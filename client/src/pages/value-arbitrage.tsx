@@ -101,8 +101,8 @@ export default function ValueArbitragePage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Value Arbitrage</h1>
-              <p className="text-sm text-gray-500">Find market inefficiencies using advanced metrics</p>
+              <h1 className="text-xl font-bold text-gray-900">Player Value Analysis</h1>
+              <p className="text-sm text-gray-500">Compare player metrics to their market price</p>
             </div>
           </div>
         </div>
@@ -111,9 +111,9 @@ export default function ValueArbitragePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Performance tracking requires historical validation data */}
         <Card className="p-6 mb-6 bg-blue-50 border-blue-200">
-          <h2 className="text-lg font-semibold text-blue-900 mb-2">System Status</h2>
+          <h2 className="text-lg font-semibold text-blue-900 mb-2">How This Works</h2>
           <p className="text-blue-800 text-sm">
-            Currently collecting baseline metrics and market data. Historical performance tracking will be available after accumulating sufficient validation data over multiple NFL weeks.
+            We compare each player's actual NFL performance data (like separation, targets, routes) to their fantasy draft position to find potential bargains or overpriced players.
           </p>
         </Card>
 

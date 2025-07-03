@@ -125,7 +125,7 @@ export default function PlayerAnalysisPage() {
             </Link>
             <div>
               <h1 className="text-xl font-bold text-gray-900">Player Analysis</h1>
-              <p className="text-sm text-gray-500">Advanced separation metrics & season trends</p>
+              <p className="text-sm text-gray-500">NFL performance data and season trends</p>
             </div>
           </div>
         </div>
