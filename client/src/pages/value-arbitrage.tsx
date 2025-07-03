@@ -76,14 +76,14 @@ export default function ValueArbitragePage() {
 
   const getReasonText = (reasonCode: string) => {
     const reasons: Record<string, string> = {
-      'elite_yprr_low_adp': 'Elite YPRR (>2.0) with low ADP',
-      'high_target_share_available': 'High target share (>25%) but available',
-      'red_zone_upside_undervalued': 'Strong red zone usage undervalued',
-      'strong_metrics_low_price': 'Strong overall metrics vs low market price',
-      'poor_metrics_high_adp': 'Poor underlying metrics vs high ADP',
-      'slight_undervalue': 'Marginally undervalued by market',
-      'slight_overvalue': 'Marginally overvalued by market',
-      'metrics_balanced': 'Metrics align with market value'
+      'elite_yprr_low_adp': 'Gets open frequently (>2.0 yards per route) but drafted late',
+      'high_target_share_available': 'Gets 25%+ of team targets but still available',
+      'red_zone_upside_undervalued': 'Gets targets near goal line but drafted low',
+      'strong_metrics_low_price': 'Good separation and targets but cheap draft cost',
+      'poor_metrics_high_adp': 'Low separation and few targets but drafted early',
+      'slight_undervalue': 'Slightly better stats than draft position suggests',
+      'slight_overvalue': 'Stats don\'t quite match high draft position',
+      'metrics_balanced': 'Stats match draft position fairly'
     };
     return reasons[reasonCode] || 'Analysis pending';
   };
