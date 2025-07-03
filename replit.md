@@ -144,6 +144,9 @@ Changelog:
 - July 03, 2025. Added Justin Jefferson, Tyreek Hill, and CeeDee Lamb to cached player analysis
 - July 03, 2025. Updated UI to use colored boxes with solid black numbers for better visual hierarchy
 - July 03, 2025. Removed misleading hit rate claims and fake performance metrics - system now honestly reports data collection status
+- July 03, 2025. Fixed case-insensitive player search - "justin jefferson" now finds "Justin Jefferson" correctly
+- July 03, 2025. Added player search autocomplete endpoint and improved player name matching algorithm
+- July 03, 2025. Implemented market data aggregation system framework for multi-source dynasty valuations
 ```
 
 ## User Preferences

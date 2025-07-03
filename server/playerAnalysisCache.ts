@@ -166,14 +166,33 @@ class PlayerAnalysisCache {
       .trim();
   }
 
+  private normalizeSearchTerm(name: string): string {
+    return name.toLowerCase()
+      .replace(/[^a-z\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   async getPlayerAnalysis(playerName: string, season: number = 2024): Promise<any> {
     const normalizedName = this.normalizePlayerName(playerName);
     const cacheKey = `${normalizedName}_${season}`;
     
-    // Check pre-computed data first
+    // Check pre-computed data first (try multiple matching approaches)
     if (this.preComputedPlayers[normalizedName]) {
       console.log(`Using pre-computed analysis for ${playerName}`);
       return this.preComputedPlayers[normalizedName];
+    }
+    
+    // Try to find by partial match (for case-insensitive search)
+    const searchTerm = this.normalizeSearchTerm(playerName);
+    const matchingKey = Object.keys(this.preComputedPlayers).find(key => {
+      const keyAsSpaces = key.replace(/_/g, ' ');
+      return keyAsSpaces === searchTerm || key === normalizedName;
+    });
+    
+    if (matchingKey) {
+      console.log(`Using pre-computed analysis for ${playerName} (matched: ${matchingKey})`);
+      return this.preComputedPlayers[matchingKey];
     }
     
     // Check in-memory cache

@@ -74,6 +74,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player search for autocomplete
+  app.get('/api/players/search', async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      if (!query || query.length < 2) {
+        return res.json([]);
+      }
+      
+      // Get available players from cache
+      const availablePlayers = playerAnalysisCache.getAvailablePlayers();
+      
+      // Filter by search query
+      const matches = availablePlayers
+        .filter(name => name.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 10) // Limit results
+        .map(name => ({
+          name,
+          team: 'NFL', // Simplified for now
+          position: 'WR' // Most of our cached players are WRs
+        }));
+      
+      res.json(matches);
+    } catch (error) {
+      console.error('Error searching players:', error);
+      res.status(500).json({ error: 'Search failed' });
+    }
+  });
+
   // Player Analysis endpoint with smart caching
   app.get("/api/analysis/player/:name", async (req, res) => {
     try {

@@ -175,6 +175,7 @@ export default function PlayerAnalysisPage() {
           <Card className="p-6 text-center">
             <p className="text-red-600 mb-4">Error loading player analysis. Please try another player.</p>
             <p className="text-sm text-gray-600">Available players: Rome Odunze, Justin Jefferson, Tyreek Hill, CeeDee Lamb</p>
+            <p className="text-xs text-gray-500 mt-2">Note: Search is case-insensitive. Try "justin jefferson" or "rome odunze"</p>
           </Card>
         )}
 
