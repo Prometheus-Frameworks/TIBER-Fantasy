@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { teamSyncService } from "./teamSync";
 import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generateWaiverRecommendations } from "./analytics";
 import { valueArbitrageService } from "./valueArbitrage";
+import { sportsDataAPI } from "./sportsdata";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
