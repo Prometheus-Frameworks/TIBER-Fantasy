@@ -11,6 +11,7 @@ import PlayersPage from "@/pages/players";
 import TrendsPage from "@/pages/trends";
 import TradesPage from "@/pages/trades";
 import ValueArbitragePage from "@/pages/value-arbitrage";
+import PlayerAnalysisPage from "@/pages/player-analysis";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/trends" component={TrendsPage} />
       <Route path="/trades" component={TradesPage} />
       <Route path="/arbitrage" component={ValueArbitragePage} />
+      <Route path="/player-analysis" component={PlayerAnalysisPage} />
       <Route path="/lineup" component={LineupOptimizer} />
       <Route path="/analytics" component={LineupOptimizer} />
       <Route path="/premium" component={PremiumAnalytics} />

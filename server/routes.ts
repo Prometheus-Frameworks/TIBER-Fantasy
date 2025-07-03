@@ -416,98 +416,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Analysis Endpoint for individual breakdown
+  // Enhanced Player Analysis using NFL-Data-Py
   app.get("/api/analysis/player/:name", async (req, res) => {
     try {
       const playerName = decodeURIComponent(req.params.name);
+      const { spawn } = require('child_process');
       
-      // Get player data from SportsDataIO
-      const players = await sportsDataAPI.getActivePlayers();
-      const player = players.find(p => 
-        p.Name.toLowerCase().includes(playerName.toLowerCase()) ||
-        `${p.FirstName} ${p.LastName}`.toLowerCase().includes(playerName.toLowerCase())
-      );
-
-      if (!player) {
-        return res.status(404).json({ message: `Player ${playerName} not found` });
-      }
-
-      // Get 2024 season stats
-      const seasonStats = await sportsDataAPI.getPlayerStats("2024REG");
-      const playerStats = seasonStats.find(s => s.PlayerID === player.PlayerID);
-
-      // Calculate advanced metrics
-      const analysis = {
-        player: {
-          name: player.Name,
-          team: player.Team,
-          position: player.Position,
-          age: player.Age,
-          experience: player.ExperienceString,
-          injury: {
-            status: player.InjuryStatus,
-            bodyPart: player.InjuryBodyPart,
-            notes: player.InjuryNotes
-          }
-        },
-        marketData: {
-          adp: player.AverageDraftPosition,
-          depthChart: {
-            position: player.DepthChartPosition,
-            order: player.DepthChartOrder
-          },
-          dfsIds: {
-            fanDuel: player.FanDuelPlayerID,
-            draftKings: player.DraftKingsPlayerID,
-            yahoo: player.YahooPlayerID
-          }
-        },
-        seasonStats: playerStats ? {
-          games: playerStats.Games,
-          // Receiving stats
-          targets: playerStats.ReceivingTargets,
-          receptions: playerStats.Receptions,
-          receivingYards: playerStats.ReceivingYards,
-          receivingTDs: playerStats.ReceivingTouchdowns,
-          yardsPerTarget: playerStats.ReceivingYardsPerTarget,
-          yardsPerReception: playerStats.ReceivingYardsPerReception,
-          receptionPercentage: playerStats.ReceptionPercentage,
-          // Snap data
-          offensiveSnaps: playerStats.OffensiveSnapsPlayed,
-          teamSnaps: playerStats.OffensiveTeamSnaps,
-          snapPercentage: playerStats.OffensiveTeamSnaps > 0 ? 
-            (playerStats.OffensiveSnapsPlayed / playerStats.OffensiveTeamSnaps * 100) : 0,
-          // Fantasy
-          fantasyPoints: playerStats.FantasyPoints,
-          fantasyPointsPPR: playerStats.FantasyPointsPPR,
-          fantasyPointsPerGame: playerStats.FantasyPointsPerGame,
-          fantasyPointsPPRPerGame: playerStats.FantasyPointsPPRPerGame,
-          // Platform specific
-          fanDuelPoints: playerStats.FantasyPointsFanDuel,
-          draftKingsPoints: playerStats.FantasyPointsDraftKings,
-          yahooPoints: playerStats.FantasyPointsYahoo
-        } : null,
-        advancedMetrics: playerStats ? {
-          // Calculate yards per route run (approximation)
-          yardsPerRouteRun: playerStats.OffensiveSnapsPlayed > 0 ? 
-            (playerStats.ReceivingYards / playerStats.OffensiveSnapsPlayed).toFixed(3) : 0,
-          // Target share would need team totals
-          efficiency: {
-            yardsPerTarget: playerStats.ReceivingYardsPerTarget,
-            catchRate: playerStats.ReceptionPercentage,
-            yardsAfterCatch: playerStats.ReceivingYards > 0 && playerStats.Receptions > 0 ? 
-              (playerStats.ReceivingYards - (playerStats.ReceivingTargets * 8)).toFixed(1) : 0 // Rough YAC estimate
-          },
-          volume: {
-            targets: playerStats.ReceivingTargets,
-            airYards: playerStats.ReceivingTargets * 8, // Rough air yards estimate
-            snapsPerGame: playerStats.Games > 0 ? 
-              (playerStats.OffensiveSnapsPlayed / playerStats.Games).toFixed(1) : 0
-          }
-        } : null
-      };
-
-      res.json(analysis);
+      // Use NFL-Data-Py for comprehensive analysis
+      const pythonProcess = spawn('python3', ['nfl_analytics.py', playerName, '2024'], {
+        cwd: './server'
+      });
+      
+      let output = '';
+      let errorOutput = '';
+      
+      pythonProcess.stdout.on('data', (data: Buffer) => {
+        output += data.toString();
+      });
+      
+      pythonProcess.stderr.on('data', (data: Buffer) => {
+        errorOutput += data.toString();
+      });
+      
+      pythonProcess.on('close', (code: number) => {
+        if (code !== 0) {
+          console.error(`Python process error: ${errorOutput}`);
+          return res.status(500).json({ message: "Failed to analyze player" });
+        }
+        
+        try {
+          const analysis = JSON.parse(output);
+          res.json(analysis);
+        } catch (parseError) {
+          console.error(`JSON parse error: ${parseError}`, output);
+          res.status(500).json({ message: "Failed to parse player analysis" });
+        }
+      });
+      
     } catch (error) {
       console.error("Error analyzing player:", error);
       res.status(500).json({ message: "Failed to analyze player" });
