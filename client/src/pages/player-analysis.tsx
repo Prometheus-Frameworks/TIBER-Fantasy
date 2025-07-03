@@ -97,6 +97,12 @@ export default function PlayerAnalysisPage() {
     return "text-red-600";
   };
 
+  const getMetricBoxStyle = (value: number, thresholds: { good: number; avg: number }) => {
+    if (value >= thresholds.good) return "bg-green-50 border-green-200";
+    if (value >= thresholds.avg) return "bg-yellow-50 border-yellow-200";
+    return "bg-red-50 border-red-200";
+  };
+
   const getTargetTrendIcon = (trend: string) => {
     return trend === "increasing" ? (
       <TrendingUp className="w-4 h-4 text-green-600" />
@@ -155,7 +161,8 @@ export default function PlayerAnalysisPage() {
         {/* Error State */}
         {error && (
           <Card className="p-6 text-center">
-            <p className="text-red-600">Error loading player analysis. Please try another player.</p>
+            <p className="text-red-600 mb-4">Error loading player analysis. Please try another player.</p>
+            <p className="text-sm text-gray-600">Available players: Rome Odunze, Justin Jefferson, Tyreek Hill, CeeDee Lamb</p>
           </Card>
         )}
 
@@ -189,7 +196,7 @@ export default function PlayerAnalysisPage() {
               </h3>
               <div className="grid gap-4 md:grid-cols-3">
                 <div className={`${getSeparationRating(analysis.separation_metrics.avg_separation_percentile).bgColor} ${getSeparationRating(analysis.separation_metrics.avg_separation_percentile).borderColor} border rounded-lg p-4`}>
-                  <div className={`text-2xl font-bold ${getSeparationRating(analysis.separation_metrics.avg_separation_percentile).color}`}>{analysis.separation_metrics.avg_separation.toFixed(2)}</div>
+                  <div className="text-2xl font-bold text-gray-900">{analysis.separation_metrics.avg_separation.toFixed(2)}</div>
                   <div className="text-sm text-gray-600">Avg Separation (yards)</div>
                   <div className="flex items-center mt-2">
                     <Progress value={analysis.separation_metrics.avg_separation_percentile} className="flex-1 h-2" />
@@ -197,17 +204,17 @@ export default function PlayerAnalysisPage() {
                       {getSeparationRating(analysis.separation_metrics.avg_separation_percentile).label}
                     </span>
                   </div>
-                  <div className={`text-xs mt-1 ${getPercentileColor(analysis.separation_metrics.avg_separation_percentile)}`}>{analysis.separation_metrics.avg_separation_percentile.toFixed(1)}th percentile</div>
+                  <div className="text-xs text-gray-500 mt-1">{analysis.separation_metrics.avg_separation_percentile.toFixed(1)}th percentile</div>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className={`text-2xl font-bold ${getMetricColor(analysis.separation_metrics.avg_cushion, { good: 6.0, avg: 4.5 })}`}>{analysis.separation_metrics.avg_cushion.toFixed(1)}</div>
+                <div className={`${getMetricBoxStyle(analysis.separation_metrics.avg_cushion, { good: 6.0, avg: 4.5 })} border rounded-lg p-4`}>
+                  <div className="text-2xl font-bold text-gray-900">{analysis.separation_metrics.avg_cushion.toFixed(1)}</div>
                   <div className="text-sm text-gray-600">Avg Cushion (yards)</div>
                   <div className="text-xs text-gray-500 mt-1">Pre-snap defender distance</div>
                 </div>
 
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <div className={`text-2xl font-bold ${getMetricColor(analysis.separation_metrics.percent_share_of_intended_air_yards, { good: 25, avg: 15 })}`}>{analysis.separation_metrics.percent_share_of_intended_air_yards.toFixed(1)}%</div>
+                <div className={`${getMetricBoxStyle(analysis.separation_metrics.percent_share_of_intended_air_yards, { good: 25, avg: 15 })} border rounded-lg p-4`}>
+                  <div className="text-2xl font-bold text-gray-900">{analysis.separation_metrics.percent_share_of_intended_air_yards.toFixed(1)}%</div>
                   <div className="text-sm text-gray-600">Air Yards Share</div>
                   <div className="text-xs text-gray-500 mt-1">Team target quality</div>
                 </div>
@@ -253,35 +260,35 @@ export default function PlayerAnalysisPage() {
             <Card className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Production & Efficiency</h3>
               <div className="grid gap-4 md:grid-cols-4">
-                <div className="text-center">
-                  <div className={`text-2xl font-bold ${getMetricColor(analysis.receiving_metrics.targets, { good: 100, avg: 60 })}`}>{analysis.receiving_metrics.targets}</div>
+                <div className={`${getMetricBoxStyle(analysis.receiving_metrics.targets, { good: 100, avg: 60 })} border rounded-lg p-4 text-center`}>
+                  <div className="text-2xl font-bold text-gray-900">{analysis.receiving_metrics.targets}</div>
                   <div className="text-sm text-gray-600">Targets</div>
                 </div>
-                <div className="text-center">
-                  <div className={`text-2xl font-bold ${getMetricColor(analysis.receiving_metrics.receptions, { good: 70, avg: 40 })}`}>{analysis.receiving_metrics.receptions}</div>
+                <div className={`${getMetricBoxStyle(analysis.receiving_metrics.receptions, { good: 70, avg: 40 })} border rounded-lg p-4 text-center`}>
+                  <div className="text-2xl font-bold text-gray-900">{analysis.receiving_metrics.receptions}</div>
                   <div className="text-sm text-gray-600">Receptions</div>
                 </div>
-                <div className="text-center">
-                  <div className={`text-2xl font-bold ${getMetricColor(analysis.receiving_metrics.receiving_yards, { good: 1000, avg: 600 })}`}>{analysis.receiving_metrics.receiving_yards}</div>
+                <div className={`${getMetricBoxStyle(analysis.receiving_metrics.receiving_yards, { good: 1000, avg: 600 })} border rounded-lg p-4 text-center`}>
+                  <div className="text-2xl font-bold text-gray-900">{analysis.receiving_metrics.receiving_yards}</div>
                   <div className="text-sm text-gray-600">Receiving Yards</div>
                 </div>
-                <div className="text-center">
-                  <div className={`text-2xl font-bold ${getMetricColor(analysis.receiving_metrics.receiving_tds, { good: 8, avg: 4 })}`}>{analysis.receiving_metrics.receiving_tds}</div>
+                <div className={`${getMetricBoxStyle(analysis.receiving_metrics.receiving_tds, { good: 8, avg: 4 })} border rounded-lg p-4 text-center`}>
+                  <div className="text-2xl font-bold text-gray-900">{analysis.receiving_metrics.receiving_tds}</div>
                   <div className="text-sm text-gray-600">Touchdowns</div>
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-3 mt-6 pt-6 border-t">
-                <div className="text-center">
-                  <div className={`text-lg font-bold ${getMetricColor(analysis.efficiency_metrics.yards_per_target, { good: 8.5, avg: 6.5 })}`}>{analysis.efficiency_metrics.yards_per_target.toFixed(2)}</div>
+                <div className={`${getMetricBoxStyle(analysis.efficiency_metrics.yards_per_target, { good: 8.5, avg: 6.5 })} border rounded-lg p-4 text-center`}>
+                  <div className="text-lg font-bold text-gray-900">{analysis.efficiency_metrics.yards_per_target.toFixed(2)}</div>
                   <div className="text-sm text-gray-600">Yards per Target</div>
                 </div>
-                <div className="text-center">
-                  <div className={`text-lg font-bold ${getMetricColor(analysis.receiving_metrics.catch_percentage, { good: 65, avg: 55 })}`}>{analysis.receiving_metrics.catch_percentage.toFixed(1)}%</div>
+                <div className={`${getMetricBoxStyle(analysis.receiving_metrics.catch_percentage, { good: 65, avg: 55 })} border rounded-lg p-4 text-center`}>
+                  <div className="text-lg font-bold text-gray-900">{analysis.receiving_metrics.catch_percentage.toFixed(1)}%</div>
                   <div className="text-sm text-gray-600">Catch Rate</div>
                 </div>
-                <div className="text-center">
-                  <div className={`text-lg font-bold ${getMetricColor(analysis.receiving_metrics.avg_yac, { good: 5.5, avg: 4.0 })}`}>{analysis.receiving_metrics.avg_yac.toFixed(1)}</div>
+                <div className={`${getMetricBoxStyle(analysis.receiving_metrics.avg_yac, { good: 5.5, avg: 4.0 })} border rounded-lg p-4 text-center`}>
+                  <div className="text-lg font-bold text-gray-900">{analysis.receiving_metrics.avg_yac.toFixed(1)}</div>
                   <div className="text-sm text-gray-600">Avg YAC</div>
                 </div>
               </div>

@@ -5,6 +5,7 @@ import { teamSyncService } from "./teamSync";
 import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generateWaiverRecommendations } from "./analytics";
 import { valueArbitrageService } from "./valueArbitrage";
 import { sportsDataAPI } from "./sportsdata";
+import { playerAnalysisCache } from "./playerAnalysisCache";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -70,58 +71,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Analysis endpoint  
-  app.get("/api/analysis/player/:name", (req, res) => {
+  // Player Analysis endpoint with smart caching
+  app.get("/api/analysis/player/:name", async (req, res) => {
     try {
       const playerName = decodeURIComponent(req.params.name);
       console.log(`Player analysis request for: ${playerName}`);
       
-      // Return authentic Rome Odunze analysis from NFL-Data-Py
-      if (playerName.toLowerCase().includes("rome") && playerName.toLowerCase().includes("odunze")) {
-        const romeAnalysis = {
-          "player": {
-            "name": "Rome Odunze",
-            "team": "CHI", 
-            "position": "WR",
-            "season": 2024
-          },
-          "separation_metrics": {
-            "avg_separation": 2.96,
-            "avg_cushion": 5.68,
-            "avg_separation_percentile": 46.1,
-            "avg_intended_air_yards": 13.69,
-            "percent_share_of_intended_air_yards": 33.21
-          },
-          "receiving_metrics": {
-            "targets": 101,
-            "receptions": 54,
-            "receiving_yards": 734,
-            "receiving_tds": 3,
-            "catch_percentage": 53.47,
-            "avg_yac": 4.98,
-            "avg_yac_above_expectation": 0.50
-          },
-          "efficiency_metrics": {
-            "yards_per_target": 7.27,
-            "yards_per_reception": 13.59,
-            "air_yards_vs_separation": 10.73
-          },
-          "season_trends": {
-            "target_trend": "increasing",
-            "early_season_avg_targets": 5.2,
-            "late_season_avg_targets": 6.4,
-            "target_improvement": 1.2
-          }
-        };
-        return res.json(romeAnalysis);
-      }
+      // Use the smart caching system
+      const analysis = await playerAnalysisCache.getPlayerAnalysis(playerName, 2024);
+      return res.json(analysis);
       
-      // For other players, return helpful message
-      return res.status(500).json({ 
-        error: "Player analysis currently available for Rome Odunze. NFL-Data-Py integration expanding soon!" 
-      });
     } catch (error) {
       console.error("Player analysis error:", error);
+      
+      // Check if it's a "not available" error vs a real error
+      if (error.message.includes("not available")) {
+        const availablePlayers = playerAnalysisCache.getAvailablePlayers();
+        return res.status(500).json({ 
+          error: error.message,
+          availablePlayers: availablePlayers,
+          suggestion: `Try searching for: ${availablePlayers.slice(0, 3).join(', ')}`
+        });
+      }
+      
       return res.status(500).json({ message: "Failed to analyze player" });
     }
   });
