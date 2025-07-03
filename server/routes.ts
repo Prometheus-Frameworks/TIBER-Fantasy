@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { teamSyncService } from "./teamSync";
+import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generateWaiverRecommendations } from "./analytics";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -194,6 +195,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(syncData);
     } catch (error) {
       res.status(500).json({ message: `Test failed: ${error}` });
+    }
+  });
+
+  // Advanced Analytics Endpoints
+  app.get("/api/teams/:id/lineup-optimizer", async (req, res) => {
+    const teamId = parseInt(req.params.id);
+    const week = parseInt(req.query.week as string) || 18;
+    
+    try {
+      const teamPlayers = await storage.getTeamPlayers(teamId);
+      
+      // Analyze optimal lineup based on current projections
+      const lineup = optimizeLineup(teamPlayers);
+      
+      res.json({
+        week,
+        optimizedLineup: lineup,
+        projectedPoints: lineup.totalProjected,
+        confidence: calculateConfidence(lineup),
+        recommendations: lineup.recommendations || []
+      });
+    } catch (error) {
+      console.error("Error optimizing lineup:", error);
+      res.status(500).json({ message: "Failed to optimize lineup" });
+    }
+  });
+
+  app.get("/api/teams/:id/trade-analyzer", async (req, res) => {
+    const teamId = parseInt(req.params.id);
+    
+    try {
+      const teamPlayers = await storage.getTeamPlayers(teamId);
+      const availablePlayers = await storage.getAvailablePlayers();
+      
+      const analysis = analyzeTradeOpportunities(teamPlayers, availablePlayers);
+      
+      res.json({
+        tradeTargets: analysis.targets,
+        teamNeeds: analysis.needs,
+        surplus: analysis.surplus,
+        recommendations: analysis.recommendations
+      });
+    } catch (error) {
+      console.error("Error analyzing trades:", error);
+      res.status(500).json({ message: "Failed to analyze trades" });
+    }
+  });
+
+  app.get("/api/teams/:id/waiver-wire", async (req, res) => {
+    const teamId = parseInt(req.params.id);
+    
+    try {
+      const teamPlayers = await storage.getTeamPlayers(teamId);
+      const availablePlayers = await storage.getAvailablePlayers();
+      
+      const recommendations = generateWaiverRecommendations(teamPlayers, availablePlayers);
+      
+      res.json({
+        recommendations,
+        totalAvailable: availablePlayers.length,
+        priorityPickups: recommendations.slice(0, 5)
+      });
+    } catch (error) {
+      console.error("Error fetching waiver recommendations:", error);
+      res.status(500).json({ message: "Failed to fetch waiver recommendations" });
     }
   });
 

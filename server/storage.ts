@@ -4,16 +4,31 @@ import {
   teamPlayers, 
   positionAnalysis, 
   weeklyPerformance,
+  matchupAnalysis,
+  lineupOptimization,
+  tradeAnalysis,
+  waiverRecommendations,
+  injuryTracker,
   type Team, 
   type Player, 
   type TeamPlayer, 
   type PositionAnalysis, 
   type WeeklyPerformance,
+  type MatchupAnalysis,
+  type LineupOptimization,
+  type TradeAnalysis,
+  type WaiverRecommendations,
+  type InjuryTracker,
   type InsertTeam, 
   type InsertPlayer, 
   type InsertTeamPlayer, 
   type InsertPositionAnalysis, 
-  type InsertWeeklyPerformance 
+  type InsertWeeklyPerformance,
+  type InsertMatchupAnalysis,
+  type InsertLineupOptimization,
+  type InsertTradeAnalysis,
+  type InsertWaiverRecommendations,
+  type InsertInjuryTracker
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -50,6 +65,23 @@ export interface IStorage {
   
   // Recommendations
   getPlayerRecommendations(teamId: number, position?: string): Promise<Player[]>;
+  
+  // Advanced Analytics
+  createMatchupAnalysis(analysis: InsertMatchupAnalysis): Promise<MatchupAnalysis>;
+  getMatchupAnalysis(playerId: number, week: number): Promise<MatchupAnalysis | undefined>;
+  
+  createLineupOptimization(optimization: InsertLineupOptimization): Promise<LineupOptimization>;
+  getLineupOptimization(teamId: number, week: number): Promise<LineupOptimization | undefined>;
+  
+  createTradeAnalysis(analysis: InsertTradeAnalysis): Promise<TradeAnalysis>;
+  getTradeAnalysis(teamId: number): Promise<TradeAnalysis[]>;
+  
+  createWaiverRecommendations(recommendation: InsertWaiverRecommendations): Promise<WaiverRecommendations>;
+  getWaiverRecommendations(teamId: number): Promise<WaiverRecommendations[]>;
+  
+  createInjuryTracker(injury: InsertInjuryTracker): Promise<InjuryTracker>;
+  getInjuryTracker(playerId: number): Promise<InjuryTracker | undefined>;
+  updateInjuryTracker(playerId: number, updates: Partial<InsertInjuryTracker>): Promise<void>;
 }
 
 export class MemStorage implements IStorage {

@@ -103,6 +103,17 @@ The application uses a relational database design with the following core entiti
 - `start`: Production server startup
 - `db:push`: Apply database schema changes
 
+## Advanced Analytics Roadmap
+
+Based on user feedback, expanding to include:
+- Live player stats and projections
+- Lineup optimizer with matchup analysis  
+- Trade evaluator with value models
+- Waiver wire recommendations
+- Injury impact tracker
+- AI-powered breakout predictions
+- Social features and league chat
+
 ## Changelog
 
 ```
@@ -110,6 +121,7 @@ Changelog:
 - July 03, 2025. Initial setup with in-memory storage
 - July 03, 2025. Added PostgreSQL database integration with Drizzle ORM
 - July 03, 2025. Built comprehensive fantasy team sync system with ESPN, Sleeper, and manual import capabilities
+- July 03, 2025. Planning advanced analytics expansion with real-time features
 ```
 
 ## User Preferences
