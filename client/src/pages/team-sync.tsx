@@ -9,10 +9,12 @@ import { AlertCircle, CheckCircle, Users, Smartphone, Globe, Upload } from "luci
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 export default function TeamSync() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   
   const [espnData, setEspnData] = useState({ leagueId: "", teamId: "" });
   const [sleeperData, setSleeperData] = useState({ leagueId: "", userId: "" });
@@ -33,6 +35,8 @@ export default function TeamSync() {
         description: `Successfully imported ${data.playersFound} players from ESPN`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/teams", 1] });
+      // Redirect to dashboard after successful sync
+      setTimeout(() => setLocation("/"), 2000);
     },
     onError: (error) => {
       toast({
@@ -58,6 +62,8 @@ export default function TeamSync() {
         description: `Successfully imported ${data.playersFound} players from Sleeper`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/teams", 1] });
+      // Redirect to dashboard after successful sync
+      setTimeout(() => setLocation("/"), 2000);
     },
     onError: (error) => {
       toast({
@@ -83,6 +89,8 @@ export default function TeamSync() {
         description: `Successfully imported ${data.playersFound} players`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/teams", 1] });
+      // Redirect to dashboard after successful sync
+      setTimeout(() => setLocation("/"), 2000);
     },
     onError: (error) => {
       toast({
