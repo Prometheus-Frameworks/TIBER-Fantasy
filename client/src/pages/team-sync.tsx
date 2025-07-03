@@ -64,10 +64,9 @@ export default function TeamSync() {
         description: `Successfully imported ${data.playersFound} players from Sleeper`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/teams", 1] });
-      // Redirect to dashboard after successful sync
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 1500);
+      // Try multiple redirect methods
+      setLocation("/");
+      setTimeout(() => window.location.href = "/", 100);
     },
     onError: (error) => {
       toast({
@@ -280,13 +279,26 @@ export default function TeamSync() {
                   </p>
                 </div>
 
-                <Button 
-                  onClick={handleSleeperSync}
-                  disabled={sleeperMutation.isPending}
-                  className="w-full"
-                >
-                  {sleeperMutation.isPending ? "Syncing..." : "Import from Sleeper"}
-                </Button>
+                <div className="space-y-2">
+                  <Button 
+                    onClick={handleSleeperSync}
+                    disabled={sleeperMutation.isPending}
+                    className="w-full"
+                  >
+                    {sleeperMutation.isPending ? "Syncing..." : "Import from Sleeper"}
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => {
+                      console.log("Test redirect button clicked");
+                      window.location.href = "/";
+                    }}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Test Redirect to Dashboard
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
