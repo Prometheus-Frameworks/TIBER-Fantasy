@@ -1,36 +1,37 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Users, Search, Settings } from "lucide-react";
+import { BarChart3, Users, Search, Settings, Brain } from "lucide-react";
+import { Link, useLocation } from "wouter";
 
 export default function MobileNav() {
-  const [activeTab, setActiveTab] = useState("analysis");
+  const [location] = useLocation();
 
   const tabs = [
-    { id: "analysis", label: "Analysis", icon: BarChart3 },
-    { id: "lineup", label: "Lineup", icon: Users },
-    { id: "players", label: "Players", icon: Search },
-    { id: "settings", label: "Settings", icon: Settings },
+    { id: "dashboard", label: "Team", icon: BarChart3, href: "/" },
+    { id: "analytics", label: "Analytics", icon: Brain, href: "/analytics" },
+    { id: "sync", label: "Sync", icon: Users, href: "/sync" },
+    { id: "settings", label: "Settings", icon: Settings, href: "/settings" },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50">
       <div className="grid grid-cols-4 h-16">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+          const isActive = location === tab.href || (tab.href === "/" && location === "/dashboard");
           
           return (
-            <Button
-              key={tab.id}
-              variant="ghost"
-              className={`flex flex-col items-center justify-center space-y-1 h-full rounded-none ${
-                isActive ? "field-green" : "text-gray-500"
-              }`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <Icon size={20} />
-              <span className="text-xs font-medium">{tab.label}</span>
-            </Button>
+            <Link key={tab.id} href={tab.href}>
+              <Button
+                variant="ghost"
+                className={`flex flex-col items-center justify-center space-y-1 h-full rounded-none w-full ${
+                  isActive ? "text-field-green bg-green-50" : "text-gray-500"
+                }`}
+              >
+                <Icon size={20} />
+                <span className="text-xs font-medium">{tab.label}</span>
+              </Button>
+            </Link>
           );
         })}
       </div>
