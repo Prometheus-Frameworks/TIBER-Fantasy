@@ -17,6 +17,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
+import { sportsDataAPI } from "./sportsdata";
 
 export interface IStorage {
   // Team operations
@@ -243,10 +244,65 @@ export class DatabaseStorage implements IStorage {
     const existingTeams = await db.select().from(teams);
     if (existingTeams.length > 0) return;
 
+    console.log("Seeding database with real NFL data from SportsDataIO...");
+
+    try {
+      // Fetch real player data from SportsDataIO
+      console.log("Fetching active players from SportsDataIO...");
+      const sportsDataPlayers = await sportsDataAPI.getActivePlayers();
+      console.log(`Fetched ${sportsDataPlayers.length} players from SportsDataIO`);
+
+      // Filter to fantasy-relevant players and limit for free tier
+      const fantasyPlayers = sportsDataPlayers
+        .filter(p => p.FantasyPosition && ["QB", "RB", "WR", "TE", "K", "DST"].includes(p.FantasyPosition))
+        .filter(p => p.Team && p.Active) // Only active players with teams
+        .slice(0, 150); // Limit for free tier API calls
+
+      console.log(`Filtered to ${fantasyPlayers.length} fantasy-relevant players`);
+
+      // Convert to our schema format
+      const playerData = fantasyPlayers.map(player => sportsDataAPI.convertToPlayer(player));
+      
+      // Insert players into database
+      const insertedPlayers = await db.insert(players).values(playerData).returning();
+      console.log(`Inserted ${insertedPlayers.length} players into database`);
+
+    } catch (error) {
+      console.error("Failed to fetch SportsDataIO data, using fallback:", error);
+      // Fall back to minimal sample data if API fails
+      const fallbackData = [
+        { 
+          name: "Josh Allen", team: "BUF", position: "QB", avgPoints: 23.4, projectedPoints: 23.4, 
+          ownershipPercentage: 95, isAvailable: false, upside: 8.9, injuryStatus: "Healthy",
+          availability: "Available", consistency: 85.0, matchupRating: 8.5, trend: "up", 
+          ownership: 95, targetShare: null, redZoneTargets: null, carries: null, snapCount: null, externalId: "1001"
+        },
+        { 
+          name: "Derrick Henry", team: "BAL", position: "RB", avgPoints: 18.2, projectedPoints: 18.2, 
+          ownershipPercentage: 87, isAvailable: true, upside: 9.5, injuryStatus: "Healthy",
+          availability: "Available", consistency: 82.0, matchupRating: 7.8, trend: "up", 
+          ownership: 87, targetShare: null, redZoneTargets: null, carries: 285, snapCount: 892, externalId: "1002"
+        },
+        { 
+          name: "Tyreek Hill", team: "MIA", position: "WR", avgPoints: 18.7, projectedPoints: 18.7, 
+          ownershipPercentage: 98, isAvailable: true, upside: 8.5, injuryStatus: "Healthy",
+          availability: "Available", consistency: 78.0, matchupRating: 9.2, trend: "up", 
+          ownership: 98, targetShare: 25.5, redZoneTargets: 12, carries: null, snapCount: 1024, externalId: "1003"
+        },
+        { 
+          name: "Travis Kelce", team: "KC", position: "TE", avgPoints: 14.4, projectedPoints: 14.4, 
+          ownershipPercentage: 92, isAvailable: true, upside: 7.8, injuryStatus: "Healthy",
+          availability: "Available", consistency: 88.0, matchupRating: 8.1, trend: "up", 
+          ownership: 92, targetShare: 18.5, redZoneTargets: 8, carries: null, snapCount: 856, externalId: "1004"
+        },
+      ];
+      await db.insert(players).values(fallbackData);
+    }
+
     // Create sample team
     const [team] = await db.insert(teams).values({
       name: "Lightning Bolts",
-      ownerId: "user1",
+      ownerId: "user1", 
       leagueName: "Championship Division",
       record: "6-2",
       leagueRank: 3,
@@ -254,37 +310,19 @@ export class DatabaseStorage implements IStorage {
       healthScore: 78
     }).returning();
 
-    // Create sample players
-    const playerData = [
-      // Starting lineup
-      { name: "Josh Allen", team: "BUF", position: "QB", avgPoints: 23.4, projectedPoints: 23.4, ownershipPercentage: 95, isAvailable: false, upside: 89 },
-      { name: "Ezekiel Elliott", team: "NE", position: "RB", avgPoints: 8.2, projectedPoints: 8.2, ownershipPercentage: 45, isAvailable: false, upside: 34 },
-      { name: "Dameon Pierce", team: "HOU", position: "RB", avgPoints: 11.8, projectedPoints: 11.8, ownershipPercentage: 67, isAvailable: false, upside: 42 },
-      { name: "Tyreek Hill", team: "MIA", position: "WR", avgPoints: 18.7, projectedPoints: 18.7, ownershipPercentage: 98, isAvailable: false, upside: 95 },
-      { name: "Mike Evans", team: "TB", position: "WR", avgPoints: 16.3, projectedPoints: 16.3, ownershipPercentage: 89, isAvailable: false, upside: 87 },
-      { name: "Cole Kmet", team: "CHI", position: "TE", avgPoints: 9.4, projectedPoints: 9.4, ownershipPercentage: 34, isAvailable: false, upside: 62 },
-      
-      // Available players
-      { name: "Gus Edwards", team: "BAL", position: "RB", avgPoints: 12.4, projectedPoints: 12.4, ownershipPercentage: 47, isAvailable: true, upside: 78 },
-      { name: "Logan Thomas", team: "WAS", position: "TE", avgPoints: 8.9, projectedPoints: 8.9, ownershipPercentage: 23, isAvailable: true, upside: 65 },
-      { name: "Roschon Johnson", team: "CHI", position: "RB", avgPoints: 9.8, projectedPoints: 9.8, ownershipPercentage: 15, isAvailable: true, upside: 72 },
-      { name: "Tyler Higbee", team: "LAR", position: "TE", avgPoints: 7.2, projectedPoints: 7.2, ownershipPercentage: 12, isAvailable: true, upside: 58 },
-      { name: "Jerome Ford", team: "CLE", position: "RB", avgPoints: 10.5, projectedPoints: 10.5, ownershipPercentage: 35, isAvailable: true, upside: 69 },
-    ];
+    // Get some players to assign to the team
+    const availablePlayers = await db.select().from(players).limit(6);
 
-    const insertedPlayers = await db.insert(players).values(playerData).returning();
+    if (availablePlayers.length > 0) {
+      // Add players to team (starters only)
+      const teamPlayerData = availablePlayers.slice(0, 6).map((player, index) => ({
+        teamId: team.id,
+        playerId: player.id,
+        isStarter: true
+      }));
 
-    // Add players to team (starters only)
-    const teamPlayerData = [
-      { teamId: team.id, playerId: insertedPlayers[0].id, isStarter: true }, // Josh Allen
-      { teamId: team.id, playerId: insertedPlayers[1].id, isStarter: true }, // Ezekiel Elliott
-      { teamId: team.id, playerId: insertedPlayers[2].id, isStarter: true }, // Dameon Pierce
-      { teamId: team.id, playerId: insertedPlayers[3].id, isStarter: true }, // Tyreek Hill
-      { teamId: team.id, playerId: insertedPlayers[4].id, isStarter: true }, // Mike Evans
-      { teamId: team.id, playerId: insertedPlayers[5].id, isStarter: true }, // Cole Kmet
-    ];
-
-    await db.insert(teamPlayers).values(teamPlayerData);
+      await db.insert(teamPlayers).values(teamPlayerData);
+    }
 
     // Position analysis
     const analysisData = [

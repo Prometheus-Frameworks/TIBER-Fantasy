@@ -23,7 +23,18 @@ export const players = pgTable("players", {
   projectedPoints: real("projected_points").notNull(),
   ownershipPercentage: integer("ownership_percentage").notNull(),
   isAvailable: boolean("is_available").notNull().default(true),
-  upside: integer("upside").notNull(), // 0-100 potential score
+  upside: real("upside").notNull(),
+  injuryStatus: text("injury_status").default("Healthy"),
+  availability: text("availability").default("Available"),
+  consistency: real("consistency"), // Performance consistency rating
+  matchupRating: real("matchup_rating"), // Upcoming matchup rating
+  trend: text("trend"), // "up", "down", "stable"
+  ownership: integer("ownership"), // Fantasy ownership %
+  targetShare: real("target_share"), // WR/TE target share
+  redZoneTargets: integer("red_zone_targets"), // Red zone targets
+  carries: integer("carries"), // RB carries
+  snapCount: integer("snap_count"), // Offensive snap count
+  externalId: text("external_id"), // SportsDataIO player ID
 });
 
 export const teamPlayers = pgTable("team_players", {
