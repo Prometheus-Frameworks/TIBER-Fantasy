@@ -7,8 +7,8 @@ import { valueArbitrageService } from "./valueArbitrage";
 import { sportsDataAPI } from "./sportsdata";
 import { playerAnalysisCache } from "./playerAnalysisCache";
 import { db } from "./db";
-import { dynastyTradeHistory } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { dynastyTradeHistory, players as playersTable } from "@shared/schema";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -472,6 +472,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Hit rate endpoint removed - requires actual historical validation data
+  
+  // Get player search suggestions for autocomplete
+  app.get("/api/players/search", async (req, res) => {
+    try {
+      const { q } = req.query;
+      if (!q || typeof q !== 'string' || q.length < 2) {
+        return res.json([]);
+      }
+      
+      // Get dynasty-relevant players (QB, RB, WR, TE) matching search
+      const searchTerm = q.toLowerCase();
+      const searchResults = await db.select({
+        id: playersTable.id,
+        name: playersTable.name,
+        team: playersTable.team,
+        position: playersTable.position
+      })
+      .from(playersTable)
+      .where(
+        and(
+          sql`LOWER(${playersTable.name}) LIKE ${`%${searchTerm}%`}`,
+          sql`${playersTable.position} IN ('QB', 'RB', 'WR', 'TE')`
+        )
+      )
+      .limit(10)
+      .orderBy(playersTable.name);
+      
+      res.json(searchResults);
+    } catch (error) {
+      console.error("Error searching players:", error);
+      res.status(500).json({ message: "Failed to search players" });
+    }
+  });
 
 
 

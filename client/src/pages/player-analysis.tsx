@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Search, TrendingUp, Target, BarChart3 } from "lucide-react";
+import { ArrowLeft, Search, TrendingUp, Target, BarChart3, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Link } from "wouter";
+import { cn } from "@/lib/utils";
 import MobileNav from "@/components/mobile-nav";
 
 interface PlayerAnalysis {
@@ -56,9 +59,18 @@ interface PlayerAnalysis {
   error?: string;
 }
 
+interface PlayerSearchResult {
+  id: number;
+  name: string;
+  team: string;
+  position: string;
+}
+
 export default function PlayerAnalysisPage() {
   const [searchTerm, setSearchTerm] = useState("Rome Odunze");
   const [searchInput, setSearchInput] = useState("Rome Odunze");
+  const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: analysis, isLoading, error } = useQuery<PlayerAnalysis>({
     queryKey: ["/api/analysis/player", searchTerm],
