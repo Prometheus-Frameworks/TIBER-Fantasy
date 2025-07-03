@@ -118,6 +118,14 @@ Based on user feedback, expanding to include:
 ## Core Value Proposition
 The app's primary goal is identifying players whose advanced analytics don't match their market value - finding undervalued gems with elite metrics (YPRR > 2.0) trading below ADP, and avoiding overpriced players with poor underlying data.
 
+## Value Arbitrage Features (Priority Implementation)
+- **Market Inefficiency Detection**: Compare advanced metrics vs ADP/ownership to find mispriced players
+- **Undervalued Player Alerts**: Identify players with elite metrics but low market value
+- **Overvalued Player Warnings**: Flag players with poor advanced stats but high consensus rankings
+- **Correlation Analysis**: Track which metrics best predict fantasy success vs market pricing
+- **Confidence Scoring**: Rate each recommendation based on metric strength and sample size
+- **Historical Validation**: Show hit rates of previous value arbitrage recommendations
+
 ## Changelog
 
 ```
