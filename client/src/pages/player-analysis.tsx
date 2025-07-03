@@ -62,6 +62,13 @@ export default function PlayerAnalysisPage() {
 
   const { data: analysis, isLoading, error } = useQuery<PlayerAnalysis>({
     queryKey: ["/api/analysis/player", searchTerm],
+    queryFn: async () => {
+      const response = await fetch(`/api/analysis/player/${encodeURIComponent(searchTerm)}`);
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    },
     enabled: !!searchTerm,
   });
 
