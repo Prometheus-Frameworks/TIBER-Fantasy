@@ -38,6 +38,7 @@ export interface IStorage {
   // Team operations
   getTeam(id: number): Promise<Team | undefined>;
   createTeam(team: InsertTeam): Promise<Team>;
+  updateTeam(teamId: number, updates: Partial<InsertTeam>): Promise<void>;
   updateTeamSync(teamId: number, syncData: {
     syncPlatform?: string | null;
     syncLeagueId?: string | null;
@@ -197,6 +198,14 @@ export class MemStorage implements IStorage {
     const newTeam: Team = { ...team, id };
     this.teams.set(id, newTeam);
     return newTeam;
+  }
+
+  async updateTeam(teamId: number, updates: Partial<InsertTeam>): Promise<void> {
+    const team = this.teams.get(teamId);
+    if (team) {
+      Object.assign(team, updates);
+      this.teams.set(teamId, team);
+    }
   }
 
   async updateTeamSync(teamId: number, syncData: {
@@ -420,6 +429,13 @@ export class DatabaseStorage implements IStorage {
       .values(team)
       .returning();
     return newTeam;
+  }
+
+  async updateTeam(teamId: number, updates: Partial<InsertTeam>): Promise<void> {
+    await db
+      .update(teams)
+      .set(updates)
+      .where(eq(teams.id, teamId));
   }
 
   async updateTeamSync(teamId: number, syncData: {

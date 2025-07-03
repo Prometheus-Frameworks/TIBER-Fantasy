@@ -200,7 +200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Update team with sync metadata
+      // Update team with sync metadata and name
       await storage.updateTeamSync(teamId, {
         syncPlatform: "sleeper",
         syncLeagueId: leagueId,
