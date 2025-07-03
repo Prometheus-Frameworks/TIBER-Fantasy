@@ -155,20 +155,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Note: We don't have a remove method, so we'll skip this for now
       }
       
-      // Add matched players to team
+      // Add matched players to team, create missing players
+      console.log(`Processing ${matchedPlayers.length} players from Sleeper sync`);
       let playersAdded = 0;
       for (const match of matchedPlayers) {
+        let playerId: number;
+        
         if (match.player && match.confidence > 0.8) {
+          // Use existing player
+          playerId = match.player.id;
+          console.log(`Using existing player: ${match.player.name} (confidence: ${match.confidence})`);
+        } else {
+          // Create missing player
+          console.log(`Creating new player: ${match.syncPlayer.name} (confidence: ${match.confidence})`);
           try {
-            await storage.addPlayerToTeam({
-              teamId: teamId,
-              playerId: match.player.id,
-              isStarter: match.syncPlayer.isStarter || false
+            const newPlayer = await storage.createPlayer({
+              name: match.syncPlayer.name,
+              team: match.syncPlayer.team || "UNK",
+              position: match.syncPlayer.position || "FLEX",
+              avgPoints: 10.0,
+              projectedPoints: 10.0,
+              ownershipPercentage: 50,
+              isAvailable: false,
+              upside: 5.0
             });
-            playersAdded++;
+            playerId = newPlayer.id;
+            console.log(`Created player ${newPlayer.name} with ID ${newPlayer.id}`);
           } catch (error) {
-            console.log(`Player ${match.player.name} already on team or error adding:`, error);
+            console.log(`Failed to create player ${match.syncPlayer.name}:`, error);
+            continue;
           }
+        }
+        
+        // Add player to team
+        try {
+          await storage.addPlayerToTeam({
+            teamId: teamId,
+            playerId: playerId,
+            isStarter: match.syncPlayer.isStarter || false
+          });
+          playersAdded++;
+        } catch (error) {
+          console.log(`Player already on team or error adding:`, error);
         }
       }
       

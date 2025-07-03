@@ -275,8 +275,10 @@ export default function TeamSync() {
                 
                 <div className="p-4 bg-muted rounded-lg">
                   <p className="text-sm text-muted-foreground">
-                    <strong>How to find your IDs:</strong> In the Sleeper app, go to League → Settings. 
-                    Your League ID is shown there. User ID can be found in your profile URL.
+                    <strong>How to find your IDs:</strong><br/>
+                    • <strong>League ID:</strong> In Sleeper app → League → Settings (numbers only, like "123456789")<br/>
+                    • <strong>User ID:</strong> Your Sleeper username or ID from your profile<br/>
+                    • <strong>Note:</strong> Remove any letters from League ID (like "G" at the end)
                   </p>
                 </div>
 
