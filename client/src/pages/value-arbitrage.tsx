@@ -81,6 +81,11 @@ export default function ValueArbitragePage() {
       'red_zone_upside_undervalued': 'Gets targets near goal line but drafted low',
       'strong_metrics_low_price': 'Good separation and targets but cheap draft cost',
       'poor_metrics_high_adp': 'Low separation and few targets but drafted early',
+      'young_qb_superflex_value': 'Young QB with long-term superflex dynasty upside',
+      'boom_bust_upside': 'High ceiling player with weekly variance - boom potential',
+      'consistent_floor_play': 'Reliable weekly production with limited ceiling',
+      'aging_decline_risk': 'Declining age curve may hurt long-term dynasty value',
+      'breakout_candidate': 'Multiple indicators suggest potential breakout season',
       'slight_undervalue': 'Slightly better stats than draft position suggests',
       'slight_overvalue': 'Stats don\'t quite match high draft position',
       'metrics_balanced': 'Stats match draft position fairly'

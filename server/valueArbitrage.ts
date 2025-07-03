@@ -28,11 +28,19 @@ export class ValueArbitrageService {
     let score = 0;
     let factors = 0;
 
-    // Base scoring on position-specific metrics
-    if (position === 'WR' || position === 'TE') {
-      // YPRR is crucial for receivers
+    // Dynasty-focused scoring with age consideration
+    if (position === 'QB') {
+      // QB dynasty value: Age and long-term upside crucial in superflex
+      if (player.age && player.age <= 27) score += 20; // Young QB premium
+      else if (player.age && player.age <= 30) score += 10; // Prime age
+      
+      if (player.passingYards && player.passingYards > 3500) score += 15;
+      if (player.passingTouchdowns && player.passingTouchdowns > 25) score += 15;
+      factors += 2;
+    } else if (position === 'WR' || position === 'TE') {
+      // YPRR is crucial for receivers in dynasty
       if (player.yardsPerRouteRun && player.yardsPerRouteRun > 0) {
-        if (player.yardsPerRouteRun > 2.0) score += 25; // Elite YPRR
+        if (player.yardsPerRouteRun > 2.0) score += 25; // Elite YPRR - boom potential
         else if (player.yardsPerRouteRun > 1.5) score += 15; // Good YPRR
         else if (player.yardsPerRouteRun > 1.0) score += 5; // Average YPRR
         factors++;
@@ -152,6 +160,9 @@ export class ValueArbitrageService {
 
   // Find top arbitrage opportunities
   async findArbitrageOpportunities(position?: string, limit: number = 20): Promise<ArbitrageOpportunity[]> {
+    // Dynasty focus - skill positions only (QB, RB, WR, TE)
+    const dynastyPositions = ['QB', 'RB', 'WR', 'TE'];
+    
     // Active players filter - exclude inactive/retired players
     const inactivePlayers = [
       'Joe Flacco', 'Ryan Fitzpatrick', 'Matt Ryan', 'Ben Roethlisberger', 
@@ -159,21 +170,27 @@ export class ValueArbitrageService {
       'Mike White', 'Nathan Peterman', 'Josh Johnson'
     ];
 
-    // Get available players (not on teams)
+    // Get available players (not on teams) - dynasty positions only
     let whereConditions = eq(players.isAvailable, true);
     
-    if (position) {
+    if (position && position !== 'skill') {
       whereConditions = and(whereConditions, eq(players.position, position)) as any;
     }
     
     const allPlayers = await db.select().from(players).where(whereConditions).limit(100);
     
-    // Filter out inactive players
-    const availablePlayers = allPlayers.filter(player => 
-      !inactivePlayers.some(inactive => 
+    // Filter for dynasty-relevant players only (skill positions + active players)
+    const availablePlayers = allPlayers.filter(player => {
+      // Dynasty positions only
+      if (!dynastyPositions.includes(player.position)) return false;
+      
+      // Remove inactive players
+      if (inactivePlayers.some(inactive => 
         player.name.toLowerCase().includes(inactive.toLowerCase())
-      )
-    );
+      )) return false;
+      
+      return true;
+    });
     
     const opportunities: ArbitrageOpportunity[] = [];
     

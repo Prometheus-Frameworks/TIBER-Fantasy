@@ -150,4 +150,6 @@ Changelog:
 
 ```
 Preferred communication style: Simple, everyday language.
+League focus: Dynasty leagues (skill positions only - QB, RB, WR, TE). No kickers or defense.
+Future consideration: May add redraft emphasis later.
 ```
