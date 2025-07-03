@@ -114,7 +114,15 @@ export class TeamSyncService {
       const leagueResponse = await fetch(leagueUrl);
       
       if (!leagueResponse.ok) {
+        if (leagueResponse.status === 404) {
+          throw new Error(`League not found. Please verify the League ID "${leagueId}" is correct. Sleeper League IDs are usually shorter (like "123456789").`);
+        }
         throw new Error(`Sleeper league API error: ${leagueResponse.status}`);
+      }
+
+      const leagueData = await leagueResponse.json();
+      if (!leagueData) {
+        throw new Error(`League not found. Please verify the League ID "${leagueId}" is correct. Sleeper League IDs are usually shorter (like "123456789").`);
       }
 
       // Get user's roster

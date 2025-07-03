@@ -21,14 +21,11 @@ export default function TeamSync() {
   // ESPN sync mutation
   const espnMutation = useMutation({
     mutationFn: async (data: { leagueId: string; teamId: string }) => {
-      return await apiRequest("/api/teams/1/sync/espn", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          leagueId: data.leagueId,
-          espnTeamId: data.teamId
-        })
+      const response = await apiRequest("POST", "/api/teams/1/sync/espn", {
+        leagueId: data.leagueId,
+        espnTeamId: data.teamId
       });
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
@@ -49,11 +46,11 @@ export default function TeamSync() {
   // Sleeper sync mutation
   const sleeperMutation = useMutation({
     mutationFn: async (data: { leagueId: string; userId: string }) => {
-      return await apiRequest("/api/teams/1/sync/sleeper", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+      const response = await apiRequest("POST", "/api/teams/1/sync/sleeper", {
+        leagueId: data.leagueId,
+        userId: data.userId
       });
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
@@ -74,11 +71,11 @@ export default function TeamSync() {
   // Manual import mutation
   const manualMutation = useMutation({
     mutationFn: async (data: { playerNames: string[]; teamName: string }) => {
-      return await apiRequest("/api/teams/1/sync/manual", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+      const response = await apiRequest("POST", "/api/teams/1/sync/manual", {
+        playerNames: data.playerNames,
+        teamName: data.teamName
       });
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
