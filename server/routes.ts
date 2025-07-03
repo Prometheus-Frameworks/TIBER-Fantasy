@@ -102,6 +102,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dynasty Valuation endpoint - our unique weighted scoring
+  app.get('/api/dynasty/valuation/:playerId', async (req, res) => {
+    try {
+      const playerId = parseInt(req.params.playerId);
+      const player = await storage.getPlayer(playerId);
+      
+      if (!player) {
+        return res.status(404).json({ error: 'Player not found' });
+      }
+      
+      const { dynastyValuationService } = await import('./dynastyValuation');
+      const valuation = await dynastyValuationService.calculateDynastyValue(player);
+      
+      res.json(valuation);
+    } catch (error) {
+      console.error('Error calculating dynasty valuation:', error);
+      res.status(500).json({ error: 'Failed to calculate dynasty value' });
+    }
+  });
+
+  // Team dynasty valuations - ranked by our system
+  app.get('/api/dynasty/team/:teamId/valuations', async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const teamPlayers = await storage.getTeamPlayers(teamId);
+      
+      const { dynastyValuationService } = await import('./dynastyValuation');
+      const valuations = await dynastyValuationService.calculateTeamValues(teamPlayers);
+      
+      res.json(valuations);
+    } catch (error) {
+      console.error('Error calculating team valuations:', error);
+      res.status(500).json({ error: 'Failed to calculate team valuations' });
+    }
+  });
+
   // Player Analysis endpoint with smart caching
   app.get("/api/analysis/player/:name", async (req, res) => {
     try {

@@ -23,58 +23,62 @@ export interface ArbitrageOpportunity {
 
 export class ValueArbitrageService {
   
-  // Calculate metrics-based score for a player
+  // Calculate metrics-based score for a player using available fields
   private calculateMetricsScore(player: Player, position: string): number {
     let score = 0;
     let factors = 0;
 
-    // Dynasty-focused scoring with age consideration
+    // Use actual available fantasy metrics
+    const baseFantasyScore = player.avgPoints || 0;
+    const upside = player.upside || 0;
+    
+    // Dynasty-focused scoring based on available data
     if (position === 'QB') {
-      // QB dynasty value: Age and long-term upside crucial in superflex
-      if (player.age && player.age <= 27) score += 20; // Young QB premium
-      else if (player.age && player.age <= 30) score += 10; // Prime age
-      
-      if (player.passingYards && player.passingYards > 3500) score += 15;
-      if (player.passingTouchdowns && player.passingTouchdowns > 25) score += 15;
-      factors += 2;
+      // QB scoring: Higher baseline due to superflex scarcity
+      score = baseFantasyScore * 1.2; // QB premium in superflex
+      if (baseFantasyScore > 20) score += 10; // Elite QB bonus
+      factors++;
     } else if (position === 'WR' || position === 'TE') {
-      // YPRR is crucial for receivers in dynasty
-      if (player.yardsPerRouteRun && player.yardsPerRouteRun > 0) {
-        if (player.yardsPerRouteRun > 2.0) score += 25; // Elite YPRR - boom potential
-        else if (player.yardsPerRouteRun > 1.5) score += 15; // Good YPRR
-        else if (player.yardsPerRouteRun > 1.0) score += 5; // Average YPRR
-        factors++;
-      }
-
-      // Target share
+      // Use available metrics for receivers
+      score = baseFantasyScore;
+      
+      // Target share (field exists in schema)
       if (player.targetShare && player.targetShare > 0) {
-        if (player.targetShare > 25) score += 20; // High target share
-        else if (player.targetShare > 20) score += 15; // Good target share  
-        else if (player.targetShare > 15) score += 10; // Decent target share
+        if (player.targetShare > 25) score += 15; // High target share
+        else if (player.targetShare > 20) score += 10; // Good target share
+        else if (player.targetShare > 15) score += 5; // Decent target share
         factors++;
       }
 
-      // Red zone targets
+      // Red zone targets (field exists in schema)
       if (player.redZoneTargets && player.redZoneTargets > 0) {
-        if (player.redZoneTargets > 8) score += 15; // High RZ usage
-        else if (player.redZoneTargets > 5) score += 10; // Good RZ usage
-        else if (player.redZoneTargets > 2) score += 5; // Some RZ usage
+        if (player.redZoneTargets > 8) score += 12; // High RZ usage
+        else if (player.redZoneTargets > 5) score += 8; // Good RZ usage
+        else if (player.redZoneTargets > 2) score += 4; // Some RZ usage
         factors++;
       }
+
+      // Use upside metric for breakout potential
+      if (upside > 8) score += 10; // High upside player
+      else if (upside > 5) score += 5; // Some upside
+      factors++;
     }
 
     if (position === 'RB') {
-      // Snap count percentage is crucial for RBs
-      if (player.snapCount && player.snapCount > 0) {
-        const snapPercent = (player.snapCount / 70) * 100; // Assume ~70 snaps per game
-        if (snapPercent > 70) score += 25; // Workhorse back
-        else if (snapPercent > 50) score += 15; // Good usage
-        else if (snapPercent > 30) score += 5; // Limited role
+      // Use base fantasy points as primary metric for RBs
+      score = baseFantasyScore;
+      
+      // Rushing + receiving combination
+      if (player.rushingYards && player.receivingYards) {
+        const totalYards = player.rushingYards + player.receivingYards;
+        if (totalYards > 1200) score += 20; // Elite production
+        else if (totalYards > 800) score += 15; // Good production
+        else if (totalYards > 500) score += 8; // Decent production
         factors++;
       }
 
-      // Carries and targets combined
-      const totalTouches = (player.carries || 0) + (player.targetShare || 0);
+      // Total TDs
+      const totalTDs = (player.rushingTouchdowns || 0) + (player.receivingTouchdowns || 0);
       if (totalTouches > 20) score += 20; // High touch count
       else if (totalTouches > 15) score += 15; // Good touches
       else if (totalTouches > 10) score += 10; // Decent touches
