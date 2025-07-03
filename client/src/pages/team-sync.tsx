@@ -36,7 +36,15 @@ export default function TeamSync() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/teams", 1] });
       // Redirect to dashboard after successful sync
-      setTimeout(() => setLocation("/"), 2000);
+      setTimeout(() => {
+        console.log("Redirecting to dashboard...");
+        try {
+          setLocation("/");
+        } catch (error) {
+          // Fallback to browser navigation
+          window.location.href = "/";
+        }
+      }, 2000);
     },
     onError: (error) => {
       toast({
@@ -63,7 +71,15 @@ export default function TeamSync() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/teams", 1] });
       // Redirect to dashboard after successful sync
-      setTimeout(() => setLocation("/"), 2000);
+      setTimeout(() => {
+        console.log("Redirecting to dashboard...");
+        try {
+          setLocation("/");
+        } catch (error) {
+          // Fallback to browser navigation
+          window.location.href = "/";
+        }
+      }, 2000);
     },
     onError: (error) => {
       toast({
@@ -90,7 +106,15 @@ export default function TeamSync() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/teams", 1] });
       // Redirect to dashboard after successful sync
-      setTimeout(() => setLocation("/"), 2000);
+      setTimeout(() => {
+        console.log("Redirecting to dashboard...");
+        try {
+          setLocation("/");
+        } catch (error) {
+          // Fallback to browser navigation
+          window.location.href = "/";
+        }
+      }, 2000);
     },
     onError: (error) => {
       toast({
