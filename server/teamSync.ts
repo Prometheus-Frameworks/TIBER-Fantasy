@@ -134,9 +134,43 @@ export class TeamSyncService {
       }
 
       const rosters = await rostersResponse.json();
-      const userRoster = rosters.find((r: any) => r.owner_id === userId);
+      
+      // Try to find user by exact owner_id first
+      let userRoster = rosters.find((r: any) => r.owner_id === userId);
+      
+      // If not found, try to get league users and match by username
+      if (!userRoster) {
+        try {
+          const usersUrl = `https://api.sleeper.app/v1/league/${leagueId}/users`;
+          const usersResponse = await fetch(usersUrl);
+          if (usersResponse.ok) {
+            const users = await usersResponse.json();
+            const matchedUser = users.find((u: any) => 
+              u.username?.toLowerCase() === userId.toLowerCase() || 
+              u.display_name?.toLowerCase() === userId.toLowerCase()
+            );
+            if (matchedUser) {
+              userRoster = rosters.find((r: any) => r.owner_id === matchedUser.user_id);
+            }
+          }
+        } catch (e) {
+          // Continue with original error if username lookup fails
+        }
+      }
       
       if (!userRoster) {
+        // Get available users for better error message
+        try {
+          const usersUrl = `https://api.sleeper.app/v1/league/${leagueId}/users`;
+          const usersResponse = await fetch(usersUrl);
+          if (usersResponse.ok) {
+            const users = await usersResponse.json();
+            const userList = users.map((u: any) => u.username || u.display_name).join(', ');
+            throw new Error(`User "${userId}" not found in league. Available users: ${userList}`);
+          }
+        } catch (e) {
+          // Fall back to generic error
+        }
         throw new Error(`User ${userId} not found in league ${leagueId}`);
       }
 
