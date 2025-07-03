@@ -79,10 +79,22 @@ export default function PlayerAnalysisPage() {
   };
 
   const getSeparationRating = (percentile: number) => {
-    if (percentile >= 75) return { label: "Elite", color: "text-green-600" };
-    if (percentile >= 50) return { label: "Above Avg", color: "text-blue-600" };
-    if (percentile >= 25) return { label: "Below Avg", color: "text-yellow-600" };
-    return { label: "Poor", color: "text-red-600" };
+    if (percentile >= 75) return { label: "Elite", color: "text-green-600", bgColor: "bg-green-50", borderColor: "border-green-200" };
+    if (percentile >= 50) return { label: "Above Avg", color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" };
+    if (percentile >= 25) return { label: "Below Avg", color: "text-yellow-600", bgColor: "bg-yellow-50", borderColor: "border-yellow-200" };
+    return { label: "Poor", color: "text-red-600", bgColor: "bg-red-50", borderColor: "border-red-200" };
+  };
+
+  const getPercentileColor = (percentile: number) => {
+    if (percentile >= 75) return "text-green-600";
+    if (percentile >= 50) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  const getMetricColor = (value: number, thresholds: { good: number; avg: number }) => {
+    if (value >= thresholds.good) return "text-green-600";
+    if (value >= thresholds.avg) return "text-yellow-600";
+    return "text-red-600";
   };
 
   const getTargetTrendIcon = (trend: string) => {
@@ -176,8 +188,8 @@ export default function PlayerAnalysisPage() {
                 Separation Analytics
               </h3>
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <div className="text-2xl font-bold text-blue-600">{analysis.separation_metrics.avg_separation.toFixed(2)}</div>
+                <div className={`${getSeparationRating(analysis.separation_metrics.avg_separation_percentile).bgColor} ${getSeparationRating(analysis.separation_metrics.avg_separation_percentile).borderColor} border rounded-lg p-4`}>
+                  <div className={`text-2xl font-bold ${getSeparationRating(analysis.separation_metrics.avg_separation_percentile).color}`}>{analysis.separation_metrics.avg_separation.toFixed(2)}</div>
                   <div className="text-sm text-gray-600">Avg Separation (yards)</div>
                   <div className="flex items-center mt-2">
                     <Progress value={analysis.separation_metrics.avg_separation_percentile} className="flex-1 h-2" />
@@ -185,17 +197,17 @@ export default function PlayerAnalysisPage() {
                       {getSeparationRating(analysis.separation_metrics.avg_separation_percentile).label}
                     </span>
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">{analysis.separation_metrics.avg_separation_percentile.toFixed(1)}th percentile</div>
+                  <div className={`text-xs mt-1 ${getPercentileColor(analysis.separation_metrics.avg_separation_percentile)}`}>{analysis.separation_metrics.avg_separation_percentile.toFixed(1)}th percentile</div>
                 </div>
 
-                <div className="bg-green-50 rounded-lg p-4">
-                  <div className="text-2xl font-bold text-green-600">{analysis.separation_metrics.avg_cushion.toFixed(1)}</div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className={`text-2xl font-bold ${getMetricColor(analysis.separation_metrics.avg_cushion, { good: 6.0, avg: 4.5 })}`}>{analysis.separation_metrics.avg_cushion.toFixed(1)}</div>
                   <div className="text-sm text-gray-600">Avg Cushion (yards)</div>
                   <div className="text-xs text-gray-500 mt-1">Pre-snap defender distance</div>
                 </div>
 
-                <div className="bg-purple-50 rounded-lg p-4">
-                  <div className="text-2xl font-bold text-purple-600">{analysis.separation_metrics.percent_share_of_intended_air_yards.toFixed(1)}%</div>
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className={`text-2xl font-bold ${getMetricColor(analysis.separation_metrics.percent_share_of_intended_air_yards, { good: 25, avg: 15 })}`}>{analysis.separation_metrics.percent_share_of_intended_air_yards.toFixed(1)}%</div>
                   <div className="text-sm text-gray-600">Air Yards Share</div>
                   <div className="text-xs text-gray-500 mt-1">Team target quality</div>
                 </div>
@@ -242,34 +254,34 @@ export default function PlayerAnalysisPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Production & Efficiency</h3>
               <div className="grid gap-4 md:grid-cols-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-field-green">{analysis.receiving_metrics.targets}</div>
+                  <div className={`text-2xl font-bold ${getMetricColor(analysis.receiving_metrics.targets, { good: 100, avg: 60 })}`}>{analysis.receiving_metrics.targets}</div>
                   <div className="text-sm text-gray-600">Targets</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{analysis.receiving_metrics.receptions}</div>
+                  <div className={`text-2xl font-bold ${getMetricColor(analysis.receiving_metrics.receptions, { good: 70, avg: 40 })}`}>{analysis.receiving_metrics.receptions}</div>
                   <div className="text-sm text-gray-600">Receptions</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">{analysis.receiving_metrics.receiving_yards}</div>
+                  <div className={`text-2xl font-bold ${getMetricColor(analysis.receiving_metrics.receiving_yards, { good: 1000, avg: 600 })}`}>{analysis.receiving_metrics.receiving_yards}</div>
                   <div className="text-sm text-gray-600">Receiving Yards</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">{analysis.receiving_metrics.receiving_tds}</div>
+                  <div className={`text-2xl font-bold ${getMetricColor(analysis.receiving_metrics.receiving_tds, { good: 8, avg: 4 })}`}>{analysis.receiving_metrics.receiving_tds}</div>
                   <div className="text-sm text-gray-600">Touchdowns</div>
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-3 mt-6 pt-6 border-t">
                 <div className="text-center">
-                  <div className="text-lg font-bold text-gray-900">{analysis.efficiency_metrics.yards_per_target.toFixed(2)}</div>
+                  <div className={`text-lg font-bold ${getMetricColor(analysis.efficiency_metrics.yards_per_target, { good: 8.5, avg: 6.5 })}`}>{analysis.efficiency_metrics.yards_per_target.toFixed(2)}</div>
                   <div className="text-sm text-gray-600">Yards per Target</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-bold text-gray-900">{analysis.receiving_metrics.catch_percentage.toFixed(1)}%</div>
+                  <div className={`text-lg font-bold ${getMetricColor(analysis.receiving_metrics.catch_percentage, { good: 65, avg: 55 })}`}>{analysis.receiving_metrics.catch_percentage.toFixed(1)}%</div>
                   <div className="text-sm text-gray-600">Catch Rate</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-bold text-gray-900">{analysis.receiving_metrics.avg_yac.toFixed(1)}</div>
+                  <div className={`text-lg font-bold ${getMetricColor(analysis.receiving_metrics.avg_yac, { good: 5.5, avg: 4.0 })}`}>{analysis.receiving_metrics.avg_yac.toFixed(1)}</div>
                   <div className="text-sm text-gray-600">Avg YAC</div>
                 </div>
               </div>
