@@ -64,9 +64,10 @@ export default function TeamSync() {
         description: `Successfully imported ${data.playersFound} players from Sleeper`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/teams", 1] });
-      // Try multiple redirect methods
-      setLocation("/");
-      setTimeout(() => window.location.href = "/", 100);
+      // Wait for data to sync, then redirect
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1000);
     },
     onError: (error) => {
       toast({
