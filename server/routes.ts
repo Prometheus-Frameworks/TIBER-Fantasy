@@ -93,6 +93,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const syncData = await teamSyncService.syncESPNTeam(leagueId, espnTeamId, season || 2024);
       
+      // Match players to database and add to team
+      const matchedPlayers = await teamSyncService.matchPlayersToDatabase(syncData);
+      
+      // Add matched players to team
+      let playersAdded = 0;
+      for (const match of matchedPlayers) {
+        if (match.player && match.confidence > 0.8) {
+          try {
+            await storage.addPlayerToTeam({
+              teamId: teamId,
+              playerId: match.player.id,
+              isStarter: match.syncPlayer.isStarter || false
+            });
+            playersAdded++;
+          } catch (error) {
+            console.log(`Player ${match.player.name} already on team or error adding:`, error);
+          }
+        }
+      }
+      
       // Update team with sync metadata
       await storage.updateTeamSync(teamId, {
         syncPlatform: "espn",
@@ -105,7 +125,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         message: "ESPN team synced successfully",
         syncData,
-        playersFound: syncData.players.length
+        playersFound: syncData.players.length,
+        playersAdded: playersAdded
       });
     } catch (error) {
       console.error("ESPN sync error:", error);
@@ -125,6 +146,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const syncData = await teamSyncService.syncSleeperTeam(leagueId, userId);
       
+      // Match players to database and add to team
+      const matchedPlayers = await teamSyncService.matchPlayersToDatabase(syncData);
+      
+      // Clear existing team roster
+      const existingPlayers = await storage.getTeamPlayers(teamId);
+      for (const player of existingPlayers) {
+        // Note: We don't have a remove method, so we'll skip this for now
+      }
+      
+      // Add matched players to team
+      let playersAdded = 0;
+      for (const match of matchedPlayers) {
+        if (match.player && match.confidence > 0.8) {
+          try {
+            await storage.addPlayerToTeam({
+              teamId: teamId,
+              playerId: match.player.id,
+              isStarter: match.syncPlayer.isStarter || false
+            });
+            playersAdded++;
+          } catch (error) {
+            console.log(`Player ${match.player.name} already on team or error adding:`, error);
+          }
+        }
+      }
+      
       // Update team with sync metadata
       await storage.updateTeamSync(teamId, {
         syncPlatform: "sleeper",
@@ -137,7 +184,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         message: "Sleeper team synced successfully",
         syncData,
-        playersFound: syncData.players.length
+        playersFound: syncData.players.length,
+        playersAdded: playersAdded
       });
     } catch (error) {
       console.error("Sleeper sync error:", error);
@@ -157,6 +205,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const syncData = await teamSyncService.syncManualTeam(playerNames, teamName || "My Team");
       
+      // Match players to database and add to team
+      const matchedPlayers = await teamSyncService.matchPlayersToDatabase(syncData);
+      
+      // Add matched players to team
+      let playersAdded = 0;
+      for (const match of matchedPlayers) {
+        if (match.player && match.confidence > 0.8) {
+          try {
+            await storage.addPlayerToTeam({
+              teamId: teamId,
+              playerId: match.player.id,
+              isStarter: match.syncPlayer.isStarter || false
+            });
+            playersAdded++;
+          } catch (error) {
+            console.log(`Player ${match.player.name} already on team or error adding:`, error);
+          }
+        }
+      }
+      
       // Update team with sync metadata
       await storage.updateTeamSync(teamId, {
         syncPlatform: "manual",
@@ -169,7 +237,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         message: "Manual team import completed",
         syncData,
-        playersFound: syncData.players.length
+        playersFound: syncData.players.length,
+        playersAdded: playersAdded
       });
     } catch (error) {
       console.error("Manual sync error:", error);
