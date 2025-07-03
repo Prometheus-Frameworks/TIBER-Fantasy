@@ -37,7 +37,7 @@ interface ArbitrageOpportunity {
 // Hit rate interface removed - requires actual historical validation
 
 export default function ValueArbitragePage() {
-  const [positionFilter, setPositionFilter] = useState<string>("all");
+  const [positionFilter, setPositionFilter] = useState<string>("skill");
   
   const { data: opportunities, isLoading } = useQuery<ArbitrageOpportunity[]>({
     queryKey: ["/api/arbitrage/opportunities", positionFilter === "all" ? undefined : positionFilter],
