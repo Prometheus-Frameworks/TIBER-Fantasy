@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { teamSyncService } from "./teamSync";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -74,6 +75,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(players);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch available players" });
+    }
+  });
+
+  // Team sync endpoints
+  
+  // Sync ESPN team
+  app.post("/api/teams/:id/sync/espn", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const { leagueId, espnTeamId, season } = req.body;
+      
+      if (!leagueId || !espnTeamId) {
+        return res.status(400).json({ message: "League ID and ESPN Team ID are required" });
+      }
+
+      const syncData = await teamSyncService.syncESPNTeam(leagueId, espnTeamId, season || 2024);
+      
+      // Update team with sync metadata
+      await storage.updateTeamSync(teamId, {
+        syncPlatform: "espn",
+        syncLeagueId: leagueId,
+        syncTeamId: espnTeamId,
+        lastSyncDate: new Date(),
+        syncEnabled: true
+      });
+
+      res.json({
+        message: "ESPN team synced successfully",
+        syncData,
+        playersFound: syncData.players.length
+      });
+    } catch (error) {
+      console.error("ESPN sync error:", error);
+      res.status(500).json({ message: `ESPN sync failed: ${error}` });
+    }
+  });
+
+  // Sync Sleeper team
+  app.post("/api/teams/:id/sync/sleeper", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const { leagueId, userId } = req.body;
+      
+      if (!leagueId || !userId) {
+        return res.status(400).json({ message: "League ID and User ID are required" });
+      }
+
+      const syncData = await teamSyncService.syncSleeperTeam(leagueId, userId);
+      
+      // Update team with sync metadata
+      await storage.updateTeamSync(teamId, {
+        syncPlatform: "sleeper",
+        syncLeagueId: leagueId,
+        syncTeamId: userId,
+        lastSyncDate: new Date(),
+        syncEnabled: true
+      });
+
+      res.json({
+        message: "Sleeper team synced successfully",
+        syncData,
+        playersFound: syncData.players.length
+      });
+    } catch (error) {
+      console.error("Sleeper sync error:", error);
+      res.status(500).json({ message: `Sleeper sync failed: ${error}` });
+    }
+  });
+
+  // Manual team import
+  app.post("/api/teams/:id/sync/manual", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const { playerNames, teamName } = req.body;
+      
+      if (!Array.isArray(playerNames) || playerNames.length === 0) {
+        return res.status(400).json({ message: "Player names array is required" });
+      }
+
+      const syncData = await teamSyncService.syncManualTeam(playerNames, teamName || "My Team");
+      
+      // Update team with sync metadata
+      await storage.updateTeamSync(teamId, {
+        syncPlatform: "manual",
+        syncLeagueId: null,
+        syncTeamId: null,
+        lastSyncDate: new Date(),
+        syncEnabled: false
+      });
+
+      res.json({
+        message: "Manual team import completed",
+        syncData,
+        playersFound: syncData.players.length
+      });
+    } catch (error) {
+      console.error("Manual sync error:", error);
+      res.status(500).json({ message: `Manual import failed: ${error}` });
+    }
+  });
+
+  // Test sync endpoints (for development)
+  app.post("/api/sync/test/espn", async (req, res) => {
+    try {
+      const { leagueId, teamId } = req.body;
+      const syncData = await teamSyncService.syncESPNTeam(leagueId, teamId);
+      res.json(syncData);
+    } catch (error) {
+      res.status(500).json({ message: `Test failed: ${error}` });
+    }
+  });
+
+  app.post("/api/sync/test/sleeper", async (req, res) => {
+    try {
+      const { leagueId, userId } = req.body;
+      const syncData = await teamSyncService.syncSleeperTeam(leagueId, userId);
+      res.json(syncData);
+    } catch (error) {
+      res.status(500).json({ message: `Test failed: ${error}` });
     }
   });
 

@@ -23,6 +23,13 @@ export interface IStorage {
   // Team operations
   getTeam(id: number): Promise<Team | undefined>;
   createTeam(team: InsertTeam): Promise<Team>;
+  updateTeamSync(teamId: number, syncData: {
+    syncPlatform?: string | null;
+    syncLeagueId?: string | null;
+    syncTeamId?: string | null;
+    lastSyncDate?: Date | null;
+    syncEnabled?: boolean | null;
+  }): Promise<void>;
   
   // Player operations
   getPlayer(id: number): Promise<Player | undefined>;
@@ -155,6 +162,20 @@ export class MemStorage implements IStorage {
     const newTeam: Team = { ...team, id };
     this.teams.set(id, newTeam);
     return newTeam;
+  }
+
+  async updateTeamSync(teamId: number, syncData: {
+    syncPlatform?: string | null;
+    syncLeagueId?: string | null;
+    syncTeamId?: string | null;
+    lastSyncDate?: Date | null;
+    syncEnabled?: boolean | null;
+  }): Promise<void> {
+    const team = this.teams.get(teamId);
+    if (team) {
+      Object.assign(team, syncData);
+      this.teams.set(teamId, team);
+    }
   }
 
   async getPlayer(id: number): Promise<Player | undefined> {
@@ -364,6 +385,19 @@ export class DatabaseStorage implements IStorage {
       .values(team)
       .returning();
     return newTeam;
+  }
+
+  async updateTeamSync(teamId: number, syncData: {
+    syncPlatform?: string | null;
+    syncLeagueId?: string | null;
+    syncTeamId?: string | null;
+    lastSyncDate?: Date | null;
+    syncEnabled?: boolean | null;
+  }): Promise<void> {
+    await db
+      .update(teams)
+      .set(syncData)
+      .where(eq(teams.id, teamId));
   }
 
   async getPlayer(id: number): Promise<Player | undefined> {

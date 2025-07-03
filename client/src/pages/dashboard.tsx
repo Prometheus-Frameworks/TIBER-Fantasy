@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Volleyball, RotateCcw } from "lucide-react";
+import { Loader2, Volleyball, RotateCcw, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import TeamOverview from "@/components/team-overview";
 import PositionAnalysis from "@/components/position-analysis";
 import PlayerRecommendations from "@/components/player-recommendations";
@@ -54,6 +55,15 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <Link href="/sync">
+                <Button 
+                  variant="outline"
+                  className="text-field-green border-field-green hover:bg-field-green hover:text-white"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import Team
+                </Button>
+              </Link>
               <Button 
                 onClick={handleRefresh}
                 className="bg-field-green hover:bg-dark-green"

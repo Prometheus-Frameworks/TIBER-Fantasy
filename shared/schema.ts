@@ -12,6 +12,12 @@ export const teams = pgTable("teams", {
   leagueRank: integer("league_rank").notNull(),
   totalPoints: real("total_points").notNull(),
   healthScore: integer("health_score").notNull(), // 0-100
+  // Sync metadata
+  syncPlatform: text("sync_platform"), // "espn", "yahoo", "sleeper", "manual"
+  syncLeagueId: text("sync_league_id"), // External league ID
+  syncTeamId: text("sync_team_id"), // External team ID
+  lastSyncDate: timestamp("last_sync_date"),
+  syncEnabled: boolean("sync_enabled").default(false),
 });
 
 export const players = pgTable("players", {

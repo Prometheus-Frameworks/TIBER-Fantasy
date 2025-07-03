@@ -19,12 +19,14 @@ This is a full-stack fantasy football team management application built with Rea
 - **Language**: TypeScript with ES modules
 - **API Design**: RESTful API endpoints under `/api` namespace
 - **Development Server**: Vite middleware integration for hot module replacement
+- **External APIs**: SportsDataIO integration for real NFL player data
 
 ### Data Layer
 - **Database**: PostgreSQL with Neon serverless driver
 - **ORM**: Drizzle ORM for type-safe database operations
 - **Schema Management**: Drizzle Kit for migrations and schema management
 - **Session Storage**: PostgreSQL-based session storage using connect-pg-simple
+- **Real Data**: SportsDataIO API providing authentic NFL statistics and projections
 
 ## Key Components
 
@@ -43,6 +45,13 @@ The application uses a relational database design with the following core entiti
 - `GET /api/teams/:id/performance` - Weekly performance history
 - `GET /api/teams/:id/recommendations` - Player recommendations with optional position filtering
 
+#### Team Sync Endpoints
+- `POST /api/teams/:id/sync/espn` - Import team from ESPN Fantasy Football
+- `POST /api/teams/:id/sync/sleeper` - Import team from Sleeper Fantasy Football
+- `POST /api/teams/:id/sync/manual` - Manual team import via player names
+- `POST /api/sync/test/espn` - Test ESPN sync functionality
+- `POST /api/sync/test/sleeper` - Test Sleeper sync functionality
+
 ### UI Components
 - **Dashboard**: Main application view with team overview and navigation
 - **Team Overview**: Team statistics, health score, and key metrics
@@ -50,6 +59,7 @@ The application uses a relational database design with the following core entiti
 - **Player Recommendations**: Smart suggestions for roster improvements
 - **Performance Chart**: Weekly performance visualization with Recharts
 - **Mobile Navigation**: Responsive bottom navigation for mobile devices
+- **Team Sync**: Multi-platform team import interface with tabbed navigation for ESPN, Sleeper, Yahoo, and manual import options
 
 ## Data Flow
 
@@ -99,6 +109,7 @@ The application uses a relational database design with the following core entiti
 Changelog:
 - July 03, 2025. Initial setup with in-memory storage
 - July 03, 2025. Added PostgreSQL database integration with Drizzle ORM
+- July 03, 2025. Built comprehensive fantasy team sync system with ESPN, Sleeper, and manual import capabilities
 ```
 
 ## User Preferences
