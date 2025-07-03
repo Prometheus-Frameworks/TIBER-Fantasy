@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Dashboard from "@/pages/dashboard";
 import TeamSync from "@/pages/team-sync";
 import LineupOptimizer from "@/pages/lineup-optimizer";
+import PremiumAnalytics from "@/pages/premium-analytics";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -15,6 +16,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/sync" component={TeamSync} />
       <Route path="/analytics" component={LineupOptimizer} />
+      <Route path="/premium" component={PremiumAnalytics} />
       <Route component={NotFound} />
     </Switch>
   );

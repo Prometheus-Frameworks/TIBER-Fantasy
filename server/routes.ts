@@ -263,6 +263,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Premium Analytics Endpoint
+  app.patch("/api/players/:id/premium", async (req, res) => {
+    try {
+      const playerId = parseInt(req.params.id);
+      const premiumData = req.body;
+      
+      await storage.updatePlayerPremiumAnalytics(playerId, {
+        ...premiumData,
+        premiumDataUpdated: new Date()
+      });
+      
+      res.json({ message: "Premium analytics updated successfully" });
+    } catch (error) {
+      console.error("Error updating premium analytics:", error);
+      res.status(500).json({ message: "Failed to update premium analytics" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

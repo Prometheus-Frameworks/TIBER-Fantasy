@@ -82,6 +82,9 @@ export interface IStorage {
   createInjuryTracker(injury: InsertInjuryTracker): Promise<InjuryTracker>;
   getInjuryTracker(playerId: number): Promise<InjuryTracker | undefined>;
   updateInjuryTracker(playerId: number, updates: Partial<InsertInjuryTracker>): Promise<void>;
+  
+  // Premium Analytics
+  updatePlayerPremiumAnalytics(playerId: number, premiumData: any): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -537,6 +540,13 @@ export class DatabaseStorage implements IStorage {
     return result
       .sort((a: Player, b: Player) => (b.upside + b.avgPoints) - (a.upside + a.avgPoints))
       .slice(0, 10);
+  }
+
+  async updatePlayerPremiumAnalytics(playerId: number, premiumData: any): Promise<void> {
+    await db
+      .update(players)
+      .set(premiumData)
+      .where(eq(players.id, playerId));
   }
 }
 

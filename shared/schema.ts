@@ -41,6 +41,24 @@ export const players = pgTable("players", {
   carries: integer("carries"), // RB carries
   snapCount: integer("snap_count"), // Offensive snap count
   externalId: text("external_id"), // SportsDataIO player ID
+  
+  // Advanced Premium Analytics
+  yardsPerRouteRun: real("yards_per_route_run"), // YPRR - key efficiency metric
+  yardsAfterContact: real("yards_after_contact"), // YACo - YAC efficiency
+  routesRun: integer("routes_run"), // Total routes run
+  airyards: real("air_yards"), // Average air yards per target
+  cushion: real("cushion"), // Average cushion (separation)
+  separationScore: real("separation_score"), // NextGen separation metric
+  receivingGrade: real("receiving_grade"), // PFF receiving grade
+  contested_catches: integer("contested_catches"), // Contested catch attempts
+  contested_catch_rate: real("contested_catch_rate"), // Success rate on contested
+  endzone_targets: integer("endzone_targets"), // Red zone/endzone targets
+  firstdown_rate: real("firstdown_rate"), // First down rate per target
+  
+  // Premium entry metadata
+  premiumDataSource: text("premium_data_source"), // "PFF", "NextGen", "Manual"
+  premiumDataWeek: integer("premium_data_week"), // Week of premium data
+  premiumDataUpdated: timestamp("premium_data_updated"), // Last manual update
 });
 
 export const teamPlayers = pgTable("team_players", {
