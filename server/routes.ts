@@ -6,6 +6,9 @@ import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generat
 import { valueArbitrageService } from "./valueArbitrage";
 import { sportsDataAPI } from "./sportsdata";
 import { playerAnalysisCache } from "./playerAnalysisCache";
+import { db } from "./db";
+import { dynastyTradeHistory } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -405,6 +408,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating premium analytics:", error);
       res.status(500).json({ message: "Failed to update premium analytics" });
+    }
+  });
+
+  // Dynasty Trade History Endpoints
+  app.get("/api/teams/:id/trades", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const trades = await db.select()
+        .from(dynastyTradeHistory)
+        .where(eq(dynastyTradeHistory.teamId, teamId))
+        .orderBy(desc(dynastyTradeHistory.tradeDate));
+      res.json(trades);
+    } catch (error) {
+      console.error("Error fetching trade history:", error);
+      res.status(500).json({ message: "Failed to fetch trade history" });
+    }
+  });
+
+  app.post("/api/teams/:id/trades", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const tradeData = {
+        ...req.body,
+        teamId,
+      };
+      
+      const [trade] = await db.insert(dynastyTradeHistory)
+        .values(tradeData)
+        .returning();
+      
+      res.json(trade);
+    } catch (error) {
+      console.error("Error creating trade:", error);
+      res.status(500).json({ message: "Failed to create trade" });
     }
   });
 

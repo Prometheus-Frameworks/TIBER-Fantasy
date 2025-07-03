@@ -152,6 +152,13 @@ export class ValueArbitrageService {
 
   // Find top arbitrage opportunities
   async findArbitrageOpportunities(position?: string, limit: number = 20): Promise<ArbitrageOpportunity[]> {
+    // Active players filter - exclude inactive/retired players
+    const inactivePlayers = [
+      'Joe Flacco', 'Ryan Fitzpatrick', 'Matt Ryan', 'Ben Roethlisberger', 
+      'Tom Brady', 'Philip Rivers', 'Drew Brees', 'Eli Manning', 'Case Keenum',
+      'Mike White', 'Nathan Peterman', 'Josh Johnson'
+    ];
+
     // Get available players (not on teams)
     let whereConditions = eq(players.isAvailable, true);
     
@@ -159,7 +166,14 @@ export class ValueArbitrageService {
       whereConditions = and(whereConditions, eq(players.position, position)) as any;
     }
     
-    const availablePlayers = await db.select().from(players).where(whereConditions).limit(100); // Get larger sample to analyze
+    const allPlayers = await db.select().from(players).where(whereConditions).limit(100);
+    
+    // Filter out inactive players
+    const availablePlayers = allPlayers.filter(player => 
+      !inactivePlayers.some(inactive => 
+        player.name.toLowerCase().includes(inactive.toLowerCase())
+      )
+    );
     
     const opportunities: ArbitrageOpportunity[] = [];
     

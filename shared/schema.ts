@@ -122,6 +122,25 @@ export const tradeAnalysis = pgTable("trade_analysis", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const dynastyTradeHistory = pgTable("dynasty_trade_history", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull().references(() => teams.id),
+  tradePartnerTeamId: integer("trade_partner_team_id"), // Other team in trade
+  playersGiven: text("players_given").notNull(), // JSON array of {playerId, playerName, position, age}
+  playersReceived: text("players_received").notNull(), // JSON array of {playerId, playerName, position, age}
+  draftPicksGiven: text("draft_picks_given"), // JSON array of {year, round, pick}
+  draftPicksReceived: text("draft_picks_received"), // JSON array of {year, round, pick}
+  tradeDate: timestamp("trade_date").defaultNow(),
+  tradeValue: real("trade_value"), // Value assessment at time of trade
+  currentValue: real("current_value"), // Current retrospective value
+  tradeGrade: text("trade_grade"), // "A+", "A", "B+", "B", "C+", "C", "D+", "D", "F"
+  notes: text("notes"), // User notes about the trade
+  leagueId: text("league_id"), // External league ID for sync
+  externalTradeId: text("external_trade_id"), // Platform-specific trade ID
+  season: integer("season").notNull().default(2024),
+  week: integer("week"), // Week the trade was made
+});
+
 export const waiverRecommendations = pgTable("waiver_recommendations", {
   id: serial("id").primaryKey(),
   teamId: integer("team_id").notNull().references(() => teams.id),
@@ -267,6 +286,7 @@ export type WeeklyPerformance = typeof weeklyPerformance.$inferSelect;
 export type MatchupAnalysis = typeof matchupAnalysis.$inferSelect;
 export type LineupOptimization = typeof lineupOptimization.$inferSelect;
 export type TradeAnalysis = typeof tradeAnalysis.$inferSelect;
+export type DynastyTradeHistory = typeof dynastyTradeHistory.$inferSelect;
 export type WaiverRecommendations = typeof waiverRecommendations.$inferSelect;
 export type InjuryTracker = typeof injuryTracker.$inferSelect;
 export type MarketData = typeof marketData.$inferSelect;
