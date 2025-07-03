@@ -34,11 +34,7 @@ interface ArbitrageOpportunity {
   };
 }
 
-interface HitRate {
-  undervalued: number;
-  overvalued: number;
-  overall: number;
-}
+// Hit rate interface removed - requires actual historical validation
 
 export default function ValueArbitragePage() {
   const [positionFilter, setPositionFilter] = useState<string>("all");
@@ -54,9 +50,7 @@ export default function ValueArbitragePage() {
     }
   });
 
-  const { data: hitRate } = useQuery<HitRate>({
-    queryKey: ["/api/arbitrage/hit-rate"],
-  });
+  // Hit rate query removed - requires actual historical validation data
 
   const getRecommendationColor = (recommendation: string) => {
     switch (recommendation) {
@@ -115,29 +109,13 @@ export default function ValueArbitragePage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Performance Summary */}
-        {hitRate && (
-          <Card className="p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">System Performance</h2>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{hitRate.undervalued.toFixed(1)}%</div>
-                <div className="text-sm text-gray-600">Undervalued Hit Rate</div>
-                <Progress value={hitRate.undervalued} className="mt-2 h-2" />
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">{hitRate.overvalued.toFixed(1)}%</div>
-                <div className="text-sm text-gray-600">Overvalued Hit Rate</div>
-                <Progress value={hitRate.overvalued} className="mt-2 h-2" />
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-field-green">{hitRate.overall.toFixed(1)}%</div>
-                <div className="text-sm text-gray-600">Overall Accuracy</div>
-                <Progress value={hitRate.overall} className="mt-2 h-2" />
-              </div>
-            </div>
-          </Card>
-        )}
+        {/* Performance tracking requires historical validation data */}
+        <Card className="p-6 mb-6 bg-blue-50 border-blue-200">
+          <h2 className="text-lg font-semibold text-blue-900 mb-2">System Status</h2>
+          <p className="text-blue-800 text-sm">
+            Currently collecting baseline metrics and market data. Historical performance tracking will be available after accumulating sufficient validation data over multiple NFL weeks.
+          </p>
+        </Card>
 
         {/* Filters */}
         <div className="flex items-center justify-between mb-6">

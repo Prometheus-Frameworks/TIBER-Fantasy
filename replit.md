@@ -143,6 +143,7 @@ Changelog:
 - July 03, 2025. Built smart caching system to solve compute efficiency concerns - pre-computed data for popular players
 - July 03, 2025. Added Justin Jefferson, Tyreek Hill, and CeeDee Lamb to cached player analysis
 - July 03, 2025. Updated UI to use colored boxes with solid black numbers for better visual hierarchy
+- July 03, 2025. Removed misleading hit rate claims and fake performance metrics - system now honestly reports data collection status
 ```
 
 ## User Preferences

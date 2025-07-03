@@ -235,13 +235,13 @@ export class ValueArbitrageService {
   }
 
   // Calculate hit rate for arbitrage recommendations
-  async calculateHitRate(weeks: number = 4): Promise<{ undervalued: number; overvalued: number; overall: number }> {
-    // This would compare past recommendations to actual performance
-    // For now, return placeholder data
+  async calculateHitRate(weeks: number = 4): Promise<{ status: string; message: string; dataAvailable: boolean }> {
+    // We need actual historical data to calculate real hit rates
+    // This requires tracking recommendations over multiple weeks/seasons
     return {
-      undervalued: 72.5, // % of undervalued picks that outperformed ADP
-      overvalued: 68.3,  // % of overvalued picks that underperformed ADP  
-      overall: 70.4      // Overall accuracy rate
+      status: "insufficient_data",
+      message: "Hit rate calculation requires historical tracking data from multiple NFL weeks. System is currently collecting baseline metrics.",
+      dataAvailable: false
     };
   }
 }

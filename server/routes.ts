@@ -471,15 +471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/arbitrage/hit-rate", async (req, res) => {
-    try {
-      const hitRate = await valueArbitrageService.calculateHitRate();
-      res.json(hitRate);
-    } catch (error) {
-      console.error("Error calculating hit rate:", error);
-      res.status(500).json({ message: "Failed to calculate hit rate" });
-    }
-  });
+  // Hit rate endpoint removed - requires actual historical validation data
 
 
 
