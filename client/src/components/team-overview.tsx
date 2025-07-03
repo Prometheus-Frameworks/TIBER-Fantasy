@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Search, TrendingUp, ArrowLeftRight, Users } from "lucide-react";
+import { Link } from "wouter";
 import type { Team } from "@shared/schema";
 
 interface TeamOverviewProps {
@@ -52,29 +53,37 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Button variant="outline" className="bg-blue-50 hover:bg-blue-100 border-blue-200 h-auto p-4 flex flex-col items-start text-left">
-            <Search className="text-blue-600 mb-2" size={20} />
-            <div className="font-medium text-gray-900">Find Players</div>
-            <div className="text-sm text-gray-600">Search waiver wire</div>
-          </Button>
+          <Link href="/players">
+            <Button variant="outline" className="bg-blue-50 hover:bg-blue-100 border-blue-200 h-auto p-4 flex flex-col items-start text-left w-full">
+              <Search className="text-blue-600 mb-2" size={20} />
+              <div className="font-medium text-gray-900">Find Players</div>
+              <div className="text-sm text-gray-600">Search waiver wire</div>
+            </Button>
+          </Link>
           
-          <Button variant="outline" className="bg-orange-50 hover:bg-orange-100 border-orange-200 h-auto p-4 flex flex-col items-start text-left">
-            <TrendingUp className="text-orange-600 mb-2" size={20} />
-            <div className="font-medium text-gray-900">Trends</div>
-            <div className="text-sm text-gray-600">Performance analysis</div>
-          </Button>
+          <Link href="/trends">
+            <Button variant="outline" className="bg-orange-50 hover:bg-orange-100 border-orange-200 h-auto p-4 flex flex-col items-start text-left w-full">
+              <TrendingUp className="text-orange-600 mb-2" size={20} />
+              <div className="font-medium text-gray-900">Trends</div>
+              <div className="text-sm text-gray-600">Performance analysis</div>
+            </Button>
+          </Link>
           
-          <Button variant="outline" className="bg-purple-50 hover:bg-purple-100 border-purple-200 h-auto p-4 flex flex-col items-start text-left">
-            <ArrowLeftRight className="text-purple-600 mb-2" size={20} />
-            <div className="font-medium text-gray-900">Trade Ideas</div>
-            <div className="text-sm text-gray-600">Suggested trades</div>
-          </Button>
+          <Link href="/trades">
+            <Button variant="outline" className="bg-purple-50 hover:bg-purple-100 border-purple-200 h-auto p-4 flex flex-col items-start text-left w-full">
+              <ArrowLeftRight className="text-purple-600 mb-2" size={20} />
+              <div className="font-medium text-gray-900">Trade Ideas</div>
+              <div className="text-sm text-gray-600">Suggested trades</div>
+            </Button>
+          </Link>
           
-          <Button variant="outline" className="bg-green-50 hover:bg-green-100 border-green-200 h-auto p-4 flex flex-col items-start text-left">
-            <Users className="text-green-600 mb-2" size={20} />
-            <div className="font-medium text-gray-900">Lineup</div>
-            <div className="text-sm text-gray-600">Optimize starters</div>
-          </Button>
+          <Link href="/lineup">
+            <Button variant="outline" className="bg-green-50 hover:bg-green-100 border-green-200 h-auto p-4 flex flex-col items-start text-left w-full">
+              <Users className="text-green-600 mb-2" size={20} />
+              <div className="font-medium text-gray-900">Lineup</div>
+              <div className="text-sm text-gray-600">Optimize starters</div>
+            </Button>
+          </Link>
         </div>
       </Card>
     </div>
