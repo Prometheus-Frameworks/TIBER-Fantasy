@@ -193,6 +193,71 @@ export const insertInjuryTrackerSchema = createInsertSchema(injuryTracker).omit(
   updatedAt: true,
 });
 
+// Value Arbitrage Tables
+export const marketData = pgTable("market_data", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull().references(() => players.id),
+  source: varchar("source", { length: 50 }).notNull(), // 'fantasypros', 'dynastydatalab', 'sportsdata'
+  adp: real("adp"),
+  adpRank: integer("adp_rank"),
+  ownershipPercent: real("ownership_percent"),
+  tradeValue: real("trade_value"),
+  consensusRank: integer("consensus_rank"),
+  week: integer("week"),
+  season: integer("season").notNull(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const valueArbitrage = pgTable("value_arbitrage", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull().references(() => players.id),
+  adpValue: real("adp_value"), // Current ADP ranking
+  metricsScore: real("metrics_score"), // Calculated score from advanced metrics
+  valueGap: real("value_gap"), // Difference between metrics and ADP
+  recommendation: varchar("recommendation", { length: 20 }).notNull(), // 'undervalued', 'overvalued', 'fair'
+  confidence: real("confidence"), // 0-100 confidence score
+  reasonCode: varchar("reason_code", { length: 100 }), // Primary metric driving recommendation
+  weeklyChange: real("weekly_change"), // Change in value gap from previous week
+  targetShare: real("target_share"),
+  yardsPerRouteRun: real("yards_per_route_run"),
+  airYards: real("air_yards"),
+  redZoneTargets: integer("red_zone_targets"),
+  snapCountPercent: real("snap_count_percent"),
+  week: integer("week").notNull(),
+  season: integer("season").notNull(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const metricCorrelations = pgTable("metric_correlations", {
+  id: serial("id").primaryKey(),
+  position: varchar("position", { length: 10 }).notNull(),
+  metricName: varchar("metric_name", { length: 100 }).notNull(),
+  correlationToFantasy: real("correlation_to_fantasy"), // -1 to 1 correlation with fantasy points
+  correlationToAdp: real("correlation_to_adp"), // -1 to 1 correlation with ADP
+  sampleSize: integer("sample_size"),
+  season: integer("season").notNull(),
+  lastCalculated: timestamp("last_calculated").defaultNow(),
+});
+
+export const insertMarketDataSchema = createInsertSchema(marketData).omit({
+  id: true,
+  createdAt: true,
+  lastUpdated: true,
+});
+
+export const insertValueArbitrageSchema = createInsertSchema(valueArbitrage).omit({
+  id: true,
+  createdAt: true,
+  lastUpdated: true,
+});
+
+export const insertMetricCorrelationsSchema = createInsertSchema(metricCorrelations).omit({
+  id: true,
+  lastCalculated: true,
+});
+
 // Types
 export type Team = typeof teams.$inferSelect;
 export type Player = typeof players.$inferSelect;
@@ -204,6 +269,9 @@ export type LineupOptimization = typeof lineupOptimization.$inferSelect;
 export type TradeAnalysis = typeof tradeAnalysis.$inferSelect;
 export type WaiverRecommendations = typeof waiverRecommendations.$inferSelect;
 export type InjuryTracker = typeof injuryTracker.$inferSelect;
+export type MarketData = typeof marketData.$inferSelect;
+export type ValueArbitrage = typeof valueArbitrage.$inferSelect;
+export type MetricCorrelations = typeof metricCorrelations.$inferSelect;
 
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
@@ -215,6 +283,9 @@ export type InsertLineupOptimization = z.infer<typeof insertLineupOptimizationSc
 export type InsertTradeAnalysis = z.infer<typeof insertTradeAnalysisSchema>;
 export type InsertWaiverRecommendations = z.infer<typeof insertWaiverRecommendationsSchema>;
 export type InsertInjuryTracker = z.infer<typeof insertInjuryTrackerSchema>;
+export type InsertMarketData = z.infer<typeof insertMarketDataSchema>;
+export type InsertValueArbitrage = z.infer<typeof insertValueArbitrageSchema>;
+export type InsertMetricCorrelations = z.infer<typeof insertMetricCorrelationsSchema>;
 
 // Relations
 export const teamsRelations = relations(teams, ({ many }) => ({

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Volleyball, RotateCcw, Upload } from "lucide-react";
+import { Loader2, Volleyball, RotateCcw, Upload, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import TeamOverview from "@/components/team-overview";
@@ -55,6 +55,14 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <Link href="/arbitrage">
+                <Button 
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Target className="w-4 h-4 mr-2" />
+                  Value Arbitrage
+                </Button>
+              </Link>
               <Link href="/sync">
                 <Button 
                   variant="outline"

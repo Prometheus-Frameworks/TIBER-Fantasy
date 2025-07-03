@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { teamSyncService } from "./teamSync";
 import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generateWaiverRecommendations } from "./analytics";
+import { valueArbitrageService } from "./valueArbitrage";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -375,6 +376,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating premium analytics:", error);
       res.status(500).json({ message: "Failed to update premium analytics" });
+    }
+  });
+
+  // Value Arbitrage Endpoints
+  app.get("/api/arbitrage/opportunities", async (req, res) => {
+    try {
+      const { position, limit } = req.query;
+      const opportunities = await valueArbitrageService.findArbitrageOpportunities(
+        position as string,
+        limit ? parseInt(limit as string) : 20
+      );
+      res.json(opportunities);
+    } catch (error) {
+      console.error("Error fetching arbitrage opportunities:", error);
+      res.status(500).json({ message: "Failed to fetch arbitrage opportunities" });
+    }
+  });
+
+  app.get("/api/arbitrage/player/:id", async (req, res) => {
+    try {
+      const playerId = parseInt(req.params.id);
+      const opportunity = await valueArbitrageService.analyzePlayer(playerId);
+      res.json(opportunity);
+    } catch (error) {
+      console.error("Error analyzing player for arbitrage:", error);
+      res.status(500).json({ message: "Failed to analyze player" });
+    }
+  });
+
+  app.get("/api/arbitrage/hit-rate", async (req, res) => {
+    try {
+      const hitRate = await valueArbitrageService.calculateHitRate();
+      res.json(hitRate);
+    } catch (error) {
+      console.error("Error calculating hit rate:", error);
+      res.status(500).json({ message: "Failed to calculate hit rate" });
     }
   });
 
