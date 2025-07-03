@@ -1,4 +1,5 @@
 import { pgTable, text, serial, integer, real, boolean, timestamp } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -83,3 +84,39 @@ export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
 export type InsertTeamPlayer = z.infer<typeof insertTeamPlayerSchema>;
 export type InsertPositionAnalysis = z.infer<typeof insertPositionAnalysisSchema>;
 export type InsertWeeklyPerformance = z.infer<typeof insertWeeklyPerformanceSchema>;
+
+// Relations
+export const teamsRelations = relations(teams, ({ many }) => ({
+  teamPlayers: many(teamPlayers),
+  positionAnalyses: many(positionAnalysis),
+  weeklyPerformances: many(weeklyPerformance),
+}));
+
+export const playersRelations = relations(players, ({ many }) => ({
+  teamPlayers: many(teamPlayers),
+}));
+
+export const teamPlayersRelations = relations(teamPlayers, ({ one }) => ({
+  team: one(teams, {
+    fields: [teamPlayers.teamId],
+    references: [teams.id],
+  }),
+  player: one(players, {
+    fields: [teamPlayers.playerId],
+    references: [players.id],
+  }),
+}));
+
+export const positionAnalysisRelations = relations(positionAnalysis, ({ one }) => ({
+  team: one(teams, {
+    fields: [positionAnalysis.teamId],
+    references: [teams.id],
+  }),
+}));
+
+export const weeklyPerformanceRelations = relations(weeklyPerformance, ({ one }) => ({
+  team: one(teams, {
+    fields: [weeklyPerformance.teamId],
+    references: [teams.id],
+  }),
+}));

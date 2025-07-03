@@ -97,7 +97,8 @@ The application uses a relational database design with the following core entiti
 
 ```
 Changelog:
-- July 03, 2025. Initial setup
+- July 03, 2025. Initial setup with in-memory storage
+- July 03, 2025. Added PostgreSQL database integration with Drizzle ORM
 ```
 
 ## User Preferences
