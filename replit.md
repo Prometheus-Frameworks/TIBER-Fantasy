@@ -106,13 +106,17 @@ The application uses a relational database design with the following core entiti
 ## Advanced Analytics Roadmap
 
 Based on user feedback, expanding to include:
-- Live player stats and projections
+- **Value Arbitrage System**: Find market inefficiencies by comparing advanced metrics (YPRR, YACo, target share) against consensus values (ADP, ownership %)
+- Live player stats and projections with SportsDataIO integration
 - Lineup optimizer with matchup analysis  
 - Trade evaluator with value models
-- Waiver wire recommendations
+- Waiver wire recommendations based on advanced analytics vs market pricing
 - Injury impact tracker
-- AI-powered breakout predictions
+- AI-powered breakout predictions using metric correlations
 - Social features and league chat
+
+## Core Value Proposition
+The app's primary goal is identifying players whose advanced analytics don't match their market value - finding undervalued gems with elite metrics (YPRR > 2.0) trading below ADP, and avoiding overpriced players with poor underlying data.
 
 ## Changelog
 
