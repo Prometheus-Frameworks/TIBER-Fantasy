@@ -175,6 +175,9 @@ Changelog:
 - July 04, 2025. **SLEEPER API INTEGRATION**: Connected to Sleeper API for authentic player data, trending analysis, and realistic ADP calculations
 - July 04, 2025. Enhanced team display: Updated to show "Morts FF Dynasty • 1 PPR SF TEP" format with correct league settings
 - July 04, 2025. Conservative analytics: Rebuilt RB/WR opportunity scoring with realistic thresholds to prevent inflated rankings
+- July 04, 2025. **OWNERSHIP PERCENTAGE CLARITY**: Fixed validation system to remove ownership-based filtering from main rankings
+- July 04, 2025. Ownership context: 50% ownership = "check your waivers"; 80%+ ownership = rostered in all leagues (Puka, Jefferson never on waivers)
+- July 04, 2025. Proper usage: Ownership percentage only relevant for waiver wire analysis, not dynasty rankings or player valuations
 ```
 
 ## User Preferences

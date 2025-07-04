@@ -16,20 +16,20 @@ export class PlayerDataValidationService {
     'Kareem Hunt',        // Check current team status
   ]);
 
-  // Minimum realistic thresholds for 2024 season
+  // Minimum realistic thresholds for 2024 season (points only - ownership irrelevant for rankings)
   private readonly MIN_THRESHOLDS = {
-    QB: { minPoints: 8, maxOwnership: 90 },   // Even backup QBs should score 8+ in starts
-    RB: { minPoints: 3, maxOwnership: 85 },   // Handcuffs can be lower
-    WR: { minPoints: 3, maxOwnership: 80 },   // Deep sleepers can be lower  
-    TE: { minPoints: 2, maxOwnership: 75 },   // Streaming TEs can be very low
+    QB: { minPoints: 8 },   // Even backup QBs should score 8+ in starts
+    RB: { minPoints: 3 },   // Handcuffs can be lower
+    WR: { minPoints: 3 },   // Deep sleepers can be lower  
+    TE: { minPoints: 2 },   // Streaming TEs can be very low
   };
 
-  // Maximum realistic thresholds (catch obvious fake data)
+  // Maximum realistic thresholds (catch obvious fake data - points only)
   private readonly MAX_THRESHOLDS = {
-    QB: { maxPoints: 30, minOwnership: 5 },   // Even Josh Allen doesn't exceed 30 PPG
-    RB: { maxPoints: 25, minOwnership: 3 },   // CMC ceiling around 23-24 PPG
-    WR: { maxPoints: 22, minOwnership: 3 },   // Elite WR1 ceiling
-    TE: { maxPoints: 18, minOwnership: 2 },   // Kelce ceiling
+    QB: { maxPoints: 30 },   // Even Josh Allen doesn't exceed 30 PPG
+    RB: { maxPoints: 25 },   // CMC ceiling around 23-24 PPG
+    WR: { maxPoints: 22 },   // Elite WR1 ceiling
+    TE: { maxPoints: 18 },   // Kelce ceiling
   };
 
   /**
@@ -77,8 +77,7 @@ export class PlayerDataValidationService {
     // Check realistic stats
     if (!this.hasRealisticStats(player)) {
       const avgPoints = player.avgPoints || 0;
-      const ownership = player.ownershipPercentage || 0;
-      return `Unrealistic stats (${avgPoints.toFixed(1)} PPG, ${ownership.toFixed(1)}% owned)`;
+      return `Unrealistic stats (${avgPoints.toFixed(1)} PPG)`;
     }
 
     // Check activity
@@ -88,14 +87,9 @@ export class PlayerDataValidationService {
       }
       
       const avgPoints = player.avgPoints || 0;
-      const ownership = player.ownershipPercentage || 0;
       
-      if (avgPoints === 0 && ownership < 5) {
-        return "Inactive (0 points, low ownership)";
-      }
-      
-      if (avgPoints > 15 && ownership < 10 && player.position !== 'QB') {
-        return "Data anomaly (high points, low ownership)";
+      if (avgPoints === 0) {
+        return "Inactive (0 points)";
       }
     }
 
@@ -135,21 +129,15 @@ export class PlayerDataValidationService {
     if (!minThreshold || !maxThreshold) return false;
 
     const avgPoints = player.avgPoints || 0;
-    const ownership = player.ownershipPercentage || 0;
 
-    // Check minimum thresholds
-    if (avgPoints < minThreshold.minPoints && ownership > minThreshold.maxOwnership) {
-      return false; // High ownership but terrible production = bad data
+    // Check minimum thresholds (points only)
+    if (avgPoints < minThreshold.minPoints) {
+      return false; // Below minimum realistic production
     }
 
-    // Check maximum thresholds  
+    // Check maximum thresholds (catch obvious fake data)
     if (avgPoints > maxThreshold.maxPoints) {
       return false; // Impossibly high production
-    }
-
-    // Check ownership vs production correlation
-    if (avgPoints < 1 && ownership > 50) {
-      return false; // No production but high ownership = bad data
     }
 
     return true;
@@ -160,21 +148,15 @@ export class PlayerDataValidationService {
    */
   private appearsActive(player: Player): boolean {
     const avgPoints = player.avgPoints || 0;
-    const ownership = player.ownershipPercentage || 0;
-
-    // Players with 0 points and very low ownership are likely inactive
-    if (avgPoints === 0 && ownership < 5) {
-      return false;
-    }
 
     // Check injury status
     if (player.injuryStatus === 'Suspended' || player.injuryStatus === 'Retired') {
       return false;
     }
 
-    // Players with very high points but very low ownership might be bad data
-    if (avgPoints > 15 && ownership < 10 && player.position !== 'QB') {
-      return false; // Likely data error
+    // Players with exactly 0 points might be inactive (but this is conservative)
+    if (avgPoints === 0) {
+      return false;
     }
 
     return true;
