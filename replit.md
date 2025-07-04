@@ -147,6 +147,10 @@ Changelog:
 - July 03, 2025. Fixed case-insensitive player search - "justin jefferson" now finds "Justin Jefferson" correctly
 - July 03, 2025. Added player search autocomplete endpoint and improved player name matching algorithm
 - July 03, 2025. Implemented market data aggregation system framework for multi-source dynasty valuations
+- July 03, 2025. Fixed unrealistic average points and ADPs with authentic 2024 fantasy data (Josh Allen 23.4 PPG, etc)
+- July 03, 2025. Created comprehensive dynasty valuation system with 5-component weighted scoring
+- July 03, 2025. Built Dynasty Values page showcasing our unique player evaluation methodology
+- July 03, 2025. Added weighted scoring: Fantasy Production (30%), Advanced Metrics (25%), Opportunity (20%), Efficiency (15%), Situational (10%)
 ```
 
 ## User Preferences
