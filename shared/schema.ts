@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, real, boolean, timestamp, varchar, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, real, boolean, timestamp, varchar, jsonb, unique } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -248,7 +248,10 @@ export const valueArbitrage = pgTable("value_arbitrage", {
   season: integer("season").notNull(),
   lastUpdated: timestamp("last_updated").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  // Add unique constraint for player per week/season
+  playerWeekSeasonUnique: unique().on(table.playerId, table.week, table.season),
+}));
 
 export const metricCorrelations = pgTable("metric_correlations", {
   id: serial("id").primaryKey(),

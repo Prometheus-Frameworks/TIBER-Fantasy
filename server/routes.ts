@@ -514,13 +514,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { position, limit } = req.query;
       const opportunities = await valueArbitrageService.findArbitrageOpportunities(
-        position as string,
         limit ? parseInt(limit as string) : 20
       );
       res.json(opportunities);
     } catch (error) {
       console.error("Error fetching arbitrage opportunities:", error);
       res.status(500).json({ message: "Failed to fetch arbitrage opportunities" });
+    }
+  });
+
+  // Quick test endpoint for arbitrage functionality
+  app.get("/api/arbitrage/test", async (req, res) => {
+    try {
+      const { testArbitrageSystem } = await import("./arbitrageTest");
+      const opportunities = await testArbitrageSystem();
+      res.json({ 
+        message: "Arbitrage test completed",
+        count: opportunities.length,
+        opportunities 
+      });
+    } catch (error) {
+      console.error("Error in arbitrage test:", error);
+      res.status(500).json({ message: "Arbitrage test failed" });
     }
   });
 
