@@ -19,6 +19,7 @@ import LeagueRankingsPage from "@/pages/league-rankings";
 import PositionRankingsPage from "@/pages/position-rankings";
 import LeagueAnalysisPage from "@/pages/league-analysis";
 import FantasyMovesPage from "@/pages/fantasy-moves";
+import TrendingPlayersPage from "@/pages/trending-players";
 import NotFound from "@/pages/not-found";
 
 function Router() {
