@@ -1,8 +1,8 @@
-# Fantasy Football Dashboard
+# Prometheus: fantasy and data
 
 ## Overview
 
-This is a full-stack fantasy football team management application built with React, Express, and PostgreSQL. The application provides comprehensive team analysis, player recommendations, and performance tracking for fantasy football managers. It features a modern web interface with server-side rendering capabilities and a REST API backend.
+This is a full-stack fantasy football analytics platform built with React, Express, and PostgreSQL. The application provides comprehensive team analysis, player recommendations, and performance tracking for fantasy football managers. It features a modern web interface with server-side rendering capabilities and a REST API backend.
 
 ## System Architecture
 

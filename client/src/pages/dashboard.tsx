@@ -50,8 +50,8 @@ export default function Dashboard() {
                 <Volleyball className="text-white" size={16} />
               </div>
               <div>
-                <h1 className="text-lg md:text-xl font-bold text-gray-900">FantasyWeakness Pro</h1>
-                <p className="text-xs md:text-sm text-gray-500 hidden sm:block">Find Your Team's Weak Spots</p>
+                <h1 className="text-lg md:text-xl font-bold text-gray-900">Prometheus</h1>
+                <p className="text-xs md:text-sm text-gray-500 hidden sm:block">fantasy and data</p>
               </div>
             </div>
             {/* Desktop Action Buttons */}
