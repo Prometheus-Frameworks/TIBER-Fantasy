@@ -194,6 +194,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Jake Maraia ranking methodology analysis
+  app.get('/api/analysis/jake-maraia-methodology', async (req, res) => {
+    try {
+      const { rankingAnalysis } = await import('./rankingAnalysis');
+      const analyses = await rankingAnalysis.analyzeRankingFactors();
+      const report = await rankingAnalysis.generateAnalysisReport();
+      
+      res.json({
+        analyses,
+        report,
+        summary: {
+          topFactor: analyses.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation))[0],
+          correlationStrength: analyses.map(a => ({ factor: a.factor, correlation: a.correlation }))
+        }
+      });
+    } catch (error) {
+      console.error('Error running ranking analysis:', error);
+      res.status(500).json({ error: 'Failed to analyze rankings' });
+    }
+  });
+
   // League Import - Complete league standings and player import
   app.post("/api/teams/:id/import-league", async (req, res) => {
     try {
