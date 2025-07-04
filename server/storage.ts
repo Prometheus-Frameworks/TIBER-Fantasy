@@ -49,6 +49,7 @@ export interface IStorage {
   
   // Player operations
   getPlayer(id: number): Promise<Player | undefined>;
+  getPlayerByExternalId(externalId: string): Promise<Player | undefined>;
   getAllPlayers(): Promise<Player[]>;
   getAvailablePlayers(position?: string): Promise<Player[]>;
   createPlayer(player: InsertPlayer): Promise<Player>;

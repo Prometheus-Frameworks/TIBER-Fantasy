@@ -2,8 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertTriangle, AlertCircle, CheckCircle, Flame, ArrowRight, Wand2 } from "lucide-react";
+import { Loader2, AlertTriangle, AlertCircle, CheckCircle, Flame, ArrowRight, Wand2, MousePointer } from "lucide-react";
 import { getPositionColor, getPositionBadgeColor } from "@/lib/utils";
+import { Link } from "wouter";
 import type { PositionAnalysis, Player } from "@shared/schema";
 
 interface PositionAnalysisProps {
@@ -65,18 +66,26 @@ export default function PositionAnalysis({ teamId }: PositionAnalysisProps) {
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900">Position Analysis</h3>
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500">Last Updated:</span>
-              <span className="text-sm font-medium text-gray-900">2 hours ago</span>
+            <div className="flex items-center space-x-3">
+              <Link href="/position-rankings">
+                <Button variant="outline" size="sm" className="text-sm">
+                  <MousePointer className="w-4 h-4 mr-2" />
+                  View Rankings
+                </Button>
+              </Link>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">Last Updated:</span>
+                <span className="text-sm font-medium text-gray-900">2 hours ago</span>
+              </div>
             </div>
           </div>
 
           <div className="space-y-4">
             {analysis?.map((position) => (
-              <div
-                key={position.id}
-                className={`flex items-center justify-between p-4 rounded-lg border ${getPositionColor(position.status)}`}
-              >
+              <Link key={position.id} href="/position-rankings">
+                <div
+                  className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] ${getPositionColor(position.status)}`}
+                >
                 <div className="flex items-center space-x-4">
                   <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getPositionBadgeColor(position.position, position.status)}`}>
                     <span className="text-white font-bold text-sm">{position.position}</span>
@@ -93,6 +102,10 @@ export default function PositionAnalysis({ teamId }: PositionAnalysisProps) {
                        position.status === "warning" ? "Moderate concern" :
                        "Strong position"}
                     </div>
+                    <div className="text-xs text-gray-400 mt-1 flex items-center">
+                      <MousePointer className="w-3 h-3 mr-1" />
+                      Click to view detailed rankings
+                    </div>
                   </div>
                 </div>
                 <div className="text-right">
@@ -106,7 +119,8 @@ export default function PositionAnalysis({ teamId }: PositionAnalysisProps) {
                     {getStatusIcon(position.status)}
                   </div>
                 </div>
-              </div>
+                </div>
+              </Link>
             ))}
           </div>
         </Card>

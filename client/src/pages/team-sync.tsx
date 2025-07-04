@@ -78,6 +78,35 @@ export default function TeamSync() {
     },
   });
 
+  // League import mutation
+  const leagueImportMutation = useMutation({
+    mutationFn: async (data: { leagueId: string; userId: string }) => {
+      const response = await apiRequest("POST", "/api/teams/1/import-league", {
+        leagueId: data.leagueId,
+        userId: data.userId
+      });
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "League Import Complete",
+        description: `Successfully imported league. Your rank: #${data.rank}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", 1] });
+      // Redirect to dashboard after successful import
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 2000);
+    },
+    onError: (error) => {
+      toast({
+        title: "League Import Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Manual import mutation
   const manualMutation = useMutation({
     mutationFn: async (data: { playerNames: string[]; teamName: string }) => {
@@ -129,6 +158,18 @@ export default function TeamSync() {
       return;
     }
     sleeperMutation.mutate(sleeperData);
+  };
+
+  const handleFullLeagueImport = () => {
+    if (!sleeperData.leagueId || !sleeperData.userId) {
+      toast({
+        title: "Missing Information", 
+        description: "Please provide both League ID and User ID first",
+        variant: "destructive",
+      });
+      return;
+    }
+    leagueImportMutation.mutate(sleeperData);
   };
 
   const handleManualImport = () => {
@@ -282,7 +323,7 @@ export default function TeamSync() {
                   </p>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <Button 
                     onClick={handleSleeperSync}
                     disabled={sleeperMutation.isPending}
@@ -290,6 +331,20 @@ export default function TeamSync() {
                   >
                     {sleeperMutation.isPending ? "Syncing..." : "Import from Sleeper"}
                   </Button>
+                  
+                  <div className="border-t pt-3">
+                    <Button 
+                      onClick={handleFullLeagueImport}
+                      disabled={leagueImportMutation.isPending}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {leagueImportMutation.isPending ? "Importing League..." : "Import Full League & Rankings"}
+                    </Button>
+                    <p className="text-sm text-gray-600 mt-2 text-center">
+                      Imports all teams, players, and shows your league rank
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>

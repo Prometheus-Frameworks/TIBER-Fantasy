@@ -177,6 +177,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // League Import - Complete league standings and player import
+  app.post("/api/teams/:id/import-league", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const { leagueId, userId } = req.body;
+      
+      if (!leagueId || !userId) {
+        return res.status(400).json({ 
+          message: "League ID and User ID are required" 
+        });
+      }
+      
+      console.log(`Starting full league import for league: ${leagueId}, user: ${userId}`);
+      
+      const { leagueImportService } = await import('./leagueImport');
+      
+      // Import complete league and update team ranking
+      await leagueImportService.updateTeamRanking(teamId, leagueId, userId);
+      
+      // Get updated team info
+      const updatedTeam = await storage.getTeam(teamId);
+      
+      res.json({
+        success: true,
+        message: "League imported successfully",
+        team: updatedTeam,
+        rank: updatedTeam?.leagueRank || 0
+      });
+      
+    } catch (error) {
+      console.error("Error importing league:", error);
+      res.status(500).json({ 
+        message: `Failed to import league: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      });
+    }
+  });
+
   // Team sync endpoints
   
   // Sync ESPN team
@@ -677,6 +714,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/arbitrage/opportunities", async (req, res) => {
     try {
       const { position, limit } = req.query;
+      const { valueArbitrageService } = await import('./valueArbitrage');
       const opportunities = await valueArbitrageService.findArbitrageOpportunities(
         limit ? parseInt(limit as string) : 20
       );
