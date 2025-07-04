@@ -478,10 +478,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Our Rankings vs Consensus ADP Comparison
   app.get("/api/rankings/comparison", async (req, res) => {
     try {
-      const players = await db.select().from(players).limit(100);
+      const playerData = await db.select().from(playersTable).limit(100);
       
       const { rankingComparisonService } = await import('./rankingComparison');
-      const rankings = await rankingComparisonService.generateRankings(players);
+      const rankings = await rankingComparisonService.generateRankings(playerData);
       
       // Sort by value opportunities (biggest steals first)
       rankings.sort((a, b) => {
@@ -585,9 +585,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Find player by name (case-insensitive)
       const [player] = await db.select()
-        .from(players)
+        .from(playersTable)
         .where(
-          sql`LOWER(${players.name}) LIKE LOWER(${'%' + playerName + '%'})`
+          sql`LOWER(${playersTable.name}) LIKE LOWER(${'%' + playerName + '%'})`
         )
         .limit(1);
       
