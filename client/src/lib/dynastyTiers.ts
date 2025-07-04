@@ -20,7 +20,7 @@ export const DYNASTY_TIERS: DynastyTier[] = [
     minScore: 95,
     maxScore: 100,
     color: '#8B5CF6', // Purple
-    description: 'Championship-defining assets with elite production and youth',
+    description: 'Foundational assets - Top 2 round startup ADP (QB1s, RB1s, WR1s)',
     icon: 'Crown'
   },
   {
@@ -142,27 +142,30 @@ export function calculateDynastyScore(player: {
 }
 
 function calculateAgePremium(age: number, position: string): number {
-  const peakAges = { QB: 28, RB: 25, WR: 26, TE: 27 };
-  const peakAge = peakAges[position as keyof typeof peakAges] || 26;
+  // Dynasty heavily penalizes age - this is NOT redraft
+  const peakAges = { QB: 28, RB: 24, WR: 26, TE: 27 };
+  const peakAge = peakAges[position as keyof typeof peakAges] || 25;
   
-  if (age <= 23) return 100; // Elite youth premium
-  if (age <= 25) return 90;  // Strong youth
-  if (age <= peakAge) return 80; // Peak years
-  if (age <= peakAge + 2) return 65; // Slight decline
-  if (age <= peakAge + 4) return 45; // Noticeable decline
-  return 25; // Steep decline
+  // Much steeper age penalties for dynasty
+  if (age <= 22) return 100; // Elite youth premium
+  if (age <= 24) return 85;  // Strong youth
+  if (age <= 26) return 70; // Good age
+  if (age <= 28) return 50; // Declining value
+  if (age <= 30) return 25; // Poor dynasty value
+  return 10; // Very poor dynasty value (30+ for RB/WR)
 }
 
 function calculateProductionScore(avgPoints: number, position: string): number {
-  const eliteThresholds = { QB: 25, RB: 18, WR: 16, TE: 14 };
-  const threshold = eliteThresholds[position as keyof typeof eliteThresholds] || 15;
+  // Realistic dynasty production thresholds
+  const eliteThresholds = { QB: 22, RB: 15, WR: 14, TE: 12 };
+  const threshold = eliteThresholds[position as keyof typeof eliteThresholds] || 12;
   
-  if (avgPoints >= threshold * 1.3) return 100; // Elite production
-  if (avgPoints >= threshold) return 85; // Strong production
-  if (avgPoints >= threshold * 0.8) return 70; // Good production
-  if (avgPoints >= threshold * 0.6) return 55; // Decent production
-  if (avgPoints >= threshold * 0.4) return 35; // Poor production
-  return 15; // Very poor production
+  if (avgPoints >= threshold * 1.2) return 95; // Elite production
+  if (avgPoints >= threshold) return 80; // Strong production
+  if (avgPoints >= threshold * 0.75) return 65; // Good production
+  if (avgPoints >= threshold * 0.50) return 45; // Decent production
+  if (avgPoints >= threshold * 0.25) return 25; // Poor production
+  return 10; // Very poor production
 }
 
 function calculateOpportunityScore(team: string, position: string): number {
@@ -201,29 +204,41 @@ function generateFactors(player: any, age: number, production: number, opportuni
 
 function getElitePlayerScores(): Record<string, number> {
   return {
-    // Elite Tier (95-100)
-    'Josh Allen': 100, 'Lamar Jackson': 98, 'Jalen Hurts': 97,
-    'Anthony Richardson': 96, 'C.J. Stroud': 95,
+    // Elite Tier (95-100) - Foundational assets, 1st-2nd round startup ADP
+    // QB1s: Top tier dynasty QBs that anchor teams
+    'Josh Allen': 100, 'Lamar Jackson': 98, 'Jalen Hurts': 97, 'Anthony Richardson': 96,
     
-    'Breece Hall': 100, 'Bijan Robinson': 98, 'Jahmyr Gibbs': 97,
-    'Jonathan Taylor': 96, 'Kenneth Walker': 95,
+    // RB1s: Young elite backs with 3+ year windows
+    'Breece Hall': 100, 'Bijan Robinson': 99, 'Jahmyr Gibbs': 98, 'Jonathan Taylor': 96,
     
-    'Justin Jefferson': 100, 'Ja\'Marr Chase': 99, 'CeeDee Lamb': 98,
+    // WR1s: Elite young receivers, true WR1 ceiling
+    'Justin Jefferson': 100, 'Ja\'Marr Chase': 99, 'CeeDee Lamb': 98, 
     'Amon-Ra St. Brown': 97, 'Puka Nacua': 96, 'Garrett Wilson': 95,
     
-    'Sam LaPorta': 100, 'Travis Kelce': 96,
+    // TE1: True difference makers at position
+    'Sam LaPorta': 100, 'Kyle Pitts': 95,
     
-    // Premium Tier (85-94)
-    'Jayden Daniels': 94, 'Caleb Williams': 93, 'Joe Burrow': 92,
-    'Tua Tagovailoa': 90, 'Dak Prescott': 88, 'Josh Jacobs': 94,
-    'De\'Von Achane': 93, 'Kyren Williams': 92, 'Saquon Barkley': 90,
-    'Derrick Henry': 88, 'Alvin Kamara': 87, 'Christian McCaffrey': 86,
+    // Premium Tier (85-94) - High-end assets but not foundational
+    'C.J. Stroud': 94, 'Jayden Daniels': 93, 'Caleb Williams': 92,
+    'Joe Burrow': 90, 'Tua Tagovailoa': 87,
     
-    'Drake London': 94, 'Marvin Harrison Jr.': 93, 'Rome Odunze': 92,
-    'DJ Moore': 91, 'Nico Collins': 90, 'Chris Olave': 89,
-    'Jaylen Waddle': 88, 'Terry McLaurin': 87, 'DeVonta Smith': 86,
+    'Kenneth Walker': 92, 'De\'Von Achane': 91, 'Josh Jacobs': 89,
+    'Kyren Williams': 87, 'Saquon Barkley': 85,
     
-    'Trey McBride': 94, 'Kyle Pitts': 92, 'Mark Andrews': 90,
-    'George Kittle': 88, 'Evan Engram': 86
+    'Drake London': 93, 'Marvin Harrison Jr.': 92, 'Rome Odunze': 91,
+    'DJ Moore': 90, 'Nico Collins': 89, 'Chris Olave': 88,
+    'Jaylen Waddle': 87, 'DeVonta Smith': 86, 'Terry McLaurin': 85,
+    
+    'Trey McBride': 92, 'Mark Andrews': 85,
+    
+    // Strong Tier (75-84) - Solid assets but aging or limited ceiling
+    'Dak Prescott': 82, 'Trevor Lawrence': 80, 'Herbert': 78,
+    'Christian McCaffrey': 80, 'Derrick Henry': 75, 'Alvin Kamara': 75,
+    'Tyreek Hill': 80, 'Davante Adams': 75, 'Mike Evans': 75,
+    'George Kittle': 80, 'Travis Kelce': 75,
+    
+    // Older/Lower Value Players - Dynasty Bench/Depth (Under 65)
+    'Kareem Hunt': 45, 'Dare Ogunbowale': 30, 'Kyle Juszczyk': 25,
+    'Samaje Perine': 35, 'C.J. Ham': 20
   };
 }

@@ -203,9 +203,11 @@ Changelog:
 - July 04, 2025. **EXPERT CONSENSUS INTEGRATION**: Aligned dynasty rankings with FantasyPros Jake Maraia and Fantasy Footballers expert consensus - eliminated illogical rankings like Demarcus Robinson at WR12 by implementing expert-validated tier system
 - July 04, 2025. **PLAYER SEARCH INTEGRATION**: Added comprehensive player search functionality directly to Rankings page with tabbed interface - search tab as primary feature with dropdown autocomplete, dynasty analysis, and real-time Jake Maraia PVS calculations
 - July 04, 2025. **6-TIER DYNASTY SYSTEM**: Implemented comprehensive dynasty classification framework with Elite (95-100), Premium (85-94), Strong (75-84), Solid (65-74), Depth (50-64), and Bench (0-49) tiers
-- July 04, 2025. Dynasty tier engine: Created server-side dynastyTierSystem.ts and client-side dynastyTiers.ts with Jake Maraia methodology - Age Premium (35%), Production Baseline (30%), Opportunity Context (35%)
+- July 04, 2025. Dynasty tier engine: Created server-side dynastyTierSystem.ts and client-side dynastyTiers.ts with custom evaluation methodology - Age Premium (35%), Production Baseline (30%), Opportunity Context (35%)
 - July 04, 2025. Comprehensive player categorization: All players now classified into 6 tiers with visual tier badges, dynasty scores, and position-specific thresholds for complete database coverage
 - July 04, 2025. Database schema enhancement: Added dynastyTier field to players table with automated population system via /api/admin/populate-tiers endpoint for systematic player classification
+- July 04, 2025. **ELITE TIER REDEFINITION**: Updated Elite tier to represent foundational assets with 1st-2nd round startup ADP - true QB1s, RB1s, WR1s that anchor dynasty teams
+- July 04, 2025. Fixed dynasty scoring algorithm: Steeper age penalties, realistic production thresholds, and expert consensus for aging veterans (Kareem Hunt 45, not 81.3)
 ```
 
 ## User Preferences
