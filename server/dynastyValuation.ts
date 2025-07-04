@@ -336,23 +336,37 @@ export class DynastyValuationService {
   }
   
   private calculateMarketArbitrage(player: Player, ourValue: number): any {
-    const marketValue = player.ownershipPercentage || 50;
-    const difference = ourValue - marketValue;
+    const marketOwnership = player.ownershipPercentage || 50;
+    
+    // Convert ownership % to expected dynasty score range for comparison
+    // High ownership (90%+) suggests market expects 80+ dynasty scores
+    // Medium ownership (70-89%) suggests market expects 60-79 dynasty scores  
+    // Low ownership (<70%) suggests market expects <60 dynasty scores
+    let marketExpectedScore = 50;
+    if (marketOwnership >= 90) marketExpectedScore = 85;
+    else if (marketOwnership >= 80) marketExpectedScore = 75;
+    else if (marketOwnership >= 70) marketExpectedScore = 65;
+    else if (marketOwnership >= 60) marketExpectedScore = 55;
+    
+    const difference = ourValue - marketExpectedScore;
     
     let arbitrageOpportunity: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
     let confidence = 50;
     
-    if (difference >= 20) {
-      arbitrageOpportunity = 'BUY';
-      confidence = Math.min(95, 50 + difference);
-    } else if (difference <= -20) {
-      arbitrageOpportunity = 'SELL';
-      confidence = Math.min(95, 50 + Math.abs(difference));
+    // If our analytics score is much higher than what ownership suggests market expects
+    if (difference >= 15) {
+      arbitrageOpportunity = 'BUY'; // Undervalued by market
+      confidence = Math.min(95, 50 + difference * 2);
+    } 
+    // If market ownership suggests higher expectations than our analytics support
+    else if (difference <= -15) {
+      arbitrageOpportunity = 'SELL'; // Overvalued by market
+      confidence = Math.min(95, 50 + Math.abs(difference) * 2);
     }
     
     return {
       ourValue,
-      marketValue,
+      marketValue: marketOwnership, // Keep original ownership % for display
       arbitrageOpportunity,
       confidence
     };
