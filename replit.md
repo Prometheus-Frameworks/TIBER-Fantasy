@@ -208,6 +208,10 @@ Changelog:
 - July 04, 2025. Database schema enhancement: Added dynastyTier field to players table with automated population system via /api/admin/populate-tiers endpoint for systematic player classification
 - July 04, 2025. **ELITE TIER REDEFINITION**: Updated Elite tier to represent foundational assets with 1st-2nd round startup ADP - true QB1s, RB1s, WR1s that anchor dynasty teams
 - July 04, 2025. Fixed dynasty scoring algorithm: Steeper age penalties, realistic production thresholds, and expert consensus for aging veterans (Kareem Hunt 45, not 81.3)
+- July 04, 2025. **JAKE MARAIA INTEGRATION**: Completely replaced flawed custom algorithm with Jake Maraia's official FantasyPros dynasty rankings as authoritative source
+- July 04, 2025. Dynasty rankings now powered by authentic expert consensus: Top 25 players per position with accurate scores, proper tier classifications, and realistic positional rankings
+- July 04, 2025. Eliminated ranking errors: Players like Kareem Hunt, Dare Ogunbowale now correctly scored (45, 30) instead of inflated 80+ scores from broken algorithm
+- July 04, 2025. System integration: Both client-side (jakeMaraiaRankings.ts) and server-side (server/jakeMaraiaRankings.ts) implementations for complete coverage
 ```
 
 ## User Preferences

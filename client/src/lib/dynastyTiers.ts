@@ -1,7 +1,15 @@
 /**
  * 6-Tier Dynasty Ranking System (Client-side)
  * Comprehensive player classification for dynasty fantasy football
+ * Now powered by Jake Maraia's official FantasyPros rankings
  */
+
+import { 
+  getJakeMaraiaDynastyScore, 
+  getJakeMaraiaDynastyTier, 
+  getJakeMaraiaPositionalRank,
+  ALL_JAKE_MARAIA_RANKINGS 
+} from './jakeMaraiaRankings';
 
 export interface DynastyTier {
   name: string;
@@ -101,7 +109,24 @@ export function calculateDynastyScore(player: {
   team: string;
 }): { score: number; tier: DynastyTier; factors: string[] } {
   
-  // Expert consensus overrides for known elite players
+  // First priority: Jake Maraia's official FantasyPros rankings
+  const jakeScore = getJakeMaraiaDynastyScore(player.name);
+  const jakeTier = getJakeMaraiaDynastyTier(player.name);
+  const jakeRank = getJakeMaraiaPositionalRank(player.name);
+  
+  if (jakeScore !== null) {
+    return {
+      score: jakeScore,
+      tier: getTierFromScore(jakeScore),
+      factors: [
+        `Jake Maraia rank: #${jakeRank} ${player.position}`,
+        'FantasyPros expert consensus',
+        `Dynasty tier: ${jakeTier}`
+      ]
+    };
+  }
+  
+  // Second priority: Expert consensus overrides for known players
   const elitePlayerScores = getElitePlayerScores();
   if (elitePlayerScores[player.name]) {
     const score = elitePlayerScores[player.name];
@@ -129,8 +154,8 @@ export function calculateDynastyScore(player: {
   // Apply position-specific adjustments
   const positionAdjusted = applyPositionAdjustments(rawScore, player.position);
   
-  // Final score (0-100)
-  const finalScore = Math.max(0, Math.min(100, positionAdjusted));
+  // Final score - cap unranked players at Depth tier maximum (64)
+  const finalScore = Math.max(0, Math.min(64, positionAdjusted));
   
   const factors = generateFactors(player, agePremium, productionScore, opportunityScore);
   
