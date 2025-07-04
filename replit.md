@@ -182,6 +182,9 @@ Changelog:
 - July 04, 2025. Superflex QB revolution: Josh Allen example shows #24 overall in 1QB → #1-2 overall in superflex due to 2-QB scarcity and higher floors
 - July 04, 2025. Dynasty weighting: Production (30%), Opportunity (25%), Age (20%), Stability (15%), Efficiency (10%) with 35-point QB premiums in superflex
 - July 04, 2025. Position-specific UI: Five-tab interface with tier badges, component scores, strengths/concerns, and superflex explanation highlighting QB value transformation
+- July 04, 2025. **ESPN API INTEGRATION**: Connected to ESPN's hidden API endpoints for real-time NFL data including scores, news, injury reports, and team information
+- July 04, 2025. Fantasy context enhancement: Live injury updates, "playing tonight" indicators, team schedules, and game context for dynasty valuations
+- July 04, 2025. Multi-source data strategy: ESPN API complements existing Sleeper and SportsDataIO integrations for comprehensive authentic data coverage
 ```
 
 ## User Preferences
