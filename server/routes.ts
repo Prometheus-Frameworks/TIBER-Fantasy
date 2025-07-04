@@ -7,6 +7,7 @@ import { valueArbitrageEngine } from "./valueArbitrage";
 import { sportsDataAPI } from "./sportsdata";
 import { playerAnalysisCache } from "./playerAnalysisCache";
 import { espnAPI } from "./espnAPI";
+import { dataRefreshService } from "./dataRefresh";
 import { db } from "./db";
 import { dynastyTradeHistory, players as playersTable } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -171,7 +172,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const position = req.query.position as string | undefined;
       const players = await storage.getAvailablePlayers(position);
-      res.json(players);
+      
+      // Add elite dynasty players to improve ranking accuracy
+      const { getEliteDynastyPlayers } = await import('./eliteDynastyPlayers');
+      const elitePlayers = getEliteDynastyPlayers();
+      
+      // Filter elite players by position if specified
+      const filteredElitePlayers = position 
+        ? elitePlayers.filter(p => p.position === position)
+        : elitePlayers;
+      
+      // Combine existing players with elite players (avoid duplicates by name)
+      const existingNames = new Set(players.map(p => p.name));
+      const uniqueElitePlayers = filteredElitePlayers.filter(p => !existingNames.has(p.name));
+      
+      const combinedPlayers = [...players, ...uniqueElitePlayers];
+      
+      res.json(combinedPlayers);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch available players" });
     }
@@ -1244,6 +1261,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("ESPN playing today error:", error);
       res.status(500).json({ message: "Failed to check if team is playing" });
+    }
+  });
+
+  // Data refresh endpoint to pull authentic NFL player data
+  app.post('/api/data/refresh', async (req, res) => {
+    try {
+      console.log('🔄 Starting player data refresh from SportsDataIO...');
+      
+      const results = await dataRefreshService.refreshPlayerData();
+      
+      res.json({
+        success: true,
+        message: `Successfully refreshed ${results.updated} players`,
+        details: {
+          playersUpdated: results.updated,
+          playersFiltered: results.filtered,
+          totalPlayers: results.total
+        }
+      });
+    } catch (error) {
+      console.error('❌ Data refresh failed:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to refresh player data',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

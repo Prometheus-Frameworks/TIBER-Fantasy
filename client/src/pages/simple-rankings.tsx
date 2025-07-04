@@ -30,10 +30,36 @@ export default function SimpleRankings() {
 
   const userPlayerIds = new Set(teamPlayers?.map(p => p.id) || []);
 
+  // Filter out irrelevant players for dynasty rankings
+  const isRelevantDynastyPlayer = (player: Player): boolean => {
+    // Filter out players with unrealistic stats
+    if (player.avgPoints < 1 || player.avgPoints > 35) return false;
+    
+    // Filter out inactive/irrelevant players by name
+    const excludedPlayers = [
+      'Deshaun Watson', 'Trent Taylor', 'Practice Squad', 'Free Agent',
+      'Injured Reserve', 'Unknown Player', 'Test Player'
+    ];
+    
+    if (excludedPlayers.some(name => player.name.includes(name))) return false;
+    
+    // Position-specific minimum thresholds for dynasty relevance
+    const minThresholds = {
+      QB: 8.0,   // QBs need at least 8 PPG to be dynasty relevant
+      RB: 5.0,   // RBs need at least 5 PPG 
+      WR: 4.0,   // WRs need at least 4 PPG
+      TE: 3.0    // TEs need at least 3 PPG
+    };
+    
+    const threshold = minThresholds[player.position as keyof typeof minThresholds] || 0;
+    return player.avgPoints >= threshold;
+  };
+
   // Generate simple rankings for each position
   const generateSimpleRankings = (position: string): SimpleRankedPlayer[] => {
     const positionPlayers = (allPlayers || [])
       .filter(p => p.position === position)
+      .filter(isRelevantDynastyPlayer) // Filter out irrelevant players
       .sort((a, b) => (b.avgPoints + b.upside) - (a.avgPoints + a.upside)) // Sort by dynasty value
       .slice(0, 50); // Top 50 for each position
 

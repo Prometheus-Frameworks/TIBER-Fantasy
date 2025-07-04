@@ -53,6 +53,7 @@ export interface IStorage {
   getAllPlayers(): Promise<Player[]>;
   getAvailablePlayers(position?: string): Promise<Player[]>;
   createPlayer(player: InsertPlayer): Promise<Player>;
+  updatePlayer(id: number, updates: Partial<InsertPlayer>): Promise<Player>;
   
   // Team-Player relationships
   getTeamPlayers(teamId: number): Promise<(Player & { isStarter: boolean })[]>;
