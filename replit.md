@@ -190,7 +190,10 @@ Changelog:
 - July 04, 2025. Value arbitrage dashboard: Market inefficiency detection comparing advanced metrics against ADP/dynasty values with confidence intervals
 - July 04, 2025. Enhanced trending section: Interactive filtering, sustainability scores, mobile navigation integration with Chart.js visualization framework
 - July 04, 2025. Implementation roadmap: Created comprehensive 8-10 week development timeline for $200 FantasyPointsData subscription integration
-- July 04, 2025. **PLAYER VALUE SCORE (PVS) SYSTEM**: Implemented comprehensive dynasty ranking algorithm using weighted formula: Points (40%) + Consistency (25%) + Positional Scarcity (20%) + Durability (10%) + Team Offense (5%)
+- July 04, 2025. **JAKE MARAIA PVS INTEGRATION**: Rebuilt Player Value Score system using reverse-engineered Jake Maraia methodology - Age/Longevity (35%), Current Production (30%), Opportunity Context (35%)
+- July 04, 2025. Age premium implementation: Players under 24 score 95-100 points, steep decline after 30 (matches Jake's "no WR over 30 in top 15" observation)
+- July 04, 2025. Dynasty minimum threshold: 12 PPG requirement for dynasty relevance, position-specific elite benchmarks (QB 25, RB 18, WR 16, TE 14)
+- July 04, 2025. Opportunity scoring: Target share estimation (40%), team offense strength (30%), role clarity analysis (30%) for comprehensive dynasty context
 - July 04, 2025. **COMPREHENSIVE DATA SYNC**: Built multi-source NFL database with SportsDataIO, ESPN API, and Sleeper integration for authentic player profiles, injury reports, and performance metrics
 - July 04, 2025. API authentication framework: Rate-limited data collection (100 req/min), batch processing (50 players), and intelligent data normalization across multiple fantasy platforms
 - July 04, 2025. Database scalability: Efficient querying structure with external ID mapping, comprehensive error handling, and incremental sync capabilities for daily updates

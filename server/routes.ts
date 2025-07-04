@@ -1616,6 +1616,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player Search with Autocomplete
+  app.get('/api/players/search', async (req, res) => {
+    try {
+      const { q, limit = 10 } = req.query;
+      
+      if (!q || typeof q !== 'string' || q.length < 2) {
+        return res.json([]);
+      }
+      
+      const players = await storage.searchPlayers(q.toLowerCase(), parseInt(limit as string));
+      
+      res.json(players.map(player => ({
+        id: player.id,
+        name: player.name,
+        position: player.position,
+        team: player.team,
+        avgPoints: player.avgPoints,
+        imageUrl: player.imageUrl
+      })));
+    } catch (error) {
+      console.error('Player search error:', error);
+      res.status(500).json({ message: 'Search failed' });
+    }
+  });
+
+  // Player Tier Information
+  app.get('/api/players/:id/tier', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const player = await storage.getPlayer(parseInt(id));
+      
+      if (!player) {
+        return res.status(404).json({ message: 'Player not found' });
+      }
+      
+      const { getPlayerTier } = await import('./playerTiers');
+      const tierInfo = getPlayerTier(player.name);
+      
+      res.json({
+        player: {
+          id: player.id,
+          name: player.name,
+          position: player.position,
+          team: player.team
+        },
+        tier: tierInfo || {
+          tier: 'Unranked',
+          tierDescription: 'Not in dynasty tier system',
+          dynastyScore: 0,
+          strengths: [],
+          concerns: ['Not evaluated for dynasty value']
+        }
+      });
+    } catch (error) {
+      console.error('Player tier error:', error);
+      res.status(500).json({ message: 'Failed to get tier info' });
+    }
+  });
+
+  // Get Players by Tier
+  app.get('/api/tiers/:tier', async (req, res) => {
+    try {
+      const { tier } = req.params;
+      const { getPlayersByTier } = await import('./playerTiers');
+      const players = getPlayersByTier(tier);
+      
+      res.json(players);
+    } catch (error) {
+      console.error('Tier players error:', error);
+      res.status(500).json({ message: 'Failed to get tier players' });
+    }
+  });
+
   // Comprehensive Data Sync endpoints
   app.post('/api/data/sync-comprehensive', async (req, res) => {
     try {

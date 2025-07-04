@@ -53,6 +53,7 @@ export interface IStorage {
   getPlayerBySleeperIdFromMemory(sleeperId: string): Promise<Player | undefined>;
   getAllPlayers(): Promise<Player[]>;
   getAvailablePlayers(position?: string): Promise<Player[]>;
+  searchPlayers(query: string, limit?: number): Promise<Player[]>;
   createPlayer(player: InsertPlayer): Promise<Player>;
   updatePlayer(id: number, updates: Partial<InsertPlayer>): Promise<Player>;
   
@@ -647,6 +648,34 @@ export class DatabaseStorage implements IStorage {
       .values(performance)
       .returning();
     return newPerformance;
+  }
+
+  async searchPlayers(query: string, limit: number = 10): Promise<Player[]> {
+    const result = await db
+      .select()
+      .from(players)
+      .limit(limit);
+    
+    // Filter by name match (case-insensitive)
+    return result
+      .filter(player => 
+        player.name.toLowerCase().includes(query.toLowerCase())
+      )
+      .sort((a, b) => {
+        // Exact matches first
+        const aExact = a.name.toLowerCase() === query.toLowerCase() ? 1 : 0;
+        const bExact = b.name.toLowerCase() === query.toLowerCase() ? 1 : 0;
+        if (aExact !== bExact) return bExact - aExact;
+        
+        // Then by starts with
+        const aStarts = a.name.toLowerCase().startsWith(query.toLowerCase()) ? 1 : 0;
+        const bStarts = b.name.toLowerCase().startsWith(query.toLowerCase()) ? 1 : 0;
+        if (aStarts !== bStarts) return bStarts - aStarts;
+        
+        // Finally by fantasy points
+        return (b.avgPoints || 0) - (a.avgPoints || 0);
+      })
+      .slice(0, limit);
   }
 
   async getPlayerRecommendations(teamId: number, position?: string): Promise<Player[]> {
