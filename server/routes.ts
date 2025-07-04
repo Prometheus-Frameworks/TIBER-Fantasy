@@ -6,6 +6,7 @@ import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generat
 import { valueArbitrageService } from "./valueArbitrage";
 import { sportsDataAPI } from "./sportsdata";
 import { playerAnalysisCache } from "./playerAnalysisCache";
+import { espnAPI } from "./espnAPI";
 import { db } from "./db";
 import { dynastyTradeHistory, players as playersTable } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -780,7 +781,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ESPN API Integration Routes
+  app.get("/api/espn/scoreboard", async (req, res) => {
+    try {
+      const date = req.query.date as string;
+      const scoreboard = date 
+        ? await espnAPI.getScoreboardByDate(date)
+        : await espnAPI.getCurrentScoreboard();
+      res.json(scoreboard);
+    } catch (error) {
+      console.error("ESPN scoreboard error:", error);
+      res.status(500).json({ message: "Failed to fetch ESPN scoreboard" });
+    }
+  });
 
+  app.get("/api/espn/news", async (req, res) => {
+    try {
+      const news = await espnAPI.getLatestNews();
+      res.json(news);
+    } catch (error) {
+      console.error("ESPN news error:", error);
+      res.status(500).json({ message: "Failed to fetch ESPN news" });
+    }
+  });
+
+  app.get("/api/espn/news/injuries", async (req, res) => {
+    try {
+      const injuryNews = await espnAPI.getInjuryNews();
+      res.json(injuryNews);
+    } catch (error) {
+      console.error("ESPN injury news error:", error);
+      res.status(500).json({ message: "Failed to fetch injury news" });
+    }
+  });
+
+  app.get("/api/espn/teams", async (req, res) => {
+    try {
+      const teams = await espnAPI.getAllTeams();
+      res.json(teams);
+    } catch (error) {
+      console.error("ESPN teams error:", error);
+      res.status(500).json({ message: "Failed to fetch ESPN teams" });
+    }
+  });
+
+  app.get("/api/espn/teams/:teamId", async (req, res) => {
+    try {
+      const team = await espnAPI.getTeam(req.params.teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      res.json(team);
+    } catch (error) {
+      console.error("ESPN team error:", error);
+      res.status(500).json({ message: "Failed to fetch ESPN team" });
+    }
+  });
+
+  app.get("/api/espn/games/:gameId", async (req, res) => {
+    try {
+      const gameSummary = await espnAPI.getGameSummary(req.params.gameId);
+      res.json(gameSummary);
+    } catch (error) {
+      console.error("ESPN game summary error:", error);
+      res.status(500).json({ message: "Failed to fetch game summary" });
+    }
+  });
+
+  app.get("/api/espn/insights", async (req, res) => {
+    try {
+      const insights = await espnAPI.getFantasyInsights();
+      res.json(insights);
+    } catch (error) {
+      console.error("ESPN insights error:", error);
+      res.status(500).json({ message: "Failed to fetch fantasy insights" });
+    }
+  });
+
+  app.get("/api/espn/playing-today/:team", async (req, res) => {
+    try {
+      const isPlaying = await espnAPI.isTeamPlayingToday(req.params.team);
+      res.json({ team: req.params.team, playingToday: isPlaying });
+    } catch (error) {
+      console.error("ESPN playing today error:", error);
+      res.status(500).json({ message: "Failed to check if team is playing" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
