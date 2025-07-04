@@ -36,7 +36,8 @@ export default function SimpleRankings() {
     const excludedPlayers = [
       'Deshaun Watson', 'Trent Taylor', 'Practice Squad', 'Free Agent',
       'Injured Reserve', 'Unknown Player', 'Test Player', 'Demarcus Robinson',
-      'Tim Patrick', 'Stefon Diggs', 'Allen Robinson'
+      'Tim Patrick', 'Allen Robinson', 'Sterling Shepard', 'Parris Campbell',
+      'Nelson Agholor', 'Marquise Goodwin', 'JuJu Smith-Schuster'
     ];
     
     if (excludedPlayers.some(name => player.name.includes(name))) return false;
@@ -71,12 +72,41 @@ export default function SimpleRankings() {
     return dynastyValue > 6.0; // Minimum dynasty value threshold
   };
 
-  // Calculate dynasty value with age adjustment
+  // Calculate dynasty value with expert consensus alignment
   const calculateDynastyValue = (player: Player): number => {
     const age = player.age || 25;
-    const ageMultiplier = Math.max(0.5, 1 - (age - 22) * 0.03); // 3% penalty per year over 22
-    const baseValue = (player.avgPoints || 0) + (player.upside || 0);
-    return baseValue * ageMultiplier;
+    const avgPoints = player.avgPoints || 0;
+    
+    // Expert consensus tiers based on Jake Maraia and Fantasy Footballers rankings
+    const expertTiers: Record<string, number> = {
+      // Tier 1 - Elite (90-100 points)
+      'Ja\'Marr Chase': 100, 'CeeDee Lamb': 98, 'Puka Nacua': 96, 'Justin Jefferson': 95,
+      
+      // Tier 2 - Elite Young (85-89 points)  
+      'Brian Thomas Jr.': 89, 'Amon-Ra St. Brown': 88, 'Nico Collins': 87, 'Malik Nabers': 86,
+      
+      // Tier 3 - Strong Dynasty Assets (80-84 points)
+      'Drake London': 84, 'Ladd McConkey': 83, 'Rashee Rice': 82, 'A.J. Brown': 81, 'Tee Higgins': 80,
+      
+      // Tier 4 - Good Dynasty Assets (75-79 points)
+      'Tyreek Hill': 79, 'Mike Evans': 78, 'Garrett Wilson': 77, 'Marvin Harrison Jr.': 76, 'Terry McLaurin': 75,
+      
+      // Tier 5 - Solid Assets (70-74 points)
+      'George Pickens': 74, 'DeVonta Smith': 73, 'Jaylen Waddle': 72, 'Zay Flowers': 71, 'Jameson Williams': 70
+    };
+    
+    // Check if player is in expert consensus
+    if (expertTiers[player.name]) {
+      return expertTiers[player.name];
+    }
+    
+    // For non-consensus players, use age-adjusted calculation with conservative scoring
+    const ageMultiplier = Math.max(0.3, 1 - (age - 22) * 0.04); // Steeper age penalty
+    const baseValue = avgPoints * 3.5; // Convert PPG to dynasty score (more conservative)
+    const dynastyValue = baseValue * ageMultiplier;
+    
+    // Cap non-consensus players at 65 to prevent unknown players from ranking too high
+    return Math.min(65, dynastyValue);
   };
 
   // Generate simple rankings for each position

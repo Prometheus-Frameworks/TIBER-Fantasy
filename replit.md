@@ -197,6 +197,7 @@ Changelog:
 - July 04, 2025. **COMPARE LEAGUE INTEGRATION**: Updated league comparison system to use PVS calculations for real dynasty valuations instead of mock data, with authentic Sleeper API connectivity
 - July 04, 2025. **CRITICAL QOL FIX**: Fixed league settings sync accuracy - now shows correct team count (12 vs 16), proper scoring format (PPR detection), Superflex identification, and authentic league names from platform APIs
 - July 04, 2025. **CRITICAL PRODUCTION FIX**: Removed false ownership claims from Rankings page to prevent misleading production users - system now shows clean dynasty rankings without incorrect "Your Player" badges
+- July 04, 2025. **EXPERT CONSENSUS INTEGRATION**: Aligned dynasty rankings with FantasyPros Jake Maraia and Fantasy Footballers expert consensus - eliminated illogical rankings like Demarcus Robinson at WR12 by implementing expert-validated tier system
 ```
 
 ## User Preferences
