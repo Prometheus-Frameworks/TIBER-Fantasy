@@ -49,6 +49,7 @@ export interface IStorage {
   
   // Player operations
   getPlayer(id: number): Promise<Player | undefined>;
+  getAllPlayers(): Promise<Player[]>;
   getAvailablePlayers(position?: string): Promise<Player[]>;
   createPlayer(player: InsertPlayer): Promise<Player>;
   
@@ -454,6 +455,10 @@ export class DatabaseStorage implements IStorage {
   async getPlayer(id: number): Promise<Player | undefined> {
     const [player] = await db.select().from(players).where(eq(players.id, id));
     return player || undefined;
+  }
+
+  async getAllPlayers(): Promise<Player[]> {
+    return await db.select().from(players);
   }
 
   async getAvailablePlayers(position?: string): Promise<Player[]> {

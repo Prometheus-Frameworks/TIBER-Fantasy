@@ -512,6 +512,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Position-specific rankings (QB, RB, WR, TE, SFLEX) - 1 to 250 rankings
+  app.get('/api/rankings/position/:position', async (req, res) => {
+    try {
+      const { position } = req.params;
+      const validPositions = ['QB', 'RB', 'WR', 'TE', 'SFLEX'];
+      
+      if (!validPositions.includes(position)) {
+        return res.status(400).json({ message: `Invalid position. Must be one of: ${validPositions.join(', ')}` });
+      }
+
+      const { positionRankingService } = await import('./positionRankings');
+      const rankings = await positionRankingService.generatePositionRankings(position as any);
+      res.json(rankings);
+    } catch (error) {
+      console.error(`Error generating ${req.params.position} rankings:`, error);
+      res.status(500).json({ message: `Failed to generate ${req.params.position} rankings` });
+    }
+  });
+
+  // All position rankings at once
+  app.get('/api/rankings/all-positions', async (req, res) => {
+    try {
+      const { positionRankingService } = await import('./positionRankings');
+      const allRankings = await positionRankingService.getAllPositionRankings();
+      res.json(allRankings);
+    } catch (error) {
+      console.error("Error generating all position rankings:", error);
+      res.status(500).json({ message: "Failed to generate position rankings" });
+    }
+  });
+
   // Sleeper API Integration and Data Sync
   app.post("/api/sync/sleeper", async (req, res) => {
     try {

@@ -178,6 +178,10 @@ Changelog:
 - July 04, 2025. **OWNERSHIP PERCENTAGE CLARITY**: Fixed validation system to remove ownership-based filtering from main rankings
 - July 04, 2025. Ownership context: 50% ownership = "check your waivers"; 80%+ ownership = rostered in all leagues (Puka, Jefferson never on waivers)
 - July 04, 2025. Proper usage: Ownership percentage only relevant for waiver wire analysis, not dynasty rankings or player valuations
+- July 04, 2025. **POSITION RANKINGS SYSTEM**: Created comprehensive 1-250 rankings for QB, RB, WR, TE, and SFLEX with research-based dynasty scoring
+- July 04, 2025. Superflex QB revolution: Josh Allen example shows #24 overall in 1QB → #1-2 overall in superflex due to 2-QB scarcity and higher floors
+- July 04, 2025. Dynasty weighting: Production (30%), Opportunity (25%), Age (20%), Stability (15%), Efficiency (10%) with 35-point QB premiums in superflex
+- July 04, 2025. Position-specific UI: Five-tab interface with tier badges, component scores, strengths/concerns, and superflex explanation highlighting QB value transformation
 ```
 
 ## User Preferences
