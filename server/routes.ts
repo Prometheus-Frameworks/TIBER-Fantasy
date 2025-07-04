@@ -499,6 +499,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // League Rankings - Total Team Values (Players + Draft Picks)
+  app.get("/api/league/rankings", async (req, res) => {
+    try {
+      const { leagueRankingService } = await import('./leagueRankings');
+      const leagueRankings = await leagueRankingService.calculateLeagueRankings();
+      
+      res.json(leagueRankings);
+    } catch (error) {
+      console.error("Error calculating league rankings:", error);
+      res.status(500).json({ message: "Failed to calculate league rankings" });
+    }
+  });
+
   // Dynasty Trade History Endpoints
   app.get("/api/teams/:id/trades", async (req, res) => {
     try {

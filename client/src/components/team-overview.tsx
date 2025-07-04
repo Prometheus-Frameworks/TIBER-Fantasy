@@ -18,7 +18,7 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
             <div className="mb-4 sm:mb-0">
               <h2 className="text-xl md:text-2xl font-bold text-gray-900">{team.name}</h2>
-              <p className="text-sm md:text-base text-gray-600">Week 8 • League: {team.leagueName}</p>
+              <p className="text-sm md:text-base text-gray-600">{team.leagueName} • 1 PPR SF TEP</p>
             </div>
             
             {/* Stats Grid - Mobile Responsive */}

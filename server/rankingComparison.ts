@@ -102,9 +102,9 @@ export class RankingComparisonService {
   private calculateProductionScore(player: Player): number {
     const avgPoints = player.avgPoints || 0;
     
-    // Position-relative scoring based on 2024 data
+    // Position-relative scoring based on 2024 data - more accurate tiers
     if (player.position === 'QB') {
-      if (avgPoints >= 23) return 95;    // Josh Allen tier
+      if (avgPoints >= 23) return 95;    // Josh Allen tier (23.4 PPG)
       if (avgPoints >= 20) return 85;    // Lamar/Hurts tier
       if (avgPoints >= 18) return 75;    // Burrow/Mahomes tier
       if (avgPoints >= 15) return 60;    // QB1 range
@@ -113,12 +113,14 @@ export class RankingComparisonService {
     }
     
     if (player.position === 'RB') {
-      if (avgPoints >= 18) return 95;    // CMC/Saquon tier
+      if (avgPoints >= 18) return 95;    // CMC tier (20+ PPG)
       if (avgPoints >= 15) return 85;    // Henry/Gibbs tier
-      if (avgPoints >= 12) return 75;    // RB1 range
-      if (avgPoints >= 10) return 60;    // RB2 range
-      if (avgPoints >= 7) return 40;     // Flex range
-      return 20;
+      if (avgPoints >= 13) return 75;    // High-end RB1
+      if (avgPoints >= 11) return 65;    // Mid RB1 range
+      if (avgPoints >= 9) return 50;     // Low RB1/High RB2
+      if (avgPoints >= 7) return 35;     // RB2/Flex range
+      if (avgPoints >= 5) return 25;     // Deep flex
+      return 15;                         // Bench/handcuff
     }
     
     if (player.position === 'WR') {
@@ -175,25 +177,25 @@ export class RankingComparisonService {
     } else if (player.position === 'RB') {
       const carries = player.carries || this.estimateCarries(player);
       const targetShare = player.targetShare || this.estimateTargetShare(player);
-      const totalTouches = carries + (targetShare * 2.5); // Weight targets higher
+      const totalTouches = carries + targetShare; // More realistic touch calculation
       
-      // Touch volume is king for RBs
-      if (totalTouches >= 22) score += 50;       // Bell cow (CMC level)
-      else if (totalTouches >= 18) score += 45;  // Heavy usage
-      else if (totalTouches >= 15) score += 35;  // Solid usage
-      else if (totalTouches >= 12) score += 25;  // Committee back
-      else if (totalTouches >= 8) score += 15;   // Change of pace
-      else score += 5;                           // Limited role
+      // More conservative touch volume scoring - higher thresholds
+      if (totalTouches >= 25) score += 50;       // True bell cow (CMC level)
+      else if (totalTouches >= 20) score += 40;  // Heavy usage (Henry, Gibbs)
+      else if (totalTouches >= 16) score += 30;  // Good usage 
+      else if (totalTouches >= 12) score += 20;  // Decent role
+      else if (totalTouches >= 8) score += 10;   // Limited role
+      else score += 5;                           // Minimal role
       
-      // Goal line work
-      if (carries >= 15 && player.avgPoints >= 10) score += 25; // Likely goal line back
-      else if (carries >= 10) score += 15;       // Some goal line work
+      // Goal line work (more conservative)
+      if (carries >= 18 && player.avgPoints >= 12) score += 20; // Clear goal line back
+      else if (carries >= 12 && player.avgPoints >= 9) score += 10; // Some goal line work
       else score += 5;
       
-      // Three-down capability (receiving work)
-      if (targetShare >= 8) score += 25;         // Elite receiving back
-      else if (targetShare >= 5) score += 20;    // Good receiving work
-      else if (targetShare >= 3) score += 15;    // Some receiving
+      // Three-down capability (stricter requirements)
+      if (targetShare >= 6) score += 20;         // Elite receiving back
+      else if (targetShare >= 4) score += 15;    // Good receiving work
+      else if (targetShare >= 2) score += 10;    // Some receiving
       else score += 5;                           // Limited passing downs
       
     } else if (player.position === 'QB') {
@@ -488,9 +490,12 @@ export class RankingComparisonService {
       return 8;
     }
     if (player.position === 'RB') {
-      if (avgPoints >= 15) return 7;
-      if (avgPoints >= 10) return 5;
-      return 3;
+      // More conservative target estimates for RBs
+      if (avgPoints >= 18) return 8;      // Elite receiving back (CMC, Barkley)
+      if (avgPoints >= 15) return 6;      // Good receiving work  
+      if (avgPoints >= 12) return 4;      // Some receiving ability
+      if (avgPoints >= 9) return 3;       // Limited receiving
+      return 1;                           // Minimal receiving work
     }
     return 5;
   }
@@ -508,10 +513,13 @@ export class RankingComparisonService {
     if (player.position !== 'RB') return 0;
     
     const avgPoints = player.avgPoints || 0;
-    if (avgPoints >= 15) return 18;
-    if (avgPoints >= 10) return 12;
-    if (avgPoints >= 6) return 8;
-    return 4;
+    // More conservative carry estimates - 10 PPG doesn't guarantee heavy usage
+    if (avgPoints >= 18) return 20;     // True bell cow (CMC level)
+    if (avgPoints >= 15) return 16;     // High usage
+    if (avgPoints >= 12) return 12;     // Solid starter
+    if (avgPoints >= 9) return 8;       // Moderate usage
+    if (avgPoints >= 6) return 5;       // Limited role
+    return 2;                           // Minimal touches
   }
 }
 

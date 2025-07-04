@@ -262,7 +262,7 @@ export default function ValueRankings() {
                         <div className="text-xs text-gray-500">Position Rank</div>
                       </div>
                       <div>
-                        <div className="font-bold text-blue-600">+{ranking.adpDifference}</div>
+                        <div className="font-bold text-blue-600">+{ranking.adpDifference.toFixed(1)}</div>
                         <div className="text-xs text-gray-500">Difference</div>
                       </div>
                     </div>
@@ -310,7 +310,7 @@ export default function ValueRankings() {
                         </div>
                         <div className="text-center">
                           <div className={`font-bold ${ranking.adpDifference > 0 ? 'text-green-600' : ranking.adpDifference < 0 ? 'text-red-600' : 'text-gray-600'}`}>
-                            {ranking.adpDifference > 0 ? '+' : ''}{ranking.adpDifference}
+                            {ranking.adpDifference > 0 ? '+' : ''}{ranking.adpDifference.toFixed(1)}
                           </div>
                           <div className="text-xs text-gray-500">Difference</div>
                         </div>

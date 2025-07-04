@@ -142,6 +142,22 @@ export const dynastyTradeHistory = pgTable("dynasty_trade_history", {
   week: integer("week"), // Week the trade was made
 });
 
+export const draftPicks = pgTable("draft_picks", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull().references(() => teams.id),
+  year: integer("year").notNull(), // 2025, 2026, etc.
+  round: integer("round").notNull(), // 1, 2, 3, etc.
+  pick: integer("pick").notNull(), // 1-12 for each round
+  originalTeamId: integer("original_team_id").references(() => teams.id), // Track pick trades
+  isTraded: boolean("is_traded").default(false),
+  tradeDate: timestamp("trade_date"),
+  tradeValue: real("trade_value"), // Dynasty trade value at time of trade
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniquePick: unique().on(table.year, table.round, table.pick),
+}));
+
 export const waiverRecommendations = pgTable("waiver_recommendations", {
   id: serial("id").primaryKey(),
   teamId: integer("team_id").notNull().references(() => teams.id),
@@ -296,6 +312,7 @@ export type InjuryTracker = typeof injuryTracker.$inferSelect;
 export type MarketData = typeof marketData.$inferSelect;
 export type ValueArbitrage = typeof valueArbitrage.$inferSelect;
 export type MetricCorrelations = typeof metricCorrelations.$inferSelect;
+export type DraftPick = typeof draftPicks.$inferSelect;
 
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;

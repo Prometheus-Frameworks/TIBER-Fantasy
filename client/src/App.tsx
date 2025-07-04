@@ -15,6 +15,7 @@ import PlayerAnalysisPage from "@/pages/player-analysis";
 import TradeHistoryPage from "@/pages/trade-history";
 import DynastyValuesPage from "@/pages/dynasty-values";
 import ValueRankingsPage from "@/pages/value-rankings";
+import LeagueRankingsPage from "@/pages/league-rankings";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/trade-history/:id" component={TradeHistoryPage} />
       <Route path="/dynasty-values" component={DynastyValuesPage} />
       <Route path="/rankings" component={ValueRankingsPage} />
+      <Route path="/league-rankings" component={LeagueRankingsPage} />
       <Route path="/lineup" component={LineupOptimizer} />
       <Route path="/analytics" component={LineupOptimizer} />
       <Route path="/premium" component={PremiumAnalytics} />
