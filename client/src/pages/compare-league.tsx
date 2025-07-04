@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Users, Trophy, TrendingUp, TrendingDown, Search, Crown, Target, RefreshCw, AlertCircle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -25,6 +26,18 @@ interface TeamValue {
   rank: number;
   powerScore: number;
   trend: 'up' | 'down' | 'stable';
+  roster?: Player[];
+}
+
+interface Player {
+  id: number;
+  name: string;
+  position: string;
+  team: string;
+  dynastyValue: number;
+  dynastyTier: string;
+  avgPoints: number;
+  isStarter: boolean;
 }
 
 interface LeagueComparison {
@@ -72,6 +85,8 @@ export default function CompareLeague() {
   const [leagueId, setLeagueId] = useState("");
   const [platform, setPlatform] = useState("sleeper");
   const [isSetup, setIsSetup] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<TeamValue | null>(null);
+  const [showRosterModal, setShowRosterModal] = useState(false);
   
   // Fetch league comparison data
   const { data: comparison, isLoading, error, refetch } = useQuery({
@@ -98,6 +113,34 @@ export default function CompareLeague() {
   const handleLoadLeague = () => {
     if (!leagueId.trim()) return;
     loadLeagueMutation.mutate({ leagueId: leagueId.trim(), platform });
+  };
+
+  const handleTeamClick = async (team: TeamValue) => {
+    setSelectedTeam(team);
+    
+    // Fetch detailed roster for the team
+    try {
+      const response = await fetch(`/api/teams/${team.teamId}/players`);
+      if (response.ok) {
+        const roster = await response.json();
+        setSelectedTeam(prev => prev ? { ...prev, roster } : null);
+      }
+    } catch (error) {
+      console.error("Failed to fetch team roster:", error);
+    }
+    
+    setShowRosterModal(true);
+  };
+
+  const getTierColor = (tier: string) => {
+    switch (tier) {
+      case 'Elite': return 'bg-purple-100 text-purple-800 border-purple-300';
+      case 'Premium': return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'Strong': return 'bg-green-100 text-green-800 border-green-300';
+      case 'Solid': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'Depth': return 'bg-orange-100 text-orange-800 border-orange-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
   };
 
   // Process team data for charts
@@ -456,34 +499,56 @@ export default function CompareLeague() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {chartData.map((team, index) => (
-                <div
-                  key={team.fullName}
-                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Badge className={`w-8 h-6 flex items-center justify-center text-xs font-bold ${getRankBadgeColor(index + 1)}`}>
-                      #{index + 1}
-                    </Badge>
-                    <div>
-                      <div className="font-semibold text-gray-900">{team.fullName}</div>
-                      <div className="text-sm text-gray-600">Owner: {team.owner}</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="font-bold text-lg text-gray-900">
-                        {team.total.toLocaleString()}
+              {chartData.map((team, index) => {
+                const teamValue: TeamValue = {
+                  teamId: `team-${index + 1}`,
+                  teamName: team.fullName,
+                  owner: team.owner,
+                  totalValue: team.total,
+                  positionValues: {
+                    QB: team.QB || 0,
+                    RB: team.RB || 0,
+                    WR: team.WR || 0,
+                    TE: team.TE || 0
+                  },
+                  rank: index + 1,
+                  powerScore: team.total,
+                  trend: team.trend || 'stable'
+                };
+                
+                return (
+                  <div
+                    key={team.fullName}
+                    onClick={() => handleTeamClick(teamValue)}
+                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-blue-50 hover:border-blue-300 transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Badge className={`w-8 h-6 flex items-center justify-center text-xs font-bold ${getRankBadgeColor(index + 1)}`}>
+                        #{index + 1}
+                      </Badge>
+                      <div>
+                        <div className="font-semibold text-gray-900 group-hover:text-blue-900">{team.fullName}</div>
+                        <div className="text-sm text-gray-600">Owner: {team.owner}</div>
                       </div>
-                      <div className="text-xs text-gray-600">dynasty pts</div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {getTrendIcon(team.trend)}
+                    
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="font-bold text-lg text-gray-900 group-hover:text-blue-900">
+                          {team.total.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-gray-600">dynasty pts</div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {getTrendIcon(team.trend)}
+                        <div className="text-xs text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                          View Roster →
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -514,6 +579,133 @@ export default function CompareLeague() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Interactive Team Roster Modal */}
+      <Dialog open={showRosterModal} onOpenChange={setShowRosterModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-yellow-600" />
+              {selectedTeam?.teamName} Roster
+            </DialogTitle>
+            <DialogDescription>
+              Dynasty values and player breakdown • Owner: {selectedTeam?.owner}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedTeam && (
+            <div className="space-y-6">
+              {/* Team Summary */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-lg font-bold text-gray-900">#{selectedTeam.rank}</div>
+                    <div className="text-xs text-gray-600">League Rank</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-lg font-bold text-gray-900">
+                      {selectedTeam.totalValue.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-gray-600">Total Value</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-lg font-bold text-purple-600">{selectedTeam.positionValues.QB}</div>
+                    <div className="text-xs text-gray-600">QB Value</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-lg font-bold text-green-600">{selectedTeam.positionValues.RB}</div>
+                    <div className="text-xs text-gray-600">RB Value</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-lg font-bold text-blue-600">{selectedTeam.positionValues.WR}</div>
+                    <div className="text-xs text-gray-600">WR Value</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Position Filter for Roster */}
+              <div className="flex gap-2 flex-wrap">
+                <Button 
+                  variant={selectedPosition === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedPosition("all")}
+                >
+                  All Players
+                </Button>
+                {Object.keys(POSITION_COLORS).map(pos => (
+                  <Button
+                    key={pos}
+                    variant={selectedPosition === pos ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedPosition(pos)}
+                    style={{
+                      backgroundColor: selectedPosition === pos ? POSITION_COLORS[pos as keyof typeof POSITION_COLORS] : undefined
+                    }}
+                  >
+                    {pos}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Roster Players */}
+              {selectedTeam.roster && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-gray-900">
+                    {selectedPosition === "all" ? "Full Roster" : `${selectedPosition} Players`}
+                  </h3>
+                  <div className="grid gap-2">
+                    {selectedTeam.roster
+                      .filter(player => selectedPosition === "all" || player.position === selectedPosition)
+                      .sort((a, b) => (b.dynastyValue || 0) - (a.dynastyValue || 0))
+                      .map((player, idx) => (
+                        <div key={player.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                          <div className="flex items-center gap-3">
+                            <Badge 
+                              className={`text-xs px-2 py-1 ${getTierColor(player.dynastyTier || 'Bench')}`}
+                            >
+                              {player.dynastyTier || 'Bench'}
+                            </Badge>
+                            <div>
+                              <div className="font-medium text-gray-900">{player.name}</div>
+                              <div className="text-sm text-gray-600">
+                                {player.position} • {player.team} 
+                                {player.isStarter && <span className="ml-2 text-green-600 font-medium">Starter</span>}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-gray-900">{player.dynastyValue || 0}</div>
+                            <div className="text-xs text-gray-600">{player.avgPoints?.toFixed(1)} PPG</div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                  
+                  {selectedTeam.roster.filter(player => selectedPosition === "all" || player.position === selectedPosition).length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      No {selectedPosition === "all" ? "" : selectedPosition} players found
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {!selectedTeam.roster && (
+                <div className="text-center py-8 text-gray-500">
+                  Loading roster data...
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <MobileNav />
     </div>
