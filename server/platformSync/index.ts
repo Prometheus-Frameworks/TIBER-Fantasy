@@ -7,10 +7,11 @@ import { ESPNSyncAdapter } from './adapters/espnAdapter';
 import { YahooSyncAdapter } from './adapters/yahooAdapter';
 import { SleeperSyncAdapter } from './adapters/sleeperAdapter';
 import { NFLSyncAdapter } from './adapters/nflAdapter';
+import { MySportsFeedsAdapter } from './adapters/mysportsfeedsAdapter';
 import { storage } from '../storage';
 
 export interface PlatformCredentials {
-  platform: 'espn' | 'yahoo' | 'nfl' | 'sleeper';
+  platform: 'espn' | 'yahoo' | 'nfl' | 'sleeper' | 'mysportsfeeds';
   accessToken?: string;
   refreshToken?: string;
   leagueId: string;
@@ -19,6 +20,7 @@ export interface PlatformCredentials {
   espnS2?: string; // ESPN specific
   consumerKey?: string; // Yahoo specific
   consumerSecret?: string; // Yahoo specific
+  apiKey?: string; // MySportsFeeds specific
 }
 
 export interface SyncData {
@@ -174,6 +176,7 @@ export class PlatformSyncManager {
     this.adapters.set('yahoo', new YahooSyncAdapter());
     this.adapters.set('sleeper', new SleeperSyncAdapter());
     this.adapters.set('nfl', new NFLSyncAdapter());
+    this.adapters.set('mysportsfeeds', new MySportsFeedsAdapter());
   }
 
   /**

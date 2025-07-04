@@ -1290,6 +1290,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Platform Sync Routes - Multi-platform fantasy data synchronization
+  app.post('/api/sync/authenticate', async (req, res) => {
+    try {
+      const { platformSyncManager } = await import('./platformSync');
+      const { platform, ...credentials } = req.body;
+      
+      const isAuthenticated = await platformSyncManager.authenticateUser({
+        platform,
+        ...credentials
+      });
+      
+      res.json({ success: isAuthenticated, platform });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/sync/full/:platform', async (req, res) => {
+    try {
+      const { platformSyncManager } = await import('./platformSync');
+      const { platform } = req.params;
+      const { userId = 'default_user', ...credentials } = req.body;
+      
+      const syncData = await platformSyncManager.syncUserData(userId, {
+        platform: platform as any,
+        ...credentials
+      });
+      
+      res.json(syncData);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/sync/status/:userId', async (req, res) => {
+    try {
+      const { platformSyncManager } = await import('./platformSync');
+      const { userId } = req.params;
+      
+      const status = await platformSyncManager.getSyncStatus(userId);
+      res.json(status);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // MySportsFeeds test endpoint for commercial data
+  app.post('/api/sync/mysportsfeeds/test', async (req, res) => {
+    try {
+      const { MySportsFeedsAdapter } = await import('./platformSync/adapters/mysportsfeedsAdapter');
+      const adapter = new MySportsFeedsAdapter();
+      
+      const { apiKey } = req.body;
+      if (!apiKey) {
+        return res.status(400).json({ message: 'MySportsFeeds API key required' });
+      }
+
+      const credentials = {
+        platform: 'mysportsfeeds' as const,
+        apiKey,
+        leagueId: 'nfl-2024-regular'
+      };
+
+      console.log('🔄 Testing MySportsFeeds authentication...');
+      
+      // Test authentication
+      const isAuthenticated = await adapter.authenticate(credentials);
+      if (!isAuthenticated) {
+        return res.status(401).json({ 
+          success: false,
+          message: 'MySportsFeeds authentication failed - check API key' 
+        });
+      }
+
+      console.log('✅ MySportsFeeds authenticated, fetching sample data...');
+
+      // Fetch sample data
+      const [leagues, teams] = await Promise.all([
+        adapter.fetchLeagues(credentials),
+        adapter.fetchTeams(credentials).catch(() => []) // Teams endpoint might require higher tier
+      ]);
+
+      res.json({
+        success: true,
+        authenticated: isAuthenticated,
+        message: 'MySportsFeeds connection successful',
+        sampleData: {
+          leagues: leagues.slice(0, 1),
+          teams: teams.slice(0, 5),
+          totalTeams: teams.length,
+          pricing: {
+            current: '$39 CAD/month (~$29 USD)',
+            tier: 'Non-Live NFL Data',
+            upgrades: 'Live data, projections, DFS salaries available'
+          }
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ MySportsFeeds test failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message,
+        error: error.toString(),
+        help: 'Verify your MySportsFeeds API key and subscription status'
+      });
+    }
+  });
+
+  // Get MySportsFeeds pricing and setup info
+  app.get('/api/sync/mysportsfeeds/info', async (req, res) => {
+    res.json({
+      provider: 'MySportsFeeds',
+      commercial: true,
+      pricing: {
+        nfl: {
+          nonLive: '$39 CAD/month (~$29 USD)',
+          live10min: '$109 CAD/month (~$82 USD)',
+          live5min: '$309 CAD/month (~$232 USD)'
+        },
+        addons: {
+          stats: '$29 CAD/month',
+          projections: '$29 CAD/month', 
+          dfs: '$29 CAD/month',
+          odds: '$29 CAD/month'
+        }
+      },
+      features: [
+        'Commercial use allowed',
+        'Authentic NFL player statistics',
+        'Fantasy point calculations',
+        'Weekly and season data',
+        'Canadian pricing (20-30% discount)',
+        '3-day free trial available'
+      ],
+      setup: {
+        website: 'https://www.mysportsfeeds.com',
+        documentation: 'https://www.mysportsfeeds.com/data-feeds/api-docs/',
+        support: 'Account required for API access'
+      }
+    });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
