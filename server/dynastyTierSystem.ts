@@ -1,14 +1,14 @@
 /**
  * 6-Tier Dynasty Ranking System
  * Comprehensive player classification for dynasty fantasy football
- * Now powered by Jake Maraia's official FantasyPros rankings
+ * Now powered by expert consensus rankings
  */
 
 import { 
-  getJakeMaraiaDynastyScore, 
-  getJakeMaraiaDynastyTier, 
-  isJakeMaraiaRankedPlayer
-} from './jakeMaraiaRankings';
+  getExpertDynastyScore, 
+  getExpertDynastyTier, 
+  isExpertRankedPlayer
+} from './expertConsensusRankings';
 import { getValidatedDynastyScore, validatePlayerRanking } from './rankingValidation';
 
 export interface DynastyTier {

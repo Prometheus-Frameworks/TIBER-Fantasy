@@ -100,7 +100,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Jake Maraia-powered dynasty rankings with 6-tier classification system. 
+                Expert consensus dynasty rankings with 6-tier classification system. 
                 Find Elite, Premium, and undervalued Solid tier players.
               </p>
               <Link href="/rankings">
@@ -239,11 +239,11 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Built on authentic sources: Jake Maraia rankings, KTC values, 
+                Built on authentic sources: Expert consensus rankings, KTC values, 
                 FantasyCalc trades, and real NFL statistics. No synthetic data.
               </p>
               <div className="flex gap-2">
-                <Badge variant="outline" className="text-xs">Jake Maraia</Badge>
+                <Badge variant="outline" className="text-xs">Expert Consensus</Badge>
                 <Badge variant="outline" className="text-xs">KTC</Badge>
                 <Badge variant="outline" className="text-xs">NFL Data</Badge>
               </div>

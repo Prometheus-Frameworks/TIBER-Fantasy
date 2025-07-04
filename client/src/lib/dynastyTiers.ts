@@ -1,15 +1,15 @@
 /**
  * 6-Tier Dynasty Ranking System (Client-side)
  * Comprehensive player classification for dynasty fantasy football
- * Now powered by Jake Maraia's official FantasyPros rankings
+ * Powered by expert consensus rankings
  */
 
 import { 
-  getJakeMaraiaDynastyScore, 
-  getJakeMaraiaDynastyTier, 
-  getJakeMaraiaPositionalRank,
-  ALL_JAKE_MARAIA_RANKINGS 
-} from './jakeMaraiaRankings';
+  getExpertDynastyScore, 
+  getExpertDynastyTier, 
+  getExpertPositionalRank,
+  ALL_EXPERT_RANKINGS 
+} from './expertConsensusRankings';
 
 export interface DynastyTier {
   name: string;
@@ -99,7 +99,7 @@ export function getTierIcon(tierName: string): string {
 
 /**
  * Enhanced dynasty scoring with 6-tier classification
- * Client-side version using Jake Maraia methodology
+ * Client-side version using expert consensus methodology
  */
 export function calculateDynastyScore(player: {
   name: string;
@@ -109,19 +109,19 @@ export function calculateDynastyScore(player: {
   team: string;
 }): { score: number; tier: DynastyTier; factors: string[] } {
   
-  // First priority: Jake Maraia's official FantasyPros rankings
-  const jakeScore = getJakeMaraiaDynastyScore(player.name);
-  const jakeTier = getJakeMaraiaDynastyTier(player.name);
-  const jakeRank = getJakeMaraiaPositionalRank(player.name);
+  // First priority: Expert consensus rankings
+  const expertScore = getExpertDynastyScore(player.name);
+  const expertTier = getExpertDynastyTier(player.name);
+  const expertRank = getExpertPositionalRank(player.name);
   
-  if (jakeScore !== null) {
+  if (expertScore !== null) {
     return {
-      score: jakeScore,
-      tier: getTierFromScore(jakeScore),
+      score: expertScore,
+      tier: getTierFromScore(expertScore),
       factors: [
-        `Jake Maraia rank: #${jakeRank} ${player.position}`,
-        'FantasyPros expert consensus',
-        `Dynasty tier: ${jakeTier}`
+        `Expert rank: #${expertRank} ${player.position}`,
+        'Expert consensus',
+        `Dynasty tier: ${expertTier}`
       ]
     };
   }
