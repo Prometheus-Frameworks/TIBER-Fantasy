@@ -145,8 +145,8 @@ class LeagueComparisonService {
       name: league.name,
       settings: {
         type: league.settings?.type === 2 ? 'Dynasty' : 'Redraft',
-        scoring: league.scoring_settings?.rec ? 'PPR' : 'Standard',
-        teamCount: league.total_rosters,
+        scoring: this.parseSleeperScoringFormat(league.scoring_settings),
+        teamCount: league.total_rosters || teams.length,
         positions: this.parseSleeperPositions(league.roster_positions)
       },
       teams,
@@ -170,6 +170,49 @@ class LeagueComparisonService {
     // Yahoo requires OAuth authentication
     // This would need user OAuth tokens to implement
     throw new Error('Yahoo league sync requires OAuth authentication');
+  }
+
+  /**
+   * Parse Sleeper scoring format accurately
+   */
+  private parseSleeperScoringFormat(scoringSettings: any): string {
+    if (!scoringSettings) return 'Standard';
+    
+    const recPoints = scoringSettings.rec || 0;
+    const tePoints = scoringSettings.bonus_rec_te || 0;
+    
+    let format = '';
+    
+    // PPR Detection
+    if (recPoints === 1) {
+      format = 'PPR';
+    } else if (recPoints === 0.5) {
+      format = 'Half PPR';
+    } else if (recPoints === 0) {
+      format = 'Standard';
+    } else {
+      format = `${recPoints} PPR`;
+    }
+    
+    // TE Premium Detection
+    if (tePoints > 0) {
+      format += ` TEP`;
+    }
+    
+    return format;
+  }
+
+  /**
+   * Parse Sleeper roster positions accurately
+   */
+  private parseSleeperPositions(rosterPositions: string[]): string[] {
+    if (!rosterPositions || !Array.isArray(rosterPositions)) {
+      return ['QB', 'RB', 'RB', 'WR', 'WR', 'TE', 'FLEX', 'K', 'DEF'];
+    }
+    
+    return rosterPositions.filter((pos: string) => 
+      ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SUPER_FLEX', 'K', 'DEF'].includes(pos)
+    );
   }
 
   /**

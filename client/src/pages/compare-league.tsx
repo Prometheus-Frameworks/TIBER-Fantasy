@@ -261,11 +261,15 @@ export default function CompareLeague() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl md:text-2xl font-bold text-gray-900">Compare League</h1>
-              <p className="text-sm text-gray-600">Dynasty team value analysis • 16 teams</p>
+              <p className="text-sm text-gray-600">
+                Dynasty team value analysis • {leagueData?.leagueSettings?.teamCount || leagueData?.teams?.length || 0} teams
+                {leagueData?.leagueSettings?.scoring && ` • ${leagueData.leagueSettings.scoring}`}
+                {leagueData?.leagueSettings?.positions?.includes('SUPER_FLEX') && ' • Superflex'}
+              </p>
             </div>
             <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
               <Users className="w-3 h-3 mr-1" />
-              Morts FF Dynasty
+              {leagueData?.leagueName || 'Dynasty League'}
             </Badge>
           </div>
 
