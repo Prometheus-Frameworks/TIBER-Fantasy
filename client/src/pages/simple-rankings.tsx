@@ -4,10 +4,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Users, Search, Trophy, Star } from "lucide-react";
+import { Loader2, Users, Search, Trophy, Star, Crown, Award, Target, Zap, Shield } from "lucide-react";
 import { useState } from "react";
 import type { Player } from "@shared/schema";
 import { PlayerSearch } from "@/components/player-search";
+import { calculateDynastyScore, getTierFromScore, getTierColor, getTierLabel, getTierIcon, DYNASTY_TIERS } from "@/lib/dynastyTiers";
 
 interface SimpleRankedPlayer {
   rank: number;
@@ -75,41 +76,25 @@ export default function SimpleRankings() {
     return dynastyValue > 6.0; // Minimum dynasty value threshold
   };
 
-  // Calculate dynasty value with expert consensus alignment
+  // Calculate dynasty value using the 6-tier system
   const calculateDynastyValue = (player: Player): number => {
-    const age = player.age || 25;
-    const avgPoints = player.avgPoints || 0;
-    
-    // Expert consensus tiers based on Jake Maraia and Fantasy Footballers rankings
-    const expertTiers: Record<string, number> = {
-      // Tier 1 - Elite (90-100 points)
-      'Ja\'Marr Chase': 100, 'CeeDee Lamb': 98, 'Puka Nacua': 96, 'Justin Jefferson': 95,
-      
-      // Tier 2 - Elite Young (85-89 points)  
-      'Brian Thomas Jr.': 89, 'Amon-Ra St. Brown': 88, 'Nico Collins': 87, 'Malik Nabers': 86,
-      
-      // Tier 3 - Strong Dynasty Assets (80-84 points)
-      'Drake London': 84, 'Ladd McConkey': 83, 'Rashee Rice': 82, 'A.J. Brown': 81, 'Tee Higgins': 80,
-      
-      // Tier 4 - Good Dynasty Assets (75-79 points)
-      'Tyreek Hill': 79, 'Mike Evans': 78, 'Garrett Wilson': 77, 'Marvin Harrison Jr.': 76, 'Terry McLaurin': 75,
-      
-      // Tier 5 - Solid Assets (70-74 points)
-      'George Pickens': 74, 'DeVonta Smith': 73, 'Jaylen Waddle': 72, 'Zay Flowers': 71, 'Jameson Williams': 70
-    };
-    
-    // Check if player is in expert consensus
-    if (expertTiers[player.name]) {
-      return expertTiers[player.name];
-    }
-    
-    // For non-consensus players, use age-adjusted calculation with conservative scoring
-    const ageMultiplier = Math.max(0.3, 1 - (age - 22) * 0.04); // Steeper age penalty
-    const baseValue = avgPoints * 3.5; // Convert PPG to dynasty score (more conservative)
-    const dynastyValue = baseValue * ageMultiplier;
-    
-    // Cap non-consensus players at 65 to prevent unknown players from ranking too high
-    return Math.min(65, dynastyValue);
+    const result = calculateDynastyScore({
+      name: player.name,
+      position: player.position,
+      age: player.age || 25,
+      avgPoints: player.avgPoints,
+      team: player.team
+    });
+    return result.score;
+  };
+
+  // Group players by tiers for comprehensive rankings
+  const getPlayersByTier = (players: SimpleRankedPlayer[], tierName: string) => {
+    return players.filter(p => {
+      const score = calculateDynastyValue(p.player);
+      const tier = getTierFromScore(score);
+      return tier.name === tierName;
+    });
   };
 
   // Generate simple rankings for each position
@@ -252,39 +237,74 @@ export default function SimpleRankings() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {generateSimpleRankings(position).map((ranking) => (
-                    <div
-                      key={ranking.player.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-white hover:bg-gray-50"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                          <span className="text-sm font-bold text-gray-700">
-                            {ranking.rank}
+                <div className="space-y-4">
+                  {/* Show players grouped by tier */}
+                  {DYNASTY_TIERS.map((tier) => {
+                    const tierPlayers = getPlayersByTier(generateSimpleRankings(position), tier.name);
+                    if (tierPlayers.length === 0) return null;
+                    
+                    return (
+                      <div key={tier.name} className="space-y-2">
+                        <div className="flex items-center gap-2 pb-2 border-b">
+                          <Badge 
+                            style={{ backgroundColor: tier.color, color: 'white' }}
+                            className="font-medium"
+                          >
+                            {tier.label}
+                          </Badge>
+                          <span className="text-sm text-gray-500">
+                            {tier.description}
                           </span>
                         </div>
                         
-                        <div>
-                          <div className="font-medium text-gray-900">
-                            {ranking.player.name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {ranking.player.team} • {ranking.player.avgPoints.toFixed(1)} PPG
-                          </div>
-                        </div>
-                      </div>
+                        {tierPlayers.map((ranking) => {
+                          const score = calculateDynastyValue(ranking.player);
+                          const tierInfo = getTierFromScore(score);
+                          
+                          return (
+                            <div
+                              key={ranking.player.id}
+                              className="flex items-center justify-between p-3 rounded-lg border bg-white hover:bg-gray-50"
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                  <span className="text-sm font-bold text-gray-700">
+                                    {ranking.rank}
+                                  </span>
+                                </div>
+                                
+                                <div>
+                                  <div className="font-medium text-gray-900">
+                                    {ranking.player.name}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {ranking.player.team} • {ranking.player.avgPoints.toFixed(1)} PPG
+                                  </div>
+                                </div>
+                              </div>
 
-                      <div className="text-right">
-                        <div className="text-sm font-medium text-gray-900">
-                          {position}{ranking.rank}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Position Rank
-                        </div>
+                              <div className="text-right flex items-center gap-3">
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">
+                                    Score: {score.toFixed(1)}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {position}{ranking.rank}
+                                  </div>
+                                </div>
+                                <Badge 
+                                  style={{ backgroundColor: tierInfo.color, color: 'white' }}
+                                  className="text-xs"
+                                >
+                                  {tierInfo.label}
+                                </Badge>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

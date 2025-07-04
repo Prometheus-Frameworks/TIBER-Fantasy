@@ -1770,6 +1770,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 6-Tier Dynasty System endpoints
+  app.post('/api/admin/populate-tiers', async (req, res) => {
+    try {
+      const { populatePlayerTiers } = await import('./populateTiers');
+      const result = await populatePlayerTiers();
+      res.json({
+        message: '6-tier dynasty classification complete',
+        ...result
+      });
+    } catch (error) {
+      console.error('❌ Tier population error:', error);
+      res.status(500).json({ 
+        message: 'Failed to populate player tiers',
+        error: error.message 
+      });
+    }
+  });
+
+  app.get('/api/tiers/statistics', async (req, res) => {
+    try {
+      const { getTierStatistics } = await import('./populateTiers');
+      const stats = await getTierStatistics();
+      res.json(stats);
+    } catch (error) {
+      console.error('❌ Tier statistics error:', error);
+      res.status(500).json({ 
+        message: 'Failed to get tier statistics',
+        error: error.message 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

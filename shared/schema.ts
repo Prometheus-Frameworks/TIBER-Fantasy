@@ -46,6 +46,7 @@ export const players = pgTable("players", {
   // Market data
   adp: real("adp"), // Average draft position
   dynastyValue: integer("dynasty_value"), // Dynasty value score 0-100
+  dynastyTier: text("dynasty_tier"), // 6-tier classification: tier0-tier5
   efficiency: real("efficiency"), // Efficiency rating
   sustainability: integer("sustainability"), // Sustainability score 0-100
   marketValue: integer("market_value"), // Market consensus value
