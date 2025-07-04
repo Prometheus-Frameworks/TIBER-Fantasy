@@ -3,9 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Users, Trophy, TrendingUp, TrendingDown, Search, Crown, Target } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Users, Trophy, TrendingUp, TrendingDown, Search, Crown, Target, RefreshCw, AlertCircle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import MobileNav from "@/components/mobile-nav";
 
 interface TeamValue {
@@ -36,179 +39,24 @@ interface LeagueComparison {
   bottomTeams: TeamValue[];
 }
 
-// Sample league data with 16 teams for demonstration
-const SAMPLE_LEAGUE_DATA: LeagueComparison = {
-  teams: [
-    {
-      teamId: "team1",
-      teamName: "Dynasty Dominators",
-      owner: "JohnSmith",
-      totalValue: 2850,
-      positionValues: { QB: 780, RB: 950, WR: 850, TE: 270 },
-      rank: 1,
-      powerScore: 95,
-      trend: 'up'
-    },
-    {
-      teamId: "team2", 
-      teamName: "Championship Chasers",
-      owner: "SarahJones",
-      totalValue: 2720,
-      positionValues: { QB: 720, RB: 890, WR: 820, TE: 290 },
-      rank: 2,
-      powerScore: 89,
-      trend: 'stable'
-    },
-    {
-      teamId: "team3",
-      teamName: "Future Champions",
-      owner: "MikeWilson",
-      totalValue: 2680,
-      positionValues: { QB: 690, RB: 860, WR: 870, TE: 260 },
-      rank: 3,
-      powerScore: 87,
-      trend: 'up'
-    },
-    {
-      teamId: "team4",
-      teamName: "Playoff Pushers",
-      owner: "EmilyDavis",
-      totalValue: 2590,
-      positionValues: { QB: 710, RB: 780, WR: 830, TE: 270 },
-      rank: 4,
-      powerScore: 82,
-      trend: 'down'
-    },
-    {
-      teamId: "team5",
-      teamName: "Rising Stars",
-      owner: "ChrisBrown",
-      totalValue: 2540,
-      positionValues: { QB: 650, RB: 820, WR: 790, TE: 280 },
-      rank: 5,
-      powerScore: 79,
-      trend: 'up'
-    },
-    {
-      teamId: "team6",
-      teamName: "Contenders",
-      owner: "JessicaTaylor",
-      totalValue: 2480,
-      positionValues: { QB: 680, RB: 750, WR: 780, TE: 270 },
-      rank: 6,
-      powerScore: 76,
-      trend: 'stable'
-    },
-    {
-      teamId: "team7",
-      teamName: "Rebuilding Kings",
-      owner: "DavidMiller",
-      totalValue: 2420,
-      positionValues: { QB: 590, RB: 780, WR: 760, TE: 290 },
-      rank: 7,
-      powerScore: 73,
-      trend: 'up'
-    },
-    {
-      teamId: "team8",
-      teamName: "Mid-Tier Mayhem",
-      owner: "AmandaWilson",
-      totalValue: 2380,
-      positionValues: { QB: 620, RB: 720, WR: 750, TE: 290 },
-      rank: 8,
-      powerScore: 70,
-      trend: 'stable'
-    },
-    {
-      teamId: "team9",
-      teamName: "Sleeper Squad",
-      owner: "RyanJohnson",
-      totalValue: 2340,
-      positionValues: { QB: 580, RB: 710, WR: 760, TE: 290 },
-      rank: 9,
-      powerScore: 67,
-      trend: 'up'
-    },
-    {
-      teamId: "team10",
-      teamName: "Wild Cards",
-      owner: "LisaAnderson",
-      totalValue: 2290,
-      positionValues: { QB: 610, RB: 680, WR: 730, TE: 270 },
-      rank: 10,
-      powerScore: 64,
-      trend: 'down'
-    },
-    {
-      teamId: "team11",
-      teamName: "Underdog United",
-      owner: "KevinThomas",
-      totalValue: 2240,
-      positionValues: { QB: 550, RB: 690, WR: 720, TE: 280 },
-      rank: 11,
-      powerScore: 61,
-      trend: 'stable'
-    },
-    {
-      teamId: "team12",
-      teamName: "Rookie Revolution",
-      owner: "NicoleMoore",
-      totalValue: 2180,
-      positionValues: { QB: 520, RB: 650, WR: 710, TE: 300 },
-      rank: 12,
-      powerScore: 58,
-      trend: 'up'
-    },
-    {
-      teamId: "team13",
-      teamName: "Veteran Voyage",
-      owner: "BrianClark",
-      totalValue: 2120,
-      positionValues: { QB: 590, RB: 620, WR: 680, TE: 230 },
-      rank: 13,
-      powerScore: 55,
-      trend: 'down'
-    },
-    {
-      teamId: "team14",
-      teamName: "Tank Squad",
-      owner: "MeganLewis",
-      totalValue: 2050,
-      positionValues: { QB: 480, RB: 580, WR: 690, TE: 300 },
-      rank: 14,
-      powerScore: 52,
-      trend: 'stable'
-    },
-    {
-      teamId: "team15",
-      teamName: "Rebuilding Block",
-      owner: "JasonWalker",
-      totalValue: 1980,
-      positionValues: { QB: 450, RB: 560, WR: 660, TE: 310 },
-      rank: 15,
-      powerScore: 48,
-      trend: 'down'
-    },
-    {
-      teamId: "team16",
-      teamName: "Future Focus",
-      owner: "TiffanyHall",
-      totalValue: 1890,
-      positionValues: { QB: 420, RB: 520, WR: 630, TE: 320 },
-      rank: 16,
-      powerScore: 43,
-      trend: 'up'
-    }
-  ],
+interface LeagueComparisonData {
+  leagueId: string;
+  leagueName: string;
+  leagueSettings: {
+    type: string;
+    scoring: string;
+    teamCount: number;
+    positions: string[];
+  };
+  teams: TeamValue[];
   leagueAverages: {
-    QB: 605,
-    RB: 720,
-    WR: 756,
-    TE: 281
-  },
-  topTeams: [],
-  bottomTeams: []
-};
+    QB: number;
+    RB: number;
+    WR: number;
+    TE: number;
+  };
+  lastUpdated: Date;
+}
 
 const POSITION_COLORS = {
   QB: "#8b5cf6", // Purple
@@ -218,14 +66,43 @@ const POSITION_COLORS = {
 };
 
 export default function CompareLeague() {
-  const [leagueData, setLeagueData] = useState<LeagueComparison>(SAMPLE_LEAGUE_DATA);
+  const [leagueData, setLeagueData] = useState<LeagueComparisonData | null>(null);
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [leagueId, setLeagueId] = useState("");
+  const [platform, setPlatform] = useState("sleeper");
+  const [isSetup, setIsSetup] = useState(false);
+  
+  // Fetch league comparison data
+  const { data: comparison, isLoading, error, refetch } = useQuery({
+    queryKey: ['/api/league-comparison', leagueId],
+    enabled: false, // Only fetch when user submits
+    retry: false
+  });
+
+  // Load league comparison
+  const loadLeagueMutation = useMutation({
+    mutationFn: async ({ leagueId, platform }: { leagueId: string; platform: string }) => {
+      const response = await fetch(`/api/league-comparison/${leagueId}?platform=${platform}`);
+      if (!response.ok) {
+        throw new Error(`Failed to load league: ${response.statusText}`);
+      }
+      return await response.json();
+    },
+    onSuccess: (data: LeagueComparisonData) => {
+      setLeagueData(data);
+      setIsSetup(true);
+    }
+  });
+
+  const handleLoadLeague = () => {
+    if (!leagueId.trim()) return;
+    loadLeagueMutation.mutate({ leagueId: leagueId.trim(), platform });
+  };
 
   // Process team data for charts
-  const chartData = leagueData.teams
-    .filter(team => 
+  const chartData = leagueData?.teams
+    ?.filter(team => 
       searchTerm === "" || 
       team.teamName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       team.owner.toLowerCase().includes(searchTerm.toLowerCase())
@@ -242,7 +119,7 @@ export default function CompareLeague() {
       total: team.totalValue,
       rank: index + 1,
       trend: team.trend
-    }));
+    })) || [];
 
   const getTrendIcon = (trend: string) => {
     switch (trend) {
@@ -258,6 +135,123 @@ export default function CompareLeague() {
     if (rank <= 12) return "bg-blue-100 text-blue-800";
     return "bg-gray-100 text-gray-800";
   };
+
+  // Show setup interface if no league loaded
+  if (!isSetup || !leagueData) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200 px-4 py-4 md:px-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900">Compare League</h1>
+              <p className="text-sm text-gray-600">Connect your fantasy league for dynasty analysis</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 md:p-6 max-w-2xl mx-auto">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-600" />
+                Connect Your League
+              </CardTitle>
+              <CardDescription>
+                Enter your league information to analyze all teams and their dynasty values
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Platform Selection */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Fantasy Platform</label>
+                <Select value={platform} onValueChange={setPlatform}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sleeper">Sleeper</SelectItem>
+                    <SelectItem value="espn">ESPN (requires login)</SelectItem>
+                    <SelectItem value="yahoo">Yahoo (requires login)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* League ID Input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  League ID
+                  {platform === 'sleeper' && (
+                    <span className="text-xs text-gray-500 ml-1">(found in URL)</span>
+                  )}
+                </label>
+                <Input
+                  placeholder={platform === 'sleeper' ? 'e.g., 1197631162923614208' : 'Enter league ID'}
+                  value={leagueId}
+                  onChange={(e) => setLeagueId(e.target.value)}
+                  className="font-mono"
+                />
+                {platform === 'sleeper' && (
+                  <p className="text-xs text-gray-500">
+                    Find your League ID in the Sleeper URL: sleeper.app/leagues/<strong>1197631162923614208</strong>
+                  </p>
+                )}
+              </div>
+
+              {/* Error Display */}
+              {loadLeagueMutation.error && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {loadLeagueMutation.error.message || 'Failed to load league data'}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Load Button */}
+              <Button
+                onClick={handleLoadLeague}
+                disabled={!leagueId.trim() || loadLeagueMutation.isPending}
+                className="w-full"
+              >
+                {loadLeagueMutation.isPending ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Loading League...
+                  </>
+                ) : (
+                  <>
+                    <Users className="w-4 h-4 mr-2" />
+                    Load League
+                  </>
+                )}
+              </Button>
+
+              {/* Help Text */}
+              <div className="mt-6 space-y-3 text-sm text-gray-600">
+                <h4 className="font-medium text-gray-900">Supported Platforms:</h4>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                    <div>
+                      <strong>Sleeper:</strong> Works instantly with League ID
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
+                    <div>
+                      <strong>ESPN/Yahoo:</strong> Requires authentication credentials
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <MobileNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

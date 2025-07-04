@@ -1398,6 +1398,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // League Comparison Routes - Real fantasy league analysis
+  app.get('/api/league-comparison/:leagueId', async (req, res) => {
+    try {
+      const { leagueId } = req.params;
+      const { platform = 'sleeper' } = req.query;
+      
+      const { leagueComparisonService } = await import('./leagueComparison');
+      const comparison = await leagueComparisonService.getLeagueComparison(
+        leagueId, 
+        platform as string
+      );
+      
+      res.json(comparison);
+    } catch (error: any) {
+      console.error('❌ League comparison failed:', error);
+      res.status(500).json({ 
+        message: error.message || 'Failed to fetch league comparison',
+        error: error.toString()
+      });
+    }
+  });
+
+  app.post('/api/league-comparison/test', async (req, res) => {
+    try {
+      const { leagueId, platform = 'sleeper' } = req.body;
+      
+      if (!leagueId) {
+        return res.status(400).json({ message: 'League ID required' });
+      }
+
+      console.log(`🔄 Testing league comparison for ${leagueId} on ${platform}...`);
+      
+      const { leagueComparisonService } = await import('./leagueComparison');
+      const comparison = await leagueComparisonService.getLeagueComparison(leagueId, platform);
+      
+      res.json({
+        success: true,
+        message: `Successfully analyzed ${comparison.teams.length} teams`,
+        data: {
+          leagueName: comparison.leagueName,
+          teamCount: comparison.teams.length,
+          topTeam: comparison.teams[0],
+          leagueAverages: comparison.leagueAverages,
+          settings: comparison.leagueSettings
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ League comparison test failed:', error);
+      res.status(500).json({ 
+        success: false,
+        message: error.message || 'Failed to test league comparison',
+        error: error.toString()
+      });
+    }
+  });
+
   // Get MySportsFeeds pricing and setup info
   app.get('/api/sync/mysportsfeeds/info', async (req, res) => {
     res.json({
@@ -1430,6 +1486,194 @@ export async function registerRoutes(app: Express): Promise<Server> {
         support: 'Account required for API access'
       }
     });
+  });
+
+  // Player Value Score endpoints
+  app.get('/api/player-value-score/:playerId', async (req, res) => {
+    try {
+      const { playerId } = req.params;
+      const { scoring = 'ppr', positions = 'QB,RB,WR,TE' } = req.query;
+      
+      const leagueSettings = {
+        scoring: scoring as 'standard' | 'ppr' | 'half-ppr',
+        positions: (positions as string).split(',')
+      };
+
+      const { playerValueScoreEngine } = await import('./playerValueScore');
+      const pvsData = await playerValueScoreEngine.calculatePlayerValueScore(
+        parseInt(playerId),
+        leagueSettings
+      );
+      
+      res.json(pvsData);
+    } catch (error) {
+      console.error('PVS calculation error:', error);
+      res.status(500).json({ 
+        message: 'Failed to calculate Player Value Score',
+        error: error.message 
+      });
+    }
+  });
+
+  // Batch PVS calculation for multiple players
+  app.post('/api/player-value-score/batch', async (req, res) => {
+    try {
+      const { playerIds, scoring = 'ppr', positions = ['QB', 'RB', 'WR', 'TE'] } = req.body;
+      
+      if (!Array.isArray(playerIds)) {
+        return res.status(400).json({ message: 'playerIds must be an array' });
+      }
+
+      const leagueSettings = {
+        scoring: scoring as 'standard' | 'ppr' | 'half-ppr',
+        positions
+      };
+
+      const { playerValueScoreEngine } = await import('./playerValueScore');
+      const pvsResults = await playerValueScoreEngine.calculateBatchPlayerValueScores(
+        playerIds,
+        leagueSettings
+      );
+      
+      res.json(pvsResults);
+    } catch (error) {
+      console.error('Batch PVS calculation error:', error);
+      res.status(500).json({ 
+        message: 'Failed to calculate batch Player Value Scores',
+        error: error.message 
+      });
+    }
+  });
+
+  // Top players by position with PVS
+  app.get('/api/rankings/:position', async (req, res) => {
+    try {
+      const { position } = req.params;
+      const { limit = '50', scoring = 'ppr', positions = 'QB,RB,WR,TE' } = req.query;
+      
+      const leagueSettings = {
+        scoring: scoring as 'standard' | 'ppr' | 'half-ppr',
+        positions: (positions as string).split(',')
+      };
+
+      const { playerValueScoreEngine } = await import('./playerValueScore');
+      const topPlayers = await playerValueScoreEngine.getTopPlayersByPosition(
+        position.toUpperCase(),
+        parseInt(limit as string),
+        leagueSettings
+      );
+      
+      res.json(topPlayers);
+    } catch (error) {
+      console.error('Position rankings error:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch position rankings',
+        error: error.message 
+      });
+    }
+  });
+
+  // League comparison endpoint with PVS integration
+  app.get('/api/league-comparison/:leagueId', async (req, res) => {
+    try {
+      const { leagueId } = req.params;
+      const { platform = 'sleeper' } = req.query;
+      
+      const { leagueComparisonService } = await import('./leagueComparison');
+      const leagueData = await leagueComparisonService.getLeagueComparison(
+        leagueId, 
+        platform as string
+      );
+      
+      res.json(leagueData);
+    } catch (error) {
+      console.error('League comparison error:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch league comparison data',
+        error: error.message 
+      });
+    }
+  });
+
+  // Comprehensive Data Sync endpoints
+  app.post('/api/data/sync-comprehensive', async (req, res) => {
+    try {
+      console.log('🚀 Starting comprehensive NFL data sync...');
+      
+      const { comprehensiveDataSync } = await import('./comprehensiveDataSync');
+      const results = await comprehensiveDataSync.syncAllPlayerData();
+      
+      res.json({
+        success: true,
+        message: `Comprehensive sync completed: ${results.created} created, ${results.updated} updated`,
+        results
+      });
+    } catch (error) {
+      console.error('❌ Comprehensive sync failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Comprehensive data sync failed',
+        error: error.message 
+      });
+    }
+  });
+
+  app.post('/api/data/sync-incremental', async (req, res) => {
+    try {
+      console.log('🔄 Starting incremental data sync...');
+      
+      const { comprehensiveDataSync } = await import('./comprehensiveDataSync');
+      const results = await comprehensiveDataSync.incrementalSync();
+      
+      res.json({
+        success: true,
+        message: `Incremental sync completed: ${results.updated} updates`,
+        results
+      });
+    } catch (error) {
+      console.error('❌ Incremental sync failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Incremental data sync failed',
+        error: error.message 
+      });
+    }
+  });
+
+  app.get('/api/data/sync-status', async (req, res) => {
+    try {
+      const { comprehensiveDataSync } = await import('./comprehensiveDataSync');
+      const status = await comprehensiveDataSync.getSyncStatus();
+      
+      res.json({
+        status: 'ready',
+        database: status,
+        apis: {
+          sportsDataIO: {
+            enabled: !!process.env.SPORTSDATA_API_KEY,
+            description: 'Official NFL statistics and player data'
+          },
+          espnAPI: {
+            enabled: true,
+            description: 'Real-time injury reports and game data'
+          },
+          playerValueScore: {
+            enabled: true,
+            description: 'Comprehensive dynasty player valuations'
+          }
+        },
+        recommendations: {
+          nextSync: 'Run comprehensive sync to populate database with authentic NFL data',
+          dataQuality: status.playersWithPVS > 0 ? 'Good' : 'Initial setup required'
+        }
+      });
+    } catch (error) {
+      console.error('❌ Sync status error:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch sync status',
+        error: error.message 
+      });
+    }
   });
 
   const httpServer = createServer(app);

@@ -50,6 +50,7 @@ export interface IStorage {
   // Player operations
   getPlayer(id: number): Promise<Player | undefined>;
   getPlayerByExternalId(externalId: string): Promise<Player | undefined>;
+  getPlayerBySleeperIdFromMemory(sleeperId: string): Promise<Player | undefined>;
   getAllPlayers(): Promise<Player[]>;
   getAvailablePlayers(position?: string): Promise<Player[]>;
   createPlayer(player: InsertPlayer): Promise<Player>;
@@ -479,6 +480,16 @@ export class DatabaseStorage implements IStorage {
   async getPlayer(id: number): Promise<Player | undefined> {
     const [player] = await db.select().from(players).where(eq(players.id, id));
     return player || undefined;
+  }
+
+  async getPlayerByExternalId(externalId: string): Promise<Player | undefined> {
+    const [player] = await db.select().from(players).where(eq(players.externalId, externalId));
+    return player || undefined;
+  }
+
+  async getPlayerBySleeperIdFromMemory(sleeperId: string): Promise<Player | undefined> {
+    // For Sleeper, the external ID is the sleeper ID
+    return await this.getPlayerByExternalId(sleeperId);
   }
 
   async getAllPlayers(): Promise<Player[]> {
