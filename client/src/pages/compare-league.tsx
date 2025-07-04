@@ -525,7 +525,7 @@ export default function CompareLeague() {
             <div className="space-y-3">
               {chartData.map((team, index) => {
                 const teamValue: TeamValue = {
-                  teamId: `team-${index + 1}`,
+                  teamId: team.teamId || team.rosterId || `team-${index + 1}`,
                   teamName: team.fullName,
                   owner: team.owner,
                   totalValue: team.total,
