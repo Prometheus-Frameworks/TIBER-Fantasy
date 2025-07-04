@@ -67,7 +67,7 @@ export default function PositionAnalysis({ teamId }: PositionAnalysisProps) {
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900">Position Analysis</h3>
             <div className="flex items-center space-x-3">
-              <Link href="/position-rankings">
+              <Link href="/rankings">
                 <Button variant="outline" size="sm" className="text-sm">
                   <MousePointer className="w-4 h-4 mr-2" />
                   View Rankings
@@ -82,7 +82,7 @@ export default function PositionAnalysis({ teamId }: PositionAnalysisProps) {
 
           <div className="space-y-4">
             {analysis?.map((position) => (
-              <Link key={position.id} href="/position-rankings">
+              <Link key={position.id} href="/rankings">
                 <div
                   className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] ${getPositionColor(position.status)}`}
                 >
