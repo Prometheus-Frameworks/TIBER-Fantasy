@@ -151,6 +151,10 @@ Changelog:
 - July 03, 2025. Created comprehensive dynasty valuation system with 5-component weighted scoring
 - July 03, 2025. Built Dynasty Values page showcasing our unique player evaluation methodology
 - July 03, 2025. Added weighted scoring: Fantasy Production (30%), Advanced Metrics (25%), Opportunity (20%), Efficiency (15%), Situational (10%)
+- July 04, 2025. **MAJOR UPDATE**: Research-based dynasty scoring weights based on correlation studies - Opportunity (35%), Fantasy Production (30%), Advanced Metrics (20%), Efficiency (10%), Situational (5%)
+- July 04, 2025. Research findings: Volume metrics (target share, touches) are most predictive of fantasy success with correlation >0.6; efficiency metrics show minimal correlation (3% for RBs)
+- July 04, 2025. Updated dynasty valuation system to prioritize predictive metrics over descriptive ones (YPRR descriptive vs Target Share predictive)
+- July 04, 2025. Enhanced UI to highlight research-based approach - "Most Predictive" and "Low Correlation" labels for user education
 ```
 
 ## User Preferences

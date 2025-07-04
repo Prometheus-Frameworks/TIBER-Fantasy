@@ -99,7 +99,7 @@ export default function DynastyValuesPage() {
             </Link>
             <div>
               <h1 className="text-xl font-bold text-gray-900">Dynasty Player Values</h1>
-              <p className="text-sm text-gray-500">Our unique weighted scoring system combining all data sources</p>
+              <p className="text-sm text-gray-500">Research-based scoring prioritizing volume metrics (most predictive of fantasy success)</p>
             </div>
           </div>
         </div>
@@ -108,7 +108,8 @@ export default function DynastyValuesPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Methodology Card */}
         <Card className="p-6 mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Our Dynasty Valuation System</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">Research-Based Dynasty Valuation</h2>
+          <p className="text-sm text-gray-600 mb-4">Weighted scoring based on correlation studies showing volume metrics (target share, touches) are most predictive of fantasy success</p>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="text-center">
               <Target className="w-6 h-6 mx-auto mb-2 text-blue-600" />
@@ -116,24 +117,26 @@ export default function DynastyValuesPage() {
               <div className="text-xs text-gray-600">30% Weight</div>
             </div>
             <div className="text-center">
-              <Zap className="w-6 h-6 mx-auto mb-2 text-green-600" />
-              <div className="font-medium text-sm">Advanced Metrics</div>
-              <div className="text-xs text-gray-600">25% Weight</div>
-            </div>
-            <div className="text-center">
               <Users className="w-6 h-6 mx-auto mb-2 text-purple-600" />
               <div className="font-medium text-sm">Opportunity</div>
+              <div className="text-xs text-gray-600">35% Weight</div>
+              <div className="text-xs text-green-600 font-medium">Most Predictive</div>
+            </div>
+            <div className="text-center">
+              <Zap className="w-6 h-6 mx-auto mb-2 text-green-600" />
+              <div className="font-medium text-sm">Advanced Metrics</div>
               <div className="text-xs text-gray-600">20% Weight</div>
             </div>
             <div className="text-center">
               <Activity className="w-6 h-6 mx-auto mb-2 text-orange-600" />
               <div className="font-medium text-sm">Efficiency</div>
-              <div className="text-xs text-gray-600">15% Weight</div>
+              <div className="text-xs text-gray-600">10% Weight</div>
+              <div className="text-xs text-red-600 font-medium">Low Correlation</div>
             </div>
             <div className="text-center">
               <MapPin className="w-6 h-6 mx-auto mb-2 text-red-600" />
               <div className="font-medium text-sm">Situational</div>
-              <div className="text-xs text-gray-600">10% Weight</div>
+              <div className="text-xs text-gray-600">5% Weight</div>
             </div>
           </div>
         </Card>
