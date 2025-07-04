@@ -926,6 +926,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Trending Players Analysis endpoints
+  app.get('/api/trending', async (req, res) => {
+    try {
+      const { position, category, minConfidence } = req.query;
+      
+      const { trendingPlayersService } = await import('./trendingPlayers');
+      
+      if (position || category || minConfidence) {
+        const players = await trendingPlayersService.getFilteredTrending(
+          position as string,
+          category as string,
+          minConfidence ? parseInt(minConfidence as string) : undefined
+        );
+        res.json({ players });
+      } else {
+        const analysis = await trendingPlayersService.getTrendingPlayers();
+        res.json(analysis);
+      }
+    } catch (error) {
+      console.error('Error fetching trending players:', error);
+      res.status(500).json({ error: 'Failed to fetch trending players' });
+    }
+  });
+
+  app.get('/api/trending/:playerId/analysis', async (req, res) => {
+    try {
+      const { playerId } = req.params;
+      
+      const { trendingPlayersService } = await import('./trendingPlayers');
+      
+      const analysis = await trendingPlayersService.analyzePlayerTrend(parseInt(playerId));
+      res.json(analysis);
+    } catch (error) {
+      console.error('Error analyzing player trend:', error);
+      res.status(500).json({ error: 'Failed to analyze player trend' });
+    }
+  });
+
+  app.get('/api/trending/premium-preview', async (req, res) => {
+    try {
+      // Preview of what FantasyPointsData integration would provide
+      res.json({
+        subscription: {
+          name: "FantasyPointsData Premium",
+          price: "$200/year",
+          status: "not_subscribed"
+        },
+        premiumMetrics: [
+          {
+            name: "Target Share",
+            description: "Percentage of team targets (vs X% placeholder)",
+            example: "23.4% late season vs 12.1% early"
+          },
+          {
+            name: "Route Participation",
+            description: "Percentage of passing plays where player ran route",
+            example: "78.5% route participation rate"
+          },
+          {
+            name: "Weighted Opportunity Rating",
+            description: "Composite score weighting targets, carries, and red zone touches",
+            example: "8.7 WOR (top 15% at position)"
+          },
+          {
+            name: "Dominator Rating",
+            description: "Share of team's total offensive production",
+            example: "31.2% dominator rating"
+          },
+          {
+            name: "Air Yards Share",
+            description: "Percentage of team's total air yards",
+            example: "28.9% air yards share"
+          }
+        ],
+        features: [
+          "Real-time role tracking from Week 9 onward",
+          "Advanced breakout context analysis",
+          "Sustainability probability models",
+          "2025 projection algorithms",
+          "Integration with dynasty value APIs"
+        ]
+      });
+    } catch (error) {
+      console.error('Error fetching premium preview:', error);
+      res.status(500).json({ error: 'Failed to fetch premium preview' });
+    }
+  });
+
   // ESPN API Integration Routes
   app.get("/api/espn/scoreboard", async (req, res) => {
     try {
