@@ -1,15 +1,15 @@
 /**
  * 6-Tier Dynasty Ranking System (Client-side)
  * Comprehensive player classification for dynasty fantasy football
- * Powered by expert consensus rankings
+ * Powered by proprietary statistical analysis
  */
 
 import { 
-  getExpertDynastyScore, 
-  getExpertDynastyTier, 
-  getExpertPositionalRank,
-  ALL_EXPERT_RANKINGS 
-} from './expertConsensusRankings';
+  getProprietaryDynastyScore, 
+  getProprietaryDynastyTier, 
+  getProprietaryPositionalRank,
+  ALL_PROPRIETARY_RANKINGS 
+} from './proprietaryRankings';
 
 export interface DynastyTier {
   name: string;
@@ -109,19 +109,19 @@ export function calculateDynastyScore(player: {
   team: string;
 }): { score: number; tier: DynastyTier; factors: string[] } {
   
-  // First priority: Expert consensus rankings
-  const expertScore = getExpertDynastyScore(player.name);
-  const expertTier = getExpertDynastyTier(player.name);
-  const expertRank = getExpertPositionalRank(player.name);
+  // First priority: Proprietary rankings (legally safe)
+  const proprietaryScore = getProprietaryDynastyScore(player.name);
+  const proprietaryTier = getProprietaryDynastyTier(player.name);
+  const proprietaryRank = getProprietaryPositionalRank(player.name);
   
-  if (expertScore !== null) {
+  if (proprietaryScore !== null) {
     return {
-      score: expertScore,
-      tier: getTierFromScore(expertScore),
+      score: proprietaryScore,
+      tier: getTierFromScore(proprietaryScore),
       factors: [
-        `Expert rank: #${expertRank} ${player.position}`,
-        'Expert consensus',
-        `Dynasty tier: ${expertTier}`
+        `Prometheus rank: #${proprietaryRank} ${player.position}`,
+        'Proprietary statistical analysis',
+        `Dynasty tier: ${proprietaryTier}`
       ]
     };
   }

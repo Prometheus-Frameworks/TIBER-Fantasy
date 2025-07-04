@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import DataAttributionFooter from "@/components/data-attribution-footer";
 import { 
   Trophy, 
   TrendingUp, 
@@ -100,7 +101,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Expert consensus dynasty rankings with 6-tier classification system. 
+                Proprietary dynasty rankings with 6-tier classification system based on statistical analysis. 
                 Find Elite, Premium, and undervalued Solid tier players.
               </p>
               <Link href="/rankings">
@@ -239,11 +240,11 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Built on authentic sources: Expert consensus rankings, KTC values, 
+                Built on authentic sources: Proprietary statistical analysis, KTC values, 
                 FantasyCalc trades, and real NFL statistics. No synthetic data.
               </p>
               <div className="flex gap-2">
-                <Badge variant="outline" className="text-xs">Expert Consensus</Badge>
+                <Badge variant="outline" className="text-xs">Proprietary Analysis</Badge>
                 <Badge variant="outline" className="text-xs">KTC</Badge>
                 <Badge variant="outline" className="text-xs">NFL Data</Badge>
               </div>
@@ -281,24 +282,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="bg-gray-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
-            <h3 className="text-2xl font-bold mb-2">Prometheus</h3>
-            <p className="text-gray-400 mb-4">Advanced Fantasy Football Analytics</p>
-            <div className="flex justify-center gap-6 text-sm text-gray-400">
-              <span>Dynasty Rankings</span>
-              <span>•</span>
-              <span>Player Analysis</span>
-              <span>•</span>
-              <span>Market Values</span>
-              <span>•</span>
-              <span>League Sync</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Data Attribution Footer */}
+      <DataAttributionFooter />
     </div>
   );
 }

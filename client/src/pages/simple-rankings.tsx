@@ -10,6 +10,7 @@ import { Link } from "wouter";
 import type { Player } from "@shared/schema";
 import { PlayerSearch } from "@/components/player-search";
 import { calculateDynastyScore, getTierFromScore, getTierColor, getTierLabel, getTierIcon, DYNASTY_TIERS } from "@/lib/dynastyTiers";
+import RankingDisclaimer from "@/components/ranking-disclaimer";
 
 interface SimpleRankedPlayer {
   rank: number;
