@@ -61,7 +61,7 @@ class LeagueComparisonService {
       // Analyze each team's dynasty value
       const teams = await Promise.all(
         leagueData.teams.map(async (team, index) => {
-          const teamAnalysis = await this.analyzeTeamValue(team, leagueData.rosters[index]);
+          const teamAnalysis = await this.analyzeTeamValue(team, leagueData);
           return {
             ...teamAnalysis,
             rank: 0 // Will be set after sorting
@@ -112,10 +112,12 @@ class LeagueComparisonService {
    * Fetch Sleeper league data
    */
   private async fetchSleeperLeague(leagueId: string) {
-    const [leagueResponse, usersResponse, rostersResponse] = await Promise.all([
+    const [leagueResponse, usersResponse, rostersResponse, playersResponse, draftsResponse] = await Promise.all([
       fetch(`https://api.sleeper.app/v1/league/${leagueId}`),
       fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`),
-      fetch(`https://api.sleeper.app/v1/league/${leagueId}/rosters`)
+      fetch(`https://api.sleeper.app/v1/league/${leagueId}/rosters`),
+      fetch(`https://api.sleeper.app/v1/players/nfl`),
+      fetch(`https://api.sleeper.app/v1/league/${leagueId}/drafts`)
     ]);
 
     if (!leagueResponse.ok || !usersResponse.ok || !rostersResponse.ok) {
@@ -125,10 +127,16 @@ class LeagueComparisonService {
     const league = await leagueResponse.json();
     const users = await usersResponse.json();
     const rosters = await rostersResponse.json();
+    const sleeperPlayers = playersResponse.ok ? await playersResponse.json() : {};
+    const drafts = draftsResponse.ok ? await draftsResponse.json() : [];
 
-    // Map users to rosters
+    // Map users to rosters with draft picks
     const teams = rosters.map((roster: any) => {
       const owner = users.find((user: any) => user.user_id === roster.owner_id);
+      
+      // Get draft picks for this roster
+      const draftPicks = this.getDraftPicksForRoster(roster.roster_id, drafts, league);
+      
       return {
         teamId: roster.roster_id.toString(),
         teamName: owner?.metadata?.team_name || owner?.display_name || `Team ${roster.roster_id}`,
@@ -137,6 +145,7 @@ class LeagueComparisonService {
         ownerId: roster.owner_id,
         players: roster.players || [],
         starters: roster.starters || [],
+        draftPicks: draftPicks,
         settings: roster.settings || {}
       };
     });
@@ -150,7 +159,9 @@ class LeagueComparisonService {
         positions: this.parseSleeperPositions(league.roster_positions)
       },
       teams,
-      rosters
+      rosters,
+      sleeperPlayers,
+      drafts
     };
   }
 
@@ -216,47 +227,62 @@ class LeagueComparisonService {
   }
 
   /**
-   * Analyze a team's dynasty value
+   * Analyze a team's dynasty value using Sleeper player data
    */
-  private async analyzeTeamValue(team: any, roster: any): Promise<Omit<TeamComparison, 'rank'>> {
+  private async analyzeTeamValue(team: any, leagueData: any): Promise<Omit<TeamComparison, 'rank'>> {
     const playerIds = team.players || [];
     const starterIds = team.starters || [];
+    const draftPicks = team.draftPicks || [];
     
-    // Get player dynasty values from our database
+    // Get player dynasty values using Sleeper player data
     const playerValues = await Promise.all(
       playerIds.map(async (playerId: string) => {
-        const player = await storage.getPlayerBySleeperIdFromMemory(playerId);
-        if (!player) {
-          // If player not in our database, estimate value based on position
-          const position = await this.getPlayerPosition(playerId);
+        const sleeperPlayer = leagueData.sleeperPlayers[playerId];
+        
+        if (!sleeperPlayer) {
           return {
-            playerId: parseInt(playerId),
+            playerId: parseInt(playerId) || 0,
             playerName: `Unknown Player ${playerId}`,
-            position,
-            dynastyValue: this.estimatePlayerValue(position),
+            position: 'FLEX',
+            dynastyValue: 10, // Minimal value for unknown players
             isStarter: starterIds.includes(playerId)
           };
         }
         
+        // Calculate dynasty value based on player data
+        const dynastyValue = this.calculateSleeperPlayerValue(sleeperPlayer);
+        
         return {
-          playerId: player.id,
-          playerName: player.name,
-          position: player.position,
-          dynastyValue: player.dynastyValue || this.estimatePlayerValue(player.position),
+          playerId: parseInt(playerId) || 0,
+          playerName: `${sleeperPlayer.first_name || ''} ${sleeperPlayer.last_name || ''}`.trim() || 'Unknown',
+          position: sleeperPlayer.position || 'FLEX',
+          dynastyValue,
           isStarter: starterIds.includes(playerId)
         };
       })
     );
 
+    // Add draft pick values
+    const draftPickValues = draftPicks.map((pick: any) => ({
+      playerId: `pick_${pick.round}_${pick.pick_no}`,
+      playerName: `${pick.season} Round ${pick.round} Pick ${pick.pick_no}`,
+      position: 'PICK',
+      dynastyValue: this.calculateDraftPickValue(pick),
+      isStarter: false
+    }));
+
+    const allAssets = [...playerValues, ...draftPickValues];
+
     // Calculate positional values
     const positionValues = {
-      QB: this.calculatePositionValue(playerValues, 'QB'),
-      RB: this.calculatePositionValue(playerValues, 'RB'),
-      WR: this.calculatePositionValue(playerValues, 'WR'),
-      TE: this.calculatePositionValue(playerValues, 'TE')
+      QB: this.calculatePositionValue(allAssets, 'QB'),
+      RB: this.calculatePositionValue(allAssets, 'RB'),
+      WR: this.calculatePositionValue(allAssets, 'WR'),
+      TE: this.calculatePositionValue(allAssets, 'TE')
     };
 
-    const totalValue = Object.values(positionValues).reduce((sum, val) => sum + val, 0);
+    const totalValue = Object.values(positionValues).reduce((sum, val) => sum + val, 0) +
+                      this.calculatePositionValue(allAssets, 'PICK'); // Add draft pick value
 
     return {
       teamId: team.teamId,
@@ -264,9 +290,9 @@ class LeagueComparisonService {
       owner: team.owner,
       totalValue,
       positionValues,
-      powerScore: Math.round((totalValue / 30)), // Normalize to 0-100
+      powerScore: Math.round((totalValue / 50)), // Normalize to 0-100
       trend: this.calculateTrend(totalValue),
-      roster: playerValues
+      roster: allAssets
     };
   }
 
@@ -282,6 +308,108 @@ class LeagueComparisonService {
       const multiplier = player.isStarter ? 1.0 : 0.3; // Starters worth full value, bench 30%
       return sum + (baseValue * multiplier);
     }, 0);
+  }
+
+  /**
+   * Get draft picks for a specific roster
+   */
+  private getDraftPicksForRoster(rosterId: number, drafts: any[], league: any): any[] {
+    if (!drafts || drafts.length === 0) return [];
+    
+    const currentSeason = new Date().getFullYear();
+    const picks: any[] = [];
+    
+    // Get traded picks and calculate future draft picks
+    for (let season = currentSeason; season <= currentSeason + 3; season++) {
+      for (let round = 1; round <= 4; round++) {
+        picks.push({
+          season,
+          round,
+          pick_no: Math.round(rosterId * 12 / league.total_rosters) + ((round - 1) * 12),
+          original_owner: rosterId
+        });
+      }
+    }
+    
+    return picks;
+  }
+
+  /**
+   * Calculate dynasty value for a Sleeper player
+   */
+  private calculateSleeperPlayerValue(player: any): number {
+    const position = player.position;
+    const age = player.age || 25;
+    const yearsExp = player.years_exp || 0;
+    
+    // Base values by position (elite tier)
+    const baseValues: Record<string, number> = {
+      'QB': 300,
+      'RB': 250, 
+      'WR': 280,
+      'TE': 200,
+      'K': 5,
+      'DEF': 5
+    };
+    
+    let baseValue = baseValues[position] || 50;
+    
+    // Age adjustment (peak years: QB 28-32, RB 24-27, WR 25-29, TE 26-30)
+    const agePeaks: Record<string, [number, number]> = {
+      'QB': [28, 32],
+      'RB': [24, 27],
+      'WR': [25, 29], 
+      'TE': [26, 30]
+    };
+    
+    const [peakStart, peakEnd] = agePeaks[position] || [25, 29];
+    
+    if (age >= peakStart && age <= peakEnd) {
+      baseValue *= 1.0; // Peak years
+    } else if (age < peakStart) {
+      baseValue *= Math.max(0.7, 1 - (peakStart - age) * 0.1); // Young upside
+    } else {
+      baseValue *= Math.max(0.3, 1 - (age - peakEnd) * 0.15); // Decline
+    }
+    
+    // Rookie premium for positions
+    if (yearsExp === 0 && ['RB', 'WR', 'TE'].includes(position)) {
+      baseValue *= 1.2;
+    }
+    
+    // Add some variance based on player status
+    if (player.injury_status === 'Out' || player.injury_status === 'IR') {
+      baseValue *= 0.7;
+    }
+    
+    return Math.round(Math.max(10, baseValue));
+  }
+
+  /**
+   * Calculate draft pick value
+   */
+  private calculateDraftPickValue(pick: any): number {
+    const round = pick.round;
+    const season = pick.season;
+    const currentSeason = new Date().getFullYear();
+    
+    // Base values by round
+    const roundValues: Record<number, number> = {
+      1: 150,
+      2: 80,
+      3: 40,
+      4: 20
+    };
+    
+    let value = roundValues[round] || 10;
+    
+    // Future year discount
+    const yearsOut = season - currentSeason;
+    if (yearsOut > 0) {
+      value *= Math.pow(0.9, yearsOut); // 10% discount per year
+    }
+    
+    return Math.round(value);
   }
 
   /**
