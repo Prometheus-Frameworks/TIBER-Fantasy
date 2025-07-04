@@ -481,21 +481,68 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllPlayers(): Promise<Player[]> {
-    return await db.select().from(players);
+    // Select only the essential columns that exist in the current database
+    return await db
+      .select({
+        id: players.id,
+        name: players.name,
+        team: players.team,
+        position: players.position,
+        avgPoints: players.avgPoints,
+        projectedPoints: players.projectedPoints,
+        ownershipPercentage: players.ownershipPercentage,
+        isAvailable: players.isAvailable,
+        upside: players.upside,
+        injuryStatus: players.injuryStatus,
+        availability: players.availability,
+        imageUrl: players.imageUrl,
+        consistency: players.consistency,
+        matchupRating: players.matchupRating,
+        trend: players.trend,
+        ownership: players.ownership,
+        targetShare: players.targetShare,
+        redZoneTargets: players.redZoneTargets,
+        carries: players.carries,
+        snapCount: players.snapCount,
+        externalId: players.externalId
+      })
+      .from(players);
   }
 
   async getAvailablePlayers(position?: string): Promise<Player[]> {
-    if (position) {
-      return await db
-        .select()
-        .from(players)
-        .where(and(eq(players.isAvailable, true), eq(players.position, position)));
-    }
-    
-    return await db
-      .select()
+    // Select only the essential columns that exist in the current database
+    const query = db
+      .select({
+        id: players.id,
+        name: players.name,
+        team: players.team,
+        position: players.position,
+        avgPoints: players.avgPoints,
+        projectedPoints: players.projectedPoints,
+        ownershipPercentage: players.ownershipPercentage,
+        isAvailable: players.isAvailable,
+        upside: players.upside,
+        injuryStatus: players.injuryStatus,
+        availability: players.availability,
+        imageUrl: players.imageUrl,
+        consistency: players.consistency,
+        matchupRating: players.matchupRating,
+        trend: players.trend,
+        ownership: players.ownership,
+        targetShare: players.targetShare,
+        redZoneTargets: players.redZoneTargets,
+        carries: players.carries,
+        snapCount: players.snapCount,
+        externalId: players.externalId
+      })
       .from(players)
       .where(eq(players.isAvailable, true));
+    
+    if (position) {
+      return await query.where(and(eq(players.isAvailable, true), eq(players.position, position)));
+    }
+    
+    return await query;
   }
 
   async createPlayer(player: InsertPlayer): Promise<Player> {
