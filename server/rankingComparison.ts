@@ -1,4 +1,6 @@
 import type { Player } from "@shared/schema";
+import { playerDataValidationService } from "./playerDataValidation";
+import { sleeperAPI } from "./sleeperAPI";
 
 export interface PlayerRanking {
   player: Player;
@@ -27,10 +29,14 @@ export class RankingComparisonService {
   async generateRankings(players: Player[]): Promise<PlayerRanking[]> {
     const rankings: PlayerRanking[] = [];
     
+    // Filter out problematic players first
+    const validPlayers = playerDataValidationService.filterValidPlayers(players);
+    console.log(`Filtered ${players.length - validPlayers.length} problematic players, analyzing ${validPlayers.length} valid players`);
+    
     // Calculate our analytical rankings first
     const scoredPlayers = await Promise.all(
-      players.map(async (player) => ({
-        player,
+      validPlayers.map(async (player) => ({
+        player: playerDataValidationService.normalizePlayerData(player),
         analyticsScore: await this.calculateAnalyticsScore(player)
       }))
     );
@@ -47,7 +53,7 @@ export class RankingComparisonService {
       const ourOverallRank = i + 1;
       const ourPositionRank = positionRanks[player.position]?.[player.id] || 99;
       
-      const consensusADP = this.estimateConsensusADP(player);
+      const consensusADP = playerDataValidationService.getRealisticADP(player);
       const consensusPositionRank = this.estimateConsensusPositionRank(player);
       
       const adpDifference = consensusADP - ourOverallRank;

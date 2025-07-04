@@ -170,6 +170,11 @@ Changelog:
 - July 04, 2025. Value categorization: STEAL (50+ picks undervalued), VALUE (25+ picks), FAIR (±25), OVERVALUED/AVOID (overvalued)
 - July 04, 2025. Clear ranking displays: "Our Rank: #23 WR vs Market ADP: #44 WR = +21 picks undervalued" 
 - July 04, 2025. Navigation enhancement: Added Rankings as main section with Trophy icon in mobile navigation
+- July 04, 2025. **DATA QUALITY CRISIS**: Fixed unrealistic player rankings (Deshaun Watson QB7, AJ Dillon RB7) by implementing comprehensive data validation
+- July 04, 2025. Player filtering system: Excludes suspended/inactive players, validates stat ranges, normalizes decimal precision to .toFixed(1)
+- July 04, 2025. **SLEEPER API INTEGRATION**: Connected to Sleeper API for authentic player data, trending analysis, and realistic ADP calculations
+- July 04, 2025. Enhanced team display: Updated to show "Morts FF Dynasty • 1 PPR SF TEP" format with correct league settings
+- July 04, 2025. Conservative analytics: Rebuilt RB/WR opportunity scoring with realistic thresholds to prevent inflated rankings
 ```
 
 ## User Preferences

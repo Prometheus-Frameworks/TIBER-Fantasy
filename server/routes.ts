@@ -512,6 +512,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sleeper API Integration and Data Sync
+  app.post("/api/sync/sleeper", async (req, res) => {
+    try {
+      const { sleeperAPI } = await import('./sleeperAPI');
+      const syncResults = await sleeperAPI.syncSleeperData();
+      
+      res.json({
+        message: "Sleeper data sync completed successfully",
+        results: syncResults
+      });
+    } catch (error) {
+      console.error("Error syncing Sleeper data:", error);
+      res.status(500).json({ message: "Failed to sync Sleeper data" });
+    }
+  });
+
+  // Get player data from Sleeper API
+  app.get("/api/sleeper/player/:name", async (req, res) => {
+    try {
+      const { sleeperAPI } = await import('./sleeperAPI');
+      const playerName = req.params.name;
+      const playerData = await sleeperAPI.getPlayerAnalytics(playerName);
+      
+      if (!playerData) {
+        return res.status(404).json({ message: "Player not found in Sleeper data" });
+      }
+      
+      res.json(playerData);
+    } catch (error) {
+      console.error("Error fetching Sleeper player data:", error);
+      res.status(500).json({ message: "Failed to fetch player data from Sleeper" });
+    }
+  });
+
   // Dynasty Trade History Endpoints
   app.get("/api/teams/:id/trades", async (req, res) => {
     try {
