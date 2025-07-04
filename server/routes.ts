@@ -197,8 +197,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           dynastyTier
         };
       });
+
+      // Filter out irrelevant players using dynasty scoring and performance thresholds
+      const relevantPlayers = playersWithDynastyValues.filter(player => {
+        // Always include elite/premium dynasty assets
+        if (player.dynastyValue >= 30) return true;
+        
+        // Include players with decent fantasy production
+        if (player.avgPoints >= 8) return true;
+        
+        // Include specifically ranked elite players
+        const eliteNames = ['Josh Allen', 'Lamar Jackson', 'Justin Jefferson', 'CeeDee Lamb', 'Tyreek Hill', 'Ja\'Marr Chase', 'Amon-Ra St. Brown'];
+        if (eliteNames.includes(player.name)) return true;
+        
+        // Exclude low-value players with poor production
+        return false;
+      });
       
-      res.json(playersWithDynastyValues);
+      // Sort by dynasty value (highest first)
+      relevantPlayers.sort((a, b) => (b.dynastyValue || 0) - (a.dynastyValue || 0));
+      
+      res.json(relevantPlayers);
     } catch (error) {
       console.error("Error fetching available players:", error);
       res.status(500).json({ message: "Failed to fetch available players" });
@@ -1605,7 +1624,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
       
-      // Search using raw SQL for reliability
+      // Search using raw SQL for reliability - no caching headers
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       const searchTerm = q.toLowerCase();
       const searchResults = await db.execute(
         sql`
@@ -1613,8 +1636,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           FROM players 
           WHERE LOWER(name) LIKE ${`%${searchTerm}%`}
             AND position IN ('QB', 'RB', 'WR', 'TE')
-            AND (avg_points >= 5 OR dynasty_value >= 15)
-          ORDER BY dynasty_value DESC NULLS LAST, name
+            AND (
+              avg_points >= 8 OR 
+              dynasty_value >= 30 OR 
+              name IN ('Josh Allen', 'Lamar Jackson', 'Justin Jefferson', 'CeeDee Lamb', 'Tyreek Hill')
+            )
+          ORDER BY dynasty_value DESC NULLS LAST, avg_points DESC, name
           LIMIT ${parseInt(limit as string)}
         `
       );
