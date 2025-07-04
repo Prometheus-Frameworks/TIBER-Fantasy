@@ -229,41 +229,45 @@ export default function CompareLeague() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Platform Selection */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Fantasy Platform</label>
-                <Select value={platform} onValueChange={setPlatform}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sleeper">Sleeper</SelectItem>
-                    <SelectItem value="espn">ESPN (requires login)</SelectItem>
-                    <SelectItem value="yahoo">Yahoo (requires login)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <form noValidate onSubmit={(e) => { e.preventDefault(); handleLoadLeague(); }}>
+                {/* Platform Selection */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Fantasy Platform</label>
+                  <Select value={platform} onValueChange={setPlatform}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sleeper">Sleeper</SelectItem>
+                      <SelectItem value="espn">ESPN (requires login)</SelectItem>
+                      <SelectItem value="yahoo">Yahoo (requires login)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* League ID Input */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  League ID
+                {/* League ID Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    League ID
+                    {platform === 'sleeper' && (
+                      <span className="text-xs text-gray-500 ml-1">(found in URL)</span>
+                    )}
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder={platform === 'sleeper' ? 'e.g., 1197631162923614208' : 'Enter league ID'}
+                    value={leagueId}
+                    onChange={(e) => setLeagueId(e.target.value)}
+                    className="font-mono"
+                    autoComplete="off"
+                    required={false}
+                  />
                   {platform === 'sleeper' && (
-                    <span className="text-xs text-gray-500 ml-1">(found in URL)</span>
+                    <p className="text-xs text-gray-500">
+                      Find your League ID in the Sleeper URL: sleeper.app/leagues/<strong>1197631162923614208</strong>
+                    </p>
                   )}
-                </label>
-                <Input
-                  placeholder={platform === 'sleeper' ? 'e.g., 1197631162923614208' : 'Enter league ID'}
-                  value={leagueId}
-                  onChange={(e) => setLeagueId(e.target.value)}
-                  className="font-mono"
-                />
-                {platform === 'sleeper' && (
-                  <p className="text-xs text-gray-500">
-                    Find your League ID in the Sleeper URL: sleeper.app/leagues/<strong>1197631162923614208</strong>
-                  </p>
-                )}
-              </div>
+                </div>
 
               {/* Error Display */}
               {loadLeagueMutation.error && (
@@ -293,6 +297,7 @@ export default function CompareLeague() {
                   </>
                 )}
               </Button>
+              </form>
 
               {/* Help Text */}
               <div className="mt-6 space-y-3 text-sm text-gray-600">
