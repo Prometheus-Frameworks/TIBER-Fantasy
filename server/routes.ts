@@ -167,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get available players
+  // Get available players with dynasty values
   app.get("/api/players/available", async (req, res) => {
     try {
       const position = req.query.position as string | undefined;
@@ -188,8 +188,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const combinedPlayers = [...players, ...uniqueElitePlayers];
       
-      res.json(combinedPlayers);
+      // Calculate dynasty values using Jake Maraia rankings
+      const { DynastyTierEngine } = await import('./dynastyTierSystem');
+      const { getJakeMaraiaDynastyScore, getJakeMaraiaDynastyTier } = await import('./jakeMaraiaRankings');
+      const dynastyEngine = new DynastyTierEngine();
+      
+      const playersWithDynastyValues = combinedPlayers.map(player => {
+        // Use Jake Maraia's rankings or fallback calculation
+        const jakeScore = getJakeMaraiaDynastyScore(player.name);
+        const jakeTier = getJakeMaraiaDynastyTier(player.name);
+        
+        let dynastyValue: number;
+        let dynastyTier: string;
+        
+        if (jakeScore !== null && jakeTier !== null) {
+          dynastyValue = jakeScore;
+          dynastyTier = jakeTier;
+        } else {
+          // Fallback for unranked players
+          const result = dynastyEngine.calculateDynastyScore({
+            name: player.name,
+            position: player.position,
+            age: 25, // Default age for missing data
+            avgPoints: player.avgPoints,
+            team: player.team
+          });
+          dynastyValue = result.score;
+          dynastyTier = result.tier.label;
+        }
+        
+        return {
+          ...player,
+          dynastyValue,
+          dynastyTier
+        };
+      });
+      
+      res.json(playersWithDynastyValues);
     } catch (error) {
+      console.error("Error fetching available players:", error);
       res.status(500).json({ message: "Failed to fetch available players" });
     }
   });

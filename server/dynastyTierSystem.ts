@@ -7,8 +7,7 @@
 import { 
   getJakeMaraiaDynastyScore, 
   getJakeMaraiaDynastyTier, 
-  getJakeMaraiaPositionalRank,
-  isInJakeMaraiaRankings
+  isJakeMaraiaRankedPlayer
 } from './jakeMaraiaRankings';
 
 export interface DynastyTier {
@@ -117,7 +116,6 @@ export class DynastyTierEngine {
     // First priority: Jake Maraia's official FantasyPros rankings
     const jakeScore = getJakeMaraiaDynastyScore(player.name);
     const jakeTier = getJakeMaraiaDynastyTier(player.name);
-    const jakeRank = getJakeMaraiaPositionalRank(player.name);
     
     if (jakeScore !== null) {
       return {
