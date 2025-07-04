@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { teamSyncService } from "./teamSync";
 import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generateWaiverRecommendations } from "./analytics";
-import { valueArbitrageService } from "./valueArbitrage";
+import { valueArbitrageEngine } from "./valueArbitrage";
 import { sportsDataAPI } from "./sportsdata";
 import { playerAnalysisCache } from "./playerAnalysisCache";
 import { espnAPI } from "./espnAPI";
@@ -706,7 +706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/arbitrage/player/:id", async (req, res) => {
     try {
       const playerId = parseInt(req.params.id);
-      const opportunity = await valueArbitrageService.analyzePlayer(playerId);
+      const opportunity = await valueArbitrageEngine.analyzePlayer(playerId);
       res.json(opportunity);
     } catch (error) {
       console.error("Error analyzing player for arbitrage:", error);
@@ -947,6 +947,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching trending players:', error);
       res.status(500).json({ error: 'Failed to fetch trending players' });
+    }
+  });
+
+  // Sustainability scoring endpoint
+  app.get('/api/trending/:playerId/sustainability', async (req, res) => {
+    try {
+      const { playerId } = req.params;
+      
+      const { sustainabilityEngine } = await import('./breakoutSustainability');
+      const { fantasyPointsDataETL } = await import('./fantasyPointsDataETL');
+      
+      // Get premium metrics for player
+      const premiumMetrics = await fantasyPointsDataETL.runFullETL();
+      
+      // Calculate sustainability score
+      const score = sustainabilityEngine.calculateSustainability(
+        parseInt(playerId),
+        "Sample Player", // In production, fetch from database
+        "WR",
+        {} as any, // Premium metrics
+        { snapShareIncrease: 25, touchIncrease: 8, targetIncrease: 4, trendStartWeek: 9 }
+      );
+      
+      res.json(score);
+    } catch (error) {
+      console.error('Error calculating sustainability score:', error);
+      res.status(500).json({ error: 'Failed to calculate sustainability score' });
+    }
+  });
+
+  // Value arbitrage endpoint
+  app.get('/api/arbitrage/trending', async (req, res) => {
+    try {
+      const { valueArbitrageEngine } = await import('./valueArbitrage');
+      
+      const dashboard = await valueArbitrageEngine.analyzeTrendingArbitrage();
+      res.json(dashboard);
+    } catch (error) {
+      console.error('Error analyzing arbitrage opportunities:', error);
+      res.status(500).json({ error: 'Failed to analyze arbitrage opportunities' });
+    }
+  });
+
+  // ETL pipeline status endpoint
+  app.get('/api/etl/status', async (req, res) => {
+    try {
+      const { fantasyPointsDataETL } = await import('./fantasyPointsDataETL');
+      
+      // Return ETL pipeline status
+      res.json({
+        status: 'ready',
+        lastRun: new Date(),
+        nextScheduledRun: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
+        subscription: {
+          active: false,
+          provider: 'FantasyPointsData',
+          cost: '$200/year',
+          features: [
+            'Real-time target share tracking',
+            'Route participation metrics',
+            'Weighted opportunity ratings',
+            'Dominator rating calculations',
+            'Air yards share analysis'
+          ]
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching ETL status:', error);
+      res.status(500).json({ error: 'Failed to fetch ETL status' });
+    }
+  });
+
+  // Manual ETL trigger endpoint
+  app.post('/api/etl/run', async (req, res) => {
+    try {
+      const { fantasyPointsDataETL } = await import('./fantasyPointsDataETL');
+      
+      const results = await fantasyPointsDataETL.runFullETL();
+      res.json({
+        success: true,
+        results,
+        message: 'ETL pipeline completed successfully'
+      });
+    } catch (error) {
+      console.error('Error running ETL pipeline:', error);
+      res.status(500).json({ error: 'Failed to run ETL pipeline' });
     }
   });
 

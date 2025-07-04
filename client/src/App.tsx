@@ -40,6 +40,7 @@ function Router() {
       <Route path="/league-rankings" component={LeagueRankingsPage} />
       <Route path="/league-analysis" component={LeagueAnalysisPage} />
       <Route path="/fantasy-moves" component={FantasyMovesPage} />
+      <Route path="/trending" component={TrendingPlayersPage} />
       <Route path="/lineup" component={LineupOptimizer} />
       <Route path="/analytics" component={LineupOptimizer} />
       <Route path="/premium" component={PremiumAnalytics} />

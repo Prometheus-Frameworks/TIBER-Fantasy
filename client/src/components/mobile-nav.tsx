@@ -9,7 +9,7 @@ export default function MobileNav() {
   const tabs = [
     { id: "dashboard", label: "Team", icon: BarChart3, href: "/" },
     { id: "rankings", label: "Rankings", icon: Trophy, href: "/rankings" },
-    { id: "moves", label: "Moves", icon: TrendingUp, href: "/fantasy-moves" },
+    { id: "trending", label: "Trending", icon: TrendingUp, href: "/trending" },
     { id: "arbitrage", label: "Value", icon: Search, href: "/arbitrage" },
     { id: "sync", label: "Sync", icon: Users, href: "/sync" },
   ];

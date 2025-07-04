@@ -74,7 +74,7 @@ interface TrendingAnalysis {
 
 export default function TrendingPlayers() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("touchIncrease");
   
   const { data: trendingData, isLoading } = useQuery<TrendingAnalysis>({
@@ -82,7 +82,7 @@ export default function TrendingPlayers() {
     queryFn: () => {
       const params = new URLSearchParams();
       if (selectedPosition !== "all") params.set("position", selectedPosition);
-      if (selectedCategory) params.set("category", selectedCategory);
+      if (selectedCategory !== "all") params.set("category", selectedCategory);
       
       return fetch(`/api/trending?${params.toString()}`).then(res => res.json());
     }
@@ -240,7 +240,7 @@ export default function TrendingPlayers() {
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Categories</SelectItem>
+            <SelectItem value="all">All Categories</SelectItem>
             <SelectItem value="high-confidence">High Confidence</SelectItem>
             <SelectItem value="buy-low">Buy Low</SelectItem>
             <SelectItem value="sell-high">Sell High</SelectItem>

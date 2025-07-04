@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { players } from "@shared/schema";
 import type { Player } from "@shared/schema";
-import { valueArbitrageService } from "./valueArbitrage";
+import { valueArbitrageEngine } from "./valueArbitrage";
 
 // Quick test of arbitrage functionality with top players
 export async function testArbitrageSystem() {
