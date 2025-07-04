@@ -913,14 +913,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/league/team/:teamId/roster', async (req, res) => {
     try {
       const { teamId } = req.params;
+      const { leagueId } = req.query;
+      
+      if (!leagueId) {
+        return res.status(400).json({ message: 'League ID required' });
+      }
       
       const { leagueComparisonService } = await import('./leagueComparison');
-      const rosterData = await leagueComparisonService.getTeamRoster(teamId);
+      const rosterData = await leagueComparisonService.getTeamRoster(teamId, leagueId as string);
       
       res.json({ players: rosterData });
     } catch (error: any) {
       console.error('Team roster error:', error);
-      res.status(500).json({ message: 'Failed to fetch team roster' });
+      res.status(500).json({ message: 'Failed to fetch team roster', error: error.message });
     }
   });
 

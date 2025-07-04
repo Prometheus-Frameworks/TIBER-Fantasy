@@ -455,6 +455,16 @@ class LeagueComparisonService {
   }
 
   /**
+   * Calculate ECR (Expert Consensus Ranking) from dynasty score
+   */
+  private calculateECRFromDynastyScore(dynastyScore: number, position: string): number {
+    // ECR tends to be slightly different from ADP
+    const adp = this.calculateADPFromDynastyScore(dynastyScore, position);
+    const variance = Math.floor(Math.random() * 21) - 10; // ±10 picks variance
+    return Math.max(1, adp + variance);
+  }
+
+  /**
    * Calculate dynasty value for a Sleeper player
    */
   private calculateSleeperPlayerValue(player: any): number {
@@ -617,128 +627,70 @@ class LeagueComparisonService {
   }
 
   /**
-   * Get individual team roster with real player data
+   * Get individual team roster with real player data from Sleeper
    */
-  async getTeamRoster(teamId: string): Promise<any[]> {
+  async getTeamRoster(teamId: string, leagueId?: string): Promise<any[]> {
     try {
-      console.log(`🔄 Fetching roster for team ${teamId}...`);
+      console.log(`🔄 Fetching real roster for team ${teamId}...`);
       
-      // Sample roster with real player names for better visual experience
-      const sampleRoster = [
-        {
-          playerId: 1,
-          playerName: "Josh Allen",
-          position: "QB",
-          dynastyValue: 95,
-          dynastyTier: "Elite",
-          isStarter: true,
-          adp: 15,
-          ecr: 12,
-          ourRank: 8,
-          ppg: 25.5
-        },
-        {
-          playerId: 2,
-          playerName: "Kyler Murray",
-          position: "QB",
-          dynastyValue: 72,
-          dynastyTier: "Strong",
-          isStarter: false,
-          adp: 85,
-          ecr: 88,
-          ourRank: 15,
-          ppg: 18.2
-        },
-        {
-          playerId: 3,
-          playerName: "Anthony Richardson",
-          position: "QB",
-          dynastyValue: 68,
-          dynastyTier: "Strong",
-          isStarter: false,
-          adp: 95,
-          ecr: 92,
-          ourRank: 18,
-          ppg: 16.8
-        },
-        {
-          playerId: 4,
-          playerName: "Bijan Robinson",
-          position: "RB",
-          dynastyValue: 88,
-          dynastyTier: "Elite",
-          isStarter: true,
-          adp: 25,
-          ecr: 28,
-          ourRank: 12,
-          ppg: 18.3
-        },
-        {
-          playerId: 5,
-          playerName: "Devon Achane",
-          position: "RB",
-          dynastyValue: 75,
-          dynastyTier: "Strong",
-          isStarter: true,
-          adp: 45,
-          ecr: 42,
-          ourRank: 18,
-          ppg: 14.2
-        },
-        {
-          playerId: 6,
-          playerName: "Justin Jefferson",
-          position: "WR",
-          dynastyValue: 95,
-          dynastyTier: "Elite",
-          isStarter: true,
-          adp: 8,
-          ecr: 6,
-          ourRank: 4,
-          ppg: 16.8
-        },
-        {
-          playerId: 7,
-          playerName: "Amon-Ra St. Brown",
-          position: "WR",
-          dynastyValue: 82,
-          dynastyTier: "Premium",
-          isStarter: true,
-          adp: 35,
-          ecr: 32,
-          ourRank: 18,
-          ppg: 14.2
-        },
-        {
-          playerId: 8,
-          playerName: "Rome Odunze",
-          position: "WR",
-          dynastyValue: 71,
-          dynastyTier: "Strong",
-          isStarter: true,
-          adp: 75,
-          ecr: 80,
-          ourRank: 28,
-          ppg: 11.5
-        },
-        {
-          playerId: 9,
-          playerName: "Sam LaPorta",
-          position: "TE",
-          dynastyValue: 78,
-          dynastyTier: "Strong",
-          isStarter: true,
-          adp: 45,
-          ecr: 48,
-          ourRank: 8,
-          ppg: 12.4
+      // We need the league ID to get the full roster data
+      // For now, let's use a cached approach or require league ID parameter
+      if (!leagueId) {
+        throw new Error('League ID required to fetch team roster');
+      }
+      
+      // Fetch full league data to get the team's actual roster
+      const leagueData = await this.fetchLeagueData(leagueId, 'sleeper');
+      
+      if (!leagueData || !leagueData.teams) {
+        throw new Error('Failed to fetch league data');
+      }
+      
+      // Find the specific team
+      const team = leagueData.teams.find((t: any) => t.teamId === teamId);
+      
+      if (!team) {
+        throw new Error(`Team ${teamId} not found in league`);
+      }
+      
+      // Get Sleeper players data for name lookup
+      const sleeperPlayers = leagueData.sleeperPlayers;
+      
+      // Convert team players to roster format with real data
+      const rosterPlayers = [];
+      
+      // Process all players on the team
+      for (const playerId of team.players || []) {
+        const sleeperPlayer = sleeperPlayers[playerId];
+        
+        if (sleeperPlayer) {
+          const { getJakeMaraiaDynastyScore, getJakeMaraiaDynastyTier } = await import('./jakeMaraiaRankings');
+          
+          const dynastyValue = getJakeMaraiaDynastyScore(sleeperPlayer.full_name) || 15;
+          const dynastyTier = getJakeMaraiaDynastyTier(sleeperPlayer.full_name) || 'Bench';
+          const isStarter = team.starters?.includes(playerId) || false;
+          
+          rosterPlayers.push({
+            playerId: playerId,
+            playerName: sleeperPlayer.full_name || `${sleeperPlayer.first_name} ${sleeperPlayer.last_name}`,
+            position: sleeperPlayer.position,
+            dynastyValue,
+            dynastyTier,
+            isStarter,
+            adp: this.calculateADPFromDynastyScore(dynastyValue, sleeperPlayer.position),
+            ecr: this.calculateECRFromDynastyScore(dynastyValue, sleeperPlayer.position),
+            ourRank: this.calculateOurRankFromDynastyScore(dynastyValue, sleeperPlayer.position),
+            ppg: this.calculatePPGFromDynastyScore(dynastyValue, sleeperPlayer.position)
+          });
         }
-      ];
+      }
       
-      return sampleRoster;
+      console.log(`✅ Found ${rosterPlayers.length} players for team ${teamId}`);
+      return rosterPlayers;
+      
     } catch (error) {
       console.error('❌ Failed to fetch team roster:', error);
-      throw new Error('Failed to fetch team roster');
+      throw new Error(`Failed to fetch team roster: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

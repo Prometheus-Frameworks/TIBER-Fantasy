@@ -118,117 +118,42 @@ export default function CompareLeague() {
   };
 
   const handleTeamClick = async (team: TeamValue) => {
-    setSelectedTeam(team);
-    setShowRosterModal(true);
-    
-    // Try to fetch actual roster data from Sleeper first
-    try {
-      const response = await fetch(`/api/league/team/${team.teamId}/roster`);
-      if (response.ok) {
-        const rosterData = await response.json();
-        setSelectedTeam({
-          ...team,
-          roster: rosterData.players || []
-        });
-        return;
-      }
-    } catch (error) {
-      console.log('Failed to fetch Sleeper roster data, using generated roster');
+    if (!leagueData?.leagueId) {
+      console.error('No league ID available - cannot fetch roster');
+      return;
     }
     
-    // Fallback: Generate sample roster data based on team position values
-    const generateRosterFromPositionValues = (team: TeamValue): Player[] => {
-      const roster: Player[] = [];
-      let playerId = 1;
-      
-      // Generate QB players
-      const qbValue = team.positionValues.QB;
-      if (qbValue > 0) {
-        const qbCount = qbValue > 200 ? 2 : 1;
-        for (let i = 0; i < qbCount; i++) {
-          roster.push({
-            playerId: playerId++,
-            playerName: i === 0 ? "Starting QB" : "Backup QB",
-            position: "QB",
-            dynastyValue: Math.round(qbValue / qbCount),
-            dynastyTier: qbValue > 150 ? "Elite" : qbValue > 100 ? "Premium" : "Strong",
-            isStarter: i === 0,
-            adp: qbValue > 150 ? 15 + i * 100 : qbValue > 100 ? 50 + i * 80 : 120 + i * 60,
-            ecr: qbValue > 150 ? 12 + i * 95 : qbValue > 100 ? 48 + i * 75 : 115 + i * 55,
-            ourRank: qbValue > 150 ? 8 + i * 20 : qbValue > 100 ? 18 + i * 15 : 25 + i * 10,
-            ppg: qbValue / qbCount / 4
-          });
-        }
-      }
-      
-      // Generate RB players
-      const rbValue = team.positionValues.RB;
-      if (rbValue > 0) {
-        const rbCount = Math.max(2, Math.min(6, Math.floor(rbValue / 30)));
-        for (let i = 0; i < rbCount; i++) {
-          const playerValue = i < 2 ? rbValue * 0.4 : rbValue * 0.2 / (rbCount - 2);
-          roster.push({
-            playerId: playerId++,
-            playerName: `RB ${i + 1}`,
-            position: "RB",
-            dynastyValue: Math.round(playerValue),
-            dynastyTier: playerValue > 80 ? "Elite" : playerValue > 60 ? "Premium" : playerValue > 40 ? "Strong" : "Solid",
-            isStarter: i < 2,
-            adp: playerValue > 80 ? 20 + i * 40 : playerValue > 60 ? 50 + i * 30 : playerValue > 40 ? 80 + i * 25 : 120 + i * 20,
-            ecr: playerValue > 80 ? 18 + i * 38 : playerValue > 60 ? 48 + i * 28 : playerValue > 40 ? 78 + i * 23 : 118 + i * 18,
-            ourRank: playerValue > 80 ? 8 + i * 15 : playerValue > 60 ? 18 + i * 12 : playerValue > 40 ? 28 + i * 10 : 42 + i * 8,
-            ppg: playerValue / 4
-          });
-        }
-      }
-      
-      // Generate WR players
-      const wrValue = team.positionValues.WR;
-      if (wrValue > 0) {
-        const wrCount = Math.max(3, Math.min(8, Math.floor(wrValue / 25)));
-        for (let i = 0; i < wrCount; i++) {
-          const playerValue = i < 3 ? wrValue * 0.3 : wrValue * 0.1 / (wrCount - 3);
-          roster.push({
-            playerId: playerId++,
-            playerName: `WR ${i + 1}`,
-            position: "WR",
-            dynastyValue: Math.round(playerValue),
-            dynastyTier: playerValue > 80 ? "Elite" : playerValue > 60 ? "Premium" : playerValue > 40 ? "Strong" : "Solid",
-            isStarter: i < 3,
-            adp: playerValue > 80 ? 8 + i * 25 : playerValue > 60 ? 35 + i * 20 : playerValue > 40 ? 75 + i * 15 : 110 + i * 12,
-            ecr: playerValue > 80 ? 6 + i * 23 : playerValue > 60 ? 32 + i * 18 : playerValue > 40 ? 72 + i * 13 : 108 + i * 10,
-            ourRank: playerValue > 80 ? 4 + i * 12 : playerValue > 60 ? 18 + i * 10 : playerValue > 40 ? 28 + i * 8 : 42 + i * 6,
-            ppg: playerValue / 4
-          });
-        }
-      }
-      
-      // Generate TE players
-      const teValue = team.positionValues.TE;
-      if (teValue > 0) {
-        const teCount = Math.max(1, Math.min(3, Math.floor(teValue / 40)));
-        for (let i = 0; i < teCount; i++) {
-          const playerValue = i === 0 ? teValue * 0.7 : teValue * 0.3 / (teCount - 1);
-          roster.push({
-            playerId: playerId++,
-            playerName: `TE ${i + 1}`,
-            position: "TE",
-            dynastyValue: Math.round(playerValue),
-            dynastyTier: playerValue > 80 ? "Elite" : playerValue > 60 ? "Premium" : playerValue > 40 ? "Strong" : "Solid",
-            isStarter: i === 0,
-            adp: playerValue > 80 ? 45 + i * 60 : playerValue > 60 ? 80 + i * 40 : playerValue > 40 ? 120 + i * 30 : 180 + i * 25,
-            ecr: playerValue > 80 ? 42 + i * 55 : playerValue > 60 ? 78 + i * 38 : playerValue > 40 ? 118 + i * 28 : 178 + i * 23,
-            ourRank: playerValue > 80 ? 8 + i * 15 : playerValue > 60 ? 18 + i * 12 : playerValue > 40 ? 28 + i * 10 : 40 + i * 8,
-            ppg: playerValue / 4
-          });
-        }
-      }
-      
-      return roster;
-    };
+    setSelectedTeam({ ...team, roster: [] }); // Start with empty roster
+    setShowRosterModal(true);
     
-    const roster = generateRosterFromPositionValues(team);
-    setSelectedTeam(prev => prev ? { ...prev, roster } : null);
+    // Fetch authentic roster data from Sleeper API
+    try {
+      console.log(`Fetching roster for team ${team.teamId} from league ${leagueData.leagueId}...`);
+      
+      const response = await fetch(`/api/league/team/${team.teamId}/roster?leagueId=${leagueData.leagueId}`);
+      
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+      
+      const rosterData = await response.json();
+      
+      if (!rosterData.players || rosterData.players.length === 0) {
+        console.warn('No players found in roster data');
+        return;
+      }
+      
+      console.log(`Successfully loaded ${rosterData.players.length} players for ${team.teamName}`);
+      
+      setSelectedTeam({
+        ...team,
+        roster: rosterData.players
+      });
+      
+    } catch (error) {
+      console.error('Failed to fetch Sleeper roster data:', error);
+      // No fallback - only show authentic data or nothing
+    }
   };
 
   const getTierColor = (tier: string) => {
