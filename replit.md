@@ -214,6 +214,9 @@ Changelog:
 - July 04, 2025. System integration: Both client-side (jakeMaraiaRankings.ts) and server-side (server/jakeMaraiaRankings.ts) implementations for complete coverage
 - July 04, 2025. **CRITICAL FIX**: Fixed API integration - dynastyValue and dynastyTier fields now properly calculated and returned by /api/players/available endpoint
 - July 04, 2025. Verified authentic rankings: Josh Allen (98, Elite), Lamar Jackson (94, Premium) match Jake Maraia's FantasyPros rankings exactly
+- July 04, 2025. **ECR VALIDATION SYSTEM**: Implemented Expert Consensus Ranking validation to eliminate unrealistic dynasty scores for unranked players
+- July 04, 2025. Fixed dynasty score inflation: Kareem Hunt (81.3→15), Dare Ogunbowale (75.3→15), proper Bench tier classification for depth players
+- July 04, 2025. Comprehensive ranking integrity: ECR system validates all players against FantasyPros consensus, unranked players capped at 30 dynasty score maximum
 ```
 
 ## User Preferences

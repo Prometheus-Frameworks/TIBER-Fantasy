@@ -9,6 +9,7 @@ import {
   getJakeMaraiaDynastyTier, 
   isJakeMaraiaRankedPlayer
 } from './jakeMaraiaRankings';
+import { getValidatedDynastyScore, validatePlayerRanking } from './rankingValidation';
 
 export interface DynastyTier {
   name: string;
@@ -122,48 +123,26 @@ export class DynastyTierEngine {
         score: jakeScore,
         tier: getTierFromScore(jakeScore),
         factors: [
-          `Jake Maraia rank: #${jakeRank} ${player.position}`,
-          'FantasyPros expert consensus',
+          `Jake Maraia FantasyPros ranking`,
+          'Expert consensus dynasty value',
           `Dynasty tier: ${jakeTier}`
         ]
       };
     }
     
-    // Second priority: Expert consensus overrides for known players
-    const elitePlayerScores = this.getElitePlayerScores();
-    if (elitePlayerScores[player.name]) {
-      const score = elitePlayerScores[player.name];
-      return {
-        score,
-        tier: getTierFromScore(score),
-        factors: ['Expert consensus ranking', 'Proven elite production']
-      };
-    }
-    
-    // Age premium calculation (35% weight)
-    const agePremium = this.calculateAgePremium(player.age, player.position);
-    
-    // Production baseline (30% weight)
-    const productionScore = this.calculateProductionScore(player.avgPoints, player.position);
-    
-    // Opportunity context (35% weight)
-    const opportunityScore = this.calculateOpportunityScore(player.team, player.position);
-    
-    // Calculate weighted score
-    const rawScore = (agePremium * 0.35) + (productionScore * 0.30) + (opportunityScore * 0.35);
-    
-    // Apply position-specific adjustments
-    const positionAdjusted = this.applyPositionAdjustments(rawScore, player.position);
-    
-    // Final score - cap unranked players at Depth tier maximum (64)
-    const finalScore = Math.max(0, Math.min(64, positionAdjusted));
-    
-    const factors = this.generateFactors(player, agePremium, productionScore, opportunityScore);
+    // For players not in Jake Maraia's top rankings: Use ECR validation
+    const validatedRanking = getValidatedDynastyScore(player.name, player.position);
+    const validation = validatePlayerRanking(player.name, player.position, 0);
     
     return {
-      score: finalScore,
-      tier: getTierFromScore(finalScore),
-      factors
+      score: validatedRanking.score,
+      tier: getTierFromScore(validatedRanking.score),
+      factors: [
+        validation.reason,
+        `ECR validated score: ${validatedRanking.score}/100`,
+        `Age: ${player.age} years old`,
+        `Production: ${player.avgPoints.toFixed(1)} PPG`
+      ]
     };
   }
   
