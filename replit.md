@@ -217,6 +217,8 @@ Changelog:
 - July 04, 2025. **ECR VALIDATION SYSTEM**: Implemented Expert Consensus Ranking validation to eliminate unrealistic dynasty scores for unranked players
 - July 04, 2025. Fixed dynasty score inflation: Kareem Hunt (81.3→15), Dare Ogunbowale (75.3→15), proper Bench tier classification for depth players
 - July 04, 2025. Comprehensive ranking integrity: ECR system validates all players against FantasyPros consensus, unranked players capped at 30 dynasty score maximum
+- July 04, 2025. **NAME MATCHING FIX**: Fixed Patrick Mahomes ranking issue (QB17→QB8) by implementing name variation matching for players with suffixes (II, Jr, Sr)
+- July 04, 2025. Dynasty rankings now completely logical: Patrick Mahomes (84, Strong tier), proper top-8 QB ranking instead of 0 dynasty value
 ```
 
 ## User Preferences

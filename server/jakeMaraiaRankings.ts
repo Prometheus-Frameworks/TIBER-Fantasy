@@ -150,16 +150,46 @@ ALL_JAKE_MARAIA_PLAYERS.forEach(player => {
  * Get Jake Maraia's dynasty score for a player (0-100)
  */
 export function getJakeMaraiaDynastyScore(playerName: string): number | null {
-  const key = playerName.toLowerCase();
-  return playerScoreMap.get(key) || null;
+  const searchName = playerName.toLowerCase();
+  
+  // Find player with name matching (including variations like Jr, II, etc.)
+  const player = ALL_JAKE_MARAIA_PLAYERS.find(p => {
+    const rankingName = p.name.toLowerCase();
+    
+    // Exact match first
+    if (rankingName === searchName) return true;
+    
+    // Handle name variations (Patrick Mahomes vs Patrick Mahomes II)
+    const baseRankingName = rankingName.replace(/\s(ii|jr|sr|iii|iv)\.?$/, '');
+    const baseSearchName = searchName.replace(/\s(ii|jr|sr|iii|iv)\.?$/, '');
+    
+    return baseRankingName === baseSearchName;
+  });
+  
+  return player ? player.dynastyScore : null;
 }
 
 /**
  * Get Jake Maraia's dynasty tier for a player
  */
 export function getJakeMaraiaDynastyTier(playerName: string): string | null {
-  const key = playerName.toLowerCase();
-  return playerTierMap.get(key) || null;
+  const searchName = playerName.toLowerCase();
+  
+  // Find player with name matching (including variations like Jr, II, etc.)
+  const player = ALL_JAKE_MARAIA_PLAYERS.find(p => {
+    const rankingName = p.name.toLowerCase();
+    
+    // Exact match first
+    if (rankingName === searchName) return true;
+    
+    // Handle name variations (Patrick Mahomes vs Patrick Mahomes II)
+    const baseRankingName = rankingName.replace(/\s(ii|jr|sr|iii|iv)\.?$/, '');
+    const baseSearchName = searchName.replace(/\s(ii|jr|sr|iii|iv)\.?$/, '');
+    
+    return baseRankingName === baseSearchName;
+  });
+  
+  return player ? player.dynastyTier : null;
 }
 
 /**
