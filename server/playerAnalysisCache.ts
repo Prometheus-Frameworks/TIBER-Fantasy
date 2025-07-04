@@ -16,6 +16,30 @@ class PlayerAnalysisCache {
   
   // Pre-computed data for popular players to avoid API calls
   private preComputedPlayers: Record<string, any> = {
+    "puka nacua": {
+      separation_metrics: {
+        avg_separation: 3.2,
+        avg_separation_percentile: 98, // NFL YPRR leader
+        avg_intended_air_yards: 12.8,
+        avg_cushion: 4.1
+      },
+      efficiency_metrics: {
+        yards_per_target: 9.8,
+        catch_rate: 0.68,
+        yards_per_route_run: 3.47, // NFL leader in YPRR
+        first_down_rate: 0.42
+      },
+      season_trends: {
+        target_trend: "increasing",
+        production_trend: "stable",
+        snap_count_trend: "stable"
+      },
+      usage_metrics: {
+        target_share: 0.28,
+        air_yards_share: 0.32,
+        red_zone_target_share: 0.22
+      }
+    },
     "rome_odunze": {
       "player": {
         "name": "Rome Odunze",
