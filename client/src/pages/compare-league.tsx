@@ -176,6 +176,7 @@ export default function CompareLeague() {
     )
     .sort((a, b) => b.totalValue - a.totalValue)
     .map((team, index) => ({
+      teamId: team.teamId, // Include the actual Sleeper roster ID
       name: team.teamName.length > 12 ? `${team.teamName.substring(0, 12)}...` : team.teamName,
       fullName: team.teamName,
       owner: team.owner,
@@ -525,7 +526,7 @@ export default function CompareLeague() {
             <div className="space-y-3">
               {chartData.map((team, index) => {
                 const teamValue: TeamValue = {
-                  teamId: team.teamId || team.rosterId || `team-${index + 1}`,
+                  teamId: team.teamId, // Use the authentic Sleeper roster ID
                   teamName: team.fullName,
                   owner: team.owner,
                   totalValue: team.total,
