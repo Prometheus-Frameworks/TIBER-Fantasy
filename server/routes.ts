@@ -550,6 +550,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Advanced player analytics endpoint
+  app.get('/api/players/analytics', async (req, res) => {
+    try {
+      const { player: playerName } = req.query;
+      
+      if (!playerName || typeof playerName !== 'string') {
+        return res.status(400).json({ message: "Player name required" });
+      }
+      
+      // Find player by name (case-insensitive)
+      const [player] = await db.select()
+        .from(players)
+        .where(
+          sql`LOWER(${players.name}) LIKE LOWER(${'%' + playerName + '%'})`
+        )
+        .limit(1);
+      
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+      
+      // Import and use advanced analytics engine
+      const { advancedAnalyticsEngine } = await import('./advancedAnalytics');
+      const analytics = await advancedAnalyticsEngine.analyzePlayer(player);
+      
+      res.json(analytics);
+    } catch (error) {
+      console.error('Player analytics error:', error);
+      res.status(500).json({ message: "Analytics calculation failed" });
+    }
+  });
+
   // Hit rate endpoint removed - requires actual historical validation data
   
   // Get player search suggestions for autocomplete
