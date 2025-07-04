@@ -607,9 +607,9 @@ export default function CompareLeague() {
 
       {/* Full-Page Team Roster View */}
       {showRosterModal && selectedTeam && (
-        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+        <div className="fixed inset-0 bg-white z-50 flex flex-col">
           {/* Header */}
-          <div className="bg-white border-b border-gray-200 px-4 py-4 md:px-6 sticky top-0 z-10">
+          <div className="bg-white border-b border-gray-200 px-4 py-4 md:px-6 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Button 
@@ -636,7 +636,7 @@ export default function CompareLeague() {
             </div>
           </div>
 
-          <div className="p-4 md:p-6">
+          <div className="flex-1 overflow-y-auto p-4 md:p-6">
             <div className="space-y-6">
               {/* Team Summary */}
               <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
