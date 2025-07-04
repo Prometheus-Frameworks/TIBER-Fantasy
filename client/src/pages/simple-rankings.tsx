@@ -35,21 +35,48 @@ export default function SimpleRankings() {
     // Filter out inactive/irrelevant players by name
     const excludedPlayers = [
       'Deshaun Watson', 'Trent Taylor', 'Practice Squad', 'Free Agent',
-      'Injured Reserve', 'Unknown Player', 'Test Player'
+      'Injured Reserve', 'Unknown Player', 'Test Player', 'Demarcus Robinson',
+      'Tim Patrick', 'Stefon Diggs', 'Allen Robinson'
     ];
     
     if (excludedPlayers.some(name => player.name.includes(name))) return false;
     
-    // Position-specific minimum thresholds for dynasty relevance
+    // Age-based dynasty relevance (dynasty focuses on future value)
+    const age = player.age || 25;
+    const maxAges = {
+      QB: 32,   // QBs can be valuable longer
+      RB: 28,   // RBs fall off quickly
+      WR: 30,   // WRs have moderate longevity  
+      TE: 31    // TEs peak later, last longer
+    };
+    
+    const maxAge = maxAges[player.position as keyof typeof maxAges] || 30;
+    if (age > maxAge) return false;
+    
+    // Higher thresholds for dynasty relevance (not just any production)
     const minThresholds = {
-      QB: 8.0,   // QBs need at least 8 PPG to be dynasty relevant
-      RB: 5.0,   // RBs need at least 5 PPG 
-      WR: 4.0,   // WRs need at least 4 PPG
-      TE: 3.0    // TEs need at least 3 PPG
+      QB: 12.0,   // QBs need at least 12 PPG to be dynasty relevant
+      RB: 8.0,    // RBs need at least 8 PPG 
+      WR: 8.0,    // WRs need at least 8 PPG (raised significantly)
+      TE: 5.0     // TEs need at least 5 PPG
     };
     
     const threshold = minThresholds[player.position as keyof typeof minThresholds] || 0;
-    return player.avgPoints >= threshold;
+    if (player.avgPoints < threshold) return false;
+    
+    // Calculate dynasty value with age penalty
+    const ageMultiplier = Math.max(0.5, 1 - (age - 22) * 0.03); // 3% penalty per year over 22
+    const dynastyValue = player.avgPoints * ageMultiplier;
+    
+    return dynastyValue > 6.0; // Minimum dynasty value threshold
+  };
+
+  // Calculate dynasty value with age adjustment
+  const calculateDynastyValue = (player: Player): number => {
+    const age = player.age || 25;
+    const ageMultiplier = Math.max(0.5, 1 - (age - 22) * 0.03); // 3% penalty per year over 22
+    const baseValue = (player.avgPoints || 0) + (player.upside || 0);
+    return baseValue * ageMultiplier;
   };
 
   // Generate simple rankings for each position
@@ -57,7 +84,7 @@ export default function SimpleRankings() {
     const positionPlayers = (allPlayers || [])
       .filter(p => p.position === position)
       .filter(isRelevantDynastyPlayer) // Filter out irrelevant players
-      .sort((a, b) => (b.avgPoints + b.upside) - (a.avgPoints + a.upside)) // Sort by dynasty value
+      .sort((a, b) => calculateDynastyValue(b) - calculateDynastyValue(a)) // Sort by age-adjusted dynasty value
       .slice(0, 50); // Top 50 for each position
 
     return positionPlayers.map((player, index) => ({
