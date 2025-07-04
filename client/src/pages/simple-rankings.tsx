@@ -4,9 +4,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Users } from "lucide-react";
+import { Loader2, Users, Search, Trophy, Star } from "lucide-react";
 import { useState } from "react";
 import type { Player } from "@shared/schema";
+import { PlayerSearch } from "@/components/player-search";
 
 interface SimpleRankedPlayer {
   rank: number;
@@ -15,6 +16,8 @@ interface SimpleRankedPlayer {
 }
 
 export default function SimpleRankings() {
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [activeTab, setActiveTab] = useState("search");
   const { data: allPlayers, isLoading: allPlayersLoading } = useQuery<Player[]>({
     queryKey: ["/api/players/available"],
   });
@@ -133,14 +136,106 @@ export default function SimpleRankings() {
         <p className="text-gray-600">Simple numbered rankings for your league</p>
       </div>
 
-      <Tabs defaultValue="WR" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="search" className="flex items-center gap-2">
+            <Search className="h-4 w-4" />
+            Search
+          </TabsTrigger>
           {positions.map((position) => (
             <TabsTrigger key={position} value={position}>
               {position}
             </TabsTrigger>
           ))}
         </TabsList>
+
+        <TabsContent value="search" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                Player Search & Analysis
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <PlayerSearch
+                onPlayerSelect={setSelectedPlayer}
+                placeholder="Search for dynasty players..."
+                className="w-full"
+              />
+              
+              {selectedPlayer && (
+                <div className="border-t pt-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                          <Users className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-lg">{selectedPlayer.name}</h3>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">{selectedPlayer.position}</Badge>
+                            <span className="text-sm text-muted-foreground">{selectedPlayer.team}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Fantasy Points</span>
+                          <span className="font-medium">{selectedPlayer.avgPoints.toFixed(1)} PPG</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Dynasty Score</span>
+                          <span className="font-medium">{calculateDynastyValue(selectedPlayer).toFixed(0)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Position Rank</span>
+                          <span className="font-medium">
+                            #{generateSimpleRankings(selectedPlayer.position).findIndex(p => p.player.id === selectedPlayer.id) + 1} {selectedPlayer.position}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Dynasty Analysis</h4>
+                      <div className="space-y-3">
+                        {calculateDynastyValue(selectedPlayer) >= 85 && (
+                          <div className="flex items-center gap-2">
+                            <Trophy className="h-4 w-4 text-purple-500" />
+                            <span className="text-sm">Elite Dynasty Asset</span>
+                          </div>
+                        )}
+                        {calculateDynastyValue(selectedPlayer) >= 80 && calculateDynastyValue(selectedPlayer) < 85 && (
+                          <div className="flex items-center gap-2">
+                            <Star className="h-4 w-4 text-blue-500" />
+                            <span className="text-sm">Premium Dynasty Asset</span>
+                          </div>
+                        )}
+                        {selectedPlayer.age && selectedPlayer.age <= 25 && (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-green-600 border-green-600">
+                              Youth Premium
+                            </Badge>
+                          </div>
+                        )}
+                        {selectedPlayer.avgPoints >= 15 && (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-blue-600 border-blue-600">
+                              High Production
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {positions.map((position) => (
           <TabsContent key={position} value={position}>

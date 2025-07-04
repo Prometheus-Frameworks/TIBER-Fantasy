@@ -4,15 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-interface Player {
-  id: number;
-  name: string;
-  position: string;
-  team: string;
-  avgPoints: number;
-  imageUrl?: string;
-}
+import type { Player } from "@shared/schema";
 
 interface PlayerSearchProps {
   onPlayerSelect: (player: Player) => void;
