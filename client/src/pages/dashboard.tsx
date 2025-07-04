@@ -41,83 +41,78 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header - Mobile Optimized */}
       <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-field-green rounded-lg flex items-center justify-center">
-                <Volleyball className="text-white" size={20} />
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-3 md:py-4">
+            <div className="flex items-center space-x-2 md:space-x-3">
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-field-green rounded-lg flex items-center justify-center">
+                <Volleyball className="text-white" size={16} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">FantasyWeakness Pro</h1>
-                <p className="text-sm text-gray-500">Find Your Team's Weak Spots</p>
+                <h1 className="text-lg md:text-xl font-bold text-gray-900">FantasyWeakness Pro</h1>
+                <p className="text-xs md:text-sm text-gray-500 hidden sm:block">Find Your Team's Weak Spots</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            {/* Desktop Action Buttons */}
+            <div className="hidden lg:flex items-center space-x-3">
               <Link href="/arbitrage">
-                <Button 
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
                   <Target className="w-4 h-4 mr-2" />
                   Value Arbitrage
                 </Button>
               </Link>
-              <Link href="/player-analysis">
-                <Button 
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Player Analysis
-                </Button>
-              </Link>
               <Link href="/dynasty-values">
-                <Button 
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  <Target className="w-4 h-4 mr-2" />
-                  Dynasty Values
+                <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <Crown className="w-4 h-4 mr-2" />
+                  Dynasty
                 </Button>
               </Link>
               <Link href="/sync">
                 <Button 
+                  size="sm"
                   variant="outline"
                   className="text-field-green border-field-green hover:bg-field-green hover:text-white"
                 >
                   <Upload className="w-4 h-4 mr-2" />
-                  Import Team
+                  Import
                 </Button>
               </Link>
               <Button 
+                size="sm"
                 onClick={handleRefresh}
                 className="bg-field-green hover:bg-dark-green"
               >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Refresh Data
+                <RotateCcw className="w-4 h-4" />
               </Button>
-              <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
+            </div>
+            
+            {/* Mobile Refresh Button */}
+            <div className="flex lg:hidden">
+              <Button 
+                size="sm"
+                onClick={handleRefresh}
+                className="bg-field-green hover:bg-dark-green p-2"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Main Content - Mobile Optimized */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 pb-20 md:pb-6">
         {/* Team Overview */}
         <TeamOverview team={team} />
 
-        {/* Position Analysis and Recommendations */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2">
-            <PositionAnalysis teamId={teamId} />
-          </div>
-          <div>
-            {/* This will be filled by the PositionAnalysis component with recommendations sidebar */}
-          </div>
+        {/* Position Analysis and Recommendations - Stacked on Mobile */}
+        <div className="grid grid-cols-1 gap-4 md:gap-6 mb-6 md:mb-8">
+          <PositionAnalysis teamId={teamId} />
         </div>
 
-        {/* Performance Chart and Current Roster */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Performance Chart and Current Roster - Stacked on Mobile */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
           <PerformanceChart teamId={teamId} />
           <div>
             {/* Current roster will be part of PositionAnalysis */}

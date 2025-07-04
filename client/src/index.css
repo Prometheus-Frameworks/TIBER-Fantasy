@@ -2,6 +2,115 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile-first performance optimizations for iOS, Android, and desktop */
+* {
+  /* Improve scrolling performance on mobile devices */
+  -webkit-overflow-scrolling: touch;
+  /* Prevent zoom on double-tap for better UX */
+  touch-action: manipulation;
+}
+
+/* iOS-specific optimizations */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari optimizations */
+  body {
+    /* Prevent bounce scroll */
+    position: fixed;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+  }
+  
+  #root {
+    /* Enable smooth scrolling within the app */
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Enhanced touch targets for mobile */
+button, a, [role="button"] {
+  /* Minimum 44px touch target as per iOS guidelines */
+  min-height: 44px;
+  min-width: 44px;
+  /* Improve tap response time */
+  touch-action: manipulation;
+  /* Remove tap highlight on Android */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Responsive breakpoints optimized for mobile-first design */
+@media (max-width: 640px) {
+  /* Mobile-specific optimizations */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Larger text for better readability on mobile */
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.25rem; }
+  h3 { font-size: 1.125rem; }
+  
+  /* Better spacing for mobile cards */
+  .card {
+    margin-bottom: 1rem;
+    border-radius: 0.75rem;
+  }
+  
+  /* Optimize table displays for mobile */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .tablet-layout {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Desktop optimizations */
+@media (min-width: 1025px) {
+  .desktop-layout {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+}
+
+/* Performance optimizations */
+img {
+  /* Enable hardware acceleration for images */
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Smooth animations across all devices */
+* {
+  transition-duration: 0.15s;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 :root {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(20, 14.3%, 4.1%);

@@ -107,10 +107,10 @@ export default function DynastyValuesPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Methodology Card */}
-        <Card className="p-6 mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Research-Based Dynasty Valuation</h2>
-          <p className="text-sm text-gray-600 mb-4">Weighted scoring based on correlation studies showing volume metrics (target share, touches) are most predictive of fantasy success</p>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <Card className="p-4 md:p-6 mb-4 md:mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-2 md:mb-3">Research-Based Dynasty Valuation</h2>
+          <p className="text-sm text-gray-600 mb-3 md:mb-4">Weighted scoring based on correlation studies showing volume metrics (target share, touches) are most predictive of fantasy success</p>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
             <div className="text-center">
               <Target className="w-6 h-6 mx-auto mb-2 text-blue-600" />
               <div className="font-medium text-sm">Fantasy Production</div>

@@ -8,14 +8,14 @@ export default function MobileNav() {
 
   const tabs = [
     { id: "dashboard", label: "Team", icon: BarChart3, href: "/" },
-    { id: "analytics", label: "Analytics", icon: Brain, href: "/analytics" },
-    { id: "premium", label: "Premium", icon: Crown, href: "/premium" },
+    { id: "dynasty", label: "Dynasty", icon: Crown, href: "/dynasty-values" },
+    { id: "arbitrage", label: "Value", icon: Search, href: "/arbitrage" },
     { id: "sync", label: "Sync", icon: Users, href: "/sync" },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50">
-      <div className="grid grid-cols-4 h-16">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50 safe-area-inset-bottom">
+      <div className="grid grid-cols-4 h-16 max-w-md mx-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = location === tab.href || (tab.href === "/" && location === "/dashboard");
@@ -24,17 +24,19 @@ export default function MobileNav() {
             <Link key={tab.id} href={tab.href}>
               <Button
                 variant="ghost"
-                className={`flex flex-col items-center justify-center space-y-1 h-full rounded-none w-full ${
-                  isActive ? "text-field-green bg-green-50" : "text-gray-500"
+                className={`flex flex-col items-center justify-center space-y-1 h-full rounded-none w-full touch-manipulation transition-colors duration-150 ${
+                  isActive ? "text-field-green bg-green-50" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                 }`}
               >
-                <Icon size={20} />
-                <span className="text-xs font-medium">{tab.label}</span>
+                <Icon size={22} className="mb-1" />
+                <span className="text-xs font-medium leading-tight">{tab.label}</span>
               </Button>
             </Link>
           );
         })}
       </div>
+      {/* iOS home indicator safe area */}
+      <div className="h-safe-bottom bg-white"></div>
     </nav>
   );
 }
