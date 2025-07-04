@@ -43,6 +43,16 @@ export const players = pgTable("players", {
   snapCount: integer("snap_count"), // Offensive snap count
   externalId: text("external_id"), // SportsDataIO player ID
   
+  // Market data
+  adp: real("adp"), // Average draft position
+  dynastyValue: integer("dynasty_value"), // Dynasty value score 0-100
+  efficiency: real("efficiency"), // Efficiency rating
+  sustainability: integer("sustainability"), // Sustainability score 0-100
+  marketValue: integer("market_value"), // Market consensus value
+  confidence: integer("confidence"), // Confidence score 0-100
+  age: integer("age"), // Player age
+  experience: integer("experience"), // Years in NFL
+  
   // Advanced Premium Analytics
   yardsPerRouteRun: real("yards_per_route_run"), // YPRR - key efficiency metric
   yardsAfterContact: real("yards_after_contact"), // YACo - YAC efficiency

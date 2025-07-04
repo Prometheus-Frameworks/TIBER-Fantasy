@@ -290,17 +290,6 @@ export default function TeamSync() {
                   >
                     {sleeperMutation.isPending ? "Syncing..." : "Import from Sleeper"}
                   </Button>
-                  
-                  <Button 
-                    onClick={() => {
-                      console.log("Test redirect button clicked");
-                      window.location.href = "/";
-                    }}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    Test Redirect to Dashboard
-                  </Button>
                 </div>
               </CardContent>
             </Card>

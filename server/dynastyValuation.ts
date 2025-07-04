@@ -359,37 +359,28 @@ export class DynastyValuationService {
   }
   
   private calculateMarketArbitrage(player: Player, ourValue: number): any {
-    const marketOwnership = player.ownershipPercentage || 50;
+    const marketValue = player.marketValue || player.dynastyValue || ourValue;
     
-    // Convert ownership % to expected dynasty score range for comparison
-    // High ownership (90%+) suggests market expects 80+ dynasty scores
-    // Medium ownership (70-89%) suggests market expects 60-79 dynasty scores  
-    // Low ownership (<70%) suggests market expects <60 dynasty scores
-    let marketExpectedScore = 50;
-    if (marketOwnership >= 90) marketExpectedScore = 85;
-    else if (marketOwnership >= 80) marketExpectedScore = 75;
-    else if (marketOwnership >= 70) marketExpectedScore = 65;
-    else if (marketOwnership >= 60) marketExpectedScore = 55;
-    
-    const difference = ourValue - marketExpectedScore;
+    // Calculate the difference: if our value is higher, it's a BUY (undervalued)
+    const difference = ourValue - marketValue;
     
     let arbitrageOpportunity: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
     let confidence = 50;
     
-    // If our analytics score is much higher than what ownership suggests market expects
-    if (difference >= 15) {
+    // If our analytics score is much higher than market value
+    if (difference >= 10) {
       arbitrageOpportunity = 'BUY'; // Undervalued by market
-      confidence = Math.min(95, 50 + difference * 2);
+      confidence = Math.min(95, 60 + Math.abs(difference) * 2);
     } 
-    // If market ownership suggests higher expectations than our analytics support
-    else if (difference <= -15) {
+    // If market value is much higher than our analytics support
+    else if (difference <= -10) {
       arbitrageOpportunity = 'SELL'; // Overvalued by market
-      confidence = Math.min(95, 50 + Math.abs(difference) * 2);
+      confidence = Math.min(95, 60 + Math.abs(difference) * 2);
     }
     
     return {
       ourValue,
-      marketValue: marketOwnership, // Keep original ownership % for display
+      marketValue,
       arbitrageOpportunity,
       confidence
     };
