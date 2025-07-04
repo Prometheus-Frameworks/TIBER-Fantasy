@@ -781,6 +781,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // League Analysis endpoints
+  app.get('/api/league/:leagueId/analysis', async (req, res) => {
+    try {
+      const { leagueId } = req.params;
+      const { userId } = req.query;
+      
+      const { leagueAnalysisService } = await import('./leagueSync');
+      const leagueAnalysis = await leagueAnalysisService.analyzeFullLeague(leagueId, userId as string);
+      res.json(leagueAnalysis);
+    } catch (error: any) {
+      console.error('League analysis error:', error);
+      res.status(500).json({ error: error.message || 'Failed to analyze league' });
+    }
+  });
+
+  app.get('/api/league/:leagueId/teams', async (req, res) => {
+    try {
+      const { leagueId } = req.params;
+      const { leagueAnalysisService } = await import('./leagueSync');
+      const analysis = await leagueAnalysisService.analyzeFullLeague(leagueId);
+      res.json({
+        teams: analysis.teams,
+        leagueAverages: analysis.leagueAverages,
+        powerRankings: analysis.powerRankings
+      });
+    } catch (error: any) {
+      console.error('League teams error:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch league teams' });
+    }
+  });
+
   // ESPN API Integration Routes
   app.get("/api/espn/scoreboard", async (req, res) => {
     try {

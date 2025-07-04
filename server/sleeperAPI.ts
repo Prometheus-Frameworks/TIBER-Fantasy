@@ -293,6 +293,67 @@ export class SleeperAPIService {
       trendingDrops: trendingDrops.length
     };
   }
+
+  /**
+   * Get league information
+   */
+  async getLeague(leagueId: string): Promise<any> {
+    try {
+      const response = await fetch(`${this.BASE_URL}/league/${leagueId}`);
+      if (!response.ok) throw new Error(`Failed to fetch league: ${response.status}`);
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching league:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get league rosters
+   */
+  async getLeagueRosters(leagueId: string): Promise<any[]> {
+    try {
+      const response = await fetch(`${this.BASE_URL}/league/${leagueId}/rosters`);
+      if (!response.ok) throw new Error(`Failed to fetch rosters: ${response.status}`);
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching rosters:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get league users
+   */
+  async getLeagueUsers(leagueId: string): Promise<any[]> {
+    try {
+      const response = await fetch(`${this.BASE_URL}/league/${leagueId}/users`);
+      if (!response.ok) throw new Error(`Failed to fetch users: ${response.status}`);
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get player details by ID
+   */
+  async getPlayerById(playerId: string): Promise<SleeperPlayer | null> {
+    try {
+      // First try cache
+      if (this.playerCache.has(playerId)) {
+        return this.playerCache.get(playerId) || null;
+      }
+
+      // Fetch all players if cache is stale
+      await this.getAllPlayers();
+      return this.playerCache.get(playerId) || null;
+    } catch (error) {
+      console.error(`Error fetching player ${playerId}:`, error);
+      return null;
+    }
+  }
 }
 
 export const sleeperAPI = new SleeperAPIService();
