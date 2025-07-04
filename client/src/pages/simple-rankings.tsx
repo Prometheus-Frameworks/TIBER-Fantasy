@@ -2,7 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Users } from "lucide-react";
+import { useState } from "react";
 import type { Player } from "@shared/schema";
 
 interface SimpleRankedPlayer {
@@ -12,41 +15,17 @@ interface SimpleRankedPlayer {
 }
 
 export default function SimpleRankings() {
-  // Get user's actual Sleeper league roster data
-  const { data: leagueData, isLoading: leagueLoading } = useQuery({
-    queryKey: ["/api/league-comparison/1197631162923614208"],
-    retry: false
-  });
-
-  const { data: teamPlayers, isLoading: playersLoading } = useQuery<(Player & { isStarter: boolean })[]>({
-    queryKey: ["/api/teams", 1, "players"],
-  });
-
   const { data: allPlayers, isLoading: allPlayersLoading } = useQuery<Player[]>({
     queryKey: ["/api/players/available"],
   });
 
-  if (playersLoading || allPlayersLoading || leagueLoading) {
+  if (allPlayersLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
   }
-
-  // Get user's actual roster from Sleeper league data
-  const getUserPlayerNames = (): Set<string> => {
-    if (!leagueData?.teams) return new Set();
-    
-    // For now, we'll use the first team as an example - in production you'd identify the user's specific team
-    const userTeam = leagueData.teams[0];
-    if (!userTeam?.roster) return new Set();
-    
-    return new Set(userTeam.roster.map((player: any) => player.playerName));
-  };
-
-  const userPlayerNames = getUserPlayerNames();
-  const userPlayerIds = new Set(teamPlayers?.map(p => p.id) || []);
 
   // Filter out irrelevant players for dynasty rankings
   const isRelevantDynastyPlayer = (player: Player): boolean => {
@@ -84,7 +63,7 @@ export default function SimpleRankings() {
     return positionPlayers.map((player, index) => ({
       rank: index + 1,
       player,
-      isUserPlayer: userPlayerNames.has(player.name) || userPlayerIds.has(player.id),
+      isUserPlayer: false, // Remove false ownership claims for production
     }));
   };
 
@@ -116,7 +95,7 @@ export default function SimpleRankings() {
                    position === "WR" ? "Wide Receivers" :
                    "Tight Ends"}
                   <span className="text-sm text-gray-500">
-                    ({generateSimpleRankings(position).filter(r => r.isUserPlayer).length} on your team)
+                    Dynasty Rankings
                   </span>
                 </CardTitle>
               </CardHeader>
@@ -125,11 +104,7 @@ export default function SimpleRankings() {
                   {generateSimpleRankings(position).map((ranking) => (
                     <div
                       key={ranking.player.id}
-                      className={`flex items-center justify-between p-3 rounded-lg border ${
-                        ranking.isUserPlayer 
-                          ? 'bg-blue-50 border-blue-200' 
-                          : 'bg-white hover:bg-gray-50'
-                      }`}
+                      className="flex items-center justify-between p-3 rounded-lg border bg-white hover:bg-gray-50"
                     >
                       <div className="flex items-center gap-4">
                         <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
@@ -141,9 +116,6 @@ export default function SimpleRankings() {
                         <div>
                           <div className="font-medium text-gray-900">
                             {ranking.player.name}
-                            {ranking.isUserPlayer && (
-                              <Badge className="ml-2 bg-blue-600 text-white">Your Player</Badge>
-                            )}
                           </div>
                           <div className="text-sm text-gray-500">
                             {ranking.player.team} • {ranking.player.avgPoints.toFixed(1)} PPG
