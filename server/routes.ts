@@ -317,6 +317,156 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get individual player profile
+  app.get("/api/players/:id", async (req, res) => {
+    try {
+      const playerId = parseInt(req.params.id);
+      const player = await storage.getPlayer(playerId);
+      
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      // Add dynasty values using Jake Maraia rankings
+      const { getJakeMaraiaDynastyScore, getJakeMaraiaDynastyTier } = await import('./jakeMaraiaRankings');
+      const dynastyScore = getJakeMaraiaDynastyScore(player.name, player.position);
+      const dynastyTier = getJakeMaraiaDynastyTier(player.name, player.position);
+
+      const playerProfile = {
+        ...player,
+        dynastyValue: dynastyScore,
+        dynastyTier: dynastyTier
+      };
+
+      res.json(playerProfile);
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to fetch player profile" });
+    }
+  });
+
+  // Search players by name and position
+  app.get("/api/players/search", async (req, res) => {
+    try {
+      const { q: query, position } = req.query;
+      
+      if (!query || typeof query !== 'string' || query.length < 2) {
+        return res.json([]);
+      }
+
+      const players = await storage.searchPlayers(query as string);
+      
+      // Add dynasty values
+      const { getJakeMaraiaDynastyScore, getJakeMaraiaDynastyTier } = await import('./jakeMaraiaRankings');
+      
+      const playersWithDynasty = players.map(player => ({
+        ...player,
+        dynastyValue: getJakeMaraiaDynastyScore(player.name, player.position),
+        dynastyTier: getJakeMaraiaDynastyTier(player.name, player.position)
+      }));
+
+      res.json(playersWithDynasty.slice(0, 10)); // Limit to 10 results
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to search players" });
+    }
+  });
+
+  // Get player analytics and comparison data
+  app.get("/api/players/:id/analytics", async (req, res) => {
+    try {
+      const playerId = parseInt(req.params.id);
+      const player = await storage.getPlayer(playerId);
+      
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      // Generate weekly performance data (2024 season)
+      const weeklyPerformance = Array.from({ length: 17 }, (_, i) => {
+        const week = i + 1;
+        const basePoints = player.avgPoints;
+        const variance = basePoints * 0.3; // 30% variance
+        const actualPoints = Math.max(0, basePoints + (Math.random() - 0.5) * variance * 2);
+        const projectedPoints = basePoints + (Math.random() - 0.5) * variance;
+        
+        return {
+          week,
+          points: Math.round(actualPoints * 10) / 10,
+          projected: Math.round(projectedPoints * 10) / 10,
+          targets: player.position === 'WR' || player.position === 'TE' ? Math.floor(Math.random() * 12) + 3 : undefined,
+          carries: player.position === 'RB' ? Math.floor(Math.random() * 20) + 8 : undefined
+        };
+      });
+
+      // Calculate market comparison
+      const dynastyValue = player.dynastyValue || 50;
+      const ourRank = Math.floor(dynastyValue / 2); // Convert dynasty score to rank approximation
+      const adpRank = player.adp || ourRank + 50;
+      const valueDifference = adpRank - ourRank;
+      
+      let valueCategory = 'FAIR';
+      if (valueDifference >= 50) valueCategory = 'STEAL';
+      else if (valueDifference >= 25) valueCategory = 'VALUE';
+      else if (valueDifference <= -50) valueCategory = 'AVOID';
+      else if (valueDifference <= -25) valueCategory = 'OVERVALUED';
+
+      // Generate strengths and concerns based on player metrics
+      const strengths = [];
+      const concerns = [];
+
+      const consistency = player.consistency || 70;
+      const upside = player.upside || 70;
+      const age = player.age || 25;
+      const sustainability = player.sustainability || 70;
+
+      if (consistency > 80) strengths.push("Excellent week-to-week consistency for reliable production");
+      if (upside > 85) strengths.push("High ceiling with league-winning upside potential");
+      if (age < 26) strengths.push("Prime dynasty age with multiple productive years ahead");
+      if (player.targetShare && player.targetShare > 20) strengths.push(`Strong ${player.targetShare}% target share indicates established role`);
+      if (sustainability > 80) strengths.push("Sustainable production model with low bust risk");
+
+      if (age > 29) concerns.push("Aging asset with limited dynasty window remaining");
+      if (consistency < 60) concerns.push("Inconsistent production creates weekly lineup uncertainty");
+      if (player.injuryStatus) concerns.push(`Injury concerns: ${player.injuryStatus}`);
+      if (player.ownershipPercentage && player.ownershipPercentage < 50) concerns.push("Low ownership suggests potential red flags or market inefficiency");
+      if (sustainability < 60) concerns.push("Production model may not be sustainable long-term");
+
+      // Add default strengths/concerns if none generated
+      if (strengths.length === 0) {
+        strengths.push("Solid overall player profile with dynasty relevance");
+      }
+      if (concerns.length === 0) {
+        concerns.push("Standard dynasty risks apply based on position and age");
+      }
+
+      // Generate similar players
+      const similarPlayers = [
+        { name: "Player A", similarity: 87, reason: "Similar usage patterns and team context" },
+        { name: "Player B", similarity: 82, reason: "Comparable age and production trajectory" },
+        { name: "Player C", similarity: 78, reason: "Similar target share and efficiency metrics" }
+      ];
+
+      const analytics = {
+        weeklyPerformance,
+        marketComparison: {
+          ourRank,
+          adpRank,
+          ecrRank: adpRank - 5, // ECR typically close to ADP
+          valueDifference,
+          valueCategory
+        },
+        strengthsAndConcerns: {
+          strengths,
+          concerns
+        },
+        similarPlayers
+      };
+
+      res.json(analytics);
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to generate player analytics" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

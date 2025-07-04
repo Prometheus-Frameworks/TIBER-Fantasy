@@ -4,8 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Users, Search, Trophy, Star, Crown, Award, Target, Zap, Shield } from "lucide-react";
+import { Loader2, Users, Search, Trophy, Star, Crown, Award, Target, Zap, Shield, ExternalLink } from "lucide-react";
 import { useState } from "react";
+import { Link } from "wouter";
 import type { Player } from "@shared/schema";
 import { PlayerSearch } from "@/components/player-search";
 import { calculateDynastyScore, getTierFromScore, getTierColor, getTierLabel, getTierIcon, DYNASTY_TIERS } from "@/lib/dynastyTiers";
@@ -274,9 +275,13 @@ export default function SimpleRankings() {
                                 </div>
                                 
                                 <div>
-                                  <div className="font-medium text-gray-900">
+                                  <Link 
+                                    href={`/player/${ranking.player.id}`}
+                                    className="font-medium text-gray-900 hover:text-blue-600 hover:underline cursor-pointer transition-colors flex items-center gap-1"
+                                  >
                                     {ranking.player.name}
-                                  </div>
+                                    <ExternalLink className="w-3 h-3 opacity-50" />
+                                  </Link>
                                   <div className="text-sm text-gray-500">
                                     {ranking.player.team} • {ranking.player.avgPoints.toFixed(1)} PPG
                                   </div>
