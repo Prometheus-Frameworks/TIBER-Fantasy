@@ -30,14 +30,16 @@ interface TeamValue {
 }
 
 interface Player {
-  id: number;
-  name: string;
+  playerId: number;
+  playerName: string;
   position: string;
-  team: string;
   dynastyValue: number;
   dynastyTier: string;
-  avgPoints: number;
   isStarter: boolean;
+  adp: number;
+  ecr: number;
+  ourRank: number;
+  ppg: number;
 }
 
 interface LeagueComparison {
@@ -131,14 +133,16 @@ export default function CompareLeague() {
         const qbCount = qbValue > 200 ? 2 : 1;
         for (let i = 0; i < qbCount; i++) {
           roster.push({
-            id: playerId++,
-            name: i === 0 ? "Starting QB" : "Backup QB",
+            playerId: playerId++,
+            playerName: i === 0 ? "Starting QB" : "Backup QB",
             position: "QB",
-            team: "NFL",
             dynastyValue: Math.round(qbValue / qbCount),
             dynastyTier: qbValue > 150 ? "Elite" : qbValue > 100 ? "Premium" : "Strong",
-            avgPoints: qbValue / qbCount / 4,
-            isStarter: i === 0
+            isStarter: i === 0,
+            adp: qbValue > 150 ? 15 + i * 100 : qbValue > 100 ? 50 + i * 80 : 120 + i * 60,
+            ecr: qbValue > 150 ? 12 + i * 95 : qbValue > 100 ? 48 + i * 75 : 115 + i * 55,
+            ourRank: qbValue > 150 ? 8 + i * 20 : qbValue > 100 ? 18 + i * 15 : 25 + i * 10,
+            ppg: qbValue / qbCount / 4
           });
         }
       }
@@ -150,14 +154,16 @@ export default function CompareLeague() {
         for (let i = 0; i < rbCount; i++) {
           const playerValue = i < 2 ? rbValue * 0.4 : rbValue * 0.2 / (rbCount - 2);
           roster.push({
-            id: playerId++,
-            name: `RB ${i + 1}`,
+            playerId: playerId++,
+            playerName: `RB ${i + 1}`,
             position: "RB",
-            team: "NFL",
             dynastyValue: Math.round(playerValue),
             dynastyTier: playerValue > 80 ? "Elite" : playerValue > 60 ? "Premium" : playerValue > 40 ? "Strong" : "Solid",
-            avgPoints: playerValue / 4,
-            isStarter: i < 2
+            isStarter: i < 2,
+            adp: playerValue > 80 ? 20 + i * 40 : playerValue > 60 ? 50 + i * 30 : playerValue > 40 ? 80 + i * 25 : 120 + i * 20,
+            ecr: playerValue > 80 ? 18 + i * 38 : playerValue > 60 ? 48 + i * 28 : playerValue > 40 ? 78 + i * 23 : 118 + i * 18,
+            ourRank: playerValue > 80 ? 8 + i * 15 : playerValue > 60 ? 18 + i * 12 : playerValue > 40 ? 28 + i * 10 : 42 + i * 8,
+            ppg: playerValue / 4
           });
         }
       }
@@ -169,14 +175,16 @@ export default function CompareLeague() {
         for (let i = 0; i < wrCount; i++) {
           const playerValue = i < 3 ? wrValue * 0.3 : wrValue * 0.1 / (wrCount - 3);
           roster.push({
-            id: playerId++,
-            name: `WR ${i + 1}`,
+            playerId: playerId++,
+            playerName: `WR ${i + 1}`,
             position: "WR",
-            team: "NFL",
             dynastyValue: Math.round(playerValue),
             dynastyTier: playerValue > 80 ? "Elite" : playerValue > 60 ? "Premium" : playerValue > 40 ? "Strong" : "Solid",
-            avgPoints: playerValue / 4,
-            isStarter: i < 3
+            isStarter: i < 3,
+            adp: playerValue > 80 ? 8 + i * 25 : playerValue > 60 ? 35 + i * 20 : playerValue > 40 ? 75 + i * 15 : 110 + i * 12,
+            ecr: playerValue > 80 ? 6 + i * 23 : playerValue > 60 ? 32 + i * 18 : playerValue > 40 ? 72 + i * 13 : 108 + i * 10,
+            ourRank: playerValue > 80 ? 4 + i * 12 : playerValue > 60 ? 18 + i * 10 : playerValue > 40 ? 28 + i * 8 : 42 + i * 6,
+            ppg: playerValue / 4
           });
         }
       }
@@ -188,14 +196,16 @@ export default function CompareLeague() {
         for (let i = 0; i < teCount; i++) {
           const playerValue = i === 0 ? teValue * 0.7 : teValue * 0.3 / (teCount - 1);
           roster.push({
-            id: playerId++,
-            name: `TE ${i + 1}`,
+            playerId: playerId++,
+            playerName: `TE ${i + 1}`,
             position: "TE",
-            team: "NFL",
             dynastyValue: Math.round(playerValue),
             dynastyTier: playerValue > 80 ? "Elite" : playerValue > 60 ? "Premium" : playerValue > 40 ? "Strong" : "Solid",
-            avgPoints: playerValue / 4,
-            isStarter: i === 0
+            isStarter: i === 0,
+            adp: playerValue > 80 ? 45 + i * 60 : playerValue > 60 ? 80 + i * 40 : playerValue > 40 ? 120 + i * 30 : 180 + i * 25,
+            ecr: playerValue > 80 ? 42 + i * 55 : playerValue > 60 ? 78 + i * 38 : playerValue > 40 ? 118 + i * 28 : 178 + i * 23,
+            ourRank: playerValue > 80 ? 8 + i * 15 : playerValue > 60 ? 18 + i * 12 : playerValue > 40 ? 28 + i * 10 : 40 + i * 8,
+            ppg: playerValue / 4
           });
         }
       }
@@ -785,7 +795,7 @@ export default function CompareLeague() {
                               {positionPlayers
                                 .sort((a, b) => (b.dynastyValue || 0) - (a.dynastyValue || 0))
                                 .map((player) => (
-                                  <div key={player.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                  <div key={player.playerId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                     <div className="flex items-center gap-3">
                                       <Badge 
                                         className={`text-xs px-2 py-1 ${getTierColor(player.dynastyTier || 'Bench')}`}
@@ -793,16 +803,21 @@ export default function CompareLeague() {
                                         {player.dynastyTier || 'Bench'}
                                       </Badge>
                                       <div>
-                                        <div className="font-medium text-gray-900">{player.name}</div>
-                                        <div className="text-sm text-gray-600">
-                                          {player.team}
-                                          {player.isStarter && <span className="ml-2 text-green-600 font-medium">• Starter</span>}
+                                        <div className="font-medium text-gray-900">
+                                          {player.position}{player.isStarter ? '1' : '2'} - {player.playerName}
+                                        </div>
+                                        <div className="text-sm text-gray-600 space-x-3">
+                                          <span>ADP: {player.adp === 999 ? 'Undrafted' : player.adp}</span>
+                                          <span>ECR: {player.ecr === 999 ? 'Unranked' : player.ecr}</span>
+                                          <span>Our Rank: {player.ourRank === 999 ? 'Unranked' : player.ourRank}</span>
+                                          <span>PPG: {player.ppg.toFixed(1)}</span>
+                                          {player.isStarter && <span className="text-green-600 font-medium">• Starter</span>}
                                         </div>
                                       </div>
                                     </div>
                                     <div className="text-right">
                                       <div className="font-bold text-gray-900">{Math.round(player.dynastyValue || 0)}</div>
-                                      <div className="text-xs text-gray-600">{(player.avgPoints || 0).toFixed(1)} PPG</div>
+                                      <div className="text-xs text-gray-600">Dynasty Value</div>
                                     </div>
                                   </div>
                                 ))}
