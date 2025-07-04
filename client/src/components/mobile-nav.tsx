@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Users, Search, Settings, Brain, Crown, Trophy } from "lucide-react";
+import { BarChart3, Users, Search, Settings, Brain, Crown, Trophy, TrendingUp } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 export default function MobileNav() {
@@ -9,7 +9,7 @@ export default function MobileNav() {
   const tabs = [
     { id: "dashboard", label: "Team", icon: BarChart3, href: "/" },
     { id: "rankings", label: "Rankings", icon: Trophy, href: "/rankings" },
-    { id: "dynasty", label: "Dynasty", icon: Crown, href: "/dynasty-values" },
+    { id: "moves", label: "Moves", icon: TrendingUp, href: "/fantasy-moves" },
     { id: "arbitrage", label: "Value", icon: Search, href: "/arbitrage" },
     { id: "sync", label: "Sync", icon: Users, href: "/sync" },
   ];

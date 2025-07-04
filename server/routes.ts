@@ -812,6 +812,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Fantasy Moves Analysis endpoints
+  app.get('/api/teams/:id/moves', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { type, year } = req.query;
+      
+      // Import sample data for demonstration
+      const { sampleMoves, getMovesByType } = await import('./sampleMovesData');
+      
+      let moves = sampleMoves;
+      
+      // Filter by type if specified
+      if (type && typeof type === 'string') {
+        moves = getMovesByType(moves, type);
+      }
+      
+      // Filter by year if specified
+      if (year && typeof year === 'string') {
+        const targetYear = parseInt(year);
+        moves = moves.filter(move => new Date(move.date).getFullYear() === targetYear);
+      }
+      
+      res.json(moves);
+    } catch (error) {
+      console.error('Error fetching fantasy moves:', error);
+      res.status(500).json({ error: 'Failed to fetch fantasy moves' });
+    }
+  });
+
+  app.get('/api/teams/:id/moves/stats', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Import sample data for demonstration
+      const { sampleMoves, generateMoveStats, getTopMovesAnalysis } = await import('./sampleMovesData');
+      
+      const stats = generateMoveStats(sampleMoves);
+      const topMoves = getTopMovesAnalysis(sampleMoves);
+      
+      res.json({
+        overview: stats,
+        analysis: topMoves
+      });
+    } catch (error) {
+      console.error('Error generating move stats:', error);
+      res.status(500).json({ error: 'Failed to generate move statistics' });
+    }
+  });
+
+  app.post('/api/teams/:id/moves/analyze-trade', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { playersGained, playersLost, picksGained, picksLost, tradeDate } = req.body;
+      
+      const { fantasyMovesValuation } = await import('./fantasyMovesValuation');
+      
+      const analysis = await fantasyMovesValuation.analyzeTrade(
+        playersGained,
+        playersLost,
+        picksGained,
+        picksLost,
+        tradeDate ? new Date(tradeDate) : new Date()
+      );
+      
+      res.json(analysis);
+    } catch (error) {
+      console.error('Error analyzing trade:', error);
+      res.status(500).json({ error: 'Failed to analyze trade' });
+    }
+  });
+
+  app.post('/api/teams/:id/moves/analyze-draft', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { pick, year, playerId, playerName, draftDate } = req.body;
+      
+      const { fantasyMovesValuation } = await import('./fantasyMovesValuation');
+      
+      const analysis = await fantasyMovesValuation.analyzeDraftPick(
+        pick,
+        year,
+        playerId,
+        playerName,
+        draftDate ? new Date(draftDate) : new Date()
+      );
+      
+      res.json(analysis);
+    } catch (error) {
+      console.error('Error analyzing draft pick:', error);
+      res.status(500).json({ error: 'Failed to analyze draft pick' });
+    }
+  });
+
+  app.post('/api/teams/:id/moves/analyze-waiver', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { playerId, playerName, waiverPosition, claimDate } = req.body;
+      
+      const { fantasyMovesValuation } = await import('./fantasyMovesValuation');
+      
+      const analysis = await fantasyMovesValuation.analyzeWaiverClaim(
+        playerId,
+        playerName,
+        waiverPosition,
+        claimDate ? new Date(claimDate) : new Date()
+      );
+      
+      res.json(analysis);
+    } catch (error) {
+      console.error('Error analyzing waiver claim:', error);
+      res.status(500).json({ error: 'Failed to analyze waiver claim' });
+    }
+  });
+
   // ESPN API Integration Routes
   app.get("/api/espn/scoreboard", async (req, res) => {
     try {

@@ -142,21 +142,7 @@ export const dynastyTradeHistory = pgTable("dynasty_trade_history", {
   week: integer("week"), // Week the trade was made
 });
 
-export const draftPicks = pgTable("draft_picks", {
-  id: serial("id").primaryKey(),
-  teamId: integer("team_id").notNull().references(() => teams.id),
-  year: integer("year").notNull(), // 2025, 2026, etc.
-  round: integer("round").notNull(), // 1, 2, 3, etc.
-  pick: integer("pick").notNull(), // 1-12 for each round
-  originalTeamId: integer("original_team_id").references(() => teams.id), // Track pick trades
-  isTraded: boolean("is_traded").default(false),
-  tradeDate: timestamp("trade_date"),
-  tradeValue: real("trade_value"), // Dynasty trade value at time of trade
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => ({
-  uniquePick: unique().on(table.year, table.round, table.pick),
-}));
+
 
 export const waiverRecommendations = pgTable("waiver_recommendations", {
   id: serial("id").primaryKey(),
@@ -229,6 +215,78 @@ export const insertInjuryTrackerSchema = createInsertSchema(injuryTracker).omit(
   updatedAt: true,
 });
 
+// Fantasy Moves Tracking Tables
+export const fantasyMoves = pgTable("fantasy_moves", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull().references(() => teams.id),
+  moveType: text("move_type").notNull(), // "trade", "draft", "waiver", "free_agent"
+  moveDate: timestamp("move_date").notNull(),
+  description: text("description").notNull(), // "Traded for Josh Allen", "Drafted Brian Thomas Jr."
+  
+  // Value tracking
+  valueGained: integer("value_gained").notNull(), // Dynasty points gained
+  valueLost: integer("value_lost").notNull(), // Dynasty points lost  
+  netValue: integer("net_value").notNull(), // Net gain/loss
+  
+  // Move details
+  playersAcquired: jsonb("players_acquired"), // [{id, name, position, valueAtTime}]
+  playersLost: jsonb("players_lost"), // [{id, name, position, valueAtTime}]
+  picksAcquired: jsonb("picks_acquired"), // [{round, pick, year, valueAtTime}]
+  picksLost: jsonb("picks_lost"), // [{round, pick, year, valueAtTime}]
+  
+  // Current evaluation
+  currentValueGained: integer("current_value_gained"), // Current dynasty value of acquired assets
+  currentValueLost: integer("current_value_lost"), // Current dynasty value of lost assets  
+  currentNetValue: integer("current_net_value"), // Current net value
+  
+  // Metadata
+  tradePartner: text("trade_partner"), // For trades
+  waiverPriority: integer("waiver_priority"), // For waivers
+  season: integer("season").notNull(),
+  week: integer("week"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const draftPicks = pgTable("draft_picks", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull().references(() => teams.id),
+  round: integer("round").notNull(),
+  pick: integer("pick").notNull(), // Overall pick number
+  originalPick: text("original_pick").notNull(), // "1.12", "2.03", etc.
+  year: integer("year").notNull(),
+  playerId: integer("player_id").references(() => players.id), // If picked
+  playerName: text("player_name"), // Player selected
+  position: text("position"), // Position of player selected
+  
+  // Valuation at time of pick
+  pickValue: integer("pick_value").notNull(), // Dynasty value of pick slot
+  playerCurrentValue: integer("player_current_value"), // Current dynasty value of player
+  
+  // Trade context if applicable
+  acquiredVia: text("acquired_via"), // "original", "trade", "compensatory"
+  tradeContext: text("trade_context"), // Description of how pick was acquired
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const playerValueHistory = pgTable("player_value_history", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull().references(() => players.id),
+  date: timestamp("date").notNull(),
+  dynastyValue: integer("dynasty_value").notNull(),
+  source: text("source").notNull(), // "KeepTradeCut", "DynastyDataLab", "estimated"
+  adp: real("adp"), // Average draft position
+  ownership: real("ownership"), // Ownership percentage
+  
+  // Context
+  season: integer("season").notNull(),
+  week: integer("week"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Value Arbitrage Tables
 export const marketData = pgTable("market_data", {
   id: serial("id").primaryKey(),
@@ -297,6 +355,22 @@ export const insertMetricCorrelationsSchema = createInsertSchema(metricCorrelati
   lastCalculated: true,
 });
 
+export const insertFantasyMovesSchema = createInsertSchema(fantasyMoves).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDraftPicksSchema = createInsertSchema(draftPicks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPlayerValueHistorySchema = createInsertSchema(playerValueHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type Team = typeof teams.$inferSelect;
 export type Player = typeof players.$inferSelect;
@@ -312,7 +386,9 @@ export type InjuryTracker = typeof injuryTracker.$inferSelect;
 export type MarketData = typeof marketData.$inferSelect;
 export type ValueArbitrage = typeof valueArbitrage.$inferSelect;
 export type MetricCorrelations = typeof metricCorrelations.$inferSelect;
+export type FantasyMove = typeof fantasyMoves.$inferSelect;
 export type DraftPick = typeof draftPicks.$inferSelect;
+export type PlayerValueHistory = typeof playerValueHistory.$inferSelect;
 
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
@@ -327,6 +403,9 @@ export type InsertInjuryTracker = z.infer<typeof insertInjuryTrackerSchema>;
 export type InsertMarketData = z.infer<typeof insertMarketDataSchema>;
 export type InsertValueArbitrage = z.infer<typeof insertValueArbitrageSchema>;
 export type InsertMetricCorrelations = z.infer<typeof insertMetricCorrelationsSchema>;
+export type InsertFantasyMove = z.infer<typeof insertFantasyMovesSchema>;
+export type InsertDraftPick = z.infer<typeof insertDraftPicksSchema>;
+export type InsertPlayerValueHistory = z.infer<typeof insertPlayerValueHistorySchema>;
 
 // Relations
 export const teamsRelations = relations(teams, ({ many }) => ({
@@ -361,5 +440,30 @@ export const weeklyPerformanceRelations = relations(weeklyPerformance, ({ one })
   team: one(teams, {
     fields: [weeklyPerformance.teamId],
     references: [teams.id],
+  }),
+}));
+
+export const fantasyMovesRelations = relations(fantasyMoves, ({ one }) => ({
+  team: one(teams, {
+    fields: [fantasyMoves.teamId],
+    references: [teams.id],
+  }),
+}));
+
+export const draftPicksRelations = relations(draftPicks, ({ one }) => ({
+  team: one(teams, {
+    fields: [draftPicks.teamId],
+    references: [teams.id],
+  }),
+  player: one(players, {
+    fields: [draftPicks.playerId],
+    references: [players.id],
+  }),
+}));
+
+export const playerValueHistoryRelations = relations(playerValueHistory, ({ one }) => ({
+  player: one(players, {
+    fields: [playerValueHistory.playerId],
+    references: [players.id],
   }),
 }));
