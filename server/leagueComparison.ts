@@ -4,6 +4,7 @@
  */
 
 import { storage } from './storage';
+import { marketValuationService } from './marketValuation';
 
 export interface TeamComparison {
   teamId: string;
@@ -254,10 +255,12 @@ class LeagueComparisonService {
           };
         }
         
-        // Calculate dynasty value and get comprehensive player data
-        const dynastyValue = this.calculateSleeperPlayerValue(sleeperPlayer);
+        // Get player name and position
         const playerName = `${sleeperPlayer.first_name || ''} ${sleeperPlayer.last_name || ''}`.trim() || 'Unknown';
         const position = sleeperPlayer.position || 'FLEX';
+        
+        // Use authentic market values instead of custom algorithm
+        const dynastyValue = await this.getAuthenticDynastyValue(playerName);
         
         // Get player dynasty rankings and stats
         const playerStats = await this.getPlayerDynastyStats(playerName, position);
@@ -595,6 +598,37 @@ class LeagueComparisonService {
       console.warn(`Could not fetch position for player ${playerId}`);
     }
     return 'FLEX';
+  }
+
+  /**
+   * Get authentic dynasty value using market data (FantasyCalc + Jake Maraia)
+   */
+  private async getAuthenticDynastyValue(playerName: string): Promise<number> {
+    try {
+      // Initialize market service if not already done
+      await marketValuationService.initialize();
+      
+      // First try Jake Maraia rankings (most authoritative)
+      const { getJakeMaraiaDynastyScore } = await import('./jakeMaraiaRankings');
+      const jakeScore = getJakeMaraiaDynastyScore(playerName);
+      
+      if (jakeScore !== null) {
+        return jakeScore;
+      }
+      
+      // Fallback to FantasyCalc market values
+      const marketValue = await marketValuationService.getMarketValue(playerName);
+      if (marketValue) {
+        return marketValuationService.convertToLegacyScore(marketValue.fantasyCalcValue);
+      }
+      
+      // Final fallback for unknown players
+      return 15;
+      
+    } catch (error) {
+      console.warn(`Failed to get dynasty value for ${playerName}:`, error);
+      return 15;
+    }
   }
 
   /**
