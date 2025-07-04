@@ -2033,6 +2033,184 @@ except Exception as e:
     }
   });
 
+  // Sleeper API Sync Endpoints - Production Ready
+  app.post('/api/sync/sleeper/league/:leagueId', async (req, res) => {
+    try {
+      const { leagueId } = req.params;
+      console.log(`🔄 Starting Sleeper sync for league: ${leagueId}`);
+      
+      const { spawn } = require('child_process');
+      const pythonProcess = spawn('python3', ['./server/sleeperSync.py'], {
+        env: { ...process.env, SLEEPER_LEAGUE_ID: leagueId }
+      });
+      
+      let stdout = '';
+      let stderr = '';
+      
+      pythonProcess.stdout.on('data', (data: any) => {
+        stdout += data.toString();
+        console.log('Sleeper Sync:', data.toString().trim());
+      });
+      
+      pythonProcess.stderr.on('data', (data: any) => {
+        stderr += data.toString();
+      });
+      
+      pythonProcess.on('close', (code: number) => {
+        if (code === 0) {
+          res.json({
+            success: true,
+            message: 'Sleeper sync completed successfully',
+            leagueId,
+            output: stdout,
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          res.status(500).json({
+            success: false,
+            message: 'Sleeper sync failed',
+            leagueId,
+            error: stderr,
+            code
+          });
+        }
+      });
+      
+      // Timeout after 3 minutes
+      setTimeout(() => {
+        pythonProcess.kill();
+        res.status(408).json({
+          success: false,
+          message: 'Sleeper sync timeout',
+          leagueId,
+          error: 'Process exceeded 3 minute limit'
+        });
+      }, 180000);
+      
+    } catch (error) {
+      console.error('Sleeper sync error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to start Sleeper sync',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/sync/sleeper/test', async (req, res) => {
+    try {
+      console.log('🧪 Testing Sleeper API connectivity...');
+      
+      const testScript = `
+import requests
+import json
+print("Testing Sleeper API connectivity...")
+try:
+    response = requests.get("https://api.sleeper.app/v1/state/nfl", timeout=10)
+    if response.status_code == 200:
+        data = response.json()
+        print(f"✅ Sleeper API: Week {data.get('week', 'Unknown')} of {data.get('season', 'Unknown')}")
+        print("✅ Sleeper API connectivity confirmed")
+    else:
+        print(f"❌ API Error: {response.status_code}")
+except Exception as e:
+    print(f"❌ Connection failed: {e}")
+`;
+      
+      const { spawn } = require('child_process');
+      const pythonProcess = spawn('python3', ['-c', testScript]);
+      
+      let output = '';
+      let error = '';
+      
+      pythonProcess.stdout.on('data', (data: any) => {
+        output += data.toString();
+      });
+      
+      pythonProcess.stderr.on('data', (data: any) => {
+        error += data.toString();
+      });
+      
+      pythonProcess.on('close', (code: number) => {
+        if (code === 0) {
+          res.json({
+            status: 'success',
+            message: 'Sleeper API connectivity confirmed',
+            output: output.trim(),
+            api_endpoint: 'https://api.sleeper.app/v1',
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          res.status(500).json({
+            status: 'error',
+            message: 'Sleeper API connectivity failed',
+            error: error.trim(),
+            code
+          });
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to test Sleeper connectivity',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Refined Rankings API Integration
+  app.post('/api/rankings/refined/generate', async (req, res) => {
+    try {
+      const { refinedRankingEngine } = await import('./refinedRankingSystem');
+      
+      console.log('🔧 Starting refined rankings generation...');
+      const result = await refinedRankingEngine.executeRefinedRankings();
+      
+      res.json({
+        success: result.success,
+        message: result.success ? 'Refined rankings generated' : 'Rankings refinement failed',
+        stats: {
+          totalProcessed: result.totalProcessed,
+          playersRetained: result.playersRetained,
+          playersExcluded: result.playersExcluded,
+          exclusionsByPosition: result.exclusionsByPosition
+        },
+        errors: result.errors,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('Refined rankings error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate refined rankings',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/rankings/refined/validate', async (req, res) => {
+    try {
+      const { refinedRankingEngine } = await import('./refinedRankingSystem');
+      
+      const validation = await refinedRankingEngine.validateRefinedSystem();
+      
+      res.json({
+        systemHealth: validation.isHealthy ? 'Healthy' : 'Issues Detected',
+        validation,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('Refined system validation error:', error);
+      res.status(500).json({
+        systemHealth: 'Error',
+        message: 'Failed to validate refined ranking system',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
