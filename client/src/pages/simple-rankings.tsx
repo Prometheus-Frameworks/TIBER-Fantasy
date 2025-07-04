@@ -12,6 +12,12 @@ interface SimpleRankedPlayer {
 }
 
 export default function SimpleRankings() {
+  // Get user's actual Sleeper league roster data
+  const { data: leagueData, isLoading: leagueLoading } = useQuery({
+    queryKey: ["/api/league-comparison/1197631162923614208"],
+    retry: false
+  });
+
   const { data: teamPlayers, isLoading: playersLoading } = useQuery<(Player & { isStarter: boolean })[]>({
     queryKey: ["/api/teams", 1, "players"],
   });
@@ -20,7 +26,7 @@ export default function SimpleRankings() {
     queryKey: ["/api/players/available"],
   });
 
-  if (playersLoading || allPlayersLoading) {
+  if (playersLoading || allPlayersLoading || leagueLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -28,6 +34,18 @@ export default function SimpleRankings() {
     );
   }
 
+  // Get user's actual roster from Sleeper league data
+  const getUserPlayerNames = (): Set<string> => {
+    if (!leagueData?.teams) return new Set();
+    
+    // For now, we'll use the first team as an example - in production you'd identify the user's specific team
+    const userTeam = leagueData.teams[0];
+    if (!userTeam?.roster) return new Set();
+    
+    return new Set(userTeam.roster.map((player: any) => player.playerName));
+  };
+
+  const userPlayerNames = getUserPlayerNames();
   const userPlayerIds = new Set(teamPlayers?.map(p => p.id) || []);
 
   // Filter out irrelevant players for dynasty rankings
@@ -66,7 +84,7 @@ export default function SimpleRankings() {
     return positionPlayers.map((player, index) => ({
       rank: index + 1,
       player,
-      isUserPlayer: userPlayerIds.has(player.id),
+      isUserPlayer: userPlayerNames.has(player.name) || userPlayerIds.has(player.id),
     }));
   };
 
