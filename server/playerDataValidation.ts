@@ -36,13 +36,76 @@ export class PlayerDataValidationService {
    * Filter players for rankings to exclude problematic data
    */
   filterValidPlayers(players: Player[]): Player[] {
-    return players.filter(player => this.isValidPlayer(player));
+    const validPlayers = [];
+    const filteredPlayers = [];
+
+    for (const player of players) {
+      if (this.isValidPlayer(player)) {
+        validPlayers.push(player);
+      } else {
+        const reason = this.getFilterReason(player);
+        filteredPlayers.push({ name: player.name, position: player.position, reason });
+      }
+    }
+
+    // Log detailed filtering results
+    console.log(`\n=== PLAYER FILTERING RESULTS ===`);
+    console.log(`Total players analyzed: ${players.length}`);
+    console.log(`Valid players: ${validPlayers.length}`);
+    console.log(`Filtered players: ${filteredPlayers.length}\n`);
+
+    if (filteredPlayers.length > 0) {
+      console.log(`FILTERED PLAYERS:`);
+      filteredPlayers.forEach(({ name, position, reason }) => {
+        console.log(`❌ ${name} (${position}): ${reason}`);
+      });
+      console.log(`\n=== END FILTERING RESULTS ===\n`);
+    }
+
+    return validPlayers;
+  }
+
+  /**
+   * Get specific reason why a player was filtered
+   */
+  getFilterReason(player: Player): string {
+    // Check explicit exclusions first
+    if (this.EXCLUDED_PLAYERS.has(player.name)) {
+      return "Explicitly excluded (suspended/inactive)";
+    }
+
+    // Check realistic stats
+    if (!this.hasRealisticStats(player)) {
+      const avgPoints = player.avgPoints || 0;
+      const ownership = player.ownershipPercentage || 0;
+      return `Unrealistic stats (${avgPoints.toFixed(1)} PPG, ${ownership.toFixed(1)}% owned)`;
+    }
+
+    // Check activity
+    if (!this.appearsActive(player)) {
+      if (player.injuryStatus === 'Suspended' || player.injuryStatus === 'Retired') {
+        return `Injury status: ${player.injuryStatus}`;
+      }
+      
+      const avgPoints = player.avgPoints || 0;
+      const ownership = player.ownershipPercentage || 0;
+      
+      if (avgPoints === 0 && ownership < 5) {
+        return "Inactive (0 points, low ownership)";
+      }
+      
+      if (avgPoints > 15 && ownership < 10 && player.position !== 'QB') {
+        return "Data anomaly (high points, low ownership)";
+      }
+    }
+
+    return "Unknown validation failure";
   }
 
   /**
    * Validate individual player data
    */
-  private isValidPlayer(player: Player): boolean {
+  isValidPlayer(player: Player): boolean {
     // Exclude known problematic players
     if (this.EXCLUDED_PLAYERS.has(player.name)) {
       return false;

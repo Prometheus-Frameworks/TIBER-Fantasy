@@ -546,6 +546,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player Data Validation Diagnostics
+  app.get("/api/validation/filtered-players", async (req, res) => {
+    try {
+      const { playerDataValidationService } = await import('./playerDataValidation');
+      const allPlayers = await storage.getPlayers();
+      
+      const filteredDetails = [];
+      const validPlayers = [];
+
+      for (const player of allPlayers) {
+        if (!playerDataValidationService.isValidPlayer(player)) {
+          const reason = playerDataValidationService.getFilterReason(player);
+          filteredDetails.push({
+            name: player.name,
+            position: player.position,
+            team: player.team,
+            avgPoints: player.avgPoints,
+            ownershipPercentage: player.ownershipPercentage,
+            injuryStatus: player.injuryStatus,
+            reason: reason
+          });
+        } else {
+          validPlayers.push(player);
+        }
+      }
+
+      res.json({
+        summary: {
+          totalPlayers: allPlayers.length,
+          validPlayers: validPlayers.length,
+          filteredPlayers: filteredDetails.length
+        },
+        filteredPlayers: filteredDetails.sort((a, b) => a.name.localeCompare(b.name)),
+        filteringCriteria: {
+          explicitlyExcluded: [
+            'Deshaun Watson (Suspended/not playing 2024)',
+            'Calvin Ridley (Was suspended, may have outdated data)',
+            'Josh Gordon (Suspended repeatedly)',
+            'Alvin Kamara (Check if data is current)',
+            'Leonard Fournette (Free agent/inactive)',
+            'Kareem Hunt (Check current team status)'
+          ],
+          statisticalThresholds: {
+            QB: { minPoints: 8, maxPoints: 28, maxOwnership: 90 },
+            RB: { minPoints: 3, maxPoints: 25, maxOwnership: 85 },
+            WR: { minPoints: 3, maxPoints: 22, maxOwnership: 80 },
+            TE: { minPoints: 2, maxPoints: 18, maxOwnership: 75 }
+          },
+          activityChecks: [
+            'Players with 0 points and <5% ownership (inactive)',
+            'Players with Suspended/Retired injury status',
+            'Players with >15 PPG but <10% ownership (data anomaly)'
+          ]
+        }
+      });
+    } catch (error) {
+      console.error("Error generating validation report:", error);
+      res.status(500).json({ message: "Failed to generate validation report" });
+    }
+  });
+
   // Dynasty Trade History Endpoints
   app.get("/api/teams/:id/trades", async (req, res) => {
     try {
