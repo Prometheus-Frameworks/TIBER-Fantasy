@@ -25,6 +25,21 @@ interface DynastyValueScore {
 
 export class DynastyValuationService {
   
+  /*
+   * Dynasty Score Distribution Philosophy:
+   * 
+   * 95-100: Generational talents (0.5-1% of players) - Peak Mahomes, prime CMC, Kelce at his best
+   * 85-94:  Elite tier (5-8% of players) - Top 10-15 fantasy producers with exceptional metrics
+   * 70-84:  Great tier (15-20% of players) - Quality weekly starters with multiple strengths
+   * 50-69:  Good/Average (30-40% of players) - Roster-worthy players with specific roles
+   * <50:    Below average/replacement level
+   * 
+   * The weighted system requires multiple components to align for high scores:
+   * - A 90+ overall score needs excellence across most categories (not just fantasy points)
+   * - Component caps prevent single-dimension excellence from inflating scores
+   * - Position-specific thresholds reflect real scarcity and value
+   */
+  
   // Main valuation function combining all data sources
   async calculateDynastyValue(player: Player): Promise<DynastyValueScore> {
     const components = await this.calculateComponents(player);
@@ -87,43 +102,47 @@ export class DynastyValuationService {
     };
   }
   
-  // Component 1: Fantasy Production (30%)
+  // Component 1: Fantasy Production (30%) - More conservative scoring
   private calculateFantasyProduction(player: Player, position: string): number {
     const avgPoints = player.avgPoints || 0;
     const projectedPoints = player.projectedPoints || 0;
-    const consistency = player.consistency || 50; // Default middle score
+    const consistency = player.consistency || 50;
     
     let score = 0;
     
-    // Position-adjusted scoring thresholds
+    // Highly restrictive thresholds - only generational talents hit 90+
     if (position === 'QB') {
-      if (avgPoints >= 22) score = 95;      // Elite (Josh Allen tier)
-      else if (avgPoints >= 20) score = 85; // Great (Dak tier)
-      else if (avgPoints >= 18) score = 70; // Good (Baker tier)
-      else if (avgPoints >= 15) score = 50; // Average
-      else score = 25;                      // Poor
+      if (avgPoints >= 25) score = 95;      // Generational (peak Mahomes/Allen level)
+      else if (avgPoints >= 23) score = 85; // Elite tier (Josh Allen 2024)
+      else if (avgPoints >= 21) score = 75; // Great tier (Lamar, Dak)
+      else if (avgPoints >= 18) score = 60; // Good tier (Baker, Sam)
+      else if (avgPoints >= 15) score = 45; // Average/bench
+      else score = 20;                      // Poor
     } else if (position === 'RB') {
-      if (avgPoints >= 16) score = 95;      // Elite (CMC tier)
-      else if (avgPoints >= 14) score = 85; // Great
-      else if (avgPoints >= 12) score = 70; // Good
-      else if (avgPoints >= 9) score = 50;  // Average
-      else score = 25;                      // Poor
+      if (avgPoints >= 18) score = 95;      // Generational (peak CMC level)
+      else if (avgPoints >= 16) score = 85; // Elite (CMC 2024)
+      else if (avgPoints >= 14) score = 75; // Great
+      else if (avgPoints >= 11) score = 60; // Good
+      else if (avgPoints >= 8) score = 45;  // Average
+      else score = 20;                      // Poor
     } else if (position === 'WR') {
-      if (avgPoints >= 15) score = 95;      // Elite (Hill tier)
-      else if (avgPoints >= 13) score = 85; // Great
-      else if (avgPoints >= 11) score = 70; // Good
-      else if (avgPoints >= 8) score = 50;  // Average
-      else score = 25;                      // Poor
+      if (avgPoints >= 17) score = 95;      // Generational (peak Jefferson/Kupp level)
+      else if (avgPoints >= 15) score = 85; // Elite (Hill, Jefferson)
+      else if (avgPoints >= 13) score = 75; // Great
+      else if (avgPoints >= 10) score = 60; // Good
+      else if (avgPoints >= 7) score = 45;  // Average
+      else score = 20;                      // Poor
     } else if (position === 'TE') {
-      if (avgPoints >= 12) score = 95;      // Elite (Kelce tier)
-      else if (avgPoints >= 10) score = 85; // Great
-      else if (avgPoints >= 8) score = 70;  // Good
-      else if (avgPoints >= 6) score = 50;  // Average
-      else score = 25;                      // Poor
+      if (avgPoints >= 14) score = 95;      // Generational (peak Kelce level)
+      else if (avgPoints >= 12) score = 85; // Elite (current Kelce)
+      else if (avgPoints >= 10) score = 75; // Great (Hockenson, Andrews)
+      else if (avgPoints >= 7) score = 60;  // Good
+      else if (avgPoints >= 5) score = 45;  // Average
+      else score = 20;                      // Poor
     }
     
-    // Consistency adjustment (±10 points)
-    const consistencyBonus = (consistency - 50) * 0.2;
+    // Smaller consistency adjustment (±5 points max)
+    const consistencyBonus = (consistency - 50) * 0.1;
     
     return Math.max(0, Math.min(100, score + consistencyBonus));
   }
@@ -155,124 +174,133 @@ export class DynastyValuationService {
   }
   
   private scoreNextGenMetrics(analysis: any, position: string): number {
-    if (position !== 'WR' && position !== 'TE') return 50;
+    if (position !== 'WR' && position !== 'TE') return 40; // Lower default
     
     let score = 0;
     let factors = 0;
     
-    // Separation metrics (key for WR/TE dynasty value)
+    // Much more restrictive separation scoring - only elite get high marks
     if (analysis.separation_metrics?.avg_separation_percentile) {
       const separationPercentile = analysis.separation_metrics.avg_separation_percentile;
-      if (separationPercentile >= 80) score += 25;
-      else if (separationPercentile >= 65) score += 20;
-      else if (separationPercentile >= 50) score += 15;
-      else if (separationPercentile >= 35) score += 10;
-      else score += 5;
+      if (separationPercentile >= 95) score += 30; // Truly elite separation (top 5%)
+      else if (separationPercentile >= 85) score += 22; // Very good (top 15%)
+      else if (separationPercentile >= 70) score += 15; // Above average
+      else if (separationPercentile >= 50) score += 8;  // Average
+      else score += 2; // Below average
       factors++;
     }
     
-    // Target quality
+    // Target quality - more restrictive
     if (analysis.separation_metrics?.avg_intended_air_yards) {
       const airYards = analysis.separation_metrics.avg_intended_air_yards;
-      if (airYards >= 12) score += 20; // Deep threats
-      else if (airYards >= 8) score += 15; // Intermediate
-      else score += 10; // Short/underneath
+      if (airYards >= 15) score += 18; // Deep threat elite
+      else if (airYards >= 12) score += 12; // Deep threats
+      else if (airYards >= 8) score += 8; // Intermediate
+      else score += 4; // Short/underneath
       factors++;
     }
     
-    // Efficiency metrics
+    // Efficiency metrics - much higher bar
     if (analysis.efficiency_metrics?.yards_per_target) {
       const ypt = analysis.efficiency_metrics.yards_per_target;
-      if (ypt >= 9) score += 20;
-      else if (ypt >= 7) score += 15;
-      else if (ypt >= 5) score += 10;
-      else score += 5;
+      if (ypt >= 10) score += 25; // Elite efficiency (very rare)
+      else if (ypt >= 8.5) score += 18; // Great efficiency
+      else if (ypt >= 7) score += 12; // Good efficiency
+      else if (ypt >= 5) score += 6; // Average
+      else score += 2; // Poor
       factors++;
     }
     
-    // Season trends (dynasty crucial)
+    // Season trends - more conservative bonuses
     if (analysis.season_trends?.target_trend === 'increasing') {
-      score += 15; // Positive trajectory
+      score += 8; // Positive trajectory (smaller bonus)
       factors++;
     } else if (analysis.season_trends?.target_trend === 'stable') {
-      score += 10;
+      score += 4; // Stability (smaller bonus)
       factors++;
     }
     
-    return factors > 0 ? Math.min(100, score) : 50;
+    // Cap advanced metrics at lower ceiling unless truly exceptional
+    const maxScore = factors > 0 ? Math.min(90, score) : 40;
+    return maxScore;
   }
   
-  // Component 3: Opportunity (20%)
+  // Component 3: Opportunity (20%) - Much more restrictive
   private calculateOpportunity(player: Player, position: string): number {
-    let score = 50; // Start at middle
+    let score = 40; // Start lower than middle
     
-    // Target share for pass catchers
+    // Target share for pass catchers - only elite volume gets high scores
     if ((position === 'WR' || position === 'TE') && player.targetShare) {
-      if (player.targetShare >= 25) score = 90;
-      else if (player.targetShare >= 20) score = 75;
-      else if (player.targetShare >= 15) score = 60;
-      else if (player.targetShare >= 10) score = 45;
-      else score = 30;
+      if (player.targetShare >= 30) score = 85; // Elite target hog (very rare)
+      else if (player.targetShare >= 25) score = 75; // High usage
+      else if (player.targetShare >= 20) score = 60; // Good usage
+      else if (player.targetShare >= 15) score = 45; // Decent
+      else if (player.targetShare >= 10) score = 30; // Limited
+      else score = 15; // Minimal role
     }
     
-    // Carries for RBs
+    // Carries for RBs - extremely high bar for elite scores
     if (position === 'RB' && player.carries) {
-      if (player.carries >= 250) score = 95; // Workhorse
-      else if (player.carries >= 180) score = 80; // Good volume
-      else if (player.carries >= 120) score = 65; // Decent
-      else if (player.carries >= 80) score = 45; // Limited
-      else score = 25; // Minimal role
+      if (player.carries >= 300) score = 90; // Elite workhorse (very rare)
+      else if (player.carries >= 250) score = 80; // Workhorse
+      else if (player.carries >= 200) score = 65; // Good volume
+      else if (player.carries >= 150) score = 50; // Decent
+      else if (player.carries >= 100) score = 35; // Limited
+      else score = 20; // Minimal role
     }
     
-    // Snap count (universal)
+    // Snap count bonus - smaller impact
     if (player.snapCount) {
-      const snapBonus = Math.min(15, player.snapCount / 50); // Up to 15 point bonus
+      const snapBonus = Math.min(8, player.snapCount / 80); // Max 8 point bonus, higher threshold
       score += snapBonus;
     }
     
-    // Red zone opportunity
+    // Red zone opportunity - smaller bonuses
     if (player.redZoneTargets) {
-      const rzBonus = Math.min(10, player.redZoneTargets * 1.5);
+      const rzBonus = Math.min(6, player.redZoneTargets * 0.8); // Smaller multiplier
       score += rzBonus;
     }
     
-    return Math.max(0, Math.min(100, score));
+    return Math.max(0, Math.min(85, score)); // Cap opportunity at 85 to prevent inflation
   }
   
-  // Component 4: Efficiency (15%)
+  // Component 4: Efficiency (15%) - Much more restrictive, elite scores very rare
   private calculateEfficiency(player: Player, position: string): number {
-    let score = 50;
+    let score = 35; // Start below middle
     const avgPoints = player.avgPoints || 0;
     const projectedPoints = player.projectedPoints || 0;
     
-    // Points per opportunity efficiency
+    // Points per opportunity efficiency - much higher thresholds
     if (position === 'WR' || position === 'TE') {
       if (player.targetShare && player.targetShare > 0) {
         const pointsPerTargetShare = avgPoints / player.targetShare;
-        if (pointsPerTargetShare >= 0.8) score = 90;
-        else if (pointsPerTargetShare >= 0.6) score = 75;
-        else if (pointsPerTargetShare >= 0.4) score = 60;
-        else score = 40;
+        if (pointsPerTargetShare >= 1.0) score = 80;  // Elite efficiency (very rare)
+        else if (pointsPerTargetShare >= 0.8) score = 65; // Great efficiency
+        else if (pointsPerTargetShare >= 0.6) score = 50; // Good efficiency
+        else if (pointsPerTargetShare >= 0.4) score = 35; // Average
+        else score = 20; // Poor efficiency
       }
     }
     
     if (position === 'RB' && player.carries && player.carries > 0) {
       const pointsPerCarry = avgPoints / player.carries;
-      if (pointsPerCarry >= 0.08) score = 90;
-      else if (pointsPerCarry >= 0.06) score = 75;
-      else if (pointsPerCarry >= 0.04) score = 60;
-      else score = 40;
+      if (pointsPerCarry >= 0.10) score = 80;  // Elite efficiency (very rare)
+      else if (pointsPerCarry >= 0.08) score = 65; // Great efficiency
+      else if (pointsPerCarry >= 0.06) score = 50; // Good efficiency  
+      else if (pointsPerCarry >= 0.04) score = 35; // Average
+      else score = 20; // Poor efficiency
     }
     
-    // Projected vs actual (consistency indicator)
+    // Projected vs actual (consistency indicator) - smaller bonuses
     if (projectedPoints > 0) {
       const accuracy = Math.abs(avgPoints - projectedPoints) / projectedPoints;
-      if (accuracy <= 0.1) score += 10; // Very predictable
-      else if (accuracy <= 0.2) score += 5; // Somewhat predictable
+      if (accuracy <= 0.05) score += 8; // Extremely predictable (rare)
+      else if (accuracy <= 0.1) score += 5; // Very predictable
+      else if (accuracy <= 0.15) score += 2; // Somewhat predictable
       // No bonus for unpredictable players
     }
     
-    return Math.max(0, Math.min(100, score));
+    return Math.max(0, Math.min(75, score)); // Cap efficiency at 75 to prevent inflation
   }
   
   // Component 5: Situational (10%)
@@ -300,11 +328,11 @@ export class DynastyValuationService {
   }
   
   private getGrade(score: number): 'Elite' | 'Great' | 'Good' | 'Average' | 'Poor' {
-    if (score >= 85) return 'Elite';
-    if (score >= 75) return 'Great';
-    if (score >= 65) return 'Good';
-    if (score >= 45) return 'Average';
-    return 'Poor';
+    if (score >= 95) return 'Elite';    // Reserved for generational talents (top 1-2% of players)
+    if (score >= 85) return 'Great';    // Top tier starters (top 5-10%)
+    if (score >= 70) return 'Good';     // Quality starters (top 25%)
+    if (score >= 50) return 'Average';  // Roster-worthy players
+    return 'Poor';                      // Replacement level or worse
   }
   
   private calculateMarketArbitrage(player: Player, ourValue: number): any {

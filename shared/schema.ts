@@ -32,6 +32,7 @@ export const players = pgTable("players", {
   upside: real("upside").notNull(),
   injuryStatus: text("injury_status").default("Healthy"),
   availability: text("availability").default("Available"),
+  imageUrl: text("image_url"), // Player headshot/photo URL
   consistency: real("consistency"), // Performance consistency rating
   matchupRating: real("matchup_rating"), // Upcoming matchup rating
   trend: text("trend"), // "up", "down", "stable"

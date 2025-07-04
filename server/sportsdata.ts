@@ -262,6 +262,7 @@ export class SportsDataAPI {
       upside: Math.round((projectedPoints * 1.3 - avgPoints) * 10) / 10,
       injuryStatus: this.normalizeInjuryStatus(sportsDataPlayer.InjuryStatus),
       availability: sportsDataPlayer.Active ? "Available" : "Unavailable",
+      imageUrl: sportsDataPlayer.PhotoUrl || null, // Include player headshot
       consistency: Math.round((80 + Math.random() * 20) * 10) / 10,
       matchupRating: Math.round((6 + Math.random() * 4) * 10) / 10,
       trend: Math.random() > 0.5 ? "up" : "down",
