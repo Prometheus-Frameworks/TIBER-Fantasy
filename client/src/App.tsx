@@ -21,6 +21,7 @@ import SimpleRankingsPage from "@/pages/simple-rankings";
 import LeagueAnalysisPage from "@/pages/league-analysis";
 import FantasyMovesPage from "@/pages/fantasy-moves";
 import TrendingPlayersPage from "@/pages/trending-players";
+import CompareLeaguePage from "@/pages/compare-league";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/league-analysis" component={LeagueAnalysisPage} />
       <Route path="/fantasy-moves" component={FantasyMovesPage} />
       <Route path="/trending" component={TrendingPlayersPage} />
+      <Route path="/compare-league" component={CompareLeaguePage} />
       <Route path="/lineup" component={LineupOptimizer} />
       <Route path="/analytics" component={LineupOptimizer} />
       <Route path="/premium" component={PremiumAnalytics} />

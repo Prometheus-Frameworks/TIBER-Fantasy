@@ -11,7 +11,7 @@ export default function MobileNav() {
     { id: "rankings", label: "Rankings", icon: Trophy, href: "/rankings" },
     { id: "trending", label: "Trending", icon: TrendingUp, href: "/trending" },
     { id: "arbitrage", label: "Value", icon: Search, href: "/arbitrage" },
-    { id: "sync", label: "Sync", icon: Users, href: "/sync" },
+    { id: "compare", label: "Compare", icon: Users, href: "/compare-league" },
   ];
 
   return (

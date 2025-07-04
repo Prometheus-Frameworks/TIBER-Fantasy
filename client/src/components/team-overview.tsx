@@ -81,11 +81,11 @@ export default function TeamOverview({ team }: TeamOverviewProps) {
               </Button>
             </Link>
             
-            <Link href="/sync">
+            <Link href="/compare-league">
               <Button variant="outline" className="bg-green-50 hover:bg-green-100 border-green-200 h-auto p-3 md:p-4 flex flex-col items-center text-center w-full touch-manipulation">
                 <Users className="text-green-600 mb-1 md:mb-2" size={18} />
-                <div className="font-medium text-gray-900 text-sm md:text-base">Import</div>
-                <div className="text-xs text-gray-600 hidden md:block">Sync team</div>
+                <div className="font-medium text-gray-900 text-sm md:text-base">Compare</div>
+                <div className="text-xs text-gray-600 hidden md:block">League teams</div>
               </Button>
             </Link>
           </div>
