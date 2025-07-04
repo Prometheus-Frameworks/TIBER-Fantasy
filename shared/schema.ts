@@ -71,6 +71,13 @@ export const players = pgTable("players", {
   premiumDataSource: text("premium_data_source"), // "PFF", "NextGen", "Manual"
   premiumDataWeek: integer("premium_data_week"), // Week of premium data
   premiumDataUpdated: timestamp("premium_data_updated"), // Last manual update
+  
+  // Advanced NFL Rankings Integration
+  advancedRank: integer("advanced_rank"), // Position rank from NFL analytics
+  compositeScore: real("composite_score"), // Weighted analytics score
+  advancedMetrics: jsonb("advanced_metrics"), // Position-specific analytics
+  confidenceScore: integer("confidence_score"), // Data confidence 0-100
+  lastAdvancedUpdate: timestamp("last_advanced_update"), // Last analytics update
 });
 
 export const teamPlayers = pgTable("team_players", {

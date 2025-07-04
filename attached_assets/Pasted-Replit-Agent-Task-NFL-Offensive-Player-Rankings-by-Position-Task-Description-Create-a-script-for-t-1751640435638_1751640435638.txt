@@ -1,0 +1,48 @@
+Replit Agent Task: NFL Offensive Player Rankings by Position
+Task Description: Create a script for the fantasy football app to rank NFL offensive players (QB, RB, WR, TE) using advanced analytics from APIs [e.g., nflverse, ESPN Public API, MySportsFeeds]. Integrate with the app’s real-time data sync for lineup/roster optimization.
+Steps:
+1.  API Integration: Connect to APIs (e.g., nfl_data_py for nflverse) with API keys.
+2.  Data Retrieval: Fetch 2024 season player stats, advanced metrics, and game logs.
+3.  Metric Calculation: Compute position-specific analytics (below). Normalize per game/snap.
+4.  Ranking Logic: Generate composite score (e.g., weighted sum) per player. Rank by position.
+5.  Output: Store rankings in app’s database. Export as JSON for integration.
+Key Analytics by Position:
+•  Quarterback (QB):
+	•  Expected Points Added (EPA) per Play: Efficiency.
+	•  Completion Percentage Over Expected (CPOE): Accuracy.
+	•  Deep Pass Yards per Attempt: Big-play ability.
+	•  Pressure-to-Sack Rate: Pocket presence.
+•  Running Back (RB):
+	•  Yards After Contact per Carry: Elusiveness.
+	•  Rush EPA per Attempt: Run efficiency.
+	•  Receiving Yards per Route Run: Pass-catching.
+	•  Broken Tackle Rate: Physicality.
+•  Wide Receiver (WR):
+	•  Yards per Route Run: Efficiency.
+	•  Target Share: Offensive involvement.
+	•  Air Yards Share: Deep-threat ability.
+	•  Contested Catch Rate: Reliability.
+•  Tight End (TE):
+	•  Yards per Route Run: Receiving efficiency.
+	•  Red Zone Target Share: Scoring opportunity.
+	•  Blocking Snap Percentage: Run-game contribution.
+	•  Catch Rate Over Expected: Hands reliability.
+Implementation Notes:
+•  Use Python with nfl_data_py, pandas, requests.
+•  Filter by minimum snaps (e.g., 100) or games (e.g., 8).
+•  Handle missing data by excluding players or imputing averages.
+•  Weight metrics (e.g., 40% EPA, 30% efficiency, 20% volume, 10% durability).
+•  Sync with app’s database (per July 3, 2025 discussion) for ESPN/Yahoo/NFL platforms.
+•  Test API: nfl.import_weekly_data(season=2024, columns=["player_id", "position", "epa"]).
+Deliverable:
+•  Script (nfl_offense_rankings.py):
+	•  Pulls API data.
+	•  Calculates metrics, ranks players.
+	•  Stores in database.
+	•  Outputs JSON (offense_rankings_2024.json).
+•  Console: Top 10 players per position.
+Resources:
+•  nflverse: https://pypi.org/project/nfl-data-py/.
+•  ESPN API: http://developer.espn.com/docs.
+•  MySportsFeeds: https://www.mysportsfeeds.com/data-feeds/nfl.
+Deadline: [Insert deadline, e.g., 7 days].

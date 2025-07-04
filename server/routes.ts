@@ -1839,6 +1839,200 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Advanced NFL Rankings API - Bulletproof Analytics
+  app.post('/api/rankings/generate', async (req, res) => {
+    try {
+      console.log('🏈 Generating advanced NFL rankings with authentic data...');
+      
+      // Execute Python NFL analytics script
+      const { spawn } = require('child_process');
+      const pythonProcess = spawn('python3', ['./server/nflOffenseRankings.py']);
+      
+      let stdout = '';
+      let stderr = '';
+      
+      pythonProcess.stdout.on('data', (data: any) => {
+        stdout += data.toString();
+        console.log('NFL Analytics:', data.toString().trim());
+      });
+      
+      pythonProcess.stderr.on('data', (data: any) => {
+        stderr += data.toString();
+      });
+      
+      pythonProcess.on('close', (code: number) => {
+        if (code === 0) {
+          res.json({
+            success: true,
+            message: 'Advanced NFL rankings generated successfully',
+            output: stdout,
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          res.status(500).json({
+            success: false,
+            message: 'NFL rankings generation failed',
+            error: stderr,
+            code
+          });
+        }
+      });
+      
+      // Timeout after 5 minutes
+      setTimeout(() => {
+        pythonProcess.kill();
+        res.status(408).json({
+          success: false,
+          message: 'NFL rankings generation timeout',
+          error: 'Process exceeded 5 minute limit'
+        });
+      }, 300000);
+      
+    } catch (error) {
+      console.error('NFL rankings error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to generate NFL rankings',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/rankings/nfl/test', async (req, res) => {
+    try {
+      console.log('🧪 Testing NFL data connectivity...');
+      
+      const { spawn } = require('child_process');
+      const testScript = `
+import nfl_data_py as nfl
+import pandas as pd
+print("✅ NFL Data library imported successfully")
+try:
+    rosters = nfl.import_rosters([2024])
+    print(f"✅ Roster data: {len(rosters)} players loaded")
+    print("✅ NFL data connectivity confirmed")
+except Exception as e:
+    print(f"❌ Data fetch error: {e}")
+`;
+      
+      const pythonProcess = spawn('python3', ['-c', testScript]);
+      
+      let output = '';
+      let error = '';
+      
+      pythonProcess.stdout.on('data', (data: any) => {
+        output += data.toString();
+      });
+      
+      pythonProcess.stderr.on('data', (data: any) => {
+        error += data.toString();
+      });
+      
+      pythonProcess.on('close', (code: number) => {
+        if (code === 0) {
+          res.json({
+            status: 'success',
+            message: 'NFL data connectivity confirmed',
+            output: output.trim(),
+            libraries: ['nfl-data-py', 'pandas', 'numpy'],
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          res.status(500).json({
+            status: 'error',
+            message: 'NFL data connectivity failed',
+            error: error.trim(),
+            code
+          });
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to test NFL connectivity',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Bulletproof Rankings API - Production Ready
+  app.post('/api/rankings/bulletproof/generate', async (req, res) => {
+    try {
+      const { bulletproofRankings } = await import('./bulletproofRankings');
+      
+      console.log('🔧 Generating bulletproof rankings...');
+      const result = await bulletproofRankings.generateBulletproofRankings();
+      
+      res.json({
+        success: result.success,
+        message: result.success ? 'Bulletproof rankings generated' : 'Rankings generation failed',
+        stats: result.stats,
+        rankingsByPosition: Object.keys(result.rankings),
+        errors: result.errors,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('Bulletproof rankings error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate bulletproof rankings',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/rankings/bulletproof/:position?', async (req, res) => {
+    try {
+      const { bulletproofRankings } = await import('./bulletproofRankings');
+      const { position } = req.params;
+      
+      const rankings = await bulletproofRankings.getBulletproofRankings(position);
+      
+      res.json({
+        position: position || 'ALL',
+        rankings: rankings.slice(0, 50), // Top 50 per position
+        total: rankings.length,
+        dataQuality: {
+          high: rankings.filter(r => r.dataQuality === 'High').length,
+          medium: rankings.filter(r => r.dataQuality === 'Medium').length,
+          low: rankings.filter(r => r.dataQuality === 'Low').length
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('Bulletproof rankings fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch bulletproof rankings',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/rankings/validate', async (req, res) => {
+    try {
+      const { bulletproofRankings } = await import('./bulletproofRankings');
+      
+      const validation = await bulletproofRankings.validateSystem();
+      
+      res.json({
+        systemHealth: validation.isHealthy ? 'Healthy' : 'Issues Detected',
+        validation,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('System validation error:', error);
+      res.status(500).json({
+        systemHealth: 'Error',
+        message: 'Failed to validate ranking system',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
