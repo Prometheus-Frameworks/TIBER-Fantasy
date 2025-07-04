@@ -35,8 +35,8 @@ function Router() {
       <Route path="/player-analysis" component={PlayerAnalysisPage} />
       <Route path="/trade-history/:id" component={TradeHistoryPage} />
       <Route path="/dynasty-values" component={DynastyValuesPage} />
-      <Route path="/rankings" component={ValueRankingsPage} />
-      <Route path="/position-rankings" component={PositionRankingsPage} />
+      <Route path="/rankings" component={PositionRankingsPage} />
+      <Route path="/value-rankings" component={ValueRankingsPage} />
       <Route path="/league-rankings" component={LeagueRankingsPage} />
       <Route path="/league-analysis" component={LeagueAnalysisPage} />
       <Route path="/fantasy-moves" component={FantasyMovesPage} />

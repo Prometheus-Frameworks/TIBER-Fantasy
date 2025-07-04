@@ -546,9 +546,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPlayer(player: InsertPlayer): Promise<Player> {
+    // Only insert the essential columns that exist in the current database
+    const safePlayerData = {
+      name: player.name,
+      team: player.team,
+      position: player.position,
+      avgPoints: player.avgPoints,
+      projectedPoints: player.projectedPoints,
+      ownershipPercentage: player.ownershipPercentage,
+      isAvailable: player.isAvailable,
+      upside: player.upside,
+      injuryStatus: player.injuryStatus || "Healthy",
+      availability: player.availability || "Available",
+      imageUrl: player.imageUrl,
+      consistency: player.consistency,
+      matchupRating: player.matchupRating,
+      trend: player.trend,
+      ownership: player.ownership,
+      targetShare: player.targetShare,
+      redZoneTargets: player.redZoneTargets,
+      carries: player.carries,
+      snapCount: player.snapCount,
+      externalId: player.externalId
+    };
+    
     const [newPlayer] = await db
       .insert(players)
-      .values(player)
+      .values(safePlayerData)
       .returning();
     return newPlayer;
   }
