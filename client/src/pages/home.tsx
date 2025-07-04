@@ -1,0 +1,304 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Link } from "wouter";
+import { 
+  Trophy, 
+  TrendingUp, 
+  Users, 
+  BarChart3, 
+  Target, 
+  Star, 
+  Crown,
+  Search,
+  Zap,
+  Shield,
+  ChevronRight,
+  Activity,
+  LineChart
+} from "lucide-react";
+
+export default function Home() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
+          <div className="text-center">
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Prometheus
+              </span>
+            </h1>
+            <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
+              Advanced dynasty fantasy football analytics platform with market inefficiency detection, 
+              expert consensus rankings, and comprehensive player profiling
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+              <Link href="/rankings">
+                <Button size="lg" className="px-8 py-3 text-lg">
+                  Explore Rankings
+                  <ChevronRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+              <Link href="/compare-league">
+                <Button variant="outline" size="lg" className="px-8 py-3 text-lg">
+                  Compare Leagues
+                  <Users className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+            </div>
+            
+            {/* Stats Bar */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
+              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm">
+                <div className="text-2xl font-bold text-blue-600">1000+</div>
+                <div className="text-sm text-gray-600">Players Analyzed</div>
+              </div>
+              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm">
+                <div className="text-2xl font-bold text-green-600">6</div>
+                <div className="text-sm text-gray-600">Dynasty Tiers</div>
+              </div>
+              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm">
+                <div className="text-2xl font-bold text-purple-600">4</div>
+                <div className="text-sm text-gray-600">Platforms Synced</div>
+              </div>
+              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm">
+                <div className="text-2xl font-bold text-orange-600">Live</div>
+                <div className="text-sm text-gray-600">NFL Data</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Features Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            Everything You Need for Dynasty Domination
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            From market value analysis to individual player profiling, 
+            Prometheus provides the insights you need to build championship teams
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* Dynasty Rankings */}
+          <Card className="hover:shadow-lg transition-shadow border-0 bg-white/60 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Crown className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Dynasty Rankings</CardTitle>
+                  <CardDescription>Expert consensus dynasty values</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 mb-4">
+                Jake Maraia-powered dynasty rankings with 6-tier classification system. 
+                Find Elite, Premium, and undervalued Solid tier players.
+              </p>
+              <Link href="/rankings">
+                <Button variant="outline" size="sm" className="w-full">
+                  View Rankings <Trophy className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Player Profiles */}
+          <Card className="hover:shadow-lg transition-shadow border-0 bg-white/60 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Search className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Player Profiles</CardTitle>
+                  <CardDescription>Individual player analysis</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 mb-4">
+                Comprehensive player profiles with performance charts, market analysis, 
+                strengths/concerns, and similar player comparisons.
+              </p>
+              <Link href="/rankings">
+                <Button variant="outline" size="sm" className="w-full">
+                  Search Players <Search className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Market Value Analysis */}
+          <Card className="hover:shadow-lg transition-shadow border-0 bg-white/60 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Value Analysis</CardTitle>
+                  <CardDescription>Market inefficiency detection</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 mb-4">
+                Find STEAL and VALUE opportunities by comparing our rankings 
+                against ADP and market consensus. Avoid overvalued players.
+              </p>
+              <div className="flex gap-2 mb-4">
+                <Badge variant="outline" className="text-green-600 border-green-200">STEAL</Badge>
+                <Badge variant="outline" className="text-blue-600 border-blue-200">VALUE</Badge>
+                <Badge variant="outline" className="text-red-600 border-red-200">AVOID</Badge>
+              </div>
+              <Link href="/rankings">
+                <Button variant="outline" size="sm" className="w-full">
+                  Find Values <Target className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* League Comparison */}
+          <Card className="hover:shadow-lg transition-shadow border-0 bg-white/60 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <Users className="h-6 w-6 text-orange-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">League Analysis</CardTitle>
+                  <CardDescription>Multi-platform sync and comparison</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 mb-4">
+                Sync with Sleeper, ESPN, Yahoo leagues. Compare team values, 
+                identify the strongest rosters, and find trade opportunities.
+              </p>
+              <Link href="/compare-league">
+                <Button variant="outline" size="sm" className="w-full">
+                  Compare Leagues <BarChart3 className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Advanced Analytics */}
+          <Card className="hover:shadow-lg transition-shadow border-0 bg-white/60 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-100 rounded-lg">
+                  <Activity className="h-6 w-6 text-indigo-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">NFL Analytics</CardTitle>
+                  <CardDescription>Real NFL data integration</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 mb-4">
+                Target share, snap share, YPRR, and advanced metrics from 
+                authentic NFL data sources. Fantasy production meets real analytics.
+              </p>
+              <div className="flex gap-2 mb-4">
+                <Badge variant="outline" className="text-xs">Target Share</Badge>
+                <Badge variant="outline" className="text-xs">YPRR</Badge>
+                <Badge variant="outline" className="text-xs">Snap %</Badge>
+              </div>
+              <Button variant="outline" size="sm" className="w-full" disabled>
+                <Zap className="mr-2 h-4 w-4" />
+                Coming Soon
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Data Integrity */}
+          <Card className="hover:shadow-lg transition-shadow border-0 bg-white/60 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-100 rounded-lg">
+                  <Shield className="h-6 w-6 text-emerald-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Authentic Data</CardTitle>
+                  <CardDescription>No mock or placeholder data</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 mb-4">
+                Built on authentic sources: Jake Maraia rankings, KTC values, 
+                FantasyCalc trades, and real NFL statistics. No synthetic data.
+              </p>
+              <div className="flex gap-2">
+                <Badge variant="outline" className="text-xs">Jake Maraia</Badge>
+                <Badge variant="outline" className="text-xs">KTC</Badge>
+                <Badge variant="outline" className="text-xs">NFL Data</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Ready to Dominate Your Dynasty League?
+            </h2>
+            <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
+              Join thousands of fantasy managers using advanced analytics 
+              to build championship rosters and find market inefficiencies
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/rankings">
+                <Button size="lg" variant="secondary" className="px-8 py-3 text-lg">
+                  Start Analyzing
+                  <LineChart className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+              <Link href="/compare-league">
+                <Button size="lg" variant="outline" className="px-8 py-3 text-lg border-white text-white hover:bg-white hover:text-blue-600">
+                  Sync Your League
+                  <Users className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="bg-gray-900 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <h3 className="text-2xl font-bold mb-2">Prometheus</h3>
+            <p className="text-gray-400 mb-4">Advanced Fantasy Football Analytics</p>
+            <div className="flex justify-center gap-6 text-sm text-gray-400">
+              <span>Dynasty Rankings</span>
+              <span>•</span>
+              <span>Player Analysis</span>
+              <span>•</span>
+              <span>Market Values</span>
+              <span>•</span>
+              <span>League Sync</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
