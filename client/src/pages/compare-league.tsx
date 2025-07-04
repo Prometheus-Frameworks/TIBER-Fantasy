@@ -155,11 +155,11 @@ export default function CompareLeague() {
       name: team.teamName.length > 12 ? `${team.teamName.substring(0, 12)}...` : team.teamName,
       fullName: team.teamName,
       owner: team.owner,
-      QB: team.positionValues.QB,
-      RB: team.positionValues.RB, 
-      WR: team.positionValues.WR,
-      TE: team.positionValues.TE,
-      total: team.totalValue,
+      QB: Math.round(team.positionValues.QB),
+      RB: Math.round(team.positionValues.RB), 
+      WR: Math.round(team.positionValues.WR),
+      TE: Math.round(team.positionValues.TE),
+      total: Math.round(team.totalValue),
       rank: index + 1,
       trend: team.trend
     })) || [];
@@ -596,7 +596,7 @@ export default function CompareLeague() {
           {selectedTeam && (
             <div className="space-y-6">
               {/* Team Summary */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 <Card>
                   <CardContent className="p-4 text-center">
                     <div className="text-lg font-bold text-gray-900">#{selectedTeam.rank}</div>
@@ -606,94 +606,119 @@ export default function CompareLeague() {
                 <Card>
                   <CardContent className="p-4 text-center">
                     <div className="text-lg font-bold text-gray-900">
-                      {selectedTeam.totalValue.toLocaleString()}
+                      {Math.round(selectedTeam.totalValue).toLocaleString()}
                     </div>
                     <div className="text-xs text-gray-600">Total Value</div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4 text-center">
-                    <div className="text-lg font-bold text-purple-600">{selectedTeam.positionValues.QB}</div>
+                    <div className="text-lg font-bold text-purple-600">{Math.round(selectedTeam.positionValues.QB)}</div>
                     <div className="text-xs text-gray-600">QB Value</div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4 text-center">
-                    <div className="text-lg font-bold text-green-600">{selectedTeam.positionValues.RB}</div>
+                    <div className="text-lg font-bold text-green-600">{Math.round(selectedTeam.positionValues.RB)}</div>
                     <div className="text-xs text-gray-600">RB Value</div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4 text-center">
-                    <div className="text-lg font-bold text-blue-600">{selectedTeam.positionValues.WR}</div>
+                    <div className="text-lg font-bold text-blue-600">{Math.round(selectedTeam.positionValues.WR)}</div>
                     <div className="text-xs text-gray-600">WR Value</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-lg font-bold text-orange-600">{Math.round(selectedTeam.positionValues.TE)}</div>
+                    <div className="text-xs text-gray-600">TE Value</div>
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Position Filter for Roster */}
-              <div className="flex gap-2 flex-wrap">
-                <Button 
-                  variant={selectedPosition === "all" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedPosition("all")}
-                >
-                  All Players
-                </Button>
-                {Object.keys(POSITION_COLORS).map(pos => (
-                  <Button
-                    key={pos}
-                    variant={selectedPosition === pos ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedPosition(pos)}
-                    style={{
-                      backgroundColor: selectedPosition === pos ? POSITION_COLORS[pos as keyof typeof POSITION_COLORS] : undefined
-                    }}
-                  >
-                    {pos}
-                  </Button>
-                ))}
-              </div>
-
-              {/* Roster Players */}
+              {/* Roster by Position - Expandable Sections */}
               {selectedTeam.roster && (
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-gray-900">
-                    {selectedPosition === "all" ? "Full Roster" : `${selectedPosition} Players`}
-                  </h3>
-                  <div className="grid gap-2">
-                    {selectedTeam.roster
-                      .filter(player => selectedPosition === "all" || player.position === selectedPosition)
-                      .sort((a, b) => (b.dynastyValue || 0) - (a.dynastyValue || 0))
-                      .map((player, idx) => (
-                        <div key={player.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                          <div className="flex items-center gap-3">
-                            <Badge 
-                              className={`text-xs px-2 py-1 ${getTierColor(player.dynastyTier || 'Bench')}`}
-                            >
-                              {player.dynastyTier || 'Bench'}
-                            </Badge>
-                            <div>
-                              <div className="font-medium text-gray-900">{player.name}</div>
-                              <div className="text-sm text-gray-600">
-                                {player.position} • {player.team} 
-                                {player.isStarter && <span className="ml-2 text-green-600 font-medium">Starter</span>}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-gray-900">Team Roster</h3>
+                  
+                  {Object.keys(POSITION_COLORS).map(position => {
+                    const positionPlayers = selectedTeam.roster?.filter(player => player.position === position) || [];
+                    const positionValue = Math.round(selectedTeam.positionValues[position as keyof typeof selectedTeam.positionValues] || 0);
+                    const isExpanded = selectedPosition === position;
+                    
+                    if (positionPlayers.length === 0) return null;
+                    
+                    return (
+                      <Card key={position} className="overflow-hidden">
+                        <CardContent className="p-0">
+                          {/* Position Header - Clickable */}
+                          <div 
+                            onClick={() => setSelectedPosition(isExpanded ? "all" : position)}
+                            className="p-4 cursor-pointer hover:bg-gray-50 transition-colors border-b"
+                            style={{
+                              backgroundColor: isExpanded ? `${POSITION_COLORS[position as keyof typeof POSITION_COLORS]}10` : undefined
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div 
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                                  style={{ backgroundColor: POSITION_COLORS[position as keyof typeof POSITION_COLORS] }}
+                                >
+                                  {position}
+                                </div>
+                                <div>
+                                  <div className="font-semibold text-gray-900">{position} ({positionPlayers.length})</div>
+                                  <div className="text-sm text-gray-600">Total Value: {positionValue}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="text-right">
+                                  <div className="font-bold text-lg" style={{ color: POSITION_COLORS[position as keyof typeof POSITION_COLORS] }}>
+                                    {positionValue}
+                                  </div>
+                                </div>
+                                <div className="text-gray-400">
+                                  {isExpanded ? '▼' : '▶'}
+                                </div>
                               </div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="font-bold text-gray-900">{player.dynastyValue || 0}</div>
-                            <div className="text-xs text-gray-600">{player.avgPoints?.toFixed(1)} PPG</div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                  
-                  {selectedTeam.roster.filter(player => selectedPosition === "all" || player.position === selectedPosition).length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      No {selectedPosition === "all" ? "" : selectedPosition} players found
-                    </div>
-                  )}
+                          
+                          {/* Position Players - Expanded */}
+                          {isExpanded && (
+                            <div className="p-4 space-y-3">
+                              {positionPlayers
+                                .sort((a, b) => (b.dynastyValue || 0) - (a.dynastyValue || 0))
+                                .map((player) => (
+                                  <div key={player.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                      <Badge 
+                                        className={`text-xs px-2 py-1 ${getTierColor(player.dynastyTier || 'Bench')}`}
+                                      >
+                                        {player.dynastyTier || 'Bench'}
+                                      </Badge>
+                                      <div>
+                                        <div className="font-medium text-gray-900">{player.name}</div>
+                                        <div className="text-sm text-gray-600">
+                                          {player.team}
+                                          {player.isStarter && <span className="ml-2 text-green-600 font-medium">• Starter</span>}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="font-bold text-gray-900">{Math.round(player.dynastyValue || 0)}</div>
+                                      <div className="text-xs text-gray-600">{(player.avgPoints || 0).toFixed(1)} PPG</div>
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
               
