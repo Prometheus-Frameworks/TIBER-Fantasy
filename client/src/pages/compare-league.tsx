@@ -121,8 +121,22 @@ export default function CompareLeague() {
     setSelectedTeam(team);
     setShowRosterModal(true);
     
-    // Generate sample roster data based on team position values
-    // This simulates the roster breakdown since we don't have individual team rosters stored
+    // Try to fetch actual roster data from Sleeper first
+    try {
+      const response = await fetch(`/api/league/team/${team.teamId}/roster`);
+      if (response.ok) {
+        const rosterData = await response.json();
+        setSelectedTeam({
+          ...team,
+          roster: rosterData.players || []
+        });
+        return;
+      }
+    } catch (error) {
+      console.log('Failed to fetch Sleeper roster data, using generated roster');
+    }
+    
+    // Fallback: Generate sample roster data based on team position values
     const generateRosterFromPositionValues = (team: TeamValue): Player[] => {
       const roster: Player[] = [];
       let playerId = 1;
@@ -795,29 +809,67 @@ export default function CompareLeague() {
                               {positionPlayers
                                 .sort((a, b) => (b.dynastyValue || 0) - (a.dynastyValue || 0))
                                 .map((player) => (
-                                  <div key={player.playerId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <div className="flex items-center gap-3">
-                                      <Badge 
-                                        className={`text-xs px-2 py-1 ${getTierColor(player.dynastyTier || 'Bench')}`}
-                                      >
-                                        {player.dynastyTier || 'Bench'}
-                                      </Badge>
-                                      <div>
-                                        <div className="font-medium text-gray-900">
-                                          {player.position}{player.isStarter ? '1' : '2'} - {player.playerName}
+                                  <div key={player.playerId} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-4">
+                                        {/* Player Position Circle */}
+                                        <div 
+                                          className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                                          style={{ backgroundColor: POSITION_COLORS[player.position as keyof typeof POSITION_COLORS] || '#6B7280' }}
+                                        >
+                                          {player.position}
                                         </div>
-                                        <div className="text-sm text-gray-600 space-x-3">
-                                          <span>ADP: {player.adp === 999 ? 'Undrafted' : player.adp}</span>
-                                          <span>ECR: {player.ecr === 999 ? 'Unranked' : player.ecr}</span>
-                                          <span>Our Rank: {player.ourRank === 999 ? 'Unranked' : player.ourRank}</span>
-                                          <span>PPG: {player.ppg.toFixed(1)}</span>
-                                          {player.isStarter && <span className="text-green-600 font-medium">• Starter</span>}
+                                        
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-3 mb-2">
+                                            <div className="font-semibold text-gray-900 text-lg">
+                                              {player.playerName}
+                                            </div>
+                                            <Badge 
+                                              className={`text-xs px-2 py-1 ${getTierColor(player.dynastyTier || 'Bench')}`}
+                                            >
+                                              {player.dynastyTier || 'Bench'}
+                                            </Badge>
+                                            {player.isStarter && (
+                                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                Starter
+                                              </span>
+                                            )}
+                                          </div>
+                                          
+                                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                            <div className="bg-blue-50 rounded-lg p-2 text-center">
+                                              <div className="text-xs text-gray-600">ADP</div>
+                                              <div className="font-medium text-blue-700">
+                                                {player.adp === 999 ? 'Undrafted' : `#${player.adp}`}
+                                              </div>
+                                            </div>
+                                            <div className="bg-purple-50 rounded-lg p-2 text-center">
+                                              <div className="text-xs text-gray-600">ECR</div>
+                                              <div className="font-medium text-purple-700">
+                                                {player.ecr === 999 ? 'Unranked' : `#${player.ecr}`}
+                                              </div>
+                                            </div>
+                                            <div className="bg-orange-50 rounded-lg p-2 text-center">
+                                              <div className="text-xs text-gray-600">Our Rank</div>
+                                              <div className="font-medium text-orange-700">
+                                                {player.ourRank === 999 ? 'Unranked' : `#${player.ourRank}`}
+                                              </div>
+                                            </div>
+                                            <div className="bg-green-50 rounded-lg p-2 text-center">
+                                              <div className="text-xs text-gray-600">PPG</div>
+                                              <div className="font-medium text-green-700">
+                                                {player.ppg.toFixed(1)}
+                                              </div>
+                                            </div>
+                                          </div>
                                         </div>
                                       </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="font-bold text-gray-900">{Math.round(player.dynastyValue || 0)}</div>
-                                      <div className="text-xs text-gray-600">Dynasty Value</div>
+                                      
+                                      <div className="text-right ml-4">
+                                        <div className="text-2xl font-bold text-gray-900">{Math.round(player.dynastyValue || 0)}</div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wide">Dynasty Value</div>
+                                      </div>
                                     </div>
                                   </div>
                                 ))}

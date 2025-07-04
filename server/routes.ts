@@ -909,6 +909,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Individual team roster endpoint
+  app.get('/api/league/team/:teamId/roster', async (req, res) => {
+    try {
+      const { teamId } = req.params;
+      
+      const { leagueComparisonService } = await import('./leagueComparison');
+      const rosterData = await leagueComparisonService.getTeamRoster(teamId);
+      
+      res.json({ players: rosterData });
+    } catch (error: any) {
+      console.error('Team roster error:', error);
+      res.status(500).json({ message: 'Failed to fetch team roster' });
+    }
+  });
+
   // Fantasy Moves Analysis endpoints
   app.get('/api/teams/:id/moves', async (req, res) => {
     try {
