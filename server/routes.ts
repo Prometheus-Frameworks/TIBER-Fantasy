@@ -475,6 +475,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Our Rankings vs Consensus ADP Comparison
+  app.get("/api/rankings/comparison", async (req, res) => {
+    try {
+      const players = await db.select().from(players).limit(100);
+      
+      const { rankingComparisonService } = await import('./rankingComparison');
+      const rankings = await rankingComparisonService.generateRankings(players);
+      
+      // Sort by value opportunities (biggest steals first)
+      rankings.sort((a, b) => {
+        if (a.valueCategory === 'STEAL' && b.valueCategory !== 'STEAL') return -1;
+        if (b.valueCategory === 'STEAL' && a.valueCategory !== 'STEAL') return 1;
+        if (a.valueCategory === 'VALUE' && b.valueCategory !== 'VALUE') return -1;
+        if (b.valueCategory === 'VALUE' && a.valueCategory !== 'VALUE') return 1;
+        return b.adpDifference - a.adpDifference; // Largest positive difference first
+      });
+      
+      res.json(rankings);
+    } catch (error) {
+      console.error("Error calculating ranking comparisons:", error);
+      res.status(500).json({ message: "Failed to calculate rankings" });
+    }
+  });
+
   // Dynasty Trade History Endpoints
   app.get("/api/teams/:id/trades", async (req, res) => {
     try {
