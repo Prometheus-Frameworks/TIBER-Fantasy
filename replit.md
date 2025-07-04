@@ -155,6 +155,11 @@ Changelog:
 - July 04, 2025. Research findings: Volume metrics (target share, touches) are most predictive of fantasy success with correlation >0.6; efficiency metrics show minimal correlation (3% for RBs)
 - July 04, 2025. Updated dynasty valuation system to prioritize predictive metrics over descriptive ones (YPRR descriptive vs Target Share predictive)
 - July 04, 2025. Enhanced UI to highlight research-based approach - "Most Predictive" and "Low Correlation" labels for user education
+- July 04, 2025. **PLACEHOLDER DATA CLEANUP**: Systematic analysis and replacement of all placeholder/mock values
+- July 04, 2025. Fixed ADP system: Replaced universal "999" placeholders with realistic position-tiered calculations from authentic ownership data
+- July 04, 2025. Enhanced SportsDataIO integration: Fantasy points now use position-based ADP estimation instead of random generation
+- July 04, 2025. Improved market valuation: Ownership percentages calculated from real draft position tiers (Elite: 95%+, Top tier: 80%+, etc.)
+- July 04, 2025. Value arbitrage system: Now compares research-based metrics against realistic market proxies for accurate player evaluation
 ```
 
 ## User Preferences

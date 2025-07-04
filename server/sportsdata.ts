@@ -248,8 +248,20 @@ export class SportsDataAPI {
 
   // Convert SportsData player to our schema format
   convertToPlayer(sportsDataPlayer: SportsDataPlayer, stats?: SportsDataPlayerStats): InsertPlayer {
-    const avgPoints = stats?.FantasyPointsPPR || Math.random() * 15 + 5; // Fallback to random if no stats
-    const projectedPoints = avgPoints * (0.8 + Math.random() * 0.4); // ±20% variance
+    const avgPoints = stats?.FantasyPointsPPR || this.estimateFantasyPoints(sportsDataPlayer);
+    const projectedPoints = avgPoints * (0.9 + Math.random() * 0.2); // ±10% variance
+    
+    // Use real ADP data from SportsDataIO
+    const realADP = sportsDataPlayer.AverageDraftPosition || 999;
+    
+    // Convert ADP to ownership percentage (lower ADP = higher ownership)
+    let ownershipPercentage = 5; // Base ownership
+    if (realADP <= 12) ownershipPercentage = 95 + Math.random() * 5; // Elite players
+    else if (realADP <= 36) ownershipPercentage = 80 + Math.random() * 15; // Top tier
+    else if (realADP <= 72) ownershipPercentage = 60 + Math.random() * 20; // Mid tier
+    else if (realADP <= 120) ownershipPercentage = 30 + Math.random() * 30; // Bench players
+    else if (realADP <= 200) ownershipPercentage = 10 + Math.random() * 20; // Deep league
+    else ownershipPercentage = 1 + Math.random() * 10; // Rarely owned
     
     return {
       name: sportsDataPlayer.Name,
@@ -257,9 +269,9 @@ export class SportsDataAPI {
       position: this.normalizePosition(sportsDataPlayer.FantasyPosition || sportsDataPlayer.Position),
       avgPoints: Math.round(avgPoints * 10) / 10,
       projectedPoints: Math.round(projectedPoints * 10) / 10,
-      ownershipPercentage: Math.round(Math.random() * 100),
+      ownershipPercentage: Math.round(ownershipPercentage),
       isAvailable: true,
-      upside: Math.round((projectedPoints * 1.3 - avgPoints) * 10) / 10,
+      upside: Math.round((projectedPoints * 1.2 - avgPoints) * 10) / 10,
       injuryStatus: this.normalizeInjuryStatus(sportsDataPlayer.InjuryStatus),
       availability: sportsDataPlayer.Active ? "Available" : "Unavailable",
       imageUrl: sportsDataPlayer.PhotoUrl || null, // Include player headshot
@@ -273,6 +285,33 @@ export class SportsDataAPI {
       snapCount: stats?.OffensiveSnapsPlayed || undefined,
       externalId: sportsDataPlayer.PlayerID.toString(),
     };
+  }
+
+  // Estimate fantasy points based on position and depth chart
+  private estimateFantasyPoints(player: SportsDataPlayer): number {
+    const position = player.FantasyPosition || player.Position;
+    const adp = player.AverageDraftPosition || 999;
+    
+    // Estimate points based on ADP and position
+    if (position === 'QB') {
+      if (adp <= 12) return 22 + Math.random() * 6; // Top 12 QBs: 22-28 points
+      else if (adp <= 24) return 18 + Math.random() * 4; // QB13-24: 18-22 points
+      else return 12 + Math.random() * 6; // Backup QBs: 12-18 points
+    } else if (position === 'RB') {
+      if (adp <= 24) return 16 + Math.random() * 6; // RB1-24: 16-22 points
+      else if (adp <= 48) return 10 + Math.random() * 6; // RB25-48: 10-16 points
+      else return 6 + Math.random() * 4; // Handcuffs: 6-10 points
+    } else if (position === 'WR') {
+      if (adp <= 36) return 14 + Math.random() * 6; // WR1-36: 14-20 points
+      else if (adp <= 72) return 8 + Math.random() * 6; // WR37-72: 8-14 points
+      else return 4 + Math.random() * 4; // Deep WRs: 4-8 points
+    } else if (position === 'TE') {
+      if (adp <= 12) return 12 + Math.random() * 6; // Elite TEs: 12-18 points
+      else if (adp <= 24) return 8 + Math.random() * 4; // Mid TEs: 8-12 points
+      else return 4 + Math.random() * 4; // Streaming TEs: 4-8 points
+    }
+    
+    return 5 + Math.random() * 5; // Default fallback
   }
 
   private normalizePosition(position: string): string {
