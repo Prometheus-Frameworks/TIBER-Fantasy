@@ -516,7 +516,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Our Rankings vs Consensus ADP Comparison
   app.get("/api/rankings/comparison", async (req, res) => {
     try {
-      const playerData = await db.select().from(playersTable).limit(100);
+      // Select only existing columns to avoid database errors
+      const playerData = await db.select({
+        id: playersTable.id,
+        name: playersTable.name,
+        team: playersTable.team,
+        position: playersTable.position,
+        avgPoints: playersTable.avgPoints,
+        projectedPoints: playersTable.projectedPoints,
+        ownershipPercentage: playersTable.ownershipPercentage,
+        isAvailable: playersTable.isAvailable,
+        upside: playersTable.upside,
+        injuryStatus: playersTable.injuryStatus,
+        availability: playersTable.availability,
+        consistency: playersTable.consistency,
+        matchupRating: playersTable.matchupRating,
+        trend: playersTable.trend,
+        ownership: playersTable.ownership,
+        targetShare: playersTable.targetShare,
+        redZoneTargets: playersTable.redZoneTargets,
+        carries: playersTable.carries,
+        snapCount: playersTable.snapCount,
+        externalId: playersTable.externalId
+      }).from(playersTable).limit(100);
       
       const { rankingComparisonService } = await import('./rankingComparison');
       const rankings = await rankingComparisonService.generateRankings(playerData);
