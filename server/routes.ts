@@ -76,33 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player search for autocomplete
-  app.get('/api/players/search', async (req, res) => {
-    try {
-      const query = req.query.q as string;
-      if (!query || query.length < 2) {
-        return res.json([]);
-      }
-      
-      // Get available players from cache
-      const availablePlayers = playerAnalysisCache.getAvailablePlayers();
-      
-      // Filter by search query
-      const matches = availablePlayers
-        .filter(name => name.toLowerCase().includes(query.toLowerCase()))
-        .slice(0, 10) // Limit results
-        .map(name => ({
-          name,
-          team: 'NFL', // Simplified for now
-          position: 'WR' // Most of our cached players are WRs
-        }));
-      
-      res.json(matches);
-    } catch (error) {
-      console.error('Error searching players:', error);
-      res.status(500).json({ error: 'Search failed' });
-    }
-  });
+
 
   // Dynasty Valuation endpoint - our unique weighted scoring
   app.get('/api/dynasty/valuation/:playerId', async (req, res) => {
@@ -883,38 +857,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Hit rate endpoint removed - requires actual historical validation data
   
-  // Get player search suggestions for autocomplete
-  app.get("/api/players/search", async (req, res) => {
-    try {
-      const { q } = req.query;
-      if (!q || typeof q !== 'string' || q.length < 2) {
-        return res.json([]);
-      }
-      
-      // Get dynasty-relevant players (QB, RB, WR, TE) matching search
-      const searchTerm = q.toLowerCase();
-      const searchResults = await db.select({
-        id: playersTable.id,
-        name: playersTable.name,
-        team: playersTable.team,
-        position: playersTable.position
-      })
-      .from(playersTable)
-      .where(
-        and(
-          sql`LOWER(${playersTable.name}) LIKE ${`%${searchTerm}%`}`,
-          sql`${playersTable.position} IN ('QB', 'RB', 'WR', 'TE')`
-        )
-      )
-      .limit(10)
-      .orderBy(playersTable.name);
-      
-      res.json(searchResults);
-    } catch (error) {
-      console.error("Error searching players:", error);
-      res.status(500).json({ message: "Failed to search players" });
-    }
-  });
+
 
   // League Analysis endpoints
   app.get('/api/league/:leagueId/analysis', async (req, res) => {
@@ -1653,7 +1596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Search with Autocomplete
+  // Player Search with Dynasty Rankings Integration
   app.get('/api/players/search', async (req, res) => {
     try {
       const { q, limit = 10 } = req.query;
@@ -1662,16 +1605,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
       
-      const players = await storage.searchPlayers(q.toLowerCase(), parseInt(limit as string));
+      // Search using raw SQL for reliability
+      const searchTerm = q.toLowerCase();
+      const searchResults = await db.execute(
+        sql`
+          SELECT id, name, team, position, avg_points, dynasty_value
+          FROM players 
+          WHERE LOWER(name) LIKE ${`%${searchTerm}%`}
+            AND position IN ('QB', 'RB', 'WR', 'TE')
+            AND (avg_points >= 5 OR dynasty_value >= 15)
+          ORDER BY dynasty_value DESC NULLS LAST, name
+          LIMIT ${parseInt(limit as string)}
+        `
+      );
       
-      res.json(players.map(player => ({
-        id: player.id,
-        name: player.name,
-        position: player.position,
-        team: player.team,
-        avgPoints: player.avgPoints,
-        imageUrl: player.imageUrl
-      })));
+      // Get Jake Maraia dynasty values for authentic rankings
+      const { getJakeMaraiaDynastyScore, getJakeMaraiaDynastyTier } = await import('./jakeMaraiaRankings');
+      
+      // Filter out artificially ranked players and enrich with authentic dynasty values
+      const enrichedResults = searchResults.rows
+        .map((row: any) => {
+          const jakeMaraiaScore = getJakeMaraiaDynastyScore(row.name);
+          const dynastyValue = jakeMaraiaScore || row.dynasty_value || 15;
+          
+          return {
+            id: row.id,
+            name: row.name,
+            position: row.position,
+            team: row.team,
+            avgPoints: row.avg_points,
+            dynastyValue,
+            dynastyTier: getJakeMaraiaDynastyTier(row.name) || 'Bench'
+          };
+        })
+        .filter(player => 
+          // Only show dynasty-relevant players (Jake Maraia ranked OR significant production)
+          player.dynastyValue >= 20 || player.avgPoints >= 8
+        );
+      
+      res.json(enrichedResults);
     } catch (error) {
       console.error('Player search error:', error);
       res.status(500).json({ message: 'Search failed' });
