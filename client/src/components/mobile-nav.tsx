@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Users, Search, Settings, Brain, Crown } from "lucide-react";
+import { BarChart3, Users, Search, Settings, Brain, Crown, Trophy } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 export default function MobileNav() {
@@ -8,6 +8,7 @@ export default function MobileNav() {
 
   const tabs = [
     { id: "dashboard", label: "Team", icon: BarChart3, href: "/" },
+    { id: "rankings", label: "Rankings", icon: Trophy, href: "/rankings" },
     { id: "dynasty", label: "Dynasty", icon: Crown, href: "/dynasty-values" },
     { id: "arbitrage", label: "Value", icon: Search, href: "/arbitrage" },
     { id: "sync", label: "Sync", icon: Users, href: "/sync" },
@@ -15,7 +16,7 @@ export default function MobileNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50 safe-area-inset-bottom">
-      <div className="grid grid-cols-4 h-16 max-w-md mx-auto">
+      <div className="grid grid-cols-5 h-16 max-w-lg mx-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = location === tab.href || (tab.href === "/" && location === "/dashboard");

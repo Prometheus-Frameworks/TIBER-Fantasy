@@ -166,6 +166,10 @@ Changelog:
 - July 04, 2025. Analytics expertise: Mastered correlation studies showing target share (0.8+ correlation) most predictive of fantasy success
 - July 04, 2025. NFL knowledge: Integrated findings that first downs per route run (0.91 correlation with YPRR) is more predictive than raw efficiency
 - July 04, 2025. Position-specific analysis: Different metric thresholds for QB/RB/WR/TE based on positional research
+- July 04, 2025. **RANKINGS SECTION**: Created dedicated rankings vs ADP comparison system to find value opportunities
+- July 04, 2025. Value categorization: STEAL (50+ picks undervalued), VALUE (25+ picks), FAIR (±25), OVERVALUED/AVOID (overvalued)
+- July 04, 2025. Clear ranking displays: "Our Rank: #23 WR vs Market ADP: #44 WR = +21 picks undervalued" 
+- July 04, 2025. Navigation enhancement: Added Rankings as main section with Trophy icon in mobile navigation
 ```
 
 ## User Preferences
