@@ -84,7 +84,7 @@ export default function SimpleRankings() {
       name: player.name,
       position: player.position,
       age: player.age || 25,
-      avgPoints: player.avgPoints,
+      avgPoints: player.avgPoints || 0,
       team: player.team
     });
     return result.score;
@@ -279,7 +279,7 @@ export default function SimpleRankings() {
                               <ExternalLink className="w-3 h-3 opacity-50" />
                             </Link>
                             <div className="text-sm text-gray-500">
-                              {ranking.player.team} • {ranking.player.avgPoints.toFixed(1)} PPG
+                              {ranking.player.team} • {(ranking.player.avgPoints || 0).toFixed(1)} PPG
                             </div>
                           </div>
                         </div>

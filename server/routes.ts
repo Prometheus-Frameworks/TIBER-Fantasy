@@ -231,6 +231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: player.position,
           team: player.team,
           points: 0, // Will be populated by SportsDataIO later
+          avgPoints: player.avgPoints || 0, // Add avgPoints field
           adp: player.rank * 5, // Rough ADP estimation
           dynastyValue: player.dynastyScore,
           dynastyTier: player.dynastyTier
@@ -244,6 +245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: player.position,
           team: player.team,
           points: 0, // Will be populated by SportsDataIO later
+          avgPoints: player.avgPoints || 0, // Add avgPoints field
           adp: player.rank * 5, // Rough ADP estimation
           dynastyValue: player.dynastyScore,
           dynastyTier: player.dynastyTier
