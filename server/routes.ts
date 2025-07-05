@@ -303,6 +303,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Ranking Validation endpoint
+  app.get('/api/rankings/validate', async (req, res) => {
+    try {
+      const { rankingValidator } = await import('./rankingValidation');
+      const validation = await rankingValidator.validateWRRankings();
+      res.json(validation);
+    } catch (error) {
+      console.error('Ranking validation error:', error);
+      res.status(500).json({ error: 'Failed to validate rankings' });
+    }
+  });
+
+  // Ranking Validation Report endpoint
+  app.get('/api/rankings/validate/report', async (req, res) => {
+    try {
+      const { rankingValidator } = await import('./rankingValidation');
+      const report = await rankingValidator.generateValidationReport();
+      res.json({ report });
+    } catch (error) {
+      console.error('Ranking validation report error:', error);
+      res.status(500).json({ error: 'Failed to generate validation report' });
+    }
+  });
+
   // Search players
   app.get("/api/players/search", async (req, res) => {
     try {
