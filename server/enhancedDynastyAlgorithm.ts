@@ -217,11 +217,20 @@ export class EnhancedDynastyAlgorithm {
       score *= 0.6; // 40% penalty for young players with poor production (< 6 PPG for WRs)
     }
     
-    // Rookie star bonus: Reward young players who actually produced
-    if (player.age <= 23 && avgPoints >= posThreshold.good) {
-      score += 12; // Strong bonus for elite productive rookies (Nabers, Puka)
-    } else if (player.age <= 23 && avgPoints >= (posThreshold.average * 1.2)) {
-      score += 8; // Moderate bonus for solid rookie production (BTJ, strong performers)
+    // Young talent dynasty bonus: Reward young players who showed promise
+    if (player.age <= 23) {
+      if (avgPoints >= posThreshold.good) {
+        score += 15; // Strong bonus for elite productive rookies (Nabers, Puka)
+      } else if (avgPoints >= (posThreshold.average * 1.1)) {
+        score += 10; // Good bonus for solid rookie production (BTJ, MHJ type performances)
+      } else if (avgPoints >= (posThreshold.average * 0.8)) {
+        score += 5; // Small bonus for flashing young talent
+      }
+    }
+    
+    // Young proven performer bonus (ages 24-26 with good production)
+    if (player.age >= 24 && player.age <= 26 && avgPoints >= posThreshold.good) {
+      score += 8; // Dynasty premium for proven young stars (Tee Higgins tier)
     }
     
     // Underperformance penalty for hyped players who haven't delivered
@@ -321,9 +330,9 @@ export class EnhancedDynastyAlgorithm {
         break;
         
       case 'WR':
-        // WRs: Young players must PROVE themselves before getting age bonus
-        // Production requirement prevents rookie overvaluation
-        if (age <= 23) score = 70; // REDUCED: Must prove production first
+        // WRs: Balance youth potential with production requirements
+        // Recognize proven young stars while preventing unproven rookie inflation
+        if (age <= 23) score = 80; // Young talent premium (up from 70)
         else if (age <= 27) score = 100; // Peak years for proven players
         else if (age <= 30) score = 85; // Gradual decline starts
         else if (age <= 32) score = 65; // Noticeable drop

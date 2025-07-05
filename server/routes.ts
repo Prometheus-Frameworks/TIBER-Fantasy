@@ -241,6 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'Davante Adams': 32, 'Stefon Diggs': 31, 'DeAndre Hopkins': 32, 'Mike Evans': 31,
           'Chris Olave': 24, 'Garrett Wilson': 24, 'Drake London': 23, 'Jaylen Waddle': 26,
           'Amon-Ra St. Brown': 25, 'Puka Nacua': 23, 'Malik Nabers': 21, 'Rome Odunze': 22,
+          'Brian Thomas Jr.': 22, 'Marvin Harrison Jr.': 22, 'Tee Higgins': 25, 'DeVonta Smith': 26,
           
           // TEs (Age cliff at 33)
           'Travis Kelce': 35, 'Mark Andrews': 29, 'Sam LaPorta': 23, 'Trey McBride': 25,
