@@ -16,7 +16,8 @@ import {
   Shield,
   ChevronRight,
   Activity,
-  LineChart
+  LineChart,
+  Brain
 } from "lucide-react";
 
 export default function Home() {
@@ -94,6 +95,32 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* Enhanced Dynasty Algorithm */}
+          <Card className="hover:shadow-lg transition-shadow border-0 bg-gradient-to-br from-purple-50 to-blue-50 backdrop-blur-sm ring-2 ring-purple-200">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg">
+                  <Brain className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Enhanced Dynasty v2.0</CardTitle>
+                  <CardDescription>Grok AI + KTC-style exponential scaling</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 mb-4">
+                NEW: Position-specific efficiency weights, KTC-style elite player scaling, 
+                and research-backed dynasty valuations with 150 players.
+              </p>
+              <Link href="/enhanced-dynasty">
+                <Button className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600">
+                  Try Enhanced Algorithm <Zap className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
           {/* Dynasty Rankings */}
           <Card className="hover:shadow-lg transition-shadow border-0 bg-white/60 backdrop-blur-sm">
             <CardHeader>
@@ -103,7 +130,7 @@ export default function Home() {
                 </div>
                 <div>
                   <CardTitle className="text-lg">Dynasty Rankings</CardTitle>
-                  <CardDescription>Expert consensus dynasty values</CardDescription>
+                  <CardDescription>Proprietary dynasty values</CardDescription>
                 </div>
               </div>
             </CardHeader>
