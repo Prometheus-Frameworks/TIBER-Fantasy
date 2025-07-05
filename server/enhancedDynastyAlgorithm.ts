@@ -109,20 +109,20 @@ export class EnhancedDynastyAlgorithm {
     switch (position) {
       case 'QB':
         return {
-          production: 0.30,
-          opportunity: 0.30,  // Starting role is critical
+          production: 0.40,  // INCREASED: Elite current production should matter more
+          opportunity: 0.25,  // Starting role is critical  
           age: 0.20,         // QBs have longer careers
           stability: 0.15,   // Health critical for QBs
-          efficiency: 0.05   // INCREASED: EPA/play, accuracy matter more for QBs
+          efficiency: 0.00   // Keep minimal - focus on proven production
         };
         
       case 'RB':
         return {
-          production: 0.32,
-          opportunity: 0.35,  // Volume is king for RBs
-          age: 0.18,         // RBs age faster
-          stability: 0.12,   // Injury risk higher
-          efficiency: 0.03   // INCREASED: YAC, elusiveness separate elite RBs
+          production: 0.45,  // INCREASED: Elite current production most important
+          opportunity: 0.30,  // Volume still matters but secondary to production
+          age: 0.15,         // REDUCED: Don't over-penalize proven producers
+          stability: 0.10,   // Injury risk moderate consideration
+          efficiency: 0.00   // Keep minimal - production tells the story
         };
         
       case 'WR':
@@ -292,14 +292,14 @@ export class EnhancedDynastyAlgorithm {
         break;
         
       case 'RB':
-        // RBs: Peak 22-26, steep decline at 28, cliff at 30
-        // Research: 95% of elite seasons before 29, only 3% at age 30
+        // RBs: Peak 22-26, gradual decline for elite producers, cliff at 32
+        // Research: Elite producers can maintain value longer than role players
         if (age <= 22) score = 85; // Early career
-        else if (age <= 26) score = 100; // Peak years (76% of elite seasons)
-        else if (age <= 28) score = 65; // 15% decline starts
-        else if (age <= 29) score = 45; // 25% decline
-        else if (age <= 30) score = 25; // Age cliff (40% decline)
-        else score = 10; // Post-cliff wasteland
+        else if (age <= 26) score = 100; // Peak years
+        else if (age <= 28) score = 80; // Still strong for elite producers
+        else if (age <= 30) score = 60; // Noticeable decline but viable
+        else if (age <= 32) score = 35; // Post-peak but can contribute
+        else score = 15; // True cliff
         break;
         
       case 'WR':

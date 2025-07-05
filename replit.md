@@ -261,9 +261,11 @@ Changelog:
 - July 05, 2025. Donation framework: Added donation section to support free data access, with coffee fund ($5), data supporter ($25), and MVP patron ($50) options
 - July 05, 2025. Fixed age calculation: Replaced random age generation with realistic player ages (Tyreek Hill now correctly shows 30, Josh Allen 28, etc.)
 - July 05, 2025. **KYLE PITTS RANKING FIX**: Implemented underperformance penalty system for hyped players who haven't delivered on their draft pedigree
-- July 05, 2025. Underperformance penalties: Kyle Pitts dropped from #5 to #30 TE with 25-point penalty for 4th overall pick bust status
+- July 05, 2025. Underperformance penalties: Kyle Pitts dropped from #5 to #29 TE with 25-point penalty for 4th overall pick bust status
 - July 05, 2025. Algorithm refinement: Added specific penalties for Trey Lance, Zach Wilson, Kadarius Toney and other high-draft underperformers
-- July 05, 2025. TE rankings corrected: Young elite TEs (Brock Bowers, Trey McBride, Sam LaPorta) properly elevated while aging veterans (Kelce #28, Kittle #17) appropriately downgraded
+- July 05, 2025. **PRODUCTION VS POTENTIAL BALANCE**: Fixed algorithm weighting to properly value proven elite producers over pure youth potential
+- July 05, 2025. George Kittle elevated: Moved from #17 to #4 TE by increasing production weight to 40% and adding proven producer bonus for elite current performers
+- July 05, 2025. Dynasty balance achieved: Current elite production (Kittle 10.2 PPG) now properly valued over unproven potential (Kincaid 8.4 PPG) while maintaining age considerations
 ```
 
 ## User Preferences
