@@ -147,11 +147,15 @@ export default function About() {
                 The Reality: Data Costs Add Up
               </h3>
               <div className="text-gray-600 space-y-2">
-                <p>• NFL-Data-Py API: Research-grade analytics</p>
-                <p>• SportsDataIO: Real-time player data and projections</p>
-                <p>• Server hosting: Keeping the platform fast and reliable</p>
-                <p>• Database costs: Storing historical trends and analysis</p>
+                <p>• <strong>NFL-Data-Py API:</strong> Advanced Next Gen Stats, target share analytics, and efficiency metrics</p>
+                <p>• <strong>SportsDataIO:</strong> Real-time player data, injury reports, and projections ($200+/month)</p>
+                <p>• <strong>Sleeper API:</strong> League synchronization and roster management integration</p>
+                <p>• <strong>PostgreSQL hosting:</strong> Reliable database infrastructure for historical trends</p>
+                <p>• <strong>Server costs:</strong> Fast, scalable hosting to keep the platform responsive</p>
               </div>
+              <p className="text-sm text-gray-500 mt-4 italic">
+                Professional fantasy data subscriptions elsewhere cost $100-300+ annually. We're committed to keeping this free.
+              </p>
             </div>
 
             <div className="bg-white/80 rounded-lg p-6">
