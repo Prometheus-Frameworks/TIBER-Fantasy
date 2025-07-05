@@ -212,6 +212,11 @@ export class EnhancedDynastyAlgorithm {
     else if (avgPoints >= posThreshold.average) score = 60;
     else score = Math.max(0, Math.round((avgPoints / posThreshold.average) * 60));
     
+    // Rookie reality check: Heavy penalty for young unproven players
+    if (player.age <= 23 && avgPoints < posThreshold.average) {
+      score *= 0.5; // 50% penalty for young players with below-average production
+    }
+    
     // Underperformance penalty for hyped players who haven't delivered
     const underperformers = [
       'Kyle Pitts',      // 4th overall pick, consistently underperformed
@@ -234,6 +239,12 @@ export class EnhancedDynastyAlgorithm {
     if (avgPoints >= posThreshold.elite * 0.9) { // 90% of elite threshold
       const eliteBonus = Math.round((avgPoints / posThreshold.elite) * 10);
       score += eliteBonus; // Bonus for proven elite production
+    }
+    
+    // Veteran experience bonus for older players with solid production
+    // Helps proven veterans like DeAndre Hopkins compete with unproven youth
+    if (player.age >= 29 && avgPoints >= posThreshold.average) {
+      score += 8; // Veteran reliability bonus
     }
     
     return Math.min(100, score);
@@ -303,10 +314,10 @@ export class EnhancedDynastyAlgorithm {
         break;
         
       case 'WR':
-        // WRs: Peak 24-27, gradual decline 29-30, cliff at 32
-        // Research: 79% of peak seasons before 30, 5.6% after 32
-        if (age <= 23) score = 85; // Development/breakout years
-        else if (age <= 27) score = 100; // Peak years
+        // WRs: Young players must PROVE themselves before getting age bonus
+        // Production requirement prevents rookie overvaluation
+        if (age <= 23) score = 70; // REDUCED: Must prove production first
+        else if (age <= 27) score = 100; // Peak years for proven players
         else if (age <= 30) score = 85; // Gradual decline starts
         else if (age <= 32) score = 65; // Noticeable drop
         else if (age <= 34) score = 40; // Post-cliff

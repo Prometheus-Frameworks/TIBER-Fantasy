@@ -266,6 +266,10 @@ Changelog:
 - July 05, 2025. **PRODUCTION VS POTENTIAL BALANCE**: Fixed algorithm weighting to properly value proven elite producers over pure youth potential
 - July 05, 2025. George Kittle elevated: Moved from #17 to #4 TE by increasing production weight to 40% and adding proven producer bonus for elite current performers
 - July 05, 2025. Dynasty balance achieved: Current elite production (Kittle 10.2 PPG) now properly valued over unproven potential (Kincaid 8.4 PPG) while maintaining age considerations
+- July 05, 2025. **ROOKIE REALITY CHECK**: Fixed rookie overvaluation across all positions - Rome Odunze, Marvin Harrison Jr. no longer inflated in top 10
+- July 05, 2025. Algorithm adjustments: Reduced young player age bonus (85→70), added 50% production penalty for unproven rookies, veteran experience bonus (+8) for 29+ players
+- July 05, 2025. Proven performer elevation: Davante Adams (#14, 15.1 PPG), Mike Evans (#17, 13.9 PPG), Stefon Diggs (#18, 14.2 PPG) properly valued over low-production youth
+- July 05, 2025. Complete ranking balance: All positions now use 40-45% production weighting, preventing young potential from overriding proven elite performance
 ```
 
 ## User Preferences
