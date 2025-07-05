@@ -212,9 +212,16 @@ export class EnhancedDynastyAlgorithm {
     else if (avgPoints >= posThreshold.average) score = 60;
     else score = Math.max(0, Math.round((avgPoints / posThreshold.average) * 60));
     
-    // Rookie reality check: Heavy penalty for young unproven players
-    if (player.age <= 23 && avgPoints < posThreshold.average) {
-      score *= 0.5; // 50% penalty for young players with below-average production
+    // Rookie reality check: Only penalize truly unproven young players
+    if (player.age <= 23 && avgPoints < (posThreshold.average * 0.75)) {
+      score *= 0.6; // 40% penalty for young players with poor production (< 6 PPG for WRs)
+    }
+    
+    // Rookie star bonus: Reward young players who actually produced
+    if (player.age <= 23 && avgPoints >= posThreshold.good) {
+      score += 12; // Strong bonus for elite productive rookies (Nabers, Puka)
+    } else if (player.age <= 23 && avgPoints >= (posThreshold.average * 1.2)) {
+      score += 8; // Moderate bonus for solid rookie production (BTJ, strong performers)
     }
     
     // Underperformance penalty for hyped players who haven't delivered
