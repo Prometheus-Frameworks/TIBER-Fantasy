@@ -104,13 +104,13 @@ export default function Home() {
                 </div>
                 <div>
                   <CardTitle className="text-lg">Enhanced Dynasty v2.0</CardTitle>
-                  <CardDescription>Grok AI + KTC-style exponential scaling</CardDescription>
+                  <CardDescription>Research-based exponential scaling</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                NEW: Position-specific efficiency weights, KTC-style elite player scaling, 
+                NEW: Position-specific efficiency weights, exponential elite player scaling, 
                 and research-backed dynasty valuations with 150 players.
               </p>
               <Link href="/enhanced-dynasty">

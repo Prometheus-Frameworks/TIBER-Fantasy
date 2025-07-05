@@ -96,7 +96,7 @@ export default function EnhancedDynasty() {
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">Enhanced Dynasty Algorithm v2.0</h1>
         <p className="text-muted-foreground">
-          Powered by Grok's research insights + KTC-style exponential scaling for elite players
+          Advanced research-based dynasty valuations with exponential scaling for elite players
         </p>
       </div>
 

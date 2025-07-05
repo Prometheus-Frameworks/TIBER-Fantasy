@@ -273,17 +273,24 @@ export class EnhancedDynastyAlgorithm {
     
     switch (player.position) {
       case 'QB':
-        // EPA per play and completion % over expected
-        if (player.epaPerPlay) {
-          if (player.epaPerPlay >= 0.15) score += 25;
-          else if (player.epaPerPlay >= 0.05) score += 10;
-          else if (player.epaPerPlay < -0.05) score -= 15;
+        // For elite QBs like Josh Allen, Mahomes, etc., use production as efficiency proxy
+        const avgPoints = player.avgPoints || 0;
+        
+        // Elite fantasy production indicates efficiency
+        if (avgPoints >= 25) score += 30; // Elite QB1s like Josh Allen
+        else if (avgPoints >= 20) score += 20; // High-end QB1s
+        else if (avgPoints >= 15) score += 10; // Solid starters
+        else if (avgPoints < 10) score -= 15; // Poor efficiency
+        
+        // Dual-threat bonus for mobile QBs
+        if (player.rushingYards && player.rushingYards > 400) {
+          score += 15; // Josh Allen, Lamar, Hurts get efficiency boost
         }
         
-        if (player.completionPercentageOverExpected) {
-          if (player.completionPercentageOverExpected >= 3) score += 25;
-          else if (player.completionPercentageOverExpected >= 1) score += 10;
-          else if (player.completionPercentageOverExpected < -2) score -= 15;
+        // Traditional efficiency metrics when available
+        if (player.epaPerPlay) {
+          if (player.epaPerPlay >= 0.15) score += 10;
+          else if (player.epaPerPlay >= 0.05) score += 5;
         }
         break;
         
