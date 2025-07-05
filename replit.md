@@ -260,6 +260,10 @@ Changelog:
 - July 05, 2025. **ABOUT PAGE & MISSION STATEMENT**: Created comprehensive About page with Prometheus mission statement - providing high-end fantasy data without paywalls
 - July 05, 2025. Donation framework: Added donation section to support free data access, with coffee fund ($5), data supporter ($25), and MVP patron ($50) options
 - July 05, 2025. Fixed age calculation: Replaced random age generation with realistic player ages (Tyreek Hill now correctly shows 30, Josh Allen 28, etc.)
+- July 05, 2025. **KYLE PITTS RANKING FIX**: Implemented underperformance penalty system for hyped players who haven't delivered on their draft pedigree
+- July 05, 2025. Underperformance penalties: Kyle Pitts dropped from #5 to #30 TE with 25-point penalty for 4th overall pick bust status
+- July 05, 2025. Algorithm refinement: Added specific penalties for Trey Lance, Zach Wilson, Kadarius Toney and other high-draft underperformers
+- July 05, 2025. TE rankings corrected: Young elite TEs (Brock Bowers, Trey McBride, Sam LaPorta) properly elevated while aging veterans (Kelce #28, Kittle #17) appropriately downgraded
 ```
 
 ## User Preferences
