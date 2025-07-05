@@ -99,18 +99,31 @@ export default function SimpleRankings() {
     });
   };
 
-  // Generate simple rankings for each position
-  const generateSimpleRankings = (position: string): SimpleRankedPlayer[] => {
+  // Simple list view for showing all players without tier grouping
+  const generateSimpleList = (position: string): SimpleRankedPlayer[] => {
     const positionPlayers = (allPlayers || [])
       .filter(p => p.position === position)
-      .filter(isRelevantDynastyPlayer) // Filter out irrelevant players
-      .sort((a, b) => calculateDynastyValue(b) - calculateDynastyValue(a)) // Sort by age-adjusted dynasty value
-      .slice(0, 50); // Top 50 for each position
+      .sort((a, b) => calculateDynastyValue(b) - calculateDynastyValue(a));
 
     return positionPlayers.map((player, index) => ({
       rank: index + 1,
       player,
-      isUserPlayer: false, // Remove false ownership claims for production
+      isUserPlayer: false,
+    }));
+  };
+
+  // Generate simple rankings for each position
+  const generateSimpleRankings = (position: string): SimpleRankedPlayer[] => {
+    const positionPlayers = (allPlayers || [])
+      .filter(p => p.position === position)
+      // Show ALL players for the position, not just dynasty relevant ones
+      .sort((a, b) => calculateDynastyValue(b) - calculateDynastyValue(a)) // Sort by dynasty value
+      // Don't limit to top 50 - show all available players
+
+    return positionPlayers.map((player, index) => ({
+      rank: index + 1,
+      player,
+      isUserPlayer: false,
     }));
   };
 
@@ -239,75 +252,54 @@ export default function SimpleRankings() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {/* Show players grouped by tier */}
-                  {DYNASTY_TIERS.map((tier) => {
-                    const tierPlayers = getPlayersByTier(generateSimpleRankings(position), tier.name);
-                    if (tierPlayers.length === 0) return null;
+                <div className="space-y-2">
+                  {/* Show all players in simple ranked list */}
+                  {generateSimpleList(position).map((ranking) => {
+                    const score = calculateDynastyValue(ranking.player);
+                    const tierInfo = getTierFromScore(score);
                     
                     return (
-                      <div key={tier.name} className="space-y-2">
-                        <div className="flex items-center gap-2 pb-2 border-b">
-                          <Badge 
-                            style={{ backgroundColor: tier.color, color: 'white' }}
-                            className="font-medium"
-                          >
-                            {tier.label}
-                          </Badge>
-                          <span className="text-sm text-gray-500">
-                            {tier.description}
-                          </span>
-                        </div>
-                        
-                        {tierPlayers.map((ranking) => {
-                          const score = calculateDynastyValue(ranking.player);
-                          const tierInfo = getTierFromScore(score);
+                      <div
+                        key={ranking.player.id}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                            <span className="text-sm font-bold text-gray-700">
+                              {ranking.rank}
+                            </span>
+                          </div>
                           
-                          return (
-                            <div
-                              key={ranking.player.id}
-                              className="flex items-center justify-between p-3 rounded-lg border bg-white hover:bg-gray-50"
+                          <div>
+                            <Link 
+                              href={`/player/${ranking.player.id}`}
+                              className="font-medium text-gray-900 hover:text-blue-600 hover:underline cursor-pointer transition-colors flex items-center gap-1"
                             >
-                              <div className="flex items-center gap-4">
-                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                  <span className="text-sm font-bold text-gray-700">
-                                    {ranking.rank}
-                                  </span>
-                                </div>
-                                
-                                <div>
-                                  <Link 
-                                    href={`/player/${ranking.player.id}`}
-                                    className="font-medium text-gray-900 hover:text-blue-600 hover:underline cursor-pointer transition-colors flex items-center gap-1"
-                                  >
-                                    {ranking.player.name}
-                                    <ExternalLink className="w-3 h-3 opacity-50" />
-                                  </Link>
-                                  <div className="text-sm text-gray-500">
-                                    {ranking.player.team} • {ranking.player.avgPoints.toFixed(1)} PPG
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="text-right flex items-center gap-3">
-                                <div>
-                                  <div className="text-sm font-medium text-gray-900">
-                                    Score: {score.toFixed(1)}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    {position}{ranking.rank}
-                                  </div>
-                                </div>
-                                <Badge 
-                                  style={{ backgroundColor: tierInfo.color, color: 'white' }}
-                                  className="text-xs"
-                                >
-                                  {tierInfo.label}
-                                </Badge>
-                              </div>
+                              {ranking.player.name}
+                              <ExternalLink className="w-3 h-3 opacity-50" />
+                            </Link>
+                            <div className="text-sm text-gray-500">
+                              {ranking.player.team} • {ranking.player.avgPoints.toFixed(1)} PPG
                             </div>
-                          );
-                        })}
+                          </div>
+                        </div>
+
+                        <div className="text-right flex items-center gap-3">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              Score: {score.toFixed(1)}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {position}{ranking.rank}
+                            </div>
+                          </div>
+                          <Badge 
+                            style={{ backgroundColor: tierInfo.color, color: 'white' }}
+                            className="text-xs"
+                          >
+                            {tierInfo.label}
+                          </Badge>
+                        </div>
                       </div>
                     );
                   })}
