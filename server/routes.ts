@@ -250,14 +250,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const playerAge = playerAges[player.name] || 26; // Default age for unlisted players
         
         // Calculate enhanced dynasty score using research-backed algorithm
-        const enhancedAnalysis = enhancedDynastyAlgorithm.calculateEnhancedDynastyScore({
+        const enhancedAnalysis = enhancedDynastyAlgorithm.calculateEnhancedDynastyValue({
+          id: player.rank,
           name: player.name,
-          position: player.position,
+          position: player.position as 'QB' | 'RB' | 'WR' | 'TE',
           team: player.team,
           age: playerAge,
           avgPoints: player.avgPoints || 0,
           projectedPoints: player.avgPoints || 0,
-          isAvailable: true,
           upside: 75,
           consistency: 75,
           targetShare: 20,
@@ -273,10 +273,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           points: 0,
           avgPoints: player.avgPoints || 0,
           adp: player.rank * 5,
-          dynastyValue: enhancedAnalysis.enhancedScore,
+          dynastyValue: enhancedAnalysis.enhancedDynastyValue,
           dynastyTier: enhancedAnalysis.tier,
           age: playerAge,
-          ageScore: enhancedAnalysis.components.age,
+          ageScore: enhancedAnalysis.ageScore,
           isEnhanced: true
         };
       });

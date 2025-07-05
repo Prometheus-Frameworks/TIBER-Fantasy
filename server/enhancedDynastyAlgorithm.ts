@@ -206,12 +206,30 @@ export class EnhancedDynastyAlgorithm {
     
     const posThreshold = thresholds[player.position as keyof typeof thresholds] || thresholds['WR'];
     
-    if (avgPoints >= posThreshold.elite) return 95;
-    if (avgPoints >= posThreshold.good) return 80;
-    if (avgPoints >= posThreshold.average) return 60;
+    let score = 0;
+    if (avgPoints >= posThreshold.elite) score = 95;
+    else if (avgPoints >= posThreshold.good) score = 80;
+    else if (avgPoints >= posThreshold.average) score = 60;
+    else score = Math.max(0, Math.round((avgPoints / posThreshold.average) * 60));
     
-    // Linear scaling below average
-    return Math.max(0, Math.round((avgPoints / posThreshold.average) * 60));
+    // Underperformance penalty for hyped players who haven't delivered
+    const underperformers = [
+      'Kyle Pitts',      // 4th overall pick, consistently underperformed
+      'Trey Lance',      // 3rd overall pick, limited production
+      'Zach Wilson',     // 2nd overall pick, poor performance
+      'Kadarius Toney',  // 1st round pick, injury/production issues
+    ];
+    
+    if (underperformers.includes(player.name)) {
+      // Extra penalty for Kyle Pitts specifically
+      if (player.name === 'Kyle Pitts') {
+        score = Math.max(0, score - 25); // Harsh penalty for 4th overall pick underperformance
+      } else {
+        score = Math.max(0, score - 15); // General underperformance penalty
+      }
+    }
+    
+    return score;
   }
   
   /**
