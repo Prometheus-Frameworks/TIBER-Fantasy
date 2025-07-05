@@ -252,11 +252,14 @@ Changelog:
 - July 04, 2025. Data attribution footer: Added comprehensive source attribution for KTC, FantasyCalc, NFL-Data-Py, and Sleeper API
 - July 04, 2025. Legal disclaimers: Added ranking disclaimers and user responsibility statements throughout platform
 - July 04, 2025. Risk mitigation: Eliminated all copyrighted expert opinions, prepared for SportsDataIO subscription integration
-- July 05, 2025. **ENHANCED DYNASTY ALGORITHM v2.0**: Implemented Grok AI feedback with position-specific efficiency weights and KTC-style exponential scaling
+- July 05, 2025. **ENHANCED DYNASTY ALGORITHM v2.0**: Implemented Grok AI feedback with position-specific efficiency weights and exponential scaling for elite players
 - July 05, 2025. Position-specific efficiency adjustments: QB (20%), RB (15%), WR/TE (10%) based on correlation research showing QBs/RBs benefit more from efficiency metrics
-- July 05, 2025. KTC-style elite player scaling: Elite players (90+) get exponential premiums preventing "four quarters equal a dollar" problem
+- July 05, 2025. Exponential elite player scaling: Elite players (90+) get exponential premiums preventing "four quarters equal a dollar" problem
 - July 05, 2025. Research-backed weighting system: Opportunity (35%), Production (30%), Age (20%), Stability (15%), Efficiency (position-specific) for maximum predictive power
 - July 05, 2025. Enhanced UI showcase: Created comprehensive Enhanced Dynasty page with component breakdowns, tier visualizations, and algorithm comparisons
+- July 05, 2025. **ABOUT PAGE & MISSION STATEMENT**: Created comprehensive About page with Prometheus mission statement - providing high-end fantasy data without paywalls
+- July 05, 2025. Donation framework: Added donation section to support free data access, with coffee fund ($5), data supporter ($25), and MVP patron ($50) options
+- July 05, 2025. Fixed age calculation: Replaced random age generation with realistic player ages (Tyreek Hill now correctly shows 30, Josh Allen 28, etc.)
 ```
 
 ## User Preferences

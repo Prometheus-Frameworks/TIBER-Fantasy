@@ -358,8 +358,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
       
       const enhancedRankings = ALL_PROPRIETARY_PLAYERS.map(player => {
-        // Estimate advanced metrics for demonstration
-        const estimatedAge = Math.floor(Math.random() * 8) + 22; // 22-30 years old
+        // Use realistic player ages based on their current NFL status
+        const playerAges: Record<string, number> = {
+          'Josh Allen': 28, 'Patrick Mahomes': 29, 'Lamar Jackson': 28, 'Joe Burrow': 28,
+          'Jalen Hurts': 26, 'Tua Tagovailoa': 27, 'Justin Herbert': 26, 'Dak Prescott': 31,
+          'Brock Purdy': 25, 'Jayden Daniels': 24, 'Caleb Williams': 23, 'Drake Maye': 22,
+          
+          'Christian McCaffrey': 28, 'Josh Jacobs': 27, 'Saquon Barkley': 28, 'Derrick Henry': 31,
+          'Alvin Kamara': 29, 'Austin Ekeler': 29, 'Tony Pollard': 27, 'James Cook': 25,
+          'Breece Hall': 23, 'Kenneth Walker III': 24, 'Bijan Robinson': 22, 'Jahmyr Gibbs': 22,
+          
+          'Justin Jefferson': 25, 'Ja\'Marr Chase': 24, 'CeeDee Lamb': 25, 'Tyreek Hill': 30,
+          'Davante Adams': 32, 'Stefon Diggs': 31, 'DeAndre Hopkins': 32, 'Mike Evans': 31,
+          'Chris Olave': 24, 'Garrett Wilson': 24, 'Drake London': 23, 'Jaylen Waddle': 26,
+          'Amon-Ra St. Brown': 25, 'Puka Nacua': 23, 'Malik Nabers': 21, 'Rome Odunze': 22,
+          
+          'Travis Kelce': 35, 'Mark Andrews': 29, 'George Kittle': 31, 'Kyle Pitts': 24,
+          'Evan Engram': 30, 'Dallas Goedert': 29, 'T.J. Hockenson': 27, 'David Njoku': 28,
+          'Sam LaPorta': 23, 'Brock Bowers': 22, 'Trey McBride': 24
+        };
+        
+        const estimatedAge = playerAges[player.name] || 26; // Default to 26 if not found
         const avgPoints = player.avgPoints || 0;
         
         const enhanced = enhancedDynastyAlgorithm.calculateEnhancedDynastyValue({

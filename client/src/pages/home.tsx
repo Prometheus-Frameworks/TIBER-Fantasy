@@ -333,6 +333,13 @@ export default function Home() {
                 </Button>
               </Link>
             </div>
+            <div className="mt-8">
+              <Link href="/about">
+                <Button variant="link" className="text-white/80 hover:text-white underline">
+                  Learn About Our Mission • Support Free Fantasy Data
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
