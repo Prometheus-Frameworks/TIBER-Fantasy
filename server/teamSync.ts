@@ -48,6 +48,8 @@ export interface TeamSyncData {
     name: string;
     position: string;
     team: string;
+    imageUrl?: string;
+    externalPlayerId?: string;
     isStarter: boolean;
   }>;
   teamName?: string;
