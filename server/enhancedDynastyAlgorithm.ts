@@ -128,9 +128,9 @@ export class EnhancedDynastyAlgorithm {
       case 'WR':
       case 'TE':
         return {
-          production: 0.30,
-          opportunity: 0.35,  // Target share most predictive
-          age: 0.20,         // Standard aging curve
+          production: 0.40,  // INCREASED: Elite current production should matter more
+          opportunity: 0.30,  // Target share most predictive
+          age: 0.15,         // REDUCED: Don't over-penalize proven producers
           stability: 0.15,   // Moderate injury risk
           efficiency: 0.00   // Keep low - YPRR more descriptive than predictive
         };
@@ -229,7 +229,14 @@ export class EnhancedDynastyAlgorithm {
       }
     }
     
-    return score;
+    // Proven producer bonus for elite current performers
+    // This helps players like Kittle who are still fantasy game-changers
+    if (avgPoints >= posThreshold.elite * 0.9) { // 90% of elite threshold
+      const eliteBonus = Math.round((avgPoints / posThreshold.elite) * 10);
+      score += eliteBonus; // Bonus for proven elite production
+    }
+    
+    return Math.min(100, score);
   }
   
   /**
@@ -307,12 +314,12 @@ export class EnhancedDynastyAlgorithm {
         break;
         
       case 'TE':
-        // TEs: Peak 25-28, decline at 30, cliff at 33
-        // Research: 92% of peak seasons before 33, late bloomers
-        if (age <= 24) score = 80; // Late development
-        else if (age <= 28) score = 100; // Peak years (Years 5-6)
-        else if (age <= 30) score = 85; // Still solid
-        else if (age <= 33) score = 60; // Decline period
+        // TEs: Peak 25-28, extended prime for elite producers, cliff at 34
+        // Research: 92% of peak seasons before 33, but elite TEs have longer careers
+        if (age <= 24) score = 85; // Development years
+        else if (age <= 28) score = 100; // Peak years
+        else if (age <= 31) score = 80; // Extended prime for elite producers
+        else if (age <= 33) score = 60; // Gradual decline
         else if (age <= 35) score = 35; // Post-cliff
         else score = 15;
         break;
