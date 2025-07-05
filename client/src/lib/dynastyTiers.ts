@@ -7,8 +7,7 @@
 import { 
   getProprietaryDynastyScore, 
   getProprietaryDynastyTier, 
-  getProprietaryPositionalRank,
-  ALL_PROPRIETARY_RANKINGS 
+  ALL_PROPRIETARY_PLAYERS 
 } from './proprietaryRankings';
 
 export interface DynastyTier {
@@ -23,57 +22,57 @@ export interface DynastyTier {
 
 export const DYNASTY_TIERS: DynastyTier[] = [
   {
-    name: 'tier0',
+    name: 'elite',
     label: 'Elite',
-    minScore: 95,
+    minScore: 90,
     maxScore: 100,
     color: '#8B5CF6', // Purple
-    description: 'Foundational assets - Top 2 round startup ADP (QB1s, RB1s, WR1s)',
+    description: 'Top-tier dynasty assets. Foundational players you build around.',
     icon: 'Crown'
   },
   {
-    name: 'tier1',
+    name: 'premium',
     label: 'Premium',
-    minScore: 85,
-    maxScore: 94,
+    minScore: 75,
+    maxScore: 89,
     color: '#3B82F6', // Blue
-    description: 'Premium dynasty assets with high value and consistent production',
+    description: 'High-value players with strong production and dynasty outlook.',
     icon: 'Trophy'
   },
   {
-    name: 'tier2',
+    name: 'strong',
     label: 'Strong',
-    minScore: 75,
-    maxScore: 84,
+    minScore: 60,
+    maxScore: 74,
     color: '#10B981', // Green
-    description: 'Strong dynasty assets with good production or upside',
+    description: 'Reliable players with consistent value in dynasty leagues.',
     icon: 'Star'
   },
   {
-    name: 'tier3',
+    name: 'solid',
     label: 'Solid',
-    minScore: 65,
-    maxScore: 74,
+    minScore: 45,
+    maxScore: 59,
     color: '#F59E0B', // Yellow
-    description: 'Solid dynasty pieces with decent value',
+    description: 'Decent dynasty pieces with some long-term value.',
     icon: 'Award'
   },
   {
-    name: 'tier4',
+    name: 'depth',
     label: 'Depth',
-    minScore: 50,
-    maxScore: 64,
+    minScore: 30,
+    maxScore: 44,
     color: '#EF4444', // Red
-    description: 'Depth pieces and speculative assets',
+    description: 'Deep roster players with limited but real dynasty value.',
     icon: 'Target'
   },
   {
-    name: 'tier5',
+    name: 'bench',
     label: 'Bench',
     minScore: 0,
-    maxScore: 49,
+    maxScore: 29,
     color: '#6B7280', // Gray
-    description: 'Bench stashes and long-shot prospects',
+    description: 'Minimal dynasty value. Deep league holds or waiver options.',
     icon: 'Shield'
   }
 ];
@@ -112,14 +111,13 @@ export function calculateDynastyScore(player: {
   // First priority: Proprietary rankings (legally safe)
   const proprietaryScore = getProprietaryDynastyScore(player.name);
   const proprietaryTier = getProprietaryDynastyTier(player.name);
-  const proprietaryRank = getProprietaryPositionalRank(player.name);
   
   if (proprietaryScore !== null) {
     return {
       score: proprietaryScore,
       tier: getTierFromScore(proprietaryScore),
       factors: [
-        `Prometheus rank: #${proprietaryRank} ${player.position}`,
+        `Prometheus rank based on stats`,
         'Proprietary statistical analysis',
         `Dynasty tier: ${proprietaryTier}`
       ]

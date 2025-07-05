@@ -186,33 +186,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get player game logs  
+  app.get("/api/players/:id/gamelog", async (req, res) => {
+    try {
+      const playerId = parseInt(req.params.id);
+      
+      // For now, return a placeholder message indicating future integration
+      // This will be populated with real data from Sleeper API or NFL APIs
+      const gameLogData = {
+        gameLog: [], // Will be populated with real game log data
+        summary: {
+          gamesPlayed: 0,
+          averagePoints: 0,
+          bestGame: 0,
+          doubleDigitGames: 0
+        },
+        source: "Coming soon - Sleeper API & NFL integration"
+      };
+      
+      res.json(gameLogData);
+    } catch (error: any) {
+      console.error("Error fetching game log:", error);
+      res.status(500).json({ message: "Failed to fetch game log" });
+    }
+  });
+
   // Get available players with dynasty values
   app.get("/api/players/available", async (req, res) => {
     try {
       const position = req.query.position as string | undefined;
-      const players = await storage.getAvailablePlayers(position);
       
-      // Use only authentic storage players - no mock data
-      const combinedPlayers = players;
+      // Import proprietary rankings
+      const { getProprietaryDynastyScore, getProprietaryDynastyTier, getProprietaryPositionRankings } = await import('./proprietaryRankings');
       
-      // Calculate dynasty values using Jake Maraia rankings
-      const { DynastyTierEngine } = await import('./dynastyTierSystem');
-      const { getJakeMaraiaDynastyScore, getJakeMaraiaDynastyTier } = await import('./jakeMaraiaRankings');
-      const dynastyEngine = new DynastyTierEngine();
+      // Get players from proprietary rankings instead of storage (which may be empty)
+      let combinedPlayers;
       
-      const playersWithDynastyValues = combinedPlayers.map(player => {
-        const dynastyScore = getJakeMaraiaDynastyScore(player.name, player.position);
-        const dynastyTier = getJakeMaraiaDynastyTier(player.name, player.position);
-        
-        return {
-          ...player,
-          dynastyValue: dynastyScore,
-          dynastyTier: dynastyTier
-        };
-      });
+      if (position) {
+        // Get rankings for specific position
+        const positionRankings = getProprietaryPositionRankings(position);
+        combinedPlayers = positionRankings.map(player => ({
+          id: player.rank,
+          name: player.name,
+          position: player.position,
+          team: player.team,
+          points: 0, // Will be populated by SportsDataIO later
+          adp: player.rank * 5, // Rough ADP estimation
+          dynastyValue: player.dynastyScore,
+          dynastyTier: player.dynastyTier
+        }));
+      } else {
+        // Get all players from all positions
+        const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
+        combinedPlayers = ALL_PROPRIETARY_PLAYERS.map(player => ({
+          id: player.rank,
+          name: player.name,
+          position: player.position,
+          team: player.team,
+          points: 0, // Will be populated by SportsDataIO later
+          adp: player.rank * 5, // Rough ADP estimation
+          dynastyValue: player.dynastyScore,
+          dynastyTier: player.dynastyTier
+        }));
+      }
       
-      res.json(playersWithDynastyValues);
+      res.json(combinedPlayers);
     } catch (error: any) {
+      console.error("Error in /api/players/available:", error);
       res.status(500).json({ message: "Failed to fetch available players" });
     }
   });
@@ -227,8 +267,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
       
-      const players = await storage.searchPlayers(query, limit);
-      res.json(players);
+      // Search in proprietary rankings
+      const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
+      
+      const searchResults = ALL_PROPRIETARY_PLAYERS
+        .filter(player => 
+          player.name.toLowerCase().includes(query.toLowerCase())
+        )
+        .slice(0, limit)
+        .map(player => ({
+          id: player.rank,
+          name: player.name,
+          position: player.position,
+          team: player.team,
+          dynastyValue: player.dynastyScore,
+          dynastyTier: player.dynastyTier
+        }));
+      
+      res.json(searchResults);
     } catch (error: any) {
       res.status(500).json({ message: "Failed to search players" });
     }

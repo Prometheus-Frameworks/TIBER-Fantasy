@@ -37,6 +37,32 @@ interface PlayerProfile {
   injuryStatus: string | null;
 }
 
+interface GameLogEntry {
+  week: number;
+  date: string;
+  opponent: string;
+  result: string; // W/L
+  fantasyPoints: number;
+  // Position-specific stats
+  // QB
+  passingYards?: number;
+  passingTDs?: number;
+  interceptions?: number;
+  completions?: number;
+  attempts?: number;
+  // RB/WR/TE
+  rushingYards?: number;
+  rushingTDs?: number;
+  carries?: number;
+  receivingYards?: number;
+  receivingTDs?: number;
+  receptions?: number;
+  targets?: number;
+  // Additional
+  snapCount?: number;
+  snapShare?: number;
+}
+
 interface PlayerAnalytics {
   weeklyPerformance: Array<{
     week: number;
@@ -45,6 +71,7 @@ interface PlayerAnalytics {
     targets?: number;
     carries?: number;
   }>;
+  gameLog: GameLogEntry[];
   marketComparison: {
     ourRank: number;
     adpRank: number;
@@ -245,9 +272,10 @@ export default function PlayerProfile() {
       {/* Profile Content */}
       <div className="p-4 md:p-6 max-w-7xl mx-auto">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="performance">Performance</TabsTrigger>
+            <TabsTrigger value="gamelog">Game Log</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="comparison">Market Value</TabsTrigger>
           </TabsList>
@@ -430,6 +458,133 @@ export default function PlayerProfile() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          {/* Game Log Tab */}
+          <TabsContent value="gamelog" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  2024 Game Log
+                </CardTitle>
+                <CardDescription>Week-by-week performance and statistical breakdown</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {analytics?.gameLog && analytics.gameLog.length > 0 ? (
+                  <div className="space-y-4">
+                    {/* Summary Stats */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-gray-900">
+                          {analytics.gameLog.length}
+                        </p>
+                        <p className="text-sm text-gray-600">Games Played</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-gray-900">
+                          {(analytics.gameLog.reduce((sum, game) => sum + game.fantasyPoints, 0) / analytics.gameLog.length).toFixed(1)}
+                        </p>
+                        <p className="text-sm text-gray-600">Avg Points</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-gray-900">
+                          {Math.max(...analytics.gameLog.map(g => g.fantasyPoints)).toFixed(1)}
+                        </p>
+                        <p className="text-sm text-gray-600">Best Game</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-gray-900">
+                          {analytics.gameLog.filter(g => g.fantasyPoints >= 10).length}
+                        </p>
+                        <p className="text-sm text-gray-600">10+ Point Games</p>
+                      </div>
+                    </div>
+
+                    {/* Game Log Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-gray-50">
+                            <th className="text-left p-3 font-medium">Week</th>
+                            <th className="text-left p-3 font-medium">Opponent</th>
+                            <th className="text-center p-3 font-medium">Result</th>
+                            <th className="text-center p-3 font-medium">Fantasy Pts</th>
+                            {player.position === 'QB' && (
+                              <>
+                                <th className="text-center p-3 font-medium">Pass Yds</th>
+                                <th className="text-center p-3 font-medium">Pass TDs</th>
+                                <th className="text-center p-3 font-medium">INTs</th>
+                              </>
+                            )}
+                            {(player.position === 'RB' || player.position === 'WR' || player.position === 'TE') && (
+                              <>
+                                <th className="text-center p-3 font-medium">Rec</th>
+                                <th className="text-center p-3 font-medium">Rec Yds</th>
+                                <th className="text-center p-3 font-medium">Rec TDs</th>
+                              </>
+                            )}
+                            {player.position === 'RB' && (
+                              <>
+                                <th className="text-center p-3 font-medium">Rush Yds</th>
+                                <th className="text-center p-3 font-medium">Rush TDs</th>
+                              </>
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {analytics.gameLog.map((game, index) => (
+                            <tr key={index} className="border-b hover:bg-gray-50">
+                              <td className="p-3 font-medium">{game.week}</td>
+                              <td className="p-3">{game.opponent}</td>
+                              <td className="p-3 text-center">
+                                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                  game.result === 'W' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {game.result}
+                                </span>
+                              </td>
+                              <td className="p-3 text-center font-medium">{game.fantasyPoints.toFixed(1)}</td>
+                              
+                              {player.position === 'QB' && (
+                                <>
+                                  <td className="p-3 text-center">{game.passingYards || '-'}</td>
+                                  <td className="p-3 text-center">{game.passingTDs || '-'}</td>
+                                  <td className="p-3 text-center">{game.interceptions || '-'}</td>
+                                </>
+                              )}
+                              
+                              {(player.position === 'RB' || player.position === 'WR' || player.position === 'TE') && (
+                                <>
+                                  <td className="p-3 text-center">{game.receptions || '-'}</td>
+                                  <td className="p-3 text-center">{game.receivingYards || '-'}</td>
+                                  <td className="p-3 text-center">{game.receivingTDs || '-'}</td>
+                                </>
+                              )}
+                              
+                              {player.position === 'RB' && (
+                                <>
+                                  <td className="p-3 text-center">{game.rushingYards || '-'}</td>
+                                  <td className="p-3 text-center">{game.rushingTDs || '-'}</td>
+                                </>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">Game log data will be available soon</p>
+                    <p className="text-sm text-gray-400 mt-2">
+                      We're working on integrating live game logs from NFL and fantasy platforms
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Analytics Tab */}

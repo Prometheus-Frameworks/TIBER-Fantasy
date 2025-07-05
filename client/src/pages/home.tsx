@@ -101,8 +101,8 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Proprietary dynasty rankings with 6-tier classification system based on statistical analysis. 
-                Find Elite, Premium, and undervalued Solid tier players.
+                Proprietary dynasty rankings with our own tier system based on statistical analysis. 
+                Find Elite, Premium, and undervalued players across all tiers.
               </p>
               <Link href="/rankings">
                 <Button variant="outline" size="sm" className="w-full">
