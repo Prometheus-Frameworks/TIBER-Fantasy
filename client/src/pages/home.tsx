@@ -52,22 +52,30 @@ export default function Home() {
             
             {/* Stats Bar */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
-              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm">
-                <div className="text-2xl font-bold text-blue-600">1000+</div>
-                <div className="text-sm text-gray-600">Players Analyzed</div>
-              </div>
-              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm">
-                <div className="text-2xl font-bold text-green-600">6</div>
-                <div className="text-sm text-gray-600">Dynasty Tiers</div>
-              </div>
-              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm">
-                <div className="text-2xl font-bold text-purple-600">4</div>
-                <div className="text-sm text-gray-600">Platforms Synced</div>
-              </div>
-              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm">
-                <div className="text-2xl font-bold text-orange-600">Live</div>
-                <div className="text-sm text-gray-600">NFL Data</div>
-              </div>
+              <Link href="/rankings">
+                <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
+                  <div className="text-2xl font-bold text-blue-600">1000+</div>
+                  <div className="text-sm text-gray-600">Players Analyzed</div>
+                </div>
+              </Link>
+              <Link href="/rankings">
+                <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
+                  <div className="text-2xl font-bold text-green-600">6</div>
+                  <div className="text-sm text-gray-600">Dynasty Tiers</div>
+                </div>
+              </Link>
+              <Link href="/compare-league">
+                <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
+                  <div className="text-2xl font-bold text-purple-600">3</div>
+                  <div className="text-sm text-gray-600">Platforms Synced</div>
+                </div>
+              </Link>
+              <Link href="/rankings">
+                <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
+                  <div className="text-2xl font-bold text-orange-600">Live</div>
+                  <div className="text-sm text-gray-600">NFL Data</div>
+                </div>
+              </Link>
             </div>
           </div>
         </div>
@@ -130,7 +138,7 @@ export default function Home() {
                 Comprehensive player profiles with performance charts, market analysis, 
                 strengths/concerns, and similar player comparisons.
               </p>
-              <Link href="/rankings">
+              <Link href="/rankings?tab=search">
                 <Button variant="outline" size="sm" className="w-full">
                   Search Players <Search className="ml-2 h-4 w-4" />
                 </Button>
@@ -157,9 +165,15 @@ export default function Home() {
                 against ADP and market consensus. Avoid overvalued players.
               </p>
               <div className="flex gap-2 mb-4">
-                <Badge variant="outline" className="text-green-600 border-green-200">STEAL</Badge>
-                <Badge variant="outline" className="text-blue-600 border-blue-200">VALUE</Badge>
-                <Badge variant="outline" className="text-red-600 border-red-200">AVOID</Badge>
+                <Link href="/rankings">
+                  <Badge variant="outline" className="text-green-600 border-green-200 hover:bg-green-50 cursor-pointer transition-colors">STEAL</Badge>
+                </Link>
+                <Link href="/rankings">
+                  <Badge variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50 cursor-pointer transition-colors">VALUE</Badge>
+                </Link>
+                <Link href="/rankings">
+                  <Badge variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 cursor-pointer transition-colors">AVOID</Badge>
+                </Link>
               </div>
               <Link href="/rankings">
                 <Button variant="outline" size="sm" className="w-full">
@@ -214,14 +228,22 @@ export default function Home() {
                 authentic NFL data sources. Fantasy production meets real analytics.
               </p>
               <div className="flex gap-2 mb-4">
-                <Badge variant="outline" className="text-xs">Target Share</Badge>
-                <Badge variant="outline" className="text-xs">YPRR</Badge>
-                <Badge variant="outline" className="text-xs">Snap %</Badge>
+                <Link href="/rankings?tab=search">
+                  <Badge variant="outline" className="text-xs hover:bg-gray-50 cursor-pointer transition-colors">Target Share</Badge>
+                </Link>
+                <Link href="/rankings?tab=search">
+                  <Badge variant="outline" className="text-xs hover:bg-gray-50 cursor-pointer transition-colors">YPRR</Badge>
+                </Link>
+                <Link href="/rankings?tab=search">
+                  <Badge variant="outline" className="text-xs hover:bg-gray-50 cursor-pointer transition-colors">Snap %</Badge>
+                </Link>
               </div>
-              <Button variant="outline" size="sm" className="w-full" disabled>
-                <Zap className="mr-2 h-4 w-4" />
-                Coming Soon
-              </Button>
+              <Link href="/rankings">
+                <Button variant="outline" size="sm" className="w-full">
+                  <Zap className="mr-2 h-4 w-4" />
+                  View Analytics
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 
@@ -243,11 +265,17 @@ export default function Home() {
                 Built on authentic sources: Proprietary statistical analysis, KTC values, 
                 FantasyCalc trades, and real NFL statistics. No synthetic data.
               </p>
-              <div className="flex gap-2">
+              <div className="flex gap-2 mb-4">
                 <Badge variant="outline" className="text-xs">Proprietary Analysis</Badge>
                 <Badge variant="outline" className="text-xs">KTC</Badge>
                 <Badge variant="outline" className="text-xs">NFL Data</Badge>
               </div>
+              <Link href="/rankings">
+                <Button variant="outline" size="sm" className="w-full">
+                  <Shield className="mr-2 h-4 w-4" />
+                  View Sources
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
