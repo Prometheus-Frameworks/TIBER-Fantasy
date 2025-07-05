@@ -211,51 +211,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get available players with dynasty values
+  // Get available players with Enhanced Dynasty Algorithm rankings
   app.get("/api/players/available", async (req, res) => {
     try {
       const position = req.query.position as string | undefined;
       
-      // Import proprietary rankings
-      const { getProprietaryDynastyScore, getProprietaryDynastyTier, getProprietaryPositionRankings } = await import('./proprietaryRankings');
+      // Use Enhanced Dynasty Algorithm instead of static rankings
+      const { enhancedDynastyAlgorithm } = await import('./enhancedDynastyAlgorithm');
+      const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
       
-      // Get players from proprietary rankings instead of storage (which may be empty)
-      let combinedPlayers;
-      
-      if (position) {
-        // Get rankings for specific position
-        const positionRankings = getProprietaryPositionRankings(position);
-        combinedPlayers = positionRankings.map(player => ({
+      // Apply research-backed aging curves and enhanced scoring
+      const enhancedRankings = ALL_PROPRIETARY_PLAYERS.map(player => {
+        // Realistic player ages based on 2025 NFL data
+        const playerAges: Record<string, number> = {
+          // QBs
+          'Josh Allen': 28, 'Patrick Mahomes': 29, 'Lamar Jackson': 28, 'Joe Burrow': 28,
+          'Jalen Hurts': 26, 'Tua Tagovailoa': 27, 'Justin Herbert': 26, 'Dak Prescott': 31,
+          'Brock Purdy': 25, 'Jayden Daniels': 24, 'Caleb Williams': 23, 'Drake Maye': 22,
+          
+          // RBs (Apply research-backed age cliff at 30)
+          'Christian McCaffrey': 28, 'Josh Jacobs': 27, 'Saquon Barkley': 28, 'Derrick Henry': 31,
+          'Alvin Kamara': 29, 'Nick Chubb': 29, 'Joe Mixon': 28, 'Aaron Jones': 30,
+          'Rhamondre Stevenson': 27, 'Brian Robinson Jr.': 25, 'D\'Andre Swift': 26,
+          'Najee Harris': 27, 'Tony Pollard': 27, 'James Cook': 25, 'Breece Hall': 23,
+          'Kenneth Walker III': 24, 'Bijan Robinson': 22, 'Jahmyr Gibbs': 22, 'Kyren Williams': 24,
+          
+          // WRs (Age cliff at 32)
+          'Justin Jefferson': 25, 'Ja\'Marr Chase': 24, 'CeeDee Lamb': 25, 'Tyreek Hill': 30,
+          'Davante Adams': 32, 'Stefon Diggs': 31, 'DeAndre Hopkins': 32, 'Mike Evans': 31,
+          'Chris Olave': 24, 'Garrett Wilson': 24, 'Drake London': 23, 'Jaylen Waddle': 26,
+          'Amon-Ra St. Brown': 25, 'Puka Nacua': 23, 'Malik Nabers': 21, 'Rome Odunze': 22,
+          
+          // TEs (Age cliff at 33)
+          'Travis Kelce': 35, 'Mark Andrews': 29, 'Sam LaPorta': 23, 'Trey McBride': 25,
+          'George Kittle': 31, 'Kyle Pitts': 24, 'Evan Engram': 30, 'David Njoku': 28
+        };
+        
+        const playerAge = playerAges[player.name] || 26; // Default age for unlisted players
+        
+        // Calculate enhanced dynasty score using research-backed algorithm
+        const enhancedAnalysis = enhancedDynastyAlgorithm.calculateEnhancedDynastyScore({
+          name: player.name,
+          position: player.position,
+          team: player.team,
+          age: playerAge,
+          avgPoints: player.avgPoints || 0,
+          projectedPoints: player.avgPoints || 0,
+          isAvailable: true,
+          upside: 75,
+          consistency: 75,
+          targetShare: 20,
+          carries: player.position === 'RB' ? 15 : 0,
+          snapCount: 60
+        });
+        
+        return {
           id: player.rank,
           name: player.name,
           position: player.position,
           team: player.team,
-          points: 0, // Will be populated by SportsDataIO later
-          avgPoints: player.avgPoints || 0, // Add avgPoints field
-          adp: player.rank * 5, // Rough ADP estimation
-          dynastyValue: player.dynastyScore,
-          dynastyTier: player.dynastyTier
-        }));
-      } else {
-        // Get all players from all positions
-        const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
-        combinedPlayers = ALL_PROPRIETARY_PLAYERS.map(player => ({
-          id: player.rank,
-          name: player.name,
-          position: player.position,
-          team: player.team,
-          points: 0, // Will be populated by SportsDataIO later
-          avgPoints: player.avgPoints || 0, // Add avgPoints field
-          adp: player.rank * 5, // Rough ADP estimation
-          dynastyValue: player.dynastyScore,
-          dynastyTier: player.dynastyTier
-        }));
-      }
+          points: 0,
+          avgPoints: player.avgPoints || 0,
+          adp: player.rank * 5,
+          dynastyValue: enhancedAnalysis.enhancedScore,
+          dynastyTier: enhancedAnalysis.tier,
+          age: playerAge,
+          ageScore: enhancedAnalysis.components.age,
+          isEnhanced: true
+        };
+      });
       
-      res.json(combinedPlayers);
+      // Sort by enhanced dynasty value and re-rank
+      enhancedRankings.sort((a, b) => b.dynastyValue - a.dynastyValue);
+      
+      // Filter by position if requested
+      let finalRankings = position ? 
+        enhancedRankings.filter(p => p.position === position.toUpperCase()) : 
+        enhancedRankings;
+      
+      // Re-assign ranks based on enhanced scoring
+      finalRankings = finalRankings.map((player, index) => ({
+        ...player,
+        id: index + 1,
+        rank: index + 1
+      }));
+      
+      res.json(finalRankings);
     } catch (error: any) {
-      console.error("Error in /api/players/available:", error);
-      res.status(500).json({ message: "Failed to fetch available players" });
+      console.error("Error in Enhanced Dynasty rankings:", error);
+      res.status(500).json({ message: "Failed to fetch enhanced dynasty rankings" });
     }
   });
 
