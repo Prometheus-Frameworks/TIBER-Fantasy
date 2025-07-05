@@ -45,18 +45,23 @@ export default function About() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-lg text-gray-700 leading-relaxed">
-              <strong>High-end fantasy data should be accessible to everyone.</strong> Just like Prometheus brought fire to humanity, 
-              we're bringing advanced NFL analytics, dynasty valuations, and market insights to fantasy managers without the barrier of paywalls.
+              <strong>We stand at the threshold of an unprecedented era in human history.</strong> As data becomes the new currency of understanding, 
+              we have a choice: hoard knowledge behind paywalls, or democratize insights to strengthen our communities.
             </p>
             <p className="text-gray-600">
-              Too many fantasy platforms lock their best data behind expensive subscriptions. We believe that passionate fantasy managers 
-              deserve access to the same advanced metrics and research-backed insights that drive championship decisions.
+              Fantasy football represents something deeper than entertainment—it's millions of people passionate about analytical thinking, 
+              strategic decision-making, and friendly competition. When we make advanced data accessible to all, we're not just improving fantasy teams; 
+              we're fostering a culture where informed decision-making thrives at every level of society.
+            </p>
+            <p className="text-gray-600">
+              Like Prometheus stealing fire from the gods, we believe transformative knowledge belongs in the hands of the people, 
+              not locked away by those who can afford it. Every insight shared freely makes our entire community stronger.
             </p>
             <div className="flex flex-wrap gap-2 pt-4">
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700">No Paywalls</Badge>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700">Research-Based</Badge>
-              <Badge variant="secondary" className="bg-green-100 text-green-700">Community Driven</Badge>
-              <Badge variant="secondary" className="bg-purple-100 text-purple-700">Always Free</Badge>
+              <Badge variant="secondary" className="bg-orange-100 text-orange-700">Democratized Knowledge</Badge>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700">Community Strengthening</Badge>
+              <Badge variant="secondary" className="bg-green-100 text-green-700">Data as Human Right</Badge>
+              <Badge variant="secondary" className="bg-purple-100 text-purple-700">Forever Open</Badge>
             </div>
           </CardContent>
         </Card>
