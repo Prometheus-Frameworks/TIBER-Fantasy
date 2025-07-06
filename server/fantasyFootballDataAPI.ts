@@ -127,7 +127,7 @@ class FantasyFootballDataProAPI {
    */
   async getSeasonData(season: number): Promise<FFDPSeasonPlayer[]> {
     try {
-      const data = await this.makeRequest(`/players/${season}`);
+      const data = await this.makeRequest(`/players/${season}/all`);
       return Array.isArray(data) ? data : [];
     } catch (error) {
       console.error(`Error fetching season data for ${season}:`, error);
@@ -140,7 +140,7 @@ class FantasyFootballDataProAPI {
    */
   async getProjections(season: number): Promise<FFDPProjection[]> {
     try {
-      const data = await this.makeRequest(`/projections/${season}`);
+      const data = await this.makeRequest(`/projections`);
       return Array.isArray(data) ? data : [];
     } catch (error) {
       console.error(`Error fetching projections for ${season}:`, error);
@@ -273,7 +273,7 @@ class FantasyFootballDataProAPI {
    */
   async testConnection(): Promise<{ success: boolean; message: string }> {
     try {
-      const data = await this.makeRequest('/players/2024/1');
+      const data = await this.makeRequest('/players/2019/1');
       return {
         success: Array.isArray(data) && data.length > 0,
         message: 'Fantasy Football Data Pros API connection successful'

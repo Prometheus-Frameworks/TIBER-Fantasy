@@ -210,15 +210,24 @@ class DataSourceManager {
       // Get data from available sources
       let primaryPlayers: MSFPlayerStats[] = [];
       if (this.isSourceAvailable('MySportsFeeds')) {
-        primaryPlayers = await mySportsFeedsAPI.getPlayerStats('2024-2025-regular', position);
+        try {
+          primaryPlayers = await mySportsFeedsAPI.getPlayerStats('2024-2025-regular', position);
+        } catch (error) {
+          console.warn('MySportsFeeds not available, continuing with other sources');
+        }
       }
 
       let secondaryPlayers: FFDPSeasonPlayer[] = [];
       if (this.isSourceAvailable('FantasyFootballDataPros')) {
-        const allPlayers = await fantasyFootballDataAPI.getSeasonData(2024);
-        secondaryPlayers = position 
-          ? allPlayers.filter(p => p.position === position.toUpperCase())
-          : allPlayers;
+        try {
+          // Use 2019 data as it's available from Fantasy Football Data Pros
+          const allPlayers = await fantasyFootballDataAPI.getSeasonData(2019);
+          secondaryPlayers = position 
+            ? allPlayers.filter(p => p.position === position.toUpperCase())
+            : allPlayers;
+        } catch (error) {
+          console.warn('Fantasy Football Data Pros not available, continuing with other sources');
+        }
       }
 
       // Use primary source as base, supplement with secondary
