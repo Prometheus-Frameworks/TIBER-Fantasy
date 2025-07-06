@@ -718,6 +718,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dynasty Weighting Breakdown - Shows exact scoring methodology
+  app.get("/api/dynasty/weighting/:playerName?", async (req, res) => {
+    try {
+      const { dynastyWeightingSystem } = await import('./dynastyWeightingSystem');
+      const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
+      
+      const requestedPlayer = req.params.playerName;
+      
+      if (requestedPlayer) {
+        // Single player breakdown
+        const player = ALL_PROPRIETARY_PLAYERS.find(p => 
+          p.name.toLowerCase() === requestedPlayer.toLowerCase()
+        );
+        
+        if (!player) {
+          return res.status(404).json({ message: "Player not found" });
+        }
+        
+        // Get realistic age
+        const playerAges: Record<string, number> = {
+          'Josh Allen': 28, 'Patrick Mahomes': 29, 'Lamar Jackson': 28, 'Joe Burrow': 28,
+          'Jalen Hurts': 26, 'Tua Tagovailoa': 27, 'Justin Herbert': 26, 'Dak Prescott': 31,
+          'Brock Purdy': 25, 'Jayden Daniels': 24, 'Caleb Williams': 23, 'Drake Maye': 22,
+          'Christian McCaffrey': 28, 'Josh Jacobs': 27, 'Saquon Barkley': 28, 'Derrick Henry': 31,
+          'Alvin Kamara': 29, 'Nick Chubb': 29, 'Joe Mixon': 28, 'Aaron Jones': 30,
+          'Bijan Robinson': 22, 'Jahmyr Gibbs': 22, 'Breece Hall': 23, 'Kenneth Walker III': 24,
+          'Justin Jefferson': 25, 'Ja\'Marr Chase': 24, 'CeeDee Lamb': 25, 'Tyreek Hill': 30,
+          'Davante Adams': 32, 'Stefon Diggs': 31, 'DeAndre Hopkins': 32, 'Mike Evans': 31,
+          'Chris Olave': 24, 'Garrett Wilson': 24, 'Drake London': 23, 'Malik Nabers': 21,
+          'Brian Thomas Jr.': 22, 'Marvin Harrison Jr.': 22, 'Travis Kelce': 35, 'Mark Andrews': 29,
+          'Sam LaPorta': 23, 'Trey McBride': 25, 'George Kittle': 31, 'Kyle Pitts': 24
+        };
+        
+        const age = playerAges[player.name] || 26;
+        
+        const breakdown = dynastyWeightingSystem.calculatePlayerBreakdown({
+          name: player.name,
+          position: player.position as 'QB' | 'RB' | 'WR' | 'TE',
+          age: age,
+          avgPoints: player.avgPoints || 0,
+          team: player.team,
+          gamesPlayed: 16 // Default to healthy season
+        });
+        
+        res.json({
+          player: breakdown,
+          explanation: {
+            title: `Dynasty Scoring Breakdown: ${player.name}`,
+            summary: `${player.name} (${player.position}, Age ${age}) scores ${breakdown.enhancedDynastyValue}/100 in our dynasty system`,
+            components: [
+              `Production (${(breakdown.weights.production * 100)}%): ${breakdown.productionScore}/100 → ${breakdown.weightedProduction} points`,
+              `Opportunity (${(breakdown.weights.opportunity * 100)}%): ${breakdown.opportunityScore}/100 → ${breakdown.weightedOpportunity} points`,
+              `Age (${(breakdown.weights.age * 100)}%): ${breakdown.ageScore}/100 → ${breakdown.weightedAge} points`,
+              `Stability (${(breakdown.weights.stability * 100)}%): ${breakdown.stabilityScore}/100 → ${breakdown.weightedStability} points`,
+              `Efficiency (${(breakdown.weights.efficiency * 100)}%): ${breakdown.efficiencyScore}/100 → ${breakdown.weightedEfficiency} points`
+            ],
+            calculation: `Raw Score: ${breakdown.rawDynastyValue} + Elite Bonus: ${breakdown.elitePlayerBonus} = Final: ${breakdown.enhancedDynastyValue}`,
+            methodology: breakdown.methodology,
+            strengths: breakdown.strengthAnalysis,
+            concerns: breakdown.concernAnalysis
+          }
+        });
+      } else {
+        // All players summary
+        const weightingSummary = {
+          methodology: {
+            title: "Dynasty Scoring Methodology - Applied to All Players",
+            description: "Research-backed weighting system prioritizing predictive metrics over descriptive ones",
+            researchBasis: "Based on correlation studies showing production and opportunity most predictive of fantasy success"
+          },
+          positionWeights: {
+            QB: dynastyWeightingSystem.getPositionWeights('QB'),
+            RB: dynastyWeightingSystem.getPositionWeights('RB'),
+            WR: dynastyWeightingSystem.getPositionWeights('WR'),
+            TE: dynastyWeightingSystem.getPositionWeights('TE')
+          },
+          examples: {
+            elite: "Josh Allen: Production 40% + Opportunity 25% + Age 20% + Stability 15% + Efficiency 0% = Elite Dynasty Asset",
+            explanation: "Each component scored 0-100, then weighted by position-specific percentages, with elite scaling applied"
+          },
+          usage: "Use /api/dynasty/weighting/{playerName} to see detailed breakdown for any specific player"
+        };
+        
+        res.json(weightingSummary);
+      }
+    } catch (error: any) {
+      console.error("Error in dynasty weighting:", error);
+      res.status(500).json({ message: "Failed to calculate dynasty weighting" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

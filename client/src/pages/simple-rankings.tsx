@@ -21,7 +21,7 @@ interface SimpleRankedPlayer {
 
 export default function SimpleRankings() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [activeTab, setActiveTab] = useState("trending");
+  const [activeTab, setActiveTab] = useState("QB");
   const { data: allPlayers, isLoading: allPlayersLoading } = useQuery<Player[]>({
     queryKey: ["/api/players/available"],
   });
