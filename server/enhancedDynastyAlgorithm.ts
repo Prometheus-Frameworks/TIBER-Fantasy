@@ -418,18 +418,70 @@ export class EnhancedDynastyAlgorithm {
    * Calculate stability score
    */
   private calculateStabilityScore(player: any): number {
-    let score = 70; // Base stability
+    let score = 60; // Conservative base stability
     
-    // Age-based injury risk
-    if (player.age >= 30) score -= 15;
-    else if (player.age >= 28) score -= 5;
-    else if (player.age <= 24) score += 10;
+    // ROOKIE/YOUNG PLAYER PENALTY (Most Important Fix)
+    if (player.age <= 22) {
+      score -= 30; // Major penalty for true rookies like Caleb Williams
+    } else if (player.age <= 24) {
+      score -= 15; // Still unproven, moderate penalty
+    }
     
-    // Position-specific injury risk
-    if (player.position === 'RB') score -= 10; // Higher injury risk
-    if (player.position === 'QB') score += 5; // Lower injury risk
+    // PROVEN VETERAN BONUS
+    if (player.age >= 26 && player.age <= 32) {
+      score += 20; // Prime stability years for proven players
+    } else if (player.age >= 25) {
+      score += 10; // Slight bonus for entering prime
+    }
     
-    return Math.max(20, Math.min(100, score));
+    // EXPERIENCE-BASED STABILITY (Games played)
+    const gamesPlayed = player.gamesPlayed || 0;
+    if (gamesPlayed >= 48) { // 3+ full seasons
+      score += 15; // Proven track record
+    } else if (gamesPlayed >= 32) { // 2+ seasons
+      score += 10; // Some experience
+    } else if (gamesPlayed >= 16) { // 1+ season
+      score += 5; // Minimal experience
+    } else {
+      score -= 20; // Rookie/minimal experience penalty
+    }
+    
+    // PRODUCTION CONSISTENCY (Fantasy points)
+    const avgPoints = player.avgPoints || 0;
+    if (avgPoints >= 15) {
+      score += 15; // Elite consistent producers are stable
+    } else if (avgPoints >= 10) {
+      score += 10; // Good producers
+    } else if (avgPoints >= 6) {
+      score += 5; // Decent producers
+    } else if (avgPoints < 6 && player.age <= 23) {
+      score -= 15; // Young unproductive players are very unstable
+    }
+    
+    // POSITION-SPECIFIC ADJUSTMENTS
+    if (player.position === 'QB') {
+      score += 10; // QBs generally more stable than other positions
+    } else if (player.position === 'RB') {
+      score -= 10; // RBs have higher injury risk and shorter careers
+    }
+    
+    // INJURY STATUS PENALTIES
+    if (player.injuryStatus === 'OUT' || player.injuryStatus === 'IR') {
+      score -= 20;
+    } else if (player.injuryStatus === 'DOUBTFUL') {
+      score -= 15;
+    } else if (player.injuryStatus === 'QUESTIONABLE') {
+      score -= 5;
+    }
+    
+    // AGE-RELATED DECLINE
+    if (player.age >= 33) {
+      score -= 20; // Significant decline risk
+    } else if (player.age >= 30) {
+      score -= 10; // Moderate decline risk
+    }
+    
+    return Math.max(10, Math.min(100, score));
   }
   
   /**

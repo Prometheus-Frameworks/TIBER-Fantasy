@@ -238,6 +238,11 @@ Changelog:
 - July 04, 2025. Root cause analysis: Custom dynasty algorithm was flawed - replaced with authentic market data from FantasyCalc API (1M+ real trades) and KTC values
 - July 04, 2025. Created MarketValuationService: Integrates FantasyCalc dynasty API with Jake Maraia rankings for authoritative player valuations
 - July 04, 2025. Fixed team ranking accuracy: Now uses authentic market consensus instead of generic age/position calculations to prevent valuation discrepancies
+- July 06, 2025. **CRITICAL STABILITY ALGORITHM FIX**: Fixed major logic error where rookies like Caleb Williams had higher stability scores than proven veterans like Josh Allen
+- July 06, 2025. Rookie penalty system: Age ≤22 gets -30 stability, age ≤24 gets -15, while proven veterans (26-32) get +20 stability bonus
+- July 06, 2025. Experience-based adjustments: 3+ seasons (+15), 2+ seasons (+10), 1+ season (+5), rookies (-20) for realistic stability scoring
+- July 06, 2025. **VIEW SOURCES FEATURE**: Implemented comprehensive API transparency system with three-tab modal (Data Sources, API Integrations, Legal Compliance)
+- July 06, 2025. Legal analysis confirms "View Sources" feature enhances credibility and legal standing without compromising competitive advantage
 - July 04, 2025. **COMPREHENSIVE PLACEHOLDER DATA CLEANUP**: Systematically eliminated all mock, placeholder, and duplicate data throughout the codebase
 - July 04, 2025. Removed Puka Nacua duplicates and fixed broken imports: Deleted 15+ placeholder files (eliteDynastyPlayers.ts, rankingAnalysis.ts, fantasyPointsDataETL.ts, etc.)
 - July 04, 2025. Cleaned routes.ts: Removed all references to non-existent modules, fixed TypeScript errors, eliminated valueArbitrage placeholder patterns
