@@ -809,6 +809,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Data Sources and API Disclosure
+  app.get("/api/data-sources", async (req, res) => {
+    try {
+      const { dataSourceManager } = await import('./dataSources');
+      const disclosure = dataSourceManager.getSourceDisclosure();
+      res.json(disclosure);
+    } catch (error: any) {
+      console.error("Error fetching data sources:", error);
+      res.status(500).json({ message: "Failed to fetch data sources" });
+    }
+  });
+
+  // Legal Compliance Status
+  app.get("/api/data-sources/compliance", async (req, res) => {
+    try {
+      const { dataSourceManager } = await import('./dataSources');
+      const compliance = dataSourceManager.getLegalCompliance();
+      res.json(compliance);
+    } catch (error: any) {
+      console.error("Error fetching compliance info:", error);
+      res.status(500).json({ message: "Failed to fetch compliance information" });
+    }
+  });
+
+  // API Integrations Overview
+  app.get("/api/data-sources/integrations", async (req, res) => {
+    try {
+      const { dataSourceManager } = await import('./dataSources');
+      const integrations = dataSourceManager.getApiIntegrations();
+      res.json({
+        title: "Prometheus Data Integration Summary",
+        description: "Comprehensive overview of our API integrations and data sources",
+        categories: integrations,
+        totalIntegrations: integrations.reduce((sum, cat) => sum + cat.integrations.length, 0),
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error("Error fetching API integrations:", error);
+      res.status(500).json({ message: "Failed to fetch API integrations" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

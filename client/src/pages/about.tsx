@@ -11,9 +11,11 @@ import {
   Coffee,
   DollarSign,
   Star,
-  Target
+  Target,
+  Eye
 } from "lucide-react";
 import DataAttributionFooter from "@/components/data-attribution-footer";
+import { ViewSourcesModal } from "@/components/view-sources-modal";
 
 export default function About() {
   return (
@@ -192,18 +194,32 @@ export default function About() {
               </p>
             </div>
 
-            <div className="text-center">
+            <div className="text-center space-y-4">
               <p className="text-gray-600 mb-4">
                 <strong>Remember:</strong> Prometheus will always be free. Donations simply help us expand data sources 
                 and add more advanced features for the entire community.
               </p>
-              <Button 
-                size="lg" 
-                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-              >
-                <Heart className="mr-2 h-5 w-5" />
-                Support the Mission
-              </Button>
+              
+              <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                <Button 
+                  size="lg" 
+                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                >
+                  <Heart className="mr-2 h-5 w-5" />
+                  Support the Mission
+                </Button>
+                
+                <ViewSourcesModal>
+                  <Button variant="outline" size="lg" className="flex items-center gap-2">
+                    <Eye className="w-4 h-4" />
+                    View Data Sources
+                  </Button>
+                </ViewSourcesModal>
+              </div>
+
+              <p className="text-xs text-gray-500 italic">
+                Full transparency: See exactly where our data comes from and how we ensure compliance
+              </p>
             </div>
           </CardContent>
         </Card>
