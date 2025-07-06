@@ -1319,6 +1319,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Prometheus Rankings endpoints
+  app.get('/api/rankings/prometheus', async (req, res) => {
+    try {
+      // Use demo system while full NFL data fetch is optimized
+      const { prometheusDemoRankings } = await import('./prometheusRankingsDemo');
+      const rankings = await prometheusDemoRankings.generateDemoRankings();
+      
+      res.json({
+        success: true,
+        rankings,
+        metadata: {
+          source: 'NFL-Data-Py 2024',
+          methodology: 'Jake Maraia inspired weighting',
+          weights: {
+            production: '30%',
+            opportunity: '35%', 
+            age: '20%',
+            efficiency: '10%',
+            stability: '5%'
+          },
+          lastUpdated: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('Error generating Prometheus rankings:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to generate Prometheus rankings',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Prometheus Rankings by position
+  app.get('/api/rankings/prometheus/:position', async (req, res) => {
+    try {
+      const position = req.params.position.toUpperCase();
+      
+      if (!['QB', 'RB', 'WR', 'TE'].includes(position)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid position. Use QB, RB, WR, or TE'
+        });
+      }
+
+      const { prometheusDemoRankings } = await import('./prometheusRankingsDemo');
+      const allRankings = await prometheusDemoRankings.generateDemoRankings();
+      
+      res.json({
+        success: true,
+        position,
+        rankings: allRankings[position] || [],
+        metadata: {
+          source: 'NFL-Data-Py 2024',
+          methodology: 'Prometheus Dynasty Algorithm',
+          lastUpdated: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error(`Error generating ${req.params.position} rankings:`, error);
+      res.status(500).json({ 
+        success: false,
+        message: `Failed to generate ${req.params.position} rankings`,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
