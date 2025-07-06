@@ -368,7 +368,7 @@ export default function DataSourcesPage() {
                             <h4 className="font-semibold">{player.name}</h4>
                             <p className="text-sm text-gray-600">
                               {player.team} • {player.position} • 
-                              {player.stats.avgPointsPerGame.toFixed(1)} PPG
+                              {player.stats.avgPointsPerGame?.toFixed(1) || '0.0'} PPG
                             </p>
                           </div>
                           <div className="text-right">
