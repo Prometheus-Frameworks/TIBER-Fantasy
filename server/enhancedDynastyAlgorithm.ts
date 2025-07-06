@@ -248,29 +248,40 @@ export class EnhancedDynastyAlgorithm {
       else if (avgPoints >= 15) score = 50;   // Low-end starters
       else score = Math.max(20, Math.round((avgPoints / 15) * 50));
       
-      // QB Dynasty Hierarchy - Reverse engineered from target rankings
-      if (player.name === 'Josh Allen') {
-        score += 30; // #1 Dynasty QB - Elite dual-threat + proven
-      } else if (player.name === 'Lamar Jackson') {
-        score += 28; // #2 Ultimate rushing upside + proven elite
-      } else if (player.name === 'Jayden Daniels') {
-        score += 26; // #3 Elite rushing + youth + 1.01 startup value
-      } else if (player.name === 'Joe Burrow') {
-        score += 23; // #4 Elite arm talent, injury concerns manageable  
+      // QB Dynasty Bonuses - Based on Jake's FantasyPros philosophy
+      // High stability + rushing/passing production = dynasty value
+      
+      // Elite mobile QBs with proven track records
+      if (player.name === 'Josh Allen' || player.name === 'Lamar Jackson') {
+        score += 25; // Elite dual-threat + high stability
       } else if (player.name === 'Jalen Hurts') {
-        score += 21; // #5 Strong rushing upside, proven production
-      } else if (player.name === 'Drake Maye') {
-        score += 19; // #6 Youth + mobility + draft capital
-      } else if (player.name === 'Justin Herbert') {
-        score += 17; // #7 Elite arm, limited rushing upside
-      } else if (player.name === 'Patrick Mahomes') {
-        score += 15; // #8 Proven winner but age concerns in dynasty
-      } else if (player.name === 'C.J. Stroud') {
-        score += 13; // #9 Strong rookie year, limited rushing
-      } else if (player.name === 'Brock Purdy') {
-        score += 11; // #10 Value + system fit
+        score += 20; // Strong rushing upside + proven production
       }
-      // Richardson gets no bonus due to stability concerns
+      
+      // Young mobile QBs with huge upside
+      else if (player.name === 'Jayden Daniels') {
+        score += 22; // Elite rushing potential + perfect age + high stability
+      } else if (player.name === 'Drake Maye') {
+        score += 15; // Youth + mobility + draft capital
+      }
+      
+      // Elite pocket passers with high stability
+      else if (player.name === 'Joe Burrow') {
+        score += 18; // Elite arm talent, manageable injury concerns
+      } else if (player.name === 'C.J. Stroud') {
+        score += 12; // Strong rookie year, high stability
+      } else if (player.name === 'Brock Purdy') {
+        score += 10; // Value + system + high stability
+      }
+      
+      // Elite arms but dynasty concerns
+      else if (player.name === 'Justin Herbert') {
+        score += 14; // Elite arm, limited rushing, stability questions
+      } else if (player.name === 'Patrick Mahomes') {
+        score += 12; // Proven winner but age/contract concerns
+      }
+      
+      // Richardson gets no bonus due to extreme stability concerns
     } else {
       // Other positions use standard thresholds
       if (avgPoints >= posThreshold.elite) score = 95;
@@ -525,19 +536,27 @@ export class EnhancedDynastyAlgorithm {
   private calculateStabilityScore(player: any): number {
     let score = 60; // Conservative base stability
     
-    // SPECIFIC PLAYER STABILITY OVERRIDES - Based on injury/availability concerns
-    if (player.name === 'Anthony Richardson') {
-      return 15; // EXTREMELY low - "Can't score points if you ain't on the field"
+    // SPECIFIC PLAYER STABILITY - Jake's FantasyPros philosophy
+    // High stability QBs who consistently produce
+    if (player.name === 'Josh Allen' || player.name === 'Lamar Jackson') {
+      score = 90; // Elite durability + consistent production
+    } else if (player.name === 'Jalen Hurts') {
+      score = 85; // Strong track record + rushing safety net
+    } else if (player.name === 'Jayden Daniels' || player.name === 'Drake Maye') {
+      score = 85; // Young, no injury history, rushing ability
+    } else if (player.name === 'Joe Burrow') {
+      score = 75; // Elite when healthy, some injury concerns
+    } else if (player.name === 'C.J. Stroud' || player.name === 'Brock Purdy') {
+      score = 80; // High stability + consistent production
+    } else if (player.name === 'Justin Herbert' || player.name === 'Patrick Mahomes') {
+      score = 75; // Good but some dynasty concerns
+    }
+    
+    // Low stability players
+    else if (player.name === 'Anthony Richardson') {
+      return 15; // EXTREMELY low - availability concerns
     } else if (player.name === 'Tua Tagovailoa') {
       return 25; // Concussion concerns
-    } else if (player.name === 'Nick Chubb') {
-      return 30; // Major knee injury
-    } else if (player.name === 'Joe Burrow') {
-      score = 65; // Manageable injury concerns, but proven
-    } else if (player.name === 'Josh Allen' || player.name === 'Lamar Jackson') {
-      score = 90; // Elite durability despite mobile style
-    } else if (player.name === 'Jayden Daniels' || player.name === 'Drake Maye') {
-      score = 85; // Young, no major injury history
     }
     
     // ROOKIE/YOUNG PLAYER PENALTY (Most Important Fix)
