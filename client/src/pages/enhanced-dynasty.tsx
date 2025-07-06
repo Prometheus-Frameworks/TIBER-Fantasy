@@ -141,7 +141,7 @@ export default function EnhancedDynasty() {
             <div className="flex items-center space-x-2">
               <BarChart3 className="h-5 w-5 text-purple-500" />
               <div>
-                <p className="font-medium">KTC-Style Scaling</p>
+                <p className="font-medium">Exponential Scaling</p>
                 <p className="text-sm text-muted-foreground">Elite players get exponential premiums</p>
               </div>
             </div>
