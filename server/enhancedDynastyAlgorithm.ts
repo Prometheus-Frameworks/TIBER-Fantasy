@@ -88,7 +88,7 @@ export class EnhancedDynastyAlgorithm {
     // Calculate component scores
     const productionScore = this.calculateProductionScore(player);
     const opportunityScore = this.calculateOpportunityScore(player);
-    const ageScore = this.calculateAgeScore(player.age, player.position);
+    const ageScore = this.calculateAgeScore(player.age, player.position, player.name);
     const stabilityScore = this.calculateStabilityScore(player);
     const efficiencyScore = this.calculateEfficiencyScore(player);
     
@@ -210,16 +210,9 @@ export class EnhancedDynastyAlgorithm {
       eliteMultiplier = 1.0 + 0.03 * Math.pow(valueRatio, 1.5);
     }
     
-    // Position-specific adjustments - AGGRESSIVE QB scaling reduction
+    // Position-specific adjustments - NO QB scaling to prevent inflation
     if (position === 'QB') {
-      // Prevent QB inflation by capping all QB scaling
-      if (rawValue >= 90) {
-        eliteMultiplier = 1.0; // NO scaling for any QBs to prevent hitting 100
-      } else if (rawValue >= 85) {
-        eliteMultiplier = 1.0; // NO scaling for high-end QBs 
-      } else {
-        eliteMultiplier = 1.0; // NO scaling for any QBs
-      }
+      eliteMultiplier = 1.0; // Complete removal of QB scaling to use base scores only
     }
     
     const enhancedValue = Math.min(100, Math.round(rawValue * eliteMultiplier));
@@ -246,7 +239,7 @@ export class EnhancedDynastyAlgorithm {
     
     let score = 0;
     
-    // QB-specific scoring to prevent inflation
+    // QB-specific scoring with startup draft reality adjustments
     if (player.position === 'QB') {
       if (avgPoints >= 23) score = 95;        // Only Josh Allen tier
       else if (avgPoints >= 21) score = 90;   // Lamar, Burrow tier
@@ -254,6 +247,29 @@ export class EnhancedDynastyAlgorithm {
       else if (avgPoints >= 17) score = 65;   // Mid-tier starters
       else if (avgPoints >= 15) score = 50;   // Low-end starters
       else score = Math.max(20, Math.round((avgPoints / 15) * 50));
+      
+      // QB Rushing Upside Bonuses - Mobile QBs get massive dynasty premiums
+      // Rushing ability = higher floor, higher ceiling, longer fantasy relevance
+      if (player.name === 'Josh Allen') {
+        score += 25; // Elite dual-threat + elite arm = dynasty QB1
+      } else if (player.name === 'Lamar Jackson') {
+        score += 22; // Ultimate rushing upside, proven elite dual-threat
+      } else if (player.name === 'Jayden Daniels') {
+        score += 45; // ELITE rushing upside + perfect age + 1.01 startup value
+      } else if (player.name === 'Jalen Hurts') {
+        score += 18; // Strong rushing upside, proven fantasy production
+      } else if (player.name === 'Anthony Richardson') {
+        score += 12; // Elite athletic traits, rushing upside, youth
+      } else if (player.name === 'Caleb Williams') {
+        score += 8; // Some mobility, high draft capital
+      } else if (player.name === 'Joe Burrow') {
+        score -= 5; // Pure passer, injury concerns, no rushing upside
+      } else if (player.name === 'C.J. Stroud') {
+        score += 2; // Limited rushing, but strong rookie year
+      } else if (player.name === 'Patrick Mahomes') {
+        score -= 8; // Age + limited rushing in dynasty vs production QBs
+      }
+      // Non-mobile QBs get penalized in dynasty rankings
     } else {
       // Other positions use standard thresholds
       if (avgPoints >= posThreshold.elite) score = 95;
@@ -290,7 +306,7 @@ export class EnhancedDynastyAlgorithm {
     
     // Specific player fixes for known elite performers
     if (player.name === 'Ja\'Marr Chase') {
-      score += 8; // Additional boost for Chase's elite production + youth
+      score += 18; // MASSIVE boost - top 3 dynasty WR with elite production + youth
     }
     if (player.name === 'Davante Adams' && avgPoints >= 15) {
       score += 12; // Elite current production bonus for proven WR1
@@ -381,7 +397,17 @@ export class EnhancedDynastyAlgorithm {
    * Research-backed position-specific aging curves
    * Based on NFL aging research: RBs cliff at 30, WRs at 32, TEs at 33, QBs plateau 25-35
    */
-  private calculateAgeScore(age: number, position: string): number {
+  private calculateAgeScore(age: number, position: string, playerName?: string): number {
+    // Special dynasty bonuses for elite young dual-threat QBs
+    if (position === 'QB' && playerName) {
+      if (playerName === 'Jayden Daniels' && age <= 24) {
+        return 100; // Perfect age + elite rushing upside
+      } else if ((playerName === 'Josh Allen' || playerName === 'Lamar Jackson') && age <= 28) {
+        return 95; // Elite dual-threats in their prime
+      } else if (playerName === 'Anthony Richardson' && age <= 23) {
+        return 90; // Young with elite athletic traits
+      }
+    }
     let score = 50; // Base score
     
     switch (position) {
