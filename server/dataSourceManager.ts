@@ -240,7 +240,7 @@ class DataSourceManager {
         
         const secondaryMatch = secondaryPlayers.find(p => 
           p.player_name.toLowerCase() === playerName.toLowerCase()
-        );
+        ) || null;
 
         const unifiedPlayer = this.mergePlayerData(msfPlayer, secondaryMatch, {}, playerId);
         if (unifiedPlayer) {
