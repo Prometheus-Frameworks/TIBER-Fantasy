@@ -1322,9 +1322,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Prometheus Rankings endpoints
   app.get('/api/rankings/prometheus', async (req, res) => {
     try {
-      // Use complete NFL integration for authentic 2024 data
-      const { prometheusNFLIntegration } = await import('./prometheusNFLIntegration');
-      const rankings = await prometheusNFLIntegration.generateCompleteRankings();
+      // Use file-based NFL integration with authentic 2024 data  
+      const { prometheusNFLFile } = await import('./prometheusNFLFile');
+      const rankings = await prometheusNFLFile.generateFileBasedRankings();
       
       res.json({
         success: true,
@@ -1364,8 +1364,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { prometheusNFLIntegration } = await import('./prometheusNFLIntegration');
-      const allRankings = await prometheusNFLIntegration.generateCompleteRankings();
+      const { prometheusNFLFile } = await import('./prometheusNFLFile');
+      const allRankings = await prometheusNFLFile.generateFileBasedRankings();
       
       res.json({
         success: true,

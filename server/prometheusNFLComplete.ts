@@ -83,6 +83,7 @@ class PrometheusCompleteNFL {
 import nfl_data_py as nfl
 import json
 import sys
+import pandas as pd
 
 try:
     # Get all 2024 weekly data
@@ -92,8 +93,9 @@ try:
     skill_positions = ['QB', 'RB', 'WR', 'TE']
     weekly = weekly[weekly['position'].isin(skill_positions)]
     
-    # Select only columns we need
-    columns = [
+    # Select only columns we need and ensure they exist
+    available_columns = []
+    desired_columns = [
         'player_id', 'player_name', 'position', 'recent_team', 'week',
         'targets', 'receptions', 'receiving_yards', 'receiving_tds',
         'carries', 'rushing_yards', 'rushing_tds', 
@@ -102,16 +104,38 @@ try:
         'fantasy_points_ppr'
     ]
     
-    # Only include columns that exist
-    available_columns = [col for col in columns if col in weekly.columns]
+    for col in desired_columns:
+        if col in weekly.columns:
+            available_columns.append(col)
+    
     weekly_filtered = weekly[available_columns]
     
-    # Convert to records
-    result = weekly_filtered.to_dict('records')
-    print(json.dumps(result, default=str))
+    # Handle any NaN values that could break JSON
+    weekly_filtered = weekly_filtered.fillna(0)
+    
+    # Convert to records, handling data types properly
+    result = []
+    for _, row in weekly_filtered.iterrows():
+        record = {}
+        for col in available_columns:
+            value = row[col]
+            # Convert numpy types to Python types
+            if pd.isna(value):
+                record[col] = 0
+            elif isinstance(value, (int, float)):
+                if pd.isna(value):
+                    record[col] = 0
+                else:
+                    record[col] = float(value) if col in ['target_share', 'air_yards_share', 'wopr'] else int(value)
+            else:
+                record[col] = str(value)
+        result.append(record)
+    
+    print(json.dumps(result))
     
 except Exception as e:
-    print(json.dumps({'error': str(e)}), file=sys.stderr)
+    error_result = {'error': str(e)}
+    print(json.dumps(error_result), file=sys.stderr)
     sys.exit(1)
 `;
 
@@ -224,12 +248,32 @@ except Exception as e:
     const rankedPlayers: PrometheusRankedPlayer[] = [];
     
     playerMap.forEach(playerData => {
-      // Filter out players with insufficient games/opportunity
-      if (playerData.totals.games < 4) return;
+      // Fantasy relevance filters - only include players who matter
       
-      // Position-specific filtering
-      if (position === 'QB' && playerData.totals.attempts < 50) return;
-      if (['RB', 'WR', 'TE'].includes(position) && playerData.totals.targets < 20 && playerData.totals.carries < 30) return;
+      if (position === 'QB') {
+        // Must have started meaningful games
+        if (playerData.totals.games < 4 || playerData.totals.attempts < 50) return;
+        if (playerData.totals.fantasy_points_ppr < 50) return;
+      }
+      
+      if (position === 'RB') {
+        // Must have significant touches or be a key receiving back
+        const totalTouches = (playerData.totals.carries || 0) + (playerData.totals.targets || 0);
+        if (playerData.totals.games < 4 || totalTouches < 30) return;
+        if (playerData.totals.fantasy_points_ppr < 20) return;
+      }
+      
+      if (position === 'WR') {
+        // Must have meaningful target volume - eliminates practice squad/deep bench
+        if (playerData.totals.games < 4 || playerData.totals.targets < 15) return;
+        if (playerData.totals.fantasy_points_ppr < 10) return;
+      }
+      
+      if (position === 'TE') {
+        // TE relevance threshold is lower due to position scarcity
+        if (playerData.totals.games < 4 || playerData.totals.targets < 10) return;
+        if (playerData.totals.fantasy_points_ppr < 15) return;
+      }
       
       const rankedPlayer = this.createRankedPlayer(playerData, position);
       rankedPlayers.push(rankedPlayer);

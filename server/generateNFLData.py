@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""
+Generate NFL Data for Prometheus Rankings
+Creates JSON files with authentic 2024 NFL data
+"""
+
+import nfl_data_py as nfl
+import json
+import warnings
+warnings.filterwarnings('ignore')
+
+def generate_position_data(position):
+    """Generate data for a specific position"""
+    print(f"Processing {position}...")
+    
+    # Get 2024 data
+    weekly = nfl.import_weekly_data([2024])
+    pos_data = weekly[weekly['position'] == position]
+
+    # Aggregate by player
+    if position == 'QB':
+        player_totals = pos_data.groupby(['player_id', 'player_name', 'recent_team']).agg({
+            'passing_yards': 'sum',
+            'passing_tds': 'sum',
+            'fantasy_points_ppr': 'sum',
+            'week': 'count'
+        }).reset_index()
+        
+        # Filter for relevance
+        relevant = player_totals[
+            (player_totals['week'] >= 4) &
+            (player_totals['fantasy_points_ppr'] >= 50)
+        ]
+    else:
+        player_totals = pos_data.groupby(['player_id', 'player_name', 'recent_team']).agg({
+            'targets': 'sum',
+            'receptions': 'sum', 
+            'receiving_yards': 'sum',
+            'receiving_tds': 'sum',
+            'fantasy_points_ppr': 'sum',
+            'week': 'count'
+        }).reset_index()
+
+        # Apply position-specific filters
+        if position == 'WR':
+            relevant = player_totals[
+                (player_totals['week'] >= 4) &
+                (player_totals['targets'] >= 15) &
+                (player_totals['fantasy_points_ppr'] >= 10)
+            ]
+        elif position == 'RB':
+            relevant = player_totals[
+                (player_totals['week'] >= 4) &
+                (player_totals['fantasy_points_ppr'] >= 20)
+            ]
+        elif position == 'TE':
+            relevant = player_totals[
+                (player_totals['week'] >= 4) &
+                (player_totals['targets'] >= 10) &
+                (player_totals['fantasy_points_ppr'] >= 15)
+            ]
+
+    # Sort by fantasy points and take top 30
+    top_players = relevant.nlargest(30, 'fantasy_points_ppr')
+
+    # Convert to clean format
+    result = []
+    for idx, row in top_players.iterrows():
+        player = {
+            'player_id': str(row['player_id']),
+            'player_name': str(row['player_name']),
+            'recent_team': str(row['recent_team']),
+            'games': int(row['week']),
+            'fantasy_points_ppr': float(row['fantasy_points_ppr'])
+        }
+        
+        # Add position-specific stats
+        if position == 'QB':
+            player.update({
+                'passing_yards': int(row.get('passing_yards', 0)),
+                'passing_tds': int(row.get('passing_tds', 0)),
+                'targets': 0,
+                'receptions': 0,
+                'receiving_yards': 0,
+                'receiving_tds': 0
+            })
+        else:
+            player.update({
+                'targets': int(row.get('targets', 0)),
+                'receptions': int(row.get('receptions', 0)),
+                'receiving_yards': int(row.get('receiving_yards', 0)),
+                'receiving_tds': int(row.get('receiving_tds', 0)),
+                'passing_yards': 0,
+                'passing_tds': 0
+            })
+        
+        result.append(player)
+
+    return result
+
+def main():
+    """Generate data for all positions"""
+    all_data = {}
+    
+    for position in ['QB', 'RB', 'WR', 'TE']:
+        try:
+            all_data[position] = generate_position_data(position)
+            print(f"✅ {position}: {len(all_data[position])} players")
+        except Exception as e:
+            print(f"❌ Error processing {position}: {e}")
+            all_data[position] = []
+    
+    # Save to file
+    output_file = 'server/nfl_data_2024.json'
+    with open(output_file, 'w') as f:
+        json.dump(all_data, f, indent=2)
+    
+    print(f"\n📁 Data saved to {output_file}")
+    print(f"Total players: {sum(len(players) for players in all_data.values())}")
+
+if __name__ == "__main__":
+    main()
