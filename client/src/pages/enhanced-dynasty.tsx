@@ -210,7 +210,7 @@ export default function EnhancedDynasty() {
 
         <TabsContent value={selectedPosition} className="space-y-4 mt-6">
           {filteredPlayers.slice(0, 25).map((player, index) => (
-            <Card key={player.enhancedMetrics.playerId} className="hover:shadow-md transition-shadow">
+            <Card key={`${player.enhancedMetrics.playerId}-${index}`} className="hover:shadow-md transition-shadow">
               <CardContent className="pt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Player Info */}

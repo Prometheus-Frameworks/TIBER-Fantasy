@@ -486,6 +486,9 @@ export class EnhancedDynastyAlgorithm {
   private calculateEfficiencyScore(player: any): number {
     let score = 50; // Base efficiency
     
+    // SCHEME-BASED EFFICIENCY BOOSTS
+    score += this.getSchemeEfficiencyBoost(player);
+    
     switch (player.position) {
       case 'QB':
         // Advanced NFL Analytics for QB evaluation
@@ -512,7 +515,7 @@ export class EnhancedDynastyAlgorithm {
         break;
     }
     
-    return Math.max(0, Math.min(100, score));
+    return Math.max(0, Math.min(95, score)); // Allow room for scheme boosts
   }
 
   /**
@@ -734,6 +737,12 @@ export class EnhancedDynastyAlgorithm {
       score = 75; // Good but some dynasty concerns
     }
     
+    // SCHEME-BASED STABILITY BOOSTS
+    const schemeStabilityBoost = this.getSchemeStabilityBoost(player);
+    if (schemeStabilityBoost > 0) {
+      score = Math.max(score, 85) + schemeStabilityBoost; // Ensure minimum stability for scheme players
+    }
+    
     // Low stability players
     else if (player.name === 'Anthony Richardson') {
       return 15; // EXTREMELY low - availability concerns
@@ -803,6 +812,121 @@ export class EnhancedDynastyAlgorithm {
     }
     
     return Math.max(10, Math.min(100, score));
+  }
+
+  /**
+   * Calculate scheme-based efficiency boost
+   */
+  private getSchemeEfficiencyBoost(player: any): number {
+    const team = player.team;
+    const position = player.position;
+    const avgPoints = player.avgPoints || 0;
+    
+    // Elite WR-friendly offensive schemes (based on yards per target, target share, and consistency)
+    const eliteWRSchemes = {
+      'MIN': 20, // Kevin O'Connell - proven 1400+ yard seasons regardless of QB
+      'MIA': 15, // McDaniel's system - speed/efficiency/YAC focused
+      'LAR': 12, // McVay system - receiver-friendly concepts
+      'CIN': 12, // Burrow + Taylor - high-volume passing
+      'BUF': 10, // Josh Allen system - target share concentrated
+      'KC': 10,  // Mahomes system - elite QB play
+      'TB': 8,   // Bowles system - volume passing
+      'PHI': 8,  // Sirianni - A.J. Brown development
+    };
+    
+    // QB-friendly systems
+    const eliteQBSchemes = {
+      'KC': 12,  // Reid's system
+      'BUF': 12, // Dorsey's system
+      'MIA': 10, // McDaniel RPO system
+      'LAR': 8,  // McVay system
+    };
+    
+    // RB-friendly rushing schemes
+    const eliteRBSchemes = {
+      'BAL': 15, // Lamar + Henry system
+      'SF': 12,  // Shanahan zone scheme
+      'PHI': 10, // Sirianni rushing attack
+      'DET': 8,  // Campbell's system
+    };
+    
+    let boost = 0;
+    
+    if (position === 'WR' && eliteWRSchemes[team]) {
+      boost = eliteWRSchemes[team];
+      // Additional boost for elite producers in elite schemes (proven performers)
+      if (avgPoints >= 18) boost += 10;  // True elite (1400+ yards)
+      else if (avgPoints >= 15) boost += 6;  // High-end WR1s
+      else if (avgPoints >= 12) boost += 3;  // Solid WR1/2s
+    } else if (position === 'QB' && eliteQBSchemes[team]) {
+      boost = eliteQBSchemes[team];
+      if (avgPoints >= 22) boost += 10; // Elite QB1 production
+      else if (avgPoints >= 18) boost += 6;  // High-end QB1s
+    } else if (position === 'RB' && eliteRBSchemes[team]) {
+      boost = eliteRBSchemes[team];
+      if (avgPoints >= 15) boost += 8;   // Elite RB1 production
+      else if (avgPoints >= 12) boost += 5;  // Solid RB1s
+    }
+    
+    return boost;
+  }
+
+  /**
+   * Calculate scheme-based stability boost
+   */
+  private getSchemeStabilityBoost(player: any): number {
+    const team = player.team;
+    const position = player.position;
+    const avgPoints = player.avgPoints || 0;
+    
+    // Stable organizations with consistent schemes
+    const stableSchemes = {
+      'KC': 12,   // Reid consistency
+      'BUF': 10,  // McDermott stability
+      'MIN': 15,  // O'Connell WR development
+      'SF': 10,   // Shanahan system
+      'BAL': 8,   // Harbaugh consistency
+      'GB': 8,    // LaFleur system
+      'MIA': 8,   // McDaniel innovation
+    };
+    
+    // Position-specific scheme fits
+    const positionSchemes = {
+      'WR': {
+        'MIN': 20, // O'Connell's WR factory
+        'CIN': 15, // Burrow connection
+        'LAR': 12, // McVay system
+        'MIA': 10, // Speed concepts
+      },
+      'QB': {
+        'KC': 15,  // Reid's QB development
+        'BUF': 12, // Allen's system
+        'MIA': 10, // RPO mastery
+      },
+      'RB': {
+        'SF': 15,  // Shanahan zone
+        'BAL': 12, // Ravens rushing
+        'PHI': 10, // Eagles ground game
+      }
+    };
+    
+    let boost = 0;
+    
+    // Base scheme stability
+    if (stableSchemes[team]) {
+      boost += stableSchemes[team];
+    }
+    
+    // Position-specific scheme fit
+    if (positionSchemes[position] && positionSchemes[position][team]) {
+      boost += positionSchemes[position][team];
+      
+      // Elite performers get additional stability in their ideal schemes
+      if (avgPoints >= 15) boost += 8;
+      else if (avgPoints >= 10) boost += 5;
+    }
+    
+    return boost;
   }
   
   /**
