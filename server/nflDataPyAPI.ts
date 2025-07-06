@@ -104,7 +104,7 @@ import sys
 
 try:
     # Get current roster data
-    roster = nfl.import_rosters([2024])
+    roster = nfl.import_seasonal_rosters([2024])
     
     # Convert to list of dictionaries
     roster_data = []
