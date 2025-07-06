@@ -851,6 +851,198 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // League Comparison Routes - Real fantasy league analysis
+  app.get('/api/league-comparison/:leagueId', async (req, res) => {
+    try {
+      const { leagueId } = req.params;
+      const { platform = 'sleeper' } = req.query;
+      
+      console.log(`🔄 Fetching league comparison for ${leagueId} on ${platform}...`);
+      
+      const { leagueComparisonService } = await import('./leagueComparison');
+      const comparison = await leagueComparisonService.getLeagueComparison(
+        leagueId, 
+        platform as string
+      );
+      
+      res.json(comparison);
+    } catch (error: any) {
+      console.error('❌ League comparison failed:', error);
+      res.status(500).json({ 
+        message: error.message || 'Failed to fetch league comparison',
+        error: error.toString()
+      });
+    }
+  });
+
+  // Individual team roster endpoint
+  app.get('/api/league/team/:teamId/roster', async (req, res) => {
+    try {
+      const { teamId } = req.params;
+      const { leagueId } = req.query;
+      
+      if (!leagueId) {
+        return res.status(400).json({ message: 'League ID required' });
+      }
+      
+      console.log(`🔄 Fetching roster for team ${teamId} in league ${leagueId}...`);
+      
+      const { leagueComparisonService } = await import('./leagueComparison');
+      const rosterData = await leagueComparisonService.getTeamRoster(teamId, leagueId as string);
+      
+      res.json({ players: rosterData });
+    } catch (error: any) {
+      console.error('Team roster error:', error);
+      res.status(500).json({ message: 'Failed to fetch team roster', error: error.message });
+    }
+  });
+
+  // Sleeper Player Database Routes
+  app.post('/api/sleeper/sync/players', async (req, res) => {
+    try {
+      console.log('🔄 Starting Sleeper player sync...');
+      
+      const { sleeperPlayerDB } = await import('./sleeperPlayerDB');
+      const result = await sleeperPlayerDB.syncAllPlayers();
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          message: `Successfully synced ${result.playersUpdated} players`,
+          playersUpdated: result.playersUpdated,
+          errors: result.errors
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: 'Player sync failed',
+          errors: result.errors
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Sleeper player sync error:', error);
+      res.status(500).json({ message: 'Failed to sync players', error: error.message });
+    }
+  });
+
+  app.post('/api/sleeper/sync/gamelogs', async (req, res) => {
+    try {
+      const { season, week, seasonType = 'regular' } = req.body;
+      
+      if (!season || !week) {
+        return res.status(400).json({ message: 'Season and week are required' });
+      }
+      
+      console.log(`🔄 Starting game logs sync for ${season} season, week ${week}...`);
+      
+      const { sleeperPlayerDB } = await import('./sleeperPlayerDB');
+      const result = await sleeperPlayerDB.syncGameLogs(season, week, seasonType);
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          message: `Successfully synced ${result.logsUpdated} game logs`,
+          logsUpdated: result.logsUpdated,
+          errors: result.errors
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: 'Game logs sync failed',
+          errors: result.errors
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Game logs sync error:', error);
+      res.status(500).json({ message: 'Failed to sync game logs', error: error.message });
+    }
+  });
+
+  app.get('/api/sleeper/trending/:type', async (req, res) => {
+    try {
+      const { type } = req.params;
+      const { hours = 24, limit = 25 } = req.query;
+      
+      if (type !== 'add' && type !== 'drop') {
+        return res.status(400).json({ message: 'Type must be "add" or "drop"' });
+      }
+      
+      const { sleeperPlayerDB } = await import('./sleeperPlayerDB');
+      const result = await sleeperPlayerDB.getTrendingPlayers(
+        type as 'add' | 'drop',
+        Number(hours),
+        Number(limit)
+      );
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          players: result.players,
+          type,
+          lookbackHours: hours,
+          limit
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: 'Failed to fetch trending players',
+          errors: result.errors
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Trending players error:', error);
+      res.status(500).json({ message: 'Failed to fetch trending players', error: error.message });
+    }
+  });
+
+  app.get('/api/sleeper/player/:sleeperId/stats', async (req, res) => {
+    try {
+      const { sleeperId } = req.params;
+      const { season = 2024, seasonType = 'regular' } = req.query;
+      
+      const { sleeperPlayerDB } = await import('./sleeperPlayerDB');
+      const stats = await sleeperPlayerDB.getPlayerStats(
+        sleeperId,
+        Number(season),
+        seasonType as string
+      );
+      
+      res.json({
+        success: true,
+        playerId: sleeperId,
+        season,
+        seasonType,
+        stats
+      });
+    } catch (error: any) {
+      console.error(`❌ Player stats error for ${req.params.sleeperId}:`, error);
+      res.status(500).json({ message: 'Failed to fetch player stats', error: error.message });
+    }
+  });
+
+  app.get('/api/sleeper/player/:sleeperId/photo', async (req, res) => {
+    try {
+      const { sleeperId } = req.params;
+      const { size = 'medium' } = req.query;
+      
+      const { sleeperPlayerDB } = await import('./sleeperPlayerDB');
+      const photoUrl = sleeperPlayerDB.getPlayerPhotoUrl(
+        sleeperId,
+        size as 'small' | 'medium' | 'large'
+      );
+      
+      res.json({
+        success: true,
+        playerId: sleeperId,
+        photoUrl,
+        size
+      });
+    } catch (error: any) {
+      console.error(`❌ Player photo error for ${req.params.sleeperId}:`, error);
+      res.status(500).json({ message: 'Failed to get player photo', error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

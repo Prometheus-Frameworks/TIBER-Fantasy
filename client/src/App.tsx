@@ -29,6 +29,7 @@ import PlayerProfile from "@/pages/player-profile";
 import EnhancedDynasty from "@/pages/enhanced-dynasty";
 import About from "@/pages/about";
 import NotFound from "@/pages/not-found";
+import SleeperDatabase from "@/pages/sleeper-database";
 
 function Router() {
   return (
@@ -58,6 +59,7 @@ function Router() {
       <Route path="/lineup" component={LineupOptimizer} />
       <Route path="/analytics" component={LineupOptimizer} />
       <Route path="/premium" component={PremiumAnalytics} />
+      <Route path="/sleeper-database" component={SleeperDatabase} />
       <Route component={NotFound} />
     </Switch>
   );

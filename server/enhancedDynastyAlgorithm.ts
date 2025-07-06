@@ -34,13 +34,14 @@ export class EnhancedDynastyAlgorithm {
   
   /**
    * Get NFL positional age medians for comparison
+   * Based on 2024 NFL data and career length research
    */
   private getNFLPositionalMedians(): Record<string, number> {
     return {
-      'QB': 26.8,  // QBs tend to play longer, median around 26-27
-      'RB': 25.2,  // RBs have shorter careers, median around 25
-      'WR': 26.4,  // WRs have moderate longevity, median around 26
-      'TE': 27.1   // TEs play longer like QBs, median around 27
+      'QB': 27.0,  // QBs: Longer careers, overall NFL average ~26.8 years
+      'RB': 25.0,  // RBs: Shortest careers at 2.6 years avg, peak at 25-27
+      'WR': 26.5,  // WRs: Moderate careers, peak around 26-27 years  
+      'TE': 27.5   // TEs: Longer like QBs, peak 25-30, avg likely 27-28
     };
   }
 

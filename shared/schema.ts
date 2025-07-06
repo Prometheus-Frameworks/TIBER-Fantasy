@@ -43,6 +43,28 @@ export const players = pgTable("players", {
   snapCount: integer("snap_count"), // Offensive snap count
   externalId: text("external_id"), // SportsDataIO player ID
   
+  // Sleeper API integration fields
+  sleeperId: text("sleeper_id").unique(), // Sleeper player ID
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  fullName: text("full_name"),
+  jerseyNumber: integer("jersey_number"),
+  age: integer("age"),
+  yearsExp: integer("years_exp"),
+  height: text("height"), // e.g., "6'4""
+  weight: integer("weight"), // in pounds
+  college: text("college"),
+  birthCountry: text("birth_country"),
+  status: text("status"), // "Active", "Inactive", etc.
+  depthChartPosition: text("depth_chart_position"),
+  depthChartOrder: integer("depth_chart_order"),
+  
+  // External IDs for cross-platform matching
+  espnId: text("espn_id"),
+  yahooId: text("yahoo_id"),
+  rotowireId: text("rotowire_id"),
+  fantasyDataId: text("fantasy_data_id"),
+  
   // Market data
   adp: real("adp"), // Average draft position
   dynastyValue: integer("dynasty_value"), // Dynasty value score 0-100
@@ -51,7 +73,6 @@ export const players = pgTable("players", {
   sustainability: integer("sustainability"), // Sustainability score 0-100
   marketValue: integer("market_value"), // Market consensus value
   confidence: integer("confidence"), // Confidence score 0-100
-  age: integer("age"), // Player age
   experience: integer("experience"), // Years in NFL
   
   // Advanced Premium Analytics
@@ -78,7 +99,56 @@ export const players = pgTable("players", {
   advancedMetrics: jsonb("advanced_metrics"), // Position-specific analytics
   confidenceScore: integer("confidence_score"), // Data confidence 0-100
   lastAdvancedUpdate: timestamp("last_advanced_update"), // Last analytics update
+  lastSleeperSync: timestamp("last_sleeper_sync"), // Track when player data was last synced
 });
+
+// Game logs table for storing weekly performance data
+export const gameLogs = pgTable("game_logs", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
+  sleeperId: text("sleeper_id").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  seasonType: text("season_type").notNull(), // "regular", "post", "pre"
+  opponent: text("opponent"),
+  gameDate: timestamp("game_date"),
+  
+  // Fantasy stats
+  fantasyPoints: real("fantasy_points"),
+  fantasyPointsPpr: real("fantasy_points_ppr"),
+  fantasyPointsHalfPpr: real("fantasy_points_half_ppr"),
+  
+  // Passing stats
+  passAttempts: integer("pass_attempts"),
+  passCompletions: integer("pass_completions"),
+  passYards: integer("pass_yards"),
+  passTd: integer("pass_td"),
+  passInt: integer("pass_int"),
+  pass2pt: integer("pass_2pt"),
+  
+  // Rushing stats
+  rushAttempts: integer("rush_attempts"),
+  rushYards: integer("rush_yards"),
+  rushTd: integer("rush_td"),
+  rush2pt: integer("rush_2pt"),
+  
+  // Receiving stats
+  receptions: integer("receptions"),
+  targets: integer("targets"),
+  recYards: integer("rec_yards"),
+  recTd: integer("rec_td"),
+  rec2pt: integer("rec_2pt"),
+  
+  // Other stats
+  fumbles: integer("fumbles"),
+  fumblesLost: integer("fumbles_lost"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+}, (table) => ({
+  // Unique constraint to prevent duplicate game logs
+  uniqueGameLog: unique().on(table.sleeperId, table.season, table.week, table.seasonType)
+}));
 
 export const teamPlayers = pgTable("team_players", {
   id: serial("id").primaryKey(),
@@ -421,6 +491,18 @@ export type InsertInjuryTracker = z.infer<typeof insertInjuryTrackerSchema>;
 export type InsertMarketData = z.infer<typeof insertMarketDataSchema>;
 export type InsertValueArbitrage = z.infer<typeof insertValueArbitrageSchema>;
 export type InsertMetricCorrelations = z.infer<typeof insertMetricCorrelationsSchema>;
+
+// Game Logs types
+export type GameLog = typeof gameLogs.$inferSelect;
+export type InsertGameLog = typeof gameLogs.$inferInsert;
+
+export const insertGameLogSchema = createInsertSchema(gameLogs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertGameLogType = z.infer<typeof insertGameLogSchema>;
 export type InsertFantasyMove = z.infer<typeof insertFantasyMovesSchema>;
 export type InsertDraftPick = z.infer<typeof insertDraftPicksSchema>;
 export type InsertPlayerValueHistory = z.infer<typeof insertPlayerValueHistorySchema>;
@@ -434,6 +516,14 @@ export const teamsRelations = relations(teams, ({ many }) => ({
 
 export const playersRelations = relations(players, ({ many }) => ({
   teamPlayers: many(teamPlayers),
+  gameLogs: many(gameLogs),
+}));
+
+export const gameLogsRelations = relations(gameLogs, ({ one }) => ({
+  player: one(players, {
+    fields: [gameLogs.playerId],
+    references: [players.id],
+  }),
 }));
 
 export const teamPlayersRelations = relations(teamPlayers, ({ one }) => ({
