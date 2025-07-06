@@ -7,6 +7,7 @@
 import { mySportsFeedsAPI, type MSFPlayer, type MSFPlayerStats } from './mySportsFeedsAPI';
 import { fantasyFootballDataAPI, type FFDPSeasonPlayer } from './fantasyFootballDataAPI';
 import { realTimeNFLAnalytics } from './realTimeNFLAnalytics';
+import { nflDataPyAPI } from './nflDataPyAPI';
 
 export interface UnifiedPlayer {
   id: string;
@@ -98,6 +99,7 @@ class DataSourceManager {
     // Check all data source availability
     await this.checkSourceStatus('MySportsFeeds', () => mySportsFeedsAPI.testConnection());
     await this.checkSourceStatus('FantasyFootballDataPros', () => fantasyFootballDataAPI.testConnection());
+    await this.checkSourceStatus('NFL-Data-Py', () => nflDataPyAPI.testConnection());
     await this.checkSourceStatus('RealTimeNFLAnalytics', () => this.testNFLAnalytics());
   }
 

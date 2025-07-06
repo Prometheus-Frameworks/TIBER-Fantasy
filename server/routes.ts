@@ -1266,6 +1266,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get authentic NFL advanced metrics
+  app.get("/api/nfl/player/:playerName/advanced", async (req, res) => {
+    try {
+      const { nflDataPyAPI } = await import('./nflDataPyAPI');
+      const playerName = req.params.playerName;
+      const season = parseInt(req.query.season as string) || 2024;
+      
+      const playerMetrics = await nflDataPyAPI.getPlayerAdvancedMetrics(playerName, season);
+      
+      if (!playerMetrics) {
+        return res.status(404).json({ 
+          message: `No advanced metrics found for ${playerName} in ${season}` 
+        });
+      }
+      
+      res.json({
+        player: playerMetrics,
+        dataSource: 'NFL-Data-Py (Official NFL Statistics)',
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error(`Error fetching advanced metrics for ${req.params.playerName}:`, error);
+      res.status(500).json({ 
+        message: "Failed to fetch advanced NFL metrics",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get Puka Nacua's YPRR specifically (for the user's question)
+  app.get("/api/nfl/puka-nacua/yprr", async (req, res) => {
+    try {
+      const { nflDataPyAPI } = await import('./nflDataPyAPI');
+      const result = await nflDataPyAPI.getPukaNacuaYPRR();
+      
+      res.json({
+        player: 'Puka Nacua',
+        season: 2024,
+        yprr: result.yprr,
+        fullStats: result.fullStats,
+        dataSource: 'NFL-Data-Py (Official NFL Next Gen Stats)',
+        note: result.yprr ? `Puka Nacua's 2024 YPRR is ${result.yprr.toFixed(2)}` : 'YPRR data not available',
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error fetching Puka Nacua YPRR:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch Puka Nacua's YPRR",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
