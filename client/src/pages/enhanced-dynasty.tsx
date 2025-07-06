@@ -29,6 +29,7 @@ interface EnhancedPlayer {
     position: string;
     team: string;
     age: number;
+    ageVsNFLMedian: string;
     productionScore: number;
     opportunityScore: number;
     ageScore: number;
@@ -243,9 +244,14 @@ export default function EnhancedDynasty() {
                             value={player.enhancedMetrics.ageScore} 
                             className="w-20 h-2" 
                           />
-                          <span className="text-sm font-medium w-8">
-                            {player.enhancedMetrics.ageScore}
-                          </span>
+                          <div className="text-right">
+                            <span className="text-sm font-medium block">
+                              {player.enhancedMetrics.ageScore}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {player.enhancedMetrics.ageVsNFLMedian}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       

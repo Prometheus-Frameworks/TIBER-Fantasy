@@ -10,6 +10,7 @@ export interface EnhancedDynastyMetrics {
   position: 'QB' | 'RB' | 'WR' | 'TE';
   team: string;
   age: number;
+  ageVsNFLMedian: string;    // Format: "23 (+3.4)" showing age vs positional median
   
   // Core Components
   productionScore: number;    // Fantasy points per game baseline
@@ -30,6 +31,35 @@ export interface EnhancedDynastyMetrics {
 }
 
 export class EnhancedDynastyAlgorithm {
+  
+  /**
+   * Get NFL positional age medians for comparison
+   */
+  private getNFLPositionalMedians(): Record<string, number> {
+    return {
+      'QB': 26.8,  // QBs tend to play longer, median around 26-27
+      'RB': 25.2,  // RBs have shorter careers, median around 25
+      'WR': 26.4,  // WRs have moderate longevity, median around 26
+      'TE': 27.1   // TEs play longer like QBs, median around 27
+    };
+  }
+
+  /**
+   * Format age comparison vs NFL positional median
+   */
+  private formatAgeVsNFLMedian(age: number, position: string): string {
+    const medians = this.getNFLPositionalMedians();
+    const positionMedian = medians[position] || 26.5;
+    const difference = positionMedian - age;
+    
+    if (difference > 0) {
+      return `${age} (+${difference.toFixed(1)})`;  // Younger than median
+    } else if (difference < 0) {
+      return `${age} (${difference.toFixed(1)})`;   // Older than median  
+    } else {
+      return `${age} (0.0)`;                        // Exactly median
+    }
+  }
   
   /**
    * Calculate enhanced dynasty value with position-specific efficiency weights
@@ -82,6 +112,7 @@ export class EnhancedDynastyAlgorithm {
       position: player.position,
       team: player.team,
       age: player.age,
+      ageVsNFLMedian: this.formatAgeVsNFLMedian(player.age, player.position),
       productionScore,
       opportunityScore,
       ageScore,
