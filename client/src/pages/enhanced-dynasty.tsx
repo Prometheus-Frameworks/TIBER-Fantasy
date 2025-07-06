@@ -118,7 +118,7 @@ export default function EnhancedDynasty() {
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">Enhanced Dynasty Algorithm v2.0</h1>
         <p className="text-muted-foreground">
-          Advanced research-based dynasty valuations with exponential scaling for elite players
+          Professional-grade dynasty valuations using position-specific NFL advanced analytics and exponential scaling
         </p>
       </div>
 
@@ -129,8 +129,8 @@ export default function EnhancedDynasty() {
             <div className="flex items-center space-x-2">
               <Brain className="h-5 w-5 text-blue-500" />
               <div>
-                <p className="font-medium">Position-Specific Efficiency</p>
-                <p className="text-sm text-muted-foreground">QB: 20% | RB: 15% | WR/TE: 10%</p>
+                <p className="font-medium">Advanced NFL Analytics</p>
+                <p className="text-sm text-muted-foreground">28 position-specific metrics</p>
               </div>
             </div>
           </CardContent>
@@ -172,6 +172,117 @@ export default function EnhancedDynasty() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Position-Specific Analytics Breakdown */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Position-Specific Advanced Analytics
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="rb" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="rb">Running Backs (10 Metrics)</TabsTrigger>
+              <TabsTrigger value="wr">WR/TE (10 Metrics)</TabsTrigger>
+              <TabsTrigger value="qb">Quarterbacks (8 Metrics)</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="rb" className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                <div className="space-y-1">
+                  <p className="font-medium">Contact Metrics</p>
+                  <p className="text-muted-foreground">• Yards After Contact</p>
+                  <p className="text-muted-foreground">• Broken Tackle Rate</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium">Efficiency</p>
+                  <p className="text-muted-foreground">• EPA per Rush</p>
+                  <p className="text-muted-foreground">• Success Rate</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium">Expected Value</p>
+                  <p className="text-muted-foreground">• Rush Yards Over Expected</p>
+                  <p className="text-muted-foreground">• Receiving EPA</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium">Situational</p>
+                  <p className="text-muted-foreground">• Red Zone Efficiency</p>
+                  <p className="text-muted-foreground">• Third-Down Rate</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium">Usage & Security</p>
+                  <p className="text-muted-foreground">• Workload Share</p>
+                  <p className="text-muted-foreground">• Fumble Rate</p>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="wr" className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                <div className="space-y-1">
+                  <p className="font-medium">Receiving Skills</p>
+                  <p className="text-muted-foreground">• YAC per Reception</p>
+                  <p className="text-muted-foreground">• Contested Catch Rate</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium">Route Running</p>
+                  <p className="text-muted-foreground">• Separation Rate</p>
+                  <p className="text-muted-foreground">• Route Diversity</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium">Expected Value</p>
+                  <p className="text-muted-foreground">• EPA per Target</p>
+                  <p className="text-muted-foreground">• Catch Rate Over Expected</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium">Role & Usage</p>
+                  <p className="text-muted-foreground">• Air Yards Share</p>
+                  <p className="text-muted-foreground">• Red Zone Efficiency</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium">Reliability</p>
+                  <p className="text-muted-foreground">• Third-Down Rate</p>
+                  <p className="text-muted-foreground">• Drop Rate</p>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="qb" className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="space-y-1">
+                  <p className="font-medium">Passing Efficiency</p>
+                  <p className="text-muted-foreground">• Adjusted Yards/Attempt</p>
+                  <p className="text-muted-foreground">• EPA per Play</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium">Accuracy</p>
+                  <p className="text-muted-foreground">• Completion % Above Exp.</p>
+                  <p className="text-muted-foreground">• Air Yards Efficiency</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium">Pressure Response</p>
+                  <p className="text-muted-foreground">• Clean Pocket Rating</p>
+                  <p className="text-muted-foreground">• Pressure Performance</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium">Decision Making</p>
+                  <p className="text-muted-foreground">• Third-Down Efficiency</p>
+                  <p className="text-muted-foreground">• Red Zone Rating</p>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+          
+          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <p className="text-sm text-blue-800 dark:text-blue-300">
+              <strong>Research Integration:</strong> All metrics use authentic NFL thresholds based on positional research. 
+              Elite benchmarks: RB Success Rate 50%+, WR Separation Rate 75%+, QB EPA/Play 0.25+
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Trend Tags Legend */}
       <Card className="mb-6">
