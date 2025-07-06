@@ -28,6 +28,7 @@ import CompareLeaguePage from "@/pages/compare-league";
 import PlayerProfile from "@/pages/player-profile";
 import EnhancedDynasty from "@/pages/enhanced-dynasty";
 import About from "@/pages/about";
+import EnhancedNFLRankings from "@/pages/enhanced-nfl-rankings";
 import NotFound from "@/pages/not-found";
 import SleeperDatabase from "@/pages/sleeper-database";
 
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/trending" component={TrendingPlayersPage} />
       <Route path="/compare-league" component={CompareLeaguePage} />
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
+      <Route path="/enhanced-nfl" component={EnhancedNFLRankings} />
       <Route path="/about" component={About} />
       <Route path="/player/:id" component={PlayerProfile} />
       <Route path="/lineup" component={LineupOptimizer} />

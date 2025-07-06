@@ -420,6 +420,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced rankings with real-time NFL analytics
+  app.get('/api/rankings/enhanced-nfl', async (req, res) => {
+    try {
+      const { position } = req.query;
+      const { realTimeNFLAnalytics } = await import('./realTimeNFLAnalytics');
+      const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
+      
+      // Filter by position if specified
+      const players = position ? 
+        ALL_PROPRIETARY_PLAYERS.filter(p => p.position === position.toUpperCase()) : 
+        ALL_PROPRIETARY_PLAYERS;
+      
+      // Analyze first 20 players with real NFL analytics for demonstration
+      const enhancedPlayers = await Promise.all(
+        players.slice(0, 20).map(async (player) => {
+          try {
+            // Create a simplified player object for analytics
+            const playerObj = {
+              id: player.rank,
+              name: player.name,
+              position: player.position,
+              team: player.team,
+              age: 26 // Default age
+            };
+            
+            const profile = await realTimeNFLAnalytics.analyzePlayerWithAPIData(playerObj);
+            
+            return {
+              ...player,
+              nflAnalytics: profile.dynastyAnalysis,
+              enhancedDynastyValue: profile.dynastyAnalysis.enhancedValue,
+              confidenceScore: profile.dynastyAnalysis.confidenceScore,
+              strengthsFromAPI: profile.dynastyAnalysis.strengthsFromAPI,
+              concernsFromAPI: profile.dynastyAnalysis.concernsFromAPI
+            };
+          } catch (error) {
+            console.error(`Error analyzing ${player.name}:`, error);
+            return {
+              ...player,
+              enhancedDynastyValue: player.dynastyScore,
+              confidenceScore: 30,
+              strengthsFromAPI: ['Standard dynasty evaluation'],
+              concernsFromAPI: ['Limited API data available']
+            };
+          }
+        })
+      );
+      
+      // Sort by enhanced dynasty value
+      enhancedPlayers.sort((a, b) => b.enhancedDynastyValue - a.enhancedDynastyValue);
+      
+      res.json(enhancedPlayers);
+    } catch (error: any) {
+      console.error('Error generating enhanced NFL rankings:', error);
+      res.status(500).json({ message: 'Failed to generate enhanced NFL rankings' });
+    }
+  });
+
   // Enhanced Dynasty Algorithm endpoint
   app.get('/api/players/enhanced-dynasty', async (req, res) => {
     try {
@@ -618,6 +676,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(playersWithDynasty.slice(0, 10)); // Limit to 10 results
     } catch (error: any) {
       res.status(500).json({ message: "Failed to search players" });
+    }
+  });
+
+  // Get enhanced real-time NFL analytics
+  app.get("/api/players/:id/nfl-analytics", async (req, res) => {
+    try {
+      const playerId = parseInt(req.params.id);
+      const player = await storage.getPlayer(playerId);
+      
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      const { realTimeNFLAnalytics } = await import('./realTimeNFLAnalytics');
+      const playerProfile = await realTimeNFLAnalytics.analyzePlayerWithAPIData(player);
+      
+      res.json(playerProfile);
+    } catch (error: any) {
+      console.error("Error fetching NFL analytics:", error);
+      res.status(500).json({ message: "Failed to fetch NFL analytics" });
     }
   });
 
