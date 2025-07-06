@@ -82,7 +82,11 @@ export default function DataSourcesPage() {
 
   // Refresh data sources mutation
   const refreshMutation = useMutation({
-    mutationFn: () => apiRequest('/api/data-sources/refresh', { method: 'POST' }),
+    mutationFn: async () => {
+      const response = await fetch('/api/data-sources/refresh', { method: 'POST' });
+      if (!response.ok) throw new Error('Failed to refresh data sources');
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/data-sources/status'] });
     },
@@ -90,7 +94,11 @@ export default function DataSourcesPage() {
 
   // Clear cache mutation
   const clearCacheMutation = useMutation({
-    mutationFn: () => apiRequest('/api/data-sources/clear-cache', { method: 'POST' }),
+    mutationFn: async () => {
+      const response = await fetch('/api/data-sources/clear-cache', { method: 'POST' });
+      if (!response.ok) throw new Error('Failed to clear cache');
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/unified/players'] });
     },
@@ -98,8 +106,11 @@ export default function DataSourcesPage() {
 
   // Test specific data source
   const testSourceMutation = useMutation({
-    mutationFn: (sourceName: string) => 
-      apiRequest(`/api/data-sources/${sourceName}/test`, { method: 'POST' }),
+    mutationFn: async (sourceName: string) => {
+      const response = await fetch(`/api/data-sources/${sourceName}/test`, { method: 'POST' });
+      if (!response.ok) throw new Error(`Failed to test ${sourceName}`);
+      return response.json();
+    },
   });
 
   const getStatusIcon = (available: boolean, hasAuth: boolean) => {
@@ -350,7 +361,7 @@ export default function DataSourcesPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {unifiedData?.players?.slice(0, 10).map((player: UnifiedPlayer, index: number) => (
+                    {(unifiedData as any)?.players?.slice(0, 10).map((player: UnifiedPlayer, index: number) => (
                       <div key={index} className="border rounded p-4">
                         <div className="flex items-center justify-between">
                           <div>

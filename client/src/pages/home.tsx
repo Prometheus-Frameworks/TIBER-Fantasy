@@ -59,7 +59,7 @@ export default function Home() {
                   <div className="text-sm text-gray-600">Players Analyzed</div>
                 </div>
               </Link>
-              <Link href="/rankings">
+              <Link href="/enhanced-dynasty">
                 <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
                   <div className="text-2xl font-bold text-green-600">6</div>
                   <div className="text-sm text-gray-600">Dynasty Tiers</div>
@@ -71,7 +71,7 @@ export default function Home() {
                   <div className="text-sm text-gray-600">Platforms Synced</div>
                 </div>
               </Link>
-              <Link href="/rankings">
+              <Link href="/data-sources">
                 <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
                   <div className="text-2xl font-bold text-orange-600">Live</div>
                   <div className="text-sm text-gray-600">NFL Data</div>
@@ -192,15 +192,9 @@ export default function Home() {
                 valuation models compared against consensus pricing mechanisms.
               </p>
               <div className="flex gap-2 mb-4">
-                <Link href="/rankings">
-                  <Badge variant="outline" className="text-green-600 border-green-200 hover:bg-green-50 cursor-pointer transition-colors">STEAL</Badge>
-                </Link>
-                <Link href="/rankings">
-                  <Badge variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50 cursor-pointer transition-colors">VALUE</Badge>
-                </Link>
-                <Link href="/rankings">
-                  <Badge variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 cursor-pointer transition-colors">AVOID</Badge>
-                </Link>
+                <Badge variant="outline" className="text-green-600 border-green-200">STEAL</Badge>
+                <Badge variant="outline" className="text-blue-600 border-blue-200">VALUE</Badge>
+                <Badge variant="outline" className="text-red-600 border-red-200">AVOID</Badge>
               </div>
               <Link href="/rankings">
                 <Button variant="outline" size="sm" className="w-full">
@@ -255,15 +249,9 @@ export default function Home() {
                 advanced efficiency metrics, and proprietary statistical models for competitive insights.
               </p>
               <div className="flex gap-2 mb-4">
-                <Link href="/rankings?tab=search">
-                  <Badge variant="outline" className="text-xs hover:bg-gray-50 cursor-pointer transition-colors">Target Share</Badge>
-                </Link>
-                <Link href="/rankings?tab=search">
-                  <Badge variant="outline" className="text-xs hover:bg-gray-50 cursor-pointer transition-colors">YPRR</Badge>
-                </Link>
-                <Link href="/rankings?tab=search">
-                  <Badge variant="outline" className="text-xs hover:bg-gray-50 cursor-pointer transition-colors">Snap %</Badge>
-                </Link>
+                <Badge variant="outline" className="text-xs">Target Share</Badge>
+                <Badge variant="outline" className="text-xs">YPRR</Badge>
+                <Badge variant="outline" className="text-xs">Snap %</Badge>
               </div>
               <Link href="/rankings">
                 <Button variant="outline" size="sm" className="w-full">
@@ -297,7 +285,7 @@ export default function Home() {
                 <Badge variant="outline" className="text-xs">KTC</Badge>
                 <Badge variant="outline" className="text-xs">NFL Data</Badge>
               </div>
-              <Link href="/rankings">
+              <Link href="/data-sources">
                 <Button variant="outline" size="sm" className="w-full">
                   <Shield className="mr-2 h-4 w-4" />
                   View Sources
