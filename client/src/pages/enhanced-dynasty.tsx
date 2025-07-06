@@ -39,6 +39,7 @@ interface EnhancedPlayer {
     enhancedDynastyValue: number;
     elitePlayerBonus: number;
     tier: string;
+    trendTag: string;
     confidenceScore: number;
     marketComparison: string;
   };
@@ -66,6 +67,26 @@ export default function EnhancedDynasty() {
       case 'depth': return 'bg-orange-500';
       case 'bench': return 'bg-gray-500';
       default: return 'bg-gray-400';
+    }
+  };
+
+  const getTrendBadgeVariant = (trendTag: string) => {
+    switch (trendTag?.toLowerCase()) {
+      case 'contender': return 'default';     // Purple - aging elite
+      case 'rebuilder': return 'secondary';   // Blue - young ascending  
+      case 'stable': return 'outline';        // Gray - prime years
+      case 'declining': return 'destructive'; // Red - concerning trend
+      default: return 'outline';
+    }
+  };
+
+  const getTrendIcon = (trendTag: string) => {
+    switch (trendTag?.toLowerCase()) {
+      case 'contender': return '🏆';
+      case 'rebuilder': return '🏗️';
+      case 'stable': return '⚖️';
+      case 'declining': return '📉';
+      default: return '⚖️';
     }
   };
 
@@ -138,7 +159,44 @@ export default function EnhancedDynasty() {
             </div>
           </CardContent>
         </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="h-5 w-5 text-blue-500" />
+              <div>
+                <p className="font-medium">Trend Classification</p>
+                <p className="text-sm text-muted-foreground">🏆 Contender | 🏗️ Rebuilder | ⚖️ Stable</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Trend Tags Legend */}
+      <Card className="mb-6">
+        <CardContent className="pt-4">
+          <h3 className="font-semibold mb-3">Trend Classification System</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs">🏗️ Rebuilder</Badge>
+              <span className="text-muted-foreground">Young, ascending players</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">⚖️ Stable</Badge>
+              <span className="text-muted-foreground">Prime age, consistent</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="default" className="text-xs">🏆 Contender</Badge>
+              <span className="text-muted-foreground">Over age cliff, elite production</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="destructive" className="text-xs">📉 Declining</Badge>
+              <span className="text-muted-foreground">Concerning trend</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Position Filter Tabs */}
       <Tabs value={selectedPosition} onValueChange={setSelectedPosition}>
@@ -166,6 +224,9 @@ export default function EnhancedDynasty() {
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="outline">{player.position}</Badge>
                           <Badge variant="outline">{player.team}</Badge>
+                          <Badge variant={getTrendBadgeVariant(player.enhancedMetrics.trendTag)} className="text-xs">
+                            {getTrendIcon(player.enhancedMetrics.trendTag)} {player.enhancedMetrics.trendTag}
+                          </Badge>
                           <span className="text-sm text-muted-foreground">
                             {player.avgPoints.toFixed(1)} PPG
                           </span>
@@ -191,7 +252,7 @@ export default function EnhancedDynasty() {
                     </div>
                     
                     <div className="text-sm text-muted-foreground">
-                      {player.enhancedMetrics.marketComparison}
+                      Age: {player.enhancedMetrics.ageVsNFLMedian} • {player.enhancedMetrics.marketComparison}
                     </div>
                   </div>
 

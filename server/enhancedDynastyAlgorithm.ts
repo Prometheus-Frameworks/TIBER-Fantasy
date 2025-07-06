@@ -26,6 +26,7 @@ export interface EnhancedDynastyMetrics {
   
   // Market Analysis
   tier: 'Elite' | 'Premium' | 'Strong' | 'Solid' | 'Depth' | 'Bench';
+  trendTag: 'Contender' | 'Rebuilder' | 'Stable' | 'Declining'; // Performance trend classification
   confidenceScore: number;   // Statistical confidence in valuation
   marketComparison: string;  // vs KTC/consensus rankings
 }
@@ -123,6 +124,7 @@ export class EnhancedDynastyAlgorithm {
       enhancedDynastyValue: enhancedValue,
       elitePlayerBonus: eliteBonus,
       tier,
+      trendTag: this.calculateTrendTag(player),
       confidenceScore,
       marketComparison: this.getMarketComparison(enhancedValue, player.position)
     };
@@ -619,6 +621,95 @@ export class EnhancedDynastyAlgorithm {
     }
     
     return baseMetrics;
+  }
+
+  /**
+   * Calculate trend tag - Contender/Rebuilder based on performance trajectory
+   */
+  private calculateTrendTag(player: any): 'Contender' | 'Rebuilder' | 'Stable' | 'Declining' {
+    const age = player.age || 25;
+    const avgPoints = player.avgPoints || 0;
+    const position = player.position;
+    
+    // Age cliff definitions by position
+    const ageCliffs = { QB: 32, RB: 28, WR: 30, TE: 30 };
+    const ageCliff = ageCliffs[position as keyof typeof ageCliffs] || 30;
+    
+    // Young ascending players (Rebuilder)
+    if (age <= 24 && avgPoints >= this.getPositionMinimum(position)) {
+      return 'Rebuilder'; // Young players still developing
+    }
+    
+    // Players over age cliff still performing (Contender)
+    if (age >= ageCliff && avgPoints >= this.getEliteThreshold(position)) {
+      return 'Contender'; // Aging but elite production
+    }
+    
+    // Player-specific trend analysis based on known performance patterns
+    const trendOverrides = this.getPlayerSpecificTrends(player.name, age, avgPoints, position);
+    if (trendOverrides) return trendOverrides;
+    
+    // Prime age players with good production
+    if (age >= 25 && age < ageCliff && avgPoints >= this.getPositionMinimum(position)) {
+      return 'Stable'; // Prime years, consistent production
+    }
+    
+    // Declining production or concerning age/performance combo
+    if (avgPoints < this.getPositionMinimum(position) || 
+        (age >= ageCliff && avgPoints < this.getEliteThreshold(position))) {
+      return 'Declining';
+    }
+    
+    return 'Stable'; // Default for unclear cases
+  }
+
+  /**
+   * Player-specific trend overrides based on known career trajectories
+   */
+  private getPlayerSpecificTrends(name: string, age: number, avgPoints: number, position: string): 'Contender' | 'Rebuilder' | null {
+    // Young ascending QBs
+    if (position === 'QB') {
+      if (['Jayden Daniels', 'Drake Maye', 'C.J. Stroud', 'Caleb Williams'].includes(name)) {
+        return 'Rebuilder'; // Young QBs still developing
+      }
+      
+      if (['Josh Allen', 'Lamar Jackson', 'Patrick Mahomes'].includes(name) && age >= 28) {
+        return 'Contender'; // Elite QBs in prime/past prime but still dominant
+      }
+    }
+    
+    // Young skill position players
+    if (['Marvin Harrison Jr.', 'Rome Odunze', 'Malik Nabers'].includes(name)) {
+      return 'Rebuilder'; // Rookie/2nd year breakout candidates
+    }
+    
+    // Aging but elite producers  
+    if (['Davante Adams', 'DeAndre Hopkins', 'Travis Kelce'].includes(name) && avgPoints >= 15) {
+      return 'Contender'; // Over 30 but still producing
+    }
+    
+    // Declining veterans
+    if (['Zeke Elliott', 'Julio Jones', 'Mike Evans'].includes(name) && age >= 30) {
+      return avgPoints >= 12 ? 'Contender' : 'Declining';
+    }
+    
+    return null; // No specific override
+  }
+
+  /**
+   * Position-specific minimum thresholds for relevance
+   */
+  private getPositionMinimum(position: string): number {
+    const minimums = { QB: 15, RB: 10, WR: 8, TE: 6 };
+    return minimums[position as keyof typeof minimums] || 8;
+  }
+
+  /**
+   * Position-specific elite thresholds
+   */
+  private getEliteThreshold(position: string): number {
+    const eliteThresholds = { QB: 20, RB: 15, WR: 12, TE: 10 };
+    return eliteThresholds[position as keyof typeof eliteThresholds] || 12;
   }
   
   /**
