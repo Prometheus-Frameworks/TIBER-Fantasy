@@ -52,11 +52,26 @@ export default function SleeperDatabase() {
     enabled: !!testPlayerId,
   });
 
+  // Sync status polling
+  const { data: syncStatus, refetch: refetchStatus } = useQuery({
+    queryKey: ['/api/sleeper/sync/status'],
+    queryFn: async () => {
+      const response = await fetch('/api/sleeper/sync/status');
+      if (!response.ok) throw new Error('Failed to fetch sync status');
+      return await response.json();
+    },
+    refetchInterval: syncType === 'players' ? 2000 : false, // Poll every 2 seconds during player sync
+  });
+
   // Player sync mutation
   const playerSyncMutation = useMutation({
     mutationFn: async () => {
       return await apiRequest('/api/sleeper/sync/players', 'POST', {});
     },
+    onSuccess: () => {
+      // Start polling for status updates
+      refetchStatus();
+    }
   });
 
   // Game logs sync mutation
@@ -156,18 +171,24 @@ export default function SleeperDatabase() {
               <div className="space-y-3">
                 <Button 
                   onClick={handleSync}
-                  disabled={playerSyncMutation.isPending || gameLogsSyncMutation.isPending}
+                  disabled={
+                    playerSyncMutation.isPending || 
+                    gameLogsSyncMutation.isPending || 
+                    (syncStatus?.success && syncStatus.status?.isRunning)
+                  }
                   className="w-full"
                 >
-                  {(playerSyncMutation.isPending || gameLogsSyncMutation.isPending) ? (
+                  {(playerSyncMutation.isPending || gameLogsSyncMutation.isPending || (syncStatus?.success && syncStatus.status?.isRunning)) ? (
                     <>
                       <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                      Syncing...
+                      {syncStatus?.success && syncStatus.status?.isRunning 
+                        ? `Syncing... ${syncStatus.status.progress}%` 
+                        : 'Starting Sync...'}
                     </>
                   ) : (
                     <>
                       <Database className="w-4 h-4 mr-2" />
-                      Start Sync
+                      Start {syncType === 'players' ? 'Full Player' : 'Game Logs'} Sync
                     </>
                   )}
                 </Button>
@@ -182,6 +203,66 @@ export default function SleeperDatabase() {
                 )}
               </div>
             </div>
+
+            {/* Real-time Sync Status */}
+            {syncStatus?.success && syncStatus.status && (
+              <div className="space-y-3">
+                {syncStatus.status.isRunning && (
+                  <Alert className="border-blue-200 bg-blue-50">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <AlertDescription>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span><strong>Phase:</strong> {syncStatus.status.currentPhase}</span>
+                          <span><strong>Progress:</strong> {syncStatus.status.progress}%</span>
+                        </div>
+                        
+                        {syncStatus.status.total > 0 && (
+                          <div className="w-full bg-blue-100 rounded-full h-2">
+                            <div 
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                              style={{ width: `${syncStatus.status.progress}%` }}
+                            />
+                          </div>
+                        )}
+                        
+                        <div className="grid grid-cols-2 gap-4 text-xs">
+                          <div>
+                            <strong>Players:</strong> {syncStatus.status.processed}/{syncStatus.status.total}
+                          </div>
+                          <div>
+                            <strong>Errors:</strong> {syncStatus.status.errors}
+                          </div>
+                          {syncStatus.status.estimatedTimeRemaining > 0 && (
+                            <div className="col-span-2">
+                              <strong>ETA:</strong> ~{Math.round(syncStatus.status.estimatedTimeRemaining / 60)} minutes
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {syncStatus.status.currentPhase === 'complete' && !syncStatus.status.isRunning && (
+                  <Alert className="border-green-200 bg-green-50">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      ✅ Sync completed! Processed {syncStatus.status.processed} players with {syncStatus.status.errors} errors.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {syncStatus.status.currentPhase === 'error' && !syncStatus.status.isRunning && (
+                  <Alert className="border-red-200 bg-red-50">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      ❌ Sync failed: {syncStatus.status.lastError}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
 
             {/* Sync Results */}
             {(playerSyncMutation.data || playerSyncMutation.error) && (

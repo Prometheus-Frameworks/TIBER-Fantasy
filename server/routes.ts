@@ -897,31 +897,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Sleeper Player Database Routes
+  // Sleeper sync status monitoring
+  app.get('/api/sleeper/sync/status', async (req, res) => {
+    try {
+      const { sleeperPlayerDB } = await import('./sleeperPlayerDB');
+      const status = sleeperPlayerDB.getSyncStatus();
+      res.json({ success: true, status });
+    } catch (error: any) {
+      console.error('❌ Sync status error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to fetch sync status',
+        error: error.message 
+      });
+    }
+  });
+
+  // Sleeper Player Database Routes - Enhanced with background processing
   app.post('/api/sleeper/sync/players', async (req, res) => {
     try {
-      console.log('🔄 Starting Sleeper player sync...');
+      console.log('🚀 Starting comprehensive Sleeper player sync...');
       
       const { sleeperPlayerDB } = await import('./sleeperPlayerDB');
-      const result = await sleeperPlayerDB.syncAllPlayers();
       
-      if (result.success) {
-        res.json({
-          success: true,
-          message: `Successfully synced ${result.playersUpdated} players`,
-          playersUpdated: result.playersUpdated,
-          errors: result.errors
-        });
-      } else {
-        res.status(500).json({
+      // Check if sync is already running
+      const currentStatus = sleeperPlayerDB.getSyncStatus();
+      if (currentStatus.isRunning) {
+        return res.status(409).json({
           success: false,
-          message: 'Player sync failed',
-          errors: result.errors
+          message: 'Player sync already in progress',
+          status: currentStatus
         });
       }
+      
+      // Start sync in background for large datasets
+      sleeperPlayerDB.syncAllPlayers()
+        .then(result => {
+          console.log(`✅ Background player sync completed: ${result.playersUpdated} players, ${result.errors.length} errors`);
+        })
+        .catch(error => {
+          console.error('❌ Background player sync failed:', error);
+        });
+      
+      res.json({
+        success: true,
+        message: 'Full player sync started in background. Use /api/sleeper/sync/status to monitor progress.',
+        syncStarted: new Date().toISOString()
+      });
+      
     } catch (error: any) {
       console.error('❌ Sleeper player sync error:', error);
-      res.status(500).json({ message: 'Failed to sync players', error: error.message });
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to start player sync', 
+        error: error.message 
+      });
     }
   });
 

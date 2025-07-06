@@ -76,10 +76,30 @@ interface SleeperStats {
 export class SleeperPlayerDB {
   private readonly baseUrl = 'https://api.sleeper.app/v1';
   private readonly statsUrl = 'https://api.sleeper.com/stats/nfl';
-  private readonly rateLimitDelay = 100; // 100ms between requests
+  private readonly rateLimitDelay = 150; // 150ms between requests for safety
+  private readonly maxRetries = 3;
+  
+  private syncStatus = {
+    isRunning: false,
+    progress: 0,
+    total: 0,
+    processed: 0,
+    errors: 0,
+    startTime: null as Date | null,
+    currentPhase: 'idle' as 'idle' | 'fetching' | 'processing' | 'complete' | 'error',
+    lastError: null as string | null,
+    estimatedTimeRemaining: 0
+  };
   
   /**
-   * Full sync of all NFL players from Sleeper API
+   * Get current sync status for progress tracking
+   */
+  getSyncStatus() {
+    return { ...this.syncStatus };
+  }
+
+  /**
+   * Full sync of all NFL players from Sleeper API with comprehensive progress tracking
    * Use sparingly - intended for daily updates only
    */
   async syncAllPlayers(): Promise<{ 
@@ -87,38 +107,73 @@ export class SleeperPlayerDB {
     playersUpdated: number; 
     errors: string[] 
   }> {
-    console.log('🔄 Starting full Sleeper player sync...');
+    // Prevent concurrent syncs
+    if (this.syncStatus.isRunning) {
+      throw new Error('Player sync already in progress');
+    }
+
+    // Initialize sync status
+    this.syncStatus = {
+      isRunning: true,
+      progress: 0,
+      total: 0,
+      processed: 0,
+      errors: 0,
+      startTime: new Date(),
+      currentPhase: 'fetching',
+      lastError: null,
+      estimatedTimeRemaining: 0
+    };
+
+    console.log('🔄 Starting comprehensive Sleeper player sync...');
     
     try {
+      this.syncStatus.currentPhase = 'fetching';
       const response = await fetch(`${this.baseUrl}/players/nfl`);
       if (!response.ok) {
         throw new Error(`Sleeper API error: ${response.status} ${response.statusText}`);
       }
       
       const playersData: Record<string, SleeperPlayer> = await response.json();
-      const playersList = Object.values(playersData);
+      const playersList = Object.values(playersData)
+        .filter(player => player && player.player_id && player.position && player.position !== 'DEF');
       
-      console.log(`📊 Retrieved ${playersList.length} players from Sleeper API`);
+      this.syncStatus.total = playersList.length;
+      this.syncStatus.currentPhase = 'processing';
+      
+      console.log(`📊 Retrieved ${playersList.length} active NFL players from Sleeper API`);
       
       let playersUpdated = 0;
       const errors: string[] = [];
       
-      // Process in batches to avoid overwhelming the database
-      const batchSize = 50;
+      // Process in smaller batches for better reliability
+      const batchSize = 25;
       for (let i = 0; i < playersList.length; i += batchSize) {
         const batch = playersList.slice(i, i + batchSize);
         
         try {
-          await this.processBatch(batch);
+          await this.processBatchWithRetry(batch);
           playersUpdated += batch.length;
+          this.syncStatus.processed += batch.length;
+          this.syncStatus.progress = Math.round((this.syncStatus.processed / this.syncStatus.total) * 100);
           
-          // Rate limiting
+          // Calculate estimated time remaining
+          const elapsed = Date.now() - this.syncStatus.startTime!.getTime();
+          const rate = this.syncStatus.processed / (elapsed / 1000); // players per second
+          const remaining = this.syncStatus.total - this.syncStatus.processed;
+          this.syncStatus.estimatedTimeRemaining = Math.round(remaining / rate);
+          
+          console.log(`📈 Progress: ${this.syncStatus.processed}/${this.syncStatus.total} (${this.syncStatus.progress}%)`);
+          
+          // Rate limiting between batches
           if (i + batchSize < playersList.length) {
             await this.delay(this.rateLimitDelay);
           }
         } catch (error) {
           console.error(`❌ Batch processing error (${i}-${i + batchSize}):`, error);
           errors.push(`Batch ${i}-${i + batchSize}: ${error}`);
+          this.syncStatus.errors++;
+          this.syncStatus.lastError = `Batch error: ${error}`;
         }
       }
       
@@ -132,12 +187,40 @@ export class SleeperPlayerDB {
       
     } catch (error) {
       console.error('❌ Full player sync failed:', error);
+      this.syncStatus.currentPhase = 'error';
+      this.syncStatus.lastError = error instanceof Error ? error.message : String(error);
       return {
         success: false,
         playersUpdated: 0,
-        errors: [error.toString()]
+        errors: [error instanceof Error ? error.message : String(error)]
       };
+    } finally {
+      this.syncStatus.isRunning = false;
     }
+  }
+
+  /**
+   * Process batch with retry logic for reliability
+   */
+  private async processBatchWithRetry(batch: SleeperPlayer[]): Promise<void> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      try {
+        await this.processBatch(batch);
+        return; // Success, exit retry loop
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.warn(`⚠️ Batch attempt ${attempt}/${this.maxRetries} failed:`, lastError.message);
+        
+        if (attempt < this.maxRetries) {
+          // Exponential backoff
+          await this.delay(this.rateLimitDelay * Math.pow(2, attempt - 1));
+        }
+      }
+    }
+    
+    throw lastError || new Error('Unknown batch processing error');
   }
   
   /**
