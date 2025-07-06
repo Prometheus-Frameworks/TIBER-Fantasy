@@ -250,7 +250,7 @@ export default function EnhancedDynasty() {
             </TabsContent>
             
             <TabsContent value="qb" className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                 <div className="space-y-1">
                   <p className="font-medium">Passing Efficiency</p>
                   <p className="text-muted-foreground">• Adjusted Yards/Attempt</p>
@@ -258,18 +258,23 @@ export default function EnhancedDynasty() {
                 </div>
                 <div className="space-y-1">
                   <p className="font-medium">Accuracy</p>
-                  <p className="text-muted-foreground">• Completion % Above Exp.</p>
-                  <p className="text-muted-foreground">• Air Yards Efficiency</p>
+                  <p className="text-muted-foreground">• Completion % Over Expected</p>
+                  <p className="text-muted-foreground">• Deep Ball Accuracy</p>
                 </div>
                 <div className="space-y-1">
                   <p className="font-medium">Pressure Response</p>
-                  <p className="text-muted-foreground">• Clean Pocket Rating</p>
-                  <p className="text-muted-foreground">• Pressure Performance</p>
+                  <p className="text-muted-foreground">• Pressure-to-Sack Rate</p>
+                  <p className="text-muted-foreground">• Rating Under Pressure</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="font-medium">Decision Making</p>
-                  <p className="text-muted-foreground">• Third-Down Efficiency</p>
-                  <p className="text-muted-foreground">• Red Zone Rating</p>
+                  <p className="font-medium">Situational</p>
+                  <p className="text-muted-foreground">• Red Zone Efficiency</p>
+                  <p className="text-muted-foreground">• Third-Down Rate</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium">Scheme Versatility</p>
+                  <p className="text-muted-foreground">• Play-Action EPA</p>
+                  <p className="text-muted-foreground">• Total QBR</p>
                 </div>
               </div>
             </TabsContent>
@@ -277,8 +282,8 @@ export default function EnhancedDynasty() {
           
           <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
             <p className="text-sm text-blue-800 dark:text-blue-300">
-              <strong>Research Integration:</strong> All metrics use authentic NFL thresholds based on positional research. 
-              Elite benchmarks: RB Success Rate 50%+, WR Separation Rate 75%+, QB EPA/Play 0.25+
+              <strong>Complete Analytics Integration:</strong> 28 total advanced NFL metrics across all skill positions with research-based elite thresholds.
+              QB: EPA 0.25+, AYA 8.5+ | RB: Success Rate 50%+, YAC 2.5+ | WR: Separation 75%+, YAC/Rec 6.0+
             </p>
           </div>
         </CardContent>

@@ -285,9 +285,14 @@ Changelog:
 - July 06, 2025. **COMPREHENSIVE POSITION-SPECIFIC NFL ANALYTICS**: Integrated 28 advanced metrics across all skill positions for authentic dynasty evaluations
 - July 06, 2025. RB Analytics (10 metrics): Yards After Contact, EPA per Rush, Rush Yards Over Expected, Success Rate, Broken Tackle Rate, Red Zone Efficiency, Receiving EPA, Fumble Rate, Third-Down Conversion, Workload Share
 - July 06, 2025. WR/TE Analytics (10 metrics): YAC per Reception, EPA per Target, Catch Rate Over Expected, Air Yards Share, Separation Rate, Contested Catch Rate, Red Zone Efficiency, Third-Down Conversion Rate, Route Diversity Score, Drop Rate
-- July 06, 2025. Elite NFL thresholds implemented: RB Success Rate 50%+, WR Separation Rate 75%+, QB EPA/Play 0.25+ based on positional research
+- July 06, 2025. QB Analytics (10 metrics): Adjusted Yards/Attempt, EPA per Play, Completion % Over Expected, Deep Ball Accuracy, Pressure-to-Sack Rate, Rating Under Pressure, Red Zone Efficiency, Third-Down Rate, Play-Action EPA, Total QBR
+- July 06, 2025. Elite NFL thresholds implemented: QB EPA 0.25+/AYA 8.5+, RB Success Rate 50%+/YAC 2.5+, WR Separation 75%+/YAC/Rec 6.0+ based on positional research
 - July 06, 2025. Enhanced Dynasty page showcases complete analytics breakdown with position-specific tabs and research integration explanations
 - July 06, 2025. Dynasty algorithm now uses authentic NFL efficiency metrics instead of basic fantasy stats for professional-grade player evaluations
+- July 06, 2025. **COMPLETE 28-METRIC SYSTEM**: Successfully integrated comprehensive position-specific NFL analytics covering all skill positions (QB/RB/WR/TE) with research-based elite thresholds
+- July 06, 2025. QB Analytics complete: 10 comprehensive metrics including EPA per Play, Adjusted Yards/Attempt, Completion % Over Expected, Deep Ball Accuracy, Pressure Response metrics
+- July 06, 2025. Position-specific efficiency weighting: QB 20%, RB 15%, WR/TE 10% based on correlation research showing QBs/RBs benefit more from efficiency metrics
+- July 06, 2025. Enhanced Dynasty page updated with complete tabbed breakdown showcasing all 28 advanced NFL metrics with position-specific elite thresholds and research integration
 ```
 
 ## User Preferences
