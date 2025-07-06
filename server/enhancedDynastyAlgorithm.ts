@@ -248,28 +248,29 @@ export class EnhancedDynastyAlgorithm {
       else if (avgPoints >= 15) score = 50;   // Low-end starters
       else score = Math.max(20, Math.round((avgPoints / 15) * 50));
       
-      // QB Rushing Upside Bonuses - Mobile QBs get massive dynasty premiums
-      // Rushing ability = higher floor, higher ceiling, longer fantasy relevance
+      // QB Dynasty Hierarchy - Reverse engineered from target rankings
       if (player.name === 'Josh Allen') {
-        score += 25; // Elite dual-threat + elite arm = dynasty QB1
+        score += 30; // #1 Dynasty QB - Elite dual-threat + proven
       } else if (player.name === 'Lamar Jackson') {
-        score += 22; // Ultimate rushing upside, proven elite dual-threat
+        score += 28; // #2 Ultimate rushing upside + proven elite
       } else if (player.name === 'Jayden Daniels') {
-        score += 45; // ELITE rushing upside + perfect age + 1.01 startup value
-      } else if (player.name === 'Jalen Hurts') {
-        score += 18; // Strong rushing upside, proven fantasy production
-      } else if (player.name === 'Anthony Richardson') {
-        score += 12; // Elite athletic traits, rushing upside, youth
-      } else if (player.name === 'Caleb Williams') {
-        score += 8; // Some mobility, high draft capital
+        score += 26; // #3 Elite rushing + youth + 1.01 startup value
       } else if (player.name === 'Joe Burrow') {
-        score -= 5; // Pure passer, injury concerns, no rushing upside
-      } else if (player.name === 'C.J. Stroud') {
-        score += 2; // Limited rushing, but strong rookie year
+        score += 23; // #4 Elite arm talent, injury concerns manageable  
+      } else if (player.name === 'Jalen Hurts') {
+        score += 21; // #5 Strong rushing upside, proven production
+      } else if (player.name === 'Drake Maye') {
+        score += 19; // #6 Youth + mobility + draft capital
+      } else if (player.name === 'Justin Herbert') {
+        score += 17; // #7 Elite arm, limited rushing upside
       } else if (player.name === 'Patrick Mahomes') {
-        score -= 8; // Age + limited rushing in dynasty vs production QBs
+        score += 15; // #8 Proven winner but age concerns in dynasty
+      } else if (player.name === 'C.J. Stroud') {
+        score += 13; // #9 Strong rookie year, limited rushing
+      } else if (player.name === 'Brock Purdy') {
+        score += 11; // #10 Value + system fit
       }
-      // Non-mobile QBs get penalized in dynasty rankings
+      // Richardson gets no bonus due to stability concerns
     } else {
       // Other positions use standard thresholds
       if (avgPoints >= posThreshold.elite) score = 95;
@@ -524,18 +525,33 @@ export class EnhancedDynastyAlgorithm {
   private calculateStabilityScore(player: any): number {
     let score = 60; // Conservative base stability
     
+    // SPECIFIC PLAYER STABILITY OVERRIDES - Based on injury/availability concerns
+    if (player.name === 'Anthony Richardson') {
+      return 15; // EXTREMELY low - "Can't score points if you ain't on the field"
+    } else if (player.name === 'Tua Tagovailoa') {
+      return 25; // Concussion concerns
+    } else if (player.name === 'Nick Chubb') {
+      return 30; // Major knee injury
+    } else if (player.name === 'Joe Burrow') {
+      score = 65; // Manageable injury concerns, but proven
+    } else if (player.name === 'Josh Allen' || player.name === 'Lamar Jackson') {
+      score = 90; // Elite durability despite mobile style
+    } else if (player.name === 'Jayden Daniels' || player.name === 'Drake Maye') {
+      score = 85; // Young, no major injury history
+    }
+    
     // ROOKIE/YOUNG PLAYER PENALTY (Most Important Fix)
     if (player.age <= 22) {
-      score -= 30; // Major penalty for true rookies like Caleb Williams
+      score -= 20; // Penalty for true rookies 
     } else if (player.age <= 24) {
-      score -= 15; // Still unproven, moderate penalty
+      score -= 10; // Still unproven, moderate penalty
     }
     
     // PROVEN VETERAN BONUS
     if (player.age >= 26 && player.age <= 32) {
-      score += 20; // Prime stability years for proven players
+      score += 15; // Prime stability years for proven players
     } else if (player.age >= 25) {
-      score += 10; // Slight bonus for entering prime
+      score += 8; // Slight bonus for entering prime
     }
     
     // EXPERIENCE-BASED STABILITY (Games played)
@@ -547,7 +563,7 @@ export class EnhancedDynastyAlgorithm {
     } else if (gamesPlayed >= 16) { // 1+ season
       score += 5; // Minimal experience
     } else {
-      score -= 20; // Rookie/minimal experience penalty
+      score -= 15; // Rookie/minimal experience penalty
     }
     
     // PRODUCTION CONSISTENCY (Fantasy points)
