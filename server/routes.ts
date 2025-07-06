@@ -1151,6 +1151,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Unified Data Source API endpoints
+  const { dataSourceManager } = await import('./dataSourceManager');
+
+  // Get unified player data from multiple sources
+  app.get("/api/unified/player/:id", async (req, res) => {
+    try {
+      const playerId = req.params.id;
+      const playerName = req.query.name as string;
+      
+      const unifiedPlayer = await dataSourceManager.getUnifiedPlayer(playerId, playerName);
+      
+      if (!unifiedPlayer) {
+        return res.status(404).json({ message: "Player not found in any data source" });
+      }
+      
+      res.json(unifiedPlayer);
+    } catch (error) {
+      console.error("Error fetching unified player data:", error);
+      res.status(500).json({ message: "Failed to fetch unified player data" });
+    }
+  });
+
+  // Get unified players list with multiple source data
+  app.get("/api/unified/players", async (req, res) => {
+    try {
+      const position = req.query.position as string;
+      const limit = parseInt(req.query.limit as string) || 50;
+      
+      const unifiedPlayers = await dataSourceManager.getUnifiedPlayers(position, limit);
+      
+      res.json({
+        players: unifiedPlayers,
+        total: unifiedPlayers.length,
+        sources: dataSourceManager.getDataSourceStatuses()
+      });
+    } catch (error) {
+      console.error("Error fetching unified players data:", error);
+      res.status(500).json({ message: "Failed to fetch unified players data" });
+    }
+  });
+
+  // Get data source status for all APIs
+  app.get("/api/data-sources/status", async (req, res) => {
+    try {
+      const statuses = dataSourceManager.getDataSourceStatuses();
+      res.json({
+        sources: statuses,
+        summary: {
+          total: statuses.length,
+          available: statuses.filter(s => s.available).length,
+          authenticated: statuses.filter(s => s.hasAuth).length
+        }
+      });
+    } catch (error) {
+      console.error("Error getting data source statuses:", error);
+      res.status(500).json({ message: "Failed to get data source statuses" });
+    }
+  });
+
+  // Test specific data source
+  app.post("/api/data-sources/:source/test", async (req, res) => {
+    try {
+      const sourceName = req.params.source;
+      
+      let testResult;
+      switch (sourceName.toLowerCase()) {
+        case 'mysportsfeeds':
+          const { mySportsFeedsAPI } = await import('./mySportsFeedsAPI');
+          testResult = await mySportsFeedsAPI.testConnection();
+          break;
+        case 'fantasyfootballdatapros':
+          const { fantasyFootballDataAPI } = await import('./fantasyFootballDataAPI');
+          testResult = await fantasyFootballDataAPI.testConnection();
+          break;
+        default:
+          return res.status(400).json({ message: "Unknown data source" });
+      }
+      
+      res.json(testResult);
+    } catch (error) {
+      console.error(`Error testing ${req.params.source}:`, error);
+      res.status(500).json({ 
+        success: false,
+        message: error instanceof Error ? error.message : "Test failed"
+      });
+    }
+  });
+
+  // Refresh data source statuses
+  app.post("/api/data-sources/refresh", async (req, res) => {
+    try {
+      await dataSourceManager.refreshDataSources();
+      const statuses = dataSourceManager.getDataSourceStatuses();
+      
+      res.json({
+        message: "Data sources refreshed successfully",
+        sources: statuses
+      });
+    } catch (error) {
+      console.error("Error refreshing data sources:", error);
+      res.status(500).json({ message: "Failed to refresh data sources" });
+    }
+  });
+
+  // Clear data cache
+  app.post("/api/data-sources/clear-cache", async (req, res) => {
+    try {
+      dataSourceManager.clearCache();
+      res.json({ message: "Cache cleared successfully" });
+    } catch (error) {
+      console.error("Error clearing cache:", error);
+      res.status(500).json({ message: "Failed to clear cache" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
