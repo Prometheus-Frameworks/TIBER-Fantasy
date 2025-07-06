@@ -33,8 +33,8 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Advanced dynasty fantasy football analytics platform with market inefficiency detection, 
-              expert consensus rankings, and comprehensive player profiling
+              Professional dynasty analytics powered by proprietary algorithms, market intelligence, 
+              and advanced statistical modeling for competitive advantage
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Link href="/rankings">
@@ -110,8 +110,8 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                NEW: Position-specific efficiency weights, exponential elite player scaling, 
-                and research-backed dynasty valuations with 150 players.
+                Next-generation analytical framework with proprietary scoring models, 
+                exponential performance scaling, and comprehensive player evaluation algorithms.
               </p>
               <Link href="/enhanced-dynasty">
                 <Button className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600">
@@ -136,8 +136,8 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Proprietary dynasty rankings with our own tier system based on statistical analysis. 
-                Find Elite, Premium, and undervalued players across all tiers.
+                Sophisticated tier classification system utilizing advanced statistical models 
+                to identify elite prospects and undervalued assets across positional tiers.
               </p>
               <Link href="/rankings">
                 <Button variant="outline" size="sm" className="w-full">
@@ -162,8 +162,8 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Comprehensive player profiles with performance charts, market analysis, 
-                strengths/concerns, and similar player comparisons.
+                In-depth analytical profiles featuring performance modeling, market valuation analysis, 
+                and comprehensive evaluation metrics with comparative benchmarking.
               </p>
               <Link href="/rankings?tab=search">
                 <Button variant="outline" size="sm" className="w-full">
@@ -188,8 +188,8 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Find STEAL and VALUE opportunities by comparing our rankings 
-                against ADP and market consensus. Avoid overvalued players.
+                Advanced market intelligence identifies mispriced assets through proprietary 
+                valuation models compared against consensus pricing mechanisms.
               </p>
               <div className="flex gap-2 mb-4">
                 <Link href="/rankings">
@@ -225,8 +225,8 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Sync with Sleeper, ESPN, Yahoo leagues. Compare team values, 
-                identify the strongest rosters, and find trade opportunities.
+                Multi-platform integration with comprehensive team valuation algorithms 
+                and competitive analysis to identify roster strengths and trade optimization.
               </p>
               <Link href="/compare-league">
                 <Button variant="outline" size="sm" className="w-full">
@@ -251,8 +251,8 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Target share, snap share, YPRR, and advanced metrics from 
-                authentic NFL data sources. Fantasy production meets real analytics.
+                Professional-grade analytics utilizing authentic NFL performance data, 
+                advanced efficiency metrics, and proprietary statistical models for competitive insights.
               </p>
               <div className="flex gap-2 mb-4">
                 <Link href="/rankings?tab=search">
@@ -289,8 +289,8 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Built on authentic sources: Proprietary statistical analysis, KTC values, 
-                FantasyCalc trades, and real NFL statistics. No synthetic data.
+                Enterprise-grade data foundation utilizing proprietary analytical models, 
+                real market transactions, and authentic NFL performance metrics for reliable insights.
               </p>
               <div className="flex gap-2 mb-4">
                 <Badge variant="outline" className="text-xs">Proprietary Analysis</Badge>
@@ -316,8 +316,8 @@ export default function Home() {
               Ready to Dominate Your Dynasty League?
             </h2>
             <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
-              Join thousands of fantasy managers using advanced analytics 
-              to build championship rosters and find market inefficiencies
+              Join successful dynasty managers leveraging sophisticated analytical frameworks 
+              to build championship rosters and identify competitive advantages
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/rankings">

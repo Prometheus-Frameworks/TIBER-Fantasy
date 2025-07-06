@@ -99,7 +99,7 @@ export default function DynastyValuesPage() {
             </Link>
             <div>
               <h1 className="text-xl font-bold text-gray-900">Dynasty Player Values</h1>
-              <p className="text-sm text-gray-500">Research-based scoring prioritizing volume metrics (most predictive of fantasy success)</p>
+              <p className="text-sm text-gray-500">Advanced analytical framework utilizing proprietary scoring algorithms for dynasty optimization</p>
             </div>
           </div>
         </div>
@@ -108,8 +108,8 @@ export default function DynastyValuesPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Methodology Card */}
         <Card className="p-4 md:p-6 mb-4 md:mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-          <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-2 md:mb-3">Research-Based Dynasty Valuation</h2>
-          <p className="text-sm text-gray-600 mb-3 md:mb-4">Weighted scoring based on correlation studies showing volume metrics (target share, touches) are most predictive of fantasy success</p>
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-2 md:mb-3">Proprietary Dynasty Valuation System</h2>
+          <p className="text-sm text-gray-600 mb-3 md:mb-4">Advanced multi-factor modeling combining predictive analytics with market intelligence to identify high-value dynasty assets</p>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
             <div className="text-center">
               <Target className="w-6 h-6 mx-auto mb-2 text-blue-600" />
