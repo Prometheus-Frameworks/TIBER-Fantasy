@@ -145,7 +145,7 @@ export default function Home() {
                       NEW
                     </Badge>
                   </CardTitle>
-                  <CardDescription>Authentic dynasty draft data from 12,847+ Sleeper drafts</CardDescription>
+                  <CardDescription>Real draft data from dynasty leagues</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -178,8 +178,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                In-depth analytical profiles featuring performance modeling, market valuation analysis, 
-                and comprehensive evaluation metrics with comparative benchmarking.
+                Look up any player to see their stats and dynasty ranking.
               </p>
               <Link href="/rankings?tab=search">
                 <Button variant="outline" size="sm" className="w-full">
@@ -204,8 +203,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Advanced market intelligence identifies mispriced assets through proprietary 
-                valuation models compared against consensus pricing mechanisms.
+                Find players worth more than their draft position suggests.
               </p>
               <div className="flex gap-2 mb-4">
                 <Badge variant="outline" className="text-green-600 border-green-200">STEAL</Badge>
@@ -235,8 +233,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Multi-platform integration with comprehensive team valuation algorithms 
-                and competitive analysis to identify roster strengths and trade optimization.
+                Connect your Sleeper league to see how your team stacks up.
               </p>
               <Link href="/compare-league">
                 <Button variant="outline" size="sm" className="w-full">
@@ -320,8 +317,7 @@ export default function Home() {
               Ready to Dominate Your Dynasty League?
             </h2>
             <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
-              Join successful dynasty managers leveraging sophisticated analytical frameworks 
-              to build championship rosters and identify competitive advantages
+              Get the same insights the top dynasty players use to build winning teams.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/enhanced-rankings">

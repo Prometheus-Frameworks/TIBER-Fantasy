@@ -149,8 +149,8 @@ export default function CleanADP() {
               <div className="flex-1 min-w-0 px-1">Player</div>
               <div className="w-12 text-center shrink-0">Rank</div>
               <div className="w-10 text-center shrink-0">Pos</div>
+              <div className="w-12 text-center shrink-0">Value</div>
               <div className="w-12 text-center shrink-0">Own</div>
-              <div className="w-12 text-center shrink-0">Trend</div>
             </div>
           </div>
 
