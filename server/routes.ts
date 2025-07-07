@@ -242,10 +242,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/adp/sleeper/:format?', async (req, res) => {
     try {
       const format = req.params.format || 'superflex';
-      const { sleeperADPService } = await import('./sleeperADP');
+      const { cleanADPService } = await import('./cleanADPService');
       
       console.log(`🎯 Fetching Sleeper ADP data for ${format} format...`);
-      const adpData = await sleeperADPService.calculateDynastyADP(format as any);
+      const adpData = await cleanADPService.calculateDynastyADP(format as any);
       
       res.json(adpData);
     } catch (error: any) {
@@ -260,12 +260,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/adp/trending/:format?', async (req, res) => {
     try {
       const format = req.params.format || 'superflex';
-      const { sleeperADPService } = await import('./sleeperADP');
+      const { cleanADPService } = await import('./cleanADPService');
       
       console.log(`📈 Fetching trending players for ${format}...`);
       const [trendingAdds, trendingDrops] = await Promise.all([
-        sleeperADPService.getTrendingPlayers('add', 168, 50),
-        sleeperADPService.getTrendingPlayers('drop', 168, 50)
+        cleanADPService.getTrendingPlayers('add'),
+        cleanADPService.getTrendingPlayers('drop')
       ]);
       
       res.json({

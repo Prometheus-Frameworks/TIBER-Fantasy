@@ -260,14 +260,6 @@ export class SleeperADPService {
     // Apply trending influence
     const trendInfluence = Math.abs(trend) > 100 ? (trend / 1000) : (trend / 100);
     baseADP = Math.max(1, baseADP - trendInfluence);
-      } else if (position === 'RB') {
-        baseADP = Math.random() * 80 + 40;
-      } else if (position === 'WR') {
-        baseADP = Math.random() * 100 + 50;
-      } else if (position === 'TE') {
-        baseADP = Math.random() * 120 + 80;
-      }
-    }
 
     // Age adjustments for dynasty
     if (age && age < 24) baseADP -= 10; // Youth premium
