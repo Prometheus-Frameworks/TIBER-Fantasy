@@ -240,7 +240,7 @@ export class PrometheusAlgorithm {
     
     // WR consensus adjustments - elevate proven elite producers
     if (player.name === 'Tee Higgins' && player.position === 'WR') {
-      return Math.min(score, 87); // Strong WR2 but not elite tier
+      return Math.min(score, 75); // Good WR2 but injury concerns and not elite
     }
     if (player.name === 'Amon-Ra St. Brown' && player.position === 'WR') {
       return Math.max(score, 89); // Elite production should rank higher
@@ -321,29 +321,28 @@ export class PrometheusAlgorithm {
     let positionWeight = 1.0;
     
     if (position === 'QB') {
-      // QBs in superflex are premium - higher weight for elite QBs
-      if (dynastyValue >= 95) positionWeight = 1.25; // Elite QBs get 25% boost
-      else if (dynastyValue >= 85) positionWeight = 1.15; // Top tier QBs get 15% boost
+      // QBs in superflex - but not too aggressive
+      if (dynastyValue >= 95) positionWeight = 1.20; // Elite QBs get 20% boost
+      else if (dynastyValue >= 85) positionWeight = 1.12; // Top tier QBs get 12% boost
       else if (dynastyValue >= 75) positionWeight = 1.05; // Decent QBs get small boost
-      else positionWeight = 0.90; // Bad QBs get penalty
+      else positionWeight = 0.95; // Bad QBs get slight penalty
     } else if (position === 'RB') {
-      // RBs are scarce but risky - moderate weight adjustments
-      if (dynastyValue >= 90) positionWeight = 1.15; // Elite RBs get 15% boost
-      else if (dynastyValue >= 80) positionWeight = 1.08; // Good RBs get 8% boost
-      else if (dynastyValue >= 70) positionWeight = 1.02; // Decent RBs get small boost
-      else positionWeight = 0.85; // Bad RBs get larger penalty due to injury risk
+      // RBs are scarce but need realistic weighting
+      if (dynastyValue >= 95) positionWeight = 1.10; // Elite RBs get 10% boost
+      else if (dynastyValue >= 85) positionWeight = 1.05; // Good RBs get 5% boost
+      else if (dynastyValue >= 75) positionWeight = 1.02; // Decent RBs get small boost
+      else positionWeight = 0.90; // Lower tier RBs get penalty
     } else if (position === 'WR') {
-      // WRs are stable and predictable - baseline weights
-      if (dynastyValue >= 95) positionWeight = 1.10; // Elite WRs get 10% boost
-      else if (dynastyValue >= 85) positionWeight = 1.05; // Good WRs get 5% boost
-      else if (dynastyValue >= 75) positionWeight = 1.01; // Decent WRs get tiny boost
-      else positionWeight = 0.95; // Below average WRs get small penalty
+      // WRs are baseline - most stable position, minimal boosts
+      if (dynastyValue >= 98) positionWeight = 1.03; // Only truly elite WRs get small boost
+      else if (dynastyValue >= 95) positionWeight = 1.01; // Top WRs get tiny boost
+      else if (dynastyValue >= 85) positionWeight = 1.00; // Good WRs stay neutral
+      else positionWeight = 0.96; // Below average WRs get penalty
     } else if (position === 'TE') {
-      // TEs are extremely scarce at the top - high variance
-      if (dynastyValue >= 90) positionWeight = 1.20; // Elite TEs get 20% boost (Bowers)
-      else if (dynastyValue >= 75) positionWeight = 1.05; // Good TEs get 5% boost
-      else if (dynastyValue >= 60) positionWeight = 0.98; // Decent TEs slight penalty
-      else positionWeight = 0.80; // Bad TEs get large penalty
+      // TEs only elite ones matter
+      if (dynastyValue >= 90) positionWeight = 1.15; // Elite TEs get 15% boost
+      else if (dynastyValue >= 80) positionWeight = 1.02; // Good TEs get tiny boost
+      else positionWeight = 0.85; // Most TEs get significant penalty
     }
     
     // Value discrepancy factor - identify market inefficiencies
