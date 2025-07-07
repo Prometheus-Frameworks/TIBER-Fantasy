@@ -7,6 +7,7 @@ import { playerMapping } from './playerMapping';
 import { sleeperAPI } from './sleeperAPI';
 import { playerNameMapping } from './playerNameMapping';
 import { dynastyADPService } from './dynastyADPService';
+import { fallbackADPService } from './fallbackADPData';
 
 // Utility function for dynasty tier classification
 function getDynastyTierFromValue(dynastyValue: number): string {
@@ -323,20 +324,28 @@ export class RankingEnhancementService {
    */
   private async integrateADPData(player: EnhancedPlayer): Promise<void> {
     try {
-      // Get dynasty ADP for the player
-      const adpPlayer = await dynastyADPService.getPlayerADP(player.name);
+      // Try external ADP service first
+      let adpPlayer = await dynastyADPService.getPlayerADP(player.name);
+      let adpValue: number | null = null;
       
       if (adpPlayer && adpPlayer.adp) {
-        player.dynastyADP = adpPlayer.adp;
+        adpValue = adpPlayer.adp;
+      } else {
+        // Use fallback ADP data for key players
+        adpValue = fallbackADPService.getPlayerADP(player.name);
+      }
+      
+      if (adpValue) {
+        player.dynastyADP = adpValue;
         
         // Calculate ADP-weighted dynasty value
         // High ADP = more valuable (earlier draft pick)
         // Formula: Base dynasty value + ADP bonus
-        const adpBonus = this.calculateADPBonus(adpPlayer.adp, player.position);
+        const adpBonus = this.calculateADPBonus(adpValue, player.position);
         player.adpWeightedValue = Math.min(100, player.dynastyValue + adpBonus);
         
         // Determine value category based on ADP vs our ranking
-        const valueAnalysis = this.analyzePlayerValue(player, adpPlayer.adp);
+        const valueAnalysis = this.analyzePlayerValue(player, adpValue);
         player.valueCategory = valueAnalysis.category;
         player.adpDifference = valueAnalysis.difference;
         
