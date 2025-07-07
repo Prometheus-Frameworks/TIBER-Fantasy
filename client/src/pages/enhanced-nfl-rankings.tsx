@@ -39,7 +39,7 @@ export default function EnhancedNFLRankings() {
   });
 
   // Transform API response to match component interface
-  const enhancedPlayers: EnhancedPlayer[] = apiResponse?.players?.map((player: any, index: number) => ({
+  const enhancedPlayers: EnhancedPlayer[] = (apiResponse as any)?.players?.map((player: any, index: number) => ({
     rank: index + 1,
     name: player.name,
     position: player.position,

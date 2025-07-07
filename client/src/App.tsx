@@ -48,19 +48,9 @@ function Router() {
       <Route path="/player-analysis" component={PlayerAnalysisPage} />
       <Route path="/trade-history/:id" component={TradeHistoryPage} />
       <Route path="/dynasty-values" component={DynastyValuesPage} />
-      <Route path="/rankings" component={SimpleRankingsPage} />
-      <Route path="/ranking-analysis" component={RankingAnalysisPage} />
-      <Route path="/player-search" component={PlayerSearchDemo} />
-      <Route path="/value-rankings" component={ValueRankingsPage} />
-      <Route path="/league-rankings" component={LeagueRankingsPage} />
-      <Route path="/league-analysis" component={LeagueAnalysisPage} />
-      <Route path="/fantasy-moves" component={FantasyMovesPage} />
-      <Route path="/trending" component={TrendingPlayersPage} />
+      <Route path="/rankings" component={EnhancedNFLRankings} />
       <Route path="/compare-league" component={CompareLeaguePage} />
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
-      <Route path="/enhanced-rankings" component={EnhancedRankings} />
-      <Route path="/enhanced-nfl" component={EnhancedNFLRankings} />
-      <Route path="/prometheus" component={PrometheusRankings} />
       <Route path="/data-sources" component={DataSourcesPage} />
       <Route path="/about" component={About} />
       <Route path="/player/:id" component={PlayerProfile} />
