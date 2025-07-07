@@ -71,6 +71,61 @@ export interface CollegePlayer {
  * 2025 College Player Database - Top Dynasty Prospects
  */
 export const COLLEGE_DYNASTY_PROSPECTS: Record<string, CollegePlayer> = {
+  "Ashton Jeanty": {
+    id: 20000,
+    name: "Ashton Jeanty", 
+    position: "RB",
+    college: "Boise State",
+    year: "Junior",
+    
+    draftCapital: {
+      projectedRound: 1,
+      projectedPick: 8, // Top 10 pick
+      draftGrade: 94,
+      consensus: "Elite RB Prospect - Top 10 Pick"
+    },
+    
+    college2024: {
+      games: 14,
+      carries: 374,
+      rushingYards: 2497, // Leading nation in rushing
+      rushingTds: 29,
+      targets: 43,
+      receptions: 35,
+      receivingYards: 348,
+      receivingTds: 4
+    },
+    
+    physical: {
+      height: "5'9\"",
+      weight: 215,
+      age: 21,
+      armLength: "31 3/4\"",
+      handSize: "9 1/4\""
+    },
+    
+    athletic: {
+      estimatedFortyYard: 4.45,
+      estimatedRAS: 8.8,
+      athleticismGrade: 92
+    },
+    
+    dynastyProjection: {
+      immediateImpact: 88, // Elite rookie RB projection
+      ceilingGrade: 95, // Elite RB ceiling
+      floorGrade: 78, // High floor due to proven production
+      threeYearProjection: 92,
+      riskLevel: 'Low'
+    },
+    
+    scouting: {
+      strengths: ["Elite vision", "Breakaway speed", "Proven college production", "Pass-catching ability", "Durability"],
+      concerns: ["Size for NFL", "Competition level", "Workload concerns"],
+      comparison: "Brian Westbrook (size, versatility)",
+      scheme: "Zone/Outside - elite vision"
+    }
+  },
+  
   "Travis Hunter": {
     id: 20001,
     name: "Travis Hunter",

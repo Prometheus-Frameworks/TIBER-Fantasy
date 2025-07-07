@@ -32,11 +32,11 @@ export const EXPANDED_DYNASTY_DATABASE: DynastyPlayer[] = [
   { id: 8, name: 'Malik Nabers', position: 'WR', team: 'NYG', age: 22, avgPoints: 11.9, dynastyValue: 88, dynastyTier: 'Premium', adp: 5.2, isAvailable: true, upside: 32, consistency: 75 },
   { id: 9, name: 'Amon-Ra St. Brown', position: 'WR', team: 'DET', age: 25, avgPoints: 15.4, dynastyValue: 87, dynastyTier: 'Premium', adp: 8, isAvailable: true, upside: 25, consistency: 88 },
   { id: 10, name: 'Jayden Daniels', position: 'QB', team: 'WAS', age: 24, avgPoints: 20.1, dynastyValue: 86, dynastyTier: 'Premium', adp: 7, isAvailable: true, upside: 32, consistency: 78 },
-  { id: 11, name: 'Jahmyr Gibbs', position: 'RB', team: 'DET', age: 22, avgPoints: 15.7, dynastyValue: 85, dynastyTier: 'Premium', adp: 25, isAvailable: true, upside: 28, consistency: 85 },
+  { id: 11, name: 'Jahmyr Gibbs', position: 'RB', team: 'DET', age: 22, avgPoints: 16.8, dynastyValue: 92, dynastyTier: 'Premium', adp: 8, isAvailable: true, upside: 30, consistency: 85 },
   { id: 12, name: 'Brian Thomas Jr.', position: 'WR', team: 'JAX', age: 22, avgPoints: 14.8, dynastyValue: 84, dynastyTier: 'Premium', adp: 18, isAvailable: true, upside: 30, consistency: 75 },
   { id: 13, name: 'Trey McBride', position: 'TE', team: 'ARI', age: 24, avgPoints: 12.8, dynastyValue: 83, dynastyTier: 'Premium', adp: 32, isAvailable: true, upside: 22, consistency: 88 },
   { id: 14, name: 'Caleb Williams', position: 'QB', team: 'CHI', age: 23, avgPoints: 18.2, dynastyValue: 82, dynastyTier: 'Premium', adp: 15, isAvailable: true, upside: 35, consistency: 72 },
-  { id: 15, name: 'Bijan Robinson', position: 'RB', team: 'ATL', age: 22, avgPoints: 12.8, dynastyValue: 81, dynastyTier: 'Premium', adp: 28, isAvailable: true, upside: 28, consistency: 80 },
+  { id: 15, name: 'Bijan Robinson', position: 'RB', team: 'ATL', age: 22, avgPoints: 14.2, dynastyValue: 95, dynastyTier: 'Elite', adp: 3, isAvailable: true, upside: 32, consistency: 88 },
   { id: 16, name: 'Ladd McConkey', position: 'WR', team: 'LAC', age: 22, avgPoints: 13.2, dynastyValue: 80, dynastyTier: 'Premium', adp: 25, isAvailable: true, upside: 28, consistency: 72 },
   { id: 17, name: 'Marvin Harrison Jr.', position: 'WR', team: 'ARI', age: 22, avgPoints: 12.1, dynastyValue: 79, dynastyTier: 'Premium', adp: 42, isAvailable: true, upside: 32, consistency: 70 },
   { id: 18, name: 'Drake Maye', position: 'QB', team: 'NE', age: 22, avgPoints: 16.8, dynastyValue: 78, dynastyTier: 'Premium', adp: 48, isAvailable: true, upside: 35, consistency: 65 },
@@ -56,8 +56,8 @@ export const EXPANDED_DYNASTY_DATABASE: DynastyPlayer[] = [
   { id: 30, name: 'Dak Prescott', position: 'QB', team: 'DAL', age: 31, avgPoints: 21.4, dynastyValue: 66, dynastyTier: 'Strong', adp: 45, isAvailable: true, upside: 25, consistency: 85 },
   { id: 31, name: 'Tua Tagovailoa', position: 'QB', team: 'MIA', age: 27, avgPoints: 20.2, dynastyValue: 65, dynastyTier: 'Strong', adp: 52, isAvailable: true, upside: 28, consistency: 75 },
   { id: 32, name: 'Jordan Love', position: 'QB', team: 'GB', age: 26, avgPoints: 19.8, dynastyValue: 64, dynastyTier: 'Strong', adp: 48, isAvailable: true, upside: 30, consistency: 78 },
-  { id: 33, name: 'Breece Hall', position: 'RB', team: 'NYJ', age: 23, avgPoints: 11.2, dynastyValue: 63, dynastyTier: 'Strong', adp: 30, isAvailable: true, upside: 28, consistency: 70 },
-  { id: 34, name: 'Kenneth Walker III', position: 'RB', team: 'SEA', age: 24, avgPoints: 12.8, dynastyValue: 62, dynastyTier: 'Strong', adp: 38, isAvailable: true, upside: 25, consistency: 75 },
+  { id: 33, name: 'Breece Hall', position: 'RB', team: 'NYJ', age: 23, avgPoints: 13.5, dynastyValue: 88, dynastyTier: 'Premium', adp: 15, isAvailable: true, upside: 30, consistency: 80 },
+  { id: 34, name: 'Kenneth Walker III', position: 'RB', team: 'SEA', age: 24, avgPoints: 12.8, dynastyValue: 82, dynastyTier: 'Premium', adp: 25, isAvailable: true, upside: 28, consistency: 78 },
   { id: 35, name: 'Jonathan Taylor', position: 'RB', team: 'IND', age: 25, avgPoints: 13.4, dynastyValue: 61, dynastyTier: 'Strong', adp: 32, isAvailable: true, upside: 28, consistency: 78 },
   { id: 36, name: 'DeVonta Smith', position: 'WR', team: 'PHI', age: 26, avgPoints: 12.8, dynastyValue: 60, dynastyTier: 'Strong', adp: 42, isAvailable: true, upside: 25, consistency: 80 },
 
@@ -134,7 +134,7 @@ export const EXPANDED_DYNASTY_DATABASE: DynastyPlayer[] = [
   { id: 100, name: 'Tyler Lockett', position: 'WR', team: 'SEA', age: 32, avgPoints: 11.8, dynastyValue: 36, dynastyTier: 'Depth', adp: 62, isAvailable: true, upside: 18, consistency: 88 },
 
   // Additional RBs to expand database
-  { id: 101, name: 'De\'Von Achane', position: 'RB', team: 'MIA', age: 23, avgPoints: 12.4, dynastyValue: 58, dynastyTier: 'Solid', adp: 42, isAvailable: true, upside: 30, consistency: 70 },
+  { id: 101, name: 'De\'Von Achane', position: 'RB', team: 'MIA', age: 23, avgPoints: 15.1, dynastyValue: 85, dynastyTier: 'Premium', adp: 20, isAvailable: true, upside: 32, consistency: 75 },
   { id: 102, name: 'Isiah Pacheco', position: 'RB', team: 'KC', age: 25, avgPoints: 11.8, dynastyValue: 54, dynastyTier: 'Solid', adp: 48, isAvailable: true, upside: 25, consistency: 75 },
   { id: 103, name: 'James Cook', position: 'RB', team: 'BUF', age: 25, avgPoints: 11.2, dynastyValue: 52, dynastyTier: 'Solid', adp: 52, isAvailable: true, upside: 28, consistency: 72 },
   { id: 104, name: 'Javonte Williams', position: 'RB', team: 'DEN', age: 24, avgPoints: 9.8, dynastyValue: 48, dynastyTier: 'Solid', adp: 58, isAvailable: true, upside: 28, consistency: 65 },
