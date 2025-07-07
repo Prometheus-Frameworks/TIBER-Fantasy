@@ -12,6 +12,7 @@ import { db } from "./db";
 import { dynastyTradeHistory, players as playersTable } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { z } from "zod";
+import { jakeMaraiaValidator } from './jakeMaraiaValidation';
 
 /**
  * Apply league format adjustments to dynasty values
@@ -996,6 +997,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Only use authentic strengths/concerns - no generic fallbacks
+      
+      // Optional: Check against Jake Maraia benchmark (for development)
+      const jakeRank = jakeMaraiaValidator.getBenchmarkRank(player.name, player.position);
+      if (jakeRank && Math.abs(rank - jakeRank) > 10) {
+        console.log(`📊 ${player.name}: Our rank ${rank}, Jake Maraia ${jakeRank} (${Math.abs(rank - jakeRank)} spots difference)`);
+      }
 
       // Generate similar players
       const similarPlayers = [
@@ -1939,6 +1946,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `Failed to generate ${req.params.position} rankings`,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  // Jake Maraia validation endpoint (for development/testing)
+  app.get('/api/rankings/validate-jake-maraia', async (req, res) => {
+    try {
+      // Get current top 30 from each position for validation
+      const topPlayers = [
+        { name: "Ja'Marr Chase", position: "WR", rank: 1 },
+        { name: "Justin Jefferson", position: "WR", rank: 2 },
+        { name: "CeeDee Lamb", position: "WR", rank: 3 },
+        { name: "Malik Nabers", position: "WR", rank: 4 },
+        { name: "Brian Thomas Jr.", position: "WR", rank: 5 },
+        { name: "Ladd McConkey", position: "WR", rank: 9 },
+        { name: "Marvin Harrison Jr.", position: "WR", rank: 17 },
+        { name: "Rome Odunze", position: "WR", rank: 29 },
+        { name: "Bijan Robinson", position: "RB", rank: 1 },
+        { name: "Jahmyr Gibbs", position: "RB", rank: 2 },
+        { name: "Breece Hall", position: "RB", rank: 11 },
+        { name: "Josh Allen", position: "QB", rank: 1 },
+        { name: "Lamar Jackson", position: "QB", rank: 2 },
+        { name: "Patrick Mahomes II", position: "QB", rank: 8 },
+        { name: "Travis Kelce", position: "TE", rank: 6 }
+      ];
+
+      const accuracy = jakeMaraiaValidator.validateRankingAccuracy(topPlayers);
+      
+      res.json({
+        message: "Jake Maraia benchmark validation",
+        accuracy,
+        interpretation: accuracy.accuracyScore >= 80 ? 
+          "Algorithm performing well - most players within acceptable range" :
+          "Some ranking discrepancies detected - review major differences"
+      });
+    } catch (error) {
+      console.error("Jake Maraia validation error:", error);
+      res.status(500).json({ error: "Failed to validate rankings" });
     }
   });
 
