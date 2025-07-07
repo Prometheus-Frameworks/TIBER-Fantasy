@@ -32,7 +32,7 @@ import About from "@/pages/about";
 import EnhancedNFLRankings from "@/pages/enhanced-nfl-rankings";
 import PrometheusRankings from "@/pages/prometheus-rankings";
 import DataSourcesPage from "@/pages/data-sources";
-import TestADP from "@/pages/TestADP";
+import CleanADP from "@/pages/CleanADP";
 import NotFound from "@/pages/not-found";
 import SleeperDatabase from "@/pages/sleeper-database";
 
@@ -54,7 +54,7 @@ function Router() {
       <Route path="/compare-league" component={CompareLeaguePage} />
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
       <Route path="/data-sources" component={DataSourcesPage} />
-      <Route path="/adp" component={TestADP} />
+      <Route path="/adp" component={CleanADP} />
       <Route path="/about" component={About} />
       <Route path="/player/:id" component={PlayerProfile} />
       <Route path="/lineup" component={LineupOptimizer} />
