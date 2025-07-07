@@ -28,7 +28,7 @@ function applyLeagueFormatAdjustments(players: any[], format: string): any[] {
     let adjustment = 0;
     const baseValue = player.dynastyValue || 0;
 
-    if (format === 'single-qb') {
+    if (format === 'single-qb' || format === '1qb') {
       // Single QB: Significant penalty for QBs
       // Elite QBs (85+) drop to RB2/WR2 range (60-70)
       // Mid-tier QBs (70-84) drop to bench/streaming (35-55)
@@ -43,23 +43,26 @@ function applyLeagueFormatAdjustments(players: any[], format: string): any[] {
         adjustment = -20; // Already low
       }
     } else {
-      // Superflex: Premium for QBs with rookie experience penalty
-      // Only proven elite QBs (90+ base) get Elite tier boost
-      // Rookie/young QBs capped at Premium tier regardless of base score
+      // Superflex: MASSIVE QB premiums to match Jake Maraia's top 10
+      // Jake has Josh Allen #1, Jayden #2, Lamar #3, Burrow #6, Jalen #7
+      // Need to boost QBs into top 10 overall territory
       
-      const isRookieQB = player.age <= 24; // Rookies and 2nd year players
-      const maxBoostForRookies = isRookieQB ? 6 : 15; // Cap rookie boost
-      
-      if (baseValue >= 90) {
-        adjustment = +15; // Only proven elite QBs → Elite tier
-      } else if (baseValue >= 85) {
-        adjustment = Math.min(+10, maxBoostForRookies); // High potential → Premium tier max
-      } else if (baseValue >= 70) {
-        adjustment = Math.min(+8, maxBoostForRookies); // Mid QBs → capped boost
+      // Elite proven QBs → Top 3 overall (95-100+ range)
+      if (baseValue >= 85) {
+        adjustment = +20; // Josh Allen 97→100+, Lamar 98→100+
+      } else if (baseValue >= 75) {
+        adjustment = +18; // Joe Burrow, Jalen Hurts → Elite tier  
+      } else if (baseValue >= 65) {
+        adjustment = +15; // Mid-tier starters → Premium tier
       } else if (baseValue >= 50) {
-        adjustment = +6; // Startable QBs → moderate boost
+        adjustment = +12; // Fringe starters → Strong tier
       } else {
-        adjustment = +3; // Backup QBs → minimal boost
+        adjustment = +8; // Backup QBs → meaningful boost
+      }
+      
+      // Special boost for young elite QBs (Jayden Daniels phenomenon)
+      if (player.age <= 25 && baseValue >= 75) {
+        adjustment += 5; // Jayden Daniels #2 overall in superflex
       }
     }
 
@@ -1459,7 +1462,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enhancedPlayers = await rankingEnhancement.enhancePlayerRankings(playersToEnhance);
       
       // Apply league format adjustments
+      console.log(`🔧 Applying format adjustments for: ${format}`);
       const formatAdjustedPlayers = applyLeagueFormatAdjustments(enhancedPlayers, format as string);
+      
+      // Debug QB adjustments
+      const qbsAfterAdjustment = formatAdjustedPlayers.filter(p => p.position === 'QB').slice(0, 3);
+      console.log(`🔧 QB adjustments for ${format}:`, qbsAfterAdjustment.map(qb => ({ 
+        name: qb.name, 
+        baseValue: enhancedPlayers.find(ep => ep.id === qb.id)?.dynastyValue, 
+        adjustedValue: qb.dynastyValue,
+        adjustment: qb.leagueFormatAdjustment 
+      })));
       
       // Sort enhanced players by dynasty value (highest first) for true overall rankings
       formatAdjustedPlayers.sort((a: any, b: any) => (b.dynastyValue || 0) - (a.dynastyValue || 0));
