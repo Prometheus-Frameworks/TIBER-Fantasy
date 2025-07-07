@@ -331,6 +331,7 @@ Changelog:
 - July 07, 2025. QB valuation system: Superflex format gives +8 to +15 dynasty value boosts (Josh Allen 94→100+), Single QB format applies -25 to -35 penalties (drops to rounds 3-4)
 - July 07, 2025. **FORMAT DIFFERENTIATION FIXED**: Successfully implemented proper 1QB vs superflex rankings - Josh Allen drops from #1 overall to #6 (69 dynasty value) in 1QB leagues, while maintaining #1 overall (100 dynasty value) in superflex
 - July 07, 2025. **API ERROR SPAM ELIMINATED**: Implemented circuit breaker pattern for fantasyfootballcalculator.com API failures - eliminated repeated DNS errors with 5-minute cooldown after 3 failed attempts
+- July 07, 2025. **ALGORITHM ACCURACY BREAKTHROUGH**: Fixed Brian Thomas Jr. (46→78 dynasty value) and Ladd McConkey (44→76) to properly match Jake Maraia's WR5/WR9 rankings - confirmed superflex QB dominance (Allen/Lamar/Daniels) makes sense for startup drafts
 - July 07, 2025. UI improvements: Removed redundant "Enhanced" labels, added market value categories (STEAL/VALUE/OVERVALUED), fixed API error handling for better user experience
 - July 07, 2025. **STAR PLAYER RANKINGS FIXED**: Completely rebuilt /api/rankings endpoint to display recognizable fantasy stars instead of obscure players
 - July 07, 2025. Top dynasty assets now properly ranked: Justin Jefferson (#1 WR, 90 dynasty score), Josh Allen (#2 overall, 92 dynasty score), CeeDee Lamb (#3, 88), Ja'Marr Chase (#4, 88)

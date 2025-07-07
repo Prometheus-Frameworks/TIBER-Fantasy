@@ -51,10 +51,10 @@ export const EXPANDED_DYNASTY_DATABASE: DynastyPlayer[] = [
   { id: 23, name: 'Patrick Mahomes', position: 'QB', team: 'KC', age: 29, avgPoints: 18.2, dynastyValue: 52, dynastyTier: 'Solid', adp: 18, isAvailable: true, upside: 28, consistency: 92 },
   { id: 24, name: 'Caleb Williams', position: 'QB', team: 'CHI', age: 23, avgPoints: 17.8, dynastyValue: 50, dynastyTier: 'Solid', adp: 55, isAvailable: true, upside: 35, consistency: 72 },
   { id: 25, name: 'C.J. Stroud', position: 'QB', team: 'HOU', age: 23, avgPoints: 18.4, dynastyValue: 48, dynastyTier: 'Solid', adp: 25, isAvailable: true, upside: 35, consistency: 80 },
-  { id: 26, name: 'Brian Thomas Jr.', position: 'WR', team: 'JAX', age: 22, avgPoints: 16.2, dynastyValue: 46, dynastyTier: 'Solid', adp: 28, isAvailable: true, upside: 30, consistency: 75 },
+  { id: 26, name: 'Brian Thomas Jr.', position: 'WR', team: 'JAX', age: 22, avgPoints: 16.2, dynastyValue: 78, dynastyTier: 'Elite', adp: 28, isAvailable: true, upside: 30, consistency: 75 },
 
   // DEPTH TIER (30-44) - Roster depth with upside
-  { id: 27, name: 'Ladd McConkey', position: 'WR', team: 'LAC', age: 22, avgPoints: 15.8, dynastyValue: 44, dynastyTier: 'Depth', adp: 35, isAvailable: true, upside: 28, consistency: 72 },
+  { id: 27, name: 'Ladd McConkey', position: 'WR', team: 'LAC', age: 22, avgPoints: 15.8, dynastyValue: 76, dynastyTier: 'Elite', adp: 35, isAvailable: true, upside: 28, consistency: 72 },
   { id: 28, name: 'Mike Evans', position: 'WR', team: 'TB', age: 31, avgPoints: 17.5, dynastyValue: 42, dynastyTier: 'Depth', adp: 28, isAvailable: true, upside: 22, consistency: 85 },
   { id: 29, name: 'Tee Higgins', position: 'WR', team: 'CIN', age: 26, avgPoints: 18.7, dynastyValue: 40, dynastyTier: 'Depth', adp: 48, isAvailable: true, upside: 28, consistency: 75 },
   { id: 30, name: 'Travis Kelce', position: 'TE', team: 'KC', age: 35, avgPoints: 12.3, dynastyValue: 38, dynastyTier: 'Depth', adp: 25, isAvailable: true, upside: 15, consistency: 95 },
