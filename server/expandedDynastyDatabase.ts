@@ -40,7 +40,7 @@ export const EXPANDED_DYNASTY_DATABASE: DynastyPlayer[] = [
   // STRONG TIER (60-69) - Solid dynasty contributors
   { id: 15, name: 'Rome Odunze', position: 'WR', team: 'CHI', age: 22, avgPoints: 10.8, dynastyValue: 68, dynastyTier: 'Strong', adp: 22, isAvailable: true, upside: 32, consistency: 68 },
   { id: 16, name: 'Drake Maye', position: 'QB', team: 'NE', age: 22, avgPoints: 18.4, dynastyValue: 66, dynastyTier: 'Strong', adp: 45, isAvailable: true, upside: 35, consistency: 65 },
-  { id: 17, name: 'Tua Tagovailoa', position: 'QB', team: 'MIA', age: 26, avgPoints: 21.2, dynastyValue: 64, dynastyTier: 'Strong', adp: 28, isAvailable: true, upside: 28, consistency: 75 },
+  // Removed duplicate Tua entry - using correct stats below
   { id: 18, name: 'Dak Prescott', position: 'QB', team: 'DAL', age: 31, avgPoints: 20.4, dynastyValue: 62, dynastyTier: 'Strong', adp: 35, isAvailable: true, upside: 25, consistency: 82 },
   { id: 19, name: 'Kyren Williams', position: 'RB', team: 'LAR', age: 24, avgPoints: 17.8, dynastyValue: 60, dynastyTier: 'Strong', adp: 18, isAvailable: true, upside: 28, consistency: 78 },
 
@@ -162,7 +162,7 @@ export const EXPANDED_DYNASTY_DATABASE: DynastyPlayer[] = [
   { id: 112, name: 'Pat Freiermuth', position: 'TE', team: 'PIT', age: 26, avgPoints: 7.8, dynastyValue: 42, dynastyTier: 'Depth', adp: 38, isAvailable: true, upside: 22, consistency: 70 },
 
   // More QBs
-  { id: 113, name: 'Tua Tagovailoa', position: 'QB', team: 'MIA', age: 26, avgPoints: 16.8, dynastyValue: 58, dynastyTier: 'Solid', adp: 35, isAvailable: true, upside: 25, consistency: 78 },
+  { id: 113, name: 'Tua Tagovailoa', position: 'QB', team: 'MIA', age: 26, avgPoints: 16.8, dynastyValue: 0, dynastyTier: 'Bench', adp: 35, isAvailable: true, upside: 25, consistency: 78 }, // Will be overridden by algorithm
   { id: 114, name: 'Dak Prescott', position: 'QB', team: 'DAL', age: 31, avgPoints: 17.0, dynastyValue: 52, dynastyTier: 'Solid', adp: 18, isAvailable: true, upside: 20, consistency: 85 },
   { id: 115, name: 'Jalen Hurts', position: 'QB', team: 'PHI', age: 26, avgPoints: 18.6, dynastyValue: 68, dynastyTier: 'Strong', adp: 12, isAvailable: true, upside: 30, consistency: 75 },
   { id: 116, name: 'Joe Burrow', position: 'QB', team: 'CIN', age: 28, avgPoints: 19.2, dynastyValue: 78, dynastyTier: 'Elite', adp: 8, isAvailable: true, upside: 32, consistency: 80 },

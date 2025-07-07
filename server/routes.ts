@@ -105,15 +105,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enhance players with mapping data
       let enhancedPlayers = await rankingEnhancement.enhancePlayerRankings(playersToEnhance);
       
-      // Apply Jake Maraia's authentic dynasty algorithm
-      console.log('🔧 Applying Jake Maraia dynasty methodology...');
+      // Apply Jake Maraia's authentic dynasty algorithm - OVERRIDE all database values
+      console.log('🔧 Applying Jake Maraia dynasty methodology (OVERRIDING database values)...');
       const { jakeMaraiaAlgorithm } = await import('./jakeMaraiaAlgorithm');
       
       enhancedPlayers = enhancedPlayers.map(player => {
         const jakeScore = jakeMaraiaAlgorithm.calculateJakeScore(player);
+        console.log(`🔧 ${player.name}: Database=${player.dynastyValue} → Algorithm=${jakeScore.totalScore}`);
         return {
           ...player,
-          dynastyValue: jakeScore.totalScore,
+          dynastyValue: jakeScore.totalScore,  // OVERRIDE database value
           dynastyTier: jakeScore.tier,
           jakeMaraiaScore: jakeScore
         };

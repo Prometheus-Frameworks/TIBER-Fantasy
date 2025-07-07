@@ -25,6 +25,12 @@ export class JakeMaraiaAlgorithm {
     const efficiency = this.calculateEfficiencyScore(player);
     const stability = this.calculateStabilityScore(player);
     
+    // Debug logging for Tua specifically
+    if (player.name === 'Tua Tagovailoa') {
+      console.log(`🔍 TUA DEBUG - Production: ${production}, Age: ${age}, Opportunity: ${opportunity}, Efficiency: ${efficiency}, Stability: ${stability}`);
+      console.log(`🔍 TUA AVG POINTS: ${player.avgPoints}`);
+    }
+    
     // Jake's weighting: Heavy on production and age, with superflex QB premium
     let totalScore = Math.round(
       (production * 0.40) +
@@ -34,15 +40,27 @@ export class JakeMaraiaAlgorithm {
       (stability * 0.05)
     );
     
+    // Debug logging for Tua base score
+    if (player.name === 'Tua Tagovailoa') {
+      console.log(`🔍 TUA BASE SCORE: ${totalScore}`);
+    }
+    
     // Superflex QB premium - EXTREMELY selective for only elite QBs
     if (player.position === 'QB' && totalScore >= 85) {
       totalScore += 12; // Premium only for truly elite QBs (Josh Allen, Lamar, Jayden)
+      if (player.name === 'Tua Tagovailoa') console.log(`🔍 TUA +12 PREMIUM`);
     } else if (player.position === 'QB' && totalScore >= 75) {
       totalScore += 6;  // Small premium for top-tier QBs (Burrow range)
+      if (player.name === 'Tua Tagovailoa') console.log(`🔍 TUA +6 PREMIUM`);
     } else if (player.position === 'QB' && totalScore >= 60) {
       totalScore += 2;  // Minimal premium for decent QBs
+      if (player.name === 'Tua Tagovailoa') console.log(`🔍 TUA +2 PREMIUM`);
     }
     // No premium for QBs scoring below 60 - they should rank appropriately low
+    
+    if (player.name === 'Tua Tagovailoa') {
+      console.log(`🔍 TUA FINAL SCORE: ${totalScore}`);
+    }
     
     return {
       production,
