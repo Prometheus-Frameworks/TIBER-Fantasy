@@ -32,15 +32,10 @@ export default function Home() {
                 Prometheus
               </span>
             </h1>
-            <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-lg border border-orange-200 mb-8 max-w-4xl mx-auto">
-              <p className="text-2xl font-semibold text-gray-800 mb-3">
-                "This is the best you can get for free. Trust me."
-              </p>
-              <p className="text-lg text-gray-600">
-                Professional dynasty analytics powered by proprietary algorithms and authentic NFL data—
-                completely free, no paywalls, no premium tiers.
-              </p>
-            </div>
+            <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
+              Professional dynasty analytics powered by proprietary algorithms and authentic NFL data—
+              completely free, no paywalls, no premium tiers.
+            </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Link href="/rankings">
                 <Button size="lg" className="px-8 py-3 text-lg">
