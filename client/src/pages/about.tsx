@@ -46,14 +46,20 @@ export default function About() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-lg text-gray-700 leading-relaxed">
-              <strong>We stand at the threshold of an unprecedented era in human history.</strong> As data becomes the new currency of understanding, 
-              we have a choice: hoard knowledge behind paywalls, or democratize insights to strengthen our communities.
-            </p>
+            <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-lg border border-orange-200">
+              <p className="text-xl font-semibold text-gray-800 leading-relaxed mb-4">
+                <strong>"This is the best you can get for free. Trust me."</strong>
+              </p>
+              <p className="text-lg text-gray-700 leading-relaxed">
+                We refuse to compromise on our core belief: elite fantasy analytics should not be locked behind paywalls. 
+                While others charge premium subscriptions for advanced data, Prometheus delivers the highest quality dynasty rankings, 
+                player analytics, and market insights available—completely free.
+              </p>
+            </div>
             <p className="text-gray-600">
-              Fantasy football represents something deeper than entertainment—it's millions of people passionate about analytical thinking, 
-              strategic decision-making, and friendly competition. When we make advanced data accessible to all, we're not just improving fantasy teams; 
-              we're fostering a culture where informed decision-making thrives at every level of society.
+              We've built our platform using authentic NFL data, proprietary statistical algorithms, and comprehensive multi-year analysis 
+              to ensure you're getting professional-grade insights without paying a cent. No hidden tiers, no premium upgrades, 
+              no "upgrade to see more" buttons—just the best free fantasy data available anywhere.
             </p>
             <p className="text-gray-600">
               Like Prometheus stealing fire from the gods, we believe transformative knowledge belongs in the hands of the people, 
