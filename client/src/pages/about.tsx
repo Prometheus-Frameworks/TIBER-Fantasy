@@ -49,11 +49,11 @@ export default function About() {
           <CardContent className="space-y-4">
             <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-6 rounded-lg border border-gray-200">
               <p className="text-lg text-gray-700 leading-relaxed">
-                As we enter a new and unprecedented era in human history, we must place emphasis on the democratization of data and knowledge. 
-                Fantasy football serves as our gateway - a proving ground where analytical mastery translates directly to competitive advantage. 
-                Prometheus seeks to eliminate the artificial scarcity of elite insights, recognizing that when knowledge flows freely, 
-                our collective intellectual capacity expands exponentially. This is not merely about fantasy sports; 
-                it is about removing barriers that have historically segregated human potential based on economic access.
+                This is our contribution to the new generation—proving we can elevate fantasy football into something profoundly transformational. 
+                We demonstrate that the barriers separating amateur from elite analytics are merely illusions of a trapped society 
+                that profits from keeping transformative knowledge locked behind paywalls. Our platform proves we have the capacity 
+                to smash these remaining barriers, liberating analytical sophistication for everyone who refuses to accept artificial scarcity 
+                as the natural order.
               </p>
             </div>
             <p className="text-gray-600">
@@ -67,42 +67,42 @@ export default function About() {
               The future belongs to those who understand that when knowledge is democratized, the entire species benefits.
             </p>
             <div className="flex flex-wrap gap-2 pt-4">
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700">Human Evolution</Badge>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700">Intellectual Liberation</Badge>
-              <Badge variant="secondary" className="bg-green-100 text-green-700">Universal Access</Badge>
-              <Badge variant="secondary" className="bg-purple-100 text-purple-700">Barrier Destruction</Badge>
-              <Badge variant="secondary" className="bg-red-100 text-red-700">Knowledge Democracy</Badge>
-              <Badge variant="secondary" className="bg-indigo-100 text-indigo-700">Promethean Vision</Badge>
+              <Badge variant="secondary" className="bg-orange-100 text-orange-700">Generational Gift</Badge>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700">Barrier Smashing</Badge>
+              <Badge variant="secondary" className="bg-green-100 text-green-700">Hobby Elevation</Badge>
+              <Badge variant="secondary" className="bg-purple-100 text-purple-700">Illusion Destruction</Badge>
+              <Badge variant="secondary" className="bg-red-100 text-red-700">Trapped Society Liberation</Badge>
+              <Badge variant="secondary" className="bg-indigo-100 text-indigo-700">New Generation Proof</Badge>
             </div>
           </CardContent>
         </Card>
 
-        {/* Philosophical Foundation */}
+        {/* Generational Contribution */}
         <Card className="mb-12 border-0 bg-gradient-to-r from-slate-50 to-gray-50 backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-center gap-3">
               <Brain className="h-6 w-6 text-indigo-500" />
-              <CardTitle className="text-2xl">The Intellectual Revolution</CardTitle>
+              <CardTitle className="text-2xl">Our Contribution to the New Generation</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-700">
-              <strong>Fantasy football is merely our starting point.</strong> We recognize that analytical sophistication 
-              has become the new currency of competitive advantage across all domains of human endeavor. 
-              By democratizing access to elite analytical frameworks within fantasy sports, we establish a precedent 
-              that will reshape how knowledge is distributed throughout society.
+              <strong>This is our proof that we can elevate a hobby into something transformational.</strong> Fantasy football becomes 
+              the laboratory where we demonstrate humanity's capacity to democratize elite intelligence. 
+              We are proving that the barriers between "amateur" and "professional" analytics are nothing but illusions 
+              of a trapped society that profits from artificial scarcity.
             </p>
             <p className="text-gray-700">
-              <strong>This movement represents human evolution in action.</strong> For millennia, transformative knowledge 
-              was hoarded by institutions, accessible only to those who could afford entry fees. We reject this paradigm. 
-              When analytical tools that once cost thousands become freely accessible, we accelerate the intellectual 
-              development of our entire species. The barriers fall, and human potential is unleashed.
+              <strong>We have the capacity to smash these remaining barriers.</strong> The gatekeepers who claim exclusive ownership 
+              over analytical sophistication are defending crumbling walls. When we liberate fantasy analytics from paywall prisons, 
+              we establish the template for liberating knowledge across every domain. This generation will not accept that 
+              transformative insights must be purchased from institutional monopolies.
             </p>
             <p className="text-gray-700">
-              <strong>The future demands nothing less.</strong> As artificial intelligence reshapes civilization, 
-              those with access to sophisticated analytical thinking will thrive, while others will be left behind. 
-              We refuse to accept a future where intellectual capability is determined by economic status. 
-              Prometheus steals fire from the gods not for profit, but to ensure humanity's collective advancement.
+              <strong>Fantasy football is our gift to the future.</strong> We prove that ordinary people, armed with the right tools, 
+              can achieve analytical sophistication that rivals the most expensive premium platforms. 
+              This movement transcends sports—it demonstrates humanity's evolutionary leap toward universal access to intelligence itself. 
+              The barriers were always illusions. We are simply brave enough to walk through them.
             </p>
           </CardContent>
         </Card>
@@ -171,6 +171,35 @@ export default function About() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Proof of Concept */}
+        <Card className="mb-12 border-0 bg-gradient-to-r from-indigo-50 to-purple-50 backdrop-blur-sm">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Zap className="h-6 w-6 text-purple-500" />
+              <CardTitle className="text-2xl">Living Proof of Concept</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-gray-700">
+              <strong>Every ranking, every analysis, every insight on this platform serves as evidence.</strong> 
+              We prove daily that the supposed expertise gap between amateur and professional analytics is a fabricated illusion. 
+              When our free platform delivers dynasty valuations that rival $200+ subscription services, 
+              we demonstrate that the barriers were always artificial constructs designed to extract profit.
+            </p>
+            <p className="text-gray-700">
+              <strong>This is what happens when a generation refuses to accept limitations.</strong> 
+              We took a hobby and elevated it into a demonstration of human potential unleashed. 
+              Every user who discovers an undervalued player through our analytics becomes living proof 
+              that transformative intelligence belongs to everyone willing to think beyond imposed boundaries.
+            </p>
+            <div className="bg-white/60 p-6 rounded-lg border border-purple-200">
+              <p className="text-purple-800 font-semibold text-center text-lg">
+                "Fantasy football was our choice of battleground. The war we're winning is against the illusion that knowledge must be purchased."
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Support Section */}
         <Card className="border-0 bg-gradient-to-r from-orange-50 to-red-50 shadow-xl">
