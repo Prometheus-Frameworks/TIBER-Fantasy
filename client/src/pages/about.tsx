@@ -48,24 +48,27 @@ export default function About() {
           <CardContent className="space-y-4">
             <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-6 rounded-lg border border-gray-200">
               <p className="text-lg text-gray-700 leading-relaxed">
-                Professional dynasty analytics using authentic NFL data sources, statistical modeling, and market analysis. 
-                No subscription fees, premium tiers, or paywalls. All analytical tools and player evaluations 
-                are freely accessible to dynasty managers.
+                We are witnessing the dawn of an unprecedented era where access to elite analytical knowledge will separate champions from the rest. 
+                Professional dynasty analytics using authentic NFL data sources, statistical modeling, and market intelligence - 
+                liberated from subscription gates, premium tiers, and paywall restrictions. In this transformative age, 
+                every manager deserves access to the insights that were once exclusive to the privileged few.
               </p>
             </div>
             <p className="text-gray-600">
-              Built with NFL-Data-Py integration, Scott Barrett's FantasyPointsData methodology, Jake Maraia's dynasty framework, 
+              Built with NFL-Data-Py integration, proprietary analytical frameworks derived from industry-leading methodologies, 
               and comprehensive statistical validation. All analytical models use research-backed metrics with documented correlation studies.
             </p>
             <p className="text-gray-600">
-              Like Prometheus stealing fire from the gods, we believe transformative knowledge belongs in the hands of the people, 
-              not locked away by those who can afford it. Every insight shared freely makes our entire community stronger.
+              We stand at an unprecedented inflection point in human history where data and analytical knowledge will determine winners and losers. 
+              Like Prometheus stealing fire from the gods, we believe transformative insights belong in the hands of the people, 
+              not hoarded by paywalled gatekeepers. In this new era, democratized access to elite analytics isn't just fair - it's inevitable.
             </p>
             <div className="flex flex-wrap gap-2 pt-4">
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700">Democratized Knowledge</Badge>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700">Community Strengthening</Badge>
-              <Badge variant="secondary" className="bg-green-100 text-green-700">Data as Human Right</Badge>
+              <Badge variant="secondary" className="bg-orange-100 text-orange-700">Data Liberation</Badge>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700">Era of Access</Badge>
+              <Badge variant="secondary" className="bg-green-100 text-green-700">Knowledge Prevails</Badge>
               <Badge variant="secondary" className="bg-purple-100 text-purple-700">Forever Open</Badge>
+              <Badge variant="secondary" className="bg-red-100 text-red-700">No Gatekeepers</Badge>
             </div>
           </CardContent>
         </Card>

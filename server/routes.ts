@@ -12,7 +12,7 @@ import { db } from "./db";
 import { dynastyTradeHistory, players as playersTable } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { z } from "zod";
-import { jakeMaraiaValidator } from './jakeMaraiaValidation';
+import { expertConsensusValidator } from './jakeMaraiaValidation';
 
 /**
  * Apply league format adjustments to dynasty values
@@ -1708,7 +1708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         players: enhancedRankings,
-        analytics: 'Scott Barrett FantasyPointsData methodology',
+        analytics: 'Industry-leading analytical methodology',
         timestamp: new Date().toISOString()
       });
     } catch (error: any) {
@@ -1728,7 +1728,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         insights,
         validation,
         methodology: {
-          yprr_threshold: '2.00+ for NFL success',
+          yprr_threshold: '2.00+ for elite performance',
           tprr_threshold: '0.20+ for solid target earning',
           actualOpportunity_correlation: '0.97 with fantasy points',
           bellCow_threshold: '75+ index for RB dominance'
