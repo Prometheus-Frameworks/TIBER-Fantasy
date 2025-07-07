@@ -1,0 +1,5654 @@
+[
+  {
+    "nfl_id": "00-0034857",
+    "sleeper_id": "4984",
+    "espn_id": null,
+    "name": "Josh Allen",
+    "team": "BUF",
+    "position": "QB",
+    "confidence": 85
+  },
+  {
+    "nfl_id": "00-0034796",
+    "sleeper_id": "4881",
+    "espn_id": null,
+    "name": "Lamar Jackson",
+    "team": "BAL",
+    "position": "QB",
+    "confidence": 85
+  },
+  {
+    "nfl_id": "00-0036389",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jhurts",
+    "team": "PHI",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033873",
+    "sleeper_id": "4046",
+    "espn_id": null,
+    "name": "Patrick Mahomes",
+    "team": "KC",
+    "position": "QB",
+    "confidence": 85
+  },
+  {
+    "nfl_id": "00-0034855",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bmayfield",
+    "team": "TB",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033106",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jgoff",
+    "team": "DET",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037834",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bpurdy",
+    "team": "SF",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036264",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jlove",
+    "team": "GB",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039163",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cstroud",
+    "team": "HOU",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036355",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jherbert",
+    "team": "LAC",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036442",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jburrow",
+    "team": "CIN",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0026498",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mstafford",
+    "team": "LA",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0030565",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gsmith",
+    "team": "SEA",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033077",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dprescott",
+    "team": "DAL",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036212",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ttagovailoa",
+    "team": "MIA",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035228",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kmurray",
+    "team": "ARI",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039910",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jdaniels",
+    "team": "WAS",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036971",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tlawrence",
+    "team": "JAX",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031280",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dcarr",
+    "team": "NO",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039150",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Byoung",
+    "team": "CAR",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039732",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bnix",
+    "team": "DEN",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034869",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Sdarnold",
+    "team": "MIN",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037077",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Showell",
+    "team": "WAS",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0029263",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rwilson",
+    "team": "DEN",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0023459",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Arodgers",
+    "team": "NYJ",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039918",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cwilliams",
+    "team": "CHI",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039164",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Arichardson",
+    "team": "IND",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036945",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jfields",
+    "team": "CHI",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039152",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Wlevis",
+    "team": "TEN",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038579",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ao'connell",
+    "team": "LV",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035289",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gminshew",
+    "team": "IND",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035710",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Djones",
+    "team": "NYG",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0029263",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rwilson",
+    "team": "PIT",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038122",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dridder",
+    "team": "ATL",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039851",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dmaye",
+    "team": "NE",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0029604",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kcousins",
+    "team": "ATL",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033537",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dwatson",
+    "team": "CLE",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0029604",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kcousins",
+    "team": "MIN",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035100",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jbrowning",
+    "team": "CIN",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031503",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jwinston",
+    "team": "CLE",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033949",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jdobbs",
+    "team": "ARI",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037013",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Zwilson",
+    "team": "NYJ",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036945",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jfields",
+    "team": "PIT",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0026158",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jflacco",
+    "team": "CLE",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033662",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Crush",
+    "team": "DAL",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038102",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kpickett",
+    "team": "PIT",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038476",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tdevito",
+    "team": "NYG",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036972",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mjones",
+    "team": "NE",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0026158",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jflacco",
+    "team": "IND",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035289",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gminshew",
+    "team": "LV",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036972",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mjones",
+    "team": "JAX",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034771",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mrudolph",
+    "team": "TEN",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0028118",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ttaylor",
+    "team": "NYG",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0027973",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Adalton",
+    "team": "CAR",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035704",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dlock",
+    "team": "NYG",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0029701",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rtannehill",
+    "team": "TEN",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033949",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jdobbs",
+    "team": "MIN",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038108",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bzappe",
+    "team": "NE",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033319",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Nmullens",
+    "team": "MIN",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035282",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Estick",
+    "team": "LAC",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039376",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Srattler",
+    "team": "NO",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031800",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Theinicke",
+    "team": "ATL",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031345",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jgaroppolo",
+    "team": "LV",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035993",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Thuntley",
+    "team": "MIA",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034771",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mrudolph",
+    "team": "PIT",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038416",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tbagent",
+    "team": "CHI",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038128",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mwillis",
+    "team": "GB",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033869",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mtrubisky",
+    "team": "PIT",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032268",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mmariota",
+    "team": "WAS",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033119",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jbrissett",
+    "team": "NE",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039917",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mpenix",
+    "team": "ATL",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038583",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dthompson-robinson",
+    "team": "CLE",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033949",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jdobbs",
+    "team": "SF",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035704",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dlock",
+    "team": "SEA",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038400",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tmckee",
+    "team": "PHI",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036898",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dmills",
+    "team": "HOU",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035264",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jstidham",
+    "team": "DEN",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032156",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tsiemian",
+    "team": "NYJ",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032950",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cwentz",
+    "team": "LA",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035993",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Thuntley",
+    "team": "BAL",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038102",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kpickett",
+    "team": "PHI",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034869",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Sdarnold",
+    "team": "SF",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033119",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jbrissett",
+    "team": "WAS",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038122",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dridder",
+    "team": "LV",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033936",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cbeathard",
+    "team": "JAX",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0028118",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ttaylor",
+    "team": "NYJ",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033275",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Pwalker",
+    "team": "CLE",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031345",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jgaroppolo",
+    "team": "LA",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039398",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jmilton",
+    "team": "NE",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033869",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mtrubisky",
+    "team": "BUF",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032436",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jdriskel",
+    "team": "CLE",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038998",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jhaener",
+    "team": "NO",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037012",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tlance",
+    "team": "DAL",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031503",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jwinston",
+    "team": "NO",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032268",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mmariota",
+    "team": "PHI",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034177",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tboyle",
+    "team": "NYJ",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0028986",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ckeenum",
+    "team": "HOU",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037327",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Sthompson",
+    "team": "MIA",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034177",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tboyle",
+    "team": "MIA",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038108",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bzappe",
+    "team": "CLE",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034177",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tboyle",
+    "team": "NYG",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034955",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Brypien",
+    "team": "LA",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032434",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ballen",
+    "team": "SF",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0027948",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bgabbert",
+    "team": "KC",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038582",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ctune",
+    "team": "ARI",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0026625",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bhoyer",
+    "team": "LV",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032950",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cwentz",
+    "team": "KC",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031800",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Theinicke",
+    "team": "LAC",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038128",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mwillis",
+    "team": "TEN",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038550",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Hhooker",
+    "team": "DET",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038598",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jhall",
+    "team": "MIN",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034401",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mwhite",
+    "team": "MIA",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038391",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Sclifford",
+    "team": "GB",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034401",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mwhite",
+    "team": "BUF",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0026300",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jjohnson",
+    "team": "BAL",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034577",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kallen",
+    "team": "PIT",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031288",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Amccarron",
+    "team": "CIN",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037324",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Coladokun",
+    "team": "KC",
+    "position": "QB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039139",
+    "sleeper_id": "9221",
+    "espn_id": null,
+    "name": "Jahmyr Gibbs",
+    "team": "DET",
+    "position": "RB",
+    "confidence": 85
+  },
+  {
+    "nfl_id": "00-0038542",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Brobinson",
+    "team": "ATL",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037248",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jcook",
+    "team": "BUF",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037840",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kwilliams",
+    "team": "LA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038120",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bhall",
+    "team": "NYJ",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033280",
+    "sleeper_id": "4034",
+    "espn_id": null,
+    "name": "Christian McCaffrey",
+    "team": "SF",
+    "position": "RB",
+    "confidence": 85
+  },
+  {
+    "nfl_id": "00-0037256",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rwhite",
+    "team": "TB",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033906",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Akamara",
+    "team": "NO",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039040",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dachane",
+    "team": "MIA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035685",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dmontgomery",
+    "team": "DET",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034844",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Sbarkley",
+    "team": "PHI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033553",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jconner",
+    "team": "ARI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036555",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Chubbard",
+    "team": "CAR",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036893",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Nharris",
+    "team": "PIT",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036973",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tetienne",
+    "team": "JAX",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036223",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jtaylor",
+    "team": "IND",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037746",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Brobinson",
+    "team": "WAS",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032764",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dhenry",
+    "team": "BAL",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038134",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kwalker",
+    "team": "SEA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037267",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jford",
+    "team": "CLE",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037197",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ipacheco",
+    "team": "KC",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036997",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jwilliams",
+    "team": "DEN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031687",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rmostert",
+    "team": "MIA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037228",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jwarren",
+    "team": "PIT",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036875",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rstevenson",
+    "team": "NE",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035700",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jjacobs",
+    "team": "GB",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038597",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cbrown",
+    "team": "CIN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036139",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rdowdle",
+    "team": "DAL",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039165",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Zcharbonnet",
+    "team": "SEA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033897",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jmixon",
+    "team": "HOU",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034975",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jhill",
+    "team": "BAL",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039032",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tspears",
+    "team": "TEN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033897",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jmixon",
+    "team": "CIN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039361",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Birving",
+    "team": "TB",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033293",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ajones",
+    "team": "MIN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032764",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dhenry",
+    "team": "TEN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035261",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tpollard",
+    "team": "DAL",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037263",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tallgeier",
+    "team": "ATL",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034844",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Sbarkley",
+    "team": "NYG",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036275",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dswift",
+    "team": "CHI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036275",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dswift",
+    "team": "PHI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038794",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jmclaughlin",
+    "team": "DEN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035261",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tpollard",
+    "team": "TEN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034184",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gedwards",
+    "team": "BAL",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035250",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dsingletary",
+    "team": "HOU",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036158",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jdobbins",
+    "team": "LAC",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033699",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Aekeler",
+    "team": "LAC",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033293",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ajones",
+    "team": "GB",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033923",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Khunt",
+    "team": "KC",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039384",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ttracy",
+    "team": "NYG",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035700",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jjacobs",
+    "team": "LV",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039021",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rjohnson",
+    "team": "CHI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033045",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Eelliott",
+    "team": "NE",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036919",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kgainwell",
+    "team": "PHI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036251",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Zmoss",
+    "team": "IND",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032104",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Aabdullah",
+    "team": "LV",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035243",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Msanders",
+    "team": "CAR",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037525",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jmason",
+    "team": "SF",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033699",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Aekeler",
+    "team": "WAS",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035537",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tjohnson",
+    "team": "BUF",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038555",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tbigsby",
+    "team": "JAX",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033923",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Khunt",
+    "team": "CLE",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034972",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Amattison",
+    "team": "LV",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034972",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Amattison",
+    "team": "MIN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037276",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tchandler",
+    "team": "MIN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037258",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dpierce",
+    "team": "HOU",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038705",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Edemercado",
+    "team": "ARI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036328",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Agibson",
+    "team": "WAS",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039875",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rdavis",
+    "team": "BUF",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036906",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kherbert",
+    "team": "CHI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033526",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Sperine",
+    "team": "DEN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038797",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ewilson",
+    "team": "GB",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036265",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Adillon",
+    "team": "GB",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036414",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cakers",
+    "team": "MIN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036328",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Agibson",
+    "team": "NE",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038040",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Zwhite",
+    "team": "LV",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033948",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jwilliams",
+    "team": "NO",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035250",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dsingletary",
+    "team": "NYG",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039363",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Iguerendo",
+    "team": "SF",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0030513",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Lmurray",
+    "team": "BUF",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033925",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dforeman",
+    "team": "CHI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031376",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jmckinnon",
+    "team": "KC",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034791",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Nchubb",
+    "team": "CLE",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039794",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ballen",
+    "team": "NYJ",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033526",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Sperine",
+    "team": "KC",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036251",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Zmoss",
+    "team": "CIN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036360",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cedwards-helaire",
+    "team": "KC",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038098",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Pstrong",
+    "team": "CLE",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038454",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kmitchell",
+    "team": "BAL",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036984",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tsermon",
+    "team": "IND",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038951",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Stucker",
+    "team": "TB",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038551",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kmiller",
+    "team": "NO",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033955",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jmcnichols",
+    "team": "WAS",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035628",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Djohnson",
+    "team": "JAX",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038611",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Crodriguez",
+    "team": "WAS",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036924",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mcarter",
+    "team": "ARI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033854",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dogunbowale",
+    "team": "HOU",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034184",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gedwards",
+    "team": "LAC",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037120",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tgoodson",
+    "team": "IND",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036370",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jkelley",
+    "team": "LAC",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035567",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Creynolds",
+    "team": "DET",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033045",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Eelliott",
+    "team": "DAL",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036567",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Emitchell",
+    "team": "SF",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034115",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jwilson",
+    "team": "MIA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039373",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Aestime",
+    "team": "DEN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034681",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cedmonds",
+    "team": "TB",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039921",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tbenson",
+    "team": "ARI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033308",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mbreida",
+    "team": "NYG",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037557",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rrivers",
+    "team": "LA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034838",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rfreeman",
+    "team": "LA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039798",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Idavis",
+    "team": "NYJ",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038685",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cbrooks",
+    "team": "GB",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035664",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dhenderson",
+    "team": "LA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036020",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Sahmed",
+    "team": "MIA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033893",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dcook",
+    "team": "NYJ",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0030578",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cpatterson",
+    "team": "PIT",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0030578",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cpatterson",
+    "team": "ATL",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039738",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bcorum",
+    "team": "LA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037617",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Hhaskins",
+    "team": "LAC",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039391",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kvidal",
+    "team": "LAC",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033925",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dforeman",
+    "team": "CLE",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038396",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Egray",
+    "team": "NYG",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035973",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ptaylor",
+    "team": "GB",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036414",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cakers",
+    "team": "HOU",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035973",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ptaylor",
+    "team": "SF",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039746",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Wshipley",
+    "team": "PHI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035806",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jhasty",
+    "team": "NE",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036297",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Devans",
+    "team": "CHI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037509",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Smccormick",
+    "team": "LV",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038622",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dvaughn",
+    "team": "DAL",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039874",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jwright",
+    "team": "MIA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038678",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jmims",
+    "team": "NO",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036924",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mcarter",
+    "team": "NYJ",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035860",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tjones",
+    "team": "NO",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037429",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rblackshear",
+    "team": "CAR",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039325",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Csteele",
+    "team": "KC",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038636",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kmcintosh",
+    "team": "SEA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036906",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kherbert",
+    "team": "CIN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037286",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kharris",
+    "team": "NE",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036425",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ddallas",
+    "team": "ARI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032144",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mgordon",
+    "team": "BAL",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035657",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dharris",
+    "team": "BUF",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038045",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ispiller",
+    "team": "LAC",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035860",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tjones",
+    "team": "ARI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038389",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Iabanikanda",
+    "team": "NYJ",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034414",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bscott",
+    "team": "PHI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035291",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Twilliams",
+    "team": "CIN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036269",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Lperine",
+    "team": "KC",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037299",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kingram",
+    "team": "ARI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037745",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Vjones",
+    "team": "CHI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034208",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mboone",
+    "team": "HOU",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037594",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jchestnut",
+    "team": "TEN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036425",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ddallas",
+    "team": "SEA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036158",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jdobbins",
+    "team": "BAL",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036569",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gbrightwell",
+    "team": "NYG",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0029239",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bbolden",
+    "team": "LV",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038685",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cbrooks",
+    "team": "MIA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037085",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tbadie",
+    "team": "DEN",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036360",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cedwards-helaire",
+    "team": "NO",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036414",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cakers",
+    "team": "LA",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039364",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Svaki",
+    "team": "DET",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0030874",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dwilliams",
+    "team": "ARI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039344",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jbrooks",
+    "team": "CAR",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036450",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kvaughn",
+    "team": "TB",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035594",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Thomer",
+    "team": "CHI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036096",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jtaylor",
+    "team": "HOU",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036842",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Knwangwu",
+    "team": "NYJ",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034208",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mboone",
+    "team": "CAR",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039617",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jkibodi",
+    "team": "CLE",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034750",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rpenny",
+    "team": "PHI",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033296",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Aarmah",
+    "team": "WAS",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037410",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jcorbin",
+    "team": "NYG",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036670",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Justin Jefferson",
+    "team": "DET",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033856",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Lfournette",
+    "team": "BUF",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033893",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dcook",
+    "team": "DAL",
+    "position": "RB",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036963",
+    "sleeper_id": "7547",
+    "espn_id": null,
+    "name": "Amon-Ra St. Brown",
+    "team": "DET",
+    "position": "WR",
+    "confidence": 85
+  },
+  {
+    "nfl_id": "00-0036358",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Clamb",
+    "team": "DAL",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036900",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jchase",
+    "team": "CIN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033040",
+    "sleeper_id": "3321",
+    "espn_id": null,
+    "name": "Tyreek Hill",
+    "team": "MIA",
+    "position": "WR",
+    "confidence": 85
+  },
+  {
+    "nfl_id": "00-0031408",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mevans",
+    "team": "TB",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039075",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Pnacua",
+    "team": "LA",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035676",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Abrown",
+    "team": "PHI",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036554",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ncollins",
+    "team": "HOU",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036322",
+    "sleeper_id": "6794",
+    "espn_id": null,
+    "name": "Justin Jefferson",
+    "team": "MIN",
+    "position": "WR",
+    "confidence": 85
+  },
+  {
+    "nfl_id": "00-0035659",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tmclaurin",
+    "team": "WAS",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034827",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dmoore",
+    "team": "CHI",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036912",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dsmith",
+    "team": "PHI",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037740",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gwilson",
+    "team": "NYJ",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037238",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dlondon",
+    "team": "ATL",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039064",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Zflowers",
+    "team": "BAL",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034348",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Csutton",
+    "team": "DEN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038994",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jaddison",
+    "team": "MIN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034960",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jmeyers",
+    "team": "LV",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039146",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jreed",
+    "team": "GB",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035719",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dsamuel",
+    "team": "SF",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036252",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mpittman",
+    "team": "IND",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035640",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dmetcalf",
+    "team": "SEA",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038543",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jsmith-njigba",
+    "team": "SEA",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037247",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gpickens",
+    "team": "PIT",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0030035",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Athielen",
+    "team": "CAR",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033921",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cgodwin",
+    "team": "TB",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033908",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ckupp",
+    "team": "LA",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037261",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kshakir",
+    "team": "BUF",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036410",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Thiggins",
+    "team": "CIN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036613",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jwaddle",
+    "team": "MIA",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037816",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rdoubs",
+    "team": "GB",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036261",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Baiyuk",
+    "team": "SF",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038997",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jdowns",
+    "team": "IND",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039067",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rrice",
+    "team": "KC",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037240",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jwilliams",
+    "team": "DET",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032211",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tlockett",
+    "team": "SEA",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038117",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Wrobinson",
+    "team": "NYG",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031381",
+    "sleeper_id": "2133",
+    "espn_id": null,
+    "name": "Davante Adams",
+    "team": "LV",
+    "position": "WR",
+    "confidence": 85
+  },
+  {
+    "nfl_id": "00-0037239",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Colave",
+    "team": "NO",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038977",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tdell",
+    "team": "HOU",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031544",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Acooper",
+    "team": "CLE",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036259",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jjennings",
+    "team": "SF",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031588",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Sdiggs",
+    "team": "BUF",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036550",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rbateman",
+    "team": "BAL",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039893",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bthomas",
+    "team": "JAX",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0030279",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kallen",
+    "team": "LAC",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039915",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Lmcconkey",
+    "team": "LAC",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039337",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mnabers",
+    "team": "NYG",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038544",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Qjohnston",
+    "team": "LAC",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0030564",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dhopkins",
+    "team": "TEN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035535",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dslayton",
+    "team": "NYG",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037664",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Apierce",
+    "team": "IND",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036980",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Emoore",
+    "team": "CLE",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038621",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ddouglas",
+    "team": "NE",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031236",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bcooks",
+    "team": "DAL",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039894",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Xworthy",
+    "team": "KC",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038393",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dwicks",
+    "team": "GB",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036407",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jjeudy",
+    "team": "CLE",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037545",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rshaheed",
+    "team": "NO",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038559",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mwilson",
+    "team": "ARI",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032775",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Drobinson",
+    "team": "LA",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034837",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cridley",
+    "team": "JAX",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036849",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tatwell",
+    "team": "LA",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034775",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ckirk",
+    "team": "JAX",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036182",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Nwestbrook-ikhine",
+    "team": "TEN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036988",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jpalmer",
+    "team": "LAC",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037666",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jtolbert",
+    "team": "DAL",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038124",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cwatson",
+    "team": "GB",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038976",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mmims",
+    "team": "DEN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038563",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ttucker",
+    "team": "LV",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034837",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cridley",
+    "team": "TEN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039849",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mharrison",
+    "team": "ARI",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031381",
+    "sleeper_id": "2133",
+    "espn_id": null,
+    "name": "Davante Adams",
+    "team": "NYJ",
+    "position": "WR",
+    "confidence": 85
+  },
+  {
+    "nfl_id": "00-0036309",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dmooney",
+    "team": "ATL",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034521",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Alazard",
+    "team": "NYJ",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037837",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Caustin",
+    "team": "PIT",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0030279",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kallen",
+    "team": "CHI",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034386",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jwatson",
+    "team": "KC",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038619",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Aiosivas",
+    "team": "CIN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035216",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Djohnson",
+    "team": "PIT",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033307",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kbourne",
+    "team": "NE",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037801",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kturpin",
+    "team": "DAL",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031549",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Nagholor",
+    "team": "BAL",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036196",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gdavis",
+    "team": "BUF",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032464",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kraymond",
+    "team": "DET",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033282",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Csamuel",
+    "team": "WAS",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033943",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jreynolds",
+    "team": "DET",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035500",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gdortch",
+    "team": "ARI",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039052",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tpalmer",
+    "team": "TB",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039919",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rodunze",
+    "team": "CHI",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033009",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tboyd",
+    "team": "CIN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036626",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dbrown",
+    "team": "WAS",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034407",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rmccloud",
+    "team": "ATL",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036407",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jjeudy",
+    "team": "DEN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039855",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jmcmillan",
+    "team": "TB",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038606",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Pwashington",
+    "team": "JAX",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0030431",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rwoods",
+    "team": "HOU",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035662",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mbrown",
+    "team": "ARI",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035208",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ozaccheaus",
+    "team": "WAS",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038608",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kboutte",
+    "team": "NE",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039342",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Xlegette",
+    "team": "CAR",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037741",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jdotson",
+    "team": "WAS",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038979",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ctillman",
+    "team": "CLE",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0030564",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dhopkins",
+    "team": "KC",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031588",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Sdiggs",
+    "team": "HOU",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033555",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mhollins",
+    "team": "BUF",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036345",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kosborn",
+    "team": "MIN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039901",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kcoleman",
+    "team": "BUF",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037291",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jnailor",
+    "team": "MIN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034777",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dchark",
+    "team": "CAR",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031235",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Obeckham",
+    "team": "BAL",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035406",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Lhumphrey",
+    "team": "DEN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039062",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jmingo",
+    "team": "CAR",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039424",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dvele",
+    "team": "DEN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037614",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jmetchie",
+    "team": "HOU",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036936",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rmoore",
+    "team": "ARI",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034764",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mgallup",
+    "team": "DAL",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033591",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Nbrown",
+    "team": "HOU",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033375",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tpatrick",
+    "team": "DET",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039916",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rpearsall",
+    "team": "SF",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039491",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jcoker",
+    "team": "CAR",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032765",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mthomas",
+    "team": "NO",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033282",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Csamuel",
+    "team": "BUF",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038752",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jbobo",
+    "team": "SEA",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033591",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Nbrown",
+    "team": "WAS",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033589",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dmoore",
+    "team": "CAR",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035216",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Djohnson",
+    "team": "CAR",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034272",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mvaldes-scantling",
+    "team": "KC",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034646",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bpowell",
+    "team": "MIN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037091",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bmelton",
+    "team": "GB",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039868",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tfranklin",
+    "team": "DEN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032385",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Sshepard",
+    "team": "TB",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034272",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mvaldes-scantling",
+    "team": "NO",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038496",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Xgipson",
+    "team": "NYJ",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036309",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dmooney",
+    "team": "CHI",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038573",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ddavis",
+    "team": "LAC",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033009",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tboyd",
+    "team": "TEN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033891",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Zjones",
+    "team": "JAX",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034418",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cwilson",
+    "team": "MIA",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035140",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mhardman",
+    "team": "KC",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036415",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Vjefferson",
+    "team": "PIT",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038938",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jhyatt",
+    "team": "NYG",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037382",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bjohnson",
+    "team": "DEN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031547",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dparker",
+    "team": "NE",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031941",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jcrowder",
+    "team": "WAS",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031544",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Acooper",
+    "team": "BUF",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036427",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tjohnson",
+    "team": "LA",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034854",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Khodge",
+    "team": "ATL",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032398",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cmoore",
+    "team": "TEN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037257",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dbell",
+    "team": "CLE",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035341",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tirwin",
+    "team": "CIN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031428",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Arobinson",
+    "team": "PIT",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038465",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mheath",
+    "team": "GB",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033857",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jsmith-schuster",
+    "team": "KC",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038618",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Xhutchinson",
+    "team": "HOU",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036165",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ihodgins",
+    "team": "NYG",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033857",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jsmith-schuster",
+    "team": "NE",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038612",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Aperry",
+    "team": "NO",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034419",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bberrios",
+    "team": "MIA",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039880",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mwashington",
+    "team": "MIA",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037741",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jdotson",
+    "team": "PHI",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039751",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jwhittington",
+    "team": "LA",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036196",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gdavis",
+    "team": "JAX",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039890",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Amitchell",
+    "team": "IND",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038090",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Smoore",
+    "team": "KC",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036913",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ktoney",
+    "team": "KC",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034418",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cwilson",
+    "team": "NO",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036630",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Twallace",
+    "team": "BAL",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033536",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mwilliams",
+    "team": "LAC",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034983",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Hrenfrow",
+    "team": "LV",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038640",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jbrooks",
+    "team": "DAL",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035215",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dharty",
+    "team": "BUF",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037742",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tburks",
+    "team": "TEN",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036527",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dturner",
+    "team": "LV",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034054",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rcracraft",
+    "team": "MIA",
+    "position": "WR",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0030506",
+    "sleeper_id": "1466",
+    "espn_id": null,
+    "name": "Travis Kelce",
+    "team": "KC",
+    "position": "TE",
+    "confidence": 85
+  },
+  {
+    "nfl_id": "00-0039065",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Slaporta",
+    "team": "DET",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033288",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gkittle",
+    "team": "SF",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037744",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tmcbride",
+    "team": "ARI",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033885",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dnjoku",
+    "team": "CLE",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034753",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mandrews",
+    "team": "BAL",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035229",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Thockenson",
+    "team": "MIN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033881",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Eengram",
+    "team": "JAX",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038041",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jferguson",
+    "team": "DAL",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034383",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dschultz",
+    "team": "HOU",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036290",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ckmet",
+    "team": "CHI",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034351",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dgoedert",
+    "team": "PHI",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038129",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cotton",
+    "team": "TB",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038933",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dkincaid",
+    "team": "BUF",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036970",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kpitts",
+    "team": "ATL",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037838",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ilikely",
+    "team": "BAL",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033090",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Hhenry",
+    "team": "NE",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038996",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tkraft",
+    "team": "GB",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039338",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bbowers",
+    "team": "LV",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036894",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Pfreiermuth",
+    "team": "PIT",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033357",
+    "sleeper_id": "4381",
+    "espn_id": null,
+    "name": "Tyreek Hill",
+    "team": "NO",
+    "position": "TE",
+    "confidence": 85
+  },
+  {
+    "nfl_id": "00-0034270",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tconklin",
+    "team": "NYJ",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037809",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cokonkwo",
+    "team": "TEN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033858",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jsmith",
+    "team": "MIA",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036040",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jjohnson",
+    "team": "NO",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0030061",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Zertz",
+    "team": "WAS",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036637",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ngray",
+    "team": "KC",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035644",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Nfant",
+    "team": "SEA",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033110",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Thigbee",
+    "team": "LA",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034981",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Fmoreau",
+    "team": "NO",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034829",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mgesicki",
+    "team": "CIN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035689",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dknox",
+    "team": "BUF",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031260",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Lthomas",
+    "team": "WAS",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033858",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jsmith",
+    "team": "ATL",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035249",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Joliver",
+    "team": "MIN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034364",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jakins",
+    "team": "CLE",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034613",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Thudson",
+    "team": "CIN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037005",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ttremble",
+    "team": "CAR",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034159",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Wdissly",
+    "team": "LAC",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031610",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dwaller",
+    "team": "NYG",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033895",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Geverett",
+    "team": "LAC",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032392",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ahooper",
+    "team": "NE",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039066",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mmayer",
+    "team": "LV",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038935",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bstrange",
+    "team": "JAX",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036422",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Atrautman",
+    "team": "DEN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039144",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Lmusgrave",
+    "team": "GB",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036876",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kgranson",
+    "team": "IND",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033246",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jmundt",
+    "team": "MIN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034798",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dsmythe",
+    "team": "MIA",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035631",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dsample",
+    "team": "CIN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039041",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ehiggins",
+    "team": "ARI",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038547",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Lschoonmaker",
+    "team": "DAL",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038589",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jwhyle",
+    "team": "TEN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033217",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Malie-cox",
+    "team": "IND",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035329",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dparham",
+    "team": "LAC",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039793",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Abarner",
+    "team": "SEA",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036244",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cparkinson",
+    "team": "LA",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038115",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dbellinger",
+    "team": "NYG",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039356",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jsanders",
+    "team": "CAR",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037086",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gcalcaterra",
+    "team": "PHI",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036556",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bjordan",
+    "team": "HOU",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039847",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tjohnson",
+    "team": "NYG",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037475",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ssmartt",
+    "team": "LAC",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036754",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bwright",
+    "team": "DET",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034829",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mgesicki",
+    "team": "NE",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036244",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cparkinson",
+    "team": "SEA",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037292",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Aogletree",
+    "team": "IND",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038558",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dwashington",
+    "team": "PIT",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037805",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jruckert",
+    "team": "NYJ",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037539",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Lkrull",
+    "team": "DEN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037304",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cheyward",
+    "team": "PIT",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036628",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jbates",
+    "team": "WAS",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0030061",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Zertz",
+    "team": "ARI",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038046",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ckolar",
+    "team": "BAL",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038783",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Nadkins",
+    "team": "DEN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032394",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Nvannett",
+    "team": "TEN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039074",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dallen",
+    "team": "LA",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032392",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ahooper",
+    "team": "LV",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036232",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Hbryant",
+    "team": "CLE",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039050",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Pdurham",
+    "team": "TB",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036887",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Lfarrell",
+    "team": "JAX",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038394",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Wmallory",
+    "team": "IND",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034830",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Hhurst",
+    "team": "CAR",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039359",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cstover",
+    "team": "HOU",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034159",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Wdissly",
+    "team": "SEA",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033439",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Pbrown",
+    "team": "NE",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039814",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Eall",
+    "team": "CIN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0027696",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jgraham",
+    "team": "NO",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034970",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ismith",
+    "team": "CIN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038720",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jhill",
+    "team": "MIA",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033576",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Esaubert",
+    "team": "SF",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031585",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mpruitt",
+    "team": "ATL",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036590",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Qmorris",
+    "team": "BUF",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036438",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ssullivan",
+    "team": "CAR",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037078",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cturner",
+    "team": "WAS",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033757",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rtonyan",
+    "team": "CHI",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038809",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bsims",
+    "team": "GB",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037004",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Hlong",
+    "team": "LA",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036510",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kyeboah",
+    "team": "NYJ",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032134",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cuzomah",
+    "team": "NYJ",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032141",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gswaim",
+    "team": "ARI",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039530",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bspann-ford",
+    "team": "DAL",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036232",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Hbryant",
+    "team": "LV",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039912",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bsinnott",
+    "team": "WAS",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038710",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bwhiteheart",
+    "team": "CLE",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031585",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mpruitt",
+    "team": "PIT",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034830",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Hhurst",
+    "team": "LAC",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035771",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mwilcox",
+    "team": "CIN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036332",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jdeguara",
+    "team": "GB",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034365",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ithomas",
+    "team": "CAR",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0024243",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Mlewis",
+    "team": "CHI",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039754",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dculp",
+    "team": "TB",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036145",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Lcager",
+    "team": "NYG",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037654",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tfisk",
+    "team": "LAC",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037252",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gdulcich",
+    "team": "DEN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036424",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bhopkins",
+    "team": "LA",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033439",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Pbrown",
+    "team": "SEA",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031484",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cmanhertz",
+    "team": "NYG",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036741",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jstoll",
+    "team": "PHI",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036429",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cwoerner",
+    "team": "ATL",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033895",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Geverett",
+    "team": "CHI",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032062",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Bbell",
+    "team": "KC",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037569",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Phendershot",
+    "team": "KC",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039737",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Treiman",
+    "team": "ARI",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039631",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cgrandy",
+    "team": "CIN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037569",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Phendershot",
+    "team": "DAL",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038498",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ejenkins",
+    "team": "PHI",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037311",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Kkieft",
+    "team": "TB",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036429",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cwoerner",
+    "team": "SF",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037277",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tquitoriano",
+    "team": "HOU",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039613",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dholker",
+    "team": "NO",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037282",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jmitchell",
+    "team": "DET",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036332",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jdeguara",
+    "team": "JAX",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033576",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Esaubert",
+    "team": "HOU",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039420",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jbell",
+    "team": "NE",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031484",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cmanhertz",
+    "team": "DEN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037317",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Nmuse",
+    "team": "MIN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036534",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Szylstra",
+    "team": "DET",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035259",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Twesco",
+    "team": "TEN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0031690",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Etomlinson",
+    "team": "LAC",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036825",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ffranks",
+    "team": "CAR",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034073",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rdwelley",
+    "team": "SF",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037306",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jfitzpatrick",
+    "team": "ATL",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037654",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Tfisk",
+    "team": "ATL",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0033455",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Afirkser",
+    "team": "DET",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032141",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gswaim",
+    "team": "CLE",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039824",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jwiley",
+    "team": "KC",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0038920",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jshenker",
+    "team": "LV",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037506",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Cfotheringham",
+    "team": "LV",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034193",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Krader",
+    "team": "TEN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0039648",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dmartin-robinson",
+    "team": "TEN",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034073",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Rdwelley",
+    "team": "ATL",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0036640",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Zdavidson",
+    "team": "BUF",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035547",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jfortson",
+    "team": "KC",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035562",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jhorsted",
+    "team": "LV",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0032394",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Nvannett",
+    "team": "LAC",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0035956",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Gricci",
+    "team": "CAR",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0037306",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Jfitzpatrick",
+    "team": "GB",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034970",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Ismith",
+    "team": "HOU",
+    "position": "TE",
+    "confidence": 0
+  },
+  {
+    "nfl_id": "00-0034575",
+    "sleeper_id": null,
+    "espn_id": null,
+    "name": "Dwells",
+    "team": "TB",
+    "position": "TE",
+    "confidence": 0
+  }
+]

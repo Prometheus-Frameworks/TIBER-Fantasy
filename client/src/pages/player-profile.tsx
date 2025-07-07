@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Search, TrendingUp, TrendingDown, Target, Activity, BarChart3, Star, AlertCircle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { PlayerNFLAnalytics } from "@/components/PlayerNFLAnalytics";
+import PlayerAnalyticsChart from "@/components/PlayerAnalyticsChart";
 
 interface PlayerProfile {
   id: number;
@@ -273,9 +274,10 @@ export default function PlayerProfile() {
       {/* Profile Content */}
       <div className="p-4 md:p-6 max-w-7xl mx-auto">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="performance">Performance</TabsTrigger>
+            <TabsTrigger value="charts">Charts</TabsTrigger>
             <TabsTrigger value="nfl-analytics">NFL Analytics</TabsTrigger>
             <TabsTrigger value="gamelog">Game Log</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -465,6 +467,15 @@ export default function PlayerProfile() {
           {/* NFL Analytics Tab */}
           <TabsContent value="nfl-analytics" className="space-y-6">
             <PlayerNFLAnalytics playerId={parseInt(params.id as string)} />
+          </TabsContent>
+
+          {/* Interactive Charts Tab */}
+          <TabsContent value="charts" className="space-y-6">
+            <PlayerAnalyticsChart 
+              playerId={params.id as string}
+              playerName={player?.name || ''}
+              position={player?.position || 'WR'}
+            />
           </TabsContent>
 
           {/* Game Log Tab */}

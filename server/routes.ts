@@ -6,6 +6,7 @@ import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generat
 import { sportsDataAPI } from "./sportsdata";
 import { playerAnalysisCache } from "./playerAnalysisCache";
 import { espnAPI } from "./espnAPI";
+import { playerMapping } from "./playerMapping";
 import { dataRefreshService } from "./dataRefresh";
 import { db } from "./db";
 import { dynastyTradeHistory, players as playersTable } from "@shared/schema";
@@ -950,6 +951,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: error.message || 'Failed to fetch league comparison',
         error: error.toString()
       });
+    }
+  });
+
+  // Player Mapping Endpoints for Fantasy Platform Linking
+  app.get("/api/mapping/generate", async (req, res) => {
+    try {
+      console.log('🔄 Generating player mappings between NFL database and fantasy platforms...');
+      const mappings = await playerMapping.generateMappings();
+      const stats = playerMapping.getMappingStats();
+      
+      res.json({
+        success: true,
+        mappings: mappings.length,
+        stats,
+        message: `Generated ${mappings.length} player mappings with ${stats.confidence}% confidence`
+      });
+    } catch (error: any) {
+      console.error("Error generating player mappings:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to generate player mappings",
+        error: error.message 
+      });
+    }
+  });
+
+  app.get("/api/mapping/stats", async (req, res) => {
+    try {
+      const stats = playerMapping.getMappingStats();
+      res.json(stats);
+    } catch (error: any) {
+      console.error("Error fetching mapping stats:", error);
+      res.status(500).json({ message: "Failed to fetch mapping statistics" });
+    }
+  });
+
+  app.get("/api/mapping/sleeper/:sleeperId", async (req, res) => {
+    try {
+      const sleeperId = req.params.sleeperId;
+      const nflId = playerMapping.getNFLIdBySleeper(sleeperId);
+      
+      if (!nflId) {
+        return res.status(404).json({ message: "No mapping found for Sleeper player" });
+      }
+      
+      res.json({ sleeper_id: sleeperId, nfl_id: nflId });
+    } catch (error: any) {
+      console.error("Error fetching Sleeper mapping:", error);
+      res.status(500).json({ message: "Failed to fetch mapping" });
     }
   });
 
