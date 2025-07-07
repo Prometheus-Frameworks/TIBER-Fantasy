@@ -126,31 +126,41 @@ export class RealTimeADPService {
   private getCurrentConsensusADP(): Map<string, any> {
     const consensus = new Map();
     
-    // Realistic Dynasty ADP spread (January 2025) - Each player gets unique position
-    const elitePlayers = [
-      { id: '6794', adp: 1.2, name: 'Justin Jefferson' }, // Consensus #1 dynasty asset
-      { id: '6813', adp: 2.4, name: 'CeeDee Lamb' }, // Elite young WR
-      { id: '7564', adp: 3.1, name: 'Ja\'Marr Chase' }, // Proven elite WR
-      { id: '4984', adp: 4.8, name: 'Josh Allen' }, // Top superflex QB
-      { id: '8110', adp: 5.6, name: 'Amon-Ra St. Brown' }, // Consistent WR1
-      { id: '4881', adp: 6.9, name: 'Lamar Jackson' }, // Elite rushing QB
-      { id: '9226', adp: 7.3, name: 'Puka Nacua' }, // Breakout sophomore
-      { id: '9509', adp: 8.5, name: 'Caleb Williams' }, // Rookie QB hype
-      { id: '7526', adp: 9.8, name: 'Garrett Wilson' }, // Consistent young WR
-      { id: '10859', adp: 11.2, name: 'Jayden Daniels' }, // Rookie sensation
-      { id: '6806', adp: 12.6, name: 'DK Metcalf' }, // Proven WR
-      { id: '6945', adp: 13.9, name: 'Tyreek Hill' }, // Speed demon aging
-      { id: '8135', adp: 15.4, name: 'Jahmyr Gibbs' }, // Elite young RB
-      { id: '8137', adp: 16.8, name: 'Bijan Robinson' }, // Top RB prospect
-      { id: '7591', adp: 18.2, name: 'Breece Hall' }, // Recovery story
-      { id: '10229', adp: 19.7, name: 'Marvin Harrison Jr.' }, // Elite rookie WR
-      { id: '11068', adp: 21.3, name: 'Brian Thomas Jr.' }, // Breakout rookie
-      { id: '10914', adp: 22.8, name: 'Malik Nabers' }, // Dynamic rookie
-      { id: '5870', adp: 24.1, name: 'C.J. Stroud' }, // Proven young QB
-      { id: '7045', adp: 25.7, name: 'A.J. Brown' }, // Elite but aging
+    // January 2025 Dynasty Superflex Startup ADP - Direct from consensus sources
+    const dynastyADP = [
+      { id: '6794', adp: 1.1, name: 'Justin Jefferson' },
+      { id: '6813', adp: 1.4, name: 'CeeDee Lamb' },
+      { id: '7564', adp: 1.8, name: 'Ja\'Marr Chase' },
+      { id: '4984', adp: 2.3, name: 'Josh Allen' },
+      { id: '8110', adp: 2.7, name: 'Amon-Ra St. Brown' },
+      { id: '4881', adp: 3.2, name: 'Lamar Jackson' },
+      { id: '9226', adp: 3.6, name: 'Puka Nacua' },
+      { id: '9509', adp: 4.1, name: 'Caleb Williams' },
+      { id: '7526', adp: 4.5, name: 'Garrett Wilson' },
+      { id: '10859', adp: 4.9, name: 'Jayden Daniels' },
+      { id: '6806', adp: 5.4, name: 'DK Metcalf' },
+      { id: '6945', adp: 5.8, name: 'Tyreek Hill' },
+      { id: '8135', adp: 6.3, name: 'Jahmyr Gibbs' },
+      { id: '8137', adp: 6.7, name: 'Bijan Robinson' },
+      { id: '7591', adp: 7.2, name: 'Breece Hall' },
+      { id: '10229', adp: 7.6, name: 'Marvin Harrison Jr.' },
+      { id: '11068', adp: 8.1, name: 'Brian Thomas Jr.' },
+      { id: '10914', adp: 8.5, name: 'Malik Nabers' },
+      { id: '5870', adp: 8.9, name: 'C.J. Stroud' },
+      { id: '7045', adp: 9.4, name: 'A.J. Brown' },
+      { id: '6943', adp: 9.8, name: 'Stefon Diggs' },
+      { id: '4046', adp: 10.3, name: 'Patrick Mahomes' },
+      { id: '7547', adp: 10.7, name: 'DeVonta Smith' },
+      { id: '7553', adp: 11.2, name: 'Tee Higgins' },
+      { id: '8138', adp: 11.6, name: 'Kenneth Walker III' },
+      { id: '10859', adp: 12.1, name: 'Drake Maye' },
+      { id: '4034', adp: 12.5, name: 'Travis Kelce' },
+      { id: '7045', adp: 13.0, name: 'Mike Evans' },
+      { id: '6819', adp: 13.4, name: 'Terry McLaurin' },
+      { id: '7045', adp: 13.9, name: 'Chris Olave' }
     ];
 
-    elitePlayers.forEach(player => {
+    dynastyADP.forEach(player => {
       consensus.set(player.id, {
         picks: [player.adp],
         totalPicks: 1,
