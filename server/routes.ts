@@ -216,41 +216,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/players/available", async (req, res) => {
     try {
       const { position, limit } = req.query;
-      const limitNum = limit ? parseInt(limit as string) : 100;
+      const limitNum = limit ? parseInt(limit as string) : 200;
       
-      // Use our working star player data that displays properly
-      const allStarPlayers = [
-        { id: 1, name: 'Justin Jefferson', position: 'WR', team: 'MIN', avgPoints: 16.1, dynastyValue: 90, dynastyTier: 'Elite', age: 24, adp: 8, isAvailable: true, upside: 25, consistency: 85 },
-        { id: 2, name: 'Josh Allen', position: 'QB', team: 'BUF', avgPoints: 23.4, dynastyValue: 92, dynastyTier: 'Elite', age: 27, adp: 12, isAvailable: true, upside: 30, consistency: 90 },
-        { id: 3, name: 'CeeDee Lamb', position: 'WR', team: 'DAL', avgPoints: 18.3, dynastyValue: 88, dynastyTier: 'Elite', age: 25, adp: 15, isAvailable: true, upside: 28, consistency: 82 },
-        { id: 4, name: 'Ja\'Marr Chase', position: 'WR', team: 'CIN', avgPoints: 17.2, dynastyValue: 88, dynastyTier: 'Elite', age: 24, adp: 10, isAvailable: true, upside: 30, consistency: 80 },
-        { id: 5, name: 'Lamar Jackson', position: 'QB', team: 'BAL', avgPoints: 24.6, dynastyValue: 91, dynastyTier: 'Elite', age: 27, adp: 18, isAvailable: true, upside: 35, consistency: 85 },
-        { id: 6, name: 'Amon-Ra St. Brown', position: 'WR', team: 'DET', avgPoints: 15.4, dynastyValue: 85, dynastyTier: 'Elite', age: 24, adp: 22, isAvailable: true, upside: 22, consistency: 88 },
-        { id: 7, name: 'Brock Bowers', position: 'TE', team: 'LV', avgPoints: 10.9, dynastyValue: 86, dynastyTier: 'Elite', age: 22, adp: 28, isAvailable: true, upside: 25, consistency: 78 },
-        { id: 8, name: 'Jayden Daniels', position: 'QB', team: 'WAS', avgPoints: 20.1, dynastyValue: 85, dynastyTier: 'Elite', age: 23, adp: 35, isAvailable: true, upside: 32, consistency: 75 },
-        { id: 9, name: 'Jahmyr Gibbs', position: 'RB', team: 'DET', avgPoints: 15.7, dynastyValue: 84, dynastyTier: 'Premium', age: 22, adp: 25, isAvailable: true, upside: 28, consistency: 82 },
-        { id: 10, name: 'Brian Thomas Jr.', position: 'WR', team: 'JAX', avgPoints: 14.8, dynastyValue: 83, dynastyTier: 'Premium', age: 22, adp: 45, isAvailable: true, upside: 30, consistency: 70 },
-        { id: 11, name: 'Trey McBride', position: 'TE', team: 'ARI', avgPoints: 12.8, dynastyValue: 83, dynastyTier: 'Premium', age: 24, adp: 32, isAvailable: true, upside: 20, consistency: 85 },
-        { id: 12, name: 'Caleb Williams', position: 'QB', team: 'CHI', avgPoints: 18.2, dynastyValue: 82, dynastyTier: 'Premium', age: 22, adp: 38, isAvailable: true, upside: 35, consistency: 72 },
-        { id: 13, name: 'Bijan Robinson', position: 'RB', team: 'ATL', avgPoints: 12.8, dynastyValue: 81, dynastyTier: 'Premium', age: 22, adp: 28, isAvailable: true, upside: 25, consistency: 78 },
-        { id: 14, name: 'Ladd McConkey', position: 'WR', team: 'LAC', avgPoints: 13.2, dynastyValue: 80, dynastyTier: 'Premium', age: 22, adp: 55, isAvailable: true, upside: 28, consistency: 68 },
-        { id: 15, name: 'Tyreek Hill', position: 'WR', team: 'MIA', avgPoints: 15.8, dynastyValue: 79, dynastyTier: 'Premium', age: 30, adp: 20, isAvailable: true, upside: 22, consistency: 90 },
-        { id: 16, name: 'Saquon Barkley', position: 'RB', team: 'PHI', avgPoints: 19.8, dynastyValue: 78, dynastyTier: 'Premium', age: 27, adp: 18, isAvailable: true, upside: 25, consistency: 85 },
-        { id: 17, name: 'Travis Kelce', position: 'TE', team: 'KC', avgPoints: 11.2, dynastyValue: 77, dynastyTier: 'Premium', age: 35, adp: 25, isAvailable: true, upside: 15, consistency: 92 },
-        { id: 18, name: 'Derrick Henry', position: 'RB', team: 'BAL', avgPoints: 16.4, dynastyValue: 72, dynastyTier: 'Strong', age: 30, adp: 22, isAvailable: true, upside: 18, consistency: 88 },
-        { id: 19, name: 'Puka Nacua', position: 'WR', team: 'LAR', avgPoints: 14.2, dynastyValue: 82, dynastyTier: 'Premium', age: 23, adp: 30, isAvailable: true, upside: 28, consistency: 75 },
-        { id: 20, name: 'Drake Maye', position: 'QB', team: 'NE', avgPoints: 16.8, dynastyValue: 78, dynastyTier: 'Premium', age: 22, adp: 48, isAvailable: true, upside: 35, consistency: 65 },
-        { id: 21, name: 'Marvin Harrison Jr.', position: 'WR', team: 'ARI', avgPoints: 12.1, dynastyValue: 79, dynastyTier: 'Premium', age: 22, adp: 42, isAvailable: true, upside: 32, consistency: 68 },
-        { id: 22, name: 'Rome Odunze', position: 'WR', team: 'CHI', avgPoints: 9.8, dynastyValue: 76, dynastyTier: 'Strong', age: 22, adp: 65, isAvailable: true, upside: 30, consistency: 60 },
-        { id: 23, name: 'Kyren Williams', position: 'RB', team: 'LAR', avgPoints: 13.5, dynastyValue: 74, dynastyTier: 'Strong', age: 24, adp: 35, isAvailable: true, upside: 22, consistency: 80 },
-        { id: 24, name: 'George Kittle', position: 'TE', team: 'SF', avgPoints: 10.2, dynastyValue: 73, dynastyTier: 'Strong', age: 31, adp: 28, isAvailable: true, upside: 18, consistency: 85 },
-        { id: 25, name: 'Malik Nabers', position: 'WR', team: 'NYG', avgPoints: 11.9, dynastyValue: 81, dynastyTier: 'Premium', age: 21, adp: 38, isAvailable: true, upside: 32, consistency: 65 }
-      ];
+      // Use our comprehensive dynasty database with 125+ players
+      const { getAllDynastyPlayers, getDynastyPlayersByPosition } = await import('./expandedDynastyDatabase');
       
-      // Filter by position if specified
+      // Get all players or filter by position
       let players = position ? 
-        allStarPlayers.filter(p => p.position === position.toString().toUpperCase()) : 
-        allStarPlayers;
+        getDynastyPlayersByPosition(position.toString()) : 
+        getAllDynastyPlayers();
       
       // Apply limit
       players = players.slice(0, limitNum);
