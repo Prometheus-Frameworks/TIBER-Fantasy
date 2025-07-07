@@ -14,7 +14,7 @@ export interface PlayerFix {
 }
 
 export const TARGETED_PLAYER_FIXES: PlayerFix[] = [
-  // QB Fixes
+  // QB Fixes - Aligned with Jake Maraia Expert Consensus
   {
     name: 'Josh Allen',
     position: 'QB',
@@ -38,12 +38,39 @@ export const TARGETED_PLAYER_FIXES: PlayerFix[] = [
     position: 'QB',
     issue: 'Rookie QB with elite upside',
     currentValue: 82,
+    targetValue: 96,
+    adjustment: +14,
+    reason: 'ROY performance + dual-threat + long-term upside + Jake Maraia QB3'
+  },
+  {
+    name: 'Joe Burrow',
+    position: 'QB',
+    issue: 'Elite QB being undervalued',
+    currentValue: 88,
     targetValue: 94,
-    adjustment: +12,
-    reason: 'ROY performance + dual-threat + long-term upside'
+    adjustment: +6,
+    reason: 'Jake Maraia QB4 + elite arm talent + proven production'
   },
   
-  // RB Fixes
+  // RB Fixes - Conservative to prevent inflation
+  {
+    name: 'Jahmyr Gibbs',
+    position: 'RB',
+    issue: 'Prevent artificial inflation',
+    currentValue: 99,
+    targetValue: 87,
+    adjustment: -12,
+    reason: 'Cap to prevent youth bonus stacking - Jake Maraia RB1 range'
+  },
+  {
+    name: 'Breece Hall',
+    position: 'RB',
+    issue: 'Prevent artificial inflation',
+    currentValue: 97,
+    targetValue: 85,
+    adjustment: -12,
+    reason: 'Cap to prevent youth bonus stacking - Jake Maraia RB2-3 range'
+  },
   {
     name: 'Bijan Robinson',
     position: 'RB',
@@ -54,78 +81,78 @@ export const TARGETED_PLAYER_FIXES: PlayerFix[] = [
     reason: '1st round pedigree + elite youth + proven production + Atlanta improvement'
   },
   
-  // WR Fixes
+  // WR Fixes - Jake Maraia Aligned
   {
     name: "Ja'Marr Chase",
     position: 'WR',
     issue: 'Should be WR1 with 403 fantasy points',
     currentValue: 88,
-    targetValue: 96,
-    adjustment: +8,
-    reason: '403 fantasy points + 175 targets + elite production'
+    targetValue: 98,
+    adjustment: +10,
+    reason: 'Jake Maraia WR1 + 403 fantasy points + 175 targets + elite production'
   },
   {
     name: 'Justin Jefferson',
     position: 'WR',
     issue: 'Should be WR2 consistently',
     currentValue: 86,
-    targetValue: 95,
-    adjustment: +9,
-    reason: 'Elite target share + proven production + young age'
+    targetValue: 96,
+    adjustment: +10,
+    reason: 'Jake Maraia WR2 + elite target share + proven production'
   },
   {
     name: 'CeeDee Lamb',
     position: 'WR',
     issue: 'Should be WR3',
     currentValue: 84,
-    targetValue: 93,
-    adjustment: +9,
-    reason: 'Elite target share + team focal point + young'
+    targetValue: 94,
+    adjustment: +10,
+    reason: 'Jake Maraia WR3 + elite target share + team focal point'
   },
   {
     name: 'Amon-Ra St. Brown',
     position: 'WR',
     issue: 'Undervalued elite producer',
     currentValue: 78,
-    targetValue: 88,
-    adjustment: +10,
-    reason: '340 fantasy points + elite target share + proven'
+    targetValue: 92,
+    adjustment: +14,
+    reason: 'Jake Maraia WR4 + 340 fantasy points + elite target share + proven'
   },
   {
-    name: 'Drake London',
+    name: 'Puka Nacua',
     position: 'WR',
-    issue: 'Missing from top 10 WRs',
-    currentValue: 72,
-    targetValue: 85,
-    adjustment: +13,
-    reason: 'Elite target share + team improvements + breakout 2024'
+    issue: 'Prevent artificial inflation vs Jake ranking',
+    currentValue: 96,
+    targetValue: 90,
+    adjustment: -6,
+    reason: 'Jake Maraia WR5 - prevent overvaluing vs proven elites'
   },
   {
     name: 'Malik Nabers',
     position: 'WR',
     issue: 'Elite rookie production',
     currentValue: 74,
-    targetValue: 87,
-    adjustment: +13,
-    reason: '172 targets as rookie + elite talent + long-term upside'
+    targetValue: 86,
+    adjustment: +12,
+    reason: 'Jake Maraia WR7 + 172 targets as rookie + elite talent'
+  },
+  {
+    name: 'Drake London',
+    position: 'WR',
+    issue: 'Missing from top 10 WRs',
+    currentValue: 72,
+    targetValue: 84,
+    adjustment: +12,
+    reason: 'Jake Maraia WR8 + elite target share + team improvements'
   },
   {
     name: 'Brian Thomas Jr.',
     position: 'WR',
     issue: 'Rookie breakout candidate',
     currentValue: 70,
-    targetValue: 83,
-    adjustment: +13,
-    reason: '282 fantasy points as rookie + deep threat + upside'
-  },
-  {
-    name: 'Ladd McConkey',
-    position: 'WR',
-    issue: 'Elite rookie efficiency',
-    currentValue: 68,
-    targetValue: 80,
-    adjustment: +12,
-    reason: '275 fantasy points + efficiency + long-term upside'
+    targetValue: 74,
+    adjustment: +4,
+    reason: 'Jake Maraia WR13 + 282 fantasy points as rookie'
   },
   
   // TE Fixes
@@ -212,17 +239,17 @@ export class AlgorithmFixer {
     
     let bonus = 0;
     
-    // Elite young RB bonus
-    if (position === 'RB' && age <= 24 && avgPoints >= 12) {
-      bonus = +12; // Significant boost for elite young RBs
+    // Elite young RB bonus - more selective criteria
+    if (position === 'RB' && age <= 24 && avgPoints >= 16) {
+      bonus = +8; // Reduced bonus and higher threshold
     }
     // Elite young WR bonus  
     else if (position === 'WR' && age <= 24 && avgPoints >= 15) {
-      bonus = +8;
+      bonus = +6; // Slightly reduced
     }
     // Elite young QB bonus
     else if (position === 'QB' && age <= 25 && avgPoints >= 20) {
-      bonus = +10;
+      bonus = +8; // Slightly reduced
     }
     
     return bonus;
@@ -248,7 +275,7 @@ export class AlgorithmFixer {
   }
   
   /**
-   * Calculate comprehensive adjusted dynasty value
+   * Calculate comprehensive adjusted dynasty value - ANTI-INFLATION SYSTEM
    */
   calculateAdjustedDynastyValue(player: any): number {
     // Skip adjustment if player already has a targeted fix
@@ -265,36 +292,91 @@ export class AlgorithmFixer {
     const productionBonus = this.applyProductionBonus(player);
     const positionalPremium = this.applyPositionalPremium(player);
     
-    let adjustedValue = baseValue + agePenalty + youthBonus + injuryPenalty + productionBonus + positionalPremium;
+    // Calculate total adjustments
+    const totalAdjustments = agePenalty + youthBonus + injuryPenalty + productionBonus + positionalPremium;
+    
+    // ANTI-INFLATION CAP: Limit total bonus to prevent artificial inflation
+    const maxTotalBonus = this.getMaxAllowedBonus(player, baseValue);
+    const cappedAdjustments = Math.min(totalAdjustments, maxTotalBonus);
+    
+    let adjustedValue = baseValue + cappedAdjustments;
+    
+    // Additional position-specific caps to prevent unrealistic rankings
+    adjustedValue = this.applyPositionalCaps(player, adjustedValue);
     
     // Ensure value stays within bounds
     return Math.max(0, Math.min(100, adjustedValue));
   }
   
   /**
-   * Apply production-based bonuses for elite performers
+   * Get maximum allowed bonus to prevent artificial inflation
+   */
+  private getMaxAllowedBonus(player: any, baseValue: number): number {
+    const position = player.position;
+    const avgPoints = player.avgPoints || 0;
+    
+    // High producers can get larger bonuses
+    if (avgPoints >= 20) return +15; // Elite producers
+    if (avgPoints >= 17) return +12; // High-end players
+    if (avgPoints >= 14) return +8;  // Solid players
+    if (avgPoints >= 12) return +5;  // Average players
+    return +3; // Low producers get minimal bonuses
+  }
+  
+  /**
+   * Apply position-specific caps to prevent unrealistic rankings
+   */
+  private applyPositionalCaps(player: any, value: number): number {
+    const position = player.position;
+    const avgPoints = player.avgPoints || 0;
+    
+    // RB Reality Check: No RB should exceed these without elite production
+    if (position === 'RB') {
+      if (avgPoints < 18 && value > 90) return 85; // Elite tier requires elite production
+      if (avgPoints < 15 && value > 85) return 75; // Premium tier cap for moderate production
+      if (avgPoints < 12 && value > 70) return 60; // Significant cap for low production
+    }
+    
+    // WR Reality Check: Young talent can't exceed proven elites without production
+    if (position === 'WR') {
+      if (avgPoints < 20 && value > 95) return 88; // Only proven elites get 95+
+      if (avgPoints < 16 && value > 85) return 78; // Moderate production ceiling
+      if (avgPoints < 13 && value > 75) return 65; // Low production ceiling
+    }
+    
+    // QB caps already handled by targeted fixes
+    // TE caps: Similar to WR but more generous for youth
+    if (position === 'TE') {
+      if (avgPoints < 12 && value > 85) return 78; // TE ceiling for moderate production
+    }
+    
+    return value;
+  }
+  
+  /**
+   * Apply production-based bonuses for elite performers - CONSERVATIVE APPROACH
    */
   applyProductionBonus(player: any): number {
     const fantasyPoints = (player.avgPoints || 0) * 17; // Convert to season total
     const position = player.position;
     let bonus = 0;
     
-    // Elite production thresholds based on 2024 data
+    // Much more conservative production bonuses
     if (position === 'QB') {
-      if (fantasyPoints >= 400) bonus = +6; // Josh Allen tier
-      else if (fantasyPoints >= 380) bonus = +4; // Lamar tier
-      else if (fantasyPoints >= 350) bonus = +2; // High-end QB1
+      if (fantasyPoints >= 420) bonus = +4; // Only Josh Allen tier
+      else if (fantasyPoints >= 390) bonus = +2; // Lamar tier
+      // Removed lower tier bonuses to prevent inflation
     } else if (position === 'RB') {
-      if (fantasyPoints >= 350) bonus = +8; // Elite RB1
-      else if (fantasyPoints >= 300) bonus = +5; // High-end RB1
-      else if (fantasyPoints >= 250) bonus = +2; // RB1
+      if (fantasyPoints >= 330) bonus = +5; // Only truly elite RB1s
+      else if (fantasyPoints >= 280) bonus = +2; // High-end RB1
+      // Significantly raised thresholds
     } else if (position === 'WR') {
-      if (fantasyPoints >= 380) bonus = +6; // Chase tier
-      else if (fantasyPoints >= 340) bonus = +4; // Elite WR1
-      else if (fantasyPoints >= 300) bonus = +2; // High-end WR1
+      if (fantasyPoints >= 400) bonus = +4; // Only Chase tier (403 points)
+      else if (fantasyPoints >= 360) bonus = +2; // Other elite WR1s
+      // Much higher thresholds required
     } else if (position === 'TE') {
-      if (fantasyPoints >= 260) bonus = +6; // Elite TE1
-      else if (fantasyPoints >= 220) bonus = +3; // High-end TE1
+      if (fantasyPoints >= 270) bonus = +4; // Only elite TE1
+      else if (fantasyPoints >= 240) bonus = +2; // High-end TE1
     }
     
     return bonus;
@@ -314,11 +396,11 @@ export class AlgorithmFixer {
       return +2; // Established QBs get moderate premium
     }
     
-    // Youth premium for skill positions
+    // Youth premium for skill positions - more conservative
     if (age <= 23) {
-      if (position === 'RB') return +3; // Young RBs valuable
-      if (position === 'WR') return +4; // Young WRs most valuable
-      if (position === 'TE') return +2; // Young TEs moderate value
+      if (position === 'RB') return +2; // Reduced RB youth bonus
+      if (position === 'WR') return +3; // Reduced WR youth bonus
+      if (position === 'TE') return +2; // Same TE youth bonus
     }
     
     return 0;
