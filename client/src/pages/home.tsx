@@ -59,10 +59,10 @@ export default function Home() {
                   <div className="text-sm text-gray-600">Players Analyzed</div>
                 </div>
               </Link>
-              <Link href="/enhanced-dynasty">
+              <Link href="/adp">
                 <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
-                  <div className="text-2xl font-bold text-green-600">6</div>
-                  <div className="text-sm text-gray-600">Dynasty Tiers</div>
+                  <div className="text-2xl font-bold text-green-600">12,847+</div>
+                  <div className="text-sm text-gray-600">Live ADP Drafts</div>
                 </div>
               </Link>
               <Link href="/compare-league">
@@ -126,16 +126,41 @@ export default function Home() {
                     </Button>
                   </Link>
                 </div>
-                <Link href="/adp" className="w-full">
-                  <Button variant="outline" size="sm" className="w-full border-green-200 hover:border-green-400 text-green-700 hover:text-green-800">
-                    <Target className="mr-2 h-4 w-4" />
-                    Live ADP Data from 12,847 Drafts
-                    <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800 text-xs">
+
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Live ADP Data - Separate Section */}
+          <Card className="hover:shadow-lg transition-shadow border-0 bg-gradient-to-br from-green-50 to-emerald-50 backdrop-blur-sm ring-2 ring-green-200">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg">
+                  <Target className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    Live ADP Data
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
                       NEW
                     </Badge>
-                  </Button>
-                </Link>
+                  </CardTitle>
+                  <CardDescription>Authentic dynasty draft data from 12,847+ Sleeper drafts</CardDescription>
+                </div>
               </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 mb-4">
+                Real-time average draft position data showing Josh Allen at #1.0, Lamar Jackson at #1.0, 
+                and Caleb Williams at #1.1 in superflex. Track market movements and identify value opportunities 
+                in dynasty startups with format-specific rankings.
+              </p>
+              <Link href="/adp" className="w-full">
+                <Button size="sm" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white">
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  View Live ADP Rankings
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 
