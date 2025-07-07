@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, ExternalLink } from 'lucide-react';
 
 interface EnhancedPlayer {
   id: number;
@@ -47,7 +47,7 @@ export default function EnhancedRankings() {
       if (selectedPosition !== 'all') {
         params.append('position', selectedPosition);
       }
-      params.append('limit', '25');
+      params.append('limit', '100');
       return fetch(`/api/rankings/enhanced?${params}`).then(res => res.json());
     },
   });
@@ -114,7 +114,11 @@ export default function EnhancedRankings() {
         <TabsContent value={selectedPosition} className="mt-6">
           <div className="space-y-3">
             {players.map((player, index) => (
-              <Card key={player.id} className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
+              <Card 
+                key={player.id} 
+                className="hover:shadow-md transition-all border-l-4 border-l-blue-500 cursor-pointer hover:border-l-blue-600 group"
+                onClick={() => window.open(`/player/${player.id}`, '_blank')}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     {/* Left: Player Info */}
@@ -123,7 +127,12 @@ export default function EnhancedRankings() {
                         #{index + 1}
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-900">{player.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                            {player.name}
+                          </h3>
+                          <ExternalLink className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
                         <div className="text-sm text-gray-500">
                           {player.team} {player.position} • {player.avgPoints} PPG
                         </div>
@@ -133,7 +142,7 @@ export default function EnhancedRankings() {
                     {/* Right: Visual Indicators */}
                     <div className="flex items-center gap-4">
                       {/* Dynasty Score */}
-                      <div className="text-center bg-blue-50 px-3 py-1 rounded">
+                      <div className="text-center bg-blue-50 px-3 py-1 rounded group-hover:bg-blue-100 transition-colors">
                         <div className="text-lg font-bold text-blue-700">{player.dynastyValue}</div>
                         <div className="text-xs text-blue-600">Score</div>
                       </div>

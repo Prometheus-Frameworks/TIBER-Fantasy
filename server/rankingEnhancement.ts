@@ -62,12 +62,16 @@ export class RankingEnhancementService {
    * Enhance individual player with fantasy platform data
    */
   private async enhanceIndividualPlayer(player: any): Promise<EnhancedPlayer> {
+    // Get accurate 2024 age
+    const { get2024Age } = await import('./player2024Ages');
+    const accurate2024Age = get2024Age(player.name);
+    
     const enhanced: EnhancedPlayer = {
       id: player.id || player.rank,
       name: player.name,
       position: player.position,
       team: player.team,
-      age: player.age || 26,
+      age: accurate2024Age || player.age || 26, // Use accurate 2024 age first
       avgPoints: player.avgPoints || 0,
       dynastyValue: player.dynastyValue || player.dynastyScore || 0,
       dynastyTier: player.dynastyTier || 'Bench',

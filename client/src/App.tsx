@@ -25,7 +25,7 @@ import LeagueAnalysisPage from "@/pages/league-analysis";
 import FantasyMovesPage from "@/pages/fantasy-moves";
 import TrendingPlayersPage from "@/pages/trending-players";
 import CompareLeaguePage from "@/pages/compare-league";
-import PlayerProfile from "@/pages/player-profile";
+import PlayerProfile from "@/pages/enhanced-player-profile";
 import EnhancedDynasty from "@/pages/enhanced-dynasty";
 import EnhancedRankings from "@/pages/enhanced-rankings";
 import About from "@/pages/about";

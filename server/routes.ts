@@ -212,8 +212,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get available players with Enhanced Dynasty Algorithm rankings
+  // Get available players with 600+ NFL Database rankings
   app.get("/api/players/available", async (req, res) => {
+    try {
+      const { position, limit } = req.query;
+      const limitNum = limit ? parseInt(limit as string) : 100;
+      
+      // Use expanded NFL database instead of limited proprietary rankings
+      const { expandedPlayerDB } = await import('./expandedPlayerDatabase');
+      
+      let players;
+      if (position && typeof position === 'string') {
+        players = await expandedPlayerDB.getPlayersByPosition(position.toUpperCase(), limitNum);
+      } else {
+        const allPlayers = await expandedPlayerDB.getAllPlayers();
+        players = allPlayers.slice(0, limitNum);
+      }
+      
+      res.json(players);
+    } catch (error) {
+      console.error("Error fetching expanded players:", error);
+      res.status(500).json({ message: "Failed to fetch players" });
+    }
+  });
+
+  // Legacy enhanced players endpoint for compatibility
+  app.get("/api/players/legacy-enhanced", async (req, res) => {
     try {
       const position = req.query.position as string | undefined;
       
@@ -627,29 +651,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get individual player profile
+  // Enhanced Player Profile API - 2024 Analytics with Percentiles & Physical Data
   app.get("/api/players/:id", async (req, res) => {
     try {
-      const playerId = parseInt(req.params.id);
-      const player = await storage.getPlayer(playerId);
+      const playerId = req.params.id;
+      
+      // Import enhanced player profile system  
+      const { getPlayerProfile } = await import('./playerProfile2024');
+      
+      // Try to get enhanced profile first (by ID or name)
+      let playerProfile = getPlayerProfile(parseInt(playerId));
+      
+      // If not found by ID, try name search from proprietary rankings
+      if (!playerProfile) {
+        const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
+        const player = ALL_PROPRIETARY_PLAYERS.find(p => p.id === parseInt(playerId));
+        if (player) {
+          playerProfile = getPlayerProfile(player.name);
+        }
+      }
+      
+      // If we have an enhanced profile with 2024 analytics, return it
+      if (playerProfile) {
+        res.json({
+          ...playerProfile,
+          enhanced: true,
+          message: "Enhanced profile with 2024 analytics, percentiles, and physical data"
+        });
+        return;
+      }
+      
+      // Fallback to basic player data
+      const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
+      const player = ALL_PROPRIETARY_PLAYERS.find(p => p.id === parseInt(playerId));
       
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
 
-      // Add dynasty values using Jake Maraia rankings
-      const { getJakeMaraiaDynastyScore, getJakeMaraiaDynastyTier } = await import('./jakeMaraiaRankings');
-      const dynastyScore = getJakeMaraiaDynastyScore(player.name, player.position);
-      const dynastyTier = getJakeMaraiaDynastyTier(player.name, player.position);
-
-      const playerProfile = {
+      // Basic profile without enhanced analytics
+      const basicProfile = {
         ...player,
-        dynastyValue: dynastyScore,
-        dynastyTier: dynastyTier
+        enhanced: false,
+        experience: Math.max(1, player.age - 21),
+        projectedPoints: player.avgPoints * 1.05,
+        valueCategory: player.dynastyValue >= 80 ? 'VALUE' : 
+                      player.dynastyValue >= 60 ? 'FAIR' : 'OVERVALUED',
+        message: "Basic profile - enhanced analytics available for select players"
       };
 
-      res.json(playerProfile);
+      res.json(basicProfile);
     } catch (error: any) {
+      console.error("Error fetching player profile:", error);
       res.status(500).json({ message: "Failed to fetch player profile" });
     }
   });
@@ -665,8 +718,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const players = await storage.searchPlayers(query as string);
       
-      // Add dynasty values
-      const { getJakeMaraiaDynastyScore, getJakeMaraiaDynastyTier } = await import('./jakeMaraiaRankings');
+      // Use proprietary rankings for dynasty values
+      const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
       
       const playersWithDynasty = players.map(player => ({
         ...player,
@@ -987,23 +1040,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Brian Thomas Jr. & Ladd McConkey Integration API
+  app.get("/api/rankings/2024-breakouts", async (req, res) => {
+    try {
+      const { getEnhancedWRRankings, validateBreakoutRankings } = await import('./brian-ladd-integration');
+      
+      // Get current WR rankings
+      const allPlayers = await storage.getAllPlayers();
+      const currentWRs = allPlayers.filter(p => p.position === 'WR');
+      
+      // Add Brian Thomas Jr. and Ladd McConkey with 2024-weighted scoring
+      const enhancedWRs = getEnhancedWRRankings(currentWRs);
+      
+      // Validate they rank in top 10
+      const validation = validateBreakoutRankings(enhancedWRs);
+      
+      res.json({
+        message: "2024 breakout WRs integration - Brian Thomas Jr. & Ladd McConkey",
+        methodology: "80% 2024 performance + 20% age/opportunity weighting",
+        wrRankings: enhancedWRs.slice(0, 15), // Top 15 WRs
+        validation: {
+          brianThomas: {
+            rank: validation.brianRank,
+            topTen: validation.brianRank <= 10,
+            dynastyValue: enhancedWRs.find(wr => wr.name === "Brian Thomas Jr.")?.dynastyValue || 0
+          },
+          laddMcConkey: {
+            rank: validation.laddRank, 
+            topTen: validation.laddRank <= 10,
+            dynastyValue: enhancedWRs.find(wr => wr.name === "Ladd McConkey")?.dynastyValue || 0
+          }
+        },
+        summary: validation.topTen ? 
+          "✅ Both players ranked in top 10 WRs based on 2024 performance" :
+          "⚠️ Adjustment needed for proper 2024 weighting"
+      });
+    } catch (error) {
+      console.error("Error generating 2024 breakouts:", error);
+      res.status(500).json({ error: "Failed to generate 2024 breakout rankings" });
+    }
+  });
+
+  // 2024-Weighted Rankings API - Prioritizes current season performance
+  app.get("/api/rankings/2024-weighted", async (req, res) => {
+    try {
+      const { processAll2024WeightedScores } = await import('./data2024Weighting');
+      const weighted2024Players = await processAll2024WeightedScores();
+      
+      res.json({
+        message: "2024-weighted dynasty rankings (80% current season + 20% context)",
+        weighting: {
+          "2024_performance": "80%",
+          "historical_context": "20%",
+          "methodology": "Heavily prioritizes 2024 data while preserving stability context"
+        },
+        players: weighted2024Players,
+        totalPlayers: weighted2024Players.length
+      });
+    } catch (error) {
+      console.error("Error generating 2024-weighted rankings:", error);
+      res.status(500).json({ error: "Failed to generate 2024-weighted rankings" });
+    }
+  });
+
   // Enhanced Rankings API - Shows how player mapping improves dynasty valuations
   app.get("/api/rankings/enhanced", async (req, res) => {
     try {
-      const { position, limit = 50 } = req.query;
+      const { position, limit = 100 } = req.query;
       const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
       const { rankingEnhancement } = await import('./rankingEnhancement');
       
       console.log('🔄 Generating enhanced rankings with fantasy platform integration...');
       
-      // Filter by position if specified
-      let players = ALL_PROPRIETARY_PLAYERS;
+      // Use players from available API endpoint to get accurate age data
+      const availablePlayers = await storage.getAvailablePlayers();
+      
+      // Filter by position if specified  
+      let players = availablePlayers;
       if (position && typeof position === 'string') {
         players = players.filter(p => p.position === position.toUpperCase());
       }
       
-      // Take subset for enhancement (API performance)
-      const playersToEnhance = players.slice(0, Number(limit));
+      // For "all" positions, get balanced representation from each position
+      if (!position || position === 'all') {
+        const limitPerPosition = Math.floor(Number(limit) / 4);
+        const qbs = players.filter(p => p.position === 'QB').slice(0, limitPerPosition);
+        const rbs = players.filter(p => p.position === 'RB').slice(0, limitPerPosition);
+        const wrs = players.filter(p => p.position === 'WR').slice(0, limitPerPosition);
+        const tes = players.filter(p => p.position === 'TE').slice(0, limitPerPosition);
+        players = [...qbs, ...rbs, ...wrs, ...tes];
+      } else {
+        // For specific position, apply limit
+        players = players.slice(0, Number(limit));
+      }
+      
+      // Use all filtered players for enhancement
+      const playersToEnhance = players;
       
       // Enhance players with mapping data
       const enhancedPlayers = await rankingEnhancement.enhancePlayerRankings(playersToEnhance);
