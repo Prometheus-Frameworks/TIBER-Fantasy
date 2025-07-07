@@ -25,15 +25,15 @@ export default function About() {
         {/* Hero Section */}
         <div className="text-center mb-16">
           <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="p-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl">
-              <Zap className="h-8 w-8 text-white" />
+            <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl">
+              <BarChart3 className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Prometheus
             </h1>
           </div>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Bringing the fire of knowledge to fantasy football managers everywhere
+            Professional dynasty fantasy football analytics platform
           </p>
         </div>
 
@@ -46,20 +46,16 @@ export default function About() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-lg border border-orange-200">
-              <p className="text-xl font-semibold text-gray-800 leading-relaxed mb-4">
-                <strong>"This is the best you can get for free. Trust me."</strong>
-              </p>
+            <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-6 rounded-lg border border-gray-200">
               <p className="text-lg text-gray-700 leading-relaxed">
-                We refuse to compromise on our core belief: elite fantasy analytics should not be locked behind paywalls. 
-                While others charge premium subscriptions for advanced data, Prometheus delivers the highest quality dynasty rankings, 
-                player analytics, and market insights available—completely free.
+                Professional dynasty analytics using authentic NFL data sources, statistical modeling, and market analysis. 
+                No subscription fees, premium tiers, or paywalls. All analytical tools and player evaluations 
+                are freely accessible to dynasty managers.
               </p>
             </div>
             <p className="text-gray-600">
-              We've built our platform using authentic NFL data, proprietary statistical algorithms, and comprehensive multi-year analysis 
-              to ensure you're getting professional-grade insights without paying a cent. No hidden tiers, no premium upgrades, 
-              no "upgrade to see more" buttons—just the best free fantasy data available anywhere.
+              Built with NFL-Data-Py integration, Scott Barrett's FantasyPointsData methodology, Jake Maraia's dynasty framework, 
+              and comprehensive statistical validation. All analytical models use research-backed metrics with documented correlation studies.
             </p>
             <p className="text-gray-600">
               Like Prometheus stealing fire from the gods, we believe transformative knowledge belongs in the hands of the people, 
@@ -144,7 +140,7 @@ export default function About() {
               <Heart className="h-6 w-6 text-red-500" />
               <CardTitle className="text-2xl">Support Our Mission</CardTitle>
               <CardDescription className="text-base mt-2">
-                Help us keep advanced fantasy data free for everyone
+                Infrastructure and data source funding
               </CardDescription>
             </div>
           </CardHeader>
@@ -161,8 +157,8 @@ export default function About() {
                 <p>• <strong>PostgreSQL hosting:</strong> Reliable database infrastructure for historical trends</p>
                 <p>• <strong>Server costs:</strong> Fast, scalable hosting to keep the platform responsive</p>
               </div>
-              <p className="text-sm text-gray-500 mt-4 italic">
-                Professional fantasy data subscriptions elsewhere cost $100-300+ annually. We're committed to keeping this free.
+              <p className="text-sm text-gray-500 mt-4">
+                Comparable analytics platforms: FantasyPointsData ($200+), FantasyPros Premium ($100+), PlayerProfiler ($80+).
               </p>
             </div>
 

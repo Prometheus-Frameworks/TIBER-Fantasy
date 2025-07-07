@@ -33,8 +33,8 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Professional dynasty analytics powered by proprietary algorithms and authentic NFL data—
-              completely free, no paywalls, no premium tiers.
+              Dynasty analytics platform using NFL data, statistical modeling, and market analysis.
+              Free access to all analytical tools and player evaluations.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Link href="/rankings">
@@ -86,11 +86,10 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Everything You Need for Dynasty Domination
+            Dynasty Analytics Suite
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            From market value analysis to individual player profiling, 
-            Prometheus provides the insights you need to build championship teams
+            Market value analysis, player profiling, and statistical modeling for dynasty league management.
           </p>
         </div>
 
