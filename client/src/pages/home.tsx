@@ -151,9 +151,8 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Real-time average draft position data showing Josh Allen at #1.0, Lamar Jackson at #1.0, 
-                and Caleb Williams at #1.1 in superflex. Track market movements and identify value opportunities 
-                in dynasty startups with format-specific rankings.
+                See where players are being drafted in real dynasty leagues. Josh Allen goes #1, 
+                Lamar Jackson #2, and top rookies in the first round.
               </p>
               <Link href="/adp" className="w-full">
                 <Button size="sm" className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white">
