@@ -6,6 +6,7 @@
 import { playerMapping } from './playerMapping';
 import { sleeperAPI } from './sleeperAPI';
 import { playerNameMapping } from './playerNameMapping';
+import { dynastyADPService } from './dynastyADPService';
 
 // Utility function for dynasty tier classification
 function getDynastyTierFromValue(dynastyValue: number): string {
@@ -26,6 +27,12 @@ export interface EnhancedPlayer {
   avgPoints: number;
   dynastyValue: number;
   dynastyTier: string;
+  
+  // ADP Integration
+  dynastyADP?: number;
+  adpWeightedValue?: number;
+  valueCategory?: 'STEAL' | 'VALUE' | 'FAIR' | 'OVERVALUED' | 'AVOID';
+  adpDifference?: number;
   
   // Enhanced data from Sleeper mapping
   sleeperId?: string;
@@ -131,6 +138,9 @@ export class RankingEnhancementService {
         enhanced.sleeperId = fuzzyMatch;
       }
     }
+
+    // Add ADP integration to weight dynasty rankings
+    await this.integrateADPData(enhanced);
 
     return enhanced;
   }
@@ -308,6 +318,79 @@ export class RankingEnhancementService {
    */
   private async attemptFuzzyMapping(player: any): Promise<string | null> {
     return await this.findSleeperIdByFullName(player.name, player.team, player.position);
+  }
+
+  /**
+   * Integrate ADP data to weight dynasty rankings and identify value
+   */
+  private async integrateADPData(player: EnhancedPlayer): Promise<void> {
+    try {
+      // Get dynasty ADP for the player
+      const adpPlayer = await dynastyADPService.getPlayerADP(player.name);
+      
+      if (adpPlayer && adpPlayer.adp) {
+        player.dynastyADP = adpPlayer.adp;
+        
+        // Calculate ADP-weighted dynasty value
+        // High ADP = more valuable (earlier draft pick)
+        // Formula: Base dynasty value + ADP bonus
+        const adpBonus = this.calculateADPBonus(adpPlayer.adp, player.position);
+        player.adpWeightedValue = Math.min(100, player.dynastyValue + adpBonus);
+        
+        // Determine value category based on ADP vs our ranking
+        const valueAnalysis = this.analyzePlayerValue(player, adpPlayer.adp);
+        player.valueCategory = valueAnalysis.category;
+        player.adpDifference = valueAnalysis.difference;
+        
+        // Update dynasty tier based on weighted value
+        player.dynastyTier = getDynastyTierFromValue(player.adpWeightedValue);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to integrate ADP for ${player.name}:`, error);
+    }
+  }
+
+  /**
+   * Calculate ADP bonus for dynasty value weighting
+   */
+  private calculateADPBonus(dynastyADP: number, position: string): number {
+    // Early picks get higher bonuses
+    if (dynastyADP <= 12) return 15; // First round dynasty picks
+    if (dynastyADP <= 24) return 10; // Second round
+    if (dynastyADP <= 48) return 5;  // Third-fourth round
+    if (dynastyADP <= 96) return 2;  // Fifth-eighth round
+    return 0; // Later picks get no bonus
+  }
+
+  /**
+   * Analyze player value vs market ADP
+   */
+  private analyzePlayerValue(player: EnhancedPlayer, dynastyADP: number): {
+    category: 'STEAL' | 'VALUE' | 'FAIR' | 'OVERVALUED' | 'AVOID';
+    difference: number;
+  } {
+    // Convert dynasty value to rough ADP equivalent
+    // Elite (90+) = picks 1-12, Premium (75+) = picks 13-24, etc.
+    const ourADPEstimate = this.dynastyValueToADP(player.dynastyValue, player.position);
+    const difference = dynastyADP - ourADPEstimate; // Positive = undervalued by market
+    
+    if (difference >= 50) return { category: 'STEAL', difference };
+    if (difference >= 25) return { category: 'VALUE', difference };
+    if (difference >= -25) return { category: 'FAIR', difference };
+    if (difference >= -50) return { category: 'OVERVALUED', difference };
+    return { category: 'AVOID', difference };
+  }
+
+  /**
+   * Convert dynasty value to estimated ADP
+   */
+  private dynastyValueToADP(dynastyValue: number, position: string): number {
+    if (dynastyValue >= 90) return 6;   // Elite: picks 1-12
+    if (dynastyValue >= 75) return 18;  // Premium: picks 13-24
+    if (dynastyValue >= 60) return 36;  // Strong: picks 25-48
+    if (dynastyValue >= 45) return 72;  // Solid: picks 49-96
+    if (dynastyValue >= 30) return 144; // Depth: picks 97-192
+    return 250; // Bench: undrafted
   }
 
   /**

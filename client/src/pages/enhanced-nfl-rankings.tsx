@@ -26,6 +26,13 @@ interface EnhancedPlayer {
   adp: number;
   enhancedDynastyValue: number;
   enhancementStatus: 'Enhanced' | 'Basic';
+  
+  // ADP Integration
+  dynastyADP?: number;
+  adpWeightedValue?: number;
+  valueCategory?: 'STEAL' | 'VALUE' | 'FAIR' | 'OVERVALUED' | 'AVOID';
+  adpDifference?: number;
+  
   strengthsFromAPI: string[];
   concernsFromAPI: string[];
 }
@@ -48,10 +55,17 @@ export default function EnhancedNFLRankings() {
     dynastyTier: player.dynastyTier,
     avgPoints: player.avgPoints,
     adp: player.adp || 999,
-    enhancedDynastyValue: player.dynastyValue,
+    enhancedDynastyValue: player.adpWeightedValue || player.dynastyValue,
     enhancementStatus: player.enhancementStatus || 'Basic',
-    strengthsFromAPI: [`${player.dynastyTier} dynasty asset`, 'Platform enhanced'],
-    concernsFromAPI: player.enhancementStatus === 'Basic' ? ['Limited platform data'] : []
+    
+    // ADP Integration
+    dynastyADP: player.dynastyADP,
+    adpWeightedValue: player.adpWeightedValue,
+    valueCategory: player.valueCategory,
+    adpDifference: player.adpDifference,
+    
+    strengthsFromAPI: [`${player.dynastyTier} dynasty asset`, player.valueCategory === 'STEAL' ? 'Market undervalued' : player.valueCategory === 'VALUE' ? 'Good value pick' : 'Platform enhanced'],
+    concernsFromAPI: player.valueCategory === 'OVERVALUED' ? ['Market overvalued'] : player.valueCategory === 'AVOID' ? ['Significant overvalue'] : player.enhancementStatus === 'Basic' ? ['Limited platform data'] : []
   })) || [];
 
   const getTierColor = (tier: string) => {
@@ -62,6 +76,17 @@ export default function EnhancedNFLRankings() {
       case 'Solid': return 'bg-yellow-500 text-white';
       case 'Depth': return 'bg-orange-500 text-white';
       default: return 'bg-gray-500 text-white';
+    }
+  };
+
+  const getValueCategoryColor = (category?: string) => {
+    switch (category) {
+      case 'STEAL': return 'bg-green-600 text-white';
+      case 'VALUE': return 'bg-green-400 text-white';
+      case 'FAIR': return 'bg-blue-500 text-white';
+      case 'OVERVALUED': return 'bg-orange-500 text-white';
+      case 'AVOID': return 'bg-red-600 text-white';
+      default: return 'bg-gray-400 text-white';
     }
   };
 
@@ -188,13 +213,30 @@ export default function EnhancedNFLRankings() {
                           <Badge className={getTierColor(player.dynastyTier)}>
                             {player.dynastyTier}
                           </Badge>
+                          {player.valueCategory && (
+                            <Badge className={getValueCategoryColor(player.valueCategory)}>
+                              {player.valueCategory}
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <span>{player.team} • {player.position}</span>
                           <span>•</span>
                           <span>{player.avgPoints} PPG</span>
-                          <span>•</span>
-                          <span>ADP: {player.adp}</span>
+                          {player.dynastyADP && (
+                            <>
+                              <span>•</span>
+                              <span>Dynasty ADP: {player.dynastyADP}</span>
+                            </>
+                          )}
+                          {player.adpDifference && (
+                            <>
+                              <span>•</span>
+                              <span className={player.adpDifference > 0 ? 'text-green-600' : 'text-red-600'}>
+                                {player.adpDifference > 0 ? '+' : ''}{player.adpDifference} picks
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
