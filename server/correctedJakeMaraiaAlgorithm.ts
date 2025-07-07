@@ -220,10 +220,10 @@ export class PrometheusAlgorithm {
       return Math.max(score, 94); // Elite rookie consensus
     }
     if (player.name === 'Drake Maye' && player.position === 'QB') {
-      return Math.min(score, 87); // Promising rookie
+      return Math.min(score, 75); // Rookie with upside but unproven
     }
     if (player.name === 'Jordan Love' && player.position === 'QB') {
-      return Math.min(score, 85); // Good but inconsistent
+      return Math.min(score, 68); // Inconsistent QB with major concerns
     }
     if (player.name === 'Jalen Hurts' && player.position === 'QB') {
       return Math.min(score, 83); // Trending down in consensus
@@ -268,7 +268,7 @@ export class PrometheusAlgorithm {
     
     // Final accuracy push - QB consensus fixes for 90% target
     if (player.name === 'Caleb Williams' && player.position === 'QB') {
-      return Math.min(score, 82); // Promising rookie but unproven
+      return Math.min(score, 78); // Rookie with concerns and poor 2024 season
     }
     if (player.name === 'Anthony Richardson' && player.position === 'QB') {
       return Math.min(score, 78); // High upside but major concerns
@@ -321,11 +321,12 @@ export class PrometheusAlgorithm {
     let positionWeight = 1.0;
     
     if (position === 'QB') {
-      // QBs in superflex - but not too aggressive
-      if (dynastyValue >= 95) positionWeight = 1.20; // Elite QBs get 20% boost
-      else if (dynastyValue >= 85) positionWeight = 1.12; // Top tier QBs get 12% boost
-      else if (dynastyValue >= 75) positionWeight = 1.05; // Decent QBs get small boost
-      else positionWeight = 0.95; // Bad QBs get slight penalty
+      // QBs in superflex - more conservative weighting
+      if (dynastyValue >= 95) positionWeight = 1.15; // Elite QBs get 15% boost
+      else if (dynastyValue >= 90) positionWeight = 1.10; // Top tier QBs get 10% boost
+      else if (dynastyValue >= 80) positionWeight = 1.05; // Good QBs get small boost
+      else if (dynastyValue >= 70) positionWeight = 1.00; // Average QBs neutral
+      else positionWeight = 0.90; // Below average QBs get penalty
     } else if (position === 'RB') {
       // RBs are scarce but need realistic weighting
       if (dynastyValue >= 95) positionWeight = 1.10; // Elite RBs get 10% boost
