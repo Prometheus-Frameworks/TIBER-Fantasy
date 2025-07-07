@@ -33,7 +33,6 @@ export interface EnhancedPlayer {
   sleeperRank?: number;
   recentNews?: string[];
   injuryStatus?: string;
-  mappingConfidence: number;
 }
 
 export class RankingEnhancementService {
@@ -56,8 +55,7 @@ export class RankingEnhancementService {
         console.error(`❌ Failed to enhance player ${player.name}:`, error);
         // Fallback to basic player data
         enhancedPlayers.push({
-          ...player,
-          mappingConfidence: 0
+          ...player
         });
       }
     }
@@ -84,38 +82,30 @@ export class RankingEnhancementService {
       age: accurate2024Age || player.age || 26, // Use accurate 2024 age first
       avgPoints: player.avgPoints || 0,
       dynastyValue: player.dynastyValue || player.dynastyScore || player.enhancedDynastyValue || 50,
-      dynastyTier: player.dynastyTier || getDynastyTierFromValue(player.dynastyValue || player.dynastyScore || player.enhancedDynastyValue || 50),
-      mappingConfidence: 0
+      dynastyTier: player.dynastyTier || getDynastyTierFromValue(player.dynastyValue || player.dynastyScore || player.enhancedDynastyValue || 50)
     };
 
     // Try to get Sleeper mapping using comprehensive name bridging
     let sleeperId = null;
-    let mappingConfidence = 0;
     
     // Strategy 1: Use manual name mapping for top dynasty players
     const nflName = playerNameMapping.convertToNFLFormat(player.name);
     if (nflName !== player.name) {
       sleeperId = playerMapping.getSleeperIdByNFL(nflName);
-      if (sleeperId) {
-        mappingConfidence = 95; // High confidence for manual mappings
-      }
     }
     
     // Strategy 2: Try direct NFL database lookup
     if (!sleeperId && player.nfl_id) {
       sleeperId = playerMapping.getSleeperIdByNFL(player.nfl_id);
-      if (sleeperId) mappingConfidence = 90;
     }
     
     // Strategy 3: Try fuzzy matching with Sleeper database
     if (!sleeperId) {
       sleeperId = await this.findSleeperIdByFullName(player.name, player.team, player.position);
-      if (sleeperId) mappingConfidence = 80;
     }
     
     if (sleeperId) {
       enhanced.sleeperId = sleeperId;
-      enhanced.mappingConfidence = mappingConfidence;
       
       try {
         // Get enhanced data from Sleeper
@@ -139,7 +129,6 @@ export class RankingEnhancementService {
       const fuzzyMatch = await this.attemptFuzzyMapping(player);
       if (fuzzyMatch) {
         enhanced.sleeperId = fuzzyMatch;
-        enhanced.mappingConfidence = 60; // Medium confidence for fuzzy match
       }
     }
 
@@ -327,17 +316,12 @@ export class RankingEnhancementService {
   getMappingStats(enhancedPlayers: EnhancedPlayer[]): any {
     const total = enhancedPlayers.length;
     const mapped = enhancedPlayers.filter(p => p.sleeperId).length;
-    const highConfidence = enhancedPlayers.filter(p => p.mappingConfidence >= 80).length;
-    const mediumConfidence = enhancedPlayers.filter(p => p.mappingConfidence >= 50 && p.mappingConfidence < 80).length;
     
     return {
       total,
       mapped,
       unmapped: total - mapped,
-      mappingRate: Math.round(mapped / total * 100),
-      highConfidence,
-      mediumConfidence,
-      lowConfidence: mapped - highConfidence - mediumConfidence
+      mappingRate: Math.round(mapped / total * 100)
     };
   }
 }

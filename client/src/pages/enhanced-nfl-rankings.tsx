@@ -25,7 +25,7 @@ interface EnhancedPlayer {
   avgPoints: number;
   adp: number;
   enhancedDynastyValue: number;
-  confidenceScore: number;
+  enhancementStatus: 'Enhanced' | 'Basic';
   strengthsFromAPI: string[];
   concernsFromAPI: string[];
 }
@@ -49,9 +49,9 @@ export default function EnhancedNFLRankings() {
     avgPoints: player.avgPoints,
     adp: player.adp || 999,
     enhancedDynastyValue: player.dynastyValue,
-    confidenceScore: player.mappingConfidence || 85,
+    enhancementStatus: player.enhancementStatus || 'Basic',
     strengthsFromAPI: [`${player.dynastyTier} dynasty asset`, 'Platform enhanced'],
-    concernsFromAPI: player.mappingConfidence < 80 ? ['Limited platform data'] : []
+    concernsFromAPI: player.enhancementStatus === 'Basic' ? ['Limited platform data'] : []
   })) || [];
 
   const getTierColor = (tier: string) => {
@@ -65,11 +65,7 @@ export default function EnhancedNFLRankings() {
     }
   };
 
-  const getConfidenceColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
-    return 'text-red-600';
-  };
+
 
   if (isLoading) {
     return (
@@ -219,14 +215,10 @@ export default function EnhancedNFLRankings() {
 
                         {/* Confidence Score */}
                         <div className="text-center">
-                          <div className="text-sm text-gray-500 mb-1">Confidence</div>
-                          <div className={`text-lg font-semibold ${getConfidenceColor(player.confidenceScore)}`}>
-                            {player.confidenceScore}%
+                          <div className="text-sm text-gray-500 mb-1">Enhancement</div>
+                          <div className="text-lg font-semibold text-blue-600">
+                            {player.enhancementStatus}
                           </div>
-                          <Progress 
-                            value={player.confidenceScore} 
-                            className="w-16 h-2 mt-1"
-                          />
                         </div>
                       </div>
                     </div>

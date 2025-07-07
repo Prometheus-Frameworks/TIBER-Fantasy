@@ -1392,10 +1392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Enhanced data from mapping
           sleeperId: player.sleeperId || null,
           fantasyOwnership: player.fantasyOwnership || null,
-          mappingConfidence: player.mappingConfidence,
-          enhancementStatus: player.sleeperId ? 'Enhanced' : 'Basic',
-          dataQuality: player.mappingConfidence >= 80 ? 'High' : 
-                      player.mappingConfidence >= 50 ? 'Medium' : 'Low'
+          enhancementStatus: player.sleeperId ? 'Enhanced' : 'Basic'
         })),
         mappingStats,
         message: `Enhanced ${enhancedPlayers.length} players with ${mappingStats.mappingRate}% platform integration`
