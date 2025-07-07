@@ -41,12 +41,18 @@ export class RankingEnhancementService {
       // Apply Prometheus Algorithm v2.0
       const correctedPlayers = players.map(player => {
         const prometheusScore = prometheusAlgorithm.calculatePrometheusScore(player);
+        const adpDifference = player.adp - this.calculateExpectedADP(prometheusScore.totalScore, player.position);
+        const valueCategory = this.getValueCategory(adpDifference);
+        
         return {
           ...player,
           dynastyValue: prometheusScore.totalScore,
+          positionAdjustedValue: prometheusScore.positionAdjustedScore,
           dynastyTier: prometheusScore.tier,
           confidence: prometheusScore.confidence,
           algorithmVersion: 'prometheus_v2',
+          valueCategory,
+          adpDifference,
           metrics: {
             production: prometheusScore.production,
             opportunity: prometheusScore.opportunity,
@@ -56,9 +62,9 @@ export class RankingEnhancementService {
         };
       });
       
-      // Sort by dynasty value and apply limit
+      // Sort by position-adjusted value to find market inefficiencies
       const sortedPlayers = correctedPlayers
-        .sort((a, b) => b.dynastyValue - a.dynastyValue)
+        .sort((a, b) => (b.positionAdjustedValue || b.dynastyValue) - (a.positionAdjustedValue || a.dynastyValue))
         .slice(0, limit);
       
       return {
@@ -74,6 +80,39 @@ export class RankingEnhancementService {
       console.error('Error generating corrected rankings:', error);
       throw error;
     }
+  }
+
+  private calculateExpectedADP(dynastyValue: number, position: string): number {
+    // Copy of the same logic from prometheus algorithm
+    if (position === 'QB') {
+      if (dynastyValue >= 95) return 8;
+      if (dynastyValue >= 85) return 20;
+      if (dynastyValue >= 75) return 45;
+      return 80;
+    } else if (position === 'RB') {
+      if (dynastyValue >= 90) return 5;
+      if (dynastyValue >= 80) return 15;
+      if (dynastyValue >= 70) return 35;
+      return 60;
+    } else if (position === 'WR') {
+      if (dynastyValue >= 95) return 3;
+      if (dynastyValue >= 85) return 12;
+      if (dynastyValue >= 75) return 25;
+      return 50;
+    } else if (position === 'TE') {
+      if (dynastyValue >= 90) return 25;
+      if (dynastyValue >= 75) return 60;
+      return 100;
+    }
+    return 100;
+  }
+
+  private getValueCategory(adpDifference: number): string {
+    if (adpDifference > 50) return 'STEAL';
+    if (adpDifference > 25) return 'VALUE';
+    if (adpDifference > -10) return 'FAIR';
+    if (adpDifference > -25) return 'CAUTION';
+    return 'AVOID';
   }
   
   /**

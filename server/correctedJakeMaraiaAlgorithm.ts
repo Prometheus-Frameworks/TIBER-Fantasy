@@ -10,6 +10,8 @@ export interface PrometheusDynastyScore {
   age: number;           // 20% - Normalized age score (0-1)
   stability: number;     // 15% - (1 - injury games %) * (1 - snap % variance)
   totalScore: number;
+  positionAdjustedScore: number; // Position-specific weighted value
+  superflex: boolean;    // Whether superflex adjustments applied
   tier: string;
   confidence: number;
 }
@@ -39,12 +41,16 @@ export class PrometheusAlgorithm {
     // Calculate confidence based on data completeness
     const confidence = this.calculateConfidence(player);
     
+    const positionAdjustedScore = this.calculatePositionAdjustedScore(totalScore, player);
+    
     return {
       production,
       opportunity,
       age,
       stability,
       totalScore: Math.min(100, Math.max(0, totalScore)),
+      positionAdjustedScore,
+      superflex: this.isSuperflex(player),
       tier: this.calculateTier(totalScore),
       confidence
     };
@@ -302,6 +308,93 @@ export class PrometheusAlgorithm {
     }
     
     return score;
+  }
+  
+  /**
+   * Calculate position-adjusted dynasty value (individualized by position)
+   */
+  private calculatePositionAdjustedScore(dynastyValue: number, player: any): number {
+    const position = player.position;
+    const adp = player.adp || 999;
+    
+    // Position-specific correlation weights based on scarcity and value
+    let positionWeight = 1.0;
+    
+    if (position === 'QB') {
+      // QBs in superflex are premium - higher weight for elite QBs
+      if (dynastyValue >= 95) positionWeight = 1.25; // Elite QBs get 25% boost
+      else if (dynastyValue >= 85) positionWeight = 1.15; // Top tier QBs get 15% boost
+      else if (dynastyValue >= 75) positionWeight = 1.05; // Decent QBs get small boost
+      else positionWeight = 0.90; // Bad QBs get penalty
+    } else if (position === 'RB') {
+      // RBs are scarce but risky - moderate weight adjustments
+      if (dynastyValue >= 90) positionWeight = 1.15; // Elite RBs get 15% boost
+      else if (dynastyValue >= 80) positionWeight = 1.08; // Good RBs get 8% boost
+      else if (dynastyValue >= 70) positionWeight = 1.02; // Decent RBs get small boost
+      else positionWeight = 0.85; // Bad RBs get larger penalty due to injury risk
+    } else if (position === 'WR') {
+      // WRs are stable and predictable - baseline weights
+      if (dynastyValue >= 95) positionWeight = 1.10; // Elite WRs get 10% boost
+      else if (dynastyValue >= 85) positionWeight = 1.05; // Good WRs get 5% boost
+      else if (dynastyValue >= 75) positionWeight = 1.01; // Decent WRs get tiny boost
+      else positionWeight = 0.95; // Below average WRs get small penalty
+    } else if (position === 'TE') {
+      // TEs are extremely scarce at the top - high variance
+      if (dynastyValue >= 90) positionWeight = 1.20; // Elite TEs get 20% boost (Bowers)
+      else if (dynastyValue >= 75) positionWeight = 1.05; // Good TEs get 5% boost
+      else if (dynastyValue >= 60) positionWeight = 0.98; // Decent TEs slight penalty
+      else positionWeight = 0.80; // Bad TEs get large penalty
+    }
+    
+    // Value discrepancy factor - identify market inefficiencies
+    let valueFactor = 1.0;
+    const expectedADP = this.calculateExpectedADP(dynastyValue, position);
+    const adpDifference = adp - expectedADP;
+    
+    // Players significantly undervalued by market (late ADP, high dynasty value)
+    if (adpDifference > 50) valueFactor = 1.20; // Major value opportunities
+    else if (adpDifference > 25) valueFactor = 1.10; // Solid value plays
+    else if (adpDifference > 10) valueFactor = 1.05; // Slight value
+    // Players overvalued by market (early ADP, lower dynasty value) 
+    else if (adpDifference < -25) valueFactor = 0.85; // Avoid - overpriced
+    else if (adpDifference < -10) valueFactor = 0.95; // Proceed with caution
+    
+    return dynastyValue * positionWeight * valueFactor;
+  }
+  
+  /**
+   * Calculate expected ADP based on dynasty value and position
+   */
+  private calculateExpectedADP(dynastyValue: number, position: string): number {
+    // Position-specific ADP curves based on dynasty value
+    if (position === 'QB') {
+      if (dynastyValue >= 95) return 8;  // Elite QBs
+      if (dynastyValue >= 85) return 20; // Top tier QBs
+      if (dynastyValue >= 75) return 45; // Solid QBs
+      return 80; // Lower tier QBs
+    } else if (position === 'RB') {
+      if (dynastyValue >= 90) return 5;  // Elite RBs
+      if (dynastyValue >= 80) return 15; // Good RBs
+      if (dynastyValue >= 70) return 35; // Decent RBs
+      return 60; // Lower tier RBs
+    } else if (position === 'WR') {
+      if (dynastyValue >= 95) return 3;  // Elite WRs
+      if (dynastyValue >= 85) return 12; // Good WRs
+      if (dynastyValue >= 75) return 25; // Decent WRs
+      return 50; // Lower tier WRs
+    } else if (position === 'TE') {
+      if (dynastyValue >= 90) return 25; // Elite TEs
+      if (dynastyValue >= 75) return 60; // Good TEs
+      return 100; // Lower tier TEs
+    }
+    return 100; // Default
+  }
+
+  /**
+   * Check if superflex adjustments should apply
+   */
+  private isSuperflex(player: any): boolean {
+    return player.position === 'QB'; // Superflex affects QBs primarily
   }
   
   /**
