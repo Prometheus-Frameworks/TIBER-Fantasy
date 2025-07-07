@@ -168,8 +168,8 @@ export default function EnhancedNFLRankings() {
                       {/* Player Info */}
                       <div>
                         <div className="flex items-center gap-3 mb-1">
-                          <Link href={`/player/${player.rank}`}>
-                            <h3 className="text-lg font-semibold text-gray-900 hover:text-blue-600 cursor-pointer">
+                          <Link href={`/player/${encodeURIComponent(player.name.replace(/\s+/g, '-').toLowerCase())}`}>
+                            <h3 className="text-lg font-semibold text-gray-900 hover:text-blue-600 cursor-pointer transition-colors">
                               {player.name}
                             </h3>
                           </Link>

@@ -449,52 +449,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/rankings/enhanced-nfl', async (req, res) => {
     try {
       const { position } = req.query;
-      const { realTimeNFLAnalytics } = await import('./realTimeNFLAnalytics');
-      const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
+      const { processAll2024WeightedScores } = await import('./data2024Weighting');
+      
+      // Get 2024-weighted players (our working dataset)
+      const weighted2024Players = await processAll2024WeightedScores();
       
       // Filter by position if specified
       const players = position ? 
-        ALL_PROPRIETARY_PLAYERS.filter(p => p.position === position.toUpperCase()) : 
-        ALL_PROPRIETARY_PLAYERS;
+        weighted2024Players.filter(p => p.position === position.toString().toUpperCase()) : 
+        weighted2024Players;
       
-      // Analyze first 20 players with real NFL analytics for demonstration
-      const enhancedPlayers = await Promise.all(
-        players.slice(0, 20).map(async (player) => {
-          try {
-            // Create a simplified player object for analytics
-            const playerObj = {
-              id: player.rank,
-              name: player.name,
-              position: player.position,
-              team: player.team,
-              age: 26 // Default age
-            };
-            
-            const profile = await realTimeNFLAnalytics.analyzePlayerWithAPIData(playerObj);
-            
-            return {
-              ...player,
-              nflAnalytics: profile.dynastyAnalysis,
-              enhancedDynastyValue: profile.dynastyAnalysis.enhancedValue,
-              confidenceScore: profile.dynastyAnalysis.confidenceScore,
-              strengthsFromAPI: profile.dynastyAnalysis.strengthsFromAPI,
-              concernsFromAPI: profile.dynastyAnalysis.concernsFromAPI
-            };
-          } catch (error) {
-            console.error(`Error analyzing ${player.name}:`, error);
-            return {
-              ...player,
-              enhancedDynastyValue: player.dynastyScore,
-              confidenceScore: 30,
-              strengthsFromAPI: ['Standard dynasty evaluation'],
-              concernsFromAPI: ['Limited API data available']
-            };
-          }
-        })
-      );
-      
-      // Sort by enhanced dynasty value
-      enhancedPlayers.sort((a, b) => b.enhancedDynastyValue - a.enhancedDynastyValue);
+      // Helper function to determine dynasty tier
+      const getDynastyTier = (score: number): string => {
+        if (score >= 85) return 'Elite';
+        if (score >= 70) return 'Premium';
+        if (score >= 55) return 'Strong';
+        if (score >= 40) return 'Solid';
+        return 'Depth';
+      };
+
+      // Format players for frontend using 2024-weighted structure
+      const enhancedPlayers = players.map((player, index) => ({
+        rank: index + 1,
+        name: player.player,
+        position: player.position,
+        team: player.team,
+        dynastyScore: player.finalDynastyScore,
+        dynastyTier: getDynastyTier(player.finalDynastyScore),
+        avgPoints: player.ppg2024,
+        adp: 999, // Default ADP
+        enhancedDynastyValue: player.finalDynastyScore,
+        confidenceScore: 85, // High confidence in 2024 data
+        strengthsFromAPI: [`Strong 2024 performance (${player.ppg2024.toFixed(1)} PPG)`],
+        concernsFromAPI: player.ppg2024 < 10 ? ['Below average production'] : ['Standard dynasty risk']
+      }));
       
       res.json(enhancedPlayers);
     } catch (error: any) {
@@ -651,27 +639,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced Player Profile API - 2024 Analytics with Percentiles & Physical Data
-  app.get("/api/players/:id", async (req, res) => {
+  // Enhanced Player Profile API - 2024 Analytics with Name-based lookup
+  app.get("/api/players/:identifier", async (req, res) => {
     try {
-      const playerId = req.params.id;
+      const identifier = req.params.identifier;
       
       // Import enhanced player profile system  
       const { getPlayerProfile } = await import('./playerProfile2024');
+      const { processAll2024WeightedScores } = await import('./data2024Weighting');
       
-      // Try to get enhanced profile first (by ID or name)
-      let playerProfile = getPlayerProfile(parseInt(playerId));
+      // Try enhanced profile first (supports both ID and name)
+      let playerProfile = null;
       
-      // If not found by ID, try name search from proprietary rankings
-      if (!playerProfile) {
-        const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
-        const player = ALL_PROPRIETARY_PLAYERS.find(p => p.id === parseInt(playerId));
-        if (player) {
-          playerProfile = getPlayerProfile(player.name);
-        }
+      // Check if identifier is a number (ID lookup)
+      const playerId = parseInt(identifier);
+      if (!isNaN(playerId)) {
+        playerProfile = getPlayerProfile(playerId);
+      } else {
+        // Name-based lookup (URL-safe format: brian-thomas-jr)
+        const searchName = identifier.replace(/-/g, ' ');
+        playerProfile = getPlayerProfile(searchName);
       }
       
-      // If we have an enhanced profile with 2024 analytics, return it
+      // If we have an enhanced profile, return it
       if (playerProfile) {
         res.json({
           ...playerProfile,
@@ -681,23 +671,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       
-      // Fallback to basic player data
-      const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
-      const player = ALL_PROPRIETARY_PLAYERS.find(p => p.id === parseInt(playerId));
+      // Fallback to 2024-weighted data
+      const weighted2024Players = await processAll2024WeightedScores();
+      let player2024 = null;
       
-      if (!player) {
+      if (!isNaN(playerId)) {
+        // For legacy ID support, try to match by position in array
+        player2024 = weighted2024Players[playerId - 1];
+      } else {
+        // Name-based search in 2024 data
+        const searchName = identifier.replace(/-/g, ' ');
+        player2024 = weighted2024Players.find(p => 
+          p.player.toLowerCase().includes(searchName.toLowerCase()) ||
+          searchName.toLowerCase().includes(p.player.toLowerCase())
+        );
+      }
+      
+      if (!player2024) {
         return res.status(404).json({ message: "Player not found" });
       }
 
-      // Basic profile without enhanced analytics
+      // Create basic profile from 2024 data
       const basicProfile = {
-        ...player,
+        id: playerId || Math.floor(Math.random() * 1000),
+        name: player2024.player,
+        position: player2024.position,
+        team: player2024.team,
+        age: 26, // Default age
+        avgPoints: player2024.ppg2024,
+        dynastyValue: player2024.finalDynastyScore,
+        dynastyTier: player2024.finalDynastyScore >= 85 ? 'Elite' : 
+                    player2024.finalDynastyScore >= 70 ? 'Premium' : 
+                    player2024.finalDynastyScore >= 55 ? 'Strong' : 'Solid',
         enhanced: false,
-        experience: Math.max(1, player.age - 21),
-        projectedPoints: player.avgPoints * 1.05,
-        valueCategory: player.dynastyValue >= 80 ? 'VALUE' : 
-                      player.dynastyValue >= 60 ? 'FAIR' : 'OVERVALUED',
-        message: "Basic profile - enhanced analytics available for select players"
+        experience: Math.max(1, 26 - 21), // Default experience
+        projectedPoints: player2024.ppg2024 * 1.05,
+        valueCategory: player2024.finalDynastyScore >= 80 ? 'VALUE' : 
+                      player2024.finalDynastyScore >= 60 ? 'FAIR' : 'OVERVALUED',
+        // Additional 2024 context
+        snapShare2024: player2024.snapShare2024,
+        targetShare2024: player2024.targetShare2024,
+        carries2024: player2024.carries2024,
+        redZoneShare2024: player2024.redZoneShare2024,
+        careerPPG: player2024.careerPPG,
+        message: `2024-weighted dynasty analysis (${player2024.weighted2024Score.toFixed(1)} score)`
       };
 
       res.json(basicProfile);
@@ -1078,6 +1095,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating 2024 breakouts:", error);
       res.status(500).json({ error: "Failed to generate 2024 breakout rankings" });
+    }
+  });
+
+  // College Player Database API - Draft prospects with capital weighting
+  app.get("/api/college-prospects", async (req, res) => {
+    try {
+      const { getAllCollegeProspects } = await import('./collegePlayerDatabase');
+      const collegeProspects = getAllCollegeProspects();
+      
+      res.json({
+        message: "College dynasty prospects with draft capital integration",
+        methodology: "50% draft capital + 30% college production + 20% athletic profile",
+        totalProspects: collegeProspects.length,
+        prospects: collegeProspects,
+        note: "Draft capital heavily weighted - most predictive factor for NFL success"
+      });
+    } catch (error) {
+      console.error("Error fetching college prospects:", error);
+      res.status(500).json({ error: "Failed to fetch college prospects" });
+    }
+  });
+
+  // Enhanced WR Algorithm API - Environmental context and draft capital
+  app.get("/api/rankings/enhanced-wr", async (req, res) => {
+    try {
+      const { calculateEnhancedWRValue, NFL_TEAM_CONTEXTS, WR_DRAFT_CAPITAL } = await import('./enhancedWRAlgorithm');
+      
+      // Get current WR players
+      const allPlayers = await storage.getAllPlayers();
+      const wrPlayers = allPlayers.filter(p => p.position === 'WR');
+      
+      // Apply enhanced algorithm to each WR
+      const enhancedWRs = wrPlayers.map(player => {
+        const teamContext = NFL_TEAM_CONTEXTS[player.team];
+        const draftCapital = WR_DRAFT_CAPITAL[player.name];
+        return calculateEnhancedWRValue(player, teamContext, draftCapital);
+      }).sort((a, b) => b.finalDynastyValue - a.finalDynastyValue);
+      
+      // Top passing volume teams for context
+      const topPassingTeams = [
+        { team: 'MIA', attempts: 612, context: 'Elite pass volume' },
+        { team: 'KC', attempts: 588, context: 'High volume + elite stability' },
+        { team: 'PHI', attempts: 580, context: 'Balanced high volume' },
+        { team: 'CIN', attempts: 578, context: 'Pass-heavy when healthy' },
+        { team: 'BUF', attempts: 565, context: 'Allen-driven volume' }
+      ];
+      
+      res.json({
+        message: "Enhanced WR rankings with environmental context and draft capital",
+        methodology: "Base value + team context + draft capital + situational target weighting",
+        factors: {
+          teamContext: "Pass volume, coaching stability, QB stability, red zone opportunities",
+          targetValue: "EPA-weighted by situation (red zone, third down, open field)",
+          draftCapital: "Significant boost for young players with high draft capital"
+        },
+        topPassingTeams,
+        wrRankings: enhancedWRs.slice(0, 25),
+        totalWRs: enhancedWRs.length
+      });
+    } catch (error) {
+      console.error("Error generating enhanced WR rankings:", error);
+      res.status(500).json({ error: "Failed to generate enhanced WR rankings" });
     }
   });
 

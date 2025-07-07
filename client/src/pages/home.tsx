@@ -308,7 +308,7 @@ export default function Home() {
               to build championship rosters and identify competitive advantages
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/rankings">
+              <Link href="/enhanced-rankings">
                 <Button size="lg" variant="secondary" className="px-8 py-3 text-lg">
                   Start Analyzing
                   <LineChart className="ml-2 h-5 w-5" />
