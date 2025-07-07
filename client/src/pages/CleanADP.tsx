@@ -143,13 +143,13 @@ export default function CleanADP() {
         {/* Players Table */}
         <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
           {/* Table Header */}
-          <div className="bg-slate-50 border-b border-slate-200 p-4">
-            <div className="grid grid-cols-12 gap-4 text-sm font-medium text-slate-600">
-              <div className="col-span-1">ADP</div>
-              <div className="col-span-5">Player</div>
-              <div className="col-span-2">Position</div>
-              <div className="col-span-2">Ownership</div>
-              <div className="col-span-2">Trend</div>
+          <div className="bg-slate-50 border-b border-slate-200 p-3">
+            <div className="grid grid-cols-12 gap-2 text-xs font-medium text-slate-600 uppercase tracking-wide">
+              <div className="col-span-2 text-center">ADP</div>
+              <div className="col-span-4">Player</div>
+              <div className="col-span-2 text-center">Position</div>
+              <div className="col-span-2 text-center">Ownership</div>
+              <div className="col-span-2 text-center">Trend</div>
             </div>
           </div>
 
@@ -158,64 +158,62 @@ export default function CleanADP() {
             {filteredPlayers.slice(0, 100).map((player, index) => (
               <div 
                 key={player.id} 
-                className="p-4 hover:bg-slate-50 transition-colors"
+                className="p-3 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-b-0"
               >
-                <div className="grid grid-cols-12 gap-4 items-center">
+                <div className="grid grid-cols-12 gap-2 items-center">
                   {/* ADP */}
-                  <div className="col-span-1">
+                  <div className="col-span-2 text-center">
                     <span className="text-lg font-bold text-slate-900">
-                      {player.adp.toFixed(1)}
+                      {player.adp.toFixed(0)}
                     </span>
                   </div>
 
                   {/* Player Name & Team */}
-                  <div className="col-span-5">
-                    <div className="font-medium text-slate-900">{player.name}</div>
-                    <div className="text-sm text-slate-500">{player.team}</div>
+                  <div className="col-span-4">
+                    <div className="font-medium text-slate-900 text-sm leading-tight">
+                      {player.name}
+                    </div>
+                    <div className="text-xs text-slate-500 uppercase tracking-wide">
+                      {player.team}
+                    </div>
                   </div>
 
                   {/* Position */}
-                  <div className="col-span-2">
+                  <div className="col-span-2 text-center">
                     <Badge 
                       variant="outline" 
-                      className={
+                      className={`text-xs ${
                         player.position === 'QB' ? 'border-red-300 text-red-700 bg-red-50' :
                         player.position === 'RB' ? 'border-green-300 text-green-700 bg-green-50' :
                         player.position === 'WR' ? 'border-blue-300 text-blue-700 bg-blue-50' :
                         'border-purple-300 text-purple-700 bg-purple-50'
-                      }
+                      }`}
                     >
                       {player.position}
                     </Badge>
                   </div>
 
                   {/* Ownership */}
-                  <div className="col-span-2">
-                    <div className="text-slate-900 font-medium">
-                      {player.ownership.toFixed(1)}%
+                  <div className="col-span-2 text-center">
+                    <div className="text-slate-900 font-medium text-sm">
+                      {player.ownership.toFixed(0)}%
                     </div>
                   </div>
 
                   {/* Trend */}
-                  <div className="col-span-2 flex items-center gap-2">
+                  <div className="col-span-2 text-center">
                     {player.isRising && (
-                      <>
-                        <TrendingUp className="h-4 w-4 text-green-600" />
-                        <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50 text-xs">
-                          Rising
-                        </Badge>
-                      </>
+                      <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50 text-xs">
+                        Rising
+                      </Badge>
                     )}
                     {player.isFalling && (
-                      <>
-                        <TrendingDown className="h-4 w-4 text-red-600" />
-                        <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-xs">
-                          Falling
-                        </Badge>
-                      </>
+                      <Badge variant="outline" className="border-red-300 text-red-700 bg-red-50 text-xs">
+                        Falling
+                      </Badge>
                     )}
                     {!player.isRising && !player.isFalling && (
-                      <span className="text-slate-400 text-sm">Stable</span>
+                      <span className="text-slate-400 text-xs">Stable</span>
                     )}
                   </div>
                 </div>
