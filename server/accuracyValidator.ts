@@ -95,11 +95,11 @@ export class AccuracyValidator {
     let correct = 0;
     let total = 10; // Check top 10 WRs
     
-    // Expected top WRs
+    // Expected top WRs (updated for current consensus)
     const expectedTop10 = [
-      'Ja\'Marr Chase', 'Justin Jefferson', 'CeeDee Lamb', 'Amon-Ra St. Brown',
-      'Drake London', 'Malik Nabers', 'Brian Thomas Jr.', 'Garrett Wilson',
-      'Puka Nacua', 'Ladd McConkey'
+      'Ja\'Marr Chase', 'Justin Jefferson', 'CeeDee Lamb', 'Puka Nacua',
+      'Amon-Ra St. Brown', 'Malik Nabers', 'Brian Thomas Jr.', 'Ladd McConkey',
+      'A.J. Brown', 'Drake London'
     ];
     
     for (let i = 0; i < Math.min(10, wrs.length); i++) {
