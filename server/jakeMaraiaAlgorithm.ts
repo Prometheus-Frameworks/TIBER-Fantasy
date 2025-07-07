@@ -34,14 +34,15 @@ export class JakeMaraiaAlgorithm {
       (stability * 0.05)
     );
     
-    // Superflex QB premium - Only for truly elite QBs
-    if (player.position === 'QB' && totalScore >= 80) {
-      totalScore += 15; // Significant premium only for elite QBs (Josh Allen, Lamar, etc)
-    } else if (player.position === 'QB' && totalScore >= 70) {
-      totalScore += 8;  // Moderate premium for good QBs
-    } else if (player.position === 'QB' && totalScore >= 55) {
-      totalScore += 3;  // Small premium for starter-level QBs
+    // Superflex QB premium - EXTREMELY selective for only elite QBs
+    if (player.position === 'QB' && totalScore >= 85) {
+      totalScore += 12; // Premium only for truly elite QBs (Josh Allen, Lamar, Jayden)
+    } else if (player.position === 'QB' && totalScore >= 75) {
+      totalScore += 6;  // Small premium for top-tier QBs (Burrow range)
+    } else if (player.position === 'QB' && totalScore >= 60) {
+      totalScore += 2;  // Minimal premium for decent QBs
     }
+    // No premium for QBs scoring below 60 - they should rank appropriately low
     
     return {
       production,
@@ -61,15 +62,16 @@ export class JakeMaraiaAlgorithm {
     const position = player.position;
     const avgPoints = player.avgPoints || 0;
     
-    // Jake's thresholds based on 2024 data - More restrictive for QBs
+    // Jake's thresholds based on 2024 data - MUCH more restrictive for QBs
     if (position === 'QB') {
       if (avgPoints >= 24) return 100; // Josh Allen tier (24.8)
       if (avgPoints >= 22) return 95;  // Lamar tier (22.4)
       if (avgPoints >= 20) return 85;  // Jayden tier (20.8)
-      if (avgPoints >= 19) return 75;  // Joe Burrow tier (19.2)
-      if (avgPoints >= 17) return 55;  // Mid-tier QBs (Tua 16.8, Jordan Love 17.4, Dak 17.0)
-      if (avgPoints >= 15) return 40;  // Lower-tier QBs
-      return Math.max(0, avgPoints * 2); // Linear below QB2
+      if (avgPoints >= 19) return 70;  // Joe Burrow tier (19.2)
+      if (avgPoints >= 18) return 50;  // High-end QB2s
+      if (avgPoints >= 16) return 35;  // Mid-tier QBs (Tua 16.8, Jordan Love 17.4, Dak 17.0)
+      if (avgPoints >= 15) return 25;  // Lower-tier QBs
+      return Math.max(0, avgPoints * 1.5); // Very conservative below QB2
     }
     
     if (position === 'RB') {
