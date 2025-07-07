@@ -238,7 +238,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ADP endpoints using Sleeper API
+  // ADP endpoints - Real-time dynasty data
+  app.get('/api/adp/realtime/:format?', async (req, res) => {
+    try {
+      const format = req.params.format || 'superflex';
+      const { realTimeADPService } = await import('./realTimeADPService');
+      
+      console.log(`🎯 Fetching real-time dynasty ADP data for ${format} format...`);
+      const rawADPData = await realTimeADPService.fetchRecentDynastyStartups();
+      
+      // Get all players for mapping
+      const { cleanADPService } = await import('./cleanADPService');
+      const allPlayers = await cleanADPService.getAllPlayers();
+      
+      // Convert to expected format with realistic spread
+      const players = rawADPData.map(adpEntry => {
+        const player = allPlayers[adpEntry.player_id];
+        if (!player || !['QB', 'RB', 'WR', 'TE'].includes(player.position)) return null;
+        
+        const playerName = `${player.first_name || ''} ${player.last_name || ''}`.trim();
+        const ownership = realTimeADPService.calculateOwnership(adpEntry.adp);
+        
+        return {
+          id: adpEntry.player_id,
+          sleeperId: adpEntry.player_id,
+          name: playerName,
+          position: player.position,
+          team: player.team || 'FA',
+          adp: adpEntry.adp,
+          adpTrend: 0,
+          ownership: Math.round(ownership),
+          ownershipTrend: 0,
+          draftCount: adpEntry.total_picks || 1,
+          rankChange: 0,
+          isRising: false,
+          isFalling: false
+        };
+      }).filter(Boolean);
+      
+      // Sort by realistic ADP
+      players.sort((a, b) => (a?.adp || 999) - (b?.adp || 999));
+      
+      res.json({
+        players: players.slice(0, 500),
+        format,
+        lastUpdated: new Date().toISOString(),
+        source: 'Real-time Dynasty Consensus + Market Data'
+      });
+    } catch (error: any) {
+      console.error('❌ Real-time ADP endpoint error:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch real-time ADP data', 
+        error: error.message 
+      });
+    }
+  });
+
+  // Legacy ADP endpoints using Sleeper API
   app.get('/api/adp/sleeper/:format?', async (req, res) => {
     try {
       const format = req.params.format || 'superflex';

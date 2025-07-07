@@ -30,7 +30,8 @@ export default function CleanADP() {
   const [selectedPosition, setSelectedPosition] = useState("ALL");
 
   const { data: adpData, isLoading, error } = useQuery<ADPData>({
-    queryKey: ['/api/adp/sleeper', 'superflex'],
+    queryKey: ['/api/adp/realtime', 'superflex'],
+    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes for real-time data
   });
 
   // Debug logging
