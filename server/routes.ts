@@ -275,6 +275,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Expanded Player Database endpoints
+  app.get('/api/players/database', async (req, res) => {
+    try {
+      const { expandedPlayerDatabase } = await import('./expandedPlayerDatabase');
+      const allPlayers = expandedPlayerDatabase.getAllNFLPlayers();
+      res.json({
+        players: allPlayers,
+        totalCount: allPlayers.length,
+        byPosition: {
+          QB: allPlayers.filter(p => p.position === 'QB').length,
+          RB: allPlayers.filter(p => p.position === 'RB').length,
+          WR: allPlayers.filter(p => p.position === 'WR').length,
+          TE: allPlayers.filter(p => p.position === 'TE').length
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ Player database error:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch player database', 
+        error: error.message 
+      });
+    }
+  });
+
+  app.get('/api/players/position/:position', async (req, res) => {
+    try {
+      const position = req.params.position.toUpperCase();
+      const { expandedPlayerDatabase } = await import('./expandedPlayerDatabase');
+      const players = expandedPlayerDatabase.getPlayersByPosition(position);
+      res.json({ players, position, count: players.length });
+    } catch (error: any) {
+      console.error('❌ Position filter error:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch players by position', 
+        error: error.message 
+      });
+    }
+  });
+
+  app.get('/api/players/dynasty/young', async (req, res) => {
+    try {
+      const { expandedPlayerDatabase } = await import('./expandedPlayerDatabase');
+      const youngAssets = expandedPlayerDatabase.getYoungDynastyAssets();
+      res.json({ 
+        players: youngAssets, 
+        count: youngAssets.length,
+        description: 'Players under 25 years old - Prime dynasty assets'
+      });
+    } catch (error: any) {
+      console.error('❌ Young assets error:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch young dynasty assets', 
+        error: error.message 
+      });
+    }
+  });
+
+  // Dynasty Rankings Integration
+  app.get('/api/rankings/integrated', async (req, res) => {
+    try {
+      console.log('🔄 Generating integrated dynasty rankings...');
+      const { dynastyRankingsIntegration } = await import('./dynastyRankingsIntegration');
+      const rankings = dynastyRankingsIntegration.generateIntegratedRankings();
+      
+      res.json({
+        rankings,
+        totalPlayers: rankings.length,
+        lastUpdated: new Date().toISOString(),
+        methodology: 'Prometheus v2.0 Dynasty Algorithm - Production (40%), Opportunity (35%), Age (20%), Stability (15%)'
+      });
+    } catch (error: any) {
+      console.error('❌ Integrated rankings error:', error);
+      res.status(500).json({ 
+        message: 'Failed to generate integrated rankings', 
+        error: error.message 
+      });
+    }
+  });
+
+  app.get('/api/rankings/integrated/:position', async (req, res) => {
+    try {
+      const position = req.params.position.toUpperCase();
+      const { dynastyRankingsIntegration } = await import('./dynastyRankingsIntegration');
+      const allRankings = dynastyRankingsIntegration.generateIntegratedRankings();
+      const positionRankings = allRankings.filter(p => p.position === position);
+      
+      res.json({
+        rankings: positionRankings,
+        position,
+        count: positionRankings.length,
+        topTier: positionRankings.filter(p => ['Elite', 'Premium'].includes(p.tier)),
+        methodology: 'Position-specific dynasty evaluation with age and opportunity weighting'
+      });
+    } catch (error: any) {
+      console.error('❌ Position rankings error:', error);
+      res.status(500).json({ 
+        message: 'Failed to generate position rankings', 
+        error: error.message 
+      });
+    }
+  });
+
   // Legacy ADP endpoints using Sleeper API
   app.get('/api/adp/sleeper/:format?', async (req, res) => {
     try {
