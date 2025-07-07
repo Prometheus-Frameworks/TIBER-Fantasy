@@ -1461,17 +1461,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enhance players with mapping data
       let enhancedPlayers = await rankingEnhancement.enhancePlayerRankings(playersToEnhance);
       
-      // Apply algorithm fixes for better accuracy against expert consensus
-      console.log('🔧 Applying algorithm fixes to improve accuracy...');
-      const { algorithmFixer } = await import('./algorithmFixesNew');
-      enhancedPlayers = algorithmFixer.applyPlayerFixes(enhancedPlayers);
+      // Apply Jake Maraia's authentic dynasty algorithm
+      console.log('🔧 Applying Jake Maraia dynasty methodology...');
+      const { jakeMaraiaAlgorithm } = await import('./jakeMaraiaAlgorithm');
       
-      // Apply comprehensive adjustments (age penalties, production bonuses, etc.)
-      enhancedPlayers = enhancedPlayers.map(player => ({
-        ...player,
-        dynastyValue: algorithmFixer.calculateAdjustedDynastyValue(player),
-        dynastyTier: algorithmFixer.calculateTier(algorithmFixer.calculateAdjustedDynastyValue(player))
-      }));
+      enhancedPlayers = enhancedPlayers.map(player => {
+        const jakeScore = jakeMaraiaAlgorithm.calculateJakeScore(player);
+        return {
+          ...player,
+          dynastyValue: jakeScore.totalScore,
+          dynastyTier: jakeScore.tier,
+          jakeMaraiaScore: jakeScore
+        };
+      });
       
       // Apply league format adjustments
       const formatAdjustedPlayers = applyLeagueFormatAdjustments(enhancedPlayers, format as string);
