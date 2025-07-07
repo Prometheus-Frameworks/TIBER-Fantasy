@@ -238,31 +238,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ADP endpoints - Real-time dynasty data
+  // ADP endpoints - Real Sleeper dynasty data
   app.get('/api/adp/realtime/:format?', async (req, res) => {
     try {
-      const format = req.params.format || 'superflex';
-      const { realTimeADPService } = await import('./realTimeADPService');
+      console.log(`🎯 Fetching REAL Sleeper dynasty ADP data (2QB mock draft)...`);
       
-      console.log(`🎯 Fetching dynasty startup ADP data (established NFL players only)...`);
-      
-      // Use curated dynasty startup service - no college rookies
-      const { dynastyStartupADPService } = await import('./dynastyStartupADP');
-      const players = dynastyStartupADPService.getDynastyStartupADP();
+      // Use authentic Sleeper dynasty ADP from real mock drafts
+      const { sleeperDynastyADPService } = await import('./sleeperDynastyADP');
+      const players = sleeperDynastyADPService.getSleeperDynastyADP();
       
       // Players already formatted and filtered for dynasty startup
       
-      res.json({
-        players: players.slice(0, 50),
-        format,
-        lastUpdated: new Date().toISOString(),
-        source: 'Dynasty Startup Consensus - Established NFL Players Only',
-        draftType: 'dynasty_startup'
-      });
+      res.json(players);
     } catch (error: any) {
       console.error('❌ Real-time ADP endpoint error:', error);
       res.status(500).json({ 
         message: 'Failed to fetch real-time ADP data', 
+        error: error.message 
+      });
+    }
+  });
+
+  // ADP Accuracy Validation - Sleeper vs FantasyPros
+  app.get('/api/adp/accuracy', async (req, res) => {
+    try {
+      console.log('🔍 Running ADP accuracy validation...');
+      const { adpAccuracyValidator } = await import('./adpAccuracyValidator');
+      const accuracyReport = await adpAccuracyValidator.validateSleeperVsFantasyPros();
+      res.json(accuracyReport);
+    } catch (error: any) {
+      console.error('❌ ADP accuracy validation error:', error);
+      res.status(500).json({ 
+        message: 'Failed to validate ADP accuracy', 
         error: error.message 
       });
     }
