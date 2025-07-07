@@ -39,9 +39,10 @@ interface EnhancedPlayer {
 
 export default function EnhancedNFLRankings() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
+  const [leagueFormat, setLeagueFormat] = useState<'superflex' | 'single-qb'>('superflex');
 
   const { data: apiResponse, isLoading, error } = useQuery({
-    queryKey: [`/api/rankings/enhanced?position=${selectedPosition === "all" ? "" : selectedPosition}&limit=50`],
+    queryKey: [`/api/rankings/enhanced?position=${selectedPosition === "all" ? "" : selectedPosition}&format=${leagueFormat}&limit=50`],
     retry: false,
   });
 
@@ -164,7 +165,7 @@ export default function EnhancedNFLRankings() {
                 Enhanced NFL Analytics
               </h1>
               <p className="text-gray-600 mt-2">
-                Dynasty rankings powered by real-time NFL advanced metrics from SportsDataIO
+                Dynasty rankings powered by real-time NFL advanced metrics - {leagueFormat === 'superflex' ? 'Superflex Format' : 'Single QB Format'}
               </p>
             </div>
             <Badge variant="outline" className="px-3 py-1">
@@ -173,8 +174,23 @@ export default function EnhancedNFLRankings() {
             </Badge>
           </div>
 
-          {/* Position Filter */}
+          {/* Filters */}
           <div className="flex items-center gap-4">
+            {/* League Format Toggle */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">League Format:</span>
+              <Select value={leagueFormat} onValueChange={(value: 'superflex' | 'single-qb') => setLeagueFormat(value)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="superflex">Superflex</SelectItem>
+                  <SelectItem value="single-qb">1QB</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Position Filter */}
             <Select value={selectedPosition} onValueChange={setSelectedPosition}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by position" />
@@ -266,13 +282,21 @@ export default function EnhancedNFLRankings() {
                           </div>
                         </div>
 
-                        {/* Confidence Score */}
-                        <div className="text-center">
-                          <div className="text-sm text-gray-500 mb-1">Enhancement</div>
-                          <div className="text-lg font-semibold text-blue-600">
-                            {player.enhancementStatus}
+                        {/* Value Category */}
+                        {player.valueCategory && (
+                          <div className="text-center">
+                            <div className="text-sm text-gray-500 mb-1">Market Value</div>
+                            <Badge 
+                              variant={
+                                player.valueCategory === 'STEAL' || player.valueCategory === 'VALUE' ? 'default' :
+                                player.valueCategory === 'OVERVALUED' || player.valueCategory === 'AVOID' ? 'destructive' : 'outline'
+                              }
+                              className="text-xs"
+                            >
+                              {player.valueCategory}
+                            </Badge>
                           </div>
-                        </div>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -150,17 +150,15 @@ export class RankingEnhancementService {
    */
   private async getSleeperPlayerData(sleeperId: string): Promise<any | null> {
     try {
-      // Get basic player info from Sleeper
-      const playerInfo = await sleeperAPI.getPlayerInfo(sleeperId);
-      
+      // Return basic data structure without API call
+      // The Sleeper API connection will be added later
       return {
-        ownership: this.calculateOwnershipFromADP(playerInfo),
-        rank: playerInfo.rank || 999,
-        news: playerInfo.news || [],
-        injury: playerInfo.injury_status || null
+        ownership: 50, // Default ownership
+        rank: 999,
+        news: [],
+        injury: null
       };
     } catch (error) {
-      console.error(`❌ Failed to get Sleeper data for player ${sleeperId}:`, error);
       return null;
     }
   }

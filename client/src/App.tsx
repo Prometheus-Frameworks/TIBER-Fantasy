@@ -49,6 +49,7 @@ function Router() {
       <Route path="/trade-history/:id" component={TradeHistoryPage} />
       <Route path="/dynasty-values" component={DynastyValuesPage} />
       <Route path="/rankings" component={EnhancedNFLRankings} />
+      <Route path="/enhanced-nfl" component={EnhancedNFLRankings} />
       <Route path="/compare-league" component={CompareLeaguePage} />
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
       <Route path="/data-sources" component={DataSourcesPage} />

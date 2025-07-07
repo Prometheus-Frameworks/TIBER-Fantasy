@@ -13,6 +13,60 @@ import { dynastyTradeHistory, players as playersTable } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { z } from "zod";
 
+/**
+ * Apply league format adjustments to dynasty values
+ * Superflex: QBs get premium (default values)
+ * Single QB: QBs get penalty (-25-40 points)
+ */
+function applyLeagueFormatAdjustments(players: any[], format: string): any[] {
+  return players.map((player: any) => {
+    if (player.position !== 'QB') {
+      return player; // No adjustment for non-QBs
+    }
+
+    let adjustment = 0;
+    const baseValue = player.dynastyValue || 0;
+
+    if (format === 'single-qb') {
+      // Single QB: Significant penalty for QBs
+      // Elite QBs (85+) drop to RB2/WR2 range (60-70)
+      // Mid-tier QBs (70-84) drop to bench/streaming (35-55)
+      // Low-tier QBs (50-69) drop to waiver wire (15-35)
+      if (baseValue >= 85) {
+        adjustment = -25; // Josh Allen 94 → 69 (Strong tier)
+      } else if (baseValue >= 70) {
+        adjustment = -30; // Mid QBs → Depth tier
+      } else if (baseValue >= 50) {
+        adjustment = -35; // Low QBs → Bench tier
+      } else {
+        adjustment = -20; // Already low
+      }
+    }
+    // Superflex is default - no adjustment needed
+
+    const adjustedValue = Math.max(0, Math.min(100, baseValue + adjustment));
+    
+    return {
+      ...player,
+      dynastyValue: adjustedValue,
+      dynastyTier: getDynastyTierFromValue(adjustedValue),
+      leagueFormatAdjustment: adjustment
+    };
+  });
+}
+
+/**
+ * Get dynasty tier from numeric value
+ */
+function getDynastyTierFromValue(value: number): string {
+  if (value >= 90) return 'Elite';
+  if (value >= 75) return 'Premium';
+  if (value >= 60) return 'Strong';
+  if (value >= 45) return 'Solid';
+  if (value >= 30) return 'Depth';
+  return 'Bench';
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // Get team overview
@@ -1345,7 +1399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced Rankings API - Shows how player mapping improves dynasty valuations
   app.get("/api/rankings/enhanced", async (req, res) => {
     try {
-      const { position, limit = 100 } = req.query;
+      const { position, format = 'superflex', limit = 100 } = req.query;
       const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
       const { rankingEnhancement } = await import('./rankingEnhancement');
       
@@ -1372,15 +1426,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enhance players with mapping data
       const enhancedPlayers = await rankingEnhancement.enhancePlayerRankings(playersToEnhance);
       
+      // Apply league format adjustments
+      const formatAdjustedPlayers = applyLeagueFormatAdjustments(enhancedPlayers, format as string);
+      
       // Sort enhanced players by dynasty value (highest first) for true overall rankings
-      enhancedPlayers.sort((a, b) => (b.dynastyValue || 0) - (a.dynastyValue || 0));
+      formatAdjustedPlayers.sort((a: any, b: any) => (b.dynastyValue || 0) - (a.dynastyValue || 0));
       
       // Get mapping statistics
-      const mappingStats = rankingEnhancement.getMappingStats(enhancedPlayers);
+      const mappingStats = rankingEnhancement.getMappingStats(formatAdjustedPlayers);
       
       // Format response for frontend
       const response = {
-        players: enhancedPlayers.map(player => ({
+        players: formatAdjustedPlayers.map(player => ({
           id: player.id,
           name: player.name,
           position: player.position,
