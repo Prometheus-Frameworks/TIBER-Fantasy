@@ -561,7 +561,7 @@ class RealTimeNFLAnalytics {
       if (wr.airYardsShare <= 15) concerns.push('Low target share');
     }
     
-    return concerns.length > 0 ? concerns : [];
+    return concerns;
   }
 }
 

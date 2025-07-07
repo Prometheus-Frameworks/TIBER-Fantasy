@@ -315,7 +315,7 @@ export class DynastyWeightingSystem {
     if (age < 60) concerns.push("Age-related decline risk");
     if ((player.gamesPlayed || 16) < 12) concerns.push("Injury history");
     
-    return concerns.join(", ") || "No major concerns";
+    return concerns.join(", ");
   }
 }
 

@@ -322,6 +322,11 @@ Changelog:
 - July 07, 2025. Multi-strategy player connection: Manual mappings (95% confidence), NFL database lookup (90% confidence), fuzzy matching fallback (80% confidence)
 - July 07, 2025. Data quality enhancement: "Enhanced" players show Sleeper IDs, high confidence scores, and complete platform integration status
 - July 07, 2025. Dynasty valuation improvement: Player mapping now filters better platform data into rankings, demonstrating value of authentic fantasy connectivity over NFL stats alone
+- July 07, 2025. **RESTRICTIVE DYNASTY SCORING OVERHAUL**: Implemented ultra-restrictive scoring system where 100 is nearly impossible and most NFL players score below 55
+- July 07, 2025. Authentic PPG integration: All player averages now based on actual games played from 2024 NFL data (Ja'Marr Chase 23.7 PPG in 17 games, not season/17)
+- July 07, 2025. Elite tier redefinition: Only 4 players above 95 (Chase 100, Lamar 98, Allen 97, Jefferson 96) - achieving 100 is nearly impossible perfection
+- July 07, 2025. Massive deflation applied: Patrick Mahomes 67→54, Travis Kelce 74→40, Tyreek Hill 76→32 to reflect realistic dynasty valuations
+- July 07, 2025. Target leaders baseline: Used 2024 NFL data showing Chase (175 targets), Nabers (172), Jefferson (163) as production ceiling for 100-scale algorithm
 - July 07, 2025. **LEAGUE FORMAT TOGGLE SYSTEM**: Implemented comprehensive superflex vs single QB league format adjustments for accurate QB valuations
 - July 07, 2025. QB valuation system: Superflex format gives +8 to +15 dynasty value boosts (Josh Allen 94→100+), Single QB format applies -25 to -35 penalties (drops to rounds 3-4)
 - July 07, 2025. UI improvements: Removed redundant "Enhanced" labels, added market value categories (STEAL/VALUE/OVERVALUED), fixed API error handling for better user experience

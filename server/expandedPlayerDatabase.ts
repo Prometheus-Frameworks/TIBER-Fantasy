@@ -392,7 +392,7 @@ except Exception as e:
     if (player.targets < 40 && (player.position === 'WR' || player.position === 'TE')) concerns.push('Low Target Share');
     if (player.fantasy_points < 100) concerns.push('Limited Production');
     
-    return concerns.slice(0, 2); // Max 2 concerns
+    return concerns.slice(0, 2); // Max 2 concerns - only authentic datarns
   }
 
   /**
