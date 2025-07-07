@@ -24,11 +24,21 @@ interface ADPData {
 }
 
 export default function CleanADP() {
+  console.log('CleanADP component rendering...');
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPosition, setSelectedPosition] = useState("ALL");
 
-  const { data: adpData, isLoading } = useQuery<ADPData>({
+  const { data: adpData, isLoading, error } = useQuery<ADPData>({
     queryKey: ['/api/adp/sleeper', 'superflex'],
+  });
+
+  // Debug logging
+  console.log('ADP Query State:', { 
+    isLoading, 
+    hasError: !!error, 
+    hasData: !!adpData, 
+    playerCount: adpData?.players?.length || 0 
   });
 
   const filteredPlayers = adpData?.players?.filter(player => {
@@ -41,12 +51,45 @@ export default function CleanADP() {
     return (
       <div className="min-h-screen bg-slate-50 p-6">
         <div className="max-w-4xl mx-auto">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-slate-200 rounded w-1/3"></div>
-            <div className="h-4 bg-slate-200 rounded w-1/2"></div>
-            {[...Array(15)].map((_, i) => (
-              <div key={i} className="h-12 bg-slate-200 rounded"></div>
-            ))}
+          <div className="text-center py-12">
+            <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-slate-600">Loading ADP data from Sleeper...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center py-12">
+            <p className="text-red-600 mb-4">Error loading ADP data</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!adpData?.players || adpData.players.length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center py-12">
+            <p className="text-slate-600 mb-4">No ADP data available</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Refresh
+            </button>
           </div>
         </div>
       </div>
