@@ -76,8 +76,8 @@ export class AccuracyValidator {
     let correct = 0;
     let total = 5; // Check top 5 QBs
     
-    // Expected top QBs in superflex
-    const expectedOrder = ['Josh Allen', 'Lamar Jackson', 'Jayden Daniels', 'Jalen Hurts', 'Anthony Richardson'];
+    // Expected top QBs in superflex (updated for expert consensus)
+    const expectedOrder = ['Josh Allen', 'Lamar Jackson', 'Jayden Daniels', 'C.J. Stroud', 'Joe Burrow'];
     
     for (let i = 0; i < Math.min(5, qbs.length); i++) {
       const qb = qbs[i];
