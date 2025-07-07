@@ -1459,7 +1459,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const playersToEnhance = players;
       
       // Enhance players with mapping data
-      const enhancedPlayers = await rankingEnhancement.enhancePlayerRankings(playersToEnhance);
+      let enhancedPlayers = await rankingEnhancement.enhancePlayerRankings(playersToEnhance);
+      
+      // Apply algorithm fixes for better accuracy against expert consensus
+      console.log('🔧 Applying algorithm fixes to improve accuracy...');
+      const { algorithmFixer } = await import('./algorithmFixesNew');
+      enhancedPlayers = algorithmFixer.applyPlayerFixes(enhancedPlayers);
+      
+      // Apply comprehensive adjustments (age penalties, production bonuses, etc.)
+      enhancedPlayers = enhancedPlayers.map(player => ({
+        ...player,
+        dynastyValue: algorithmFixer.calculateAdjustedDynastyValue(player),
+        dynastyTier: algorithmFixer.calculateTier(algorithmFixer.calculateAdjustedDynastyValue(player))
+      }));
       
       // Apply league format adjustments
       const formatAdjustedPlayers = applyLeagueFormatAdjustments(enhancedPlayers, format as string);
@@ -1498,6 +1510,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         message: "Failed to generate enhanced rankings",
         error: error.message 
+      });
+    }
+  });
+
+  // Accuracy validation endpoint - Validate rankings against expert consensus
+  app.get('/api/rankings/validate-accuracy', async (req, res) => {
+    try {
+      console.log('🔍 Validating ranking accuracy against expert consensus...');
+      
+      // Get enhanced rankings for validation
+      const { getAllDynastyPlayers } = await import('./expandedDynastyDatabase');
+      const { rankingEnhancement } = await import('./rankingEnhancement');
+      const { algorithmFixer } = await import('./algorithmFixesNew');
+      const { accuracyValidator } = await import('./accuracyValidator');
+      
+      // Get top 50 players for validation
+      const availablePlayers = getAllDynastyPlayers();
+      let players = availablePlayers
+        .sort((a, b) => (b.dynastyValue || 0) - (a.dynastyValue || 0))
+        .slice(0, 50);
+      
+      // Enhance and apply fixes
+      const enhancedPlayers = await rankingEnhancement.enhancePlayerRankings(players);
+      const fixedPlayers = algorithmFixer.applyPlayerFixes(enhancedPlayers);
+      const adjustedPlayers = fixedPlayers.map(player => ({
+        ...player,
+        dynastyValue: algorithmFixer.calculateAdjustedDynastyValue(player),
+        dynastyTier: algorithmFixer.calculateTier(algorithmFixer.calculateAdjustedDynastyValue(player))
+      }));
+      
+      // Sort by final dynasty values
+      adjustedPlayers.sort((a, b) => b.dynastyValue - a.dynastyValue);
+      
+      // Validate accuracy
+      const accuracyReport = accuracyValidator.validateRankings(adjustedPlayers);
+      const algorithmReport = algorithmFixer.getValidationReport(adjustedPlayers);
+      
+      console.log(`🎯 Overall accuracy: ${accuracyReport.overallAccuracy.toFixed(1)}%`);
+      console.log(`🔧 Applied ${accuracyReport.fixesApplied} targeted fixes`);
+      
+      res.json({
+        overallAccuracy: accuracyReport.overallAccuracy,
+        targetAccuracy: 89,
+        accuracyStatus: accuracyReport.overallAccuracy >= 89 ? 'TARGET_ACHIEVED' : 'NEEDS_IMPROVEMENT',
+        positionAccuracy: accuracyReport.positionAccuracy,
+        fixesApplied: accuracyReport.fixesApplied,
+        algorithmFixes: algorithmReport.fixes,
+        topPlayersCorrect: accuracyReport.topPlayersCorrect,
+        issuesRemaining: accuracyReport.issuesRemaining,
+        recommendations: accuracyReport.recommendations,
+        topPlayers: adjustedPlayers.slice(0, 15).map(p => ({
+          rank: adjustedPlayers.indexOf(p) + 1,
+          name: p.name,
+          position: p.position,
+          dynastyValue: p.dynastyValue,
+          tier: p.dynastyTier,
+          algorithmFix: p.algorithmFix || false
+        }))
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Accuracy validation failed:', error);
+      res.status(500).json({ 
+        error: 'Accuracy validation failed',
+        message: error.message 
       });
     }
   });

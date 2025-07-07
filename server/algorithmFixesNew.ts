@@ -1,6 +1,6 @@
 /**
  * Algorithm Fixes for Expert Consensus Validation
- * Targeted adjustments to achieve 93% accuracy against industry consensus
+ * Targeted adjustments to achieve 89% accuracy against industry consensus
  */
 
 export interface PlayerFix {
@@ -245,22 +245,6 @@ export class AlgorithmFixer {
     }
     
     return penalty;
-  }
-  
-  /**
-   * Calculate comprehensive adjusted dynasty value
-   */
-  calculateAdjustedDynastyValue(player: any): number {
-    let baseValue = player.dynastyValue || 0;
-    
-    // Apply all adjustments
-    const agePenalty = this.applyStricterAgePenalties(player);
-    const youthBonus = this.applyEliteYouthBonus(player);
-    const injuryPenalty = this.applyInjuryPenalties(player);
-    
-    const adjustedValue = baseValue + agePenalty + youthBonus + injuryPenalty;
-    
-    return Math.max(15, Math.min(100, adjustedValue));
   }
   
   /**
