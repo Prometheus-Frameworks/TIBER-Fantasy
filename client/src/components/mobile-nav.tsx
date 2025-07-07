@@ -12,11 +12,12 @@ export default function MobileNav() {
     { id: "trending", label: "Trending", icon: TrendingUp, href: "/trending" },
     { id: "arbitrage", label: "Value", icon: Search, href: "/arbitrage" },
     { id: "compare", label: "Compare", icon: Users, href: "/compare-league" },
+    { id: "about", label: "About", icon: Settings, href: "/about" },
   ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50 safe-area-inset-bottom">
-      <div className="grid grid-cols-5 h-16 max-w-lg mx-auto">
+      <div className="grid grid-cols-6 h-16 max-w-lg mx-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = location === tab.href || (tab.href === "/" && location === "/dashboard");
