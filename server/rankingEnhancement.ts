@@ -344,9 +344,13 @@ export class RankingEnhancementService {
         
         // Update dynasty tier based on weighted value
         player.dynastyTier = getDynastyTierFromValue(player.adpWeightedValue);
+      } else {
+        // No ADP data available - use base dynasty value
+        player.adpWeightedValue = player.dynastyValue;
       }
     } catch (error) {
-      console.error(`❌ Failed to integrate ADP for ${player.name}:`, error);
+      // Silently continue without ADP data - don't spam logs
+      player.adpWeightedValue = player.dynastyValue;
     }
   }
 

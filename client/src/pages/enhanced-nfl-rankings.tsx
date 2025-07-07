@@ -64,8 +64,19 @@ export default function EnhancedNFLRankings() {
     valueCategory: player.valueCategory,
     adpDifference: player.adpDifference,
     
-    strengthsFromAPI: [`${player.dynastyTier} dynasty asset`, player.valueCategory === 'STEAL' ? 'Market undervalued' : player.valueCategory === 'VALUE' ? 'Good value pick' : 'Platform enhanced'],
-    concernsFromAPI: player.valueCategory === 'OVERVALUED' ? ['Market overvalued'] : player.valueCategory === 'AVOID' ? ['Significant overvalue'] : player.enhancementStatus === 'Basic' ? ['Limited platform data'] : []
+    strengthsFromAPI: [
+      `${player.dynastyTier} dynasty asset`,
+      ...(player.valueCategory === 'STEAL' ? ['Market undervalued'] : 
+          player.valueCategory === 'VALUE' ? ['Good value pick'] : 
+          player.avgPoints >= 15 ? ['Strong production'] : 
+          player.avgPoints >= 10 ? ['Solid producer'] : [])
+    ],
+    concernsFromAPI: [
+      ...(player.valueCategory === 'OVERVALUED' ? ['Market overvalued'] : 
+          player.valueCategory === 'AVOID' ? ['Significant overvalue'] : []),
+      ...(player.enhancementStatus === 'Basic' ? ['Limited platform data'] : []),
+      ...(player.avgPoints < 8 ? ['Low production'] : [])
+    ]
   })) || [];
 
   const getTierColor = (tier: string) => {
