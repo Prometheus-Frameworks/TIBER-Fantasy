@@ -145,11 +145,11 @@ export default function CleanADP() {
           {/* Table Header */}
           <div className="bg-slate-50 border-b border-slate-200 p-2 px-3">
             <div className="flex items-center gap-1 text-xs font-medium text-slate-600 uppercase tracking-wide">
-              <div className="w-10 text-center shrink-0">ADP</div>
-              <div className="flex-1 min-w-0 px-1">Player</div>
-              <div className="w-12 text-center shrink-0">Rank</div>
-              <div className="w-10 text-center shrink-0">Pos</div>
-              <div className="w-12 text-center shrink-0">Value</div>
+              <div className="w-12 text-center shrink-0">ADP</div>
+              <div className="flex-1 min-w-0 px-2">Player</div>
+              <div className="w-14 text-center shrink-0">Rank</div>
+              <div className="w-12 text-center shrink-0">Pos</div>
+              <div className="w-14 text-center shrink-0">Value</div>
               <div className="w-12 text-center shrink-0">Own</div>
             </div>
           </div>
@@ -166,9 +166,9 @@ export default function CleanADP() {
                 key={`${player.position}-${player.id}-${index}`} 
                 className="p-2 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-b-0"
               >
-                <div className="flex items-center">
+                <div className="flex items-center gap-1">
                   {/* ADP */}
-                  <div className="w-12 text-center">
+                  <div className="w-12 text-center shrink-0">
                     <span className="text-base font-bold text-slate-900">
                       {player.adp.toFixed(1)}
                     </span>
@@ -176,7 +176,7 @@ export default function CleanADP() {
 
                   {/* Player Name & Team */}
                   <div className="flex-1 px-2 min-w-0">
-                    <div className="font-medium text-slate-900 text-sm leading-tight truncate">
+                    <div className="font-medium text-slate-900 text-sm leading-tight">
                       {player.name}
                     </div>
                     <div className="text-xs text-slate-500 uppercase tracking-wide">
@@ -185,14 +185,14 @@ export default function CleanADP() {
                   </div>
 
                   {/* Position Rank */}
-                  <div className="w-16 text-center">
+                  <div className="w-14 text-center shrink-0">
                     <div className="text-xs font-medium text-slate-700">
                       {player.position}{positionRank}
                     </div>
                   </div>
 
                   {/* Position */}
-                  <div className="w-16 text-center">
+                  <div className="w-12 text-center shrink-0">
                     <Badge 
                       variant="outline" 
                       className={`text-xs px-1 py-0.5 ${
@@ -206,16 +206,29 @@ export default function CleanADP() {
                     </Badge>
                   </div>
 
+                  {/* Value Comparison */}
+                  <div className="w-14 text-center shrink-0">
+                    {(() => {
+                      // Mock value comparison - in real implementation this would come from our rankings API
+                      const mockOurRank = positionRank - Math.floor(Math.random() * 6) + 2; // Simulated our ranking
+                      const adpRank = positionRank;
+                      const difference = adpRank - mockOurRank;
+                      
+                      if (difference >= 3) {
+                        return <span className="text-green-600 font-medium text-xs">+{difference}</span>;
+                      } else if (difference <= -3) {
+                        return <span className="text-red-600 font-medium text-xs">{difference}</span>;
+                      } else {
+                        return <span className="text-slate-400 text-xs">—</span>;
+                      }
+                    })()}
+                  </div>
+
                   {/* Ownership */}
-                  <div className="w-16 text-center">
+                  <div className="w-12 text-center shrink-0">
                     <div className="text-slate-900 font-medium text-xs">
                       {player.ownership.toFixed(0)}%
                     </div>
-                  </div>
-
-                  {/* Trend */}
-                  <div className="w-16 text-center">
-                    <span className="text-slate-400 text-xs">Stable</span>
                   </div>
                 </div>
               </div>
