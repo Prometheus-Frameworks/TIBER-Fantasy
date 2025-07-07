@@ -5,6 +5,7 @@
 
 import { playerMapping } from './playerMapping';
 import { sleeperAPI } from './sleeperAPI';
+import { playerNameMapping } from './playerNameMapping';
 
 export interface EnhancedPlayer {
   id: number;
@@ -70,28 +71,34 @@ export class RankingEnhancementService {
       mappingConfidence: 0
     };
 
-    // Try to get Sleeper mapping using multiple strategies
+    // Try to get Sleeper mapping using comprehensive name bridging
     let sleeperId = null;
+    let mappingConfidence = 0;
     
-    // Strategy 1: Try direct NFL ID lookup
-    if (player.nfl_id) {
+    // Strategy 1: Use manual name mapping for top dynasty players
+    const nflName = playerNameMapping.convertToNFLFormat(player.name);
+    if (nflName !== player.name) {
+      sleeperId = playerMapping.getSleeperIdByNFL(nflName);
+      if (sleeperId) {
+        mappingConfidence = 95; // High confidence for manual mappings
+      }
+    }
+    
+    // Strategy 2: Try direct NFL database lookup
+    if (!sleeperId && player.nfl_id) {
       sleeperId = playerMapping.getSleeperIdByNFL(player.nfl_id);
+      if (sleeperId) mappingConfidence = 90;
     }
     
-    // Strategy 2: Try lookup by converting full name to abbreviated format
-    if (!sleeperId) {
-      const abbreviatedName = this.convertToAbbreviatedName(player.name);
-      sleeperId = playerMapping.getSleeperIdByNFL(abbreviatedName);
-    }
-    
-    // Strategy 3: Try reverse lookup from Sleeper using full name
+    // Strategy 3: Try fuzzy matching with Sleeper database
     if (!sleeperId) {
       sleeperId = await this.findSleeperIdByFullName(player.name, player.team, player.position);
+      if (sleeperId) mappingConfidence = 80;
     }
     
     if (sleeperId) {
       enhanced.sleeperId = sleeperId;
-      enhanced.mappingConfidence = 85; // High confidence for successful mapping
+      enhanced.mappingConfidence = mappingConfidence;
       
       try {
         // Get enhanced data from Sleeper
@@ -249,6 +256,26 @@ export class RankingEnhancementService {
     }
     
     return matrix[str2.length][str1.length];
+  }
+
+  /**
+   * Estimate fantasy ownership based on dynasty value and position
+   */
+  private estimateOwnership(dynastyValue: number, position: string): number {
+    // Elite dynasty assets are owned in 90%+ leagues
+    if (dynastyValue >= 90) return Math.random() * 10 + 90; // 90-100%
+    
+    // Premium players owned in 75-90% leagues
+    if (dynastyValue >= 75) return Math.random() * 15 + 75; // 75-90%
+    
+    // Strong players owned in 60-80% leagues
+    if (dynastyValue >= 60) return Math.random() * 20 + 60; // 60-80%
+    
+    // Solid players owned in 40-65% leagues
+    if (dynastyValue >= 45) return Math.random() * 25 + 40; // 40-65%
+    
+    // Depth/bench players owned in 10-45% leagues
+    return Math.random() * 35 + 10; // 10-45%
   }
 
   /**
