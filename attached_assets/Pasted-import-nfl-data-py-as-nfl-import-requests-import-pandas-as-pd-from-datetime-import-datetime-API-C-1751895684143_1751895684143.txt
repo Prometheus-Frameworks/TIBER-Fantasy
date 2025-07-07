@@ -1,0 +1,74 @@
+import nfl_data_py as nfl
+import requests
+import pandas as pd
+from datetime import datetime
+
+# API Config
+SLEEPER_URL = "https://api.sleeper.app/v1/players/nfl"
+ESPN_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl"
+HEADERS = {"User-Agent": "Mozilla/5.0"}
+
+# Step 1: Data Collection
+def fetch_data():
+    # NFL-Data-Py
+    pbp_2024 = nfl.import_pbp_data([2024])
+    next_gen = nfl.import_ngs_data("passing", 2024)
+    
+    # Sleeper
+    sleeper_players = requests.get(SLEEPER_URL, headers=HEADERS).json()
+    
+    # ESPN (example endpoint)
+    espn_stats = requests.get(f"{ESPN_URL}/athletes", headers=HEADERS).json()
+    
+    return pbp_2024, next_gen, sleeper_players, espn_stats
+
+# Step 2: Preprocessing
+def preprocess_data(pbp, next_gen, sleeper, espn):
+    # Merge datasets by player ID
+    df = pd.merge(pbp, next_gen, on="player_id", how="left")
+    df = pd.merge(df, sleeper, on="player_id", how="left")
+    
+    # Filter 2024 data
+    df = df[df["season"] == 2024]
+    
+    # Calculate metrics
+    df["target_share"] = df["targets"] / df["team_targets"]
+    df["age_score"] = 1 - ((df["age"] - 20) / 15)  # Normalize age
+    df["stability"] = (1 - df["games_missed"] / 17) * (1 - df["snap_variance"])
+    
+    return df
+
+# Step 3: Scoring
+def calculate_score(row):
+    production = 0.4 * (row["ppg"] * 0.6 + row["efficiency"] * 0.4)
+    opportunity = 0.35 * (row["target_share"] * 0.5 + row["snap_pct"] * 0.5)
+    age = 0.20 * row["age_score"]
+    stability = 0.15 * row["stability"]
+    score = min(100, (production + opportunity + age + stability) * 100 / 60)  # Scale to 100
+    return score
+
+# Step 4: Validation
+def validate_rankings(df, jake_maraia_ranks):
+    drifts = (df["score_rank"] - jake_maraia_ranks["rank"]).abs()
+    df["valid"] = drifts <= 10
+    print(f"Validation: {df['valid'].mean()*100:.1f}% within 10 spots")
+    return df
+
+# Main
+def main():
+    pbp, next_gen, sleeper, espn = fetch_data()
+    df = preprocess_data(pbp, next_gen, sleeper, espn)
+    df["score"] = df.apply(calculate_score, axis=1)
+    
+    # Apply position adjustments
+    df.loc[df["position"] == "QB", "score"] *= 1.10 if superflex else 0.95
+    
+    # Validate
+    jake_maraia = pd.read_csv("jake_maraia_ranks.csv")  # Hypothetical expert ranks
+    df = validate_rankings(df, jake_maraia)
+    
+    # Output
+    df[["player_id", "name", "position", "score"]].to_json("player_rankings.json")
+
+if __name__ == "__main__":
+    main()

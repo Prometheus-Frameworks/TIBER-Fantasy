@@ -1,0 +1,42 @@
+Algorithm: NFL Player Effectiveness Weighting System (2024)
+Inputs
+•  APIs: NFL-Data-Py (play-by-play, Next Gen Stats), Sleeper API (player data, league context), ESPN API (game stats, team context)
+•  Data: 2024 season stats (PPG, targets, attempts, efficiency metrics), player metadata (age, position, team), injury data
+•  Weighting Criteria (from Prometheus):
+	•  Production: 40% (e.g., PPG, yards, TDs)
+	•  Opportunity: 35% (e.g., target share, snap count, team pass attempts)
+	•  Age: 20% (younger players favored for dynasty)
+	•  Stability: 15% (injury history, team role consistency)
+•  Constraints: Free data sources only, no paywalls, 92%+ data integration accuracy
+Output
+•  Ranked list of NFL players with effectiveness scores (0-100), position-specific adjustments, and confidence intervals.
+Steps
+1.  Data Collection
+	•  NFL-Data-Py:
+		•  Fetch play-by-play data: completions, rushing yards, receiving yards, TDs, EPA (Expected Points Added).
+		•  Next Gen Stats: efficiency metrics (e.g., completion % above expectation, YAC above expectation).
+	•  Sleeper API:
+		•  Pull player metadata: IDs, positions, roster status, age.
+		•  League context: snap counts, target shares.
+	•  ESPN API:
+		•  Game-level stats: team pass attempts, injury impacts, drive outcomes.
+		•  Note: Handle missing kickoff return data post-Week 10 (play-type-id 12).
+	•  Validation: Cross-check player IDs across APIs (628 mapped players, 92% success rate). Log mismatches for manual review.
+2.  Data Preprocessing
+	•  Clean Data:
+		•  Remove sample/old data (use timestamp checks, exclude pre-2024 seasons).
+		•  Handle nulls: Impute missing stats with position averages or flag for exclusion.
+	•  Normalize Metrics:
+		•  Standardize PPG, efficiency metrics (z-scores) across QB/RB/WR/TE.
+		•  Adjust for games played (no season averages, use actual data).
+	•  Feature Engineering:
+		•  Calculate opportunity metrics: target share = (player targets / team targets), snap %.
+		•  Compute stability: injury games missed (2023-2024), role consistency (snap % variance).
+		•  Age adjustment: Scale score inversely with age (e.g., 22 = 1.0, 30 = 0.8, 35 = 0.5).
+3.  Effectiveness Scoring
+	•  Position-Specific Metrics (28 metrics from Prometheus):
+		•  QB: Completion % above expectation, passing yards, rushing yards, EPA/play.
+		•  RB: Rush yards over expected, YAC, attempts vs. 8+ defenders.
+		•  WR: Average separation, catch %, target share.
+		•  TE: YAC above expectation, red-zone targets.
+	•  Scoring Formula:

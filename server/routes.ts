@@ -159,6 +159,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // NEW: Corrected Jake Maraia Algorithm endpoint
+  app.get('/api/rankings/corrected', async (req, res) => {
+    try {
+      const { limit = 50, position } = req.query;
+      const { RankingEnhancementService } = await import('./rankingEnhancement');
+      const rankingEnhancement = new RankingEnhancementService();
+      const correctedRankings = await rankingEnhancement.getCorrectedRankings(Number(limit), position as string);
+      res.json(correctedRankings);
+    } catch (error) {
+      console.error('Error fetching corrected rankings:', error);
+      res.status(500).json({ error: 'Failed to fetch corrected rankings' });
+    }
+  });
+
   // Rankings accuracy validation
   app.get('/api/rankings/validate-accuracy', async (req, res) => {
     try {

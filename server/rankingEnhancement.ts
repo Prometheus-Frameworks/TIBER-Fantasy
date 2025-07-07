@@ -4,6 +4,7 @@
  */
 
 import { playerMapping } from './playerMapping';
+import { correctedJakeMaraiaAlgorithm } from './correctedJakeMaraiaAlgorithm';
 import { sleeperAPI } from './sleeperAPI';
 import { dynastyADPService } from './dynastyADPService';
 
@@ -22,6 +23,57 @@ export interface EnhancedPlayer {
 }
 
 export class RankingEnhancementService {
+  
+  /**
+   * Get corrected rankings using the new algorithm specification
+   */
+  async getCorrectedRankings(limit: number = 50, position?: string): Promise<any> {
+    try {
+      // Get base player data
+      const { getAllDynastyPlayers } = await import('./expandedDynastyDatabase');
+      let players = getAllDynastyPlayers();
+      
+      // Apply position filter if specified
+      if (position) {
+        players = players.filter(p => p.position === position.toUpperCase());
+      }
+      
+      // Apply corrected Jake Maraia algorithm
+      const correctedPlayers = players.map(player => {
+        const correctedScore = correctedJakeMaraiaAlgorithm.calculateCorrectedScore(player);
+        return {
+          ...player,
+          dynastyValue: correctedScore.totalScore,
+          dynastyTier: correctedScore.tier,
+          confidence: correctedScore.confidence,
+          algorithmVersion: 'corrected',
+          metrics: {
+            production: correctedScore.production,
+            opportunity: correctedScore.opportunity,
+            age: correctedScore.age,
+            stability: correctedScore.stability
+          }
+        };
+      });
+      
+      // Sort by dynasty value and apply limit
+      const sortedPlayers = correctedPlayers
+        .sort((a, b) => b.dynastyValue - a.dynastyValue)
+        .slice(0, limit);
+      
+      return {
+        players: sortedPlayers,
+        algorithm: 'corrected_jake_maraia',
+        weighting: 'Production (40%), Opportunity (35%), Age (20%), Stability (15%)',
+        targetAccuracy: '92%',
+        total: sortedPlayers.length
+      };
+      
+    } catch (error) {
+      console.error('Error generating corrected rankings:', error);
+      throw error;
+    }
+  }
   
   /**
    * Enhance player rankings with platform integration data
