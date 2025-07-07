@@ -1355,30 +1355,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { getAllDynastyPlayers } = await import('./expandedDynastyDatabase');
       const availablePlayers = getAllDynastyPlayers();
       
-      // Filter by position if specified  
-      let players = availablePlayers;
+      // Sort all players by dynasty value first to get true dynasty rankings
+      let players = availablePlayers.sort((a, b) => (b.dynastyValue || 0) - (a.dynastyValue || 0));
+      
+      // Then filter by position if specified  
       if (position && typeof position === 'string') {
         players = players.filter(p => p.position === position.toUpperCase());
       }
       
-      // For "all" positions, get balanced representation from each position
-      if (!position || position === 'all') {
-        const limitPerPosition = Math.floor(Number(limit) / 4);
-        const qbs = players.filter(p => p.position === 'QB').slice(0, limitPerPosition);
-        const rbs = players.filter(p => p.position === 'RB').slice(0, limitPerPosition);
-        const wrs = players.filter(p => p.position === 'WR').slice(0, limitPerPosition);
-        const tes = players.filter(p => p.position === 'TE').slice(0, limitPerPosition);
-        players = [...qbs, ...rbs, ...wrs, ...tes];
-      } else {
-        // For specific position, apply limit
-        players = players.slice(0, Number(limit));
-      }
+      // Apply limit after sorting and filtering
+      players = players.slice(0, Number(limit));
       
       // Use all filtered players for enhancement
       const playersToEnhance = players;
       
       // Enhance players with mapping data
       const enhancedPlayers = await rankingEnhancement.enhancePlayerRankings(playersToEnhance);
+      
+      // Sort enhanced players by dynasty value (highest first) for true overall rankings
+      enhancedPlayers.sort((a, b) => (b.dynastyValue || 0) - (a.dynastyValue || 0));
       
       // Get mapping statistics
       const mappingStats = rankingEnhancement.getMappingStats(enhancedPlayers);
