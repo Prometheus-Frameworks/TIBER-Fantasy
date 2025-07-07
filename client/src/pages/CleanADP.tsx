@@ -29,20 +29,24 @@ export default function CleanADP() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPosition, setSelectedPosition] = useState("ALL");
 
-  const { data: adpData, isLoading, error } = useQuery<ADPData>({
-    queryKey: ['/api/adp/realtime', 'superflex'],
-    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes for real-time data
+  const { data: players = [], isLoading, error } = useQuery({
+    queryKey: ['/api/players/with-adp'],
+    queryFn: async () => {
+      const response = await fetch('/api/players/with-adp?limit=500');
+      if (!response.ok) throw new Error('Failed to fetch players');
+      return response.json();
+    }
   });
 
   // Debug logging
   console.log('ADP Query State:', { 
     isLoading, 
     hasError: !!error, 
-    hasData: !!adpData, 
-    playerCount: adpData?.players?.length || 0 
+    hasData: !!players, 
+    playerCount: players.length || 0 
   });
 
-  const filteredPlayers = adpData?.players?.filter(player => {
+  const filteredPlayers = players.filter((player: any) => {
     const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPosition = selectedPosition === "ALL" || player.position === selectedPosition;
     return matchesSearch && matchesPosition;
@@ -79,7 +83,7 @@ export default function CleanADP() {
     );
   }
 
-  if (!adpData?.players || adpData.players.length === 0) {
+  if (!players || players.length === 0) {
     return (
       <div className="min-h-screen bg-slate-50 p-6">
         <div className="max-w-4xl mx-auto">
@@ -104,7 +108,7 @@ export default function CleanADP() {
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold text-slate-900 mb-2">Dynasty ADP Rankings</h1>
           <p className="text-slate-600 text-sm">
-            Based on {adpData?.totalDrafts?.toLocaleString()} recent Sleeper dynasty drafts
+            Showing {filteredPlayers.length} players with trending ADP data from Sleeper
           </p>
         </div>
       </div>

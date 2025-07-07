@@ -474,6 +474,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Expanded Sleeper collection (all players)
+  app.post('/api/sleeper/collect/all-players', async (req, res) => {
+    try {
+      const { collectAllSleeperPlayers } = await import('./expandedSleeperCollector');
+      const result = await collectAllSleeperPlayers();
+      res.json(result);
+    } catch (error: any) {
+      console.error('Expanded Sleeper collection error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Expanded collection failed',
+        error: error.message
+      });
+    }
+  });
+
   app.get('/api/sleeper/players/preview', async (req, res) => {
     try {
       console.log('👀 Previewing eligible Sleeper players...');
@@ -560,6 +576,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching data sources:", error);
       res.status(500).json({ message: "Failed to fetch data sources" });
+    }
+  });
+
+  // Enhanced players endpoint with ADP filtering
+  app.get('/api/players/with-adp', async (req, res) => {
+    try {
+      const { position, limit = 100 } = req.query;
+      
+      let query = db.select().from(playersTable)
+        .where(sql`adp IS NOT NULL AND sleeper_id IS NOT NULL`);
+      
+      if (position) {
+        query = query.where(eq(playersTable.position, position as string));
+      }
+      
+      const result = await query
+        .orderBy(sql`CAST(adp AS DECIMAL)`)
+        .limit(Number(limit));
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error fetching players with ADP:', error);
+      res.status(500).json({ message: 'Failed to fetch ADP players', error: error.message });
+    }
+  });
+
+  // Get all players (including ADP-missing)
+  app.get('/api/players/all', async (req, res) => {
+    try {
+      const { position, limit = 200 } = req.query;
+      
+      let query = db.select().from(playersTable)
+        .where(sql`sleeper_id IS NOT NULL`);
+      
+      if (position) {
+        query = query.where(eq(playersTable.position, position as string));
+      }
+      
+      const result = await query.limit(Number(limit));
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error fetching all players:', error);
+      res.status(500).json({ message: 'Failed to fetch all players', error: error.message });
     }
   });
 

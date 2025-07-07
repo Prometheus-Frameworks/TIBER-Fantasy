@@ -67,6 +67,7 @@ export const players = pgTable("players", {
   
   // Market data
   adp: real("adp"), // Average draft position
+  adpMissing: boolean("adp_missing").default(false), // True if ADP data unavailable
   dynastyValue: integer("dynasty_value"), // Dynasty value score 0-100
   efficiency: real("efficiency"), // Efficiency rating
   sustainability: integer("sustainability"), // Sustainability score 0-100
