@@ -25,14 +25,23 @@ export class JakeMaraiaAlgorithm {
     const efficiency = this.calculateEfficiencyScore(player);
     const stability = this.calculateStabilityScore(player);
     
-    // Jake's weighting: Heavy on production and age
-    const totalScore = Math.round(
+    // Jake's weighting: Heavy on production and age, with superflex QB premium
+    let totalScore = Math.round(
       (production * 0.40) +
       (age * 0.25) +
       (opportunity * 0.20) +
       (efficiency * 0.10) +
       (stability * 0.05)
     );
+    
+    // Superflex QB premium - Only for truly elite QBs
+    if (player.position === 'QB' && totalScore >= 80) {
+      totalScore += 15; // Significant premium only for elite QBs (Josh Allen, Lamar, etc)
+    } else if (player.position === 'QB' && totalScore >= 70) {
+      totalScore += 8;  // Moderate premium for good QBs
+    } else if (player.position === 'QB' && totalScore >= 55) {
+      totalScore += 3;  // Small premium for starter-level QBs
+    }
     
     return {
       production,
@@ -52,13 +61,14 @@ export class JakeMaraiaAlgorithm {
     const position = player.position;
     const avgPoints = player.avgPoints || 0;
     
-    // Jake's thresholds based on 2024 data
+    // Jake's thresholds based on 2024 data - More restrictive for QBs
     if (position === 'QB') {
       if (avgPoints >= 24) return 100; // Josh Allen tier (24.8)
       if (avgPoints >= 22) return 95;  // Lamar tier (22.4)
       if (avgPoints >= 20) return 85;  // Jayden tier (20.8)
-      if (avgPoints >= 18) return 70;  // Solid QB1
-      if (avgPoints >= 15) return 50;  // QB2 range
+      if (avgPoints >= 19) return 75;  // Joe Burrow tier (19.2)
+      if (avgPoints >= 17) return 55;  // Mid-tier QBs (Tua 16.8, Jordan Love 17.4, Dak 17.0)
+      if (avgPoints >= 15) return 40;  // Lower-tier QBs
       return Math.max(0, avgPoints * 2); // Linear below QB2
     }
     
