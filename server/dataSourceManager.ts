@@ -96,8 +96,7 @@ class DataSourceManager {
   }
 
   private async initializeDataSources() {
-    // Check all data source availability
-    await this.checkSourceStatus('MySportsFeeds', () => mySportsFeedsAPI.testConnection());
+    // Check free data source availability only
     await this.checkSourceStatus('FantasyFootballDataPros', () => fantasyFootballDataAPI.testConnection());
     await this.checkSourceStatus('NFL-Data-Py', () => nflDataPyAPI.testConnection());
     await this.checkSourceStatus('RealTimeNFLAnalytics', () => this.testNFLAnalytics());
