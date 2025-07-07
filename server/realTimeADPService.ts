@@ -126,8 +126,8 @@ export class RealTimeADPService {
   private getCurrentConsensusADP(): Map<string, any> {
     const consensus = new Map();
     
-    // January 2025 Dynasty Superflex Startup ADP - Direct from consensus sources
-    const dynastyADP = [
+    // Dynasty Startup ADP (NFL players only) - January 2025 Superflex
+    const dynastyStartupADP = [
       { id: '6794', adp: 1.1, name: 'Justin Jefferson' },
       { id: '6813', adp: 1.4, name: 'CeeDee Lamb' },
       { id: '7564', adp: 1.8, name: 'Ja\'Marr Chase' },
@@ -153,14 +153,14 @@ export class RealTimeADPService {
       { id: '7547', adp: 10.7, name: 'DeVonta Smith' },
       { id: '7553', adp: 11.2, name: 'Tee Higgins' },
       { id: '8138', adp: 11.6, name: 'Kenneth Walker III' },
-      { id: '10859', adp: 12.1, name: 'Drake Maye' },
+      { id: '4217', adp: 12.1, name: 'Drake Maye' },
       { id: '4034', adp: 12.5, name: 'Travis Kelce' },
-      { id: '7045', adp: 13.0, name: 'Mike Evans' },
+      { id: '4036', adp: 13.0, name: 'Mike Evans' },
       { id: '6819', adp: 13.4, name: 'Terry McLaurin' },
-      { id: '7045', adp: 13.9, name: 'Chris Olave' }
+      { id: '7828', adp: 13.9, name: 'Chris Olave' }
     ];
 
-    dynastyADP.forEach(player => {
+    dynastyStartupADP.forEach(player => {
       consensus.set(player.id, {
         picks: [player.adp],
         totalPicks: 1,

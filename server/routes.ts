@@ -244,46 +244,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const format = req.params.format || 'superflex';
       const { realTimeADPService } = await import('./realTimeADPService');
       
-      console.log(`🎯 Fetching real-time dynasty ADP data for ${format} format...`);
-      const rawADPData = await realTimeADPService.fetchRecentDynastyStartups();
+      console.log(`🎯 Fetching dynasty startup ADP data (established NFL players only)...`);
       
-      // Get all players for mapping
-      const { cleanADPService } = await import('./cleanADPService');
-      const allPlayers = await cleanADPService.getAllPlayers();
+      // Use curated dynasty startup service - no college rookies
+      const { dynastyStartupADPService } = await import('./dynastyStartupADP');
+      const players = dynastyStartupADPService.getDynastyStartupADP();
       
-      // Convert to expected format with realistic spread
-      const players = rawADPData.map(adpEntry => {
-        const player = allPlayers[adpEntry.player_id];
-        if (!player || !['QB', 'RB', 'WR', 'TE'].includes(player.position)) return null;
-        
-        const playerName = `${player.first_name || ''} ${player.last_name || ''}`.trim();
-        const ownership = realTimeADPService.calculateOwnership(adpEntry.adp);
-        
-        return {
-          id: adpEntry.player_id,
-          sleeperId: adpEntry.player_id,
-          name: playerName,
-          position: player.position,
-          team: player.team || 'FA',
-          adp: adpEntry.adp,
-          adpTrend: 0,
-          ownership: Math.round(ownership),
-          ownershipTrend: 0,
-          draftCount: adpEntry.total_picks || 1,
-          rankChange: 0,
-          isRising: false,
-          isFalling: false
-        };
-      }).filter(Boolean);
-      
-      // Sort by realistic ADP
-      players.sort((a, b) => (a?.adp || 999) - (b?.adp || 999));
+      // Players already formatted and filtered for dynasty startup
       
       res.json({
-        players: players.slice(0, 500),
+        players: players.slice(0, 50),
         format,
         lastUpdated: new Date().toISOString(),
-        source: 'Real-time Dynasty Consensus + Market Data'
+        source: 'Dynasty Startup Consensus - Established NFL Players Only',
+        draftType: 'dynasty_startup'
       });
     } catch (error: any) {
       console.error('❌ Real-time ADP endpoint error:', error);
