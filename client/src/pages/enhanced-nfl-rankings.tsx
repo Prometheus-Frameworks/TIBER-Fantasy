@@ -33,10 +33,26 @@ interface EnhancedPlayer {
 export default function EnhancedNFLRankings() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
 
-  const { data: enhancedPlayers = [], isLoading, error } = useQuery<EnhancedPlayer[]>({
-    queryKey: [`/api/rankings/enhanced-nfl?position=${selectedPosition === "all" ? "" : selectedPosition}`],
+  const { data: apiResponse, isLoading, error } = useQuery({
+    queryKey: [`/api/rankings/enhanced?position=${selectedPosition === "all" ? "" : selectedPosition}&limit=50`],
     retry: false,
   });
+
+  // Transform API response to match component interface
+  const enhancedPlayers: EnhancedPlayer[] = apiResponse?.players?.map((player: any, index: number) => ({
+    rank: index + 1,
+    name: player.name,
+    position: player.position,
+    team: player.team,
+    dynastyScore: player.dynastyValue,
+    dynastyTier: player.dynastyTier,
+    avgPoints: player.avgPoints,
+    adp: player.adp || 999,
+    enhancedDynastyValue: player.dynastyValue,
+    confidenceScore: player.mappingConfidence || 85,
+    strengthsFromAPI: [`${player.dynastyTier} dynasty asset`, 'Platform enhanced'],
+    concernsFromAPI: player.mappingConfidence < 80 ? ['Limited platform data'] : []
+  })) || [];
 
   const getTierColor = (tier: string) => {
     switch (tier) {
