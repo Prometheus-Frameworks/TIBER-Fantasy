@@ -324,6 +324,7 @@ Changelog:
 - July 07, 2025. **CLEAN ADP INTERFACE**: Created dedicated CleanADP page with simplified table layout, clean white background, proper grid system, and dedicated ADP section as user requested - eliminated visual clutter and text box overload
 - July 07, 2025. **ADP NAVIGATION FIX**: Fixed ADP page navigation issues - API returning 500 players with authentic data (Caleb Williams ADP 1, 95% ownership), clean interface loading correctly, dedicated ADP section now accessible via green button on home page
 - July 07, 2025. **AUTHENTIC ADP DATA**: Fixed placeholder ADP values - replaced random generation with authentic 2024/2025 dynasty consensus data showing Justin Jefferson #1.2, CeeDee Lamb #2.8, Josh Allen #4.2 (superflex), eliminating fake "multiple ADP 1" issue
+- July 07, 2025. **REAL LEAGUE ADP INTEGRATION**: Enhanced ADP service to access actual Sleeper league data for superflex vs 1QB formats instead of estimated values - now pulls from real dynasty startup drafts with proper format detection
 - July 07, 2025. Enhanced Rankings system working: All elite dynasty QBs successfully linked (Josh Allen→4984, Lamar Jackson→4881, Patrick Mahomes→4046, etc.)
 - July 07, 2025. Multi-strategy player connection: Manual mappings (95% confidence), NFL database lookup (90% confidence), fuzzy matching fallback (80% confidence)
 - July 07, 2025. Data quality enhancement: "Enhanced" players show Sleeper IDs, high confidence scores, and complete platform integration status
