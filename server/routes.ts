@@ -42,18 +42,23 @@ function applyLeagueFormatAdjustments(players: any[], format: string): any[] {
         adjustment = -20; // Already low
       }
     } else {
-      // Superflex: Premium for QBs
-      // Elite QBs (85+) get massive boost to dominate top picks
-      // Mid-tier QBs (70-84) get significant boost to early rounds
-      // All startable QBs (50+) get premium over skill positions
-      if (baseValue >= 85) {
-        adjustment = +15; // Josh Allen 94 → 100+ (Elite tier, picks 1-3)
+      // Superflex: Premium for QBs with rookie experience penalty
+      // Only proven elite QBs (90+ base) get Elite tier boost
+      // Rookie/young QBs capped at Premium tier regardless of base score
+      
+      const isRookieQB = player.age <= 24; // Rookies and 2nd year players
+      const maxBoostForRookies = isRookieQB ? 6 : 15; // Cap rookie boost
+      
+      if (baseValue >= 90) {
+        adjustment = +15; // Only proven elite QBs → Elite tier
+      } else if (baseValue >= 85) {
+        adjustment = Math.min(+10, maxBoostForRookies); // High potential → Premium tier max
       } else if (baseValue >= 70) {
-        adjustment = +12; // Mid QBs → Premium tier (picks 4-8)
+        adjustment = Math.min(+8, maxBoostForRookies); // Mid QBs → capped boost
       } else if (baseValue >= 50) {
-        adjustment = +8; // Startable QBs → Strong tier (picks 9-15)
+        adjustment = +6; // Startable QBs → moderate boost
       } else {
-        adjustment = +5; // Backup QBs still valuable
+        adjustment = +3; // Backup QBs → minimal boost
       }
     }
 
@@ -72,11 +77,11 @@ function applyLeagueFormatAdjustments(players: any[], format: string): any[] {
  * Get dynasty tier from numeric value
  */
 function getDynastyTierFromValue(value: number): string {
-  if (value >= 90) return 'Elite';
-  if (value >= 75) return 'Premium';
-  if (value >= 60) return 'Strong';
-  if (value >= 45) return 'Solid';
-  if (value >= 30) return 'Depth';
+  if (value >= 95) return 'Elite';    // Only true dynasty cornerstones
+  if (value >= 85) return 'Premium';  // High-end dynasty assets
+  if (value >= 70) return 'Strong';   // Solid dynasty pieces
+  if (value >= 55) return 'Solid';    // Fantasy contributors
+  if (value >= 35) return 'Depth';    // Bench/depth players
   return 'Bench';
 }
 

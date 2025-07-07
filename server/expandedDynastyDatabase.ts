@@ -19,16 +19,16 @@ interface DynastyPlayer {
 }
 
 export const EXPANDED_DYNASTY_DATABASE: DynastyPlayer[] = [
-  // ELITE TIER (90-100) - Dynasty Cornerstones
-  { id: 1, name: 'Justin Jefferson', position: 'WR', team: 'MIN', age: 25, avgPoints: 16.1, dynastyValue: 95, dynastyTier: 'Elite', adp: 8, isAvailable: true, upside: 28, consistency: 90 },
-  { id: 2, name: 'Josh Allen', position: 'QB', team: 'BUF', age: 28, avgPoints: 23.4, dynastyValue: 94, dynastyTier: 'Elite', adp: 12, isAvailable: true, upside: 30, consistency: 92 },
-  { id: 3, name: 'CeeDee Lamb', position: 'WR', team: 'DAL', age: 25, avgPoints: 18.3, dynastyValue: 93, dynastyTier: 'Elite', adp: 15, isAvailable: true, upside: 28, consistency: 88 },
-  { id: 4, name: 'Ja\'Marr Chase', position: 'WR', team: 'CIN', age: 24, avgPoints: 17.2, dynastyValue: 92, dynastyTier: 'Elite', adp: 10, isAvailable: true, upside: 30, consistency: 85 },
-  { id: 5, name: 'Lamar Jackson', position: 'QB', team: 'BAL', age: 28, avgPoints: 24.6, dynastyValue: 91, dynastyTier: 'Elite', adp: 18, isAvailable: true, upside: 35, consistency: 87 },
-  { id: 6, name: 'Brock Bowers', position: 'TE', team: 'LV', age: 22, avgPoints: 10.9, dynastyValue: 90, dynastyTier: 'Elite', adp: 28, isAvailable: true, upside: 25, consistency: 82 },
+  // ELITE TIER (95-100) - True Dynasty Cornerstones
+  { id: 1, name: 'Justin Jefferson', position: 'WR', team: 'MIN', age: 25, avgPoints: 16.1, dynastyValue: 97, dynastyTier: 'Elite', adp: 8, isAvailable: true, upside: 28, consistency: 90 },
+  { id: 2, name: 'Josh Allen', position: 'QB', team: 'BUF', age: 28, avgPoints: 23.4, dynastyValue: 96, dynastyTier: 'Elite', adp: 12, isAvailable: true, upside: 30, consistency: 92 },
+  { id: 3, name: 'CeeDee Lamb', position: 'WR', team: 'DAL', age: 25, avgPoints: 18.3, dynastyValue: 95, dynastyTier: 'Elite', adp: 15, isAvailable: true, upside: 28, consistency: 88 },
 
-  // PREMIUM TIER (75-89) - High-End Dynasty Assets
-  { id: 7, name: 'Puka Nacua', position: 'WR', team: 'LAR', age: 23, avgPoints: 14.2, dynastyValue: 89, dynastyTier: 'Premium', adp: 4.5, isAvailable: true, upside: 30, consistency: 82 },
+  // PREMIUM TIER (85-94) - High-End Dynasty Assets  
+  { id: 4, name: 'Ja\'Marr Chase', position: 'WR', team: 'CIN', age: 24, avgPoints: 17.2, dynastyValue: 94, dynastyTier: 'Premium', adp: 10, isAvailable: true, upside: 30, consistency: 85 },
+  { id: 5, name: 'Lamar Jackson', position: 'QB', team: 'BAL', age: 28, avgPoints: 24.6, dynastyValue: 93, dynastyTier: 'Premium', adp: 18, isAvailable: true, upside: 35, consistency: 87 },
+  { id: 6, name: 'Brock Bowers', position: 'TE', team: 'LV', age: 22, avgPoints: 10.9, dynastyValue: 92, dynastyTier: 'Premium', adp: 28, isAvailable: true, upside: 25, consistency: 82 },
+  { id: 7, name: 'Puka Nacua', position: 'WR', team: 'LAR', age: 23, avgPoints: 14.2, dynastyValue: 91, dynastyTier: 'Premium', adp: 4.5, isAvailable: true, upside: 30, consistency: 82 },
   { id: 8, name: 'Malik Nabers', position: 'WR', team: 'NYG', age: 22, avgPoints: 11.9, dynastyValue: 88, dynastyTier: 'Premium', adp: 5.2, isAvailable: true, upside: 32, consistency: 75 },
   { id: 9, name: 'Amon-Ra St. Brown', position: 'WR', team: 'DET', age: 25, avgPoints: 15.4, dynastyValue: 87, dynastyTier: 'Premium', adp: 8, isAvailable: true, upside: 25, consistency: 88 },
   { id: 10, name: 'Jayden Daniels', position: 'QB', team: 'WAS', age: 24, avgPoints: 20.1, dynastyValue: 86, dynastyTier: 'Premium', adp: 7, isAvailable: true, upside: 32, consistency: 78 },

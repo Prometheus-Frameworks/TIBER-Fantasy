@@ -11,11 +11,11 @@ import { fallbackADPService } from './fallbackADPData';
 
 // Utility function for dynasty tier classification
 function getDynastyTierFromValue(dynastyValue: number): string {
-  if (dynastyValue >= 90) return 'Elite';
-  if (dynastyValue >= 75) return 'Premium';
-  if (dynastyValue >= 60) return 'Strong';
-  if (dynastyValue >= 45) return 'Solid';
-  if (dynastyValue >= 30) return 'Depth';
+  if (dynastyValue >= 95) return 'Elite';    // Only true dynasty cornerstones
+  if (dynastyValue >= 85) return 'Premium';  // High-end dynasty assets
+  if (dynastyValue >= 70) return 'Strong';   // Solid dynasty pieces
+  if (dynastyValue >= 55) return 'Solid';    // Fantasy contributors
+  if (dynastyValue >= 35) return 'Depth';    // Bench/depth players
   return 'Bench';
 }
 
