@@ -75,10 +75,10 @@ export class JakeMaraiaAlgorithm {
       if (avgPoints >= 23) return 100; // Chase tier (23.7)
       if (avgPoints >= 21) return 95;  // Jefferson tier (21.4)
       if (avgPoints >= 18) return 85;  // Elite WR1
-      if (avgPoints >= 15) return 70;  // WR1 range
-      if (avgPoints >= 12) return 50;  // WR2 range
-      if (avgPoints >= 8) return 30;   // WR3/Flex
-      return Math.max(0, avgPoints * 2.5); // Linear scaling
+      if (avgPoints >= 15) return 75;  // WR1 range - slight boost
+      if (avgPoints >= 12) return 55;  // WR2 range
+      if (avgPoints >= 8) return 35;   // WR3/Flex
+      return Math.max(0, avgPoints * 3); // Slightly higher linear scaling
     }
     
     if (position === 'TE') {
@@ -110,10 +110,11 @@ export class JakeMaraiaAlgorithm {
     }
     
     if (position === 'RB') {
-      if (age <= 23) return 100; // Peak dynasty value
-      if (age <= 25) return 80;  // Still prime
-      if (age <= 27) return 55;  // Decline starts early
-      if (age <= 29) return 25;  // Steep drop
+      if (age <= 22) return 100; // Peak dynasty value for elite youth
+      if (age <= 24) return 85;  // Still excellent
+      if (age <= 26) return 65;  // Good but declining
+      if (age <= 28) return 40;  // Steep decline
+      if (age <= 30) return 20;  // Limited value
       return 5; // Nearly worthless
     }
     
