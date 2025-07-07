@@ -17,7 +17,7 @@ export interface PrometheusDynastyScore {
 export class PrometheusAlgorithm {
   
   /**
-   * Calculate dynasty score using CORRECTED Jake Maraia methodology
+   * Calculate dynasty score using Prometheus Algorithm v2.0
    */
   calculatePrometheusScore(player: any): PrometheusDynastyScore {
     const production = this.calculateProductionScore(player);
