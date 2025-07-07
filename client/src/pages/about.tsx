@@ -12,7 +12,8 @@ import {
   DollarSign,
   Star,
   Target,
-  Eye
+  Eye,
+  Brain
 } from "lucide-react";
 import DataAttributionFooter from "@/components/data-attribution-footer";
 import { ViewSourcesModal } from "@/components/view-sources-modal";
@@ -42,16 +43,17 @@ export default function About() {
           <CardHeader>
             <div className="flex items-center gap-3">
               <Target className="h-6 w-6 text-orange-500" />
-              <CardTitle className="text-2xl">Our Mission</CardTitle>
+              <CardTitle className="text-2xl">The Promethean Manifesto</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-6 rounded-lg border border-gray-200">
               <p className="text-lg text-gray-700 leading-relaxed">
-                We are witnessing the dawn of an unprecedented era where access to elite analytical knowledge will separate champions from the rest. 
-                Professional dynasty analytics using authentic NFL data sources, statistical modeling, and market intelligence - 
-                liberated from subscription gates, premium tiers, and paywall restrictions. In this transformative age, 
-                every manager deserves access to the insights that were once exclusive to the privileged few.
+                As we enter a new and unprecedented era in human history, we must place emphasis on the democratization of data and knowledge. 
+                Fantasy football serves as our gateway - a proving ground where analytical mastery translates directly to competitive advantage. 
+                Prometheus seeks to eliminate the artificial scarcity of elite insights, recognizing that when knowledge flows freely, 
+                our collective intellectual capacity expands exponentially. This is not merely about fantasy sports; 
+                it is about removing barriers that have historically segregated human potential based on economic access.
               </p>
             </div>
             <p className="text-gray-600">
@@ -59,17 +61,49 @@ export default function About() {
               and comprehensive statistical validation. All analytical models use research-backed metrics with documented correlation studies.
             </p>
             <p className="text-gray-600">
-              We stand at an unprecedented inflection point in human history where data and analytical knowledge will determine winners and losers. 
-              Like Prometheus stealing fire from the gods, we believe transformative insights belong in the hands of the people, 
-              not hoarded by paywalled gatekeepers. In this new era, democratized access to elite analytics isn't just fair - it's inevitable.
+              We stand at a pivotal moment where the acceleration of human knowledge depends on our willingness to tear down artificial barriers. 
+              Like Prometheus bringing fire to humanity, we liberate the analytical tools that were once monopolized by those who could afford them. 
+              This movement transcends fantasy football - it represents humanity's next evolutionary leap toward universal access to transformative intelligence. 
+              The future belongs to those who understand that when knowledge is democratized, the entire species benefits.
             </p>
             <div className="flex flex-wrap gap-2 pt-4">
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700">Data Liberation</Badge>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700">Era of Access</Badge>
-              <Badge variant="secondary" className="bg-green-100 text-green-700">Knowledge Prevails</Badge>
-              <Badge variant="secondary" className="bg-purple-100 text-purple-700">Forever Open</Badge>
-              <Badge variant="secondary" className="bg-red-100 text-red-700">No Gatekeepers</Badge>
+              <Badge variant="secondary" className="bg-orange-100 text-orange-700">Human Evolution</Badge>
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700">Intellectual Liberation</Badge>
+              <Badge variant="secondary" className="bg-green-100 text-green-700">Universal Access</Badge>
+              <Badge variant="secondary" className="bg-purple-100 text-purple-700">Barrier Destruction</Badge>
+              <Badge variant="secondary" className="bg-red-100 text-red-700">Knowledge Democracy</Badge>
+              <Badge variant="secondary" className="bg-indigo-100 text-indigo-700">Promethean Vision</Badge>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Philosophical Foundation */}
+        <Card className="mb-12 border-0 bg-gradient-to-r from-slate-50 to-gray-50 backdrop-blur-sm">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Brain className="h-6 w-6 text-indigo-500" />
+              <CardTitle className="text-2xl">The Intellectual Revolution</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-gray-700">
+              <strong>Fantasy football is merely our starting point.</strong> We recognize that analytical sophistication 
+              has become the new currency of competitive advantage across all domains of human endeavor. 
+              By democratizing access to elite analytical frameworks within fantasy sports, we establish a precedent 
+              that will reshape how knowledge is distributed throughout society.
+            </p>
+            <p className="text-gray-700">
+              <strong>This movement represents human evolution in action.</strong> For millennia, transformative knowledge 
+              was hoarded by institutions, accessible only to those who could afford entry fees. We reject this paradigm. 
+              When analytical tools that once cost thousands become freely accessible, we accelerate the intellectual 
+              development of our entire species. The barriers fall, and human potential is unleashed.
+            </p>
+            <p className="text-gray-700">
+              <strong>The future demands nothing less.</strong> As artificial intelligence reshapes civilization, 
+              those with access to sophisticated analytical thinking will thrive, while others will be left behind. 
+              We refuse to accept a future where intellectual capability is determined by economic status. 
+              Prometheus steals fire from the gods not for profit, but to ensure humanity's collective advancement.
+            </p>
           </CardContent>
         </Card>
 
@@ -99,8 +133,9 @@ export default function About() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600">
-                Research-backed dynasty rankings, market inefficiency detection, and proprietary 
-                algorithms that help you find undervalued players and build championship teams.
+                Advanced statistical frameworks that reveal market inefficiencies and hidden value, 
+                empowering every user with the analytical sophistication previously reserved for industry elites. 
+                This represents the first step toward universal access to transformative intelligence.
               </p>
             </CardContent>
           </Card>
@@ -114,8 +149,9 @@ export default function About() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600">
-                All rankings and insights are derived from publicly available NFL data and our own 
-                statistical analysis. No copyrighted expert opinions or unauthorized content.
+                Our methodologies transcend traditional boundaries by synthesizing publicly available data 
+                into revolutionary analytical frameworks. We operate within legal principles while challenging 
+                the artificial scarcity that has historically limited human intellectual advancement.
               </p>
             </CardContent>
           </Card>
