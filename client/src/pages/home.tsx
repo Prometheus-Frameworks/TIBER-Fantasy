@@ -94,7 +94,7 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {/* Enhanced Dynasty Algorithm */}
+          {/* Dynasty Rankings - Combined */}
           <Card className="hover:shadow-lg transition-shadow border-0 bg-gradient-to-br from-purple-50 to-blue-50 backdrop-blur-sm ring-2 ring-purple-200">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -102,47 +102,29 @@ export default function Home() {
                   <Brain className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Enhanced Dynasty v2.0</CardTitle>
-                  <CardDescription>Research-based exponential scaling</CardDescription>
+                  <CardTitle className="text-lg">Dynasty Rankings</CardTitle>
+                  <CardDescription>Enhanced v2.0 with research-based exponential scaling</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
                 Next-generation analytical framework with proprietary scoring models, 
-                exponential performance scaling, and comprehensive player evaluation algorithms.
+                sophisticated tier classification system, and comprehensive player evaluation algorithms 
+                to identify elite prospects and undervalued assets.
               </p>
-              <Link href="/enhanced-dynasty">
-                <Button className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600">
-                  Try Enhanced Algorithm <Zap className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* Dynasty Rankings */}
-          <Card className="hover:shadow-lg transition-shadow border-0 bg-white/60 backdrop-blur-sm">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Crown className="h-6 w-6 text-purple-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg">Dynasty Rankings</CardTitle>
-                  <CardDescription>Proprietary dynasty values</CardDescription>
-                </div>
+              <div className="flex gap-2">
+                <Link href="/rankings" className="flex-1">
+                  <Button variant="outline" size="sm" className="w-full">
+                    View Rankings <Trophy className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/enhanced-dynasty" className="flex-1">
+                  <Button className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600" size="sm">
+                    Enhanced Algorithm <Zap className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
               </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 mb-4">
-                Sophisticated tier classification system utilizing advanced statistical models 
-                to identify elite prospects and undervalued assets across positional tiers.
-              </p>
-              <Link href="/rankings">
-                <Button variant="outline" size="sm" className="w-full">
-                  View Rankings <Trophy className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
             </CardContent>
           </Card>
 
