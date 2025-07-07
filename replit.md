@@ -322,6 +322,9 @@ Changelog:
 - July 07, 2025. **COMPREHENSIVE ROOKIE EVALUATION SYSTEM**: Built complete college prospect analysis with College Production (30%) + Draft Capital (25%) + Athletic Metrics (20%) + Team Opportunity (25%) weighting
 - July 07, 2025. Historical success integration: Added position-specific rookie hit rates (QB 65%, RB 75%, WR 60%, TE 45% for first-round picks) and year-one fantasy projections
 - July 07, 2025. Enhanced WR algorithm completed: Environmental factors, team offensive context (pass volume, coaching stability), and situational target value weighting for comprehensive wide receiver evaluation
+- July 07, 2025. **JACOB GIBBS ANALYTICS RESEARCH**: Analyzed @jagibbs_23 methodology - TPRR (Targets Per Route Run) has 0.817 correlation with fantasy scoring vs 0.763 for raw targets
+- July 07, 2025. Route efficiency validation: Progressive TPRR growth predicts breakouts (Michael Thomas 20.3%→30.1%, Davante Adams 18.6%→31.5%, A.J. Brown 21.4%→24.9%)
+- July 07, 2025. Age-adjusted TPRR analysis: Players under 24 with 20%+ TPRR are elite dynasty assets, validates our opportunity metrics (35% weight) + efficiency approach
 ```
 
 ## User Preferences
