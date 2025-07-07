@@ -299,6 +299,7 @@ Changelog:
 - July 06, 2025. Built Enhanced NFL Rankings page (/enhanced-nfl) showcasing real-time analytics integration with methodology documentation and free data source transparency
 - July 06, 2025. Added /api/players/:id/nfl-analytics and /api/rankings/enhanced-nfl endpoints for comprehensive player profiling with authentic NFL performance data
 - July 06, 2025. Free data strategy implemented: SportsDataIO (advanced metrics), Sleeper API (fantasy context), NFL-Data-Py (historical trends) avoiding commercial licensing restrictions
+- July 06, 2025. **JAKE MARAIA COLLABORATION**: User initiating direct contact with Jake Maraia (FF Dataroma creator) to request permission for using his dynasty ranking methodology
 - July 06, 2025. **JAKE MARAIA RESPONSE**: Received confirmation from FF Dataroma creator about FantasyPointsData TOS violations - using their data on websites violates terms and would result in cease and desist
 - July 06, 2025. **PIVOT TO LEGAL DATA SOURCES**: Removed all FantasyPointsData references, focused on NFL-Data-Py (completely free), MySportsFeeds (commercial-friendly), and Fantasy Football Data Pros (free historical)
 - July 06, 2025. **AUTHENTIC NFL DATA SUCCESS**: Successfully integrated NFL-Data-Py with 2024 season data - Ja'Marr Chase (403 PPR), Justin Jefferson (328 PPR), verified authentic stats

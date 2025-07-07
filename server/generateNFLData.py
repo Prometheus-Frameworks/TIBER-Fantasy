@@ -13,8 +13,8 @@ def generate_position_data(position):
     """Generate data for a specific position"""
     print(f"Processing {position}...")
     
-    # Get 2024 data
-    weekly = nfl.import_weekly_data([2024])
+    # Get 2023-2024 data for deeper player pool
+    weekly = nfl.import_weekly_data([2023, 2024])
     pos_data = weekly[weekly['position'] == position]
 
     # Aggregate by player
@@ -26,10 +26,9 @@ def generate_position_data(position):
             'week': 'count'
         }).reset_index()
         
-        # Filter for relevance
+        # Very inclusive filter for QB to get close to 175
         relevant = player_totals[
-            (player_totals['week'] >= 4) &
-            (player_totals['fantasy_points_ppr'] >= 50)
+            (player_totals['fantasy_points_ppr'] >= 0.1)
         ]
     else:
         player_totals = pos_data.groupby(['player_id', 'player_name', 'recent_team']).agg({
@@ -41,27 +40,23 @@ def generate_position_data(position):
             'week': 'count'
         }).reset_index()
 
-        # Apply position-specific filters
+        # Very inclusive filters to get close to 175 players each
         if position == 'WR':
             relevant = player_totals[
-                (player_totals['week'] >= 4) &
-                (player_totals['targets'] >= 15) &
-                (player_totals['fantasy_points_ppr'] >= 10)
+                (player_totals['fantasy_points_ppr'] >= 0.1)
             ]
         elif position == 'RB':
             relevant = player_totals[
-                (player_totals['week'] >= 4) &
-                (player_totals['fantasy_points_ppr'] >= 20)
+                (player_totals['fantasy_points_ppr'] >= 0.1)
             ]
         elif position == 'TE':
             relevant = player_totals[
-                (player_totals['week'] >= 4) &
-                (player_totals['targets'] >= 10) &
-                (player_totals['fantasy_points_ppr'] >= 15)
+                (player_totals['fantasy_points_ppr'] >= 0.1)
             ]
 
-    # Sort by fantasy points and take top 30
-    top_players = relevant.nlargest(30, 'fantasy_points_ppr')
+    # Sort by fantasy points and take top 175 (or all available if less than 175)
+    num_to_take = min(175, len(relevant))
+    top_players = relevant.nlargest(num_to_take, 'fantasy_points_ppr')
 
     # Convert to clean format
     result = []
