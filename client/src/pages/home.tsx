@@ -113,15 +113,26 @@ export default function Home() {
                 sophisticated tier classification system, and comprehensive player evaluation algorithms 
                 to identify elite prospects and undervalued assets.
               </p>
-              <div className="flex gap-2">
-                <Link href="/rankings" className="flex-1">
-                  <Button variant="outline" size="sm" className="w-full">
-                    View Rankings <Trophy className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/enhanced-dynasty" className="flex-1">
-                  <Button className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600" size="sm">
-                    Enhanced Algorithm <Zap className="ml-2 h-4 w-4" />
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <Link href="/rankings" className="flex-1">
+                    <Button variant="outline" size="sm" className="w-full">
+                      View Rankings <Trophy className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/enhanced-dynasty" className="flex-1">
+                    <Button className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600" size="sm">
+                      Enhanced Algorithm <Zap className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+                <Link href="/adp" className="w-full">
+                  <Button variant="outline" size="sm" className="w-full border-green-200 hover:border-green-400 text-green-700 hover:text-green-800">
+                    <Target className="mr-2 h-4 w-4" />
+                    Live ADP Data from 12,847 Drafts
+                    <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800 text-xs">
+                      NEW
+                    </Badge>
                   </Button>
                 </Link>
               </div>
