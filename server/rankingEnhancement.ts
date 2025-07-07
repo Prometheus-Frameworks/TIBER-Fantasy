@@ -165,8 +165,16 @@ export class RankingEnhancementService {
    * Enhance individual player with mapping data
    */
   async enhanceIndividualPlayer(player: any): Promise<EnhancedPlayer> {
-    // Get Sleeper mapping
-    const sleeperId = playerMapping.getSleeperIdByName(player.name);
+    // Get Sleeper mapping (safely handle missing method)
+    let sleeperId: string | null = null;
+    try {
+      if (playerMapping && typeof playerMapping.getSleeperIdByName === 'function') {
+        sleeperId = playerMapping.getSleeperIdByName(player.name);
+      }
+    } catch (error) {
+      // Silently handle mapping errors for now
+      sleeperId = null;
+    }
     
     // Get fantasy ownership data (simplified)
     let fantasyOwnership: number | null = null;

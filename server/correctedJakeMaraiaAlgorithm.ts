@@ -74,10 +74,10 @@ export class PrometheusAlgorithm {
     
     if (position === 'RB') {
       if (avgPoints >= 20) return 100; // Elite RBs (Saquon level)
-      if (avgPoints >= 17) return 90;  // Top tier (Gibbs, Hall)
-      if (avgPoints >= 14) return 75;  // Solid RBs
-      if (avgPoints >= 10) return 60;  // Decent production
-      return Math.max(15, avgPoints * 3); // Scale with production
+      if (avgPoints >= 18) return 90;  // Top tier (Gibbs, Hall)
+      if (avgPoints >= 16) return 75;  // Solid RBs (Kyren level but not elite)
+      if (avgPoints >= 12) return 60;  // Decent production
+      return Math.max(15, avgPoints * 2.5); // Scale with production (reduced from 3)
     }
     
     if (position === 'WR') {
