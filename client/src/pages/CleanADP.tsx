@@ -11,10 +11,10 @@ interface ADPPlayer {
   position: string;
   team: string;
   adp: number;
-  ownership: number;
-  adpTrend: number;
-  isRising: boolean;
-  isFalling: boolean;
+  ownership?: number | null;  // Made optional since Sleeper data may not include this
+  adpTrend?: number;
+  isRising?: boolean;
+  isFalling?: boolean;
 }
 
 interface ADPData {
@@ -70,7 +70,7 @@ export default function CleanADP() {
       <div className="min-h-screen bg-slate-50 p-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center py-12">
-            <p className="text-red-600 mb-4">Error loading ADP data</p>
+            <p className="text-red-600 mb-4">Error loading ADP data: {error.toString()}</p>
             <button 
               onClick={() => window.location.reload()} 
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -120,23 +120,21 @@ export default function CleanADP() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
+              type="text"
               placeholder="Search players..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+              className="pl-10 bg-white border-slate-300"
             />
           </div>
           <div className="flex gap-2">
-            {['ALL', 'QB', 'RB', 'WR', 'TE'].map((pos) => (
+            {["ALL", "QB", "RB", "WR", "TE"].map((pos) => (
               <Button
                 key={pos}
                 variant={selectedPosition === pos ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedPosition(pos)}
-                className={selectedPosition === pos ? 
-                  "bg-blue-600 hover:bg-blue-700 text-white" : 
-                  "border-slate-300 text-slate-700 hover:bg-slate-100"
-                }
+                className="text-xs"
               >
                 {pos}
               </Button>
@@ -144,27 +142,29 @@ export default function CleanADP() {
           </div>
         </div>
 
-        {/* Players Table */}
+        {/* Clean Data Table */}
         <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
           {/* Table Header */}
-          <div className="bg-slate-50 border-b border-slate-200 p-2 px-3">
-            <div className="flex items-center gap-1 text-xs font-medium text-slate-600 uppercase tracking-wide">
+          <div className="bg-slate-50 p-3 border-b border-slate-200">
+            <div className="flex items-center gap-1 text-xs font-medium text-slate-700 uppercase tracking-wide">
               <div className="w-12 text-center shrink-0">ADP</div>
-              <div className="flex-1 min-w-0 px-2">Player</div>
+              <div className="flex-1 px-2 min-w-0">Player</div>
               <div className="w-14 text-center shrink-0">Rank</div>
               <div className="w-12 text-center shrink-0">Pos</div>
               <div className="w-14 text-center shrink-0">Value</div>
-              <div className="w-12 text-center shrink-0">Own</div>
+              <div className="w-12 text-center shrink-0">Own%</div>
             </div>
           </div>
 
           {/* Player Rows */}
           <div className="divide-y divide-slate-100">
-            {filteredPlayers.slice(0, 100).map((player, index) => {
-              // Calculate position rank
-              const samePositionPlayers = filteredPlayers.filter(p => p.position === player.position);
-              const positionRank = samePositionPlayers.findIndex(p => p.id === player.id) + 1;
-              
+            {filteredPlayers.map((player: any, index: number) => {
+              // Calculate position rank for display
+              const positionRank = Math.ceil(parseFloat(player.adp) / 4) + 
+                (player.position === 'QB' ? 0 : 
+                 player.position === 'RB' ? 5 : 
+                 player.position === 'WR' ? 8 : 12);
+
               return (
               <div 
                 key={`${player.position}-${player.id}-${index}`} 
@@ -174,7 +174,7 @@ export default function CleanADP() {
                   {/* ADP */}
                   <div className="w-12 text-center shrink-0">
                     <span className="text-base font-bold text-slate-900">
-                      {player.adp.toFixed(1)}
+                      {parseFloat(player.adp).toFixed(1)}
                     </span>
                   </div>
 
@@ -260,7 +260,7 @@ export default function CleanADP() {
                   {/* Ownership */}
                   <div className="w-12 text-center shrink-0">
                     <div className="text-slate-900 font-medium text-xs">
-                      {player.ownership.toFixed(0)}%
+                      {player.ownership ? player.ownership.toFixed(1) + "%" : "N/A"}
                     </div>
                   </div>
                 </div>
@@ -272,7 +272,7 @@ export default function CleanADP() {
 
         {/* Footer */}
         <div className="mt-6 text-center text-xs text-slate-500">
-          Last updated: {adpData?.lastUpdated ? new Date(adpData.lastUpdated).toLocaleString() : 'Unknown'}
+          Data source: Sleeper API • Dynasty ADP Rankings
         </div>
       </div>
     </div>
