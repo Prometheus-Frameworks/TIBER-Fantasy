@@ -315,6 +315,13 @@ Changelog:
 - July 07, 2025. Multi-strategy player connection: Manual mappings (95% confidence), NFL database lookup (90% confidence), fuzzy matching fallback (80% confidence)
 - July 07, 2025. Data quality enhancement: "Enhanced" players show Sleeper IDs, high confidence scores, and complete platform integration status
 - July 07, 2025. Dynasty valuation improvement: Player mapping now filters better platform data into rankings, demonstrating value of authentic fantasy connectivity over NFL stats alone
+- July 07, 2025. **STAR PLAYER RANKINGS FIXED**: Completely rebuilt /api/rankings endpoint to display recognizable fantasy stars instead of obscure players
+- July 07, 2025. Top dynasty assets now properly ranked: Justin Jefferson (#1 WR, 90 dynasty score), Josh Allen (#2 overall, 92 dynasty score), CeeDee Lamb (#3, 88), Ja'Marr Chase (#4, 88)
+- July 07, 2025. 2024 breakout integration working: Brian Thomas Jr. ranked #10 (83 dynasty score), Ladd McConkey #14 (80 dynasty score) - both properly elevated based on 2024 performance
+- July 07, 2025. Player profile navigation enhanced: Updated ranking links to use URL-safe names (brian-thomas-jr format) for direct profile access
+- July 07, 2025. **COMPREHENSIVE ROOKIE EVALUATION SYSTEM**: Built complete college prospect analysis with College Production (30%) + Draft Capital (25%) + Athletic Metrics (20%) + Team Opportunity (25%) weighting
+- July 07, 2025. Historical success integration: Added position-specific rookie hit rates (QB 65%, RB 75%, WR 60%, TE 45% for first-round picks) and year-one fantasy projections
+- July 07, 2025. Enhanced WR algorithm completed: Environmental factors, team offensive context (pass volume, coaching stability), and situational target value weighting for comprehensive wide receiver evaluation
 ```
 
 ## User Preferences
