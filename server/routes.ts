@@ -1693,6 +1693,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Scott Barrett Analytics Integration Routes
+  app.get('/api/rankings/barrett-enhanced', async (req, res) => {
+    try {
+      const { limit = 50, format = 'superflex', position } = req.query;
+      
+      const { barrettRankingIntegration } = await import('./scottBarrettIntegration');
+      const enhancedRankings = barrettRankingIntegration.getBarrettEnhancedRankings({
+        limit: Number(limit),
+        format: format as 'superflex' | '1qb',
+        position: position as string
+      });
+      
+      res.json({
+        success: true,
+        players: enhancedRankings,
+        analytics: 'Scott Barrett FantasyPointsData methodology',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Barrett rankings error:', error);
+      res.status(500).json({ message: 'Failed to generate Barrett analytics', error: error.message });
+    }
+  });
+
+  app.get('/api/analytics/barrett-insights', async (req, res) => {
+    try {
+      const { barrettRankingIntegration } = await import('./scottBarrettIntegration');
+      const insights = barrettRankingIntegration.getBarrettInsights();
+      const validation = barrettRankingIntegration.validateBarrettMetrics();
+      
+      res.json({
+        success: true,
+        insights,
+        validation,
+        methodology: {
+          yprr_threshold: '2.00+ for NFL success',
+          tprr_threshold: '0.20+ for solid target earning',
+          actualOpportunity_correlation: '0.97 with fantasy points',
+          bellCow_threshold: '75+ index for RB dominance'
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ Barrett insights error:', error);
+      res.status(500).json({ message: 'Failed to generate Barrett insights', error: error.message });
+    }
+  });
+
+  // Enhanced Sleeper Roster Sync Routes
+  app.get('/api/sleeper/test-connection', async (req, res) => {
+    try {
+      const { sleeperRosterSync } = await import('./sleeperRosterSync');
+      const testResult = await sleeperRosterSync.testConnection();
+      
+      res.json(testResult);
+    } catch (error: any) {
+      console.error('❌ Sleeper test error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.get('/api/sleeper/league/:leagueId/complete-sync', async (req, res) => {
+    try {
+      const { leagueId } = req.params;
+      console.log(`🚀 Starting complete league sync for: ${leagueId}`);
+      
+      const { sleeperRosterSync } = await import('./sleeperRosterSync');
+      const syncResult = await sleeperRosterSync.syncCompleteLeague(leagueId);
+      
+      if (syncResult.success) {
+        res.json({
+          success: true,
+          league: syncResult.league,
+          teams: syncResult.rosters?.length || 0,
+          totalPlayers: syncResult.totalPlayers || 0,
+          rosters: syncResult.rosters
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          error: syncResult.error || 'League sync failed'
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Complete league sync error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.get('/api/sleeper/team/:leagueId/:userId', async (req, res) => {
+    try {
+      const { leagueId, userId } = req.params;
+      console.log(`🔄 Syncing team for user ${userId} in league ${leagueId}`);
+      
+      const { sleeperRosterSync } = await import('./sleeperRosterSync');
+      const teamResult = await sleeperRosterSync.syncTeamRoster(leagueId, userId);
+      
+      res.json(teamResult);
+    } catch (error: any) {
+      console.error('❌ Team sync error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   app.get('/api/sleeper/player/:sleeperId/photo', async (req, res) => {
     try {
       const { sleeperId } = req.params;
