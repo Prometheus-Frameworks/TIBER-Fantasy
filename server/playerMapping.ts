@@ -122,28 +122,69 @@ export class PlayerMappingService {
   }
 
   /**
-   * Clean and normalize player names
+   * Clean and normalize player names with comprehensive mapping
    */
   private cleanPlayerName(name: string): string {
-    // Convert "J.Allen" to "Josh Allen" format
+    // Comprehensive name mapping from NFL abbreviated format to full names
     const nameMap: Record<string, string> = {
-      'J.Allen': 'Josh Allen',
-      'L.Jackson': 'Lamar Jackson',
-      'J.Gibbs': 'Jahmyr Gibbs',
-      'A.St. Brown': 'Amon-Ra St. Brown',
-      'T.Kelce': 'Travis Kelce',
-      'P.Mahomes': 'Patrick Mahomes',
-      'C.McCaffrey': 'Christian McCaffrey',
-      'J.Jefferson': 'Justin Jefferson',
-      'T.Hill': 'Tyreek Hill',
-      'D.Adams': 'Davante Adams'
+      // Top QBs
+      'J.Allen': 'Josh Allen', 'L.Jackson': 'Lamar Jackson', 'P.Mahomes II': 'Patrick Mahomes II',
+      'J.Burrow': 'Joe Burrow', 'J.Hurts': 'Jalen Hurts', 'T.Tagovailoa': 'Tua Tagovailoa',
+      'J.Herbert': 'Justin Herbert', 'D.Prescott': 'Dak Prescott', 'B.Purdy': 'Brock Purdy',
+      'J.Daniels': 'Jayden Daniels', 'C.Williams': 'Caleb Williams', 'D.Maye': 'Drake Maye',
+      
+      // Top RBs  
+      'C.McCaffrey': 'Christian McCaffrey', 'J.Jacobs': 'Josh Jacobs', 'S.Barkley': 'Saquon Barkley',
+      'D.Henry': 'Derrick Henry', 'A.Kamara': 'Alvin Kamara', 'N.Chubb': 'Nick Chubb',
+      'J.Mixon': 'Joe Mixon', 'A.Jones': 'Aaron Jones', 'B.Robinson': 'Bijan Robinson',
+      'J.Gibbs': 'Jahmyr Gibbs', 'B.Hall': 'Breece Hall', 'K.Walker III': 'Kenneth Walker III',
+      
+      // Top WRs
+      'J.Jefferson': 'Justin Jefferson', 'J.Chase': 'Ja\'Marr Chase', 'C.Lamb': 'CeeDee Lamb',
+      'T.Hill': 'Tyreek Hill', 'D.Adams': 'Davante Adams', 'S.Diggs': 'Stefon Diggs',
+      'D.Hopkins': 'DeAndre Hopkins', 'M.Evans': 'Mike Evans', 'A.St. Brown': 'Amon-Ra St. Brown',
+      'C.Olave': 'Chris Olave', 'G.Wilson': 'Garrett Wilson', 'D.London': 'Drake London',
+      'M.Nabers': 'Malik Nabers', 'B.Thomas': 'Brian Thomas Jr.', 'M.Harrison': 'Marvin Harrison Jr.',
+      
+      // Top TEs
+      'T.Kelce': 'Travis Kelce', 'M.Andrews': 'Mark Andrews', 'S.LaPorta': 'Sam LaPorta',
+      'T.McBride': 'Trey McBride', 'G.Kittle': 'George Kittle', 'K.Pitts': 'Kyle Pitts',
+      
+      // Common name variations
+      'D.Samuel': 'Deebo Samuel', 'D.Johnson': 'Diontae Johnson', 'A.Cooper': 'Amari Cooper'
     };
 
     if (nameMap[name]) {
       return nameMap[name];
     }
 
-    // Basic cleanup for other names
+    // Advanced name expansion for abbreviated formats
+    const parts = name.split(/[\s\.]+/).filter(Boolean);
+    if (parts.length >= 2) {
+      const firstPart = parts[0];
+      const lastName = parts[parts.length - 1];
+      
+      // Common first name expansions
+      const firstNameMap: Record<string, string> = {
+        'J': 'Josh|Justin|Jalen|Joe|Jayden|Ja\'Marr|James|Jonathan|Jordan',
+        'C': 'Christian|Chris|Caleb|CeeDee|Cooper|Calvin',
+        'D': 'Dak|Drake|Davante|DeAndre|Derrick|Diontae|Deebo',
+        'T': 'Travis|Tyreek|Tua|Trey|Tank|Tyler',
+        'A': 'Alvin|Aaron|Amon-Ra|Amari|Austin|Antonio',
+        'B': 'Brock|Bijan|Breece|Brian|Brandon',
+        'M': 'Mark|Malik|Marvin|Mike|Michael',
+        'S': 'Saquon|Sam|Stefon|Sterling',
+        'K': 'Kenneth|Kyle|Kyren',
+        'G': 'George|Garrett',
+        'L': 'Lamar|Ladd'
+      };
+      
+      if (firstPart.length === 1 && firstNameMap[firstPart]) {
+        return `${firstPart}.${lastName}`; // Keep abbreviated for matching
+      }
+    }
+
+    // Basic cleanup for unrecognized names
     return name
       .replace(/\./g, '') // Remove periods
       .split(' ')
@@ -152,35 +193,120 @@ export class PlayerMappingService {
   }
 
   /**
-   * Find matching Sleeper player
+   * Find matching Sleeper player with enhanced fuzzy matching
    */
   private findSleeperMatch(name: string, team: string, position: string): string | null {
+    let bestMatch: string | null = null;
+    let bestScore = 0;
+
     for (const [sleeperId, sleeperPlayer] of Array.from(this.sleeperPlayers.entries())) {
       if (!sleeperPlayer.full_name) continue;
 
-      // Exact name match
-      if (sleeperPlayer.full_name.toLowerCase() === name.toLowerCase()) {
-        // Verify team and position if available
-        if (sleeperPlayer.team === team || sleeperPlayer.position === position) {
-          return sleeperId;
+      let score = 0;
+      const cleanName = name.toLowerCase().replace(/[^\w\s]/g, '');
+      const sleeperName = sleeperPlayer.full_name.toLowerCase().replace(/[^\w\s]/g, '');
+
+      // Exact name match (highest score)
+      if (sleeperName === cleanName) {
+        score += 100;
+      }
+      
+      // Last name + first initial match
+      const nameParts = cleanName.split(' ');
+      const sleeperParts = sleeperName.split(' ');
+      
+      if (nameParts.length >= 2 && sleeperParts.length >= 2) {
+        const lastName = nameParts[nameParts.length - 1];
+        const sleeperLastName = sleeperParts[sleeperParts.length - 1];
+        
+        // Last name exact match
+        if (lastName === sleeperLastName) {
+          score += 50;
+          
+          // First initial match
+          if (nameParts[0][0] === sleeperParts[0][0]) {
+            score += 30;
+          }
+          
+          // Handle abbreviated formats like "J.Allen" -> "Josh Allen"
+          if (nameParts[0].length === 1 || nameParts[0].includes('.')) {
+            const firstLetter = nameParts[0][0];
+            if (sleeperParts[0][0] === firstLetter) {
+              score += 40; // Bonus for abbreviated name match
+            }
+          }
         }
       }
 
-      // Partial name matching for common abbreviations
-      const nameParts = name.toLowerCase().split(' ');
-      const sleeperParts = sleeperPlayer.full_name.toLowerCase().split(' ');
-      
-      if (nameParts.length >= 2 && sleeperParts.length >= 2) {
-        const lastNameMatch = nameParts[nameParts.length - 1] === sleeperParts[sleeperParts.length - 1];
-        const firstInitialMatch = nameParts[0][0] === sleeperParts[0][0];
-        
-        if (lastNameMatch && firstInitialMatch && sleeperPlayer.team === team) {
-          return sleeperId;
-        }
+      // Team match bonus
+      if (sleeperPlayer.team === team) {
+        score += 20;
+      }
+
+      // Position match bonus  
+      if (sleeperPlayer.position === position) {
+        score += 15;
+      }
+
+      // Fuzzy string similarity for partial matches
+      const similarity = this.calculateStringSimilarity(cleanName, sleeperName);
+      if (similarity > 0.7) {
+        score += Math.floor(similarity * 30);
+      }
+
+      // Update best match if this score is higher
+      if (score > bestScore && score >= 40) { // Lowered confidence threshold for better matching
+        bestScore = score;
+        bestMatch = sleeperId;
       }
     }
 
-    return null;
+    return bestMatch;
+  }
+
+  /**
+   * Calculate string similarity using Jaro-Winkler-like algorithm
+   */
+  private calculateStringSimilarity(str1: string, str2: string): number {
+    if (str1 === str2) return 1.0;
+    if (str1.length === 0 || str2.length === 0) return 0.0;
+
+    const matchDistance = Math.floor(Math.max(str1.length, str2.length) / 2) - 1;
+    const str1Matches = new Array(str1.length).fill(false);
+    const str2Matches = new Array(str2.length).fill(false);
+
+    let matches = 0;
+    let transpositions = 0;
+
+    // Find matches
+    for (let i = 0; i < str1.length; i++) {
+      const start = Math.max(0, i - matchDistance);
+      const end = Math.min(i + matchDistance + 1, str2.length);
+
+      for (let j = start; j < end; j++) {
+        if (str2Matches[j] || str1[i] !== str2[j]) continue;
+        str1Matches[i] = true;
+        str2Matches[j] = true;
+        matches++;
+        break;
+      }
+    }
+
+    if (matches === 0) return 0.0;
+
+    // Find transpositions
+    let k = 0;
+    for (let i = 0; i < str1.length; i++) {
+      if (!str1Matches[i]) continue;
+      while (!str2Matches[k]) k++;
+      if (str1[i] !== str2[k]) transpositions++;
+      k++;
+    }
+
+    const jaro = (matches / str1.length + matches / str2.length + 
+                 (matches - transpositions / 2) / matches) / 3;
+
+    return jaro;
   }
 
   /**

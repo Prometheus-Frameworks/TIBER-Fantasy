@@ -987,6 +987,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced Rankings API - Shows how player mapping improves dynasty valuations
+  app.get("/api/rankings/enhanced", async (req, res) => {
+    try {
+      const { position, limit = 50 } = req.query;
+      const { ALL_PROPRIETARY_PLAYERS } = await import('./proprietaryRankings');
+      const { rankingEnhancement } = await import('./rankingEnhancement');
+      
+      console.log('🔄 Generating enhanced rankings with fantasy platform integration...');
+      
+      // Filter by position if specified
+      let players = ALL_PROPRIETARY_PLAYERS;
+      if (position && typeof position === 'string') {
+        players = players.filter(p => p.position === position.toUpperCase());
+      }
+      
+      // Take subset for enhancement (API performance)
+      const playersToEnhance = players.slice(0, Number(limit));
+      
+      // Enhance players with mapping data
+      const enhancedPlayers = await rankingEnhancement.enhancePlayerRankings(playersToEnhance);
+      
+      // Get mapping statistics
+      const mappingStats = rankingEnhancement.getMappingStats(enhancedPlayers);
+      
+      // Format response for frontend
+      const response = {
+        players: enhancedPlayers.map(player => ({
+          id: player.id,
+          name: player.name,
+          position: player.position,
+          team: player.team,
+          age: player.age,
+          avgPoints: player.avgPoints,
+          dynastyValue: player.dynastyValue,
+          dynastyTier: player.dynastyTier,
+          // Enhanced data from mapping
+          sleeperId: player.sleeperId || null,
+          fantasyOwnership: player.fantasyOwnership || null,
+          mappingConfidence: player.mappingConfidence,
+          enhancementStatus: player.sleeperId ? 'Enhanced' : 'Basic',
+          dataQuality: player.mappingConfidence >= 80 ? 'High' : 
+                      player.mappingConfidence >= 50 ? 'Medium' : 'Low'
+        })),
+        mappingStats,
+        message: `Enhanced ${enhancedPlayers.length} players with ${mappingStats.mappingRate}% platform integration`
+      };
+      
+      console.log(`✅ Enhanced rankings: ${mappingStats.mapped}/${mappingStats.total} players mapped (${mappingStats.mappingRate}%)`);
+      res.json(response);
+      
+    } catch (error: any) {
+      console.error("Error generating enhanced rankings:", error);
+      res.status(500).json({ 
+        message: "Failed to generate enhanced rankings",
+        error: error.message 
+      });
+    }
+  });
+
   app.get("/api/mapping/sleeper/:sleeperId", async (req, res) => {
     try {
       const sleeperId = req.params.sleeperId;
