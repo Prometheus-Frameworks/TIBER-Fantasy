@@ -217,7 +217,7 @@ export default function CleanADP() {
                       const name = player.name.toLowerCase();
                       
                       // Elite players typically ranked higher by us than ADP suggests
-                      if (name.includes('chase') || name.includes('jefferson')) {
+                      if (name.includes('chase') || name.includes('jefferson') || name.includes('mahomes')) {
                         ourRank = Math.max(1, positionRank - 2);
                       }
                       // Rookies often overvalued in ADP
