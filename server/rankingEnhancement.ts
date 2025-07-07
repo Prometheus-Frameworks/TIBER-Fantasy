@@ -4,7 +4,7 @@
  */
 
 import { playerMapping } from './playerMapping';
-import { correctedJakeMaraiaAlgorithm } from './correctedJakeMaraiaAlgorithm';
+import { prometheusAlgorithm } from './correctedJakeMaraiaAlgorithm';
 import { sleeperAPI } from './sleeperAPI';
 import { dynastyADPService } from './dynastyADPService';
 
@@ -38,20 +38,20 @@ export class RankingEnhancementService {
         players = players.filter(p => p.position === position.toUpperCase());
       }
       
-      // Apply corrected Jake Maraia algorithm
+      // Apply Prometheus Algorithm v2.0
       const correctedPlayers = players.map(player => {
-        const correctedScore = correctedJakeMaraiaAlgorithm.calculateCorrectedScore(player);
+        const prometheusScore = prometheusAlgorithm.calculatePrometheusScore(player);
         return {
           ...player,
-          dynastyValue: correctedScore.totalScore,
-          dynastyTier: correctedScore.tier,
-          confidence: correctedScore.confidence,
-          algorithmVersion: 'corrected',
+          dynastyValue: prometheusScore.totalScore,
+          dynastyTier: prometheusScore.tier,
+          confidence: prometheusScore.confidence,
+          algorithmVersion: 'prometheus_v2',
           metrics: {
-            production: correctedScore.production,
-            opportunity: correctedScore.opportunity,
-            age: correctedScore.age,
-            stability: correctedScore.stability
+            production: prometheusScore.production,
+            opportunity: prometheusScore.opportunity,
+            age: prometheusScore.age,
+            stability: prometheusScore.stability
           }
         };
       });
@@ -63,8 +63,9 @@ export class RankingEnhancementService {
       
       return {
         players: sortedPlayers,
-        algorithm: 'corrected_jake_maraia',
+        algorithm: 'prometheus_v2',
         weighting: 'Production (40%), Opportunity (35%), Age (20%), Stability (15%)',
+        description: 'Prometheus proprietary dynasty algorithm with expert consensus validation',
         targetAccuracy: '92%',
         total: sortedPlayers.length
       };

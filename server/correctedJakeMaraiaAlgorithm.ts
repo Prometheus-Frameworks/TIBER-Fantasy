@@ -1,10 +1,10 @@
 /**
- * CORRECTED Jake Maraia Dynasty Algorithm Implementation
- * Based on user's corrected specification: Production (40%), Opportunity (35%), Age (20%), Stability (15%)
- * Targets 92% alignment with Jake Maraia consensus
+ * Prometheus Dynasty Algorithm v2.0 - Corrected Implementation
+ * Our proprietary algorithm specification: Production (40%), Opportunity (35%), Age (20%), Stability (15%)
+ * Uses expert consensus as validation benchmark, targeting 92% alignment for accuracy
  */
 
-export interface CorrectedDynastyScore {
+export interface PrometheusDynastyScore {
   production: number;     // 40% - Current fantasy output (PPG, efficiency metrics)
   opportunity: number;    // 35% - Target share, snap %, team pass attempts  
   age: number;           // 20% - Normalized age score (0-1)
@@ -14,12 +14,12 @@ export interface CorrectedDynastyScore {
   confidence: number;
 }
 
-export class CorrectedJakeMaraiaAlgorithm {
+export class PrometheusAlgorithm {
   
   /**
    * Calculate dynasty score using CORRECTED Jake Maraia methodology
    */
-  calculateCorrectedScore(player: any): CorrectedDynastyScore {
+  calculatePrometheusScore(player: any): PrometheusDynastyScore {
     const production = this.calculateProductionScore(player);
     const opportunity = this.calculateOpportunityScore(player);  
     const age = this.calculateAgeScore(player);
@@ -228,4 +228,4 @@ export class CorrectedJakeMaraiaAlgorithm {
   }
 }
 
-export const correctedJakeMaraiaAlgorithm = new CorrectedJakeMaraiaAlgorithm();
+export const prometheusAlgorithm = new PrometheusAlgorithm();
