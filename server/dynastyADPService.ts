@@ -34,6 +34,15 @@ export interface ADPData {
 class DynastyADPService {
   private cache: Map<string, { data: any; timestamp: number }> = new Map();
   private readonly CACHE_DURATION = 60 * 60 * 1000; // 1 hour cache
+  
+  // Circuit breaker to prevent repeated failed API calls
+  private circuitBreaker = {
+    isOpen: false,
+    failures: 0,
+    lastFailureTime: 0,
+    threshold: 3, // Open circuit after 3 failures
+    timeout: 5 * 60 * 1000 // 5 minutes before retry
+  };
 
   /**
    * Fetch dynasty ADP data from Fantasy Football Calculator
@@ -45,16 +54,36 @@ class DynastyADPService {
     if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
       return cached.data;
     }
+    
+    // Check circuit breaker
+    if (this.circuitBreaker.isOpen) {
+      const timeSinceFailure = Date.now() - this.circuitBreaker.lastFailureTime;
+      if (timeSinceFailure < this.circuitBreaker.timeout) {
+        // Circuit is open, return empty array
+        return [];
+      } else {
+        // Reset circuit breaker for retry
+        this.circuitBreaker.isOpen = false;
+        this.circuitBreaker.failures = 0;
+      }
+    }
 
     try {
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch(
         `https://api.fantasyfootballcalculator.com/v1/adp/${format}?teams=${teams}`,
         {
           headers: {
             'User-Agent': 'Prometheus Fantasy Analytics (prometheus-fantasy.com)',
-          }
+          },
+          signal: controller.signal
         }
       );
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`Dynasty ADP API error: ${response.status}`);
@@ -70,6 +99,19 @@ class DynastyADPService {
 
       return data.players || [];
     } catch (error) {
+      // Handle circuit breaker failures
+      this.circuitBreaker.failures++;
+      this.circuitBreaker.lastFailureTime = Date.now();
+      
+      if (this.circuitBreaker.failures >= this.circuitBreaker.threshold) {
+        this.circuitBreaker.isOpen = true;
+      }
+      
+      // Suppress DNS errors to avoid log spam - API may be temporarily unavailable
+      if (error instanceof Error && (error.message.includes('ENOTFOUND') || error.message.includes('getaddrinfo') || error.message.includes('AbortError'))) {
+        // Silently return empty array for network connectivity issues
+        return [];
+      }
       console.error('Failed to fetch dynasty ADP:', error);
       return [];
     }

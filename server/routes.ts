@@ -1462,17 +1462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enhancedPlayers = await rankingEnhancement.enhancePlayerRankings(playersToEnhance);
       
       // Apply league format adjustments
-      console.log(`🔧 Applying format adjustments for: ${format}`);
       const formatAdjustedPlayers = applyLeagueFormatAdjustments(enhancedPlayers, format as string);
-      
-      // Debug QB adjustments
-      const qbsAfterAdjustment = formatAdjustedPlayers.filter(p => p.position === 'QB').slice(0, 3);
-      console.log(`🔧 QB adjustments for ${format}:`, qbsAfterAdjustment.map(qb => ({ 
-        name: qb.name, 
-        baseValue: enhancedPlayers.find(ep => ep.id === qb.id)?.dynastyValue, 
-        adjustedValue: qb.dynastyValue,
-        adjustment: qb.leagueFormatAdjustment 
-      })));
       
       // Sort enhanced players by dynasty value (highest first) for true overall rankings
       formatAdjustedPlayers.sort((a: any, b: any) => (b.dynastyValue || 0) - (a.dynastyValue || 0));
