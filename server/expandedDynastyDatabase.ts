@@ -104,6 +104,7 @@ export const EXPANDED_DYNASTY_DATABASE: DynastyPlayer[] = [
   { id: 68, name: 'Mark Andrews', position: 'TE', team: 'BAL', age: 29, avgPoints: 8.2, dynastyValue: 18, dynastyTier: 'Bench', adp: 52, isAvailable: true, upside: 20, consistency: 70 },
   { id: 69, name: 'T.J. Hockenson', position: 'TE', team: 'MIN', age: 27, avgPoints: 7.8, dynastyValue: 16, dynastyTier: 'Bench', adp: 65, isAvailable: true, upside: 18, consistency: 75 },
   { id: 70, name: 'Russell Wilson', position: 'QB', team: 'PIT', age: 36, avgPoints: 18.4, dynastyValue: 15, dynastyTier: 'Bench', adp: 85, isAvailable: true, upside: 20, consistency: 85 },
+
   { id: 71, name: 'Kareem Hunt', position: 'RB', team: 'KC', age: 29, avgPoints: 12.2, dynastyValue: 35, dynastyTier: 'Depth', adp: 85, isAvailable: true, upside: 15, consistency: 78 },
   { id: 72, name: 'Dare Ogunbowale', position: 'RB', team: 'HOU', age: 30, avgPoints: 8.4, dynastyValue: 25, dynastyTier: 'Bench', adp: 95, isAvailable: true, upside: 12, consistency: 65 },
   { id: 73, name: 'Demarcus Robinson', position: 'WR', team: 'LAR', age: 30, avgPoints: 9.8, dynastyValue: 28, dynastyTier: 'Bench', adp: 88, isAvailable: true, upside: 15, consistency: 68 },
@@ -124,7 +125,7 @@ export const EXPANDED_DYNASTY_DATABASE: DynastyPlayer[] = [
   { id: 82, name: 'Breece Hall', position: 'RB', team: 'NYJ', age: 23, avgPoints: 16.8, dynastyValue: 80, dynastyTier: 'Elite', adp: 9, isAvailable: true, upside: 38, consistency: 75 },
   { id: 83, name: 'Kenneth Walker III', position: 'RB', team: 'SEA', age: 24, avgPoints: 14.2, dynastyValue: 74, dynastyTier: 'Strong', adp: 18, isAvailable: true, upside: 32, consistency: 70 },
   { id: 84, name: 'De\'Von Achane', position: 'RB', team: 'MIA', age: 23, avgPoints: 13.8, dynastyValue: 72, dynastyTier: 'Strong', adp: 22, isAvailable: true, upside: 35, consistency: 65 },
-  { id: 85, name: 'Kyren Williams', position: 'RB', team: 'LAR', age: 24, avgPoints: 15.6, dynastyValue: 70, dynastyTier: 'Strong', adp: 15, isAvailable: true, upside: 28, consistency: 82 },
+
 
   // Elite TEs
   { id: 86, name: 'Brock Bowers', position: 'TE', team: 'LV', age: 22, avgPoints: 15.9, dynastyValue: 85, dynastyTier: 'Elite', adp: 12, isAvailable: true, upside: 35, consistency: 85 },

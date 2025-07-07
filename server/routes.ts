@@ -238,6 +238,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ADP endpoints using Sleeper API
+  app.get('/api/adp/sleeper/:format?', async (req, res) => {
+    try {
+      const format = req.params.format || 'superflex';
+      const { sleeperADPService } = await import('./sleeperADP');
+      
+      console.log(`🎯 Fetching Sleeper ADP data for ${format} format...`);
+      const adpData = await sleeperADPService.calculateDynastyADP(format as any);
+      
+      res.json(adpData);
+    } catch (error: any) {
+      console.error('❌ ADP endpoint error:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch ADP data', 
+        error: error.message 
+      });
+    }
+  });
+
+  app.get('/api/adp/trending/:format?', async (req, res) => {
+    try {
+      const format = req.params.format || 'superflex';
+      const { sleeperADPService } = await import('./sleeperADP');
+      
+      console.log(`📈 Fetching trending players for ${format}...`);
+      const [trendingAdds, trendingDrops] = await Promise.all([
+        sleeperADPService.getTrendingPlayers('add', 168, 50),
+        sleeperADPService.getTrendingPlayers('drop', 168, 50)
+      ]);
+      
+      res.json({
+        rising: trendingAdds,
+        falling: trendingDrops,
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Trending endpoint error:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch trending data', 
+        error: error.message 
+      });
+    }
+  });
+
+  app.get('/api/adp/analytics/:format?', async (req, res) => {
+    try {
+      const format = req.params.format || 'superflex';
+      const { sleeperADPService } = await import('./sleeperADP');
+      
+      console.log(`📊 Generating ADP analytics for ${format}...`);
+      const analytics = await sleeperADPService.getADPAnalytics(format as any);
+      
+      res.json(analytics);
+    } catch (error: any) {
+      console.error('❌ Analytics endpoint error:', error);
+      res.status(500).json({ 
+        message: 'Failed to generate analytics', 
+        error: error.message 
+      });
+    }
+  });
+
   // Team sync endpoints
   app.post("/api/teams/:id/sync/sleeper", async (req, res) => {
     try {
