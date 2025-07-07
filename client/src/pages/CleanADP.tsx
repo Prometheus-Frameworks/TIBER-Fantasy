@@ -147,6 +147,7 @@ export default function CleanADP() {
             <div className="flex items-center gap-1 text-xs font-medium text-slate-600 uppercase tracking-wide">
               <div className="w-10 text-center shrink-0">ADP</div>
               <div className="flex-1 min-w-0 px-1">Player</div>
+              <div className="w-12 text-center shrink-0">Rank</div>
               <div className="w-10 text-center shrink-0">Pos</div>
               <div className="w-12 text-center shrink-0">Own</div>
               <div className="w-12 text-center shrink-0">Trend</div>
@@ -155,9 +156,14 @@ export default function CleanADP() {
 
           {/* Player Rows */}
           <div className="divide-y divide-slate-100">
-            {filteredPlayers.slice(0, 100).map((player, index) => (
+            {filteredPlayers.slice(0, 100).map((player, index) => {
+              // Calculate position rank
+              const samePositionPlayers = filteredPlayers.filter(p => p.position === player.position);
+              const positionRank = samePositionPlayers.findIndex(p => p.id === player.id) + 1;
+              
+              return (
               <div 
-                key={player.id} 
+                key={`${player.position}-${player.id}-${index}`} 
                 className="p-2 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-b-0"
               >
                 <div className="flex items-center">
@@ -175,6 +181,13 @@ export default function CleanADP() {
                     </div>
                     <div className="text-xs text-slate-500 uppercase tracking-wide">
                       {player.team}
+                    </div>
+                  </div>
+
+                  {/* Position Rank */}
+                  <div className="w-16 text-center">
+                    <div className="text-xs font-medium text-slate-700">
+                      {player.position}{positionRank}
                     </div>
                   </div>
 
@@ -206,7 +219,8 @@ export default function CleanADP() {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
