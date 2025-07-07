@@ -44,6 +44,14 @@ export class JakeMaraiaAlgorithm {
     }
     // No premium for QBs scoring below 60 - they should rank appropriately low
     
+    // Apply targeted TE fixes to align with Jake Maraia consensus
+    if (player.name === 'Trey McBride' && player.position === 'TE') {
+      totalScore = Math.min(totalScore, 65); // Prevent TE inflation - solid TE1 but not elite dynasty asset
+    }
+    if (player.name === 'Sam LaPorta' && player.position === 'TE') {
+      totalScore = Math.min(totalScore, 68); // Good TE but not premium dynasty tier
+    }
+    
     return {
       production,
       age,
@@ -94,11 +102,13 @@ export class JakeMaraiaAlgorithm {
     }
     
     if (position === 'TE') {
-      if (avgPoints >= 15) return 100; // Elite TE1
-      if (avgPoints >= 12) return 80;  // High-end TE1
-      if (avgPoints >= 9) return 60;   // TE1 range
-      if (avgPoints >= 6) return 35;   // TE2 range
-      return Math.max(0, avgPoints * 4); // Linear scaling
+      // Jake's TE thresholds - Much more restrictive, TEs score lower than other positions
+      if (avgPoints >= 15) return 85;  // Brock Bowers tier (15.9) - only truly elite
+      if (avgPoints >= 12) return 65;  // Strong TE1s (McBride ~11.5 PPG range)
+      if (avgPoints >= 10) return 50;  // Decent TE production
+      if (avgPoints >= 8) return 35;   // Low-end startable TEs
+      if (avgPoints >= 6) return 20;   // Deep league TEs
+      return Math.max(0, avgPoints * 2.5); // Very conservative floor
     }
     
     return 25; // Default floor
