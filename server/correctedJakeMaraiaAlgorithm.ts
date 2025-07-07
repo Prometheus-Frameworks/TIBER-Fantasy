@@ -352,12 +352,12 @@ export class PrometheusAlgorithm {
     const adpDifference = adp - expectedADP;
     
     // Players significantly undervalued by market (late ADP, high dynasty value)
-    if (adpDifference > 50) valueFactor = 1.20; // Major value opportunities
-    else if (adpDifference > 25) valueFactor = 1.10; // Solid value plays
-    else if (adpDifference > 10) valueFactor = 1.05; // Slight value
+    if (adpDifference > 30) valueFactor = 1.20; // Major value opportunities
+    else if (adpDifference > 15) valueFactor = 1.10; // Solid value plays
+    else if (adpDifference > 8) valueFactor = 1.05; // Slight value
     // Players overvalued by market (early ADP, lower dynasty value) 
-    else if (adpDifference < -25) valueFactor = 0.85; // Avoid - overpriced
-    else if (adpDifference < -10) valueFactor = 0.95; // Proceed with caution
+    else if (adpDifference < -15) valueFactor = 0.85; // Avoid - overpriced
+    else if (adpDifference < -8) valueFactor = 0.95; // Proceed with caution
     
     return dynastyValue * positionWeight * valueFactor;
   }

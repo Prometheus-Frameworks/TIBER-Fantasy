@@ -108,10 +108,10 @@ export class RankingEnhancementService {
   }
 
   private getValueCategory(adpDifference: number): string {
-    if (adpDifference > 50) return 'STEAL';
-    if (adpDifference > 25) return 'VALUE';
-    if (adpDifference > -10) return 'FAIR';
-    if (adpDifference > -25) return 'CAUTION';
+    if (adpDifference > 30) return 'STEAL';
+    if (adpDifference > 15) return 'VALUE';
+    if (adpDifference > -8) return 'FAIR';
+    if (adpDifference > -15) return 'CAUTION';
     return 'AVOID';
   }
   
