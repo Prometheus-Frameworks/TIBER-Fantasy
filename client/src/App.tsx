@@ -27,6 +27,7 @@ import TrendingPlayersPage from "@/pages/trending-players";
 import CompareLeaguePage from "@/pages/compare-league";
 import PlayerProfile from "@/pages/player-profile";
 import EnhancedDynasty from "@/pages/enhanced-dynasty";
+import EnhancedRankings from "@/pages/enhanced-rankings";
 import About from "@/pages/about";
 import EnhancedNFLRankings from "@/pages/enhanced-nfl-rankings";
 import PrometheusRankings from "@/pages/prometheus-rankings";
@@ -57,6 +58,7 @@ function Router() {
       <Route path="/trending" component={TrendingPlayersPage} />
       <Route path="/compare-league" component={CompareLeaguePage} />
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
+      <Route path="/enhanced-rankings" component={EnhancedRankings} />
       <Route path="/enhanced-nfl" component={EnhancedNFLRankings} />
       <Route path="/prometheus" component={PrometheusRankings} />
       <Route path="/data-sources" component={DataSourcesPage} />
