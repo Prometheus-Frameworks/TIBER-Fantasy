@@ -82,7 +82,10 @@ export class DynastyStartupADPService {
       { id: '8143', name: 'Tank Dell', position: 'WR', team: 'HOU', adp: 68.5, ownership: 46 }
     ];
     
-    return dynastyStartupPlayers.map(player => ({
+    // CRITICAL FIX: Sort by ADP ascending order for correct rankings
+    const sortedPlayers = dynastyStartupPlayers.sort((a, b) => a.adp - b.adp);
+    
+    return sortedPlayers.map(player => ({
       id: player.id,
       sleeperId: player.id,
       name: player.name,
