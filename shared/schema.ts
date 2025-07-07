@@ -68,7 +68,6 @@ export const players = pgTable("players", {
   // Market data
   adp: real("adp"), // Average draft position
   dynastyValue: integer("dynasty_value"), // Dynasty value score 0-100
-  dynastyTier: text("dynasty_tier"), // 6-tier classification: tier0-tier5
   efficiency: real("efficiency"), // Efficiency rating
   sustainability: integer("sustainability"), // Sustainability score 0-100
   marketValue: integer("market_value"), // Market consensus value
@@ -93,13 +92,7 @@ export const players = pgTable("players", {
   premiumDataWeek: integer("premium_data_week"), // Week of premium data
   premiumDataUpdated: timestamp("premium_data_updated"), // Last manual update
   
-  // Advanced NFL Rankings Integration
-  advancedRank: integer("advanced_rank"), // Position rank from NFL analytics
-  compositeScore: real("composite_score"), // Weighted analytics score
-  advancedMetrics: jsonb("advanced_metrics"), // Position-specific analytics
-  confidenceScore: integer("confidence_score"), // Data confidence 0-100
-  lastAdvancedUpdate: timestamp("last_advanced_update"), // Last analytics update
-  lastSleeperSync: timestamp("last_sleeper_sync"), // Track when player data was last synced
+
 });
 
 // Game logs table for storing weekly performance data

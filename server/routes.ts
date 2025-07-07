@@ -439,6 +439,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sleeper Data Collection Endpoints
+  app.post('/api/sleeper/collect/players', async (req, res) => {
+    try {
+      console.log('🏈 Starting Sleeper player data collection...');
+      
+      // First test if basic inserts work
+      const { testSleeperInsert } = await import('./testSleeperInsert');
+      const testResult = await testSleeperInsert();
+      
+      if (!testResult) {
+        return res.status(500).json({
+          success: false,
+          message: 'Database insert test failed',
+          error: 'Cannot insert basic player data'
+        });
+      }
+      
+      const { sleeperBasicCollector } = await import('./sleeperBasicCollector');
+      const result = await sleeperBasicCollector.collectAndStoreBasicData();
+      
+      res.json({
+        success: true,
+        message: `Successfully collected ${result.playersStored} players`,
+        details: result
+      });
+    } catch (error: any) {
+      console.error('❌ Sleeper data collection error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to collect Sleeper data', 
+        error: error.message 
+      });
+    }
+  });
+
+  app.get('/api/sleeper/players/preview', async (req, res) => {
+    try {
+      console.log('👀 Previewing eligible Sleeper players...');
+      const { sleeperDataCollector } = await import('./sleeperDataCollector');
+      
+      // Get a preview without storing
+      const response = await fetch('https://api.sleeper.app/v1/players/nfl');
+      const allPlayers = await response.json();
+      
+      const eligible = Object.values(allPlayers).filter((player: any) => {
+        const hasValidTeam = player.team && player.team !== null;
+        const hasValidPosition = ['QB', 'RB', 'WR', 'TE'].includes(player.position);
+        const isNotRetired = player.status !== 'Retired' && player.status !== 'Inactive';
+        
+        return hasValidTeam && hasValidPosition && isNotRetired;
+      });
+
+      res.json({
+        success: true,
+        totalPlayers: Object.keys(allPlayers).length,
+        eligiblePlayers: eligible.length,
+        samplePlayers: eligible.slice(0, 10).map((p: any) => ({
+          name: p.full_name,
+          team: p.team,
+          position: p.position,
+          status: p.status,
+          college: p.college
+        }))
+      });
+    } catch (error: any) {
+      console.error('❌ Preview error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to preview data', 
+        error: error.message 
+      });
+    }
+  });
+
   // Team sync endpoints
   app.post("/api/teams/:id/sync/sleeper", async (req, res) => {
     try {
