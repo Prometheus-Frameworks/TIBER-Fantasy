@@ -314,4 +314,5 @@ Changelog:
 Preferred communication style: Simple, everyday language.
 League focus: Dynasty leagues (skill positions only - QB, RB, WR, TE). No kickers or defense.
 Future consideration: May add redraft emphasis later.
+Mission commitment: Strictly avoid all paywall partnerships or data sources. Maintain complete independence and free access to all platform features.
 ```
