@@ -133,8 +133,19 @@ export default function SimpleRankings() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Dynasty Rankings</h1>
-        <p className="text-gray-600">Simple numbered rankings for your league</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Dynasty Rankings</h1>
+            <p className="text-gray-600">Simple numbered rankings for your league</p>
+          </div>
+          <Link href="/enhanced-rankings">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Zap className="h-4 w-4" />
+              Enhanced Rankings
+              <ExternalLink className="h-3 w-3" />
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

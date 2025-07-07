@@ -33,6 +33,9 @@ export class RankingEnhancementService {
   async enhancePlayerRankings(players: any[]): Promise<EnhancedPlayer[]> {
     console.log(`🔄 Enhancing ${players.length} players with fantasy platform data...`);
     
+    // Auto-initialize mapping data if missing
+    await this.ensureMappingDataLoaded();
+    
     const enhancedPlayers: EnhancedPlayer[] = [];
     
     for (const player of players) {
@@ -256,6 +259,23 @@ export class RankingEnhancementService {
     }
     
     return matrix[str2.length][str1.length];
+  }
+
+  /**
+   * Ensure mapping data is loaded before enhancement
+   */
+  private async ensureMappingDataLoaded(): Promise<void> {
+    try {
+      // Check if player mapping has data
+      const testMapping = playerMapping.getSleeperIdByNFL('J.Allen');
+      if (!testMapping) {
+        console.log('🔄 Player mapping data not found, generating...');
+        // Trigger mapping regeneration
+        await fetch('http://localhost:5000/api/mapping/generate');
+      }
+    } catch (error) {
+      console.error('❌ Failed to ensure mapping data loaded:', error);
+    }
   }
 
   /**
