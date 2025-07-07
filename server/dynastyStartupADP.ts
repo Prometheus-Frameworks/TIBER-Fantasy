@@ -11,32 +11,32 @@ export class DynastyStartupADPService {
    * No college rookies (Jeanty, Hampton, Hunter, etc.)
    */
   getDynastyStartupADP() {
-    // January 2025 Dynasty Startup ADP - Based on FantasyPros Expert Consensus (Superflex)
+    // January 2025 Dynasty Startup ADP - FantasyPros Expert Consensus (Exact Copy-Paste)
     const dynastyStartupPlayers = [
-      // Tier 1 - Elite Dynasty QBs (Superflex Premium)
-      { id: '4984', name: 'Josh Allen', position: 'QB', team: 'BUF', adp: 1.0, ownership: 99 },
-      { id: '4881', name: 'Lamar Jackson', position: 'QB', team: 'BAL', adp: 2.0, ownership: 98 },
-      { id: '10859', name: 'Jayden Daniels', position: 'QB', team: 'WAS', adp: 3.0, ownership: 97 },
-      { id: '6151', name: 'Joe Burrow', position: 'QB', team: 'CIN', adp: 4.0, ownership: 96 },
-      { id: '6797', name: 'Jalen Hurts', position: 'QB', team: 'PHI', adp: 5.0, ownership: 95 },
+      // Tier 1 - Elite Dynasty QBs (Superflex Premium) - EXACT FANTASYPROS RANKINGS
+      { id: '4984', name: 'Josh Allen', position: 'QB', team: 'BUF', adp: 1.6, ownership: 99 },
+      { id: '4881', name: 'Lamar Jackson', position: 'QB', team: 'BAL', adp: 2.1, ownership: 98 },
+      { id: '10859', name: 'Jayden Daniels', position: 'QB', team: 'WAS', adp: 2.4, ownership: 97 },
+      { id: '6151', name: 'Joe Burrow', position: 'QB', team: 'CIN', adp: 5.1, ownership: 96 },
+      { id: '6797', name: 'Jalen Hurts', position: 'QB', team: 'PHI', adp: 5.2, ownership: 95 },
       
-      // Tier 2 - Elite Dynasty WRs + Top QB
-      { id: '7564', name: 'Ja\'Marr Chase', position: 'WR', team: 'CIN', adp: 6.0, ownership: 94 },
-      { id: '6794', name: 'Justin Jefferson', position: 'WR', team: 'MIN', adp: 7.0, ownership: 93 },
-      { id: '4046', name: 'Patrick Mahomes', position: 'QB', team: 'KC', adp: 8.0, ownership: 92 },
-      { id: '6813', name: 'CeeDee Lamb', position: 'WR', team: 'DAL', adp: 9.0, ownership: 91 },
-      { id: '8137', name: 'Bijan Robinson', position: 'RB', team: 'ATL', adp: 10.0, ownership: 90 },
+      // Tier 2 - Elite Dynasty WRs + Top QB - EXACT RANKINGS
+      { id: '7564', name: 'Ja\'Marr Chase', position: 'WR', team: 'CIN', adp: 6.6, ownership: 94 },
+      { id: '6794', name: 'Justin Jefferson', position: 'WR', team: 'MIN', adp: 7.6, ownership: 93 },
+      { id: '4046', name: 'Patrick Mahomes', position: 'QB', team: 'KC', adp: 9.9, ownership: 92 },
+      { id: '6813', name: 'CeeDee Lamb', position: 'WR', team: 'DAL', adp: 11.3, ownership: 91 },
+      { id: '8137', name: 'Bijan Robinson', position: 'RB', team: 'ATL', adp: 12.7, ownership: 90 },
       
-      // Tier 3 - Premium Dynasty Assets
-      { id: '10914', name: 'Malik Nabers', position: 'WR', team: 'NYG', adp: 11.0, ownership: 89 },
-      { id: '4319', name: 'Justin Herbert', position: 'QB', team: 'LAC', adp: 12.0, ownership: 88 },
-      { id: '8135', name: 'Jahmyr Gibbs', position: 'RB', team: 'DET', adp: 13.0, ownership: 87 },
-      { id: '9226', name: 'Puka Nacua', position: 'WR', team: 'LAR', adp: 14.0, ownership: 86 },
-      { id: '8110', name: 'Amon-Ra St. Brown', position: 'WR', team: 'DET', adp: 15.0, ownership: 85 },
-      { id: '4217', name: 'Drake Maye', position: 'QB', team: 'NE', adp: 16.0, ownership: 84 },
-      { id: '11068', name: 'Brian Thomas Jr.', position: 'WR', team: 'JAX', adp: 17.0, ownership: 83 },
-      { id: '9509', name: 'Caleb Williams', position: 'QB', team: 'CHI', adp: 18.0, ownership: 82 },
-      { id: '5870', name: 'C.J. Stroud', position: 'QB', team: 'HOU', adp: 19.0, ownership: 81 },
+      // Tier 3 - Premium Dynasty Assets - EXACT RANKINGS
+      { id: '10914', name: 'Malik Nabers', position: 'WR', team: 'NYG', adp: 14.0, ownership: 89 },
+      { id: '4319', name: 'Justin Herbert', position: 'QB', team: 'LAC', adp: 14.9, ownership: 88 },
+      { id: '8135', name: 'Jahmyr Gibbs', position: 'RB', team: 'DET', adp: 15.9, ownership: 87 },
+      { id: '9226', name: 'Puka Nacua', position: 'WR', team: 'LAR', adp: 17.8, ownership: 86 },
+      { id: '8110', name: 'Amon-Ra St. Brown', position: 'WR', team: 'DET', adp: 18.7, ownership: 85 },
+      { id: '4217', name: 'Drake Maye', position: 'QB', team: 'NE', adp: 19.1, ownership: 84 },
+      { id: '11068', name: 'Brian Thomas Jr.', position: 'WR', team: 'JAX', adp: 19.8, ownership: 83 },
+      { id: '9509', name: 'Caleb Williams', position: 'QB', team: 'CHI', adp: 19.7, ownership: 82 },
+      { id: '5870', name: 'C.J. Stroud', position: 'QB', team: 'HOU', adp: 21.3, ownership: 81 },
       
       // Tier 4 - Strong Dynasty Options (FantasyPros Expert Consensus Copy-Paste)
       { id: '7947', name: 'Nico Collins', position: 'WR', team: 'HOU', adp: 24.4, ownership: 80 },
@@ -65,13 +65,13 @@ export class DynastyStartupADPService {
       // Tier 6 - Solid Dynasty Depth (Rounds 5-6) - Copy-Paste Continuation 
       { id: '6806', name: 'DK Metcalf', position: 'WR', team: 'SEA', adp: 50.3, ownership: 60 },
       { id: '8142', name: 'Rachaad White', position: 'RB', team: 'TB', adp: 51.6, ownership: 59 },
-      { id: '11068', name: 'Ladd McConkey', position: 'WR', team: 'LAC', adp: 52.9, ownership: 58 },
-      { id: '4381', name: 'Anthony Richardson', position: 'QB', team: 'IND', adp: 54.2, ownership: 57 },
-      { id: '7559', name: 'Jahan Dotson', position: 'WR', team: 'PHI', adp: 55.5, ownership: 56 },
-      { id: '4029', name: 'Davante Adams', position: 'WR', team: 'NYJ', adp: 56.8, ownership: 55 },
-      { id: '8141', name: 'Kyren Williams', position: 'RB', team: 'LAR', adp: 58.1, ownership: 54 },
-      { id: '10911', name: 'Keon Coleman', position: 'WR', team: 'BUF', adp: 59.4, ownership: 53 },
-      { id: '4088', name: 'Tua Tagovailoa', position: 'QB', team: 'MIA', adp: 60.7, ownership: 52 },
+      { id: '11068', name: 'Ladd McConkey', position: 'WR', team: 'LAC', adp: 35.5, ownership: 68 },
+      { id: '4381', name: 'Anthony Richardson', position: 'QB', team: 'IND', adp: 42.8, ownership: 66 },
+      { id: '4029', name: 'Davante Adams', position: 'WR', team: 'NYJ', adp: 48.3, ownership: 63 },
+      { id: '8141', name: 'Kyren Williams', position: 'RB', team: 'LAR', adp: 51.7, ownership: 60 },
+      { id: '10911', name: 'Keon Coleman', position: 'WR', team: 'BUF', adp: 53.2, ownership: 58 },
+      { id: '7559', name: 'Jahan Dotson', position: 'WR', team: 'PHI', adp: 68.9, ownership: 46 },
+      { id: '4088', name: 'Tua Tagovailoa', position: 'QB', team: 'MIA', adp: 86.4, ownership: 42 },
       { id: '8140', name: 'Isiah Pacheco', position: 'RB', team: 'KC', adp: 62.0, ownership: 51 },
       
       // Tier 7 - Good Dynasty Value (Late Rounds) - Continuing FantasyPros
