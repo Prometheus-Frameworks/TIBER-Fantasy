@@ -1351,8 +1351,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('🔄 Generating enhanced rankings with fantasy platform integration...');
       
-      // Use players from available API endpoint to get accurate age data
-      const availablePlayers = await storage.getAvailablePlayers();
+      // Use our comprehensive dynasty database with 125+ players
+      const { getAllDynastyPlayers } = await import('./expandedDynastyDatabase');
+      const availablePlayers = getAllDynastyPlayers();
       
       // Filter by position if specified  
       let players = availablePlayers;

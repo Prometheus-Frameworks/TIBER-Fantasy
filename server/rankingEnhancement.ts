@@ -7,6 +7,16 @@ import { playerMapping } from './playerMapping';
 import { sleeperAPI } from './sleeperAPI';
 import { playerNameMapping } from './playerNameMapping';
 
+// Utility function for dynasty tier classification
+function getDynastyTierFromValue(dynastyValue: number): string {
+  if (dynastyValue >= 90) return 'Elite';
+  if (dynastyValue >= 75) return 'Premium';
+  if (dynastyValue >= 60) return 'Strong';
+  if (dynastyValue >= 45) return 'Solid';
+  if (dynastyValue >= 30) return 'Depth';
+  return 'Bench';
+}
+
 export interface EnhancedPlayer {
   id: number;
   name: string;
@@ -73,8 +83,8 @@ export class RankingEnhancementService {
       team: player.team,
       age: accurate2024Age || player.age || 26, // Use accurate 2024 age first
       avgPoints: player.avgPoints || 0,
-      dynastyValue: player.dynastyValue || player.dynastyScore || 0,
-      dynastyTier: player.dynastyTier || 'Bench',
+      dynastyValue: player.dynastyValue || player.dynastyScore || player.enhancedDynastyValue || 50,
+      dynastyTier: player.dynastyTier || getDynastyTierFromValue(player.dynastyValue || player.dynastyScore || player.enhancedDynastyValue || 50),
       mappingConfidence: 0
     };
 
@@ -155,6 +165,8 @@ export class RankingEnhancementService {
       return null;
     }
   }
+
+
 
   /**
    * Calculate ownership percentage from ADP/rank
