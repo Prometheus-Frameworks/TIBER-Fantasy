@@ -328,6 +328,7 @@ Changelog:
 - July 07, 2025. **SIMPLIFIED DATA APPROACH**: Following user feedback to "make it simple copy paste" - replaced complex league data fetching with clean, direct dynasty ADP consensus values ensuring authentic spread and eliminating duplicate value problems
 - July 07, 2025. **DYNASTY STARTUP VS ROOKIE DRAFT SEPARATION**: Fixed critical data mixing issue where college rookies (Jeanty, Hampton, Hunter) appeared in dynasty startup ADP - created dedicated dynastyStartupADP.ts service with only established NFL players
 - July 07, 2025. **CLEAN NFL PLAYER FILTERING**: Dynasty startup ADP now shows proper separation - Justin Jefferson (1.1), CeeDee Lamb (1.4), Ja'Marr Chase (1.8) vs college players excluded entirely for authentic dynasty startup experience
+- July 07, 2025. **PRECISE ADP DATA & TEXT OVERLAY FIXES**: Updated dynasty startup ADP with exact FantasyPros expert consensus values (Josh Allen 1.6, Lamar Jackson 2.1, Jayden Daniels 2.4) and fixed mobile text overlay issues by replacing grid layout with flexbox layout with shrink-0 constraints and proper column widths
 - July 07, 2025. Enhanced Rankings system working: All elite dynasty QBs successfully linked (Josh Allen→4984, Lamar Jackson→4881, Patrick Mahomes→4046, etc.)
 - July 07, 2025. Multi-strategy player connection: Manual mappings (95% confidence), NFL database lookup (90% confidence), fuzzy matching fallback (80% confidence)
 - July 07, 2025. Data quality enhancement: "Enhanced" players show Sleeper IDs, high confidence scores, and complete platform integration status
