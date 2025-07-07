@@ -65,9 +65,12 @@ export const players = pgTable("players", {
   rotowireId: text("rotowire_id"),
   fantasyDataId: text("fantasy_data_id"),
   
-  // Market data
-  adp: real("adp"), // Average draft position
+  // Market data - ENHANCED WITH DUAL ADP FIELDS
+  adp: real("adp"), // Overall ADP (e.g., 4)
+  positionalADP: text("positional_adp"), // Position rank (e.g., "WR1", "RB6")
   adpMissing: boolean("adp_missing").default(false), // True if ADP data unavailable
+  adpLastUpdated: timestamp("adp_last_updated"), // When ADP was last synced
+  adpSource: text("adp_source"), // 'sleeper', 'espn', 'fantasypros'
   dynastyValue: integer("dynasty_value"), // Dynasty value score 0-100
   efficiency: real("efficiency"), // Efficiency rating
   sustainability: integer("sustainability"), // Sustainability score 0-100

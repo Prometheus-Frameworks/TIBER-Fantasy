@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, TrendingUp, TrendingDown } from "lucide-react";
+import { ADPStatusIndicator } from "@/components/ADPStatusIndicator";
 
 interface ADPPlayer {
   id: string;
@@ -30,10 +31,10 @@ export default function CleanADP() {
   const [selectedPosition, setSelectedPosition] = useState("ALL");
 
   const { data: players = [], isLoading, error } = useQuery({
-    queryKey: ['/api/players/with-adp'],
+    queryKey: ['/api/players/enhanced-adp'],
     queryFn: async () => {
-      const response = await fetch('/api/players/with-adp?limit=500');
-      if (!response.ok) throw new Error('Failed to fetch players');
+      const response = await fetch('/api/players/enhanced-adp?limit=500');
+      if (!response.ok) throw new Error('Failed to fetch enhanced ADP data');
       return response.json();
     }
   });
@@ -115,6 +116,11 @@ export default function CleanADP() {
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto p-6">
+        {/* ADP Status Indicator */}
+        <div className="mb-6">
+          <ADPStatusIndicator />
+        </div>
+
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="relative flex-1">
@@ -149,7 +155,7 @@ export default function CleanADP() {
             <div className="flex items-center gap-1 text-xs font-medium text-slate-700 uppercase tracking-wide">
               <div className="w-12 text-center shrink-0">ADP</div>
               <div className="flex-1 px-2 min-w-0">Player</div>
-              <div className="w-14 text-center shrink-0">Rank</div>
+              <div className="w-14 text-center shrink-0">Pos Rank</div>
               <div className="w-12 text-center shrink-0">Pos</div>
               <div className="w-14 text-center shrink-0">Value</div>
               <div className="w-12 text-center shrink-0">Own%</div>
@@ -159,11 +165,8 @@ export default function CleanADP() {
           {/* Player Rows */}
           <div className="divide-y divide-slate-100">
             {filteredPlayers.map((player: any, index: number) => {
-              // Calculate position rank for display
-              const positionRank = Math.ceil(parseFloat(player.adp) / 4) + 
-                (player.position === 'QB' ? 0 : 
-                 player.position === 'RB' ? 5 : 
-                 player.position === 'WR' ? 8 : 12);
+              // Use the new positionalADP field directly
+              const positionRank = player.positionalADP || `${player.position}—`;
 
               return (
               <div 
@@ -191,7 +194,7 @@ export default function CleanADP() {
                   {/* Position Rank */}
                   <div className="w-14 text-center shrink-0">
                     <div className="text-xs font-medium text-slate-700">
-                      {player.position}{positionRank}
+                      {positionRank}
                     </div>
                   </div>
 
@@ -210,51 +213,11 @@ export default function CleanADP() {
                     </Badge>
                   </div>
 
-                  {/* Value Comparison */}
+                  {/* Dynasty Value */}
                   <div className="w-14 text-center shrink-0">
-                    {(() => {
-                      // Calculate actual value based on player-specific data
-                      let ourRank = positionRank; // Default to ADP rank
-                      let difference = 0;
-                      
-                      // Apply player-specific adjustments based on known factors
-                      const name = player.name.toLowerCase();
-                      
-                      // Elite players typically ranked higher by us than ADP suggests
-                      if (name.includes('chase') || name.includes('jefferson') || name.includes('mahomes')) {
-                        ourRank = Math.max(1, positionRank - 2);
-                      }
-                      // Rookies often overvalued in ADP
-                      else if (name.includes('harrison') || name.includes('odunze') || name.includes('nabers')) {
-                        ourRank = positionRank + 3;
-                      }
-                      // Veterans with proven production undervalued
-                      else if (name.includes('adams') || name.includes('evans') || name.includes('hill')) {
-                        ourRank = Math.max(1, positionRank - 4);
-                      }
-                      // Injury concerns or bust candidates
-                      else if (name.includes('pitts') || name.includes('watson')) {
-                        ourRank = positionRank + 5;
-                      }
-                      // Breakout candidates undervalued in ADP
-                      else if (name.includes('thomas') && name.includes('brian') || name.includes('mcconkey')) {
-                        ourRank = Math.max(1, positionRank - 3);
-                      }
-                      
-                      difference = positionRank - ourRank;
-                      
-                      if (difference >= 3) {
-                        return <span className="text-green-600 font-medium text-xs">+{difference}</span>;
-                      } else if (difference <= -3) {
-                        return <span className="text-red-600 font-medium text-xs">{difference}</span>;
-                      } else if (difference > 0) {
-                        return <span className="text-green-500 font-medium text-xs">+{difference}</span>;
-                      } else if (difference < 0) {
-                        return <span className="text-red-500 font-medium text-xs">{difference}</span>;
-                      } else {
-                        return <span className="text-slate-400 text-xs">—</span>;
-                      }
-                    })()}
+                    <div className="text-xs font-medium text-slate-700">
+                      {player.dynastyValue || "—"}
+                    </div>
                   </div>
 
                   {/* Ownership */}

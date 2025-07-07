@@ -1,5 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { registerADPRoutes } from "./routes/adpRoutes";
+import { adpSyncService } from "./adpSyncService";
 import { storage } from "./storage";
 import { teamSyncService } from "./teamSync";
 import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generateWaiverRecommendations } from "./analytics";
@@ -8,6 +10,7 @@ import { playerAnalysisCache } from "./playerAnalysisCache";
 import { espnAPI } from "./espnAPI";
 import { playerMapping } from "./playerMapping";
 import { dataRefreshService } from "./dataRefresh";
+import { realTimeADPUpdater } from "./realTimeADPUpdater";
 import { db } from "./db";
 import { dynastyTradeHistory, players as playersTable } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -50,6 +53,16 @@ function applyLeagueFormatAdjustments(players: any[], format: string): any[] {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Register ADP routes
+  registerADPRoutes(app);
+  
+  // Start automatic ADP syncing
+  adpSyncService.startAutoSync();
+  
+  // Initialize positional rankings on startup
+  setTimeout(() => {
+    realTimeADPUpdater.initializePositionalRankings();
+  }, 5000); // Wait 5 seconds for database to be ready
   
   // Core API Routes
   app.get("/api/teams/:id", async (req, res) => {
