@@ -62,18 +62,39 @@ export class RankingEnhancementService {
         };
       });
       
-      // Sort by position-adjusted value to find market inefficiencies
+      // Sort by position-adjusted value to get overall rankings 
       const sortedPlayers = correctedPlayers
-        .sort((a, b) => (b.positionAdjustedValue || b.dynastyValue) - (a.positionAdjustedValue || a.dynastyValue))
-        .slice(0, limit);
+        .sort((a, b) => (b.positionAdjustedValue || b.dynastyValue) - (a.positionAdjustedValue || a.dynastyValue));
+
+      // Add overall rankings and value analysis
+      const rankedPlayers = sortedPlayers.map((player, index) => {
+        const overallRank = index + 1;
+        const adp = player.adp || 999;
+        const rankingGap = adp - overallRank; // Positive = undervalued, Negative = overvalued
+        
+        let valueAnalysis = '';
+        if (rankingGap > 30) valueAnalysis = `MAJOR VALUE: ADP ${adp} but we rank him #${overallRank} overall (+${rankingGap} picks undervalued)`;
+        else if (rankingGap > 15) valueAnalysis = `VALUE PLAY: ADP ${adp} but we rank him #${overallRank} overall (+${rankingGap} picks undervalued)`;
+        else if (rankingGap > 5) valueAnalysis = `SLIGHT VALUE: ADP ${adp} vs our #${overallRank} ranking (+${rankingGap} picks)`;
+        else if (rankingGap < -15) valueAnalysis = `OVERVALUED: ADP ${adp} but we rank him #${overallRank} overall (${rankingGap} picks overvalued)`;
+        else if (rankingGap < -5) valueAnalysis = `CAUTION: ADP ${adp} vs our #${overallRank} ranking (${rankingGap} picks)`;
+        else valueAnalysis = `FAIR VALUE: ADP ${adp} matches our #${overallRank} ranking`;
+
+        return {
+          ...player,
+          overallRank,
+          rankingGap,
+          valueAnalysis
+        };
+      }).slice(0, limit);
       
       return {
-        players: sortedPlayers,
+        players: rankedPlayers,
         algorithm: 'prometheus_v2',
         weighting: 'Production (40%), Opportunity (35%), Age (20%), Stability (15%)',
-        description: 'Prometheus proprietary dynasty algorithm with expert consensus validation',
-        targetAccuracy: '92%',
-        total: sortedPlayers.length
+        description: 'Prometheus proprietary dynasty algorithm with individualized position scaling',
+        valuePhilosophy: 'Find market inefficiencies by comparing our overall rankings vs consensus ADP',
+        total: rankedPlayers.length
       };
       
     } catch (error) {
