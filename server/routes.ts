@@ -41,8 +41,21 @@ function applyLeagueFormatAdjustments(players: any[], format: string): any[] {
       } else {
         adjustment = -20; // Already low
       }
+    } else {
+      // Superflex: Premium for QBs
+      // Elite QBs (85+) get massive boost to dominate top picks
+      // Mid-tier QBs (70-84) get significant boost to early rounds
+      // All startable QBs (50+) get premium over skill positions
+      if (baseValue >= 85) {
+        adjustment = +15; // Josh Allen 94 → 100+ (Elite tier, picks 1-3)
+      } else if (baseValue >= 70) {
+        adjustment = +12; // Mid QBs → Premium tier (picks 4-8)
+      } else if (baseValue >= 50) {
+        adjustment = +8; // Startable QBs → Strong tier (picks 9-15)
+      } else {
+        adjustment = +5; // Backup QBs still valuable
+      }
     }
-    // Superflex is default - no adjustment needed
 
     const adjustedValue = Math.max(0, Math.min(100, baseValue + adjustment));
     
