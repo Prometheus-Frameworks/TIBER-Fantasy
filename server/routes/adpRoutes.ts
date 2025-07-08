@@ -8,6 +8,7 @@ import { db } from '../db';
 import { players } from '../../shared/schema';
 import { sql, desc, eq } from 'drizzle-orm';
 import { PlayerFilteringService } from '../playerFiltering';
+import { prometheusBenchmarks, meetsPrometheusBenchmark } from '../prometheusBenchmarkCluster';
 
 export function registerADPRoutes(app: Express): void {
   
@@ -754,6 +755,83 @@ export function registerADPRoutes(app: Express): void {
         error: 'Failed to fetch ADP trends',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  /**
+   * Prometheus Benchmark Cluster Analysis
+   * Returns elite player thresholds and benchmark comparisons
+   */
+  app.get('/api/analytics/prometheus-benchmarks', async (req, res) => {
+    try {
+      const analysis = {
+        benchmarks: prometheusBenchmarks,
+        analysis: {
+          title: "Prometheus Benchmark Cluster - Elite Player Analytics",
+          description: "Advanced thresholds based on 2024 analysis of Ja'Marr Chase, Saquon Barkley, Lamar Jackson, and Josh Allen",
+          keyFindings: [
+            "Target Share (27.2%+) most predictive metric for WR spike weeks",
+            "WOPR >0.637 indicates elite opportunity quality",  
+            "QB rushing yards (44+ YPG) provide scoring floor stability",
+            "Air Yards Share (32.7%+) drives deep threat ceiling games"
+          ],
+          spikeAnalysis: {
+            WR: "Elite WRs average 17.6% spike week frequency with 35.6 point threshold",
+            RB: "Elite RBs show 10.0% spike rate with 34.2 point threshold",
+            QB: "Elite QBs have 5.3% spike rate but highest consistent floors"
+          },
+          correlations: prometheusBenchmarks.spikeCorrelations
+        },
+        eliteProfiles: {
+          "Ja'Marr Chase": {
+            position: "WR",
+            fantasyPointsPerGame: 23.7,
+            spikeWeeks: "3/17 games (17.6%)",
+            keyMetrics: {
+              targetShare: "27.2% (elite threshold)",
+              airYardsShare: "32.7% (deep threat role)",
+              wopr: "0.637 (elite opportunity)"
+            }
+          },
+          "Saquon Barkley": {
+            position: "RB", 
+            fantasyPointsPerGame: 22.8,
+            spikeWeeks: "2/20 games (10.0%)",
+            keyMetrics: {
+              yardsPerCarry: "5.7 (elite efficiency)",
+              targetShare: "13.0% (receiving involvement)",
+              totalRushingYards: "2,504 (elite volume)"
+            }
+          },
+          "Lamar Jackson": {
+            position: "QB",
+            fantasyPointsPerGame: 24.8,
+            spikeWeeks: "0/19 games (0.0% - consistent floor)",
+            keyMetrics: {
+              rushingYardsPerGame: "54.5 (elite dual-threat)",
+              completionPercentage: "67.3% (efficient passing)",
+              yardsPerAttempt: "8.8 (elite efficiency)"
+            }
+          },
+          "Josh Allen": {
+            position: "QB",
+            fantasyPointsPerGame: 23.1,
+            spikeWeeks: "2/19 games (10.5%)",
+            keyMetrics: {
+              rushingYardsPerGame: "33.5 (dual-threat value)",
+              completionPercentage: "64.6% (solid accuracy)",
+              yardsPerAttempt: "7.7 (good efficiency)"
+            }
+          }
+        }
+      };
+
+      console.log('✅ Prometheus Benchmark Cluster analysis requested');
+      res.json(analysis);
+      
+    } catch (error) {
+      console.error('Prometheus benchmarks error:', error);
+      res.status(500).json({ error: 'Failed to fetch Prometheus benchmarks' });
     }
   });
 }

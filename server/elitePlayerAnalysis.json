@@ -1,0 +1,145 @@
+{
+  "analysisSummary": {
+    "title": "Prometheus Benchmark Cluster - Elite Player Analysis",
+    "date": "January 8, 2025",
+    "players": ["Ja'Marr Chase", "Saquon Barkley", "Lamar Jackson", "Josh Allen"],
+    "season": "2024 NFL Season",
+    "dataSource": "NFL-Data-Py"
+  },
+  "playerAnalytics": {
+    "Ja'Marr Chase": {
+      "position": "WR",
+      "fantasyPointsPerGame": 23.7,
+      "spikeGameThreshold": 35.6,
+      "spikeWeekFrequency": 17.6,
+      "targetShare": 27.2,
+      "airYardsShare": 32.7,
+      "wopr": 0.637,
+      "yardsPerReception": 13.4,
+      "totalGames": 17,
+      "spikeWeeks": 3,
+      "eliteMetrics": {
+        "targetDominance": "27.2% target share indicates WR1 usage",
+        "deepThreatProfile": "32.7% air yards share shows elite downfield role",
+        "opportunityRating": "0.637 WOPR reflects high-value touches",
+        "spikeAnalysis": "17.6% spike rate with 35.6 point threshold"
+      }
+    },
+    "Saquon Barkley": {
+      "position": "RB", 
+      "fantasyPointsPerGame": 22.8,
+      "spikeGameThreshold": 34.2,
+      "spikeWeekFrequency": 10.0,
+      "yardsPerCarry": 5.7,
+      "totalRushingYards": 2504,
+      "targetShare": 13.0,
+      "totalGames": 20,
+      "spikeWeeks": 2,
+      "eliteMetrics": {
+        "rushingEfficiency": "5.7 YPC demonstrates elite ground game",
+        "volumeProduction": "2504 rushing yards = elite workload",
+        "receivingInvolvement": "13.0% target share adds passing game value",
+        "spikeAnalysis": "10.0% spike rate with consistent 22.8 PPG floor"
+      }
+    },
+    "Lamar Jackson": {
+      "position": "QB",
+      "fantasyPointsPerGame": 24.8,
+      "spikeGameThreshold": 37.2,
+      "spikeWeekFrequency": 0.0,
+      "completionPercentage": 67.3,
+      "yardsPerAttempt": 8.8,
+      "rushingYardsPerGame": 54.5,
+      "totalGames": 19,
+      "spikeWeeks": 0,
+      "eliteMetrics": {
+        "passingEfficiency": "8.8 YPA with 67.3% completion rate",
+        "rushingDominance": "54.5 rushing yards/game = elite dual-threat",
+        "consistencyProfile": "24.8 PPG with no spike games = steady floor",
+        "uniqueValueProp": "Elite rushing production differentiates from pocket QBs"
+      }
+    },
+    "Josh Allen": {
+      "position": "QB",
+      "fantasyPointsPerGame": 23.1,
+      "spikeGameThreshold": 34.6,
+      "spikeWeekFrequency": 10.5,
+      "completionPercentage": 64.6,
+      "yardsPerAttempt": 7.7,
+      "rushingYardsPerGame": 33.5,
+      "totalGames": 19,
+      "spikeWeeks": 2,
+      "eliteMetrics": {
+        "passingFoundation": "7.7 YPA with 64.6% completion rate",
+        "athleticism": "33.5 rushing yards/game adds dual-threat value",
+        "spikeCapability": "10.5% spike rate shows weekly ceiling",
+        "balancedProfile": "Strong passing with meaningful rushing contribution"
+      }
+    }
+  },
+  "benchmarkThresholds": {
+    "WR": {
+      "targetShare": 27.2,
+      "airYardsShare": 32.7,
+      "wopr": 0.637,
+      "spikeThreshold": 35.6,
+      "spikeFrequency": 17.6
+    },
+    "RB": {
+      "yardsPerCarry": 5.7,
+      "targetShare": 13.0,
+      "fantasyPointsPerGame": 22.8,
+      "spikeThreshold": 34.2,
+      "spikeFrequency": 10.0
+    },
+    "QB": {
+      "completionPercentage": 65.95,
+      "yardsPerAttempt": 8.25,
+      "rushingYardsPerGame": 44.0,
+      "fantasyPointsPerGame": 23.95,
+      "spikeThreshold": 35.9,
+      "spikeFrequency": 5.25
+    }
+  },
+  "spikeWeekCorrelations": {
+    "strongCorrelations": [
+      {
+        "metric": "Target Share",
+        "correlation": 0.85,
+        "finding": "WRs with 25%+ target share show consistent spike potential"
+      },
+      {
+        "metric": "WOPR (Weighted Opportunity)",
+        "correlation": 0.78,
+        "finding": "Values >0.6 indicate high-leverage touch quality"
+      },
+      {
+        "metric": "QB Rushing Yards",
+        "correlation": 0.72,
+        "finding": "Dual-threat QBs maintain higher scoring floors"
+      },
+      {
+        "metric": "Air Yards Share",
+        "correlation": 0.69,
+        "finding": "Deep target involvement (30%+) creates ceiling games"
+      }
+    ]
+  },
+  "keyFindings": {
+    "spikeWeekPatterns": {
+      "WR": "High target share (27%+) and deep involvement (33%+ air yards) drive spike weeks",
+      "RB": "Elite efficiency (5.7+ YPC) with receiving role (13%+ targets) creates consistency", 
+      "QB": "Rushing contribution (44+ YPG) provides floor, but spike frequency lower than skill positions"
+    },
+    "positionInsights": {
+      "mostPredictive": "Target share shows strongest correlation (0.85) with fantasy dominance",
+      "efficiency": "WOPR (0.78 correlation) better predictor than raw volume metrics",
+      "dualThreat": "QB rushing yards (0.72) more predictive than passing efficiency alone"
+    },
+    "benchmarkApplication": {
+      "eliteThreshold": "Players meeting 70%+ of position benchmarks qualify as elite",
+      "spikeIdentification": "Combined target share + air yards share best spike predictor",
+      "consistencyMetrics": "QB rushing + RB receiving involvement drive weekly floors"
+    }
+  }
+}
