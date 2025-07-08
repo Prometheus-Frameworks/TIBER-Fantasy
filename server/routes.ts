@@ -89,6 +89,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RB Touchdown Regression Analysis Routes
+  app.post('/api/analytics/rb-td-regression-assessment', async (req, res) => {
+    try {
+      const { rbTDRegressionAnalyzer } = await import('./rbTouchdownRegression');
+      const { playerId, playerName, context, season } = req.body;
+
+      if (!playerId || !playerName || !context) {
+        return res.status(400).json({
+          success: false,
+          error: 'Player ID, name, and touchdown context required'
+        });
+      }
+
+      const assessment = rbTDRegressionAnalyzer.assessTDRegressionRisk(
+        playerId,
+        playerName,
+        context,
+        season || 2024
+      );
+      
+      res.json({
+        success: true,
+        assessment,
+        methodology: 'RB Touchdown Regression Logic (v1.0)',
+        module: 'Prometheus methodology plugin for sustainable TD analysis'
+      });
+    } catch (error: any) {
+      console.error('❌ RB TD regression assessment error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'RB touchdown regression assessment failed',
+        details: error.message
+      });
+    }
+  });
+
+  // Get RB TD Regression Methodology Info
+  app.get('/api/analytics/rb-td-regression-methodology', async (req, res) => {
+    try {
+      const { RB_TD_REGRESSION_METHODOLOGY, rbTDRegressionAnalyzer } = await import('./rbTouchdownRegression');
+      const exampleAnalysis = rbTDRegressionAnalyzer.getExampleAnalysis();
+      
+      res.json({
+        success: true,
+        methodology: RB_TD_REGRESSION_METHODOLOGY,
+        exampleAnalysis,
+        integration: {
+          preserves: 'All existing evaluation logic and context awareness',
+          scope: 'Dynasty valuation, player profiles, analytics panels',
+          module: 'Appended modularly - does not overwrite spike week detection, YPRR logic, or adjustedDynastyValue formula'
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ RB TD methodology error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to load RB TD regression methodology'
+      });
+    }
+  });
+
   // Get Dynasty Decline Framework Info
   app.get('/api/analytics/dynasty-decline-framework', async (req, res) => {
     try {

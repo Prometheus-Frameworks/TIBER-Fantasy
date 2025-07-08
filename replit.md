@@ -128,6 +128,17 @@ Based on user feedback, expanding to include:
 
 **Integration**: Framework applies risk-based penalties to Prometheus v2.0 Stability component (15% weighting) for comprehensive dynasty valuations.
 
+## RB Touchdown Regression Logic (v1.0)
+
+**Modular Plugin**: Safely appended methodology module that evaluates TD sustainability without overwriting existing evaluation logic.
+
+**Three-Step Analysis**:
+1. **Flagging for Regression Risk**: Compare TD rate to league average (3.5%), flag if >1.5x threshold
+2. **Contextual Risk Factors**: Goal-line work analysis, QB competition, volume/efficiency ratios, backfield competition
+3. **Dynasty Value Adjustment**: Apply 15% reduction for multiple risk factors, add "TD Regression Risk" tags
+
+**Integration Scope**: Dynasty valuation, player profiles, analytics panels - preserves spike week detection, YPRR logic, and adjustedDynastyValue calculations.
+
 ## Core Value Proposition & Philosophical Mission
 **Primary Goal**: Identifying players whose advanced analytics don't match their market value - finding undervalued gems with elite metrics (YPRR > 2.0) trading below ADP, and avoiding overpriced players with poor underlying data.
 
@@ -426,6 +437,9 @@ Changelog:
 - July 08, 2025. **DYNASTY DECLINE DETECTION FRAMEWORK**: Implemented comprehensive risk assessment system using skill-isolating metrics (YAC/o, missed tackles forced, target share, EPA per touch, WOPR, YPRR) with multi-season trend analysis
 - July 08, 2025. **RISK MANAGEMENT SYSTEM**: Built four-tier risk classification (SkillDecayRisk, DeclineVerified, SystemDependent, Post-Context Cliff) with player evaluation framework integrated into Prometheus v2.0 algorithm
 - July 08, 2025. **DYNASTY DECLINE ANALYSIS PAGE**: Created comprehensive frontend interface with live assessment tools, example scenarios, methodology documentation, and integration with backend assessment APIs
+- July 08, 2025. **RB TOUCHDOWN REGRESSION LOGIC (v1.0)**: Implemented modular methodology plugin for evaluating TD sustainability and regression risk - safely appended to existing evaluation logic without overwriting spike week detection, YPRR analysis, or adjustedDynastyValue formulas
+- July 08, 2025. **TD REGRESSION ASSESSMENT SYSTEM**: Built comprehensive three-step analysis (flagging, contextual risk factors, dynasty value adjustment) with James Cook example case study showing 8% TD rate, Josh Allen competition, and 15% value reduction
+- July 08, 2025. **MODULAR PLUGIN ARCHITECTURE**: Created safe integration framework that preserves all existing methodology while adding TD regression analysis to dynasty valuation, player profiles, and analytics panels
 - July 07, 2025. Historical success integration: Added position-specific rookie hit rates (QB 65%, RB 75%, WR 60%, TE 45% for first-round picks) and year-one fantasy projections
 - July 07, 2025. Enhanced WR algorithm completed: Environmental factors, team offensive context (pass volume, coaching stability), and situational target value weighting for comprehensive wide receiver evaluation
 - July 07, 2025. **ROUTE EFFICIENCY RESEARCH**: Analyzed advanced methodology - TPRR (Targets Per Route Run) has 0.817 correlation with fantasy scoring vs 0.763 for raw targets

@@ -37,6 +37,7 @@ import DraftAnalysis from "@/pages/DraftAnalysis";
 import DraftRoom from "@/pages/DraftRoom";
 import PlayerProfile from "@/pages/PlayerProfile";
 import DynastyDeclineAnalysis from "@/pages/DynastyDeclineAnalysis";
+import RBTouchdownRegression from "@/pages/RBTouchdownRegression";
 import FullPlayerPool from "@/pages/FullPlayerPool";
 import NotFound from "@/pages/not-found";
 import SleeperDatabase from "@/pages/sleeper-database";
@@ -73,6 +74,7 @@ function Router() {
       <Route path="/sleeper-database" component={SleeperDatabase} />
       <Route path="/prometheus-benchmarks" component={PrometheusBenchmarks} />
       <Route path="/dynasty-decline-analysis" component={DynastyDeclineAnalysis} />
+      <Route path="/rb-touchdown-regression" component={RBTouchdownRegression} />
       <Route component={NotFound} />
     </Switch>
   );

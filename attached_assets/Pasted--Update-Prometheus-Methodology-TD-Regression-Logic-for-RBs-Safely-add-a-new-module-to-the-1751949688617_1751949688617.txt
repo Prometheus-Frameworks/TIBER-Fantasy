@@ -1,0 +1,58 @@
+// 🧠 Update Prometheus Methodology: TD Regression Logic for RBs
+
+/* 
+Safely add a new module to the agent's player evaluation methodology.
+This module should not overwrite or delete existing logic—append modularly under a new section
+called `RB Touchdown Regression Logic (v1.0)`. Treat this as a plugin to use during dynasty value
+calculations and player context analysis.
+
+✅ Preserve all existing evaluation logic and context awareness
+✅ Only add this to the `methodology` block
+✅ Do not overwrite spike week detection, YPRR logic, or current adjustedDynastyValue formula
+*/
+
+addMethodologyModule("RB Touchdown Regression Logic (v1.0)", {
+  description: "Evaluates the sustainability of RB touchdowns and flags regression risk.",
+  triggerScope: ["dynastyValuation", "playerProfile", "analyticsPanel"],
+  steps: [
+    {
+      step: "Flagging for Regression Risk",
+      logic: [
+        "Compare player.tdRate (TDs per touch) to leagueAvgRBTDrate (~3.5% by default).",
+        "If tdRate > 1.5 * leagueAvgRBTDrate, flag for potential regression."
+      ]
+    },
+    {
+      step: "Analyze Contextual Risk Factors",
+      logic: [
+        "Check if player lacks goal-line work using inside5Carries < 5 and low teamInside5Share.",
+        "Check if QB has high red zone carries (qb.redZoneRushes > 20).",
+        "Check if player has <220 total touches and >8% TD rate.",
+        "Flag if rookie or vet red zone back is present (e.g. Ray Davis, Tyler Johnson)."
+      ]
+    },
+    {
+      step: "Adjust Dynasty Value",
+      logic: [
+        "If player is flagged with multiple contextual risk factors, reduce adjustedDynastyValue by 15%.",
+        "Apply 'TD Regression Risk' tag to player profile."
+      ]
+    }
+  ],
+  examplePlayer: {
+    name: "James Cook",
+    season: 2024,
+    context: {
+      tdRate: "8%",
+      totalTouches: "<250",
+      qb: "Josh Allen (RZ threat)",
+      competition: ["Ray Davis (rookie)", "Ty Johnson (veteran)"],
+      note: "Scheme shift under OC Joe Brady increased efficiency"
+    },
+    outcome: {
+      flag: true,
+      valueAdjustment: "-15%",
+      tag: "TD Regression Risk"
+    }
+  }
+});
