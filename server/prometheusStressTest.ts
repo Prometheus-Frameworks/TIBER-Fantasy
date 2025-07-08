@@ -125,7 +125,14 @@ export class PrometheusStressTestService {
         targets: 51,
         targetShare: 0.12,
         backfieldShare: 0.65,
-        fumbles: 1
+        fumbles: 1,
+        totalTouches: 258,
+        qbRedZoneRushes: 25,
+        teamRushingAttempts: 420,
+        receivingShare: 0.35,
+        receivingTDs: 2,
+        opportunityShare: 0.68,
+        backfieldCompetition: ['Ray Davis']
       }
     },
     {
@@ -147,7 +154,14 @@ export class PrometheusStressTestService {
         targets: 24,
         targetShare: 0.06,
         backfieldShare: 0.25,
-        fumbles: 0
+        fumbles: 0,
+        totalTouches: 87,
+        qbRedZoneRushes: 25,
+        teamRushingAttempts: 420,
+        receivingShare: 0.15,
+        receivingTDs: 1,
+        opportunityShare: 0.28,
+        backfieldCompetition: ['James Cook', 'Ty Johnson']
       }
     },
     {
@@ -169,7 +183,14 @@ export class PrometheusStressTestService {
         targets: 75,
         targetShare: 0.15,
         backfieldShare: 0.80,
-        fumbles: 2
+        fumbles: 2,
+        totalTouches: 312,
+        qbRedZoneRushes: 8,
+        teamRushingAttempts: 380,
+        receivingShare: 0.45,
+        receivingTDs: 3,
+        opportunityShare: 0.78,
+        backfieldCompetition: []
       }
     },
     // WR Test Cases
@@ -244,9 +265,13 @@ export class PrometheusStressTestService {
         targets: 35,
         routesRun: 280,
         targetShare: 0.09,
+        receivingYards: 380,
         redZoneTargets: 6,
         inside10Targets: 4,
+        teamPassAttempts: 450,
+        redZonePassShare: 0.20,
         teTDShare: 0.60,
+        teTargetShare: 0.15,
         passVolumeVolatility: 0.15,
         teRoomDepth: 2
       }
@@ -264,9 +289,13 @@ export class PrometheusStressTestService {
         targets: 71,
         routesRun: 445,
         targetShare: 0.17,
+        receivingYards: 520,
         redZoneTargets: 8,
         inside10Targets: 5,
+        teamPassAttempts: 420,
+        redZonePassShare: 0.18,
         teTDShare: 0.40,
+        teTargetShare: 0.22,
         passVolumeVolatility: 0.08,
         teRoomDepth: 2
       }
@@ -284,9 +313,13 @@ export class PrometheusStressTestService {
         targets: 73,
         routesRun: 385,
         targetShare: 0.16,
+        receivingYards: 630,
         redZoneTargets: 12,
         inside10Targets: 8,
+        teamPassAttempts: 465,
+        redZonePassShare: 0.22,
         teTDShare: 0.50,
+        teTargetShare: 0.18,
         passVolumeVolatility: 0.12,
         teRoomDepth: 1
       }
@@ -406,7 +439,7 @@ export class PrometheusStressTestService {
             player.context,
             2024
           );
-          testPassed = assessment.validation.requiredFieldsPresent;
+          testPassed = assessment.validation?.requiredFieldsPresent || false;
           auditLog.push(`WR TD Regression: TD Rate=${player.context.tdRate}, Target Share=${player.context.targetShare}`);
           break;
 
@@ -418,7 +451,7 @@ export class PrometheusStressTestService {
             player.context,
             2024
           );
-          testPassed = assessment.validation.requiredFieldsPresent;
+          testPassed = assessment.validation?.requiredFieldsPresent || false;
           auditLog.push(`TE TD Regression: TD Rate=${player.context.tdRate}, Red Zone Targets=${player.context.redZoneTargets}`);
           break;
 
