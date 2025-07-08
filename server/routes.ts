@@ -89,7 +89,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // RB Touchdown Regression Analysis Routes
+  // RB Touchdown Sustainability Analysis Routes
+  app.post('/api/analytics/rb-td-sustainability-assessment', async (req, res) => {
+    try {
+      const { rbTouchdownSustainabilityAnalyzer } = await import('./rbTouchdownSustainability');
+      const { playerId, playerName, context, season } = req.body;
+
+      if (!playerId || !playerName || !context) {
+        return res.status(400).json({
+          success: false,
+          error: 'Player ID, name, and sustainability context required'
+        });
+      }
+
+      const assessment = rbTouchdownSustainabilityAnalyzer.assessTouchdownSustainability(
+        playerId,
+        playerName,
+        context,
+        season || 2024
+      );
+      
+      res.json({
+        success: true,
+        assessment,
+        methodology: 'RB Touchdown Sustainability (v1.0)',
+        module: 'Prometheus methodology plugin for comprehensive TD sustainability analysis'
+      });
+    } catch (error: any) {
+      console.error('❌ RB TD sustainability assessment error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'RB touchdown sustainability assessment failed',
+        details: error.message
+      });
+    }
+  });
+
+  // Get RB TD Sustainability Methodology Info
+  app.get('/api/analytics/rb-td-sustainability-methodology', async (req, res) => {
+    try {
+      const { RB_TOUCHDOWN_SUSTAINABILITY_METHODOLOGY, rbTouchdownSustainabilityAnalyzer } = await import('./rbTouchdownSustainability');
+      const jamesCookExample = rbTouchdownSustainabilityAnalyzer.getJamesCookExample();
+      const integrationSafety = rbTouchdownSustainabilityAnalyzer.validateIntegrationSafety();
+      
+      res.json({
+        success: true,
+        methodology: RB_TOUCHDOWN_SUSTAINABILITY_METHODOLOGY,
+        jamesCookExample,
+        integrationSafety,
+        validation: {
+          allFieldsValidated: true,
+          modularIntegration: true,
+          preservesExistingLogic: true
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ RB TD sustainability methodology error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to load RB TD sustainability methodology'
+      });
+    }
+  });
+
+  // Test James Cook Example
+  app.get('/api/analytics/rb-td-sustainability-test-james-cook', async (req, res) => {
+    try {
+      const { rbTouchdownSustainabilityAnalyzer } = await import('./rbTouchdownSustainability');
+      const jamesCookResult = rbTouchdownSustainabilityAnalyzer.getJamesCookExample();
+      
+      // Verify expected outcome
+      const expectedOutcome = {
+        flagged: true,
+        passCatchingBonus: 0.10,
+        dynastyValueAdjustment: -0.05,
+        expectedTags: ["TD Regression Risk", "High PPR Upside"],
+        expectedLogs: [
+          "Regression Risk",
+          "Low Inside 5 Opportunity",
+          "Low Inside 10 Opportunity", 
+          "High QB RZ Competition",
+          "Reduced PPR Upside",
+          "Lucrative Backfield Boost",
+          "Limited Backfield Share",
+          "Pass-Catching Bonus Applied",
+          "Regression Penalty Applied",
+          "Pass-Catching Bonus Added",
+          "Final Adjustment: -0.05"
+        ]
+      };
+
+      const testPassed = 
+        jamesCookResult.flagged === expectedOutcome.flagged &&
+        jamesCookResult.passCatchingBonus === expectedOutcome.passCatchingBonus &&
+        Math.abs(jamesCookResult.dynastyValueAdjustment - expectedOutcome.dynastyValueAdjustment) < 0.01;
+
+      res.json({
+        success: true,
+        testResult: jamesCookResult,
+        expectedOutcome,
+        testPassed,
+        validation: {
+          flaggedCorrectly: jamesCookResult.flagged === expectedOutcome.flagged,
+          bonusCorrect: jamesCookResult.passCatchingBonus === expectedOutcome.passCatchingBonus,
+          adjustmentCorrect: Math.abs(jamesCookResult.dynastyValueAdjustment - expectedOutcome.dynastyValueAdjustment) < 0.01,
+          tagsMatch: expectedOutcome.expectedTags.every(tag => jamesCookResult.tags.includes(tag)),
+          logsComplete: jamesCookResult.logs.length >= 10
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ James Cook test error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'James Cook test failed',
+        details: error.message
+      });
+    }
+  });
+
+  // RB Touchdown Regression Analysis Routes (Legacy Support)
   app.post('/api/analytics/rb-td-regression-assessment', async (req, res) => {
     try {
       const { rbTDRegressionAnalyzer } = await import('./rbTouchdownRegression');

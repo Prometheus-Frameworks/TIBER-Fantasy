@@ -10,50 +10,81 @@ import { TrendingDown, Target, AlertTriangle, Info, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-interface RBTouchdownContext {
+interface RBSustainabilityContext {
   tdRate: number;
   totalTouches: number;
   inside5Carries: number;
+  inside10Carries: number;
   teamInside5Share: number;
+  teamInside10Share: number;
   qbRedZoneRushes: number;
-  hasRookieCompetition: boolean;
-  hasVetCompetition: boolean;
-  schemeChange: boolean;
+  teamRushingAttempts: number;
+  opportunityShare: number;
+  receivingShare: number;
+  targetShare: number;
+  receivingYards: number;
+  receivingTDs: number;
+  backfieldCompetition: string[];
 }
 
-interface TDRegressionAssessment {
+interface SustainabilityAssessment {
   playerId: string;
   playerName: string;
   season: number;
-  riskFlags: any;
-  riskLevel: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
-  valueAdjustment: number;
+  flagged: boolean;
+  riskFlags: string[];
+  passCatchingBonus: number;
+  dynastyValueAdjustment: number;
   tags: string[];
-  contextualNote: string;
-  recommendation: string;
+  logs: string[];
+  validation: {
+    requiredFieldsPresent: boolean;
+    missingFields: string[];
+  };
+  contextAnalysis: {
+    tdRateRatio: number;
+    teamRushRatio: number;
+    targetShareRatio: number;
+    riskFactorCount: number;
+  };
 }
 
 export default function RBTouchdownRegression() {
-  const [assessmentResult, setAssessmentResult] = useState<TDRegressionAssessment | null>(null);
+  return <RBTouchdownSustainabilityPage />;
+}
+
+function RBTouchdownSustainabilityPage() {
+  const [assessmentResult, setAssessmentResult] = useState<SustainabilityAssessment | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
   // Custom player analysis form
   const [customPlayer, setCustomPlayer] = useState({
     playerId: '',
     playerName: '',
-    tdRate: 5.0,
-    totalTouches: 200,
-    inside5Carries: 8,
-    teamInside5Share: 0.6,
-    qbRedZoneRushes: 15,
-    hasRookieCompetition: false,
-    hasVetCompetition: false,
-    schemeChange: false
+    tdRate: 0.08,
+    totalTouches: 240,
+    inside5Carries: 3,
+    inside10Carries: 6,
+    teamInside5Share: 0.15,
+    teamInside10Share: 0.18,
+    qbRedZoneRushes: 25,
+    teamRushingAttempts: 480,
+    opportunityShare: 0.33,
+    receivingShare: 0.10,
+    targetShare: 0.12,
+    receivingYards: 450,
+    receivingTDs: 3,
+    backfieldCompetition: ["Ray Davis (rookie)", "Ty Johnson (veteran)"]
   });
 
   // Fetch methodology information
   const { data: methodologyData } = useQuery({
-    queryKey: ['/api/analytics/rb-td-regression-methodology'],
+    queryKey: ['/api/analytics/rb-td-sustainability-methodology'],
+  });
+
+  // Test James Cook example
+  const { data: jamesCookTest } = useQuery({
+    queryKey: ['/api/analytics/rb-td-sustainability-test-james-cook'],
   });
 
   const runCustomAnalysis = async () => {
@@ -61,7 +92,7 @@ export default function RBTouchdownRegression() {
     
     setIsAnalyzing(true);
     try {
-      const response = await fetch('/api/analytics/rb-td-regression-assessment', {
+      const response = await fetch('/api/analytics/rb-td-sustainability-assessment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -71,11 +102,17 @@ export default function RBTouchdownRegression() {
             tdRate: customPlayer.tdRate,
             totalTouches: customPlayer.totalTouches,
             inside5Carries: customPlayer.inside5Carries,
+            inside10Carries: customPlayer.inside10Carries,
             teamInside5Share: customPlayer.teamInside5Share,
+            teamInside10Share: customPlayer.teamInside10Share,
             qbRedZoneRushes: customPlayer.qbRedZoneRushes,
-            hasRookieCompetition: customPlayer.hasRookieCompetition,
-            hasVetCompetition: customPlayer.hasVetCompetition,
-            schemeChange: customPlayer.schemeChange
+            teamRushingAttempts: customPlayer.teamRushingAttempts,
+            opportunityShare: customPlayer.opportunityShare,
+            receivingShare: customPlayer.receivingShare,
+            targetShare: customPlayer.targetShare,
+            receivingYards: customPlayer.receivingYards,
+            receivingTDs: customPlayer.receivingTDs,
+            backfieldCompetition: customPlayer.backfieldCompetition
           },
           season: 2024
         })
@@ -92,8 +129,8 @@ export default function RBTouchdownRegression() {
   };
 
   const runExampleAnalysis = async () => {
-    if (!methodologyData?.exampleAnalysis?.[0]) return;
-    setAssessmentResult(methodologyData.exampleAnalysis[0]);
+    if (!jamesCookTest?.testResult) return;
+    setAssessmentResult(jamesCookTest.testResult);
   };
 
   const getRiskColor = (level: string) => {
@@ -114,16 +151,17 @@ export default function RBTouchdownRegression() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">RB Touchdown Regression Logic (v1.0)</h1>
+        <h1 className="text-3xl font-bold mb-2">RB Touchdown Sustainability (v1.0)</h1>
         <p className="text-lg text-muted-foreground">
-          Modular methodology plugin for evaluating TD sustainability and regression risk
+          Comprehensive methodology for evaluating TD sustainability, pass-catching upside, and regression risk
         </p>
       </div>
 
       <Tabs defaultValue="methodology" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="methodology">Methodology</TabsTrigger>
           <TabsTrigger value="analysis">Live Analysis</TabsTrigger>
+          <TabsTrigger value="validation">Validation</TabsTrigger>
           <TabsTrigger value="integration">Integration</TabsTrigger>
         </TabsList>
 
@@ -385,6 +423,126 @@ export default function RBTouchdownRegression() {
               </Card>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="validation" className="space-y-6">
+          {jamesCookTest?.success && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    James Cook Test Results
+                    <Badge variant={jamesCookTest.testPassed ? 'default' : 'destructive'}>
+                      {jamesCookTest.testPassed ? 'PASSED' : 'FAILED'}
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    Validation of expected methodology outputs
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">{formatValueAdjustment(jamesCookTest.testResult.dynastyValueAdjustment)}</div>
+                      <div className="text-sm text-muted-foreground">Dynasty Value Adjustment</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">+{(jamesCookTest.testResult.passCatchingBonus * 100).toFixed(0)}%</div>
+                      <div className="text-sm text-muted-foreground">Pass-Catching Bonus</div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-3">Validation Checks</h4>
+                    <div className="space-y-2">
+                      {Object.entries(jamesCookTest.validation).map(([key, passed]) => (
+                        <div key={key} className="flex items-center justify-between">
+                          <span className="text-sm capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                          <Badge variant={passed ? 'default' : 'destructive'}>
+                            {passed ? '✅ Pass' : '❌ Fail'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-3">Applied Tags</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {jamesCookTest.testResult.tags.map((tag: string, index: number) => (
+                        <Badge key={index} variant="outline">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Processing Logs</CardTitle>
+                  <CardDescription>
+                    Step-by-step methodology execution
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {jamesCookTest.testResult.logs.map((log: string, index: number) => (
+                      <div key={index} className="flex items-start gap-2 text-sm">
+                        <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-xs text-primary font-medium">{index + 1}</span>
+                        </div>
+                        <span className="text-muted-foreground">{log}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Context Analysis</CardTitle>
+                  <CardDescription>
+                    Detailed breakdown of James Cook's sustainability metrics
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 border rounded-lg">
+                      <div className="text-lg font-bold">{jamesCookTest.testResult.contextAnalysis.tdRateRatio.toFixed(2)}x</div>
+                      <div className="text-sm text-muted-foreground">TD Rate Ratio</div>
+                      <div className="text-xs text-muted-foreground mt-1">vs League Avg</div>
+                    </div>
+                    <div className="text-center p-4 border rounded-lg">
+                      <div className="text-lg font-bold">{jamesCookTest.testResult.contextAnalysis.teamRushRatio.toFixed(2)}x</div>
+                      <div className="text-sm text-muted-foreground">Team Rush Ratio</div>
+                      <div className="text-xs text-muted-foreground mt-1">vs League Avg</div>
+                    </div>
+                    <div className="text-center p-4 border rounded-lg">
+                      <div className="text-lg font-bold">{jamesCookTest.testResult.contextAnalysis.targetShareRatio.toFixed(2)}x</div>
+                      <div className="text-sm text-muted-foreground">Target Share Ratio</div>
+                      <div className="text-xs text-muted-foreground mt-1">vs League Avg</div>
+                    </div>
+                    <div className="text-center p-4 border rounded-lg">
+                      <div className="text-lg font-bold">{jamesCookTest.testResult.contextAnalysis.riskFactorCount}</div>
+                      <div className="text-sm text-muted-foreground">Risk Factors</div>
+                      <div className="text-xs text-muted-foreground mt-1">Identified</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {!jamesCookTest?.success && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                James Cook test validation data not available. The methodology is still functional for live analysis.
+              </AlertDescription>
+            </Alert>
+          )}
         </TabsContent>
 
         <TabsContent value="integration" className="space-y-6">

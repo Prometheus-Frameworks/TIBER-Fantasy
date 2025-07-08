@@ -1,0 +1,104 @@
+addMethodologyModule("RB Touchdown Sustainability (v1.0)", {
+  description: "Evaluates RB touchdown sustainability, pass-catching upside, and flags regression risk.",
+  triggerScope: ["dynastyValuation", "playerProfile", "analyticsPanel"],
+  inputValidation: {
+    requiredFields: [
+      "player.tdRate", "player.totalTouches", "player.inside5Carries", "player.inside10Carries",
+      "team.inside5Share", "team.inside10Share", "qb.redZoneRushes", "team.rushingAttempts",
+      "player.receivingShare", "player.targetShare", "player.receivingYards", "player.receivingTDs",
+      "team.leagueAvgRushingAttempts", "team.backfieldCompetition"
+    ],
+    defaults: {
+      leagueAvgRBTDrate: 0.035, // 3.5% default
+      leagueAvgRushingAttempts: 400, // Default league average rushing attempts per season
+      leagueAvgTargetShare: 0.10 // Default RB target share (10%)
+    }
+  },
+  steps: [
+    {
+      step: "Flagging for Regression Risk",
+      logic: [
+        "Calculate tdRateRatio = player.tdRate / leagueAvgRBTDrate.",
+        "If tdRateRatio > 1.5, flag player for potential regression and log 'Regression Risk' to player.profile.logs."
+      ]
+    },
+    {
+      step: "Analyze Contextual Risk Factors",
+      logic: [
+        "Flag if player.inside5Carries < 5 AND team.inside5Share < 0.2, log 'Low Inside 5 Opportunity' to player.profile.logs.",
+        "Flag if player.inside10Carries < 8 AND team.inside10Share < 0.2, log 'Low Inside 10 Opportunity' to player.profile.logs.",
+        "Flag if qb.redZoneRushes > 20, log 'High QB RZ Competition' to player.profile.logs.",
+        "Flag if player.totalTouches < 220 AND player.tdRate > 0.08, log 'Low Touch High TD Rate' to player.profile.logs.",
+        "Flag if roster includes rookie or veteran red zone back (e.g., 'Ray Davis', 'Ty Johnson'), log 'RZ Back Competition' to player.profile.logs.",
+        "Flag if receiving back (e.g., 'Ty Johnson') has receivingShare > 0.15, log 'Reduced PPR Upside' to player.profile.logs."
+      ]
+    },
+    {
+      step: "Analyze Team Rushing Attempts",
+      logic: [
+        "Calculate teamRushRatio = team.rushingAttempts / leagueAvgRushingAttempts.",
+        "If teamRushRatio > 1.0, scale player.opportunityShare by teamRushRatio and log 'Lucrative Backfield Boost' to player.profile.logs.",
+        "If player.opportunityShare < 0.35 in high-value offense (teamRushRatio > 1.2), flag for limited ceiling and log 'Limited Backfield Share' to player.profile.logs."
+      ]
+    },
+    {
+      step: "Evaluate Pass-Catching Upside",
+      logic: [
+        "Calculate targetShareRatio = player.targetShare / leagueAvgTargetShare.",
+        "If targetShareRatio > 1.5 AND (player.receivingYards > 400 OR player.receivingTDs >= 3), apply passCatchingBonus = +0.10 to dynastyValueAdjustment and log 'Pass-Catching Bonus Applied' to player.profile.logs.",
+        "If passCatchingBonus is applied, add 'High PPR Upside' tag to player.profile.tags."
+      ]
+    },
+    {
+      step: "Adjust Dynasty Value",
+      logic: [
+        "If player has >= 2 contextual risk flags, apply dynastyValueAdjustment = -0.15 and log 'Regression Penalty Applied' to player.profile.logs.",
+        "If passCatchingBonus exists, add +0.10 to dynastyValueAdjustment and log 'Pass-Catching Bonus Added' to player.profile.logs.",
+        "Add 'TD Regression Risk' tag to player.profile.tags if regression flagged.",
+        "Net dynastyValueAdjustment capped at ±0.25, log final adjustment to player.profile.logs."
+      ]
+    }
+  ],
+  examplePlayer: {
+    name: "James Cook",
+    season: 2024,
+    context: {
+      tdRate: 0.08,
+      totalTouches: 240,
+      inside5Carries: 3,
+      inside10Carries: 6,
+      teamInside5Share: 0.15,
+      teamInside10Share: 0.18,
+      qb: "Josh Allen",
+      qbRedZoneRushes: 25,
+      teamRushingAttempts: 480,
+      leagueAvgRushingAttempts: 400,
+      opportunityShare: 0.33,
+      receivingShare: 0.10,
+      targetShare: 0.12,
+      receivingYards: 450,
+      receivingTDs: 3,
+      competition: ["Ray Davis (rookie)", "Ty Johnson (veteran, receivingShare: 0.18)"],
+      note: "Scheme shift under OC Joe Brady increased efficiency, but Ty Johnson limits PPR upside."
+    },
+    outcome: {
+      flagged: true,
+      passCatchingBonus: 0.10,
+      dynastyValueAdjustment: -0.05,
+      tags: ["TD Regression Risk", "High PPR Upside"],
+      logs: [
+        "Regression Risk",
+        "Low Inside 5 Opportunity",
+        "Low Inside 10 Opportunity",
+        "High QB RZ Competition",
+        "Reduced PPR Upside",
+        "Lucrative Backfield Boost",
+        "Limited Backfield Share",
+        "Pass-Catching Bonus Applied",
+        "Regression Penalty Applied",
+        "Pass-Catching Bonus Added",
+        "Final Adjustment: -0.05"
+      ]
+    }
+  }
+});
