@@ -58,6 +58,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register ADP routes
   registerADPRoutes(app);
   
+  // Dynasty Decline Detection Framework Routes
+  app.post('/api/analytics/dynasty-decline-assessment', async (req, res) => {
+    try {
+      const { dynastyDeclineDetector } = await import('./dynastyDeclineDetection');
+      const { playerHistory } = req.body;
+
+      if (!playerHistory || !Array.isArray(playerHistory)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Player history array required'
+        });
+      }
+
+      const assessment = dynastyDeclineDetector.assessDeclineRisk(playerHistory);
+      
+      res.json({
+        success: true,
+        assessment,
+        framework: 'Dynasty Decline Detection',
+        methodology: 'Two+ consecutive seasons of skill-isolating metric decline triggers devaluation'
+      });
+    } catch (error: any) {
+      console.error('❌ Dynasty decline assessment error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Dynasty decline assessment failed',
+        details: error.message
+      });
+    }
+  });
+
+  // Get Dynasty Decline Framework Info
+  app.get('/api/analytics/dynasty-decline-framework', async (req, res) => {
+    try {
+      res.json({
+        success: true,
+        framework: {
+          name: 'Dynasty Decline Detection Framework',
+          description: 'Identifies players at risk of value deterioration through skill-isolating metrics',
+          coreIndicators: [
+            'YAC over Expected (YAC/o) decline — less post-catch explosiveness',
+            'Missed tackles forced per touch or per route trending downward',
+            'Target share or first-read share falling despite stable snap counts',
+            'EPA per touch, WOPR, or YPRR dropping year-over-year',
+            'Repeated failure to meet yardage expectations (prop-style benchmarks)'
+          ],
+          riskTags: [
+            { tag: 'SkillDecayRisk', description: 'One-year trend suggesting possible decline' },
+            { tag: 'DeclineVerified', description: 'Two+ seasons of skill-based regression' },
+            { tag: 'SystemDependent', description: 'Performance reliant on scheme or QB play' },
+            { tag: 'Post-Context Cliff', description: 'At risk of steep drop-off after system change' }
+          ],
+          interpretation: 'System-dependent players should be marked as volatile, especially when production is inflated by favorable offensive environment',
+          purpose: 'Risk management and trade timing assistance for dynasty users'
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ Framework info error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to load framework information'
+      });
+    }
+  });
+  
   // Start automatic ADP syncing
   adpSyncService.startAutoSync();
   

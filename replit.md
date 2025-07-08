@@ -107,6 +107,7 @@ The application uses a relational database design with the following core entiti
 
 Based on user feedback, expanding to include:
 - **Value Arbitrage System**: Find market inefficiencies by comparing advanced metrics (YPRR, YACo, target share) against consensus values (ADP, ownership %)
+- **Dynasty Decline Detection Framework**: ✅ COMPLETE - Multi-season skill-isolating metric analysis for risk management
 - Live player stats and projections with SportsDataIO integration
 - Lineup optimizer with matchup analysis  
 - Trade evaluator with value models
@@ -114,6 +115,18 @@ Based on user feedback, expanding to include:
 - Injury impact tracker
 - AI-powered breakout predictions using metric correlations
 - Social features and league chat
+
+## Dynasty Decline Detection Framework
+
+**Core Implementation**: Two or more consecutive seasons of skill-based decline triggers devaluation, focusing on metrics that measure player ability beyond scheme dependency.
+
+**Risk Assessment Categories**:
+- **SkillDecayRisk**: One-year trend suggesting possible decline
+- **DeclineVerified**: Two+ seasons of skill-based regression  
+- **SystemDependent**: Performance reliant on scheme or QB play
+- **Post-Context Cliff**: At risk of steep drop-off after system change
+
+**Integration**: Framework applies risk-based penalties to Prometheus v2.0 Stability component (15% weighting) for comprehensive dynasty valuations.
 
 ## Core Value Proposition & Philosophical Mission
 **Primary Goal**: Identifying players whose advanced analytics don't match their market value - finding undervalued gems with elite metrics (YPRR > 2.0) trading below ADP, and avoiding overpriced players with poor underlying data.
@@ -410,6 +423,9 @@ Changelog:
 - July 08, 2025. **ENHANCED WEEKLY SPIKE ANALYSIS COMPLETE**: Successfully implemented NFL-Data-Py weekly spike analysis with `weekly_df = nfl.import_weekly_data([2024])` filtering by player_id - authentic 2024 data shows Ja'Marr Chase (23.7 PPG, 3 spike weeks, 17.6% rate), Saquon Barkley, Lamar Jackson, Josh Allen comprehensive analysis
 - July 08, 2025. **PRODUCTION API INTEGRATION**: Built complete weekly analysis integration with JSON parsing fixes, pandas warning suppression, and clean API endpoints - /api/analytics/weekly-spike-analysis and /api/analytics/prometheus-benchmarks?weekly=true both working with authentic NFL performance data
 - July 08, 2025. **COMPREHENSIVE SPIKE ANALYTICS**: Created position-specific context metrics (WR: target share/WOPR, RB: carries/targets, QB: passing/rushing yards) with weekly breakdown showing exact game-by-game performance including opponents and spike week identification above 1.5x season average thresholds
+- July 08, 2025. **DYNASTY DECLINE DETECTION FRAMEWORK**: Implemented comprehensive risk assessment system using skill-isolating metrics (YAC/o, missed tackles forced, target share, EPA per touch, WOPR, YPRR) with multi-season trend analysis
+- July 08, 2025. **RISK MANAGEMENT SYSTEM**: Built four-tier risk classification (SkillDecayRisk, DeclineVerified, SystemDependent, Post-Context Cliff) with player evaluation framework integrated into Prometheus v2.0 algorithm
+- July 08, 2025. **DYNASTY DECLINE ANALYSIS PAGE**: Created comprehensive frontend interface with live assessment tools, example scenarios, methodology documentation, and integration with backend assessment APIs
 - July 07, 2025. Historical success integration: Added position-specific rookie hit rates (QB 65%, RB 75%, WR 60%, TE 45% for first-round picks) and year-one fantasy projections
 - July 07, 2025. Enhanced WR algorithm completed: Environmental factors, team offensive context (pass volume, coaching stability), and situational target value weighting for comprehensive wide receiver evaluation
 - July 07, 2025. **ROUTE EFFICIENCY RESEARCH**: Analyzed advanced methodology - TPRR (Targets Per Route Run) has 0.817 correlation with fantasy scoring vs 0.763 for raw targets
