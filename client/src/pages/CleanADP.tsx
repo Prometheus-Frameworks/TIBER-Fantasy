@@ -31,10 +31,10 @@ export default function CleanADP() {
   const [selectedPosition, setSelectedPosition] = useState("ALL");
 
   const { data: players = [], isLoading, error } = useQuery({
-    queryKey: ['/api/players/enhanced-adp'],
+    queryKey: ['/api/clean-adp'],
     queryFn: async () => {
-      const response = await fetch('/api/players/enhanced-adp?limit=500');
-      if (!response.ok) throw new Error('Failed to fetch enhanced ADP data');
+      const response = await fetch('/api/clean-adp?limit=500');
+      if (!response.ok) throw new Error('Failed to fetch clean ADP data');
       return response.json();
     }
   });
@@ -165,8 +165,8 @@ export default function CleanADP() {
           {/* Player Rows */}
           <div className="divide-y divide-slate-100">
             {filteredPlayers.map((player: any, index: number) => {
-              // Use the new positionalADP field directly
-              const positionRank = player.positionalADP || `${player.position}—`;
+              // Use the new posADP field directly
+              const positionRank = player.posADP || `${player.position}—`;
 
               return (
               <div 
@@ -177,7 +177,7 @@ export default function CleanADP() {
                   {/* ADP */}
                   <div className="w-12 text-center shrink-0">
                     <span className="text-base font-bold text-slate-900">
-                      {parseFloat(player.adp).toFixed(1)}
+                      {parseFloat(player.overallADP).toFixed(1)}
                     </span>
                   </div>
 

@@ -222,6 +222,139 @@ export function registerADPRoutes(app: Express): void {
   });
 
   /**
+   * Clean ADP endpoint - merges live Sleeper data with database players
+   * Deduplicates by name+position+team and normalizes field structure
+   */
+  app.get('/api/clean-adp', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      
+      // Fetch from both sources simultaneously
+      const [sleeperResponse, dbPlayers] = await Promise.all([
+        // Live Sleeper data
+        fetch('https://api.sleeper.app/v1/players/nfl').then(async (response) => {
+          if (!response.ok) return [];
+          const sleeperPlayers = await response.json();
+          
+          const eligiblePlayers = Object.values(sleeperPlayers)
+            .filter((p: any) => 
+              p.position && 
+              ['QB', 'RB', 'WR', 'TE'].includes(p.position) &&
+              p.team &&
+              p.status === 'Active'
+            )
+            .slice(0, 50);
+          
+          // Transform and calculate proper positional rankings
+          const playersByPosition: {[key: string]: any[]} = {};
+          
+          eligiblePlayers.forEach((player: any, index: number) => {
+            const position = player.position;
+            if (!playersByPosition[position]) {
+              playersByPosition[position] = [];
+            }
+            playersByPosition[position].push({
+              name: `${player.first_name} ${player.last_name}`,
+              team: player.team || 'FA',
+              position: position,
+              overallADP: index + 1,
+              source: 'sleeper'
+            });
+          });
+          
+          // Assign position-specific rankings
+          const transformedPlayers: any[] = [];
+          Object.keys(playersByPosition).forEach(position => {
+            playersByPosition[position].forEach((player, posIndex) => {
+              player.posADP = `${position}${posIndex + 1}`;
+              transformedPlayers.push(player);
+            });
+          });
+          
+          return transformedPlayers.sort((a, b) => a.overallADP - b.overallADP);
+        }).catch(() => []),
+        
+        // Database players
+        db.select({
+          name: players.name,
+          team: players.team,
+          position: players.position,
+          overallADP: sql`CAST(${players.adp} AS DECIMAL)`,
+          posADP: players.positionalADP,
+          dynastyValue: players.dynastyValue,
+          ownership: players.ownership,
+          source: sql`'database'`
+        })
+        .from(players)
+        .where(sql`position IN ('QB', 'RB', 'WR', 'TE') AND adp IS NOT NULL`)
+        .orderBy(sql`CAST(adp AS DECIMAL)`)
+        .limit(limit)
+      ]);
+      
+      // Merge and deduplicate players
+      const playerMap = new Map<string, any>();
+      const allPlayers = [...sleeperResponse, ...dbPlayers];
+      
+      allPlayers.forEach(player => {
+        const key = `${player.name.toLowerCase().trim()}-${player.position}-${player.team}`;
+        
+        if (!playerMap.has(key)) {
+          // First occurrence - add player
+          const cleanPlayer: any = {
+            name: player.name,
+            team: player.team,
+            position: player.position,
+            overallADP: parseFloat(player.overallADP || 0),
+            posADP: player.posADP || `${player.position}—`
+          };
+          
+          // Add optional fields only if they exist and are non-null
+          if (player.dynastyValue != null) {
+            cleanPlayer.dynastyValue = player.dynastyValue;
+          }
+          if (player.ownership != null) {
+            cleanPlayer.ownership = player.ownership;
+          }
+          
+          playerMap.set(key, cleanPlayer);
+        } else {
+          // Duplicate found - keep the most complete version
+          const existing = playerMap.get(key);
+          const current = player;
+          
+          // Prefer database version if it has dynasty value
+          if (current.dynastyValue != null && existing.dynastyValue == null) {
+            existing.dynastyValue = current.dynastyValue;
+          }
+          if (current.ownership != null && existing.ownership == null) {
+            existing.ownership = current.ownership;
+          }
+          
+          // Use better ADP if available (lower is better)
+          if (current.overallADP > 0 && (existing.overallADP === 0 || current.overallADP < existing.overallADP)) {
+            existing.overallADP = parseFloat(current.overallADP);
+            existing.posADP = current.posADP;
+          }
+        }
+      });
+      
+      // Convert to array and sort by ADP
+      const cleanPlayers = Array.from(playerMap.values())
+        .filter(player => player.overallADP > 0)
+        .sort((a, b) => a.overallADP - b.overallADP)
+        .slice(0, limit);
+      
+      console.log(`✅ Clean ADP: merged ${sleeperResponse.length} Sleeper + ${dbPlayers.length} DB players → ${cleanPlayers.length} unique players`);
+      
+      res.json(cleanPlayers);
+      
+    } catch (error) {
+      console.error('Clean ADP API error:', error);
+      res.status(500).json({ error: 'Failed to fetch clean ADP data' });
+    }
+  });
+
+  /**
    * Get positional rankings summary
    */
   app.get('/api/adp/positional-summary', async (req, res) => {
