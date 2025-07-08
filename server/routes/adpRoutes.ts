@@ -355,12 +355,13 @@ export function registerADPRoutes(app: Express): void {
   });
 
   /**
-   * Dynasty Value Scoring Engine
-   * Returns players with calculated dynasty values based on ADP and position weights
+   * Dynasty Value Scoring Engine with Age Decay
+   * Returns players with calculated dynasty values based on ADP, position weights, and age
    */
   app.get('/api/players/with-dynasty-value', async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 100;
+      const agePenalty = 0.75; // Configurable age penalty factor
       
       // Fetch from both sources simultaneously
       const [sleeperResponse, dbPlayers] = await Promise.all([
@@ -471,7 +472,7 @@ export function registerADPRoutes(app: Express): void {
         }
       });
       
-      // Convert to array and calculate dynasty values
+      // Convert to array and calculate dynasty values with age decay
       const cleanPlayers = Array.from(playerMap.values())
         .filter(player => player.overallADP > 0)
         .map(player => {
@@ -493,12 +494,34 @@ export function registerADPRoutes(app: Express): void {
             player.dynastyValue : 
             Math.round(calculatedDynastyValue * 10) / 10; // Round to 1 decimal
           
+          // Age Decay Calculation
+          // adjustedDynastyValue = dynastyValue - (age * agePenalty)
+          // Sample ages for testing (in production, this would come from database)
+          const sampleAges: {[key: string]: number} = {
+            'Justin Jefferson': 25,
+            'CeeDee Lamb': 25,
+            'Ja\'Marr Chase': 24,
+            'Josh Allen': 28,
+            'Lamar Jackson': 27,
+            'Joe Flacco': 39,
+            'Aaron Rodgers': 40,
+            'Bijan Robinson': 22,
+            'Breece Hall': 23
+          };
+          
+          const playerAge = player.age || sampleAges[player.name] || null;
+          const adjustedDynastyValue = playerAge != null ? 
+            Math.max(0, finalDynastyValue - (playerAge * agePenalty)) : 
+            finalDynastyValue; // If no age data, use original dynasty value
+          
           return {
             ...player,
-            dynastyValue: finalDynastyValue
+            dynastyValue: finalDynastyValue,
+            adjustedDynastyValue: Math.round(adjustedDynastyValue * 10) / 10, // Round to 1 decimal
+            age: playerAge
           };
         })
-        .sort((a, b) => b.dynastyValue - a.dynastyValue) // Sort by dynasty value descending
+        .sort((a, b) => b.adjustedDynastyValue - a.adjustedDynastyValue) // Sort by adjusted dynasty value descending
         .slice(0, limit);
       
       console.log(`✅ Dynasty Values: processed ${cleanPlayers.length} players with dynasty scoring`);
