@@ -66,9 +66,41 @@ export class WRTouchdownRegressionService {
     const logs: string[] = [];
     const tags: string[] = [];
 
-    // Step 0: 2024 Season Validation
+    // Step 0: Enhanced 2024 Season Validation & Data Freshness Check
     if (season < 2024) {
       console.warn(`⚠️ WR TD Regression: Using outdated season data (${season}) for ${playerName}. Consider using 2024 data for current evaluations.`);
+    }
+
+    // Check if player season context matches evaluation season
+    if (context.season && context.season < 2024) {
+      const dataFreshnessFlags = [`Data Freshness Error: season = ${context.season} (Season mismatch)`];
+      const logs = ["Historical Mode: Skipping dynasty value adjustment due to outdated season data"];
+      
+      // Historical mode - skip dynasty adjustments
+      return {
+        playerId,
+        playerName,
+        season: context.season,
+        lastEvaluatedSeason: 2024,
+        flagged: true,
+        regressionFlags: ["Historical Mode"],
+        dynastyValueAdjustment: 0,
+        tags: ["Historical Mode"],
+        logs: dataFreshnessFlags.concat(["Historical evaluation - dynasty adjustments skipped"]),
+        contextAnalysis: {
+          redZoneContext: false,
+          targetShareVolume: false,
+          routeParticipation: false,
+          teamContext: false,
+          totalFlags: 1
+        },
+        validation: {
+          requiredFieldsPresent: true,
+          missingFields: [],
+          optionalFieldsUsed: []
+        },
+        timestamp: new Date()
+      };
     }
 
     // Step 1: Flagging for Regression Risk

@@ -40,6 +40,7 @@ import DynastyDeclineAnalysis from "@/pages/DynastyDeclineAnalysis";
 import RBTouchdownRegression from "@/pages/RBTouchdownRegression";
 import WRTouchdownRegression from "@/pages/WRTouchdownRegression";
 import TETouchdownRegression from "@/pages/TETouchdownRegression";
+import QBEvaluationLogic from "@/pages/QBEvaluationLogic";
 import FullPlayerPool from "@/pages/FullPlayerPool";
 import NotFound from "@/pages/not-found";
 import SleeperDatabase from "@/pages/sleeper-database";
@@ -79,6 +80,7 @@ function Router() {
       <Route path="/rb-touchdown-regression" component={RBTouchdownRegression} />
       <Route path="/wr-touchdown-regression" component={WRTouchdownRegression} />
       <Route path="/te-touchdown-regression" component={TETouchdownRegression} />
+      <Route path="/qb-evaluation-logic" component={QBEvaluationLogic} />
       <Route component={NotFound} />
     </Switch>
   );

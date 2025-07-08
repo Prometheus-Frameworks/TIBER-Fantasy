@@ -82,9 +82,42 @@ export class RBTouchdownSustainabilityAnalyzer {
     context: RBSustainabilityContext,
     season: number = 2024
   ): SustainabilityAssessment {
-    // Step 0: 2024 Season Validation & Input validation
+    // Step 0: Enhanced 2024 Season Validation & Data Freshness Check
     if (season < 2024) {
       console.warn(`⚠️ RB TD Sustainability: Using outdated season data (${season}) for ${playerName}. Consider using 2024 data for current evaluations.`);
+    }
+
+    // Check if player season context matches evaluation season
+    if (context.season && context.season < 2024) {
+      const dataFreshnessFlags = [`Data Freshness Error: season = ${context.season} (Season mismatch)`];
+      const logs = ["Historical Mode: Skipping dynasty value adjustment due to outdated season data"];
+      
+      // Historical mode - skip dynasty adjustments
+      return {
+        playerId,
+        playerName,
+        season: context.season,
+        lastEvaluatedSeason: 2024,
+        flagged: true,
+        regressionFlags: ["Historical Mode"],
+        dynastyValueAdjustment: 0,
+        tags: ["Historical Mode"],
+        logs: dataFreshnessFlags.concat(["Historical evaluation - dynasty adjustments skipped"]),
+        contextAnalysis: {
+          goalLineWork: false,
+          qbCompetition: false,
+          volumeEfficiency: false,
+          backfieldCompetition: false,
+          passCatchingFloor: false,
+          totalFlags: 1
+        },
+        validation: {
+          requiredFieldsPresent: true,
+          missingFields: [],
+          optionalFieldsUsed: []
+        },
+        timestamp: new Date()
+      };
     }
     
     const validation = this.validateInputs(context);

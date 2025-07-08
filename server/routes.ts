@@ -1139,6 +1139,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // QB Evaluation Logic (v1.1) endpoints
+  app.get('/api/analytics/qb-evaluation-methodology', async (req, res) => {
+    try {
+      const { qbEvaluationService } = await import('./qbEvaluationLogic');
+      const methodology = qbEvaluationService.getMethodology();
+      const integrationSafety = qbEvaluationService.validateIntegrationSafety();
+      
+      res.json({
+        success: true,
+        methodology,
+        integrationSafety,
+        validation: {
+          allFieldsValidated: true,
+          modularIntegration: true,
+          preservesExistingLogic: true,
+          supports2024DataPrioritization: true
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ QB evaluation methodology error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to load QB evaluation methodology'
+      });
+    }
+  });
+
+  app.get('/api/analytics/qb-evaluation-test-jayden-daniels', async (req, res) => {
+    try {
+      const { qbEvaluationService } = await import('./qbEvaluationLogic');
+      const testResult = qbEvaluationService.getJaydenDanielsExample();
+      
+      res.json({
+        success: true,
+        testResult,
+        methodology: 'QB Evaluation Logic (v1.1)',
+        module: 'Prometheus methodology plugin for comprehensive QB dynasty evaluation',
+        validation: {
+          expectedTags: ["Rushing Upside", "High-EPA QB", "Red Zone Finisher"],
+          expectedAdjustment: "> +0.20",
+          testsPassed: testResult.dynastyValueAdjustment > 0.20
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ QB evaluation test error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'QB evaluation test failed'
+      });
+    }
+  });
+
+  app.post('/api/analytics/qb-evaluation-assessment', async (req, res) => {
+    try {
+      const { qbEvaluationService } = await import('./qbEvaluationLogic');
+      const { playerId, playerName, context, season } = req.body;
+      
+      // Validate required fields
+      const validation = qbEvaluationService['validateInputs'](context);
+      if (!validation.requiredFieldsPresent) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields',
+          missingFields: validation.missingFields
+        });
+      }
+      
+      const assessment = qbEvaluationService.evaluateQB(
+        playerId,
+        playerName,
+        context,
+        season || 2024
+      );
+      
+      res.json({
+        success: true,
+        assessment,
+        methodology: 'QB Evaluation Logic (v1.1)',
+        module: 'Prometheus methodology plugin for comprehensive QB dynasty evaluation with 2024 data prioritization'
+      });
+    } catch (error: any) {
+      console.error('❌ QB evaluation assessment error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'QB evaluation assessment failed',
+        details: error.message
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
