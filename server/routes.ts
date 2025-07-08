@@ -1229,6 +1229,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // OASIS Contextual Team Mapping endpoints
+  app.post('/api/analytics/oasis-team-context', async (req, res) => {
+    try {
+      const { oasisContextualTeamMappingService } = await import('./oasisContextualTeamMapping');
+      const { player, teamContext } = req.body;
+      
+      console.log('🌐 OASIS Team Context Analysis:', player?.playerName, player?.position);
+      
+      const result = oasisContextualTeamMappingService.applyTeamContext(player, teamContext);
+      
+      res.json({
+        success: true,
+        message: 'OASIS team context analysis completed',
+        data: result,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ OASIS team context analysis failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'OASIS team context analysis failed',
+        details: error.message
+      });
+    }
+  });
+
+  app.get('/api/analytics/oasis-test-cases', async (req, res) => {
+    try {
+      const { oasisContextualTeamMappingService } = await import('./oasisContextualTeamMapping');
+      
+      console.log('🧪 Running OASIS test cases...');
+      
+      const testResults = oasisContextualTeamMappingService.runTestCases();
+      
+      res.json({
+        success: true,
+        message: 'OASIS test cases completed',
+        data: {
+          testResults,
+          methodology: oasisContextualTeamMappingService.getMethodology(),
+          integrationSafety: oasisContextualTeamMappingService.getIntegrationSafety()
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ OASIS test cases failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'OASIS test cases failed',
+        details: error.message
+      });
+    }
+  });
+
   // Prometheus Stress Test endpoints
   app.post('/api/analytics/stress-test', async (req, res) => {
     try {
