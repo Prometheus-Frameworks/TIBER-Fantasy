@@ -608,6 +608,93 @@ export function registerADPRoutes(app: Express): void {
   });
 
   /**
+   * Clean Startup Draft Rankings
+   * Returns only active players sorted by adjusted dynasty value
+   */
+  app.get('/api/startup-draft-rankings', async (req, res) => {
+    try {
+      console.log('🚀 Startup Draft Rankings endpoint called');
+      
+      const limit = parseInt(req.query.limit as string) || 150;
+      
+      // Simplified: Use existing with-dynasty-value endpoint data
+      const dbPlayers = await db.select({
+        name: players.name,
+        team: players.team,
+        position: players.position,
+        overallADP: sql`CAST(${players.adp} AS DECIMAL)`,
+        dynastyValue: players.dynastyValue,
+        age: players.age
+      })
+      .from(players)
+      .where(sql`
+        position IN ('QB', 'RB', 'WR', 'TE') 
+        AND adp IS NOT NULL 
+        AND team IS NOT NULL 
+        AND team != 'FA'
+        AND team != 'RET'
+      `)
+      .orderBy(sql`CAST(adp AS DECIMAL)`)
+      .limit(limit);
+      
+      // Calculate dynasty values for clean startup rankings
+      const cleanRankings = dbPlayers
+        .filter(player => 
+          player.overallADP > 0 && 
+          player.overallADP < 300 // Only startup-draftable players
+        )
+        .map(player => {
+          // Position weights for dynasty value calculation
+          const positionWeights = { QB: 10, RB: 15, WR: 12, TE: 8 };
+          const positionWeight = positionWeights[player.position as keyof typeof positionWeights] || 0;
+          
+          // Dynasty value formula: (100 - ADP * 2) + position weight
+          const calculatedDynastyValue = Math.max(0, (100 - player.overallADP * 2) + positionWeight);
+          const finalDynastyValue = player.dynastyValue || calculatedDynastyValue;
+          
+          // Age-based adjustment
+          const age = player.age || 27; // Default to 27 if age unknown
+          const adjustedDynastyValue = Math.max(0, finalDynastyValue - (age * 0.75));
+          
+          // Value grade based on ADP vs our ranking
+          const rawADPValue = 100 - (player.overallADP * 2);
+          const valueDiscrepancy = adjustedDynastyValue - rawADPValue;
+          
+          let valueGrade: string;
+          if (valueDiscrepancy >= 10) valueGrade = "STEAL";
+          else if (valueDiscrepancy >= 5) valueGrade = "VALUE";
+          else if (valueDiscrepancy > -5) valueGrade = "FAIR";
+          else if (valueDiscrepancy > -10) valueGrade = "OVERVALUED";
+          else valueGrade = "AVOID";
+          
+          return {
+            name: player.name,
+            position: player.position,
+            team: player.team,
+            overallADP: Math.round(parseFloat(player.overallADP as string) * 10) / 10,
+            dynastyValue: Math.round(finalDynastyValue * 10) / 10,
+            adjustedDynastyValue: Math.round(adjustedDynastyValue * 10) / 10,
+            valueGrade: valueGrade
+          };
+        })
+        // Sort by adjusted dynasty value (highest first)
+        .sort((a, b) => b.adjustedDynastyValue - a.adjustedDynastyValue)
+        .slice(0, limit);
+      
+      console.log(`✅ Startup Draft Rankings: ${cleanRankings.length} active players sorted by dynasty value`);
+      
+      res.json(cleanRankings);
+      
+    } catch (error) {
+      console.error('Startup Draft Rankings error:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch startup draft rankings',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  /**
    * Get positional rankings summary
    */
   app.get('/api/adp/positional-summary', async (req, res) => {
