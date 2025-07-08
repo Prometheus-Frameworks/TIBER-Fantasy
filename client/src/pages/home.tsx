@@ -255,6 +255,37 @@ export default function Home() {
             </CardContent>
           </Card>
 
+          {/* Prometheus Benchmark Cluster */}
+          <Card className="hover:shadow-lg transition-shadow border-0 bg-gradient-to-br from-amber-50 to-orange-50 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <Trophy className="h-6 w-6 text-amber-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Elite Benchmarks</CardTitle>
+                  <CardDescription>Prometheus analytics cluster</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 mb-4">
+                Advanced analytics from Chase, Barkley, Lamar, and Allen. Elite thresholds for target share, spike weeks, and performance correlations.
+              </p>
+              <div className="flex gap-2 mb-4">
+                <Badge variant="outline" className="text-xs">27.2% Target</Badge>
+                <Badge variant="outline" className="text-xs">0.85 Correlation</Badge>
+                <Badge variant="outline" className="text-xs">Elite Thresholds</Badge>
+              </div>
+              <Link href="/prometheus-benchmarks">
+                <Button variant="outline" size="sm" className="w-full bg-amber-500 text-white hover:bg-amber-600 border-amber-500">
+                  <Trophy className="mr-2 h-4 w-4" />
+                  View Benchmarks
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
           {/* Advanced Analytics */}
           <Card className="hover:shadow-lg transition-shadow border-0 bg-white/60 backdrop-blur-sm">
             <CardHeader>

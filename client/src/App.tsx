@@ -39,6 +39,7 @@ import PlayerProfile from "@/pages/PlayerProfile";
 import FullPlayerPool from "@/pages/FullPlayerPool";
 import NotFound from "@/pages/not-found";
 import SleeperDatabase from "@/pages/sleeper-database";
+import PrometheusBenchmarks from "@/pages/PrometheusBenchmarks";
 
 function Router() {
   return (
@@ -69,6 +70,7 @@ function Router() {
       <Route path="/analytics" component={LineupOptimizer} />
       <Route path="/premium" component={PremiumAnalytics} />
       <Route path="/sleeper-database" component={SleeperDatabase} />
+      <Route path="/prometheus-benchmarks" component={PrometheusBenchmarks} />
       <Route component={NotFound} />
     </Switch>
   );
