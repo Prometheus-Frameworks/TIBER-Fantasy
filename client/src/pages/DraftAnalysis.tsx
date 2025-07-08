@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpDown, Search, Filter } from "lucide-react";
+import { Link } from "wouter";
 
 interface Player {
   name: string;
@@ -233,7 +234,14 @@ export default function DraftAnalysis() {
                 {filteredPlayers.map((player: Player, index: number) => (
                   <tr key={`${player.name}-${player.position}`} className="hover:bg-gray-50">
                     <td className="border border-gray-200 px-4 py-2">{index + 1}</td>
-                    <td className="border border-gray-200 px-4 py-2 font-medium">{player.name}</td>
+                    <td className="border border-gray-200 px-4 py-2 font-medium">
+                      <Link 
+                        href={`/player/${player.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`}
+                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {player.name}
+                      </Link>
+                    </td>
                     <td className="border border-gray-200 px-4 py-2">{player.position}</td>
                     <td className="border border-gray-200 px-4 py-2">{player.team}</td>
                     <td className="border border-gray-200 px-4 py-2">{player.age || 'N/A'}</td>

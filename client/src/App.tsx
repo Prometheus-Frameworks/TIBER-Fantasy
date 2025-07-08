@@ -25,7 +25,7 @@ import LeagueAnalysisPage from "@/pages/league-analysis";
 import FantasyMovesPage from "@/pages/fantasy-moves";
 import TrendingPlayersPage from "@/pages/trending-players";
 import CompareLeaguePage from "@/pages/compare-league";
-import PlayerProfile from "@/pages/enhanced-player-profile";
+import EnhancedPlayerProfile from "@/pages/enhanced-player-profile";
 import EnhancedDynasty from "@/pages/enhanced-dynasty";
 import EnhancedRankings from "@/pages/enhanced-rankings";
 import About from "@/pages/about";
@@ -34,6 +34,7 @@ import PrometheusRankings from "@/pages/prometheus-rankings";
 import DataSourcesPage from "@/pages/data-sources";
 import CleanADP from "@/pages/CleanADP";
 import DraftAnalysis from "@/pages/DraftAnalysis";
+import PlayerProfile from "@/pages/PlayerProfile";
 import FullPlayerPool from "@/pages/FullPlayerPool";
 import NotFound from "@/pages/not-found";
 import SleeperDatabase from "@/pages/sleeper-database";
@@ -58,9 +59,10 @@ function Router() {
       <Route path="/data-sources" component={DataSourcesPage} />
       <Route path="/adp" component={CleanADP} />
       <Route path="/draft-analysis" component={DraftAnalysis} />
+      <Route path="/player/:id" component={PlayerProfile} />
+      <Route path="/enhanced-player/:id" component={EnhancedPlayerProfile} />
       <Route path="/player-pool" component={FullPlayerPool} />
       <Route path="/about" component={About} />
-      <Route path="/player/:id" component={PlayerProfile} />
       <Route path="/lineup" component={LineupOptimizer} />
       <Route path="/analytics" component={LineupOptimizer} />
       <Route path="/premium" component={PremiumAnalytics} />

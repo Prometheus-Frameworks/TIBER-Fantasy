@@ -1,92 +1,85 @@
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
-import { TrendingUp, TrendingDown, Activity, Target, Clock, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ArrowLeft, TrendingUp, Target, Award, BarChart3 } from "lucide-react";
 import { Link } from "wouter";
 
-interface PlayerProfile {
-  id: number;
+interface PlayerData {
   name: string;
   position: string;
   team: string;
-  age: number;
-  dynastyValue: number;
-  dynastyTier: string;
-  
-  // Advanced metrics
-  advancedMetrics: {
-    productionScore: number;
-    opportunityScore: number;
-    ageScore: number;
-    stabilityScore: number;
-    efficiencyScore?: number;
-  };
-  
-  // Performance data
-  performance: {
-    ppg2024: number;
-    ppg2023?: number;
-    gamesPlayed2024: number;
-    targets?: number;
-    carries?: number;
-    fantasyRank: number;
-  };
-  
-  // Analysis
-  strengths: string[];
-  concerns: string[];
-  sleeperInfo?: {
-    sleeperId: string;
-    confidence: number;
-  };
-  
-  // Validation
-  jakeMaraiaRank?: number;
-  consensusRank?: number;
-}
-
-function getDynastyTierColor(tier: string): string {
-  switch (tier) {
-    case 'Elite': return 'bg-purple-500';
-    case 'Premium': return 'bg-blue-500';
-    case 'Strong': return 'bg-green-500';
-    case 'Solid': return 'bg-yellow-500';
-    case 'Depth': return 'bg-orange-500';
-    case 'Bench': return 'bg-gray-500';
-    default: return 'bg-gray-400';
-  }
-}
-
-function getScoreColor(score: number): string {
-  if (score >= 80) return 'text-green-600';
-  if (score >= 60) return 'text-yellow-600';
-  return 'text-red-600';
+  age: number | null;
+  adjustedDynastyValue: number;
+  overallADP: number;
+  positionalADP?: string;
+  valueDiscrepancy: number;
+  valueGrade: string;
+  suggestedDraftTier: number;
 }
 
 export default function PlayerProfile() {
-  const params = useParams();
-  const playerName = params.name?.replace(/-/g, ' ') || '';
-
-  const { data: player, isLoading, error } = useQuery<PlayerProfile>({
-    queryKey: ['/api/players/profile', playerName],
-    enabled: !!playerName
+  const { id } = useParams();
+  
+  // Fetch player data by searching for the player name
+  const { data: players = [], isLoading, error } = useQuery({
+    queryKey: ["/api/players/with-dynasty-value?limit=500"],
   });
+
+  // Find the specific player by converting URL-safe name back to actual name
+  const playerName = id?.replace(/-/g, ' ') || '';
+  const player = players.find((p: PlayerData) => 
+    p.name.toLowerCase() === playerName.toLowerCase()
+  );
+
+  const getGradeBadge = (grade: string) => {
+    const gradeColors = {
+      STEAL: "bg-green-500 text-white",
+      VALUE: "bg-yellow-500 text-black", 
+      FAIR: "bg-gray-500 text-white",
+      OVERVALUED: "bg-orange-500 text-white",
+      AVOID: "bg-red-500 text-white"
+    };
+    
+    return (
+      <Badge className={gradeColors[grade as keyof typeof gradeColors] || "bg-gray-300"}>
+        {grade}
+      </Badge>
+    );
+  };
+
+  const getGradeDescription = (grade: string) => {
+    const descriptions = {
+      STEAL: "Significantly undervalued - priority draft target",
+      VALUE: "Moderately undervalued - good draft value",
+      FAIR: "Fairly valued by the market",
+      OVERVALUED: "Moderately overvalued - draft carefully",
+      AVOID: "Significantly overvalued - avoid drafting"
+    };
+    return descriptions[grade as keyof typeof descriptions] || "Unknown grade";
+  };
+
+  const getTierDescription = (tier: number) => {
+    const tiers = {
+      1: "Tier 1 - Elite Targets (STEAL RB/WR)",
+      2: "Tier 2 - Strong Targets (STEAL QB/TE)",
+      3: "Tier 3 - Value Picks",
+      4: "Tier 4 - Fair Value",
+      5: "Tier 5 - Overvalued",
+      6: "Tier 6 - Avoid"
+    };
+    return tiers[tier as keyof typeof tiers] || `Tier ${tier}`;
+  };
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[1,2,3].map(i => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
+      <div className="container mx-auto p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="h-64 bg-gray-200 rounded"></div>
+            <div className="h-64 bg-gray-200 rounded"></div>
           </div>
         </div>
       </div>
@@ -95,403 +88,233 @@ export default function PlayerProfile() {
 
   if (error || !player) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <h1 className="text-2xl font-bold mb-4">Player Not Found</h1>
-        <p className="text-gray-600 mb-4">
-          We couldn't find a player profile for "{playerName}". 
-        </p>
-        <Link href="/rankings">
-          <Button>View All Rankings</Button>
-        </Link>
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Link href="/draft-analysis">
+                <Button variant="outline" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Analysis
+                </Button>
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <h2 className="text-xl font-semibold mb-2">Player Not Found</h2>
+              <p className="text-gray-600 mb-4">
+                Could not find player data for "{playerName}"
+              </p>
+              <Link href="/draft-analysis">
+                <Button>Return to Draft Analysis</Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  const yearOverYearChange = player.performance.ppg2023 ? 
-    player.performance.ppg2024 - player.performance.ppg2023 : null;
-
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-4 mb-4">
+      <div className="flex items-center gap-4 mb-6">
+        <Link href="/draft-analysis">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Analysis
+          </Button>
+        </Link>
+        <div>
           <h1 className="text-3xl font-bold">{player.name}</h1>
-          <Badge variant="outline" className="text-sm">
-            {player.team} {player.position}
-          </Badge>
-          <Badge className={getDynastyTierColor(player.dynastyTier)}>
-            {player.dynastyTier}
-          </Badge>
-          {player.sleeperInfo && (
-            <Badge variant="secondary">
-              Enhanced ({player.sleeperInfo.confidence}% confidence)
-            </Badge>
-          )}
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Dynasty Score</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{player.dynastyValue}</div>
-              <div className="text-sm text-gray-600">out of 100</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">2024 PPG</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <div className="text-3xl font-bold">{player.performance.ppg2024}</div>
-                {yearOverYearChange !== null && (
-                  <div className={`flex items-center text-sm ${yearOverYearChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {yearOverYearChange >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                    {Math.abs(yearOverYearChange).toFixed(1)}
-                  </div>
-                )}
-              </div>
-              <div className="text-sm text-gray-600">
-                {player.performance.gamesPlayed2024} games played
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Age</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{player.age}</div>
-              <div className="text-sm text-gray-600">years old</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Fantasy Rank</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">#{player.performance.fantasyRank}</div>
-              <div className="text-sm text-gray-600">{player.position} in 2024</div>
-            </CardContent>
-          </Card>
+          <p className="text-gray-600">{player.position} • {player.team}</p>
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="metrics">Dynasty Breakdown</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="validation">Benchmarks</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Strengths */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
-                  Strengths
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {player.strengths.length > 0 ? (
-                  <ul className="space-y-2">
-                    {player.strengths.map((strength, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
-                        <span className="text-sm">{strength}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-500 text-sm">No specific strengths identified</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Concerns */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-orange-600" />
-                  Concerns
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {player.concerns.length > 0 ? (
-                  <ul className="space-y-2">
-                    {player.concerns.map((concern, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
-                        <span className="text-sm">{concern}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-500 text-sm">No specific concerns identified</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Quick Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle>2024 Season Stats</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold">{player.performance.ppg2024}</div>
-                  <div className="text-sm text-gray-600">Points Per Game</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold">{player.performance.gamesPlayed2024}</div>
-                  <div className="text-sm text-gray-600">Games Played</div>
-                </div>
-                {player.performance.targets && (
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{player.performance.targets}</div>
-                    <div className="text-sm text-gray-600">Targets</div>
-                  </div>
-                )}
-                {player.performance.carries && (
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{player.performance.carries}</div>
-                    <div className="text-sm text-gray-600">Carries</div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="metrics" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Dynasty Valuation Breakdown</CardTitle>
-              <CardDescription>
-                Our proprietary algorithm weights these components based on predictive research
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Production Score */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Player Overview */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Award className="h-5 w-5" />
+              Player Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-medium">Production Score (40% weight)</span>
-                  <span className={`font-bold ${getScoreColor(player.advancedMetrics.productionScore)}`}>
-                    {player.advancedMetrics.productionScore}/100
-                  </span>
-                </div>
-                <Progress value={player.advancedMetrics.productionScore} className="h-2" />
-                <p className="text-sm text-gray-600 mt-1">
-                  Fantasy points, consistency, and proven performance
-                </p>
+                <label className="text-sm font-medium text-gray-600">Position</label>
+                <p className="text-lg font-semibold">{player.position}</p>
               </div>
-
-              {/* Opportunity Score */}
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-medium">Opportunity Score (35% weight)</span>
-                  <span className={`font-bold ${getScoreColor(player.advancedMetrics.opportunityScore)}`}>
-                    {player.advancedMetrics.opportunityScore}/100
-                  </span>
-                </div>
-                <Progress value={player.advancedMetrics.opportunityScore} className="h-2" />
-                <p className="text-sm text-gray-600 mt-1">
-                  Target share, team offense, and role within system
-                </p>
+                <label className="text-sm font-medium text-gray-600">Team</label>
+                <p className="text-lg font-semibold">{player.team}</p>
               </div>
-
-              {/* Age Score */}
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-medium">Age Score (20% weight)</span>
-                  <span className={`font-bold ${getScoreColor(player.advancedMetrics.ageScore)}`}>
-                    {player.advancedMetrics.ageScore}/100
-                  </span>
-                </div>
-                <Progress value={player.advancedMetrics.ageScore} className="h-2" />
-                <p className="text-sm text-gray-600 mt-1">
-                  Career longevity and peak performance window
-                </p>
+                <label className="text-sm font-medium text-gray-600">Age</label>
+                <p className="text-lg font-semibold">{player.age || 'N/A'}</p>
               </div>
-
-              {/* Stability Score */}
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-medium">Stability Score (15% weight)</span>
-                  <span className={`font-bold ${getScoreColor(player.advancedMetrics.stabilityScore)}`}>
-                    {player.advancedMetrics.stabilityScore}/100
-                  </span>
-                </div>
-                <Progress value={player.advancedMetrics.stabilityScore} className="h-2" />
-                <p className="text-sm text-gray-600 mt-1">
-                  Injury history, team stability, and role security
-                </p>
+                <label className="text-sm font-medium text-gray-600">Draft Tier</label>
+                <p className="text-sm text-gray-700">{getTierDescription(player.suggestedDraftTier)}</p>
               </div>
-
-              {/* Efficiency Score (position-specific) */}
-              {player.advancedMetrics.efficiencyScore && (
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium">
-                      Efficiency Score ({player.position === 'QB' ? '20%' : player.position === 'RB' ? '15%' : '10%'} weight)
-                    </span>
-                    <span className={`font-bold ${getScoreColor(player.advancedMetrics.efficiencyScore)}`}>
-                      {player.advancedMetrics.efficiencyScore}/100
-                    </span>
-                  </div>
-                  <Progress value={player.advancedMetrics.efficiencyScore} className="h-2" />
-                  <p className="text-sm text-gray-600 mt-1">
-                    Advanced metrics and per-touch efficiency
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Methodology Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Our Methodology</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600 mb-4">
-                Our dynasty algorithm uses research-backed weightings that prioritize predictive metrics over descriptive ones. 
-                Opportunity metrics (target share, touches) have higher correlation with future success than efficiency metrics.
-              </p>
-              <div className="text-xs text-gray-500">
-                <Link href="/methodology" className="text-blue-600 hover:underline">
-                  View complete methodology →
-                </Link>
+            </div>
+            
+            <div className="pt-4 border-t">
+              <label className="text-sm font-medium text-gray-600">Value Grade</label>
+              <div className="flex items-center gap-3 mt-1">
+                {getGradeBadge(player.valueGrade)}
+                <span className="text-sm text-gray-600">
+                  {getGradeDescription(player.valueGrade)}
+                </span>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+          </CardContent>
+        </Card>
 
-        <TabsContent value="performance" className="space-y-6">
-          {/* Year over year comparison */}
-          {player.performance.ppg2023 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Year-over-Year Performance</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <div className="text-sm text-gray-600">2023 PPG</div>
-                    <div className="text-2xl font-bold">{player.performance.ppg2023}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-600">2024 PPG</div>
-                    <div className="text-2xl font-bold">{player.performance.ppg2024}</div>
-                  </div>
-                </div>
-                
-                {yearOverYearChange !== null && (
-                  <div className="mt-4 p-4 rounded-lg bg-gray-50">
-                    <div className={`flex items-center gap-2 ${yearOverYearChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {yearOverYearChange >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-                      <span className="font-medium">
-                        {yearOverYearChange >= 0 ? '+' : ''}{yearOverYearChange.toFixed(1)} PPG change
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600 mt-1">
-                      {Math.abs((yearOverYearChange / player.performance.ppg2023!) * 100).toFixed(1)}% 
-                      {yearOverYearChange >= 0 ? ' increase' : ' decline'} from 2023
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Performance context */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance Context</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span>Fantasy Rank ({player.position})</span>
-                  <span className="font-medium">#{player.performance.fantasyRank}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Games Played</span>
-                  <span className="font-medium">{player.performance.gamesPlayed2024}/17</span>
-                </div>
-                {player.performance.targets && (
-                  <div className="flex justify-between">
-                    <span>Total Targets</span>
-                    <span className="font-medium">{player.performance.targets}</span>
-                  </div>
-                )}
-                {player.performance.carries && (
-                  <div className="flex justify-between">
-                    <span>Total Carries</span>
-                    <span className="font-medium">{player.performance.carries}</span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="validation" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Expert Consensus Validation</CardTitle>
-              <CardDescription>
-                How our ranking compares to established expert consensus
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {player.jakeMaraiaRank && (
-                  <div className="flex justify-between items-center">
-                    <span>Jake Maraia (FF Dataroma)</span>
-                    <Badge variant="outline">#{player.jakeMaraiaRank} {player.position}</Badge>
-                  </div>
-                )}
-                {player.consensusRank && (
-                  <div className="flex justify-between items-center">
-                    <span>FantasyPros Consensus</span>
-                    <Badge variant="outline">#{player.consensusRank} {player.position}</Badge>
-                  </div>
-                )}
-                <Separator />
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Prometheus Dynasty Rank</span>
-                  <Badge>#{player.performance.fantasyRank} {player.position}</Badge>
-                </div>
+        {/* Dynasty Metrics */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Dynasty Metrics
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <label className="text-sm font-medium text-blue-800">Adjusted Dynasty Value</label>
+                <p className="text-2xl font-bold text-blue-900">{player.adjustedDynastyValue.toFixed(1)}</p>
+                <p className="text-xs text-blue-700">Age-adjusted dynasty score</p>
               </div>
               
-              {player.sleeperInfo && (
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Activity className="w-4 h-4 text-blue-600" />
-                    <span className="font-medium text-blue-900">Platform Integration</span>
-                  </div>
-                  <div className="text-sm text-blue-700">
-                    Enhanced with Sleeper platform data (ID: {player.sleeperInfo.sleeperId})
-                    <br />
-                    Confidence: {player.sleeperInfo.confidence}%
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <label className="text-sm font-medium text-gray-700">Overall ADP</label>
+                  <p className="text-xl font-bold text-gray-900">{player.overallADP.toFixed(1)}</p>
+                  <p className="text-xs text-gray-600">Market draft position</p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <label className="text-sm font-medium text-gray-700">Positional ADP</label>
+                  <p className="text-xl font-bold text-gray-900">
+                    {player.positionalADP || `${player.position}${Math.floor(player.overallADP/4) + 1}`}
+                  </p>
+                  <p className="text-xs text-gray-600">Position ranking</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Value Analysis */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Value Analysis
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-gradient-to-r from-green-50 to-red-50 p-4 rounded-lg">
+              <label className="text-sm font-medium text-gray-700">Value Discrepancy</label>
+              <div className="flex items-baseline gap-2">
+                <span className={`text-3xl font-bold ${
+                  player.valueDiscrepancy >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {player.valueDiscrepancy > 0 ? '+' : ''}{player.valueDiscrepancy.toFixed(1)}
+                </span>
+                <span className="text-sm text-gray-600">points</span>
+              </div>
+              <p className="text-xs text-gray-600 mt-1">
+                {player.valueDiscrepancy >= 0 
+                  ? 'Dynasty value exceeds market price' 
+                  : 'Market price exceeds dynasty value'
+                }
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-gray-600">Market Value:</span>
+                <span className="font-medium ml-2">{(100 - player.overallADP * 2).toFixed(1)}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Our Value:</span>
+                <span className="font-medium ml-2">{player.adjustedDynastyValue.toFixed(1)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Dynasty Trend Chart Placeholder */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Dynasty Value Trend
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-50 rounded-lg p-8 text-center">
+              <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="font-medium text-gray-700 mb-2">Dynasty Trend Chart</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Historical dynasty value progression over time
+              </p>
+              <div className="bg-white p-4 rounded border-2 border-dashed border-gray-300">
+                <p className="text-xs text-gray-400">
+                  Chart will show {player.name}'s dynasty value changes across multiple seasons,
+                  tracking age decay, performance improvements, and market perception shifts.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Draft Strategy */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Draft Strategy</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h3 className="font-semibold text-blue-900 mb-2">Recommendation</h3>
+            {player.valueGrade === 'STEAL' && (
+              <p className="text-blue-800">
+                <strong>Priority Target:</strong> {player.name} is significantly undervalued with a +{player.valueDiscrepancy.toFixed(1)} 
+                discrepancy. Target in {getTierDescription(player.suggestedDraftTier)} of your draft.
+              </p>
+            )}
+            {player.valueGrade === 'VALUE' && (
+              <p className="text-blue-800">
+                <strong>Good Value:</strong> {player.name} offers solid value with a +{player.valueDiscrepancy.toFixed(1)} 
+                discrepancy. Consider targeting in middle rounds.
+              </p>
+            )}
+            {player.valueGrade === 'FAIR' && (
+              <p className="text-blue-800">
+                <strong>Market Price:</strong> {player.name} is fairly valued by the market. 
+                Draft at ADP if fits your roster construction.
+              </p>
+            )}
+            {player.valueGrade === 'OVERVALUED' && (
+              <p className="text-orange-800">
+                <strong>Proceed Carefully:</strong> {player.name} may be overvalued with a {player.valueDiscrepancy.toFixed(1)} 
+                discrepancy. Consider waiting or targeting other options.
+              </p>
+            )}
+            {player.valueGrade === 'AVOID' && (
+              <p className="text-red-800">
+                <strong>Avoid:</strong> {player.name} is significantly overvalued with a {player.valueDiscrepancy.toFixed(1)} 
+                discrepancy. Look for better value elsewhere.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
