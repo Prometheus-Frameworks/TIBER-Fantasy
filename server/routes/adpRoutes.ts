@@ -7,6 +7,7 @@ import { adpSyncService } from '../adpSyncService';
 import { db } from '../db';
 import { players } from '../../shared/schema';
 import { sql, desc, eq } from 'drizzle-orm';
+import { PlayerFilteringService } from '../playerFiltering';
 
 export function registerADPRoutes(app: Express): void {
   
@@ -562,11 +563,38 @@ export function registerADPRoutes(app: Express): void {
           };
         })
         .sort((a, b) => {
-          // Primary sort: suggestedDraftTier (ascending - Tier 1 first)
-          if (a.suggestedDraftTier !== b.suggestedDraftTier) {
-            return a.suggestedDraftTier - b.suggestedDraftTier;
-          }
-          // Secondary sort: adjustedDynastyValue (descending - higher values first within same tier)
+          // Enhanced filtering: Apply dynasty eligibility check
+          const aIsEligible = PlayerFilteringService.isValidDynastyPlayer({
+            name: a.name,
+            position: a.position,
+            team: a.team,
+            age: a.age,
+            adjustedDynastyValue: a.adjustedDynastyValue,
+            status: a.team === 'FA' ? 'Free Agent' : 'Active',
+            lastSeason: 2024,
+            rookie: a.age <= 22,
+            draftYear: 2024,
+            drafted: true
+          });
+          
+          const bIsEligible = PlayerFilteringService.isValidDynastyPlayer({
+            name: b.name,
+            position: b.position,
+            team: b.team,
+            age: b.age,
+            adjustedDynastyValue: b.adjustedDynastyValue,
+            status: b.team === 'FA' ? 'Free Agent' : 'Active',
+            lastSeason: 2024,
+            rookie: b.age <= 22,
+            draftYear: 2024,
+            drafted: true
+          });
+          
+          // Prioritize dynasty-eligible players
+          if (aIsEligible && !bIsEligible) return -1;
+          if (!aIsEligible && bIsEligible) return 1;
+          
+          // Among eligible players, sort by dynasty value (highest first)
           return b.adjustedDynastyValue - a.adjustedDynastyValue;
         })
         .slice(0, limit);

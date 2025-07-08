@@ -12,6 +12,7 @@ import { playerMapping } from "./playerMapping";
 import { dataRefreshService } from "./dataRefresh";
 import { realTimeADPUpdater } from "./realTimeADPUpdater";
 import { dataIntegrityFixer } from "./dataIntegrityFixer";
+import { PlayerFilteringService } from "./playerFiltering";
 import { db } from "./db";
 import { dynastyTradeHistory, players as playersTable } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
