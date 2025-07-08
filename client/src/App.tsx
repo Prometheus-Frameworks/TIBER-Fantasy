@@ -34,6 +34,7 @@ import PrometheusRankings from "@/pages/prometheus-rankings";
 import DataSourcesPage from "@/pages/data-sources";
 import CleanADP from "@/pages/CleanADP";
 import DraftAnalysis from "@/pages/DraftAnalysis";
+import DraftRoom from "@/pages/DraftRoom";
 import PlayerProfile from "@/pages/PlayerProfile";
 import FullPlayerPool from "@/pages/FullPlayerPool";
 import NotFound from "@/pages/not-found";
@@ -59,6 +60,7 @@ function Router() {
       <Route path="/data-sources" component={DataSourcesPage} />
       <Route path="/adp" component={CleanADP} />
       <Route path="/draft-analysis" component={DraftAnalysis} />
+      <Route path="/draft-room" component={DraftRoom} />
       <Route path="/player/:id" component={PlayerProfile} />
       <Route path="/enhanced-player/:id" component={EnhancedPlayerProfile} />
       <Route path="/player-pool" component={FullPlayerPool} />

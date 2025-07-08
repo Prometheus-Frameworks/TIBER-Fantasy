@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpDown, Search, Filter } from "lucide-react";
 import { Link } from "wouter";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Player {
   name: string;
@@ -79,19 +80,57 @@ export default function DraftAnalysis() {
     return filtered;
   }, [players, searchTerm, positionFilter, gradeFilter, teamFilter, sortField, sortDirection]);
 
-  const getGradeBadge = (grade: string) => {
+  const getGradeTooltip = (grade: string, discrepancy: number, playerName: string) => {
+    const baseTooltips = {
+      STEAL: "Massive value vs ADP - High priority target",
+      VALUE: "Good value vs ADP - Solid draft pick", 
+      FAIR: "Fairly valued by market - Draft at ADP",
+      OVERVALUED: "Market price exceeds value - Consider alternatives",
+      AVOID: "Consensus cost outweighs return - High risk pick"
+    };
+
+    const baseTooltip = baseTooltips[grade as keyof typeof baseTooltips] || "Unknown grade";
+    
+    if (Math.abs(discrepancy) > 15) {
+      const extremeRationale = discrepancy > 15 
+        ? `${playerName} shows exceptional value with +${discrepancy.toFixed(1)} discrepancy - analytics heavily favor this pick`
+        : `${playerName} appears significantly overvalued with ${discrepancy.toFixed(1)} discrepancy - market may be pricing in factors not reflected in current metrics`;
+      return `${baseTooltip}\n\n${extremeRationale}`;
+    }
+    
+    return baseTooltip;
+  };
+
+  const getGradeBadge = (grade: string, discrepancy: number, playerName: string) => {
     const gradeColors = {
-      STEAL: "bg-green-500 text-white",
-      VALUE: "bg-yellow-500 text-black", 
-      FAIR: "bg-gray-500 text-white",
-      OVERVALUED: "bg-orange-500 text-white",
-      AVOID: "bg-red-500 text-white"
+      STEAL: "bg-green-500 text-white hover:bg-green-600",
+      VALUE: "bg-yellow-500 text-black hover:bg-yellow-600", 
+      FAIR: "bg-gray-500 text-white hover:bg-gray-600",
+      OVERVALUED: "bg-orange-500 text-white hover:bg-orange-600",
+      AVOID: "bg-red-500 text-white hover:bg-red-600"
     };
     
     return (
-      <Badge className={gradeColors[grade as keyof typeof gradeColors] || "bg-gray-300"}>
-        {grade}
-      </Badge>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge className={`${gradeColors[grade as keyof typeof gradeColors] || "bg-gray-300"} cursor-help transition-colors`}>
+              {grade}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs p-3">
+            <div className="space-y-2">
+              <p className="font-medium">{grade} Grade</p>
+              <p className="text-sm whitespace-pre-line">
+                {getGradeTooltip(grade, discrepancy, playerName)}
+              </p>
+              <div className="text-xs text-gray-500">
+                Value Discrepancy: {discrepancy > 0 ? '+' : ''}{discrepancy.toFixed(1)}
+              </div>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   };
 
@@ -252,7 +291,9 @@ export default function DraftAnalysis() {
                         {player.valueDiscrepancy > 0 ? '+' : ''}{player.valueDiscrepancy?.toFixed(1)}
                       </span>
                     </td>
-                    <td className="border border-gray-200 px-4 py-2">{getGradeBadge(player.valueGrade)}</td>
+                    <td className="border border-gray-200 px-4 py-2">
+                      {getGradeBadge(player.valueGrade, player.valueDiscrepancy, player.name)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

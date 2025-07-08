@@ -49,6 +49,12 @@ export default function Home() {
                   <Target className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
+              <Link href="/draft-room">
+                <Button size="lg" className="px-8 py-3 text-lg bg-purple-600 hover:bg-purple-700">
+                  Draft Room
+                  <Users className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
               <Link href="/compare-league">
                 <Button variant="outline" size="lg" className="px-8 py-3 text-lg">
                   Compare Leagues
