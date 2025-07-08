@@ -514,10 +514,31 @@ export function registerADPRoutes(app: Express): void {
             Math.max(0, finalDynastyValue - (playerAge * agePenalty)) : 
             finalDynastyValue; // If no age data, use original dynasty value
           
+          // Value Discrepancy Analysis
+          // valueDiscrepancy = adjustedDynastyValue - (100 - overallADP * 2)
+          const rawADPValue = 100 - (player.overallADP * 2);
+          const valueDiscrepancy = adjustedDynastyValue - rawADPValue;
+          
+          // Value Grade Classification
+          let valueGrade: string;
+          if (valueDiscrepancy >= 10) {
+            valueGrade = "STEAL";
+          } else if (valueDiscrepancy >= 5) {
+            valueGrade = "VALUE";
+          } else if (valueDiscrepancy > -5) {
+            valueGrade = "FAIR";
+          } else if (valueDiscrepancy > -10) {
+            valueGrade = "OVERVALUED";
+          } else {
+            valueGrade = "AVOID";
+          }
+          
           return {
             ...player,
             dynastyValue: finalDynastyValue,
             adjustedDynastyValue: Math.round(adjustedDynastyValue * 10) / 10, // Round to 1 decimal
+            valueDiscrepancy: Math.round(valueDiscrepancy * 10) / 10, // Round to 1 decimal
+            valueGrade: valueGrade,
             age: playerAge
           };
         })
