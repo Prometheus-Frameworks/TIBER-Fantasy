@@ -562,46 +562,44 @@ export function registerADPRoutes(app: Express): void {
             age: playerAge
           };
         })
-        .sort((a, b) => {
-          // Enhanced filtering: Apply dynasty eligibility check
-          const aIsEligible = PlayerFilteringService.isValidDynastyPlayer({
-            name: a.name,
-            position: a.position,
-            team: a.team,
-            age: a.age,
-            adjustedDynastyValue: a.adjustedDynastyValue,
-            status: a.team === 'FA' ? 'Free Agent' : 'Active',
-            lastSeason: 2024,
-            rookie: a.age <= 22,
-            draftYear: 2024,
+        // Apply enhanced dynasty filtering and ranking
+        const enhancedPlayers = PlayerFilteringService.getDynastyRankedPlayers(
+          cleanPlayers.map(player => ({
+            name: player.name,
+            position: player.position,
+            team: player.team,
+            age: player.age,
+            adjustedDynastyValue: player.adjustedDynastyValue,
+            status: player.team === 'FA' ? 'Free Agent' : 'Active',
+            lastSeason: 2024, // Assume current players are active
+            rookie: player.age <= 22,
+            draftYear: player.age <= 22 ? 2024 : 2020,
             drafted: true
-          });
-          
-          const bIsEligible = PlayerFilteringService.isValidDynastyPlayer({
-            name: b.name,
-            position: b.position,
-            team: b.team,
-            age: b.age,
-            adjustedDynastyValue: b.adjustedDynastyValue,
-            status: b.team === 'FA' ? 'Free Agent' : 'Active',
-            lastSeason: 2024,
-            rookie: b.age <= 22,
-            draftYear: 2024,
-            drafted: true
-          });
-          
-          // Prioritize dynasty-eligible players
-          if (aIsEligible && !bIsEligible) return -1;
-          if (!aIsEligible && bIsEligible) return 1;
-          
-          // Among eligible players, sort by dynasty value (highest first)
-          return b.adjustedDynastyValue - a.adjustedDynastyValue;
-        })
-        .slice(0, limit);
+          })),
+          limit
+        );
+        
+        // Convert back to API format
+        const rankedPlayers = enhancedPlayers.map(player => ({
+          name: player.name,
+          team: player.team,
+          position: player.position,
+          overallADP: cleanPlayers.find(p => p.name === player.name)?.overallADP || 999,
+          dynastyValue: player.adjustedDynastyValue,
+          adjustedDynastyValue: player.adjustedDynastyValue,
+          valueDiscrepancy: cleanPlayers.find(p => p.name === player.name)?.valueDiscrepancy || 0,
+          valueGrade: cleanPlayers.find(p => p.name === player.name)?.valueGrade || 'FAIR',
+          suggestedDraftTier: cleanPlayers.find(p => p.name === player.name)?.suggestedDraftTier || 4,
+          age: player.age,
+          rank: player.rank,
+          dynastyRank: player.dynastyRank,
+          startupDraftable: player.startupDraftable
+        }));
+        
+        
+      console.log(`✅ Dynasty Values: processed ${rankedPlayers.length} startup-eligible dynasty players`);
       
-      console.log(`✅ Dynasty Values: processed ${cleanPlayers.length} players with dynasty scoring`);
-      
-      res.json(cleanPlayers);
+      res.json(rankedPlayers);
       
     } catch (error) {
       console.error('Dynasty Value API error:', error);
