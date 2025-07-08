@@ -533,11 +533,14 @@ export function registerADPRoutes(app: Express): void {
             valueGrade = "AVOID";
           }
           
+          const roundedAdjustedDynastyValue = Math.round(adjustedDynastyValue * 10) / 10;
+          const roundedValueDiscrepancy = Math.round(valueDiscrepancy * 10) / 10;
+          
           return {
             ...player,
             dynastyValue: finalDynastyValue,
-            adjustedDynastyValue: Math.round(adjustedDynastyValue * 10) / 10, // Round to 1 decimal
-            valueDiscrepancy: Math.round(valueDiscrepancy * 10) / 10, // Round to 1 decimal
+            adjustedDynastyValue: roundedAdjustedDynastyValue,
+            valueDiscrepancy: roundedValueDiscrepancy,
             valueGrade: valueGrade,
             age: playerAge
           };
