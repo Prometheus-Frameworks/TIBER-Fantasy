@@ -637,6 +637,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Analytics Inventory API
+  app.get('/api/analytics/inventory', async (req, res) => {
+    try {
+      const { AnalyticsInventoryService } = await import('./analyticsInventory');
+      const inventory = await AnalyticsInventoryService.generateInventory();
+      res.json(inventory);
+    } catch (error: any) {
+      console.error('Analytics inventory error:', error);
+      res.status(500).json({ 
+        message: 'Failed to generate analytics inventory', 
+        error: error.message 
+      });
+    }
+  });
+
+  // Quick analytics summary
+  app.get('/api/analytics/summary', async (req, res) => {
+    try {
+      const { AnalyticsInventoryService } = await import('./analyticsInventory');
+      const inventory = await AnalyticsInventoryService.generateInventory();
+      
+      const summary = {
+        totalDataSources: Object.keys(inventory.dataSources).length,
+        activeSources: Object.values(inventory.dataSources).filter(s => s.status === 'Active').length,
+        totalFields: inventory.playerFields.core.length + 
+                    inventory.playerFields.fantasyMetrics.length + 
+                    inventory.playerFields.advancedAnalytics.length +
+                    inventory.playerFields.marketData.length +
+                    inventory.playerFields.metadata.length,
+        derivedMetrics: inventory.derivedMetrics.calculated.length + inventory.derivedMetrics.algorithmic.length,
+        totalPlayers: inventory.totalPlayers,
+        dataGaps: inventory.gaps.missingFields.length + inventory.gaps.placeholderData.length
+      };
+      
+      res.json(summary);
+    } catch (error: any) {
+      console.error('Analytics summary error:', error);
+      res.status(500).json({ 
+        message: 'Failed to generate analytics summary', 
+        error: error.message 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

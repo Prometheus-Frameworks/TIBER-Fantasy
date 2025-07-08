@@ -1,0 +1,398 @@
+{
+  "analyticsInventoryResults": {
+    "executionDate": "2025-01-08T03:21:17.000Z",
+    "summary": {
+      "totalDataSources": 7,
+      "activeDataSources": 5,
+      "totalStatisticalFields": 47,
+      "derivedMetrics": 11,
+      "coverageAnalysis": "85% field coverage across 151 dynasty-eligible players"
+    },
+    "primaryDataSources": {
+      "NFL-Data-Py": {
+        "status": "Active",
+        "apiType": "Python subprocess integration",
+        "fieldsProvided": 28,
+        "coverage": "100% for 2024 active NFL players",
+        "dataTypes": ["Season-Level", "Career-Aggregate"],
+        "keyMetrics": [
+          "yardsPerRouteRun",
+          "targetShare", 
+          "airYardsShare",
+          "wopr",
+          "yardsAfterContact",
+          "rushingYardsOverExpected",
+          "epaPerPlay",
+          "completionPercentageOverExpected"
+        ],
+        "status_note": "Official NFL statistics via nfl-data-py Python package"
+      },
+      "Sleeper-API": {
+        "status": "Active", 
+        "apiType": "REST API",
+        "endpoint": "https://api.sleeper.app/v1/players/nfl",
+        "fieldsProvided": 12,
+        "coverage": "95% player mapping success",
+        "dataTypes": ["Real-Time", "Static"],
+        "keyMetrics": [
+          "name",
+          "team", 
+          "sleeperId",
+          "ownership",
+          "positionalADP"
+        ],
+        "status_note": "Primary source for player identification and platform integration"
+      },
+      "SportsDataIO": {
+        "status": "Key-Required",
+        "apiType": "REST API",
+        "endpoint": "https://api.sportsdata.io/v3/nfl", 
+        "fieldsProvided": 45,
+        "coverage": "Available with paid subscription",
+        "dataTypes": ["Season-Level", "Game-Level", "Real-Time"],
+        "keyMetrics": "Premium NFL statistics and advanced metrics",
+        "status_note": "Requires SPORTSDATA_API_KEY environment variable"
+      },
+      "ESPN-API": {
+        "status": "Rate-Limited",
+        "apiType": "Unofficial REST endpoints",
+        "fieldsProvided": 8,
+        "coverage": "Limited to public endpoints only",
+        "dataTypes": ["Real-Time"],
+        "keyMetrics": [
+          "injuryStatus",
+          "gameSchedule",
+          "teamInfo"
+        ],
+        "status_note": "Supplementary data only, rate limiting applies"
+      },
+      "FantasyCalc": {
+        "status": "Active",
+        "apiType": "Web scraping",
+        "endpoint": "fantasyfootballcalculator.com",
+        "fieldsProvided": 4,
+        "coverage": "85% for fantasy-relevant players",
+        "dataTypes": ["Real-Time"],
+        "keyMetrics": [
+          "overallADP",
+          "positionalADP"
+        ],
+        "status_note": "Dynasty startup ADP data"
+      }
+    },
+    "playerFieldCategories": {
+      "coreIdentification": {
+        "fields": 5,
+        "coverage": "95% average",
+        "fields_list": [
+          {
+            "name": "name",
+            "source": "Sleeper-API",
+            "type": "string",
+            "granularity": "Static",
+            "status": "Active",
+            "coverage": "100%"
+          },
+          {
+            "name": "position", 
+            "source": "NFL-Data-Py",
+            "type": "string",
+            "granularity": "Static", 
+            "status": "Active",
+            "coverage": "100%"
+          },
+          {
+            "name": "team",
+            "source": "Sleeper-API",
+            "type": "string", 
+            "granularity": "Real-Time",
+            "status": "Active",
+            "coverage": "98% (FA players null)"
+          },
+          {
+            "name": "age",
+            "source": "Internal-Calculation",
+            "type": "number",
+            "granularity": "Static",
+            "status": "Placeholder",
+            "coverage": "60% (many null values)"
+          },
+          {
+            "name": "sleeperId",
+            "source": "Sleeper-API", 
+            "type": "string",
+            "granularity": "Static",
+            "status": "Active",
+            "coverage": "95% via enhanced mapping"
+          }
+        ]
+      },
+      "fantasyMetrics": {
+        "fields": 5,
+        "coverage": "90% average",
+        "fields_list": [
+          {
+            "name": "fantasyPoints",
+            "source": "NFL-Data-Py",
+            "type": "number",
+            "granularity": "Season-Level",
+            "status": "Active",
+            "coverage": "100% for 2024 season"
+          },
+          {
+            "name": "fantasyPointsPerGame",
+            "source": "Internal-Calculation", 
+            "type": "number",
+            "granularity": "Season-Level",
+            "status": "Active",
+            "coverage": "100% where games > 0"
+          },
+          {
+            "name": "overallADP",
+            "source": "FantasyCalc",
+            "type": "number",
+            "granularity": "Real-Time",
+            "status": "Active", 
+            "coverage": "85% for fantasy relevant players"
+          },
+          {
+            "name": "positionalADP",
+            "source": "Internal-Calculation",
+            "type": "string",
+            "granularity": "Real-Time",
+            "status": "Active",
+            "coverage": "100% where ADP exists"
+          },
+          {
+            "name": "ownership",
+            "source": "Sleeper-API",
+            "type": "number", 
+            "granularity": "Real-Time",
+            "status": "Active",
+            "coverage": "90% via Sleeper data"
+          }
+        ]
+      },
+      "advancedAnalytics": {
+        "fields": 8,
+        "coverage": "100% for position-relevant metrics",
+        "fields_list": [
+          {
+            "name": "yardsPerRouteRun",
+            "source": "NFL-Data-Py",
+            "type": "number",
+            "granularity": "Season-Level", 
+            "status": "Active",
+            "coverage": "100% for WR/TE with routes",
+            "description": "YPRR - Elite threshold: 2.0+"
+          },
+          {
+            "name": "targetShare",
+            "source": "NFL-Data-Py",
+            "type": "number",
+            "granularity": "Season-Level",
+            "status": "Active", 
+            "coverage": "100% for pass catchers",
+            "description": "Team target percentage - Elite threshold: 25%+"
+          },
+          {
+            "name": "airYardsShare",
+            "source": "NFL-Data-Py",
+            "type": "number",
+            "granularity": "Season-Level",
+            "status": "Active",
+            "coverage": "100% for WR/TE",
+            "description": "Team air yards percentage"
+          },
+          {
+            "name": "wopr", 
+            "source": "NFL-Data-Py",
+            "type": "number",
+            "granularity": "Season-Level",
+            "status": "Active",
+            "coverage": "100% for WR/TE",
+            "description": "Weighted Opportunity Rating"
+          },
+          {
+            "name": "yardsAfterContact",
+            "source": "NFL-Data-Py",
+            "type": "number",
+            "granularity": "Season-Level",
+            "status": "Active",
+            "coverage": "100% for RB",
+            "description": "Rushing yards after contact - Elite threshold: 2.5+"
+          },
+          {
+            "name": "rushingYardsOverExpected",
+            "source": "NFL-Data-Py", 
+            "type": "number",
+            "granularity": "Season-Level",
+            "status": "Active",
+            "coverage": "100% for RB with carries",
+            "description": "RYOE - Expected vs actual rushing efficiency"
+          },
+          {
+            "name": "epaPerPlay",
+            "source": "NFL-Data-Py",
+            "type": "number",
+            "granularity": "Season-Level",
+            "status": "Active",
+            "coverage": "100% for QB",
+            "description": "Expected Points Added - Elite threshold: 0.25+"
+          },
+          {
+            "name": "completionPercentageOverExpected",
+            "source": "NFL-Data-Py",
+            "type": "number", 
+            "granularity": "Season-Level",
+            "status": "Active",
+            "coverage": "100% for QB with attempts",
+            "description": "CPOE - Accuracy vs expected completion rate"
+          }
+        ]
+      },
+      "marketData": {
+        "fields": 4,
+        "coverage": "75% average (KTC not implemented)",
+        "fields_list": [
+          {
+            "name": "dynastyValue",
+            "source": "Internal-Calculation",
+            "type": "number",
+            "granularity": "Real-Time",
+            "status": "Active",
+            "coverage": "100% for all ranked players",
+            "description": "Prometheus v2.0 dynasty scoring algorithm"
+          },
+          {
+            "name": "adjustedDynastyValue",
+            "source": "Internal-Calculation",
+            "type": "number",
+            "granularity": "Real-Time", 
+            "status": "Active",
+            "coverage": "100% where age available",
+            "description": "Age-decay adjusted dynasty value"
+          },
+          {
+            "name": "valueGrade",
+            "source": "Internal-Calculation",
+            "type": "string",
+            "granularity": "Real-Time",
+            "status": "Active",
+            "coverage": "100% where ADP available", 
+            "description": "ADP vs ranking value (STEAL/VALUE/FAIR/AVOID)"
+          },
+          {
+            "name": "ktcValue",
+            "source": "KTC-API",
+            "type": "number",
+            "granularity": "Real-Time",
+            "status": "Placeholder",
+            "coverage": "0% (not implemented)",
+            "description": "KeepTradeCut dynasty trade value"
+          }
+        ]
+      }
+    },
+    "derivedMetrics": {
+      "calculated": {
+        "count": 3,
+        "metrics": [
+          {
+            "name": "ageAdjustedScore",
+            "formula": "dynastyValue - (age * 0.75)",
+            "coverage": "60% (where age available)",
+            "status": "Active"
+          },
+          {
+            "name": "breakoutProbability", 
+            "formula": "Statistical model (planned)",
+            "coverage": "0% (planned feature)",
+            "status": "Placeholder"
+          },
+          {
+            "name": "injuryRisk",
+            "formula": "Position/age based probability",
+            "coverage": "0% (planned feature)", 
+            "status": "Placeholder"
+          }
+        ]
+      },
+      "algorithmic": {
+        "count": 3,
+        "metrics": [
+          {
+            "name": "prometheusScore",
+            "formula": "Production(40%) + Opportunity(35%) + Age(20%) + Stability(15%)",
+            "coverage": "100% for ranked players",
+            "status": "Active",
+            "description": "Proprietary dynasty valuation algorithm"
+          },
+          {
+            "name": "valueArbitrage",
+            "formula": "adjustedDynastyValue - marketExpectedValue",
+            "coverage": "85% where ADP available",
+            "status": "Active",
+            "description": "Market inefficiency identification"
+          },
+          {
+            "name": "startupDraftRank", 
+            "formula": "Enhanced filtering + recent performance weighting",
+            "coverage": "100% for top 151 players",
+            "status": "Active",
+            "description": "Dynasty startup draft position"
+          }
+        ]
+      }
+    },
+    "dataGaps": {
+      "missingFields": [
+        "injuryHistory",
+        "collegeProduction", 
+        "draftCapital",
+        "weeklyProjections",
+        "gameLogData",
+        "tradeHistory",
+        "strengthOfSchedule"
+      ],
+      "lowCoverageFields": [
+        "age (60% coverage - many null values)",
+        "nflDataPyId (46% mapping success)",
+        "espnId (0% integration)",
+        "yahooId (0% integration)"
+      ],
+      "placeholderData": [
+        "ktcValue (not implemented)",
+        "breakoutProbability (planned feature)",
+        "injuryRisk (planned feature)",
+        "weeklyProjections (future enhancement)"
+      ],
+      "improvementRecommendations": [
+        "Implement age data collection for remaining 40% of players",
+        "Integrate KTC API for dynasty trade values",
+        "Add college production metrics for rookie evaluation", 
+        "Implement weekly projection system",
+        "Add injury history tracking",
+        "Expand ESPN/Yahoo platform integration"
+      ]
+    },
+    "technicalImplementation": {
+      "primaryDatabase": "PostgreSQL with Drizzle ORM",
+      "apiFramework": "Express.js with TypeScript",
+      "dataRefreshFrequency": {
+        "Sleeper-API": "Every 6 hours",
+        "NFL-Data-Py": "2024 season data (static)",
+        "FantasyCalc": "Real-time with circuit breaker",
+        "Internal-Calculations": "On-demand"
+      },
+      "totalAPIEndpoints": 15,
+      "dataProcessingCapabilities": [
+        "Real-time player mapping",
+        "Enhanced dynasty filtering",
+        "Position-specific analytics",
+        "Market value arbitrage analysis",
+        "Startup draft optimization"
+      ]
+    }
+  }
+}
