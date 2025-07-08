@@ -1,0 +1,106 @@
+addMethodologyModule("QB Evaluation Logic (v1.1)", {
+  description: "Evaluates QBs based on rushing upside, EPA/play, deep passing, and scheme-fit metrics to assess dynasty upside.",
+  triggerScope: ["dynastyValuation", "playerProfile", "analyticsPanel"],
+  inputValidation: {
+    requiredFields: [
+      "player.season", "player.epaPerPlay", "player.rushYards", "player.rushTDs", "player.deepBallAttempts",
+      "player.deepBallCompletionRate", "player.cleanPocketEPA", "player.pressureEPA",
+      "player.redZonePassRate", "player.redZonePassTDConversion", "player.scrambleEPA", 
+      "player.contractYearsRemaining", "team.passRateOverExpected",
+      "player.age", "player.dynastyExperience"
+    ],
+    defaults: {
+      season: 2024,
+      eliteEPAThreshold: 0.15,
+      eliteRushYards: 500,
+      eliteRushTDs: 5,
+      youngQBMaxAge: 26,
+      dynastyExperience: 0 // Fallback for rookies
+    },
+    validation: [
+      "If player.season < 2024, log 'Warning: Evaluation uses pre-2024 data' and reject unless explicitly requested."
+    ]
+  },
+  steps: [
+    {
+      step: "Rush-Based Upside",
+      logic: [
+        "If player.rushYards >= eliteRushYards, flag 'Elite Rushing Floor'.",
+        "If player.rushTDs >= eliteRushTDs, flag 'Elite Rushing TD Threat'.",
+        "Add bonus +0.15 to dynastyValue if both are true."
+      ]
+    },
+    {
+      step: "Passing Efficiency",
+      logic: [
+        "If player.epaPerPlay >= eliteEPAThreshold, flag 'Elite EPA Efficiency'.",
+        "If player.deepBallCompletionRate > 0.45, flag 'Efficient Deep Thrower'.",
+        "Add bonus +0.10 if cleanPocketEPA > pressureEPA."
+      ]
+    },
+    {
+      step: "Scheme Fit + Usage",
+      logic: [
+        "If team.passRateOverExpected > 0.05, flag 'High Volume Scheme'.",
+        "If player.scrambleEPA > 0.10, add +0.05 to dynastyValue.",
+        "If player.redZonePassRate > 0.60, flag 'Red Zone Usage'.",
+        "If player.redZonePassTDConversion > 0.25, flag 'High Red Zone TD Efficiency'."
+      ]
+    },
+    {
+      step: "Age + Experience Check",
+      logic: [
+        "If player.age <= youngQBMaxAge AND player.dynastyExperience <= 3, flag 'Franchise Window'.",
+        "If player.contractYearsRemaining >= 3, add +0.03 to dynastyValue.",
+        "Add +0.05 if all of the above are true."
+      ]
+    },
+    {
+      step: "Adjust Dynasty Value",
+      logic: [
+        "Apply total bonuses. Cap adjustment at ±0.30.",
+        "If player scores all elite flags: Add 'Tier 1 QB' tag.",
+        "If only rushing and deep passing flagged: Add 'Dual Threat Upside' tag."
+      ]
+    }
+  ],
+  examplePlayer: {
+    name: "Example QB",
+    season: 2024,
+    context: {
+      season: 2024,
+      epaPerPlay: 0.18,
+      rushYards: 550,
+      rushTDs: 6,
+      deepBallAttempts: 40,
+      deepBallCompletionRate: 0.48,
+      cleanPocketEPA: 0.22,
+      pressureEPA: 0.10,
+      redZonePassRate: 0.65,
+      redZonePassTDConversion: 0.30,
+      scrambleEPA: 0.12,
+      contractYearsRemaining: 4,
+      teamPassRateOverExpected: 0.07,
+      age: 25,
+      dynastyExperience: 2
+    },
+    outcome: {
+      lastEvaluatedSeason: 2024,
+      flagged: true,
+      dynastyValueAdjustment: 0.28,
+      tags: ["Tier 1 QB"],
+      logs: [
+        "Elite Rushing Floor",
+        "Elite Rushing TD Threat",
+        "Elite EPA Efficiency",
+        "Efficient Deep Thrower",
+        "High Volume Scheme",
+        "Red Zone Usage",
+        "High Red Zone TD Efficiency",
+        "Franchise Window",
+        "Long-Term Contract",
+        "Dynasty Bonus Applied: +0.28"
+      ]
+    }
+  }
+});
