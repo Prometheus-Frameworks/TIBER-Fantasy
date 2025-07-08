@@ -1229,6 +1229,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Prometheus Stress Test endpoints
+  app.post('/api/analytics/stress-test', async (req, res) => {
+    try {
+      const { prometheusStressTest } = await import('./prometheusStressTest');
+      console.log('🔬 Starting Prometheus Player Evaluation Stress Test...');
+      
+      const testResults = await prometheusStressTest.runStressTest();
+      
+      console.log(`✅ Stress Test Complete: ${testResults.summary.testsPassed}/${testResults.summary.totalPlayers} tests passed`);
+      
+      res.json({
+        success: true,
+        message: 'Prometheus stress test completed successfully',
+        data: testResults,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Stress test failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Stress test execution failed',
+        details: error.message
+      });
+    }
+  });
+
+  app.get('/api/rankings/dynasty-rankings.json', async (req, res) => {
+    try {
+      const { prometheusStressTest } = await import('./prometheusStressTest');
+      const testResults = await prometheusStressTest.runStressTest();
+      
+      const dynastyRankings = {
+        generated: new Date().toISOString(),
+        methodology: 'Prometheus Player Evaluation v2.0',
+        positions: testResults.positionRankings,
+        summary: testResults.summary
+      };
+      
+      res.json(dynastyRankings);
+    } catch (error: any) {
+      console.error('❌ Dynasty rankings generation failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate dynasty rankings'
+      });
+    }
+  });
+
+  app.get('/api/position/:position.json', async (req, res) => {
+    try {
+      const position = req.params.position.toUpperCase();
+      if (!['QB', 'RB', 'WR', 'TE'].includes(position)) {
+        return res.status(400).json({ error: 'Invalid position' });
+      }
+
+      const { prometheusStressTest } = await import('./prometheusStressTest');
+      const testResults = await prometheusStressTest.runStressTest();
+      
+      const positionData = testResults.positionRankings.find(p => p.position === position);
+      
+      if (!positionData) {
+        return res.status(404).json({ error: 'Position data not found' });
+      }
+
+      res.json({
+        position,
+        generated: new Date().toISOString(),
+        methodology: 'Prometheus Player Evaluation v2.0',
+        players: positionData.players
+      });
+    } catch (error: any) {
+      console.error(`❌ Position ${req.params.position} rankings failed:`, error);
+      res.status(500).json({
+        success: false,
+        error: `Failed to generate ${req.params.position} rankings`
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
