@@ -19,6 +19,7 @@ interface Player {
   valueDiscrepancy: number;
   valueGrade: string;
   suggestedDraftTier: number;
+  rank?: number; // Dynasty rank derived from sorted adjustedDynastyValue
 }
 
 export default function DraftAnalysis() {
@@ -26,8 +27,8 @@ export default function DraftAnalysis() {
   const [positionFilter, setPositionFilter] = useState("ALL");
   const [gradeFilter, setGradeFilter] = useState("ALL");
   const [teamFilter, setTeamFilter] = useState("ALL");
-  const [sortField, setSortField] = useState<"adjustedDynastyValue" | "valueDiscrepancy">("valueDiscrepancy");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [sortField, setSortField] = useState<"rank" | "adjustedDynastyValue" | "valueDiscrepancy">("rank");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const { data: players = [], isLoading } = useQuery({
     queryKey: ["/api/players/with-dynasty-value?limit=200"],
@@ -39,9 +40,18 @@ export default function DraftAnalysis() {
     return teams.sort();
   }, [players]);
 
-  // Filter and sort players
+  // Filter and sort players with rank injection
   const filteredPlayers = useMemo(() => {
-    let filtered = players.filter((player: Player) => {
+    // First, add rank to all players based on adjustedDynastyValue (higher value = better rank)
+    const playersWithRank = [...players]
+      .sort((a: Player, b: Player) => (b.adjustedDynastyValue || 0) - (a.adjustedDynastyValue || 0))
+      .map((player: Player, index: number) => ({
+        ...player,
+        rank: index + 1 // Dynasty rank (1 = best)
+      }));
+
+    // Apply filters
+    let filtered = playersWithRank.filter((player: Player) => {
       // Search term filter
       if (searchTerm && !player.name.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false;
@@ -65,10 +75,17 @@ export default function DraftAnalysis() {
       return true;
     });
 
-    // Sort players
+    // Sort filtered players
     filtered.sort((a: Player, b: Player) => {
-      const aVal = a[sortField] || 0;
-      const bVal = b[sortField] || 0;
+      let aVal: number, bVal: number;
+      
+      if (sortField === "rank") {
+        aVal = a.rank || 999;
+        bVal = b.rank || 999;
+      } else {
+        aVal = a[sortField] || 0;
+        bVal = b[sortField] || 0;
+      }
       
       if (sortDirection === "desc") {
         return bVal - aVal;
@@ -134,12 +151,13 @@ export default function DraftAnalysis() {
     );
   };
 
-  const handleSort = (field: "adjustedDynastyValue" | "valueDiscrepancy") => {
+  const handleSort = (field: "rank" | "adjustedDynastyValue" | "valueDiscrepancy") => {
     if (sortField === field) {
       setSortDirection(sortDirection === "desc" ? "asc" : "desc");
     } else {
       setSortField(field);
-      setSortDirection("desc");
+      // Default sort direction based on field type
+      setSortDirection(field === "rank" ? "asc" : "desc");
     }
   };
 
@@ -242,7 +260,15 @@ export default function DraftAnalysis() {
             <table className="w-full border-collapse border border-gray-200">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="border border-gray-200 px-4 py-2 text-left">Rank</th>
+                  <th 
+                    className="border border-gray-200 px-4 py-2 text-left cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("rank")}
+                  >
+                    <div className="flex items-center gap-1">
+                      Rank
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </th>
                   <th className="border border-gray-200 px-4 py-2 text-left">Name</th>
                   <th className="border border-gray-200 px-4 py-2 text-left">Pos</th>
                   <th className="border border-gray-200 px-4 py-2 text-left">Team</th>
@@ -272,7 +298,9 @@ export default function DraftAnalysis() {
               <tbody>
                 {filteredPlayers.map((player: Player, index: number) => (
                   <tr key={`${player.name}-${player.position}`} className="hover:bg-gray-50">
-                    <td className="border border-gray-200 px-4 py-2">{index + 1}</td>
+                    <td className="border border-gray-200 px-4 py-2 font-bold text-center">
+                      {player.rank}
+                    </td>
                     <td className="border border-gray-200 px-4 py-2 font-medium">
                       <Link 
                         href={`/player/${player.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`}
