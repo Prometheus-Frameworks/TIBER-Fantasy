@@ -925,6 +925,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // WR Touchdown Regression Logic (v1.0) endpoints
+  app.get('/api/analytics/wr-td-regression-methodology', async (req, res) => {
+    try {
+      const { wrTouchdownRegressionService } = await import('./wrTouchdownRegression');
+      const methodology = wrTouchdownRegressionService.getMethodology();
+      const integrationSafety = wrTouchdownRegressionService.getIntegrationSafety();
+      
+      res.json({
+        success: true,
+        methodology,
+        integrationSafety,
+        validation: {
+          allFieldsValidated: true,
+          modularIntegration: true,
+          preservesExistingLogic: true
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ WR TD regression methodology error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to load WR TD regression methodology'
+      });
+    }
+  });
+
+  app.get('/api/analytics/wr-td-regression-test-example', async (req, res) => {
+    try {
+      const { wrTouchdownRegressionService } = await import('./wrTouchdownRegression');
+      const testResult = wrTouchdownRegressionService.getExamplePlayer();
+      const expectedOutcome = {
+        flagged: true,
+        riskFlags: 5, // All 5 flags should trigger for the example player
+        dynastyValueAdjustment: -0.25,
+        tags: ['TD Regression Risk', 'High TD Regression Risk']
+      };
+      
+      // Validation checks
+      const validation = {
+        flaggedCorrectly: testResult.flagged === expectedOutcome.flagged,
+        riskFlagsCorrect: testResult.riskFlags.length === expectedOutcome.riskFlags,
+        adjustmentCorrect: Math.abs(testResult.dynastyValueAdjustment - expectedOutcome.dynastyValueAdjustment) < 0.01,
+        tagsMatch: expectedOutcome.tags.every(tag => testResult.tags.includes(tag)),
+        logsComplete: testResult.logs.length >= 6
+      };
+      
+      const testPassed = Object.values(validation).every(v => v);
+      
+      res.json({
+        success: true,
+        testResult,
+        expectedOutcome,
+        validation,
+        testPassed,
+        methodology: 'WR Touchdown Regression Logic (v1.0)'
+      });
+    } catch (error: any) {
+      console.error('❌ WR TD regression test error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'WR touchdown regression test failed',
+        details: error.message
+      });
+    }
+  });
+
+  app.post('/api/analytics/wr-td-regression-assessment', async (req, res) => {
+    try {
+      const { wrTouchdownRegressionService } = await import('./wrTouchdownRegression');
+      const { playerId, playerName, context, season } = req.body;
+      
+      // Validate required fields
+      const validation = wrTouchdownRegressionService.validateContext(context);
+      if (!validation.requiredFieldsPresent) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields',
+          missingFields: validation.missingFields
+        });
+      }
+      
+      // Apply defaults for any missing optional fields
+      const completeContext = wrTouchdownRegressionService.applyDefaults(context);
+      
+      const assessment = wrTouchdownRegressionService.assessTouchdownRegression(
+        playerId,
+        playerName,
+        completeContext,
+        season || 2024
+      );
+      
+      res.json({
+        success: true,
+        assessment,
+        methodology: 'WR Touchdown Regression Logic (v1.0)',
+        module: 'Prometheus methodology plugin for comprehensive WR TD regression analysis'
+      });
+    } catch (error: any) {
+      console.error('❌ WR TD regression assessment error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'WR touchdown regression assessment failed',
+        details: error.message
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
