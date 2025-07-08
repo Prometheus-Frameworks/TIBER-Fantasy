@@ -533,6 +533,21 @@ export function registerADPRoutes(app: Express): void {
             valueGrade = "AVOID";
           }
           
+          // Suggested Draft Tier Logic
+          let suggestedDraftTier: number;
+          if (valueGrade === "STEAL") {
+            // STEAL: RB/WR → Tier 1, QB/TE → Tier 2
+            suggestedDraftTier = (player.position === "RB" || player.position === "WR") ? 1 : 2;
+          } else if (valueGrade === "VALUE") {
+            suggestedDraftTier = 3;
+          } else if (valueGrade === "FAIR") {
+            suggestedDraftTier = 4;
+          } else if (valueGrade === "OVERVALUED") {
+            suggestedDraftTier = 5;
+          } else { // AVOID
+            suggestedDraftTier = 6;
+          }
+          
           const roundedAdjustedDynastyValue = Math.round(adjustedDynastyValue * 10) / 10;
           const roundedValueDiscrepancy = Math.round(valueDiscrepancy * 10) / 10;
           
@@ -542,10 +557,18 @@ export function registerADPRoutes(app: Express): void {
             adjustedDynastyValue: roundedAdjustedDynastyValue,
             valueDiscrepancy: roundedValueDiscrepancy,
             valueGrade: valueGrade,
+            suggestedDraftTier: suggestedDraftTier,
             age: playerAge
           };
         })
-        .sort((a, b) => b.adjustedDynastyValue - a.adjustedDynastyValue) // Sort by adjusted dynasty value descending
+        .sort((a, b) => {
+          // Primary sort: suggestedDraftTier (ascending - Tier 1 first)
+          if (a.suggestedDraftTier !== b.suggestedDraftTier) {
+            return a.suggestedDraftTier - b.suggestedDraftTier;
+          }
+          // Secondary sort: adjustedDynastyValue (descending - higher values first within same tier)
+          return b.adjustedDynastyValue - a.adjustedDynastyValue;
+        })
         .slice(0, limit);
       
       console.log(`✅ Dynasty Values: processed ${cleanPlayers.length} players with dynasty scoring`);
