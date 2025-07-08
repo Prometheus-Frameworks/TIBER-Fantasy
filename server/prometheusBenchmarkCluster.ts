@@ -4,6 +4,32 @@
  * Source: Ja'Marr Chase, Saquon Barkley, Lamar Jackson, Josh Allen
  */
 
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+export interface WeeklyBreakdown {
+  week: number;
+  opponent: string;
+  fantasy_points: number;
+  is_spike_week: boolean;
+  threshold_met?: number;
+}
+
+export interface SpikeWeekAnalysis {
+  player_id: string;
+  position: string;
+  games_played: number;
+  season_average: number;
+  spike_threshold: number;
+  spike_weeks_count: number;
+  spike_percentage: number;
+  weekly_breakdown: WeeklyBreakdown[];
+  context_metrics: Record<string, number>;
+  threshold_multiplier: number;
+}
+
 export interface PrometheusBenchmarks {
   // Wide Receiver Elite Thresholds
   WR: {
@@ -175,4 +201,22 @@ export function calculateSpikeMetrics(weeklyFantasyPoints: number[]): {
     averagePoints: Math.round(averagePoints * 10) / 10,
     spikeWeeks: spikeWeeks.map(points => Math.round(points * 10) / 10)
   };
+}
+
+/**
+ * Enhanced spike week analysis using NFL-Data-Py weekly data
+ * Uses weekly_df = nfl.import_weekly_data([2024]) then filters by player_id
+ */
+export async function getWeeklySpikeAnalysis(): Promise<Record<string, SpikeWeekAnalysis> | null> {
+  try {
+    console.log('🔍 Running enhanced weekly spike analysis...');
+    const pythonScript = 'server/weeklyAnalysisWrapper.py';
+    const { stdout } = await execAsync(`python3 ${pythonScript}`);
+    const results = JSON.parse(stdout);
+    console.log('✅ Weekly spike analysis completed');
+    return results;
+  } catch (error) {
+    console.error('❌ Weekly spike analysis failed:', error);
+    return null;
+  }
 }

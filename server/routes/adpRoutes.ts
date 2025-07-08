@@ -761,9 +761,18 @@ export function registerADPRoutes(app: Express): void {
   /**
    * Prometheus Benchmark Cluster Analysis
    * Returns elite player thresholds and benchmark comparisons
+   * Enhanced with weekly spike analysis using NFL-Data-Py
    */
   app.get('/api/analytics/prometheus-benchmarks', async (req, res) => {
     try {
+      // Get enhanced weekly spike analysis if requested
+      const includeWeekly = req.query.weekly === 'true';
+      let weeklyAnalysis = null;
+      
+      if (includeWeekly) {
+        const { getWeeklySpikeAnalysis } = await import('../prometheusBenchmarkCluster');
+        weeklyAnalysis = await getWeeklySpikeAnalysis();
+      }
       const analysis = {
         benchmarks: prometheusBenchmarks,
         analysis: {
@@ -826,12 +835,44 @@ export function registerADPRoutes(app: Express): void {
         }
       };
 
+      // Add weekly analysis if available
+      if (weeklyAnalysis) {
+        analysis.weeklyAnalysis = weeklyAnalysis;
+      }
+
       console.log('✅ Prometheus Benchmark Cluster analysis requested');
       res.json(analysis);
       
     } catch (error) {
       console.error('Prometheus benchmarks error:', error);
       res.status(500).json({ error: 'Failed to fetch Prometheus benchmarks' });
+    }
+  });
+
+  /**
+   * Enhanced Weekly Spike Analysis
+   * Filter by player_id, sum fantasy points per week, count threshold hits
+   */
+  app.get('/api/analytics/weekly-spike-analysis', async (req, res) => {
+    try {
+      const { getWeeklySpikeAnalysis } = await import('../prometheusBenchmarkCluster');
+      const weeklyAnalysis = await getWeeklySpikeAnalysis();
+      
+      if (!weeklyAnalysis) {
+        return res.status(500).json({ error: 'Weekly analysis failed' });
+      }
+      
+      console.log('✅ Weekly spike analysis requested');
+      res.json({
+        success: true,
+        analysis: weeklyAnalysis,
+        methodology: "NFL-Data-Py weekly_df filtering by player_id with 1.5x threshold",
+        source: "2024 NFL season weekly data"
+      });
+      
+    } catch (error) {
+      console.error('Weekly spike analysis error:', error);
+      res.status(500).json({ error: 'Failed to generate weekly spike analysis' });
     }
   });
 }
