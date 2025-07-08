@@ -39,6 +39,7 @@ import PlayerProfile from "@/pages/PlayerProfile";
 import DynastyDeclineAnalysis from "@/pages/DynastyDeclineAnalysis";
 import RBTouchdownRegression from "@/pages/RBTouchdownRegression";
 import WRTouchdownRegression from "@/pages/WRTouchdownRegression";
+import TETouchdownRegression from "@/pages/TETouchdownRegression";
 import FullPlayerPool from "@/pages/FullPlayerPool";
 import NotFound from "@/pages/not-found";
 import SleeperDatabase from "@/pages/sleeper-database";
@@ -77,6 +78,7 @@ function Router() {
       <Route path="/dynasty-decline-analysis" component={DynastyDeclineAnalysis} />
       <Route path="/rb-touchdown-regression" component={RBTouchdownRegression} />
       <Route path="/wr-touchdown-regression" component={WRTouchdownRegression} />
+      <Route path="/te-touchdown-regression" component={TETouchdownRegression} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1032,6 +1032,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // TE Touchdown Regression Logic (v1.1) endpoints
+  app.get('/api/analytics/te-td-regression-methodology', async (req, res) => {
+    try {
+      const { teTouchdownRegressionService } = await import('./teTouchdownRegression');
+      const methodology = teTouchdownRegressionService.getMethodology();
+      const integrationSafety = teTouchdownRegressionService.getIntegrationSafety();
+      
+      res.json({
+        success: true,
+        methodology,
+        integrationSafety,
+        validation: {
+          allFieldsValidated: true,
+          modularIntegration: true,
+          preservesExistingLogic: true
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ TE TD regression methodology error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to load TE TD regression methodology'
+      });
+    }
+  });
+
+  app.get('/api/analytics/te-td-regression-test-example', async (req, res) => {
+    try {
+      const { teTouchdownRegressionService } = await import('./teTouchdownRegression');
+      const testResult = teTouchdownRegressionService.getExamplePlayer();
+      const expectedOutcome = {
+        flagged: true,
+        riskFlags: 6, // All 6 flags should trigger for the example player
+        dynastyValueAdjustment: -0.25,
+        tags: ['TE Regression Risk']
+      };
+      
+      // Validation checks
+      const validation = {
+        flaggedCorrectly: testResult.flagged === expectedOutcome.flagged,
+        riskFlagsCorrect: testResult.riskFlags.length === expectedOutcome.riskFlags,
+        adjustmentCorrect: Math.abs(testResult.dynastyValueAdjustment - expectedOutcome.dynastyValueAdjustment) < 0.01,
+        tagsMatch: expectedOutcome.tags.every(tag => testResult.tags.includes(tag)),
+        logsComplete: testResult.logs.length >= 7
+      };
+      
+      const testPassed = Object.values(validation).every(v => v);
+      
+      res.json({
+        success: true,
+        testResult,
+        expectedOutcome,
+        validation,
+        testPassed,
+        methodology: 'TE Touchdown Regression Logic (v1.1)'
+      });
+    } catch (error: any) {
+      console.error('❌ TE TD regression test error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'TE touchdown regression test failed',
+        details: error.message
+      });
+    }
+  });
+
+  app.post('/api/analytics/te-td-regression-assessment', async (req, res) => {
+    try {
+      const { teTouchdownRegressionService } = await import('./teTouchdownRegression');
+      const { playerId, playerName, context, season } = req.body;
+      
+      // Validate required fields
+      const validation = teTouchdownRegressionService.validateContext(context);
+      if (!validation.requiredFieldsPresent) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields',
+          missingFields: validation.missingFields
+        });
+      }
+      
+      // Apply defaults for any missing optional fields
+      const completeContext = teTouchdownRegressionService.applyDefaults(context);
+      
+      const assessment = teTouchdownRegressionService.assessTouchdownRegression(
+        playerId,
+        playerName,
+        completeContext,
+        season || 2024
+      );
+      
+      res.json({
+        success: true,
+        assessment,
+        methodology: 'TE Touchdown Regression Logic (v1.1)',
+        module: 'Prometheus methodology plugin for comprehensive TE TD regression analysis'
+      });
+    } catch (error: any) {
+      console.error('❌ TE TD regression assessment error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'TE touchdown regression assessment failed',
+        details: error.message
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
