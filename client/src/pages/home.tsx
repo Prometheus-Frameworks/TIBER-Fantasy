@@ -43,6 +43,12 @@ export default function Home() {
                   <ChevronRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
+              <Link href="/draft-analysis">
+                <Button size="lg" className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700">
+                  Draft Analysis
+                  <Target className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
               <Link href="/compare-league">
                 <Button variant="outline" size="lg" className="px-8 py-3 text-lg">
                   Compare Leagues
