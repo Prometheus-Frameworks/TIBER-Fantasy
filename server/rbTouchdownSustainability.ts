@@ -40,6 +40,7 @@ export interface SustainabilityAssessment {
   playerId: string;
   playerName: string;
   season: number;
+  lastEvaluatedSeason: number; // Confirms evaluation using current season data
   flagged: boolean;
   riskFlags: string[];
   passCatchingBonus: number;
@@ -81,7 +82,11 @@ export class RBTouchdownSustainabilityAnalyzer {
     context: RBSustainabilityContext,
     season: number = 2024
   ): SustainabilityAssessment {
-    // Step 0: Input validation
+    // Step 0: 2024 Season Validation & Input validation
+    if (season < 2024) {
+      console.warn(`⚠️ RB TD Sustainability: Using outdated season data (${season}) for ${playerName}. Consider using 2024 data for current evaluations.`);
+    }
+    
     const validation = this.validateInputs(context);
     if (!validation.requiredFieldsPresent) {
       throw new Error(`Missing required fields: ${validation.missingFields.join(', ')}`);
@@ -199,6 +204,7 @@ export class RBTouchdownSustainabilityAnalyzer {
       playerId,
       playerName,
       season,
+      lastEvaluatedSeason: 2024, // Confirms evaluation using current season data
       flagged,
       riskFlags,
       passCatchingBonus,

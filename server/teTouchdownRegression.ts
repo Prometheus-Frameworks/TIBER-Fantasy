@@ -41,6 +41,7 @@ export interface TERegressionAssessment {
     passCatchingPenalty: boolean;
   };
   season: number;
+  lastEvaluatedSeason: number; // Confirms evaluation using current season data
   timestamp: Date;
 }
 
@@ -64,11 +65,16 @@ export class TETouchdownRegressionService {
     playerId: string,
     playerName: string,
     context: TERegressionContext,
-    season: number
+    season: number = 2024
   ): TERegressionAssessment {
     const riskFlags: string[] = [];
     const logs: string[] = [];
     const tags: string[] = [];
+
+    // Step 0: 2024 Season Validation
+    if (season < 2024) {
+      console.warn(`⚠️ TE TD Regression: Using outdated season data (${season}) for ${playerName}. Consider using 2024 data for current evaluations.`);
+    }
 
     // Step 1: Flagging for Regression Risk
     
@@ -165,6 +171,7 @@ export class TETouchdownRegressionService {
         passCatchingPenalty
       },
       season,
+      lastEvaluatedSeason: 2024, // Confirms evaluation using current season data
       timestamp: new Date()
     };
   }

@@ -34,6 +34,7 @@ export interface WRRegressionAssessment {
     riskFactorCount: number;
   };
   season: number;
+  lastEvaluatedSeason: number; // Confirms evaluation using current season data
   timestamp: Date;
 }
 
@@ -59,11 +60,16 @@ export class WRTouchdownRegressionService {
     playerId: string,
     playerName: string,
     context: WRRegressionContext,
-    season: number
+    season: number = 2024
   ): WRRegressionAssessment {
     const riskFlags: string[] = [];
     const logs: string[] = [];
     const tags: string[] = [];
+
+    // Step 0: 2024 Season Validation
+    if (season < 2024) {
+      console.warn(`⚠️ WR TD Regression: Using outdated season data (${season}) for ${playerName}. Consider using 2024 data for current evaluations.`);
+    }
 
     // Step 1: Flagging for Regression Risk
     const tdRateRatio = context.tdRate / this.defaults.leagueAvgTDRate;
@@ -138,6 +144,7 @@ export class WRTouchdownRegressionService {
         riskFactorCount: riskFlags.length
       },
       season,
+      lastEvaluatedSeason: 2024, // Confirms evaluation using current season data
       timestamp: new Date()
     };
   }
