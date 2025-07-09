@@ -409,14 +409,52 @@ export class PrometheusStressTestService {
       switch (player.position) {
         case 'QB':
           const { qbEvaluationService } = await import('./qbEvaluationLogic');
+          const { qbEnvironmentContextScoreService } = await import('./qbEnvironmentContextScore');
+          
+          // Primary QB evaluation
           assessment = qbEvaluationService.evaluateQB(
             player.playerId,
             player.playerName,
             player.context,
             2024
           );
+          
+          // QB Environment Context Score integration test
+          const environmentInput = {
+            playerId: player.playerId,
+            playerName: player.playerName,
+            position: 'QB',
+            team: 'TEST',
+            season: 2024,
+            scrambleRate: player.context.rushYards > 500 ? 8.5 : 4.2,
+            rushingYPC: player.context.rushYards > 500 ? 5.8 : 3.5,
+            explosiveRunRate: player.context.rushTDs > 8 ? 18.0 : 10.0,
+            cpoe: player.context.epaPerPlay > 0.20 ? 2.8 : 1.2,
+            adjCompletionRate: player.context.deepBallCompletionRate > 0.40 ? 68.5 : 63.2,
+            deepAccuracy: player.context.deepBallCompletionRate * 100,
+            pffOLineGrade: player.context.cleanPocketEPA > 0.25 ? 78.0 : 68.0,
+            pbwr: player.context.cleanPocketEPA > 0.25 ? 64.0 : 58.0,
+            pressureRate: player.context.pressureEPA < 0.10 ? 22.0 : 28.0,
+            avgWRYPRR: 1.9,
+            avgWRSeparation: 2.8,
+            avgWRYAC: 5.3,
+            hasWRUpgrade: false
+          };
+          
+          const environmentResult = qbEnvironmentContextScoreService.evaluateQBEnvironment(environmentInput);
+          
+          // Add environment context to assessment
+          if (assessment.tags) {
+            if (environmentResult.contextScore >= 80) {
+              assessment.tags.push('Elite Environment Context');
+            } else if (environmentResult.contextScore >= 65) {
+              assessment.tags.push('Strong Environment Context');
+            }
+          }
+          
           testPassed = assessment.validation.requiredFieldsPresent;
           auditLog.push(`QB Evaluation: EPA=${player.context.epaPerPlay}, Rush Yards=${player.context.rushYards}`);
+          auditLog.push(`QB Environment Score: ${environmentResult.contextScore.toFixed(1)} (${environmentResult.environmentTags.join(', ')})`);
           break;
 
         case 'RB':

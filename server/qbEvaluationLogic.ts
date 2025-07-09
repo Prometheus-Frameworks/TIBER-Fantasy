@@ -1,10 +1,13 @@
 /**
  * QB Evaluation Logic (v1.1)
  * Evaluates QBs based on rushing upside, EPA/play, deep passing accuracy, red zone performance, and scheme fit
+ * Now includes QB Environment & Context Score integration
  * 
  * Modular plugin that appends to existing Prometheus methodology
  * Preserves all existing spike week, position regression, and dynastyValue logic
  */
+
+import { qbEnvironmentContextScoreService } from './qbEnvironmentContextScore';
 
 export interface QBEvaluationContext {
   season: number;
@@ -182,7 +185,20 @@ export class QBEvaluationService {
       dynastyValueAdjustment += 0.03;
     }
 
-    // Step 6: Final adjustments and tier classification
+    // Step 6: QB Environment & Context Score Integration
+    const environmentScore = this.calculateEnvironmentScore(context, logs);
+    if (environmentScore.contextScore >= 2.0) {
+      dynastyValueAdjustment += 0.08;
+      tags.push('Elite Environment');
+    } else if (environmentScore.contextScore >= 1.5) {
+      dynastyValueAdjustment += 0.05;
+      tags.push('Strong Environment');
+    } else if (environmentScore.contextScore <= 0.5) {
+      dynastyValueAdjustment -= 0.05;
+      tags.push('Challenging Environment');
+    }
+
+    // Step 7: Final adjustments and tier classification
     dynastyValueAdjustment = Math.max(-0.30, Math.min(0.30, dynastyValueAdjustment));
     
     const flagged = evaluationFlags.length > 0;
@@ -382,6 +398,73 @@ export class QBEvaluationService {
       requiredFieldsPresent: missingFields.length === 0,
       missingFields,
       optionalFieldsUsed
+    };
+  }
+
+  /**
+   * Calculate QB Environment & Context Score (v1.1)
+   */
+  private calculateEnvironmentScore(context: QBEvaluationContext, logs: string[]) {
+    let contextScore = 0;
+
+    // Convert QB evaluation context to environment input format
+    const environmentInput = {
+      playerId: 'evaluation-context',
+      playerName: 'QB Evaluation',
+      position: 'QB',
+      team: 'N/A',
+      season: context.season,
+      
+      // Map existing context fields to environment score inputs
+      scrambleRate: (context.rushYards / 17) > 20 ? 8.0 : 4.0, // Estimate from rush yards
+      rushingYPC: context.rushYards > 500 ? 5.5 : 3.8,
+      explosiveRunRate: context.rushTDs > 5 ? 15.0 : 8.0,
+      
+      // Use existing accuracy metrics
+      cpoe: context.epaPerPlay > 0.15 ? 2.5 : 0.8,
+      adjCompletionRate: context.deepBallCompletionRate > 0.45 ? 70.0 : 65.0,
+      deepAccuracy: context.deepBallCompletionRate * 100,
+      
+      // Estimate protection from EPA metrics
+      pffOLineGrade: context.cleanPocketEPA > context.pressureEPA ? 75.0 : 65.0,
+      pbwr: context.cleanPocketEPA > 0.20 ? 65.0 : 55.0,
+      pressureRate: context.pressureEPA < 0 ? 20.0 : 28.0,
+      
+      // Use defaults for teammate quality (would need team context for accurate data)
+      avgWRYPRR: context.teamPassRateOverExpected && context.teamPassRateOverExpected > 0.05 ? 2.0 : 1.6,
+      avgWRSeparation: 2.8,
+      avgWRYAC: 5.2,
+      
+      // No offseason upgrade data in current context
+      hasWRUpgrade: false
+    };
+
+    // Calculate basic context score using simplified logic
+    if (environmentInput.rushingYPC >= 5.0) {
+      contextScore += 0.4;
+      logs.push("QB Environment: Elite rushing YPC detected");
+    }
+    
+    if (environmentInput.cpoe >= 2.0) {
+      contextScore += 0.3;
+      logs.push("QB Environment: Strong CPOE performance");
+    }
+    
+    if (environmentInput.pffOLineGrade >= 70.0) {
+      contextScore += 0.25;
+      logs.push("QB Environment: Good protection metrics");
+    }
+    
+    if (environmentInput.avgWRYPRR >= 1.8) {
+      contextScore += 0.2;
+      logs.push("QB Environment: Quality receiving weapons");
+    }
+    
+    logs.push(`QB Environment Score: ${contextScore.toFixed(2)}`);
+    
+    return {
+      contextScore: Number(contextScore.toFixed(2)),
+      environmentInput
     };
   }
 

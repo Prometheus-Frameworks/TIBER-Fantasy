@@ -41,6 +41,7 @@ import RBTouchdownRegression from "@/pages/RBTouchdownRegression";
 import WRTouchdownRegression from "@/pages/WRTouchdownRegression";
 import TETouchdownRegression from "@/pages/TETouchdownRegression";
 import QBEvaluationLogic from "@/pages/QBEvaluationLogic";
+import QBEnvironmentContext from "@/pages/QBEnvironmentContext";
 import PrometheusStressTest from "@/pages/PrometheusStressTest";
 import OASISTeamContext from "@/pages/OASISTeamContext";
 import FullPlayerPool from "@/pages/FullPlayerPool";
@@ -83,6 +84,7 @@ function Router() {
       <Route path="/wr-touchdown-regression" component={WRTouchdownRegression} />
       <Route path="/te-touchdown-regression" component={TETouchdownRegression} />
       <Route path="/qb-evaluation-logic" component={QBEvaluationLogic} />
+      <Route path="/qb-environment-context" component={QBEnvironmentContext} />
       <Route path="/prometheus-stress-test" component={PrometheusStressTest} />
       <Route path="/oasis-team-context" component={OASISTeamContext} />
       <Route component={NotFound} />

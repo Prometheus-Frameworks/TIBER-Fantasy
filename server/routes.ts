@@ -1139,6 +1139,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // QB Environment & Context Score endpoints
+  app.post('/api/analytics/qb-environment-context', async (req, res) => {
+    try {
+      const { qbEnvironmentContextScoreService } = await import('./qbEnvironmentContextScore');
+      const { qbInput } = req.body;
+      
+      console.log('🏈 QB Environment Context Analysis:', qbInput?.playerName, qbInput?.position);
+      
+      const result = qbEnvironmentContextScoreService.evaluateQBEnvironment(qbInput);
+      
+      res.json({
+        success: true,
+        message: 'QB environment context analysis completed',
+        data: result,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ QB environment context analysis failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'QB environment context analysis failed',
+        details: error.message
+      });
+    }
+  });
+
+  app.get('/api/analytics/qb-environment-test-cases', async (req, res) => {
+    try {
+      const { qbEnvironmentContextScoreService } = await import('./qbEnvironmentContextScore');
+      
+      console.log('🧪 Running QB Environment test cases...');
+      
+      const testResults = qbEnvironmentContextScoreService.runTestCases();
+      
+      res.json({
+        success: true,
+        message: 'QB Environment test cases completed',
+        data: {
+          testResults,
+          methodology: qbEnvironmentContextScoreService.getMethodology(),
+          integrationSafety: qbEnvironmentContextScoreService.getIntegrationSafety()
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ QB Environment test cases failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'QB Environment test cases failed',
+        details: error.message
+      });
+    }
+  });
+
   // QB Evaluation Logic (v1.1) endpoints
   app.get('/api/analytics/qb-evaluation-methodology', async (req, res) => {
     try {
