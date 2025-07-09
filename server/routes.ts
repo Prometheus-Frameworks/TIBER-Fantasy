@@ -1430,6 +1430,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Batch Fantasy Evaluator endpoints
+  app.post('/api/analytics/batch-evaluation', async (req, res) => {
+    try {
+      console.log('🔄 Processing batch fantasy evaluation request...');
+      const { batchFantasyEvaluator } = await import('./services/evaluation/BatchFantasyEvaluator');
+      
+      const { players } = req.body;
+      
+      if (!players || !Array.isArray(players)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Players array required',
+          expectedFormat: {
+            players: [
+              {
+                playerName: 'string',
+                season: 'number (2024+)',
+                position: 'QB|RB|WR|TE',
+                // position-specific fields...
+              }
+            ]
+          }
+        });
+      }
+
+      const batchResult = await batchFantasyEvaluator.evaluateBatch(players);
+      
+      res.json({
+        success: true,
+        batchResult,
+        methodology: 'Batch Fantasy Evaluator - Parallel multi-position evaluation',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Batch evaluation error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Batch evaluation failed',
+        details: error.message
+      });
+    }
+  });
+
+  app.get('/api/analytics/batch-evaluation-test', async (req, res) => {
+    try {
+      console.log('🧪 Running Batch Fantasy Evaluator test...');
+      const { batchFantasyEvaluator } = await import('./services/evaluation/BatchFantasyEvaluator');
+      
+      const testPlayers = batchFantasyEvaluator.generateTestPlayers();
+      const batchResult = await batchFantasyEvaluator.evaluateBatch(testPlayers);
+      const topPlayers = batchFantasyEvaluator.getTopPlayersByPosition(batchResult, 3);
+      
+      res.json({
+        success: true,
+        message: 'Batch evaluation test completed',
+        data: {
+          testInput: testPlayers,
+          fullResults: batchResult,
+          topPlayersByPosition: topPlayers,
+          methodology: {
+            description: 'Parallel multi-position fantasy player evaluation system',
+            features: [
+              'Promise.all parallel processing',
+              '2024+ data validation',
+              'Position-specific evaluation services',
+              'Error handling and logging',
+              'Secondary sort by usageProfile',
+              'Comprehensive result categorization'
+            ],
+            evaluationServices: {
+              QB: 'QBEnvironmentContextScoreService',
+              RB: 'RBTouchdownSustainabilityAnalyzer', 
+              WR: 'WREvaluationService',
+              TE: 'TEEvaluationService'
+            }
+          }
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Batch evaluation test error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Batch evaluation test failed',
+        details: error.message
+      });
+    }
+  });
+
   // OASIS Contextual Team Mapping endpoints
   app.post('/api/analytics/oasis-team-context', async (req, res) => {
     try {
