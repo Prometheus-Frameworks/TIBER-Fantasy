@@ -97,7 +97,7 @@ class BatchFantasyEvaluator {
       // Import all evaluation services
       const { qbEnvironmentContextScoreService } = await import('../../qbEnvironmentContextScore');
       const { rbTouchdownSustainabilityAnalyzer } = await import('../../rbTouchdownSustainability');
-      const { wrEvaluationService } = await import('./wrEvaluationService');
+      const { wrEvaluationService } = await import('../../wrEvaluationForecastScore');
       const { teEvaluationService } = await import('./teEvaluationService');
 
       this.qbService = qbEnvironmentContextScoreService;
@@ -173,19 +173,54 @@ class BatchFantasyEvaluator {
 
       switch (position) {
         case 'QB': {
-          const result = this.qbService.evaluate({ player: player as QBPlayerInput });
-          return { ...result, playerName };
+          // Convert to QB environment input format
+          const qbInput = {
+            playerId: `qb-${player.playerName?.toLowerCase().replace(/\s+/g, '-')}`,
+            playerName: player.playerName,
+            position: 'QB',
+            team: 'TEST',
+            season: player.season,
+            scrambleRate: (player as QBPlayerInput).scrambleRate || 0.1,
+            rushingYPC: (player as QBPlayerInput).yardsPerCarry || 3.5,
+            explosiveRunRate: ((player as QBPlayerInput).explosiveRushRate || 0.1) * 100,
+            cpoe: (player as QBPlayerInput).cpoe || 0.0,
+            adjCompletionRate: ((player as QBPlayerInput).adjustedCompletionPct || 0.6) * 100,
+            deepAccuracy: ((player as QBPlayerInput).deepAccuracyRate || 0.4) * 100,
+            pffOLineGrade: (player as QBPlayerInput).team?.passBlockGrade || 60,
+            pbwr: ((player as QBPlayerInput).team?.passBlockWinRate || 0.5) * 100,
+            pressureRate: ((player as QBPlayerInput).team?.pressureRateAllowed || 0.4) * 100,
+            avgWRYPRR: (player as QBPlayerInput).team?.wrYPRR || 1.5,
+            avgWRSeparation: 2.5,
+            avgWRYAC: (player as QBPlayerInput).team?.yacPerReception || 5.0,
+            hasWRUpgrade: true,
+            upgradeDescription: (player as QBPlayerInput).team?.offseasonWRUpgrades?.join(', ') || 'None'
+          };
+          
+          if (!this.qbService) {
+            throw new Error('QB service not initialized');
+          }
+          
+          const result = this.qbService.evaluateQBEnvironment(qbInput);
+          
+          return {
+            contextScore: result.contextScore,
+            logs: result.logs,
+            tags: result.environmentTags,
+            subScores: result.componentScores,
+            lastEvaluatedSeason: player.season,
+            playerName: player.playerName
+          };
         }
         case 'RB': {
           const result = this.rbService.evaluate(player as RBPlayerInput);
           return { ...result, playerName };
         }
         case 'WR': {
-          const result = this.wrService.evaluate({ player: player as WRPlayerInput });
+          const result = this.wrService.evaluate(player as WRPlayerInput);
           return { ...result, playerName };
         }
         case 'TE': {
-          const result = this.teService.evaluate({ player: player as TEPlayerInput });
+          const result = this.teService.evaluate(player as TEPlayerInput);
           return { ...result, playerName };
         }
         default:
