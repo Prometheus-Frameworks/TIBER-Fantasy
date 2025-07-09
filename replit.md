@@ -1,8 +1,28 @@
-# Prometheus: fantasy and data
+# PROMETHEUS
 
-## Overview
+**An open-source dynasty fantasy football analytics platform powered by modular AI systems.**
 
-This is a full-stack fantasy football analytics platform built with React, Express, and PostgreSQL. The application provides comprehensive team analysis, player recommendations, and performance tracking for fantasy football managers. It features a modern web interface with server-side rendering capabilities and a REST API backend.
+Prometheus is built to challenge the gatekeeping of fantasy football knowledge. It's not a content site — it's an *engine.* It uses advanced context scoring, spike week interpretation, regression logic, and player environment modules to give users true insight.
+
+Everything is transparent. Everything is free. This is modern fire — brought back to the people.
+
+## 🔥 Core Features
+- Full-stack evaluation system for QB, RB, WR, TE
+- Batch processing with context-aware scoring
+- Integrated modules: Spike Week Logic, OASIS Context Layer, Promethean Tiering
+- Redraft & Dynasty flexibility
+- Built-in philosophical framework (Applied Prometheanism)
+
+## 🧱 Stack
+- TypeScript / Node.js
+- React
+- Express
+- PostgreSQL
+- Replit AI Agents
+- OpenAI + Grok integration
+
+## 📌 Mission
+To quietly dismantle the elitism in fantasy football and rebuild it through code, transparency, and aligned intelligence.
 
 ## System Architecture
 
