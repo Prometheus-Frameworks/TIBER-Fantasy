@@ -43,6 +43,7 @@ import TETouchdownRegression from "@/pages/TETouchdownRegression";
 import QBEvaluationLogic from "@/pages/QBEvaluationLogic";
 import QBEnvironmentContext from "@/pages/QBEnvironmentContext";
 import WRForecastEvaluation from "@/pages/WRForecastEvaluation";
+import TEEvaluationTest from "@/pages/TEEvaluationTest";
 import PrometheusStressTest from "@/pages/PrometheusStressTest";
 import OASISTeamContext from "@/pages/OASISTeamContext";
 import FullPlayerPool from "@/pages/FullPlayerPool";
@@ -87,6 +88,7 @@ function Router() {
       <Route path="/qb-evaluation-logic" component={QBEvaluationLogic} />
       <Route path="/qb-environment-context" component={QBEnvironmentContext} />
       <Route path="/wr-forecast-evaluation" component={WRForecastEvaluation} />
+      <Route path="/te-evaluation-test" component={TEEvaluationTest} />
       <Route path="/prometheus-stress-test" component={PrometheusStressTest} />
       <Route path="/oasis-team-context" component={OASISTeamContext} />
       <Route component={NotFound} />

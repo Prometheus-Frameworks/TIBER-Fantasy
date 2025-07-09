@@ -1346,6 +1346,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // TE Evaluation & Forecast Score endpoints
+  app.post('/api/analytics/te-evaluation', async (req, res) => {
+    try {
+      console.log('🔄 Processing TE evaluation request...');
+      const { teEvaluationService } = await import('./services/evaluation/teEvaluationService');
+      
+      const { player } = req.body;
+      
+      if (!player) {
+        return res.status(400).json({
+          success: false,
+          error: 'Player data required'
+        });
+      }
+
+      const evaluation = teEvaluationService.evaluate({ player });
+      
+      res.json({
+        success: true,
+        evaluation,
+        methodology: 'TE Evaluation & Forecast Score v1.1',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ TE evaluation error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'TE evaluation failed',
+        details: error.message
+      });
+    }
+  });
+
+  app.get('/api/analytics/te-evaluation-test-cases', async (req, res) => {
+    try {
+      console.log('🧪 Running TE Evaluation test cases...');
+      const { teEvaluationService } = await import('./services/evaluation/teEvaluationService');
+      
+      const testCases = teEvaluationService.generateTestCases();
+      const testResults = testCases.map(testCase => ({
+        player: testCase.player,
+        expectedOutcome: testCase.expectedOutcome,
+        evaluation: teEvaluationService.evaluate({ player: testCase.player })
+      }));
+      
+      res.json({
+        success: true,
+        message: 'TE Evaluation test cases completed',
+        data: {
+          testResults,
+          methodology: {
+            version: '1.1',
+            description: 'TE dynasty evaluation focusing on usage, efficiency, TD regression, and volatility',
+            triggerScope: ['dynastyValuation', 'playerProfile', 'performanceForecast'],
+            components: {
+              usageProfile: '30% - TPRR, target share, route participation, red zone usage',
+              efficiency: '30% - YPRR, catch rate over expected',
+              tdRegression: '20% - Expected vs actual TDs, red zone consistency',
+              volatilityPenalty: '20% - Team EPA, WR competition, QB stability, pass volume, age, contract'
+            },
+            inputValidation: {
+              requiredFields: ['season', 'position', 'tpRR', 'ypRR', 'routeParticipation', 'redZoneTargetShare', 'expectedTDs', 'actualTDs'],
+              defaults: {
+                season: 2024,
+                teamEPARank: 16,
+                wrTargetCompetition: 1.5,
+                qbStabilityScore: 0.5
+              }
+            },
+            outputFields: ['contextScore', 'subScores', 'logs', 'tags', 'lastEvaluatedSeason']
+          }
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ TE evaluation test error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'TE evaluation test failed',
+        details: error.message
+      });
+    }
+  });
+
   // OASIS Contextual Team Mapping endpoints
   app.post('/api/analytics/oasis-team-context', async (req, res) => {
     try {
