@@ -1,50 +1,61 @@
 /**
- * WR Evaluation & Forecast Score (v1.1)
- * Forward-looking dynasty WR evaluation using 4-component scoring system
- * Focus: Dynasty forecasting with predictive metrics rather than descriptive analysis
+ * WR Environment & Forecast Score (v1.1) 
+ * Prometheus WR Evaluation layer with dynamic logic for dynasty forecasting
+ * Focus: Usage profile, efficiency, role security, and growth trajectory
  */
 
-export interface WRPlayerInput {
-  playerId: string;
-  playerName: string;
-  position: string;
-  team: string;
+interface PlayerInput {
   season: number;
-  
-  // Usage Profile metrics
-  tpRR: number; // Targets Per Route Run
-  routeParticipation: number; // % of team's routes run
-  firstReadTargetPct: number; // % of targets as first read
-  teamPassAttemptsPerGame: number;
-  wrRoomTargetCompetition: number; // Competition score 0-100
-  airYardShare: number; // % of team's air yards
-  
-  // Efficiency metrics  
-  ypRR: number; // Yards Per Route Run
-  oneDRR: number; // First Downs Per Route Run
-  dropRate: number; // Drop percentage
-  explosivePlayRate: number; // 20+ yard receptions per target
-  routeWinRate: number; // % routes with separation
-  yacPerReception: number; // Yards After Catch per reception
-  
-  // Role Security factors
+  position: string;
+  tpRR: number; // Targets per route run
+  ypRR: number; // Yards per route run
+  oneDRR: number; // First downs per route run
+  firstReadTargetPct: number;
+  fantasyPointsPerGame: number;
+  dropRate: number; // 0–1
+  routeWinRate: number; // 0–1
   age: number;
   draftCapital: 'R1' | 'R2' | 'R3' | 'R4+' | 'UDFA';
-  slotRate: number; // % of snaps in slot
-  contractYearsRemaining?: number;
+  explosivePlayRate: number;
+  slotRate: number; // 0–1
+  routeParticipation: number; // 0–1
+  teamPassAttemptsPerGame: number;
+  wrRoomTargetCompetition: number; // 0–3
+  qbStabilityScore: number; // 0–1
+  contractYearsRemaining: number;
+  previousSeasons?: { 
+    season: number; 
+    ypRR: number; 
+    tpRR: number; 
+    targetShare: number; 
+    firstReadTargetPct: number; 
+    fantasyPointsPerGame: number 
+  }[];
+}
+
+interface EvaluationOutput {
+  contextScore: number; // 0–100
+  logs: string[];
+  tags: string[];
+  subScores: {
+    usageProfile: number;
+    efficiency: number;
+    roleSecurity: number;
+    growthTrajectory: number;
+  };
+  lastEvaluatedSeason: number;
+}
+
+// Extended interface for compatibility with existing system
+export interface WRPlayerInput extends PlayerInput {
+  playerId: string;
+  playerName: string;
+  team: string;
+  // Optional fields for backward compatibility
+  airYardShare?: number;
+  yacPerReception?: number;
   injuryHistory?: 'clean' | 'minor' | 'concerning' | 'major';
   redZoneTargetShare?: number;
-  
-  // Growth Trajectory data
-  qbStabilityScore: number; // 0-100 QB environment stability
-  previousSeasons?: {
-    season: number;
-    ypRR: number;
-    tpRR: number;
-    targetShare: number;
-    firstReadTargetPct: number;
-    fantasyPointsPerGame: number;
-  }[];
   offseasonChanges?: {
     newQB?: boolean;
     newOC?: boolean;
@@ -74,21 +85,48 @@ export interface WREvaluationResult {
   timestamp: Date;
 }
 
-export class WREvaluationForecastService {
-  private readonly version = "1.1";
-  private readonly name = "WR Evaluation & Forecast Score";
-  
-  // Optimized weights for dynasty forecasting
+class WREvaluationService {
+  private version = '1.2';
   private readonly weights = {
-    usageProfile: 0.35,    // Most predictive for fantasy success
-    efficiency: 0.25,      // Quality of usage matters
-    roleSecurity: 0.25,    // Dynasty stability factor
-    growthTrajectory: 0.15 // Forward-looking component
+    usageProfile: 0.3,
+    efficiency: 0.3,
+    roleSecurity: 0.2,
+    growthTrajectory: 0.2,
   };
 
-  /**
-   * Evaluate WR with forward-looking dynasty focus
-   */
+  evaluate(player: PlayerInput): EvaluationOutput {
+    const logs: string[] = [];
+    const tags: string[] = [];
+
+    const usage = this.evaluateUsageProfile(player);
+    const efficiency = this.evaluateEfficiency(player);
+    const security = this.evaluateRoleSecurity(player);
+    const growth = this.evaluateGrowthTrajectory(player);
+
+    logs.push(...usage.logs, ...efficiency.logs, ...security.logs, ...growth.logs);
+    tags.push(...usage.tags, ...efficiency.tags, ...security.tags, ...growth.tags);
+
+    const contextScore =
+      usage.score * this.weights.usageProfile +
+      efficiency.score * this.weights.efficiency +
+      security.score * this.weights.roleSecurity +
+      growth.score * this.weights.growthTrajectory;
+
+    return {
+      contextScore: Math.round(contextScore),
+      logs,
+      tags: [...new Set(tags)],
+      subScores: {
+        usageProfile: usage.score,
+        efficiency: efficiency.score,
+        roleSecurity: security.score,
+        growthTrajectory: growth.score,
+      },
+      lastEvaluatedSeason: player.season,
+    };
+  }
+
+  // Wrapper method for backward compatibility with existing system
   evaluateWR(input: WRPlayerInput): WREvaluationResult {
     const logs: string[] = [];
     const forecastTags: string[] = [];
@@ -106,510 +144,242 @@ export class WREvaluationForecastService {
       }, forecastTags, logs, riskFactors, upside, 'AVOID');
     }
 
-    logs.push(`🔍 Evaluating WR forecast for ${input.playerName} (${input.team}) - ${input.season} season`);
-
-    // Component 1: Usage Profile (35% weight) - Most predictive
-    const usageProfile = this.evaluateUsageProfile(input, logs, forecastTags, riskFactors, upside);
-    
-    // Component 2: Efficiency (25% weight) - Quality matters
-    const efficiency = this.evaluateEfficiency(input, logs, forecastTags, riskFactors, upside);
-    
-    // Component 3: Role Security (25% weight) - Dynasty stability
-    const roleSecurity = this.evaluateRoleSecurity(input, logs, forecastTags, riskFactors, upside);
-    
-    // Component 4: Growth Trajectory (15% weight) - Forward-looking
-    const growthTrajectory = this.evaluateGrowthTrajectory(input, logs, forecastTags, riskFactors, upside);
-
-    const componentScores = {
-      usageProfile: usageProfile.score,
-      efficiency: efficiency.score,
-      roleSecurity: roleSecurity.score,
-      growthTrajectory: growthTrajectory.score
+    // Convert to core PlayerInput format
+    const playerInput: PlayerInput = {
+      season: input.season,
+      position: input.position,
+      tpRR: input.tpRR,
+      ypRR: input.ypRR,
+      oneDRR: input.oneDRR,
+      firstReadTargetPct: input.firstReadTargetPct,
+      fantasyPointsPerGame: input.fantasyPointsPerGame || 0,
+      dropRate: input.dropRate,
+      routeWinRate: input.routeWinRate,
+      age: input.age,
+      draftCapital: input.draftCapital,
+      explosivePlayRate: input.explosivePlayRate,
+      slotRate: input.slotRate,
+      routeParticipation: input.routeParticipation,
+      teamPassAttemptsPerGame: input.teamPassAttemptsPerGame,
+      wrRoomTargetCompetition: input.wrRoomTargetCompetition,
+      qbStabilityScore: input.qbStabilityScore,
+      contractYearsRemaining: input.contractYearsRemaining || 0,
+      previousSeasons: input.previousSeasons
     };
 
-    // Calculate weighted context score
-    const contextScore = 
-      (usageProfile.score * this.weights.usageProfile) +
-      (efficiency.score * this.weights.efficiency) +
-      (roleSecurity.score * this.weights.roleSecurity) +
-      (growthTrajectory.score * this.weights.growthTrajectory);
-
-    // Determine forecast grade
-    const forecastGrade = this.determineForecastGrade(contextScore, componentScores, riskFactors);
+    // Use core evaluation
+    const result = this.evaluate(playerInput);
     
-    logs.push(`📊 Final context score: ${contextScore.toFixed(1)} (${forecastGrade} forecast)`);
-
+    // Convert to expected WREvaluationResult format
+    const forecastGrade = this.determineForecastGrade(result.contextScore, result.subScores, []);
+    
     return this.createResult(
       input, 
-      contextScore, 
-      componentScores, 
-      forecastTags, 
-      logs, 
+      result.contextScore, 
+      result.subScores, 
+      result.tags, 
+      result.logs, 
       riskFactors, 
       upside, 
       forecastGrade
     );
   }
 
-  /**
-   * Usage Profile: Most predictive component for fantasy success
-   */
-  private evaluateUsageProfile(
-    input: WRPlayerInput,
-    logs: string[],
-    tags: string[],
-    risks: string[],
-    upside: string[]
-  ): { score: number } {
-    let score = 50; // Base score
-    const metrics: string[] = [];
+  private evaluateUsageProfile(player: PlayerInput): { score: number; logs: string[]; tags: string[] } {
+    let score = 0;
+    const logs: string[] = [];
+    const tags: string[] = [];
 
-    // TPRR - Most predictive metric (0.817 correlation)
-    if (input.tpRR >= 0.25) {
-      score += 25;
-      metrics.push(`Elite TPRR (${(input.tpRR * 100).toFixed(1)}%)`);
-      tags.push("Alpha Usage");
-      upside.push("Elite target earning ability");
-    } else if (input.tpRR >= 0.20) {
-      score += 15;
-      metrics.push(`Strong TPRR (${(input.tpRR * 100).toFixed(1)}%)`);
-      tags.push("Strong Usage");
-    } else if (input.tpRR >= 0.15) {
-      score += 5;
-      metrics.push(`Average TPRR (${(input.tpRR * 100).toFixed(1)}%)`);
-    } else {
-      score -= 20;
-      metrics.push(`Low TPRR (${(input.tpRR * 100).toFixed(1)}%)`);
-      risks.push("Low target earning rate");
-      tags.push("Usage Risk");
+    if (player.tpRR > 0.22) { 
+      score += 25; 
+      logs.push('High TPRR'); 
+      tags.push('Alpha Usage'); 
+    }
+    
+    if (player.firstReadTargetPct > 0.25) { 
+      score += 20; 
+      logs.push('Strong First Read %'); 
+    }
+    
+    if (player.routeParticipation > 0.9) { 
+      score += 20; 
+      logs.push('Elite Route Participation'); 
+    }
+    
+    if (player.teamPassAttemptsPerGame > 30) { 
+      score += 15; 
+      logs.push('High Pass Volume'); 
+    }
+    
+    if (player.tpRR < 0.15) { 
+      score -= 20; 
+      logs.push('Low TPRR'); 
+      tags.push('Spike Risk'); 
     }
 
-    // Route Participation - Opportunity foundation
-    if (input.routeParticipation >= 0.90) {
-      score += 15;
-      metrics.push(`Elite route participation (${(input.routeParticipation * 100).toFixed(0)}%)`);
-      upside.push("Always on field");
-    } else if (input.routeParticipation >= 0.80) {
-      score += 8;
-      metrics.push(`Strong route participation (${(input.routeParticipation * 100).toFixed(0)}%)`);
-    } else if (input.routeParticipation < 0.70) {
-      score -= 15;
-      metrics.push(`Limited route participation (${(input.routeParticipation * 100).toFixed(0)}%)`);
-      risks.push("Limited snap share");
-    }
-
-    // First Read Target % - QB trust indicator
-    if (input.firstReadTargetPct >= 0.30) {
-      score += 20;
-      metrics.push(`High first read % (${(input.firstReadTargetPct * 100).toFixed(0)}%)`);
-      tags.push("QB's Favorite");
-      upside.push("Primary read in offense");
-    } else if (input.firstReadTargetPct >= 0.20) {
-      score += 10;
-      metrics.push(`Good first read % (${(input.firstReadTargetPct * 100).toFixed(0)}%)`);
-    } else if (input.firstReadTargetPct < 0.15) {
-      score -= 10;
-      metrics.push(`Low first read % (${(input.firstReadTargetPct * 100).toFixed(0)}%)`);
-      risks.push("Not a primary read");
-    }
-
-    // Air Yard Share - Downfield involvement
-    if (input.airYardShare >= 0.35) {
-      score += 15;
-      metrics.push(`High air yard share (${(input.airYardShare * 100).toFixed(0)}%)`);
-      tags.push("Downfield Threat");
-      upside.push("Big play upside");
-    } else if (input.airYardShare < 0.20) {
-      score -= 5;
-      metrics.push(`Low air yard share (${(input.airYardShare * 100).toFixed(0)}%)`);
-    }
-
-    // Team Pass Volume Context
-    if (input.teamPassAttemptsPerGame >= 36) {
-      score += 10;
-      metrics.push(`High-volume passing offense (${input.teamPassAttemptsPerGame.toFixed(0)} att/gm)`);
-      upside.push("High-volume environment");
-    } else if (input.teamPassAttemptsPerGame < 30) {
-      score -= 10;
-      metrics.push(`Low-volume passing offense (${input.teamPassAttemptsPerGame.toFixed(0)} att/gm)`);
-      risks.push("Limited offensive volume");
-    }
-
-    // WR Room Competition
-    if (input.wrRoomTargetCompetition <= 30) {
-      score += 10;
-      metrics.push(`Low WR room competition`);
-      upside.push("Clear path to targets");
-    } else if (input.wrRoomTargetCompetition >= 70) {
-      score -= 15;
-      metrics.push(`High WR room competition`);
-      risks.push("Target competition concerns");
-      tags.push("Competition Risk");
-    }
-
-    logs.push(`Usage Profile: ${score}/100 - ${metrics.join(", ")}`);
-    return { score: Math.max(0, Math.min(100, score)) };
+    return { score: Math.max(0, Math.min(score, 100)), logs, tags };
   }
 
-  /**
-   * Efficiency: Quality of usage when targeted
-   */
-  private evaluateEfficiency(
-    input: WRPlayerInput,
-    logs: string[],
-    tags: string[],
-    risks: string[],
-    upside: string[]
-  ): { score: number } {
-    let score = 50; // Base score
-    const metrics: string[] = [];
+  private evaluateEfficiency(player: PlayerInput): { score: number; logs: string[]; tags: string[] } {
+    let score = 0;
+    const logs: string[] = [];
+    const tags: string[] = [];
 
-    // YPRR - Elite efficiency threshold
-    if (input.ypRR >= 2.2) {
-      score += 25;
-      metrics.push(`Elite YPRR (${input.ypRR.toFixed(1)})`);
-      tags.push("Efficiency Elite");
-      upside.push("Elite yards per opportunity");
-    } else if (input.ypRR >= 1.8) {
-      score += 15;
-      metrics.push(`Strong YPRR (${input.ypRR.toFixed(1)})`);
-      tags.push("Efficient Producer");
-    } else if (input.ypRR >= 1.5) {
-      score += 5;
-      metrics.push(`Average YPRR (${input.ypRR.toFixed(1)})`);
-    } else {
-      score -= 15;
-      metrics.push(`Poor YPRR (${input.ypRR.toFixed(1)})`);
-      risks.push("Inefficient usage");
-      tags.push("Efficiency Risk");
+    if (player.ypRR > 2.0) { 
+      score += 25; 
+      logs.push('Elite YPRR'); 
+      tags.push('Efficient Weapon'); 
+    }
+    else if (player.ypRR > 1.7) { 
+      score += 15; 
+      logs.push('Strong YPRR'); 
+    }
+    else if (player.ypRR < 1.3) { 
+      score -= 15; 
+      logs.push('Inefficient YPRR'); 
     }
 
-    // First Downs Per Route Run - Chain moving ability
-    if (input.oneDRR >= 0.10) {
-      score += 15;
-      metrics.push(`Elite first down rate (${(input.oneDRR * 100).toFixed(1)}%)`);
-      tags.push("Chain Mover");
-      upside.push("Reliable first down producer");
-    } else if (input.oneDRR >= 0.07) {
-      score += 8;
-      metrics.push(`Good first down rate (${(input.oneDRR * 100).toFixed(1)}%)`);
-    } else if (input.oneDRR < 0.05) {
-      score -= 10;
-      metrics.push(`Poor first down rate (${(input.oneDRR * 100).toFixed(1)}%)`);
-      risks.push("Limited chain-moving ability");
+    if (player.oneDRR > 0.08) { 
+      score += 15; 
+      logs.push('High First Down Rate'); 
+    }
+    
+    if (player.dropRate < 0.05) { 
+      score += 10; 
+      logs.push('Reliable Hands'); 
+    }
+    else if (player.dropRate > 0.08) { 
+      score -= 10; 
+      logs.push('Drop Concerns'); 
     }
 
-    // Route Win Rate - Separation ability
-    if (input.routeWinRate >= 50.0) {
-      score += 15;
-      metrics.push(`Elite route winning (${input.routeWinRate.toFixed(0)}%)`);
-      tags.push("Separation Artist");
-      upside.push("Consistent separation ability");
-    } else if (input.routeWinRate >= 40.0) {
-      score += 8;
-      metrics.push(`Good route winning (${input.routeWinRate.toFixed(0)}%)`);
-    } else if (input.routeWinRate < 35.0) {
-      score -= 10;
-      metrics.push(`Poor route winning (${input.routeWinRate.toFixed(0)}%)`);
-      risks.push("Separation concerns");
+    if (player.routeWinRate > 0.5) { 
+      score += 10; 
+      logs.push('Good Route Win Rate'); 
+    }
+    else if (player.routeWinRate < 0.35) { 
+      score -= 10; 
+      logs.push('Poor Route Win Rate'); 
     }
 
-    // Explosive Play Rate - Big play ability
-    if (input.explosivePlayRate >= 20.0) {
-      score += 15;
-      metrics.push(`Elite explosive rate (${input.explosivePlayRate.toFixed(0)}%)`);
-      tags.push("Explosive Threat");
-      upside.push("Consistent big play ability");
-    } else if (input.explosivePlayRate >= 15.0) {
-      score += 8;
-      metrics.push(`Good explosive rate (${input.explosivePlayRate.toFixed(0)}%)`);
-    } else if (input.explosivePlayRate < 10.0) {
-      score -= 5;
-      metrics.push(`Low explosive rate (${input.explosivePlayRate.toFixed(0)}%)`);
+    if (player.explosivePlayRate > 0.15) { 
+      score += 10; 
+      logs.push('Explosive Playmaker'); 
+      tags.push('Big Play Threat'); 
+    }
+    else if (player.explosivePlayRate < 0.1) { 
+      score -= 10; 
+      logs.push('Low Explosive Plays'); 
     }
 
-    // YAC per Reception - After-catch ability
-    if (input.yacPerReception >= 6.0) {
-      score += 10;
-      metrics.push(`Elite YAC ability (${input.yacPerReception.toFixed(1)})`);
-      tags.push("YAC Monster");
-      upside.push("Elite after-catch ability");
-    } else if (input.yacPerReception >= 4.5) {
-      score += 5;
-      metrics.push(`Good YAC ability (${input.yacPerReception.toFixed(1)})`);
-    }
-
-    // Drop Rate - Reliability concern
-    if (input.dropRate <= 3.0) {
-      score += 10;
-      metrics.push(`Reliable hands (${input.dropRate.toFixed(1)}% drops)`);
-      upside.push("Reliable target");
-    } else if (input.dropRate >= 7.0) {
-      score -= 15;
-      metrics.push(`Drop concerns (${input.dropRate.toFixed(1)}% drops)`);
-      risks.push("Ball security issues");
-      tags.push("Drop Risk");
-    } else if (input.dropRate >= 5.0) {
-      score -= 5;
-      metrics.push(`Average hands (${input.dropRate.toFixed(1)}% drops)`);
-    }
-
-    logs.push(`Efficiency: ${score}/100 - ${metrics.join(", ")}`);
-    return { score: Math.max(0, Math.min(100, score)) };
+    return { score: Math.max(0, Math.min(score, 100)), logs, tags };
   }
 
-  /**
-   * Role Security: Dynasty stability factors
-   */
-  private evaluateRoleSecurity(
-    input: WRPlayerInput,
-    logs: string[],
-    tags: string[],
-    risks: string[],
-    upside: string[]
-  ): { score: number } {
-    let score = 50; // Base score
-    const metrics: string[] = [];
+  private evaluateRoleSecurity(player: PlayerInput): { score: number; logs: string[]; tags: string[] } {
+    let score = 0;
+    const logs: string[] = [];
+    const tags: string[] = [];
 
-    // Draft Capital - Team investment
-    switch (input.draftCapital) {
+    if (player.routeParticipation > 0.85) { 
+      score += 20; 
+      logs.push('Consistent Route Role'); 
+      tags.push('Role Secure'); 
+    }
+    
+    if (player.slotRate > 0.5) { 
+      score += 10; 
+      logs.push('Slot Flexibility'); 
+    }
+
+    if (player.wrRoomTargetCompetition < 1.5) {
+      score += 15;
+      logs.push('Low WR Competition');
+      tags.push('Path to Volume');
+    } else if (player.wrRoomTargetCompetition > 2.0) {
+      score -= 10;
+      logs.push('Crowded WR Room');
+    }
+
+    if (player.qbStabilityScore > 0.7) { 
+      score += 10; 
+      logs.push('Stable QB Environment'); 
+    }
+    else if (player.qbStabilityScore < 0.4) { 
+      score -= 10; 
+      logs.push('Unstable QB Environment'); 
+    }
+
+    if (player.contractYearsRemaining >= 2) { 
+      score += 10; 
+      logs.push('Long-Term Contract'); 
+    }
+
+    return { score: Math.max(0, Math.min(score, 100)), logs, tags };
+  }
+
+  private evaluateGrowthTrajectory(player: PlayerInput): { score: number; logs: string[]; tags: string[] } {
+    let score = 0;
+    const logs: string[] = [];
+    const tags: string[] = [];
+
+    if (player.age < 25) { 
+      score += 20; 
+      logs.push('Young with Upside'); 
+      tags.push('Breakout Candidate'); 
+    }
+    else if (player.age >= 29) { 
+      score -= 15; 
+      logs.push('Age Decline Risk'); 
+    }
+
+    // Draft capital evaluation
+    switch (player.draftCapital) {
       case 'R1':
-        score += 25;
-        metrics.push("Round 1 draft capital");
-        tags.push("High Investment");
-        upside.push("Team committed to development");
+        score += 15;
+        logs.push('Round 1 Pedigree');
+        tags.push('Elite Draft Capital');
         break;
       case 'R2':
-        score += 20;
-        metrics.push("Round 2 draft capital");
-        tags.push("Strong Investment");
+        score += 10;
+        logs.push('Round 2 Investment');
         break;
       case 'R3':
-        score += 10;
-        metrics.push("Day 2 draft capital");
-        break;
-      case 'R4+':
-        score -= 5;
-        metrics.push("Late round draft capital");
+        score += 5;
+        logs.push('Day 2 Pick');
         break;
       case 'UDFA':
-        score -= 15;
-        metrics.push("Undrafted free agent");
-        risks.push("Limited team investment");
-        tags.push("Investment Risk");
+        score -= 10;
+        logs.push('Undrafted Risk');
         break;
     }
 
-    // Age Factor - Dynasty timeline
-    if (input.age <= 23) {
-      score += 20;
-      metrics.push(`Prime dynasty age (${input.age})`);
-      tags.push("Prime Age");
-      upside.push("Long dynasty window");
-    } else if (input.age <= 26) {
-      score += 10;
-      metrics.push(`Good dynasty age (${input.age})`);
-    } else if (input.age <= 29) {
-      score += 0;
-      metrics.push(`Aging but productive (${input.age})`);
-    } else if (input.age >= 30) {
-      score -= 15;
-      metrics.push(`Dynasty age concern (${input.age})`);
-      risks.push("Age-related decline risk");
-      tags.push("Age Risk");
-    }
-
-    // Slot vs Outside Alignment - Role versatility
-    if (input.slotRate >= 70.0) {
-      score += 5;
-      metrics.push(`Primary slot role (${input.slotRate.toFixed(0)}%)`);
-      tags.push("Slot Specialist");
-      upside.push("Slot safety net value");
-    } else if (input.slotRate <= 30.0) {
-      score += 10;
-      metrics.push(`Outside receiver role (${input.slotRate.toFixed(0)}% slot)`);
-      tags.push("Outside Threat");
-      upside.push("Downfield alpha potential");
-    } else {
-      score += 8;
-      metrics.push(`Versatile alignment (${input.slotRate.toFixed(0)}% slot)`);
-      tags.push("Alignment Versatile");
-      upside.push("Scheme flexibility");
-    }
-
-    // Contract Years Remaining
-    if (input.contractYearsRemaining !== undefined) {
-      if (input.contractYearsRemaining >= 3) {
-        score += 10;
-        metrics.push(`Secure contract (${input.contractYearsRemaining} years)`);
-        upside.push("Contract security");
-      } else if (input.contractYearsRemaining <= 1) {
-        score -= 10;
-        metrics.push(`Contract year risk (${input.contractYearsRemaining} year)`);
-        risks.push("Contract uncertainty");
-        tags.push("Contract Risk");
-      }
-    }
-
-    // Injury History
-    if (input.injuryHistory) {
-      switch (input.injuryHistory) {
-        case 'clean':
-          score += 10;
-          metrics.push("Clean injury history");
-          upside.push("Durability track record");
-          break;
-        case 'minor':
-          score += 0;
-          metrics.push("Minor injury history");
-          break;
-        case 'concerning':
-          score -= 10;
-          metrics.push("Concerning injury history");
-          risks.push("Injury pattern concerns");
-          tags.push("Injury Risk");
-          break;
-        case 'major':
-          score -= 20;
-          metrics.push("Major injury history");
-          risks.push("Significant injury risk");
-          tags.push("Major Injury Risk");
-          break;
-      }
-    }
-
-    // Red Zone Role
-    if (input.redZoneTargetShare !== undefined) {
-      if (input.redZoneTargetShare >= 25.0) {
-        score += 10;
-        metrics.push(`Strong RZ role (${input.redZoneTargetShare.toFixed(0)}%)`);
-        tags.push("RZ Threat");
-        upside.push("Red zone touchdown upside");
-      } else if (input.redZoneTargetShare < 10.0) {
-        score -= 5;
-        metrics.push(`Limited RZ role (${input.redZoneTargetShare.toFixed(0)}%)`);
-      }
-    }
-
-    logs.push(`Role Security: ${score}/100 - ${metrics.join(", ")}`);
-    return { score: Math.max(0, Math.min(100, score)) };
-  }
-
-  /**
-   * Growth Trajectory: Forward-looking projections
-   */
-  private evaluateGrowthTrajectory(
-    input: WRPlayerInput,
-    logs: string[],
-    tags: string[],
-    risks: string[],
-    upside: string[]
-  ): { score: number } {
-    let score = 50; // Base score
-    const metrics: string[] = [];
-
-    // Historical Growth Analysis
-    if (input.previousSeasons && input.previousSeasons.length > 0) {
-      const lastSeason = input.previousSeasons[input.previousSeasons.length - 1];
+    // Historical growth if available
+    if (player.previousSeasons && player.previousSeasons.length > 0) {
+      const lastSeason = player.previousSeasons[player.previousSeasons.length - 1];
       
-      // YPRR Growth - Efficiency improvement
-      const yprrGrowth = input.ypRR - lastSeason.ypRR;
-      if (yprrGrowth >= 0.4) {
-        score += 20;
-        metrics.push(`Major YPRR improvement (+${yprrGrowth.toFixed(1)})`);
-        tags.push("Breakout Trajectory");
-        upside.push("Strong efficiency growth");
-      } else if (yprrGrowth >= 0.2) {
-        score += 10;
-        metrics.push(`Good YPRR growth (+${yprrGrowth.toFixed(1)})`);
-        tags.push("Trending Up");
-      } else if (yprrGrowth <= -0.3) {
-        score -= 15;
-        metrics.push(`YPRR decline (${yprrGrowth.toFixed(1)})`);
-        risks.push("Efficiency regression");
-        tags.push("Declining Trend");
-      }
-
-      // TPRR Growth - Usage increase
-      const tprrGrowth = input.tpRR - lastSeason.tpRR;
-      if (tprrGrowth >= 0.05) {
+      const yprrGrowth = player.ypRR - lastSeason.ypRR;
+      if (yprrGrowth > 0.3) {
         score += 15;
-        metrics.push(`Increased target earning (+${(tprrGrowth * 100).toFixed(1)}%)`);
-        upside.push("Growing role in offense");
-      } else if (tprrGrowth <= -0.04) {
-        score -= 10;
-        metrics.push(`Decreased target earning (${(tprrGrowth * 100).toFixed(1)}%)`);
-        risks.push("Shrinking role");
+        logs.push('Big YPRR Growth');
+        tags.push('Breakout Trend');
       }
 
-      // Multi-year trend analysis
-      if (input.previousSeasons.length >= 2) {
-        const twoSeasonsAgo = input.previousSeasons[input.previousSeasons.length - 2];
-        const consistentGrowth = 
-          (input.ypRR > lastSeason.ypRR) && 
-          (lastSeason.ypRR > twoSeasonsAgo.ypRR);
-        
-        if (consistentGrowth) {
-          score += 10;
-          metrics.push("Multi-year growth pattern");
-          tags.push("Consistent Growth");
-          upside.push("Sustained development trajectory");
-        }
-      }
-    } else {
-      score = 50; // Neutral for rookies/no data
-      metrics.push("No historical data (rookie/limited sample)");
-      tags.push("Unknown Trajectory");
-    }
-
-    // QB Stability - Environment factor
-    if (input.qbStabilityScore >= 80) {
-      score += 15;
-      metrics.push(`Elite QB stability (${input.qbStabilityScore})`);
-      upside.push("Stable QB environment");
-    } else if (input.qbStabilityScore >= 60) {
-      score += 8;
-      metrics.push(`Good QB stability (${input.qbStabilityScore})`);
-    } else if (input.qbStabilityScore < 40) {
-      score -= 15;
-      metrics.push(`QB instability (${input.qbStabilityScore})`);
-      risks.push("QB volatility concerns");
-      tags.push("QB Risk");
-    }
-
-    // Offseason Changes Impact
-    if (input.offseasonChanges) {
-      const changes = input.offseasonChanges;
-      
-      if (changes.newQB) {
-        score -= 10;
-        metrics.push("New QB adjustment period");
-        risks.push("QB chemistry development needed");
-        tags.push("QB Transition");
-      }
-      
-      if (changes.newOC) {
-        score -= 5;
-        metrics.push("New offensive coordinator");
-        risks.push("Scheme adjustment period");
-      }
-      
-      if (changes.wrAdditions) {
-        score -= 8;
-        metrics.push("New WR competition added");
-        risks.push("Increased target competition");
-        tags.push("Competition Added");
-      }
-      
-      if (changes.schemeChange) {
-        score -= 5;
-        metrics.push("Offensive scheme changes");
-        risks.push("Role uncertainty in new scheme");
+      const tpRRGrowth = player.tpRR - lastSeason.tpRR;
+      if (tpRRGrowth > 0.04) {
+        score += 10;
+        logs.push('Increased Target Role');
       }
     }
 
-    logs.push(`Growth Trajectory: ${score}/100 - ${metrics.join(", ")}`);
-    return { score: Math.max(0, Math.min(100, score)) };
+    if (player.qbStabilityScore > 0.75) {
+      score += 10;
+      logs.push('Stable QB Environment');
+    } else if (player.qbStabilityScore < 0.4) {
+      score -= 10;
+      logs.push('QB Volatility Risk');
+    }
+
+    return { score: Math.max(0, Math.min(score, 100)), logs, tags };
   }
 
   /**
@@ -806,4 +576,9 @@ export class WREvaluationForecastService {
   }
 }
 
-export const wrEvaluationForecastService = new WREvaluationForecastService();
+// Export singleton instance as default
+export const wrEvaluationService = new WREvaluationService();
+export default wrEvaluationService;
+
+// Backward compatibility export
+export const wrEvaluationForecastService = wrEvaluationService;
