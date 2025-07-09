@@ -48,6 +48,7 @@ import BatchEvaluationTest from "@/pages/BatchEvaluationTest";
 import PrometheusStressTest from "@/pages/PrometheusStressTest";
 import OASISTeamContext from "@/pages/OASISTeamContext";
 import FullPlayerPool from "@/pages/FullPlayerPool";
+import TradeEvaluator from "@/pages/TradeEvaluator";
 import NotFound from "@/pages/not-found";
 import SleeperDatabase from "@/pages/sleeper-database";
 import PrometheusBenchmarks from "@/pages/PrometheusBenchmarks";
@@ -93,6 +94,7 @@ function Router() {
       <Route path="/batch-evaluation-test" component={BatchEvaluationTest} />
       <Route path="/prometheus-stress-test" component={PrometheusStressTest} />
       <Route path="/oasis-team-context" component={OASISTeamContext} />
+      <Route path="/trade-evaluator" component={TradeEvaluator} />
       <Route component={NotFound} />
     </Switch>
   );

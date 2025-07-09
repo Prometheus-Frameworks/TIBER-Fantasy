@@ -1,8 +1,21 @@
 # CHANGELOG
-
+## [v1.5-prep] - 2025-07-09  
+### Documentation  
+- ✅ Added `README.md`, `CHANGELOG.md`, `PROMETHEUS_BUILD_CHAIN.md`  
+- ✅ Documented Prometheus development workflow and chain of command  
+- ✅ Project root now ready for open-source visibility and contributor alignment
 All notable changes to Prometheus will be documented in this file.
 
 ---
+
+## [v1.5] - 2025-07-09  
+### Trade Evaluation System
+- ✅ Built comprehensive trade analysis engine
+- ✅ Multi-factor evaluation: tier values, age penalties, starter bonuses
+- ✅ Confidence scoring and winner determination
+- ✅ Team analysis with strengths/concerns identification
+- ✅ Complete frontend interface at /trade-evaluator
+- ✅ API endpoint: POST /api/evaluate-trade
 
 ## [v1.4] - 2025-07-09  
 ### QB Module

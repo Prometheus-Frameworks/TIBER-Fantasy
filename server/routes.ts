@@ -881,6 +881,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Trade Evaluation API
+  app.post('/api/evaluate-trade', async (req, res) => {
+    try {
+      const { evaluateTradePackage } = await import('./services/trade/evaluateTradePackage');
+      const { teamA, teamB } = req.body;
+
+      if (!Array.isArray(teamA) || !Array.isArray(teamB)) {
+        return res.status(400).json({ error: 'Both teamA and teamB must be arrays.' });
+      }
+
+      const isValidPlayer = (p: any): boolean =>
+        typeof p.name === 'string' &&
+        ['Bench', 'Depth', 'Solid', 'Strong', 'Premium', 'Elite'].includes(p.tier) &&
+        typeof p.value === 'number' &&
+        typeof p.positionRank === 'number' &&
+        typeof p.isStarter === 'boolean';
+
+      if (!teamA.every(isValidPlayer) || !teamB.every(isValidPlayer)) {
+        return res.status(400).json({ error: 'Invalid player object in input.' });
+      }
+
+      const verdict = evaluateTradePackage({ teamA, teamB });
+      console.log('🔄 Trade evaluation completed:', { 
+        winner: verdict.winner, 
+        confidence: verdict.confidence,
+        valueDiff: verdict.valueDifference 
+      });
+
+      return res.json(verdict);
+    } catch (err: any) {
+      console.error('Trade Evaluation Error:', err);
+      return res.status(500).json({ error: 'Internal server error during trade evaluation.' });
+    }
+  });
+
   // Analytics Inventory API
   app.get('/api/analytics/inventory', async (req, res) => {
     try {

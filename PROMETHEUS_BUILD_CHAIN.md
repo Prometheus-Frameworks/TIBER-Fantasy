@@ -56,6 +56,7 @@
 | Module | Status | Version | Notes |
 |--------|--------|---------|-------|
 | BatchFantasyEvaluator (QB) | ✅ Complete | v1.4 | Fully operational with Promethean bonuses |
+| Trade Evaluation System | ✅ Complete | v1.5 | Multi-factor analysis with frontend interface |
 | WR Module | 🚧 In Progress | v0.3 | Needs full testing & trait validation |
 | TE Module | ✅ Complete | v1.0 | Includes TD regression logic |
 | OASIS Context System | ⚙️ Partial | v0.8 | Implemented on QB only |
