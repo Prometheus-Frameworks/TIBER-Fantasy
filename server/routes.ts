@@ -1193,6 +1193,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // WR Evaluation & Forecast Score endpoints
+  app.get('/api/analytics/wr-evaluation-test-cases', async (req, res) => {
+    try {
+      const { wrEvaluationForecastService } = await import('./wrEvaluationForecastScore');
+      
+      console.log('🧪 Running WR Evaluation test cases...');
+      
+      const testResults = wrEvaluationForecastService.runTestCases();
+      
+      res.json({
+        success: true,
+        message: 'WR Evaluation test cases completed',
+        data: {
+          testResults,
+          methodology: wrEvaluationForecastService.getMethodology()
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ WR Evaluation test cases failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'WR Evaluation test cases failed',
+        details: error.message
+      });
+    }
+  });
+
+  app.post('/api/analytics/wr-evaluation-forecast', async (req, res) => {
+    try {
+      const { wrEvaluationForecastService } = await import('./wrEvaluationForecastScore');
+      const { wrInput } = req.body;
+      
+      console.log('📊 WR Evaluation & Forecast Analysis:', wrInput?.playerName, wrInput?.position);
+      
+      if (!wrInput) {
+        return res.status(400).json({
+          success: false,
+          message: "WR input data required",
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      const result = wrEvaluationForecastService.evaluateWR(wrInput);
+      
+      res.json({
+        success: true,
+        message: "WR evaluation completed",
+        data: result,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ WR evaluation failed:', error);
+      res.status(500).json({
+        success: false,
+        message: "WR evaluation failed",
+        error: error.message,
+        details: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // QB Evaluation Logic (v1.1) endpoints
   app.get('/api/analytics/qb-evaluation-methodology', async (req, res) => {
     try {
