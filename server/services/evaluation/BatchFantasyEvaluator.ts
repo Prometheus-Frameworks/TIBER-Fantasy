@@ -1,7 +1,7 @@
 /**
- * Batch Fantasy Evaluator
- * Parallel evaluation system for QB, RB, WR, TE positions using respective evaluation services
- * Prometheus Dynasty Analytics - Multi-position batch processing
+ * Batch Fantasy Evaluator v1.3
+ * Prometheus Dynasty Analytics - Multi-position batch processing with Promethean multiplier logic
+ * Enhanced QB evaluation with dual-threat boost for elite prospects like Allen, Lamar, Daniels
  */
 
 // Core input/output interfaces
@@ -33,17 +33,34 @@ interface BatchResult {
   rejectedPre2024: number;
 }
 
-// Position-specific input types
+// Position-specific input types - Updated for v1.3
 interface QBPlayerInput extends PlayerInput {
   position: 'QB';
-  passingYards: number;
-  passingTDs: number;
-  interceptions: number;
-  rushingYards: number;
-  rushingTDs: number;
-  completionPercentage: number;
-  epaPerPlay?: number;
-  qbr?: number;
+  scrambleRate: number; // 0–1
+  rushYPG: number;
+  yardsPerCarry: number;
+  rushTDRate: number; // 0–1, added for Promethean
+  explosiveRushRate: number; // 0–1
+  explosivePlayCount: number; // Added for Promethean, 20+ yd plays
+  cpoe: number; // -10 to 10
+  adjustedCompletionPct: number; // 0–1
+  deepAccuracyRate: number; // 0–1
+  pressureToSackRate: number; // 0–1
+  tdRate: number; // 0–1, added for Promethean
+  fantasyPointsPerGame: number; // Added for Promethean
+  team: {
+    passBlockGrade: number; // 0–100
+    passBlockWinRate: number; // 0–1
+    pressureRateAllowed: number; // 0–1
+    pressureRateOverExpected: number;
+    wrYPRR: number;
+    wr1DRR: number;
+    yardsPerTarget: number;
+    yacPerReception: number;
+    contestedCatchRate: number; // 0–1
+    routeWinRateRanks: number[]; // 0–100
+    offseasonWRUpgrades: string[];
+  };
 }
 
 interface RBPlayerInput extends PlayerInput {
@@ -82,6 +99,7 @@ interface TEPlayerInput extends PlayerInput {
 }
 
 class BatchFantasyEvaluator {
+  private version = '1.3';
   private qbService: any;
   private rbService: any;
   private wrService: any;
@@ -202,11 +220,14 @@ class BatchFantasyEvaluator {
           
           const result = this.qbService.evaluateQBEnvironment(qbInput);
           
+          // Apply Promethean multiplier for dual-threat QBs
+          const enhancedResult = this.applyPrometheanMultiplier(player as QBPlayerInput, result);
+          
           return {
-            contextScore: result.contextScore,
-            logs: result.logs,
-            tags: result.environmentTags,
-            subScores: result.componentScores,
+            contextScore: enhancedResult.contextScore,
+            logs: enhancedResult.logs,
+            tags: enhancedResult.tags,
+            subScores: enhancedResult.subScores,
             lastEvaluatedSeason: player.season,
             playerName: player.playerName
           };
@@ -278,13 +299,14 @@ class BatchFantasyEvaluator {
       
       results.totalEvaluated++;
 
-      // Count errors and rejections
-      if (evalResult.tags.includes('Error') || evalResult.tags.includes('Evaluation Error')) {
+      // Count errors and rejections - with safety checks
+      const tags = evalResult.tags || [];
+      if (tags.includes('Error') || tags.includes('Evaluation Error')) {
         results.errorCount++;
         continue;
       }
 
-      if (evalResult.tags.includes('Rejected') || evalResult.tags.includes('Pre-2024 Data')) {
+      if (tags.includes('Rejected') || tags.includes('Pre-2024 Data')) {
         results.rejectedPre2024++;
         continue;
       }
@@ -314,6 +336,95 @@ class BatchFantasyEvaluator {
     console.log(`⚠️ Errors: ${results.errorCount}, Rejected: ${results.rejectedPre2024}`);
 
     return results;
+  }
+
+  /**
+   * Apply Promethean multiplier for elite dual-threat QBs
+   * Boosts Allen, Lamar, Daniels above traditional pocket passers
+   */
+  private applyPrometheanMultiplier(qb: QBPlayerInput, result: any): any {
+    const logs = [...(result.logs || [])];
+    const tags = [...(result.environmentTags || [])];
+    let prometheanFlags = 0;
+    let bonus = 0;
+
+    // Flag 1: Elite Rush Profile (30+ rush YPG, 5%+ rush TD rate, 10%+ scramble rate)
+    if (qb.rushYPG > 30 && qb.rushTDRate > 0.05 && qb.scrambleRate > 0.1) {
+      prometheanFlags++;
+      logs.push('Promethean: Elite Rush Profile');
+      tags.push('Elite Rush Profile');
+    }
+
+    // Flag 2: Explosive Creator (15+ explosive plays or high explosive rate + deep accuracy)
+    if (qb.explosivePlayCount > 15 || (qb.explosiveRushRate > 0.1 && qb.deepAccuracyRate > 0.5)) {
+      prometheanFlags++;
+      logs.push('Promethean: Explosive Creator');
+      tags.push('Explosive Creator');
+    }
+
+    // Flag 3: High Fantasy Production (22+ PPG)
+    if (qb.fantasyPointsPerGame > 22) {
+      prometheanFlags++;
+      logs.push('Promethean: Elite Fantasy Production');
+      tags.push('Elite Fantasy Production');
+    }
+
+    // Flag 4: TD Machine (5%+ total TD rate)
+    if (qb.tdRate > 0.05) {
+      prometheanFlags++;
+      logs.push('Promethean: TD Machine');
+      tags.push('TD Machine');
+    }
+
+    // Flag 5: Pressure Warrior (low pressure-to-sack rate with high mobility)
+    if (qb.pressureToSackRate < 0.15 && qb.scrambleRate > 0.12) {
+      prometheanFlags++;
+      logs.push('Promethean: Pressure Warrior');
+      tags.push('Pressure Warrior');
+    }
+
+    // Apply bonus based on flags hit
+    if (prometheanFlags >= 4) {
+      bonus = 15; // Elite tier (Allen, Lamar, Daniels)
+      tags.push('Promethean Elite');
+    } else if (prometheanFlags >= 3) {
+      bonus = 10; // Strong tier  
+      tags.push('Promethean Strong');
+    } else if (prometheanFlags >= 2) {
+      bonus = 5; // Emerging tier
+      tags.push('Promethean Emerging');
+    }
+
+    // Update environment classification if bonus applied
+    let environment = 'Average Environment';
+    const finalScore = result.contextScore + bonus;
+    
+    if (finalScore >= 75) {
+      environment = 'Elite Environment';
+    } else if (finalScore >= 65) {
+      environment = 'Strong Environment';
+    } else if (finalScore >= 55) {
+      environment = 'Average Environment';
+    } else {
+      environment = 'Challenging Environment';
+    }
+
+    // Remove old environment tag and add new one
+    const filteredTags = tags.filter(tag => !tag.includes('Environment'));
+    filteredTags.push(environment);
+
+    logs.push(`QB: ${qb.playerName}`);
+    logs.push(`Promethean Flags Hit: ${prometheanFlags}/5`);
+    logs.push(`Bonus Applied: +${bonus}`);
+    logs.push(`Final Environment: ${environment.replace(' Environment', '').toUpperCase()}`);
+
+    return {
+      contextScore: finalScore,
+      logs,
+      environmentTags: filteredTags,
+      componentScores: result.componentScores,
+      subScores: result.componentScores
+    };
   }
 
   /**

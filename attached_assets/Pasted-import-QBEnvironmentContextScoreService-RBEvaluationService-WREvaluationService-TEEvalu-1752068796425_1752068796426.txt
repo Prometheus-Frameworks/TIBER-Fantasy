@@ -1,0 +1,185 @@
+import {
+  QBEnvironmentContextScoreService,
+  RBEvaluationService,
+  WREvaluationService,
+  TEEvaluationService,
+} from './evaluationModules';
+
+// Position-specific input interfaces
+interface QBPlayerInput {
+  season: number;
+  position: string;
+  playerName: string;
+  scrambleRate: number; // 0–1
+  rushYPG: number;
+  yardsPerCarry: number;
+  rushTDRate: number; // 0–1, added for Promethean
+  explosiveRushRate: number; // 0–1
+  explosivePlayCount: number; // Added for Promethean, 20+ yd plays
+  cpoe: number; // -10 to 10
+  adjustedCompletionPct: number; // 0–1
+  deepAccuracyRate: number; // 0–1
+  pressureToSackRate: number; // 0–1
+  tdRate: number; // 0–1, added for Promethean
+  fantasyPointsPerGame: number; // Added for Promethean
+  team: {
+    passBlockGrade: number; // 0–100
+    passBlockWinRate: number; // 0–1
+    pressureRateAllowed: number; // 0–1
+    pressureRateOverExpected: number;
+    wrYPRR: number;
+    wr1DRR: number;
+    yardsPerTarget: number;
+    yacPerReception: number;
+    contestedCatchRate: number; // 0–1
+    routeWinRateRanks: number[]; // 0–100
+    offseasonWRUpgrades: string[];
+  };
+}
+
+interface RBPlayerInput {
+  season: number;
+  position: string;
+  playerName: string;
+  rushYardsPerGame: number;
+  yardsPerCarry: number;
+  receivingYards: number;
+  targetShare: number;
+  redZoneCarries: number;
+  teamRunPlayRate: number;
+  teamEPARank: number;
+}
+
+interface WRPlayerInput {
+  season: number;
+  position: string;
+  playerName: string;
+  tpRR: number;
+  ypRR: number;
+  oneDRR: number;
+  firstReadTargetPct: number;
+  fantasyPointsPerGame: number;
+  dropRate: number;
+  routeWinRate: number;
+  age: number;
+  draftCapital: 'R1' | 'R2' | 'R3' | 'R4+' | 'UDFA';
+  explosivePlayRate: number;
+  slotRate: number;
+  routeParticipation: number;
+  teamPassAttemptsPerGame: number;
+  wrRoomTargetCompetition: number;
+  qbStabilityScore: number;
+  contractYearsRemaining: number;
+  previousSeasons?: { season: number; ypRR: number; tpRR: number; targetShare: number; firstReadTargetPct: number; fantasyPointsPerGame: number }[];
+}
+
+interface TEPlayerInput {
+  season: number;
+  position: string;
+  playerName: string;
+  tpRR: number;
+  ypRR: number;
+  routeParticipation: number;
+  redZoneTargetShare: number;
+  expectedTDs: number;
+  actualTDs: number;
+  targetShare: number;
+  catchRateOverExpected: number;
+  redZoneTargetConsistency: number;
+  age: number;
+  contractYearsRemaining: number;
+  teamEPARank: number;
+  wrTargetCompetition: number;
+  qbStabilityScore: number;
+  teamPassVolume: number;
+}
+
+type PlayerInput = QBPlayerInput | RBPlayerInput | WRPlayerInput | TEPlayerInput;
+
+interface EvaluationOutput {
+  contextScore: number; // 0–100
+  logs: string[];
+  tags: string[];
+  subScores: Record<string, number>;
+  lastEvaluatedSeason: number;
+  playerName: string;
+}
+
+interface BatchResult {
+  QB: EvaluationOutput[];
+  RB: EvaluationOutput[];
+  WR: EvaluationOutput[];
+  TE: EvaluationOutput[];
+}
+
+class BatchFantasyEvaluator {
+  private version = '1.3';
+  private readonly maxBatchSize = 100;
+  private qbService = new QBEnvironmentContextScoreService();
+  private rbService = new RBEvaluationService();
+  private wrService = new WREvaluationService();
+  private teService = new TEEvaluationService();
+
+  private validateInput(player: PlayerInput): { isValid: boolean; logs: string[] } {
+    const logs: string[] = [];
+    if (!player.playerName) {
+      logs.push('Missing playerName');
+      return { isValid: false, logs };
+    }
+    if (player.season < 2024) {
+      logs.push(`Warning: ${player.playerName} evaluation uses pre-2024 data (season: ${player.season})`);
+      return { isValid: false, logs };
+    }
+    if (!['QB', 'RB', 'WR', 'TE'].includes(player.position.toUpperCase())) {
+      logs.push(`Unsupported position for ${player.playerName}: ${player.position}`);
+      return { isValid: false, logs };
+    }
+    if (player.position.toUpperCase() === 'QB') {
+      if (!('team' in player && player.team && Array.isArray(player.team.routeWinRateRanks))) {
+        logs.push(`Invalid team data for ${player.playerName}`);
+        return { isValid: false, logs };
+      }
+      const qb = player as QBPlayerInput;
+      qb.scrambleRate = Math.max(0, Math.min(1, qb.scrambleRate));
+      qb.adjustedCompletionPct = Math.max(0, Math.min(1, qb.adjustedCompletionPct));
+      qb.deepAccuracyRate = Math.max(0, Math.min(1, qb.deepAccuracyRate));
+      qb.pressureToSackRate = Math.max(0, Math.min(1, qb.pressureToSackRate));
+      qb.rushTDRate = Math.max(0, Math.min(1, qb.rushTDRate || 0));
+      qb.tdRate = Math.max(0, Math.min(1, qb.tdRate || 0));
+      qb.explosiveRushRate = Math.max(0, Math.min(1, qb.explosiveRushRate));
+      qb.cpoe = Math.max(-10, Math.min(10, qb.cpoe || 0));
+      qb.explosivePlayCount = Math.max(0, qb.explosivePlayCount || 0);
+      qb.fantasyPointsPerGame = Math.max(0, qb.fantasyPointsPerGame || 0);
+      qb.team.passBlockWinRate = Math.max(0, Math.min(1, qb.team.passBlockWinRate));
+      qb.team.pressureRateAllowed = Math.max(0, Math.min(1, qb.team.pressureRateAllowed));
+      qb.team.contestedCatchRate = Math.max(0, Math.min(1, qb.team.contestedCatchRate));
+      qb.team.routeWinRateRanks = qb.team.routeWinRateRanks.map(rank => Math.max(0, Math.min(100, rank)));
+      if (qb.team.routeWinRateRanks.length < 1) {
+        qb.team.routeWinRateRanks = [50];
+        logs.push(`Defaulted routeWinRateRanks for ${player.playerName}`);
+      }
+      // Penalty for low mobility, low EPA, and poor pressure handling
+      if (qb.scrambleRate < 0.05 && qb.pressureToSackRate > 0.2 && qb.cpoe < 0) {
+        logs.push(`Penalty: Low mobility, poor pressure handling, low EPA for ${player.playerName}`);
+      }
+    }
+    return { isValid: true, logs };
+  }
+
+  private applyPrometheanMultiplier(qb: QBPlayerInput, result: EvaluationOutput): EvaluationOutput {
+    const logs: string[] = [];
+    const tags: string[] = [];
+    let prometheanFlags = 0;
+
+    // Promethean Tier Flags
+    if (qb.rushYPG > 30 && qb.rushTDRate > 0.05 && qb.scrambleRate > 0.1) {
+      prometheanFlags++;
+      logs.push('Promethean: Elite Rush Profile');
+      tags.push('Elite Rush Profile');
+    }
+    if (qb.explosivePlayCount > 15 || (qb.explosiveRushRate > 0.1 && qb.deepAccuracyRate > 0.5)) {
+      prometheanFlags++;
+      logs.push('Promethean: Explosive Creator');
+      tags.push('Explosive Creator');
+    }
+    if
