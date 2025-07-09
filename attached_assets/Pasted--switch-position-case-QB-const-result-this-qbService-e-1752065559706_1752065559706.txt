@@ -1,0 +1,65 @@
+          switch (position) {
+            case 'QB': {
+              const result = this.qbService.evaluate(player as QBPlayerInput);
+              return { ...result, playerName };
+            }
+            case 'RB': {
+              const result = this.rbService.evaluate(player as RBPlayerInput);
+              return { ...result, playerName };
+            }
+            case 'WR': {
+              const result = this.wrService.evaluate(player as WRPlayerInput);
+              return { ...result, playerName };
+            }
+            case 'TE': {
+              const result = this.teService.evaluate(player as TEPlayerInput);
+              return { ...result, playerName };
+            }
+            default:
+              return {
+                contextScore: 0,
+                logs: [`Unsupported position: ${position}`],
+                tags: ['Error'],
+                subScores: {},
+                lastEvaluatedSeason: 2024,
+                playerName,
+              };
+          }
+        } catch (err) {
+          return {
+            contextScore: 0,
+            logs: [`Error evaluating player: ${(err as Error).message}`],
+            tags: ['Evaluation Error'],
+            subScores: {},
+            lastEvaluatedSeason: 2024,
+            playerName: player.playerName || 'Unknown Player',
+          };
+        }
+      })
+    );
+
+    for (const evalResult of evaluations) {
+      const pos = evalResult.tags.includes('Error') || evalResult.logs.some(l => l.includes('Unsupported')) ? null : evalResult.playerName;
+      const playerType = players.find(p => p.playerName === pos)?.position?.toUpperCase();
+
+      if (playerType && results[playerType as keyof BatchResult]) {
+        results[playerType as keyof BatchResult].push(evalResult);
+      }
+    }
+
+    // Sort all by contextScore + usageProfile tiebreaker if present
+    const sortByScore = (a: EvaluationOutput, b: EvaluationOutput) => {
+      if (b.contextScore !== a.contextScore) return b.contextScore - a.contextScore;
+      return (b.subScores?.usageProfile || 0) - (a.subScores?.usageProfile || 0);
+    };
+
+    results.QB.sort(sortByScore);
+    results.RB.sort(sortByScore);
+    results.WR.sort(sortByScore);
+    results.TE.sort(sortByScore);
+
+    return results;
+  }
+}
+
+export const batchFantasyEvaluator = new BatchFantasyEvaluator();
