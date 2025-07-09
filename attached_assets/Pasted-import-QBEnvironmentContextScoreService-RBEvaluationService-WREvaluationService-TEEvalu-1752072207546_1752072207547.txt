@@ -3,7 +3,7 @@ import {
   RBEvaluationService,
   WREvaluationService,
   TEEvaluationService,
-} from './evaluationModules.js';
+} from './evaluationModules';
 
 interface QBPlayerInput {
   season: number;

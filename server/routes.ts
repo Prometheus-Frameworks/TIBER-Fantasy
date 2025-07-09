@@ -1434,7 +1434,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/analytics/batch-evaluation', async (req, res) => {
     try {
       console.log('🔄 Processing batch fantasy evaluation request...');
-      const { batchFantasyEvaluator } = await import('./services/evaluation/BatchFantasyEvaluator');
+      const BatchFantasyEvaluator = (await import('./services/evaluation/BatchFantasyEvaluator.js')).default;
+      const batchFantasyEvaluator = new BatchFantasyEvaluator();
       
       const { players } = req.body;
       
@@ -1476,11 +1477,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/analytics/batch-evaluation-test', async (req, res) => {
     try {
       console.log('🧪 Running Batch Fantasy Evaluator test...');
-      const { batchFantasyEvaluator } = await import('./services/evaluation/BatchFantasyEvaluator');
+      const BatchFantasyEvaluator = (await import('./services/evaluation/BatchFantasyEvaluator.js')).default;
+      const batchFantasyEvaluator = new BatchFantasyEvaluator();
       
-      const testPlayers = batchFantasyEvaluator.generateTestPlayers();
+      // Since v1.4 doesn't have generateTestPlayers, use QB batch data
+      const { qbBatchInputV13 } = await import('./qbBatchInputV13.js');
+      const testPlayers = qbBatchInputV13;
       const batchResult = await batchFantasyEvaluator.evaluateBatch(testPlayers);
-      const topPlayers = batchFantasyEvaluator.getTopPlayersByPosition(batchResult, 3);
       
       res.json({
         success: true,
@@ -1488,7 +1491,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data: {
           testInput: testPlayers,
           fullResults: batchResult,
-          topPlayersByPosition: topPlayers,
           methodology: {
             description: 'Parallel multi-position fantasy player evaluation system',
             features: [
