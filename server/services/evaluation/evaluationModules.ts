@@ -6,6 +6,35 @@
 // Import actual QB service
 import { QBEnvironmentContextScoreService } from '../../qbEnvironmentContextScore.js';
 
+// Default fallback values for missing QB stats
+const defaultFallbackValues = {
+  scrambleRate: 0.08,
+  rushYPG: 15.0,
+  yardsPerCarry: 4.5,
+  rushTDRate: 0.02,
+  explosiveRushRate: 0.08,
+  explosivePlayCount: 10,
+  cpoe: 0.0,
+  adjustedCompletionPct: 0.65,
+  deepAccuracyRate: 0.35,
+  pressureToSackRate: 0.20,
+  tdRate: 0.045,
+  fantasyPointsPerGame: 15.0,
+  team: {
+    passBlockGrade: 65.0,
+    passBlockWinRate: 0.58,
+    pressureRateAllowed: 0.25,
+    pressureRateOverExpected: 0.0,
+    wrYPRR: 1.6,
+    wr1DRR: 0.18,
+    yardsPerTarget: 8.5,
+    yacPerReception: 4.5,
+    contestedCatchRate: 0.55,
+    routeWinRateRanks: [50, 50, 50, 50],
+    offseasonWRUpgrades: []
+  }
+};
+
 // Import actual TE service  
 import { teEvaluationService } from './teEvaluationService.js';
 
@@ -163,6 +192,103 @@ class TEEvaluationService {
   }
 }
 
+// Create wrapper for QB service to match interface
+class QBEvaluationServiceWrapper {
+  private qbService = new QBEnvironmentContextScoreService();
+  
+  constructor() {}
+  
+  async evaluate({ player }: { player: any }) {
+    const logs: string[] = [];
+    
+    // Apply default fallback values for missing stats
+    const playerWithDefaults = this.applyDefaultFallbacks(player, logs);
+    
+    // Map BatchFantasyEvaluator fields to QBEnvironmentInput
+    const qbInput = {
+      playerName: playerWithDefaults.playerName,
+      position: 'QB',
+      team: playerWithDefaults.team?.name || 'NFL',
+      scrambleRate: playerWithDefaults.scrambleRate * 100, // Convert to percentage
+      rushingYPG: playerWithDefaults.rushYPG,
+      rushingYPC: playerWithDefaults.yardsPerCarry,
+      explosiveRunRate: playerWithDefaults.explosiveRushRate * 100, // Convert to percentage
+      cpoe: playerWithDefaults.cpoe,
+      adjCompletionRate: playerWithDefaults.adjustedCompletionPct * 100, // Convert to percentage
+      deepAccuracy: playerWithDefaults.deepAccuracyRate * 100, // Convert to percentage
+      pffOLineGrade: playerWithDefaults.team?.passBlockGrade || defaultFallbackValues.team.passBlockGrade,
+      pbwr: (playerWithDefaults.team?.passBlockWinRate || defaultFallbackValues.team.passBlockWinRate) * 100,
+      pressureRate: (playerWithDefaults.team?.pressureRateAllowed || defaultFallbackValues.team.pressureRateAllowed) * 100,
+      wrYPRR: playerWithDefaults.team?.wrYPRR || defaultFallbackValues.team.wrYPRR,
+      wr1DRR: (playerWithDefaults.team?.wr1DRR || defaultFallbackValues.team.wr1DRR) * 100,
+      yardsPerTarget: playerWithDefaults.team?.yardsPerTarget || defaultFallbackValues.team.yardsPerTarget,
+      yacPerReception: playerWithDefaults.team?.yacPerReception || defaultFallbackValues.team.yacPerReception,
+      contestedCatchRate: (playerWithDefaults.team?.contestedCatchRate || defaultFallbackValues.team.contestedCatchRate) * 100,
+      routeWinRateAvg: playerWithDefaults.team?.routeWinRateRanks ? 
+        playerWithDefaults.team.routeWinRateRanks.reduce((sum, rank) => sum + rank, 0) / playerWithDefaults.team.routeWinRateRanks.length : 50,
+      offseasonWRUpgrades: playerWithDefaults.team?.offseasonWRUpgrades || []
+    };
+    
+    try {
+      const result = this.qbService.evaluateQBEnvironment(qbInput);
+      
+      return {
+        contextScore: result.contextScore,
+        logs: [...logs, ...result.logs],
+        tags: result.environmentTags,
+        subScores: result.componentScores,
+        lastEvaluatedSeason: player.season || 2024
+      };
+    } catch (error) {
+      logs.push(`Error evaluating ${player.playerName}: ${error.message}`);
+      return {
+        contextScore: 0,
+        logs,
+        tags: [],
+        subScores: {},
+        lastEvaluatedSeason: player.season || 2024
+      };
+    }
+  }
+  
+  private applyDefaultFallbacks(player: any, logs: string[]): any {
+    const playerWithDefaults = { ...player };
+    let fallbacksApplied = 0;
+    
+    // Apply fallbacks for missing numeric values
+    Object.keys(defaultFallbackValues).forEach(key => {
+      if (key === 'team') return; // Handle team separately
+      
+      if (playerWithDefaults[key] === null || playerWithDefaults[key] === undefined) {
+        playerWithDefaults[key] = defaultFallbackValues[key];
+        fallbacksApplied++;
+        logs.push(`Applied fallback for ${key}: ${defaultFallbackValues[key]}`);
+      }
+    });
+    
+    // Apply team fallbacks
+    if (!playerWithDefaults.team) {
+      playerWithDefaults.team = { ...defaultFallbackValues.team };
+      fallbacksApplied++;
+      logs.push('Applied complete team fallback data');
+    } else {
+      Object.keys(defaultFallbackValues.team).forEach(key => {
+        if (playerWithDefaults.team[key] === null || playerWithDefaults.team[key] === undefined) {
+          playerWithDefaults.team[key] = defaultFallbackValues.team[key];
+          fallbacksApplied++;
+          logs.push(`Applied team fallback for ${key}: ${defaultFallbackValues.team[key]}`);
+        }
+      });
+    }
+    
+    if (fallbacksApplied > 0) {
+      logs.push(`Total fallbacks applied: ${fallbacksApplied}`);
+    }
+    
+    return playerWithDefaults;
+  }
+}
+
 // Export all services
-export { QBEnvironmentContextScoreService, RBEvaluationService, WREvaluationService, TEEvaluationService };
+export { QBEvaluationServiceWrapper as QBEnvironmentContextScoreService, RBEvaluationService, WREvaluationService, TEEvaluationService };
 

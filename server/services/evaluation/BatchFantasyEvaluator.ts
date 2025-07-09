@@ -222,27 +222,45 @@ class BatchFantasyEvaluator {
     const tags: string[] = [];
     let prometheanFlags = 0;
 
-    if (qb.rushYPG > 30 && qb.rushTDRate > 0.05 && qb.scrambleRate > 0.1) {
+    // Use safe default values to prevent undefined issues
+    const safeQB = {
+      rushYPG: qb.rushYPG || 0,
+      rushTDRate: qb.rushTDRate || 0,
+      scrambleRate: qb.scrambleRate || 0,
+      explosivePlayCount: qb.explosivePlayCount || 0,
+      explosiveRushRate: qb.explosiveRushRate || 0,
+      deepAccuracyRate: qb.deepAccuracyRate || 0,
+      pressureToSackRate: qb.pressureToSackRate || 0.25,
+      cpoe: qb.cpoe || 0,
+      fantasyPointsPerGame: qb.fantasyPointsPerGame || 0,
+      tdRate: qb.tdRate || 0,
+      team: {
+        wrYPRR: qb.team?.wrYPRR || 1.6,
+        passBlockGrade: qb.team?.passBlockGrade || 65
+      }
+    };
+
+    if (safeQB.rushYPG > 30 && safeQB.rushTDRate > 0.05 && safeQB.scrambleRate > 0.1) {
       prometheanFlags++;
       logs.push('Promethean: Elite Rush Profile');
       tags.push('Elite Rush Profile');
     }
-    if (qb.explosivePlayCount > 15 || (qb.explosiveRushRate > 0.1 && qb.deepAccuracyRate > 0.5)) {
+    if (safeQB.explosivePlayCount > 15 || (safeQB.explosiveRushRate > 0.1 && safeQB.deepAccuracyRate > 0.5)) {
       prometheanFlags++;
       logs.push('Promethean: Explosive Creator');
       tags.push('Explosive Creator');
     }
-    if (qb.pressureToSackRate < 0.15 && qb.cpoe > 0) {
+    if (safeQB.pressureToSackRate < 0.15 && safeQB.cpoe > 0) {
       prometheanFlags++;
       logs.push('Promethean: Pressure Performer');
       tags.push('Pressure Performer');
     }
-    if (qb.fantasyPointsPerGame > 18 && (qb.team.wrYPRR < 1.3 || qb.team.passBlockGrade < 70)) {
+    if (safeQB.fantasyPointsPerGame > 18 && (safeQB.team.wrYPRR < 1.3 || safeQB.team.passBlockGrade < 70)) {
       prometheanFlags++;
       logs.push('Promethean: Team-Agnostic Output');
       tags.push('Team-Agnostic Output');
     }
-    if (qb.tdRate > 0.05 && qb.deepAccuracyRate > 0.45) {
+    if (safeQB.tdRate > 0.05 && safeQB.deepAccuracyRate > 0.45) {
       prometheanFlags++;
       logs.push('Promethean: High-Value Thrower');
       tags.push('High-Value Thrower');
