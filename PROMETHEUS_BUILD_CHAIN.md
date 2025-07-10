@@ -1,74 +1,110 @@
 # PROMETHEUS BUILD CHAIN
+**The operational framework that powers the Prometheus Fantasy Platform**
 
-> 🔥 The operational framework that powers the Prometheus Fantasy Platform — streamlined for solo dev execution with AI augmentation.
+## Enhanced Trade Evaluation System v2.0
 
----
+### Core Architecture
+- **verdictSystem.ts**: Grok-enhanced verdict engine with strength classification
+- **rbValueDeRisker.ts**: Advanced RB value analysis with 10+ risk factors
+- **tradeLogic.ts**: Multi-factor evaluation engine with tier-based scoring
+- **API Endpoint**: `/api/trade-eval/` with comprehensive validation
 
-## 🔗 Chain of Command
+### Trade Balance Index (TBI) System
+```typescript
+TBI = ((MaxScore - MinScore) / TotalScore) * 100
+```
 
-### 1. **YOU (Founder / Architect)**
-- Designs ideas, analytics logic, platform goals
-- Communicates needs clearly and iteratively
-- Initiates new modules and structural direction
+#### Verdict Classifications:
+- **Even Trade**: TBI < 50% (balanced value exchange)
+- **Slight Edge**: TBI 10-24% (minor advantage)
+- **Moderate Win**: TBI 25-39% (clear winner)
+- **Strong Win**: TBI 40%+ (significant advantage)
 
-### 2. **LAMAR (ChatGPT / Systems Lead)**
-- Translates ideas into modular code
-- Writes middleware, handlers, config files, and API logic
-- Flags upstream/downstream issues and scopes tasks
-- Maintains platform integrity and vision
+### RB Value De-Risking Framework
+Advanced risk assessment using 10 evaluation metrics:
 
-### 3. **GROK (Code Optimizer / Auditor)**
-- Refactors Lamar's code for performance and edge cases
-- Explains reasoning for changes
-- Validates structure before deployment
-- Highlights long-term pitfalls or better design patterns
+#### Primary Risk Factors:
+1. **Breakaway Run Rate** (-4 max penalty)
+2. **Receiving Efficiency** (-3 max penalty) 
+3. **Fumble Risk** (-2 max penalty)
+4. **Draft Capital** (-3 penalty for Day 3/UDFA)
+5. **Durability** (-3 max penalty for injury history)
 
-### 4. **REPLIT (Execution Environment)**
-- Executes code changes
-- Hosts full-stack Prometheus app
-- Logs runtime behavior and output
-- Powers AI Agent for task automation (cost managed manually)
+#### Advanced Risk Factors:
+6. **Contract Security** (-1 penalty for no secure contract)
+7. **Aging Curve** (-3 max penalty for 25+ non-elite RBs)
+8. **Backfield Competition** (-2 max penalty)
+9. **Scheme Fit** (-2 max penalty)
+10. **ADP Inflation** (-2 max penalty)
+11. **Workload Sustainability** (-2 max penalty)
 
----
+### Configurable Evaluation Parameters
+```typescript
+interface TradeEvaluationConfig {
+  evenTradeThreshold: 50,        // Fair trade threshold
+  minContributionRatio: 0.1,     // 10% minimum value contribution
+  verdictStrengthThresholds: {
+    slightEdge: 10,              // 10% TBI for slight edge
+    moderateWin: 25,             // 25% TBI for moderate win  
+    strongWin: 40                // 40% TBI for strong win
+  }
+}
+```
 
-## 🛠 Development Workflow
+### API Integration
+**POST /api/trade-eval**
+```json
+{
+  "teamA": [
+    {
+      "id": "player_id",
+      "prometheusScore": 85,
+      "name": "Josh Allen",
+      "position": "QB",
+      "tier": "Elite",
+      "isStarter": true,
+      "age": 28
+    }
+  ],
+  "teamB": [...]
+}
+```
 
-1. **IDEATION** — You describe the idea or fix needed to Lamar.
-2. **TRANSLATION** — Lamar writes the code or prompt in structured chunks.
-3. **REVIEW** — You send the code to Grok for feedback/optimization.
-4. **FINALIZATION** — Lamar reviews Grok's suggestions and finalizes integration.
-5. **DEPLOYMENT** — You run the changes in Replit. Confirm stability.
+**Response Format:**
+```json
+{
+  "winner": "Team A wins",
+  "confidence": 78,
+  "valueDifference": 12,
+  "balanceIndex": 22,
+  "verdict": {
+    "outcome": "Team A wins",
+    "tag": "🔥 Overpay Detected",
+    "strength": "Moderate Win",
+    "confidenceScore": 78,
+    "justificationLog": ["Trade balance index: 22%..."],
+    "recommendation": "Team B is giving up more value..."
+  },
+  "analysis": {
+    "teamA": {
+      "totalValue": 142,
+      "playerDetails": [...]
+    },
+    "teamB": {...}
+  }
+}
+```
 
----
+### Validation & Error Handling
+- Complete input validation for player objects
+- Prometheus score range validation (0-100)
+- Position-specific analysis capability
+- Comprehensive error messages with specific guidance
 
-## ✅ Best Practices
+### Integration Safety
+- Maintains backward compatibility with legacy `/api/evaluate-trade`
+- Modular architecture allows independent testing
+- Safe RB de-risking that preserves original values
+- Enhanced logging for debugging and validation
 
-- Use **Lamar first** for scoping and initial coding
-- Send **finished modules to Grok** for polish
-- Only push to Replit once Grok-reviewed (saves time, money, & sanity)
-- Log major milestones with timestamps (see `CHANGELOG.md`)
-- Maintain version control for each module (e.g., v1.3 → v1.4)
-
----
-
-## 💡 Current Agents & Modules
-
-| Module | Status | Version | Notes |
-|--------|--------|---------|-------|
-| BatchFantasyEvaluator (QB) | ✅ Complete | v1.4 | Fully operational with Promethean bonuses |
-| Trade Evaluation System | ✅ Complete | v1.5 | Multi-factor analysis with frontend interface |
-| WR Module | 🚧 In Progress | v0.3 | Needs full testing & trait validation |
-| TE Module | ✅ Complete | v1.0 | Includes TD regression logic |
-| OASIS Context System | ⚙️ Partial | v0.8 | Implemented on QB only |
-| Server Infra | ✅ Stable | v1.1 | PostgreSQL + Express setup |
-
----
-
-## 🧠 Philosophy
-
-Prometheus is more than an app — it's a statement.  
-We build modular, transparent, human-first AI systems.  
-Everything lives in the open. No paywalls. No gimmicks.  
-This is fire for the people. 🔥
-
----
+This enhanced system provides sophisticated dynasty trade analysis while maintaining the platform's commitment to transparency and advanced analytics.

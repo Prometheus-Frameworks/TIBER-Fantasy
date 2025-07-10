@@ -881,7 +881,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Trade Evaluation API
+  // Enhanced Trade Evaluation API
+  app.use('/api/trade-eval', (await import('./api/trade-eval/index')).default);
+  
+  // Legacy Trade Evaluation API (backwards compatibility)
   app.post('/api/evaluate-trade', async (req, res) => {
     try {
       const { evaluateTradePackage } = await import('./services/trade/evaluateTradePackage');
