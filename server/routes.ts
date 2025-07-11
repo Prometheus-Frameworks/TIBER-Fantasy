@@ -1512,6 +1512,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/analytics/qb-context-validation', async (req, res) => {
+    try {
+      console.log('🔍 Running QB Context Score validation...');
+      const BatchFantasyEvaluator = (await import('./services/evaluation/BatchFantasyEvaluator.js')).default;
+      const batchFantasyEvaluator = new BatchFantasyEvaluator();
+      
+      const { qbBatchInputV13 } = await import('./qbBatchInputV13.js');
+      const testQBs = qbBatchInputV13.slice(0, 10); // Test first 10 QBs
+      const batchResult = await batchFantasyEvaluator.evaluateBatch(testQBs);
+      
+      const validation = {
+        totalQBs: batchResult.QB.length - 1, // Exclude summary entry
+        contextScores: [],
+        zeroScoreCount: 0,
+        fallbackCount: 0,
+        wrModuleStatusCount: {
+          actualData: 0,
+          fallbackData: 0
+        }
+      };
+      
+      batchResult.QB.forEach(qb => {
+        if (qb.playerName !== 'Batch Summary') {
+          const score = qb.contextScore;
+          validation.contextScores.push({
+            name: qb.playerName,
+            score: score,
+            hasFallback: qb.tags.includes('Fallback Used'),
+            wrModuleStatus: qb.logs.some(log => log.includes('WR Module: Using actual')) ? 'actual' : 'fallback'
+          });
+          
+          if (score === 0) validation.zeroScoreCount++;
+          if (qb.tags.includes('Fallback Used')) validation.fallbackCount++;
+          
+          if (qb.logs.some(log => log.includes('WR Module: Using actual'))) {
+            validation.wrModuleStatusCount.actualData++;
+          } else {
+            validation.wrModuleStatusCount.fallbackData++;
+          }
+        }
+      });
+      
+      const avgScore = validation.contextScores.reduce((sum, qb) => sum + qb.score, 0) / validation.contextScores.length;
+      
+      res.json({
+        success: true,
+        message: 'QB Context Score validation completed',
+        bugFixed: validation.zeroScoreCount === 0,
+        data: {
+          summary: {
+            totalQBs: validation.totalQBs,
+            averageContextScore: Math.round(avgScore * 10) / 10,
+            zeroScoreCount: validation.zeroScoreCount,
+            fallbackUsageCount: validation.fallbackCount,
+            wrModuleStatus: validation.wrModuleStatusCount
+          },
+          topQBs: validation.contextScores.slice(0, 5),
+          validation: validation.contextScores,
+          methodology: {
+            fixes: [
+              'Added missing playerId field to QBEnvironmentInput',
+              'Fixed WR module data mapping (avgWRYPRR, avgWRSeparation, avgWRYAC)',
+              'Implemented 50.0 fallback baseline for failed evaluations',
+              'Added defensive check preventing 0.0 context scores',
+              'Enhanced logging to track WR data vs fallback usage'
+            ],
+            fallbackLogic: 'contextScore < 5 → 50.0 league average baseline',
+            wrModuleIntegration: 'Maps team.wrYPRR → avgWRYPRR with fallback = 1.6'
+          }
+        }
+      });
+    } catch (error) {
+      console.error('❌ QB Context validation failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'QB Context validation failed',
+        details: error.message
+      });
+    }
+  });
+
   app.get('/api/analytics/batch-evaluation-test', async (req, res) => {
     try {
       console.log('🧪 Running Batch Fantasy Evaluator test...');

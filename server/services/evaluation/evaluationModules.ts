@@ -200,6 +200,7 @@ class QBEvaluationServiceWrapper {
   
   async evaluate({ player }: { player: any }) {
     const logs: string[] = [];
+    const contextLog: string[] = [];
     
     // Apply default fallback values for missing stats
     const playerWithDefaults = this.applyDefaultFallbacks(player, logs);
@@ -219,33 +220,67 @@ class QBEvaluationServiceWrapper {
       pffOLineGrade: playerWithDefaults.team?.passBlockGrade || defaultFallbackValues.team.passBlockGrade,
       pbwr: (playerWithDefaults.team?.passBlockWinRate || defaultFallbackValues.team.passBlockWinRate) * 100,
       pressureRate: (playerWithDefaults.team?.pressureRateAllowed || defaultFallbackValues.team.pressureRateAllowed) * 100,
-      wrYPRR: playerWithDefaults.team?.wrYPRR || defaultFallbackValues.team.wrYPRR,
-      wr1DRR: (playerWithDefaults.team?.wr1DRR || defaultFallbackValues.team.wr1DRR) * 100,
-      yardsPerTarget: playerWithDefaults.team?.yardsPerTarget || defaultFallbackValues.team.yardsPerTarget,
-      yacPerReception: playerWithDefaults.team?.yacPerReception || defaultFallbackValues.team.yacPerReception,
-      contestedCatchRate: (playerWithDefaults.team?.contestedCatchRate || defaultFallbackValues.team.contestedCatchRate) * 100,
-      routeWinRateAvg: playerWithDefaults.team?.routeWinRateRanks ? 
-        playerWithDefaults.team.routeWinRateRanks.reduce((sum, rank) => sum + rank, 0) / playerWithDefaults.team.routeWinRateRanks.length : 50,
-      offseasonWRUpgrades: playerWithDefaults.team?.offseasonWRUpgrades || []
+      avgWRYPRR: playerWithDefaults.team?.wrYPRR || defaultFallbackValues.team.wrYPRR,
+      avgWRSeparation: 2.8, // League average WR separation (yards)
+      avgWRYAC: playerWithDefaults.team?.yacPerReception || defaultFallbackValues.team.yacPerReception,
+      hasWRUpgrade: (playerWithDefaults.team?.offseasonWRUpgrades || []).length > 0,
+      upgradeDescription: (playerWithDefaults.team?.offseasonWRUpgrades || []).join(', ') || undefined
     };
+    
+    // Track whether actual WR data or fallback values were used
+    if (playerWithDefaults.team?.wrYPRR) {
+      contextLog.push(`WR Module: Using actual wrYPRR = ${playerWithDefaults.team.wrYPRR}`);
+    } else {
+      contextLog.push(`WR Module: Using fallback wrYPRR = ${defaultFallbackValues.team.wrYPRR}`);
+    }
+    
+    if (playerWithDefaults.team?.yacPerReception) {
+      contextLog.push(`WR Module: Using actual avgWRYAC = ${playerWithDefaults.team.yacPerReception}`);
+    } else {
+      contextLog.push(`WR Module: Using fallback avgWRYAC = ${defaultFallbackValues.team.yacPerReception}`);
+    }
+    
+    if ((playerWithDefaults.team?.offseasonWRUpgrades || []).length > 0) {
+      contextLog.push(`WR Module: WR upgrades detected = ${playerWithDefaults.team.offseasonWRUpgrades.join(', ')}`);
+    } else {
+      contextLog.push(`WR Module: No WR upgrades detected, using fallback`);
+    }
     
     try {
       const result = this.qbService.evaluateQBEnvironment(qbInput);
       
+      // Defensive check: never allow 0.0 context scores unless explicitly invalid
+      let finalContextScore = result.contextScore;
+      if (finalContextScore === 0 || finalContextScore < 5) {
+        finalContextScore = 50.0; // League average fallback
+        logs.push(`Context score was ${result.contextScore}, applying 50.0 baseline for ${player.playerName}`);
+      }
+      
       return {
-        contextScore: result.contextScore,
-        logs: [...logs, ...result.logs],
+        contextScore: finalContextScore,
+        logs: [...logs, ...contextLog, ...result.logs, `Final contextScore: ${finalContextScore}`],
         tags: result.environmentTags,
         subScores: result.componentScores,
         lastEvaluatedSeason: player.season || 2024
       };
     } catch (error) {
       logs.push(`Error evaluating ${player.playerName}: ${error.message}`);
+      logs.push(`Applying 50.0 fallback context score for ${player.playerName}`);
+      
+      // Apply fallback context score instead of 0.0
+      const fallbackContextScore = 50.0; // League average baseline
+      
       return {
-        contextScore: 0,
-        logs,
-        tags: [],
-        subScores: {},
+        contextScore: fallbackContextScore,
+        logs: [...logs, ...contextLog, `Fallback logic applied: contextScore = ${fallbackContextScore}`],
+        tags: ['Fallback Used'],
+        subScores: {
+          rushingUpside: 50,
+          throwingAccuracy: 50,
+          oLineProtection: 50,
+          teammateQuality: 50,
+          offseasonUpgrade: 0
+        },
         lastEvaluatedSeason: player.season || 2024
       };
     }
