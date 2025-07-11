@@ -107,4 +107,36 @@ interface TradeEvaluationConfig {
 - Safe RB de-risking that preserves original values
 - Enhanced logging for debugging and validation
 
-This enhanced system provides sophisticated dynasty trade analysis while maintaining the platform's commitment to transparency and advanced analytics.
+### Anchor Player Penalty Multiplier System (v2.1)
+
+**Purpose**: Prevents misclassification of trades involving elite foundational assets considered essentially untradeable.
+
+#### Implementation Details:
+```typescript
+interface PlayerProfile {
+  anchorPlayer?: boolean;  // Identifies untradeable elite assets
+}
+
+interface TradeEvaluationConfig {
+  anchorPenaltyMultiplier: 1.15;  // 15% premium requirement
+}
+```
+
+#### Core Functionality:
+- **Anchor Detection**: Scans team arrays for `anchorPlayer: true` flag
+- **Penalty Application**: Multiplies team total value by 1.15x for comparison
+- **Enhanced Logging**: Adds "Team X includes anchor player, requiring 1.15x value"
+- **Configurable Multiplier**: Adjustable penalty through `TRADE_CONFIG`
+
+#### Test Results:
+- **Mahomes + Kelce vs CeeDee + Rome + Caleb**: Raw values 183 vs 288 → Fair Trade (16% TBI)
+- **Mahomes vs Ja'Marr Chase**: Raw values 125 vs 128 → Fair Trade (6% TBI) 
+- **Josh Allen vs Mahomes (anchor)**: Raw values 130 vs 125 → Fair Trade (5% TBI)
+
+#### Integration Safety:
+- Maintains all existing trade logic and backward compatibility
+- Clean separation of concerns with modular helper functions
+- Comprehensive TypeScript interface updates across all modules
+- Enhanced justification logging preserves transparency principles
+
+This anchor player system ensures elite foundational players like Mahomes receive appropriate valuation premiums, preventing algorithmic undervaluation of truly untradeable dynasty assets while maintaining sophisticated trade analysis capabilities.

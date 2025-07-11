@@ -1,3 +1,8 @@
+interface PlayerProfile {
+  anchorPlayer?: boolean;
+  [key: string]: any;
+}
+
 interface TradeEvaluationConfig {
   evenTradeThreshold: number;
   minContributionRatio: number;
@@ -6,6 +11,7 @@ interface TradeEvaluationConfig {
     moderateWin: number;
     strongWin: number;
   };
+  anchorPenaltyMultiplier: number; // New
 }
 
 interface TradeVerdict {
@@ -26,6 +32,7 @@ const TRADE_CONFIG: TradeEvaluationConfig = {
     moderateWin: 25,
     strongWin: 40,
   },
+  anchorPenaltyMultiplier: 1.15,
 };
 
 const calculateTradeBalanceIndex = (teamAScore: number, teamBScore: number): number => {
@@ -66,14 +73,54 @@ const calculateConfidenceScore = (balanceIndex: number): number => {
   return Math.min(balanceIndex * 2, 100);
 };
 
+// New helper function for anchor player penalty
+const applyAnchorPenalty = (
+  teamAScore: number,
+  teamBScore: number,
+  teamAHasAnchor: boolean,
+  teamBHasAnchor: boolean,
+  config: TradeEvaluationConfig
+): { adjustedTeamAScore: number; adjustedTeamBScore: number; anchorLog: string[] } => {
+  let adjustedTeamAScore = teamAScore;
+  let adjustedTeamBScore = teamBScore;
+  const anchorLog: string[] = [];
+
+  if (teamAHasAnchor) {
+    adjustedTeamAScore *= config.anchorPenaltyMultiplier;
+    anchorLog.push(`Team A includes anchor player, requiring ${config.anchorPenaltyMultiplier}x value`);
+  }
+  if (teamBHasAnchor) {
+    adjustedTeamBScore *= config.anchorPenaltyMultiplier;
+    anchorLog.push(`Team B includes anchor player, requiring ${config.anchorPenaltyMultiplier}x value`);
+  }
+
+  return { adjustedTeamAScore, adjustedTeamBScore, anchorLog };
+};
+
 const determineTradeVerdict = (
+  teamA: PlayerProfile[],
+  teamB: PlayerProfile[],
   teamAScore: number,
   teamBScore: number,
   config: TradeEvaluationConfig = TRADE_CONFIG
 ): TradeVerdict => {
-  const balanceIndex = calculateTradeBalanceIndex(teamAScore, teamBScore);
-  const { isLopsided, lowContributionTeam, contributionPercent } = checkLopsidedTrade(teamAScore, teamBScore, config);
-  const justificationLog: string[] = [];
+  // Check for anchor players
+  const teamAHasAnchor = teamA.some(player => player.anchorPlayer);
+  const teamBHasAnchor = teamB.some(player => player.anchorPlayer);
+
+  // Apply anchor penalty if applicable
+  const { adjustedTeamAScore, adjustedTeamBScore, anchorLog } = applyAnchorPenalty(
+    teamAScore,
+    teamBScore,
+    teamAHasAnchor,
+    teamBHasAnchor,
+    config
+  );
+
+  // Use adjusted scores for calculations
+  const balanceIndex = calculateTradeBalanceIndex(adjustedTeamAScore, adjustedTeamBScore);
+  const { isLopsided, lowContributionTeam, contributionPercent } = checkLopsidedTrade(adjustedTeamAScore, adjustedTeamBScore, config);
+  const justificationLog: string[] = [...anchorLog];
   const verdictStrength = determineVerdictStrength(balanceIndex, config);
   const confidenceScore = calculateConfidenceScore(balanceIndex);
 
@@ -105,8 +152,8 @@ const determineTradeVerdict = (
     };
   }
 
-  const winningTeam = teamAScore > teamBScore ? 'Team A' : 'Team B';
-  const losingTeam = teamAScore > teamBScore ? 'Team B' : 'Team A';
+  const winningTeam = adjustedTeamAScore > adjustedTeamBScore ? 'Team A' : 'Team B';
+  const losingTeam = adjustedTeamAScore > adjustedTeamBScore ? 'Team B' : 'Team A';
   justificationLog.push(`Trade balance index: ${balanceIndex}% (above fair threshold)`);
   justificationLog.push(`Outcome classified as ${verdictStrength} for ${winningTeam}`);
   return {
@@ -119,4 +166,4 @@ const determineTradeVerdict = (
   };
 };
 
-export { TradeVerdict, TradeEvaluationConfig, determineTradeVerdict, calculateTradeBalanceIndex, TRADE_CONFIG };
+export { TradeVerdict, TradeEvaluationConfig, PlayerProfile, determineTradeVerdict, calculateTradeBalanceIndex, TRADE_CONFIG };

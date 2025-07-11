@@ -1,5 +1,5 @@
-import { determineTradeVerdict, TradeVerdict, calculateTradeBalanceIndex } from './verdictSystem';
-import { applyRBValueDeRisker, PlayerProfile } from './rbValueDeRisker';
+import { determineTradeVerdict, TradeVerdict, calculateTradeBalanceIndex, PlayerProfile } from './verdictSystem';
+import { applyRBValueDeRisker, PlayerProfile as RBPlayerProfile } from './rbValueDeRisker';
 
 interface TradePlayer {
   id: string;
@@ -9,6 +9,7 @@ interface TradePlayer {
   tier?: string;
   isStarter?: boolean;
   age?: number;
+  anchorPlayer?: boolean; // New
 }
 
 interface TradeInput {
@@ -65,8 +66,8 @@ function applyRBDeRiskingToPlayer(player: TradePlayer): { adjustedValue: number;
     return { adjustedValue: player.prometheusScore, adjustments: [] };
   }
 
-  // Convert TradePlayer to PlayerProfile for RB de-risking
-  const rbProfile: PlayerProfile = {
+  // Convert TradePlayer to RBPlayerProfile for RB de-risking
+  const rbProfile: RBPlayerProfile = {
     age: player.age,
     // Note: For now, we'll apply basic age-based de-risking
     // In a full implementation, these would come from the database
@@ -224,7 +225,17 @@ export function evaluateTradePackage(tradeInput: TradeInput): TradeEvaluationRes
   const teamAAnalysis = calculateTeamValue(tradeInput.teamA);
   const teamBAnalysis = calculateTeamValue(tradeInput.teamB);
   
-  const verdict = determineTradeVerdict(teamAAnalysis.totalValue, teamBAnalysis.totalValue);
+  // Convert TradePlayer arrays to PlayerProfile arrays for anchor player detection
+  const teamAProfiles: PlayerProfile[] = tradeInput.teamA.map(player => ({ 
+    ...player, 
+    anchorPlayer: player.anchorPlayer 
+  }));
+  const teamBProfiles: PlayerProfile[] = tradeInput.teamB.map(player => ({ 
+    ...player, 
+    anchorPlayer: player.anchorPlayer 
+  }));
+  
+  const verdict = determineTradeVerdict(teamAProfiles, teamBProfiles, teamAAnalysis.totalValue, teamBAnalysis.totalValue);
   const balanceIndex = calculateTradeBalanceIndex(teamAAnalysis.totalValue, teamBAnalysis.totalValue);
   
   const recommendations = generateRecommendations(teamAAnalysis, teamBAnalysis, verdict);
