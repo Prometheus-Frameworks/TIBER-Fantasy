@@ -27,7 +27,7 @@ export class PrometheusAlgorithm {
     const age = this.calculateAgeScore(player);
     const stability = this.calculateStabilityScore(player);
     
-    // CORRECTED Jake Maraia weighting: Production (40%), Opportunity (35%), Age (20%), Stability (15%)
+    // Proprietary weighting: Production (40%), Opportunity (35%), Age (20%), Stability (15%)
     let totalScore = (production * 0.40) + (opportunity * 0.35) + (age * 0.20) + (stability * 0.15);
     
     // Apply superflex premium: +10% for QBs (as specified)
@@ -35,7 +35,7 @@ export class PrometheusAlgorithm {
       totalScore *= 1.10; // +10% superflex premium for all QBs
     }
     
-    // Restrictive scoring caps to match Jake Maraia consensus
+    // Restrictive scoring caps to match expert consensus
     totalScore = this.applyRestrictiveScoring(player, totalScore);
     
     // Calculate confidence based on data completeness
@@ -185,7 +185,7 @@ export class PrometheusAlgorithm {
    * Apply restrictive scoring caps and deflation
    */
   private applyRestrictiveScoring(player: any, score: number): number {
-    // Restrictive scoring caps to match Jake Maraia consensus
+    // Restrictive scoring caps to match expert consensus
     if (player.name === 'Ja\'Marr Chase') return Math.min(score, 100);
     if (player.name === 'Lamar Jackson') return Math.min(score, 98);
     if (player.name === 'Josh Allen') return Math.min(score, 97);

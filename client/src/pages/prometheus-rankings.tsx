@@ -128,7 +128,7 @@ export default function PrometheusRankings() {
           <h1 className="text-3xl font-bold">Prometheus Dynasty Rankings</h1>
         </div>
         <p className="text-lg text-gray-600 mb-4">
-          Elite dynasty analytics using current 2024 NFL data. Rankings inspired by Jake Maraia's methodology with proprietary weighting system.
+          Elite dynasty analytics using current 2024 NFL data. Rankings powered by proprietary weighting system and advanced statistical analysis.
         </p>
         
         {/* Methodology Card */}

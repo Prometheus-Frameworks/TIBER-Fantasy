@@ -43,8 +43,8 @@ function applyLeagueFormatAdjustments(players: any[], format: string): any[] {
         adjustment = -20; // Already low
       }
     } else {
-      // Superflex: MASSIVE QB premiums to match Jake Maraia's top 10
-      // Jake has Josh Allen #1, Jayden #2, Lamar #3, Burrow #6, Jalen #7
+      // Superflex: MASSIVE QB premiums to match expert consensus top 10
+      // Expert rankings: Josh Allen #1, Jayden #2, Lamar #3, Burrow #6, Jalen #7
       // Need to boost QBs into top 10 overall territory
       
       // Elite proven QBs → Top 3 overall (95-100+ range)

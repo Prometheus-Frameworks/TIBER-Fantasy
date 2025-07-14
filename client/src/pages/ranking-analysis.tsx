@@ -12,8 +12,8 @@ interface AnalysisInsight {
 }
 
 export default function RankingAnalysis() {
-  // Manual analysis based on Jake Maraia's top 25 WR rankings
-  const jakeMaraiaInsights = {
+  // Manual analysis based on expert consensus top 25 WR rankings
+  const expertConsensusInsights = {
     primaryFactors: [
       {
         factor: "Youth Premium",
@@ -65,13 +65,13 @@ export default function RankingAnalysis() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Jake Maraia Dynasty Methodology Analysis</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Expert Consensus Dynasty Methodology Analysis</h1>
         <p className="text-gray-600">Reverse engineering expert dynasty valuations</p>
       </div>
 
       {/* Primary Factors */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {jakeMaraiaInsights.primaryFactors.map((factor, index) => (
+        {expertConsensusInsights.primaryFactors.map((factor, index) => (
           <Card key={index}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -110,7 +110,7 @@ export default function RankingAnalysis() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {jakeMaraiaInsights.keyFindings.map((finding, index) => (
+            {expertConsensusInsights.keyFindings.map((finding, index) => (
               <div key={index} className="flex items-start gap-3">
                 <Badge className="mt-1">{index + 1}</Badge>
                 <p className="text-gray-700">{finding}</p>
@@ -127,7 +127,7 @@ export default function RankingAnalysis() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {jakeMaraiaInsights.surprisingRankings.map((ranking, index) => (
+            {expertConsensusInsights.surprisingRankings.map((ranking, index) => (
               <div key={index} className="p-4 border rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-medium">{ranking.player}</h4>
@@ -143,7 +143,7 @@ export default function RankingAnalysis() {
       {/* Methodology Summary */}
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle>Jake Maraia's Dynasty Formula (Estimated)</CardTitle>
+          <CardTitle>Dynasty Evaluation Formula (Expert Analysis)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

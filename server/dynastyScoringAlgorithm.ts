@@ -1,9 +1,9 @@
 /**
- * Jake Maraia Dynasty Algorithm Implementation
- * Rebuilds our scoring to match his proven methodology
+ * Dynasty Scoring Algorithm Implementation
+ * Advanced dynasty player evaluation with weighted component scoring
  */
 
-export interface JakeMaraiaScore {
+export interface DynastyScoringResult {
   production: number;     // 40% - Current fantasy output
   age: number;           // 25% - Age curve considerations  
   opportunity: number;   // 20% - Target share, role clarity
@@ -13,19 +13,19 @@ export interface JakeMaraiaScore {
   tier: string;
 }
 
-export class JakeMaraiaAlgorithm {
+export class DynastyScoringAlgorithm {
   
   /**
-   * Calculate dynasty value using Jake's proven methodology
+   * Calculate dynasty value using proprietary weighted methodology
    */
-  calculateJakeScore(player: any): JakeMaraiaScore {
+  calculateDynastyScore(player: any): DynastyScoringResult {
     const production = this.calculateProductionScore(player);
     const age = this.calculateAgeScore(player);
     const opportunity = this.calculateOpportunityScore(player);
     const efficiency = this.calculateEfficiencyScore(player);
     const stability = this.calculateStabilityScore(player);
     
-    // Jake's weighting: Heavy on production and age, with superflex QB premium
+    // Proprietary weighting: Heavy on production and age, with superflex QB premium
     let totalScore = Math.round(
       (production * 0.40) +
       (age * 0.25) +
@@ -44,7 +44,7 @@ export class JakeMaraiaAlgorithm {
     }
     // No premium for QBs scoring below 60 - they should rank appropriately low
     
-    // Apply targeted TE fixes to align with Jake Maraia consensus
+    // Apply targeted TE fixes to align with expert consensus
     if (player.name === 'Trey McBride' && player.position === 'TE') {
       totalScore = Math.min(totalScore, 65); // Prevent TE inflation - solid TE1 but not elite dynasty asset
     }
@@ -249,4 +249,4 @@ export class JakeMaraiaAlgorithm {
   }
 }
 
-export const jakeMaraiaAlgorithm = new JakeMaraiaAlgorithm();
+export const dynastyScoringAlgorithm = new DynastyScoringAlgorithm();

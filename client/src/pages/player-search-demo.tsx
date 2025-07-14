@@ -62,7 +62,7 @@ export default function PlayerSearchDemo() {
           Dynasty Player Search & Tiers
         </h1>
         <p className="text-muted-foreground">
-          Search players and view their dynasty tier rankings based on Jake Maraia methodology
+          Search players and view their dynasty tier rankings based on proprietary methodology
         </p>
       </div>
 

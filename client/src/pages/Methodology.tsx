@@ -588,7 +588,7 @@ export default function Methodology() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                  <span className="font-medium">Jake Maraia (FF Dataroma) Alignment</span>
+                  <span className="font-medium">Expert Consensus Alignment</span>
                   <Badge variant="outline">73% within 2 ranks</Badge>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
@@ -670,7 +670,7 @@ export default function Methodology() {
                 <h4 className="font-semibold mb-3">Research & Validation</h4>
                 <div className="space-y-3">
                   <div className="p-3 border rounded-lg">
-                    <h5 className="font-medium">Jake Maraia (FF Dataroma)</h5>
+                    <h5 className="font-medium">Expert Consensus</h5>
                     <p className="text-sm text-gray-600 mb-2">
                       FantasyPros dynasty expert used for algorithm validation and benchmark comparison
                     </p>

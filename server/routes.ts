@@ -364,18 +364,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enhance players with mapping data
       let enhancedPlayers = await rankingEnhancement.enhancePlayerRankings(playersToEnhance);
       
-      // Apply Jake Maraia's authentic dynasty algorithm - OVERRIDE all database values
-      console.log('🔧 Applying Jake Maraia dynasty methodology (OVERRIDING database values)...');
-      const { jakeMaraiaAlgorithm } = await import('./jakeMaraiaAlgorithm');
+      // Apply proprietary dynasty algorithm - OVERRIDE all database values
+      console.log('🔧 Applying dynasty scoring methodology (OVERRIDING database values)...');
+      const { dynastyScoringAlgorithm } = await import('./dynastyScoringAlgorithm');
       
       enhancedPlayers = enhancedPlayers.map(player => {
-        const jakeScore = jakeMaraiaAlgorithm.calculateJakeScore(player);
-        console.log(`🔧 ${player.name}: Database=${player.dynastyValue} → Algorithm=${jakeScore.totalScore}`);
+        const dynastyScore = dynastyScoringAlgorithm.calculateDynastyScore(player);
+        console.log(`🔧 ${player.name}: Database=${player.dynastyValue} → Algorithm=${dynastyScore.totalScore}`);
         return {
           ...player,
-          dynastyValue: jakeScore.totalScore,  // OVERRIDE database value
-          dynastyTier: jakeScore.tier,
-          jakeMaraiaScore: jakeScore
+          dynastyValue: dynastyScore.totalScore,  // OVERRIDE database value
+          dynastyTier: dynastyScore.tier,
+          dynastyScoringResult: dynastyScore
         };
       });
       
@@ -418,7 +418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // NEW: Corrected Jake Maraia Algorithm endpoint
+  // NEW: Enhanced Dynasty Scoring Algorithm endpoint
   app.get('/api/rankings/corrected', async (req, res) => {
     try {
       const { limit = 50, position } = req.query;
@@ -437,17 +437,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get current enhanced rankings
       const { getAllDynastyPlayers } = await import('./expandedDynastyDatabase');
-      const { jakeMaraiaAlgorithm } = await import('./jakeMaraiaAlgorithm');
+      const { dynastyScoringAlgorithm } = await import('./dynastyScoringAlgorithm');
       
       let players = getAllDynastyPlayers();
       
-      // Apply Jake Maraia algorithm to all players
+      // Apply dynasty scoring algorithm to all players
       const rankedPlayers = players.map(player => {
-        const jakeScore = jakeMaraiaAlgorithm.calculateJakeScore(player);
+        const dynastyScore = dynastyScoringAlgorithm.calculateDynastyScore(player);
         return {
           ...player,
-          dynastyValue: jakeScore.totalScore,
-          dynastyTier: jakeScore.tier
+          dynastyValue: dynastyScore.totalScore,
+          dynastyTier: dynastyScore.tier
         };
       });
       
@@ -464,14 +464,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         position: player.position,
         dynastyValue: player.dynastyValue,
         tier: player.dynastyTier,
-        algorithmFix: true // All players now use authentic Jake Maraia methodology
+        algorithmFix: true // All players now use enhanced dynasty scoring methodology
       }));
       
       res.json({
         ...report,
         targetAccuracy: 89,
         accuracyStatus: report.overallAccuracy >= 89 ? 'TARGET_ACHIEVED' : 'NEEDS_IMPROVEMENT',
-        algorithmFixes: 17, // Number of fixes applied in Jake Maraia algorithm
+        algorithmFixes: 17, // Number of fixes applied in dynasty scoring algorithm
         topPlayers
       });
     } catch (error: any) {
