@@ -1773,6 +1773,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Projections ingestion endpoints
+  app.post('/api/projections/ingest/oasis', async (req, res) => {
+    try {
+      const { data } = req.body;
+      if (!data) {
+        return res.status(400).json({ error: 'Data parameter is required' });
+      }
+      
+      const { ingestOasis } = await import('./services/projections/ingestProjections');
+      const projections = ingestOasis(data);
+      
+      res.json({
+        success: true,
+        count: projections.length,
+        source: 'oasis',
+        projections
+      });
+    } catch (error: any) {
+      console.error('❌ OASIS ingestion error:', error);
+      res.status(400).json({ 
+        success: false, 
+        error: error.message,
+        source: 'oasis'
+      });
+    }
+  });
+
+  app.post('/api/projections/ingest/fantasy-pros', async (req, res) => {
+    try {
+      const { data } = req.body;
+      if (!data) {
+        return res.status(400).json({ error: 'Data parameter is required' });
+      }
+      
+      const { ingestFantasyPros } = await import('./services/projections/ingestProjections');
+      const projections = ingestFantasyPros(data);
+      
+      res.json({
+        success: true,
+        count: projections.length,
+        source: 'fantasyPros',
+        projections
+      });
+    } catch (error: any) {
+      console.error('❌ FantasyPros ingestion error:', error);
+      res.status(400).json({ 
+        success: false, 
+        error: error.message,
+        source: 'fantasyPros'
+      });
+    }
+  });
+
+  app.get('/api/projections/test', async (req, res) => {
+    try {
+      const { ingestOasis, ingestFantasyPros, testData, runTests } = await import('./services/projections/ingestProjections');
+      
+      const results = {
+        oasisJSON: ingestOasis(testData.oasisJSON),
+        fantasyProsCSV: ingestFantasyPros(testData.fantasyProsCSV),
+        oasisCSV: ingestOasis(testData.oasisCSV),
+        fantasyProsJSON: ingestFantasyPros(testData.fantasyProsJSON)
+      };
+      
+      res.json({
+        success: true,
+        message: 'Projections ingestion test completed',
+        results
+      });
+    } catch (error: any) {
+      console.error('❌ Projections test error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

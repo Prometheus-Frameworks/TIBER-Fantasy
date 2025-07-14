@@ -193,6 +193,11 @@ Changelog:
 - July 11, 2025. Platform neutrality achieved: Replaced all "Jake Maraia" references with "expert consensus" and "proprietary methodology" terminology while preserving full functionality
 - July 11, 2025. Code organization enhanced: Updated variable names, documentation, API comments, and frontend text to use professional naming conventions
 - July 11, 2025. Technical validation confirmed: All QB context scores remain operational (83.8, 80.4, 80.1 for top performers), dynasty evaluation system continues working correctly post-renaming
+- July 14, 2025. **MODULAR PROJECTIONS INGESTION SYSTEM COMPLETE**: Built comprehensive projections ingestion framework with core ingestProjections.ts module supporting both JSON and CSV formats
+- July 14, 2025. Dual-source support: Created ingestOasis() and ingestFantasyPros() wrapper functions with player name mapping via player_mappings.json, standardized PlayerProjection interface output
+- July 14, 2025. Full error handling: Implemented comprehensive validation, unknown player logging, format detection, and robust parsing with detailed error messages for troubleshooting
+- July 14, 2025. API integration: Added /api/projections/ingest/oasis, /api/projections/ingest/fantasy-pros, and /api/projections/test endpoints with complete frontend testing interface
+- July 14, 2025. Testing framework: Created ProjectionsTest page with manual input testing, automated test suite, example data for all formats, and real-time results visualization
 - July 03, 2025. Initial setup with in-memory storage
 - July 03, 2025. Added PostgreSQL database integration with Drizzle ORM
 - July 03, 2025. Built comprehensive fantasy team sync system with ESPN, Sleeper, and manual import capabilities
