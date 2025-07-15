@@ -53,6 +53,7 @@ import ProjectionsTest from "@/pages/ProjectionsTest";
 import NotFound from "@/pages/not-found";
 import SleeperDatabase from "@/pages/sleeper-database";
 import PrometheusBenchmarks from "@/pages/PrometheusBenchmarks";
+import CommunityPosts from "@/pages/CommunityPosts";
 
 function Router() {
   return (
@@ -83,6 +84,7 @@ function Router() {
       <Route path="/analytics" component={LineupOptimizer} />
       <Route path="/premium" component={PremiumAnalytics} />
       <Route path="/sleeper-database" component={SleeperDatabase} />
+      <Route path="/community-posts" component={CommunityPosts} />
       <Route path="/prometheus-benchmarks" component={PrometheusBenchmarks} />
       <Route path="/dynasty-decline-analysis" component={DynastyDeclineAnalysis} />
       <Route path="/rb-touchdown-regression" component={RBTouchdownRegression} />
