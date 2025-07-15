@@ -83,14 +83,13 @@ export class CleanADPService {
       'Lamar Jackson': format === 'superflex' ? 1.11 : 32.1,
       'Puka Nacua': format === 'superflex' ? 2.01 : 2.06,
       'Caleb Williams': format === 'superflex' ? 2.03 : 48.2,
-      'Garrett Wilson': format === 'superflex' ? 2.05 : 2.11,
-      'DK Metcalf': format === 'superflex' ? 2.07 : 3.03,
       'Tyreek Hill': format === 'superflex' ? 2.09 : 3.07,
       'Jayden Daniels': format === 'superflex' ? 2.11 : 52.8,
-      
-      // Round 2-3: Elite Skill Players & Young QBs (2.01-3.12)
       'Garrett Wilson': format === 'superflex' ? 3.02 : 4.08,
       'DK Metcalf': format === 'superflex' ? 3.04 : 5.01,
+      
+      // Round 2-3: Elite Skill Players & Young QBs (2.01-3.12)
+      // Note: Garrett Wilson and DK Metcalf values moved below to avoid duplicates
       'Jahmyr Gibbs': format === 'superflex' ? 3.06 : 5.04,
       'Bijan Robinson': format === 'superflex' ? 3.08 : 5.08,
       'Anthony Richardson': format === 'superflex' ? 3.10 : 82.5,
