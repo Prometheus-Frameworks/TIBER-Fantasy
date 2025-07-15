@@ -35,31 +35,15 @@ export default function Home() {
             </p>
           </header>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Link href="/rankings">
-              <Button size="lg" className="px-8 py-3 text-lg">
-                Explore Rankings
-                <ChevronRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Link href="/draft-analysis">
-              <Button size="lg" className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700">
-                Draft Analysis
-                <Target className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Link href="/draft-room">
-              <Button size="lg" className="px-8 py-3 text-lg bg-purple-600 hover:bg-purple-700">
-                Draft Room
-                <Users className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Link href="/compare-league">
-              <Button variant="outline" size="lg" className="px-8 py-3 text-lg">
-                Compare Leagues
-                <Users className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
+          <div className="button-row">
+            <a href="/rankings" className="button blue">Explore Rankings</a>
+            <a href="/draft-analysis" className="button green">Draft Analysis</a>
+            <a href="/draft-room" className="button purple">Draft Room</a>
+            <a href="/community-posts" className="button white">Community Posts</a>
+          </div>
+
+          <div className="sync-block">
+            <a href="/sync-leagues" className="button sync-button">Sync Your Leagues</a>
           </div>
           
           {/* Stats Bar */}
