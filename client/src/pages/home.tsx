@@ -85,7 +85,7 @@ export default function Home() {
           <div className="button-row">
             <a href="/rankings" className="button blue">Explore Rankings</a>
             <a href="/draft-analysis" className="button green">Draft Analysis</a>
-            <a href="/draft-room" className="button purple">Draft Room</a>
+            <a href="/draft-room" className="button purple">Draft Helper (Beta)</a>
             <a href="/community-posts" className="button white">Community Posts</a>
           </div>
 

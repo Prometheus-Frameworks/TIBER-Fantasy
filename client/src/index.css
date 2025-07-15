@@ -292,3 +292,13 @@ img {
     box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     transition: all 0.2s ease;
 }
+
+/* Draft Room Banner Styles */
+.draft-room-banner {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 20px;
+    text-align: center;
+    font-family: Arial, sans-serif;
+    margin-bottom: 20px;
+}

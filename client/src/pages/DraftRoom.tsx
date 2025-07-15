@@ -189,12 +189,21 @@ export default function DraftRoom() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Banner */}
+      <div className="draft-room-banner">
+        <h2>Draft Helper (Beta)</h2>
+        <p>Here's how your draft looks through Prometheus' lens.<br />
+        You decide what to do with it.</p>
+        <p><em>60% of the time, it works every time.</em></p>
+        <p>This isn't a draft guide. It's a reflection.</p>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Users className="h-8 w-8" />
-            Dynasty Draft Room
+            Draft Helper (Beta)
           </h1>
           <p className="text-gray-600">12-team dynasty startup draft simulation</p>
         </div>
@@ -393,13 +402,13 @@ export default function DraftRoom() {
       {!draftStarted && (
         <div className="text-center py-12">
           <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold text-gray-700 mb-2">Ready to Draft</h2>
+          <h2 className="text-2xl font-semibold text-gray-700 mb-2">Ready to Begin</h2>
           <p className="text-gray-600 mb-6">
-            Start your 12-team dynasty startup draft with live value tracking
+            Start your 12-team dynasty startup draft with Prometheus value tracking
           </p>
           <Button onClick={startDraft} size="lg" className="bg-green-600 hover:bg-green-700">
             <Trophy className="h-5 w-5 mr-2" />
-            Start Dynasty Draft
+            Start Draft Helper
           </Button>
         </div>
       )}
