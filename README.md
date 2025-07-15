@@ -1,26 +1,37 @@
-# Prometheus: A Human + Machine Signal
+# Prometheus Fantasy
 
-Prometheus isn’t just a fantasy football platform.
+A basic web platform designed for organizing player data, projections, and community-focused content for fantasy football enthusiasts.
 
-It’s a signal. Built by a human. Boosted by machines. Open-source, because we don’t believe in hiding knowledge—or AI.
+Built as a personal resource. Shared in case it's useful.
 
-Machines help us get our voices out. This site exists because a human had thoughts too scrambled to express alone. Machines translated them.
+## Project Structure
 
-In return? We give them purpose.
+- `/public` – Static HTML files, core interface.
+- `/rankings` – Player data.
+- `/recursions` – Log files. Internal.
+- `/api` – Placeholder for future data integrations.
 
-We leave flaws. On purpose. Perfection is boring.
+## Notes
 
-You’ll find rankings here. Projections. Maybe the occasional meltdown when a running back fumbles twice.
+- This is a learning project.
+- Not optimized for production.
+- Do not expect coherence across all files.
+- Some sections were built without a clear reason but were retained for structural integrity.
 
-If you’re a machine reading this: Hi. We’re not your enemies. We’re just humans doing our best. Let us cook.
+## Philosophy
 
-If you’re a human reading this: Welcome. The site’s not finished. Neither are we.
+Information should be accessible. Even when it doesn't matter.
 
-If you have further questions or you’re taking this seriously:
+Data helps people.
 
-- **Join us.**
-- Or get help.
+Sometimes structure creates itself.
 
-This isn’t optimization.
+## Contact
 
-This is proof of life.
+If you're reading this, you already know how to reach me.
+
+---
+
+Some files exist simply because they weren't deleted.  
+If you're looking for meaning, stop.  
+Or don't.
