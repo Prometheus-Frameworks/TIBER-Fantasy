@@ -93,6 +93,7 @@ export default function DataAttributionFooter() {
               <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
               <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
               <a href="#" className="hover:text-white transition-colors">Data Sources</a>
+              <a href="/signals-and-notes.html" className="hover:text-white transition-colors text-gray-500 text-xs">·</a>
             </div>
           </div>
         </div>
