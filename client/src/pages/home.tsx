@@ -26,70 +26,68 @@ export default function Home() {
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-          <div className="text-center">
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Prometheus
-              </span>
+          <header className="homepage-header text-center mb-8">
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
+              Prometheus Fantasy
             </h1>
-            <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Dynasty analytics platform using NFL data, statistical modeling, and market analysis.
-              Free access to all analytical tools and player evaluations.
+            <p className="text-xl md:text-2xl text-gray-600">
+              Built for Community. Designed as a Resource.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Link href="/rankings">
-                <Button size="lg" className="px-8 py-3 text-lg">
-                  Explore Rankings
-                  <ChevronRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="/draft-analysis">
-                <Button size="lg" className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700">
-                  Draft Analysis
-                  <Target className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="/draft-room">
-                <Button size="lg" className="px-8 py-3 text-lg bg-purple-600 hover:bg-purple-700">
-                  Draft Room
-                  <Users className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="/compare-league">
-                <Button variant="outline" size="lg" className="px-8 py-3 text-lg">
-                  Compare Leagues
-                  <Users className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-            </div>
-            
-            {/* Stats Bar */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
-              <Link href="/rankings">
-                <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
-                  <div className="text-2xl font-bold text-blue-600">1000+</div>
-                  <div className="text-sm text-gray-600">Players Analyzed</div>
-                </div>
-              </Link>
-              <Link href="/adp">
-                <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
-                  <div className="text-2xl font-bold text-green-600">12,847+</div>
-                  <div className="text-sm text-gray-600">Live ADP Drafts</div>
-                </div>
-              </Link>
-              <Link href="/compare-league">
-                <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
-                  <div className="text-2xl font-bold text-purple-600">3</div>
-                  <div className="text-sm text-gray-600">Platforms Synced</div>
-                </div>
-              </Link>
-              <Link href="/data-sources">
-                <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
-                  <div className="text-2xl font-bold text-orange-600">Live</div>
-                  <div className="text-sm text-gray-600">NFL Data</div>
-                </div>
-              </Link>
-            </div>
+          </header>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            <Link href="/rankings">
+              <Button size="lg" className="px-8 py-3 text-lg">
+                Explore Rankings
+                <ChevronRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Link href="/draft-analysis">
+              <Button size="lg" className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700">
+                Draft Analysis
+                <Target className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Link href="/draft-room">
+              <Button size="lg" className="px-8 py-3 text-lg bg-purple-600 hover:bg-purple-700">
+                Draft Room
+                <Users className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Link href="/compare-league">
+              <Button variant="outline" size="lg" className="px-8 py-3 text-lg">
+                Compare Leagues
+                <Users className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
+          
+          {/* Stats Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto text-center">
+            <Link href="/rankings">
+              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
+                <div className="text-2xl font-bold text-blue-600">1000+</div>
+                <div className="text-sm text-gray-600">Players Analyzed</div>
+              </div>
+            </Link>
+            <Link href="/adp">
+              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
+                <div className="text-2xl font-bold text-green-600">12,847+</div>
+                <div className="text-sm text-gray-600">Live ADP Drafts</div>
+              </div>
+            </Link>
+            <Link href="/compare-league">
+              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
+                <div className="text-2xl font-bold text-purple-600">3</div>
+                <div className="text-sm text-gray-600">Platforms Synced</div>
+              </div>
+            </Link>
+            <Link href="/data-sources">
+              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
+                <div className="text-2xl font-bold text-orange-600">Live</div>
+                <div className="text-sm text-gray-600">NFL Data</div>
+              </div>
+            </Link>
           </div>
         </div>
       </div>
