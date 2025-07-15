@@ -19,8 +19,55 @@ import {
   LineChart,
   Brain
 } from "lucide-react";
+import { useEffect } from "react";
 
 export default function Home() {
+  // Function to randomize button colors for organic feel
+  useEffect(() => {
+    const randomizeButtonColors = () => {
+      const baseColors = {
+        blue: '#3399ff',
+        green: '#2e8b57',
+        purple: '#8a4fff',
+        white: '#e0e0e0'
+      };
+
+      const buttons = document.querySelectorAll('.button');
+      buttons.forEach((button) => {
+        const colorClass = Array.from(button.classList).find(cls => 
+          Object.keys(baseColors).includes(cls)
+        );
+        
+        if (colorClass && baseColors[colorClass]) {
+          const baseColor = baseColors[colorClass];
+          const randomizedColor = randomizeHexColor(baseColor, 0.03); // ±3%
+          button.style.backgroundColor = randomizedColor;
+        }
+      });
+    };
+
+    const randomizeHexColor = (hexColor, variance) => {
+      const hex = hexColor.replace('#', '');
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      
+      const randomizeChannel = (channel) => {
+        const variation = Math.random() * variance * 2 - variance; // ±variance
+        const newValue = Math.round(channel * (1 + variation));
+        return Math.max(0, Math.min(255, newValue));
+      };
+      
+      const newR = randomizeChannel(r);
+      const newG = randomizeChannel(g);
+      const newB = randomizeChannel(b);
+      
+      return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+    };
+
+    // Apply randomization after component mounts
+    setTimeout(randomizeButtonColors, 100);
+  }, []);
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Hero Section */}

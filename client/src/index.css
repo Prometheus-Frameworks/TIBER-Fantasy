@@ -256,13 +256,13 @@ img {
     min-width: 140px;
 }
 
-.button.blue { background-color: #007bff; }
-.button.green { background-color: #28a745; }
-.button.purple { background-color: #6f42c1; }
+.button.blue { background-color: #3399ff; }
+.button.green { background-color: #2e8b57; }
+.button.purple { background-color: #8a4fff; }
 .button.white {
-    background-color: #f8f9fa;
-    color: black;
-    border: 1px solid #ccc;
+    background-color: #e0e0e0;
+    color: #333;
+    border: 1px solid #bbb;
 }
 
 .sync-block {
@@ -278,4 +278,17 @@ img {
     border-radius: 8px;
     text-decoration: none; 
     display: inline-block; 
+}
+
+/* Add subtle hover effects for organic feel */
+.button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+.sync-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    transition: all 0.2s ease;
 }
