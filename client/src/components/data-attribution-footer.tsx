@@ -51,16 +51,10 @@ export default function DataAttributionFooter() {
           <div className="text-center">
             <h4 className="font-medium text-white mb-2">Dynasty Values</h4>
             <p className="text-sm text-gray-400">
-              Market data powered by{" "}
-              <a 
-                href="https://keeptradecut.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 inline-flex items-center gap-1"
-              >
-                KTC
-                <ExternalLink className="w-3 h-3" />
-              </a>
+              Proprietary algorithms based on{" "}
+              <span className="text-blue-400">
+                NFL performance data
+              </span>
             </p>
           </div>
           

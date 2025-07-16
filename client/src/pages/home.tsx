@@ -368,7 +368,6 @@ export default function Home() {
               </p>
               <div className="flex gap-2 mb-4">
                 <Badge variant="outline" className="text-xs">Proprietary Analysis</Badge>
-                <Badge variant="outline" className="text-xs">KTC</Badge>
                 <Badge variant="outline" className="text-xs">NFL Data</Badge>
               </div>
               <Link href="/data-sources">

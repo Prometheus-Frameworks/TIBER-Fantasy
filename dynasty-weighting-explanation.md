@@ -52,7 +52,7 @@ Our weighting system is based on correlation studies showing:
 2. **Opportunity** (target share, touches) is the most predictive volume metric
 3. **Age** matters but shouldn't overpower proven production
 4. **Efficiency** metrics (YPRR, YAC) are more descriptive than predictive
-5. **Elite players** deserve exponential scaling (like KTC rankings)
+5. **Elite players** deserve exponential scaling for scarcity value
 
 ## Applied to All Player Types:
 

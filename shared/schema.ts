@@ -361,7 +361,7 @@ export const playerValueHistory = pgTable("player_value_history", {
   playerId: integer("player_id").notNull().references(() => players.id),
   date: timestamp("date").notNull(),
   dynastyValue: integer("dynasty_value").notNull(),
-  source: text("source").notNull(), // "KeepTradeCut", "DynastyDataLab", "estimated"
+  source: text("source").notNull(), // "DynastyDataLab", "estimated"
   adp: real("adp"), // Average draft position
   ownership: real("ownership"), // Ownership percentage
   

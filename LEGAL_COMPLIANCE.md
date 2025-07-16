@@ -8,7 +8,6 @@
 - **NFL-Data-Py**: Open source (MIT License) - attribution in footer
 
 ### ⚠️ Requires Attribution
-- **KTC (KeepTradeCut)**: Add "Dynasty values powered by KTC" 
 - **FantasyCalc**: Add "Trade data by FantasyCalc"
 
 ### ❌ High Risk - Immediate Action Required
@@ -21,7 +20,6 @@
 ```
 Data Sources: 
 - NFL statistics via NFL-Data-Py (MIT License)
-- Dynasty values powered by KTC
 - Trade data by FantasyCalc  
 - League sync via Sleeper API
 ```
@@ -41,7 +39,7 @@ Data Sources:
 1. **Remove Expert Rankings**: Replace with proprietary methodology
 2. **Add Data Attribution Footer**: Credit all sources properly
 3. **SportsDataIO Decision**: Subscribe or remove premium features
-4. **Contact KTC/FantasyCalc**: Request explicit permission for data usage
+4. **Contact FantasyCalc**: Request explicit permission for data usage
 5. **Add Legal Pages**: Privacy Policy, Terms of Service, Data Sources
 
 ## Low-Risk Alternatives

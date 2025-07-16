@@ -10,7 +10,7 @@ import { sql } from 'drizzle-orm';
 export interface AnalyticsField {
   fieldName: string;
   dataType: 'number' | 'string' | 'boolean' | 'date' | 'array';
-  source: 'NFL-Data-Py' | 'Sleeper-API' | 'ESPN-API' | 'SportsDataIO' | 'KTC-API' | 'FantasyCalc' | 'Internal-Calculation' | 'Placeholder';
+  source: 'NFL-Data-Py' | 'Sleeper-API' | 'ESPN-API' | 'SportsDataIO' | 'FantasyCalc' | 'Internal-Calculation' | 'Placeholder';
   granularity: 'Season-Level' | 'Game-Level' | 'Weekly-Rolling' | 'Career-Aggregate' | 'Real-Time' | 'Static';
   status: 'Active' | 'Placeholder' | 'Empty' | 'Deprecated' | 'Planned';
   description: string;
@@ -113,12 +113,7 @@ export class AnalyticsInventoryService {
         coverage: 'Limited to public endpoints',
         apiEndpoint: 'Various ESPN endpoints'
       },
-      'KTC-API': {
-        status: 'Active' as const,
-        totalFields: 3,
-        coverage: 'Dynasty trade values',
-        apiEndpoint: 'Custom integration'
-      },
+
       'FantasyCalc': {
         status: 'Active' as const,
         totalFields: 4,
@@ -373,16 +368,7 @@ export class AnalyticsInventoryService {
         sampleValue: 'VALUE',
         coverage: '100% where ADP available'
       },
-      {
-        fieldName: 'ktcValue',
-        dataType: 'number',
-        source: 'KTC-API',
-        granularity: 'Real-Time',
-        status: 'Placeholder',
-        description: 'KeepTradeCut dynasty value',
-        sampleValue: 8500,
-        coverage: '0% (not implemented)'
-      }
+
     ];
   }
   
@@ -525,7 +511,6 @@ export class AnalyticsInventoryService {
         'yahooId (0% integration)'
       ],
       placeholderData: [
-        'ktcValue (not implemented)',
         'breakoutProbability (planned)',
         'injuryRisk (planned)',
         'weeklyProjections (future enhancement)'

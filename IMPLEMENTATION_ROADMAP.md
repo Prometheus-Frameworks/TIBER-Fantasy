@@ -197,7 +197,7 @@
    - Confidence interval refinements
 
 3. **Dynamic Value Updates**
-   - KeepTradeCut API integration for dynasty values
+   - Dynasty value calculations via proprietary algorithms
    - Daily market shift tracking
    - Automated opportunity notifications
 

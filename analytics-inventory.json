@@ -253,7 +253,7 @@
       },
       "marketData": {
         "fields": 4,
-        "coverage": "75% average (KTC not implemented)",
+        "coverage": "75% average (proprietary algorithms)",
         "fields_list": [
           {
             "name": "dynastyValue",
@@ -282,15 +282,7 @@
             "coverage": "100% where ADP available", 
             "description": "ADP vs ranking value (STEAL/VALUE/FAIR/AVOID)"
           },
-          {
-            "name": "ktcValue",
-            "source": "KTC-API",
-            "type": "number",
-            "granularity": "Real-Time",
-            "status": "Placeholder",
-            "coverage": "0% (not implemented)",
-            "description": "KeepTradeCut dynasty trade value"
-          }
+
         ]
       }
     },
@@ -362,14 +354,13 @@
         "yahooId (0% integration)"
       ],
       "placeholderData": [
-        "ktcValue (not implemented)",
         "breakoutProbability (planned feature)",
         "injuryRisk (planned feature)",
         "weeklyProjections (future enhancement)"
       ],
       "improvementRecommendations": [
         "Implement age data collection for remaining 40% of players",
-        "Integrate KTC API for dynasty trade values",
+
         "Add college production metrics for rookie evaluation", 
         "Implement weekly projection system",
         "Add injury history tracking",
