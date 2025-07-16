@@ -33,7 +33,7 @@ import EnhancedNFLRankings from "@/pages/enhanced-nfl-rankings";
 import PrometheusRankings from "@/pages/prometheus-rankings";
 import DataSourcesPage from "@/pages/data-sources";
 import CleanADP from "@/pages/CleanADP";
-import DraftAnalysis from "@/pages/DraftAnalysis";
+import Oasis from "@/pages/Oasis";
 import DraftRoom from "@/pages/DraftRoom";
 import PlayerProfile from "@/pages/PlayerProfile";
 import DynastyDeclineAnalysis from "@/pages/DynastyDeclineAnalysis";
@@ -74,7 +74,7 @@ function Router() {
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
       <Route path="/data-sources" component={DataSourcesPage} />
       <Route path="/adp" component={CleanADP} />
-      <Route path="/draft-analysis" component={DraftAnalysis} />
+      <Route path="/oasis" component={Oasis} />
       <Route path="/draft-room" component={DraftRoom} />
       <Route path="/player/:id" component={PlayerProfile} />
       <Route path="/enhanced-player/:id" component={EnhancedPlayerProfile} />

@@ -28,6 +28,7 @@ export default function Home() {
       const baseColors = {
         blue: '#3399ff',
         green: '#2e8b57',
+        teal: '#20b2aa',
         purple: '#8a4fff',
         white: '#e0e0e0'
       };
@@ -84,7 +85,7 @@ export default function Home() {
           
           <div className="button-row">
             <a href="/rankings" className="button blue">Explore Rankings</a>
-            <a href="/draft-analysis" className="button green">Draft Analysis</a>
+            <a href="/oasis" className="button teal">OASIS</a>
             <a href="/draft-room" className="button purple">Draft Helper (Beta)</a>
             <a href="/community-posts" className="button white">Community Posts</a>
           </div>
