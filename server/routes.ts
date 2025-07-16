@@ -18,6 +18,8 @@ import { dynastyTradeHistory, players as playersTable } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { z } from "zod";
 import { accuracyValidator } from './accuracyValidator';
+import { fantasyProsAPI } from './services/fantasyProsAPI';
+import { dataIngestionService } from './services/dataIngestionService';
 
 /**
  * Apply league format adjustments to dynasty values
@@ -1769,6 +1771,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         error: `Failed to generate ${req.params.position} rankings`
+      });
+    }
+  });
+
+  // FantasyPros API Integration endpoints
+  app.get('/api/fantasy-pros/test-connection', async (req, res) => {
+    try {
+      console.log('🔄 Testing FantasyPros API connection...');
+      const connected = await fantasyProsAPI.testConnection();
+      
+      res.json({
+        success: connected,
+        message: connected ? 'FantasyPros API connected successfully' : 'FantasyPros API connection failed',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ FantasyPros connection test error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Connection test failed',
+        details: error.message
+      });
+    }
+  });
+
+  app.get('/api/fantasy-pros/dynasty-rankings/:position?', async (req, res) => {
+    try {
+      const { position } = req.params;
+      console.log(`🔄 Fetching FantasyPros dynasty rankings for ${position || 'ALL'} positions...`);
+      
+      const data = await fantasyProsAPI.getDynastyRankings(position);
+      
+      if (!data) {
+        return res.status(503).json({
+          success: false,
+          error: 'FantasyPros API unavailable - check API key configuration'
+        });
+      }
+
+      res.json({
+        success: true,
+        data,
+        message: `Retrieved ${data.players?.length || 0} dynasty rankings`,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ FantasyPros dynasty rankings error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Dynasty rankings fetch failed',
+        details: error.message
+      });
+    }
+  });
+
+  app.post('/api/fantasy-pros/sync-dynasty', async (req, res) => {
+    try {
+      console.log('🔄 Starting FantasyPros dynasty sync...');
+      const result = await fantasyProsAPI.syncDynastyRankings();
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          message: `Dynasty sync completed: ${result.playersUpdated} players updated`,
+          playersUpdated: result.playersUpdated,
+          errors: result.errors,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Dynasty sync failed',
+          errors: result.errors
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ FantasyPros sync error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Dynasty sync execution failed',
+        details: error.message
+      });
+    }
+  });
+
+  // Data Ingestion Service endpoints
+  app.post('/api/data-ingestion/process-dump', async (req, res) => {
+    try {
+      const { data, config } = req.body;
+      
+      if (!data || !Array.isArray(data)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Data array required for processing'
+        });
+      }
+
+      console.log(`🔄 Processing data dump: ${data.length} records`);
+      const result = await dataIngestionService.processDataDump(data, config);
+      
+      res.json({
+        success: true,
+        message: `Data dump processing completed: ${result.successfulRecords}/${result.totalRecords} successful`,
+        result,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Data dump processing error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Data dump processing failed',
+        details: error.message
+      });
+    }
+  });
+
+  app.get('/api/data-ingestion/stats', async (req, res) => {
+    try {
+      const stats = await dataIngestionService.getProcessingStats();
+      
+      res.json({
+        success: true,
+        stats,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Data ingestion stats error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get processing stats',
+        details: error.message
       });
     }
   });

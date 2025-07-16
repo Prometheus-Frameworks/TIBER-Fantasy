@@ -50,6 +50,7 @@ import OASISTeamContext from "@/pages/OASISTeamContext";
 import FullPlayerPool from "@/pages/FullPlayerPool";
 import TradeEvaluator from "@/pages/TradeEvaluator";
 import ProjectionsTest from "@/pages/ProjectionsTest";
+import DataIngestion from "@/pages/DataIngestion";
 import NotFound from "@/pages/not-found";
 import SleeperDatabase from "@/pages/sleeper-database";
 import PrometheusBenchmarks from "@/pages/PrometheusBenchmarks";
@@ -99,6 +100,7 @@ function Router() {
       <Route path="/oasis-team-context" component={OASISTeamContext} />
       <Route path="/trade-evaluator" component={TradeEvaluator} />
       <Route path="/projections-test" component={ProjectionsTest} />
+      <Route path="/data-ingestion" component={DataIngestion} />
       <Route component={NotFound} />
     </Switch>
   );
