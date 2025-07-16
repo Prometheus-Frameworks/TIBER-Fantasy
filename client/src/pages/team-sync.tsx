@@ -199,7 +199,7 @@ export default function TeamSync() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Import Your Fantasy Team</h1>
           <p className="text-muted-foreground">
-            Connect your existing fantasy team from popular platforms to get comprehensive analysis and recommendations.
+            Currently supports Sleeper leagues. ESPN & Yahoo integrations hopefully coming soon, one day.
           </p>
         </div>
 
@@ -210,76 +210,17 @@ export default function TeamSync() {
           </AlertDescription>
         </Alert>
 
-        <Tabs defaultValue="espn" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="espn" className="flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              ESPN
-            </TabsTrigger>
+        <Tabs defaultValue="sleeper" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="sleeper" className="flex items-center gap-2">
               <Smartphone className="h-4 w-4" />
               Sleeper
-            </TabsTrigger>
-            <TabsTrigger value="yahoo" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Yahoo
             </TabsTrigger>
             <TabsTrigger value="manual" className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
               Manual
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="espn">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
-                  ESPN Fantasy
-                </CardTitle>
-                <CardDescription>
-                  Import your team from ESPN Fantasy Football. You'll need your League ID and Team ID from your ESPN league URL.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="espn-league-id">League ID</Label>
-                    <Input
-                      id="espn-league-id"
-                      placeholder="e.g., 12345678"
-                      value={espnData.leagueId}
-                      onChange={(e) => setEspnData(prev => ({ ...prev, leagueId: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="espn-team-id">Team ID</Label>
-                    <Input
-                      id="espn-team-id"
-                      placeholder="e.g., 1"
-                      value={espnData.teamId}
-                      onChange={(e) => setEspnData(prev => ({ ...prev, teamId: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                
-                <div className="p-4 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    <strong>How to find your IDs:</strong> Go to your ESPN league page. 
-                    The URL will look like: <code>fantasy.espn.com/football/team?leagueId=LEAGUE_ID&teamId=TEAM_ID</code>
-                  </p>
-                </div>
-
-                <Button 
-                  onClick={handleEspnSync}
-                  disabled={espnMutation.isPending}
-                  className="w-full"
-                >
-                  {espnMutation.isPending ? "Syncing..." : "Import from ESPN"}
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           <TabsContent value="sleeper">
             <Card>
@@ -350,28 +291,7 @@ export default function TeamSync() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="yahoo">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Yahoo Fantasy
-                </CardTitle>
-                <CardDescription>
-                  Yahoo Fantasy requires special authentication. Use manual import for now.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Yahoo sync requires OAuth authentication which is not yet implemented. 
-                    Please use the manual import option below.
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
-          </TabsContent>
+
 
           <TabsContent value="manual">
             <Card>

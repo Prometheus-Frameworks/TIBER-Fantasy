@@ -269,7 +269,7 @@ export default function Home() {
                 </div>
                 <div>
                   <CardTitle className="text-lg">League Analysis</CardTitle>
-                  <CardDescription>Multi-platform sync and comparison</CardDescription>
+                  <CardDescription>Currently supports Sleeper leagues</CardDescription>
                 </div>
               </div>
             </CardHeader>
