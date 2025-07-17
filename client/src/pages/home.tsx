@@ -71,68 +71,186 @@ export default function Home() {
   }, []);
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Hero Section */}
+      {/* Main Banner/Header */}
       <div className="relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-          <header className="homepage-header text-center mb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8">
+          {/* Site Title & Navigation */}
+          <header className="text-center mb-12">
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
               Reflecting FF
             </h1>
-            <p className="text-xl md:text-2xl text-gray-600">
-              Built for Community. Designed as a Resource.
+            <p className="text-xl md:text-2xl text-gray-600 mb-8">
+              Fantasy Data Meets Real Insight
             </p>
+            
+            {/* Main Navigation Menu */}
+            <nav className="flex flex-wrap justify-center gap-4 mb-8">
+              <Link href="/">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  Home
+                </Button>
+              </Link>
+              <Link href="/rankings">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  Rankings
+                </Button>
+              </Link>
+              <Link href="/analytics">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  Analytics
+                </Button>
+              </Link>
+              <Link href="/trade-evaluator">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  Trade Evaluator
+                </Button>
+              </Link>
+              <Link href="/oasis">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  OASIS
+                </Button>
+              </Link>
+              <Link href="/about">
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  Philosophy
+                </Button>
+              </Link>
+            </nav>
           </header>
-          
-          <div className="button-row">
-            <a href="/rankings" className="button blue">Explore Rankings</a>
-            <a href="/oasis" className="button teal">OASIS</a>
-            <a href="/draft-room" className="button purple">Draft Helper (Beta)</a>
-            <a href="/community-posts" className="button white">Community Posts</a>
-          </div>
+        </div>
+      </div>
 
-          <div className="sync-block">
-            <a href="/sync-leagues" className="button sync-button">Sync Your Leagues</a>
+      {/* Primary Feature Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200 p-8 mb-8">
+          <div className="text-center mb-6">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4 flex items-center justify-center gap-3">
+              <Trophy className="h-8 w-8 text-blue-600" />
+              Latest Player Rankings
+            </h2>
+            <p className="text-gray-600 text-lg">
+              Current season insights with live NFL data and dynasty valuations
+            </p>
           </div>
           
-          {/* Stats Bar */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto text-center">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="text-center p-4 bg-white/50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">1000+</div>
+              <div className="text-sm text-gray-600">Players Analyzed</div>
+            </div>
+            <div className="text-center p-4 bg-white/50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">Live</div>
+              <div className="text-sm text-gray-600">NFL Data</div>
+            </div>
+            <div className="text-center p-4 bg-white/50 rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">4</div>
+              <div className="text-sm text-gray-600">Positions</div>
+            </div>
+            <div className="text-center p-4 bg-white/50 rounded-lg">
+              <div className="text-2xl font-bold text-orange-600">2024</div>
+              <div className="text-sm text-gray-600">Season Data</div>
+            </div>
+          </div>
+          
+          <div className="text-center">
             <Link href="/rankings">
-              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
-                <div className="text-2xl font-bold text-blue-600">1000+</div>
-                <div className="text-sm text-gray-600">Players Analyzed</div>
-              </div>
-            </Link>
-            <Link href="/adp">
-              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
-                <div className="text-2xl font-bold text-green-600">12,847+</div>
-                <div className="text-sm text-gray-600">Live ADP Drafts</div>
-              </div>
-            </Link>
-            <Link href="/compare-league">
-              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
-                <div className="text-2xl font-bold text-purple-600">3</div>
-                <div className="text-sm text-gray-600">Platforms Synced</div>
-              </div>
-            </Link>
-            <Link href="/data-sources">
-              <div className="text-center p-4 bg-white/50 rounded-lg backdrop-blur-sm hover:bg-white/70 transition-colors cursor-pointer">
-                <div className="text-2xl font-bold text-orange-600">Live</div>
-                <div className="text-sm text-gray-600">NFL Data</div>
-              </div>
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8">
+                <Trophy className="mr-2 h-5 w-5" />
+                Access Rankings Now
+              </Button>
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Features Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Dynasty Analytics Suite
+      {/* Secondary Section - Advanced Analytics */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200 p-8 mb-8">
+          <div className="text-center mb-6">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4 flex items-center justify-center gap-3">
+              <BarChart3 className="h-8 w-8 text-green-600" />
+              Advanced Analytics
+            </h2>
+            <p className="text-gray-600 text-lg">
+              Comprehensive NFL player analytics with dropdown tabs for all positions
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="text-center p-4 bg-white/50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">164</div>
+              <div className="text-sm text-gray-600">Wide Receivers</div>
+            </div>
+            <div className="text-center p-4 bg-white/50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">114</div>
+              <div className="text-sm text-gray-600">Running Backs</div>
+            </div>
+            <div className="text-center p-4 bg-white/50 rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">68</div>
+              <div className="text-sm text-gray-600">Quarterbacks</div>
+            </div>
+            <div className="text-center p-4 bg-white/50 rounded-lg">
+              <div className="text-2xl font-bold text-orange-600">95</div>
+              <div className="text-sm text-gray-600">Tight Ends</div>
+            </div>
+          </div>
+          
+          <div className="text-center">
+            <Link href="/analytics">
+              <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white px-8">
+                <BarChart3 className="mr-2 h-5 w-5" />
+                Access Analytics Tables
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Third Section - Trade Evaluator */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200 p-8 mb-8">
+          <div className="text-center mb-6">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4 flex items-center justify-center gap-3">
+              <Activity className="h-8 w-8 text-purple-600" />
+              Trade Evaluator
+            </h2>
+            <p className="text-gray-600 text-lg">
+              Evaluate dynasty trades with advanced player valuation models
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="text-center p-4 bg-white/50 rounded-lg">
+              <div className="text-lg font-bold text-purple-600">Dynasty Values</div>
+              <div className="text-sm text-gray-600">Age-adjusted scoring</div>
+            </div>
+            <div className="text-center p-4 bg-white/50 rounded-lg">
+              <div className="text-lg font-bold text-blue-600">Market ADP</div>
+              <div className="text-sm text-gray-600">Real draft data</div>
+            </div>
+            <div className="text-center p-4 bg-white/50 rounded-lg">
+              <div className="text-lg font-bold text-green-600">Value Analysis</div>
+              <div className="text-sm text-gray-600">Win/lose assessment</div>
+            </div>
+          </div>
+          
+          <div className="text-center">
+            <Link href="/trade-evaluator">
+              <Button size="lg" className="bg-purple-600 hover:bg-purple-700 text-white px-8">
+                <Activity className="mr-2 h-5 w-5" />
+                Launch Trade Evaluator
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Additional Features Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Additional Tools
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Market value analysis, player profiling, and statistical modeling for dynasty league management.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -381,40 +499,92 @@ export default function Home() {
         </div>
       </div>
 
-      {/* CTA Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Ready to Dominate Your Dynasty League?
-            </h2>
-            <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
-              Get the same insights the top dynasty players use to build winning teams.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/enhanced-rankings">
-                <Button size="lg" variant="secondary" className="px-8 py-3 text-lg">
-                  Start Analyzing
-                  <LineChart className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="/compare-league">
-                <Button size="lg" variant="outline" className="px-8 py-3 text-lg border-white text-white hover:bg-white hover:text-blue-600">
-                  Sync Your League
-                  <Users className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-            </div>
-            <div className="mt-8">
+      {/* Footer Section */}
+      <footer className="bg-gray-900 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            {/* Philosophy/About */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Philosophy</h3>
+              <p className="text-gray-300 mb-4">
+                Fantasy Data Meets Real Insight. Built for community creativity and data accessibility.
+              </p>
               <Link href="/about">
-                <Button variant="link" className="text-white/80 hover:text-white underline">
-                  Learn About Our Mission • Support Free Fantasy Data
+                <Button variant="link" className="text-blue-400 hover:text-blue-300 p-0">
+                  Read Our Mission <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>
             </div>
+            
+            {/* Quick Links */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
+              <div className="space-y-2">
+                <div>
+                  <Link href="/rankings">
+                    <Button variant="link" className="text-gray-300 hover:text-white p-0">
+                      Player Rankings
+                    </Button>
+                  </Link>
+                </div>
+                <div>
+                  <Link href="/analytics">
+                    <Button variant="link" className="text-gray-300 hover:text-white p-0">
+                      Advanced Analytics
+                    </Button>
+                  </Link>
+                </div>
+                <div>
+                  <Link href="/trade-evaluator">
+                    <Button variant="link" className="text-gray-300 hover:text-white p-0">
+                      Trade Evaluator
+                    </Button>
+                  </Link>
+                </div>
+                <div>
+                  <Link href="/oasis">
+                    <Button variant="link" className="text-gray-300 hover:text-white p-0">
+                      OASIS Team Context
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+            
+            {/* Contact/Info */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Information</h3>
+              <div className="space-y-2">
+                <div>
+                  <Link href="/data-sources">
+                    <Button variant="link" className="text-gray-300 hover:text-white p-0">
+                      Data Sources
+                    </Button>
+                  </Link>
+                </div>
+                <div>
+                  <Link href="/community-posts">
+                    <Button variant="link" className="text-gray-300 hover:text-white p-0">
+                      Community Posts
+                    </Button>
+                  </Link>
+                </div>
+                <div className="text-gray-400 text-sm mt-4">
+                  Built for the community, designed as a resource.
+                </div>
+              </div>
+            </div>
+            
+          </div>
+          
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center">
+            <p className="text-gray-400 text-sm">
+              © 2025 Reflecting FF. Fantasy data meets real insight.
+            </p>
           </div>
         </div>
-      </div>
+      </footer>
 
       {/* Data Attribution Footer */}
       <DataAttributionFooter />
