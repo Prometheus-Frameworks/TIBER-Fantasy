@@ -1,4 +1,4 @@
-# Prometheus Fantasy
+# Reflecting FF
 
 A basic web platform designed for organizing player data, projections, and community-focused content for fantasy football enthusiasts.
 

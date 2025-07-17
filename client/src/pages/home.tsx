@@ -76,7 +76,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
           <header className="homepage-header text-center mb-8">
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
-              Prometheus Fantasy
+              Reflecting FF
             </h1>
             <p className="text-xl md:text-2xl text-gray-600">
               Built for Community. Designed as a Resource.

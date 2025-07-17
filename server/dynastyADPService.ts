@@ -77,7 +77,7 @@ class DynastyADPService {
         `https://api.fantasyfootballcalculator.com/v1/adp/${format}?teams=${teams}`,
         {
           headers: {
-            'User-Agent': 'Prometheus Fantasy Analytics (prometheus-fantasy.com)',
+            'User-Agent': 'Reflecting FF Analytics',
           },
           signal: controller.signal
         }
@@ -133,7 +133,7 @@ class DynastyADPService {
         `https://api.fantasyfootballcalculator.com/v1/adp/rookie?teams=${teams}`,
         {
           headers: {
-            'User-Agent': 'Prometheus Fantasy Analytics (prometheus-fantasy.com)',
+            'User-Agent': 'Reflecting FF Analytics',
           }
         }
       );
