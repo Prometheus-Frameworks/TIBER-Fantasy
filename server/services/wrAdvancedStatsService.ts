@@ -77,18 +77,24 @@ try:
     wr_stats['target_share'] = wr_stats['target_share'].fillna(0)
     wr_stats['air_yards_share'] = wr_stats['air_yards_share'].fillna(0)
     
-    # Estimate routes run from targets and target share
+    # Realistic routes run estimation based on targets and position
+    # Elite WRs typically run 600-700 routes, average WRs run 400-500
+    # Conservative estimate: targets * 3.5 (accounts for contested routes without targets)
     wr_stats['routes_run'] = wr_stats.apply(lambda row: 
-        int(row['targets'] / (row['target_share'] / 100)) if row['target_share'] > 0 else row['targets'] * 2, 
+        max(int(row['targets'] * 3.5), row['targets']) if row['targets'] > 0 else 0, 
         axis=1)
     
-    # Calculate YPRR and other advanced metrics
+    # Cap routes run at realistic maximum of 750 for any player
+    wr_stats['routes_run'] = wr_stats['routes_run'].clip(upper=750)
+    
+    # Calculate YPRR with proper validation
     wr_stats['yards_per_route_run'] = wr_stats.apply(lambda row: 
-        row['receiving_yards'] / row['routes_run'] if row['routes_run'] > 0 else 0, 
+        round(row['receiving_yards'] / row['routes_run'], 2) if row['routes_run'] > 0 else 0, 
         axis=1)
     
+    # Calculate First Downs per Route Run
     wr_stats['first_downs_per_route_run'] = wr_stats.apply(lambda row: 
-        row['receiving_first_downs'] / row['routes_run'] if row['routes_run'] > 0 else 0, 
+        round(row['receiving_first_downs'] / row['routes_run'], 3) if row['routes_run'] > 0 else 0, 
         axis=1)
     
     # Filter for fantasy relevant players only (minimum 10 targets for the season)
@@ -103,15 +109,32 @@ try:
         # Estimate red zone targets (approximately 15% of total targets)
         red_zone_targets = int(row['targets'] * 0.15) if row['targets'] > 0 else 0
         
+        # Validate routes run data
+        routes_run = int(row['routes_run']) if row['routes_run'] > 0 else None
+        if routes_run is None or routes_run == 0:
+            # Log missing routes run data
+            print(f"⚠️ Missing routes run data for {row['player_name']} - using target fallback", file=sys.stderr)
+            routes_run = int(row['targets']) if row['targets'] > 0 else None
+        
+        # Calculate proper YPRR only if we have valid routes run
+        yprr = None
+        if routes_run and routes_run > 0:
+            yprr = round(row['receiving_yards'] / routes_run, 2)
+        
+        # Calculate proper First Downs per Route Run
+        first_downs_per_rr = None
+        if routes_run and routes_run > 0 and pd.notna(row['receiving_first_downs']):
+            first_downs_per_rr = round(row['receiving_first_downs'] / routes_run, 3)
+        
         player_data = {
             'playerName': str(row['player_name']),
             'team': str(row['recent_team']),
-            'yardsPerRouteRun': round(float(row['yards_per_route_run']), 2) if row['yards_per_route_run'] > 0 else 0,
-            'firstDownsPerRouteRun': round(float(row['first_downs_per_route_run']), 3) if row['first_downs_per_route_run'] > 0 else 0,
-            'targetShare': round(float(row['target_share']), 1) if row['target_share'] > 0 else 0,
-            'airYardsShare': round(float(row['air_yards_share']), 1) if row['air_yards_share'] > 0 else 0,
-            'snapPercentage': 0,  # Not available in NFL-Data-Py
-            'routesRun': int(row['routes_run']) if row['routes_run'] > 0 else 0,
+            'yardsPerRouteRun': yprr if yprr is not None else 'NA',
+            'firstDownsPerRouteRun': first_downs_per_rr if first_downs_per_rr is not None else 'NA',
+            'targetShare': round(float(row['target_share']), 1) if row['target_share'] > 0 else 'NA',
+            'airYardsShare': round(float(row['air_yards_share']), 1) if row['air_yards_share'] > 0 else 'NA',
+            'snapPercentage': 'NA',  # Not available in NFL-Data-Py
+            'routesRun': routes_run if routes_run is not None else 'NA',
             'redZoneTargets': red_zone_targets,
             'touchdowns': int(row['receiving_tds']) if pd.notna(row['receiving_tds']) else 0,
             'yardsAfterCatch': int(row['receiving_yards_after_catch']) if pd.notna(row['receiving_yards_after_catch']) else 0,

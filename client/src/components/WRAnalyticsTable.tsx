@@ -73,6 +73,11 @@ export default function WRAnalyticsTable() {
     return typeof value === 'number' ? value.toString() : 'NA';
   };
 
+  const formatPercentage = (value: number | 'NA'): string => {
+    if (value === 'NA') return 'NA';
+    return typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : 'NA';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -249,25 +254,25 @@ export default function WRAnalyticsTable() {
                           {formatValue(player.firstDownsPerRouteRun, 3)}
                         </TableCell>
                         <TableCell className={`${
-                          player.targetShare !== 'NA' && player.targetShare >= 20 
+                          player.targetShare !== 'NA' && player.targetShare >= 0.2 
                             ? 'text-green-600 font-semibold' 
                             : ''
                         }`}>
-                          {formatValue(player.targetShare, 1)}%
+                          {formatPercentage(player.targetShare)}
                         </TableCell>
                         <TableCell className={`${
-                          player.airYardsShare !== 'NA' && player.airYardsShare >= 25 
+                          player.airYardsShare !== 'NA' && player.airYardsShare >= 0.25 
                             ? 'text-green-600 font-semibold' 
                             : ''
                         }`}>
-                          {formatValue(player.airYardsShare, 1)}%
+                          {formatPercentage(player.airYardsShare)}
                         </TableCell>
                         <TableCell className={`${
-                          player.snapPercentage !== 'NA' && player.snapPercentage >= 75 
+                          player.snapPercentage !== 'NA' && player.snapPercentage >= 0.75 
                             ? 'text-green-600 font-semibold' 
                             : ''
                         }`}>
-                          {formatValue(player.snapPercentage, 1)}%
+                          {formatPercentage(player.snapPercentage)}
                         </TableCell>
                         <TableCell>
                           {formatInteger(player.routesRun)}
