@@ -856,6 +856,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // WR Advanced Stats endpoint
+  app.get("/api/analytics/wr-advanced-stats", async (req, res) => {
+    try {
+      const { wrAdvancedStatsService } = await import('./services/wrAdvancedStatsService');
+      const wrStats = await wrAdvancedStatsService.fetchWRAdvancedStats();
+      res.json({
+        success: true,
+        data: wrStats,
+        count: wrStats.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error("WR Advanced Stats API error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch WR advanced stats", 
+        error: error.message 
+      });
+    }
+  });
+
   // Simple data sources endpoint
   app.get("/api/data-sources", async (req, res) => {
     try {

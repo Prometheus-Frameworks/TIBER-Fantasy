@@ -43,6 +43,7 @@ import TETouchdownRegression from "@/pages/TETouchdownRegression";
 import QBEvaluationLogic from "@/pages/QBEvaluationLogic";
 import QBEnvironmentContext from "@/pages/QBEnvironmentContext";
 import WRForecastEvaluation from "@/pages/WRForecastEvaluation";
+import WRAnalyticsTable from "@/components/WRAnalyticsTable";
 import TEEvaluationTest from "@/pages/TEEvaluationTest";
 import BatchEvaluationTest from "@/pages/BatchEvaluationTest";
 import PrometheusStressTest from "@/pages/PrometheusStressTest";
@@ -83,7 +84,8 @@ function Router() {
       <Route path="/player-pool" component={FullPlayerPool} />
       <Route path="/about" component={About} />
       <Route path="/lineup" component={LineupOptimizer} />
-      <Route path="/analytics" component={LineupOptimizer} />
+      <Route path="/analytics/wide-receivers" component={WRAnalyticsTable} />
+      <Route path="/analytics" component={WRAnalyticsTable} />
       <Route path="/premium" component={PremiumAnalytics} />
       <Route path="/sleeper-database" component={SleeperDatabase} />
       <Route path="/community-posts" component={CommunityPosts} />

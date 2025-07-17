@@ -324,25 +324,25 @@ export default function Home() {
                   <Activity className="h-6 w-6 text-indigo-600" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">NFL Analytics</CardTitle>
-                  <CardDescription>Real NFL data integration</CardDescription>
+                  <CardTitle className="text-lg">WR Analytics</CardTitle>
+                  <CardDescription>Wide Receiver Usage & Efficiency</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Professional-grade analytics utilizing authentic NFL performance data, 
-                advanced efficiency metrics, and proprietary statistical models for competitive insights.
+                Comprehensive wide receiver advanced statistics including YPRR, target share, 
+                air yards share, and efficiency metrics from 2024 NFL data.
               </p>
               <div className="flex gap-2 mb-4">
-                <Badge variant="outline" className="text-xs">Target Share</Badge>
                 <Badge variant="outline" className="text-xs">YPRR</Badge>
-                <Badge variant="outline" className="text-xs">Snap %</Badge>
+                <Badge variant="outline" className="text-xs">Target Share</Badge>
+                <Badge variant="outline" className="text-xs">Air Yards</Badge>
               </div>
-              <Link href="/rankings">
+              <Link href="/analytics/wide-receivers">
                 <Button variant="outline" size="sm" className="w-full">
                   <Zap className="mr-2 h-4 w-4" />
-                  View Analytics
+                  View WR Analytics
                 </Button>
               </Link>
             </CardContent>
