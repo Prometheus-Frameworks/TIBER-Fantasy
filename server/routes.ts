@@ -877,6 +877,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RB Advanced Stats endpoint
+  app.get("/api/analytics/rb-advanced-stats", async (req, res) => {
+    try {
+      const { rbAdvancedStatsService } = await import('./services/rbAdvancedStatsService');
+      const rbStats = await rbAdvancedStatsService.getRBAdvancedStats();
+      res.json({
+        success: true,
+        data: rbStats,
+        count: rbStats.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error("RB Advanced Stats API error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch RB advanced stats", 
+        error: error.message 
+      });
+    }
+  });
+
   // Simple data sources endpoint
   app.get("/api/data-sources", async (req, res) => {
     try {
