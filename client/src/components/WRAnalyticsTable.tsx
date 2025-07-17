@@ -234,7 +234,14 @@ export default function WRAnalyticsTable() {
                     {wrStats.map((player, index) => (
                       <TableRow key={`${player.playerName}-${player.team}`}>
                         <TableCell className="font-medium">
-                          {player.playerName}
+                          <div className="flex items-center gap-1">
+                            {player.playerName}
+                            {player.routesRun !== 'NA' && player.routesRun < 200 && (
+                              <span className="text-orange-500 text-xs" title="Small sample size (< 200 routes)">
+                                🚧
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="font-medium text-gray-600">
                           {player.team}
@@ -244,7 +251,14 @@ export default function WRAnalyticsTable() {
                             ? 'text-green-600 font-semibold' 
                             : ''
                         }`}>
-                          {formatValue(player.yardsPerRouteRun, 2)}
+                          <div className="flex items-center gap-1">
+                            {formatValue(player.yardsPerRouteRun, 2)}
+                            {player.routesRun !== 'NA' && player.routesRun < 200 && (
+                              <span className="text-orange-500 text-xs font-normal" title="Small sample size (< 200 routes)">
+                                (SS)
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className={`${
                           player.firstDownsPerRouteRun !== 'NA' && player.firstDownsPerRouteRun >= 0.15 
