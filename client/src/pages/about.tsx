@@ -38,41 +38,57 @@ export default function About() {
           </p>
         </div>
 
-        {/* Mission Statement */}
+        {/* Our Philosophy */}
         <Card className="mb-12 border-0 bg-white/60 backdrop-blur-sm shadow-xl">
           <CardHeader>
             <div className="flex items-center gap-3">
               <Target className="h-6 w-6 text-orange-500" />
-              <CardTitle className="text-2xl">The Promethean Manifesto</CardTitle>
+              <CardTitle className="text-2xl">Our Philosophy</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-6 rounded-lg border border-gray-200">
-              <p className="text-lg text-gray-700 leading-relaxed">
-                This is our contribution to the new generation—proving we can elevate fantasy football into something profoundly transformational. 
-                We demonstrate that the barriers separating amateur from elite analytics are merely illusions of a trapped society 
-                that profits from keeping transformative knowledge locked behind paywalls. Our platform proves we have the capacity 
-                to smash these remaining barriers, liberating analytical sophistication for everyone who refuses to accept artificial scarcity 
-                as the natural order.
+              <p className="text-lg text-gray-700 leading-relaxed mb-4">
+                We believe in doing our part to access the best free data we can possibly find—and present it to you in our own way. Knowledge should belong to everyone. Tools like these can help you understand why sometimes things… just don't work out.
               </p>
+              <p className="text-lg text-gray-700 leading-relaxed mb-4">
+                We like paradoxes here. On one hand, we're trying to predict the future. Analytics with a lot of decimal points… maybe some charts. Cool colours and player ratings derived from some super cool algorithms. On the other, we accept that what we call "luck" might always be the deciding factor. That's part of the game. That's part of life.
+              </p>
+              <p className="text-lg text-gray-700 leading-relaxed mb-4">
+                What dynasty football teaches us is controlled chaos. The more you understand that concept, we're willing to bet you'll be better at the game. It's not about controlling the outcome—it's about making sure your process is sound. Building rosters that make sense. Making moves with purpose. And most importantly? Getting closer to your own intuition and reconnecting with the reason you play in the first place.
+              </p>
+              <p className="text-lg text-gray-700 leading-relaxed mb-4">
+                This isn't about pretending we know what's coming. It's about helping you think clearer. Whether you're building a contender or just trying to figure out why your roster fell apart, our goal is simple: give you the tools to think for yourself.
+              </p>
+              <p className="text-lg text-gray-700 leading-relaxed mb-4">
+                Because that's what this is really about. Football. Fun. A little heartbreak. A lot of learning. And maybe, if you're lucky, a win.
+              </p>
+              <div className="text-center text-lg font-medium text-gray-800 space-y-1">
+                <p>We find the tools.</p>
+                <p>You make the calls.</p>
+                <p>Have fun with it.</p>
+              </div>
             </div>
-            <p className="text-gray-600">
-              Built with NFL-Data-Py integration, proprietary analytical frameworks derived from industry-leading methodologies, 
-              and comprehensive statistical validation. All analytical models use research-backed metrics with documented correlation studies.
-            </p>
-            <p className="text-gray-600">
-              We stand at a pivotal moment where the acceleration of human knowledge depends on our willingness to tear down artificial barriers. 
-              Like Prometheus bringing fire to humanity, we liberate the analytical tools that were once monopolized by those who could afford them. 
-              This movement transcends fantasy football - it represents humanity's next evolutionary leap toward universal access to transformative intelligence. 
-              The future belongs to those who understand that when knowledge is democratized, the entire species benefits.
-            </p>
-            <div className="flex flex-wrap gap-2 pt-4">
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700">Generational Gift</Badge>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700">Barrier Smashing</Badge>
-              <Badge variant="secondary" className="bg-green-100 text-green-700">Hobby Elevation</Badge>
-              <Badge variant="secondary" className="bg-purple-100 text-purple-700">Illusion Destruction</Badge>
-              <Badge variant="secondary" className="bg-red-100 text-red-700">Trapped Society Liberation</Badge>
-              <Badge variant="secondary" className="bg-indigo-100 text-indigo-700">New Generation Proof</Badge>
+          </CardContent>
+        </Card>
+
+        {/* Join Us */}
+        <Card className="mb-12 border-0 bg-gradient-to-r from-blue-50 to-purple-50 backdrop-blur-sm shadow-xl">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Users className="h-6 w-6 text-blue-500" />
+              <CardTitle className="text-2xl">Join Us</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-white/80 p-6 rounded-lg border border-blue-200">
+              <p className="text-lg text-gray-700 leading-relaxed mb-4">
+                If you're curious about what we're building, or want to help, reach out. Whether it's writing content, sharing your thoughts, or just wanting to be part of something different—this platform is open.
+              </p>
+              <p className="text-lg text-gray-700 leading-relaxed text-center font-medium">
+                No paywalls. No gatekeeping. Just real people who love the game.<br />
+                Let's build together.
+              </p>
             </div>
           </CardContent>
         </Card>
