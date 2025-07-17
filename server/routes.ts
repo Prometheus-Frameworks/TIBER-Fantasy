@@ -898,6 +898,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // QB Advanced Stats endpoint
+  app.get("/api/analytics/qb-advanced-stats", async (req, res) => {
+    try {
+      const { qbAdvancedStatsService } = await import('./services/qbAdvancedStatsService');
+      const qbStats = await qbAdvancedStatsService.getQBAdvancedStats();
+      res.json({
+        success: true,
+        data: qbStats,
+        count: qbStats.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error("QB Advanced Stats API error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch QB advanced stats", 
+        error: error.message 
+      });
+    }
+  });
+
+  // TE Advanced Stats endpoint
+  app.get("/api/analytics/te-advanced-stats", async (req, res) => {
+    try {
+      const { teAdvancedStatsService } = await import('./services/teAdvancedStatsService');
+      const teStats = await teAdvancedStatsService.getTEAdvancedStats();
+      res.json({
+        success: true,
+        data: teStats,
+        count: teStats.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error("TE Advanced Stats API error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch TE advanced stats", 
+        error: error.message 
+      });
+    }
+  });
+
   // Simple data sources endpoint
   app.get("/api/data-sources", async (req, res) => {
     try {

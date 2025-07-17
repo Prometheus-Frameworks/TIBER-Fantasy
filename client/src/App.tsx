@@ -45,6 +45,8 @@ import QBEnvironmentContext from "@/pages/QBEnvironmentContext";
 import WRForecastEvaluation from "@/pages/WRForecastEvaluation";
 import WRAnalyticsTable from "@/components/WRAnalyticsTable";
 import RBAnalytics from "@/pages/RBAnalytics";
+import QBAnalyticsTable from "@/components/QBAnalyticsTable";
+import TEAnalyticsTable from "@/components/TEAnalyticsTable";
 import TEEvaluationTest from "@/pages/TEEvaluationTest";
 import BatchEvaluationTest from "@/pages/BatchEvaluationTest";
 import PrometheusStressTest from "@/pages/PrometheusStressTest";
@@ -87,6 +89,8 @@ function Router() {
       <Route path="/lineup" component={LineupOptimizer} />
       <Route path="/analytics/wide-receivers" component={WRAnalyticsTable} />
       <Route path="/analytics/running-backs" component={RBAnalytics} />
+      <Route path="/analytics/quarterbacks" component={QBAnalyticsTable} />
+      <Route path="/analytics/tight-ends" component={TEAnalyticsTable} />
       <Route path="/analytics" component={WRAnalyticsTable} />
       <Route path="/premium" component={PremiumAnalytics} />
       <Route path="/sleeper-database" component={SleeperDatabase} />
