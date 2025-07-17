@@ -60,6 +60,7 @@ import NotFound from "@/pages/not-found";
 import SleeperDatabase from "@/pages/sleeper-database";
 import PrometheusBenchmarks from "@/pages/PrometheusBenchmarks";
 import CommunityPosts from "@/pages/CommunityPosts";
+import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
 
 function Router() {
   return (
@@ -87,11 +88,11 @@ function Router() {
       <Route path="/player-pool" component={FullPlayerPool} />
       <Route path="/about" component={About} />
       <Route path="/lineup" component={LineupOptimizer} />
-      <Route path="/analytics/wide-receivers" component={WRAnalyticsTable} />
-      <Route path="/analytics/running-backs" component={RBAnalytics} />
-      <Route path="/analytics/quarterbacks" component={QBAnalyticsTable} />
-      <Route path="/analytics/tight-ends" component={TEAnalyticsTable} />
-      <Route path="/analytics" component={WRAnalyticsTable} />
+      <Route path="/analytics" component={AdvancedAnalytics} />
+      <Route path="/analytics/wide-receivers" component={AdvancedAnalytics} />
+      <Route path="/analytics/running-backs" component={AdvancedAnalytics} />
+      <Route path="/analytics/quarterbacks" component={AdvancedAnalytics} />
+      <Route path="/analytics/tight-ends" component={AdvancedAnalytics} />
       <Route path="/premium" component={PremiumAnalytics} />
       <Route path="/sleeper-database" component={SleeperDatabase} />
       <Route path="/community-posts" component={CommunityPosts} />
