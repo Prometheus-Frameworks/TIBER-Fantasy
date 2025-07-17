@@ -1,53 +1,42 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { BarChart3, Target, TrendingUp, Users } from "lucide-react";
-import { useState } from "react";
+import { BarChart3, Target, TrendingUp, Users, RefreshCw } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 interface TeamData {
   name: string;
   city: string;
   oasisScore: number;
   color: string;
+  [key: string]: any; // Allow additional fields from API
 }
 
-const nflTeams: TeamData[] = [
-  { name: "Bills", city: "Buffalo", oasisScore: 92, color: "#00338D" },
-  { name: "Dolphins", city: "Miami", oasisScore: 89, color: "#008E97" },
-  { name: "Chiefs", city: "Kansas City", oasisScore: 87, color: "#E31837" },
-  { name: "Ravens", city: "Baltimore", oasisScore: 85, color: "#241773" },
-  { name: "Cowboys", city: "Dallas", oasisScore: 83, color: "#041E42" },
-  { name: "49ers", city: "San Francisco", oasisScore: 82, color: "#AA0000" },
-  { name: "Lions", city: "Detroit", oasisScore: 80, color: "#0076B6" },
-  { name: "Bengals", city: "Cincinnati", oasisScore: 78, color: "#FB4F14" },
-  { name: "Eagles", city: "Philadelphia", oasisScore: 77, color: "#004C54" },
-  { name: "Chargers", city: "Los Angeles", oasisScore: 75, color: "#0080C6" },
-  { name: "Packers", city: "Green Bay", oasisScore: 74, color: "#203731" },
-  { name: "Texans", city: "Houston", oasisScore: 72, color: "#03202F" },
-  { name: "Rams", city: "Los Angeles", oasisScore: 71, color: "#003594" },
-  { name: "Vikings", city: "Minnesota", oasisScore: 69, color: "#4F2683" },
-  { name: "Seahawks", city: "Seattle", oasisScore: 68, color: "#002244" },
-  { name: "Saints", city: "New Orleans", oasisScore: 67, color: "#D3BC8D" },
-  { name: "Steelers", city: "Pittsburgh", oasisScore: 66, color: "#FFB612" },
-  { name: "Falcons", city: "Atlanta", oasisScore: 65, color: "#A71930" },
-  { name: "Jets", city: "New York", oasisScore: 64, color: "#125740" },
-  { name: "Buccaneers", city: "Tampa Bay", oasisScore: 63, color: "#D50A0A" },
-  { name: "Colts", city: "Indianapolis", oasisScore: 62, color: "#002C5F" },
-  { name: "Cardinals", city: "Arizona", oasisScore: 61, color: "#97233F" },
-  { name: "Browns", city: "Cleveland", oasisScore: 60, color: "#311D00" },
-  { name: "Jaguars", city: "Jacksonville", oasisScore: 59, color: "#006778" },
-  { name: "Broncos", city: "Denver", oasisScore: 58, color: "#FB4F14" },
-  { name: "Commanders", city: "Washington", oasisScore: 57, color: "#5A1414" },
-  { name: "Raiders", city: "Las Vegas", oasisScore: 56, color: "#000000" },
-  { name: "Panthers", city: "Carolina", oasisScore: 55, color: "#0085CA" },
-  { name: "Titans", city: "Tennessee", oasisScore: 54, color: "#0C2340" },
-  { name: "Patriots", city: "New England", oasisScore: 53, color: "#002244" },
-  { name: "Bears", city: "Chicago", oasisScore: 52, color: "#0B162A" },
-  { name: "Giants", city: "New York", oasisScore: 51, color: "#0B2265" }
-];
+interface OasisApiResponse {
+  success: boolean;
+  teams: TeamData[];
+  cacheStatus: {
+    cached: boolean;
+    age: number;
+    ttl: number;
+  };
+  timestamp: string;
+}
 
 export default function Oasis() {
   const [selectedTeam, setSelectedTeam] = useState<TeamData | null>(null);
+
+  // Fetch OASIS data from external API
+  const { data: apiResponse, isLoading, error, refetch } = useQuery<OasisApiResponse>({
+    queryKey: ['/api/oasis/teams'],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2
+  });
+
+  const nflTeams = apiResponse?.teams || [];
+  const isUsingLiveData = apiResponse?.success === true;
+  const cacheStatus = apiResponse?.cacheStatus;
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return "text-green-600";
@@ -68,12 +57,68 @@ export default function Oasis() {
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             OASIS: Team Environments Decoded
           </h1>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto mb-4">
             Offensive Architecture Scoring & Insight System - Revealing the hidden patterns that drive fantasy production
           </p>
+          
+          {/* API Status Indicator */}
+          <div className="flex items-center justify-center gap-4 text-sm">
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${
+              isUsingLiveData ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${
+                isUsingLiveData ? 'bg-green-500' : 'bg-yellow-500'
+              }`}></div>
+              {isLoading ? 'Loading...' : isUsingLiveData ? 'Live Data' : 'Fallback Mode'}
+            </div>
+            
+            {cacheStatus && isUsingLiveData && (
+              <span className="text-gray-500">
+                {cacheStatus.cached ? `Cached (${Math.round(cacheStatus.age / 1000)}s ago)` : 'Fresh'}
+              </span>
+            )}
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => refetch()}
+              disabled={isLoading}
+              className="flex items-center gap-1"
+            >
+              <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
+          
+          {error && (
+            <div className="mt-2 text-sm text-red-600 bg-red-50 px-3 py-2 rounded">
+              ⚠️ API Error: Using fallback data
+            </div>
+          )}
         </div>
 
-        {!selectedTeam ? (
+        {isLoading ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <div className="flex items-center justify-center gap-3">
+                <RefreshCw className="w-5 h-5 animate-spin" />
+                <span>Loading OASIS data...</span>
+              </div>
+            </CardContent>
+          </Card>
+        ) : nflTeams.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <div className="text-red-600 mb-4">
+                ⚠️ No team data available
+              </div>
+              <Button onClick={() => refetch()} className="flex items-center gap-2">
+                <RefreshCw className="w-4 h-4" />
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
+        ) : !selectedTeam ? (
           <>
             {/* Team Rankings Chart */}
             <Card className="mb-8">

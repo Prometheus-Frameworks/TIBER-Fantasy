@@ -824,6 +824,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // OASIS External API endpoint
+  app.get("/api/oasis/teams", async (req, res) => {
+    try {
+      const { oasisApiService } = await import('./services/oasisApiService');
+      const teams = await oasisApiService.fetchOasisData();
+      res.json({
+        success: true,
+        teams,
+        cacheStatus: oasisApiService.getCacheStatus(),
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error("OASIS API error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch OASIS data", 
+        error: error.message 
+      });
+    }
+  });
+
+  // OASIS Cache management endpoint (for debugging)
+  app.post("/api/oasis/clear-cache", async (req, res) => {
+    try {
+      const { oasisApiService } = await import('./services/oasisApiService');
+      oasisApiService.clearCache();
+      res.json({ success: true, message: "OASIS cache cleared" });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Simple data sources endpoint
   app.get("/api/data-sources", async (req, res) => {
     try {
@@ -831,7 +863,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sources: [
           { name: "NFL-Data-Py", status: "Active", description: "Historical NFL statistics" },
           { name: "Sleeper API", status: "Active", description: "Fantasy platform integration" },
-          { name: "SportsDataIO", status: "Active", description: "Real-time NFL data" }
+          { name: "SportsDataIO", status: "Active", description: "Real-time NFL data" },
+          { name: "OASIS External API", status: "Active", description: "Live team environment data" }
         ]
       });
     } catch (error: any) {
