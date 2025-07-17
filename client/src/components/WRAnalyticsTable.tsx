@@ -75,7 +75,7 @@ export default function WRAnalyticsTable() {
 
   const formatPercentage = (value: number | 'NA'): string => {
     if (value === 'NA') return 'NA';
-    return typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : 'NA';
+    return typeof value === 'number' ? `${(value * 100).toFixed(2)}%` : 'NA';
   };
 
   return (
