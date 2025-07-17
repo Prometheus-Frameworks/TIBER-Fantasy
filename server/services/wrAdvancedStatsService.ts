@@ -131,8 +131,8 @@ try:
             'team': str(row['recent_team']),
             'yardsPerRouteRun': yprr if yprr is not None else 'NA',
             'firstDownsPerRouteRun': first_downs_per_rr if first_downs_per_rr is not None else 'NA',
-            'targetShare': round(float(row['target_share']), 1) if row['target_share'] > 0 else 'NA',
-            'airYardsShare': round(float(row['air_yards_share']), 1) if row['air_yards_share'] > 0 else 'NA',
+            'targetShare': round(float(row['target_share']), 3) if row['target_share'] > 0 else 'NA',
+            'airYardsShare': round(float(row['air_yards_share']), 3) if row['air_yards_share'] > 0 else 'NA',
             'snapPercentage': 'NA',  # Not available in NFL-Data-Py
             'routesRun': routes_run if routes_run is not None else 'NA',
             'redZoneTargets': red_zone_targets,

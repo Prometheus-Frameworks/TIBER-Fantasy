@@ -209,7 +209,7 @@ export default function WRAnalyticsTable() {
                           Snap %
                           <MetricTooltip 
                             metric="Snap Percentage" 
-                            description="Percentage of offensive snaps played - measures usage" 
+                            description="Data Unavailable - Not provided by current NFL data source" 
                           />
                         </div>
                       </TableHead>
