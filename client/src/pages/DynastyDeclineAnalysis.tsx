@@ -396,9 +396,9 @@ export default function DynastyDeclineAnalysis() {
               </div>
 
               <div>
-                <h4 className="font-semibold mb-3">Integration with Prometheus v2.0</h4>
+                <h4 className="font-semibold mb-3">Integration with Signal v2.0</h4>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  The Dynasty Decline Detection Framework integrates with our existing Prometheus v2.0 algorithm 
+                  The Dynasty Decline Detection Framework integrates with our existing Signal v2.0 algorithm 
                   by applying risk-based penalties to the Stability component (15% weighting). Players with 
                   "DeclineVerified" or "Post-Context Cliff" tags receive significant stability penalties, 
                   while "SkillDecayRisk" players receive moderate adjustments.

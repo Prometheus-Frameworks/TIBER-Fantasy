@@ -86,7 +86,7 @@ export function ViewSourcesModal({ children }: { children: React.ReactNode }) {
 
           <TabsContent value="sources" className="space-y-4">
             <div className="text-sm text-gray-600 mb-4">
-              Transparent disclosure of all data sources powering Prometheus analytics
+              Transparent disclosure of all data sources powering Signal analytics
             </div>
             
             <div className="grid gap-4">

@@ -192,7 +192,7 @@ export default function DraftRoom() {
       {/* Banner */}
       <div className="draft-room-banner">
         <h2>Draft Helper (Beta)</h2>
-        <p>Here's how your draft looks through Prometheus' lens.<br />
+        <p>Here's how your draft looks through Signal's lens.<br />
         You decide what to do with it.</p>
         <p><em>60% of the time, it works every time.</em></p>
         <p>This isn't a draft guide. It's a reflection.</p>
@@ -404,7 +404,7 @@ export default function DraftRoom() {
           <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h2 className="text-2xl font-semibold text-gray-700 mb-2">Ready to Begin</h2>
           <p className="text-gray-600 mb-6">
-            Start your 12-team dynasty startup draft with Prometheus value tracking
+            Start your 12-team dynasty startup draft with Signal value tracking
           </p>
           <Button onClick={startDraft} size="lg" className="bg-green-600 hover:bg-green-700">
             <Trophy className="h-5 w-5 mr-2" />

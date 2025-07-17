@@ -77,7 +77,7 @@ export default function Home() {
           {/* Site Title & Navigation */}
           <header className="text-center mb-12">
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
-              Reflecting FF
+              Signal
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 mb-8">
               Fantasy Data Meets Real Insight
@@ -403,7 +403,7 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          {/* Prometheus Benchmark Cluster */}
+          {/* Signal Benchmark Cluster */}
           <Card className="hover:shadow-lg transition-shadow border-0 bg-gradient-to-br from-amber-50 to-orange-50 backdrop-blur-sm">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -412,7 +412,7 @@ export default function Home() {
                 </div>
                 <div>
                   <CardTitle className="text-lg">Elite Benchmarks</CardTitle>
-                  <CardDescription>Prometheus analytics cluster</CardDescription>
+                  <CardDescription>Signal analytics cluster</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -580,7 +580,7 @@ export default function Home() {
           
           <div className="border-t border-gray-800 mt-8 pt-8 text-center">
             <p className="text-gray-400 text-sm">
-              © 2025 Reflecting FF. Fantasy data meets real insight.
+              © 2025 Signal Fantasy Football. Dynasty and redraft.
             </p>
           </div>
         </div>

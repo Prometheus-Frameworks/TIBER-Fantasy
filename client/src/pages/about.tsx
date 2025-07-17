@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import DataAttributionFooter from "@/components/data-attribution-footer";
 import { ViewSourcesModal } from "@/components/view-sources-modal";
+import SignalFooter from "@/components/signal-footer";
 
 export default function About() {
   return (
@@ -30,7 +31,7 @@ export default function About() {
               <BarChart3 className="h-8 w-8 text-white" />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Prometheus
+              Signal
             </h1>
           </div>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
@@ -282,7 +283,7 @@ export default function About() {
 
             <div className="text-center space-y-4">
               <p className="text-gray-600 mb-4">
-                <strong>Remember:</strong> Prometheus will always be free. Donations simply help us expand data sources 
+                <strong>Remember:</strong> Signal will always be free. Donations simply help us expand data sources 
                 and add more advanced features for the entire community.
               </p>
               
@@ -323,6 +324,9 @@ export default function About() {
       </div>
 
       <DataAttributionFooter />
+      
+      {/* Signal Footer */}
+      <SignalFooter />
     </div>
   );
 }

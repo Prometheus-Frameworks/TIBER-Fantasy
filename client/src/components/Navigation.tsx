@@ -17,7 +17,7 @@ export default function Navigation() {
             <div className="flex items-center space-x-2">
               <Trophy className="h-8 w-8 text-yellow-600" />
               <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                Prometheus
+                Signal
               </span>
             </div>
           </Link>

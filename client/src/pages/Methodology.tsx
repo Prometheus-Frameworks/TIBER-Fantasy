@@ -691,7 +691,7 @@ export default function Methodology() {
               <div className="p-4 bg-gray-50 rounded-lg">
                 <h5 className="font-medium mb-2">Legal Compliance</h5>
                 <p className="text-sm text-gray-600 mb-3">
-                  Prometheus maintains strict legal compliance by using only publicly available APIs and data sources. 
+                  Signal maintains strict legal compliance by using only publicly available APIs and data sources. 
                   We do not scrape proprietary data or violate terms of service.
                 </p>
                 <ul className="text-xs text-gray-500 space-y-1">

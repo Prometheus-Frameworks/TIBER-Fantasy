@@ -21,9 +21,9 @@ export default function CommunityPosts() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Community Manifesto */}
       <div className="community-intro">
-        <h2>Welcome to the Prometheus Community</h2>
+        <h2>Welcome to the Signal Community</h2>
         <p>This space exists for anyone who wants to share their work. Articles, fantasy takes, social media threads—whatever you've created, it belongs here.</p>
-        <p>Prometheus Community isn't a classroom. It's the schoolyard. You're not here to be taught. You're here to create—and see what others are building too.</p>
+        <p>Signal Community isn't a classroom. It's the schoolyard. You're not here to be taught. You're here to create—and see what others are building too.</p>
         <p>Putting yourself out there isn't easy. This platform respects that. Every post, no matter how small, is a step forward.</p>
         <p>The goal isn't always feedback. It's reflection. It's trust. It's creativity.</p>
         <p>Post what you're proud of. Reflect what others share. This is where you belong.</p>

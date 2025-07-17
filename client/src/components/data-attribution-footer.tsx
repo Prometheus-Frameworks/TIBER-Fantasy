@@ -10,7 +10,7 @@ export default function DataAttributionFooter() {
             <h3 className="text-lg font-semibold">Data Sources & Attribution</h3>
           </div>
           <p className="text-gray-400 text-sm max-w-2xl mx-auto">
-            Prometheus uses authentic data from verified sources to provide accurate fantasy football analysis.
+            Signal uses authentic data from verified sources to provide accurate fantasy football analysis.
           </p>
         </div>
         
@@ -79,7 +79,7 @@ export default function DataAttributionFooter() {
           <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
             <div className="mb-2 md:mb-0">
               <p>
-                Prometheus is an independent fantasy football analytics platform.
+                Signal is an independent fantasy football analytics platform.
                 All trademarks belong to their respective owners.
               </p>
             </div>

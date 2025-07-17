@@ -133,7 +133,7 @@ export default function TETouchdownRegression() {
         <h1 className="text-3xl font-bold mb-2">TE Touchdown Regression Logic (v1.1)</h1>
         <p className="text-muted-foreground">
           Advanced methodology plugin for evaluating TE touchdown sustainability, red zone usage patterns, 
-          and regression risk. Safely integrates with existing Prometheus algorithms.
+          and regression risk. Safely integrates with existing Signal algorithms.
         </p>
       </div>
 

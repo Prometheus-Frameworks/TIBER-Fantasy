@@ -50,7 +50,7 @@ export default function Dashboard() {
                 <Volleyball className="text-white" size={16} />
               </div>
               <div>
-                <h1 className="text-lg md:text-xl font-bold text-gray-900">Prometheus</h1>
+                <h1 className="text-lg md:text-xl font-bold text-gray-900">Signal</h1>
                 <p className="text-xs md:text-sm text-gray-500 hidden sm:block">fantasy and data</p>
               </div>
             </div>

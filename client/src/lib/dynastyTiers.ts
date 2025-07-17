@@ -117,7 +117,7 @@ export function calculateDynastyScore(player: {
       score: proprietaryScore,
       tier: getTierFromScore(proprietaryScore),
       factors: [
-        `Prometheus rank based on stats`,
+        `Signal rank based on stats`,
         'Proprietary statistical analysis',
         `Dynasty tier: ${proprietaryTier}`
       ]

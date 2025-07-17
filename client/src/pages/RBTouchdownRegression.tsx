@@ -549,7 +549,7 @@ function RBTouchdownSustainabilityPage() {
           {methodologyData?.success && (
             <Card>
               <CardHeader>
-                <CardTitle>Prometheus Integration</CardTitle>
+                <CardTitle>Signal Integration</CardTitle>
                 <CardDescription>
                   How TD regression analysis integrates with existing methodology
                 </CardDescription>
@@ -584,7 +584,7 @@ function RBTouchdownSustainabilityPage() {
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
                     <strong>Safe Integration:</strong> This module is designed to safely append to the existing 
-                    Prometheus methodology without overwriting or deleting any current evaluation logic, including 
+                    Signal methodology without overwriting or deleting any current evaluation logic, including 
                     spike week detection, YPRR analysis, or adjustedDynastyValue formula calculations.
                   </AlertDescription>
                 </Alert>
