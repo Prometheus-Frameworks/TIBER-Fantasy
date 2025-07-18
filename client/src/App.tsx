@@ -64,6 +64,7 @@ import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
 import FantasyProTest from "@/pages/FantasyProTest";
 import HowYouCanContribute from "@/pages/how-you-can-contribute";
 import RBDraftCapitalContext from "@/pages/RBDraftCapitalContext";
+import RankingsBuilder from "@/pages/RankingsBuilder";
 
 function Router() {
   return (
@@ -79,6 +80,7 @@ function Router() {
       <Route path="/trade-history/:id" component={TradeHistoryPage} />
       <Route path="/dynasty-values" component={DynastyValuesPage} />
       <Route path="/rankings" component={EnhancedNFLRankings} />
+      <Route path="/rankings-builder" component={RankingsBuilder} />
       <Route path="/enhanced-nfl" component={EnhancedNFLRankings} />
       <Route path="/compare-league" component={CompareLeaguePage} />
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
