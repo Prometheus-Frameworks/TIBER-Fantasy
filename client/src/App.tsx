@@ -15,11 +15,7 @@ import ValueArbitragePage from "@/pages/value-arbitrage";
 import PlayerAnalysisPage from "@/pages/player-analysis";
 import TradeHistoryPage from "@/pages/trade-history";
 import DynastyValuesPage from "@/pages/dynasty-values";
-import ValueRankingsPage from "@/pages/value-rankings";
-import LeagueRankingsPage from "@/pages/league-rankings";
-import PositionRankingsPage from "@/pages/position-rankings";
-import SimpleRankingsPage from "@/pages/simple-rankings";
-import RankingAnalysisPage from "@/pages/ranking-analysis";
+
 import PlayerSearchDemo from "@/pages/player-search-demo";
 import LeagueAnalysisPage from "@/pages/league-analysis";
 import FantasyMovesPage from "@/pages/fantasy-moves";
@@ -64,7 +60,7 @@ import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
 import FantasyProTest from "@/pages/FantasyProTest";
 import HowYouCanContribute from "@/pages/how-you-can-contribute";
 import RBDraftCapitalContext from "@/pages/RBDraftCapitalContext";
-import RankingsBuilder from "@/pages/RankingsBuilder";
+import Rankings from "@/pages/Rankings";
 
 function Router() {
   return (
@@ -79,8 +75,7 @@ function Router() {
       <Route path="/player-analysis" component={PlayerAnalysisPage} />
       <Route path="/trade-history/:id" component={TradeHistoryPage} />
       <Route path="/dynasty-values" component={DynastyValuesPage} />
-      <Route path="/rankings" component={EnhancedNFLRankings} />
-      <Route path="/rankings-builder" component={RankingsBuilder} />
+      <Route path="/rankings" component={Rankings} />
       <Route path="/enhanced-nfl" component={EnhancedNFLRankings} />
       <Route path="/compare-league" component={CompareLeaguePage} />
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
