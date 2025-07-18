@@ -21,6 +21,7 @@ import { accuracyValidator } from './accuracyValidator';
 import { fantasyProsAPI } from './services/fantasyProsAPI';
 import { dataIngestionService } from './services/dataIngestionService';
 import { fantasyProService } from './services/fantasyProService';
+import { rbDraftCapitalService } from './rbDraftCapitalContext';
 
 /**
  * Apply league format adjustments to dynasty values
@@ -386,6 +387,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         error: 'James Cook test failed',
+        details: error.message
+      });
+    }
+  });
+
+  // RB Draft Capital Context Override Routes
+  app.post('/api/rb-draft-capital/evaluate', async (req, res) => {
+    try {
+      const input = req.body;
+      
+      if (!input.playerId || !input.playerName || typeof input.draftRound !== 'number') {
+        return res.status(400).json({
+          success: false,
+          error: 'Player ID, name, and draft round required'
+        });
+      }
+
+      const result = await rbDraftCapitalService.evaluateRBDraftCapitalContext(input);
+      
+      res.json({
+        success: true,
+        ...result,
+        methodology: 'RB Draft Capital Context Override Module',
+        module: 'Contextual override system for proven RB performers'
+      });
+    } catch (error: any) {
+      console.error('❌ RB Draft Capital Context evaluation error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'RB Draft Capital Context evaluation failed',
+        details: error.message
+      });
+    }
+  });
+
+  app.post('/api/rb-draft-capital/batch-evaluate', async (req, res) => {
+    try {
+      const { inputs } = req.body;
+      
+      if (!Array.isArray(inputs) || inputs.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Array of RB inputs required'
+        });
+      }
+
+      const results = await rbDraftCapitalService.batchEvaluateRBs(inputs);
+      
+      const overrideCount = results.filter(r => r.contextOverride).length;
+      
+      res.json({
+        success: true,
+        results,
+        summary: {
+          totalProcessed: results.length,
+          contextOverrides: overrideCount,
+          overridePercentage: Math.round((overrideCount / results.length) * 100)
+        },
+        methodology: 'RB Draft Capital Context Override Module (Batch)',
+        module: 'Batch processing for multiple RB evaluations'
+      });
+    } catch (error: any) {
+      console.error('❌ RB Draft Capital Context batch evaluation error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'RB Draft Capital Context batch evaluation failed',
         details: error.message
       });
     }

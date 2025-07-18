@@ -63,6 +63,7 @@ import CommunityPosts from "@/pages/CommunityPosts";
 import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
 import FantasyProTest from "@/pages/FantasyProTest";
 import HowYouCanContribute from "@/pages/how-you-can-contribute";
+import RBDraftCapitalContext from "@/pages/RBDraftCapitalContext";
 
 function Router() {
   return (
@@ -102,6 +103,7 @@ function Router() {
       <Route path="/prometheus-benchmarks" component={PrometheusBenchmarks} />
       <Route path="/dynasty-decline-analysis" component={DynastyDeclineAnalysis} />
       <Route path="/rb-touchdown-regression" component={RBTouchdownRegression} />
+      <Route path="/rb-draft-capital-context" component={RBDraftCapitalContext} />
       <Route path="/wr-touchdown-regression" component={WRTouchdownRegression} />
       <Route path="/te-touchdown-regression" component={TETouchdownRegression} />
       <Route path="/qb-evaluation-logic" component={QBEvaluationLogic} />

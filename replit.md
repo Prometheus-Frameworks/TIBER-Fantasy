@@ -219,6 +219,7 @@ Based on user feedback, expanding to include:
 ```
 Changelog:
 - July 18, 2025. **COMPREHENSIVE CONTENT REWRITE**: Updated all three main About page sections with simplified, direct messaging - "Our Philosophy" emphasizes tool building and continuous improvement, "Help Us Build" focuses on open collaboration, "Our Contribution" positions project as proof ordinary people can do extraordinary things
+- July 18, 2025. **RB DRAFT CAPITAL CONTEXT OVERRIDE MODULE**: Implemented comprehensive three-step system for contextual RB analysis - baseline draft tier tagging (PremiumBack/StrongBack/RiskBack/FragileBack), context override triggers (starting role + two top-24 seasons + no top-3 RB threat), and live projection adjustments disabling draft capital penalties for proven performers like Kyren Williams
 - July 18, 2025. **HOW YOU CAN CONTRIBUTE PAGE**: Created new dedicated page at /how-you-can-contribute featuring current goals (Community Rankings System, Trade Evaluator Improvements, Custom Player Pages), contribution methods (upload rankings, upvote, report bugs, share), and community-building messaging
 - July 18, 2025. **NEW GENIUS SECTION ADDED**: Created playful "Haha, Here's the Genius!" section encouraging direct participation and contribution to the project
 - July 18, 2025. **COLLABORATION SECTION UPDATE**: Replaced "Join Us" section in About page with new "Help Us Build (And Keep It Fair)" content emphasizing open access philosophy, legal compliance, collaboration over disruption, and non-commercial approach to data democratization
