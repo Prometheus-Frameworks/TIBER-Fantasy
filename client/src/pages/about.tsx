@@ -303,6 +303,12 @@ export default function About() {
           <p className="text-gray-600 max-w-2xl mx-auto">
             Ready to be part of something bigger? We're building the future of fantasy football together.
           </p>
+          <div className="mt-6">
+            <a href="/how-you-can-contribute" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-blue-500 text-white font-medium rounded-lg hover:from-green-600 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-xl">
+              <Users className="h-5 w-5" />
+              How You Can Contribute
+            </a>
+          </div>
         </div>
 
         {/* Contact */}

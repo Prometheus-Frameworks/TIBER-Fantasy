@@ -62,6 +62,7 @@ import PrometheusBenchmarks from "@/pages/PrometheusBenchmarks";
 import CommunityPosts from "@/pages/CommunityPosts";
 import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
 import FantasyProTest from "@/pages/FantasyProTest";
+import HowYouCanContribute from "@/pages/how-you-can-contribute";
 
 function Router() {
   return (
@@ -88,6 +89,7 @@ function Router() {
       <Route path="/enhanced-player/:id" component={EnhancedPlayerProfile} />
       <Route path="/player-pool" component={FullPlayerPool} />
       <Route path="/about" component={About} />
+      <Route path="/how-you-can-contribute" component={HowYouCanContribute} />
       <Route path="/lineup" component={LineupOptimizer} />
       <Route path="/analytics" component={AdvancedAnalytics} />
       <Route path="/analytics/wide-receivers" component={AdvancedAnalytics} />
