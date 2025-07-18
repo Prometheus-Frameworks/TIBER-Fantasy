@@ -73,22 +73,51 @@ export default function About() {
           </CardContent>
         </Card>
 
-        {/* Join Us */}
+        {/* Help Us Build (And Keep It Fair) */}
         <Card className="mb-12 border-0 bg-gradient-to-r from-blue-50 to-purple-50 backdrop-blur-sm shadow-xl">
           <CardHeader>
             <div className="flex items-center gap-3">
               <Users className="h-6 w-6 text-blue-500" />
-              <CardTitle className="text-2xl">Join Us</CardTitle>
+              <CardTitle className="text-2xl">Help Us Build (And Keep It Fair)</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-white/80 p-6 rounded-lg border border-blue-200">
-              <p className="text-lg text-gray-700 leading-relaxed mb-4">
-                If you're curious about what we're building, or want to help, reach out. Whether it's writing content, sharing your thoughts, or just wanting to be part of something different—this platform is open.
+            <div className="bg-white/80 p-6 rounded-lg border border-blue-200 space-y-4">
+              <p className="text-lg text-gray-700 leading-relaxed">
+                At its core, this project isn't just about fantasy football data.
+                It's about moving past the idea that knowledge should be locked behind paywalls or kept out of reach for the average person. Whether it's sports analytics or anything else, we believe open access to information is how communities—and humanity itself—move forward.
               </p>
-              <p className="text-lg text-gray-700 leading-relaxed text-center font-medium">
-                No paywalls. No gatekeeping. Just real people who love the game.<br />
-                Let's build together.
+              
+              <p className="text-lg text-gray-700 leading-relaxed">
+                That said, we respect the work others have put in.
+                We're committed to staying within legal boundaries, and if you're a data provider or creator concerned about how your work is reflected here, we encourage you to reach out. We'd rather collaborate than clash.
+              </p>
+              
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <p className="text-lg text-gray-800 font-medium mb-3">As for us:</p>
+                <div className="space-y-2 text-gray-700">
+                  <p>We don't pay people.</p>
+                  <p>We don't pay ourselves.</p>
+                  <p>And we don't plan to.</p>
+                  <p className="font-medium">This project exists because we believe in building something better—together.</p>
+                </div>
+              </div>
+              
+              <p className="text-lg text-gray-700 leading-relaxed">
+                If you:
+              </p>
+              <ul className="list-disc pl-6 space-y-1 text-gray-700">
+                <li>Have access to data that can help,</li>
+                <li>Want to contribute to an open, honest project,</li>
+                <li>Or simply believe progress doesn't have to come with a price tag—</li>
+              </ul>
+              
+              <p className="text-lg text-gray-700 leading-relaxed font-medium text-center">
+                Reach out. Let's work.
+              </p>
+              
+              <p className="text-lg text-gray-700 leading-relaxed text-center italic">
+                We're not here to disrupt for the sake of it.
               </p>
             </div>
           </CardContent>
