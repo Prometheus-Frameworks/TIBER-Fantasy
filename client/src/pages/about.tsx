@@ -49,26 +49,9 @@ export default function About() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-6 rounded-lg border border-gray-200">
-              <p className="text-lg text-gray-700 leading-relaxed mb-4">
-                We believe in doing our part to access the best free data we can possibly find—and present it to you in our own way. Knowledge should belong to everyone. Tools like these can help you understand why sometimes things… just don't work out.
+              <p className="text-lg text-gray-700 leading-relaxed">
+                We want to make the hard stuff simple. We build tools, apply context wherever we can, and always aim to involve as many real-life fantasy players as possible. If you're interested in learning, read more. This site is launched, but not finished. We intend to stay that way. Genius doesn't stand still.
               </p>
-              <p className="text-lg text-gray-700 leading-relaxed mb-4">
-                We like paradoxes here. On one hand, we're trying to predict the future. Analytics with a lot of decimal points… maybe some charts. Cool colours and player ratings derived from some super cool algorithms. On the other, we accept that what we call "luck" might always be the deciding factor. That's part of the game. That's part of life.
-              </p>
-              <p className="text-lg text-gray-700 leading-relaxed mb-4">
-                What dynasty football teaches us is controlled chaos. The more you understand that concept, we're willing to bet you'll be better at the game. It's not about controlling the outcome—it's about making sure your process is sound. Building rosters that make sense. Making moves with purpose. And most importantly? Getting closer to your own intuition and reconnecting with the reason you play in the first place.
-              </p>
-              <p className="text-lg text-gray-700 leading-relaxed mb-4">
-                This isn't about pretending we know what's coming. It's about helping you think clearer. Whether you're building a contender or just trying to figure out why your roster fell apart, our goal is simple: give you the tools to think for yourself.
-              </p>
-              <p className="text-lg text-gray-700 leading-relaxed mb-4">
-                Because that's what this is really about. Football. Fun. A little heartbreak. A lot of learning. And maybe, if you're lucky, a win.
-              </p>
-              <div className="text-center text-lg font-medium text-gray-800 space-y-1">
-                <p>We find the tools.</p>
-                <p>You make the calls.</p>
-                <p>Have fun with it.</p>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -84,40 +67,7 @@ export default function About() {
           <CardContent className="space-y-4">
             <div className="bg-white/80 p-6 rounded-lg border border-blue-200 space-y-4">
               <p className="text-lg text-gray-700 leading-relaxed">
-                At its core, this project isn't just about fantasy football data.
-                It's about moving past the idea that knowledge should be locked behind paywalls or kept out of reach for the average person. Whether it's sports analytics or anything else, we believe open access to information is how communities—and humanity itself—move forward.
-              </p>
-              
-              <p className="text-lg text-gray-700 leading-relaxed">
-                That said, we respect the work others have put in.
-                We're committed to staying within legal boundaries, and if you're a data provider or creator concerned about how your work is reflected here, we encourage you to reach out. We'd rather collaborate than clash.
-              </p>
-              
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <p className="text-lg text-gray-800 font-medium mb-3">As for us:</p>
-                <div className="space-y-2 text-gray-700">
-                  <p>We don't pay people.</p>
-                  <p>We don't pay ourselves.</p>
-                  <p>And we don't plan to.</p>
-                  <p className="font-medium">This project exists because we believe in building something better—together.</p>
-                </div>
-              </div>
-              
-              <p className="text-lg text-gray-700 leading-relaxed">
-                If you:
-              </p>
-              <ul className="list-disc pl-6 space-y-1 text-gray-700">
-                <li>Have access to data that can help,</li>
-                <li>Want to contribute to an open, honest project,</li>
-                <li>Or simply believe progress doesn't have to come with a price tag—</li>
-              </ul>
-              
-              <p className="text-lg text-gray-700 leading-relaxed font-medium text-center">
-                Reach out. Let's work.
-              </p>
-              
-              <p className="text-lg text-gray-700 leading-relaxed text-center italic">
-                We're not here to disrupt for the sake of it.
+                This project isn't about paywalls or profit. It's about open tools, honest insights, and building something together. If you're curious or want to help, contribute anytime. Every tool we build is made better by the people who use it.
               </p>
             </div>
           </CardContent>
@@ -132,23 +82,8 @@ export default function About() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-gray-700">
-              <strong>This is our proof that we can elevate a hobby into something transformational.</strong> Fantasy football becomes 
-              the laboratory where we demonstrate humanity's capacity to democratize elite intelligence. 
-              We are proving that the barriers between "amateur" and "professional" analytics are nothing but illusions 
-              of a trapped society that profits from artificial scarcity.
-            </p>
-            <p className="text-gray-700">
-              <strong>We have the capacity to smash these remaining barriers.</strong> The gatekeepers who claim exclusive ownership 
-              over analytical sophistication are defending crumbling walls. When we liberate fantasy analytics from paywall prisons, 
-              we establish the template for liberating knowledge across every domain. This generation will not accept that 
-              transformative insights must be purchased from institutional monopolies.
-            </p>
-            <p className="text-gray-700">
-              <strong>Fantasy football is our gift to the future.</strong> We prove that ordinary people, armed with the right tools, 
-              can achieve analytical sophistication that rivals the most expensive premium platforms. 
-              This movement transcends sports—it demonstrates humanity's evolutionary leap toward universal access to intelligence itself. 
-              The barriers were always illusions. We are simply brave enough to walk through them.
+            <p className="text-lg text-gray-700 leading-relaxed">
+              This project is proof that ordinary people can do extraordinary things. Fantasy football is just the start. We're proving that knowledge belongs to everyone. If you're reading this, you're already part of the movement.
             </p>
           </CardContent>
         </Card>
