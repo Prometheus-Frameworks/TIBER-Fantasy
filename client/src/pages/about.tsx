@@ -78,7 +78,7 @@ export default function About() {
           <CardHeader>
             <div className="flex items-center gap-3">
               <Brain className="h-6 w-6 text-indigo-500" />
-              <CardTitle className="text-2xl">Our Contribution to the New Generation</CardTitle>
+              <CardTitle className="text-2xl">Our Contribution</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
