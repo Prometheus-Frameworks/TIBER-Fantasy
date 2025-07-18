@@ -173,7 +173,14 @@ export default function EnhancedNFLRankings() {
               Free Data Sources
             </Badge>
           </div>
-
+          
+          {/* Redraft Rankings Disclaimer */}
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800 italic leading-relaxed">
+              <strong>Note:</strong> Redraft rankings focus solely on the current season. Weekly matchups, injuries, and team volatility shift value fast. These ranks aren't gospel — they're here to help frame your decisions, not dictate them. Play smart. Have fun.
+            </p>
+          </div>
+          
           {/* Filters */}
           <div className="flex items-center gap-4">
             {/* League Format Toggle */}

@@ -99,6 +99,13 @@ export default function EnhancedRankings() {
             </div>
           )}
         </div>
+        
+        {/* Dynasty Rankings Disclaimer */}
+        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-sm text-amber-800 italic leading-relaxed">
+            <strong>Note:</strong> These rankings are a guide, not strict rules. Dynasty's unpredictable — treat this as a tool, not the answer.
+          </p>
+        </div>
       </div>
 
       {/* Position Filter */}
