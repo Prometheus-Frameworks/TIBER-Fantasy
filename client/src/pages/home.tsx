@@ -17,9 +17,291 @@ import {
   ChevronRight,
   Activity,
   LineChart,
-  Brain
+  Brain,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+// Advanced Analytics Section Component with Collapsible Position Tabs
+function AdvancedAnalyticsSection() {
+  const [openSections, setOpenSections] = useState({
+    wr: false,
+    rb: false,
+    qb: false,
+    te: false
+  });
+
+  // Fetch data for all positions
+  const { data: wrData, isLoading: wrLoading } = useQuery({
+    queryKey: ['/api/analytics/wr-advanced-stats'],
+    enabled: openSections.wr
+  });
+
+  const { data: rbData, isLoading: rbLoading } = useQuery({
+    queryKey: ['/api/analytics/rb-advanced-stats'],
+    enabled: openSections.rb
+  });
+
+  const { data: qbData, isLoading: qbLoading } = useQuery({
+    queryKey: ['/api/analytics/qb-advanced-stats'],
+    enabled: openSections.qb
+  });
+
+  const { data: teData, isLoading: teLoading } = useQuery({
+    queryKey: ['/api/analytics/te-advanced-stats'],
+    enabled: openSections.te
+  });
+
+  const toggleSection = (position: string) => {
+    setOpenSections(prev => ({
+      ...prev,
+      [position]: !prev[position]
+    }));
+  };
+
+  const renderPlayerTable = (players: any[], position: string, isLoading: boolean) => {
+    if (isLoading) {
+      return (
+        <div className="flex justify-center py-4">
+          <div className="text-gray-500">Loading {position.toUpperCase()} data...</div>
+        </div>
+      );
+    }
+
+    if (!players || players.length === 0) {
+      return (
+        <div className="flex justify-center py-4">
+          <div className="text-gray-500">No {position.toUpperCase()} data available</div>
+        </div>
+      );
+    }
+
+    const displayPlayers = players.slice(0, 10); // Show top 10 for compact display
+
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-gray-50 border-b">
+              <th className="p-2 text-left font-medium text-gray-600">Player</th>
+              <th className="p-2 text-left font-medium text-gray-600">Team</th>
+              {position === 'wr' && (
+                <>
+                  <th className="p-2 text-center font-medium text-gray-600">YPRR</th>
+                  <th className="p-2 text-center font-medium text-gray-600">Tgt%</th>
+                  <th className="p-2 text-center font-medium text-gray-600">Rec Yds</th>
+                  <th className="p-2 text-center font-medium text-gray-600">TDs</th>
+                </>
+              )}
+              {position === 'rb' && (
+                <>
+                  <th className="p-2 text-center font-medium text-gray-600">Rush Yds</th>
+                  <th className="p-2 text-center font-medium text-gray-600">YPC</th>
+                  <th className="p-2 text-center font-medium text-gray-600">TDs</th>
+                  <th className="p-2 text-center font-medium text-gray-600">Touches</th>
+                </>
+              )}
+              {position === 'qb' && (
+                <>
+                  <th className="p-2 text-center font-medium text-gray-600">Pass Yds</th>
+                  <th className="p-2 text-center font-medium text-gray-600">Pass TDs</th>
+                  <th className="p-2 text-center font-medium text-gray-600">Rush Yds</th>
+                  <th className="p-2 text-center font-medium text-gray-600">QBR</th>
+                </>
+              )}
+              {position === 'te' && (
+                <>
+                  <th className="p-2 text-center font-medium text-gray-600">YPRR</th>
+                  <th className="p-2 text-center font-medium text-gray-600">Rec Yds</th>
+                  <th className="p-2 text-center font-medium text-gray-600">TDs</th>
+                  <th className="p-2 text-center font-medium text-gray-600">Targets</th>
+                </>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {displayPlayers.map((player, index) => (
+              <tr key={index} className="border-b hover:bg-gray-50">
+                <td className="p-2 font-medium text-gray-900">{player.playerName}</td>
+                <td className="p-2 text-gray-600">{player.team}</td>
+                {position === 'wr' && (
+                  <>
+                    <td className="p-2 text-center">{player.yardsPerRouteRun || 'NA'}</td>
+                    <td className="p-2 text-center">{player.targetShare ? (player.targetShare * 100).toFixed(1) + '%' : 'NA'}</td>
+                    <td className="p-2 text-center">{player.receivingYards || 'NA'}</td>
+                    <td className="p-2 text-center">{player.touchdowns || 'NA'}</td>
+                  </>
+                )}
+                {position === 'rb' && (
+                  <>
+                    <td className="p-2 text-center">{player.rushingYards || 'NA'}</td>
+                    <td className="p-2 text-center">{player.yardsPerCarry || 'NA'}</td>
+                    <td className="p-2 text-center">{player.touchdowns || 'NA'}</td>
+                    <td className="p-2 text-center">{player.totalTouches || 'NA'}</td>
+                  </>
+                )}
+                {position === 'qb' && (
+                  <>
+                    <td className="p-2 text-center">{player.passingYards || 'NA'}</td>
+                    <td className="p-2 text-center">{player.passingTouchdowns || 'NA'}</td>
+                    <td className="p-2 text-center">{player.rushingYards || 'NA'}</td>
+                    <td className="p-2 text-center">{player.qbr || 'NA'}</td>
+                  </>
+                )}
+                {position === 'te' && (
+                  <>
+                    <td className="p-2 text-center">{player.yardsPerRouteRun || 'NA'}</td>
+                    <td className="p-2 text-center">{player.receivingYards || 'NA'}</td>
+                    <td className="p-2 text-center">{player.touchdowns || 'NA'}</td>
+                    <td className="p-2 text-center">{player.targets || 'NA'}</td>
+                  </>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200 p-4 mb-4">
+        <div className="text-center mb-4">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
+            <BarChart3 className="h-6 w-6 text-green-600" />
+            Advanced Analytics
+          </h2>
+          <p className="text-gray-600 text-base">
+            Comprehensive NFL player analytics with collapsible position tabs
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div className="text-center p-3 bg-white/50 rounded-lg">
+            <div className="text-xl font-bold text-green-600">164</div>
+            <div className="text-xs text-gray-600">Wide Receivers</div>
+          </div>
+          <div className="text-center p-3 bg-white/50 rounded-lg">
+            <div className="text-xl font-bold text-blue-600">114</div>
+            <div className="text-xs text-gray-600">Running Backs</div>
+          </div>
+          <div className="text-center p-3 bg-white/50 rounded-lg">
+            <div className="text-xl font-bold text-purple-600">68</div>
+            <div className="text-xs text-gray-600">Quarterbacks</div>
+          </div>
+          <div className="text-center p-3 bg-white/50 rounded-lg">
+            <div className="text-xl font-bold text-orange-600">95</div>
+            <div className="text-xs text-gray-600">Tight Ends</div>
+          </div>
+        </div>
+
+        {/* Collapsible Position Tables */}
+        <div className="space-y-3">
+          {/* Wide Receivers */}
+          <Collapsible open={openSections.wr} onOpenChange={() => toggleSection('wr')}>
+            <CollapsibleTrigger className="w-full">
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+                  <span className="font-medium text-green-800">Wide Receivers (164)</span>
+                </div>
+                {openSections.wr ? (
+                  <ChevronUp className="h-4 w-4 text-green-600" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-green-600" />
+                )}
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-2 bg-white rounded-lg border p-3">
+                {renderPlayerTable(wrData?.data || [], 'wr', wrLoading)}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Running Backs */}
+          <Collapsible open={openSections.rb} onOpenChange={() => toggleSection('rb')}>
+            <CollapsibleTrigger className="w-full">
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                  <span className="font-medium text-blue-800">Running Backs (114)</span>
+                </div>
+                {openSections.rb ? (
+                  <ChevronUp className="h-4 w-4 text-blue-600" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-blue-600" />
+                )}
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-2 bg-white rounded-lg border p-3">
+                {renderPlayerTable(rbData?.data || [], 'rb', rbLoading)}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Quarterbacks */}
+          <Collapsible open={openSections.qb} onOpenChange={() => toggleSection('qb')}>
+            <CollapsibleTrigger className="w-full">
+              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-purple-600 rounded-full"></div>
+                  <span className="font-medium text-purple-800">Quarterbacks (68)</span>
+                </div>
+                {openSections.qb ? (
+                  <ChevronUp className="h-4 w-4 text-purple-600" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-purple-600" />
+                )}
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-2 bg-white rounded-lg border p-3">
+                {renderPlayerTable(qbData?.data || [], 'qb', qbLoading)}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Tight Ends */}
+          <Collapsible open={openSections.te} onOpenChange={() => toggleSection('te')}>
+            <CollapsibleTrigger className="w-full">
+              <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-orange-600 rounded-full"></div>
+                  <span className="font-medium text-orange-800">Tight Ends (95)</span>
+                </div>
+                {openSections.te ? (
+                  <ChevronUp className="h-4 w-4 text-orange-600" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-orange-600" />
+                )}
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-2 bg-white rounded-lg border p-3">
+                {renderPlayerTable(teData?.data || [], 'te', teLoading)}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+
+        <div className="text-center mt-4">
+          <Link href="/analytics">
+            <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white px-8">
+              <BarChart3 className="mr-2 h-5 w-5" />
+              View Full Analytics Pages
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   // Function to randomize button colors for organic feel
@@ -160,47 +442,7 @@ export default function Home() {
       </div>
 
       {/* Secondary Section - Advanced Analytics */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200 p-4 mb-4">
-          <div className="text-center mb-4">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
-              <BarChart3 className="h-6 w-6 text-green-600" />
-              Advanced Analytics
-            </h2>
-            <p className="text-gray-600 text-base">
-              Comprehensive NFL player analytics with dropdown tabs for all positions
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div className="text-center p-3 bg-white/50 rounded-lg">
-              <div className="text-xl font-bold text-green-600">164</div>
-              <div className="text-xs text-gray-600">Wide Receivers</div>
-            </div>
-            <div className="text-center p-3 bg-white/50 rounded-lg">
-              <div className="text-xl font-bold text-blue-600">114</div>
-              <div className="text-xs text-gray-600">Running Backs</div>
-            </div>
-            <div className="text-center p-3 bg-white/50 rounded-lg">
-              <div className="text-xl font-bold text-purple-600">68</div>
-              <div className="text-xs text-gray-600">Quarterbacks</div>
-            </div>
-            <div className="text-center p-3 bg-white/50 rounded-lg">
-              <div className="text-xl font-bold text-orange-600">95</div>
-              <div className="text-xs text-gray-600">Tight Ends</div>
-            </div>
-          </div>
-          
-          <div className="text-center">
-            <Link href="/analytics">
-              <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white px-8">
-                <BarChart3 className="mr-2 h-5 w-5" />
-                Access Analytics Tables
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
+      <AdvancedAnalyticsSection />
 
       {/* Third Section - Trade Evaluator */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
