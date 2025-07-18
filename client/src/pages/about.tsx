@@ -311,6 +311,19 @@ export default function About() {
           </CardContent>
         </Card>
 
+        {/* Join Us Section */}
+        <div className="text-center mt-12 space-y-4">
+          <h3 className="text-2xl font-semibold text-gray-800">Join Us</h3>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Signal is more than analytics — it's a community of fantasy managers who believe in accessible, 
+            transparent data. Whether you're sharing insights, contributing ideas, or just exploring what's possible 
+            when barriers come down, you belong here.
+          </p>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Ready to be part of something bigger? We're building the future of fantasy football together.
+          </p>
+        </div>
+
         {/* Contact */}
         <div className="text-center mt-12 space-y-4">
           <h3 className="text-xl font-semibold text-gray-800">Questions or Feedback?</h3>

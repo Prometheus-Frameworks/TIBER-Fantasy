@@ -110,45 +110,41 @@ export default function Home() {
                   OASIS
                 </Button>
               </Link>
-              <Link href="/about">
-                <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
-                  Philosophy
-                </Button>
-              </Link>
+
             </nav>
           </header>
         </div>
       </div>
 
       {/* Primary Feature Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200 p-8 mb-8">
-          <div className="text-center mb-6">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4 flex items-center justify-center gap-3">
-              <Trophy className="h-8 w-8 text-blue-600" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200 p-4 mb-4">
+          <div className="text-center mb-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
+              <Trophy className="h-6 w-6 text-blue-600" />
               Latest Player Rankings
             </h2>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-base">
               Current season insights with live NFL data and dynasty valuations
             </p>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="text-center p-4 bg-white/50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">1000+</div>
-              <div className="text-sm text-gray-600">Players Analyzed</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="text-center p-3 bg-white/50 rounded-lg">
+              <div className="text-xl font-bold text-blue-600">1000+</div>
+              <div className="text-xs text-gray-600">Players Analyzed</div>
             </div>
-            <div className="text-center p-4 bg-white/50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">Live</div>
-              <div className="text-sm text-gray-600">NFL Data</div>
+            <div className="text-center p-3 bg-white/50 rounded-lg">
+              <div className="text-xl font-bold text-green-600">Live</div>
+              <div className="text-xs text-gray-600">NFL Data</div>
             </div>
-            <div className="text-center p-4 bg-white/50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">4</div>
-              <div className="text-sm text-gray-600">Positions</div>
+            <div className="text-center p-3 bg-white/50 rounded-lg">
+              <div className="text-xl font-bold text-purple-600">4</div>
+              <div className="text-xs text-gray-600">Positions</div>
             </div>
-            <div className="text-center p-4 bg-white/50 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">2024</div>
-              <div className="text-sm text-gray-600">Season Data</div>
+            <div className="text-center p-3 bg-white/50 rounded-lg">
+              <div className="text-xl font-bold text-orange-600">2024</div>
+              <div className="text-xs text-gray-600">Season Data</div>
             </div>
           </div>
           
@@ -164,34 +160,34 @@ export default function Home() {
       </div>
 
       {/* Secondary Section - Advanced Analytics */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200 p-8 mb-8">
-          <div className="text-center mb-6">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4 flex items-center justify-center gap-3">
-              <BarChart3 className="h-8 w-8 text-green-600" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200 p-4 mb-4">
+          <div className="text-center mb-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
+              <BarChart3 className="h-6 w-6 text-green-600" />
               Advanced Analytics
             </h2>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-base">
               Comprehensive NFL player analytics with dropdown tabs for all positions
             </p>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="text-center p-4 bg-white/50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">164</div>
-              <div className="text-sm text-gray-600">Wide Receivers</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="text-center p-3 bg-white/50 rounded-lg">
+              <div className="text-xl font-bold text-green-600">164</div>
+              <div className="text-xs text-gray-600">Wide Receivers</div>
             </div>
-            <div className="text-center p-4 bg-white/50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">114</div>
-              <div className="text-sm text-gray-600">Running Backs</div>
+            <div className="text-center p-3 bg-white/50 rounded-lg">
+              <div className="text-xl font-bold text-blue-600">114</div>
+              <div className="text-xs text-gray-600">Running Backs</div>
             </div>
-            <div className="text-center p-4 bg-white/50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">68</div>
-              <div className="text-sm text-gray-600">Quarterbacks</div>
+            <div className="text-center p-3 bg-white/50 rounded-lg">
+              <div className="text-xl font-bold text-purple-600">68</div>
+              <div className="text-xs text-gray-600">Quarterbacks</div>
             </div>
-            <div className="text-center p-4 bg-white/50 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">95</div>
-              <div className="text-sm text-gray-600">Tight Ends</div>
+            <div className="text-center p-3 bg-white/50 rounded-lg">
+              <div className="text-xl font-bold text-orange-600">95</div>
+              <div className="text-xs text-gray-600">Tight Ends</div>
             </div>
           </div>
           
@@ -207,30 +203,30 @@ export default function Home() {
       </div>
 
       {/* Third Section - Trade Evaluator */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200 p-8 mb-8">
-          <div className="text-center mb-6">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4 flex items-center justify-center gap-3">
-              <Activity className="h-8 w-8 text-purple-600" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200 p-4 mb-4">
+          <div className="text-center mb-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
+              <Activity className="h-6 w-6 text-purple-600" />
               Trade Evaluator
             </h2>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-base">
               Evaluate dynasty trades with advanced player valuation models
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="text-center p-4 bg-white/50 rounded-lg">
-              <div className="text-lg font-bold text-purple-600">Dynasty Values</div>
-              <div className="text-sm text-gray-600">Age-adjusted scoring</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <div className="text-center p-3 bg-white/50 rounded-lg">
+              <div className="text-base font-bold text-purple-600">Dynasty Values</div>
+              <div className="text-xs text-gray-600">Age-adjusted scoring</div>
             </div>
-            <div className="text-center p-4 bg-white/50 rounded-lg">
-              <div className="text-lg font-bold text-blue-600">Market ADP</div>
-              <div className="text-sm text-gray-600">Real draft data</div>
+            <div className="text-center p-3 bg-white/50 rounded-lg">
+              <div className="text-base font-bold text-blue-600">Market ADP</div>
+              <div className="text-xs text-gray-600">Real draft data</div>
             </div>
-            <div className="text-center p-4 bg-white/50 rounded-lg">
-              <div className="text-lg font-bold text-green-600">Value Analysis</div>
-              <div className="text-sm text-gray-600">Win/lose assessment</div>
+            <div className="text-center p-3 bg-white/50 rounded-lg">
+              <div className="text-base font-bold text-green-600">Value Analysis</div>
+              <div className="text-xs text-gray-600">Win/lose assessment</div>
             </div>
           </div>
           
@@ -246,14 +242,14 @@ export default function Home() {
       </div>
 
       {/* Additional Features Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="text-center mb-4">
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
             Additional Tools
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Dynasty Rankings - Combined */}
           <Card className="hover:shadow-lg transition-shadow border-0 bg-gradient-to-br from-purple-50 to-blue-50 backdrop-blur-sm ring-2 ring-purple-200">
             <CardHeader>
