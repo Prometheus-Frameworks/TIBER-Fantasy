@@ -107,6 +107,39 @@ function validateRankingSubmission(data: any): string | null {
 }
 
 // =============================================================================
+// RANKINGS BUILDER API SUPPORT LAYER
+// =============================================================================
+
+/**
+ * Get all available players for rankings construction
+ * Returns complete player list for Rankings Builder interface
+ */
+async function getAllPlayersForRankings(): Promise<any[]> {
+  try {
+    const players = await db.execute(sql`
+      SELECT 
+        id as player_id,
+        name,
+        position,
+        team
+      FROM players
+      WHERE position IN ('QB', 'RB', 'WR', 'TE')
+      ORDER BY position, name
+    `);
+    
+    return players.rows.map((row: any) => ({
+      player_id: row.player_id,
+      name: row.name,
+      position: row.position,
+      team: row.team
+    }));
+  } catch (error) {
+    console.error('Error getting player list:', error);
+    throw error;
+  }
+}
+
+// =============================================================================
 // DYNAMIC CONSENSUS CALCULATION LOGIC
 // =============================================================================
 
@@ -156,18 +189,43 @@ async function getDynamicConsensusRankings(format: string, dynastyType?: string)
 // =============================================================================
 
 /**
+ * GET /api/players/list
+ * Get all available players for rankings construction
+ * Returns complete player list for Rankings Builder interface
+ */
+export async function getPlayersList(req: Request, res: Response) {
+  try {
+    const players = await getAllPlayersForRankings();
+    
+    res.json({
+      success: true,
+      data: {
+        players: players,
+        totalPlayers: players.length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching players list:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch players list'
+    });
+  }
+}
+
+/**
  * POST /api/rankings/submit
  * Submit personal rankings for a user
  * 
- * Body:
+ * Body (FastAPI pattern):
  * {
- *   "userId": 123,
- *   "format": "redraft" | "dynasty",
- *   "dynastyType": "rebuilder" | "contender" (only for dynasty),
+ *   "user_id": 123,
+ *   "mode": "redraft" | "dynasty",
+ *   "dynasty_mode": "rebuilder" | "contender" (only for dynasty),
  *   "rankings": [
  *     {
- *       "playerId": 456,
- *       "rankPosition": 1,
+ *       "player_id": 456,
+ *       "rank": 1,
  *       "notes": "Top QB this season"
  *     }
  *   ]
@@ -175,7 +233,19 @@ async function getDynamicConsensusRankings(format: string, dynastyType?: string)
  */
 export async function submitRankings(req: Request, res: Response) {
   try {
-    const submissionData = req.body as RankingSubmission;
+    const requestData = req.body;
+    
+    // Convert FastAPI pattern to internal format
+    const submissionData: RankingSubmission = {
+      userId: requestData.user_id || requestData.userId,
+      format: requestData.mode || requestData.format,
+      dynastyType: requestData.dynasty_mode || requestData.dynastyType,
+      rankings: requestData.rankings?.map((r: any) => ({
+        playerId: r.player_id || r.playerId,
+        rankPosition: r.rank || r.rankPosition,
+        notes: r.notes
+      })) || []
+    };
     
     // Validate input data
     const validationError = validateRankingSubmission(submissionData);
@@ -300,6 +370,92 @@ export async function getConsensusRankings(req: Request, res: Response) {
     res.status(500).json({
       success: false,
       error: 'Internal server error'
+    });
+  }
+}
+
+/**
+ * GET /api/rankings/personal
+ * Get personal rankings for the current user - Rankings Builder support
+ * 
+ * Query parameters:
+ * - user_id: User ID (required)
+ * - mode: "redraft" | "dynasty" (required)
+ * - dynasty_mode: "rebuilder" | "contender" (required for dynasty format)
+ */
+export async function getPersonalRankings(req: Request, res: Response) {
+  try {
+    const { user_id, mode, dynasty_mode } = req.query;
+    
+    // Validate required parameters
+    if (!user_id || isNaN(parseInt(user_id as string))) {
+      return res.status(400).json({
+        success: false,
+        error: 'user_id parameter is required and must be a number'
+      });
+    }
+    
+    if (!mode || !['redraft', 'dynasty'].includes(mode as string)) {
+      return res.status(400).json({
+        success: false,
+        error: 'mode parameter is required and must be either "redraft" or "dynasty"'
+      });
+    }
+    
+    // Dynasty format requires dynasty_mode
+    if (mode === 'dynasty' && (!dynasty_mode || !['rebuilder', 'contender'].includes(dynasty_mode as string))) {
+      return res.status(400).json({
+        success: false,
+        error: 'dynasty_mode parameter is required for dynasty format and must be either "rebuilder" or "contender"'
+      });
+    }
+    
+    // Fetch personal rankings with player details
+    const rankings = await db.execute(sql`
+      SELECT 
+        ir.player_id,
+        p.name as player_name,
+        p.position,
+        p.team,
+        ir.rank_position as rank,
+        ir.notes,
+        ir.submitted_at
+      FROM individual_rankings ir
+      JOIN players p ON ir.player_id = p.id
+      WHERE ir.user_id = ${parseInt(user_id as string)}
+      AND ir.format = ${mode}
+      AND (ir.dynasty_type = ${dynasty_mode || null} OR (ir.dynasty_type IS NULL AND ${dynasty_mode || null} IS NULL))
+      ORDER BY ir.rank_position
+    `);
+    
+    const personalRankings = rankings.rows.map((row: any) => ({
+      player_id: row.player_id,
+      name: row.player_name,
+      position: row.position,
+      team: row.team,
+      rank: row.rank,
+      notes: row.notes
+    }));
+    
+    res.json({
+      success: true,
+      data: {
+        rankings: personalRankings,
+        meta: {
+          user_id: parseInt(user_id as string),
+          mode: mode,
+          dynasty_mode: dynasty_mode,
+          totalResults: personalRankings.length,
+          lastUpdated: rankings.rows[0]?.submitted_at || null
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error fetching personal rankings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch personal rankings'
     });
   }
 }
@@ -476,16 +632,14 @@ export async function getRankingStats(req: Request, res: Response) {
  * Call this function to add routes to your Express app
  */
 export function registerRankingRoutes(app: any) {
-  // Submit personal rankings
+  // Rankings Builder API Support Layer
+  app.get('/api/players/list', getPlayersList);
+  app.get('/api/rankings/personal', getPersonalRankings);
+  
+  // Core Rankings API
   app.post('/api/rankings/submit', submitRankings);
-  
-  // Get consensus rankings
   app.get('/api/rankings/consensus', getConsensusRankings);
-  
-  // Get individual user rankings
   app.get('/api/rankings/individual/:userId', getIndividualRankings);
-  
-  // Get ranking statistics
   app.get('/api/rankings/stats', getRankingStats);
 }
 

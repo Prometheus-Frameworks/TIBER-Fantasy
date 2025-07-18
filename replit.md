@@ -245,6 +245,12 @@ Based on user feedback, expanding to include:
 
 **Architecture**: Dynamic consensus calculation eliminates static `consensus_rankings` table in favor of real-time SQL aggregation queries for maximum data integrity and transparency.
 
+**Rankings Builder API Support Layer**: Complete backend support for "On The Clock" Rankings Builder interface with FastAPI-style endpoints:
+- `GET /api/players/list` - Full player list for rankings construction
+- `POST /api/rankings/submit` - Submit personal rankings (supports both user_id/mode and userId/format patterns)
+- `GET /api/rankings/personal` - Load saved personal rankings for editing
+- `GET /api/rankings/consensus?template=true` - Consensus rankings as pre-fill template
+
 **Documentation**: Complete system documentation available in `docs/RANKINGS_BACKEND_README.md`
 
 ## Changelog
