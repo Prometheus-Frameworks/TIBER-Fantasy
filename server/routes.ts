@@ -552,6 +552,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // RB Draft Capital Context API Routes
+  app.post('/api/rb-draft-capital/evaluate', async (req, res) => {
+    try {
+      const rbDraftCapitalService = (await import('./rbDraftCapitalContext')).rbDraftCapitalService;
+      const result = await rbDraftCapitalService.evaluateRBDraftCapitalContext(req.body);
+      res.json(result);
+    } catch (error: any) {
+      console.error('❌ RB Draft Capital evaluation error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'RB Draft Capital evaluation failed',
+        details: error.message
+      });
+    }
+  });
+
+  app.post('/api/rb-draft-capital/batch-evaluate', async (req, res) => {
+    try {
+      const rbDraftCapitalService = (await import('./rbDraftCapitalContext')).rbDraftCapitalService;
+      const { inputs } = req.body;
+      const results = await rbDraftCapitalService.batchEvaluateRBs(inputs);
+      res.json(results);
+    } catch (error: any) {
+      console.error('❌ RB Draft Capital batch evaluation error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'RB Draft Capital batch evaluation failed',
+        details: error.message
+      });
+    }
+  });
   
   // Start automatic ADP syncing
   adpSyncService.startAutoSync();

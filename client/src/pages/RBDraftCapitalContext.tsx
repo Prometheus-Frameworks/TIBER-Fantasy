@@ -29,8 +29,15 @@ interface RBDraftCapitalContext {
   twoTop24Seasons: boolean;
   noTop3RBThreat: boolean;
   contextOverride: boolean;
-  contextOverrideTag?: 'LeadBack';
+  contextOverrideTag?: 'LeadBack' | 'ProvenAsset';
   displayTag: string;
+  productionThresholds?: {
+    hasTopTierSeason: boolean;
+    hasMultipleRB2Seasons: boolean;
+    has1000YardSeason: boolean;
+    hasWorkloadIncrease: boolean;
+  };
+  draftCapitalPenaltySupressed?: boolean;
 }
 
 export default function RBDraftCapitalContext() {
@@ -40,7 +47,25 @@ export default function RBDraftCapitalContext() {
     draftRound: 5,
     currentStartingRole: true,
     twoTop24Seasons: true,
-    noTop3RBThreat: true
+    noTop3RBThreat: true,
+    seasons: [
+      {
+        year: 2024,
+        positionalRank: 8,
+        rushingYards: 1144,
+        receivingYards: 367,
+        totalTouches: 317,
+        gamesPlayed: 17
+      },
+      {
+        year: 2023,
+        positionalRank: 18,
+        rushingYards: 590,
+        receivingYards: 206,
+        totalTouches: 180,
+        gamesPlayed: 12
+      }
+    ]
   });
 
   const { toast } = useToast();
@@ -155,7 +180,7 @@ export default function RBDraftCapitalContext() {
             RB Draft Capital Context Override
           </h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Contextual analysis that overrides draft capital penalties for RBs who have earned lead roles through performance
+            Enhanced production threshold system that prevents over-penalizing productive players based on draft capital alone
           </p>
         </div>
 
@@ -168,7 +193,7 @@ export default function RBDraftCapitalContext() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <h3 className="font-semibold text-sm">Step 1: Baseline Tagging</h3>
                 <div className="space-y-1 text-xs">
@@ -191,31 +216,51 @@ export default function RBDraftCapitalContext() {
                 </div>
               </div>
               <div className="space-y-2">
-                <h3 className="font-semibold text-sm">Step 2: Context Override</h3>
+                <h3 className="font-semibold text-sm">Step 2: Production Thresholds</h3>
                 <div className="space-y-1 text-xs">
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="h-3 w-3 text-green-500" />
-                    <span>Current Starting Role</span>
+                    <Trophy className="h-3 w-3 text-yellow-500" />
+                    <span>1x Top-12 Finish</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-3 w-3 text-green-500" />
-                    <span>Two Top-24 Seasons</span>
+                    <span>2x Top-24 Finishes</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Zap className="h-3 w-3 text-green-500" />
-                    <span>No Top-3 RB Threat</span>
+                    <Target className="h-3 w-3 text-blue-500" />
+                    <span>1,000+ Yards</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-3 w-3 text-purple-500" />
+                    <span>Workload Increase</span>
                   </div>
                 </div>
               </div>
               <div className="space-y-2">
-                <h3 className="font-semibold text-sm">Step 3: Override Applied</h3>
+                <h3 className="font-semibold text-sm">Step 3: Context Override</h3>
                 <div className="space-y-1 text-xs">
                   <div className="flex items-center gap-2">
+                    <CheckCircle className="h-3 w-3 text-green-500" />
+                    <span>ProvenAsset Override</span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <Zap className="h-3 w-3 text-green-500" />
-                    <span>Context Override: LeadBack</span>
+                    <span>LeadBack Override</span>
                   </div>
                   <div className="text-xs text-gray-500">
-                    Disable draft capital penalty, project stable workload
+                    Original + New triggers
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm">Step 4: Value Adjustment</h3>
+                <div className="space-y-1 text-xs">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-3 w-3 text-green-500" />
+                    <span>Penalty Suppressed</span>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Draft capital penalty removed for proven performers
                   </div>
                 </div>
               </div>
@@ -305,11 +350,48 @@ export default function RBDraftCapitalContext() {
                   {testMutation.data.contextOverride && (
                     <Badge className="bg-green-100 text-green-800">
                       <Zap className="h-3 w-3 mr-1" />
-                      Context Override
+                      {testMutation.data.contextOverrideTag}
+                    </Badge>
+                  )}
+                  {testMutation.data.draftCapitalPenaltySupressed && (
+                    <Badge className="bg-blue-100 text-blue-800">
+                      <Target className="h-3 w-3 mr-1" />
+                      Penalty Suppressed
                     </Badge>
                   )}
                 </div>
                 <p className="text-sm text-gray-600">{testMutation.data.displayTag}</p>
+                {testMutation.data.productionThresholds && (
+                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Production Thresholds Met:</h4>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {testMutation.data.productionThresholds.hasTopTierSeason && (
+                        <div className="flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          <span>Top-12 Season</span>
+                        </div>
+                      )}
+                      {testMutation.data.productionThresholds.hasMultipleRB2Seasons && (
+                        <div className="flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          <span>Multiple RB2 Seasons</span>
+                        </div>
+                      )}
+                      {testMutation.data.productionThresholds.has1000YardSeason && (
+                        <div className="flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          <span>1,000+ Yard Season</span>
+                        </div>
+                      )}
+                      {testMutation.data.productionThresholds.hasWorkloadIncrease && (
+                        <div className="flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          <span>Workload Increase</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
