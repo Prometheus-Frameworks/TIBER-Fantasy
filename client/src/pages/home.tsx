@@ -252,37 +252,34 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Dynasty Rankings - Combined */}
           <Card className="hover:shadow-lg transition-shadow border-0 bg-gradient-to-br from-purple-50 to-blue-50 backdrop-blur-sm ring-2 ring-purple-200">
-            <CardHeader>
+            <CardHeader className="pb-3">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg">
-                  <Brain className="h-6 w-6 text-white" />
+                  <Brain className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Dynasty Rankings</CardTitle>
-                  <CardDescription>Long-term player valuations for dynasty leagues</CardDescription>
+                  <CardTitle className="text-base">Dynasty Rankings</CardTitle>
+                  <CardDescription className="text-sm">Long-term player valuations for dynasty leagues</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 mb-4">
-                Player evaluation system using Production (40%), Opportunity (35%), Age (20%), 
-                and Stability (15%) weighting with authentic NFL data to identify 
-                value opportunities and tier classifications.
+            <CardContent className="pt-0">
+              <p className="text-gray-600 mb-3 text-sm">
+                Simplified long-term player valuation engine blending production, opportunity, age, and stability. Designed for dynasty fantasy football players seeking consistent process-driven rankings.
               </p>
               <div className="flex flex-col gap-2">
                 <div className="flex gap-2">
                   <Link href="/rankings" className="flex-1">
-                    <Button variant="outline" size="sm" className="w-full">
-                      View Dynasty Rankings <Trophy className="ml-2 h-4 w-4" />
+                    <Button variant="outline" size="sm" className="w-full text-xs">
+                      View Dynasty Rankings <Trophy className="ml-2 h-3 w-3" />
                     </Button>
                   </Link>
                   <Link href="/enhanced-dynasty" className="flex-1">
-                    <Button className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600" size="sm">
-                      Enhanced View <Zap className="ml-2 h-4 w-4" />
+                    <Button className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-xs" size="sm">
+                      Enhanced View <Zap className="ml-2 h-3 w-3" />
                     </Button>
                   </Link>
                 </div>
-
               </div>
             </CardContent>
           </Card>
