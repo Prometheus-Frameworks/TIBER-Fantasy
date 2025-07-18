@@ -61,6 +61,10 @@ function applyLeagueFormatAdjustments(players: any[], format: string): any[] {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register ADP routes
   registerADPRoutes(app);
+  
+  // Import and register rankings API routes
+  const { registerRankingRoutes } = await import('./rankingsApi');
+  registerRankingRoutes(app);
 
   // FantasyPros API Routes
   app.get('/api/fantasypros/players/:sport?', async (req, res) => {

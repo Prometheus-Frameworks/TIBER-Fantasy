@@ -214,10 +214,46 @@ Based on user feedback, expanding to include:
 
 **Required Action**: User must provide valid FantasyPros API key to proceed with data fetching
 
+## Rankings Backend System
+
+**NEW FEATURE**: Complete rankings backend infrastructure for "On The Clock" website integration.
+
+**Core Components**:
+- **Database Schema**: PostgreSQL tables for users, players, individual rankings, and consensus rankings
+- **API Endpoints**: RESTful endpoints for submitting rankings, retrieving consensus, and getting statistics
+- **Consensus Service**: Real-time consensus calculation using simple averages
+- **Dynasty Format Support**: Separate consensus for 'rebuilder' vs 'contender' strategies
+
+**Key Features**:
+- Simple, transparent averaging algorithm (no complex weighting)
+- Real-time consensus updates after each submission
+- Comprehensive validation and error handling
+- Audit trail for all ranking submissions
+- Statistics endpoints for monitoring participation
+
+**API Endpoints**:
+- `POST /api/rankings/submit` - Submit personal rankings
+- `GET /api/rankings/consensus` - Get community consensus rankings
+- `GET /api/rankings/individual/:userId` - Get user's personal rankings
+- `GET /api/rankings/stats` - Get ranking statistics and participation data
+
+**Format Support**:
+- **Redraft**: Standard season-long fantasy format
+- **Dynasty**: Multi-year keeper format with two consensus types:
+  - **Rebuilder**: Focus on youth and future potential
+  - **Contender**: Focus on immediate production
+
+**Documentation**: Complete system documentation available in `docs/RANKINGS_BACKEND_README.md`
+
 ## Changelog
 
 ```
 Changelog:
+- July 18, 2025. **RANKINGS BACKEND SYSTEM COMPLETE**: Built comprehensive rankings infrastructure for "On The Clock" website - PostgreSQL database schema with users, players, individual_rankings, and consensus_rankings tables supporting both redraft and dynasty formats (rebuilder/contender consensus), RESTful API endpoints for submission/retrieval, real-time consensus calculation using simple averages, comprehensive validation and error handling, audit trail system, and complete documentation
+- July 18, 2025. **CONSENSUS CALCULATION SERVICE**: Implemented transparent averaging algorithm with real-time updates - simple mathematical averages (no complex weighting), batch consensus updates, data validation framework, performance optimization with strategic indexes, and comprehensive statistics tracking
+- July 18, 2025. **DYNASTY FORMAT SUPPORT**: Added separate consensus calculation for rebuilder vs contender strategies - dynasty type validation, independent consensus tracking, format-specific API parameters, and proper database constraints
+- July 18, 2025. **API INTEGRATION**: Successfully integrated rankings API routes into existing Express server - added rankingsApi.ts import to routes.ts, registered all ranking endpoints, maintained backward compatibility with existing system
+- July 18, 2025. **COMMUNITY MESSAGING UPDATE**: Updated "How You Can Contribute" page text to match user specification - changed "Why It Matters" section to "Every ranking, every upvote, every idea transforms and shapes. It's important to know: you might be on the clock... but we are only the community"
 - July 18, 2025. **SEQUENTIAL REVEAL SYSTEM RESTORATION**: Enforced strict sequential progression logic - Philosophy starts with "Read More", reveals "Next: Help Us Build", then "Next: Our Contribution", then "Final Step: Haha, Here's the Genius!" with Join Us button, sections stay open once revealed, no collapsing allowed
 - July 18, 2025. **COMPREHENSIVE CONTENT REWRITE**: Updated all three main About page sections with simplified, direct messaging - "Our Philosophy" emphasizes tool building and continuous improvement, "Help Us Build" focuses on open collaboration, "Our Contribution" positions project as proof ordinary people can do extraordinary things
 - July 18, 2025. **RB DRAFT CAPITAL CONTEXT OVERRIDE MODULE**: Implemented comprehensive three-step system for contextual RB analysis - baseline draft tier tagging (PremiumBack/StrongBack/RiskBack/FragileBack), context override triggers (starting role + two top-24 seasons + no top-3 RB threat), and live projection adjustments disabling draft capital penalties for proven performers like Kyren Williams

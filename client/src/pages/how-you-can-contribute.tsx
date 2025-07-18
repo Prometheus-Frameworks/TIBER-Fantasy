@@ -110,7 +110,7 @@ export default function HowYouCanContribute() {
           </CardHeader>
           <CardContent className="space-y-6">
             <p className="text-lg text-gray-700 leading-relaxed text-center">
-              Every ranking, every upvote, every idea shapes On The Clock.
+              Every ranking, every upvote, every idea transforms and shapes. It's important to know: you might be on the clock... but we are only the community
             </p>
             
             <div className="text-center space-y-2">
