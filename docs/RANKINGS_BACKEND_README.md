@@ -53,7 +53,7 @@ POST /api/rankings/submit
   "message": "Rankings submitted successfully",
   "data": {
     "rankingsSubmitted": 50,
-    "consensusUpdated": 48
+    "message": "Consensus will be calculated dynamically on next query"
   }
 }
 ```
@@ -121,8 +121,9 @@ GET /api/rankings/stats?format=redraft
   "data": {
     "totalUsers": 25,
     "totalPlayers": 150,
-    "lastUpdated": "2025-01-18T19:00:00Z",
-    "format": "redraft"
+    "lastSubmission": "2025-01-18T19:00:00Z",
+    "format": "redraft",
+    "consensusCalculation": "real-time"
   }
 }
 ```

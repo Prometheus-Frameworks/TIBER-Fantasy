@@ -64,28 +64,27 @@ CREATE INDEX idx_individual_player_format ON individual_rankings(player_id, form
 CREATE INDEX idx_individual_user_format ON individual_rankings(user_id, format);
 
 -- =============================================================================
--- CONSENSUS RANKINGS TABLE
+-- DYNAMIC CONSENSUS RANKINGS VIEW
 -- =============================================================================
--- Stores calculated consensus rankings using simple averages
--- Updated automatically when individual rankings change
-CREATE TABLE consensus_rankings (
-    id SERIAL PRIMARY KEY,
-    player_id INTEGER REFERENCES players(id) ON DELETE CASCADE,
-    format VARCHAR(20) NOT NULL,        -- 'redraft' or 'dynasty'
-    dynasty_type VARCHAR(20),           -- 'rebuilder' or 'contender' (only for dynasty)
-    average_rank DECIMAL(8,2) NOT NULL, -- Simple average of all individual ranks
-    rank_count INTEGER NOT NULL,       -- Number of individual rankings used
-    consensus_rank INTEGER NOT NULL,    -- Final consensus position (1-based)
-    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    -- Ensure one consensus per player per format/dynasty_type combo
-    UNIQUE(player_id, format, dynasty_type)
-);
-
--- Add indexes for fast consensus retrieval
-CREATE INDEX idx_consensus_format ON consensus_rankings(format);
-CREATE INDEX idx_consensus_dynasty_type ON consensus_rankings(dynasty_type);
-CREATE INDEX idx_consensus_rank ON consensus_rankings(consensus_rank);
+-- Dynamic view that calculates consensus rankings in real-time
+-- Uses simple averages of individual rankings without storing static data
+CREATE VIEW dynamic_consensus_rankings AS
+SELECT
+    ir.player_id,
+    p.name as player_name,
+    p.position,
+    p.team,
+    ir.format,
+    ir.dynasty_type,
+    AVG(ir.rank_position) as average_rank,
+    COUNT(ir.rank_position) as rank_count,
+    ROW_NUMBER() OVER (
+        PARTITION BY ir.format, ir.dynasty_type 
+        ORDER BY AVG(ir.rank_position)
+    ) as consensus_rank
+FROM individual_rankings ir
+JOIN players p ON ir.player_id = p.id
+GROUP BY ir.player_id, p.name, p.position, p.team, ir.format, ir.dynasty_type;
 
 -- =============================================================================
 -- RANKING SUBMISSIONS LOG
@@ -115,20 +114,9 @@ ALTER TABLE individual_rankings
 ADD CONSTRAINT check_format 
 CHECK (format IN ('redraft', 'dynasty'));
 
-ALTER TABLE consensus_rankings 
-ADD CONSTRAINT check_consensus_format 
-CHECK (format IN ('redraft', 'dynasty'));
-
 -- Dynasty type only valid for dynasty format
 ALTER TABLE individual_rankings 
 ADD CONSTRAINT check_dynasty_type 
-CHECK (
-    (format = 'dynasty' AND dynasty_type IN ('rebuilder', 'contender')) OR
-    (format = 'redraft' AND dynasty_type IS NULL)
-);
-
-ALTER TABLE consensus_rankings 
-ADD CONSTRAINT check_consensus_dynasty_type 
 CHECK (
     (format = 'dynasty' AND dynasty_type IN ('rebuilder', 'contender')) OR
     (format = 'redraft' AND dynasty_type IS NULL)
@@ -138,15 +126,6 @@ CHECK (
 ALTER TABLE individual_rankings 
 ADD CONSTRAINT check_rank_positive 
 CHECK (rank_position > 0);
-
-ALTER TABLE consensus_rankings 
-ADD CONSTRAINT check_consensus_rank_positive 
-CHECK (consensus_rank > 0);
-
--- Rank count must be positive
-ALTER TABLE consensus_rankings 
-ADD CONSTRAINT check_rank_count_positive 
-CHECK (rank_count > 0);
 
 -- =============================================================================
 -- HELPER FUNCTIONS

@@ -219,21 +219,21 @@ Based on user feedback, expanding to include:
 **NEW FEATURE**: Complete rankings backend infrastructure for "On The Clock" website integration.
 
 **Core Components**:
-- **Database Schema**: PostgreSQL tables for users, players, individual rankings, and consensus rankings
+- **Database Schema**: PostgreSQL tables for users, players, individual rankings, and dynamic consensus views
 - **API Endpoints**: RESTful endpoints for submitting rankings, retrieving consensus, and getting statistics
-- **Consensus Service**: Real-time consensus calculation using simple averages
+- **Dynamic Consensus Service**: Real-time consensus calculation using SQL views and aggregation queries
 - **Dynasty Format Support**: Separate consensus for 'rebuilder' vs 'contender' strategies
 
 **Key Features**:
 - Simple, transparent averaging algorithm (no complex weighting)
-- Real-time consensus updates after each submission
+- **Dynamic consensus calculation** - no static storage of consensus data
 - Comprehensive validation and error handling
 - Audit trail for all ranking submissions
 - Statistics endpoints for monitoring participation
 
 **API Endpoints**:
 - `POST /api/rankings/submit` - Submit personal rankings
-- `GET /api/rankings/consensus` - Get community consensus rankings
+- `GET /api/rankings/consensus` - Get community consensus rankings (calculated dynamically)
 - `GET /api/rankings/individual/:userId` - Get user's personal rankings
 - `GET /api/rankings/stats` - Get ranking statistics and participation data
 
@@ -242,6 +242,8 @@ Based on user feedback, expanding to include:
 - **Dynasty**: Multi-year keeper format with two consensus types:
   - **Rebuilder**: Focus on youth and future potential
   - **Contender**: Focus on immediate production
+
+**Architecture**: Dynamic consensus calculation eliminates static `consensus_rankings` table in favor of real-time SQL aggregation queries for maximum data integrity and transparency.
 
 **Documentation**: Complete system documentation available in `docs/RANKINGS_BACKEND_README.md`
 

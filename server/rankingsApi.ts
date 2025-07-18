@@ -28,8 +28,8 @@ interface RankingSubmission {
 }
 
 /**
- * Consensus ranking result
- * Calculated using simple averages of individual rankings
+ * Dynamic consensus ranking result
+ * Calculated in real-time from individual rankings
  */
 interface ConsensusRanking {
   playerId: number;
@@ -107,41 +107,46 @@ function validateRankingSubmission(data: any): string | null {
 }
 
 // =============================================================================
-// CONSENSUS CALCULATION LOGIC
+// DYNAMIC CONSENSUS CALCULATION LOGIC
 // =============================================================================
 
 /**
- * Recalculate consensus rankings for a specific format/dynasty type
- * Uses simple averages of all individual rankings
+ * Get dynamic consensus rankings calculated in real-time
+ * Uses simple averages of all individual rankings without storing static data
  */
-async function updateConsensusRankings(format: string, dynastyType?: string): Promise<number> {
+async function getDynamicConsensusRankings(format: string, dynastyType?: string): Promise<ConsensusRanking[]> {
   try {
-    // First, delete existing consensus for this format/dynasty type
-    await db.execute(sql`
-      DELETE FROM consensus_rankings 
-      WHERE format = ${format} 
-      AND (dynasty_type = ${dynastyType || null} OR (dynasty_type IS NULL AND ${dynastyType || null} IS NULL))
-    `);
-    
-    // Calculate new consensus using simple averages
-    const result = await db.execute(sql`
-      INSERT INTO consensus_rankings (player_id, format, dynasty_type, average_rank, rank_count, consensus_rank)
+    // Use the dynamic consensus view to calculate rankings in real-time
+    const rankings = await db.execute(sql`
       SELECT 
-        ir.player_id,
-        ir.format,
-        ir.dynasty_type,
-        AVG(ir.rank_position) as average_rank,
-        COUNT(ir.rank_position) as rank_count,
-        ROW_NUMBER() OVER (ORDER BY AVG(ir.rank_position)) as consensus_rank
-      FROM individual_rankings ir
-      WHERE ir.format = ${format}
-      AND (ir.dynasty_type = ${dynastyType || null} OR (ir.dynasty_type IS NULL AND ${dynastyType || null} IS NULL))
-      GROUP BY ir.player_id, ir.format, ir.dynasty_type
+        player_id,
+        player_name,
+        position,
+        team,
+        average_rank,
+        rank_count,
+        consensus_rank,
+        format,
+        dynasty_type
+      FROM dynamic_consensus_rankings
+      WHERE format = ${format}
+      AND (dynasty_type = ${dynastyType || null} OR (dynasty_type IS NULL AND ${dynastyType || null} IS NULL))
+      ORDER BY consensus_rank ASC
     `);
     
-    return result.rowCount || 0;
+    return rankings.rows.map((row: any) => ({
+      playerId: row.player_id,
+      playerName: row.player_name,
+      position: row.position,
+      team: row.team,
+      averageRank: parseFloat(row.average_rank),
+      rankCount: row.rank_count,
+      consensusRank: row.consensus_rank,
+      format: row.format,
+      dynastyType: row.dynasty_type
+    }));
   } catch (error) {
-    console.error('Error updating consensus rankings:', error);
+    console.error('Error getting dynamic consensus rankings:', error);
     throw error;
   }
 }
@@ -219,15 +224,12 @@ export async function submitRankings(req: Request, res: Response) {
       `);
     });
     
-    // Update consensus rankings after successful submission
-    const consensusUpdated = await updateConsensusRankings(submissionData.format, submissionData.dynastyType);
-    
     res.json({
       success: true,
       message: 'Rankings submitted successfully',
       data: {
         rankingsSubmitted: submissionData.rankings.length,
-        consensusUpdated: consensusUpdated
+        message: 'Consensus will be calculated dynamically on next query'
       }
     });
     
@@ -270,50 +272,25 @@ export async function getConsensusRankings(req: Request, res: Response) {
       });
     }
     
-    // Fetch consensus rankings with player details
-    const rankings = await db.execute(sql`
-      SELECT 
-        cr.player_id,
-        p.name as player_name,
-        p.position,
-        p.team,
-        cr.average_rank,
-        cr.rank_count,
-        cr.consensus_rank,
-        cr.format,
-        cr.dynasty_type,
-        cr.last_updated
-      FROM consensus_rankings cr
-      JOIN players p ON cr.player_id = p.id
-      WHERE cr.format = ${format}
-      AND (cr.dynasty_type = ${dynastyType || null} OR (cr.dynasty_type IS NULL AND ${dynastyType || null} IS NULL))
-      ORDER BY cr.consensus_rank
-      LIMIT ${parseInt(limit as string)}
-      OFFSET ${parseInt(offset as string)}
-    `);
+    // Get dynamic consensus rankings in real-time
+    const consensusRankings = await getDynamicConsensusRankings(format as string, dynastyType as string);
     
-    const consensusRankings: ConsensusRanking[] = rankings.rows.map((row: any) => ({
-      playerId: row.player_id,
-      playerName: row.player_name,
-      position: row.position,
-      team: row.team,
-      averageRank: parseFloat(row.average_rank),
-      rankCount: row.rank_count,
-      consensusRank: row.consensus_rank,
-      format: row.format,
-      dynastyType: row.dynasty_type
-    }));
+    // Apply pagination
+    const startIndex = parseInt(offset as string);
+    const endIndex = startIndex + parseInt(limit as string);
+    const paginatedRankings = consensusRankings.slice(startIndex, endIndex);
     
     res.json({
       success: true,
       data: {
-        rankings: consensusRankings,
+        rankings: paginatedRankings,
         meta: {
           format: format,
           dynastyType: dynastyType,
           totalResults: consensusRankings.length,
           limit: parseInt(limit as string),
-          offset: parseInt(offset as string)
+          offset: parseInt(offset as string),
+          calculatedAt: new Date().toISOString()
         }
       }
     });
@@ -456,15 +433,15 @@ export async function getRankingStats(req: Request, res: Response) {
     // Get total number of players ranked
     const playerCount = await db.execute(sql`
       SELECT COUNT(DISTINCT player_id) as total_players
-      FROM consensus_rankings
+      FROM individual_rankings
       WHERE format = ${format}
       AND (dynasty_type = ${dynastyType || null} OR (dynasty_type IS NULL AND ${dynastyType || null} IS NULL))
     `);
     
-    // Get last update time
-    const lastUpdate = await db.execute(sql`
-      SELECT MAX(last_updated) as last_updated
-      FROM consensus_rankings
+    // Get last submission time
+    const lastSubmission = await db.execute(sql`
+      SELECT MAX(submitted_at) as last_submission
+      FROM ranking_submissions
       WHERE format = ${format}
       AND (dynasty_type = ${dynastyType || null} OR (dynasty_type IS NULL AND ${dynastyType || null} IS NULL))
     `);
@@ -474,9 +451,10 @@ export async function getRankingStats(req: Request, res: Response) {
       data: {
         totalUsers: userCount.rows[0]?.total_users || 0,
         totalPlayers: playerCount.rows[0]?.total_players || 0,
-        lastUpdated: lastUpdate.rows[0]?.last_updated || null,
+        lastSubmission: lastSubmission.rows[0]?.last_submission || null,
         format: format,
-        dynastyType: dynastyType
+        dynastyType: dynastyType,
+        consensusCalculation: 'real-time'
       }
     });
     
