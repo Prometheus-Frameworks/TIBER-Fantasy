@@ -1,0 +1,68 @@
+import { useState } from 'react';
+
+const AboutSequentialReveal = () => {
+  const [step, setStep] = useState(1);
+
+  return (
+    <div className="about-container">
+
+      {step >= 1 && (
+        <>
+          <h2>Philosophy</h2>
+          <p>
+            We want to make the hard stuff simple. We build tools, apply context wherever we can, 
+            and always aim to involve as many real-life fantasy players as possible. 
+            If you’re interested in learning, read more. 
+            This site is launched, but not finished. 
+            <strong><em> Genius doesn’t stand still.</em></strong>
+          </p>
+          {step === 1 && (
+            <button onClick={() => setStep(2)}>Next: Help Us Build</button>
+          )}
+        </>
+      )}
+
+      {step >= 2 && (
+        <>
+          <h2>Help Us Build</h2>
+          <p>
+            This project isn’t about paywalls or profit. It’s about open tools, honest insights, 
+            and building something together. If you’re curious or want to help, contribute anytime. 
+            Every tool we build is made better by the people who use it.
+          </p>
+          {step === 2 && (
+            <button onClick={() => setStep(3)}>Next: Our Contribution</button>
+          )}
+        </>
+      )}
+
+      {step >= 3 && (
+        <>
+          <h2>Our Contribution</h2>
+          <p>
+            This project is proof that ordinary people can do extraordinary things. 
+            Fantasy football is just the start. We’re proving that knowledge belongs to everyone. 
+            If you’re reading this, you’re already part of the movement.
+          </p>
+          {step === 3 && (
+            <button onClick={() => setStep(4)}>Final Step: Haha, Here’s the Genius!</button>
+          )}
+        </>
+      )}
+
+      {step >= 4 && (
+        <>
+          <h2>Haha, Here’s the Genius!</h2>
+          <p>
+            Well… if you think you’re so smart, why don’t you come on in and make things better? 
+            In fact — I could really use the help. No, seriously: 
+          </p>
+          <button>Join Us</button>
+        </>
+      )}
+
+    </div>
+  );
+};
+
+export default AboutSequentialReveal;

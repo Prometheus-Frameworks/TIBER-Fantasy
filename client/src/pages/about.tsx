@@ -24,12 +24,7 @@ import { ViewSourcesModal } from "@/components/view-sources-modal";
 import SignalFooter from "@/components/signal-footer";
 
 export default function About() {
-  const [revealedSteps, setRevealedSteps] = useState(0);
-  const [philosophyExpanded, setPhilosophyExpanded] = useState(false);
-
-  const revealNextStep = () => {
-    setRevealedSteps(prev => prev + 1);
-  };
+  const [step, setStep] = useState(1);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -51,47 +46,37 @@ export default function About() {
         </div>
 
         {/* Philosophy */}
-        <Card className="mb-12 border-0 bg-white/60 backdrop-blur-sm shadow-xl">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Target className="h-6 w-6 text-orange-500" />
-              <CardTitle className="text-2xl">Philosophy</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {philosophyExpanded && (
-              <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-6 rounded-lg border border-gray-200 animate-in slide-in-from-top-4 duration-500">
+        {step >= 1 && (
+          <Card className="mb-12 border-0 bg-white/60 backdrop-blur-sm shadow-xl">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Target className="h-6 w-6 text-orange-500" />
+                <CardTitle className="text-2xl">Philosophy</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-6 rounded-lg border border-gray-200">
                 <p className="text-lg text-gray-700 leading-relaxed mb-4">
                   We want to make the hard stuff simple. We build tools, apply context wherever we can, and always aim to involve as many real-life fantasy players as possible. If you're interested in learning, read more. This site is launched, but not finished. We intend to stay that way. <strong><em>Genius doesn't stand still.</em></strong>
                 </p>
-                <div className="text-center">
-                  <Button 
-                    onClick={revealNextStep}
-                    className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold px-8 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
-                  >
-                    <ChevronRight className="h-4 w-4 mr-2" />
-                    Next: Help Us Build
-                  </Button>
-                </div>
+                {step === 1 && (
+                  <div className="text-center">
+                    <Button 
+                      onClick={() => setStep(2)}
+                      className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold px-8 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      <ChevronRight className="h-4 w-4 mr-2" />
+                      Next: Help Us Build
+                    </Button>
+                  </div>
+                )}
               </div>
-            )}
-            {!philosophyExpanded && (
-              <div className="text-center">
-                <Button 
-                  onClick={() => setPhilosophyExpanded(true)}
-                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold px-8 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
-                >
-                  <Target className="h-4 w-4 mr-2" />
-                  Read More
-                </Button>
-              </div>
-            )}
-
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Help Us Build */}
-        {revealedSteps >= 1 && (
+        {step >= 2 && (
           <Card className="mb-12 border-0 bg-gradient-to-r from-blue-50 to-purple-50 backdrop-blur-sm shadow-xl animate-in slide-in-from-top-4 duration-500">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -104,22 +89,24 @@ export default function About() {
                 <p className="text-lg text-gray-700 leading-relaxed mb-4">
                   This project isn't about paywalls or profit. It's about open tools, honest insights, and building something together. If you're curious or want to help, contribute anytime. Every tool we build is made better by the people who use it.
                 </p>
-                <div className="text-center">
-                  <Button 
-                    onClick={revealNextStep}
-                    className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold px-8 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
-                  >
-                    <ChevronRight className="h-4 w-4 mr-2" />
-                    Next: Our Contribution
-                  </Button>
-                </div>
+                {step === 2 && (
+                  <div className="text-center">
+                    <Button 
+                      onClick={() => setStep(3)}
+                      className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold px-8 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      <ChevronRight className="h-4 w-4 mr-2" />
+                      Next: Our Contribution
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
         )}
 
         {/* Our Contribution */}
-        {revealedSteps >= 2 && (
+        {step >= 3 && (
           <Card className="mb-12 border-0 bg-gradient-to-r from-slate-50 to-gray-50 backdrop-blur-sm shadow-xl animate-in slide-in-from-top-4 duration-500">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -132,22 +119,24 @@ export default function About() {
                 <p className="text-lg text-gray-700 leading-relaxed mb-4">
                   This project is proof that ordinary people can do extraordinary things. Fantasy football is just the start. We're proving that knowledge belongs to everyone. If you're reading this, you're already part of the movement.
                 </p>
-                <div className="text-center">
-                  <Button 
-                    onClick={revealNextStep}
-                    className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold px-8 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Final Step: Haha, Here's the Genius!
-                  </Button>
-                </div>
+                {step === 3 && (
+                  <div className="text-center">
+                    <Button 
+                      onClick={() => setStep(4)}
+                      className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold px-8 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Final Step: Haha, Here's the Genius!
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
         )}
 
         {/* Final Step */}
-        {revealedSteps >= 3 && (
+        {step >= 4 && (
           <Card className="mb-12 border-0 bg-gradient-to-r from-green-50 to-emerald-50 backdrop-blur-sm shadow-xl animate-in slide-in-from-top-4 duration-500">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -158,7 +147,7 @@ export default function About() {
             <CardContent className="space-y-4">
               <div className="bg-white/80 p-6 rounded-lg border border-green-200 space-y-4">
                 <p className="text-lg text-gray-700 leading-relaxed mb-4">
-                  Well… if you think you're so smart, why don't you come on in and make things better? In fact — I could really use the help. No, seriously: Join Us.
+                  Well… if you think you're so smart, why don't you come on in and make things better? In fact — I could really use the help. No, seriously:
                 </p>
                 <div className="text-center">
                   <a href="/how-you-can-contribute" className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-green-500 to-blue-500 text-white font-semibold rounded-lg hover:from-green-600 hover:to-blue-600 transition-all duration-200 shadow-lg hover:shadow-xl">
