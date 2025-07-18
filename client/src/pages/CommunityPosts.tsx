@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
-import { Users, Link as LinkIcon, FileText, Heart } from "lucide-react";
+import { Users, Link as LinkIcon, FileText, Heart, Shield } from "lucide-react";
 
 export default function CommunityPosts() {
   const [postName, setPostName] = useState("");
@@ -28,6 +28,39 @@ export default function CommunityPosts() {
         <p>The goal isn't always feedback. It's reflection. It's trust. It's creativity.</p>
         <p>Post what you're proud of. Reflect what others share. This is where you belong.</p>
       </div>
+
+      {/* No Gambling Policy */}
+      <Card className="border-red-200 bg-red-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-red-800">
+            <Shield className="h-5 w-5" />
+            No Gambling Policy
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-red-700">
+          <div className="space-y-4">
+            <p className="font-semibold">No Gambling. No Exceptions.</p>
+            
+            <p>
+              We're here to help you win your fantasy football leagues — whether free or paid. Paid leagues are part of the game, and we're glad to support players who enjoy competing for prizes among friends.
+            </p>
+            
+            <p>But we draw a hard line:</p>
+            
+            <p className="font-medium">
+              This platform does not support sports betting, DFS (daily fantasy), or any form of gambling.
+            </p>
+            
+            <p>
+              We don't profit from gambling, we don't encourage it, and we're not responsible for your financial decisions. If you're here looking for betting advice, this is not the place for you.
+            </p>
+            
+            <p className="font-medium">
+              We build tools to help players learn. Not to feed gambling addiction.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Page Header */}
       <div className="flex items-center justify-between">
