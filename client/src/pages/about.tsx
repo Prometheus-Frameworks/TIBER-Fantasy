@@ -88,6 +88,23 @@ export default function About() {
           </CardContent>
         </Card>
 
+        {/* Haha, Here's the Genius! */}
+        <Card className="mb-12 border-0 bg-gradient-to-r from-green-50 to-emerald-50 backdrop-blur-sm shadow-xl">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Zap className="h-6 w-6 text-green-500" />
+              <CardTitle className="text-2xl">Haha, Here's the Genius!</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-white/80 p-6 rounded-lg border border-green-200 space-y-4">
+              <p className="text-lg text-gray-700 leading-relaxed">
+                Well… if you think you're so smart, why don't you come on in and make things better? In fact — I could really use the help. No, seriously: Join Us.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* What We Provide */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
           <Card className="border-0 bg-white/60 backdrop-blur-sm">
