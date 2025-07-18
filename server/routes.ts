@@ -20,6 +20,7 @@ import { z } from "zod";
 import { accuracyValidator } from './accuracyValidator';
 import { fantasyProsAPI } from './services/fantasyProsAPI';
 import { dataIngestionService } from './services/dataIngestionService';
+import { fantasyProService } from './services/fantasyProService';
 
 /**
  * Apply league format adjustments to dynasty values
@@ -59,6 +60,187 @@ function applyLeagueFormatAdjustments(players: any[], format: string): any[] {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register ADP routes
   registerADPRoutes(app);
+
+  // FantasyPros API Routes
+  app.get('/api/fantasypros/players/:sport?', async (req, res) => {
+    try {
+      const sport = req.params.sport as any || 'nfl';
+      const useCache = req.query.cache !== 'false';
+      
+      const data = await fantasyProService.fetchPlayers(sport, useCache);
+      
+      res.json({
+        success: true,
+        data,
+        count: data.length,
+        cached: useCache,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('FantasyPros players API error:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  app.get('/api/fantasypros/rankings/:sport?', async (req, res) => {
+    try {
+      const sport = req.params.sport as any || 'nfl';
+      const useCache = req.query.cache !== 'false';
+      const params = {
+        position: req.query.position as string,
+        week: req.query.week as string,
+        scoring: req.query.scoring as any,
+        year: req.query.year as string
+      };
+      
+      // Remove undefined params
+      Object.keys(params).forEach(key => {
+        if (params[key as keyof typeof params] === undefined) {
+          delete params[key as keyof typeof params];
+        }
+      });
+      
+      const data = await fantasyProService.fetchRankings(sport, Object.keys(params).length ? params : undefined, useCache);
+      
+      res.json({
+        success: true,
+        data,
+        count: data.length,
+        params,
+        cached: useCache,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('FantasyPros rankings API error:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  app.get('/api/fantasypros/projections/:sport?', async (req, res) => {
+    try {
+      const sport = req.params.sport as any || 'nfl';
+      const useCache = req.query.cache !== 'false';
+      const params = {
+        position: req.query.position as string,
+        week: req.query.week as string,
+        scoring: req.query.scoring as any,
+        year: req.query.year as string
+      };
+      
+      // Remove undefined params
+      Object.keys(params).forEach(key => {
+        if (params[key as keyof typeof params] === undefined) {
+          delete params[key as keyof typeof params];
+        }
+      });
+      
+      const data = await fantasyProService.fetchProjections(sport, Object.keys(params).length ? params : undefined, useCache);
+      
+      res.json({
+        success: true,
+        data,
+        count: data.length,
+        params,
+        cached: useCache,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('FantasyPros projections API error:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Generic flexible endpoint
+  app.get('/api/fantasypros/:endpoint/:sport?', async (req, res) => {
+    try {
+      const endpoint = req.params.endpoint as any;
+      const sport = req.params.sport as any || 'nfl';
+      const useCache = req.query.cache !== 'false';
+      
+      // Only allow specific endpoints for security
+      if (!['players', 'rankings', 'projections'].includes(endpoint)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid endpoint. Supported: players, rankings, projections'
+        });
+      }
+      
+      const params = { ...req.query };
+      delete params.cache; // Remove cache param from API params
+      
+      const data = await fantasyProService.fetchData(endpoint, sport, params as any, useCache);
+      
+      res.json({
+        success: true,
+        endpoint,
+        sport,
+        data,
+        count: Array.isArray(data) ? data.length : 1,
+        params,
+        cached: useCache,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('FantasyPros generic API error:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Cache management routes
+  app.delete('/api/fantasypros/cache/:endpoint?/:sport?', async (req, res) => {
+    try {
+      const endpoint = req.params.endpoint as any;
+      const sport = req.params.sport as any;
+      
+      fantasyProService.clearCache(endpoint, sport);
+      
+      res.json({
+        success: true,
+        message: `Cache cleared for ${endpoint || 'all'} ${sport || 'all'}`,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/fantasypros/cache/status', async (req, res) => {
+    try {
+      const status = fantasyProService.getCacheStatus();
+      const isAvailable = fantasyProService.isAvailable();
+      
+      res.json({
+        success: true,
+        available: isAvailable,
+        cache: status,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
   
   // Dynasty Decline Detection Framework Routes
   app.post('/api/analytics/dynasty-decline-assessment', async (req, res) => {

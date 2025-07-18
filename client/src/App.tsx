@@ -61,6 +61,7 @@ import SleeperDatabase from "@/pages/sleeper-database";
 import PrometheusBenchmarks from "@/pages/PrometheusBenchmarks";
 import CommunityPosts from "@/pages/CommunityPosts";
 import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
+import FantasyProTest from "@/pages/FantasyProTest";
 
 function Router() {
   return (
@@ -112,6 +113,7 @@ function Router() {
       <Route path="/projections-test" component={ProjectionsTest} />
       <Route path="/data-ingestion" component={DataIngestion} />
       <Route path="/reflect" component={Reflect} />
+      <Route path="/fantasypros-test" component={FantasyProTest} />
       <Route component={NotFound} />
     </Switch>
   );
