@@ -122,10 +122,10 @@ export default function Home() {
           <div className="text-center mb-4">
             <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
               <Trophy className="h-6 w-6 text-blue-600" />
-              Latest Player Rankings
+              Redraft Rankings
             </h2>
             <p className="text-gray-600 text-base">
-              Current season insights with live NFL data and dynasty valuations
+              Current season insights with live NFL data and redraft valuations
             </p>
           </div>
           
@@ -152,7 +152,7 @@ export default function Home() {
             <Link href="/rankings">
               <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8">
                 <Trophy className="mr-2 h-5 w-5" />
-                Access Rankings Now
+                View Redraft Rankings
               </Button>
             </Link>
           </div>
@@ -259,26 +259,26 @@ export default function Home() {
                 </div>
                 <div>
                   <CardTitle className="text-lg">Dynasty Rankings</CardTitle>
-                  <CardDescription>Enhanced v2.0 with research-based exponential scaling</CardDescription>
+                  <CardDescription>Long-term player valuations for dynasty leagues</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">
-                Next-generation analytical framework with proprietary scoring models, 
-                sophisticated tier classification system, and comprehensive player evaluation algorithms 
-                to identify elite prospects and undervalued assets.
+                Player evaluation system using Production (40%), Opportunity (35%), Age (20%), 
+                and Stability (15%) weighting with authentic NFL data to identify 
+                value opportunities and tier classifications.
               </p>
               <div className="flex flex-col gap-2">
                 <div className="flex gap-2">
                   <Link href="/rankings" className="flex-1">
                     <Button variant="outline" size="sm" className="w-full">
-                      View Rankings <Trophy className="ml-2 h-4 w-4" />
+                      View Dynasty Rankings <Trophy className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
                   <Link href="/enhanced-dynasty" className="flex-1">
                     <Button className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600" size="sm">
-                      Enhanced Algorithm <Zap className="ml-2 h-4 w-4" />
+                      Enhanced View <Zap className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
                 </div>
