@@ -173,17 +173,20 @@ export async function getConsensusWithTierBubbles(
     loose_consensus_tiers: number;
   };
 }> {
-  // Import the fixed getDynamicConsensusRankings from rankingsApi
-  const { getDynamicConsensusRankings } = await import('./rankingsApi');
-  const consensusRankings = await getDynamicConsensusRankings(format, dynastyType, position);
+  let consensusRankings: any[] = [];
+  try {
+    // Import the fixed getDynamicConsensusRankings from rankingsApi
+    const { getDynamicConsensusRankings } = await import('./rankingsApi');
+    consensusRankings = await getDynamicConsensusRankings(format, dynastyType, position);
+  } catch (error) {
+    console.error(`Error fetching rankings for ${format} ${dynastyType}:`, error);
+  }
   
-  // Transform to PlayerRankingForBubbles format
-  const playerData: PlayerRankingForBubbles[] = await Promise.all(
-    consensusRankings.map(async (player) => {
-      // Calculate standard deviation and min/max ranks for this player
+  const playerData: PlayerRankingForBubbles[] = [];
+  for (const player of consensusRankings) {
+    try {
       const rankStats = await calculatePlayerRankingStats(player.playerId, format, dynastyType);
-      
-      return {
+      playerData.push({
         player_id: player.playerId.toString(),
         player_name: player.playerName,
         position: player.position,
@@ -193,9 +196,11 @@ export async function getConsensusWithTierBubbles(
         min_rank: rankStats.minRank,
         max_rank: rankStats.maxRank,
         rank_count: player.rankCount
-      };
-    })
-  );
+      });
+    } catch (error) {
+      console.error(`Error calculating stats for player ${player.playerId}:`, error);
+    }
+  }
   
   // Generate tier bubbles
   const tierBubbles = generateTierBubbles(playerData);
