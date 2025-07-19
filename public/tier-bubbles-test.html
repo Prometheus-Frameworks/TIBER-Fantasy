@@ -24,6 +24,26 @@
             font-size: 14px;
             white-space: nowrap;
         }
+        .tier-container { 
+            background: #f9f9f9; 
+            border: 2px solid #ccc; 
+            border-radius: 8px; 
+            padding: 15px; 
+            margin: 10px 0; 
+        }
+        .player-row { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 8px; 
+            margin-top: 10px; 
+        }
+        .bg-white { background-color: white; }
+        .p-2 { padding: 8px; }
+        .border { border: 1px solid #ddd; }
+        .rounded { border-radius: 4px; }
+        .flex { display: flex; }
+        .flex-wrap { flex-wrap: wrap; }
+        .gap-2 { gap: 8px; }
         select { padding: 8px; margin: 10px 5px; }
         .debug-info { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 4px; }
         pre { font-size: 12px; }
@@ -51,27 +71,24 @@
             container.innerHTML = '';
 
             if (bubbles.length === 0) {
-                container.innerHTML = '<p>No tier bubble data available for this format.</p>';
+                container.innerHTML = '<p>No data available.</p>';
                 return;
             }
 
-            bubbles.forEach((bubble) => {
-                const bubbleContainer = document.createElement('div');
-                bubbleContainer.className = 'tier-bubble';
-                bubbleContainer.innerHTML = \`<strong>Tier \${bubble.tier_number} (\${bubble.consensus_strength})</strong><br>\`;
-
+            bubbles.forEach((bubble, index) => {
+                const tierDiv = document.createElement('div');
+                tierDiv.className = 'tier-container';
+                tierDiv.innerHTML = \`<h3>Tier \${index + 1} (\${bubble.consensus_strength})</h3><div class="player-row flex flex-wrap gap-2"></div>\`;
+                
+                const playerRow = tierDiv.querySelector('.player-row');
                 bubble.players.forEach(player => {
-                    const playerCard = document.createElement('div');
-                    playerCard.className = 'player-card';
-                    playerCard.innerHTML = \`
-                        \${player.player_name}<br>
-                        <small>\${player.position} – \${player.team}</small><br>
-                        <small>Avg Rank: \${player.average_rank.toFixed(1)}</small>
-                    \`;
-                    bubbleContainer.appendChild(playerCard);
+                    const card = document.createElement('div');
+                    card.className = 'player-card bg-white p-2 border rounded';
+                    card.innerHTML = \`\${player.player_name}<br><small>\${player.position} - \${player.team}</small>\`;
+                    playerRow.appendChild(card);
                 });
 
-                container.appendChild(bubbleContainer);
+                container.appendChild(tierDiv);
             });
         }
 

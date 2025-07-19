@@ -118,31 +118,31 @@
             container.innerHTML = '';
 
             if (bubbles.length === 0) {
-                container.innerHTML = '<div class="no-data">No tier bubble data available for this format.</div>';
+                container.innerHTML = '<div class="no-data">No data available.</div>';
                 return;
             }
 
-            bubbles.forEach((bubble) => {
-                const bubbleContainer = document.createElement('div');
-                bubbleContainer.className = 'tier-bubble';
+            bubbles.forEach((bubble, index) => {
+                const tierDiv = document.createElement('div');
+                tierDiv.className = 'tier-bubble';
                 
                 const tierHeader = document.createElement('div');
                 tierHeader.className = 'tier-header';
-                tierHeader.innerHTML = `Tier ${bubble.tier_number} (${bubble.consensus_strength.toUpperCase()} consensus)`;
-                bubbleContainer.appendChild(tierHeader);
-
+                tierHeader.innerHTML = `Tier ${index + 1} (${bubble.consensus_strength.toUpperCase()} consensus)`;
+                tierDiv.appendChild(tierHeader);
+                
                 bubble.players.forEach(player => {
-                    const playerCard = document.createElement('div');
-                    playerCard.className = 'player-card';
-                    playerCard.innerHTML = `
+                    const card = document.createElement('div');
+                    card.className = 'player-card';
+                    card.innerHTML = `
                         <div class="player-name">${player.player_name}</div>
                         <div class="player-details">${player.position} – ${player.team}</div>
                         <div class="player-details">Avg Rank: ${player.average_rank.toFixed(1)}</div>
                     `;
-                    bubbleContainer.appendChild(playerCard);
+                    tierDiv.appendChild(card);
                 });
 
-                container.appendChild(bubbleContainer);
+                container.appendChild(tierDiv);
             });
         }
 
