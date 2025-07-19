@@ -3,144 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Working Tier Bubbles Drop-In Example</title>
+    <title>Working Tier Bubbles Example</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 20px; 
+            background: #f8f9fa;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
         .tier-bubble { 
-            background: linear-gradient(135deg, #f0f8ff, #e6f3ff); 
-            border: 2px solid #0079f2; 
-            border-radius: 15px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 12px; 
             padding: 20px; 
-            margin: 15px 0; 
-            box-shadow: 0 2px 8px rgba(0,121,242,0.1);
-        }
-        .tier-header {
-            font-size: 18px;
-            font-weight: bold;
-            color: #0079f2;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #0079f2;
-            padding-bottom: 8px;
-        }
-        .players-container {
+            margin: 16px 0; 
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .tier-bubble:nth-child(even) {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .tier-bubble:nth-child(3n) {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        .tier-header {
+            width: 100%;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 12px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
         }
         .player-card { 
             background: white; 
-            border: 1px solid #ddd; 
+            border: none;
             border-radius: 8px; 
-            padding: 10px 14px; 
+            padding: 12px 16px; 
             font-size: 14px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
         }
         .player-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
-        .player-name { font-weight: bold; color: #333; }
-        .player-info { color: #666; font-size: 12px; margin-top: 2px; }
-        select { 
-            padding: 10px 15px; 
-            font-size: 16px;
-            border: 2px solid #0079f2;
-            border-radius: 8px;
-            background: white;
-            margin: 15px 5px;
-        }
-        .status { 
-            padding: 10px; 
-            margin: 10px 0; 
-            border-radius: 6px; 
+        .player-name {
             font-weight: bold;
+            color: #333;
         }
-        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .player-details {
+            color: #666;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        select { 
+            padding: 12px; 
+            margin: 10px 5px; 
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            background: white;
+        }
+        .format-selector {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-style: italic;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
-    <h1>Working Tier Bubbles Drop-In Example</h1>
-    <p>Demonstrates the exact multi-format tier bubble structure you requested.</p>
+    <div class="header">
+        <h1>🏆 Tier Bubbles - "On The Clock" Rankings</h1>
+        <p>Community consensus fantasy football rankings displayed in intuitive tier groupings</p>
+    </div>
     
-    <select onchange="loadTierBubbles(this.value)">
-        <option value="dynasty">Dynasty</option>
-        <option value="redraft">Redraft</option>
-        <option value="dynasty_contender">Dynasty Contender</option>
-        <option value="dynasty_rebuilder">Dynasty Rebuilder</option>
-    </select>
+    <div class="format-selector">
+        <label for="format-select"><strong>Select Format:</strong></label>
+        <select id="format-select" onchange="loadTierBubbles(this.value)">
+            <option value="dynasty">Dynasty</option>
+            <option value="redraft">Redraft</option>
+            <option value="dynasty_contender">Dynasty Contender</option>
+            <option value="dynasty_rebuilder">Dynasty Rebuilder</option>
+        </select>
+    </div>
 
-    <div id="status"></div>
     <div id="tier-bubbles-list"></div>
 
     <script>
-        // Tier Bubble Loader – Format-Specific (Your Exact Code)
         async function loadTierBubbles(format) {
-            const statusDiv = document.getElementById('status');
+            const response = await fetch('/api/tier-bubbles');
+            const data = await response.json();
+            const bubbles = data[format] || [];
             const container = document.getElementById('tier-bubbles-list');
-            
-            statusDiv.innerHTML = '<div class="status">Loading tier bubbles...</div>';
-            
-            try {
-                const response = await fetch('/api/tier-bubbles');  // ✅ Your actual endpoint
-                const data = await response.json();
+            container.innerHTML = '';
 
-                const bubbles = data[format] || [];  // Example: data['dynasty'], data['redraft']
-
-                container.innerHTML = '';
-
-                if (bubbles.length === 0) {
-                    statusDiv.innerHTML = '<div class="status warning">No tier bubble data available for this format.</div>';
-                    container.innerHTML = '<p>No tier bubble data available for this format.</p>';
-                    return;
-                }
-
-                statusDiv.innerHTML = \`<div class="status success">✅ Loaded \${bubbles.length} tier bubbles for \${format}</div>\`;
-
-                bubbles.forEach((bubble, index) => {
-                    const bubbleContainer = document.createElement('div');
-                    bubbleContainer.className = 'tier-bubble';
-                    
-                    // Tier header
-                    const tierHeader = document.createElement('div');
-                    tierHeader.className = 'tier-header';
-                    tierHeader.textContent = \`Tier \${index + 1} (\${bubble.players.length} players)\`;
-                    bubbleContainer.appendChild(tierHeader);
-                    
-                    // Players container
-                    const playersContainer = document.createElement('div');
-                    playersContainer.className = 'players-container';
-
-                    bubble.players.forEach(player => {
-                        const playerCard = document.createElement('div');
-                        playerCard.className = 'player-card';
-                        playerCard.innerHTML = \`
-                            <div class="player-name">\${player.player_name}</div>
-                            <div class="player-info">\${player.position} – \${player.team}</div>
-                        \`;
-                        playersContainer.appendChild(playerCard);
-                    });
-                    
-                    bubbleContainer.appendChild(playersContainer);
-                    container.appendChild(bubbleContainer);
-                });
-                
-            } catch (error) {
-                statusDiv.innerHTML = \`<div class="status warning">❌ Error loading tier bubbles: \${error.message}</div>\`;
-                container.innerHTML = \`<p>❌ Error loading tier bubbles: \${error.message}</p>\`;
-                console.error('Error fetching tier bubbles:', error);
+            if (bubbles.length === 0) {
+                container.innerHTML = '<div class="no-data">No tier bubble data available for this format.</div>';
+                return;
             }
+
+            bubbles.forEach((bubble) => {
+                const bubbleContainer = document.createElement('div');
+                bubbleContainer.className = 'tier-bubble';
+                
+                const tierHeader = document.createElement('div');
+                tierHeader.className = 'tier-header';
+                tierHeader.innerHTML = `Tier ${bubble.tier_number} (${bubble.consensus_strength.toUpperCase()} consensus)`;
+                bubbleContainer.appendChild(tierHeader);
+
+                bubble.players.forEach(player => {
+                    const playerCard = document.createElement('div');
+                    playerCard.className = 'player-card';
+                    playerCard.innerHTML = `
+                        <div class="player-name">${player.player_name}</div>
+                        <div class="player-details">${player.position} – ${player.team}</div>
+                        <div class="player-details">Avg Rank: ${player.average_rank.toFixed(1)}</div>
+                    `;
+                    bubbleContainer.appendChild(playerCard);
+                });
+
+                container.appendChild(bubbleContainer);
+            });
         }
 
-        // Example usage from dropdown or tabs:
-        function updateTierBubbles(selectedFormat) {
-            loadTierBubbles(selectedFormat);
-        }
-
-        // Optional default load:
+        // Load default format on page load
         window.onload = function() {
-            loadTierBubbles('dynasty');  // ✅ Default starting format
+            loadTierBubbles('dynasty');
         };
     </script>
 </body>

@@ -43,57 +43,54 @@
     <div id="tier-bubbles-list"></div>
 
     <script>
+        async function loadTierBubbles(format) {
+            const response = await fetch('/api/tier-bubbles');
+            const data = await response.json();
+            const bubbles = data[format] || [];
+            const container = document.getElementById('tier-bubbles-list');
+            container.innerHTML = '';
+
+            if (bubbles.length === 0) {
+                container.innerHTML = '<p>No tier bubble data available for this format.</p>';
+                return;
+            }
+
+            bubbles.forEach((bubble) => {
+                const bubbleContainer = document.createElement('div');
+                bubbleContainer.className = 'tier-bubble';
+                bubbleContainer.innerHTML = \`<strong>Tier \${bubble.tier_number} (\${bubble.consensus_strength})</strong><br>\`;
+
+                bubble.players.forEach(player => {
+                    const playerCard = document.createElement('div');
+                    playerCard.className = 'player-card';
+                    playerCard.innerHTML = \`
+                        \${player.player_name}<br>
+                        <small>\${player.position} – \${player.team}</small><br>
+                        <small>Avg Rank: \${player.average_rank.toFixed(1)}</small>
+                    \`;
+                    bubbleContainer.appendChild(playerCard);
+                });
+
+                container.appendChild(bubbleContainer);
+            });
+        }
+
         // Debug: Log Tier Bubble API Response by Format
         async function debugTierBubbles(format) {
             const debugDiv = document.getElementById('debug-info');
-            const container = document.getElementById('tier-bubbles-list');
             
             try {
                 const response = await fetch('/api/tier-bubbles');
                 const data = await response.json();
 
-                debugDiv.innerHTML = `
+                debugDiv.innerHTML = \`
                     <h3>🛠️ Full API Response Structure:</h3>
-                    <pre>${JSON.stringify(data, null, 2)}</pre>
-                `;
+                    <pre>\${JSON.stringify(data, null, 2)}</pre>
+                \`;
 
-                const bubbles = data[format];
-                console.log(\`🔎 Tier Bubble Data for Format [\${format}]:\`, bubbles);
-
-                container.innerHTML = '';
-
-                if (!bubbles || bubbles.length === 0) {
-                    container.innerHTML = \`<p>⚠️ No tier bubble data found for format: \${format}</p>\`;
-                    console.warn(\`⚠️ No tier bubble data found for format: \${format}\`);
-                } else {
-                    console.info(\`✅ Found \${bubbles.length} tier bubbles for \${format}\`);
-                    
-                    bubbles.forEach((bubble, index) => {
-                        const bubbleContainer = document.createElement('div');
-                        bubbleContainer.className = 'tier-bubble';
-                        
-                        const tierHeader = document.createElement('strong');
-                        tierHeader.textContent = \`Tier \${index + 1} (\${bubble.players.length} players)\`;
-                        tierHeader.style.width = '100%';
-                        tierHeader.style.marginBottom = '8px';
-                        bubbleContainer.appendChild(tierHeader);
-
-                        bubble.players.forEach(player => {
-                            const playerCard = document.createElement('div');
-                            playerCard.className = 'player-card';
-                            playerCard.innerHTML = \`
-                                <strong>\${player.player_name}</strong><br>
-                                <small>\${player.position} – \${player.team}</small>
-                            \`;
-                            bubbleContainer.appendChild(playerCard);
-                        });
-
-                        container.appendChild(bubbleContainer);
-                    });
-                }
+                await loadTierBubbles(format);
             } catch (error) {
                 debugDiv.innerHTML = \`<h3>❌ Error:</h3><pre>\${error.message}</pre>\`;
-                container.innerHTML = \`<p>❌ Error loading tier bubbles: \${error.message}</p>\`;
                 console.error('Error fetching tier bubbles:', error);
             }
         }

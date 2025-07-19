@@ -367,81 +367,54 @@ export async function submitRankings(req: Request, res: Response) {
  */
 export async function getMultiFormatTierBubbles(req: Request, res: Response) {
   try {
-    // Import tier bubble functionality from consensus service
     const { getConsensusWithTierBubbles } = await import('./consensusService');
     
     const result: any = {};
     
-    // Fetch redraft tier bubbles
+    // Redraft
     try {
       const redraftBubbles = await getConsensusWithTierBubbles('redraft', undefined, undefined);
-      result.redraft = redraftBubbles.tier_bubbles?.map((tier: any) => ({
-        players: tier.players.map((player: any) => ({
-          player_name: player.player_name,
-          position: player.position,
-          team: player.team
-        }))
-      })) || [];
+      result.redraft = redraftBubbles.tier_bubbles || [];
     } catch (error) {
-      console.log('No redraft tier bubbles available');
+      console.log('No redraft tier bubbles');
       result.redraft = [];
     }
     
-    // Fetch dynasty tier bubbles (general - use contender as default)
+    // Dynasty (default contender)
     try {
       const dynastyBubbles = await getConsensusWithTierBubbles('dynasty', 'contender', undefined);
-      result.dynasty = dynastyBubbles.tier_bubbles?.map((tier: any) => ({
-        players: tier.players.map((player: any) => ({
-          player_name: player.player_name,
-          position: player.position,
-          team: player.team
-        }))
-      })) || [];
+      result.dynasty = dynastyBubbles.tier_bubbles || [];
     } catch (error) {
-      console.log('No dynasty tier bubbles available');
+      console.log('No dynasty tier bubbles');
       result.dynasty = [];
     }
     
-    // Fetch dynasty contender tier bubbles
+    // Dynasty contender
     try {
       const dynastyContenderBubbles = await getConsensusWithTierBubbles('dynasty', 'contender', undefined);
-      result.dynasty_contender = dynastyContenderBubbles.tier_bubbles?.map((tier: any) => ({
-        players: tier.players.map((player: any) => ({
-          player_name: player.player_name,
-          position: player.position,
-          team: player.team
-        }))
-      })) || [];
+      result.dynasty_contender = dynastyContenderBubbles.tier_bubbles || [];
     } catch (error) {
-      console.log('No dynasty contender tier bubbles available');
+      console.log('No dynasty contender tier bubbles');
       result.dynasty_contender = [];
     }
     
-    // Fetch dynasty rebuilder tier bubbles
+    // Dynasty rebuilder
     try {
       const dynastyRebuilderBubbles = await getConsensusWithTierBubbles('dynasty', 'rebuilder', undefined);
-      result.dynasty_rebuilder = dynastyRebuilderBubbles.tier_bubbles?.map((tier: any) => ({
-        players: tier.players.map((player: any) => ({
-          player_name: player.player_name,
-          position: player.position,
-          team: player.team
-        }))
-      })) || [];
+      result.dynasty_rebuilder = dynastyRebuilderBubbles.tier_bubbles || [];
     } catch (error) {
-      console.log('No dynasty rebuilder tier bubbles available');
+      console.log('No dynasty rebuilder tier bubbles');
       result.dynasty_rebuilder = [];
     }
     
     res.json(result);
-    
   } catch (error) {
-    console.error('Error fetching multi-format tier bubbles:', error);
+    console.error('Error:', error);
     res.status(500).json({
       dynasty: [],
       redraft: [],
       dynasty_contender: [],
-      dynasty_rebuilder: [],
-      error: 'Internal server error'
+      dynasty_rebuilder: []
     });
   }
 }
