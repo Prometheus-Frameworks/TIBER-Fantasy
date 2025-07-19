@@ -359,10 +359,10 @@ export default function Home() {
           {/* Site Title & Navigation */}
           <header className="text-center mb-12">
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
-              Signal
+              On The Clock
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 mb-8">
-              Fantasy Data Meets Real Insight
+              Dynasty & Redraft Fantasy Football
             </p>
             
             {/* Main Navigation Menu */}

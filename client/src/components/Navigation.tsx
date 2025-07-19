@@ -17,13 +17,22 @@ export default function Navigation() {
             <div className="flex items-center space-x-2">
               <Trophy className="h-8 w-8 text-yellow-600" />
               <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                Signal
+                On The Clock
               </span>
             </div>
           </Link>
 
           {/* Navigation Links */}
           <div className="hidden md:flex items-center space-x-1">
+            <Link href="/">
+              <Button 
+                variant={isActive("/") ? "default" : "ghost"}
+                size="sm"
+              >
+                Home
+              </Button>
+            </Link>
+
             <Link href="/rankings">
               <Button 
                 variant={isActive("/rankings") ? "default" : "ghost"}
@@ -35,37 +44,34 @@ export default function Navigation() {
               </Button>
             </Link>
 
-            <Link href="/adp">
+            <Link href="/analytics">
               <Button 
-                variant={isActive("/adp") ? "default" : "ghost"}
+                variant={isActive("/analytics") ? "default" : "ghost"}
+                size="sm"
+              >
+                Analytics
+              </Button>
+            </Link>
+
+            <Link href="/trade-evaluator">
+              <Button 
+                variant={isActive("/trade-evaluator") ? "default" : "ghost"}
                 size="sm"
                 className="flex items-center space-x-1"
               >
                 <Target className="h-4 w-4" />
-                <span>ADP</span>
-                <Badge variant="secondary" className="ml-1 text-xs bg-blue-100 text-blue-800">
-                  Live
-                </Badge>
+                <span>Trade Evaluator</span>
               </Button>
             </Link>
 
-            <Link href="/compare-league">
+            <Link href="/oasis">
               <Button 
-                variant={isActive("/compare-league") ? "default" : "ghost"}
+                variant={isActive("/oasis") ? "default" : "ghost"}
                 size="sm"
                 className="flex items-center space-x-1"
               >
                 <Users className="h-4 w-4" />
-                <span>Compare</span>
-              </Button>
-            </Link>
-
-            <Link href="/enhanced-dynasty">
-              <Button 
-                variant={isActive("/enhanced-dynasty") ? "default" : "ghost"}
-                size="sm"
-              >
-                Analytics
+                <span>OASIS</span>
               </Button>
             </Link>
 
