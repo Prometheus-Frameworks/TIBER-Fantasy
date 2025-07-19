@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { registerADPRoutes } from "./routes/adpRoutes";
 import { adpSyncService } from "./adpSyncService";
@@ -59,6 +60,9 @@ function applyLeagueFormatAdjustments(players: any[], format: string): any[] {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve static files from public directory
+  app.use(express.static('public'));
+  
   // Register ADP routes
   registerADPRoutes(app);
   
