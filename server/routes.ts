@@ -69,6 +69,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import and register rankings API routes
   const { registerRankingRoutes } = await import('./rankingsApi');
   registerRankingRoutes(app);
+  
+  // Override tier bubbles endpoint with sample data
+  const tierBubbleData = {
+    "dynasty": [ { "players": [ { "player_name": "Ja'Marr Chase", "position": "WR", "team": "CIN" } ], "consensus_strength": "moderate" } ],
+    "redraft": [ { "players": [ { "player_name": "Christian McCaffrey", "position": "RB", "team": "SF" } ], "consensus_strength": "moderate" } ],
+    "dynasty_contender": [ { "players": [ { "player_name": "Patrick Mahomes", "position": "QB", "team": "KC" } ], "consensus_strength": "moderate" } ],
+    "dynasty_rebuilder": [ { "players": [ { "player_name": "Malik Nabers", "position": "WR", "team": "NYG" } ], "consensus_strength": "moderate" } ]
+  };
+
+  app.get('/api/tier-bubbles', (req, res) => {
+    res.json(tierBubbleData);
+  });
 
   // FantasyPros API Routes
   app.get('/api/fantasypros/players/:sport?', async (req, res) => {

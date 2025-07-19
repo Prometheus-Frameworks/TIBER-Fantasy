@@ -890,7 +890,7 @@ export async function getTierBubbles(req: Request, res: Response) {
 export function registerRankingRoutes(app: any) {
   // Drop-in module endpoints for multi-format data
   app.get('/api/consensus-rankings', getMultiFormatConsensusRankings);
-  app.get('/api/tier-bubbles', getMultiFormatTierBubbles);
+  // app.get('/api/tier-bubbles', getMultiFormatTierBubbles); // Commented out - overridden in routes.ts
   
   // Rankings Builder API Support Layer
   app.get('/api/players/list', getPlayersList);
