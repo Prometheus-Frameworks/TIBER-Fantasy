@@ -78,82 +78,59 @@ interface TierBubble {
 export function generateTierBubbles(
   playerRankings: PlayerRankingForBubbles[],
   rankDiffThreshold: number = 1.5,
-  stdDevThreshold: number = 5.0
-): TierBubble[] {
-  // Sort players by average rank
+  stdDevThreshold: number = 5.0,
+  groupStdThreshold: number = 4.0
+): { players: PlayerRankingForBubbles[], consensus_strength: 'tight' | 'moderate' | 'loose' }[] {
+  if (playerRankings.length === 0) return [];
+
   const sortedPlayers = [...playerRankings].sort((a, b) => a.average_rank - b.average_rank);
   
-  const bubbles: TierBubble[] = [];
-  let currentBubble: PlayerRankingForBubbles[] = [];
-  let lastAvgRank: number | null = null;
-  let tierNumber = 1;
+  // Precompute median rank diff for relative gap detection
+  const diffs = [];
+  for (let i = 1; i < sortedPlayers.length; i++) {
+    diffs.push(sortedPlayers[i].average_rank - sortedPlayers[i-1].average_rank);
+  }
+  const medianDiff = diffs.sort((a, b) => a - b)[Math.floor(diffs.length / 2)] || 1.0;
+  const gapThreshold = Math.max(rankDiffThreshold, 2 * medianDiff);
 
-  for (const player of sortedPlayers) {
-    const avgRank = player.average_rank;
-    const stdDev = player.standard_deviation;
+  const bubbles: { players: PlayerRankingForBubbles[], consensus_strength: 'tight' | 'moderate' | 'loose' }[] = [];
+  let currentBubble: PlayerRankingForBubbles[] = [sortedPlayers[0]];
 
-    if (currentBubble.length === 0) {
-      // Start first bubble
+  for (let i = 1; i < sortedPlayers.length; i++) {
+    const player = sortedPlayers[i];
+    const prevPlayer = sortedPlayers[i-1];
+    const avgDiff = player.average_rank - prevPlayer.average_rank;
+    
+    // Compute tentative group std if adding
+    const tentativeGroup = [...currentBubble, player];
+    const groupStds = tentativeGroup.map(p => p.standard_deviation);
+    const avgGroupStd = groupStds.reduce((sum, std) => sum + std, 0) / groupStds.length;
+
+    if (avgDiff <= gapThreshold && player.standard_deviation <= stdDevThreshold && avgGroupStd <= groupStdThreshold) {
       currentBubble.push(player);
-      lastAvgRank = avgRank;
-      continue;
-    }
-
-    const avgDiff = Math.abs(avgRank - (lastAvgRank || 0));
-
-    if (avgDiff <= rankDiffThreshold && stdDev <= stdDevThreshold) {
-      // Keep player in current bubble
-      currentBubble.push(player);
-      lastAvgRank = avgRank;
     } else {
-      // Close current bubble and start new one
-      if (currentBubble.length > 0) {
-        bubbles.push(createTierBubble(currentBubble, tierNumber));
-        tierNumber++;
-      }
+      bubbles.push(createSimplifiedTier(currentBubble));
       currentBubble = [player];
-      lastAvgRank = avgRank;
     }
   }
 
-  // Append final bubble
   if (currentBubble.length > 0) {
-    bubbles.push(createTierBubble(currentBubble, tierNumber));
+    bubbles.push(createSimplifiedTier(currentBubble));
   }
 
   return bubbles;
 }
 
-/**
- * Create a tier bubble from a group of players
- */
-function createTierBubble(players: PlayerRankingForBubbles[], tierNumber: number): TierBubble {
-  const avgRanks = players.map(p => p.average_rank);
-  const stdDevs = players.map(p => p.standard_deviation);
+function createSimplifiedTier(players: PlayerRankingForBubbles[]): { players: PlayerRankingForBubbles[], consensus_strength: 'tight' | 'moderate' | 'loose' } {
+  const stds = players.map(p => p.standard_deviation);
+  const avgStd = stds.reduce((sum, std) => sum + std, 0) / stds.length;
   
-  const minRank = Math.min(...avgRanks);
-  const maxRank = Math.max(...avgRanks);
-  const avgStdDev = stdDevs.reduce((sum, std) => sum + std, 0) / stdDevs.length;
-  
-  // Determine consensus strength based on standard deviation
-  let consensusStrength: 'tight' | 'moderate' | 'loose';
-  if (avgStdDev <= 2.0) {
-    consensusStrength = 'tight';
-  } else if (avgStdDev <= 4.0) {
-    consensusStrength = 'moderate';
-  } else {
-    consensusStrength = 'loose';
-  }
+  let consensus_strength: 'tight' | 'moderate' | 'loose';
+  if (avgStd <= 2.0) consensus_strength = 'tight';
+  else if (avgStd <= 4.0) consensus_strength = 'moderate';
+  else consensus_strength = 'loose';
 
-  return {
-    tier_number: tierNumber,
-    avg_rank_range: {
-      min: parseFloat(minRank.toFixed(1)),
-      max: parseFloat(maxRank.toFixed(1))
-    },
-    consensus_strength: consensusStrength,
-    players: players
-  };
+  return { players, consensus_strength };
 }
 
 /**
@@ -202,8 +179,19 @@ export async function getConsensusWithTierBubbles(
     }
   }
   
-  // Generate tier bubbles
-  const tierBubbles = generateTierBubbles(playerData);
+  // Generate tier bubbles with improved algorithm
+  const simplifiedTiers = generateTierBubbles(playerData);
+  
+  // Convert to TierBubble format with tier_number
+  const tierBubbles: TierBubble[] = simplifiedTiers.map((tier, index) => ({
+    tier_number: index + 1,
+    avg_rank_range: {
+      min: Math.min(...tier.players.map(p => p.average_rank)),
+      max: Math.max(...tier.players.map(p => p.average_rank))
+    },
+    consensus_strength: tier.consensus_strength,
+    players: tier.players.sort((a, b) => a.player_name.localeCompare(b.player_name))
+  }));
   
   // Calculate analysis
   const totalTiers = tierBubbles.length;
