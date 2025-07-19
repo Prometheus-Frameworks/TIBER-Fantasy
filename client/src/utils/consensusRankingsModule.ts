@@ -39,27 +39,23 @@ interface ConsensusRankingsResponse {
   };
 }
 
+// Multi-format consensus rankings loader for drop-in module
 export async function loadConsensusRankings(
-  format: 'redraft' | 'dynasty' = 'dynasty',
-  dynastyType: 'rebuilder' | 'contender' = 'contender',
+  format: 'redraft' | 'dynasty' | 'dynasty_contender' | 'dynasty_rebuilder' = 'dynasty',
   containerId: string = 'rankings-list'
 ): Promise<void> {
   try {
-    // Fetch from actual API endpoint
-    const url = `/api/rankings/consensus?format=${format}${format === 'dynasty' ? `&dynastyType=${dynastyType}` : ''}`;
-    const response = await fetch(url);
+    // Fetch multi-format consensus data
+    const response = await fetch('/api/consensus-rankings');
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    const data: ConsensusRankingsResponse = await response.json();
+    const data = await response.json();
     
-    if (!data.success || !data.data.consensus_rankings) {
-      throw new Error('Invalid response format');
-    }
-    
-    const players = data.data.consensus_rankings;
+    // Get players for the specified format
+    const players = data[format] || [];
     const container = document.getElementById(containerId);
     
     if (!container) {
@@ -69,7 +65,12 @@ export async function loadConsensusRankings(
     
     container.innerHTML = '';
     
-    players.forEach(player => {
+    if (players.length === 0) {
+      container.innerHTML = '<div class="text-center py-8 text-gray-500">No consensus rankings available for this format.</div>';
+      return;
+    }
+    
+    players.forEach((player: any, index: number) => {
       const card = document.createElement('div');
       card.className = 'player-card bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-3 mb-2 hover:shadow-md transition-shadow';
       
@@ -77,16 +78,13 @@ export async function loadConsensusRankings(
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
             <div class="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-sm font-bold text-blue-600 dark:text-blue-400">
-              ${player.consensusRank}
+              ${index + 1}
             </div>
             <div>
-              <strong class="text-gray-900 dark:text-white">${player.playerName}</strong><br>
+              <strong class="text-gray-900 dark:text-white">${player.player_name}</strong><br>
               <small class="text-gray-500 dark:text-gray-400">${player.position} – ${player.team}</small><br>
-              <small class="text-gray-400 dark:text-gray-500">Avg: ${player.averageRank?.toFixed(1) ?? 'N/A'} • ${player.rankCount} votes</small>
+              <small class="text-gray-400 dark:text-gray-500">Avg Rank: ${player.average_rank?.toFixed(1) ?? 'N/A'}</small>
             </div>
-          </div>
-          <div class="text-sm text-gray-500 dark:text-gray-400">
-            Range: ${player.minRank}-${player.maxRank}
           </div>
         </div>
       `;
@@ -94,7 +92,7 @@ export async function loadConsensusRankings(
       container.appendChild(card);
     });
     
-    console.log(`✅ Loaded ${players.length} consensus rankings for ${format}${format === 'dynasty' ? ` (${dynastyType})` : ''}`);
+    console.log(`✅ Loaded ${players.length} consensus rankings for ${format}`);
     
   } catch (error) {
     console.error('Failed to load consensus rankings:', error);

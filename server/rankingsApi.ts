@@ -341,6 +341,93 @@ export async function submitRankings(req: Request, res: Response) {
 }
 
 /**
+ * GET /api/consensus-rankings
+ * Multi-format consensus rankings endpoint for drop-in module
+ * Returns all formats in a single response with proper structure
+ * 
+ * Response format:
+ * {
+ *   "redraft": [ { player_name, position, team, average_rank }, ... ],
+ *   "dynasty": [ { player_name, position, team, average_rank }, ... ],
+ *   "dynasty_contender": [ { player_name, position, team, average_rank }, ... ],
+ *   "dynasty_rebuilder": [ { player_name, position, team, average_rank }, ... ]
+ * }
+ */
+export async function getMultiFormatConsensusRankings(req: Request, res: Response) {
+  try {
+    const result: any = {};
+    
+    // Fetch redraft consensus
+    try {
+      const redraftRankings = await getDynamicConsensusRankings('redraft', null);
+      result.redraft = redraftRankings.map(player => ({
+        player_name: player.playerName,
+        position: player.position,
+        team: player.team,
+        average_rank: player.averageRank
+      }));
+    } catch (error) {
+      console.log('No redraft rankings available');
+      result.redraft = [];
+    }
+    
+    // Fetch dynasty consensus (general)
+    try {
+      const dynastyRankings = await getDynamicConsensusRankings('dynasty', 'contender'); // Use contender as default
+      result.dynasty = dynastyRankings.map(player => ({
+        player_name: player.playerName,
+        position: player.position,
+        team: player.team,
+        average_rank: player.averageRank
+      }));
+    } catch (error) {
+      console.log('No dynasty rankings available');
+      result.dynasty = [];
+    }
+    
+    // Fetch dynasty contender consensus
+    try {
+      const dynastyContenderRankings = await getDynamicConsensusRankings('dynasty', 'contender');
+      result.dynasty_contender = dynastyContenderRankings.map(player => ({
+        player_name: player.playerName,
+        position: player.position,
+        team: player.team,
+        average_rank: player.averageRank
+      }));
+    } catch (error) {
+      console.log('No dynasty contender rankings available');
+      result.dynasty_contender = [];
+    }
+    
+    // Fetch dynasty rebuilder consensus
+    try {
+      const dynastyRebuilderRankings = await getDynamicConsensusRankings('dynasty', 'rebuilder');
+      result.dynasty_rebuilder = dynastyRebuilderRankings.map(player => ({
+        player_name: player.playerName,
+        position: player.position,
+        team: player.team,
+        average_rank: player.averageRank
+      }));
+    } catch (error) {
+      console.log('No dynasty rebuilder rankings available');
+      result.dynasty_rebuilder = [];
+    }
+    
+    res.json(result);
+    
+  } catch (error) {
+    console.error('Error fetching multi-format consensus rankings:', error);
+    res.status(500).json({
+      redraft: [],
+      dynasty: [],
+      dynasty_contender: [],
+      dynasty_rebuilder: [],
+      error: 'Internal server error'
+    });
+  }
+}
+
+/**
  * GET /api/rankings/consensus
  * Retrieve consensus rankings for a format
  * 
@@ -382,7 +469,7 @@ export async function getConsensusRankings(req: Request, res: Response) {
     res.json({
       success: true,
       data: {
-        rankings: paginatedRankings,
+        consensus_rankings: paginatedRankings,
         meta: {
           format: format,
           dynastyType: dynastyType,
@@ -722,6 +809,9 @@ export async function getTierBubbles(req: Request, res: Response) {
  * Call this function to add routes to your Express app
  */
 export function registerRankingRoutes(app: any) {
+  // Drop-in module endpoint for multi-format consensus rankings
+  app.get('/api/consensus-rankings', getMultiFormatConsensusRankings);
+  
   // Rankings Builder API Support Layer
   app.get('/api/players/list', getPlayersList);
   app.get('/api/rankings/personal', getPersonalRankings);

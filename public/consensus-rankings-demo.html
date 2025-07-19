@@ -27,13 +27,11 @@
 
         <!-- Format Selection -->
         <div class="mb-6 flex gap-4">
-            <select id="format-select" class="px-3 py-2 border border-gray-300 rounded-md">
-                <option value="dynasty">Dynasty</option>
+            <select id="format-select" onchange="updateFormat(this.value)" class="px-3 py-2 border border-gray-300 rounded-md">
                 <option value="redraft">Redraft</option>
-            </select>
-            <select id="dynasty-type-select" class="px-3 py-2 border border-gray-300 rounded-md">
-                <option value="contender">Contender</option>
-                <option value="rebuilder">Rebuilder</option>
+                <option value="dynasty">Dynasty</option>
+                <option value="dynasty_contender">Dynasty Contender</option>
+                <option value="dynasty_rebuilder">Dynasty Rebuilder</option>
             </select>
             <button onclick="refreshRankings()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
                 Refresh
@@ -80,20 +78,22 @@
     </div>
 
     <script>
-        // Drop-in consensus rankings module
-        async function loadConsensusRankings(format = 'dynasty', dynastyType = 'contender') {
+        // Multi-format consensus rankings drop-in module
+        async function loadConsensusRankings(format = 'dynasty') {
             try {
-                const url = `/api/rankings/consensus?format=${format}${format === 'dynasty' ? `&dynastyType=${dynastyType}` : ''}`;
-                const response = await fetch(url);
+                const response = await fetch('/api/consensus-rankings');
                 const data = await response.json();
 
-                if (!data.success) throw new Error('API request failed');
-
-                const players = data.data.consensus_rankings;
+                const players = data[format] || [];
                 const container = document.getElementById('rankings-list');
                 container.innerHTML = '';
 
-                players.forEach(player => {
+                if (players.length === 0) {
+                    container.innerHTML = '<p class="text-center py-8 text-gray-500">No consensus rankings available for this format.</p>';
+                    return;
+                }
+
+                players.forEach((player, index) => {
                     const card = document.createElement('div');
                     card.className = 'player-card bg-white border border-gray-200 rounded-lg p-4 mb-2 hover:shadow-md transition-shadow';
 
@@ -101,16 +101,13 @@
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-3">
                                 <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-600">
-                                    ${player.consensusRank}
+                                    ${index + 1}
                                 </div>
                                 <div>
-                                    <strong class="text-gray-900">${player.playerName}</strong><br>
+                                    <strong class="text-gray-900">${player.player_name}</strong><br>
                                     <small class="text-gray-500">${player.position} – ${player.team}</small><br>
-                                    <small class="text-gray-400">Avg: ${player.averageRank?.toFixed(1) ?? 'N/A'} • ${player.rankCount} votes</small>
+                                    <small class="text-gray-400">Avg Rank: ${player.average_rank?.toFixed(1) ?? 'N/A'}</small>
                                 </div>
-                            </div>
-                            <div class="text-sm text-gray-500">
-                                Range: ${player.minRank}-${player.maxRank}
                             </div>
                         </div>
                     `;
@@ -118,7 +115,7 @@
                     container.appendChild(card);
                 });
 
-                console.log(`✅ Loaded ${players.length} consensus rankings`);
+                console.log(`✅ Loaded ${players.length} consensus rankings for ${format}`);
             } catch (error) {
                 console.error('Failed to load consensus rankings:', error);
                 document.getElementById('rankings-list').innerHTML = `
@@ -129,17 +126,37 @@
             }
         }
 
-        async function loadTierBubbles(format = 'dynasty', dynastyType = 'contender') {
+        async function loadTierBubbles(format = 'dynasty') {
             try {
-                const url = `/api/rankings/tier-bubbles?format=${format}${format === 'dynasty' ? `&dynastyType=${dynastyType}` : ''}`;
+                // For now, use the existing tier bubbles API with format mapping
+                let apiFormat = format;
+                let dynastyType = null;
+                
+                if (format === 'dynasty_contender') {
+                    apiFormat = 'dynasty';
+                    dynastyType = 'contender';
+                } else if (format === 'dynasty_rebuilder') {
+                    apiFormat = 'dynasty';
+                    dynastyType = 'rebuilder';
+                } else if (format === 'dynasty') {
+                    apiFormat = 'dynasty';
+                    dynastyType = 'contender';  // Default to contender
+                }
+                
+                const url = `/api/rankings/tier-bubbles?format=${apiFormat}${dynastyType ? `&dynastyType=${dynastyType}` : ''}`;
                 const response = await fetch(url);
                 const data = await response.json();
 
                 if (!data.success) throw new Error('API request failed');
 
-                const tierBubbles = data.data.tier_bubbles;
+                const tierBubbles = data.data.tier_bubbles || [];
                 const container = document.getElementById('tier-bubbles-container');
                 container.innerHTML = '';
+
+                if (tierBubbles.length === 0) {
+                    container.innerHTML = '<div class="text-center py-8 text-gray-500">No tier bubbles available for this format.</div>';
+                    return;
+                }
 
                 tierBubbles.forEach(tier => {
                     const tierSection = document.createElement('div');
@@ -192,7 +209,7 @@
                     container.appendChild(tierSection);
                 });
 
-                console.log(`✅ Loaded ${tierBubbles.length} tier bubbles`);
+                console.log(`✅ Loaded ${tierBubbles.length} tier bubbles for ${format}`);
             } catch (error) {
                 console.error('Failed to load tier bubbles:', error);
                 document.getElementById('tier-bubbles-container').innerHTML = `
@@ -224,18 +241,22 @@
             activeTab.classList.add('border-blue-500', 'text-blue-600');
         }
 
-        function refreshRankings() {
-            const format = document.getElementById('format-select').value;
-            const dynastyType = document.getElementById('dynasty-type-select').value;
-            
-            loadConsensusRankings(format, dynastyType);
-            loadTierBubbles(format, dynastyType);
+        // Example Usage: Dropdown calls this with the selected format
+        function updateFormat(selectedFormat) {
+            loadConsensusRankings(selectedFormat);
+            loadTierBubbles(selectedFormat);
         }
 
-        // Initialize on page load
-        window.onload = () => {
-            loadConsensusRankings();
-            loadTierBubbles();
+        function refreshRankings() {
+            const format = document.getElementById('format-select').value;
+            loadConsensusRankings(format);
+            loadTierBubbles(format);
+        }
+
+        // Example Default Load
+        window.onload = function() {
+            loadConsensusRankings('dynasty');  // Set default format
+            loadTierBubbles('dynasty');
         };
     </script>
 </body>

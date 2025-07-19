@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drop-In Consensus Rankings Example</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .player-card { 
+            background: #f9fafb; 
+            border: 1px solid #e5e7eb; 
+            border-radius: 8px; 
+            padding: 12px; 
+            margin: 8px 0; 
+        }
+        select { padding: 8px; margin: 10px 5px; }
+    </style>
+</head>
+<body>
+    <h1>Drop-In Consensus Rankings</h1>
+    
+    <!-- Exact structure from user request -->
+    <select onchange="updateFormat(this.value)">
+        <option value="redraft">Redraft</option>
+        <option value="dynasty">Dynasty</option>
+        <option value="dynasty_contender">Dynasty Contender</option>
+        <option value="dynasty_rebuilder">Dynasty Rebuilder</option>
+    </select>
+
+    <div id="rankings-list"></div>
+
+    <script>
+        // Consensus Rankings Fetch + Render — Multi-Format Drop-In Fix
+        async function loadConsensusRankings(format) {
+            const response = await fetch('/api/consensus-rankings');  // ✅ Replace with actual endpoint
+            const data = await response.json();
+
+            const players = data[format] || [];
+
+            const container = document.getElementById('rankings-list');  // ✅ Update to your HTML target ID
+            container.innerHTML = '';
+
+            if (players.length === 0) {
+                container.innerHTML = '<p>No consensus rankings available for this format.</p>';
+                return;
+            }
+
+            players.forEach(player => {
+                const card = document.createElement('div');
+                card.className = 'player-card';
+
+                card.innerHTML = `
+                    <strong>${player.player_name}</strong><br>
+                    <small>${player.position} – ${player.team}</small><br>
+                    <small>Avg Rank: ${player.average_rank?.toFixed(1) ?? 'N/A'}</small>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // Example Usage:
+        // Dropdown calls this with the selected format:
+        function updateFormat(selectedFormat) {
+            loadConsensusRankings(selectedFormat);
+        }
+
+        // Example Default Load:
+        window.onload = function() {
+            loadConsensusRankings('dynasty');  // ✅ Set your desired default format
+        };
+    </script>
+</body>
+</html>
