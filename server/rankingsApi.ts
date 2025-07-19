@@ -341,6 +341,112 @@ export async function submitRankings(req: Request, res: Response) {
 }
 
 /**
+ * GET /api/tier-bubbles
+ * Multi-format tier bubbles endpoint for drop-in module
+ * Returns all formats in a single response with tier bubble structure
+ * 
+ * Response format:
+ * {
+ *   "dynasty": [
+ *     {
+ *       "players": [
+ *         { "player_name": "Puka Nacua", "position": "WR", "team": "LAR" },
+ *         { "player_name": "Amon-Ra St. Brown", "position": "WR", "team": "DET" }
+ *       ]
+ *     },
+ *     {
+ *       "players": [
+ *         { "player_name": "Drake London", "position": "WR", "team": "ATL" }
+ *       ]
+ *     }
+ *   ],
+ *   "redraft": [ ... ],
+ *   "dynasty_contender": [ ... ],
+ *   "dynasty_rebuilder": [ ... ]
+ * }
+ */
+export async function getMultiFormatTierBubbles(req: Request, res: Response) {
+  try {
+    // Import tier bubble functionality from consensus service
+    const { getConsensusWithTierBubbles } = await import('./consensusService');
+    
+    const result: any = {};
+    
+    // Fetch redraft tier bubbles
+    try {
+      const redraftBubbles = await getConsensusWithTierBubbles('redraft', undefined, undefined);
+      result.redraft = redraftBubbles.tier_bubbles?.map((tier: any) => ({
+        players: tier.players.map((player: any) => ({
+          player_name: player.player_name,
+          position: player.position,
+          team: player.team
+        }))
+      })) || [];
+    } catch (error) {
+      console.log('No redraft tier bubbles available');
+      result.redraft = [];
+    }
+    
+    // Fetch dynasty tier bubbles (general - use contender as default)
+    try {
+      const dynastyBubbles = await getConsensusWithTierBubbles('dynasty', 'contender', undefined);
+      result.dynasty = dynastyBubbles.tier_bubbles?.map((tier: any) => ({
+        players: tier.players.map((player: any) => ({
+          player_name: player.player_name,
+          position: player.position,
+          team: player.team
+        }))
+      })) || [];
+    } catch (error) {
+      console.log('No dynasty tier bubbles available');
+      result.dynasty = [];
+    }
+    
+    // Fetch dynasty contender tier bubbles
+    try {
+      const dynastyContenderBubbles = await getConsensusWithTierBubbles('dynasty', 'contender', undefined);
+      result.dynasty_contender = dynastyContenderBubbles.tier_bubbles?.map((tier: any) => ({
+        players: tier.players.map((player: any) => ({
+          player_name: player.player_name,
+          position: player.position,
+          team: player.team
+        }))
+      })) || [];
+    } catch (error) {
+      console.log('No dynasty contender tier bubbles available');
+      result.dynasty_contender = [];
+    }
+    
+    // Fetch dynasty rebuilder tier bubbles
+    try {
+      const dynastyRebuilderBubbles = await getConsensusWithTierBubbles('dynasty', 'rebuilder', undefined);
+      result.dynasty_rebuilder = dynastyRebuilderBubbles.tier_bubbles?.map((tier: any) => ({
+        players: tier.players.map((player: any) => ({
+          player_name: player.player_name,
+          position: player.position,
+          team: player.team
+        }))
+      })) || [];
+    } catch (error) {
+      console.log('No dynasty rebuilder tier bubbles available');
+      result.dynasty_rebuilder = [];
+    }
+    
+    res.json(result);
+    
+  } catch (error) {
+    console.error('Error fetching multi-format tier bubbles:', error);
+    res.status(500).json({
+      dynasty: [],
+      redraft: [],
+      dynasty_contender: [],
+      dynasty_rebuilder: [],
+      error: 'Internal server error'
+    });
+  }
+}
+
+/**
  * GET /api/consensus-rankings
  * Multi-format consensus rankings endpoint for drop-in module
  * Returns all formats in a single response with proper structure
@@ -809,8 +915,9 @@ export async function getTierBubbles(req: Request, res: Response) {
  * Call this function to add routes to your Express app
  */
 export function registerRankingRoutes(app: any) {
-  // Drop-in module endpoint for multi-format consensus rankings
+  // Drop-in module endpoints for multi-format data
   app.get('/api/consensus-rankings', getMultiFormatConsensusRankings);
+  app.get('/api/tier-bubbles', getMultiFormatTierBubbles);
   
   // Rankings Builder API Support Layer
   app.get('/api/players/list', getPlayersList);
