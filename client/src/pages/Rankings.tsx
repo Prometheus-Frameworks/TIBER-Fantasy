@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Plus, Save, Download, RotateCcw, Users, User, TrendingUp } from 'lucide-react';
+import { Search, Plus, Save, Download, RotateCcw, Users, User, TrendingUp, Layers } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+import TierBubbleView from '@/components/TierBubbleView';
 
 interface Player {
   player_id: number;
@@ -52,6 +53,12 @@ export default function Rankings() {
   const { data: consensusData, isLoading: consensusLoading } = useQuery({
     queryKey: ['/api/rankings/consensus', mode, dynastyMode],
     queryFn: () => apiRequest(`/api/rankings/consensus?format=${mode}${mode === 'dynasty' ? `&dynastyType=${dynastyMode}` : ''}`)
+  });
+
+  // Fetch tier bubble data
+  const { data: tierBubbleData, isLoading: tierBubbleLoading } = useQuery({
+    queryKey: ['/api/rankings/tier-bubbles', mode, dynastyMode],
+    queryFn: () => apiRequest(`/api/rankings/tier-bubbles?format=${mode}${mode === 'dynasty' ? `&dynastyType=${dynastyMode}` : ''}`)
   });
 
   // Fetch all players for builder
@@ -241,10 +248,14 @@ export default function Rankings() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="consensus" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
               Consensus Rankings
+            </TabsTrigger>
+            <TabsTrigger value="tier-bubbles" className="flex items-center gap-2">
+              <Layers className="w-4 h-4" />
+              Tier Bubbles
             </TabsTrigger>
             <TabsTrigger value="builder" className="flex items-center gap-2">
               <User className="w-4 h-4" />
@@ -317,6 +328,57 @@ export default function Rankings() {
                         No consensus rankings available for this format
                       </div>
                     )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tier Bubbles Tab */}
+          <TabsContent value="tier-bubbles" className="space-y-6">
+            <div className="flex gap-4 mb-6">
+              <Input
+                placeholder="Search players..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1"
+              />
+              <Select value={positionFilter} onValueChange={setPositionFilter}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Positions</SelectItem>
+                  {positions.map(pos => (
+                    <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Layers className="w-5 h-5" />
+                  Community Tier Bubbles
+                  {tierBubbleData?.success && (
+                    <Badge variant="secondary">
+                      {tierBubbleData.data.tier_bubbles?.length || 0} Tiers
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {tierBubbleLoading ? (
+                  <div className="text-center py-8">Loading tier bubbles...</div>
+                ) : tierBubbleData?.success ? (
+                  <TierBubbleView 
+                    tierBubbles={tierBubbleData.data.tier_bubbles || []}
+                    isLoading={tierBubbleLoading}
+                  />
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No tier bubble data available for this format
                   </div>
                 )}
               </CardContent>
