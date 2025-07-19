@@ -25,10 +25,10 @@ interface ConsensusPlayer {
 export default function Home() {
   // Fetch top 5 consensus rankings for preview
   const { data: consensusData, isLoading: consensusLoading } = useQuery({
-    queryKey: ['/api/rankings/consensus', { format: 'dynasty', limit: 5 }]
+    queryKey: ['/api/rankings/consensus?format=dynasty&dynastyType=contender&limit=5']
   });
 
-  const topPlayers = consensusData?.slice(0, 5) || [];
+  const topPlayers = consensusData?.data?.rankings?.slice(0, 5) || [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">

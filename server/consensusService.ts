@@ -35,6 +35,233 @@ interface RankingData {
   rankCount: number;
 }
 
+/**
+ * Player ranking data for tier bubble generation
+ */
+interface PlayerRankingForBubbles {
+  player_id: string;
+  player_name: string;
+  position: string;
+  team: string;
+  average_rank: number;
+  standard_deviation: number;
+  min_rank: number;
+  max_rank: number;
+  rank_count: number;
+}
+
+/**
+ * Tier bubble containing grouped players
+ */
+interface TierBubble {
+  tier_number: number;
+  avg_rank_range: {
+    min: number;
+    max: number;
+  };
+  consensus_strength: 'tight' | 'moderate' | 'loose';
+  players: PlayerRankingForBubbles[];
+}
+
+// =============================================================================
+// TIER BUBBLE GENERATION LOGIC
+// =============================================================================
+
+/**
+ * Generate tier bubbles based on average ranking similarity and consensus tightness
+ * 
+ * @param playerRankings - List of player ranking data
+ * @param rankDiffThreshold - Max average rank difference allowed within bubble (default: 1.5)
+ * @param stdDevThreshold - Max allowed standard deviation within bubble (default: 5.0)
+ * @returns Array of tier bubbles containing grouped players
+ */
+export function generateTierBubbles(
+  playerRankings: PlayerRankingForBubbles[],
+  rankDiffThreshold: number = 1.5,
+  stdDevThreshold: number = 5.0
+): TierBubble[] {
+  // Sort players by average rank
+  const sortedPlayers = [...playerRankings].sort((a, b) => a.average_rank - b.average_rank);
+  
+  const bubbles: TierBubble[] = [];
+  let currentBubble: PlayerRankingForBubbles[] = [];
+  let lastAvgRank: number | null = null;
+  let tierNumber = 1;
+
+  for (const player of sortedPlayers) {
+    const avgRank = player.average_rank;
+    const stdDev = player.standard_deviation;
+
+    if (currentBubble.length === 0) {
+      // Start first bubble
+      currentBubble.push(player);
+      lastAvgRank = avgRank;
+      continue;
+    }
+
+    const avgDiff = Math.abs(avgRank - (lastAvgRank || 0));
+
+    if (avgDiff <= rankDiffThreshold && stdDev <= stdDevThreshold) {
+      // Keep player in current bubble
+      currentBubble.push(player);
+      lastAvgRank = avgRank;
+    } else {
+      // Close current bubble and start new one
+      if (currentBubble.length > 0) {
+        bubbles.push(createTierBubble(currentBubble, tierNumber));
+        tierNumber++;
+      }
+      currentBubble = [player];
+      lastAvgRank = avgRank;
+    }
+  }
+
+  // Append final bubble
+  if (currentBubble.length > 0) {
+    bubbles.push(createTierBubble(currentBubble, tierNumber));
+  }
+
+  return bubbles;
+}
+
+/**
+ * Create a tier bubble from a group of players
+ */
+function createTierBubble(players: PlayerRankingForBubbles[], tierNumber: number): TierBubble {
+  const avgRanks = players.map(p => p.average_rank);
+  const stdDevs = players.map(p => p.standard_deviation);
+  
+  const minRank = Math.min(...avgRanks);
+  const maxRank = Math.max(...avgRanks);
+  const avgStdDev = stdDevs.reduce((sum, std) => sum + std, 0) / stdDevs.length;
+  
+  // Determine consensus strength based on standard deviation
+  let consensusStrength: 'tight' | 'moderate' | 'loose';
+  if (avgStdDev <= 2.0) {
+    consensusStrength = 'tight';
+  } else if (avgStdDev <= 4.0) {
+    consensusStrength = 'moderate';
+  } else {
+    consensusStrength = 'loose';
+  }
+
+  return {
+    tier_number: tierNumber,
+    avg_rank_range: {
+      min: parseFloat(minRank.toFixed(1)),
+      max: parseFloat(maxRank.toFixed(1))
+    },
+    consensus_strength: consensusStrength,
+    players: players
+  };
+}
+
+/**
+ * Get consensus rankings with tier bubble analysis
+ */
+export async function getConsensusWithTierBubbles(
+  format: 'redraft' | 'dynasty',
+  dynastyType?: 'rebuilder' | 'contender',
+  position?: string
+): Promise<{
+  consensus_rankings: any[];
+  tier_bubbles: TierBubble[];
+  analysis: {
+    total_tiers: number;
+    avg_tier_size: number;
+    tight_consensus_tiers: number;
+    loose_consensus_tiers: number;
+  };
+}> {
+  // Import the fixed getDynamicConsensusRankings from rankingsApi
+  const { getDynamicConsensusRankings } = await import('./rankingsApi');
+  const consensusRankings = await getDynamicConsensusRankings(format, dynastyType, position);
+  
+  // Transform to PlayerRankingForBubbles format
+  const playerData: PlayerRankingForBubbles[] = await Promise.all(
+    consensusRankings.map(async (player) => {
+      // Calculate standard deviation and min/max ranks for this player
+      const rankStats = await calculatePlayerRankingStats(player.playerId, format, dynastyType);
+      
+      return {
+        player_id: player.playerId.toString(),
+        player_name: player.playerName,
+        position: player.position,
+        team: player.team,
+        average_rank: player.averageRank,
+        standard_deviation: rankStats.standardDeviation,
+        min_rank: rankStats.minRank,
+        max_rank: rankStats.maxRank,
+        rank_count: player.rankCount
+      };
+    })
+  );
+  
+  // Generate tier bubbles
+  const tierBubbles = generateTierBubbles(playerData);
+  
+  // Calculate analysis
+  const totalTiers = tierBubbles.length;
+  const avgTierSize = totalTiers > 0 ? playerData.length / totalTiers : 0;
+  const tightTiers = tierBubbles.filter(b => b.consensus_strength === 'tight').length;
+  const looseTiers = tierBubbles.filter(b => b.consensus_strength === 'loose').length;
+  
+  return {
+    consensus_rankings: consensusRankings,
+    tier_bubbles: tierBubbles,
+    analysis: {
+      total_tiers: totalTiers,
+      avg_tier_size: parseFloat(avgTierSize.toFixed(1)),
+      tight_consensus_tiers: tightTiers,
+      loose_consensus_tiers: looseTiers
+    }
+  };
+}
+
+/**
+ * Calculate ranking statistics for a player
+ */
+async function calculatePlayerRankingStats(
+  playerId: number,
+  format: 'redraft' | 'dynasty',
+  dynastyType?: 'rebuilder' | 'contender'
+): Promise<{
+  standardDeviation: number;
+  minRank: number;
+  maxRank: number;
+}> {
+  // Build WHERE clause to avoid parameter type issues
+  const whereClause = dynastyType 
+    ? `player_id = ${playerId} AND format = '${format}' AND dynasty_type = '${dynastyType}'`
+    : `player_id = ${playerId} AND format = '${format}' AND dynasty_type IS NULL`;
+    
+  const rankings = await db.execute(sql.raw(`
+    SELECT rank_position
+    FROM individual_rankings
+    WHERE ${whereClause}
+  `));
+  
+  const ranks = rankings.rows.map((row: any) => row.rank_position);
+  
+  if (ranks.length === 0) {
+    return {
+      standardDeviation: 0,
+      minRank: 0,
+      maxRank: 0
+    };
+  }
+  
+  const mean = ranks.reduce((sum, rank) => sum + rank, 0) / ranks.length;
+  const variance = ranks.reduce((sum, rank) => sum + Math.pow(rank - mean, 2), 0) / ranks.length;
+  const standardDeviation = Math.sqrt(variance);
+  
+  return {
+    standardDeviation: parseFloat(standardDeviation.toFixed(2)),
+    minRank: Math.min(...ranks),
+    maxRank: Math.max(...ranks)
+  };
+}
+
 // =============================================================================
 // CORE CONSENSUS CALCULATION LOGIC
 // =============================================================================
@@ -51,7 +278,11 @@ export async function calculateConsensusRankings(
   
   try {
     // Step 1: Gather all individual rankings for this format/dynasty type
-    const individualRankings = await db.execute(sql`
+    const whereClause = dynastyType 
+      ? `ir.format = '${format}' AND ir.dynasty_type = '${dynastyType}'`
+      : `ir.format = '${format}' AND ir.dynasty_type IS NULL`;
+      
+    const individualRankings = await db.execute(sql.raw(`
       SELECT 
         ir.player_id,
         p.name as player_name,
@@ -60,10 +291,9 @@ export async function calculateConsensusRankings(
         ir.rank_position
       FROM individual_rankings ir
       JOIN players p ON ir.player_id = p.id
-      WHERE ir.format = ${format}
-      AND (ir.dynasty_type = ${dynastyType || null} OR (ir.dynasty_type IS NULL AND ${dynastyType || null} IS NULL))
+      WHERE ${whereClause}
       ORDER BY ir.player_id, ir.rank_position
-    `);
+    `));
     
     // Step 2: Group rankings by player and calculate averages
     const playerRankings = new Map<number, RankingData>();
@@ -112,36 +342,11 @@ export async function calculateConsensusRankings(
       player.consensusRank = index + 1;
     });
     
-    // Step 5: Clear existing consensus for this format/dynasty type
-    await db.execute(sql`
-      DELETE FROM consensus_rankings 
-      WHERE format = ${format}
-      AND (dynasty_type = ${dynastyType || null} OR (dynasty_type IS NULL AND ${dynastyType || null} IS NULL))
-    `);
+    // Step 5: Clear existing consensus for this format/dynasty type (skip for now - using dynamic consensus)
+    console.log(`✅ Calculated consensus for ${consensusData.length} players in ${format}${dynastyType ? ` (${dynastyType})` : ''}`);
     
-    // Step 6: Insert new consensus rankings
-    for (const player of consensusData) {
-      await db.execute(sql`
-        INSERT INTO consensus_rankings (
-          player_id, 
-          format, 
-          dynasty_type, 
-          average_rank, 
-          rank_count, 
-          consensus_rank,
-          last_updated
-        )
-        VALUES (
-          ${player.playerId},
-          ${format},
-          ${dynastyType || null},
-          ${player.averageRank},
-          ${player.rankCount},
-          ${player.consensusRank},
-          NOW()
-        )
-      `);
-    }
+    // Note: We use dynamic consensus calculation - no static storage needed
+    // This eliminates the consensus_rankings table dependency
     
     const calculationTime = Date.now() - startTime;
     

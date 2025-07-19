@@ -147,34 +147,62 @@ async function getAllPlayersForRankings(): Promise<any[]> {
  * Get dynamic consensus rankings calculated in real-time
  * Uses simple averages of all individual rankings without storing static data
  */
-async function getDynamicConsensusRankings(format: string, dynastyType?: string): Promise<ConsensusRanking[]> {
+export async function getDynamicConsensusRankings(format: string, dynastyType?: string, position?: string, limit?: number): Promise<ConsensusRanking[]> {
   try {
-    // Use the dynamic consensus view to calculate rankings in real-time
-    const rankings = await db.execute(sql`
-      SELECT 
-        player_id,
-        player_name,
-        position,
-        team,
-        average_rank,
-        rank_count,
-        consensus_rank,
-        format,
-        dynasty_type
-      FROM dynamic_consensus_rankings
-      WHERE format = ${format}
-      AND (dynasty_type = ${dynastyType || null} OR (dynasty_type IS NULL AND ${dynastyType || null} IS NULL))
-      ORDER BY consensus_rank ASC
-    `);
+    // Build the WHERE clause dynamically to avoid parameter type issues
+    let whereClause = `ir.format = '${format}'`;
     
-    return rankings.rows.map((row: any) => ({
+    if (dynastyType) {
+      whereClause += ` AND ir.dynasty_type = '${dynastyType}'`;
+    } else {
+      whereClause += ` AND ir.dynasty_type IS NULL`;
+    }
+    
+    if (position) {
+      whereClause += ` AND p.position = '${position}'`;
+    }
+    
+    const limitClause = limit ? `LIMIT ${limit}` : '';
+    
+    // Test simple query first
+    console.log('Testing consensus calculation with:', { format, dynastyType, position, limit });
+    
+    // Calculate consensus directly from individual_rankings table
+    const rankings = await db.execute(sql.raw(`
+      SELECT 
+        ir.player_id,
+        p.name as player_name,
+        p.position,
+        p.team,
+        AVG(ir.rank_position) as average_rank,
+        COUNT(ir.rank_position) as rank_count,
+        STDDEV(ir.rank_position) as standard_deviation,
+        MIN(ir.rank_position) as min_rank,
+        MAX(ir.rank_position) as max_rank,
+        ir.format,
+        ir.dynasty_type
+      FROM individual_rankings ir
+      JOIN players p ON ir.player_id = p.id
+      WHERE ${whereClause}
+      GROUP BY ir.player_id, p.name, p.position, p.team, ir.format, ir.dynasty_type
+      HAVING COUNT(ir.rank_position) > 0
+      ORDER BY AVG(ir.rank_position) ASC
+      ${limitClause}
+    `));
+    
+    console.log(`Found ${rankings.rows.length} consensus rankings`);
+    
+    return rankings.rows.map((row: any, index: number) => ({
       playerId: row.player_id,
       playerName: row.player_name,
       position: row.position,
       team: row.team,
       averageRank: parseFloat(row.average_rank),
-      rankCount: row.rank_count,
-      consensusRank: row.consensus_rank,
+      rankCount: parseInt(row.rank_count),
+      standardDeviation: row.standard_deviation ? parseFloat(row.standard_deviation) : 0,
+      minRank: parseInt(row.min_rank),
+      maxRank: parseInt(row.max_rank),
+      consensusRank: index + 1,
       format: row.format,
       dynastyType: row.dynasty_type
     }));
@@ -343,7 +371,8 @@ export async function getConsensusRankings(req: Request, res: Response) {
     }
     
     // Get dynamic consensus rankings in real-time
-    const consensusRankings = await getDynamicConsensusRankings(format as string, dynastyType as string);
+    const position = req.query.position as string;
+    const consensusRankings = await getDynamicConsensusRankings(format as string, dynastyType as string, position);
     
     // Apply pagination
     const startIndex = parseInt(offset as string);
@@ -623,6 +652,67 @@ export async function getRankingStats(req: Request, res: Response) {
   }
 }
 
+/**
+ * GET /api/rankings/tier-bubbles
+ * Generate tier bubbles based on consensus similarity and standard deviation
+ */
+export async function getTierBubbles(req: Request, res: Response) {
+  try {
+    // Validate input parameters
+    const format = req.query.format as 'redraft' | 'dynasty';
+    const dynastyType = req.query.dynastyType as 'rebuilder' | 'contender' | undefined;
+    const position = req.query.position as string;
+    const rankDiffThreshold = req.query.rankDiffThreshold ? parseFloat(req.query.rankDiffThreshold as string) : 1.5;
+    const stdDevThreshold = req.query.stdDevThreshold ? parseFloat(req.query.stdDevThreshold as string) : 5.0;
+    
+    // Input validation
+    if (!format || !['redraft', 'dynasty'].includes(format)) {
+      return res.status(400).json({
+        success: false,
+        error: 'format parameter is required and must be either "redraft" or "dynasty"'
+      });
+    }
+    
+    if (format === 'dynasty' && (!dynastyType || !['rebuilder', 'contender'].includes(dynastyType))) {
+      return res.status(400).json({
+        success: false,
+        error: 'dynastyType parameter is required for dynasty format and must be either "rebuilder" or "contender"'
+      });
+    }
+    
+    // Import tier bubble functionality from consensus service
+    const { getConsensusWithTierBubbles } = await import('./consensusService');
+    
+    const bubbleData = await getConsensusWithTierBubbles(format, dynastyType, position);
+    
+    res.json({
+      success: true,
+      data: {
+        consensus_rankings: bubbleData.consensus_rankings,
+        tier_bubbles: bubbleData.tier_bubbles,
+        analysis: bubbleData.analysis,
+        parameters: {
+          rank_diff_threshold: rankDiffThreshold,
+          std_dev_threshold: stdDevThreshold,
+          format: format,
+          dynasty_type: dynastyType,
+          position: position
+        },
+        metadata: {
+          generated_at: new Date().toISOString(),
+          algorithm: "consensus_bubble_generator_v1"
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error generating tier bubbles:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+}
+
 // =============================================================================
 // ROUTE REGISTRATION
 // =============================================================================
@@ -641,6 +731,7 @@ export function registerRankingRoutes(app: any) {
   app.get('/api/rankings/consensus', getConsensusRankings);
   app.get('/api/rankings/individual/:userId', getIndividualRankings);
   app.get('/api/rankings/stats', getRankingStats);
+  app.get('/api/rankings/tier-bubbles', getTierBubbles);
 }
 
 // =============================================================================
