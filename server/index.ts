@@ -68,5 +68,3 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
   });
 })();
-
-app.listen(3000, () => console.log('Server running on port 3000'));
