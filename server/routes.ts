@@ -32,6 +32,7 @@ import { registerAdpConversionTestRoutes } from './api/test-adp-conversion';
 import { registerSleeperDataDebugRoutes } from './api/debug-sleeper-data';
 import { registerWeeklyProjectionsCheckRoutes } from './api/check-weekly-projections';
 import { registerRealDataValidationRoutes } from './api/test-real-data-validation';
+import { registerTest2024ProjectionsRoutes } from './api/test-2024-projections';
 
 
 // League format adjustments removed with rankings system
@@ -71,6 +72,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register real data validation test routes
   registerRealDataValidationRoutes(app);
+  
+  // Register 2024 projections test routes (to demonstrate validation with real data)
+  registerTest2024ProjectionsRoutes(app);
   
 
   
