@@ -30,6 +30,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static files from public directory
   app.use(express.static('public'));
   
+  // Serve the new homepage
+  app.get('/', (req, res) => {
+    res.sendFile('index.html', { root: '.' });
+  });
+  
   // Register ADP routes
   registerADPRoutes(app);
   

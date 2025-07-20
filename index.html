@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>On The Clock</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            margin-bottom: 30px;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 200px);
+            gap: 20px;
+        }
+        .feature-box {
+            background-color: #f0f0f0;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .feature-box:hover {
+            background-color: #ddd;
+        }
+    </style>
+</head>
+<body>
+
+<h1>On The Clock</h1>
+<div class="feature-grid">
+    <div class="feature-box" onclick="window.location.href='/rankings.html'">Rankings</div>
+    <div class="feature-box" onclick="window.location.href='/oasis.html'">OASIS</div>
+    <div class="feature-box" onclick="window.location.href='/profiles.html'">Player Profiles</div>
+    <div class="feature-box" onclick="window.location.href='/analytics.html'">Advanced Analytics</div>
+</div>
+
+</body>
+</html>

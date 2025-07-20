@@ -216,15 +216,16 @@ Based on user feedback, expanding to include:
 
 ## Recent Reset (July 20, 2025)
 - **COMPLETE RANKINGS REMOVAL**: All rankings functionality removed per user directive "Nuke all rankings"
+- **NEW STATIC HOMEPAGE**: Replaced React app with simple HTML homepage featuring four module boxes
+- **MODULE STRUCTURE**: Created placeholder pages for Rankings, OASIS, Player Profiles, and Advanced Analytics
 - **Preserved Assets**: players.json file with 20 fantasy players kept as static data for future use
-- **Clean Landing Page**: Reset homepage to basic community-focused landing page
 - **Infrastructure Cleanup**: Removed all rankings APIs, tier bubble components, consensus services, and ranking pages
 
 ## Changelog
 
 ```
 Changelog:
-- July 20, 2025. **COMPLETE RANKINGS SYSTEM REMOVAL**: Successfully removed all rankings infrastructure per user directive - deleted Rankings.tsx, rankingsApi.ts, consensusService.ts, tier bubble components, ranking API endpoints, consensus calculation system, and all ranking-related pages and routes. Reset homepage to clean landing page focused on community and future development. Preserved players.json file with 20 fantasy players as only remaining data asset for future features.
+- July 20, 2025. **COMPLETE RANKINGS SYSTEM REMOVAL & NEW HOMEPAGE**: Successfully removed all rankings infrastructure per user directive - deleted Rankings.tsx, rankingsApi.ts, consensusService.ts, tier bubble components, ranking API endpoints, consensus calculation system, and all ranking-related pages and routes. Replaced React application with static HTML homepage featuring four feature boxes (Rankings, OASIS, Player Profiles, Advanced Analytics) linking to placeholder module pages. Preserved players.json file with 20 fantasy players as only remaining data asset for future features.
 - July 19, 2025. **TIER BUBBLE ALGORITHM VALIDATION COMPLETE**: Confirmed tier bubble generation working correctly with test data showing proper groupings (Justin Jefferson + CeeDee Lamb in Tier 1, separated tiers for larger rank gaps), mathematical validation of rank_diff_threshold=1.5 and std_dev_threshold=5.0 parameters, and live API endpoint returning comprehensive tier analysis with consensus strength indicators
 - July 19, 2025. **TIER BUBBLE FRONTEND INTEGRATION COMPLETE**: Successfully integrated hardcoded tier bubble data with frontend - API endpoint /api/rankings/tier-bubbles working correctly returning proper data structure for all formats (Redraft: Christian McCaffrey, Dynasty: Ja'Marr Chase, Dynasty Contender: Patrick Mahomes, Dynasty Rebuilder: Malik Nabers), commented out conflicting original endpoint, restarted workflow to ensure changes take effect, confirmed all four scenarios working with proper JSON structure matching frontend expectations - users need to click "Tier Bubbles" tab to view data
 - July 19, 2025. **ENHANCED TIER BUBBLES ERROR HANDLING**: Implemented improved getConsensusWithTierBubbles function with comprehensive error handling - replaced Promise.all with individual try-catch loops for better error isolation, graceful handling of missing ranking data, and detailed error logging for debugging while maintaining API stability
