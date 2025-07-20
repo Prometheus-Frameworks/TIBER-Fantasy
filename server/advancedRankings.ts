@@ -1,5 +1,5 @@
 import { fetchSleeperProjections, applyLeagueFormatScoring, PlayerProjection, LeagueSettings } from './services/projections/sleeperProjectionsService';
-import { calculateVORP } from './vorp_calculator';
+// VORP calculator import removed to avoid conflicts
 
 // Use Sleeper API as primary source for projections
 export async function fetchAggregatedProjections(skipCache: boolean = false): Promise<PlayerProjection[]> {

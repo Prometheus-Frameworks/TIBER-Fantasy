@@ -27,6 +27,12 @@ import cron from 'node-cron';
 import { registerSleeperTestRoutes } from './api/sleeper-test';
 import { registerProjectionsAnalysisRoutes } from './api/projections-analysis';
 import { registerWeeklyProjectionsTestRoutes } from './api/weekly-projections-test';
+import { registerSleeperPipelineTestRoutes } from './api/sleeper-pipeline-test';
+import { registerAdpConversionTestRoutes } from './api/test-adp-conversion';
+import { registerSleeperDataDebugRoutes } from './api/debug-sleeper-data';
+import { registerWeeklyProjectionsCheckRoutes } from './api/check-weekly-projections';
+import { registerSyntheticProjectionsRoutes } from './api/synthetic-projections';
+import { registerForceSyntheticTestRoutes } from './api/force-synthetic-test';
 
 // League format adjustments removed with rankings system
 
@@ -51,106 +57,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register weekly projections test routes
   registerWeeklyProjectionsTestRoutes(app);
   
-  // Advanced Rankings API endpoint with Dynasty/Redraft modes
+  // Register Sleeper pipeline test routes
+  registerSleeperPipelineTestRoutes(app);
+  
+  // Register ADP conversion test routes
+  registerAdpConversionTestRoutes(app);
+  
+  // Register Sleeper data debug routes
+  registerSleeperDataDebugRoutes(app);
+  
+  // Register weekly projections check routes
+  registerWeeklyProjectionsCheckRoutes(app);
+  
+  // Register synthetic projections routes
+  registerSyntheticProjectionsRoutes(app);
+  
+  // Register force synthetic test routes
+  registerForceSyntheticTestRoutes(app);
+  
+  // Rebuilt Rankings API endpoint with Sleeper as single source of truth
   app.get('/api/rankings', async (req, res) => {
     try {
-      const { 
-        mode = 'redraft', 
-        format = 'ppr',
-        league_format = format, // Backward compatibility
-        position,
-        num_teams = '12'
-      } = req.query;
+      const startTime = Date.now();
       
-      console.log(`🎯 Rankings request: mode=${mode}, format=${league_format}, position=${position}`);
+      // Parse query parameters with defaults
+      const mode = req.query.mode as string || 'dynasty';
+      const leagueFormat = req.query.league_format as string || 'ppr';
+      const position = req.query.position as string;
+      const numTeams = parseInt(req.query.num_teams as string) || 12;
+      const isSuperflex = req.query.is_superflex === 'true' || true;
       
-      // Advanced league settings
-      const leagueSettings = {
-        format: (league_format || format) as 'standard' | 'ppr' | 'half-ppr',
-        num_teams: parseInt(num_teams as string),
-        starters: { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 },
-        is_superflex: mode === 'dynasty', // Dynasty typically uses superflex
-        is_te_premium: false
-      };
+      // Dynamic source parameters
+      const source = req.query.source as string || 'season'; // 'season' or 'league'
+      const leagueId = req.query.league_id as string;
+      const week = parseInt(req.query.week as string);
+      
+      console.log(`🏆 Rankings request: ${mode} ${leagueFormat} ${position || 'all'} (${numTeams}-team, ${isSuperflex ? 'SF' : '1QB'})`);
+      console.log(`📡 Source: ${source}${leagueId ? `, league: ${leagueId}` : ''}${week ? `, week: ${week}` : ''}`);
+      
+      // Import the new Sleeper pipeline
+      const { sleeperProjectionsPipeline } = await import('./services/projections/sleeperProjectionsPipeline');
+      
+      // Configure projection source
+      const projectionSource = source === 'league' && leagueId && week
+        ? { type: 'league' as const, league_id: leagueId, week }
+        : { type: 'season' as const };
+      
+      // Get projections using the unified pipeline
+      console.log('📡 Fetching projections via Sleeper pipeline...');
+      const projections = await sleeperProjectionsPipeline.getProjections(
+        projectionSource,
+        leagueFormat,
+        position
+      );
+      
+      console.log(`✅ Received ${projections.length} projections from Sleeper pipeline`);
 
-      // Get projections from Sleeper API first
-      const { fetchSleeperProjections, applyLeagueFormatScoring, clearCache } = await import('./services/projections/sleeperProjectionsService');
-      
-      // Ensure fresh data fetch by clearing cache
-      clearCache();
-      let players = await fetchSleeperProjections(true);
-      players = applyLeagueFormatScoring(players, leagueSettings.format);
-      
-      // Calculate VORP with the fetched projections
+      // Import VORP calculator for dynasty adjustments
       const { calculateVORP } = await import('./vorp_calculator');
-      const { vorpMap, tiers } = await calculateVORP(leagueSettings, mode as string, true);
+      
+      // Apply VORP calculations for dynasty scoring
+      const vorpResults = projections.map(player => {
+        const vorpScore = calculateVORP(player, mode as 'dynasty' | 'redraft', leagueFormat, numTeams, isSuperflex);
+        return {
+          ...player,
+          vorp_score: vorpScore
+        };
+      });
 
-      // Filter by position if specified
-      let filteredPlayers = players;
-      if (position && typeof position === 'string') {
-        filteredPlayers = players.filter(p => p.position === position.toUpperCase());
-      }
-
-      // Combine projections with VORP scores and sort
-      const playersWithVORP = filteredPlayers && Array.isArray(filteredPlayers) 
-        ? filteredPlayers.map((player: any) => ({
-            playerName: player.player_name,
-            player_name: player.player_name,
-            position: player.position,
-            team: player.team,
-            projected_fpts: player.projected_fpts,
-            VORPScore: (vorpMap && player.player_name) ? (vorpMap[player.player_name] || 0) : 0,
-            vorp_score: (vorpMap && player.player_name) ? (vorpMap[player.player_name] || 0) : 0,
-            age: player.birthdate ? calculatePlayerAge(player.birthdate) : null,
-            birthdate: player.birthdate
-          })).sort((a: any, b: any) => b.VORPScore - a.VORPScore)
-        : [];
-
-      // Calculate tier assignments for filtered players
-      const playerTiers: { [key: string]: number } = {};
-      if (tiers && Array.isArray(tiers)) {
-        tiers.forEach(tier => {
-          if (tier.players && Array.isArray(tier.players)) {
-            tier.players.forEach((p: any) => {
-              playerTiers[p.player_name] = tier.tier;
-            });
-          }
-        });
-      }
-
-      // Add tier info to players
-      const playersWithTiers = playersWithVORP.map(p => ({
-        ...p,
-        tier: playerTiers[p.player_name] || null
-      }));
+      // Generate tier breaks
+      const { generateTierBreaks } = await import('./tierGeneration');
+      const tiers = generateTierBreaks(vorpResults);
+      
+      const endTime = Date.now();
+      console.log(`⚡ Rankings pipeline completed in ${endTime - startTime}ms`);
 
       res.json({
-        players: playersWithTiers,
-        tiers: (tiers && Array.isArray(tiers)) ? tiers.map(t => ({
-          tier: t.tier,
-          playerCount: t.players?.length || 0,
-          avgVorp: t.avgVorp?.toFixed(2),
-          topPlayer: t.players?.[0]?.player_name,
-          positions: t.players ? [...new Set(t.players.map((p: any) => p.position))] : []
-        })) : [],
+        players: vorpResults,
+        tiers,
         meta: {
           mode,
-          league_format: league_format || format,
+          league_format: leagueFormat,
           position: position || 'all',
-          num_teams: leagueSettings.num_teams,
-          is_superflex: leagueSettings.is_superflex,
-          totalPlayers: playersWithTiers.length,
-          tierCount: tiers?.length || 0
+          num_teams: numTeams,
+          is_superflex: isSuperflex,
+          source: source,
+          league_id: leagueId || null,
+          week: week || null,
+          totalPlayers: vorpResults.length,
+          tierCount: tiers.length
         },
-        sources: ['Advanced projections aggregation', 'Age-adjusted VORP calculation', 'Tier break analysis'],
+        sources: [
+          `Sleeper API ${source} projections`,
+          'Fuse.js deduplication',
+          'Age-adjusted VORP calculation',
+          'Tier break analysis'
+        ],
         timestamp: new Date().toISOString()
       });
-    } catch (error: any) {
-      console.error('❌ Advanced Rankings API error:', error);
+
+    } catch (error) {
+      console.error('❌ Rankings endpoint error:', error);
       res.status(500).json({
-        error: 'Failed to load advanced rankings',
-        message: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        error: 'Failed to generate rankings',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
       });
     }
   });
@@ -158,11 +169,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Clear cache endpoint for testing
   app.post('/api/rankings/clear-cache', async (req, res) => {
     try {
-      const { clearProjectionsCache } = await import('./advancedRankings');
-      clearProjectionsCache();
+      // Clear Sleeper pipeline cache
+      const { sleeperProjectionsPipeline } = await import('./services/projections/sleeperProjectionsPipeline');
+      sleeperProjectionsPipeline.clearCache();
+      
       res.json({ 
         success: true, 
-        message: 'Projections cache cleared successfully'
+        message: 'Sleeper pipeline cache cleared successfully'
       });
     } catch (error: any) {
       res.status(500).json({
