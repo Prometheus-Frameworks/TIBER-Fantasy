@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+import { fetchSleeperProjections, applyLeagueFormatScoring, PlayerProjection, LeagueSettings } from './services/projections/sleeperProjectionsService';
 
 interface VORPSettings {
   format?: 'standard' | 'half-ppr' | 'ppr';
@@ -15,15 +14,7 @@ interface VORPSettings {
   is_te_premium?: boolean;
 }
 
-interface PlayerProjection {
-  player_name: string;
-  position: string;
-  team: string;
-  projected_fpts: number;
-  receptions: number;
-}
-
-export async function calculateVORP(settings: VORPSettings = {}): Promise<Record<string, number>> {
+export async function calculateVORP(settings: VORPSettings = {}, mode: string = 'redraft', skipCache = false): Promise<{ vorpMap: Record<string, number>; tiers: any[] }> {
   const {
     format = 'ppr',
     num_teams = 12,
@@ -33,53 +24,66 @@ export async function calculateVORP(settings: VORPSettings = {}): Promise<Record
   } = settings;
 
   try {
-    // Try to load projections from external source first, fallback to seed data
-    let projections: PlayerProjection[] = [];
+    console.log(`🎯 Calculating VORP for ${format} ${mode} league (${num_teams} teams)`);
     
-    try {
-      // In a real implementation, this would fetch from external APIs
-      // For now, load from our seed data
-      const projectionsPath = path.join(process.cwd(), 'projections.json');
-      const projectionsData = fs.readFileSync(projectionsPath, 'utf-8');
-      projections = JSON.parse(projectionsData);
-    } catch (error) {
-      console.error('Failed to load projections:', error);
-      return {};
+    // Fetch projections from Sleeper API
+    let projections = await fetchSleeperProjections(skipCache);
+    
+    if (projections.length === 0) {
+      console.error('❌ No projections available from Sleeper API');
+      return { vorpMap: {}, tiers: [] };
     }
 
-    // Calculate fantasy points based on format
-    const playersWithAdjustedPoints = projections.map(player => {
-      let adjustedPoints = player.projected_fpts;
-      
-      // Adjust for PPR format
-      if (format === 'ppr') {
-        adjustedPoints += player.receptions * 1.0;
-      } else if (format === 'half-ppr') {
-        adjustedPoints += player.receptions * 0.5;
-      }
-      
-      // TE Premium adjustment
-      if (is_te_premium && player.position === 'TE') {
-        adjustedPoints += player.receptions * 0.5;
-      }
-      
-      return {
+    // Apply league format scoring using Sleeper's native PPR calculations
+    projections = applyLeagueFormatScoring(projections, format);
+
+    // Dynasty age decay
+    if (mode === 'dynasty') {
+      projections = projections.map(player => {
+        let ageDecay = 1.0;
+        if (player.birthdate) {
+          const age = new Date().getFullYear() - new Date(player.birthdate).getFullYear();
+          if (age >= 30) ageDecay = 0.88; // -12% for 30+
+          else if (age >= 28) ageDecay = 0.95; // -5% for 28-29
+        }
+        
+        return {
+          ...player,
+          adjustedPoints: player.projected_fpts * ageDecay
+        };
+      });
+    } else {
+      // Redraft mode - no age penalties
+      projections = projections.map(player => ({
         ...player,
-        adjustedPoints
-      };
-    });
+        adjustedPoints: player.projected_fpts
+      }));
+    }
+
+    // TE Premium adjustment
+    if (is_te_premium) {
+      projections = projections.map((player: any) => {
+        if (player.position === 'TE') {
+          return {
+            ...player,
+            adjustedPoints: player.adjustedPoints + (player.receptions || 0) * 0.5
+          };
+        }
+        return player;
+      });
+    }
 
     // Calculate replacement level for each position
     const positionGroups = {
-      QB: playersWithAdjustedPoints.filter(p => p.position === 'QB'),
-      RB: playersWithAdjustedPoints.filter(p => p.position === 'RB'),
-      WR: playersWithAdjustedPoints.filter(p => p.position === 'WR'),
-      TE: playersWithAdjustedPoints.filter(p => p.position === 'TE')
+      QB: projections.filter(p => p.position === 'QB'),
+      RB: projections.filter(p => p.position === 'RB'),
+      WR: projections.filter(p => p.position === 'WR'),
+      TE: projections.filter(p => p.position === 'TE')
     };
 
     // Sort each position by points
     Object.keys(positionGroups).forEach(pos => {
-      positionGroups[pos as keyof typeof positionGroups].sort((a, b) => b.adjustedPoints - a.adjustedPoints);
+      positionGroups[pos as keyof typeof positionGroups].sort((a, b) => (b as any).adjustedPoints - (a as any).adjustedPoints);
     });
 
     // Calculate replacement levels
@@ -93,16 +97,24 @@ export async function calculateVORP(settings: VORPSettings = {}): Promise<Record
     // Calculate VORP for each player
     const vorpMap: Record<string, number> = {};
     
-    playersWithAdjustedPoints.forEach(player => {
+    projections.forEach((player: any) => {
       const replacementLevel = replacementLevels[player.position as keyof typeof replacementLevels] || 0;
       const vorp = Math.max(0, player.adjustedPoints - replacementLevel);
-      vorpMap[player.player_name] = parseFloat(vorp.toFixed(2));
+      
+      // Normalize to 99-point scale
+      const normalizedVorp = Math.min(99, Math.round(vorp * 3.5));
+      vorpMap[player.player_name] = normalizedVorp;
     });
 
-    return vorpMap;
+    // Calculate tiers based on VORP gaps
+    const allVorps = Object.values(vorpMap).sort((a, b) => b - a);
+    const tiers = calculateTiers(allVorps);
+
+    console.log(`✅ VORP calculation complete: ${Object.keys(vorpMap).length} players processed`);
+    return { vorpMap, tiers };
   } catch (error) {
     console.error('Error calculating VORP:', error);
-    return {};
+    return { vorpMap: {}, tiers: [] };
   }
 }
 
@@ -112,4 +124,39 @@ function getReplacementLevel(players: any[], starterCount: number): number {
   // Replacement level is typically around the player who would be the last starter + a few bench spots
   const replacementIndex = Math.min(starterCount + Math.floor(starterCount * 0.5), players.length - 1);
   return players[replacementIndex]?.adjustedPoints || 0;
+}
+
+function calculateTiers(sortedVorps: number[]): any[] {
+  if (sortedVorps.length === 0) return [];
+  
+  const tiers = [];
+  let currentTier = 1;
+  let tierStart = 0;
+  
+  for (let i = 1; i < sortedVorps.length; i++) {
+    const gap = sortedVorps[i - 1] - sortedVorps[i];
+    
+    // Create tier break on significant VORP gaps (8+ points)
+    if (gap >= 8 && tiers.length < 6) {
+      tiers.push({
+        tier: currentTier,
+        min_vorp: sortedVorps[i - 1],
+        max_vorp: sortedVorps[tierStart],
+        count: i - tierStart
+      });
+      
+      tierStart = i;
+      currentTier++;
+    }
+  }
+  
+  // Add final tier
+  tiers.push({
+    tier: currentTier,
+    min_vorp: sortedVorps[sortedVorps.length - 1],
+    max_vorp: sortedVorps[tierStart],
+    count: sortedVorps.length - tierStart
+  });
+  
+  return tiers;
 }

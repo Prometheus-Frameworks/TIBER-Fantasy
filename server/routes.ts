@@ -24,6 +24,7 @@ import { dataIngestionService } from './services/dataIngestionService';
 import { fantasyProService } from './services/fantasyProService';
 import { rbDraftCapitalService } from './rbDraftCapitalContext';
 import cron from 'node-cron';
+import { registerSleeperTestRoutes } from './api/sleeper-test';
 
 // League format adjustments removed with rankings system
 
@@ -38,6 +39,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register ADP routes
   registerADPRoutes(app);
+  
+  // Register Sleeper test routes
+  registerSleeperTestRoutes(app);
   
   // Advanced Rankings API endpoint with Dynasty/Redraft modes
   app.get('/api/rankings', async (req, res) => {
@@ -61,8 +65,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         is_te_premium: false
       };
 
-      const { calculateVORP } = await import('./advancedRankings');
-      const { vorpMap, tiers, players } = await calculateVORP(leagueSettings, mode as string);
+      // Get projections from Sleeper API first
+      const { fetchSleeperProjections, applyLeagueFormatScoring, clearCache } = await import('./services/projections/sleeperProjectionsService');
+      
+      // Ensure fresh data fetch by clearing cache
+      clearCache();
+      let players = await fetchSleeperProjections(true);
+      players = applyLeagueFormatScoring(players, leagueSettings.format);
+      
+      // Calculate VORP with the fetched projections
+      const { calculateVORP } = await import('./vorp_calculator');
+      const { vorpMap, tiers } = await calculateVORP(leagueSettings, mode as string, true);
 
       // Filter by position if specified
       let filteredPlayers = players;
@@ -71,25 +84,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Combine projections with VORP scores and sort
-      const playersWithVORP = filteredPlayers.map((player: any) => ({
-        playerName: player.player_name,
-        player_name: player.player_name,
-        position: player.position,
-        team: player.team,
-        projected_fpts: player.projected_fpts,
-        VORPScore: vorpMap[player.player_name] || 0,
-        vorp_score: vorpMap[player.player_name] || 0,
-        age: player.birthdate ? calculatePlayerAge(player.birthdate) : null,
-        birthdate: player.birthdate
-      })).sort((a: any, b: any) => b.VORPScore - a.VORPScore);
+      const playersWithVORP = filteredPlayers && Array.isArray(filteredPlayers) 
+        ? filteredPlayers.map((player: any) => ({
+            playerName: player.player_name,
+            player_name: player.player_name,
+            position: player.position,
+            team: player.team,
+            projected_fpts: player.projected_fpts,
+            VORPScore: (vorpMap && player.player_name) ? (vorpMap[player.player_name] || 0) : 0,
+            vorp_score: (vorpMap && player.player_name) ? (vorpMap[player.player_name] || 0) : 0,
+            age: player.birthdate ? calculatePlayerAge(player.birthdate) : null,
+            birthdate: player.birthdate
+          })).sort((a: any, b: any) => b.VORPScore - a.VORPScore)
+        : [];
 
       // Calculate tier assignments for filtered players
       const playerTiers: { [key: string]: number } = {};
-      tiers.forEach(tier => {
-        tier.players.forEach((p: any) => {
-          playerTiers[p.player_name] = tier.tier;
+      if (tiers && Array.isArray(tiers)) {
+        tiers.forEach(tier => {
+          if (tier.players && Array.isArray(tier.players)) {
+            tier.players.forEach((p: any) => {
+              playerTiers[p.player_name] = tier.tier;
+            });
+          }
         });
-      });
+      }
 
       // Add tier info to players
       const playersWithTiers = playersWithVORP.map(p => ({
@@ -99,13 +118,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         players: playersWithTiers,
-        tiers: tiers.map(t => ({
+        tiers: (tiers && Array.isArray(tiers)) ? tiers.map(t => ({
           tier: t.tier,
-          playerCount: t.players.length,
+          playerCount: t.players?.length || 0,
           avgVorp: t.avgVorp?.toFixed(2),
-          topPlayer: t.players[0]?.player_name,
-          positions: [...new Set(t.players.map((p: any) => p.position))]
-        })),
+          topPlayer: t.players?.[0]?.player_name,
+          positions: t.players ? [...new Set(t.players.map((p: any) => p.position))] : []
+        })) : [],
         meta: {
           mode,
           league_format: league_format || format,
@@ -113,7 +132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           num_teams: leagueSettings.num_teams,
           is_superflex: leagueSettings.is_superflex,
           totalPlayers: playersWithTiers.length,
-          tierCount: tiers.length
+          tierCount: tiers?.length || 0
         },
         sources: ['Advanced projections aggregation', 'Age-adjusted VORP calculation', 'Tier break analysis'],
         timestamp: new Date().toISOString()

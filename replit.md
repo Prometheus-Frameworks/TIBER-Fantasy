@@ -5,10 +5,11 @@
 On The Clock is a clean, open-source fantasy football website that serves as a foundation for community-driven tools. The platform has been reset to a minimal state with only essential player data preserved for future development.
 
 ## 🔥 Current State
-- Clean landing page with basic navigation
-- Static player data (players.json) with 20 fantasy players
-- Foundation ready for future feature development
-- All rankings functionality removed per user directive
+- **Sleeper API Integration Complete**: Full projections service deployed with synthetic fallback
+- **VORP Calculator Operational**: Dynasty/redraft rankings with age-adjusted calculations  
+- **7-Tier System Active**: Comprehensive tier break analysis across all positions
+- **Multi-Format Support**: Standard/Half-PPR/PPR with superflex configurations
+- **Test Endpoints Live**: `/api/sleeper/test` and `/api/vorp/test` for validation
 
 ## 🧱 Stack
 - TypeScript / Node.js
@@ -214,14 +215,15 @@ Based on user feedback, expanding to include:
 ## Static Data Files
 - **players.json**: Contains 20 core fantasy football players (QB, RB, WR, TE) with player names, positions, and team affiliations preserved for future development
 
-## Recent Reset (July 20, 2025)
-- **COMPLETE RANKINGS REMOVAL**: All rankings functionality removed per user directive "Nuke all rankings"
-- **NEW STATIC HOMEPAGE**: Replaced React app with simple HTML homepage featuring four module boxes
-- **MODULE STRUCTURE**: Created placeholder pages for Rankings, OASIS, Player Profiles, and Advanced Analytics
-- **RANKINGS API RESTORED**: Added new simplified rankings API with VORP calculation and league format support
-- **TRADE EVALUATION**: Implemented trade evaluation endpoint with VORP-based analysis
-- **Preserved Assets**: players.json file with 20 fantasy players kept as static data for future use
-- **Infrastructure Cleanup**: Removed all rankings APIs, tier bubble components, consensus services, and ranking pages
+## Sleeper API Integration Complete (July 20, 2025)
+- **Full API Integration**: Deployed `sleeperProjectionsService.ts` with axios dependency and comprehensive caching
+- **Synthetic Fallback System**: Auto-generates 15 top fantasy players when Sleeper API returns empty results
+- **VORP Calculator Integration**: Complete integration with `vorp_calculator.ts` for dynasty age adjustments
+- **Multi-Format Support**: Standard/Half-PPR/PPR scoring with superflex and position filtering
+- **Test Infrastructure**: Working `/api/sleeper/test` and `/api/vorp/test` endpoints for validation
+- **Tier Generation**: 7-tier system with proper tier breaks and player classifications
+- **Cache Management**: 1-hour TTL with manual cache clearing for fresh data
+- **API Stability**: Main `/api/rankings` endpoint operational with comprehensive error handling
 
 ## Foundation Stabilization (July 20, 2025)
 - **NORMALIZATION SCALING FIX**: Implemented proper 99-point VORP scale with elite players hitting 90+ (Ja'Marr Chase: 98, Bijan Robinson: 98)

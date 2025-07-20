@@ -1,78 +1,10 @@
-import axios from 'axios';
-import * as cheerio from 'cheerio';
-import Fuse from 'fuse.js';
-import fs from 'fs';
-import path from 'path';
+import { fetchSleeperProjections, applyLeagueFormatScoring, PlayerProjection, LeagueSettings } from './services/projections/sleeperProjectionsService';
+import { calculateVORP } from './vorp_calculator';
 
-interface PlayerProjection {
-  player_name: string;
-  position: string;
-  team: string;
-  projected_fpts: number;
-  receptions?: number;
-  birthdate?: string;
-  // Advanced metrics for multipliers
-  yprr?: number; // Yards per route run
-  first_down_rr?: number; // 1D/RR
-  cpoe?: number; // Completion % over expected
-  oasis_score?: number; // OASIS team environment score
-}
-
-interface LeagueSettings {
-  format: 'standard' | 'ppr' | 'half-ppr';
-  num_teams: number;
-  starters: { QB: number; RB: number; WR: number; TE: number; FLEX: number };
-  is_superflex: boolean;
-  is_te_premium: boolean;
-  // Advanced multiplier weights
-  oasis_weight?: number;
-  yprr_weight?: number;
-  first_down_weight?: number;
-  cpoe_weight?: number;
-}
-
-// In-memory cache
-const cache = { projections: null as PlayerProjection[] | null, lastFetch: 0 };
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour
-
-// Fetch and aggregate projections (cache disabled for mode toggle support)
+// Use Sleeper API as primary source for projections
 export async function fetchAggregatedProjections(skipCache: boolean = false): Promise<PlayerProjection[]> {
-  if (!skipCache && cache.projections && Date.now() - cache.lastFetch < CACHE_TTL) {
-    return cache.projections;
-  }
-
-  console.log('🔄 Fetching projections from external sources...');
-  
-  const sources = [
-    { url: 'https://fantasy.espn.com/football/players/projections', parser: parseESPN },
-    { url: 'https://www.draftsharks.com/rankings', parser: parseDraftSharks },
-  ];
-
-  let allProjections: { [key: string]: { fpts: number[]; pos: string; team: string; recs: number[]; birthdate?: string } } = {};
-
-  for (const source of sources) {
-    try {
-      console.log(`📡 Fetching from ${source.url}...`);
-      const { data } = await axios.get(source.url, { timeout: 5000 });
-      const $ = cheerio.load(data);
-      const projections = source.parser($);
-      projections.forEach((p: PlayerProjection) => {
-        const key = `${p.player_name.toLowerCase()}-${p.position.toLowerCase()}`;
-        if (!allProjections[key]) {
-          allProjections[key] = { fpts: [], pos: p.position, team: p.team, recs: [], birthdate: p.birthdate };
-        }
-        allProjections[key].fpts.push(p.projected_fpts);
-        if (p.receptions) allProjections[key].recs.push(p.receptions);
-      });
-      console.log(`✅ Parsed ${projections.length} projections from ${source.url}`);
-    } catch (error: any) {
-      console.error(`❌ Fetch error from ${source.url}:`, error.message);
-    }
-  }
-
-  if (Object.keys(allProjections).length === 0) {
-    console.log('⚠️ No external data fetched, using fallback projections');
-    return loadFallbackProjections();
+  console.log('🔄 Fetching projections from Sleeper API...');
+  return await fetchSleeperProjections(skipCache);
   }
 
   const aggregated = Object.entries(allProjections).map(([key, val]) => {
