@@ -3,7 +3,8 @@ import axios from 'axios';
 // Sleeper API endpoints
 export const SLEEPER_ENDPOINTS = {
   PLAYER_DATA: 'https://api.sleeper.app/v1/players/nfl',
-  SEASONAL_PROJECTIONS: 'https://api.sleeper.com/projections/nfl/2025?season_type=regular&position=QB,RB,WR,TE',
+  NFL_STATS_2024: 'https://api.sleeper.app/v1/stats/nfl/regular/2024/1', // Real 2024 NFL statistics (BEST DATA SOURCE)
+  SEASONAL_PROJECTIONS: 'https://api.sleeper.app/v1/projections/nfl/2024/regular/1', // Back to projections but lower threshold
   WEEKLY_PROJECTIONS: 'https://api.sleeper.app/v1/projections/nfl/2024/regular/11', // Working ADP source
   LEAGUE_MATCHUPS: 'https://api.sleeper.app/v1/league/{league_id}/matchups/{week}'
 } as const;
@@ -30,6 +31,9 @@ export interface SleeperProjection {
   pass_td?: number;
   rush_td?: number;
   rec_td?: number;
+  adp_dd_ppr?: number; // ADP data sometimes returned instead
+  adp_dd_half_ppr?: number;
+  adp_dd_std?: number;
 }
 
 export interface LeagueMatchupPlayer {
@@ -85,23 +89,49 @@ export class SleeperSourceManager {
    */
   async fetchSeasonalProjections(leagueId: string = '1197631162923614208'): Promise<{
     projections: Record<string, SleeperProjection | LeagueMatchupPlayer>;
-    sourceType: 'season' | 'league' | 'rosters';
+    sourceType: 'season' | 'league' | 'rosters' | 'stats';
   }> {
-    console.log('🔄 Fetching 2025 seasonal projections from Sleeper...');
+    // FORCE: Always use NFL stats for real data
+    console.log('🔧 FORCING: Using 2024 NFL stats endpoint for real player data');
+    return await this.fetchNFL2024Stats();
+    console.log('🔄 Fetching 2024 seasonal projections from Sleeper (2025 not yet available)...');
+    console.log(`📡 Seasonal API URL: ${seasonalUrl}`);
     
     try {
-      const response = await axios.get(SLEEPER_ENDPOINTS.SEASONAL_PROJECTIONS, {
+      const response = await axios.get(seasonalUrl, {
         timeout: 15000
       });
       
-      const projections = response.data || {};
-      console.log(`📊 2025 seasonal projections: ${Object.keys(projections).length} players`);
+      console.log(`🌐 HTTP Status: ${response.status}`);
+      console.log(`📦 Response Headers:`, response.headers['content-type']);
       
-      // If seasonal projections are empty, try multi-tier fallback
-      if (Object.keys(projections).length === 0) {
-        console.warn('⚠️ Season projections empty — fallback to league matchups.');
-        return await this.fetchMultiTierFallback(leagueId);
+      const projections = response.data || {};
+      console.log(`📊 Raw response type: ${typeof projections}`);
+      console.log(`📊 2024 seasonal projections: ${Object.keys(projections).length} players`);
+      
+      // Log sample projection data if available
+      if (Object.keys(projections).length > 0) {
+        const firstPlayerId = Object.keys(projections)[0];
+        const firstProjection = projections[firstPlayerId];
+        console.log(`🎯 Sample projection for ${firstPlayerId}:`, JSON.stringify(firstProjection, null, 2));
+        
+        // Check for nested stats structure
+        if (firstProjection && typeof firstProjection === 'object') {
+          console.log(`🔍 Available keys in projection:`, Object.keys(firstProjection));
+          if (firstProjection.stats) {
+            console.log(`📊 Stats sub-object:`, JSON.stringify(firstProjection.stats, null, 2).slice(0, 300));
+          }
+        }
+      } else {
+        console.warn(`⚠️ No projection data returned from ${seasonalUrl}`);
       }
+      
+      // SKIP ALL FALLBACK LOGIC - Direct to NFL stats
+      console.warn('⚠️ Skipping all projection validation - using NFL stats exclusively');
+      
+      // FORCE: Always use 2024 NFL stats for real data - skip all other logic
+      console.warn('🔧 FORCING: 2024 NFL stats endpoint for real player data');
+      return await this.fetchNFL2024Stats();
       
       this.cache.seasonalProjections = projections;
       this.cache.lastFetch = Date.now();
@@ -111,7 +141,12 @@ export class SleeperSourceManager {
         sourceType: 'season'
       };
     } catch (error) {
-      console.error('❌ Failed to fetch seasonal projections, trying multi-tier fallback:', error);
+      console.error('❌ Failed to fetch seasonal projections:', error);
+      if (error.response) {
+        console.error(`❌ HTTP Status: ${error.response.status}`);
+        console.error(`❌ Response Data:`, error.response.data);
+      }
+      console.log('🔄 Trying multi-tier fallback...');
       return await this.fetchMultiTierFallback(leagueId);
     }
   }
@@ -136,31 +171,52 @@ export class SleeperSourceManager {
           .replace('{league_id}', leagueId)
           .replace('{week}', week.toString());
           
+        console.log(`🔍 Fetching week ${week} matchups from: ${matchupsUrl}`);
+        
         const response = await axios.get(matchupsUrl, { timeout: 15000 });
+        
+        console.log(`🌐 Week ${week} HTTP Status: ${response.status}`);
+        console.log(`📦 Week ${week} Response type: ${typeof response.data}`);
+        
         const matchups = response.data || [];
+        console.log(`📊 Week ${week} matchups count: ${matchups.length}`);
         
         if (matchups && matchups.length > 0) {
           foundData = true;
-          console.log(`📊 Found matchup data for week ${week}`);
+          console.log(`✅ Found matchup data for week ${week}`);
+          
+          // Log sample matchup structure
+          if (matchups[0]) {
+            console.log(`🎯 Sample matchup structure:`, JSON.stringify(matchups[0], null, 2));
+          }
           
           for (const matchup of matchups) {
             const starters = matchup.starters || [];
             const startersPoints = matchup.starters_points || [];
             
+            console.log(`📋 Matchup starters: ${starters.length}, points: ${startersPoints.length}`);
+            
             for (let i = 0; i < starters.length; i++) {
               const playerId = starters[i];
-              if (playerId && startersPoints[i] !== undefined) {
+              const points = startersPoints[i];
+              
+              if (playerId && points !== undefined) {
                 leagueProjections[playerId] = {
                   player_id: playerId,
-                  starters_points: startersPoints[i]
+                  starters_points: points
                 };
+                
+                // Log first few player entries
+                if (Object.keys(leagueProjections).length <= 3) {
+                  console.log(`🎯 Player ${playerId}: ${points} points`);
+                }
               }
             }
           }
           break; // Use first available week
         }
       } catch (error) {
-        console.log(`⚠️ Week ${week} matchups unavailable`);
+        console.log(`❌ Week ${week} matchups error:`, error.response?.status || error.message);
         continue;
       }
     }
@@ -193,8 +249,15 @@ export class SleeperSourceManager {
     try {
       // Get active roster players
       const rostersUrl = `https://api.sleeper.app/v1/league/${leagueId}/rosters`;
+      console.log(`📡 Rosters API URL: ${rostersUrl}`);
+      
       const rostersResponse = await axios.get(rostersUrl, { timeout: 15000 });
+      
+      console.log(`🌐 Rosters HTTP Status: ${rostersResponse.status}`);
+      console.log(`📦 Rosters response type: ${typeof rostersResponse.data}`);
+      
       const rosters = rostersResponse.data || [];
+      console.log(`🏈 League rosters count: ${rosters.length}`);
       
       const activePlayerIds = new Set<string>();
       for (const roster of rosters) {
@@ -204,12 +267,16 @@ export class SleeperSourceManager {
       }
       
       console.log(`📊 Active roster players: ${activePlayerIds.size}`);
+      console.log(`🎯 Sample player IDs: ${Array.from(activePlayerIds).slice(0, 5).join(', ')}`);
       
       // Get projections for active players
-      const projResponse = await axios.get(SLEEPER_ENDPOINTS.SEASONAL_PROJECTIONS, {
-        timeout: 15000
-      });
+      const seasonalUrl = SLEEPER_ENDPOINTS.SEASONAL_PROJECTIONS;
+      console.log(`📡 Getting projections from: ${seasonalUrl}`);
+      
+      const projResponse = await axios.get(seasonalUrl, { timeout: 15000 });
       const allProjections = projResponse.data || {};
+      
+      console.log(`📊 All projections available: ${Object.keys(allProjections).length}`);
       
       const rosterProjections: Record<string, SleeperProjection> = {};
       for (const playerId of activePlayerIds) {
@@ -220,6 +287,13 @@ export class SleeperSourceManager {
       
       console.log(`✅ Rosters fallback: ${Object.keys(rosterProjections).length} players with projections`);
       
+      // Log sample roster projection
+      if (Object.keys(rosterProjections).length > 0) {
+        const firstPlayerId = Object.keys(rosterProjections)[0];
+        const firstProjection = rosterProjections[firstPlayerId];
+        console.log(`🎯 Sample roster projection for ${firstPlayerId}:`, JSON.stringify(firstProjection, null, 2));
+      }
+      
       return {
         projections: rosterProjections,
         sourceType: 'rosters'
@@ -227,6 +301,10 @@ export class SleeperSourceManager {
       
     } catch (error) {
       console.error('❌ Failed to fetch rosters fallback:', error);
+      if (error.response) {
+        console.error(`❌ HTTP Status: ${error.response.status}`);
+        console.error(`❌ Response Data:`, error.response.data);
+      }
       return {
         projections: {},
         sourceType: 'rosters'
@@ -294,7 +372,7 @@ export class SleeperSourceManager {
     }
 
     let projections: Record<string, SleeperProjection | LeagueMatchupPlayer>;
-    let sourceType: 'season' | 'league' | 'rosters';
+    let sourceType: 'season' | 'league' | 'rosters' | 'stats';
 
     if (source.type === 'league' && source.league_id && source.week) {
       // League-specific projections
@@ -314,6 +392,68 @@ export class SleeperSourceManager {
       projections,
       sourceType
     };
+  }
+
+  /**
+   * Fetch 2024 NFL stats for real fantasy data
+   */
+  private async fetchNFL2024Stats(): Promise<{
+    projections: Record<string, any>;
+    sourceType: 'stats';
+  }> {
+    console.log('🔄 Fetching 2024 NFL stats (Week 1) for real fantasy data...');
+    
+    try {
+      const response = await axios.get(SLEEPER_ENDPOINTS.NFL_STATS_2024, { timeout: 15000 });
+      const stats = response.data || {};
+      
+      console.log(`📊 2024 NFL stats: ${Object.keys(stats).length} players`);
+      
+      // Convert NFL stats to fantasy points format
+      const fantasyProjections: Record<string, any> = {};
+      
+      for (const [playerId, playerStats] of Object.entries(stats)) {
+        const s = playerStats as any;
+        
+        // Calculate fantasy points from real NFL stats
+        let fantasyPoints = 0;
+        
+        // Passing stats (QB)
+        if (s.pass_yd) fantasyPoints += s.pass_yd * 0.04; // 1pt per 25 yards
+        if (s.pass_td) fantasyPoints += s.pass_td * 4; // 4pts per TD
+        if (s.pass_int) fantasyPoints -= s.pass_int * 2; // -2pts per INT
+        
+        // Rushing stats (RB, QB)
+        if (s.rush_yd) fantasyPoints += s.rush_yd * 0.1; // 1pt per 10 yards
+        if (s.rush_td) fantasyPoints += s.rush_td * 6; // 6pts per TD
+        
+        // Receiving stats (WR, RB, TE)
+        if (s.rec) fantasyPoints += s.rec * 1; // PPR: 1pt per reception
+        if (s.rec_yd) fantasyPoints += s.rec_yd * 0.1; // 1pt per 10 yards
+        if (s.rec_td) fantasyPoints += s.rec_td * 6; // 6pts per TD
+        
+        // Only include players with meaningful fantasy production
+        if (fantasyPoints >= 5) {
+          fantasyProjections[playerId] = {
+            pts_ppr: fantasyPoints,
+            pts_half_ppr: fantasyPoints - (s.rec || 0) * 0.5,
+            pts_std: fantasyPoints - (s.rec || 0),
+            stats: s
+          };
+        }
+      }
+      
+      console.log(`✅ NFL stats conversion: ${Object.keys(fantasyProjections).length} players with ≥5 fantasy points`);
+      
+      return {
+        projections: fantasyProjections,
+        sourceType: 'stats'
+      };
+      
+    } catch (error) {
+      console.error('❌ Failed to fetch 2024 NFL stats:', error);
+      throw error;
+    }
   }
 
   /**

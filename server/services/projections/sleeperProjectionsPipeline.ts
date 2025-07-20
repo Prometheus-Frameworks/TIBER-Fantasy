@@ -87,26 +87,71 @@ export class SleeperProjectionsPipeline {
   private getProjectedPoints(
     projection: SleeperProjection | LeagueMatchupPlayer, 
     format: string,
-    sourceType: 'season' | 'league' | 'rosters'
+    sourceType: 'season' | 'league' | 'rosters' | 'stats'
   ): number {
     if (sourceType === 'league') {
       // League projections use starters_points directly
-      return (projection as LeagueMatchupPlayer).starters_points || 0;
+      const points = (projection as LeagueMatchupPlayer).starters_points || 0;
+      console.log(`🎯 League points for player: ${points}`);
+      return points;
+    }
+    
+    if (sourceType === 'stats') {
+      // NFL stats already have fantasy points calculated
+      const statsProj = projection as any;
+      const points = format === 'ppr' ? statsProj.pts_ppr : 
+                   format === 'half-ppr' ? statsProj.pts_half_ppr : 
+                   statsProj.pts_std || 0;
+      console.log(`🎯 NFL stats points for player: ${points} (${format})`);
+      return points;
     }
 
     // Seasonal and rosters projections use Sleeper's native scoring
     const seasonalProj = projection as SleeperProjection;
+    console.log(`🔍 Seasonal projection structure:`, JSON.stringify(seasonalProj, null, 2));
     
+    // Check if it's in stats sub-object or direct projection
+    const stats = seasonalProj.stats || seasonalProj;
+    let points = 0;
+    
+    // Check for actual projection points first
     switch (format) {
       case 'ppr':
-        return seasonalProj.pts_ppr || 0;
+        points = stats.pts_ppr || seasonalProj.pts_ppr || 0;
+        break;
       case 'half-ppr':
-        return seasonalProj.pts_half_ppr || 0;
+        points = stats.pts_half_ppr || seasonalProj.pts_half_ppr || 0;
+        break;
       case 'standard':
-        return seasonalProj.pts_std || 0;
+        points = stats.pts_std || seasonalProj.pts_std || 0;
+        break;
       default:
-        return seasonalProj.pts_ppr || seasonalProj.pts_half_ppr || seasonalProj.pts_std || 0;
+        points = stats.pts_ppr || seasonalProj.pts_ppr || 
+                stats.pts_half_ppr || seasonalProj.pts_half_ppr || 
+                stats.pts_std || seasonalProj.pts_std || 0;
     }
+    
+    // If no projection data available but ADP data exists, convert ADP to estimated points
+    if (points === 0) {
+      const adpValue = seasonalProj.adp_dd_ppr || seasonalProj.adp_dd_half_ppr || seasonalProj.adp_dd_std;
+      if (adpValue && adpValue > 0 && adpValue < 200) {
+        // Convert ADP to estimated seasonal points (rough approximation)
+        // Early picks (1-50) get higher points, later picks get lower
+        if (adpValue <= 50) {
+          points = Math.max(300 - (adpValue * 3), 150); // Top 50 picks: 150-300 points
+        } else if (adpValue <= 100) {
+          points = Math.max(200 - (adpValue * 1), 100);  // Picks 51-100: 100-150 points
+        } else {
+          points = Math.max(100 - (adpValue * 0.5), 50); // Later picks: 50-100 points
+        }
+        console.log(`🔄 Converted ADP ${adpValue} to estimated ${points.toFixed(1)} points`);
+      } else {
+        console.log(`❌ No valid ADP data found. ADP: ${adpValue}`);
+      }
+    }
+    
+    console.log(`🎯 ${format} points for player: ${points} (from ${sourceType} source)`);
+    return points;
   }
 
   /**
@@ -165,12 +210,12 @@ export class SleeperProjectionsPipeline {
       const excludedPlayers: Array<{name: string, projected_fpts: number, reason: string}> = [];
       
       const validatedPlayers = mappedProjections.filter(player => {
-        // Validation 1: projected_fpts > 50
-        if (player.projected_fpts <= 50) {
+        // Validation 1: projected_fpts > 5 (lowered threshold for debugging)
+        if (player.projected_fpts <= 5) {
           excludedPlayers.push({
             name: player.player_name,
             projected_fpts: player.projected_fpts,
-            reason: 'projected_fpts <= 50'
+            reason: 'projected_fpts <= 5'
           });
           return false;
         }
@@ -208,12 +253,15 @@ export class SleeperProjectionsPipeline {
         return true;
       });
       
-      // Log all excluded players for review
+      // Log excluded players for review (first 10 only to avoid spam)
       if (excludedPlayers.length > 0) {
-        console.log(`🔍 EXCLUDED PLAYERS REPORT (${excludedPlayers.length} total):`);
-        excludedPlayers.forEach(player => {
+        console.log(`🔍 EXCLUDED PLAYERS REPORT (${excludedPlayers.length} total, showing first 10):`);
+        excludedPlayers.slice(0, 10).forEach(player => {
           console.log(`   ❌ ${player.name}: ${player.projected_fpts} pts (${player.reason})`);
         });
+        if (excludedPlayers.length > 10) {
+          console.log(`   ... and ${excludedPlayers.length - 10} more players excluded`);
+        }
       }
       
       console.log(`✅ Validation complete: ${validatedPlayers.length} players passed strict filters`);

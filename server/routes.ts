@@ -2406,6 +2406,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Debug endpoint for Sleeper API testing
+  app.get('/api/debug/sleeper', async (req: Request, res: Response) => {
+    const leagueId = '1197631162923614208';
+    
+    console.log('🔧 SLEEPER API DEBUGGING ENDPOINT');
+    
+    try {
+      // Test 1: League info
+      const leagueUrl = `https://api.sleeper.app/v1/league/${leagueId}`;
+      console.log(`📡 Testing league endpoint: ${leagueUrl}`);
+      
+      const leagueResponse = await axios.get(leagueUrl);
+      console.log(`✅ League Status: ${leagueResponse.status}`);
+      console.log(`📊 League Name: ${leagueResponse.data.name}`);
+      console.log(`📊 League Season: ${leagueResponse.data.season}`);
+      
+      // Test 2: Week 1 matchups
+      const matchupsUrl = `https://api.sleeper.app/v1/league/${leagueId}/matchups/1`;
+      console.log(`📡 Testing matchups endpoint: ${matchupsUrl}`);
+      
+      const matchupsResponse = await axios.get(matchupsUrl);
+      console.log(`✅ Matchups Status: ${matchupsResponse.status}`);
+      console.log(`📊 Matchups Count: ${matchupsResponse.data.length}`);
+      
+      if (matchupsResponse.data.length > 0) {
+        const sampleMatchup = matchupsResponse.data[0];
+        console.log(`📊 Sample matchup starters: ${sampleMatchup.starters?.length || 0}`);
+        console.log(`📊 Sample matchup points: ${sampleMatchup.starters_points?.length || 0}`);
+        console.log(`🎯 Sample starter/point pairs:`, sampleMatchup.starters?.slice(0, 3).map((id: string, i: number) => 
+          `${id}:${sampleMatchup.starters_points?.[i] || 0}`
+        ));
+      }
+      
+      // Test 3: Seasonal projections
+      const seasonalUrl = 'https://api.sleeper.com/projections/nfl/2025?season_type=regular&position=QB,RB,WR,TE';
+      console.log(`📡 Testing seasonal projections: ${seasonalUrl}`);
+      
+      const seasonalResponse = await axios.get(seasonalUrl);
+      console.log(`✅ Seasonal Status: ${seasonalResponse.status}`);
+      console.log(`📊 Seasonal Projections Count: ${Object.keys(seasonalResponse.data).length}`);
+      
+      res.json({
+        success: true,
+        tests: {
+          league: {
+            url: leagueUrl,
+            status: leagueResponse.status,
+            name: leagueResponse.data.name,
+            season: leagueResponse.data.season
+          },
+          matchups: {
+            url: matchupsUrl,
+            status: matchupsResponse.status,
+            count: matchupsResponse.data.length,
+            sampleStarters: matchupsResponse.data[0]?.starters?.length || 0
+          },
+          seasonal: {
+            url: seasonalUrl,
+            status: seasonalResponse.status,
+            count: Object.keys(seasonalResponse.data).length
+          }
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Debug endpoint error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        details: error.response?.data || 'No response details'
+      });
+    }
+  });
+
   return httpServer;
 }
 
