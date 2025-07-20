@@ -34,7 +34,7 @@ export async function testNFLStatsDirect(req: Request, res: Response) {
     console.error('❌ NFL Stats test failed:', error);
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
       sourceType: 'error'
     });
   }
