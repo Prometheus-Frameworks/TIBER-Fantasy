@@ -30,12 +30,32 @@
     <button class="toggle" data-mode="redraft">Redraft</button>
 </div>
 
+<div class="toggle-section">
+    <h3>Position Filter:</h3>
+    <button class="toggle active" data-position="all">All</button>
+    <button class="toggle" data-position="QB">QB</button>
+    <button class="toggle" data-position="RB">RB</button>
+    <button class="toggle" data-position="WR">WR</button>
+    <button class="toggle" data-position="TE">TE</button>
+</div>
+
 <div id="player-list"></div>
 <div id="sources" class="sources"></div>
 
 <script>
-    function renderPlayers(mode = 'dynasty', leagueFormat = 'ppr') {
-        const url = `/api/rankings?mode=${mode}&league_format=${leagueFormat}`;
+    let currentSettings = {
+        mode: 'dynasty',
+        leagueFormat: 'ppr',
+        position: 'all'
+    };
+
+    function renderPlayers(mode = 'dynasty', leagueFormat = 'ppr', position = 'all') {
+        currentSettings = { mode, leagueFormat, position };
+        
+        let url = `/api/rankings?mode=${mode}&league_format=${leagueFormat}`;
+        if (position !== 'all') {
+            url += `&position=${position}`;
+        }
         console.log('Fetching rankings from:', url);
         
         fetch(url)
@@ -115,7 +135,8 @@
             btn.classList.add('active');
             const league = btn.getAttribute('data-league');
             const currentMode = document.querySelector('.toggle.active[data-mode]').getAttribute('data-mode');
-            renderPlayers(currentMode, league);
+            const currentPosition = document.querySelector('.toggle.active[data-position]').getAttribute('data-position');
+            renderPlayers(currentMode, league, currentPosition);
         });
     });
 
@@ -126,7 +147,20 @@
             btn.classList.add('active');
             const mode = btn.getAttribute('data-mode');
             const currentLeague = document.querySelector('#league-toggles .toggle.active').getAttribute('data-league');
-            renderPlayers(mode, currentLeague);
+            const currentPosition = document.querySelector('.toggle.active[data-position]').getAttribute('data-position');
+            renderPlayers(mode, currentLeague, currentPosition);
+        });
+    });
+
+    // Position filter toggle listener
+    document.querySelectorAll('.toggle[data-position]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.toggle[data-position]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const position = btn.getAttribute('data-position');
+            const currentMode = document.querySelector('.toggle.active[data-mode]').getAttribute('data-mode');
+            const currentLeague = document.querySelector('#league-toggles .toggle.active').getAttribute('data-league');
+            renderPlayers(currentMode, currentLeague, position);
         });
     });
 

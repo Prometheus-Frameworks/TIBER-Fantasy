@@ -25,6 +25,8 @@ import { fantasyProService } from './services/fantasyProService';
 import { rbDraftCapitalService } from './rbDraftCapitalContext';
 import cron from 'node-cron';
 import { registerSleeperTestRoutes } from './api/sleeper-test';
+import { registerProjectionsAnalysisRoutes } from './api/projections-analysis';
+import { registerWeeklyProjectionsTestRoutes } from './api/weekly-projections-test';
 
 // League format adjustments removed with rankings system
 
@@ -42,6 +44,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register Sleeper test routes
   registerSleeperTestRoutes(app);
+  
+  // Register projections analysis routes
+  registerProjectionsAnalysisRoutes(app);
+  
+  // Register weekly projections test routes
+  registerWeeklyProjectionsTestRoutes(app);
   
   // Advanced Rankings API endpoint with Dynasty/Redraft modes
   app.get('/api/rankings', async (req, res) => {

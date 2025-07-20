@@ -217,13 +217,16 @@ Based on user feedback, expanding to include:
 
 ## Sleeper API Integration Complete (July 20, 2025)
 - **Full API Integration**: Deployed `sleeperProjectionsService.ts` with axios dependency and comprehensive caching
+- **SOURCE URL EXPOSED**: `https://api.sleeper.app/v1/projections/nfl/2024/regular/11` confirmed as working endpoint (8,565 players)
+- **PROJECTIONS ANALYSIS**: Built `/api/projections/compare` endpoint revealing weekly projections vs empty base projections
 - **Synthetic Fallback System**: Auto-generates 15 top fantasy players when Sleeper API returns empty results
 - **VORP Calculator Integration**: Complete integration with `vorp_calculator.ts` for dynasty age adjustments
 - **Multi-Format Support**: Standard/Half-PPR/PPR scoring with superflex and position filtering
+- **Position Filters**: Added QB/RB/WR/TE toggle buttons to rankings frontend with working API support
 - **Test Infrastructure**: Working `/api/sleeper/test` and `/api/vorp/test` endpoints for validation
 - **Tier Generation**: 7-tier system with proper tier breaks and player classifications
 - **Cache Management**: 1-hour TTL with manual cache clearing for fresh data
-- **API Stability**: Main `/api/rankings` endpoint operational with comprehensive error handling
+- **API Stability**: Main `/api/rankings` endpoint operational with comprehensive error handling and position filtering
 
 ## Foundation Stabilization (July 20, 2025)
 - **NORMALIZATION SCALING FIX**: Implemented proper 99-point VORP scale with elite players hitting 90+ (Ja'Marr Chase: 98, Bijan Robinson: 98)

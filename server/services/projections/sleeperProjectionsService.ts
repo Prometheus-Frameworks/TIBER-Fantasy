@@ -38,7 +38,19 @@ export interface LeagueSettings {
 }
 
 /**
- * Fetch projections from Sleeper API with native PPR support
+ * Source API URLs for projection comparison and verification
+ */
+export const SLEEPER_API_SOURCES = {
+  BASE_PROJECTIONS: 'https://api.sleeper.com/projections/nfl/2024?season_type=regular&position=QB,RB,WR,TE',
+  WEEKLY_PROJECTIONS: 'https://api.sleeper.app/v1/projections/nfl/2024/regular/{{week}}',
+  WORKING_PROJECTIONS: 'https://api.sleeper.app/v1/projections/nfl/2024/regular/11', // Live data source
+  LEAGUE_MATCHUPS: 'https://api.sleeper.app/v1/league/{{league_id}}/matchups/{{week}}',
+  PLAYER_DATA: 'https://api.sleeper.app/v1/players/nfl',
+  LEAGUE_SETTINGS: 'https://api.sleeper.app/v1/league/{{league_id}}'
+};
+
+/**
+ * Fetch projections from Sleeper API with source URL tracking
  */
 export async function fetchSleeperProjections(skipCache = false): Promise<PlayerProjection[]> {
   if (!skipCache && cache.projections && cache.players && Date.now() - cache.lastFetch < CACHE_TTL) {
@@ -52,16 +64,22 @@ export async function fetchSleeperProjections(skipCache = false): Promise<Player
   try {
     console.log('🔄 Fetching projections from Sleeper API...');
     
-    // Try multiple projection endpoints
+    // Try multiple projection endpoints in priority order
     let projectionsData = {};
     let playersData = {};
+    let sourceUsed = '';
     
     try {
-      // Try 2024 season projections first
-      const projResponse = await axios.get('https://api.sleeper.com/projections/nfl/2024?season_type=regular&position=QB,RB,WR,TE', {
+      // Try weekly projections first (analysis shows this has 8,565 players)
+      const weeklyUrl = SLEEPER_API_SOURCES.WORKING_PROJECTIONS;
+      console.log(`📡 Primary source URL: ${weeklyUrl}`);
+      const projResponse = await axios.get(weeklyUrl, {
         timeout: 10000
       });
       projectionsData = projResponse.data || {};
+      sourceUsed = weeklyUrl;
+      console.log(`📊 Raw projections response structure:`, Array.isArray(projectionsData) ? `Array[${projectionsData.length}]` : `Object{${Object.keys(projectionsData).length}}`);
+      console.log(`📊 Sample raw data:`, JSON.stringify(Array.isArray(projectionsData) ? projectionsData[0] : Object.entries(projectionsData)[0], null, 2));
       
       // Check if projections data is empty (Sleeper returns [] or {})
       const projCount = Array.isArray(projectionsData) 
@@ -69,17 +87,31 @@ export async function fetchSleeperProjections(skipCache = false): Promise<Player
         : Object.keys(projectionsData).length;
         
       if (projCount === 0) {
-        console.log('📡 Sleeper returned empty projections, generating synthetic data...');
-        projectionsData = generateSyntheticProjections();
+        console.log('📡 Weekly projections empty, trying base projections...');
+        // Fallback to base projections
+        const baseUrl = SLEEPER_API_SOURCES.BASE_PROJECTIONS;
+        console.log(`📡 Fallback source URL: ${baseUrl}`);
+        const baseResponse = await axios.get(baseUrl, { timeout: 10000 });
+        projectionsData = baseResponse.data || {};
+        sourceUsed = baseUrl;
+        
+        if (Object.keys(projectionsData).length === 0) {
+          console.log('📡 All Sleeper endpoints empty, generating synthetic data...');
+          projectionsData = generateSyntheticProjections();
+          sourceUsed = 'synthetic_fallback';
+        }
       }
     } catch (projError) {
-      console.log('📡 2024 projections API failed, generating synthetic data...');
+      console.log('📡 All projection APIs failed, generating synthetic data...');
       projectionsData = generateSyntheticProjections();
+      sourceUsed = 'synthetic_fallback';
     }
     
     // Fetch player metadata
     try {
-      const playersResponse = await axios.get('https://api.sleeper.app/v1/players/nfl', {
+      const playerUrl = SLEEPER_API_SOURCES.PLAYER_DATA;
+      console.log(`📡 Player data source: ${playerUrl}`);
+      const playersResponse = await axios.get(playerUrl, {
         timeout: 15000
       });
       playersData = playersResponse.data || {};
@@ -100,8 +132,18 @@ export async function fetchSleeperProjections(skipCache = false): Promise<Player
     cache.lastFetch = Date.now();
 
     console.log(`✅ Sleeper API integration complete: ${Object.keys(projectionsData).length} projections, ${Object.keys(playersData).length} players`);
+    console.log(`📡 Final source used: ${sourceUsed}`);
     
-    return mapProjectionsData(projectionsData, playersData);
+    const mappedData = mapProjectionsData(projectionsData, playersData);
+    
+    // Store the successful source for future use
+    if (sourceUsed !== 'synthetic_fallback' && Object.keys(projectionsData).length > 1000) {
+      console.log(`✅ Working projection source identified: ${sourceUsed}`);
+      // Update the working projections constant for future calls
+      SLEEPER_API_SOURCES.WORKING_PROJECTIONS = sourceUsed;
+    }
+    
+    return mappedData;
 
   } catch (error: any) {
     console.error('❌ Sleeper API fetch failed:', error.response?.status || error.message);
@@ -122,24 +164,34 @@ export async function fetchSleeperProjections(skipCache = false): Promise<Player
 function mapProjectionsData(projectionsData: Record<string, any>, playersData: Record<string, any>): PlayerProjection[] {
   const aggregated: PlayerProjection[] = [];
 
+  // Handle weekly projections data structure (key-value pairs without nested stats)
   for (const playerId in projectionsData) {
     const proj = projectionsData[playerId];
     const player = playersData[playerId];
     
-    if (player && proj && proj.stats && ['QB', 'RB', 'WR', 'TE'].includes(player.position)) {
+    // Remove excessive debug logging for cleaner output
+    
+    if (player && proj && ['QB', 'RB', 'WR', 'TE'].includes(player.position)) {
       const playerName = player.full_name || `${player.first_name || ''} ${player.last_name || ''}`.trim();
       
       if (playerName && playerName !== ' ') {
-        aggregated.push({
-          player_name: playerName,
-          position: player.position,
-          team: player.team || 'FA',
-          projected_fpts: proj.stats.pts_std || 0, // Default to standard
-          receptions: proj.stats.rec || 0,
-          birthdate: player.birth_date,
-          player_id: playerId,
-          stats: proj.stats
-        });
+        // Handle both old format (proj.stats.pts_std) and new format (proj.pts_std)
+        const stats = proj.stats || proj;
+        const projectedPts = stats.pts_ppr || stats.pts_std || stats.pts_half_ppr || 0;
+        
+        // Include player if they have projections OR if it's a fallback with ADP data
+        if (projectedPts > 0 || (stats.adp_dd_ppr && stats.adp_dd_ppr < 500)) { // ADP under 500 = fantasy relevant
+          aggregated.push({
+            player_name: playerName,
+            position: player.position,
+            team: player.team || 'FA',
+            projected_fpts: projectedPts || estimateProjectionsFromADP(stats.adp_dd_ppr, player.position),
+            receptions: stats.rec || 0,
+            birthdate: player.birth_date,
+            player_id: playerId,
+            stats: stats
+          });
+        }
       }
     }
   }
@@ -182,8 +234,35 @@ export function getCacheStatus() {
     lastFetch: cache.lastFetch,
     age: cache.lastFetch ? Date.now() - cache.lastFetch : 0,
     ttl: CACHE_TTL,
-    expires: cache.lastFetch + CACHE_TTL
+    expires: cache.lastFetch + CACHE_TTL,
+    sources: SLEEPER_API_SOURCES
   };
+}
+
+/**
+ * Estimate fantasy projections from ADP data
+ */
+function estimateProjectionsFromADP(adp: number, position: string): number {
+  if (!adp || adp > 300) return 0;
+  
+  // Position-specific point estimates based on ADP tiers
+  const basePoints: Record<string, Record<string, number>> = {
+    QB: { 1: 320, 25: 280, 50: 240, 100: 200, 150: 160, 300: 120 },
+    RB: { 1: 280, 25: 220, 50: 180, 100: 140, 150: 100, 300: 60 },
+    WR: { 1: 260, 25: 200, 50: 160, 100: 120, 150: 80, 300: 40 },
+    TE: { 1: 200, 25: 140, 50: 100, 100: 70, 150: 50, 300: 30 }
+  };
+  
+  const posPoints = basePoints[position] || basePoints.WR;
+  
+  // Find appropriate tier
+  for (const [tier, points] of Object.entries(posPoints)) {
+    if (adp <= parseInt(tier)) {
+      return points;
+    }
+  }
+  
+  return 30; // Minimum for very late picks
 }
 
 /**
