@@ -11,6 +11,11 @@ interface PlayerProjection {
   projected_fpts: number;
   receptions?: number;
   birthdate?: string;
+  // Advanced metrics for multipliers
+  yprr?: number; // Yards per route run
+  first_down_rr?: number; // 1D/RR
+  cpoe?: number; // Completion % over expected
+  oasis_score?: number; // OASIS team environment score
 }
 
 interface LeagueSettings {
@@ -19,6 +24,11 @@ interface LeagueSettings {
   starters: { QB: number; RB: number; WR: number; TE: number; FLEX: number };
   is_superflex: boolean;
   is_te_premium: boolean;
+  // Advanced multiplier weights
+  oasis_weight?: number;
+  yprr_weight?: number;
+  first_down_weight?: number;
+  cpoe_weight?: number;
 }
 
 // In-memory cache
