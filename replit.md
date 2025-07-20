@@ -5,13 +5,14 @@
 On The Clock is a clean, open-source fantasy football website that serves as a foundation for community-driven tools. The platform has been reset to a minimal state with only essential player data preserved for future development.
 
 ## 🔥 Current State
-- **DIRECT VORP RANKING ENGINE ACTIVE**: Pure VORP calculation system using projected_fpts - replacement_level
-- **Sleeper API Integration**: 2025 seasonal projections with sample data fallback for pre-season testing
-- **Replacement Level Thresholds**: QB: 225pts, RB: 200pts, WR: 200pts, TE: 150pts
-- **Direct Calculation Formula**: VORP = projected_fpts - replacement_level (no complex conversions)
-- **Clean Implementation**: Removed all historical ranking conversions and complex multi-tier systems
-- **Multi-Format Support**: PPR/Half-PPR/Standard scoring with direct field mapping
-- **Server Recovery Complete**: Fixed all syntax errors and corrupted code, server fully operational
+- **3-TIER FALLBACK SYSTEM DEPLOYED**: 2025 Projections → League Matchups → Static Simulated JSON
+- **Direct VORP Calculation**: Pure projected_fpts - replacement_level formula active
+- **Smart Fallback Detection**: Properly detects empty 2025 projections (empty objects) and triggers hierarchy
+- **Static Sample Integration**: Your exact 20-player JSON sample with Josh Allen (135 VORP), Mahomes (125 VORP) 
+- **Replacement Thresholds**: QB: 225pts, RB: 200pts, WR: 200pts, TE: 150pts
+- **Position Filtering**: Working (QB filter shows 2 QBs, WR shows 10 WRs, etc.)
+- **Clean Array Output**: No errors, empties, or 500s - stable UI rendering achieved
+- **Comprehensive Logging**: All skips, fallbacks, and data sources logged for debugging
 
 ## 🧱 Stack
 - TypeScript / Node.js
