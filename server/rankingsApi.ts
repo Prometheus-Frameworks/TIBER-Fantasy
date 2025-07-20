@@ -901,7 +901,7 @@ export function registerRankingRoutes(app: any) {
   app.get('/api/rankings/consensus', getConsensusRankings);
   app.get('/api/rankings/individual/:userId', getIndividualRankings);
   app.get('/api/rankings/stats', getRankingStats);
-  app.get('/api/rankings/tier-bubbles', getTierBubbles);
+  // app.get('/api/rankings/tier-bubbles', getTierBubbles); // Commented out - overridden in routes.ts
 }
 
 // =============================================================================
