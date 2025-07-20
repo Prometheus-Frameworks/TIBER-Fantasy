@@ -253,6 +253,9 @@ Based on user feedback, expanding to include:
 
 **Documentation**: Complete system documentation available in `docs/RANKINGS_BACKEND_README.md`
 
+## Static Data Files
+- **players.json**: Contains 20 core fantasy football players (QB, RB, WR, TE) with player names, positions, and team affiliations for use in rankings and tier bubble generation
+
 ## Changelog
 
 ```
