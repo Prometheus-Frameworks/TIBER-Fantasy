@@ -9,41 +9,81 @@
         .toggle { padding: 10px 20px; margin: 5px; cursor: pointer; border: 1px solid #ddd; }
         .active { background: #0079f2; color: white; }
         .player-card { background: #f0f8ff; padding: 10px; border: 1px solid #ddd; margin: 5px 0; border-radius: 4px; }
+        .toggle-section { margin: 15px 0; }
+        .toggle-section h3 { margin: 5px 0; font-size: 16px; }
+        .sources { margin-top: 30px; font-size: 12px; color: #666; }
     </style>
 </head>
 <body>
 
 <h1>Rankings</h1>
 
-<div>
-    <button class="toggle active" data-format="dynasty">Dynasty</button>
-    <button class="toggle" data-format="redraft">Redraft</button>
+<div class="toggle-section">
+    <h3>League Format:</h3>
+    <button class="format-toggle active" data-format="ppr">PPR</button>
+    <button class="format-toggle" data-format="half-ppr">Half PPR</button>
+    <button class="format-toggle" data-format="standard">Standard</button>
+</div>
+
+<div class="toggle-section">
+    <h3>League Type:</h3>
+    <button class="type-toggle active" data-type="dynasty">Dynasty</button>
+    <button class="type-toggle" data-type="redraft">Redraft</button>
 </div>
 
 <div id="player-list"></div>
+<div id="sources" class="sources"></div>
 
 <script>
-    function renderPlayers(format = 'dynasty') {
-        fetch(`/api/rankings?format=${format}`)
+    let currentFormat = 'ppr';
+    let currentType = 'dynasty';
+
+    function renderPlayers() {
+        const url = `/api/rankings?type=${currentType}&format=${currentFormat}`;
+        fetch(url)
             .then(response => response.json())
-            .then(players => {
+            .then(data => {
                 const container = document.getElementById('player-list');
+                const sourcesContainer = document.getElementById('sources');
                 container.innerHTML = '';
+                sourcesContainer.innerHTML = '';
+                
+                const players = data.players || data;
                 players.forEach(player => {
                     const div = document.createElement('div');
                     div.className = 'player-card';
-                    div.innerText = `${player.player_name} (${player.position} - ${player.team})`;
+                    const vorp = player.vorp_score || player.vorp || 'N/A';
+                    div.innerText = `${player.player_name} (${player.position} - ${player.team}) – VORP: ${vorp}`;
                     container.appendChild(div);
                 });
+
+                // Show sources if available
+                if (data.sources && data.sources.length > 0) {
+                    sourcesContainer.innerHTML = '<strong>Sources:</strong> ' + data.sources.join(', ');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching rankings:', error);
+                const container = document.getElementById('player-list');
+                container.innerHTML = '<div class="player-card">Error loading rankings</div>';
             });
     }
 
-    document.querySelectorAll('.toggle').forEach(btn => {
+    document.querySelectorAll('.format-toggle').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.toggle').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.format-toggle').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            const format = btn.getAttribute('data-format');
-            renderPlayers(format);
+            currentFormat = btn.getAttribute('data-format');
+            renderPlayers();
+        });
+    });
+
+    document.querySelectorAll('.type-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.type-toggle').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentType = btn.getAttribute('data-type');
+            renderPlayers();
         });
     });
 
