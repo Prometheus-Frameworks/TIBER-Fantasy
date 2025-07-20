@@ -36,6 +36,7 @@ import { registerTest2024ProjectionsRoutes } from './api/test-2024-projections';
 import { testNFLStatsDirect } from './api/test-nfl-stats-direct';
 import { fetchGrokProjections } from './services/grokProjectionsService';
 import { cleanVorpRankings } from './clean-vorp-endpoint';
+import { getSleeperProjections } from './services/sleeperProjectionsService';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -152,16 +153,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 🔥 TIBER DUMMY DATA PATCH - EMERGENCY DIAGNOSTIC TEST
-  app.get('/api/rankings', (req: Request, res: Response) => {
-    const dummyPlayers = [
-      { "player_name": "Justin Jefferson", "position": "WR", "team": "MIN", "projected_fpts": 320 },
-      { "player_name": "Christian McCaffrey", "position": "RB", "team": "SF", "projected_fpts": 310 },
-      { "player_name": "Patrick Mahomes", "position": "QB", "team": "KC", "projected_fpts": 305 },
-      { "player_name": "Ja'Marr Chase", "position": "WR", "team": "CIN", "projected_fpts": 290 },
-      { "player_name": "Josh Allen", "position": "QB", "team": "BUF", "projected_fpts": 300 }
-    ];
-    res.json(dummyPlayers);
+  // 🎯 REAL SLEEPER API RANKINGS - 3-TIER FALLBACK SYSTEM
+  app.get('/api/rankings', async (req: Request, res: Response) => {
+    try {
+      console.log('🚀 Rankings endpoint hit - fetching projections...');
+      const projections = await getSleeperProjections();
+      
+      // Apply position filtering if requested
+      const position = req.query.position as string;
+      let filteredProjections = projections;
+      
+      if (position && position !== 'all') {
+        filteredProjections = projections.filter(p => p.position === position.toUpperCase());
+        console.log(`🔍 Position filter applied: ${position} (${filteredProjections.length} players)`);
+      }
+      
+      console.log(`✅ Rankings API: Returning ${filteredProjections.length} players`);
+      res.json(filteredProjections);
+      
+    } catch (error) {
+      console.error('❌ Rankings API error:', error instanceof Error ? error.message : 'Unknown error');
+      res.status(500).json({ error: 'Failed to fetch rankings' });
+    }
   });
   
   // Register other routes
