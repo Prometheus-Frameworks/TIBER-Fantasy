@@ -14,7 +14,8 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 - **Enhanced Fallback Sample**: 26 elite players across all positions with proper birthdates
 - **API Query Parameters**: ?mode=dynasty/redraft, ?position=QB/RB/WR/TE, ?debug=true, ?num_teams=10
 - **FLEX Integration**: Dynamic baseline calculation with RB(0.5), WR(0.4), TE(0.1) allocation
-- **VORP Formula**: (projected_fpts - baseline) * scarcity_weight with dynasty age adjustments
+- **VORP Formula**: (projected_fpts - baseline) * scarcity_weight * pos_scaling with dynasty age adjustments
+- **POSITIONAL SCALING**: QB (0.65x), RB (1.00x), WR (1.10x), TE (1.05x) for balanced tier clustering
 - **TIER SYSTEM**: Tier 1 (400+ VORP), Tier 2 (300+ VORP), Tier 3 (200+ VORP), Tier 4 (100+ VORP), Tier 5 (<100 VORP)
 - **MODULAR ENDPOINTS**: /api/rankings/rb, /api/rankings/rb/dynasty, /api/rankings/redraft, /api/rankings/dynasty
 

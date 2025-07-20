@@ -214,7 +214,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Calculate VORP with dynasty mode and enhanced parameters
       console.log(`📊 Calculating VORP with ${mode} mode...`);
-      const playersWithVORP = calculateVORP(players, numTeams, starters, mode);
+      const debugRaw = req.query.debug === 'true';
+      const playersWithVORP = calculateVORP(players, numTeams, starters, mode, debugRaw);
       
       // Add debug information if requested
       const debug = req.query.debug === 'true';
@@ -258,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Shared function for modular rankings logic (reusable)
-  async function getRankings(mode = 'redraft', position: string | null = null, numTeams = 12) {
+  async function getRankings(mode = 'redraft', position: string | null = null, numTeams = 12, debugRaw = false) {
     try {
       console.log(`🚀 getRankings - Mode: ${mode}, Position: ${position || 'ALL'}, Teams: ${numTeams}`);
 
@@ -313,7 +314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate VORP with enhanced parameters
       console.log(`📊 Calculating VORP with ${mode} mode...`);
       const starters = { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 };
-      const playersWithVORP = calculateVORP(players, numTeams, starters, mode);
+      const playersWithVORP = calculateVORP(players, numTeams, starters, mode, debugRaw);
 
       // Add tier information based on VORP values
       const playersWithTiers = playersWithVORP.map((player) => {
@@ -340,7 +341,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/rankings/redraft', async (req: Request, res: Response) => {
     try {
       const numTeams = parseInt(req.query.num_teams as string) || 12;
-      const players = await getRankings('redraft', null, numTeams);
+      const debugRaw = req.query.debug === 'true';
+      const players = await getRankings('redraft', null, numTeams, debugRaw);
       res.json(players);
     } catch (error) {
       console.error('❌ Redraft rankings error:', error);
@@ -351,7 +353,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/rankings/dynasty', async (req: Request, res: Response) => {
     try {
       const numTeams = parseInt(req.query.num_teams as string) || 12;
-      const players = await getRankings('dynasty', null, numTeams);
+      const debugRaw = req.query.debug === 'true';
+      const players = await getRankings('dynasty', null, numTeams, debugRaw);
       res.json(players);
     } catch (error) {
       console.error('❌ Dynasty rankings error:', error);
@@ -363,7 +366,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/rankings/qb', async (req: Request, res: Response) => {
     try {
       const numTeams = parseInt(req.query.num_teams as string) || 12;
-      const players = await getRankings('redraft', 'QB', numTeams);
+      const debugRaw = req.query.debug === 'true';
+      const players = await getRankings('redraft', 'QB', numTeams, debugRaw);
       res.json(players);
     } catch (error) {
       console.error('❌ QB rankings error:', error);
@@ -374,7 +378,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/rankings/rb', async (req: Request, res: Response) => {
     try {
       const numTeams = parseInt(req.query.num_teams as string) || 12;
-      const players = await getRankings('redraft', 'RB', numTeams);
+      const debugRaw = req.query.debug === 'true';
+      const players = await getRankings('redraft', 'RB', numTeams, debugRaw);
       res.json(players);
     } catch (error) {
       console.error('❌ RB rankings error:', error);
@@ -385,7 +390,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/rankings/wr', async (req: Request, res: Response) => {
     try {
       const numTeams = parseInt(req.query.num_teams as string) || 12;
-      const players = await getRankings('redraft', 'WR', numTeams);
+      const debugRaw = req.query.debug === 'true';
+      const players = await getRankings('redraft', 'WR', numTeams, debugRaw);
       res.json(players);
     } catch (error) {
       console.error('❌ WR rankings error:', error);
@@ -396,7 +402,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/rankings/te', async (req: Request, res: Response) => {
     try {
       const numTeams = parseInt(req.query.num_teams as string) || 12;
-      const players = await getRankings('redraft', 'TE', numTeams);
+      const debugRaw = req.query.debug === 'true';
+      const players = await getRankings('redraft', 'TE', numTeams, debugRaw);
       res.json(players);
     } catch (error) {
       console.error('❌ TE rankings error:', error);
@@ -410,6 +417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const position = req.params.position.toUpperCase();
       const mode = req.params.mode;
       const numTeams = parseInt(req.query.num_teams as string) || 12;
+      const debugRaw = req.query.debug === 'true';
 
       if (!['QB', 'RB', 'WR', 'TE'].includes(position)) {
         return res.status(400).json({ error: 'Invalid position. Use QB, RB, WR, or TE' });
@@ -419,7 +427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid mode. Use redraft or dynasty' });
       }
 
-      const players = await getRankings(mode, position, numTeams);
+      const players = await getRankings(mode, position, numTeams, debugRaw);
       res.json(players);
     } catch (error) {
       console.error('❌ Combo rankings error:', error);

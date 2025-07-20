@@ -24,7 +24,8 @@ export function calculateVORP(
   players: PlayerProjection[], 
   numTeams: number = 12, 
   starters: { QB: number; RB: number; WR: number; TE: number; FLEX: number } = { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 }, 
-  mode: string = 'redraft'
+  mode: string = 'redraft',
+  debugRaw: boolean = false
 ): PlayerProjection[] {
   const posGroups: Record<string, PlayerProjection[]> = {};
   players.forEach(p => {
@@ -84,10 +85,18 @@ export function calculateVORP(
     });
   }
 
-  // Calculate VORP with scarcity weighting
+  // Positional scaling multipliers for balanced VORP distribution
+  const posScaling: Record<string, number> = { QB: 0.65, RB: 1.00, WR: 1.10, TE: 1.05 };
+
+  // Calculate VORP with scarcity weighting and positional scaling
   players.forEach(p => {
     const rawVorp = p.projected_fpts - (baselines[p.position] || 0);
-    p.vorp = rawVorp * (weights[p.position] || 1);
+    p.vorp = rawVorp * (weights[p.position] || 1) * (posScaling[p.position] || 1);
+    
+    // Optional debug field for raw VORP comparison
+    if (debugRaw) {
+      (p as any).raw_vorp = rawVorp;
+    }
   });
 
   // Sort by VORP descending
