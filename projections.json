@@ -1,0 +1,22 @@
+[
+  {"player_name": "Ja'Marr Chase", "position": "WR", "team": "CIN", "projected_fpts": 220, "receptions": 100},
+  {"player_name": "Bijan Robinson", "position": "RB", "team": "ATL", "projected_fpts": 250, "receptions": 50},
+  {"player_name": "Justin Jefferson", "position": "WR", "team": "MIN", "projected_fpts": 210, "receptions": 95},
+  {"player_name": "Jahmyr Gibbs", "position": "RB", "team": "DET", "projected_fpts": 230, "receptions": 60},
+  {"player_name": "Malik Nabers", "position": "WR", "team": "NYG", "projected_fpts": 190, "receptions": 80},
+  {"player_name": "CeeDee Lamb", "position": "WR", "team": "DAL", "projected_fpts": 215, "receptions": 105},
+  {"player_name": "Puka Nacua", "position": "WR", "team": "LAR", "projected_fpts": 200, "receptions": 90},
+  {"player_name": "Amon-Ra St. Brown", "position": "WR", "team": "DET", "projected_fpts": 205, "receptions": 100},
+  {"player_name": "Ashton Jeanty", "position": "RB", "team": "LV", "projected_fpts": 220, "receptions": 40},
+  {"player_name": "Garrett Wilson", "position": "WR", "team": "NYJ", "projected_fpts": 185, "receptions": 85},
+  {"player_name": "Marvin Harrison Jr.", "position": "WR", "team": "ARI", "projected_fpts": 180, "receptions": 75},
+  {"player_name": "A.J. Brown", "position": "WR", "team": "PHI", "projected_fpts": 195, "receptions": 85},
+  {"player_name": "Saquon Barkley", "position": "RB", "team": "PHI", "projected_fpts": 240, "receptions": 55},
+  {"player_name": "Jonathan Taylor", "position": "RB", "team": "IND", "projected_fpts": 225, "receptions": 30},
+  {"player_name": "Breece Hall", "position": "RB", "team": "NYJ", "projected_fpts": 215, "receptions": 65},
+  {"player_name": "Nico Collins", "position": "WR", "team": "HOU", "projected_fpts": 170, "receptions": 70},
+  {"player_name": "De'Von Achane", "position": "RB", "team": "MIA", "projected_fpts": 200, "receptions": 45},
+  {"player_name": "Sam LaPorta", "position": "TE", "team": "DET", "projected_fpts": 150, "receptions": 80},
+  {"player_name": "Patrick Mahomes", "position": "QB", "team": "KC", "projected_fpts": 350, "receptions": 0},
+  {"player_name": "Josh Allen", "position": "QB", "team": "BUF", "projected_fpts": 360, "receptions": 0}
+]

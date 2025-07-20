@@ -38,7 +38,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register ADP routes
   registerADPRoutes(app);
   
-  // Rankings functionality removed
+  // Rankings API endpoint
+  app.get('/api/rankings', async (req, res) => {
+    try {
+      const { format = 'dynasty', league_format = 'standard' } = req.query;
+      
+      // Load projections with VORP calculation
+      const { calculateVORP } = await import('./vorp_calculator');
+      const vorpMap = await calculateVORP({
+        format: league_format as 'standard' | 'half-ppr' | 'ppr',
+        num_teams: 12,
+        starters: { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 },
+        is_superflex: format === 'dynasty', // Assume dynasty uses superflex
+        is_te_premium: false
+      });
+
+      // Load base projections
+      const fs = await import('fs');
+      const path = await import('path');
+      const projectionsPath = path.join(process.cwd(), 'projections.json');
+      const projectionsData = fs.readFileSync(projectionsPath, 'utf-8');
+      const projections = JSON.parse(projectionsData);
+
+      // Combine projections with VORP scores
+      const playersWithVORP = projections.map((player: any) => ({
+        playerName: player.player_name,
+        player_name: player.player_name,
+        position: player.position,
+        team: player.team,
+        projected_fpts: player.projected_fpts,
+        VORPScore: vorpMap[player.player_name] || 0,
+        vorp_score: vorpMap[player.player_name] || 0
+      }));
+
+      // Sort by VORP score descending
+      playersWithVORP.sort((a: any, b: any) => b.VORPScore - a.VORPScore);
+
+      res.json({
+        players: playersWithVORP,
+        sources: ['Projections seed data', 'VORP calculation engine'],
+        format,
+        league_format,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('Rankings API error:', error);
+      res.status(500).json({
+        error: 'Failed to load rankings',
+        message: error.message
+      });
+    }
+  });
+
+  // Trade evaluation endpoint
+  app.post('/api/trade-eval', async (req, res) => {
+    try {
+      const { teamA, teamB, settings } = req.body;
+
+      if (!teamA || !teamB || !Array.isArray(teamA) || !Array.isArray(teamB) || teamA.length === 0 || teamB.length === 0) {
+        return res.status(400).json({ error: 'Invalid request: Provide non-empty teamA and teamB as arrays of player names.' });
+      }
+
+      const { calculateVORP } = await import('./vorp_calculator');
+      const vorpMap = await calculateVORP(settings || {
+        format: 'ppr',
+        num_teams: 12,
+        starters: { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 },
+        is_superflex: false,
+        is_te_premium: false
+      });
+
+      function getTeamStats(players: string[]): { totalVorp: number, stdDev: number, vorps: number[] } {
+        const vorps = players.map(p => vorpMap[p] || 0);
+        const totalVorp = vorps.reduce((sum, v) => sum + v, 0);
+        const mean = totalVorp / (vorps.length || 1);
+        const variance = vorps.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / (vorps.length || 1);
+        const stdDev = Math.sqrt(variance);
+        return { totalVorp, stdDev, vorps };
+      }
+
+      const statsA = getTeamStats(teamA);
+      const statsB = getTeamStats(teamB);
+      const totalVorpCombined = statsA.totalVorp + statsB.totalVorp;
+      const vorpDiff = Math.abs(statsA.totalVorp - statsB.totalVorp);
+
+      let verdict = 'Unbalanced Trade';
+
+      if (vorpDiff < 0.10 * totalVorpCombined) {
+        verdict = 'Fair Trade';
+      }
+
+      const varianceGap = Math.abs(statsA.stdDev - statsB.stdDev);
+
+      if (varianceGap > 20) {
+        verdict += ' – Lopsided Risk Detected';
+      }
+
+      const response: any = {
+        teamA_total_vorp: statsA.totalVorp.toFixed(2),
+        teamA_std_dev: statsA.stdDev.toFixed(2),
+        teamB_total_vorp: statsB.totalVorp.toFixed(2),
+        teamB_std_dev: statsB.stdDev.toFixed(2),
+        verdict: verdict,
+      };
+
+      if (varianceGap > 20) {
+        response.note = "One side carries a higher variance risk (star-for-depth structure detected).";
+      }
+
+      res.json(response);
+    } catch (error: any) {
+      console.error('Trade evaluation error:', error);
+      res.status(500).json({
+        error: 'Failed to evaluate trade',
+        message: error.message
+      });
+    }
+  });
 
   // FantasyPros API Routes
   app.get('/api/fantasypros/players/:sport?', async (req, res) => {
