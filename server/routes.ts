@@ -31,8 +31,8 @@ import { registerSleeperPipelineTestRoutes } from './api/sleeper-pipeline-test';
 import { registerAdpConversionTestRoutes } from './api/test-adp-conversion';
 import { registerSleeperDataDebugRoutes } from './api/debug-sleeper-data';
 import { registerWeeklyProjectionsCheckRoutes } from './api/check-weekly-projections';
-import { registerSyntheticProjectionsRoutes } from './api/synthetic-projections';
-import { registerForceSyntheticTestRoutes } from './api/force-synthetic-test';
+import { registerRealDataValidationRoutes } from './api/test-real-data-validation';
+
 
 // League format adjustments removed with rankings system
 
@@ -69,11 +69,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register weekly projections check routes
   registerWeeklyProjectionsCheckRoutes(app);
   
-  // Register synthetic projections routes
-  registerSyntheticProjectionsRoutes(app);
+  // Register real data validation test routes
+  registerRealDataValidationRoutes(app);
   
-  // Register force synthetic test routes
-  registerForceSyntheticTestRoutes(app);
+
   
   // Rebuilt Rankings API endpoint with Sleeper as single source of truth
   app.get('/api/rankings', async (req, res) => {

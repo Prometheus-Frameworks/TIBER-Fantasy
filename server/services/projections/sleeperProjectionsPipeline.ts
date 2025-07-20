@@ -144,8 +144,8 @@ export class SleeperProjectionsPipeline {
         const playerName = player.full_name || `${player.first_name || ''} ${player.last_name || ''}`.trim();
         const projectedPts = this.getProjectedPoints(projection, format, sourceType);
         
-        // Only include players with meaningful projections
-        if (projectedPts > 0) {
+        // Include all players for validation step (validation happens later)
+        if (projectedPts >= 0) {
           mappedProjections.push({
             player_name: playerName,
             position: player.position,
@@ -161,10 +161,67 @@ export class SleeperProjectionsPipeline {
 
       console.log(`📊 Mapped ${mappedProjections.length} fantasy-relevant players`);
       
-      // Step 4: Deduplicate using Fuse.js
-      const deduplicatedProjections = this.deduplicatePlayers(mappedProjections);
+      // Step 4: Apply strict validation filters with logging
+      const excludedPlayers: Array<{name: string, projected_fpts: number, reason: string}> = [];
       
-      // Step 5: Sort by projected points (descending)
+      const validatedPlayers = mappedProjections.filter(player => {
+        // Validation 1: projected_fpts > 50
+        if (player.projected_fpts <= 50) {
+          excludedPlayers.push({
+            name: player.player_name,
+            projected_fpts: player.projected_fpts,
+            reason: 'projected_fpts <= 50'
+          });
+          return false;
+        }
+        
+        // Validation 2: Sanity cap at 450
+        if (player.projected_fpts > 450) {
+          excludedPlayers.push({
+            name: player.player_name,
+            projected_fpts: player.projected_fpts,
+            reason: 'projected_fpts > 450 (sanity cap)'
+          });
+          return false;
+        }
+        
+        // Validation 3: Must be QB, RB, WR, TE (already filtered above, but double-check)
+        if (!['QB', 'RB', 'WR', 'TE'].includes(player.position)) {
+          excludedPlayers.push({
+            name: player.player_name,
+            projected_fpts: player.projected_fpts,
+            reason: 'invalid position: ' + player.position
+          });
+          return false;
+        }
+        
+        // Validation 4: Must have valid NFL team (not FA, null, empty)
+        if (!player.team || player.team === 'FA' || player.team.length !== 3) {
+          excludedPlayers.push({
+            name: player.player_name,
+            projected_fpts: player.projected_fpts,
+            reason: 'no active NFL team: ' + player.team
+          });
+          return false;
+        }
+        
+        return true;
+      });
+      
+      // Log all excluded players for review
+      if (excludedPlayers.length > 0) {
+        console.log(`🔍 EXCLUDED PLAYERS REPORT (${excludedPlayers.length} total):`);
+        excludedPlayers.forEach(player => {
+          console.log(`   ❌ ${player.name}: ${player.projected_fpts} pts (${player.reason})`);
+        });
+      }
+      
+      console.log(`✅ Validation complete: ${validatedPlayers.length} players passed strict filters`);
+      
+      // Step 5: Deduplicate using Fuse.js
+      const deduplicatedProjections = this.deduplicatePlayers(validatedPlayers);
+      
+      // Step 6: Sort by projected points (descending)
       const sortedProjections = deduplicatedProjections.sort((a, b) => b.projected_fpts - a.projected_fpts);
       
       console.log(`✅ Pipeline complete: ${sortedProjections.length} final projections`);
@@ -189,7 +246,10 @@ export class SleeperProjectionsPipeline {
    * Clear cached data for fresh fetches
    */
   clearCache(): void {
-    sleeperSourceManager.clearCache();
+    // Clear source manager cache if method exists
+    if (sleeperSourceManager && typeof sleeperSourceManager.clearCache === 'function') {
+      sleeperSourceManager.clearCache();
+    }
     console.log('🧹 Sleeper projections pipeline cache cleared');
   }
 }

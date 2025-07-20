@@ -95,11 +95,9 @@ export class SleeperSourceManager {
       let projections = response.data || {};
       console.log(`📊 2025 seasonal projections: ${Object.keys(projections).length} players`);
       
-      // If empty, use synthetic projections as fallback
+      // No fallback - use real data only
       if (Object.keys(projections).length === 0) {
-        console.log('🔄 2025 empty, using synthetic projections fallback...');
-        projections = this.generateSyntheticProjections();
-        console.log(`✅ Generated synthetic projections for ${Object.keys(projections).length} players`);
+        console.log('⚠️ No seasonal projections available from Sleeper API - returning empty dataset');
       }
       
       this.cache.seasonalProjections = projections;
@@ -110,55 +108,7 @@ export class SleeperSourceManager {
     }
   }
 
-  /**
-   * Generate synthetic projections when API returns empty data
-   */
-  private generateSyntheticProjections(): Record<string, SleeperProjection> {
-    const projections: Record<string, SleeperProjection> = {};
-    
-    // Top fantasy players with realistic 2025 projections
-    const syntheticPlayers = [
-      // Elite QBs
-      { id: '4984', pts_ppr: 385, rec: 0 }, // Josh Allen
-      { id: '4881', pts_ppr: 375, rec: 0 }, // Lamar Jackson
-      { id: '11638', pts_ppr: 360, rec: 0 }, // Jayden Daniels
-      { id: '6886', pts_ppr: 350, rec: 0 }, // Jalen Hurts
-      { id: '4046', pts_ppr: 340, rec: 0 }, // Patrick Mahomes
-      
-      // Elite RBs
-      { id: '9509', pts_ppr: 285, rec: 55 }, // Bijan Robinson
-      { id: '8110', pts_ppr: 275, rec: 45 }, // Breece Hall
-      { id: '9885', pts_ppr: 270, rec: 50 }, // Jahmyr Gibbs
-      { id: '6151', pts_ppr: 260, rec: 35 }, // Jonathan Taylor
-      { id: '3198', pts_ppr: 255, rec: 40 }, // Saquon Barkley
-      
-      // Elite WRs  
-      { id: '7564', pts_ppr: 320, rec: 95 }, // Ja'Marr Chase
-      { id: '6797', pts_ppr: 310, rec: 90 }, // Justin Jefferson
-      { id: '6945', pts_ppr: 305, rec: 85 }, // CeeDee Lamb
-      { id: '1426', pts_ppr: 295, rec: 80 }, // Tyreek Hill
-      { id: '7943', pts_ppr: 285, rec: 85 }, // Amon-Ra St. Brown
-      
-      // Elite TEs
-      { id: '1046', pts_ppr: 245, rec: 75 }, // Travis Kelce
-      { id: '9226', pts_ppr: 220, rec: 70 }, // Sam LaPorta
-      { id: '4381', pts_ppr: 210, rec: 65 }, // Mark Andrews
-      { id: '3164', pts_ppr: 205, rec: 60 }, // George Kittle
-      { id: '8156', pts_ppr: 195, rec: 55 }  // Trey McBride
-    ];
-    
-    syntheticPlayers.forEach(player => {
-      projections[player.id] = {
-        pts_ppr: player.pts_ppr,
-        pts_half_ppr: player.pts_ppr * 0.92,
-        pts_std: player.pts_ppr * 0.85,
-        rec: player.rec
-      };
-    });
-    
-    console.log(`🎯 Generated synthetic projections for ${Object.keys(projections).length} top players`);
-    return projections;
-  }
+
 
   /**
    * Fetch league-specific projections from matchups

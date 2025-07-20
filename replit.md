@@ -5,11 +5,11 @@
 On The Clock is a clean, open-source fantasy football website that serves as a foundation for community-driven tools. The platform has been reset to a minimal state with only essential player data preserved for future development.
 
 ## 🔥 Current State
-- **Sleeper API Integration Complete**: Full projections service deployed with synthetic fallback
-- **VORP Calculator Operational**: Dynasty/redraft rankings with age-adjusted calculations  
-- **7-Tier System Active**: Comprehensive tier break analysis across all positions
-- **Multi-Format Support**: Standard/Half-PPR/PPR with superflex configurations
-- **Test Endpoints Live**: `/api/sleeper/test` and `/api/vorp/test` for validation
+- **REAL DATA ONLY SYSTEM**: Complete removal of synthetic projections - strict Sleeper API validation only
+- **Sleeper API Integration**: Uses 2025 seasonal projections with comprehensive validation filters
+- **Strict Validation Active**: projected_fpts > 50, NFL team only, position QB/RB/WR/TE, sanity cap at 450
+- **Comprehensive Logging**: All excluded players logged with name and projected_fpts for review
+- **Multi-Format Support**: Standard/Half-PPR/PPR with direct field mapping (pts_ppr, pts_half_ppr, pts_std)
 
 ## 🧱 Stack
 - TypeScript / Node.js
@@ -239,6 +239,7 @@ Based on user feedback, expanding to include:
 
 ```
 Changelog:
+- July 20, 2025. **REAL DATA ONLY SYSTEM DEPLOYED**: Complete removal of synthetic projections fallback - rankings now exclusively use real Sleeper API data with strict validation (projected_fpts > 50, NFL teams only, position filters, sanity cap at 450), comprehensive logging of excluded players, direct field mapping for PPR/Half-PPR/Standard formats, and empty result returns when 2025 API has no data
 - July 20, 2025. **COMPLETE RANKINGS SYSTEM REMOVAL & NEW HOMEPAGE**: Successfully removed all rankings infrastructure per user directive - deleted Rankings.tsx, rankingsApi.ts, consensusService.ts, tier bubble components, ranking API endpoints, consensus calculation system, and all ranking-related pages and routes. Replaced React application with static HTML homepage featuring four feature boxes (Rankings, OASIS, Player Profiles, Advanced Analytics) linking to placeholder module pages. Preserved players.json file with 20 fantasy players as only remaining data asset for future features.
 - July 20, 2025. **RANKINGS API IMPLEMENTATION**: Created new simplified rankings API endpoint (/api/rankings) with league format support (standard/half-ppr/ppr) and VORP calculation engine. Added trade evaluation endpoint (/api/trade-eval) for analyzing player trades using VORP metrics. Updated rankings.html with improved league format toggles and debugging capabilities.
 - July 19, 2025. **TIER BUBBLE ALGORITHM VALIDATION COMPLETE**: Confirmed tier bubble generation working correctly with test data showing proper groupings (Justin Jefferson + CeeDee Lamb in Tier 1, separated tiers for larger rank gaps), mathematical validation of rank_diff_threshold=1.5 and std_dev_threshold=5.0 parameters, and live API endpoint returning comprehensive tier analysis with consensus strength indicators
