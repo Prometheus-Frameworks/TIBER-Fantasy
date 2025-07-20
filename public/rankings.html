@@ -26,16 +26,16 @@
 
 <div class="toggle-section">
     <h3>League Type:</h3>
-    <button class="toggle active" data-format="dynasty">Dynasty</button>
-    <button class="toggle" data-format="redraft">Redraft</button>
+    <button class="toggle active" data-mode="dynasty">Dynasty</button>
+    <button class="toggle" data-mode="redraft">Redraft</button>
 </div>
 
 <div id="player-list"></div>
 <div id="sources" class="sources"></div>
 
 <script>
-    function renderPlayers(rankFormat = 'dynasty', leagueFormat = 'standard') {
-        const url = `/api/rankings?format=${rankFormat}&league_format=${leagueFormat}`;
+    function renderPlayers(mode = 'dynasty', leagueFormat = 'ppr') {
+        const url = `/api/rankings?mode=${mode}&league_format=${leagueFormat}`;
         console.log('Fetching rankings from:', url);
         
         fetch(url)
@@ -60,19 +60,46 @@
                     return;
                 }
                 
-                players.forEach(player => {
+                players.forEach((player, index) => {
                     const div = document.createElement('div');
                     div.className = 'player-card';
                     const vorp = player.VORPScore || player.vorp_score || player.vorp || 'N/A';
                     const playerName = player.playerName || player.player_name || 'Unknown';
-                    div.innerHTML = `<strong>${playerName}</strong> (${player.position} - ${player.team})<br>VORP: <span style="color: #007acc;">${vorp}</span>`;
+                    const age = player.age ? ` (Age: ${player.age})` : '';
+                    const tier = player.tier ? ` • Tier ${player.tier}` : '';
+                    const rank = index + 1;
+                    
+                    div.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>#${rank} ${playerName}</strong> (${player.position} - ${player.team})${age}
+                                <br>VORP: <span style="color: #007acc; font-weight: bold;">${typeof vorp === 'number' ? vorp.toFixed(2) : vorp}</span>${tier}
+                            </div>
+                            <div style="font-size: 12px; color: #666;">
+                                ${player.projected_fpts ? `${player.projected_fpts.toFixed(1)} pts` : ''}
+                            </div>
+                        </div>
+                    `;
                     container.appendChild(div);
                 });
 
-                // Show sources if available
-                if (data.sources && data.sources.length > 0) {
-                    sourcesContainer.innerHTML = '<strong>Sources:</strong> ' + data.sources.join(', ');
+                // Show metadata and sources
+                let metaInfo = '';
+                if (data.meta) {
+                    metaInfo += `<div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                        <strong>Mode:</strong> ${data.meta.mode.toUpperCase()} | 
+                        <strong>Format:</strong> ${data.meta.league_format.toUpperCase()} | 
+                        <strong>Players:</strong> ${data.meta.totalPlayers} | 
+                        <strong>Tiers:</strong> ${data.meta.tierCount}
+                        ${data.meta.is_superflex ? ' | <span style="color: #28a745;">SUPERFLEX</span>' : ''}
+                    </div>`;
                 }
+                
+                if (data.sources && data.sources.length > 0) {
+                    metaInfo += '<div style="font-size: 12px; color: #666;"><strong>Sources:</strong> ' + data.sources.join(', ') + '</div>';
+                }
+                
+                sourcesContainer.innerHTML = metaInfo;
             })
             .catch(error => {
                 console.error('Error fetching rankings:', error);
@@ -87,19 +114,19 @@
             document.querySelectorAll('#league-toggles .toggle').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             const league = btn.getAttribute('data-league');
-            const currentRankFormat = document.querySelector('.toggle.active[data-format]').getAttribute('data-format');
-            renderPlayers(currentRankFormat, league);
+            const currentMode = document.querySelector('.toggle.active[data-mode]').getAttribute('data-mode');
+            renderPlayers(currentMode, league);
         });
     });
 
     // Dynasty/Redraft toggle listener
-    document.querySelectorAll('.toggle[data-format]').forEach(btn => {
+    document.querySelectorAll('.toggle[data-mode]').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.toggle[data-format]').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.toggle[data-mode]').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            const format = btn.getAttribute('data-format');
+            const mode = btn.getAttribute('data-mode');
             const currentLeague = document.querySelector('#league-toggles .toggle.active').getAttribute('data-league');
-            renderPlayers(format, currentLeague);
+            renderPlayers(mode, currentLeague);
         });
     });
 

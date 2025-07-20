@@ -23,6 +23,7 @@ import { fantasyProsAPI } from './services/fantasyProsAPI';
 import { dataIngestionService } from './services/dataIngestionService';
 import { fantasyProService } from './services/fantasyProService';
 import { rbDraftCapitalService } from './rbDraftCapitalContext';
+import cron from 'node-cron';
 
 // League format adjustments removed with rankings system
 
@@ -38,83 +39,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register ADP routes
   registerADPRoutes(app);
   
-  // Rankings API endpoint
+  // Advanced Rankings API endpoint with Dynasty/Redraft modes
   app.get('/api/rankings', async (req, res) => {
     try {
-      const { format = 'dynasty', league_format = 'standard' } = req.query;
+      const { 
+        mode = 'redraft', 
+        format = 'ppr',
+        league_format = format, // Backward compatibility
+        position,
+        num_teams = '12'
+      } = req.query;
       
-      // Load projections with VORP calculation
-      const { calculateVORP } = await import('./vorp_calculator');
-      const vorpMap = await calculateVORP({
-        format: league_format as 'standard' | 'half-ppr' | 'ppr',
-        num_teams: 12,
+      console.log(`🎯 Rankings request: mode=${mode}, format=${league_format}, position=${position}`);
+      
+      // Advanced league settings
+      const leagueSettings = {
+        format: (league_format || format) as 'standard' | 'ppr' | 'half-ppr',
+        num_teams: parseInt(num_teams as string),
         starters: { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 },
-        is_superflex: format === 'dynasty', // Assume dynasty uses superflex
+        is_superflex: mode === 'dynasty', // Dynasty typically uses superflex
         is_te_premium: false
-      });
+      };
 
-      // Load base projections
-      const fs = await import('fs');
-      const path = await import('path');
-      const projectionsPath = path.join(process.cwd(), 'projections.json');
-      const projectionsData = fs.readFileSync(projectionsPath, 'utf-8');
-      const projections = JSON.parse(projectionsData);
+      const { calculateVORP } = await import('./advancedRankings');
+      const { vorpMap, tiers, players } = await calculateVORP(leagueSettings, mode as string);
 
-      // Combine projections with VORP scores
-      const playersWithVORP = projections.map((player: any) => ({
+      // Filter by position if specified
+      let filteredPlayers = players;
+      if (position && typeof position === 'string') {
+        filteredPlayers = players.filter(p => p.position === position.toUpperCase());
+      }
+
+      // Combine projections with VORP scores and sort
+      const playersWithVORP = filteredPlayers.map((player: any) => ({
         playerName: player.player_name,
         player_name: player.player_name,
         position: player.position,
         team: player.team,
         projected_fpts: player.projected_fpts,
         VORPScore: vorpMap[player.player_name] || 0,
-        vorp_score: vorpMap[player.player_name] || 0
+        vorp_score: vorpMap[player.player_name] || 0,
+        age: player.birthdate ? calculatePlayerAge(player.birthdate) : null,
+        birthdate: player.birthdate
+      })).sort((a: any, b: any) => b.VORPScore - a.VORPScore);
+
+      // Calculate tier assignments for filtered players
+      const playerTiers: { [key: string]: number } = {};
+      tiers.forEach(tier => {
+        tier.players.forEach((p: any) => {
+          playerTiers[p.player_name] = tier.tier;
+        });
+      });
+
+      // Add tier info to players
+      const playersWithTiers = playersWithVORP.map(p => ({
+        ...p,
+        tier: playerTiers[p.player_name] || null
       }));
 
-      // Sort by VORP score descending
-      playersWithVORP.sort((a: any, b: any) => b.VORPScore - a.VORPScore);
-
       res.json({
-        players: playersWithVORP,
-        sources: ['Projections seed data', 'VORP calculation engine'],
-        format,
-        league_format,
+        players: playersWithTiers,
+        tiers: tiers.map(t => ({
+          tier: t.tier,
+          playerCount: t.players.length,
+          avgVorp: t.avgVorp?.toFixed(2),
+          topPlayer: t.players[0]?.player_name,
+          positions: [...new Set(t.players.map((p: any) => p.position))]
+        })),
+        meta: {
+          mode,
+          league_format: league_format || format,
+          position: position || 'all',
+          num_teams: leagueSettings.num_teams,
+          is_superflex: leagueSettings.is_superflex,
+          totalPlayers: playersWithTiers.length,
+          tierCount: tiers.length
+        },
+        sources: ['Advanced projections aggregation', 'Age-adjusted VORP calculation', 'Tier break analysis'],
         timestamp: new Date().toISOString()
       });
     } catch (error: any) {
-      console.error('Rankings API error:', error);
+      console.error('❌ Advanced Rankings API error:', error);
       res.status(500).json({
-        error: 'Failed to load rankings',
+        error: 'Failed to load advanced rankings',
+        message: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+  });
+
+  // Clear cache endpoint for testing
+  app.post('/api/rankings/clear-cache', async (req, res) => {
+    try {
+      const { clearProjectionsCache } = await import('./advancedRankings');
+      clearProjectionsCache();
+      res.json({ 
+        success: true, 
+        message: 'Projections cache cleared successfully'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        error: 'Failed to clear cache',
         message: error.message
       });
     }
   });
 
-  // Trade evaluation endpoint
+  // Advanced Trade evaluation endpoint
   app.post('/api/trade-eval', async (req, res) => {
     try {
-      const { teamA, teamB, settings } = req.body;
+      const { teamA, teamB, settings, mode = 'redraft' } = req.body;
 
       if (!teamA || !teamB || !Array.isArray(teamA) || !Array.isArray(teamB) || teamA.length === 0 || teamB.length === 0) {
-        return res.status(400).json({ error: 'Invalid request: Provide non-empty teamA and teamB as arrays of player names.' });
+        return res.status(400).json({ 
+          error: 'Invalid request: Provide non-empty teamA and teamB as arrays of player names.' 
+        });
       }
 
-      const { calculateVORP } = await import('./vorp_calculator');
-      const vorpMap = await calculateVORP(settings || {
+      console.log(`⚖️ Trade evaluation: ${teamA.join(', ')} vs ${teamB.join(', ')} (${mode} mode)`);
+
+      const { calculateVORP } = await import('./advancedRankings');
+      const leagueSettings = settings || {
         format: 'ppr',
         num_teams: 12,
         starters: { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 },
-        is_superflex: false,
+        is_superflex: mode === 'dynasty',
         is_te_premium: false
-      });
+      };
 
-      function getTeamStats(players: string[]): { totalVorp: number, stdDev: number, vorps: number[] } {
-        const vorps = players.map(p => vorpMap[p] || 0);
+      const { vorpMap } = await calculateVORP(leagueSettings, mode);
+
+      function getTeamStats(players: string[]): { 
+        totalVorp: number; 
+        stdDev: number; 
+        vorps: number[]; 
+        playerDetails: Array<{name: string, vorp: number}> 
+      } {
+        const playerDetails = players.map(name => ({
+          name,
+          vorp: vorpMap[name] || 0
+        }));
+        
+        const vorps = playerDetails.map(p => p.vorp);
         const totalVorp = vorps.reduce((sum, v) => sum + v, 0);
         const mean = totalVorp / (vorps.length || 1);
         const variance = vorps.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / (vorps.length || 1);
         const stdDev = Math.sqrt(variance);
-        return { totalVorp, stdDev, vorps };
+        
+        return { totalVorp, stdDev, vorps, playerDetails };
       }
 
       const statsA = getTeamStats(teamA);
@@ -123,32 +195,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const vorpDiff = Math.abs(statsA.totalVorp - statsB.totalVorp);
 
       let verdict = 'Unbalanced Trade';
+      let fairnessScore = 0;
 
-      if (vorpDiff < 0.10 * totalVorpCombined) {
-        verdict = 'Fair Trade';
+      if (totalVorpCombined > 0) {
+        fairnessScore = 100 - (vorpDiff / totalVorpCombined * 100);
+        
+        if (vorpDiff < 0.05 * totalVorpCombined) {
+          verdict = 'Very Fair Trade';
+        } else if (vorpDiff < 0.10 * totalVorpCombined) {
+          verdict = 'Fair Trade';
+        } else if (vorpDiff < 0.20 * totalVorpCombined) {
+          verdict = 'Slightly Unbalanced';
+        } else {
+          verdict = 'Heavily Unbalanced';
+        }
       }
 
       const varianceGap = Math.abs(statsA.stdDev - statsB.stdDev);
-
-      if (varianceGap > 20) {
+      let riskAssessment = 'Balanced Risk';
+      
+      if (varianceGap > 15) {
+        riskAssessment = 'High Risk Differential - Star-for-Depth Structure';
         verdict += ' – Lopsided Risk Detected';
+      } else if (varianceGap > 8) {
+        riskAssessment = 'Moderate Risk Differential';
       }
 
-      const response: any = {
-        teamA_total_vorp: statsA.totalVorp.toFixed(2),
-        teamA_std_dev: statsA.stdDev.toFixed(2),
-        teamB_total_vorp: statsB.totalVorp.toFixed(2),
-        teamB_std_dev: statsB.stdDev.toFixed(2),
-        verdict: verdict,
+      const response = {
+        teamA: {
+          players: statsA.playerDetails,
+          total_vorp: parseFloat(statsA.totalVorp.toFixed(2)),
+          std_dev: parseFloat(statsA.stdDev.toFixed(2)),
+          player_count: teamA.length
+        },
+        teamB: {
+          players: statsB.playerDetails,
+          total_vorp: parseFloat(statsB.totalVorp.toFixed(2)),
+          std_dev: parseFloat(statsB.stdDev.toFixed(2)),
+          player_count: teamB.length
+        },
+        analysis: {
+          verdict,
+          fairness_score: parseFloat(fairnessScore.toFixed(1)),
+          vorp_difference: parseFloat(vorpDiff.toFixed(2)),
+          variance_gap: parseFloat(varianceGap.toFixed(2)),
+          risk_assessment: riskAssessment,
+          mode: mode,
+          winner: statsA.totalVorp > statsB.totalVorp ? 'Team A' : 
+                  statsB.totalVorp > statsA.totalVorp ? 'Team B' : 'Even'
+        },
+        recommendations: generateTradeRecommendations(statsA, statsB, mode)
       };
-
-      if (varianceGap > 20) {
-        response.note = "One side carries a higher variance risk (star-for-depth structure detected).";
-      }
 
       res.json(response);
     } catch (error: any) {
-      console.error('Trade evaluation error:', error);
+      console.error('❌ Trade evaluation error:', error);
       res.status(500).json({
         error: 'Failed to evaluate trade',
         message: error.message
@@ -2249,5 +2350,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Schedule weekly cache refresh
+  cron.schedule('0 0 * * 0', async () => {
+    console.log('🔄 Weekly projections cache refresh');
+    try {
+      const { clearProjectionsCache } = await import('./advancedRankings');
+      clearProjectionsCache();
+      console.log('✅ Cache cleared successfully');
+    } catch (error) {
+      console.error('❌ Cache refresh failed:', error);
+    }
+  });
+  
   return httpServer;
+}
+
+// Helper function to calculate player age
+function calculatePlayerAge(birthdateStr: string): number {
+  const birthdate = new Date(birthdateStr);
+  const today = new Date();
+  let age = today.getFullYear() - birthdate.getFullYear();
+  const m = today.getMonth() - birthdate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthdate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+// Helper function for trade recommendations
+function generateTradeRecommendations(statsA: any, statsB: any, mode: string): string[] {
+  const recommendations = [];
+  
+  if (statsA.totalVorp > statsB.totalVorp * 1.2) {
+    recommendations.push('Team A is getting significantly more value');
+  } else if (statsB.totalVorp > statsA.totalVorp * 1.2) {
+    recommendations.push('Team B is getting significantly more value');
+  } else {
+    recommendations.push('Trade value is relatively balanced');
+  }
+  
+  if (mode === 'dynasty') {
+    recommendations.push('Consider long-term age trends for dynasty value');
+  }
+  
+  const varianceGap = Math.abs(statsA.stdDev - statsB.stdDev);
+  if (varianceGap > 15) {
+    recommendations.push('High variance difference suggests star-for-depth trade structure');
+  }
+  
+  return recommendations;
 }
