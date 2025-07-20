@@ -49,11 +49,13 @@ export function calculateVORP(
     console.log(`📊 ${pos} baseline (${pos}${replacementIndex + 1}): ${baselines[pos].toFixed(1)} pts`);
   }
 
-  // Scarcity weighting
+  // Conservative scarcity weighting (capped at 1.3x max)
   const maxViable = Math.max(...Object.values(viableCounts));
   const weights: Record<string, number> = {};
   for (const pos in viableCounts) {
-    weights[pos] = 1 + 0.5 * (maxViable / Math.max(1, viableCounts[pos]) - 1);
+    const rawWeight = 1 + 0.3 * (maxViable / Math.max(1, viableCounts[pos]) - 1);
+    weights[pos] = Math.min(rawWeight, 1.3); // Cap at 1.3x multiplier
+    console.log(`⚖️ ${pos} weight: ${weights[pos].toFixed(2)} (${viableCounts[pos]} viable players)`);
   }
 
   // Dynasty age penalties (applied to fpts post-baseline, pre-weighting)

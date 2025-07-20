@@ -4,15 +4,15 @@
 
 On The Clock is a clean, open-source fantasy football website that serves as a foundation for community-driven tools. The platform has been reset to a minimal state with only essential player data preserved for future development.
 
-## 🔥 Current State
-- **3-TIER FALLBACK SYSTEM DEPLOYED**: 2025 Projections → League Matchups → Static Simulated JSON
-- **Direct VORP Calculation**: Pure projected_fpts - replacement_level formula active
-- **Smart Fallback Detection**: Properly detects empty 2025 projections (empty objects) and triggers hierarchy
-- **Static Sample Integration**: Your exact 20-player JSON sample with Josh Allen (135 VORP), Mahomes (125 VORP) 
-- **Replacement Thresholds**: QB: 225pts, RB: 200pts, WR: 200pts, TE: 150pts
-- **Position Filtering**: Working (QB filter shows 2 QBs, WR shows 10 WRs, etc.)
-- **Clean Array Output**: No errors, empties, or 500s - stable UI rendering achieved
-- **Comprehensive Logging**: All skips, fallbacks, and data sources logged for debugging
+## 🔥 Current State - ENHANCED VORP SYSTEM DEPLOYED
+- **ENHANCED VORP RANKINGS SYSTEM**: Dynasty mode, age penalties, positional filtering, FLEX allocation
+- **3-TIER FALLBACK OPERATIONAL**: 2025 Projections → League Matchups → Enhanced Sample (26 players)
+- **Dynasty Age Penalties**: RB >25 years (1%/year), WR >28 years (1%/year), QB/TE >30 years (0.5%/year)
+- **Conservative Scarcity Weighting**: Capped at 1.3x multiplier to prevent VORP inflation
+- **Enhanced Fallback Sample**: 26 elite players across all positions with proper birthdates
+- **API Query Parameters**: ?mode=dynasty/redraft, ?position=QB/RB/WR/TE, ?debug=true
+- **FLEX Integration**: Dynamic baseline calculation with RB(0.5), WR(0.4), TE(0.1) allocation
+- **VORP Formula**: (projected_fpts - baseline) * scarcity_weight with dynasty age adjustments
 
 ## 🧱 Stack
 - TypeScript / Node.js
@@ -242,6 +242,7 @@ Based on user feedback, expanding to include:
 
 ```
 Changelog:
+- July 20, 2025. **ENHANCED VORP SYSTEM DEPLOYED**: Comprehensive VORP ranking engine with dynasty mode, age penalties, FLEX allocation, and scarcity weighting. Features include: Dynasty age penalties (RB >25: 1%/year, WR >28: 1%/year, QB/TE >30: 0.5%/year), conservative scarcity weighting capped at 1.3x, enhanced 26-player fallback sample, API query parameters (?mode=dynasty/redraft, ?position=QB/RB/WR/TE, ?debug=true), FLEX integration with dynamic baselines, and normalized VORP calculations preventing artificial inflation
 - July 20, 2025. **VORP RANKING ENGINE WITH 3-TIER FALLBACK DEPLOYED**: Successfully integrated comprehensive VORP (Value Over Replacement Player) calculation system with 3-tier fallback hierarchy - 2025 projections → league matchups → simulated sample, dynamic baseline calculation (QB12, RB24, WR36, TE12 for 12-team leagues), authentic Sleeper API integration, position-specific replacement level thresholds, and real-time VORP sorting for true fantasy value rankings
 - July 20, 2025. **MULTI-TIER FALLBACK SYSTEM DEPLOYED**: Enhanced 3-tier fallback system deployed - Season projections (primary) → League matchups scan (weeks 1-18) → Active rosters with projections (final fallback), maintains strict validation pipeline throughout all tiers, comprehensive logging of source switching and fallback activation, handles edge cases where all traditional data sources may be unavailable, confirmed working with real 2025 Sleeper data
 - July 20, 2025. **ENHANCED REAL DATA SYSTEM WITH LEAGUE FALLBACK**: Enhanced real-data-only system with league matchups fallback functionality - when 2025 seasonal projections are empty, system automatically falls back to league data (League: 1197631162923614208, Week: 1), maintains strict validation pipeline (projected_fpts > 50, NFL teams only, position filters, sanity cap at 450), comprehensive logging including fallback activation, direct field mapping for all scoring formats, dynamic source type detection
