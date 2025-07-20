@@ -23,10 +23,7 @@ import TrendingPlayersPage from "@/pages/trending-players";
 import CompareLeaguePage from "@/pages/compare-league";
 import EnhancedPlayerProfile from "@/pages/enhanced-player-profile";
 import EnhancedDynasty from "@/pages/enhanced-dynasty";
-import EnhancedRankings from "@/pages/enhanced-rankings";
 import About from "@/pages/about";
-import EnhancedNFLRankings from "@/pages/enhanced-nfl-rankings";
-import PrometheusRankings from "@/pages/prometheus-rankings";
 import DataSourcesPage from "@/pages/data-sources";
 import CleanADP from "@/pages/CleanADP";
 import Oasis from "@/pages/Oasis";
@@ -60,7 +57,7 @@ import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
 import FantasyProTest from "@/pages/FantasyProTest";
 import HowYouCanContribute from "@/pages/how-you-can-contribute";
 import RBDraftCapitalContext from "@/pages/RBDraftCapitalContext";
-import Rankings from "@/pages/Rankings";
+// Rankings page removed
 
 function Router() {
   return (
@@ -75,8 +72,7 @@ function Router() {
       <Route path="/player-analysis" component={PlayerAnalysisPage} />
       <Route path="/trade-history/:id" component={TradeHistoryPage} />
       <Route path="/dynasty-values" component={DynastyValuesPage} />
-      <Route path="/rankings" component={Rankings} />
-      <Route path="/enhanced-nfl" component={EnhancedNFLRankings} />
+      {/* Rankings routes removed */}
       <Route path="/compare-league" component={CompareLeaguePage} />
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
       <Route path="/data-sources" component={DataSourcesPage} />

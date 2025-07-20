@@ -18,46 +18,13 @@ import { db } from "./db";
 import { dynastyTradeHistory, players as playersTable } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { z } from "zod";
-import { accuracyValidator } from './accuracyValidator';
+// Accuracy validator removed
 import { fantasyProsAPI } from './services/fantasyProsAPI';
 import { dataIngestionService } from './services/dataIngestionService';
 import { fantasyProService } from './services/fantasyProService';
 import { rbDraftCapitalService } from './rbDraftCapitalContext';
 
-/**
- * Apply league format adjustments to dynasty values
- * Superflex: QBs get premium (default values)
- * Single QB: QBs get penalty (-25-40 points)
- */
-function applyLeagueFormatAdjustments(players: any[], format: string): any[] {
-  return players.map((player: any) => {
-    if (player.position !== 'QB') {
-      return player; // No adjustment for non-QBs
-    }
-
-    let adjustment = 0;
-    const baseValue = player.dynastyValue || 0;
-
-    if (format === 'single-qb' || format === '1qb') {
-      // Single QB: Significant penalty for QBs
-      if (baseValue >= 85) {
-        adjustment = -25; // Josh Allen 94 → 69 (Strong tier)
-      } else if (baseValue >= 70) {
-        adjustment = -30; // Mid QBs → Depth tier
-      } else if (baseValue >= 50) {
-        adjustment = -35; // Low QBs → Bench tier
-      } else {
-        adjustment = -20; // Already low
-      }
-    }
-
-    return {
-      ...player,
-      dynastyValue: Math.max(0, Math.min(100, baseValue + adjustment)),
-      formatAdjustment: adjustment
-    };
-  });
-}
+// League format adjustments removed with rankings system
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static files from public directory
@@ -66,112 +33,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register ADP routes
   registerADPRoutes(app);
   
-  // Import and register rankings API routes
-  const { registerRankingRoutes } = await import('./rankingsApi');
-  registerRankingRoutes(app);
-  
-  // Override tier bubbles endpoint with sample data
-  app.get('/api/rankings/tier-bubbles', (req, res) => {
-    const format = req.query.format as string;
-    const dynastyType = req.query.dynastyType as string;
-    
-    let tierBubbles = [];
-    
-    if (format === 'redraft') {
-      tierBubbles = [
-        {
-          tier_number: 1,
-          avg_rank_range: { min: 1, max: 1 },
-          consensus_strength: 'tight' as const,
-          players: [{
-            player_id: '1',
-            player_name: 'Christian McCaffrey',
-            position: 'RB',
-            team: 'SF',
-            average_rank: 1.0,
-            standard_deviation: 0.2,
-            min_rank: 1,
-            max_rank: 1,
-            rank_count: 5
-          }]
-        }
-      ];
-    } else if (format === 'dynasty' && dynastyType === 'rebuilder') {
-      tierBubbles = [
-        {
-          tier_number: 1,
-          avg_rank_range: { min: 1, max: 1 },
-          consensus_strength: 'tight' as const,
-          players: [{
-            player_id: '2',
-            player_name: 'Malik Nabers',
-            position: 'WR',
-            team: 'NYG',
-            average_rank: 1.0,
-            standard_deviation: 0.3,
-            min_rank: 1,
-            max_rank: 2,
-            rank_count: 5
-          }]
-        }
-      ];
-    } else if (format === 'dynasty' && dynastyType === 'contender') {
-      tierBubbles = [
-        {
-          tier_number: 1,
-          avg_rank_range: { min: 1, max: 1 },
-          consensus_strength: 'tight' as const,
-          players: [{
-            player_id: '3',
-            player_name: 'Patrick Mahomes',
-            position: 'QB',
-            team: 'KC',
-            average_rank: 1.0,
-            standard_deviation: 0.1,
-            min_rank: 1,
-            max_rank: 1,
-            rank_count: 5
-          }]
-        }
-      ];
-    } else if (format === 'dynasty') {
-      tierBubbles = [
-        {
-          tier_number: 1,
-          avg_rank_range: { min: 1, max: 1 },
-          consensus_strength: 'tight' as const,
-          players: [{
-            player_id: '4',
-            player_name: "Ja'Marr Chase",
-            position: 'WR',
-            team: 'CIN',
-            average_rank: 1.0,
-            standard_deviation: 0.2,
-            min_rank: 1,
-            max_rank: 2,
-            rank_count: 5
-          }]
-        }
-      ];
-    }
-    
-    res.json({
-      success: true,
-      data: {
-        tier_bubbles: tierBubbles,
-        format: format,
-        dynasty_type: dynastyType,
-        query_metadata: {
-          position: req.query.position,
-          limit: req.query.limit
-        },
-        metadata: {
-          generated_at: new Date().toISOString(),
-          algorithm: "hardcoded_test_data_v1"
-        }
-      }
-    });
-  });
+  // Rankings functionality removed
 
   // FantasyPros API Routes
   app.get('/api/fantasypros/players/:sport?', async (req, res) => {
@@ -198,43 +60,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/fantasypros/rankings/:sport?', async (req, res) => {
-    try {
-      const sport = req.params.sport as any || 'nfl';
-      const useCache = req.query.cache !== 'false';
-      const params = {
-        position: req.query.position as string,
-        week: req.query.week as string,
-        scoring: req.query.scoring as any,
-        year: req.query.year as string
-      };
-      
-      // Remove undefined params
-      Object.keys(params).forEach(key => {
-        if (params[key as keyof typeof params] === undefined) {
-          delete params[key as keyof typeof params];
-        }
-      });
-      
-      const data = await fantasyProService.fetchRankings(sport, Object.keys(params).length ? params : undefined, useCache);
-      
-      res.json({
-        success: true,
-        data,
-        count: data.length,
-        params,
-        cached: useCache,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('FantasyPros rankings API error:', error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
+  // FantasyPros rankings removed
 
   app.get('/api/fantasypros/projections/:sport?', async (req, res) => {
     try {
@@ -282,10 +108,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const useCache = req.query.cache !== 'false';
       
       // Only allow specific endpoints for security
-      if (!['players', 'rankings', 'projections'].includes(endpoint)) {
+      if (!['players', 'projections'].includes(endpoint)) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid endpoint. Supported: players, rankings, projections'
+          error: 'Invalid endpoint. Supported: players, projections'
         });
       }
       
@@ -726,156 +552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced Rankings API - Core Dynasty System
-  app.get('/api/rankings/enhanced', async (req, res) => {
-    try {
-      const { limit = 50, format = 'superflex', position } = req.query;
-      
-      console.log('🔄 Generating enhanced rankings with fantasy platform integration...');
-      console.log(`🔄 Enhancing ${limit} players with fantasy platform data...`);
-      
-      // Import ranking enhancement service
-      const { rankingEnhancement } = await import('./rankingEnhancement');
-      
-      // Get all dynasty players from database
-      const { getAllDynastyPlayers } = await import('./expandedDynastyDatabase');
-      let players = getAllDynastyPlayers();
-      
-      // Sort by existing dynasty value for consistent top players
-      players.sort((a: any, b: any) => (b.dynastyValue || 0) - (a.dynastyValue || 0));
-      
-      // Then filter by position if specified  
-      if (position && typeof position === 'string') {
-        players = players.filter(p => p.position === position.toUpperCase());
-      }
-      
-      // Apply limit after sorting and filtering
-      players = players.slice(0, Number(limit));
-      
-      // Use all filtered players for enhancement
-      const playersToEnhance = players;
-      
-      // Enhance players with mapping data
-      let enhancedPlayers = await rankingEnhancement.enhancePlayerRankings(playersToEnhance);
-      
-      // Apply proprietary dynasty algorithm - OVERRIDE all database values
-      console.log('🔧 Applying dynasty scoring methodology (OVERRIDING database values)...');
-      const { dynastyScoringAlgorithm } = await import('./dynastyScoringAlgorithm');
-      
-      enhancedPlayers = enhancedPlayers.map(player => {
-        const dynastyScore = dynastyScoringAlgorithm.calculateDynastyScore(player);
-        console.log(`🔧 ${player.name}: Database=${player.dynastyValue} → Algorithm=${dynastyScore.totalScore}`);
-        return {
-          ...player,
-          dynastyValue: dynastyScore.totalScore,  // OVERRIDE database value
-          dynastyTier: dynastyScore.tier,
-          dynastyScoringResult: dynastyScore
-        };
-      });
-      
-      // Apply league format adjustments
-      const formatAdjustedPlayers = applyLeagueFormatAdjustments(enhancedPlayers, format as string);
-      
-      // Sort enhanced players by dynasty value (highest first) for true overall rankings
-      formatAdjustedPlayers.sort((a: any, b: any) => (b.dynastyValue || 0) - (a.dynastyValue || 0));
-      
-      // Get mapping statistics
-      const mappingStats = rankingEnhancement.getMappingStats(formatAdjustedPlayers);
-      
-      // Format response for frontend
-      const response = {
-        players: formatAdjustedPlayers.map(player => ({
-          id: player.id,
-          name: player.name,
-          position: player.position,
-          team: player.team,
-          age: player.age,
-          avgPoints: player.avgPoints,
-          dynastyValue: player.dynastyValue,
-          dynastyTier: player.dynastyTier,
-          // Enhanced data from mapping
-          sleeperId: player.sleeperId || null,
-          fantasyOwnership: player.fantasyOwnership || null,
-          enhancementStatus: player.sleeperId ? 'Enhanced' : 'Basic'
-        })),
-        mappingStats,
-        message: `Enhanced ${formatAdjustedPlayers.length} players with ${Math.round(mappingStats.mappingRate)}% platform integration`
-      };
-      
-      res.json(response);
-    } catch (error: any) {
-      console.error('❌ Enhanced rankings error:', error);
-      res.status(500).json({ 
-        message: 'Failed to generate enhanced rankings', 
-        error: error.message 
-      });
-    }
-  });
-
-  // NEW: Enhanced Dynasty Scoring Algorithm endpoint
-  app.get('/api/rankings/corrected', async (req, res) => {
-    try {
-      const { limit = 50, position } = req.query;
-      const { RankingEnhancementService } = await import('./rankingEnhancement');
-      const rankingEnhancement = new RankingEnhancementService();
-      const correctedRankings = await rankingEnhancement.getCorrectedRankings(Number(limit), position as string);
-      res.json(correctedRankings);
-    } catch (error) {
-      console.error('Error fetching corrected rankings:', error);
-      res.status(500).json({ error: 'Failed to fetch corrected rankings' });
-    }
-  });
-
-  // Rankings accuracy validation
-  app.get('/api/rankings/validate-accuracy', async (req, res) => {
-    try {
-      // Get current enhanced rankings
-      const { getAllDynastyPlayers } = await import('./expandedDynastyDatabase');
-      const { dynastyScoringAlgorithm } = await import('./dynastyScoringAlgorithm');
-      
-      let players = getAllDynastyPlayers();
-      
-      // Apply dynasty scoring algorithm to all players
-      const rankedPlayers = players.map(player => {
-        const dynastyScore = dynastyScoringAlgorithm.calculateDynastyScore(player);
-        return {
-          ...player,
-          dynastyValue: dynastyScore.totalScore,
-          dynastyTier: dynastyScore.tier
-        };
-      });
-      
-      // Sort by dynasty value
-      rankedPlayers.sort((a, b) => (b.dynastyValue || 0) - (a.dynastyValue || 0));
-      
-      // Validate rankings accuracy
-      const report = accuracyValidator.validateRankings(rankedPlayers);
-      
-      // Add top 15 players to response
-      const topPlayers = rankedPlayers.slice(0, 15).map((player, index) => ({
-        rank: index + 1,
-        name: player.name,
-        position: player.position,
-        dynastyValue: player.dynastyValue,
-        tier: player.dynastyTier,
-        algorithmFix: true // All players now use enhanced dynasty scoring methodology
-      }));
-      
-      res.json({
-        ...report,
-        targetAccuracy: 89,
-        accuracyStatus: report.overallAccuracy >= 89 ? 'TARGET_ACHIEVED' : 'NEEDS_IMPROVEMENT',
-        algorithmFixes: 17, // Number of fixes applied in dynasty scoring algorithm
-        topPlayers
-      });
-    } catch (error: any) {
-      console.error('❌ Accuracy validation error:', error);
-      res.status(500).json({ 
-        message: 'Failed to validate accuracy', 
-        error: error.message 
-      });
-    }
-  });
+  // All rankings endpoints removed
 
   // Player mapping generation
   app.get('/api/mapping/generate', async (req, res) => {
@@ -985,50 +662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dynasty Rankings Integration
-  app.get('/api/rankings/integrated', async (req, res) => {
-    try {
-      console.log('🔄 Generating integrated dynasty rankings...');
-      const { dynastyRankingsIntegration } = await import('./dynastyRankingsIntegration');
-      const rankings = dynastyRankingsIntegration.generateIntegratedRankings();
-      
-      res.json({
-        rankings,
-        totalPlayers: rankings.length,
-        lastUpdated: new Date().toISOString(),
-        methodology: 'Prometheus v2.0 Dynasty Algorithm - Production (40%), Opportunity (35%), Age (20%), Stability (15%)'
-      });
-    } catch (error: any) {
-      console.error('❌ Integrated rankings error:', error);
-      res.status(500).json({ 
-        message: 'Failed to generate integrated rankings', 
-        error: error.message 
-      });
-    }
-  });
-
-  app.get('/api/rankings/integrated/:position', async (req, res) => {
-    try {
-      const position = req.params.position.toUpperCase();
-      const { dynastyRankingsIntegration } = await import('./dynastyRankingsIntegration');
-      const allRankings = dynastyRankingsIntegration.generateIntegratedRankings();
-      const positionRankings = allRankings.filter(p => p.position === position);
-      
-      res.json({
-        rankings: positionRankings,
-        position,
-        count: positionRankings.length,
-        topTier: positionRankings.filter(p => ['Elite', 'Premium'].includes(p.tier)),
-        methodology: 'Position-specific dynasty evaluation with age and opportunity weighting'
-      });
-    } catch (error: any) {
-      console.error('❌ Position rankings error:', error);
-      res.status(500).json({ 
-        message: 'Failed to generate position rankings', 
-        error: error.message 
-      });
-    }
-  });
+  // Dynasty rankings integration removed
 
   // Legacy ADP endpoints using Sleeper API
   app.get('/api/adp/sleeper/:format?', async (req, res) => {

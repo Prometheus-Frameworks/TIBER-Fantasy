@@ -1,17 +1,14 @@
-# PROMETHEUS
+# ON THE CLOCK
 
-**An open-source dynasty fantasy football analytics platform powered by modular AI systems.**
+**A community-driven fantasy football platform focused on tools and collaboration.**
 
-Prometheus is built to challenge the gatekeeping of fantasy football knowledge. It's not a content site — it's an *engine.* It uses advanced context scoring, spike week interpretation, regression logic, and player environment modules to give users true insight.
+On The Clock is a clean, open-source fantasy football website that serves as a foundation for community-driven tools. The platform has been reset to a minimal state with only essential player data preserved for future development.
 
-Everything is transparent. Everything is free. This is modern fire — brought back to the people.
-
-## 🔥 Core Features
-- Full-stack evaluation system for QB, RB, WR, TE
-- Batch processing with context-aware scoring
-- Integrated modules: Spike Week Logic, OASIS Context Layer, Promethean Tiering
-- Redraft & Dynasty flexibility
-- Built-in philosophical framework (Applied Prometheanism)
+## 🔥 Current State
+- Clean landing page with basic navigation
+- Static player data (players.json) with 20 fantasy players
+- Foundation ready for future feature development
+- All rankings functionality removed per user directive
 
 ## 🧱 Stack
 - TypeScript / Node.js
@@ -21,8 +18,8 @@ Everything is transparent. Everything is free. This is modern fire — brought b
 - Replit AI Agents
 - OpenAI + Grok integration
 
-## 📌 Mission
-To quietly dismantle the elitism in fantasy football and rebuild it through code, transparency, and aligned intelligence.
+## 📌 Current Focus
+Clean slate platform for community-driven fantasy football tools and collaboration.
 
 ## System Architecture
 
@@ -214,53 +211,20 @@ Based on user feedback, expanding to include:
 
 **Required Action**: User must provide valid FantasyPros API key to proceed with data fetching
 
-## Rankings Backend System
-
-**NEW FEATURE**: Complete rankings backend infrastructure for "On The Clock" website integration.
-
-**Core Components**:
-- **Database Schema**: PostgreSQL tables for users, players, individual rankings, and dynamic consensus views
-- **API Endpoints**: RESTful endpoints for submitting rankings, retrieving consensus, and getting statistics
-- **Dynamic Consensus Service**: Real-time consensus calculation using SQL views and aggregation queries
-- **Dynasty Format Support**: Separate consensus for 'rebuilder' vs 'contender' strategies
-
-**Key Features**:
-- Simple, transparent averaging algorithm (no complex weighting)
-- **Dynamic consensus calculation** - no static storage of consensus data
-- Comprehensive validation and error handling
-- Audit trail for all ranking submissions
-- Statistics endpoints for monitoring participation
-
-**API Endpoints**:
-- `POST /api/rankings/submit` - Submit personal rankings
-- `GET /api/rankings/consensus` - Get community consensus rankings (calculated dynamically)
-- `GET /api/rankings/individual/:userId` - Get user's personal rankings
-- `GET /api/rankings/stats` - Get ranking statistics and participation data
-
-**Format Support**:
-- **Redraft**: Standard season-long fantasy format
-- **Dynasty**: Multi-year keeper format with two consensus types:
-  - **Rebuilder**: Focus on youth and future potential
-  - **Contender**: Focus on immediate production
-
-**Architecture**: Dynamic consensus calculation eliminates static `consensus_rankings` table in favor of real-time SQL aggregation queries for maximum data integrity and transparency.
-
-**Rankings Builder API Support Layer**: Complete backend support for "On The Clock" Rankings Builder interface with FastAPI-style endpoints:
-- `GET /api/players/list` - Full player list for rankings construction
-- `POST /api/rankings/submit` - Submit personal rankings (supports both user_id/mode and userId/format patterns)
-- `GET /api/rankings/personal` - Load saved personal rankings for editing
-- `GET /api/rankings/consensus?template=true` - Consensus rankings as pre-fill template
-
-**Documentation**: Complete system documentation available in `docs/RANKINGS_BACKEND_README.md`
-
 ## Static Data Files
-- **players.json**: Contains 20 core fantasy football players (QB, RB, WR, TE) with player names, positions, and team affiliations for use in rankings and tier bubble generation
+- **players.json**: Contains 20 core fantasy football players (QB, RB, WR, TE) with player names, positions, and team affiliations preserved for future development
+
+## Recent Reset (July 20, 2025)
+- **COMPLETE RANKINGS REMOVAL**: All rankings functionality removed per user directive "Nuke all rankings"
+- **Preserved Assets**: players.json file with 20 fantasy players kept as static data for future use
+- **Clean Landing Page**: Reset homepage to basic community-focused landing page
+- **Infrastructure Cleanup**: Removed all rankings APIs, tier bubble components, consensus services, and ranking pages
 
 ## Changelog
 
 ```
 Changelog:
-- July 19, 2025. **COMPLETE RANKINGS BACKEND INFRASTRUCTURE DEPLOYED**: Successfully created and populated all missing database tables (users, individual_rankings, ranking_submissions) resolving critical schema issues, fixed SQL parameter type errors throughout consensus calculation system, validated tier bubble generation algorithm with real data showing proper player groupings, integrated frontend homepage to display live consensus rankings correctly, and achieved full API functionality for both consensus calculations and tier bubble generation with authentic mathematical validation
+- July 20, 2025. **COMPLETE RANKINGS SYSTEM REMOVAL**: Successfully removed all rankings infrastructure per user directive - deleted Rankings.tsx, rankingsApi.ts, consensusService.ts, tier bubble components, ranking API endpoints, consensus calculation system, and all ranking-related pages and routes. Reset homepage to clean landing page focused on community and future development. Preserved players.json file with 20 fantasy players as only remaining data asset for future features.
 - July 19, 2025. **TIER BUBBLE ALGORITHM VALIDATION COMPLETE**: Confirmed tier bubble generation working correctly with test data showing proper groupings (Justin Jefferson + CeeDee Lamb in Tier 1, separated tiers for larger rank gaps), mathematical validation of rank_diff_threshold=1.5 and std_dev_threshold=5.0 parameters, and live API endpoint returning comprehensive tier analysis with consensus strength indicators
 - July 19, 2025. **TIER BUBBLE FRONTEND INTEGRATION COMPLETE**: Successfully integrated hardcoded tier bubble data with frontend - API endpoint /api/rankings/tier-bubbles working correctly returning proper data structure for all formats (Redraft: Christian McCaffrey, Dynasty: Ja'Marr Chase, Dynasty Contender: Patrick Mahomes, Dynasty Rebuilder: Malik Nabers), commented out conflicting original endpoint, restarted workflow to ensure changes take effect, confirmed all four scenarios working with proper JSON structure matching frontend expectations - users need to click "Tier Bubbles" tab to view data
 - July 19, 2025. **ENHANCED TIER BUBBLES ERROR HANDLING**: Implemented improved getConsensusWithTierBubbles function with comprehensive error handling - replaced Promise.all with individual try-catch loops for better error isolation, graceful handling of missing ranking data, and detailed error logging for debugging while maintaining API stability
