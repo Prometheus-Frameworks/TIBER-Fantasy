@@ -4,17 +4,19 @@
 
 On The Clock is a clean, open-source fantasy football website that serves as a foundation for community-driven tools. The platform has been reset to a minimal state with only essential player data preserved for future development.
 
-## 🔥 Current State - ENHANCED VORP SYSTEM WITH TIER GROUPING DEPLOYED
+## 🔥 Current State - MODULAR RANKINGS API SYSTEM DEPLOYED
 - **ENHANCED VORP RANKINGS SYSTEM**: Dynasty mode, age penalties, positional filtering, FLEX allocation
 - **TIER-BASED RANKINGS FRONTEND**: Dynamic tier grouping with automatic fallback to flat list
+- **MODULAR API ENDPOINTS**: Position-specific and mode-specific routes fully operational
 - **3-TIER FALLBACK OPERATIONAL**: 2025 Projections → League Matchups → Enhanced Sample (26 players)
 - **Dynasty Age Penalties**: RB >25 years (1%/year), WR >28 years (1%/year), QB/TE >30 years (0.5%/year)
 - **Conservative Scarcity Weighting**: Capped at 1.3x multiplier to prevent VORP inflation
 - **Enhanced Fallback Sample**: 26 elite players across all positions with proper birthdates
-- **API Query Parameters**: ?mode=dynasty/redraft, ?position=QB/RB/WR/TE, ?debug=true
+- **API Query Parameters**: ?mode=dynasty/redraft, ?position=QB/RB/WR/TE, ?debug=true, ?num_teams=10
 - **FLEX Integration**: Dynamic baseline calculation with RB(0.5), WR(0.4), TE(0.1) allocation
 - **VORP Formula**: (projected_fpts - baseline) * scarcity_weight with dynasty age adjustments
 - **TIER SYSTEM**: Tier 1 (400+ VORP), Tier 2 (300+ VORP), Tier 3 (200+ VORP), Tier 4 (100+ VORP), Tier 5 (<100 VORP)
+- **MODULAR ENDPOINTS**: /api/rankings/rb, /api/rankings/rb/dynasty, /api/rankings/redraft, /api/rankings/dynasty
 
 ## 🧱 Stack
 - TypeScript / Node.js

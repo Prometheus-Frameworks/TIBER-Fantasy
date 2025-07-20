@@ -256,6 +256,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to fetch rankings' });
     }
   });
+
+  // Shared function for modular rankings logic (reusable)
+  async function getRankings(mode = 'redraft', position: string | null = null, numTeams = 12) {
+    try {
+      console.log(`🚀 getRankings - Mode: ${mode}, Position: ${position || 'ALL'}, Teams: ${numTeams}`);
+
+      let players = await getSleeperProjections();
+      
+      // Use enhanced fallback sample with proper positional distribution (always use this for demo)
+      if (players.length <= 5) {
+        console.log('📊 Using enhanced fallback sample...');
+        players = [
+          // Elite QBs
+          { player_name: "Josh Allen", position: "QB", team: "BUF", projected_fpts: 380, birthdate: "1996-05-21", receptions: 0 },
+          { player_name: "Patrick Mahomes", position: "QB", team: "KC", projected_fpts: 370, birthdate: "1995-09-17", receptions: 0 },
+          { player_name: "Lamar Jackson", position: "QB", team: "BAL", projected_fpts: 365, birthdate: "1997-01-07", receptions: 0 },
+          { player_name: "Jayden Daniels", position: "QB", team: "WAS", projected_fpts: 350, birthdate: "2001-12-18", receptions: 0 },
+          
+          // Elite RBs (scarcity position)
+          { player_name: "Bijan Robinson", position: "RB", team: "ATL", projected_fpts: 280, birthdate: "2002-01-30", receptions: 50 },
+          { player_name: "Saquon Barkley", position: "RB", team: "PHI", projected_fpts: 275, birthdate: "1997-02-09", receptions: 45 },
+          { player_name: "Jahmyr Gibbs", position: "RB", team: "DET", projected_fpts: 270, birthdate: "2002-03-20", receptions: 55 },
+          { player_name: "Breece Hall", position: "RB", team: "NYJ", projected_fpts: 265, birthdate: "2001-05-31", receptions: 50 },
+          { player_name: "Jonathan Taylor", position: "RB", team: "IND", projected_fpts: 260, birthdate: "1999-01-19", receptions: 40 },
+          { player_name: "De'Von Achane", position: "RB", team: "MIA", projected_fpts: 250, birthdate: "2001-10-13", receptions: 55 },
+          { player_name: "Christian McCaffrey", position: "RB", team: "SF", projected_fpts: 245, birthdate: "1996-06-07", receptions: 60 },
+          { player_name: "Ashton Jeanty", position: "RB", team: "LV", projected_fpts: 240, birthdate: "2003-12-02", receptions: 25 },
+          
+          // Elite WRs (deeper position)
+          { player_name: "Ja'Marr Chase", position: "WR", team: "CIN", projected_fpts: 290, birthdate: "2000-03-01", receptions: 105 },
+          { player_name: "Justin Jefferson", position: "WR", team: "MIN", projected_fpts: 285, birthdate: "1999-06-16", receptions: 100 },
+          { player_name: "CeeDee Lamb", position: "WR", team: "DAL", projected_fpts: 280, birthdate: "1999-04-08", receptions: 95 },
+          { player_name: "Malik Nabers", position: "WR", team: "NYG", projected_fpts: 275, birthdate: "2003-07-28", receptions: 90 },
+          { player_name: "Amon-Ra St. Brown", position: "WR", team: "DET", projected_fpts: 270, birthdate: "1999-10-24", receptions: 85 },
+          { player_name: "Puka Nacua", position: "WR", team: "LAR", projected_fpts: 265, birthdate: "2001-05-29", receptions: 80 },
+          { player_name: "A.J. Brown", position: "WR", team: "PHI", projected_fpts: 260, birthdate: "1997-06-30", receptions: 75 },
+          { player_name: "Garrett Wilson", position: "WR", team: "NYJ", projected_fpts: 255, birthdate: "2000-07-22", receptions: 70 },
+          { player_name: "Marvin Harrison Jr.", position: "WR", team: "ARI", projected_fpts: 250, birthdate: "2002-08-11", receptions: 65 },
+          { player_name: "Nico Collins", position: "WR", team: "HOU", projected_fpts: 245, birthdate: "1999-03-19", receptions: 60 },
+          
+          // Elite TEs
+          { player_name: "Sam LaPorta", position: "TE", team: "DET", projected_fpts: 200, birthdate: "2001-01-12", receptions: 75 },
+          { player_name: "Brock Bowers", position: "TE", team: "LV", projected_fpts: 195, birthdate: "2002-12-19", receptions: 70 },
+          { player_name: "Mark Andrews", position: "TE", team: "BAL", projected_fpts: 185, birthdate: "1995-09-06", receptions: 65 },
+          { player_name: "Travis Kelce", position: "TE", team: "KC", projected_fpts: 180, birthdate: "1989-10-05", receptions: 60 }
+        ];
+      }
+
+      // Apply position filtering if specified
+      if (position) {
+        players = players.filter(p => p.position === position.toUpperCase());
+        console.log(`🔍 Position filter applied: ${position} (${players.length} players)`);
+      }
+
+      // Calculate VORP with enhanced parameters
+      console.log(`📊 Calculating VORP with ${mode} mode...`);
+      const starters = { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 };
+      const playersWithVORP = calculateVORP(players, numTeams, starters, mode);
+
+      // Add tier information based on VORP values
+      const playersWithTiers = playersWithVORP.map((player) => {
+        let tier = 1;
+        if (player.vorp && player.vorp > 0) {
+          if (player.vorp >= 400) tier = 1;      // Elite (400+ VORP)
+          else if (player.vorp >= 300) tier = 2; // Premium (300+ VORP)
+          else if (player.vorp >= 200) tier = 3; // Strong (200+ VORP)
+          else if (player.vorp >= 100) tier = 4; // Solid (100+ VORP)
+          else tier = 5;                         // Depth (under 100 VORP)
+        }
+        return { ...player, tier };
+      });
+
+      console.log(`✅ getRankings: Returning ${playersWithTiers.length} players sorted by value (${mode} mode)`);
+      return playersWithTiers;
+    } catch (error) {
+      console.error('❌ getRankings error:', error instanceof Error ? error.message : 'Unknown error');
+      throw error;
+    }
+  }
+
+  // Mode-specific routes (full list)
+  app.get('/api/rankings/redraft', async (req: Request, res: Response) => {
+    try {
+      const numTeams = parseInt(req.query.num_teams as string) || 12;
+      const players = await getRankings('redraft', null, numTeams);
+      res.json(players);
+    } catch (error) {
+      console.error('❌ Redraft rankings error:', error);
+      res.status(500).json({ error: 'Failed to fetch redraft rankings' });
+    }
+  });
+
+  app.get('/api/rankings/dynasty', async (req: Request, res: Response) => {
+    try {
+      const numTeams = parseInt(req.query.num_teams as string) || 12;
+      const players = await getRankings('dynasty', null, numTeams);
+      res.json(players);
+    } catch (error) {
+      console.error('❌ Dynasty rankings error:', error);
+      res.status(500).json({ error: 'Failed to fetch dynasty rankings' });
+    }
+  });
+
+  // Position-specific routes (redraft default)
+  app.get('/api/rankings/qb', async (req: Request, res: Response) => {
+    try {
+      const numTeams = parseInt(req.query.num_teams as string) || 12;
+      const players = await getRankings('redraft', 'QB', numTeams);
+      res.json(players);
+    } catch (error) {
+      console.error('❌ QB rankings error:', error);
+      res.status(500).json({ error: 'Failed to fetch QB rankings' });
+    }
+  });
+
+  app.get('/api/rankings/rb', async (req: Request, res: Response) => {
+    try {
+      const numTeams = parseInt(req.query.num_teams as string) || 12;
+      const players = await getRankings('redraft', 'RB', numTeams);
+      res.json(players);
+    } catch (error) {
+      console.error('❌ RB rankings error:', error);
+      res.status(500).json({ error: 'Failed to fetch RB rankings' });
+    }
+  });
+
+  app.get('/api/rankings/wr', async (req: Request, res: Response) => {
+    try {
+      const numTeams = parseInt(req.query.num_teams as string) || 12;
+      const players = await getRankings('redraft', 'WR', numTeams);
+      res.json(players);
+    } catch (error) {
+      console.error('❌ WR rankings error:', error);
+      res.status(500).json({ error: 'Failed to fetch WR rankings' });
+    }
+  });
+
+  app.get('/api/rankings/te', async (req: Request, res: Response) => {
+    try {
+      const numTeams = parseInt(req.query.num_teams as string) || 12;
+      const players = await getRankings('redraft', 'TE', numTeams);
+      res.json(players);
+    } catch (error) {
+      console.error('❌ TE rankings error:', error);
+      res.status(500).json({ error: 'Failed to fetch TE rankings' });
+    }
+  });
+
+  // Combo routes (position + mode)
+  app.get('/api/rankings/:position/:mode', async (req: Request, res: Response) => {
+    try {
+      const position = req.params.position.toUpperCase();
+      const mode = req.params.mode;
+      const numTeams = parseInt(req.query.num_teams as string) || 12;
+
+      if (!['QB', 'RB', 'WR', 'TE'].includes(position)) {
+        return res.status(400).json({ error: 'Invalid position. Use QB, RB, WR, or TE' });
+      }
+      
+      if (!['redraft', 'dynasty'].includes(mode)) {
+        return res.status(400).json({ error: 'Invalid mode. Use redraft or dynasty' });
+      }
+
+      const players = await getRankings(mode, position, numTeams);
+      res.json(players);
+    } catch (error) {
+      console.error('❌ Combo rankings error:', error);
+      res.status(500).json({ error: 'Failed to fetch rankings' });
+    }
+  });
   
   // Register other routes
   registerADPRoutes(app);

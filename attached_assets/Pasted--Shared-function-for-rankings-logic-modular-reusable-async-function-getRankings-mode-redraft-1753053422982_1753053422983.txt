@@ -1,0 +1,83 @@
+// Shared function for rankings logic (modular, reusable)
+async function getRankings(mode = 'redraft', position = null, numTeams = 12, starters = { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 }) {
+  let players = await fetchAggregatedProjections(); // Your existing fetch
+
+  if (players.length === 0) {
+    // Your fallback sample (expanded)
+    players = [
+      { player_name: "Ja'Marr Chase", position: "WR", team: "CIN", projected_fpts: 220, birthdate: "2000-03-01" },
+      { player_name: "Bijan Robinson", position: "RB", team: "ATL", projected_fpts: 250, birthdate: "2002-01-30" },
+      { player_name: "Justin Jefferson", position: "WR", team: "MIN", projected_fpts: 210, birthdate: "1999-06-16" },
+      { player_name: "Jahmyr Gibbs", position: "RB", team: "DET", projected_fpts: 230, birthdate: "2002-03-20" },
+      { player_name: "Malik Nabers", position: "WR", team: "NYG", projected_fpts: 190, birthdate: "2003-07-28" },
+      { player_name: "CeeDee Lamb", position: "WR", team: "DAL", projected_fpts: 215, birthdate: "1999-04-08" },
+      { player_name: "Puka Nacua", position: "WR", team: "LAR", projected_fpts: 200, birthdate: "2001-05-29" },
+      { player_name: "Amon-Ra St. Brown", position: "WR", team: "DET", projected_fpts: 205, birthdate: "1999-10-24" },
+      { player_name: "Ashton Jeanty", position: "RB", team: "LV", projected_fpts: 220, birthdate: "2003-12-02" },
+      { player_name: "Garrett Wilson", position: "WR", team: "NYJ", projected_fpts: 185, birthdate: "2000-07-22" },
+      { player_name: "Marvin Harrison Jr.", position: "WR", team: "ARI", projected_fpts: 180, birthdate: "2002-08-11" },
+      { player_name: "A.J. Brown", position: "WR", team: "PHI", projected_fpts: 195, birthdate: "1997-06-30" },
+      { player_name: "Saquon Barkley", position: "RB", team: "PHI", projected_fpts: 240, birthdate: "1997-02-09" },
+      { player_name: "Jonathan Taylor", position: "RB", team: "IND", projected_fpts: 225, birthdate: "1999-01-19" },
+      { player_name: "Breece Hall", position: "RB", team: "NYJ", projected_fpts: 215, birthdate: "2001-05-31" },
+      { player_name: "Nico Collins", position: "WR", team: "HOU", projected_fpts: 170, birthdate: "1999-03-19" },
+      { player_name: "De'Von Achane", position: "RB", team: "MIA", projected_fpts: 200, birthdate: "2001-10-13" },
+      { player_name: "Sam LaPorta", position: "TE", team: "DET", projected_fpts: 150, birthdate: "2001-01-12" },
+      { player_name: "Patrick Mahomes", position: "QB", team: "KC", projected_fpts: 350, birthdate: "1995-09-17" },
+      { player_name: "Josh Allen", position: "QB", team: "BUF", projected_fpts: 360, birthdate: "1996-05-21" }
+    ];
+  }
+
+  if (position) {
+    players = players.filter(p => p.position === position.toUpperCase());
+  }
+
+  players = calculateVORP(players, numTeams, starters, mode); // Your existing calc with tier/VORP
+
+  return players;
+}
+
+// Mode-specific routes (full list)
+app.get('/api/rankings/redraft', async (req, res) => {
+  const players = await getRankings('redraft');
+  res.json(players);
+});
+
+app.get('/api/rankings/dynasty', async (req, res) => {
+  const players = await getRankings('dynasty');
+  res.json(players);
+});
+
+// Pos-specific routes (redraft default)
+app.get('/api/rankings/qb', async (req, res) => {
+  const players = await getRankings('redraft', 'QB');
+  res.json(players);
+});
+
+app.get('/api/rankings/rb', async (req, res) => {
+  const players = await getRankings('redraft', 'RB');
+  res.json(players);
+});
+
+app.get('/api/rankings/wr', async (req, res) => {
+  const players = await getRankings('redraft', 'WR');
+  res.json(players);
+});
+
+app.get('/api/rankings/te', async (req, res) => {
+  const players = await getRankings('redraft', 'TE');
+  res.json(players);
+});
+
+// Bonus combo route (e.g., /api/rankings/rb/dynasty)
+app.get('/api/rankings/:position/:mode', async (req, res) => {
+  const position = req.params.position.toUpperCase();
+  const mode = req.params.mode;
+  if (!['QB', 'RB', 'WR', 'TE'].includes(position) || !['redraft', 'dynasty'].includes(mode)) {
+    return res.status(400).json({ error: 'Invalid position or mode' });
+  }
+  const players = await getRankings(mode, position);
+  res.json(players);
+});
+
+// ... (rest of app code, fetchAggregatedProjections, calculateVORP, app.listen)
