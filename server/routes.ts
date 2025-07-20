@@ -181,8 +181,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🏆 Rankings request: ${mode} ${leagueFormat} ${position || 'all'} (${numTeams}-team, ${isSuperflex ? 'SF' : '1QB'})`);
       console.log(`📡 Source: ${source}${leagueId ? `, league: ${leagueId}` : ''}${week ? `, week: ${week}` : ''}`);
       
-      // 🔥 TIBER INTEGRATION: Direct NFL stats fetching with player metadata mapping
-      console.log('🔥 TIBER: Using direct NFL stats for rankings with metadata mapping');
+      // 🔥 GROK BACKEND PATCH: 2025 Sleeper API with League Fallback
+      console.log('🔥 GROK: Primary 2025 projections with league matchup fallback');
       
       // Step 1: Fetch player metadata cache
       console.log('📋 Fetching player metadata cache...');
@@ -190,11 +190,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const playerMetadata = playersResponse.data || {};
       console.log(`📋 Cached ${Object.keys(playerMetadata).length} player metadata entries`);
       
-      // Step 2: Use 2023 NFL stats (complete season with fantasy points)
-      console.log('📊 Fetching 2023 NFL season stats (complete data)...');
-      const statsResponse = await axios.get('https://api.sleeper.app/v1/stats/nfl/2023/regular', { timeout: 10000 });
-      const rawStats = statsResponse.data || {};
-      const statsSource = 'nfl_stats_2023';
+      // Step 2: Primary Source - 2025 Sleeper Projections
+      console.log('📊 Fetching 2025 NFL projections (primary source)...');
+      let rawProjections = {};
+      let dataSource = 'PROJECTIONS_2025';
+      
+      try {
+        const projectionsResponse = await axios.get('https://api.sleeper.app/v1/projections/nfl/2025/regular', { timeout: 10000 });
+        rawProjections = projectionsResponse.data || {};
+        console.log(`📊 2025 projections: ${Object.keys(rawProjections).length} players`);
+      } catch (error) {
+        console.log('⚠️ 2025 projections unavailable, attempting league fallback...');
+        
+        // Step 2b: Fallback - League Matchups Data
+        try {
+          const leagueId = '1197631162923614208'; // Architect's league
+          const week = 1;
+          console.log(`📊 Fallback: League ${leagueId} week ${week} matchups...`);
+          const matchupsResponse = await axios.get(`https://api.sleeper.app/v1/league/${leagueId}/matchups/${week}`, { timeout: 10000 });
+          
+          // Extract player projections from matchup data
+          const matchupData = matchupsResponse.data || [];
+          rawProjections = {};
+          
+          matchupData.forEach((matchup: any) => {
+            if (matchup.players_points) {
+              Object.entries(matchup.players_points).forEach(([playerId, points]: [string, any]) => {
+                rawProjections[playerId] = { pts_ppr: points };
+              });
+            }
+          });
+          
+          dataSource = 'LEAGUE_FALLBACK';
+          console.log(`📊 League fallback: ${Object.keys(rawProjections).length} players`);
+        } catch (fallbackError) {
+          console.log('❌ Both primary and fallback sources failed');
+          rawProjections = {};
+        }
+      }
       
       console.log(`📊 Individual player data from ${statsSource}: ${Object.keys(rawStats).length} players`);
       
