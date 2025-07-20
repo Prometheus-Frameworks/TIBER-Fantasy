@@ -6,46 +6,49 @@
     <title>Rankings</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
-        .toggle { padding: 8px; margin: 5px; cursor: pointer; border: 1px solid #ddd; display: inline-block; }
+        .toggle { padding: 10px 20px; margin: 5px; cursor: pointer; border: 1px solid #ddd; }
         .active { background: #0079f2; color: white; }
-        .player-list { margin-top: 20px; }
-        .player-card { background: #f0f8ff; border: 1px solid #ddd; padding: 10px; margin: 5px 0; }
+        .player-card { background: #f0f8ff; padding: 10px; border: 1px solid #ddd; margin: 5px 0; border-radius: 4px; }
     </style>
 </head>
 <body>
-    <h1>Rankings</h1>
-    <div id="toggles">
-        <div class="toggle active" data-format="dynasty">Dynasty</div>
-        <div class="toggle" data-format="redraft">Redraft</div>
-    </div>
-    <div id="player-list" class="player-list"></div>
 
-    <script>
-        function renderPlayers(format = 'dynasty') {
-            fetch(`/api/rankings?format=${format}`)
-                .then(response => response.json())
-                .then(players => {
-                    const container = document.getElementById('player-list');
-                    container.innerHTML = '';
-                    players.forEach(player => {
-                        const card = document.createElement('div');
-                        card.className = 'player-card';
-                        card.innerHTML = `${player.player_name} (${player.position} - ${player.team})`;
-                        container.appendChild(card);
-                    });
+<h1>Rankings</h1>
+
+<div>
+    <button class="toggle active" data-format="dynasty">Dynasty</button>
+    <button class="toggle" data-format="redraft">Redraft</button>
+</div>
+
+<div id="player-list"></div>
+
+<script>
+    function renderPlayers(format = 'dynasty') {
+        fetch(`/api/rankings?format=${format}`)
+            .then(response => response.json())
+            .then(players => {
+                const container = document.getElementById('player-list');
+                container.innerHTML = '';
+                players.forEach(player => {
+                    const div = document.createElement('div');
+                    div.className = 'player-card';
+                    div.innerText = `${player.player_name} (${player.position} - ${player.team})`;
+                    container.appendChild(div);
                 });
-        }
-
-        document.querySelectorAll('.toggle').forEach(toggle => {
-            toggle.addEventListener('click', () => {
-                document.querySelectorAll('.toggle').forEach(t => t.classList.remove('active'));
-                toggle.classList.add('active');
-                const format = toggle.getAttribute('data-format');
-                renderPlayers(format);
             });
-        });
+    }
 
-        renderPlayers();
-    </script>
+    document.querySelectorAll('.toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.toggle').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const format = btn.getAttribute('data-format');
+            renderPlayers(format);
+        });
+    });
+
+    renderPlayers();
+</script>
+
 </body>
 </html>
