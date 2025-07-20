@@ -27,6 +27,12 @@ export default function Home() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/rankings">
+              <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 text-lg">
+                <Trophy className="mr-2 h-5 w-5" />
+                View Rankings
+              </Button>
+            </Link>
             <Link href="/about">
               <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg">
                 Learn More
