@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import express from "express";
+import axios from "axios";
 import { createServer, type Server } from "http";
 import { registerADPRoutes } from "./routes/adpRoutes";
 import { adpSyncService } from "./adpSyncService";
@@ -39,13 +40,91 @@ import { testNFLStatsDirect } from './api/test-nfl-stats-direct';
 // League format adjustments removed with rankings system
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Serve static files from public directory
-  app.use(express.static('public'));
   
+  // 🔥 TIBER OVERRIDE: Critical NFL stats endpoint - HIGHEST PRIORITY
+  console.log('🔥 REGISTERING TIBER OVERRIDE ENDPOINT');
+  app.get('/api/force-stats', async (req, res) => {
+    try {
+      console.log('🔥 TIBER OVERRIDE: Force stats endpoint activated');
+      
+      // Direct NFL stats fetch bypassing ALL other logic
+      const response = await axios.get('https://api.sleeper.app/v1/stats/nfl/regular/2024/1', { timeout: 10000 });
+      const rawStats = response.data || {};
+      
+      console.log(`📊 Raw NFL stats fetched: ${Object.keys(rawStats).length} players`);
+      
+      // Convert to fantasy points format
+      const fantasyProjections: Record<string, any> = {};
+      let processed = 0;
+      
+      for (const [playerId, stats] of Object.entries(rawStats)) {
+        const s = stats as any;
+        
+        // Calculate fantasy points from real NFL stats
+        let fantasyPoints = 0;
+        
+        // Passing (QB)
+        if (s.pass_yd) fantasyPoints += s.pass_yd * 0.04;
+        if (s.pass_td) fantasyPoints += s.pass_td * 4;
+        if (s.pass_int) fantasyPoints -= s.pass_int * 2;
+        
+        // Rushing (RB, QB)
+        if (s.rush_yd) fantasyPoints += s.rush_yd * 0.1;
+        if (s.rush_td) fantasyPoints += s.rush_td * 6;
+        
+        // Receiving (WR, RB, TE)
+        if (s.rec) fantasyPoints += s.rec * 1; // PPR
+        if (s.rec_yd) fantasyPoints += s.rec_yd * 0.1;
+        if (s.rec_td) fantasyPoints += s.rec_td * 6;
+        
+        if (fantasyPoints > 5) { // Only relevant players
+          fantasyProjections[playerId] = {
+            pts_ppr: parseFloat(fantasyPoints.toFixed(1)),
+            stats: s,
+            source: 'NFL_STATS_2024'
+          };
+          processed++;
+        }
+      }
+      
+      // Log top 20 performers for validation
+      const topPerformers = Object.entries(fantasyProjections)
+        .sort(([,a], [,b]) => (b as any).pts_ppr - (a as any).pts_ppr)
+        .slice(0, 20);
+      
+      console.log('🏆 TOP 20 NFL PERFORMERS:');
+      topPerformers.forEach(([id, data], i) => {
+        console.log(`   ${i+1}. Player ${id}: ${(data as any).pts_ppr} pts`);
+      });
+      
+      res.json({
+        success: true,
+        source: 'NFL_STATS_2024_DIRECT',
+        totalPlayers: Object.keys(rawStats).length,
+        fantasyRelevant: processed,
+        topPerformers: topPerformers.map(([id, data]) => ({
+          playerId: id,
+          fantasyPoints: (data as any).pts_ppr
+        })),
+        projections: fantasyProjections
+      });
+      
+    } catch (error) {
+      console.error('❌ TIBER OVERRIDE FAILED:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Serve the new homepage
   app.get('/', (req, res) => {
     res.sendFile('index.html', { root: '.' });
   });
+  
+  // Serve static files from public directory
+  app.use(express.static('public'));
   
   // Register ADP routes
   registerADPRoutes(app);
@@ -82,7 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
 
   
-  // Rebuilt Rankings API endpoint with Sleeper as single source of truth
+  // 🔥 TIBER INTEGRATION: Main Rankings API now uses NFL stats exclusively
   app.get('/api/rankings', async (req, res) => {
     try {
       const startTime = Date.now();
@@ -102,23 +181,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🏆 Rankings request: ${mode} ${leagueFormat} ${position || 'all'} (${numTeams}-team, ${isSuperflex ? 'SF' : '1QB'})`);
       console.log(`📡 Source: ${source}${leagueId ? `, league: ${leagueId}` : ''}${week ? `, week: ${week}` : ''}`);
       
-      // Import the new Sleeper pipeline
-      const { sleeperProjectionsPipeline } = await import('./services/projections/sleeperProjectionsPipeline');
+      // 🔥 TIBER INTEGRATION: Direct NFL stats fetching - bypass all pipelines
+      console.log('🔥 TIBER: Using direct NFL stats for rankings');
       
-      // Configure projection source
-      const projectionSource = source === 'league' && leagueId && week
-        ? { type: 'league' as const, league_id: leagueId, week }
-        : { type: 'season' as const };
+      // Direct NFL stats fetch (same as force-stats endpoint)
+      const response = await axios.get('https://api.sleeper.app/v1/stats/nfl/regular/2024/1', { timeout: 10000 });
+      const rawStats = response.data || {};
       
-      // Get projections using the unified pipeline
-      console.log('📡 Fetching projections via Sleeper pipeline...');
-      const projections = await sleeperProjectionsPipeline.getProjections(
-        projectionSource,
-        leagueFormat,
-        position
-      );
+      console.log(`📊 Direct NFL stats: ${Object.keys(rawStats).length} players`);
       
-      console.log(`✅ Received ${projections.length} projections from Sleeper pipeline`);
+      // Convert to rankings format
+      const projections = [];
+      for (const [playerId, stats] of Object.entries(rawStats)) {
+        const s = stats as any;
+        
+        // Calculate fantasy points
+        let fantasyPoints = 0;
+        if (s.pass_yd) fantasyPoints += s.pass_yd * 0.04;
+        if (s.pass_td) fantasyPoints += s.pass_td * 4;
+        if (s.pass_int) fantasyPoints -= s.pass_int * 2;
+        if (s.rush_yd) fantasyPoints += s.rush_yd * 0.1;
+        if (s.rush_td) fantasyPoints += s.rush_td * 6;
+        if (s.rec) fantasyPoints += s.rec * 1; // PPR
+        if (s.rec_yd) fantasyPoints += s.rec_yd * 0.1;
+        if (s.rec_td) fantasyPoints += s.rec_td * 6;
+        
+        if (fantasyPoints > 50) { // Higher threshold for rankings
+          projections.push({
+            player_id: playerId,
+            full_name: `Player ${playerId}`,
+            position: 'FLEX',
+            team: 'NFL',
+            projected_fpts: parseFloat(fantasyPoints.toFixed(1)),
+            age: 25, // Default for VORP calc
+            source: 'NFL_STATS_2024'
+          });
+        }
+      }
+      
+      console.log(`✅ NFL Stats converted: ${projections.length} fantasy-relevant players`);
 
       // Import VORP calculator for dynasty adjustments
       const { calculateVORP } = await import('./vorp_calculator');
