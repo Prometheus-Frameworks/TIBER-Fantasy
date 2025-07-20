@@ -1,0 +1,52 @@
+// Updated calculateFinalRatings with format-aware pos weighting (replace your existing function)
+function calculateFinalRatings(players, mode = 'redraft', format = '1qb', scaleFactor = 1.0) {
+  // Format-aware pos weights
+  const formatPosWeights = (format) => {
+    return format === 'superflex' ? 
+      { QB: 1.3, RB: 1.1, WR: 1.1, TE: 1.0 } :    // Superflex weighting
+      { QB: 0.7, RB: 1.2, WR: 1.3, TE: 1.1 };     // 1QB default weighting
+  };
+
+  const posWeights = formatPosWeights(format);
+
+  // ... (your existing layeredRating calc code here, including OASIS, advanced, age insulation)
+
+  players.forEach(p => {
+    let layeredRating = p.vorp;
+    layeredRating *= posWeights[p.position] || 1.0; // Apply format-aware pos weight
+    layeredRating *= oasisModifiers[p.team] || 1.0; // OASIS
+    layeredRating *= advancedBoost(p); // Advanced
+    layeredRating *= ageInsulation(p, age); // Age insulation
+    layeredRating *= scaleFactor; // Tuning
+    p.final_rating = layeredRating;
+  });
+
+  // ... (your existing normalization to 1-99, sort by final_rating, tier assignment on final_rating)
+
+  return players;
+}
+
+// In /api/rankings (update to parse and pass format)
+app.get('/api/rankings', async (req, res) => {
+  const mode = req.query.mode || 'redraft';
+  const format = req.query.format || '1qb';
+  const numTeams = parseInt(req.query.num_teams) || 12;
+  const starters = req.query.starters ? JSON.parse(req.query.starters) : { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 };
+  const settings = {}; // From req if needed
+  let players = await fetchAggregatedProjections(settings);
+
+  if (players.length === 0) {
+    // Your fallback sample
+    players = [
+      { player_name: "Ja'Marr Chase", position: "WR", team: "CIN", projected_fpts: 220, birthdate: "2000-03-01" },
+      // ... full array
+    ];
+  }
+
+  players = calculateVORP(players, numTeams, starters, mode); // Assuming VORP calc first
+  players = calculateFinalRatings(players, mode, format); // Pass format here
+
+  res.json(players);
+});
+
+// ... (rest of app code)

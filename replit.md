@@ -12,10 +12,10 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 - **Dynasty Age Penalties**: RB >25 years (1%/year), WR >28 years (1%/year), QB/TE >30 years (0.5%/year)
 - **Conservative Scarcity Weighting**: Capped at 1.3x multiplier to prevent VORP inflation
 - **Enhanced Fallback Sample**: 26 elite players across all positions with proper birthdates
-- **API Query Parameters**: ?mode=dynasty/redraft, ?position=QB/RB/WR/TE, ?debug=true, ?num_teams=10
+- **API Query Parameters**: ?mode=dynasty/redraft, ?position=QB/RB/WR/TE, ?debug=true, ?num_teams=10, ?format=superflex/1qb
 - **FLEX Integration**: Dynamic baseline calculation with RB(0.5), WR(0.4), TE(0.1) allocation
 - **VORP Formula**: (projected_fpts - baseline) * scarcity_weight * pos_scaling with dynasty age adjustments
-- **POSITIONAL SCALING**: QB (0.65x), RB (1.00x), WR (1.10x), TE (1.05x) for balanced tier clustering
+- **FORMAT-AWARE SCALING**: Superflex (QB 1.3x, RB 1.1x, WR 1.1x, TE 1.0x) vs 1QB (QB 0.7x, RB 1.2x, WR 1.3x, TE 1.1x)
 - **TIER SYSTEM**: Tier 1 (400+ VORP), Tier 2 (300+ VORP), Tier 3 (200+ VORP), Tier 4 (100+ VORP), Tier 5 (<100 VORP)
 - **MODULAR ENDPOINTS**: /api/rankings/rb, /api/rankings/rb/dynasty, /api/rankings/redraft, /api/rankings/dynasty
 

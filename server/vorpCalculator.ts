@@ -19,13 +19,14 @@ function getFallbackAge(pos: string): number {
   return 27; // Default
 }
 
-// Enhanced VORP calculation with dynasty age penalties
+// Enhanced VORP calculation with dynasty age penalties and format-aware positional scaling
 export function calculateVORP(
   players: PlayerProjection[], 
   numTeams: number = 12, 
   starters: { QB: number; RB: number; WR: number; TE: number; FLEX: number } = { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 }, 
   mode: string = 'redraft',
-  debugRaw: boolean = false
+  debugRaw: boolean = false,
+  format: string = '1qb'
 ): PlayerProjection[] {
   const posGroups: Record<string, PlayerProjection[]> = {};
   players.forEach(p => {
@@ -85,10 +86,17 @@ export function calculateVORP(
     });
   }
 
-  // Positional scaling multipliers for balanced VORP distribution
-  const posScaling: Record<string, number> = { QB: 0.65, RB: 1.00, WR: 1.10, TE: 1.05 };
+  // Format-aware positional scaling multipliers
+  const formatPosWeights = (format: string) => {
+    return format === 'superflex' ? 
+      { QB: 1.3, RB: 1.1, WR: 1.1, TE: 1.0 } :    // Superflex weighting - QBs rise
+      { QB: 0.7, RB: 1.2, WR: 1.3, TE: 1.1 };     // 1QB default weighting - QBs drop
+  };
 
-  // Calculate VORP with scarcity weighting and positional scaling
+  const posScaling = formatPosWeights(format);
+  console.log(`🏆 Format: ${format} - QB scaling: ${posScaling.QB}x`);
+
+  // Calculate VORP with scarcity weighting and format-aware positional scaling
   players.forEach(p => {
     const rawVorp = p.projected_fpts - (baselines[p.position] || 0);
     p.vorp = rawVorp * (weights[p.position] || 1) * (posScaling[p.position] || 1);
