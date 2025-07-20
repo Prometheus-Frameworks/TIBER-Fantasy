@@ -235,8 +235,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('🔍 Debug info:', JSON.stringify(debugInfo, null, 2));
       }
 
-      console.log(`✅ VORP Rankings: Returning ${playersWithVORP.length} players sorted by value (${mode} mode)`);
-      res.json(playersWithVORP);
+      // Add tier information based on VORP values for better frontend grouping
+      const playersWithTiers = playersWithVORP.map((player, index) => {
+        let tier = 1;
+        if (player.vorp && player.vorp > 0) {
+          if (player.vorp >= 400) tier = 1;      // Elite (400+ VORP)
+          else if (player.vorp >= 300) tier = 2; // Premium (300+ VORP)
+          else if (player.vorp >= 200) tier = 3; // Strong (200+ VORP)
+          else if (player.vorp >= 100) tier = 4; // Solid (100+ VORP)
+          else tier = 5;                         // Depth (under 100 VORP)
+        }
+        return { ...player, tier };
+      });
+
+      console.log(`✅ VORP Rankings: Returning ${playersWithTiers.length} players sorted by value (${mode} mode)`);
+      res.json(playersWithTiers);
       
     } catch (error) {
       console.error('❌ Rankings API error:', error instanceof Error ? error.message : 'Unknown error');
