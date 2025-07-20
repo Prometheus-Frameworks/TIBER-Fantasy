@@ -5,7 +5,9 @@ interface Player {
   position: string;
   team: string;
   projected_fpts: number;
-  vorp_score?: number;
+  vorp?: number;
+  receptions?: number;
+  birthdate?: string;
 }
 
 export default function Rankings() {
@@ -70,7 +72,7 @@ export default function Rankings() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
         <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-          Player Rankings
+          Player Rankings (Sorted by VORP)
         </h1>
         
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -108,9 +110,13 @@ export default function Rankings() {
                     <div className="text-lg font-bold text-blue-600">
                       {player.projected_fpts} pts
                     </div>
-                    {player.vorp_score !== undefined && (
-                      <div className="text-sm text-gray-500">
-                        VORP: {typeof player.vorp_score === 'number' ? player.vorp_score.toFixed(1) : player.vorp_score}
+                    {player.vorp !== undefined && (
+                      <div className={`text-sm font-bold ${
+                        player.vorp > 80 ? 'text-green-600' : 
+                        player.vorp >= 50 ? 'text-orange-500' : 
+                        'text-red-500'
+                      }`}>
+                        VORP: {typeof player.vorp === 'number' ? player.vorp.toFixed(1) : player.vorp}
                       </div>
                     )}
                   </div>
