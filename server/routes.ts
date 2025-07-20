@@ -181,45 +181,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🏆 Rankings request: ${mode} ${leagueFormat} ${position || 'all'} (${numTeams}-team, ${isSuperflex ? 'SF' : '1QB'})`);
       console.log(`📡 Source: ${source}${leagueId ? `, league: ${leagueId}` : ''}${week ? `, week: ${week}` : ''}`);
       
-      // 🔥 TIBER INTEGRATION: Direct NFL stats fetching - bypass all pipelines
-      console.log('🔥 TIBER: Using direct NFL stats for rankings');
+      // 🔥 TIBER INTEGRATION: Direct NFL stats fetching with player metadata mapping
+      console.log('🔥 TIBER: Using direct NFL stats for rankings with metadata mapping');
       
-      // Direct NFL stats fetch (same as force-stats endpoint)
-      const response = await axios.get('https://api.sleeper.app/v1/stats/nfl/regular/2024/1', { timeout: 10000 });
-      const rawStats = response.data || {};
+      // Step 1: Fetch player metadata cache
+      console.log('📋 Fetching player metadata cache...');
+      const playersResponse = await axios.get('https://api.sleeper.app/v1/players/nfl', { timeout: 15000 });
+      const playerMetadata = playersResponse.data || {};
+      console.log(`📋 Cached ${Object.keys(playerMetadata).length} player metadata entries`);
       
-      console.log(`📊 Direct NFL stats: ${Object.keys(rawStats).length} players`);
+      // Step 2: Use 2023 NFL stats (complete season with fantasy points)
+      console.log('📊 Fetching 2023 NFL season stats (complete data)...');
+      const statsResponse = await axios.get('https://api.sleeper.app/v1/stats/nfl/2023/regular', { timeout: 10000 });
+      const rawStats = statsResponse.data || {};
+      const statsSource = 'nfl_stats_2023';
       
-      // Convert to rankings format
+      console.log(`📊 Individual player data from ${statsSource}: ${Object.keys(rawStats).length} players`);
+      
+      // Debug: Sample raw player data to understand structure
+      const sampleIds = Object.keys(rawStats).slice(0, 5);
+      console.log(`🔍 Sample player data structure from NFL stats:`);
+      sampleIds.forEach(id => {
+        const stats = rawStats[id] as any;
+        const keys = Object.keys(stats).slice(0, 8); // Show first 8 fields
+        console.log(`🔍 Player ${id}: ${keys.join(', ')}`);
+      });
+      
+      // Look for players with ranking data (top 100 in any format)
+      const playersWithRankings = Object.entries(rawStats).filter(([id, stats]) => {
+        const s = stats as any;
+        return (s.rank_ppr && s.rank_ppr <= 100) || (s.rank_half_ppr && s.rank_half_ppr <= 100) || (s.rank_std && s.rank_std <= 100);
+      }).sort(([,a], [,b]) => {
+        const aRank = (a as any).rank_ppr || (a as any).rank_half_ppr || (a as any).rank_std || 999;
+        const bRank = (b as any).rank_ppr || (b as any).rank_half_ppr || (b as any).rank_std || 999;
+        return aRank - bRank; // Sort by best rank
+      }).slice(0, 5);
+      
+      console.log(`🔍 Found ${playersWithRankings.length} top-100 ranked players:`);
+      playersWithRankings.forEach(([id, stats]) => {
+        const s = stats as any;
+        console.log(`🔍 Player ${id}: PPR_Rank=${s.rank_ppr || 'N/A'}, Half_Rank=${s.rank_half_ppr || 'N/A'}, Std_Rank=${s.rank_std || 'N/A'}`);
+      });
+      
+      // Step 3: Map stats to metadata for human-readable profiles
       const projections = [];
+      let mappedCount = 0;
+      let unmappedCount = 0;
+      let teamDataSkipped = 0;
+      
       for (const [playerId, stats] of Object.entries(rawStats)) {
         const s = stats as any;
         
-        // Calculate fantasy points
-        let fantasyPoints = 0;
-        if (s.pass_yd) fantasyPoints += s.pass_yd * 0.04;
-        if (s.pass_td) fantasyPoints += s.pass_td * 4;
-        if (s.pass_int) fantasyPoints -= s.pass_int * 2;
-        if (s.rush_yd) fantasyPoints += s.rush_yd * 0.1;
-        if (s.rush_td) fantasyPoints += s.rush_td * 6;
-        if (s.rec) fantasyPoints += s.rec * 1; // PPR
-        if (s.rec_yd) fantasyPoints += s.rec_yd * 0.1;
-        if (s.rec_td) fantasyPoints += s.rec_td * 6;
+        // Skip team aggregate data (TEAM_* entries)
+        if (playerId.startsWith('TEAM_')) {
+          teamDataSkipped++;
+          continue;
+        }
         
-        if (fantasyPoints > 50) { // Higher threshold for rankings
-          projections.push({
-            player_id: playerId,
-            full_name: `Player ${playerId}`,
-            position: 'FLEX',
-            team: 'NFL',
-            projected_fpts: parseFloat(fantasyPoints.toFixed(1)),
-            age: 25, // Default for VORP calc
-            source: 'NFL_STATS_2024'
-          });
+        // Extract fantasy relevance from NFL ranking data (lower rank = higher relevance)
+        let fantasyPoints = 0;
+        let hasValidRanking = false;
+        
+        if (s.rank_ppr && s.rank_ppr <= 300) {
+          fantasyPoints = Math.max(10, 350 - s.rank_ppr); // Convert rank to points
+          hasValidRanking = true;
+        } else if (s.rank_half_ppr && s.rank_half_ppr <= 300) {
+          fantasyPoints = Math.max(10, 350 - s.rank_half_ppr);
+          hasValidRanking = true;
+        } else if (s.rank_std && s.rank_std <= 300) {
+          fantasyPoints = Math.max(10, 350 - s.rank_std);
+          hasValidRanking = true;
+        }
+        
+        if (hasValidRanking && fantasyPoints > 10) { // Only players with NFL ranking data
+          // Map to player metadata for human-readable profile
+          const metadata = playerMetadata[playerId];
+          
+          if (metadata) {
+            // Calculate age from birth_date if available
+            let age = 25; // Default
+            if (metadata.birth_date) {
+              const birthYear = new Date(metadata.birth_date).getFullYear();
+              const currentYear = new Date().getFullYear();
+              age = currentYear - birthYear;
+            }
+            
+            projections.push({
+              player_id: playerId,
+              full_name: metadata.full_name || (metadata.first_name + ' ' + metadata.last_name) || 'Unknown Player',
+              position: metadata.position || 'FLEX',
+              team: metadata.team || 'FA',
+              projected_fpts: parseFloat(fantasyPoints.toFixed(1)),
+              age: age,
+              source: 'NFL_STATS_2023'
+            });
+            mappedCount++;
+          } else {
+            // Fallback for unmapped individual players
+            projections.push({
+              player_id: playerId,
+              full_name: `Unknown Player (${playerId})`,
+              position: 'FLEX',
+              team: 'Unknown',
+              projected_fpts: parseFloat(fantasyPoints.toFixed(1)),
+              age: 25,
+              source: 'NFL_STATS_2023'
+            });
+            unmappedCount++;
+            console.log(`⚠️ Unmapped player ID: ${playerId} (${fantasyPoints.toFixed(1)} pts)`);
+          }
         }
       }
       
-      console.log(`✅ NFL Stats converted: ${projections.length} fantasy-relevant players`);
+      console.log(`✅ NFL Stats with metadata: ${projections.length} fantasy-relevant players`);
+      console.log(`📋 Mapped: ${mappedCount}, Unmapped: ${unmappedCount}, Team data skipped: ${teamDataSkipped}`);
 
       // Import VORP calculator for dynasty adjustments
       const { calculateVORP } = await import('./vorp_calculator');
