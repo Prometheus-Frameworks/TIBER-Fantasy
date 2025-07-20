@@ -71,15 +71,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerRankingRoutes(app);
   
   // Override tier bubbles endpoint with sample data
-  const tierBubbleData = {
-    "dynasty": [ { "players": [ { "player_name": "Ja'Marr Chase", "position": "WR", "team": "CIN" } ], "consensus_strength": "moderate" } ],
-    "redraft": [ { "players": [ { "player_name": "Christian McCaffrey", "position": "RB", "team": "SF" } ], "consensus_strength": "moderate" } ],
-    "dynasty_contender": [ { "players": [ { "player_name": "Patrick Mahomes", "position": "QB", "team": "KC" } ], "consensus_strength": "moderate" } ],
-    "dynasty_rebuilder": [ { "players": [ { "player_name": "Malik Nabers", "position": "WR", "team": "NYG" } ], "consensus_strength": "moderate" } ]
-  };
-
-  app.get('/api/tier-bubbles', (req, res) => {
-    res.json(tierBubbleData);
+  app.get('/api/rankings/tier-bubbles', (req, res) => {
+    const format = req.query.format as string;
+    const dynastyType = req.query.dynastyType as string;
+    
+    let tierBubbles = [];
+    
+    if (format === 'redraft') {
+      tierBubbles = [
+        {
+          tier_number: 1,
+          avg_rank_range: { min: 1, max: 1 },
+          consensus_strength: 'tight' as const,
+          players: [{
+            player_id: '1',
+            player_name: 'Christian McCaffrey',
+            position: 'RB',
+            team: 'SF',
+            average_rank: 1.0,
+            standard_deviation: 0.2,
+            min_rank: 1,
+            max_rank: 1,
+            rank_count: 5
+          }]
+        }
+      ];
+    } else if (format === 'dynasty' && dynastyType === 'rebuilder') {
+      tierBubbles = [
+        {
+          tier_number: 1,
+          avg_rank_range: { min: 1, max: 1 },
+          consensus_strength: 'tight' as const,
+          players: [{
+            player_id: '2',
+            player_name: 'Malik Nabers',
+            position: 'WR',
+            team: 'NYG',
+            average_rank: 1.0,
+            standard_deviation: 0.3,
+            min_rank: 1,
+            max_rank: 2,
+            rank_count: 5
+          }]
+        }
+      ];
+    } else if (format === 'dynasty' && dynastyType === 'contender') {
+      tierBubbles = [
+        {
+          tier_number: 1,
+          avg_rank_range: { min: 1, max: 1 },
+          consensus_strength: 'tight' as const,
+          players: [{
+            player_id: '3',
+            player_name: 'Patrick Mahomes',
+            position: 'QB',
+            team: 'KC',
+            average_rank: 1.0,
+            standard_deviation: 0.1,
+            min_rank: 1,
+            max_rank: 1,
+            rank_count: 5
+          }]
+        }
+      ];
+    } else if (format === 'dynasty') {
+      tierBubbles = [
+        {
+          tier_number: 1,
+          avg_rank_range: { min: 1, max: 1 },
+          consensus_strength: 'tight' as const,
+          players: [{
+            player_id: '4',
+            player_name: "Ja'Marr Chase",
+            position: 'WR',
+            team: 'CIN',
+            average_rank: 1.0,
+            standard_deviation: 0.2,
+            min_rank: 1,
+            max_rank: 2,
+            rank_count: 5
+          }]
+        }
+      ];
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        tier_bubbles: tierBubbles,
+        format: format,
+        dynasty_type: dynastyType,
+        query_metadata: {
+          position: req.query.position,
+          limit: req.query.limit
+        },
+        metadata: {
+          generated_at: new Date().toISOString(),
+          algorithm: "hardcoded_test_data_v1"
+        }
+      }
+    });
   });
 
   // FantasyPros API Routes
