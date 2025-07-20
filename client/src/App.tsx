@@ -57,7 +57,7 @@ import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
 import FantasyProTest from "@/pages/FantasyProTest";
 import HowYouCanContribute from "@/pages/how-you-can-contribute";
 import RBDraftCapitalContext from "@/pages/RBDraftCapitalContext";
-// Rankings page removed
+import Rankings from "@/pages/Rankings";
 
 function Router() {
   return (
@@ -72,7 +72,7 @@ function Router() {
       <Route path="/player-analysis" component={PlayerAnalysisPage} />
       <Route path="/trade-history/:id" component={TradeHistoryPage} />
       <Route path="/dynasty-values" component={DynastyValuesPage} />
-      {/* Rankings routes removed */}
+      <Route path="/rankings" component={Rankings} />
       <Route path="/compare-league" component={CompareLeaguePage} />
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
       <Route path="/data-sources" component={DataSourcesPage} />
