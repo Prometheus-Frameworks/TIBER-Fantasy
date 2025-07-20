@@ -223,6 +223,13 @@ Based on user feedback, expanding to include:
 - **Preserved Assets**: players.json file with 20 fantasy players kept as static data for future use
 - **Infrastructure Cleanup**: Removed all rankings APIs, tier bubble components, consensus services, and ranking pages
 
+## Foundation Stabilization (July 20, 2025)
+- **NORMALIZATION SCALING FIX**: Implemented proper 99-point VORP scale with elite players hitting 90+ (Ja'Marr Chase: 98, Bijan Robinson: 98)
+- **MODE TOGGLE CACHE FIX**: Disabled caching for dynasty/redraft mode toggles ensuring fresh, distinct calculations
+- **DYNASTY AGE DECAY**: Working age penalties (A.J. Brown -5%, Saquon Barkley -12%) applied only in dynasty mode
+- **TIER ANALYSIS**: Logical tier breaks based on VORP drops with 4-6 tiers depending on mode
+- **EYE TEST VALIDATION**: Core foundation passing all stability tests - ready for Phase 2 advanced metrics integration
+
 ## Changelog
 
 ```

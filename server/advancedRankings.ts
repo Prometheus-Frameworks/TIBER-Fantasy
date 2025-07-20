@@ -35,9 +35,9 @@ interface LeagueSettings {
 const cache = { projections: null as PlayerProjection[] | null, lastFetch: 0 };
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
-// Fetch and aggregate projections
-export async function fetchAggregatedProjections(): Promise<PlayerProjection[]> {
-  if (cache.projections && Date.now() - cache.lastFetch < CACHE_TTL) {
+// Fetch and aggregate projections (cache disabled for mode toggle support)
+export async function fetchAggregatedProjections(skipCache: boolean = false): Promise<PlayerProjection[]> {
+  if (!skipCache && cache.projections && Date.now() - cache.lastFetch < CACHE_TTL) {
     return cache.projections;
   }
 
@@ -109,13 +109,13 @@ export async function fetchAggregatedProjections(): Promise<PlayerProjection[]> 
 }
 
 // Parsers (simplified placeholders)
-function parseESPN($: cheerio.Root): PlayerProjection[] {
+function parseESPN($: any): PlayerProjection[] {
   const projections: PlayerProjection[] = [];
   // ESPN parsing would go here - for now return empty to trigger fallback
   return projections;
 }
 
-function parseDraftSharks($: cheerio.Root): PlayerProjection[] {
+function parseDraftSharks($: any): PlayerProjection[] {
   const projections: PlayerProjection[] = [];
   // DraftSharks parsing would go here - for now return empty to trigger fallback
   return projections;
@@ -172,7 +172,8 @@ export async function calculateVORP(
   mode: string = 'redraft'
 ): Promise<{ vorpMap: { [key: string]: number }, tiers: any[], players: PlayerProjection[] }> {
   
-  let projections = await fetchAggregatedProjections();
+  // Force fresh calculation for mode toggle support
+  let projections = await fetchAggregatedProjections(true);
   if (!projections.length) {
     projections = loadFallbackProjections();
   }
@@ -232,13 +233,42 @@ export async function calculateVORP(
 
   console.log('📊 Replacement levels:', replacementLevels);
 
-  // Calculate VORP for each player
-  const vorpMap: { [key: string]: number } = {};
+  // Calculate raw VORP for each player
+  const rawVorpMap: { [key: string]: number } = {};
   
   projections.forEach(p => {
     const replacementLevel = replacementLevels[p.position] || 0;
     const vorp = Math.max(0, p.projected_fpts - replacementLevel);
-    vorpMap[p.player_name] = parseFloat(vorp.toFixed(2));
+    rawVorpMap[p.player_name] = vorp;
+  });
+
+  // Normalize to 99-point scale with elites hitting 90+
+  const rawVorpValues = Object.values(rawVorpMap).filter(v => v > 0);
+  const maxRawVorp = Math.max(...rawVorpValues, 1);
+  const minRawVorp = Math.min(...rawVorpValues, 0);
+  
+  const vorpMap: { [key: string]: number } = {};
+  
+  projections.forEach(p => {
+    const rawVorp = rawVorpMap[p.player_name];
+    if (rawVorp <= 0) {
+      vorpMap[p.player_name] = 0;
+    } else {
+      // Scale to 99-point system with top performers hitting 90+
+      const normalizedVorp = ((rawVorp - minRawVorp) / (maxRawVorp - minRawVorp)) * 99;
+      
+      // Apply curve to ensure elites hit 90+
+      let finalVorp = normalizedVorp;
+      if (normalizedVorp >= 85) {
+        finalVorp = 90 + (normalizedVorp - 85) * 0.6; // Top tier gets 90-99 range
+      } else if (normalizedVorp >= 70) {
+        finalVorp = 75 + (normalizedVorp - 70) * 0.67; // Upper tier gets 75-90 range
+      } else {
+        finalVorp = normalizedVorp * 0.75; // Lower tier gets 0-75 range
+      }
+      
+      vorpMap[p.player_name] = Math.round(Math.max(1, Math.min(99, finalVorp)));
+    }
   });
 
   // Generate tier breaks based on VORP drops
