@@ -1,12 +1,13 @@
 import axios from 'axios';
 
-interface PlayerProjection {
+export interface PlayerProjection {
   player_name: string;
   position: string;
   team: string;
   projected_fpts: number;
-  receptions: number;
+  receptions?: number;
   birthdate?: string;
+  vorp?: number;
 }
 
 interface SleeperPlayer {

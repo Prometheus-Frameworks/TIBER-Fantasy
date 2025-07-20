@@ -37,6 +37,7 @@ import { testNFLStatsDirect } from './api/test-nfl-stats-direct';
 import { fetchGrokProjections } from './services/grokProjectionsService';
 import { cleanVorpRankings } from './clean-vorp-endpoint';
 import { getSleeperProjections } from './services/sleeperProjectionsService';
+import { calculateVORP } from './vorpCalculator';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -153,23 +154,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 🎯 REAL SLEEPER API RANKINGS - 3-TIER FALLBACK SYSTEM
+  // 🎯 VORP RANKINGS WITH 3-TIER FALLBACK SYSTEM
   app.get('/api/rankings', async (req: Request, res: Response) => {
     try {
       console.log('🚀 Rankings endpoint hit - fetching projections...');
-      const projections = await getSleeperProjections();
+      let players = await getSleeperProjections();
+      
+      // Calculate VORP for all players
+      console.log('📊 Calculating VORP with dynamic baselines...');
+      const playersWithVORP = calculateVORP(players);
+      
+      // Sort by VORP descending (highest value first)
+      playersWithVORP.sort((a, b) => (b.vorp || 0) - (a.vorp || 0));
       
       // Apply position filtering if requested
       const position = req.query.position as string;
-      let filteredProjections = projections;
-      
+      let finalPlayers = playersWithVORP;
       if (position && position !== 'all') {
-        filteredProjections = projections.filter(p => p.position === position.toUpperCase());
-        console.log(`🔍 Position filter applied: ${position} (${filteredProjections.length} players)`);
+        finalPlayers = playersWithVORP.filter(p => p.position === position.toUpperCase());
+        console.log(`🔍 Position filter applied: ${position} (${finalPlayers.length} players)`);
       }
       
-      console.log(`✅ Rankings API: Returning ${filteredProjections.length} players`);
-      res.json(filteredProjections);
+      console.log(`✅ VORP Rankings: Returning ${finalPlayers.length} players sorted by value`);
+      res.json(finalPlayers);
       
     } catch (error) {
       console.error('❌ Rankings API error:', error instanceof Error ? error.message : 'Unknown error');
