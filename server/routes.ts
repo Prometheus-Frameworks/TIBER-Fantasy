@@ -228,7 +228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         else if (leagueFormat === 'half_ppr') fpts = projObj.pts_half_ppr || 0;
         else fpts = projObj.pts_std || 0;
         
-        if (fpts > 0 && fpts <= 450) {
+        if (fpts >= 100 && fpts <= 450) {  // Ensure fallback data is included
           players.push({
             player_id: playerId,
             full_name: player.full_name || `${player.first_name} ${player.last_name}`,
