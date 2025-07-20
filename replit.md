@@ -5,16 +5,13 @@
 On The Clock is a clean, open-source fantasy football website that serves as a foundation for community-driven tools. The platform has been reset to a minimal state with only essential player data preserved for future development.
 
 ## 🔥 Current State
-- **REAL DATA SYSTEM WITH MULTI-TIER FALLBACK**: Enhanced 3-tier fallback system (Season → League Matchups → Rosters)
-- **Sleeper API Integration**: Uses 2025 seasonal projections with intelligent multi-tier fallback when data is unavailable
-- **3-Tier Fallback System**: 
-  1. 2025 Seasonal projections (primary)
-  2. League matchups scan (weeks 1-18, League: 1197631162923614208)
-  3. Active rosters with seasonal projections (final fallback)
-- **Strict Validation Active**: projected_fpts > 50, NFL team only, position QB/RB/WR/TE, sanity cap at 450  
-- **Comprehensive Logging**: All excluded players logged with name and projected_fpts for review
-- **Multi-Format Support**: Standard/Half-PPR/PPR with direct field mapping (pts_ppr, pts_half_ppr, pts_std)
-- **Dynamic Source Detection**: System automatically detects data availability and logs active source type
+- **DIRECT VORP RANKING ENGINE ACTIVE**: Pure VORP calculation system using projected_fpts - replacement_level
+- **Sleeper API Integration**: 2025 seasonal projections with sample data fallback for pre-season testing
+- **Replacement Level Thresholds**: QB: 225pts, RB: 200pts, WR: 200pts, TE: 150pts
+- **Direct Calculation Formula**: VORP = projected_fpts - replacement_level (no complex conversions)
+- **Clean Implementation**: Removed all historical ranking conversions and complex multi-tier systems
+- **Multi-Format Support**: PPR/Half-PPR/Standard scoring with direct field mapping
+- **Server Recovery Complete**: Fixed all syntax errors and corrupted code, server fully operational
 
 ## 🧱 Stack
 - TypeScript / Node.js
