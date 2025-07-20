@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import express from "express";
 import axios from "axios";
 import { createServer, type Server } from "http";
@@ -152,8 +152,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 🔥 EMERGENCY CLEAN VORP RANKINGS ENDPOINT - DIRECT CALCULATION
-  app.get('/api/rankings', cleanVorpRankings);
+  // 🔥 TIBER DUMMY DATA PATCH - EMERGENCY DIAGNOSTIC TEST
+  app.get('/api/rankings', (req: Request, res: Response) => {
+    const dummyPlayers = [
+      { "player_name": "Justin Jefferson", "position": "WR", "team": "MIN", "projected_fpts": 320 },
+      { "player_name": "Christian McCaffrey", "position": "RB", "team": "SF", "projected_fpts": 310 },
+      { "player_name": "Patrick Mahomes", "position": "QB", "team": "KC", "projected_fpts": 305 },
+      { "player_name": "Ja'Marr Chase", "position": "WR", "team": "CIN", "projected_fpts": 290 },
+      { "player_name": "Josh Allen", "position": "QB", "team": "BUF", "projected_fpts": 300 }
+    ];
+    res.json(dummyPlayers);
+  });
   
   // Register other routes
   registerADPRoutes(app);
