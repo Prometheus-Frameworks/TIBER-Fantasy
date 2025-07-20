@@ -87,14 +87,14 @@ export class SleeperProjectionsPipeline {
   private getProjectedPoints(
     projection: SleeperProjection | LeagueMatchupPlayer, 
     format: string,
-    sourceType: 'season' | 'league'
+    sourceType: 'season' | 'league' | 'rosters'
   ): number {
     if (sourceType === 'league') {
       // League projections use starters_points directly
       return (projection as LeagueMatchupPlayer).starters_points || 0;
     }
 
-    // Seasonal projections use Sleeper's native scoring
+    // Seasonal and rosters projections use Sleeper's native scoring
     const seasonalProj = projection as SleeperProjection;
     
     switch (format) {

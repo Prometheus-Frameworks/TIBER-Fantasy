@@ -38,7 +38,7 @@ export interface LeagueMatchupPlayer {
 }
 
 export interface ProjectionSource {
-  type: 'season' | 'league';
+  type: 'season' | 'league' | 'rosters';
   league_id?: string;
   week?: number;
 }
@@ -81,11 +81,11 @@ export class SleeperSourceManager {
   }
 
   /**
-   * Fetch seasonal projections with automatic league fallback
+   * Fetch seasonal projections with multi-tier fallback system
    */
-  async fetchSeasonalProjections(leagueId: string = '1197631162923614208', week: number = 1): Promise<{
+  async fetchSeasonalProjections(leagueId: string = '1197631162923614208'): Promise<{
     projections: Record<string, SleeperProjection | LeagueMatchupPlayer>;
-    sourceType: 'season' | 'league';
+    sourceType: 'season' | 'league' | 'rosters';
   }> {
     console.log('🔄 Fetching 2025 seasonal projections from Sleeper...');
     
@@ -97,10 +97,10 @@ export class SleeperSourceManager {
       const projections = response.data || {};
       console.log(`📊 2025 seasonal projections: ${Object.keys(projections).length} players`);
       
-      // If seasonal projections are empty, fallback to league matchups
+      // If seasonal projections are empty, try multi-tier fallback
       if (Object.keys(projections).length === 0) {
         console.warn('⚠️ Season projections empty — fallback to league matchups.');
-        return await this.fetchLeagueMatchupsFallback(leagueId, week);
+        return await this.fetchMultiTierFallback(leagueId);
       }
       
       this.cache.seasonalProjections = projections;
@@ -111,49 +111,62 @@ export class SleeperSourceManager {
         sourceType: 'season'
       };
     } catch (error) {
-      console.error('❌ Failed to fetch seasonal projections, trying league fallback:', error);
-      return await this.fetchLeagueMatchupsFallback(leagueId, week);
+      console.error('❌ Failed to fetch seasonal projections, trying multi-tier fallback:', error);
+      return await this.fetchMultiTierFallback(leagueId);
     }
   }
 
   /**
-   * Fetch league matchup data as fallback
+   * Multi-tier fallback system: matchups -> rosters
    */
-  private async fetchLeagueMatchupsFallback(leagueId: string, week: number): Promise<{
-    projections: Record<string, LeagueMatchupPlayer>;
-    sourceType: 'league';
+  private async fetchMultiTierFallback(leagueId: string): Promise<{
+    projections: Record<string, SleeperProjection | LeagueMatchupPlayer>;
+    sourceType: 'league' | 'rosters';
   }> {
-    console.log(`🔄 Fetching league matchups fallback (League: ${leagueId}, Week: ${week})...`);
+    // Tier 1: Try league matchups across multiple weeks
+    console.log(`🔄 Tier 1 fallback: Searching league matchups (League: ${leagueId})...`);
     
-    try {
-      const matchupsUrl = SLEEPER_ENDPOINTS.LEAGUE_MATCHUPS
-        .replace('{league_id}', leagueId)
-        .replace('{week}', week.toString());
+    let foundData = false;
+    const leagueProjections: Record<string, LeagueMatchupPlayer> = {};
+    
+    // Search weeks 1-18 for available matchup data
+    for (let week = 1; week <= 18; week++) {
+      try {
+        const matchupsUrl = SLEEPER_ENDPOINTS.LEAGUE_MATCHUPS
+          .replace('{league_id}', leagueId)
+          .replace('{week}', week.toString());
+          
+        const response = await axios.get(matchupsUrl, { timeout: 15000 });
+        const matchups = response.data || [];
         
-      const response = await axios.get(matchupsUrl, {
-        timeout: 15000
-      });
-      
-      const matchups = response.data || [];
-      const leagueProjections: Record<string, LeagueMatchupPlayer> = {};
-      
-      for (const matchup of matchups) {
-        const starters = matchup.starters || [];
-        const startersPoints = matchup.starters_points || [];
-        
-        for (let i = 0; i < starters.length; i++) {
-          const playerId = starters[i];
-          if (playerId && startersPoints[i] !== undefined) {
-            leagueProjections[playerId] = {
-              player_id: playerId,
-              starters_points: startersPoints[i]
-            };
+        if (matchups && matchups.length > 0) {
+          foundData = true;
+          console.log(`📊 Found matchup data for week ${week}`);
+          
+          for (const matchup of matchups) {
+            const starters = matchup.starters || [];
+            const startersPoints = matchup.starters_points || [];
+            
+            for (let i = 0; i < starters.length; i++) {
+              const playerId = starters[i];
+              if (playerId && startersPoints[i] !== undefined) {
+                leagueProjections[playerId] = {
+                  player_id: playerId,
+                  starters_points: startersPoints[i]
+                };
+              }
+            }
           }
+          break; // Use first available week
         }
+      } catch (error) {
+        console.log(`⚠️ Week ${week} matchups unavailable`);
+        continue;
       }
-      
-      console.log(`📊 League matchups fallback: ${Object.keys(leagueProjections).length} players`);
-      
+    }
+    
+    if (foundData) {
+      console.log(`✅ League matchups fallback: ${Object.keys(leagueProjections).length} players`);
       this.cache.leagueProjections = leagueProjections;
       this.cache.lastFetch = Date.now();
       
@@ -161,11 +174,62 @@ export class SleeperSourceManager {
         projections: leagueProjections,
         sourceType: 'league'
       };
+    }
+    
+    // Tier 2: Roster-based fallback
+    console.warn('⚠️ Matchups empty — fallback to rosters.');
+    return await this.fetchRostersFallback(leagueId);
+  }
+
+  /**
+   * Roster-based fallback using active league players
+   */
+  private async fetchRostersFallback(leagueId: string): Promise<{
+    projections: Record<string, SleeperProjection>;
+    sourceType: 'rosters';
+  }> {
+    console.log(`🔄 Tier 2 fallback: Using league rosters (League: ${leagueId})...`);
+    
+    try {
+      // Get active roster players
+      const rostersUrl = `https://api.sleeper.app/v1/league/${leagueId}/rosters`;
+      const rostersResponse = await axios.get(rostersUrl, { timeout: 15000 });
+      const rosters = rostersResponse.data || [];
+      
+      const activePlayerIds = new Set<string>();
+      for (const roster of rosters) {
+        if (roster.players) {
+          roster.players.forEach((playerId: string) => activePlayerIds.add(playerId));
+        }
+      }
+      
+      console.log(`📊 Active roster players: ${activePlayerIds.size}`);
+      
+      // Get projections for active players
+      const projResponse = await axios.get(SLEEPER_ENDPOINTS.SEASONAL_PROJECTIONS, {
+        timeout: 15000
+      });
+      const allProjections = projResponse.data || {};
+      
+      const rosterProjections: Record<string, SleeperProjection> = {};
+      for (const playerId of activePlayerIds) {
+        if (allProjections[playerId]) {
+          rosterProjections[playerId] = allProjections[playerId];
+        }
+      }
+      
+      console.log(`✅ Rosters fallback: ${Object.keys(rosterProjections).length} players with projections`);
+      
+      return {
+        projections: rosterProjections,
+        sourceType: 'rosters'
+      };
+      
     } catch (error) {
-      console.error('❌ Failed to fetch league matchups:', error);
+      console.error('❌ Failed to fetch rosters fallback:', error);
       return {
         projections: {},
-        sourceType: 'league'
+        sourceType: 'rosters'
       };
     }
   }
@@ -218,7 +282,7 @@ export class SleeperSourceManager {
   async getProjections(source: ProjectionSource): Promise<{
     players: Record<string, SleeperPlayer>;
     projections: Record<string, SleeperProjection | LeagueMatchupPlayer>;
-    sourceType: 'season' | 'league';
+    sourceType: 'season' | 'league' | 'rosters';
   }> {
     // Check cache validity
     const cacheValid = this.cache.lastFetch && (Date.now() - this.cache.lastFetch) < this.CACHE_TTL;
@@ -230,7 +294,7 @@ export class SleeperSourceManager {
     }
 
     let projections: Record<string, SleeperProjection | LeagueMatchupPlayer>;
-    let sourceType: 'season' | 'league';
+    let sourceType: 'season' | 'league' | 'rosters';
 
     if (source.type === 'league' && source.league_id && source.week) {
       // League-specific projections

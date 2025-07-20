@@ -1,0 +1,130 @@
+{
+  "season": {
+    "top_10": [
+      {
+        "player_name": "Ja'Marr Chase",
+        "position": "WR",
+        "team": "CIN",
+        "projected_fpts": 220
+      },
+      {
+        "player_name": "Bijan Robinson",
+        "position": "RB",
+        "team": "ATL",
+        "projected_fpts": 250
+      },
+      {
+        "player_name": "Justin Jefferson",
+        "position": "WR",
+        "team": "MIN",
+        "projected_fpts": 210
+      },
+      {
+        "player_name": "Jahmyr Gibbs",
+        "position": "RB",
+        "team": "DET",
+        "projected_fpts": 230
+      },
+      {
+        "player_name": "Malik Nabers",
+        "position": "WR",
+        "team": "NYG",
+        "projected_fpts": 190
+      },
+      {
+        "player_name": "CeeDee Lamb",
+        "position": "WR",
+        "team": "DAL",
+        "projected_fpts": 215
+      },
+      {
+        "player_name": "Puka Nacua",
+        "position": "WR",
+        "team": "LAR",
+        "projected_fpts": 200
+      },
+      {
+        "player_name": "Amon-Ra St. Brown",
+        "position": "WR",
+        "team": "DET",
+        "projected_fpts": 205
+      },
+      {
+        "player_name": "Ashton Jeanty",
+        "position": "RB",
+        "team": "LV",
+        "projected_fpts": 220
+      },
+      {
+        "player_name": "Garrett Wilson",
+        "position": "WR",
+        "team": "NYJ",
+        "projected_fpts": 185
+      }
+    ]
+  },
+  "league": {
+    "top_10": [
+      {
+        "player_name": "Ja'Marr Chase",
+        "position": "WR",
+        "team": "CIN",
+        "projected_fpts": 225
+      },
+      {
+        "player_name": "Bijan Robinson",
+        "position": "RB",
+        "team": "ATL",
+        "projected_fpts": 255
+      },
+      {
+        "player_name": "Justin Jefferson",
+        "position": "WR",
+        "team": "MIN",
+        "projected_fpts": 215
+      },
+      {
+        "player_name": "Jahmyr Gibbs",
+        "position": "RB",
+        "team": "DET",
+        "projected_fpts": 235
+      },
+      {
+        "player_name": "Malik Nabers",
+        "position": "WR",
+        "team": "NYG",
+        "projected_fpts": 195
+      },
+      {
+        "player_name": "CeeDee Lamb",
+        "position": "WR",
+        "team": "DAL",
+        "projected_fpts": 220
+      },
+      {
+        "player_name": "Puka Nacua",
+        "position": "WR",
+        "team": "LAR",
+        "projected_fpts": 205
+      },
+      {
+        "player_name": "Amon-Ra St. Brown",
+        "position": "WR",
+        "team": "DET",
+        "projected_fpts": 210
+      },
+      {
+        "player_name": "Ashton Jeanty",
+        "position": "RB",
+        "team": "LV",
+        "projected_fpts": 225
+      },
+      {
+        "player_name": "Garrett Wilson",
+        "position": "WR",
+        "team": "NYJ",
+        "projected_fpts": 190
+      }
+    ]
+  }
+}
