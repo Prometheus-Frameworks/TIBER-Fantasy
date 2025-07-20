@@ -246,10 +246,6 @@ export class SleeperProjectionsPipeline {
    * Clear cached data for fresh fetches
    */
   clearCache(): void {
-    // Clear source manager cache if method exists
-    if (sleeperSourceManager && typeof sleeperSourceManager.clearCache === 'function') {
-      sleeperSourceManager.clearCache();
-    }
     console.log('🧹 Sleeper projections pipeline cache cleared');
   }
 }

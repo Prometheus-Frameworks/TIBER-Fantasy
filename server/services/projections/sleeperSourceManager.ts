@@ -81,30 +81,92 @@ export class SleeperSourceManager {
   }
 
   /**
-   * Fetch seasonal projections (2025 season) with ADP fallback
+   * Fetch seasonal projections with automatic league fallback
    */
-  async fetchSeasonalProjections(): Promise<Record<string, SleeperProjection>> {
+  async fetchSeasonalProjections(leagueId: string = '1197631162923614208', week: number = 1): Promise<{
+    projections: Record<string, SleeperProjection | LeagueMatchupPlayer>;
+    sourceType: 'season' | 'league';
+  }> {
     console.log('🔄 Fetching 2025 seasonal projections from Sleeper...');
     
     try {
-      // Try 2025 seasonal projections first
-      let response = await axios.get(SLEEPER_ENDPOINTS.SEASONAL_PROJECTIONS, {
+      const response = await axios.get(SLEEPER_ENDPOINTS.SEASONAL_PROJECTIONS, {
         timeout: 15000
       });
       
-      let projections = response.data || {};
+      const projections = response.data || {};
       console.log(`📊 2025 seasonal projections: ${Object.keys(projections).length} players`);
       
-      // No fallback - use real data only
+      // If seasonal projections are empty, fallback to league matchups
       if (Object.keys(projections).length === 0) {
-        console.log('⚠️ No seasonal projections available from Sleeper API - returning empty dataset');
+        console.warn('⚠️ Season projections empty — fallback to league matchups.');
+        return await this.fetchLeagueMatchupsFallback(leagueId, week);
       }
       
       this.cache.seasonalProjections = projections;
-      return projections;
+      this.cache.lastFetch = Date.now();
+      
+      return {
+        projections,
+        sourceType: 'season'
+      };
     } catch (error) {
-      console.error('❌ Failed to fetch seasonal projections:', error);
-      throw new Error('Unable to fetch seasonal projections from Sleeper API');
+      console.error('❌ Failed to fetch seasonal projections, trying league fallback:', error);
+      return await this.fetchLeagueMatchupsFallback(leagueId, week);
+    }
+  }
+
+  /**
+   * Fetch league matchup data as fallback
+   */
+  private async fetchLeagueMatchupsFallback(leagueId: string, week: number): Promise<{
+    projections: Record<string, LeagueMatchupPlayer>;
+    sourceType: 'league';
+  }> {
+    console.log(`🔄 Fetching league matchups fallback (League: ${leagueId}, Week: ${week})...`);
+    
+    try {
+      const matchupsUrl = SLEEPER_ENDPOINTS.LEAGUE_MATCHUPS
+        .replace('{league_id}', leagueId)
+        .replace('{week}', week.toString());
+        
+      const response = await axios.get(matchupsUrl, {
+        timeout: 15000
+      });
+      
+      const matchups = response.data || [];
+      const leagueProjections: Record<string, LeagueMatchupPlayer> = {};
+      
+      for (const matchup of matchups) {
+        const starters = matchup.starters || [];
+        const startersPoints = matchup.starters_points || [];
+        
+        for (let i = 0; i < starters.length; i++) {
+          const playerId = starters[i];
+          if (playerId && startersPoints[i] !== undefined) {
+            leagueProjections[playerId] = {
+              player_id: playerId,
+              starters_points: startersPoints[i]
+            };
+          }
+        }
+      }
+      
+      console.log(`📊 League matchups fallback: ${Object.keys(leagueProjections).length} players`);
+      
+      this.cache.leagueProjections = leagueProjections;
+      this.cache.lastFetch = Date.now();
+      
+      return {
+        projections: leagueProjections,
+        sourceType: 'league'
+      };
+    } catch (error) {
+      console.error('❌ Failed to fetch league matchups:', error);
+      return {
+        projections: {},
+        sourceType: 'league'
+      };
     }
   }
 
@@ -176,12 +238,11 @@ export class SleeperSourceManager {
       sourceType = 'league';
       console.log(`📊 Using league-specific projections for ${source.league_id}, week ${source.week}`);
     } else {
-      // Seasonal projections (default)
-      projections = this.cache.seasonalProjections && cacheValid 
-        ? this.cache.seasonalProjections 
-        : await this.fetchSeasonalProjections();
-      sourceType = 'season';
-      console.log('📊 Using 2025 seasonal projections');
+      // Seasonal projections with automatic fallback
+      const result = await this.fetchSeasonalProjections();
+      projections = result.projections;
+      sourceType = result.sourceType;
+      console.log(`📊 Using ${sourceType} projections`);
     }
 
     return {

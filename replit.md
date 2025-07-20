@@ -5,11 +5,13 @@
 On The Clock is a clean, open-source fantasy football website that serves as a foundation for community-driven tools. The platform has been reset to a minimal state with only essential player data preserved for future development.
 
 ## 🔥 Current State
-- **REAL DATA ONLY SYSTEM**: Complete removal of synthetic projections - strict Sleeper API validation only
-- **Sleeper API Integration**: Uses 2025 seasonal projections with comprehensive validation filters
-- **Strict Validation Active**: projected_fpts > 50, NFL team only, position QB/RB/WR/TE, sanity cap at 450
+- **REAL DATA ONLY SYSTEM WITH FALLBACK**: Enhanced system with league matchups fallback when seasonal data is empty
+- **Sleeper API Integration**: Uses 2025 seasonal projections as primary source with automatic fallback to league matchups
+- **League Matchups Fallback**: When seasonal projections return empty, automatically falls back to league data (League: 1197631162923614208, Week: 1)
+- **Strict Validation Active**: projected_fpts > 50, NFL team only, position QB/RB/WR/TE, sanity cap at 450  
 - **Comprehensive Logging**: All excluded players logged with name and projected_fpts for review
 - **Multi-Format Support**: Standard/Half-PPR/PPR with direct field mapping (pts_ppr, pts_half_ppr, pts_std)
+- **Dynamic Source Switching**: System automatically detects empty seasonal data and logs fallback activation
 
 ## 🧱 Stack
 - TypeScript / Node.js
@@ -239,6 +241,7 @@ Based on user feedback, expanding to include:
 
 ```
 Changelog:
+- July 20, 2025. **ENHANCED REAL DATA SYSTEM WITH LEAGUE FALLBACK**: Enhanced real-data-only system with league matchups fallback functionality - when 2025 seasonal projections are empty, system automatically falls back to league data (League: 1197631162923614208, Week: 1), maintains strict validation pipeline (projected_fpts > 50, NFL teams only, position filters, sanity cap at 450), comprehensive logging including fallback activation, direct field mapping for all scoring formats, dynamic source type detection
 - July 20, 2025. **REAL DATA ONLY SYSTEM DEPLOYED**: Complete removal of synthetic projections fallback - rankings now exclusively use real Sleeper API data with strict validation (projected_fpts > 50, NFL teams only, position filters, sanity cap at 450), comprehensive logging of excluded players, direct field mapping for PPR/Half-PPR/Standard formats, and empty result returns when 2025 API has no data
 - July 20, 2025. **COMPLETE RANKINGS SYSTEM REMOVAL & NEW HOMEPAGE**: Successfully removed all rankings infrastructure per user directive - deleted Rankings.tsx, rankingsApi.ts, consensusService.ts, tier bubble components, ranking API endpoints, consensus calculation system, and all ranking-related pages and routes. Replaced React application with static HTML homepage featuring four feature boxes (Rankings, OASIS, Player Profiles, Advanced Analytics) linking to placeholder module pages. Preserved players.json file with 20 fantasy players as only remaining data asset for future features.
 - July 20, 2025. **RANKINGS API IMPLEMENTATION**: Created new simplified rankings API endpoint (/api/rankings) with league format support (standard/half-ppr/ppr) and VORP calculation engine. Added trade evaluation endpoint (/api/trade-eval) for analyzing player trades using VORP metrics. Updated rankings.html with improved league format toggles and debugging capabilities.
