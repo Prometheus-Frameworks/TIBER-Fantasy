@@ -154,29 +154,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 🎯 VORP RANKINGS WITH 3-TIER FALLBACK SYSTEM
+  // 🎯 ENHANCED VORP RANKINGS WITH DYNASTY MODE & POSITIONAL FILTERING
   app.get('/api/rankings', async (req: Request, res: Response) => {
     try {
-      console.log('🚀 Rankings endpoint hit - fetching projections...');
+      const mode = req.query.mode as string || 'redraft';
+      const position = req.query.position ? (req.query.position as string).toUpperCase() : null;
+      const numTeams = parseInt(req.query.num_teams as string) || 12;
+      const starters = req.query.starters ? JSON.parse(req.query.starters as string) : { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 };
+      
+      console.log(`🚀 Rankings endpoint hit - Mode: ${mode}, Position: ${position || 'ALL'}, Teams: ${numTeams}`);
+      
       let players = await getSleeperProjections();
       
-      // Calculate VORP for all players
-      console.log('📊 Calculating VORP with dynamic baselines...');
-      const playersWithVORP = calculateVORP(players);
-      
-      // Sort by VORP descending (highest value first)
-      playersWithVORP.sort((a, b) => (b.vorp || 0) - (a.vorp || 0));
-      
-      // Apply position filtering if requested
-      const position = req.query.position as string;
-      let finalPlayers = playersWithVORP;
-      if (position && position !== 'all') {
-        finalPlayers = playersWithVORP.filter(p => p.position === position.toUpperCase());
-        console.log(`🔍 Position filter applied: ${position} (${finalPlayers.length} players)`);
+      // Use fallback sample if no data available (expanded sample)
+      if (players.length === 0) {
+        console.log('📊 Using fallback sample data...');
+        players = [
+          { player_name: "Ja'Marr Chase", position: "WR", team: "CIN", projected_fpts: 220, birthdate: "2000-03-01", receptions: 100 },
+          { player_name: "Bijan Robinson", position: "RB", team: "ATL", projected_fpts: 250, birthdate: "2002-01-30", receptions: 40 },
+          { player_name: "Justin Jefferson", position: "WR", team: "MIN", projected_fpts: 210, birthdate: "1999-06-16", receptions: 95 },
+          { player_name: "Jahmyr Gibbs", position: "RB", team: "DET", projected_fpts: 230, birthdate: "2002-03-20", receptions: 50 },
+          { player_name: "Malik Nabers", position: "WR", team: "NYG", projected_fpts: 190, birthdate: "2003-07-28", receptions: 85 },
+          { player_name: "CeeDee Lamb", position: "WR", team: "DAL", projected_fpts: 215, birthdate: "1999-04-08", receptions: 90 },
+          { player_name: "Puka Nacua", position: "WR", team: "LAR", projected_fpts: 200, birthdate: "2001-05-29", receptions: 80 },
+          { player_name: "Amon-Ra St. Brown", position: "WR", team: "DET", projected_fpts: 205, birthdate: "1999-10-24", receptions: 88 },
+          { player_name: "Ashton Jeanty", position: "RB", team: "LV", projected_fpts: 220, birthdate: "2003-12-02", receptions: 30 },
+          { player_name: "Garrett Wilson", position: "WR", team: "NYJ", projected_fpts: 185, birthdate: "2000-07-22", receptions: 75 },
+          { player_name: "Marvin Harrison Jr.", position: "WR", team: "ARI", projected_fpts: 180, birthdate: "2002-08-11", receptions: 70 },
+          { player_name: "A.J. Brown", position: "WR", team: "PHI", projected_fpts: 195, birthdate: "1997-06-30", receptions: 82 },
+          { player_name: "Saquon Barkley", position: "RB", team: "PHI", projected_fpts: 240, birthdate: "1997-02-09", receptions: 45 },
+          { player_name: "Jonathan Taylor", position: "RB", team: "IND", projected_fpts: 225, birthdate: "1999-01-19", receptions: 35 },
+          { player_name: "Breece Hall", position: "RB", team: "NYJ", projected_fpts: 215, birthdate: "2001-05-31", receptions: 55 },
+          { player_name: "Nico Collins", position: "WR", team: "HOU", projected_fpts: 170, birthdate: "1999-03-19", receptions: 68 },
+          { player_name: "De'Von Achane", position: "RB", team: "MIA", projected_fpts: 200, birthdate: "2001-10-13", receptions: 48 },
+          { player_name: "Sam LaPorta", position: "TE", team: "DET", projected_fpts: 150, birthdate: "2001-01-12", receptions: 60 },
+          { player_name: "Patrick Mahomes", position: "QB", team: "KC", projected_fpts: 350, birthdate: "1995-09-17", receptions: 0 },
+          { player_name: "Josh Allen", position: "QB", team: "BUF", projected_fpts: 360, birthdate: "1996-05-21", receptions: 0 }
+        ];
       }
       
-      console.log(`✅ VORP Rankings: Returning ${finalPlayers.length} players sorted by value`);
-      res.json(finalPlayers);
+      // Apply position filtering before VORP calculation
+      if (position) {
+        players = players.filter(p => p.position === position);
+        console.log(`🔍 Position filter applied: ${position} (${players.length} players)`);
+      }
+      
+      // Calculate VORP with dynasty mode and enhanced parameters
+      console.log(`📊 Calculating VORP with ${mode} mode...`);
+      const playersWithVORP = calculateVORP(players, numTeams, starters, mode);
+      
+      console.log(`✅ VORP Rankings: Returning ${playersWithVORP.length} players sorted by value (${mode} mode)`);
+      res.json(playersWithVORP);
       
     } catch (error) {
       console.error('❌ Rankings API error:', error instanceof Error ? error.message : 'Unknown error');
