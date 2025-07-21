@@ -258,6 +258,7 @@ Based on user feedback, expanding to include:
 
 ```
 Changelog:
+- July 21, 2025. **[DEPRECATION_COMPLETE] API SOURCES DISABLED**: Deprecated SportsDataIO Depth Chart API, NFL-Data-Py service, and FantasyCalc scraping per TIBER directive - retained only Sleeper API and OASIS API integrations
 - July 21, 2025. **TIBER DEPTH CHART SYSTEM DEPLOYED**: Successfully implemented live NFL depth chart integration with MainPlayerSystem.json generation framework using SportsDataIO API
 - July 21, 2025. **Live NFL Depth Chart API Integration Complete**: 336 fantasy relevant players across 32 teams with depth scoring system (WR1/RB1: 1.0, WR2/RB2: 0.8, etc.) and 24-hour auto-refresh cycles
 - July 21, 2025. **RB Projections Export Complete**: Successfully exported projections_rb.json with 76 RBs in standardized format (player_id, name, team, proj_points, carries, rush_yd, rush_td, rec, rec_yd, rec_td, adp)

@@ -1,7 +1,10 @@
 /**
- * Dynasty ADP Service - Real-time dynasty ADP data integration
- * Using Fantasy Football Calculator API (completely free)
+ * Dynasty ADP Service - DEPRECATED
+ * [DEPRECATION_COMPLETE] FantasyCalc API scraping disabled by TIBER directive
  */
+
+// DEPRECATED - DO NOT USE
+console.log('⚠️ [DEPRECATION_COMPLETE] FantasyCalc API scraping disabled by TIBER directive');
 
 export interface DynastyADPPlayer {
   player_name: string;
@@ -32,17 +35,17 @@ export interface ADPData {
 }
 
 class DynastyADPService {
-  private cache: Map<string, { data: any; timestamp: number }> = new Map();
-  private readonly CACHE_DURATION = 60 * 60 * 1000; // 1 hour cache
+  // [DEPRECATION_COMPLETE] All FantasyCalc functionality disabled
   
-  // Circuit breaker to prevent repeated failed API calls
-  private circuitBreaker = {
-    isOpen: false,
-    failures: 0,
-    lastFailureTime: 0,
-    threshold: 3, // Open circuit after 3 failures
-    timeout: 5 * 60 * 1000 // 5 minutes before retry
-  };
+  getDynastyADP(): Promise<DynastyADPPlayer[]> {
+    console.log('⚠️ [DEPRECATION_COMPLETE] FantasyCalc ADP scraping disabled');
+    throw new Error('[DEPRECATION_COMPLETE] FantasyCalc API disabled by TIBER directive');
+  }
+
+  getRookieADP(): Promise<any[]> {
+    console.log('⚠️ [DEPRECATION_COMPLETE] FantasyCalc rookie ADP scraping disabled');
+    throw new Error('[DEPRECATION_COMPLETE] FantasyCalc API disabled by TIBER directive');
+  }
 
   /**
    * Fetch dynasty ADP data from Fantasy Football Calculator

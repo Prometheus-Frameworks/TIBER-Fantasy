@@ -1,11 +1,17 @@
 /**
- * NFL-Data-Py Integration
- * Free, authentic NFL data including advanced metrics like YPRR
- * Uses official NFL statistics via the nfl-data-py Python package
+ * NFL-Data-Py Integration - DEPRECATED
+ * [DEPRECATION_COMPLETE] This service has been disabled by TIBER directive
+ * All NFL-Data-Py endpoints are no longer active
  */
 
-import { spawn } from 'child_process';
-import * as path from 'path';
+// DEPRECATED - DO NOT USE
+console.log('⚠️ [DEPRECATED] NFL-Data-Py service disabled by TIBER directive');
+
+// All NFL-Data-Py functions disabled
+export function fetchNFLAdvancedStats(): Promise<any[]> {
+  console.log('⚠️ [DEPRECATION_COMPLETE] NFL-Data-Py service disabled');
+  throw new Error('[DEPRECATION_COMPLETE] NFL-Data-Py service disabled by TIBER directive');
+}
 
 export interface NFLPlayerAdvanced {
   player_id: string;

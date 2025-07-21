@@ -38,26 +38,8 @@ export class DepthChartService {
   };
 
   private async fetchLiveDepthCharts(): Promise<DepthChartTeam[]> {
-    try {
-      console.log('🔍 [MPS] Fetching live NFL depth charts from SportsDataIO...');
-      
-      if (!process.env.SPORTSDATA_API_KEY) {
-        throw new Error('SPORTSDATA_API_KEY environment variable not found');
-      }
-      
-      const response = await fetch(`https://api.sportsdata.io/v3/nfl/scores/json/DepthCharts?key=${process.env.SPORTSDATA_API_KEY}`);
-      
-      if (!response.ok) {
-        throw new Error(`SportsData API error: ${response.status} ${response.statusText}`);
-      }
-      
-      const depthCharts: DepthChartTeam[] = await response.json();
-      console.log(`📊 [MPS] Successfully fetched depth charts for ${depthCharts.length} teams`);
-      return depthCharts;
-    } catch (error) {
-      console.error('❌ [MPS_API_FAILURE_NO_FEED_DETECTED] Failed to fetch depth charts:', error);
-      throw error;
-    }
+    console.log('⚠️ [DEPRECATED] SportsDataIO Depth Chart API has been disabled');
+    throw new Error('[DEPRECATION_COMPLETE] SportsDataIO Depth Chart API disabled by TIBER directive');
   }
 
   private generatePlayerID(name: string, teamCode: string): string {

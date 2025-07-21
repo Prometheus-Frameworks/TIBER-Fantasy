@@ -46,68 +46,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // 🔥 TIBER COMMAND: MainPlayerSystem.json generation with live depth charts
   console.log('🔥 REGISTERING TIBER OVERRIDE ENDPOINT');
   
-  // TIBER: Live depth chart API integration
+  // TIBER: Depth chart system - DEPRECATED
   app.get('/api/tiber/depth-chart-system', async (req, res) => {
-    try {
-      console.log('🔍 [TIBER] CHECK_FOR_LIVE_DEPTH_CHART_API initiated...');
-      
-      const mainPlayerSystem = await depthChartService.generateMainPlayerSystem();
-      
-      res.json({
-        success: true,
-        system: 'MainPlayerSystem',
-        status: '[MPS_LIVE_UPDATE_SUCCESS]',
-        totalPlayers: mainPlayerSystem.length,
-        dataSource: 'SportsDataIO Live Depth Charts',
-        lastUpdated: new Date().toISOString(),
-        autoRefresh: '24 hours',
-        data: mainPlayerSystem
-      });
-    } catch (error) {
-      console.error('❌ [MPS_API_FAILURE_NO_FEED_DETECTED]', error);
-      
-      res.status(503).json({
-        success: false,
-        status: '[MPS_API_FAILURE_NO_FEED_DETECTED]',
-        message: 'Live depth chart API unavailable',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        instructions: 'AWAIT manual input - DO NOT fallback to static source'
-      });
-    }
+    console.log('⚠️ [DEPRECATION_COMPLETE] SportsDataIO Depth Chart API disabled');
+    res.status(410).json({
+      success: false,
+      status: '[DEPRECATION_COMPLETE]',
+      message: 'SportsDataIO Depth Chart API has been deprecated',
+      deprecated: true,
+      instruction: 'Use Sleeper API or OASIS API for data sources'
+    });
   });
 
-  // TIBER: Save MainPlayerSystem.json to file
+  // TIBER: MainPlayerSystem generation - DEPRECATED
   app.post('/api/tiber/generate-main-player-system', async (req, res) => {
-    try {
-      await depthChartService.saveMainPlayerSystem();
-      
-      res.json({
-        success: true,
-        message: '[MPS_LIVE_UPDATE_SUCCESS] MainPlayerSystem.json generated',
-        file: 'MainPlayerSystem.json',
-        autoRefresh: 'Enabled (24 hours)'
-      });
-    } catch (error) {
-      console.error('❌ [MPS] Generation failed:', error);
-      res.status(500).json({
-        success: false,
-        status: '[MPS_API_FAILURE_NO_FEED_DETECTED]',
-        message: 'MainPlayerSystem generation failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
+    console.log('⚠️ [DEPRECATION_COMPLETE] MainPlayerSystem generation disabled');
+    res.status(410).json({
+      success: false,
+      status: '[DEPRECATION_COMPLETE]',
+      message: 'MainPlayerSystem.json generation has been deprecated',
+      deprecated: true,
+      instruction: 'Use Sleeper API or OASIS API for data sources'
+    });
   });
 
-  // 🔄 Auto-refresh MainPlayerSystem every 24 hours
-  cron.schedule('0 6 * * *', async () => {
-    try {
-      console.log('🔄 [MPS] Auto-refresh initiated (24-hour cycle)');
-      await depthChartService.saveMainPlayerSystem();
-      console.log('✅ [MPS_LIVE_UPDATE_SUCCESS] Auto-refresh completed');
-    } catch (error) {
-      console.error('❌ [MPS] Auto-refresh failed:', error);
-    }
-  });
+  // 🔄 Auto-refresh MainPlayerSystem - DEPRECATED
+  // [DEPRECATION_COMPLETE] SportsDataIO auto-refresh disabled
 
   // 🔥 TIBER OVERRIDE: Critical NFL stats endpoint - HIGHEST PRIORITY
   app.get('/api/force-stats', async (req, res) => {
