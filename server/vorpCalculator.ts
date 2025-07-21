@@ -110,6 +110,22 @@ export function calculateVORP(
   // Sort by VORP descending
   players.sort((a, b) => (b.vorp || 0) - (a.vorp || 0));
 
+  // Calculate final ratings (1-99 scale) based on VORP
+  if (players.length > 0) {
+    const maxVorp = Math.max(...players.map(p => p.vorp || 0));
+    const minVorp = Math.min(...players.map(p => p.vorp || 0));
+    
+    players.forEach(p => {
+      if (p.vorp !== undefined && maxVorp > minVorp) {
+        // Scale VORP to 1-99 range, with 99 being the highest VORP
+        const normalizedVorp = (p.vorp - minVorp) / (maxVorp - minVorp);
+        (p as any).final_rating = Math.max(1, Math.min(99, Math.round(1 + normalizedVorp * 98)));
+      } else {
+        (p as any).final_rating = 50; // Default middle rating
+      }
+    });
+  }
+
   console.log(`✅ VORP calculated for ${players.length} players (${mode} mode)`);
   return players;
 }
