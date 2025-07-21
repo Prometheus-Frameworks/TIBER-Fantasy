@@ -217,7 +217,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const debugRaw = req.query.debug === 'true';
       const format = req.query.format as string || '1qb';
       const qbRushAdjust = req.query.qb_rush_adjust !== 'false'; // Default to true
-      const playersWithVORP = calculateVORP(players, numTeams, starters, mode, debugRaw, format, qbRushAdjust);
+      const positionalBalance = req.query.positional_balance !== 'false'; // Default to true
+      const playersWithVORP = calculateVORP(players, numTeams, starters, mode, debugRaw, format, qbRushAdjust, positionalBalance);
       
       // Add debug information if requested
       const debug = req.query.debug === 'true';
@@ -261,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Shared function for modular rankings logic (reusable)
-  async function getRankings(mode = 'redraft', position: string | null = null, numTeams = 12, debugRaw = false, format = '1qb', qbRushAdjust = true) {
+  async function getRankings(mode = 'redraft', position: string | null = null, numTeams = 12, debugRaw = false, format = '1qb', qbRushAdjust = true, positionalBalance = true) {
     try {
       console.log(`🚀 getRankings - Mode: ${mode}, Position: ${position || 'ALL'}, Teams: ${numTeams}`);
 
@@ -316,7 +317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate VORP with enhanced parameters
       console.log(`📊 Calculating VORP with ${mode} mode...`);
       const starters = { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 };
-      const playersWithVORP = calculateVORP(players, numTeams, starters, mode, debugRaw, format, qbRushAdjust);
+      const playersWithVORP = calculateVORP(players, numTeams, starters, mode, debugRaw, format, qbRushAdjust, positionalBalance);
 
       // Add tier information based on VORP values
       const playersWithTiers = playersWithVORP.map((player) => {

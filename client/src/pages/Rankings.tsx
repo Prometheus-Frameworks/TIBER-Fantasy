@@ -19,12 +19,13 @@ const Rankings = () => {
   const [format, setFormat] = useState<'1qb' | 'superflex'>('1qb');
   const [mode, setMode] = useState<'redraft' | 'dynasty'>('redraft');
   const [qbRushAdjust, setQbRushAdjust] = useState(true);
+  const [positionalBalance, setPositionalBalance] = useState(true);
 
   const fetchRankings = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/rankings?mode=${mode}&format=${format}&qb_rush_adjust=${qbRushAdjust}`);
+      const response = await fetch(`/api/rankings?mode=${mode}&format=${format}&qb_rush_adjust=${qbRushAdjust}&positional_balance=${positionalBalance}`);
       if (!response.ok) throw new Error('Fetch failed');
       const data = await response.json();
       setPlayers(data);
@@ -37,7 +38,7 @@ const Rankings = () => {
 
   useEffect(() => {
     fetchRankings();
-  }, [format, mode, qbRushAdjust]);
+  }, [format, mode, qbRushAdjust, positionalBalance]);
 
   if (loading) {
     return <div style={{ textAlign: 'center', color: '#888', padding: '40px' }}>Loading Rankings...</div>;
@@ -156,7 +157,7 @@ const Rankings = () => {
               Dynasty
             </button>
           </div>
-          <div>
+          <div style={{ marginBottom: '15px' }}>
             <label style={{ fontWeight: 'bold', marginRight: '10px' }}>QB Rush Adjust:</label>
             <button 
               style={toggleButtonStyle(qbRushAdjust)}
@@ -167,6 +168,21 @@ const Rankings = () => {
             <button 
               style={toggleButtonStyle(!qbRushAdjust)}
               onClick={() => setQbRushAdjust(false)}
+            >
+              Off
+            </button>
+          </div>
+          <div>
+            <label style={{ fontWeight: 'bold', marginRight: '10px' }}>Positional Balance:</label>
+            <button 
+              style={toggleButtonStyle(positionalBalance)}
+              onClick={() => setPositionalBalance(true)}
+            >
+              On
+            </button>
+            <button 
+              style={toggleButtonStyle(!positionalBalance)}
+              onClick={() => setPositionalBalance(false)}
             >
               Off
             </button>
@@ -242,7 +258,7 @@ const Rankings = () => {
             Dynasty
           </button>
         </div>
-        <div>
+        <div style={{ marginBottom: '15px' }}>
           <label style={{ fontWeight: 'bold', marginRight: '10px' }}>QB Rush Adjust:</label>
           <button 
             style={toggleButtonStyle(qbRushAdjust)}
@@ -253,6 +269,21 @@ const Rankings = () => {
           <button 
             style={toggleButtonStyle(!qbRushAdjust)}
             onClick={() => setQbRushAdjust(false)}
+          >
+            Off
+          </button>
+        </div>
+        <div>
+          <label style={{ fontWeight: 'bold', marginRight: '10px' }}>Positional Balance:</label>
+          <button 
+            style={toggleButtonStyle(positionalBalance)}
+            onClick={() => setPositionalBalance(true)}
+          >
+            On
+          </button>
+          <button 
+            style={toggleButtonStyle(!positionalBalance)}
+            onClick={() => setPositionalBalance(false)}
           >
             Off
           </button>

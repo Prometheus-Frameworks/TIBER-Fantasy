@@ -19,21 +19,13 @@ function getFallbackAge(pos: string): number {
   return 27; // Default
 }
 
-// QB Rushing Adjustment Module
-function applyQBRushingAdjustment(players: PlayerProjection[], qbRushMultiplier: number = 0.85): void {
+// Positional VORP Correction Layer - Applied after VORP calculation to balance positional values
+function applyPositionalVORPCorrection(players: PlayerProjection[], positionalMultipliers: Record<string, number> = { QB: 0.85, RB: 1.0, WR: 1.1, TE: 1.0 }): void {
   players.forEach(p => {
-    if (p.position === 'QB') {
-      // Estimate QB rushing vs passing fantasy points
-      // Typical elite rushing QB: ~60-80 rushing points, rest passing
-      // Conservative estimate: 15% of total points from rushing for mobile QBs
-      const estimatedRushingFpts = p.projected_fpts * 0.15; // 15% estimate
-      const estimatedPassingFpts = p.projected_fpts - estimatedRushingFpts;
-      
-      // Apply multiplier to rushing portion only
-      const adjustedRushingFpts = estimatedRushingFpts * qbRushMultiplier;
-      p.projected_fpts = estimatedPassingFpts + adjustedRushingFpts;
-      
-      console.log(`🏃 QB Rush Adjust: ${p.player_name} ${p.projected_fpts.toFixed(1)} pts (rush nerfed by ${((1 - qbRushMultiplier) * 100).toFixed(0)}%)`);
+    if (p.vorp && positionalMultipliers[p.position]) {
+      const originalVORP = p.vorp;
+      p.vorp = p.vorp * positionalMultipliers[p.position];
+      console.log(`⚖️ Positional Correction: ${p.player_name} (${p.position}) VORP ${originalVORP.toFixed(1)} → ${p.vorp.toFixed(1)} (${positionalMultipliers[p.position]}x)`);
     }
   });
 }
@@ -46,13 +38,9 @@ export function calculateVORP(
   mode: string = 'redraft',
   debugRaw: boolean = false,
   format: string = '1qb',
-  qbRushAdjust: boolean = true
+  qbRushAdjust: boolean = true,
+  positionalBalance: boolean = true
 ): PlayerProjection[] {
-  // Apply QB rushing adjustment before VORP calculation
-  if (qbRushAdjust) {
-    console.log('🏃 Applying QB rushing adjustment (15% nerf)...');
-    applyQBRushingAdjustment(players);
-  }
 
   const posGroups: Record<string, PlayerProjection[]> = {};
   players.forEach(p => {
@@ -132,6 +120,12 @@ export function calculateVORP(
       (p as any).raw_vorp = rawVorp;
     }
   });
+
+  // Apply Positional VORP Correction Layer if enabled
+  if (positionalBalance) {
+    console.log('⚖️ Applying positional VORP corrections...');
+    applyPositionalVORPCorrection(players);
+  }
 
   // Sort by VORP descending
   players.sort((a, b) => (b.vorp || 0) - (a.vorp || 0));
