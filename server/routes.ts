@@ -38,6 +38,7 @@ import { fetchGrokProjections } from './services/grokProjectionsService';
 import { cleanVorpRankings } from './clean-vorp-endpoint';
 import { getSleeperProjections } from './services/sleeperProjectionsService';
 import { calculateVORP } from './vorpCalculator';
+import { getAllRBProjections, getRBProjectionByName } from './services/rbProjectionsService';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -456,6 +457,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerWeeklyProjectionsCheckRoutes(app);
   registerRealDataValidationRoutes(app);
   registerTest2024ProjectionsRoutes(app);
+
+  // RB Projections API endpoints
+  app.get('/api/projections/rb', (req: Request, res: Response) => {
+    try {
+      const projections = getAllRBProjections();
+      console.log(`📊 RB Projections API: Returning ${projections.length} players`);
+      res.json(projections);
+    } catch (error) {
+      console.error('❌ RB Projections API Error:', error);
+      res.status(500).json({ error: 'Failed to fetch RB projections' });
+    }
+  });
+
+  app.get('/api/projections/rb/:playerName', (req: Request, res: Response) => {
+    try {
+      const { playerName } = req.params;
+      const projection = getRBProjectionByName(playerName);
+      
+      if (projection) {
+        console.log(`🎯 RB Player API: Found ${projection.player} - ${projection.points} pts`);
+        res.json(projection);
+      } else {
+        console.log(`❌ RB Player API: Not found - ${playerName}`);
+        res.status(404).json({ error: `RB projection not found for ${playerName}` });
+      }
+    } catch (error) {
+      console.error('❌ RB Player API Error:', error);
+      res.status(500).json({ error: 'Failed to fetch RB projection' });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
