@@ -42,6 +42,7 @@ import { getAllRBProjections, getRBProjectionByName } from './services/rbProject
 import { depthChartService } from './services/depthChartService';
 import { verify2024GameLogs } from './api/verify-2024-game-logs';
 import { parseFullGameLogs } from './api/parse-full-game-logs';
+import { exportPositionalGameLogs } from './api/export-positional-game-logs';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -80,6 +81,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // TIBER: Parse 2024 game logs full depth analysis
   app.get('/api/tiber/parse-full-game-logs', parseFullGameLogs);
+
+  // TIBER: Export positional game log samples
+  app.get('/api/tiber/export-positional-game-logs', exportPositionalGameLogs);
 
   // TIBER: Direct Sleeper API test
   app.get('/api/tiber/sleeper-2024-direct', async (req, res) => {
