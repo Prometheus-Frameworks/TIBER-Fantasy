@@ -40,6 +40,7 @@ import { getSleeperProjections } from './services/sleeperProjectionsService';
 import { calculateVORP } from './vorpCalculator';
 import { getAllRBProjections, getRBProjectionByName } from './services/rbProjectionsService';
 import { depthChartService } from './services/depthChartService';
+import { verify2024GameLogs } from './api/verify-2024-game-logs';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -72,6 +73,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // 🔄 Auto-refresh MainPlayerSystem - DEPRECATED
   // [DEPRECATION_COMPLETE] SportsDataIO auto-refresh disabled
+
+  // TIBER: Verify 2024 game log access
+  app.get('/api/tiber/verify-2024-game-logs', verify2024GameLogs);
+
+  // TIBER: Direct Sleeper API test
+  app.get('/api/tiber/sleeper-2024-direct', async (req, res) => {
+    console.log('🔍 [TIBER] Direct Sleeper API test initiated...');
+    
+    try {
+      // Test multiple 2024 endpoints
+      const testResults = {
+        seasonStats: null as any,
+        weeklyTests: [] as any[],
+        weeklyGameLogs: false
+      };
+
+      // Test 1: Season stats
+      console.log('📊 Testing season stats endpoint...');
+      const seasonResponse = await axios.get('https://api.sleeper.app/v1/stats/nfl/regular/2024');
+      
+      if (seasonResponse.data && typeof seasonResponse.data === 'object' && Object.keys(seasonResponse.data).length > 0) {
+        const playerIds = Object.keys(seasonResponse.data);
+        const samplePlayer = playerIds[0];
+        const sampleStats = seasonResponse.data[samplePlayer];
+        
+        testResults.seasonStats = {
+          available: true,
+          playerCount: playerIds.length,
+          samplePlayerId: samplePlayer,
+          availableStats: Object.keys(sampleStats),
+          priorityStats: {
+            targets: 'rec_tgt' in sampleStats,
+            receptions: 'rec' in sampleStats,
+            receivingYards: 'rec_yd' in sampleStats,
+            touchdowns: 'rec_td' in sampleStats || 'rush_td' in sampleStats
+          },
+          sampleData: sampleStats
+        };
+      } else {
+        testResults.seasonStats = { available: false, data: seasonResponse.data };
+      }
+
+      // Test 2: Weekly game logs (weeks 1-3)
+      console.log('📊 Testing weekly game log endpoints...');
+      for (let week = 1; week <= 3; week++) {
+        try {
+          const weekResponse = await axios.get(`https://api.sleeper.app/v1/stats/nfl/regular/2024/${week}`);
+          if (weekResponse.data && typeof weekResponse.data === 'object' && Object.keys(weekResponse.data).length > 0) {
+            testResults.weeklyGameLogs = true;
+            testResults.weeklyTests.push({
+              week,
+              available: true,
+              playerCount: Object.keys(weekResponse.data).length,
+              samplePlayer: Object.keys(weekResponse.data)[0]
+            });
+          } else {
+            testResults.weeklyTests.push({
+              week,
+              available: false,
+              data: weekResponse.data
+            });
+          }
+        } catch (error) {
+          testResults.weeklyTests.push({
+            week,
+            available: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
+      // Final verdict
+      if (testResults.seasonStats?.available && testResults.weeklyGameLogs) {
+        res.json({
+          status: '[SLEEPER_2024_GAME_LOG_CHECK]',
+          verdict: 'YES - Both season totals and weekly game logs available',
+          dataFormats: {
+            seasonTotals: true,
+            weeklyGameLogs: true
+          },
+          testResults
+        });
+      } else if (testResults.seasonStats?.available) {
+        res.json({
+          status: '[SLEEPER_2024_GAME_LOG_CHECK]',
+          verdict: 'PARTIAL - Season totals only, weekly game logs unavailable',
+          dataFormats: {
+            seasonTotals: true,
+            weeklyGameLogs: false
+          },
+          testResults
+        });
+      } else {
+        res.json({
+          status: '[NO_2024_GAME_LOG_DATA]',
+          verdict: 'NO - 2024 data not available',
+          testResults
+        });
+      }
+
+    } catch (error) {
+      console.error('❌ [SLEEPER_2024_GAME_LOG_CHECK] Error:', error);
+      res.status(500).json({
+        status: '[NO_2024_GAME_LOG_DATA]',
+        verdict: 'ERROR - API request failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 
   // 🔥 TIBER OVERRIDE: Critical NFL stats endpoint - HIGHEST PRIORITY
   app.get('/api/force-stats', async (req, res) => {
