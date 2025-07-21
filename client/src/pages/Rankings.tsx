@@ -18,12 +18,13 @@ const Rankings = () => {
   const [loading, setLoading] = useState(true);
   const [format, setFormat] = useState<'1qb' | 'superflex'>('1qb');
   const [mode, setMode] = useState<'redraft' | 'dynasty'>('redraft');
+  const [qbRushAdjust, setQbRushAdjust] = useState(true);
 
   const fetchRankings = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/rankings?mode=${mode}&format=${format}`);
+      const response = await fetch(`/api/rankings?mode=${mode}&format=${format}&qb_rush_adjust=${qbRushAdjust}`);
       if (!response.ok) throw new Error('Fetch failed');
       const data = await response.json();
       setPlayers(data);
@@ -36,7 +37,7 @@ const Rankings = () => {
 
   useEffect(() => {
     fetchRankings();
-  }, [format, mode]);
+  }, [format, mode, qbRushAdjust]);
 
   if (loading) {
     return <div style={{ textAlign: 'center', color: '#888', padding: '40px' }}>Loading Rankings...</div>;
@@ -140,7 +141,7 @@ const Rankings = () => {
               Superflex
             </button>
           </div>
-          <div>
+          <div style={{ marginBottom: '15px' }}>
             <label style={{ fontWeight: 'bold', marginRight: '10px' }}>Mode:</label>
             <button 
               style={toggleButtonStyle(mode === 'redraft')}
@@ -153,6 +154,21 @@ const Rankings = () => {
               onClick={() => setMode('dynasty')}
             >
               Dynasty
+            </button>
+          </div>
+          <div>
+            <label style={{ fontWeight: 'bold', marginRight: '10px' }}>QB Rush Adjust:</label>
+            <button 
+              style={toggleButtonStyle(qbRushAdjust)}
+              onClick={() => setQbRushAdjust(true)}
+            >
+              On
+            </button>
+            <button 
+              style={toggleButtonStyle(!qbRushAdjust)}
+              onClick={() => setQbRushAdjust(false)}
+            >
+              Off
             </button>
           </div>
         </div>
@@ -211,7 +227,7 @@ const Rankings = () => {
             Superflex
           </button>
         </div>
-        <div>
+        <div style={{ marginBottom: '15px' }}>
           <label style={{ fontWeight: 'bold', marginRight: '10px' }}>Mode:</label>
           <button 
             style={toggleButtonStyle(mode === 'redraft')}
@@ -224,6 +240,21 @@ const Rankings = () => {
             onClick={() => setMode('dynasty')}
           >
             Dynasty
+          </button>
+        </div>
+        <div>
+          <label style={{ fontWeight: 'bold', marginRight: '10px' }}>QB Rush Adjust:</label>
+          <button 
+            style={toggleButtonStyle(qbRushAdjust)}
+            onClick={() => setQbRushAdjust(true)}
+          >
+            On
+          </button>
+          <button 
+            style={toggleButtonStyle(!qbRushAdjust)}
+            onClick={() => setQbRushAdjust(false)}
+          >
+            Off
           </button>
         </div>
       </div>
