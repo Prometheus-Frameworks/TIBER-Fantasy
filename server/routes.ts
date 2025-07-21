@@ -41,6 +41,7 @@ import { calculateVORP } from './vorpCalculator';
 import { getAllRBProjections, getRBProjectionByName } from './services/rbProjectionsService';
 import { depthChartService } from './services/depthChartService';
 import { verify2024GameLogs } from './api/verify-2024-game-logs';
+import { parseFullGameLogs } from './api/parse-full-game-logs';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -76,6 +77,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // TIBER: Verify 2024 game log access
   app.get('/api/tiber/verify-2024-game-logs', verify2024GameLogs);
+
+  // TIBER: Parse 2024 game logs full depth analysis
+  app.get('/api/tiber/parse-full-game-logs', parseFullGameLogs);
 
   // TIBER: Direct Sleeper API test
   app.get('/api/tiber/sleeper-2024-direct', async (req, res) => {
