@@ -1,0 +1,2690 @@
+[
+  {
+    "player_id": "kyler-murray_ari",
+    "name": "Kyler Murray",
+    "position": "QB",
+    "team": "ARI",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "james-conner_ari",
+    "name": "James Conner",
+    "position": "RB",
+    "team": "ARI",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "trey-mcbride_ari",
+    "name": "Trey McBride",
+    "position": "TE",
+    "team": "ARI",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "michael-penix-jr_atl",
+    "name": "Michael Penix Jr.",
+    "position": "QB",
+    "team": "ATL",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "bijan-robinson_atl",
+    "name": "Bijan Robinson",
+    "position": "RB",
+    "team": "ATL",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "kyle-pitts_atl",
+    "name": "Kyle Pitts",
+    "position": "TE",
+    "team": "ATL",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "lamar-jackson_bal",
+    "name": "Lamar Jackson",
+    "position": "QB",
+    "team": "BAL",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "derrick-henry_bal",
+    "name": "Derrick Henry",
+    "position": "RB",
+    "team": "BAL",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "mark-andrews_bal",
+    "name": "Mark Andrews",
+    "position": "TE",
+    "team": "BAL",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "josh-allen_buf",
+    "name": "Josh Allen",
+    "position": "QB",
+    "team": "BUF",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "james-cook_buf",
+    "name": "James Cook",
+    "position": "RB",
+    "team": "BUF",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "dawson-knox_buf",
+    "name": "Dawson Knox",
+    "position": "TE",
+    "team": "BUF",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "bryce-young_car",
+    "name": "Bryce Young",
+    "position": "QB",
+    "team": "CAR",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "chuba-hubbard_car",
+    "name": "Chuba Hubbard",
+    "position": "RB",
+    "team": "CAR",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "tommy-tremble_car",
+    "name": "Tommy Tremble",
+    "position": "TE",
+    "team": "CAR",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "caleb-williams_chi",
+    "name": "Caleb Williams",
+    "position": "QB",
+    "team": "CHI",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "dandre-swift_chi",
+    "name": "D'Andre Swift",
+    "position": "RB",
+    "team": "CHI",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "colston-loveland_chi",
+    "name": "Colston Loveland",
+    "position": "TE",
+    "team": "CHI",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "joe-burrow_cin",
+    "name": "Joe Burrow",
+    "position": "QB",
+    "team": "CIN",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "chase-brown_cin",
+    "name": "Chase Brown",
+    "position": "RB",
+    "team": "CIN",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "mike-gesicki_cin",
+    "name": "Mike Gesicki",
+    "position": "TE",
+    "team": "CIN",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "joe-flacco_cle",
+    "name": "Joe Flacco",
+    "position": "QB",
+    "team": "CLE",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "jerome-ford_cle",
+    "name": "Jerome Ford",
+    "position": "RB",
+    "team": "CLE",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "david-njoku_cle",
+    "name": "David Njoku",
+    "position": "TE",
+    "team": "CLE",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "dak-prescott_dal",
+    "name": "Dak Prescott",
+    "position": "QB",
+    "team": "DAL",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "javonte-williams_dal",
+    "name": "Javonte Williams",
+    "position": "RB",
+    "team": "DAL",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "jake-ferguson_dal",
+    "name": "Jake Ferguson",
+    "position": "TE",
+    "team": "DAL",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "bo-nix_den",
+    "name": "Bo Nix",
+    "position": "QB",
+    "team": "DEN",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "jk-dobbins_den",
+    "name": "J.K. Dobbins",
+    "position": "RB",
+    "team": "DEN",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "evan-engram_den",
+    "name": "Evan Engram",
+    "position": "TE",
+    "team": "DEN",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "jared-goff_det",
+    "name": "Jared Goff",
+    "position": "QB",
+    "team": "DET",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "jahmyr-gibbs_det",
+    "name": "Jahmyr Gibbs",
+    "position": "RB",
+    "team": "DET",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "sam-laporta_det",
+    "name": "Sam LaPorta",
+    "position": "TE",
+    "team": "DET",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "jordan-love_gb",
+    "name": "Jordan Love",
+    "position": "QB",
+    "team": "GB",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "josh-jacobs_gb",
+    "name": "Josh Jacobs",
+    "position": "RB",
+    "team": "GB",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "tucker-kraft_gb",
+    "name": "Tucker Kraft",
+    "position": "TE",
+    "team": "GB",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "cj-stroud_hou",
+    "name": "C.J. Stroud",
+    "position": "QB",
+    "team": "HOU",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "joe-mixon_hou",
+    "name": "Joe Mixon",
+    "position": "RB",
+    "team": "HOU",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "dalton-schultz_hou",
+    "name": "Dalton Schultz",
+    "position": "TE",
+    "team": "HOU",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "daniel-jones_ind",
+    "name": "Daniel Jones",
+    "position": "QB",
+    "team": "IND",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "jonathan-taylor_ind",
+    "name": "Jonathan Taylor",
+    "position": "RB",
+    "team": "IND",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "tyler-warren_ind",
+    "name": "Tyler Warren",
+    "position": "TE",
+    "team": "IND",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "trevor-lawrence_jax",
+    "name": "Trevor Lawrence",
+    "position": "QB",
+    "team": "JAX",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "travis-etienne-jr_jax",
+    "name": "Travis Etienne Jr.",
+    "position": "RB",
+    "team": "JAX",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "brenton-strange_jax",
+    "name": "Brenton Strange",
+    "position": "TE",
+    "team": "JAX",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "patrick-mahomes_kc",
+    "name": "Patrick Mahomes",
+    "position": "QB",
+    "team": "KC",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "isiah-pacheco_kc",
+    "name": "Isiah Pacheco",
+    "position": "RB",
+    "team": "KC",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "travis-kelce_kc",
+    "name": "Travis Kelce",
+    "position": "TE",
+    "team": "KC",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "tua-tagovailoa_lar",
+    "name": "Tua Tagovailoa",
+    "position": "QB",
+    "team": "LAR",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "devon-achane_lar",
+    "name": "De'Von Achane",
+    "position": "RB",
+    "team": "LAR",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "darren-waller_lar",
+    "name": "Darren Waller",
+    "position": "TE",
+    "team": "LAR",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "jj-mccarthy_mia",
+    "name": "J.J. McCarthy",
+    "position": "QB",
+    "team": "MIA",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "aaron-jones_mia",
+    "name": "Aaron Jones",
+    "position": "RB",
+    "team": "MIA",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "tj-hockenson_mia",
+    "name": "T.J. Hockenson",
+    "position": "TE",
+    "team": "MIA",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "drake-maye_min",
+    "name": "Drake Maye",
+    "position": "QB",
+    "team": "MIN",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "rhamondre-stevenson_min",
+    "name": "Rhamondre Stevenson",
+    "position": "RB",
+    "team": "MIN",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "hunter-henry_min",
+    "name": "Hunter Henry",
+    "position": "TE",
+    "team": "MIN",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "tyler-shough_ne",
+    "name": "Tyler Shough",
+    "position": "QB",
+    "team": "NE",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "alvin-kamara_ne",
+    "name": "Alvin Kamara",
+    "position": "RB",
+    "team": "NE",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "juwan-johnson_ne",
+    "name": "Juwan Johnson",
+    "position": "TE",
+    "team": "NE",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "russell-wilson_no",
+    "name": "Russell Wilson",
+    "position": "QB",
+    "team": "NO",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "tyrone-tracy-jr_no",
+    "name": "Tyrone Tracy Jr.",
+    "position": "RB",
+    "team": "NO",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "theo-johnson_no",
+    "name": "Theo Johnson",
+    "position": "TE",
+    "team": "NO",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "justin-fields_nyg",
+    "name": "Justin Fields",
+    "position": "QB",
+    "team": "NYG",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "breece-hall_nyg",
+    "name": "Breece Hall",
+    "position": "RB",
+    "team": "NYG",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "mason-taylor_nyg",
+    "name": "Mason Taylor",
+    "position": "TE",
+    "team": "NYG",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "geno-smith_nyj",
+    "name": "Geno Smith",
+    "position": "QB",
+    "team": "NYJ",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "ashton-jeanty_nyj",
+    "name": "Ashton Jeanty",
+    "position": "RB",
+    "team": "NYJ",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "brock-bowers_nyj",
+    "name": "Brock Bowers",
+    "position": "TE",
+    "team": "NYJ",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "jalen-hurts_phi",
+    "name": "Jalen Hurts",
+    "position": "QB",
+    "team": "PHI",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "saquon-barkley_phi",
+    "name": "Saquon Barkley",
+    "position": "RB",
+    "team": "PHI",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "dallas-goedert_phi",
+    "name": "Dallas Goedert",
+    "position": "TE",
+    "team": "PHI",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "aaron-rodgers_sea",
+    "name": "Aaron Rodgers",
+    "position": "QB",
+    "team": "SEA",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "jaylen-warren_sea",
+    "name": "Jaylen Warren",
+    "position": "RB",
+    "team": "SEA",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "pat-freiermuth_sea",
+    "name": "Pat Freiermuth",
+    "position": "TE",
+    "team": "SEA",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "justin-herbert_sf",
+    "name": "Justin Herbert",
+    "position": "QB",
+    "team": "SF",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "omarion-hampton_sf",
+    "name": "Omarion Hampton",
+    "position": "RB",
+    "team": "SF",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "will-dissly_sf",
+    "name": "Will Dissly",
+    "position": "TE",
+    "team": "SF",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "sam-darnold_tb",
+    "name": "Sam Darnold",
+    "position": "QB",
+    "team": "TB",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "kenneth-walker-iii_tb",
+    "name": "Kenneth Walker III",
+    "position": "RB",
+    "team": "TB",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "aj-barner_tb",
+    "name": "AJ Barner",
+    "position": "TE",
+    "team": "TB",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "brock-purdy_ten",
+    "name": "Brock Purdy",
+    "position": "QB",
+    "team": "TEN",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "christian-mccaffrey_ten",
+    "name": "Christian McCaffrey",
+    "position": "RB",
+    "team": "TEN",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "george-kittle_ten",
+    "name": "George Kittle",
+    "position": "TE",
+    "team": "TEN",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "baker-mayfield_unk",
+    "name": "Baker Mayfield",
+    "position": "QB",
+    "team": "UNK",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "bucky-irving_unk",
+    "name": "Bucky Irving",
+    "position": "RB",
+    "team": "UNK",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "cade-otton_unk",
+    "name": "Cade Otton",
+    "position": "TE",
+    "team": "UNK",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "cam-ward_unk",
+    "name": "Cam Ward",
+    "position": "QB",
+    "team": "UNK",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "tony-pollard_unk",
+    "name": "Tony Pollard",
+    "position": "RB",
+    "team": "UNK",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "chig-okonkwo_unk",
+    "name": "Chig Okonkwo",
+    "position": "TE",
+    "team": "UNK",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "jayden-daniels_unk",
+    "name": "Jayden Daniels",
+    "position": "QB",
+    "team": "UNK",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "brian-robinson-jr_unk",
+    "name": "Brian Robinson Jr.",
+    "position": "RB",
+    "team": "UNK",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "zach-ertz_unk",
+    "name": "Zach Ertz",
+    "position": "TE",
+    "team": "UNK",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "matthew-stafford_was",
+    "name": "Matthew Stafford",
+    "position": "QB",
+    "team": "WAS",
+    "depth_chart_slot": "QB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "kyren-williams_was",
+    "name": "Kyren Williams",
+    "position": "RB",
+    "team": "WAS",
+    "depth_chart_slot": "RB1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "tyler-higbee_was",
+    "name": "Tyler Higbee",
+    "position": "TE",
+    "team": "WAS",
+    "depth_chart_slot": "TE1",
+    "depth_score": 1
+  },
+  {
+    "player_id": "jacoby-brissett_ari",
+    "name": "Jacoby Brissett",
+    "position": "QB",
+    "team": "ARI",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "trey-benson_ari",
+    "name": "Trey Benson",
+    "position": "RB",
+    "team": "ARI",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "tip-reiman_ari",
+    "name": "Tip Reiman",
+    "position": "TE",
+    "team": "ARI",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "kirk-cousins_atl",
+    "name": "Kirk Cousins",
+    "position": "QB",
+    "team": "ATL",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "tyler-allgeier_atl",
+    "name": "Tyler Allgeier",
+    "position": "RB",
+    "team": "ATL",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "charlie-woerner_atl",
+    "name": "Charlie Woerner",
+    "position": "TE",
+    "team": "ATL",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "cooper-rush_bal",
+    "name": "Cooper Rush",
+    "position": "QB",
+    "team": "BAL",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "justice-hill_bal",
+    "name": "Justice Hill",
+    "position": "RB",
+    "team": "BAL",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "isaiah-likely_bal",
+    "name": "Isaiah Likely",
+    "position": "TE",
+    "team": "BAL",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "mitchell-trubisky_buf",
+    "name": "Mitchell Trubisky",
+    "position": "QB",
+    "team": "BUF",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "ty-johnson_buf",
+    "name": "Ty Johnson",
+    "position": "RB",
+    "team": "BUF",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "dalton-kincaid_buf",
+    "name": "Dalton Kincaid",
+    "position": "TE",
+    "team": "BUF",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "andy-dalton_car",
+    "name": "Andy Dalton",
+    "position": "QB",
+    "team": "CAR",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "rico-dowdle_car",
+    "name": "Rico Dowdle",
+    "position": "RB",
+    "team": "CAR",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "jatavion-sanders_car",
+    "name": "Ja'Tavion Sanders",
+    "position": "TE",
+    "team": "CAR",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "tyson-bagent_chi",
+    "name": "Tyson Bagent",
+    "position": "QB",
+    "team": "CHI",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "roschon-johnson_chi",
+    "name": "Roschon Johnson",
+    "position": "RB",
+    "team": "CHI",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "cole-kmet_chi",
+    "name": "Cole Kmet",
+    "position": "TE",
+    "team": "CHI",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "jake-browning_cin",
+    "name": "Jake Browning",
+    "position": "QB",
+    "team": "CIN",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "zack-moss_cin",
+    "name": "Zack Moss",
+    "position": "RB",
+    "team": "CIN",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "drew-sample_cin",
+    "name": "Drew Sample",
+    "position": "TE",
+    "team": "CIN",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "kenny-pickett_cle",
+    "name": "Kenny Pickett",
+    "position": "QB",
+    "team": "CLE",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "quinshon-judkins_cle",
+    "name": "Quinshon Judkins",
+    "position": "RB",
+    "team": "CLE",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "harold-fannin-jr_cle",
+    "name": "Harold Fannin Jr.",
+    "position": "TE",
+    "team": "CLE",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "joe-milton-iii_dal",
+    "name": "Joe Milton III",
+    "position": "QB",
+    "team": "DAL",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "miles-sanders_dal",
+    "name": "Miles Sanders",
+    "position": "RB",
+    "team": "DAL",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "luke-schoonmaker_dal",
+    "name": "Luke Schoonmaker",
+    "position": "TE",
+    "team": "DAL",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "jarrett-stidham_den",
+    "name": "Jarrett Stidham",
+    "position": "QB",
+    "team": "DEN",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "rj-harvey_den",
+    "name": "RJ Harvey",
+    "position": "RB",
+    "team": "DEN",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "adam-trautman_den",
+    "name": "Adam Trautman",
+    "position": "TE",
+    "team": "DEN",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "hendon-hooker_det",
+    "name": "Hendon Hooker",
+    "position": "QB",
+    "team": "DET",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "david-montgomery_det",
+    "name": "David Montgomery",
+    "position": "RB",
+    "team": "DET",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "brock-wright_det",
+    "name": "Brock Wright",
+    "position": "TE",
+    "team": "DET",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "malik-willis_gb",
+    "name": "Malik Willis",
+    "position": "QB",
+    "team": "GB",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "marshawn-lloyd_gb",
+    "name": "MarShawn Lloyd",
+    "position": "RB",
+    "team": "GB",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "luke-musgrave_gb",
+    "name": "Luke Musgrave",
+    "position": "TE",
+    "team": "GB",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "davis-mills_hou",
+    "name": "Davis Mills",
+    "position": "QB",
+    "team": "HOU",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "nick-chubb_hou",
+    "name": "Nick Chubb",
+    "position": "RB",
+    "team": "HOU",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "brevin-jordan_hou",
+    "name": "Brevin Jordan",
+    "position": "TE",
+    "team": "HOU",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "anthony-richardson-sr_ind",
+    "name": "Anthony Richardson Sr.",
+    "position": "QB",
+    "team": "IND",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "khalil-herbert_ind",
+    "name": "Khalil Herbert",
+    "position": "RB",
+    "team": "IND",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "mo-aliecox_ind",
+    "name": "Mo Alie-Cox",
+    "position": "TE",
+    "team": "IND",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "nick-mullens_jax",
+    "name": "Nick Mullens",
+    "position": "QB",
+    "team": "JAX",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "tank-bigsby_jax",
+    "name": "Tank Bigsby",
+    "position": "RB",
+    "team": "JAX",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "johnny-mundt_jax",
+    "name": "Johnny Mundt",
+    "position": "TE",
+    "team": "JAX",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "gardner-minshew_kc",
+    "name": "Gardner Minshew",
+    "position": "QB",
+    "team": "KC",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "kareem-hunt_kc",
+    "name": "Kareem Hunt",
+    "position": "RB",
+    "team": "KC",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "noah-gray_kc",
+    "name": "Noah Gray",
+    "position": "TE",
+    "team": "KC",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "zach-wilson_lar",
+    "name": "Zach Wilson",
+    "position": "QB",
+    "team": "LAR",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "jaylen-wright_lar",
+    "name": "Jaylen Wright",
+    "position": "RB",
+    "team": "LAR",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "pharaoh-brown_lar",
+    "name": "Pharaoh Brown",
+    "position": "TE",
+    "team": "LAR",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "sam-howell_mia",
+    "name": "Sam Howell",
+    "position": "QB",
+    "team": "MIA",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "jordan-mason_mia",
+    "name": "Jordan Mason",
+    "position": "RB",
+    "team": "MIA",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "josh-oliver_mia",
+    "name": "Josh Oliver",
+    "position": "TE",
+    "team": "MIA",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "joshua-dobbs_min",
+    "name": "Joshua Dobbs",
+    "position": "QB",
+    "team": "MIN",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "treveyon-henderson_min",
+    "name": "TreVeyon Henderson",
+    "position": "RB",
+    "team": "MIN",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "spencer-rattler_ne",
+    "name": "Spencer Rattler",
+    "position": "QB",
+    "team": "NE",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "kendre-miller_ne",
+    "name": "Kendre Miller",
+    "position": "RB",
+    "team": "NE",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "foster-moreau_ne",
+    "name": "Foster Moreau",
+    "position": "TE",
+    "team": "NE",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "jameis-winston_no",
+    "name": "Jameis Winston",
+    "position": "QB",
+    "team": "NO",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "devin-singletary_no",
+    "name": "Devin Singletary",
+    "position": "RB",
+    "team": "NO",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "daniel-bellinger_no",
+    "name": "Daniel Bellinger",
+    "position": "TE",
+    "team": "NO",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "tyrod-taylor_nyg",
+    "name": "Tyrod Taylor",
+    "position": "QB",
+    "team": "NYG",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "braelon-allen_nyg",
+    "name": "Braelon Allen",
+    "position": "RB",
+    "team": "NYG",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "jeremy-ruckert_nyg",
+    "name": "Jeremy Ruckert",
+    "position": "TE",
+    "team": "NYG",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "aidan-oconnell_nyj",
+    "name": "Aidan O'Connell",
+    "position": "QB",
+    "team": "NYJ",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "raheem-mostert_nyj",
+    "name": "Raheem Mostert",
+    "position": "RB",
+    "team": "NYJ",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "michael-mayer_nyj",
+    "name": "Michael Mayer",
+    "position": "TE",
+    "team": "NYJ",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "tanner-mckee_phi",
+    "name": "Tanner McKee",
+    "position": "QB",
+    "team": "PHI",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "aj-dillon_phi",
+    "name": "A.J. Dillon",
+    "position": "RB",
+    "team": "PHI",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "grant-calcaterra_phi",
+    "name": "Grant Calcaterra",
+    "position": "TE",
+    "team": "PHI",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "mason-rudolph_sea",
+    "name": "Mason Rudolph",
+    "position": "QB",
+    "team": "SEA",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "kaleb-johnson_sea",
+    "name": "Kaleb Johnson",
+    "position": "RB",
+    "team": "SEA",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "jonnu-smith_sea",
+    "name": "Jonnu Smith",
+    "position": "TE",
+    "team": "SEA",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "taylor-heinicke_sf",
+    "name": "Taylor Heinicke",
+    "position": "QB",
+    "team": "SF",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "tyler-conklin_sf",
+    "name": "Tyler Conklin",
+    "position": "TE",
+    "team": "SF",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "drew-lock_tb",
+    "name": "Drew Lock",
+    "position": "QB",
+    "team": "TB",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "zach-charbonnet_tb",
+    "name": "Zach Charbonnet",
+    "position": "RB",
+    "team": "TB",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "elijah-arroyo_tb",
+    "name": "Elijah Arroyo",
+    "position": "TE",
+    "team": "TB",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "mac-jones_ten",
+    "name": "Mac Jones",
+    "position": "QB",
+    "team": "TEN",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "isaac-guerendo_ten",
+    "name": "Isaac Guerendo",
+    "position": "RB",
+    "team": "TEN",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "luke-farrell_ten",
+    "name": "Luke Farrell",
+    "position": "TE",
+    "team": "TEN",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "kyle-trask_unk",
+    "name": "Kyle Trask",
+    "position": "QB",
+    "team": "UNK",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "rachaad-white_unk",
+    "name": "Rachaad White",
+    "position": "RB",
+    "team": "UNK",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "payne-durham_unk",
+    "name": "Payne Durham",
+    "position": "TE",
+    "team": "UNK",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "brandon-allen_unk",
+    "name": "Brandon Allen",
+    "position": "QB",
+    "team": "UNK",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "tyjae-spears_unk",
+    "name": "Tyjae Spears",
+    "position": "RB",
+    "team": "UNK",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "josh-whyle_unk",
+    "name": "Josh Whyle",
+    "position": "TE",
+    "team": "UNK",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "marcus-mariota_unk",
+    "name": "Marcus Mariota",
+    "position": "QB",
+    "team": "UNK",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "austin-ekeler_unk",
+    "name": "Austin Ekeler",
+    "position": "RB",
+    "team": "UNK",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "john-bates_unk",
+    "name": "John Bates",
+    "position": "TE",
+    "team": "UNK",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "jimmy-garoppolo_was",
+    "name": "Jimmy Garoppolo",
+    "position": "QB",
+    "team": "WAS",
+    "depth_chart_slot": "QB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "blake-corum_was",
+    "name": "Blake Corum",
+    "position": "RB",
+    "team": "WAS",
+    "depth_chart_slot": "RB2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "colby-parkinson_was",
+    "name": "Colby Parkinson",
+    "position": "TE",
+    "team": "WAS",
+    "depth_chart_slot": "TE2",
+    "depth_score": 0.8
+  },
+  {
+    "player_id": "clayton-tune_ari",
+    "name": "Clayton Tune",
+    "position": "QB",
+    "team": "ARI",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "emari-demercado_ari",
+    "name": "Emari Demercado",
+    "position": "RB",
+    "team": "ARI",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "elijah-higgins_ari",
+    "name": "Elijah Higgins",
+    "position": "TE",
+    "team": "ARI",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "easton-stick_atl",
+    "name": "Easton Stick",
+    "position": "QB",
+    "team": "ATL",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "carlos-washington-jr_atl",
+    "name": "Carlos Washington Jr.",
+    "position": "RB",
+    "team": "ATL",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "teagan-quitoriano_atl",
+    "name": "Teagan Quitoriano",
+    "position": "TE",
+    "team": "ATL",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "devin-leary_bal",
+    "name": "Devin Leary",
+    "position": "QB",
+    "team": "BAL",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "keaton-mitchell_bal",
+    "name": "Keaton Mitchell",
+    "position": "RB",
+    "team": "BAL",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "charlie-kolar_bal",
+    "name": "Charlie Kolar",
+    "position": "TE",
+    "team": "BAL",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "mike-white_buf",
+    "name": "Mike White",
+    "position": "QB",
+    "team": "BUF",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "ray-davis_buf",
+    "name": "Ray Davis",
+    "position": "RB",
+    "team": "BUF",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "jackson-hawes_buf",
+    "name": "Jackson Hawes",
+    "position": "TE",
+    "team": "BUF",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "jack-plummer_car",
+    "name": "Jack Plummer",
+    "position": "QB",
+    "team": "CAR",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "trevor-etienne_car",
+    "name": "Trevor Etienne",
+    "position": "RB",
+    "team": "CAR",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "mitchell-evans_car",
+    "name": "Mitchell Evans",
+    "position": "TE",
+    "team": "CAR",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "case-keenum_chi",
+    "name": "Case Keenum",
+    "position": "QB",
+    "team": "CHI",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "kyle-monangai_chi",
+    "name": "Kyle Monangai",
+    "position": "RB",
+    "team": "CHI",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "durham-smythe_chi",
+    "name": "Durham Smythe",
+    "position": "TE",
+    "team": "CHI",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "desmond-ridder_cin",
+    "name": "Desmond Ridder",
+    "position": "QB",
+    "team": "CIN",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "samaje-perine_cin",
+    "name": "Samaje Perine",
+    "position": "RB",
+    "team": "CIN",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "dillon-gabriel_cle",
+    "name": "Dillon Gabriel",
+    "position": "QB",
+    "team": "CLE",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "dylan-sampson_cle",
+    "name": "Dylan Sampson",
+    "position": "RB",
+    "team": "CLE",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "blake-whiteheart_cle",
+    "name": "Blake Whiteheart",
+    "position": "TE",
+    "team": "CLE",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "will-grier_dal",
+    "name": "Will Grier",
+    "position": "QB",
+    "team": "DAL",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "jaydon-blue_dal",
+    "name": "Jaydon Blue",
+    "position": "RB",
+    "team": "DAL",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "brevyn-spannford_dal",
+    "name": "Brevyn Spann-Ford",
+    "position": "TE",
+    "team": "DAL",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "sam-ehlinger_den",
+    "name": "Sam Ehlinger",
+    "position": "QB",
+    "team": "DEN",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "audric-estime_den",
+    "name": "Audric Estime",
+    "position": "RB",
+    "team": "DEN",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "nate-adkins_den",
+    "name": "Nate Adkins",
+    "position": "TE",
+    "team": "DEN",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "kyle-allen_det",
+    "name": "Kyle Allen",
+    "position": "QB",
+    "team": "DET",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "craig-reynolds_det",
+    "name": "Craig Reynolds",
+    "position": "RB",
+    "team": "DET",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "shane-zylstra_det",
+    "name": "Shane Zylstra",
+    "position": "TE",
+    "team": "DET",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "sean-clifford_gb",
+    "name": "Sean Clifford",
+    "position": "QB",
+    "team": "GB",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "emanuel-wilson_gb",
+    "name": "Emanuel Wilson",
+    "position": "RB",
+    "team": "GB",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "ben-sims_gb",
+    "name": "Ben Sims",
+    "position": "TE",
+    "team": "GB",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "dameon-pierce_hou",
+    "name": "Dameon Pierce",
+    "position": "RB",
+    "team": "HOU",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "cade-stover_hou",
+    "name": "Cade Stover",
+    "position": "TE",
+    "team": "HOU",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "riley-leonard_ind",
+    "name": "Riley Leonard",
+    "position": "QB",
+    "team": "IND",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "dj-giddens_ind",
+    "name": "DJ Giddens",
+    "position": "RB",
+    "team": "IND",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "drew-ogletree_ind",
+    "name": "Drew Ogletree",
+    "position": "TE",
+    "team": "IND",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "john-wolford_jax",
+    "name": "John Wolford",
+    "position": "QB",
+    "team": "JAX",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "bhayshul-tuten_jax",
+    "name": "Bhayshul Tuten",
+    "position": "RB",
+    "team": "JAX",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "hunter-long_jax",
+    "name": "Hunter Long",
+    "position": "TE",
+    "team": "JAX",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "bailey-zappe_kc",
+    "name": "Bailey Zappe",
+    "position": "QB",
+    "team": "KC",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "elijah-mitchell_kc",
+    "name": "Elijah Mitchell",
+    "position": "RB",
+    "team": "KC",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "jared-wiley_kc",
+    "name": "Jared Wiley",
+    "position": "TE",
+    "team": "KC",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "quinn-ewers_lar",
+    "name": "Quinn Ewers",
+    "position": "QB",
+    "team": "LAR",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "alexander-mattison_lar",
+    "name": "Alexander Mattison",
+    "position": "RB",
+    "team": "LAR",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "julian-hill_lar",
+    "name": "Julian Hill",
+    "position": "TE",
+    "team": "LAR",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "brett-rypien_mia",
+    "name": "Brett Rypien",
+    "position": "QB",
+    "team": "MIA",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "ty-chandler_mia",
+    "name": "Ty Chandler",
+    "position": "RB",
+    "team": "MIA",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "gavin-bartholomew_mia",
+    "name": "Gavin Bartholomew",
+    "position": "TE",
+    "team": "MIA",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "ben-wooldridge_min",
+    "name": "Ben Wooldridge",
+    "position": "QB",
+    "team": "MIN",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "antonio-gibson_min",
+    "name": "Antonio Gibson",
+    "position": "RB",
+    "team": "MIN",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "jaheim-bell_min",
+    "name": "Jaheim Bell",
+    "position": "TE",
+    "team": "MIN",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "jake-haener_ne",
+    "name": "Jake Haener",
+    "position": "QB",
+    "team": "NE",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "devin-neal_ne",
+    "name": "Devin Neal",
+    "position": "RB",
+    "team": "NE",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "taysom-hill_ne",
+    "name": "Taysom Hill",
+    "position": "TE",
+    "team": "NE",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "jaxson-dart_no",
+    "name": "Jaxson Dart",
+    "position": "QB",
+    "team": "NO",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "cam-skattebo_no",
+    "name": "Cam Skattebo",
+    "position": "RB",
+    "team": "NO",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "chris-manhertz_no",
+    "name": "Chris Manhertz",
+    "position": "TE",
+    "team": "NO",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "adrian-martinez_nyg",
+    "name": "Adrian Martinez",
+    "position": "QB",
+    "team": "NYG",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "isaiah-davis_nyg",
+    "name": "Isaiah Davis",
+    "position": "RB",
+    "team": "NYG",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "stone-smartt_nyg",
+    "name": "Stone Smartt",
+    "position": "TE",
+    "team": "NYG",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "sincere-mccormick_nyj",
+    "name": "Sincere McCormick",
+    "position": "RB",
+    "team": "NYJ",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "ian-thomas_nyj",
+    "name": "Ian Thomas",
+    "position": "TE",
+    "team": "NYJ",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "kyle-mccord_phi",
+    "name": "Kyle McCord",
+    "position": "QB",
+    "team": "PHI",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "will-shipley_phi",
+    "name": "Will Shipley",
+    "position": "RB",
+    "team": "PHI",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "kylen-granson_phi",
+    "name": "Kylen Granson",
+    "position": "TE",
+    "team": "PHI",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "will-howard_sea",
+    "name": "Will Howard",
+    "position": "QB",
+    "team": "SEA",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "kenneth-gainwell_sea",
+    "name": "Kenneth Gainwell",
+    "position": "RB",
+    "team": "SEA",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "darnell-washington_sea",
+    "name": "Darnell Washington",
+    "position": "TE",
+    "team": "SEA",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "trey-lance_sf",
+    "name": "Trey Lance",
+    "position": "QB",
+    "team": "SF",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "hassan-haskins_sf",
+    "name": "Hassan Haskins",
+    "position": "RB",
+    "team": "SF",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "oronde-gadsden_sf",
+    "name": "Oronde Gadsden",
+    "position": "TE",
+    "team": "SF",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "jalen-milroe_tb",
+    "name": "Jalen Milroe",
+    "position": "QB",
+    "team": "TB",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "kenny-mcintosh_tb",
+    "name": "Kenny McIntosh",
+    "position": "RB",
+    "team": "TB",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "eric-saubert_tb",
+    "name": "Eric Saubert",
+    "position": "TE",
+    "team": "TB",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "jordan-james_ten",
+    "name": "Jordan James",
+    "position": "RB",
+    "team": "TEN",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "ross-dwelley_ten",
+    "name": "Ross Dwelley",
+    "position": "TE",
+    "team": "TEN",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "michael-pratt_unk",
+    "name": "Michael Pratt",
+    "position": "QB",
+    "team": "UNK",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "sean-tucker_unk",
+    "name": "Sean Tucker",
+    "position": "RB",
+    "team": "UNK",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "ko-kieft_unk",
+    "name": "Ko Kieft",
+    "position": "TE",
+    "team": "UNK",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "julius-chestnut_unk",
+    "name": "Julius Chestnut",
+    "position": "RB",
+    "team": "UNK",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "gunnar-helm_unk",
+    "name": "Gunnar Helm",
+    "position": "TE",
+    "team": "UNK",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "josh-johnson_unk",
+    "name": "Josh Johnson",
+    "position": "QB",
+    "team": "UNK",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "jeremy-mcnichols_unk",
+    "name": "Jeremy McNichols",
+    "position": "RB",
+    "team": "UNK",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "ben-sinnott_unk",
+    "name": "Ben Sinnott",
+    "position": "TE",
+    "team": "UNK",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "stetson-bennett_was",
+    "name": "Stetson Bennett",
+    "position": "QB",
+    "team": "WAS",
+    "depth_chart_slot": "QB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "jarquez-hunter_was",
+    "name": "Jarquez Hunter",
+    "position": "RB",
+    "team": "WAS",
+    "depth_chart_slot": "RB3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "terrance-ferguson_was",
+    "name": "Terrance Ferguson",
+    "position": "TE",
+    "team": "WAS",
+    "depth_chart_slot": "TE3",
+    "depth_score": 0.5
+  },
+  {
+    "player_id": "deejay-dallas_ari",
+    "name": "DeeJay Dallas",
+    "position": "RB",
+    "team": "ARI",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "josiah-deguara_ari",
+    "name": "Josiah Deguara",
+    "position": "TE",
+    "team": "ARI",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "elijah-dotson_atl",
+    "name": "Elijah Dotson",
+    "position": "RB",
+    "team": "ATL",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "feleipe-franks_atl",
+    "name": "Feleipe Franks",
+    "position": "TE",
+    "team": "ATL",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "darrynton-evans_buf",
+    "name": "Darrynton Evans",
+    "position": "RB",
+    "team": "BUF",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "raheem-blackshear_car",
+    "name": "Raheem Blackshear",
+    "position": "RB",
+    "team": "CAR",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "travis-homer_chi",
+    "name": "Travis Homer",
+    "position": "RB",
+    "team": "CHI",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "stephen-carlson_chi",
+    "name": "Stephen Carlson",
+    "position": "TE",
+    "team": "CHI",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "tanner-hudson_cin",
+    "name": "Tanner Hudson",
+    "position": "TE",
+    "team": "CIN",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "shedeur-sanders_cle",
+    "name": "Shedeur Sanders",
+    "position": "QB",
+    "team": "CLE",
+    "depth_chart_slot": "QB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "pierre-strong-jr_cle",
+    "name": "Pierre Strong Jr.",
+    "position": "RB",
+    "team": "CLE",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "brenden-bates_cle",
+    "name": "Brenden Bates",
+    "position": "TE",
+    "team": "CLE",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "phil-mafah_dal",
+    "name": "Phil Mafah",
+    "position": "RB",
+    "team": "DAL",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "john-stephens-jr_dal",
+    "name": "John Stephens Jr.",
+    "position": "TE",
+    "team": "DAL",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "jaleel-mclaughlin_den",
+    "name": "Jaleel McLaughlin",
+    "position": "RB",
+    "team": "DEN",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "lucas-krull_den",
+    "name": "Lucas Krull",
+    "position": "TE",
+    "team": "DEN",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "kenny-yeboah_det",
+    "name": "Kenny Yeboah",
+    "position": "TE",
+    "team": "DET",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "chris-brooks_gb",
+    "name": "Chris Brooks",
+    "position": "RB",
+    "team": "GB",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "john-fitzpatrick_gb",
+    "name": "John FitzPatrick",
+    "position": "TE",
+    "team": "GB",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "woody-marks_hou",
+    "name": "Woody Marks",
+    "position": "RB",
+    "team": "HOU",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "luke-lachey_hou",
+    "name": "Luke Lachey",
+    "position": "TE",
+    "team": "HOU",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "tyler-goodson_ind",
+    "name": "Tyler Goodson",
+    "position": "RB",
+    "team": "IND",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "jelani-woods_ind",
+    "name": "Jelani Woods",
+    "position": "TE",
+    "team": "IND",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "quintin-morris_jax",
+    "name": "Quintin Morris",
+    "position": "TE",
+    "team": "JAX",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "robert-tonyan_kc",
+    "name": "Robert Tonyan",
+    "position": "TE",
+    "team": "KC",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "zavier-scott_mia",
+    "name": "Zavier Scott",
+    "position": "RB",
+    "team": "MIA",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "trayveon-williams_min",
+    "name": "Trayveon Williams",
+    "position": "RB",
+    "team": "MIN",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "taysom-hill_ne",
+    "name": "Taysom Hill",
+    "position": "QB",
+    "team": "NE",
+    "depth_chart_slot": "QB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "clyde-edwardshelaire_ne",
+    "name": "Clyde Edwards-Helaire",
+    "position": "RB",
+    "team": "NE",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "tommy-devito_no",
+    "name": "Tommy DeVito",
+    "position": "QB",
+    "team": "NO",
+    "depth_chart_slot": "QB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "eric-gray_no",
+    "name": "Eric Gray",
+    "position": "RB",
+    "team": "NO",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "greg-dulcich_no",
+    "name": "Greg Dulcich",
+    "position": "TE",
+    "team": "NO",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "donovan-edwards_nyg",
+    "name": "Donovan Edwards",
+    "position": "RB",
+    "team": "NYG",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "zamir-white_nyj",
+    "name": "Zamir White",
+    "position": "RB",
+    "team": "NYJ",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "dorian-thompsonrobinson_phi",
+    "name": "Dorian Thompson-Robinson",
+    "position": "QB",
+    "team": "PHI",
+    "depth_chart_slot": "QB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "keilan-robinson_phi",
+    "name": "Keilan Robinson",
+    "position": "RB",
+    "team": "PHI",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "harrison-bryant_phi",
+    "name": "Harrison Bryant",
+    "position": "TE",
+    "team": "PHI",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "skylar-thompson_sea",
+    "name": "Skylar Thompson",
+    "position": "QB",
+    "team": "SEA",
+    "depth_chart_slot": "QB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "cordarrelle-patterson_sea",
+    "name": "Cordarrelle Patterson",
+    "position": "RB",
+    "team": "SEA",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "connor-heyward_sea",
+    "name": "Connor Heyward",
+    "position": "TE",
+    "team": "SEA",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "tucker-fisk_sf",
+    "name": "Tucker Fisk",
+    "position": "TE",
+    "team": "SF",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "patrick-taylor-jr_ten",
+    "name": "Patrick Taylor Jr.",
+    "position": "RB",
+    "team": "TEN",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "brayden-willis_ten",
+    "name": "Brayden Willis",
+    "position": "TE",
+    "team": "TEN",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "kalel-mullings_unk",
+    "name": "Kalel Mullings",
+    "position": "RB",
+    "team": "UNK",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "david-martinrobinson_unk",
+    "name": "David Martin-Robinson",
+    "position": "TE",
+    "team": "UNK",
+    "depth_chart_slot": "TE4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "sam-hartman_unk",
+    "name": "Sam Hartman",
+    "position": "QB",
+    "team": "UNK",
+    "depth_chart_slot": "QB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "jacory-croskeymerritt_unk",
+    "name": "Jacory Croskey-Merritt",
+    "position": "RB",
+    "team": "UNK",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "ronnie-rivers_was",
+    "name": "Ronnie Rivers",
+    "position": "RB",
+    "team": "WAS",
+    "depth_chart_slot": "RB4",
+    "depth_score": 0.3
+  },
+  {
+    "player_id": "michael-carter_ari",
+    "name": "Michael Carter",
+    "position": "RB",
+    "team": "ARI",
+    "depth_chart_slot": "RB5",
+    "depth_score": 0.1
+  },
+  {
+    "player_id": "frank-gore-jr_buf",
+    "name": "Frank Gore Jr.",
+    "position": "RB",
+    "team": "BUF",
+    "depth_chart_slot": "RB5",
+    "depth_score": 0.1
+  },
+  {
+    "player_id": "deshaun-watson_cle",
+    "name": "Deshaun Watson",
+    "position": "QB",
+    "team": "CLE",
+    "depth_chart_slot": "QB5",
+    "depth_score": 0.1
+  },
+  {
+    "player_id": "deuce-vaughn_dal",
+    "name": "Deuce Vaughn",
+    "position": "RB",
+    "team": "DAL",
+    "depth_chart_slot": "RB5",
+    "depth_score": 0.1
+  },
+  {
+    "player_id": "irv-smith-jr_hou",
+    "name": "Irv Smith Jr.",
+    "position": "TE",
+    "team": "HOU",
+    "depth_chart_slot": "TE5",
+    "depth_score": 0.1
+  },
+  {
+    "player_id": "cam-akers_ne",
+    "name": "Cam Akers",
+    "position": "RB",
+    "team": "NE",
+    "depth_chart_slot": "RB5",
+    "depth_score": 0.1
+  },
+  {
+    "player_id": "trey-sermon_sea",
+    "name": "Trey Sermon",
+    "position": "RB",
+    "team": "SEA",
+    "depth_chart_slot": "RB5",
+    "depth_score": 0.1
+  }
+]

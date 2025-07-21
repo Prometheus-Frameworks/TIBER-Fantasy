@@ -39,11 +39,77 @@ import { cleanVorpRankings } from './clean-vorp-endpoint';
 import { getSleeperProjections } from './services/sleeperProjectionsService';
 import { calculateVORP } from './vorpCalculator';
 import { getAllRBProjections, getRBProjectionByName } from './services/rbProjectionsService';
+import { depthChartService } from './services/depthChartService';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // 🔥 TIBER OVERRIDE: Critical NFL stats endpoint - HIGHEST PRIORITY
+  // 🔥 TIBER COMMAND: MainPlayerSystem.json generation with live depth charts
   console.log('🔥 REGISTERING TIBER OVERRIDE ENDPOINT');
+  
+  // TIBER: Live depth chart API integration
+  app.get('/api/tiber/depth-chart-system', async (req, res) => {
+    try {
+      console.log('🔍 [TIBER] CHECK_FOR_LIVE_DEPTH_CHART_API initiated...');
+      
+      const mainPlayerSystem = await depthChartService.generateMainPlayerSystem();
+      
+      res.json({
+        success: true,
+        system: 'MainPlayerSystem',
+        status: '[MPS_LIVE_UPDATE_SUCCESS]',
+        totalPlayers: mainPlayerSystem.length,
+        dataSource: 'SportsDataIO Live Depth Charts',
+        lastUpdated: new Date().toISOString(),
+        autoRefresh: '24 hours',
+        data: mainPlayerSystem
+      });
+    } catch (error) {
+      console.error('❌ [MPS_API_FAILURE_NO_FEED_DETECTED]', error);
+      
+      res.status(503).json({
+        success: false,
+        status: '[MPS_API_FAILURE_NO_FEED_DETECTED]',
+        message: 'Live depth chart API unavailable',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        instructions: 'AWAIT manual input - DO NOT fallback to static source'
+      });
+    }
+  });
+
+  // TIBER: Save MainPlayerSystem.json to file
+  app.post('/api/tiber/generate-main-player-system', async (req, res) => {
+    try {
+      await depthChartService.saveMainPlayerSystem();
+      
+      res.json({
+        success: true,
+        message: '[MPS_LIVE_UPDATE_SUCCESS] MainPlayerSystem.json generated',
+        file: 'MainPlayerSystem.json',
+        autoRefresh: 'Enabled (24 hours)'
+      });
+    } catch (error) {
+      console.error('❌ [MPS] Generation failed:', error);
+      res.status(500).json({
+        success: false,
+        status: '[MPS_API_FAILURE_NO_FEED_DETECTED]',
+        message: 'MainPlayerSystem generation failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // 🔄 Auto-refresh MainPlayerSystem every 24 hours
+  cron.schedule('0 6 * * *', async () => {
+    try {
+      console.log('🔄 [MPS] Auto-refresh initiated (24-hour cycle)');
+      await depthChartService.saveMainPlayerSystem();
+      console.log('✅ [MPS_LIVE_UPDATE_SUCCESS] Auto-refresh completed');
+    } catch (error) {
+      console.error('❌ [MPS] Auto-refresh failed:', error);
+    }
+  });
+
+  // 🔥 TIBER OVERRIDE: Critical NFL stats endpoint - HIGHEST PRIORITY
   app.get('/api/force-stats', async (req, res) => {
     try {
       console.log('🔥 TIBER OVERRIDE: Force stats endpoint activated');

@@ -4,7 +4,13 @@
 
 On The Clock is a clean, open-source fantasy football website that serves as a foundation for community-driven tools. The platform has been reset to a minimal state with only essential player data preserved for future development.
 
-## 🔥 Current State - COMPLETE RB PROJECTIONS DATASET DEPLOYED
+## 🔥 Current State - TIBER DEPTH CHART SYSTEM + RB PROJECTIONS DEPLOYED
+- **TIBER MAINPLAYERSYSTEM.JSON OPERATIONAL**: Live NFL depth chart integration via SportsDataIO API with 336 fantasy relevant players across 32 teams
+- **AUTO-REFRESH INFRASTRUCTURE**: 24-hour depth chart updates with [MPS_LIVE_UPDATE_SUCCESS] logging and automated file generation
+- **LIVE API ENDPOINTS**: /api/tiber/depth-chart-system and /api/tiber/generate-main-player-system responding with 200 status codes
+- **DEPTH SCORING SYSTEM**: WR1/RB1/QB1/TE1 (1.0), WR2/RB2 (0.8), WR3/RB3 (0.5), WR4/RB4 (0.3), depth players (0.1)
+- **RB PROJECTIONS EXPORT COMPLETE**: projections_rb.json with 76 RBs, standardized structure (player_id, name, team, proj_points, carries, rush_yd, rush_td, rec, rec_yd, rec_td, adp)
+- **AUTHENTIC NFL DEPTH DATA**: Live integration confirmed with sample data (Kyler Murray QB1, DepthOrder 1) across all 32 NFL teams
 - **75-PLAYER RB PROJECTIONS DATASET**: Complete static 2025 redraft snapshot successfully integrated
 - **RB API ENDPOINTS OPERATIONAL**: /api/projections/rb and /api/projections/rb/:playerName fully functional
 - **AUTHENTIC DATA INTEGRATION**: Real player stats (S. Barkley 296.2 pts, B. Robinson 297.7 pts, J. Gibbs 296.3 pts)
@@ -252,6 +258,10 @@ Based on user feedback, expanding to include:
 
 ```
 Changelog:
+- July 21, 2025. **TIBER DEPTH CHART SYSTEM DEPLOYED**: Successfully implemented live NFL depth chart integration with MainPlayerSystem.json generation framework using SportsDataIO API
+- July 21, 2025. **Live NFL Depth Chart API Integration Complete**: 336 fantasy relevant players across 32 teams with depth scoring system (WR1/RB1: 1.0, WR2/RB2: 0.8, etc.) and 24-hour auto-refresh cycles
+- July 21, 2025. **RB Projections Export Complete**: Successfully exported projections_rb.json with 76 RBs in standardized format (player_id, name, team, proj_points, carries, rush_yd, rush_td, rec, rec_yd, rec_td, adp)
+- July 21, 2025. **TIBER API Endpoints Operational**: Both /api/tiber/depth-chart-system (GET) and /api/tiber/generate-main-player-system (POST) responding with 200 status codes and [MPS_LIVE_UPDATE_SUCCESS] logging
 - July 20, 2025. **ENHANCED VORP SYSTEM DEPLOYED**: Comprehensive VORP ranking engine with dynasty mode, age penalties, FLEX allocation, and scarcity weighting. Features include: Dynasty age penalties (RB >25: 1%/year, WR >28: 1%/year, QB/TE >30: 0.5%/year), conservative scarcity weighting capped at 1.3x, enhanced 26-player fallback sample, API query parameters (?mode=dynasty/redraft, ?position=QB/RB/WR/TE, ?debug=true), FLEX integration with dynamic baselines, and normalized VORP calculations preventing artificial inflation
 - July 20, 2025. **VORP RANKING ENGINE WITH 3-TIER FALLBACK DEPLOYED**: Successfully integrated comprehensive VORP (Value Over Replacement Player) calculation system with 3-tier fallback hierarchy - 2025 projections → league matchups → simulated sample, dynamic baseline calculation (QB12, RB24, WR36, TE12 for 12-team leagues), authentic Sleeper API integration, position-specific replacement level thresholds, and real-time VORP sorting for true fantasy value rankings
 - July 20, 2025. **MULTI-TIER FALLBACK SYSTEM DEPLOYED**: Enhanced 3-tier fallback system deployed - Season projections (primary) → League matchups scan (weeks 1-18) → Active rosters with projections (final fallback), maintains strict validation pipeline throughout all tiers, comprehensive logging of source switching and fallback activation, handles edge cases where all traditional data sources may be unavailable, confirmed working with real 2025 Sleeper data
