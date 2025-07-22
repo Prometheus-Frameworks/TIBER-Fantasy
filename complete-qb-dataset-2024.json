@@ -1,0 +1,27 @@
+{
+  "export_date": "2025-01-22T03:30:42.686Z",
+  "season": 2024,
+  "total_quarterbacks": 68,
+  "data_source": "Sleeper API",
+  "summary": {
+    "priority_qbs_included": 13,
+    "total_games_logged": 892,
+    "complete_dataset": true,
+    "includes_all_active_2024_qbs": true
+  },
+  "priority_quarterbacks": [
+    "Josh Allen (BUF) - 17 games, 20.11 avg PPR",
+    "Jared Goff (DET) - 17 games, 18.01 avg PPR", 
+    "Caleb Williams (CHI) - 17 games, 14.99 avg PPR",
+    "Patrick Mahomes (KC) - 17 games, 18.86 avg PPR",
+    "Lamar Jackson (BAL) - 17 games, 22.31 avg PPR",
+    "Jalen Hurts (PHI) - 16 games, 19.12 avg PPR",
+    "C.J. Stroud (HOU) - 17 games, 17.62 avg PPR",
+    "Justin Herbert (LAC) - 17 games, 17.75 avg PPR",
+    "Jayden Daniels (WAS) - 13 games, 21.28 avg PPR",
+    "Jordan Love (GB) - 17 games, 16.83 avg PPR",
+    "Joe Burrow (CIN) - 17 games, 19.01 avg PPR",
+    "Brock Purdy (SF) - 17 games, 19.36 avg PPR",
+    "Trevor Lawrence (JAX) - 16 games, 12.52 avg PPR"
+  ]
+}
