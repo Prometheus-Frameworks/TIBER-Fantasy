@@ -1,0 +1,170 @@
+{
+  "rb_evaluation": {
+    "evaluation_date": "2024-01-23",
+    "methodology": "Volume vs Talent vs Insulation Framework",
+    "data_source": "NFL-Data-Py 2024 Season",
+    "players": [
+      {
+        "player_name": "Saquon Barkley",
+        "team": "PHI",
+        "season": 2024,
+        "advanced_metrics": {
+          "production": {
+            "games_played": 20,
+            "total_touches": 482,
+            "total_yards": 2857,
+            "total_tds": 20,
+            "total_ppr_points": 455.7,
+            "ppr_per_game": 22.8
+          },
+          "efficiency": {
+            "yards_per_touch": 5.93,
+            "yards_per_carry": 5.74,
+            "yards_per_reception": 7.67
+          },
+          "volume": {
+            "touches_per_game": 24.1,
+            "rush_attempts_per_game": 21.8,
+            "targets_per_game": 2.3
+          },
+          "consistency": {
+            "ppr_std_dev": 11.3,
+            "games_over_15_ppr": 13,
+            "games_over_20_ppr": 9,
+            "bust_rate": 0.05,
+            "non_td_ppr_avg": 13.2
+          }
+        },
+        "role_profile": {
+          "volume_tier": "Workhorse",
+          "receiving_role": "Limited Receiver",
+          "redzone_role": "Elite Scorer",
+          "usage_consistency": "Consistent"
+        },
+        "framework_evaluation": {
+          "volume_score": 10,
+          "talent_score": 8.8,
+          "insulation_score": 8.9,
+          "composite_score": 9.2,
+          "framework_tier": "Elite (Volume + Talent)"
+        },
+        "analytical_tags": [
+          "RB1-Elite",
+          "Bell-Cow",
+          "Ground-Heavy",
+          "Efficient",
+          "TD-Machine",
+          "High-Floor",
+          "Ceiling-Games",
+          "Explosive-Upside",
+          "Elite-Talent",
+          "Breakaway-Speed"
+        ]
+      },
+      {
+        "player_name": "James Conner",
+        "team": "ARI",
+        "season": 2024,
+        "advanced_metrics": {
+          "production": {
+            "games_played": 16,
+            "total_touches": 283,
+            "total_yards": 1508,
+            "total_tds": 9,
+            "total_ppr_points": 253.8,
+            "ppr_per_game": 15.9
+          },
+          "efficiency": {
+            "yards_per_touch": 5.33,
+            "yards_per_carry": 4.64,
+            "yards_per_reception": 8.81
+          },
+          "volume": {
+            "touches_per_game": 17.7,
+            "rush_attempts_per_game": 14.8,
+            "targets_per_game": 2.9
+          },
+          "consistency": {
+            "ppr_std_dev": 7.85,
+            "games_over_15_ppr": 8,
+            "games_over_20_ppr": 4,
+            "bust_rate": 0.188,
+            "non_td_ppr_avg": 10.0
+          }
+        },
+        "role_profile": {
+          "volume_tier": "High-Volume",
+          "receiving_role": "Limited Receiver",
+          "redzone_role": "Moderate Scorer",
+          "usage_consistency": "Consistent"
+        },
+        "framework_evaluation": {
+          "volume_score": 8.8,
+          "talent_score": 7.6,
+          "insulation_score": 8.1,
+          "composite_score": 8.2,
+          "framework_tier": "Elite (Volume + Talent)"
+        },
+        "analytical_tags": [
+          "RB1-Solid",
+          "High-Floor",
+          "Steady-Producer",
+          "Receiving-Upside",
+          "Injury-Concern"
+        ]
+      },
+      {
+        "player_name": "Rico Dowdle",
+        "team": "DAL",
+        "season": 2024,
+        "advanced_metrics": {
+          "production": {
+            "games_played": 16,
+            "total_touches": 274,
+            "total_yards": 1328,
+            "total_tds": 5,
+            "total_ppr_points": 197.8,
+            "ppr_per_game": 12.4
+          },
+          "efficiency": {
+            "yards_per_touch": 4.85,
+            "yards_per_carry": 4.59,
+            "yards_per_reception": 6.38
+          },
+          "volume": {
+            "touches_per_game": 17.1,
+            "rush_attempts_per_game": 14.7,
+            "targets_per_game": 2.4
+          },
+          "consistency": {
+            "ppr_std_dev": 5.34,
+            "games_over_15_ppr": 5,
+            "games_over_20_ppr": 2,
+            "bust_rate": 0.125,
+            "non_td_ppr_avg": 9.6
+          }
+        },
+        "role_profile": {
+          "volume_tier": "High-Volume",
+          "receiving_role": "Limited Receiver",
+          "redzone_role": "Moderate Scorer",
+          "usage_consistency": "Consistent"
+        },
+        "framework_evaluation": {
+          "volume_score": 8.6,
+          "talent_score": 7.1,
+          "insulation_score": 8.4,
+          "composite_score": 8.0,
+          "framework_tier": "Elite (Volume + Talent)"
+        },
+        "analytical_tags": [
+          "RB2-Reliable",
+          "High-Floor",
+          "Late-Season-Surge",
+          "Opportunity-Based",
+          "TD-Regression-Risk"
+        ]
+      }
+    ]
+  }
+}
