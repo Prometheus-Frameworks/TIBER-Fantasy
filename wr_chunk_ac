@@ -1,0 +1,4500 @@
+          "targets": 4,
+          "receptions": 3,
+          "yards": 16,
+          "yards_per_target": 4.0,
+          "yards_per_catch": 5.3,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 2,
+          "yards": 11,
+          "yards_per_carry": 5.5,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 11,
+        "fantasy_points": 19.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 7,
+          "yards": 61,
+          "yards_per_target": 7.6,
+          "yards_per_catch": 8.7,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 12,
+        "fantasy_points": 9.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 5,
+          "yards": 48,
+          "yards_per_target": 8.0,
+          "yards_per_catch": 9.6,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 13,
+        "fantasy_points": 20.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 9,
+          "receptions": 6,
+          "yards": 83,
+          "yards_per_target": 9.2,
+          "yards_per_catch": 13.8,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 14,
+        "fantasy_points": 28.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 14,
+          "receptions": 10,
+          "yards": 115,
+          "yards_per_target": 8.2,
+          "yards_per_catch": 11.5,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 6,
+          "yards_per_carry": 6.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 15,
+        "fantasy_points": 5.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 2,
+          "yards": 36,
+          "yards_per_target": 5.1,
+          "yards_per_catch": 18.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 16,
+        "fantasy_points": 11.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 3,
+          "yards": 29,
+          "yards_per_target": 4.1,
+          "yards_per_catch": 9.7,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 17,
+        "fantasy_points": 19.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 9,
+          "receptions": 9,
+          "yards": 105,
+          "yards_per_target": 11.7,
+          "yards_per_catch": 11.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 18,
+        "fantasy_points": 4.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 2,
+          "yards": 20,
+          "yards_per_target": 6.7,
+          "yards_per_catch": 10.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      }
+    ]
+  },
+  {
+    "player_name": "Jakobi Meyers",
+    "position": "WR",
+    "team": "LV",
+    "game_logs": [
+      {
+        "week": 1,
+        "fantasy_points": 9.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 3,
+          "yards": 61,
+          "yards_per_target": 20.3,
+          "yards_per_catch": 20.3,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 3,
+          "yards_per_carry": 3.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 2,
+        "fantasy_points": 6.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 4,
+          "yards": 29,
+          "yards_per_target": 5.8,
+          "yards_per_catch": 7.2,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 3,
+        "fantasy_points": 21.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 9,
+          "receptions": 7,
+          "yards": 62,
+          "yards_per_target": 6.9,
+          "yards_per_catch": 8.9,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 4,
+        "fantasy_points": 9.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 10,
+          "receptions": 5,
+          "yards": 49,
+          "yards_per_target": 4.9,
+          "yards_per_catch": 9.8,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 5,
+        "fantasy_points": 13.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 9,
+          "receptions": 6,
+          "yards": 72,
+          "yards_per_target": 8.0,
+          "yards_per_catch": 12.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 6,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 7,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 8,
+        "fantasy_points": 17.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 6,
+          "yards": 52,
+          "yards_per_target": 7.4,
+          "yards_per_catch": 8.7,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 9,
+        "fantasy_points": 18.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 11,
+          "receptions": 8,
+          "yards": 105,
+          "yards_per_target": 9.5,
+          "yards_per_catch": 13.1,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 10,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 11,
+        "fantasy_points": 8.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 4,
+          "yards": 28,
+          "yards_per_target": 4.7,
+          "yards_per_catch": 7.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 20,
+          "yards_per_carry": 20.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 12,
+        "fantasy_points": 22.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 15,
+          "receptions": 10,
+          "yards": 121,
+          "yards_per_target": 8.1,
+          "yards_per_catch": 12.1,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 13,
+        "fantasy_points": 15.7,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 11,
+          "receptions": 6,
+          "yards": 97,
+          "yards_per_target": 8.8,
+          "yards_per_catch": 16.2,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 14,
+        "fantasy_points": 13.7,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 10,
+          "receptions": 7,
+          "yards": 67,
+          "yards_per_target": 6.7,
+          "yards_per_catch": 9.6,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 15,
+        "fantasy_points": 10.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 9,
+          "receptions": 5,
+          "yards": 59,
+          "yards_per_target": 6.6,
+          "yards_per_catch": 11.8,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 16,
+        "fantasy_points": 6.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 2,
+          "yards": 41,
+          "yards_per_target": 8.2,
+          "yards_per_catch": 20.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 17,
+        "fantasy_points": 17.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 9,
+          "receptions": 5,
+          "yards": 61,
+          "yards_per_target": 6.8,
+          "yards_per_catch": 12.2,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 18,
+        "fantasy_points": 27.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 10,
+          "receptions": 9,
+          "yards": 123,
+          "yards_per_target": 12.3,
+          "yards_per_catch": 13.7,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      }
+    ]
+  },
+  {
+    "player_name": "Khalil Shakir",
+    "position": "WR",
+    "team": "BUF",
+    "game_logs": [
+      {
+        "week": 1,
+        "fantasy_points": 13.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 3,
+          "yards": 42,
+          "yards_per_target": 14.0,
+          "yards_per_catch": 14.0,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 2,
+        "fantasy_points": 10.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 5,
+          "yards": 54,
+          "yards_per_target": 10.8,
+          "yards_per_catch": 10.8,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 2,
+          "yards_per_carry": 2.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 3,
+        "fantasy_points": 19.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 6,
+          "yards": 72,
+          "yards_per_target": 12.0,
+          "yards_per_catch": 12.0,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 4,
+        "fantasy_points": 10.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 4,
+          "yards": 62,
+          "yards_per_target": 12.4,
+          "yards_per_catch": 15.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 5,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 6,
+        "fantasy_points": 3.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 2,
+          "receptions": 2,
+          "yards": 19,
+          "yards_per_target": 9.5,
+          "yards_per_catch": 9.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 7,
+        "fantasy_points": 13.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 7,
+          "yards": 65,
+          "yards_per_target": 9.3,
+          "yards_per_catch": 9.3,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 8,
+        "fantasy_points": 19.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 10,
+          "receptions": 9,
+          "yards": 107,
+          "yards_per_target": 10.7,
+          "yards_per_catch": 11.9,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 2,
+          "yards_per_carry": 2.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 9,
+        "fantasy_points": 11.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 6,
+          "yards": 50,
+          "yards_per_target": 7.1,
+          "yards_per_catch": 8.3,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 10,
+        "fantasy_points": 11.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 9,
+          "receptions": 6,
+          "yards": 58,
+          "yards_per_target": 6.4,
+          "yards_per_catch": 9.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 11,
+        "fantasy_points": 15.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 12,
+          "receptions": 8,
+          "yards": 70,
+          "yards_per_target": 5.8,
+          "yards_per_catch": 8.8,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 12,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 13,
+        "fantasy_points": 7.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 4,
+          "yards": 30,
+          "yards_per_target": 4.3,
+          "yards_per_catch": 7.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 14,
+        "fantasy_points": 21.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 5,
+          "yards": 106,
+          "yards_per_target": 13.2,
+          "yards_per_catch": 21.2,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 15,
+        "fantasy_points": 15.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 6,
+          "yards": 39,
+          "yards_per_target": 5.6,
+          "yards_per_catch": 6.5,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 16,
+        "fantasy_points": 4.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 2,
+          "yards": 22,
+          "yards_per_target": 3.7,
+          "yards_per_catch": 11.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 17,
+        "fantasy_points": 5.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 3,
+          "yards": 25,
+          "yards_per_target": 4.2,
+          "yards_per_catch": 8.3,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 18,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      }
+    ]
+  },
+  {
+    "player_name": "Jauan Jennings",
+    "position": "WR",
+    "team": "SF",
+    "game_logs": [
+      {
+        "week": 1,
+        "fantasy_points": 11.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 5,
+          "yards": 64,
+          "yards_per_target": 12.8,
+          "yards_per_catch": 12.8,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 2,
+        "fantasy_points": 5.7,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 4,
+          "receptions": 2,
+          "yards": 37,
+          "yards_per_target": 9.2,
+          "yards_per_catch": 18.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 3,
+        "fantasy_points": 46.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 12,
+          "receptions": 11,
+          "yards": 175,
+          "yards_per_target": 14.6,
+          "yards_per_catch": 15.9,
+          "touchdowns": 3
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 4,
+        "fantasy_points": 11.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 3,
+          "yards": 88,
+          "yards_per_target": 14.7,
+          "yards_per_catch": 29.3,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 5,
+        "fantasy_points": 2.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 4,
+          "receptions": 1,
+          "yards": 13,
+          "yards_per_target": 3.2,
+          "yards_per_catch": 13.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 6,
+        "fantasy_points": 5.7,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 3,
+          "yards": 27,
+          "yards_per_target": 5.4,
+          "yards_per_catch": 9.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 7,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 8,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 9,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 10,
+        "fantasy_points": 16.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 11,
+          "receptions": 7,
+          "yards": 93,
+          "yards_per_target": 8.5,
+          "yards_per_catch": 13.3,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 11,
+        "fantasy_points": 25.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 11,
+          "receptions": 10,
+          "yards": 91,
+          "yards_per_target": 8.3,
+          "yards_per_catch": 9.1,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 12,
+        "fantasy_points": 9.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 5,
+          "yards": 40,
+          "yards_per_target": 5.7,
+          "yards_per_catch": 8.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 13,
+        "fantasy_points": 8.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 3,
+          "yards": 56,
+          "yards_per_target": 11.2,
+          "yards_per_catch": 18.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 14,
+        "fantasy_points": 28.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 7,
+          "yards": 90,
+          "yards_per_target": 11.2,
+          "yards_per_catch": 12.9,
+          "touchdowns": 2
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 15,
+        "fantasy_points": 5.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 9,
+          "receptions": 2,
+          "yards": 31,
+          "yards_per_target": 3.4,
+          "yards_per_catch": 15.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 16,
+        "fantasy_points": 9.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 4,
+          "yards": 51,
+          "yards_per_target": 8.5,
+          "yards_per_catch": 12.8,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 17,
+        "fantasy_points": 13.7,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 10,
+          "receptions": 7,
+          "yards": 67,
+          "yards_per_target": 6.7,
+          "yards_per_catch": 9.6,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 18,
+        "fantasy_points": 12.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 10,
+          "receptions": 7,
+          "yards": 52,
+          "yards_per_target": 5.2,
+          "yards_per_catch": 7.4,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      }
+    ]
+  },
+  {
+    "player_name": "Zay Flowers",
+    "position": "WR",
+    "team": "BAL",
+    "game_logs": [
+      {
+        "week": 1,
+        "fantasy_points": 11.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 10,
+          "receptions": 6,
+          "yards": 37,
+          "yards_per_target": 3.7,
+          "yards_per_catch": 6.2,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 2,
+          "yards": 14,
+          "yards_per_carry": 7.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 2,
+        "fantasy_points": 22.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 11,
+          "receptions": 7,
+          "yards": 91,
+          "yards_per_target": 8.3,
+          "yards_per_catch": 13.0,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 3,
+        "fantasy_points": 5.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 4,
+          "receptions": 3,
+          "yards": 20,
+          "yards_per_target": 5.0,
+          "yards_per_catch": 6.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 3,
+          "yards_per_carry": 3.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 4,
+        "fantasy_points": 2.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 2,
+          "receptions": 1,
+          "yards": 10,
+          "yards_per_target": 5.0,
+          "yards_per_catch": 10.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 5,
+        "fantasy_points": 19.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 12,
+          "receptions": 7,
+          "yards": 111,
+          "yards_per_target": 9.2,
+          "yards_per_catch": 15.9,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 9,
+          "yards_per_carry": 9.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 6,
+        "fantasy_points": 22.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 9,
+          "receptions": 9,
+          "yards": 132,
+          "yards_per_target": 14.7,
+          "yards_per_catch": 14.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 2,
+          "yards_per_carry": 2.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 7,
+        "fantasy_points": 4.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 1,
+          "receptions": 1,
+          "yards": 11,
+          "yards_per_target": 11.0,
+          "yards_per_catch": 11.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 19,
+          "yards_per_carry": 19.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 8,
+        "fantasy_points": 18.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 12,
+          "receptions": 7,
+          "yards": 115,
+          "yards_per_target": 9.6,
+          "yards_per_catch": 16.4,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 9,
+        "fantasy_points": 29.7,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 5,
+          "yards": 127,
+          "yards_per_target": 21.2,
+          "yards_per_catch": 25.4,
+          "touchdowns": 2
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 10,
+        "fantasy_points": 7.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 4,
+          "yards": 34,
+          "yards_per_target": 5.7,
+          "yards_per_catch": 8.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 11,
+        "fantasy_points": 11.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 2,
+          "yards": 39,
+          "yards_per_target": 6.5,
+          "yards_per_catch": 19.5,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 12,
+        "fantasy_points": 11.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 5,
+          "yards": 62,
+          "yards_per_target": 7.8,
+          "yards_per_catch": 12.4,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 13,
+        "fantasy_points": 10.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 3,
+          "yards": 74,
+          "yards_per_target": 10.6,
+          "yards_per_catch": 24.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": -3,
+          "yards_per_carry": -3.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 14,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 15,
+        "fantasy_points": 11.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 6,
+          "yards": 53,
+          "yards_per_target": 7.6,
+          "yards_per_catch": 8.8,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 16,
+        "fantasy_points": 15.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 5,
+          "yards": 100,
+          "yards_per_target": 12.5,
+          "yards_per_catch": 20.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 3,
+          "yards_per_carry": 3.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 17,
+        "fantasy_points": 5.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 2,
+          "yards": 31,
+          "yards_per_target": 6.2,
+          "yards_per_catch": 15.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 18,
+        "fantasy_points": 3.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 2,
+          "receptions": 1,
+          "yards": 12,
+          "yards_per_target": 6.0,
+          "yards_per_catch": 12.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 9,
+          "yards_per_carry": 9.0,
+          "touchdowns": 0
+        }
+      }
+    ]
+  },
+  {
+    "player_name": "Jayden Reed",
+    "position": "WR",
+    "team": "GB",
+    "game_logs": [
+      {
+        "week": 1,
+        "fantasy_points": 33.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 4,
+          "yards": 138,
+          "yards_per_target": 23.0,
+          "yards_per_catch": 34.5,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 33,
+          "yards_per_carry": 33.0,
+          "touchdowns": 1
+        }
+      },
+      {
+        "week": 2,
+        "fantasy_points": 6.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 2,
+          "receptions": 2,
+          "yards": 9,
+          "yards_per_target": 4.5,
+          "yards_per_catch": 4.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 2,
+          "yards": 37,
+          "yards_per_carry": 18.5,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 3,
+        "fantasy_points": 10.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 4,
+          "yards": 50,
+          "yards_per_target": 8.3,
+          "yards_per_catch": 12.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 2,
+          "yards": 19,
+          "yards_per_carry": 9.5,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 4,
+        "fantasy_points": 27.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 7,
+          "yards": 139,
+          "yards_per_target": 17.4,
+          "yards_per_catch": 19.9,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 2,
+          "yards_per_carry": 2.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 5,
+        "fantasy_points": 13.7,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 4,
+          "yards": 78,
+          "yards_per_target": 13.0,
+          "yards_per_catch": 19.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 2,
+          "yards": 19,
+          "yards_per_carry": 9.5,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 6,
+        "fantasy_points": 14.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 6,
+          "yards": 28,
+          "yards_per_target": 4.7,
+          "yards_per_catch": 4.7,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 7,
+        "fantasy_points": 3.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 4,
+          "receptions": 2,
+          "yards": 10,
+          "yards_per_target": 2.5,
+          "yards_per_catch": 5.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 8,
+        "fantasy_points": 7.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 2,
+          "yards": 55,
+          "yards_per_target": 18.3,
+          "yards_per_catch": 27.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 9,
+        "fantasy_points": 16.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 5,
+          "yards": 113,
+          "yards_per_target": 18.8,
+          "yards_per_catch": 22.6,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 10,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 11,
+        "fantasy_points": 9.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 2,
+          "receptions": 2,
+          "yards": 23,
+          "yards_per_target": 11.5,
+          "yards_per_catch": 11.5,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": -5,
+          "yards_per_carry": -5.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 12,
+        "fantasy_points": 5.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 3,
+          "yards": 26,
+          "yards_per_target": 8.7,
+          "yards_per_catch": 8.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 13,
+        "fantasy_points": 19.7,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 3,
+          "yards": 24,
+          "yards_per_target": 4.0,
+          "yards_per_catch": 8.0,
+          "touchdowns": 2
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 23,
+          "yards_per_carry": 23.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 14,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 1,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 15,
+        "fantasy_points": 11.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 5,
+          "yards": 34,
+          "yards_per_target": 5.7,
+          "yards_per_catch": 6.8,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 3,
+          "yards": 27,
+          "yards_per_carry": 9.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 16,
+        "fantasy_points": 11.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 4,
+          "receptions": 3,
+          "yards": 76,
+          "yards_per_target": 19.0,
+          "yards_per_catch": 25.3,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 5,
+          "yards_per_carry": 5.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 17,
+        "fantasy_points": 1.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 4,
+          "receptions": 1,
+          "yards": 6,
+          "yards_per_target": 1.5,
+          "yards_per_catch": 6.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 18,
+        "fantasy_points": 5.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 2,
+          "receptions": 2,
+          "yards": 48,
+          "yards_per_target": 24.0,
+          "yards_per_catch": 24.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 3,
+          "yards": 3,
+          "yards_per_carry": 1.0,
+          "touchdowns": 0
+        }
+      }
+    ]
+  },
+  {
+    "player_name": "Rashod Bateman",
+    "position": "WR",
+    "team": "BAL",
+    "game_logs": [
+      {
+        "week": 1,
+        "fantasy_points": 7.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 2,
+          "yards": 53,
+          "yards_per_target": 10.6,
+          "yards_per_catch": 26.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 2,
+        "fantasy_points": 7.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 4,
+          "receptions": 3,
+          "yards": 40,
+          "yards_per_target": 10.0,
+          "yards_per_catch": 13.3,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 3,
+        "fantasy_points": 11.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 4,
+          "receptions": 3,
+          "yards": 28,
+          "yards_per_target": 7.0,
+          "yards_per_catch": 9.3,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 4,
+        "fantasy_points": 3.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 1,
+          "receptions": 1,
+          "yards": 23,
+          "yards_per_target": 23.0,
+          "yards_per_catch": 23.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 5,
+        "fantasy_points": 15.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 4,
+          "yards": 58,
+          "yards_per_target": 7.2,
+          "yards_per_catch": 14.5,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 6,
+        "fantasy_points": 11.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 4,
+          "receptions": 4,
+          "yards": 71,
+          "yards_per_target": 17.8,
+          "yards_per_catch": 17.8,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 7,
+        "fantasy_points": 22.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 4,
+          "receptions": 4,
+          "yards": 121,
+          "yards_per_target": 30.2,
+          "yards_per_catch": 30.2,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 8,
+        "fantasy_points": 3.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 1,
+          "yards": 28,
+          "yards_per_target": 5.6,
+          "yards_per_catch": 28.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 9,
+        "fantasy_points": 5.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 4,
+          "receptions": 3,
+          "yards": 25,
+          "yards_per_target": 6.2,
+          "yards_per_catch": 8.3,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 10,
+        "fantasy_points": 17.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 6,
+          "yards": 54,
+          "yards_per_target": 6.8,
+          "yards_per_catch": 9.0,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 11,
+        "fantasy_points": 5.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 2,
+          "yards": 30,
+          "yards_per_target": 6.0,
+          "yards_per_catch": 15.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 12,
+        "fantasy_points": 12.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 2,
+          "yards": 43,
+          "yards_per_target": 14.3,
+          "yards_per_catch": 21.5,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 13,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 14,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 15,
+        "fantasy_points": 23.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 3,
+          "yards": 80,
+          "yards_per_target": 16.0,
+          "yards_per_catch": 26.7,
+          "touchdowns": 2
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 16,
+        "fantasy_points": 8.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 1,
+          "yards": 14,
+          "yards_per_target": 4.7,
+          "yards_per_catch": 14.0,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 17,
+        "fantasy_points": 2.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 1,
+          "receptions": 1,
+          "yards": 12,
+          "yards_per_target": 12.0,
+          "yards_per_catch": 12.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 18,
+        "fantasy_points": 18.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 5,
+          "yards": 76,
+          "yards_per_target": 9.5,
+          "yards_per_catch": 15.2,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      }
+    ]
+  },
+  {
+    "player_name": "Calvin Ridley",
+    "position": "WR",
+    "team": "TEN",
+    "game_logs": [
+      {
+        "week": 1,
+        "fantasy_points": 8.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 3,
+          "yards": 50,
+          "yards_per_target": 7.1,
+          "yards_per_catch": 16.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 2,
+        "fantasy_points": 24.7,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 4,
+          "yards": 77,
+          "yards_per_target": 12.8,
+          "yards_per_catch": 19.2,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 10,
+          "yards_per_carry": 10.0,
+          "touchdowns": 1
+        }
+      },
+      {
+        "week": 3,
+        "fantasy_points": 1.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 1,
+          "yards": 9,
+          "yards_per_target": 3.0,
+          "yards_per_catch": 9.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 4,
+        "fantasy_points": 2.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 1,
+          "yards": 5,
+          "yards_per_target": 1.7,
+          "yards_per_catch": 5.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 10,
+          "yards_per_carry": 10.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 5,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 6,
+        "fantasy_points": 0.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 9,
+          "yards_per_carry": 9.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 7,
+        "fantasy_points": 7.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 9,
+          "receptions": 3,
+          "yards": 42,
+          "yards_per_target": 4.7,
+          "yards_per_catch": 14.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 8,
+        "fantasy_points": 22.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 15,
+          "receptions": 10,
+          "yards": 143,
+          "yards_per_target": 9.5,
+          "yards_per_catch": 14.3,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 3,
+          "yards_per_carry": 3.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 9,
+        "fantasy_points": 12.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 5,
+          "yards": 73,
+          "yards_per_target": 9.1,
+          "yards_per_catch": 14.6,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 10,
+        "fantasy_points": 25.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 9,
+          "receptions": 5,
+          "yards": 84,
+          "yards_per_target": 9.3,
+          "yards_per_catch": 16.8,
+          "touchdowns": 2
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 11,
+        "fantasy_points": 9.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 4,
+          "yards": 58,
+          "yards_per_target": 9.7,
+          "yards_per_catch": 14.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 12,
+        "fantasy_points": 14.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 5,
+          "yards": 93,
+          "yards_per_target": 15.5,
+          "yards_per_catch": 18.6,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 13,
+        "fantasy_points": 6.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 2,
+          "yards": 45,
+          "yards_per_target": 6.4,
+          "yards_per_catch": 22.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 14,
+        "fantasy_points": 12.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 12,
+          "receptions": 7,
+          "yards": 59,
+          "yards_per_target": 4.9,
+          "yards_per_catch": 8.4,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 15,
+        "fantasy_points": 9.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 3,
+          "yards": 41,
+          "yards_per_target": 8.2,
+          "yards_per_catch": 13.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 19,
+          "yards_per_carry": 19.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 16,
+        "fantasy_points": 16.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 3,
+          "yards": 78,
+          "yards_per_target": 15.6,
+          "yards_per_catch": 26.0,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 17,
+        "fantasy_points": 14.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 5,
+          "yards": 84,
+          "yards_per_target": 14.0,
+          "yards_per_catch": 16.8,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 1,
+          "yards": 7,
+          "yards_per_carry": 7.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 18,
+        "fantasy_points": 10.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 3,
+          "yards": 76,
+          "yards_per_target": 15.2,
+          "yards_per_catch": 25.3,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 2,
+          "yards": -3,
+          "yards_per_carry": -1.5,
+          "touchdowns": 0
+        }
+      }
+    ]
+  },
+  {
+    "player_name": "Marvin Harrison",
+    "position": "WR",
+    "team": "ARI",
+    "game_logs": [
+      {
+        "week": 1,
+        "fantasy_points": 1.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 1,
+          "yards": 4,
+          "yards_per_target": 1.3,
+          "yards_per_catch": 4.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 2,
+        "fantasy_points": 29.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 4,
+          "yards": 130,
+          "yards_per_target": 16.2,
+          "yards_per_catch": 32.5,
+          "touchdowns": 2
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 3,
+        "fantasy_points": 17.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 11,
+          "receptions": 5,
+          "yards": 64,
+          "yards_per_target": 5.8,
+          "yards_per_catch": 12.8,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 4,
+        "fantasy_points": 15.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 5,
+          "yards": 45,
+          "yards_per_target": 7.5,
+          "yards_per_catch": 9.0,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 5,
+        "fantasy_points": 5.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 2,
+          "yards": 36,
+          "yards_per_target": 5.1,
+          "yards_per_catch": 18.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 6,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 2,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 7,
+        "fantasy_points": 5.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 3,
+          "yards": 21,
+          "yards_per_target": 3.5,
+          "yards_per_catch": 7.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 8,
+        "fantasy_points": 23.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 6,
+          "yards": 111,
+          "yards_per_target": 15.9,
+          "yards_per_catch": 18.5,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 9,
+        "fantasy_points": 3.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 2,
+          "yards": 34,
+          "yards_per_target": 6.8,
+          "yards_per_catch": 17.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 10,
+        "fantasy_points": 16.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 5,
+          "yards": 54,
+          "yards_per_target": 10.8,
+          "yards_per_catch": 10.8,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 11,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 12,
+        "fantasy_points": 7.7,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 3,
+          "yards": 47,
+          "yards_per_target": 7.8,
+          "yards_per_catch": 15.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 13,
+        "fantasy_points": 17.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 12,
+          "receptions": 5,
+          "yards": 60,
+          "yards_per_target": 5.0,
+          "yards_per_catch": 12.0,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 14,
+        "fantasy_points": 8.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 4,
+          "yards": 49,
+          "yards_per_target": 6.1,
+          "yards_per_catch": 12.2,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 15,
+        "fantasy_points": 5.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 2,
+          "yards": 32,
+          "yards_per_target": 5.3,
+          "yards_per_catch": 16.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 16,
+        "fantasy_points": 7.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 4,
+          "yards": 39,
+          "yards_per_target": 4.9,
+          "yards_per_catch": 9.8,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 17,
+        "fantasy_points": 15.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 10,
+          "receptions": 6,
+          "yards": 96,
+          "yards_per_target": 9.6,
+          "yards_per_catch": 16.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 18,
+        "fantasy_points": 17.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 5,
+          "yards": 63,
+          "yards_per_target": 10.5,
+          "yards_per_catch": 12.6,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      }
+    ]
+  },
+  {
+    "player_name": "Darnell Mooney",
+    "position": "WR",
+    "team": "ATL",
+    "game_logs": [
+      {
+        "week": 1,
+        "fantasy_points": 2.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 1,
+          "yards": 15,
+          "yards_per_target": 5.0,
+          "yards_per_catch": 15.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 2,
+        "fantasy_points": 17.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 3,
+          "yards": 88,
+          "yards_per_target": 12.6,
+          "yards_per_catch": 29.3,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 3,
+        "fantasy_points": 14.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 8,
+          "yards": 66,
+          "yards_per_target": 8.2,
+          "yards_per_catch": 8.2,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 4,
+        "fantasy_points": 8.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 3,
+          "yards": 56,
+          "yards_per_target": 9.3,
+          "yards_per_catch": 18.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 5,
+        "fantasy_points": 31.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 16,
+          "receptions": 9,
+          "yards": 105,
+          "yards_per_target": 6.6,
+          "yards_per_catch": 11.7,
+          "touchdowns": 2
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 6,
+        "fantasy_points": 6.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 3,
+          "yards": 38,
+          "yards_per_target": 7.6,
+          "yards_per_catch": 12.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 7,
+        "fantasy_points": 9.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 5,
+          "yards": 46,
+          "yards_per_target": 5.8,
+          "yards_per_catch": 9.2,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 8,
+        "fantasy_points": 18.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 4,
+          "yards": 86,
+          "yards_per_target": 14.3,
+          "yards_per_catch": 21.5,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 9,
+        "fantasy_points": 19.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 9,
+          "receptions": 5,
+          "yards": 88,
+          "yards_per_target": 9.8,
+          "yards_per_catch": 17.6,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 10,
+        "fantasy_points": 14.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 9,
+          "receptions": 5,
+          "yards": 96,
+          "yards_per_target": 10.7,
+          "yards_per_catch": 19.2,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 11,
+        "fantasy_points": 4.7,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 4,
+          "receptions": 2,
+          "yards": 27,
+          "yards_per_target": 6.8,
+          "yards_per_catch": 13.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 12,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 13,
+        "fantasy_points": 5.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 3,
+          "yards": 20,
+          "yards_per_target": 3.3,
+          "yards_per_catch": 6.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 14,
+        "fantasy_points": 20.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 6,
+          "yards": 142,
+          "yards_per_target": 20.3,
+          "yards_per_catch": 23.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 15,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 1,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 16,
+        "fantasy_points": 13.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 5,
+          "yards": 82,
+          "yards_per_target": 13.7,
+          "yards_per_catch": 16.4,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 17,
+        "fantasy_points": 5.7,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 2,
+          "yards": 37,
+          "yards_per_target": 7.4,
+          "yards_per_catch": 18.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 18,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      }
+    ]
+  },
+  {
+    "player_name": "DK Metcalf",
+    "position": "WR",
+    "team": "SEA",
+    "game_logs": [
+      {
+        "week": 1,
+        "fantasy_points": 5.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 4,
+          "receptions": 3,
+          "yards": 29,
+          "yards_per_target": 7.2,
+          "yards_per_catch": 9.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 2,
+        "fantasy_points": 28.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 14,
+          "receptions": 10,
+          "yards": 129,
+          "yards_per_target": 9.2,
+          "yards_per_catch": 12.9,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 3,
+        "fantasy_points": 20.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 4,
+          "yards": 104,
+          "yards_per_target": 17.3,
+          "yards_per_catch": 26.0,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 4,
+        "fantasy_points": 15.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 12,
+          "receptions": 7,
+          "yards": 104,
+          "yards_per_target": 8.7,
+          "yards_per_catch": 14.9,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 5,
+        "fantasy_points": 7.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 4,
+          "yards": 55,
+          "yards_per_target": 7.9,
+          "yards_per_catch": 13.8,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 6,
+        "fantasy_points": 7.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 11,
+          "receptions": 3,
+          "yards": 48,
+          "yards_per_target": 4.4,
+          "yards_per_catch": 16.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 7,
+        "fantasy_points": 19.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 4,
+          "yards": 99,
+          "yards_per_target": 14.1,
+          "yards_per_catch": 24.8,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 8,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 9,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 10,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 11,
+        "fantasy_points": 14.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 9,
+          "receptions": 7,
+          "yards": 70,
+          "yards_per_target": 7.8,
+          "yards_per_catch": 10.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 12,
+        "fantasy_points": 9.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 4,
+          "yards": 59,
+          "yards_per_target": 11.8,
+          "yards_per_catch": 14.8,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 13,
+        "fantasy_points": 10.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 9,
+          "receptions": 4,
+          "yards": 66,
+          "yards_per_target": 7.3,
+          "yards_per_catch": 16.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 14,
+        "fantasy_points": 8.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 4,
+          "yards": 49,
+          "yards_per_target": 8.2,
+          "yards_per_catch": 12.2,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 15,
+        "fantasy_points": 5.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 3,
+          "yards": 28,
+          "yards_per_target": 9.3,
+          "yards_per_catch": 9.3,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 16,
+        "fantasy_points": 14.7,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 3,
+          "yards": 57,
+          "yards_per_target": 8.1,
+          "yards_per_catch": 19.0,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 17,
+        "fantasy_points": 7.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 3,
+          "yards": 42,
+          "yards_per_target": 14.0,
+          "yards_per_catch": 14.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 18,
+        "fantasy_points": 14.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 3,
+          "yards": 53,
+          "yards_per_target": 10.6,
+          "yards_per_catch": 17.7,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      }
+    ]
+  },
+  {
+    "player_name": "Cooper Kupp",
+    "position": "WR",
+    "team": "LA",
+    "game_logs": [
+      {
+        "week": 1,
+        "fantasy_points": 32.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 21,
+          "receptions": 14,
+          "yards": 110,
+          "yards_per_target": 5.2,
+          "yards_per_catch": 7.9,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 2,
+          "yards": 10,
+          "yards_per_carry": 5.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 2,
+        "fantasy_points": 7.7,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 4,
+          "yards": 37,
+          "yards_per_target": 6.2,
+          "yards_per_catch": 9.2,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 3,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 4,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 5,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 6,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 7,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 8,
+        "fantasy_points": 16.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 5,
+          "yards": 51,
+          "yards_per_target": 6.4,
+          "yards_per_catch": 10.2,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 9,
+        "fantasy_points": 21.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 14,
+          "receptions": 11,
+          "yards": 104,
+          "yards_per_target": 7.4,
+          "yards_per_catch": 9.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 10,
+        "fantasy_points": 15.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 7,
+          "yards": 80,
+          "yards_per_target": 11.4,
+          "yards_per_catch": 11.4,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 11,
+        "fantasy_points": 28.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 10,
+          "receptions": 6,
+          "yards": 106,
+          "yards_per_target": 10.6,
+          "yards_per_catch": 17.7,
+          "touchdowns": 2
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 12,
+        "fantasy_points": 20.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 11,
+          "receptions": 8,
+          "yards": 60,
+          "yards_per_target": 5.5,
+          "yards_per_catch": 7.5,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 13,
+        "fantasy_points": 4.7,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 3,
+          "yards": 17,
+          "yards_per_target": 2.8,
+          "yards_per_catch": 5.7,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 14,
+        "fantasy_points": 20.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 5,
+          "yards": 92,
+          "yards_per_target": 11.5,
+          "yards_per_catch": 18.4,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 15,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 16,
+        "fantasy_points": 5.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 3,
+          "yards": 24,
+          "yards_per_target": 8.0,
+          "yards_per_catch": 8.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 17,
+        "fantasy_points": 3.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 1,
+          "yards": 29,
+          "yards_per_target": 9.7,
+          "yards_per_catch": 29.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 18,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      }
+    ]
+  },
+  {
+    "player_name": "Keenan Allen",
+    "position": "WR",
+    "team": "CHI",
+    "game_logs": [
+      {
+        "week": 1,
+        "fantasy_points": 6.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 11,
+          "receptions": 4,
+          "yards": 29,
+          "yards_per_target": 2.6,
+          "yards_per_catch": 7.2,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 2,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 3,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 4,
+        "fantasy_points": 4.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 3,
+          "receptions": 3,
+          "yards": 19,
+          "yards_per_target": 6.3,
+          "yards_per_catch": 6.3,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 5,
+        "fantasy_points": 6.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 3,
+          "yards": 33,
+          "yards_per_target": 5.5,
+          "yards_per_catch": 11.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 6,
+        "fantasy_points": 21.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 5,
+          "yards": 41,
+          "yards_per_target": 8.2,
+          "yards_per_catch": 8.2,
+          "touchdowns": 2
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 7,
+        "fantasy_points": 0.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 0,
+          "receptions": 0,
+          "yards": 0,
+          "yards_per_target": 0.0,
+          "yards_per_catch": 0.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 8,
+        "fantasy_points": 5.9,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 2,
+          "yards": 39,
+          "yards_per_target": 5.6,
+          "yards_per_catch": 19.5,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 9,
+        "fantasy_points": 7.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 10,
+          "receptions": 4,
+          "yards": 36,
+          "yards_per_target": 3.6,
+          "yards_per_catch": 9.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 10,
+        "fantasy_points": 9.4,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 5,
+          "yards": 44,
+          "yards_per_target": 7.3,
+          "yards_per_catch": 8.8,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 11,
+        "fantasy_points": 8.1,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 4,
+          "yards": 41,
+          "yards_per_target": 5.1,
+          "yards_per_catch": 10.2,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 12,
+        "fantasy_points": 23.6,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 15,
+          "receptions": 9,
+          "yards": 86,
+          "yards_per_target": 5.7,
+          "yards_per_catch": 9.6,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 13,
+        "fantasy_points": 24.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 8,
+          "receptions": 5,
+          "yards": 73,
+          "yards_per_target": 9.1,
+          "yards_per_catch": 14.6,
+          "touchdowns": 2
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 14,
+        "fantasy_points": 6.0,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 3,
+          "yards": 30,
+          "yards_per_target": 6.0,
+          "yards_per_catch": 10.0,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 15,
