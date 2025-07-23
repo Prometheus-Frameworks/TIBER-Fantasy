@@ -1,0 +1,100 @@
+[
+  {
+    "player_name": "Ja'Marr Chase",
+    "position": "WR",
+    "team": "CIN",
+    "game_logs": [
+      {
+        "week": 1,
+        "fantasy_points": 12.2,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 6,
+          "yards": 62,
+          "yards_per_target": 10.3,
+          "yards_per_catch": 10.3,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 2,
+        "fantasy_points": 7.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 5,
+          "receptions": 4,
+          "yards": 35,
+          "yards_per_target": 7.0,
+          "yards_per_catch": 8.8,
+          "touchdowns": 0
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 3,
+        "fantasy_points": 29.8,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 7,
+          "receptions": 6,
+          "yards": 118,
+          "yards_per_target": 16.9,
+          "yards_per_catch": 19.7,
+          "touchdowns": 2
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 4,
+        "fantasy_points": 17.5,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 6,
+          "receptions": 3,
+          "yards": 85,
+          "yards_per_target": 14.2,
+          "yards_per_catch": 28.3,
+          "touchdowns": 1
+        },
+        "rushing": {
+          "attempts": 0,
+          "yards": 0,
+          "yards_per_carry": 0.0,
+          "touchdowns": 0
+        }
+      },
+      {
+        "week": 5,
+        "fantasy_points": 41.3,
+        "snap_pct": 0,
+        "rank": 999,
+        "receiving": {
+          "targets": 12,
+          "receptions": 10,
+          "yards": 193,
+          "yards_per_target": 16.1,
+          "yards_per_catch": 19.3,
+          "touchdowns": 2
+        },
+        "rushing": {
