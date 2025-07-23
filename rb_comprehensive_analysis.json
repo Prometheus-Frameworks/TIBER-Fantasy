@@ -1,0 +1,81 @@
+{
+  "rb_comprehensive_analysis": {
+    "analysis_date": "2024-01-23",
+    "scoring_format": "Half-PPR",
+    "data_source": "NFL-Data-Py 2024 Season",
+    "players": [
+      {
+        "player_name": "Saquon Barkley",
+        "team": "PHI",
+        "season": 2024,
+        "performance_metrics": {
+          "ppg_half_ppr": 21.3,
+          "top24_finish_rate": 80.0,
+          "spike_weeks_18plus": 10,
+          "games_below_8pts": 1,
+          "total_games_played": 20,
+          "total_half_ppr_points": 426.7
+        },
+        "game_details": {
+          "highest_scoring_game": 44.2,
+          "lowest_scoring_game": 6.4,
+          "games_over_15pts": 11,
+          "games_over_20pts": 9
+        },
+        "role_analysis": {
+          "role_tag": "Workhorse",
+          "depth_chart_insulation": 9,
+          "contextual_writeup": "Barkley is a game-breaking dual-threat back with elite workload insulation. He delivered elite RB1 production (22.8 PPG) in his first season in Philadelphia, showcasing explosive big-play ability with 10 spike weeks of 18+ points. His 9/10 insulation score reflects complete backfield control and minimal competition."
+        }
+      },
+      {
+        "player_name": "James Conner",
+        "team": "ARI",
+        "season": 2024,
+        "performance_metrics": {
+          "ppg_half_ppr": 14.3,
+          "top24_finish_rate": 62.5,
+          "spike_weeks_18plus": 5,
+          "games_below_8pts": 4,
+          "total_games_played": 16,
+          "total_half_ppr_points": 228.3
+        },
+        "game_details": {
+          "highest_scoring_game": 28.3,
+          "lowest_scoring_game": 1.8,
+          "games_over_15pts": 8,
+          "games_over_20pts": 3
+        },
+        "role_analysis": {
+          "role_tag": "Reliable Grinder",
+          "depth_chart_insulation": 7,
+          "contextual_writeup": "Conner is a reliable grinder who delivered consistent RB2 production (14.3 PPG) when healthy. His veteran presence and receiving ability provide a solid floor, though 4 games below 8 points show some volatility. Moderate insulation (7/10) due to Arizona's investment in youth and his injury history."
+        }
+      },
+      {
+        "player_name": "Rico Dowdle",
+        "team": "DAL",
+        "season": 2024,
+        "performance_metrics": {
+          "ppg_half_ppr": 11.1,
+          "top24_finish_rate": 43.8,
+          "spike_weeks_18plus": 3,
+          "games_below_8pts": 6,
+          "total_games_played": 16,
+          "total_half_ppr_points": 178.3
+        },
+        "game_details": {
+          "highest_scoring_game": 19.8,
+          "lowest_scoring_game": 3.7,
+          "games_over_15pts": 4,
+          "games_over_20pts": 0
+        },
+        "role_analysis": {
+          "role_tag": "Opportunity Back",
+          "depth_chart_insulation": 6,
+          "contextual_writeup": "Dowdle emerged as an opportunity-driven back who capitalized on Dallas's backfield uncertainty. His 11.1 PPG reflects steady volume-based production, though limited spike potential (3 games over 18 points). Lower insulation score (6/10) reflects uncertain long-term role security and lack of elite pedigree."
+        }
+      }
+    ]
+  }
+}
