@@ -50,6 +50,7 @@ import { sleeperSnapService } from './services/sleeperSnapService';
 import { sleeperSnapPipeline } from './services/sleeperSnapPipeline';
 import { sleeperWeeklySnapService } from './services/sleeperWeeklySnapService';
 import { sleeperStrictSnapService } from './services/sleeperStrictSnapService';
+import { wrRatingsService } from './services/wrRatingsService';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -1008,6 +1009,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('❌ RB Player API Error:', error);
       res.status(500).json({ error: 'Failed to fetch RB projection' });
+    }
+  });
+
+  // 📊 WR 2024 RATINGS API - CSV-based WR player data endpoints
+
+  // Get all WR rankings (for /rankings page)
+  app.get('/api/wr-ratings/rankings', async (req: Request, res: Response) => {
+    try {
+      console.log('📊 Getting WR rankings from CSV data...');
+      
+      const rankingsData = wrRatingsService.getRankingsData();
+      
+      res.json({
+        success: true,
+        count: rankingsData.length,
+        data: rankingsData,
+        source: 'WR_2024_Ratings_With_Tags.csv',
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Error getting WR rankings:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get specific WR player profile (for /player/:id page)
+  app.get('/api/wr-ratings/player/:playerName', async (req: Request, res: Response) => {
+    try {
+      const playerName = req.params.playerName;
+      console.log(`🎯 Getting WR player profile: ${playerName}`);
+      
+      const playerProfile = wrRatingsService.getPlayerProfile(playerName);
+      
+      if (playerProfile) {
+        res.json({
+          success: true,
+          player_found: true,
+          data: playerProfile,
+          source: 'WR_2024_Ratings_With_Tags.csv',
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          player_found: false,
+          search_term: playerName,
+          message: 'Player not found in WR ratings data'
+        });
+      }
+      
+    } catch (error) {
+      console.error(`❌ Error getting WR player profile for ${req.params.playerName}:`, error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get WR stats overview
+  app.get('/api/wr-ratings/stats', async (req: Request, res: Response) => {
+    try {
+      console.log('📈 Getting WR stats overview...');
+      
+      const statsOverview = wrRatingsService.getStatsOverview();
+      
+      res.json({
+        success: true,
+        data: statsOverview,
+        source: 'WR_2024_Ratings_With_Tags.csv',
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Error getting WR stats overview:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

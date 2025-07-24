@@ -29,6 +29,7 @@ import CleanADP from "@/pages/CleanADP";
 import Oasis from "@/pages/Oasis";
 import DraftRoom from "@/pages/DraftRoom";
 import PlayerProfile from "@/pages/PlayerProfile";
+import Rankings from "@/pages/Rankings";
 import DynastyDeclineAnalysis from "@/pages/DynastyDeclineAnalysis";
 import RBTouchdownRegression from "@/pages/RBTouchdownRegression";
 import WRTouchdownRegression from "@/pages/WRTouchdownRegression";
@@ -57,7 +58,6 @@ import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
 import FantasyProTest from "@/pages/FantasyProTest";
 import HowYouCanContribute from "@/pages/how-you-can-contribute";
 import RBDraftCapitalContext from "@/pages/RBDraftCapitalContext";
-import Rankings from "@/pages/Rankings";
 
 function Router() {
   return (
@@ -79,7 +79,7 @@ function Router() {
       <Route path="/adp" component={CleanADP} />
       <Route path="/oasis" component={Oasis} />
       <Route path="/draft-room" component={DraftRoom} />
-      <Route path="/player/:id" component={PlayerProfile} />
+      <Route path="/player/:playerName" component={PlayerProfile} />
       <Route path="/enhanced-player/:id" component={EnhancedPlayerProfile} />
       <Route path="/player-pool" component={FullPlayerPool} />
       <Route path="/about" component={About} />

@@ -1,0 +1,51 @@
+player_name,team,games_played_x,total_points,fpg,vorp,rating,adjusted_rating,ypc,ypt,rush_ypc,targets,receptions,rec_yards,games_played_y,archetype_tag
+Ja'Marr Chase,CIN,16,377.4,23.59,11.42,97,97,13.78,10.01,10.67,161,117,1612,16,efficient alpha
+Tee Higgins,CIN,11,212.8,19.35,7.18,92,94,12.43,8.25,0.0,104,69,858,11,balanced
+Justin Jefferson,MIN,16,309.1,19.32,7.15,92,94,14.79,10.2,3.0,145,100,1479,16,efficient alpha
+Amon-Ra St. Brown,DET,16,302.5,18.91,6.74,89,91,10.88,8.85,3.0,134,109,1186,16,balanced
+Puka Nacua,LA,11,206.6,18.78,6.61,89,91,12.53,9.34,4.18,106,79,990,11,balanced
+Malik Nabers,NYG,14,256.2,18.3,6.13,89,91,10.96,7.04,0.4,162,104,1140,14,volume slot
+Nico Collins,HOU,11,195.8,17.8,5.63,89,91,15.37,10.3,0.0,94,63,968,11,balanced
+CeeDee Lamb,DAL,15,263.4,17.56,5.39,89,91,11.82,7.86,5.0,152,101,1194,15,volume slot
+Mike Evans,TB,13,222.5,17.12,4.95,89,91,14.08,9.53,0.0,96,65,915,13,balanced
+Davante Adams,LV,13,220.5,16.96,4.79,85,88,12.34,7.56,0.0,129,79,975,13,balanced
+A.J. Brown,PHI,13,216.9,16.68,4.51,85,88,16.1,11.12,0.0,97,67,1079,13,explosive outlier
+Brian Thomas,JAX,16,266.7,16.67,4.5,85,88,14.74,9.66,8.0,122,80,1179,16,balanced
+Cooper Kupp,LA,11,175.0,15.91,3.74,85,88,10.6,7.1,5.0,100,67,710,12,balanced
+Jaxon Smith-Njigba,SEA,16,247.7,15.48,3.31,85,85,11.68,8.49,5.5,132,96,1121,16,balanced
+Terry McLaurin,WAS,16,247.6,15.48,3.31,85,85,13.97,9.85,1.0,105,74,1034,16,balanced
+DeVonta Smith,PHI,13,199.4,15.34,3.17,85,85,12.25,9.36,1.0,89,68,833,13,balanced
+Garrett Wilson,NYJ,16,242.8,15.18,3.01,85,85,10.86,7.11,5.0,148,97,1053,16,volume slot
+Jordan Addison,MIN,14,211.5,15.11,2.94,85,85,14.11,9.41,6.67,93,62,875,14,balanced
+Drake London,ATL,16,240.1,15.01,2.84,85,85,12.04,7.74,-3.0,140,90,1084,16,volume slot
+Ladd McConkey,LAC,15,224.4,14.96,2.79,80,85,13.69,10.13,0.0,104,77,1054,15,balanced
+Courtland Sutton,DEN,15,219.5,14.63,2.46,80,85,12.93,7.68,0.0,128,76,983,15,balanced
+Jameson Williams,DET,14,202.8,14.49,2.32,80,85,18.6,11.65,5.55,83,52,967,14,deep threat
+Jerry Jeudy,CLE,16,228.6,14.29,2.12,80,85,13.88,8.83,0.0,132,84,1166,16,balanced
+Jauan Jennings,SF,14,198.3,14.16,1.99,80,85,13.19,8.96,0.0,103,70,923,14,balanced
+Jakobi Meyers,LV,14,190.7,13.62,1.45,80,81,11.59,7.6,11.5,119,78,904,14,balanced
+D.J. Moore,CHI,16,216.0,13.5,1.33,80,81,9.89,6.77,5.38,130,89,880,16,volume slot
+Tyreek Hill,MIA,16,214.2,13.39,1.22,80,81,11.89,7.89,6.62,119,79,939,16,balanced
+Keenan Allen,CHI,14,180.9,12.92,0.75,75,81,10.73,6.09,0.0,118,67,719,14,balanced
+Zay Flowers,BAL,16,206.4,12.9,0.73,75,81,14.34,9.18,5.88,114,73,1047,16,balanced
+Darnell Mooney,ATL,15,193.2,12.88,0.71,75,81,15.5,9.36,0.0,106,64,992,16,balanced
+Jayden Reed,GB,15,191.9,12.79,0.62,75,81,15.26,11.08,9.41,73,53,809,16,balanced
+DK Metcalf,SEA,14,176.9,12.64,0.47,75,81,14.9,9.12,0.0,103,63,939,14,balanced
+George Pickens,PIT,13,163.4,12.57,0.4,75,81,15.52,9.28,-3.0,97,58,900,13,balanced
+Josh Downs,IND,13,162.8,12.52,0.35,75,81,11.44,7.54,-1.0,94,62,709,13,balanced
+Xavier Worthy,KC,15,187.2,12.48,0.31,75,77,10.81,6.51,5.2,98,59,638,16,balanced
+Khalil Shakir,BUF,15,182.5,12.17,0.0,75,77,10.8,8.21,2.0,100,76,821,15,balanced
+Marvin Harrison,ARI,15,179.2,11.95,-0.22,75,77,14.42,7.47,0.0,110,57,822,16,balanced
+Calvin Ridley,TEN,16,188.9,11.81,-0.36,75,77,15.43,8.18,9.67,115,61,941,16,balanced
+Alec Pierce,IND,13,147.7,11.36,-0.81,75,77,21.91,11.45,0.0,67,35,767,15,deep threat
+Deebo Samuel,SF,14,155.6,11.11,-1.06,75,77,13.14,8.27,3.24,81,51,670,14,balanced
+Quentin Johnston,LAC,13,143.1,11.01,-1.16,75,77,12.5,6.82,2.0,77,42,525,14,balanced
+Jaylen Waddle,MIA,13,140.6,10.82,-1.35,70,72,12.96,9.46,2.0,74,54,700,14,balanced
+Wan'Dale Robinson,NYG,16,168.4,10.53,-1.64,70,72,7.9,5.09,6.0,129,83,656,16,balanced
+Rashod Bateman,BAL,15,156.0,10.4,-1.77,70,72,17.0,10.62,0.0,64,40,680,15,balanced
+Michael Pittman,IND,15,152.6,10.17,-2.0,70,72,11.68,7.29,0.0,101,63,736,15,balanced
+Demario Douglas,NE,15,141.3,9.42,-2.75,70,72,9.32,7.07,5.33,83,63,587,15,balanced
+Jalen Tolbert,DAL,15,138.2,9.21,-2.96,70,72,11.38,7.01,0.0,73,45,512,16,balanced
+DeAndre Hopkins,TEN,16,147.0,9.19,-2.98,70,72,10.89,7.62,0.0,80,56,610,16,balanced
+Rome Odunze,CHI,16,141.1,8.82,-3.35,65,68,13.77,7.23,5.0,99,52,716,16,balanced
+Ray-Ray McCloud,ATL,16,131.9,8.24,-3.93,65,68,10.69,7.75,7.9,80,58,620,16,balanced
