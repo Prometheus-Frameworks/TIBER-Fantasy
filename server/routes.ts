@@ -51,6 +51,7 @@ import { sleeperSnapPipeline } from './services/sleeperSnapPipeline';
 import { sleeperWeeklySnapService } from './services/sleeperWeeklySnapService';
 import { sleeperStrictSnapService } from './services/sleeperStrictSnapService';
 import { wrRatingsService } from './services/wrRatingsService';
+import { wrGameLogsService } from './services/wrGameLogsService';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -1091,6 +1092,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // 🏈 WR ADDITIONAL GAME LOGS API - Fetch WRs not in top 50 dataset
+
+  // Generate WR game logs for players not in CSV
+  app.post('/api/wr-game-logs/generate', async (req: Request, res: Response) => {
+    try {
+      console.log('🏈 Starting WR game logs generation...');
+      
+      const players = await wrGameLogsService.fetchSleeperWRGameLogs();
+      
+      if (players.length > 0) {
+        await wrGameLogsService.saveGameLogsToFile(players);
+        
+        res.json({
+          success: true,
+          message: 'WR game logs generated successfully',
+          players_count: players.length,
+          data: players,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.json({
+          success: false,
+          message: 'No additional WR players found',
+          players_count: 0,
+          data: [],
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Error generating WR game logs:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Get cached WR game logs
+  app.get('/api/wr-game-logs/cached', async (req: Request, res: Response) => {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const { fileURLToPath } = await import('url');
+      
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      const filePath = path.join(__dirname, '../services/../data/wr_2024_additional_game_logs.json');
+      
+      if (fs.existsSync(filePath)) {
+        const fileContent = fs.readFileSync(filePath, 'utf-8');
+        const players = JSON.parse(fileContent);
+        
+        res.json({
+          success: true,
+          message: 'Cached WR game logs retrieved',
+          players_count: players.length,
+          data: players,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          message: 'No cached WR game logs found. Generate new data first.',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Error retrieving cached WR game logs:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
       });
     }
   });
