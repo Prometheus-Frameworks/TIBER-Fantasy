@@ -43,6 +43,9 @@ import { depthChartService } from './services/depthChartService';
 import { verify2024GameLogs } from './api/verify-2024-game-logs';
 import { parseFullGameLogs } from './api/parse-full-game-logs';
 import { exportPositionalGameLogs } from './api/export-positional-game-logs';
+import { snapPercentageService } from './services/snapPercentageService';
+import { testSnapPercentages } from './api/test-snap-percentages';
+import { generateWRSnapData } from './api/generate-wr-snap-data';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -271,6 +274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const settings = {
         mode: mode as 'dynasty' | 'redraft',
         league_format: leagueFormat as 'ppr' | 'half_ppr' | 'standard',
+        format: 'superflex',
         num_teams: 12,
         is_superflex: true,
         position_filter: position
@@ -605,6 +609,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerWeeklyProjectionsCheckRoutes(app);
   registerRealDataValidationRoutes(app);
   registerTest2024ProjectionsRoutes(app);
+
+  // Test endpoint for snap percentages
+  app.get('/api/test/snap-percentages', testSnapPercentages);
+  
+  // Generate WR snap percentage data
+  app.post('/api/generate/wr-snap-data', generateWRSnapData);
+
+  // 🏈 SNAP PERCENTAGE API - Top 50 WRs Weekly Snap Data (Weeks 1-17)
+  app.get('/api/snap-percentages/wr', async (req: Request, res: Response) => {
+    try {
+      console.log('🏈 Fetching snap percentages for top 50 WRs...');
+      
+      const snapData = await snapPercentageService.getTop50WRSnapPercentages();
+      
+      console.log(`✅ Snap Percentages API: Returning ${snapData.length} WRs with weekly snap data`);
+      res.json({
+        success: true,
+        count: snapData.length,
+        data: snapData,
+        timestamp: new Date().toISOString(),
+        note: "Weeks 1-17 only. Week 18 excluded per request. 0% indicates inactive/injured."
+      });
+      
+    } catch (error) {
+      console.error('❌ Snap Percentages API Error:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to fetch snap percentage data',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 
   // RB Projections API endpoints
   app.get('/api/projections/rb', (req: Request, res: Response) => {
