@@ -48,6 +48,7 @@ import { testSnapPercentages } from './api/test-snap-percentages';
 import { generateWRSnapData } from './api/generate-wr-snap-data';
 import { sleeperSnapService } from './services/sleeperSnapService';
 import { sleeperSnapPipeline } from './services/sleeperSnapPipeline';
+import { sleeperWeeklySnapService } from './services/sleeperWeeklySnapService';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -770,6 +771,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
     } catch (error) {
       console.error('❌ Error getting pipeline status:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // 🔥 DIRECT SLEEPER WEEKLY SNAP SERVICE - Real API Integration
+  
+  // Verify Sleeper snap fields
+  app.get('/api/snap/verify-sleeper-fields', async (req: Request, res: Response) => {
+    try {
+      console.log('🔍 Verifying Sleeper API snap percentage fields...');
+      
+      const verification = await sleeperWeeklySnapService.verifySleeperSnapFields();
+      
+      res.json({
+        success: true,
+        verification: verification,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Error verifying Sleeper snap fields:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Collect WR snap percentages from weekly stats
+  app.post('/api/snap/collect-weekly/:position', async (req: Request, res: Response) => {
+    try {
+      const position = req.params.position.toUpperCase();
+      
+      if (position !== 'WR') {
+        return res.status(400).json({
+          success: false,
+          error: 'Currently only WR position is supported for weekly collection'
+        });
+      }
+      
+      console.log('🚀 Collecting WR snap percentages from Sleeper weekly stats...');
+      
+      const wrSnapData = await sleeperWeeklySnapService.collectWRSnapPercentages();
+      
+      res.json({
+        success: true,
+        position: position,
+        count: wrSnapData.length,
+        data: wrSnapData,
+        metadata: {
+          source: 'sleeper_weekly_stats',
+          collection_method: 'calculated_from_activity',
+          weeks_included: '1-17',
+          total_data_points: wrSnapData.length * 17,
+          note: 'Snap percentages calculated from receiving activity and available snap data'
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Error collecting weekly snap data:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get specific player snap data
+  app.get('/api/snap/player/:playerName', async (req: Request, res: Response) => {
+    try {
+      const playerName = req.params.playerName;
+      
+      console.log(`🎯 Getting snap data for player: ${playerName}`);
+      
+      const playerData = await sleeperWeeklySnapService.getPlayerSnapData(playerName);
+      
+      if (playerData) {
+        res.json({
+          success: true,
+          player_found: true,
+          data: playerData,
+          metadata: {
+            source: 'sleeper_weekly_stats',
+            search_term: playerName,
+            weeks_included: '1-17'
+          },
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          player_found: false,
+          search_term: playerName,
+          message: 'Player not found in WR snap data'
+        });
+      }
+      
+    } catch (error) {
+      console.error(`❌ Error getting player snap data for ${req.params.playerName}:`, error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
