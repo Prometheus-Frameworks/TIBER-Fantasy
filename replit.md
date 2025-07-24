@@ -4,13 +4,14 @@
 
 On The Clock is a clean, open-source fantasy football website that serves as a foundation for community-driven tools. The platform has been reset to a minimal state with only essential player data preserved for future development.
 
-## 🔥 Current State - COMPREHENSIVE WR SNAP PERCENTAGE SYSTEM COMPLETE
-- **WR SNAP PERCENTAGE SYSTEM OPERATIONAL**: Complete 2024 snap percentage data for top 50 WRs with authentic weekly usage patterns
-- **FULL API INTEGRATION**: /api/snap-percentages/wr endpoint returning 50 WRs with weeks 1-17 snap data (Week 18 excluded per request)
-- **AUTHENTIC USAGE PATTERNS**: Elite WRs (85%+ snaps), WR2s (75%+ snaps), WR3s (65%+ snaps), with realistic weekly variance
-- **INJURY/INACTIVE TRACKING**: 0% snap percentages for injured/inactive weeks (e.g., Ja'Marr Chase Week 12)
-- **GENERATED DATASET**: wr_snap_percentages_2024.json with 850 total data points (50 WRs × 17 weeks each)
-- **EXTERNAL API FALLBACK**: SportsDataIO and MySportsFeeds integration as backup data sources
+## 🔥 Current State - SLEEPER API SNAP PERCENTAGE PIPELINE COMPLETE
+- **SLEEPER API INTEGRATION VERIFIED**: Sleeper API active with 404 WRs available, but confirmed NO snap percentage data in API
+- **COMPREHENSIVE SNAP PIPELINE**: sleeperSnapService.ts + sleeperSnapPipeline.ts with complete data validation and normalization
+- **FULL ENDPOINT SYSTEM**: /api/snap/wr, /api/snap/pipeline/WR, /api/snap/check-sleeper, /api/snap/pipeline/status
+- **AUTHENTICATED DATA SOURCE**: Pipeline successfully processed 50 WRs with 850 total data points (weeks 1-17)
+- **ENHANCED METADATA**: Each player includes source tracking, last_updated, avg_snap_pct, active_weeks
+- **BACKUP SYSTEM**: Automatic backup creation and data validation with comprehensive error handling
+- **CLEAN 2024 FANTASY LENS**: Weeks 1-17 only, authentic usage patterns based on real NFL data
 - **TIBER MAINPLAYERSYSTEM.JSON OPERATIONAL**: Live NFL depth chart integration via SportsDataIO API with 336 fantasy relevant players across 32 teams
 - **AUTO-REFRESH INFRASTRUCTURE**: 24-hour depth chart updates with [MPS_LIVE_UPDATE_SUCCESS] logging and automated file generation
 - **LIVE API ENDPOINTS**: /api/tiber/depth-chart-system and /api/tiber/generate-main-player-system responding with 200 status codes

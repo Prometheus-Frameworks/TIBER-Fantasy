@@ -46,6 +46,8 @@ import { exportPositionalGameLogs } from './api/export-positional-game-logs';
 import { snapPercentageService } from './services/snapPercentageService';
 import { testSnapPercentages } from './api/test-snap-percentages';
 import { generateWRSnapData } from './api/generate-wr-snap-data';
+import { sleeperSnapService } from './services/sleeperSnapService';
+import { sleeperSnapPipeline } from './services/sleeperSnapPipeline';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -615,6 +617,165 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Generate WR snap percentage data
   app.post('/api/generate/wr-snap-data', generateWRSnapData);
+
+  // 🏈 SLEEPER SNAP PERCENTAGE SYSTEM - New Implementation
+  
+  // Check Sleeper API snap data availability
+  app.get('/api/snap/check-sleeper', async (req: Request, res: Response) => {
+    try {
+      console.log('🔍 Checking Sleeper API snap data availability...');
+      
+      const serviceStatus = await sleeperSnapService.getServiceStatus();
+      const snapCheck = await sleeperSnapService.checkSleeperSnapData();
+      
+      res.json({
+        success: true,
+        sleeper_api_active: serviceStatus.sleeperApiActive,
+        has_snap_data: serviceStatus.hasSnapData,
+        player_count: serviceStatus.playerCount,
+        alternative_sources: serviceStatus.alternativeSources,
+        snap_data_check: snapCheck,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Error checking Sleeper snap data:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Execute Sleeper snap percentage pipeline
+  app.post('/api/snap/pipeline/:position', async (req: Request, res: Response) => {
+    try {
+      const position = req.params.position.toUpperCase();
+      
+      if (!['WR', 'RB', 'QB', 'TE'].includes(position)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid position. Use WR, RB, QB, or TE'
+        });
+      }
+      
+      console.log(`🚀 Executing Sleeper snap pipeline for ${position}...`);
+      
+      const result = await sleeperSnapPipeline.executePipeline(position);
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          position: position,
+          source: result.source,
+          player_count: result.playerCount,
+          total_data_points: result.totalDataPoints,
+          message: result.message,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          position: position,
+          error: result.message,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Error executing snap pipeline:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get snap percentage data by position
+  app.get('/api/snap/:position', async (req: Request, res: Response) => {
+    try {
+      const position = req.params.position.toUpperCase();
+      
+      if (!['WR', 'RB', 'QB', 'TE'].includes(position)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid position. Use WR, RB, QB, or TE'
+        });
+      }
+      
+      console.log(`🏈 Fetching ${position} snap percentage data...`);
+      
+      // Try to load from pipeline first
+      const storedData = await sleeperSnapPipeline.loadStoredSnapData();
+      
+      if (storedData.length > 0) {
+        console.log(`✅ Returning ${storedData.length} ${position}s from Sleeper pipeline`);
+        
+        res.json({
+          success: true,
+          position: position,
+          count: storedData.length,
+          data: storedData,
+          metadata: {
+            source: storedData[0]?.metadata.source || 'unknown',
+            last_updated: storedData[0]?.metadata.last_updated,
+            weeks_included: '1-17',
+            total_data_points: storedData.length * 17
+          },
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        // Fallback to original snap service
+        console.log('🔄 No pipeline data found, using fallback service...');
+        
+        const fallbackData = await sleeperSnapService.fetchSleeperSnapPercentages(position);
+        
+        res.json({
+          success: true,
+          position: position,
+          count: fallbackData.length,
+          data: fallbackData,
+          metadata: {
+            source: 'fallback',
+            last_updated: new Date().toISOString(),
+            weeks_included: '1-17',
+            total_data_points: fallbackData.length * 17
+          },
+          note: 'Using fallback data - run pipeline to get enhanced data',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+    } catch (error) {
+      console.error(`❌ Error fetching ${req.params.position} snap data:`, error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get pipeline status
+  app.get('/api/snap/pipeline/status', async (req: Request, res: Response) => {
+    try {
+      console.log('📊 Getting Sleeper snap pipeline status...');
+      
+      const status = await sleeperSnapPipeline.getPipelineStatus();
+      
+      res.json({
+        success: true,
+        pipeline_status: status,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Error getting pipeline status:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 
   // 🏈 SNAP PERCENTAGE API - Top 50 WRs Weekly Snap Data (Weeks 1-17)
   app.get('/api/snap-percentages/wr', async (req: Request, res: Response) => {
