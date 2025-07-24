@@ -49,6 +49,7 @@ import { generateWRSnapData } from './api/generate-wr-snap-data';
 import { sleeperSnapService } from './services/sleeperSnapService';
 import { sleeperSnapPipeline } from './services/sleeperSnapPipeline';
 import { sleeperWeeklySnapService } from './services/sleeperWeeklySnapService';
+import { sleeperStrictSnapService } from './services/sleeperStrictSnapService';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -874,6 +875,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
     } catch (error) {
       console.error(`❌ Error getting player snap data for ${req.params.playerName}:`, error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // 🚨 PROMETHEUS COMPLIANCE ENDPOINTS - Strict Sleeper API Snap Extraction
+
+  // Strict snap percentage extraction (NO inference, NO substitution)
+  app.post('/api/snap/extract-strict', async (req: Request, res: Response) => {
+    try {
+      console.log('🚨 PROMETHEUS COMPLIANCE: Strict snap extraction initiated');
+      
+      const extractionResult = await sleeperStrictSnapService.extractSnapPercentagesStrict();
+      
+      res.json({
+        success: extractionResult.extraction_status === 'SUCCESS',
+        extraction_result: extractionResult,
+        prometheus_compliance: true,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Strict extraction error:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        prometheus_compliance: false
+      });
+    }
+  });
+
+  // Get available fields from Sleeper API
+  app.get('/api/snap/available-fields', async (req: Request, res: Response) => {
+    try {
+      const week = parseInt(req.query.week as string) || 10;
+      
+      console.log(`📋 Getting available fields from Week ${week}...`);
+      
+      const fieldsInfo = await sleeperStrictSnapService.getAvailableFields(week);
+      
+      res.json({
+        success: fieldsInfo.success,
+        week: week,
+        fields_info: fieldsInfo,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Error getting available fields:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Generate compliance report
+  app.get('/api/snap/compliance-report', async (req: Request, res: Response) => {
+    try {
+      console.log('📋 Generating Prometheus compliance report...');
+      
+      const complianceReport = await sleeperStrictSnapService.generateComplianceReport();
+      
+      res.json({
+        success: true,
+        compliance_report: complianceReport,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Error generating compliance report:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
