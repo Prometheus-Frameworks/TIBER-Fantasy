@@ -638,5 +638,32 @@
     "receptions": 12.0,
     "rec_yards": 121.0,
     "rec_tds": 1.0
+  },
+  {
+    "player_name": "J. Milroe",
+    "position": "QB",
+    "team": "SEA",
+    "adp": 299.6,
+    "projected_points": 35.9,
+    "passing_yards": 388,
+    "rushing_yards": 84,
+    "passing_touchdowns": 2,
+    "rushing_touchdowns": 1,
+    "interceptions": 2,
+    "passing_attempts": 59,
+    "completions": 36,
+    "completion_pct": 61.0
+  },
+  {
+    "player_name": "D. Martinez",
+    "position": "RB",
+    "team": "SEA",
+    "adp": 310.5,
+    "projected_points": 33.3,
+    "rushing_yards": 170,
+    "receiving_yards": 43,
+    "rushing_touchdowns": 1,
+    "receiving_touchdowns": 6,
+    "rushing": 41
   }
 ]
