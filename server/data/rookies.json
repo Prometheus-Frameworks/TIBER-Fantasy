@@ -408,5 +408,122 @@
     "rec_yards": 75,
     "rec": 10,
     "rush_tds": 2
+  },
+  {
+    "name": "T. Ferguson",
+    "position": "TE",
+    "team": "LAR",
+    "adp": 221.3,
+    "points": 56.6,
+    "rec": 22,
+    "rec_yds": 226,
+    "rec_td": 2.0
+  },
+  {
+    "name": "B. Smith",
+    "position": "RB",
+    "team": "KC",
+    "adp": 224.4,
+    "points": 45.6,
+    "rush_yds": 145,
+    "rec_yds": 81,
+    "rec": 11,
+    "rush_td": 1.0,
+    "rec_td": 1.0,
+    "rush": 34.0
+  },
+  {
+    "name": "J. Royals",
+    "position": "WR",
+    "team": "KC",
+    "adp": 227.1,
+    "points": 88.1,
+    "rec": 32,
+    "rec_yds": 381,
+    "rec_td": 3.0
+  },
+  {
+    "name": "E. Arroyo",
+    "position": "TE",
+    "team": "SEA",
+    "adp": 228.0,
+    "points": 107.8,
+    "rec": 44,
+    "rec_yds": 458,
+    "rec_td": 3.0
+  },
+  {
+    "name": "E. Ayomanor",
+    "position": "WR",
+    "team": "TEN",
+    "adp": 229.8,
+    "points": 70.0,
+    "rec": 26,
+    "rec_yds": 310,
+    "rec_td": 2.0
+  },
+  {
+    "name": "K. Monangai",
+    "position": "RB",
+    "team": "CHI",
+    "adp": 233.3,
+    "points": 55.6,
+    "rush_yds": 264,
+    "rec_yds": 72,
+    "rec": 10,
+    "rush_td": 2.0,
+    "rush": 64.0
+  },
+  {
+    "name": "J. James",
+    "position": "RB",
+    "team": "SF",
+    "adp": 236.5,
+    "points": 47.2,
+    "rush_yds": 230,
+    "rec_yds": 52,
+    "rec": 7,
+    "rush_td": 2.0,
+    "rush": 54.0
+  },
+  {
+    "name": "S. Sanders",
+    "position": "QB",
+    "team": "CLE",
+    "adp": 256.1,
+    "points": 33.7,
+    "pass_yds": 417,
+    "rush_yds": 30,
+    "pass_td": 3.0,
+    "rush_td": 1.0,
+    "int": 2.0,
+    "pass_att": 63.0,
+    "pass_cmp": 39.0
+  },
+  {
+    "name": "J. Dart",
+    "position": "QB",
+    "team": "NYG",
+    "adp": 257.8,
+    "points": 59.9,
+    "pass_yds": 822,
+    "rush_yds": 70,
+    "pass_td": 5.0,
+    "rush_td": 1.0,
+    "int": 4.0,
+    "pass_att": 126.0,
+    "pass_cmp": 78.0
+  },
+  {
+    "name": "J. Croskey-Merritt",
+    "position": "RB",
+    "team": "WAS",
+    "adp": 260.9,
+    "points": 26.8,
+    "rush_yds": 138,
+    "rec_yds": 30,
+    "rec": 4,
+    "rush_td": 1.0,
+    "rush": 33.0
   }
 ]
