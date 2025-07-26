@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}On The Clock - Fantasy Football Platform{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-content">
+        <h1>🏈 On The Clock</h1>
+        <p class="hero-subtitle">A community-driven fantasy football platform focused on tools and collaboration</p>
+        <p class="hero-description">
+            Clean, modular Flask architecture with comprehensive VORP rankings, 
+            WR analytics from 2024 data, and complete 2025 rookie database.
+        </p>
+    </div>
+</div>
+
+<div class="features-grid">
+    <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>VORP Rankings</h3>
+        <p>Advanced Value Over Replacement Player calculations with format-aware scaling for redraft and dynasty leagues.</p>
+        <a href="/rankings" class="feature-link">View Rankings</a>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <h3>WR 2024 Analytics</h3>
+        <p>Comprehensive wide receiver ratings and analytics from authentic 2024 season data with 50 top performers.</p>
+        <button onclick="loadWRData()" class="feature-link">Load WR Data</button>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">⭐</div>
+        <h3>2025 Rookie Database</h3>
+        <p>Complete 52-player rookie database covering the entire 2025 NFL draft class with comprehensive projections.</p>
+        <button onclick="loadRookieData()" class="feature-link">Load Rookies</button>
+    </div>
+    
+    <div class="feature-card">
+        <div class="feature-icon">⚙️</div>
+        <h3>Modular Architecture</h3>
+        <p>Clean Flask organization with /modules/, /data/, /templates/, and /static/ structure for portable deployment.</p>
+        <a href="/api/health" class="feature-link" target="_blank">System Health</a>
+    </div>
+</div>
+
+<div class="data-display" id="dataDisplay" style="display: none;">
+    <div class="data-header">
+        <h3 id="dataTitle">Data Loading...</h3>
+        <button onclick="closeDataDisplay()" class="close-btn">×</button>
+    </div>
+    <div class="data-content" id="dataContent">
+        <div class="loading">Loading data...</div>
+    </div>
+</div>
+
+<script>
+async function loadWRData() {
+    showDataDisplay('WR 2024 Analytics');
+    try {
+        const response = await fetch('/api/wr-ratings');
+        const data = await response.json();
+        
+        if (data.success) {
+            displayWRData(data.data);
+        } else {
+            displayError('Failed to load WR data: ' + data.error);
+        }
+    } catch (error) {
+        displayError('Error loading WR data: ' + error.message);
+    }
+}
+
+async function loadRookieData() {
+    showDataDisplay('2025 Rookie Database');
+    try {
+        const response = await fetch('/api/rookies');
+        const data = await response.json();
+        
+        if (data.success) {
+            displayRookieData(data.data);
+        } else {
+            displayError('Failed to load rookie data: ' + data.error);
+        }
+    } catch (error) {
+        displayError('Error loading rookie data: ' + error.message);
+    }
+}
+
+function showDataDisplay(title) {
+    document.getElementById('dataTitle').textContent = title;
+    document.getElementById('dataDisplay').style.display = 'block';
+    document.getElementById('dataContent').innerHTML = '<div class="loading">Loading data...</div>';
+}
+
+function closeDataDisplay() {
+    document.getElementById('dataDisplay').style.display = 'none';
+}
+
+function displayWRData(wrData) {
+    const topWRs = wrData.slice(0, 20);
+    let html = `
+        <div class="data-summary">
+            <p><strong>Total WRs:</strong> ${wrData.length}</p>
+            <p><strong>Top 20 by Adjusted Rating:</strong></p>
+        </div>
+        <div class="data-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Player</th>
+                        <th>Team</th>
+                        <th>Rating</th>
+                        <th>FPG</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    topWRs.forEach((wr, index) => {
+        html += `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${wr.player_name || 'Unknown'}</td>
+                <td>${wr.team || 'UNK'}</td>
+                <td>${wr.adjusted_rating || 0}</td>
+                <td>${wr.fantasy_points_per_game || 0}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    document.getElementById('dataContent').innerHTML = html;
+}
+
+function displayRookieData(rookieData) {
+    const topRookies = rookieData.slice(0, 20);
+    let html = `
+        <div class="data-summary">
+            <p><strong>Total Rookies:</strong> ${rookieData.length}</p>
+            <p><strong>Top 20 by ADP:</strong></p>
+        </div>
+        <div class="data-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ADP</th>
+                        <th>Player</th>
+                        <th>Position</th>
+                        <th>Team</th>
+                        <th>Proj Points</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    topRookies.forEach((rookie) => {
+        const name = rookie.name || rookie.player_name || 'Unknown';
+        const points = rookie.projected_points || rookie.proj_points || rookie.points || 0;
+        
+        html += `
+            <tr>
+                <td>${rookie.adp || 999}</td>
+                <td>${name}</td>
+                <td>${rookie.position || 'UNK'}</td>
+                <td>${rookie.team || 'UNK'}</td>
+                <td>${points}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    document.getElementById('dataContent').innerHTML = html;
+}
+
+function displayError(message) {
+    document.getElementById('dataContent').innerHTML = `
+        <div class="error-message">
+            <h4>Error</h4>
+            <p>${message}</p>
+        </div>
+    `;
+}
+</script>
+{% endblock %}

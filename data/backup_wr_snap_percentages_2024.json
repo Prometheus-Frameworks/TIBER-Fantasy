@@ -1,0 +1,1457 @@
+{
+  "backup_timestamp": "2025-07-24T02:07:13.289Z",
+  "player_count": 50,
+  "data_source": "generated",
+  "snap_data": [
+    {
+      "player_name": "Ja'Marr Chase",
+      "snap_percentages": {
+        "week_1": 94,
+        "week_2": 80,
+        "week_3": 96,
+        "week_4": 92,
+        "week_5": 100,
+        "week_6": 87,
+        "week_7": 94,
+        "week_8": 100,
+        "week_9": 100,
+        "week_10": 97,
+        "week_11": 95,
+        "week_12": 0,
+        "week_13": 98,
+        "week_14": 100,
+        "week_15": 93,
+        "week_16": 94,
+        "week_17": 95
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 89,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Amon-Ra St. Brown",
+      "snap_percentages": {
+        "week_1": 91,
+        "week_2": 100,
+        "week_3": 91,
+        "week_4": 97,
+        "week_5": 0,
+        "week_6": 84,
+        "week_7": 94,
+        "week_8": 66,
+        "week_9": 87,
+        "week_10": 86,
+        "week_11": 99,
+        "week_12": 94,
+        "week_13": 85,
+        "week_14": 85,
+        "week_15": 95,
+        "week_16": 91,
+        "week_17": 100
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 85,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Justin Jefferson",
+      "snap_percentages": {
+        "week_1": 93,
+        "week_2": 93,
+        "week_3": 93,
+        "week_4": 90,
+        "week_5": 95,
+        "week_6": 0,
+        "week_7": 99,
+        "week_8": 93,
+        "week_9": 92,
+        "week_10": 90,
+        "week_11": 95,
+        "week_12": 86,
+        "week_13": 88,
+        "week_14": 90,
+        "week_15": 95,
+        "week_16": 100,
+        "week_17": 90
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 87,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Terry McLaurin",
+      "snap_percentages": {
+        "week_1": 82,
+        "week_2": 90,
+        "week_3": 98,
+        "week_4": 94,
+        "week_5": 95,
+        "week_6": 95,
+        "week_7": 90,
+        "week_8": 88,
+        "week_9": 84,
+        "week_10": 85,
+        "week_11": 60,
+        "week_12": 98,
+        "week_13": 93,
+        "week_14": 0,
+        "week_15": 97,
+        "week_16": 85,
+        "week_17": 80
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 83,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Brian Thomas",
+      "snap_percentages": {
+        "week_1": 84,
+        "week_2": 86,
+        "week_3": 95,
+        "week_4": 96,
+        "week_5": 100,
+        "week_6": 92,
+        "week_7": 89,
+        "week_8": 80,
+        "week_9": 88,
+        "week_10": 80,
+        "week_11": 91,
+        "week_12": 0,
+        "week_13": 91,
+        "week_14": 99,
+        "week_15": 100,
+        "week_16": 100,
+        "week_17": 100
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 87,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Drake London",
+      "snap_percentages": {
+        "week_1": 82,
+        "week_2": 89,
+        "week_3": 93,
+        "week_4": 96,
+        "week_5": 96,
+        "week_6": 92,
+        "week_7": 92,
+        "week_8": 93,
+        "week_9": 69,
+        "week_10": 93,
+        "week_11": 89,
+        "week_12": 0,
+        "week_13": 99,
+        "week_14": 97,
+        "week_15": 82,
+        "week_16": 87,
+        "week_17": 94
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 85,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Ladd McConkey",
+      "snap_percentages": {
+        "week_1": 87,
+        "week_2": 90,
+        "week_3": 91,
+        "week_4": 90,
+        "week_5": 0,
+        "week_6": 86,
+        "week_7": 93,
+        "week_8": 93,
+        "week_9": 89,
+        "week_10": 70,
+        "week_11": 94,
+        "week_12": 92,
+        "week_13": 100,
+        "week_14": 0,
+        "week_15": 88,
+        "week_16": 93,
+        "week_17": 100
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 80,
+        "active_weeks": 15
+      }
+    },
+    {
+      "player_name": "Malik Nabers",
+      "snap_percentages": {
+        "week_1": 92,
+        "week_2": 100,
+        "week_3": 100,
+        "week_4": 95,
+        "week_5": 0,
+        "week_6": 0,
+        "week_7": 87,
+        "week_8": 99,
+        "week_9": 100,
+        "week_10": 93,
+        "week_11": 0,
+        "week_12": 91,
+        "week_13": 92,
+        "week_14": 97,
+        "week_15": 100,
+        "week_16": 94,
+        "week_17": 97
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 79,
+        "active_weeks": 14
+      }
+    },
+    {
+      "player_name": "CeeDee Lamb",
+      "snap_percentages": {
+        "week_1": 90,
+        "week_2": 92,
+        "week_3": 89,
+        "week_4": 96,
+        "week_5": 92,
+        "week_6": 91,
+        "week_7": 0,
+        "week_8": 100,
+        "week_9": 100,
+        "week_10": 91,
+        "week_11": 97,
+        "week_12": 94,
+        "week_13": 89,
+        "week_14": 94,
+        "week_15": 100,
+        "week_16": 86,
+        "week_17": 0
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 82,
+        "active_weeks": 15
+      }
+    },
+    {
+      "player_name": "Mike Evans",
+      "snap_percentages": {
+        "week_1": 97,
+        "week_2": 91,
+        "week_3": 83,
+        "week_4": 100,
+        "week_5": 99,
+        "week_6": 95,
+        "week_7": 86,
+        "week_8": 0,
+        "week_9": 0,
+        "week_10": 0,
+        "week_11": 0,
+        "week_12": 91,
+        "week_13": 100,
+        "week_14": 85,
+        "week_15": 97,
+        "week_16": 93,
+        "week_17": 91
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 71,
+        "active_weeks": 13
+      }
+    },
+    {
+      "player_name": "A.J. Brown",
+      "snap_percentages": {
+        "week_1": 100,
+        "week_2": 0,
+        "week_3": 0,
+        "week_4": 0,
+        "week_5": 0,
+        "week_6": 99,
+        "week_7": 84,
+        "week_8": 88,
+        "week_9": 82,
+        "week_10": 86,
+        "week_11": 86,
+        "week_12": 95,
+        "week_13": 90,
+        "week_14": 88,
+        "week_15": 100,
+        "week_16": 100,
+        "week_17": 82
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 69,
+        "active_weeks": 13
+      }
+    },
+    {
+      "player_name": "Xavier Worthy",
+      "snap_percentages": {
+        "week_1": 80,
+        "week_2": 77,
+        "week_3": 74,
+        "week_4": 76,
+        "week_5": 75,
+        "week_6": 0,
+        "week_7": 83,
+        "week_8": 77,
+        "week_9": 46,
+        "week_10": 62,
+        "week_11": 71,
+        "week_12": 75,
+        "week_13": 77,
+        "week_14": 81,
+        "week_15": 90,
+        "week_16": 93,
+        "week_17": 85
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 72,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Jaxon Smith-Njigba",
+      "snap_percentages": {
+        "week_1": 66,
+        "week_2": 95,
+        "week_3": 83,
+        "week_4": 98,
+        "week_5": 93,
+        "week_6": 89,
+        "week_7": 89,
+        "week_8": 88,
+        "week_9": 100,
+        "week_10": 0,
+        "week_11": 98,
+        "week_12": 87,
+        "week_13": 86,
+        "week_14": 87,
+        "week_15": 97,
+        "week_16": 96,
+        "week_17": 94
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 85,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Courtland Sutton",
+      "snap_percentages": {
+        "week_1": 100,
+        "week_2": 89,
+        "week_3": 92,
+        "week_4": 92,
+        "week_5": 81,
+        "week_6": 87,
+        "week_7": 0,
+        "week_8": 90,
+        "week_9": 97,
+        "week_10": 90,
+        "week_11": 90,
+        "week_12": 99,
+        "week_13": 87,
+        "week_14": 0,
+        "week_15": 89,
+        "week_16": 85,
+        "week_17": 91
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 80,
+        "active_weeks": 15
+      }
+    },
+    {
+      "player_name": "Garrett Wilson",
+      "snap_percentages": {
+        "week_1": 99,
+        "week_2": 91,
+        "week_3": 88,
+        "week_4": 92,
+        "week_5": 100,
+        "week_6": 100,
+        "week_7": 93,
+        "week_8": 93,
+        "week_9": 97,
+        "week_10": 86,
+        "week_11": 93,
+        "week_12": 0,
+        "week_13": 96,
+        "week_14": 92,
+        "week_15": 95,
+        "week_16": 88,
+        "week_17": 87
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 88,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Nico Collins",
+      "snap_percentages": {
+        "week_1": 87,
+        "week_2": 100,
+        "week_3": 95,
+        "week_4": 97,
+        "week_5": 74,
+        "week_6": 0,
+        "week_7": 0,
+        "week_8": 0,
+        "week_9": 0,
+        "week_10": 0,
+        "week_11": 90,
+        "week_12": 98,
+        "week_13": 96,
+        "week_14": 0,
+        "week_15": 95,
+        "week_16": 91,
+        "week_17": 86
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 59,
+        "active_weeks": 11
+      }
+    },
+    {
+      "player_name": "Davante Adams",
+      "snap_percentages": {
+        "week_1": 93,
+        "week_2": 100,
+        "week_3": 90,
+        "week_4": 0,
+        "week_5": 0,
+        "week_6": 0,
+        "week_7": 91,
+        "week_8": 91,
+        "week_9": 100,
+        "week_10": 97,
+        "week_11": 93,
+        "week_12": 0,
+        "week_13": 93,
+        "week_14": 98,
+        "week_15": 100,
+        "week_16": 92,
+        "week_17": 91
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 72,
+        "active_weeks": 13
+      }
+    },
+    {
+      "player_name": "Jerry Jeudy",
+      "snap_percentages": {
+        "week_1": 87,
+        "week_2": 91,
+        "week_3": 86,
+        "week_4": 91,
+        "week_5": 76,
+        "week_6": 84,
+        "week_7": 80,
+        "week_8": 85,
+        "week_9": 96,
+        "week_10": 0,
+        "week_11": 100,
+        "week_12": 88,
+        "week_13": 100,
+        "week_14": 92,
+        "week_15": 100,
+        "week_16": 87,
+        "week_17": 97
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 85,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "DeVonta Smith",
+      "snap_percentages": {
+        "week_1": 80,
+        "week_2": 91,
+        "week_3": 83,
+        "week_4": 0,
+        "week_5": 0,
+        "week_6": 80,
+        "week_7": 46,
+        "week_8": 90,
+        "week_9": 82,
+        "week_10": 79,
+        "week_11": 80,
+        "week_12": 0,
+        "week_13": 0,
+        "week_14": 81,
+        "week_15": 91,
+        "week_16": 77,
+        "week_17": 88
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 62,
+        "active_weeks": 13
+      }
+    },
+    {
+      "player_name": "D.J. Moore",
+      "snap_percentages": {
+        "week_1": 91,
+        "week_2": 97,
+        "week_3": 97,
+        "week_4": 90,
+        "week_5": 92,
+        "week_6": 85,
+        "week_7": 0,
+        "week_8": 82,
+        "week_9": 85,
+        "week_10": 93,
+        "week_11": 91,
+        "week_12": 95,
+        "week_13": 98,
+        "week_14": 91,
+        "week_15": 92,
+        "week_16": 97,
+        "week_17": 87
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 86,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Puka Nacua",
+      "snap_percentages": {
+        "week_1": 80,
+        "week_2": 0,
+        "week_3": 0,
+        "week_4": 0,
+        "week_5": 0,
+        "week_6": 0,
+        "week_7": 0,
+        "week_8": 88,
+        "week_9": 80,
+        "week_10": 94,
+        "week_11": 93,
+        "week_12": 95,
+        "week_13": 89,
+        "week_14": 100,
+        "week_15": 92,
+        "week_16": 87,
+        "week_17": 96
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 58,
+        "active_weeks": 11
+      }
+    },
+    {
+      "player_name": "Jameson Williams",
+      "snap_percentages": {
+        "week_1": 98,
+        "week_2": 92,
+        "week_3": 71,
+        "week_4": 69,
+        "week_5": 0,
+        "week_6": 81,
+        "week_7": 62,
+        "week_8": 0,
+        "week_9": 0,
+        "week_10": 90,
+        "week_11": 96,
+        "week_12": 93,
+        "week_13": 90,
+        "week_14": 88,
+        "week_15": 87,
+        "week_16": 91,
+        "week_17": 93
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 71,
+        "active_weeks": 14
+      }
+    },
+    {
+      "player_name": "Tee Higgins",
+      "snap_percentages": {
+        "week_1": 0,
+        "week_2": 0,
+        "week_3": 95,
+        "week_4": 95,
+        "week_5": 96,
+        "week_6": 86,
+        "week_7": 86,
+        "week_8": 0,
+        "week_9": 0,
+        "week_10": 0,
+        "week_11": 100,
+        "week_12": 0,
+        "week_13": 98,
+        "week_14": 81,
+        "week_15": 95,
+        "week_16": 99,
+        "week_17": 98
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 61,
+        "active_weeks": 11
+      }
+    },
+    {
+      "player_name": "Jordan Addison",
+      "snap_percentages": {
+        "week_1": 88,
+        "week_2": 0,
+        "week_3": 0,
+        "week_4": 92,
+        "week_5": 94,
+        "week_6": 0,
+        "week_7": 89,
+        "week_8": 84,
+        "week_9": 84,
+        "week_10": 87,
+        "week_11": 92,
+        "week_12": 90,
+        "week_13": 91,
+        "week_14": 98,
+        "week_15": 92,
+        "week_16": 94,
+        "week_17": 91
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 74,
+        "active_weeks": 14
+      }
+    },
+    {
+      "player_name": "Tyreek Hill",
+      "snap_percentages": {
+        "week_1": 99,
+        "week_2": 93,
+        "week_3": 85,
+        "week_4": 91,
+        "week_5": 90,
+        "week_6": 0,
+        "week_7": 60,
+        "week_8": 89,
+        "week_9": 89,
+        "week_10": 89,
+        "week_11": 87,
+        "week_12": 93,
+        "week_13": 99,
+        "week_14": 99,
+        "week_15": 86,
+        "week_16": 85,
+        "week_17": 95
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 84,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Jakobi Meyers",
+      "snap_percentages": {
+        "week_1": 83,
+        "week_2": 89,
+        "week_3": 90,
+        "week_4": 95,
+        "week_5": 89,
+        "week_6": 0,
+        "week_7": 0,
+        "week_8": 91,
+        "week_9": 97,
+        "week_10": 0,
+        "week_11": 94,
+        "week_12": 100,
+        "week_13": 95,
+        "week_14": 95,
+        "week_15": 95,
+        "week_16": 81,
+        "week_17": 87
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 75,
+        "active_weeks": 14
+      }
+    },
+    {
+      "player_name": "Khalil Shakir",
+      "snap_percentages": {
+        "week_1": 70,
+        "week_2": 73,
+        "week_3": 79,
+        "week_4": 73,
+        "week_5": 0,
+        "week_6": 55,
+        "week_7": 76,
+        "week_8": 80,
+        "week_9": 80,
+        "week_10": 80,
+        "week_11": 82,
+        "week_12": 0,
+        "week_13": 78,
+        "week_14": 84,
+        "week_15": 82,
+        "week_16": 77,
+        "week_17": 82
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 68,
+        "active_weeks": 15
+      }
+    },
+    {
+      "player_name": "Jauan Jennings",
+      "snap_percentages": {
+        "week_1": 81,
+        "week_2": 82,
+        "week_3": 99,
+        "week_4": 88,
+        "week_5": 76,
+        "week_6": 84,
+        "week_7": 0,
+        "week_8": 0,
+        "week_9": 0,
+        "week_10": 94,
+        "week_11": 95,
+        "week_12": 87,
+        "week_13": 82,
+        "week_14": 93,
+        "week_15": 89,
+        "week_16": 89,
+        "week_17": 100
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 73,
+        "active_weeks": 14
+      }
+    },
+    {
+      "player_name": "Zay Flowers",
+      "snap_percentages": {
+        "week_1": 97,
+        "week_2": 96,
+        "week_3": 83,
+        "week_4": 56,
+        "week_5": 99,
+        "week_6": 96,
+        "week_7": 70,
+        "week_8": 96,
+        "week_9": 99,
+        "week_10": 87,
+        "week_11": 93,
+        "week_12": 88,
+        "week_13": 94,
+        "week_14": 0,
+        "week_15": 92,
+        "week_16": 94,
+        "week_17": 80
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 84,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Jayden Reed",
+      "snap_percentages": {
+        "week_1": 84,
+        "week_2": 63,
+        "week_3": 78,
+        "week_4": 85,
+        "week_5": 83,
+        "week_6": 80,
+        "week_7": 64,
+        "week_8": 78,
+        "week_9": 84,
+        "week_10": 0,
+        "week_11": 57,
+        "week_12": 76,
+        "week_13": 78,
+        "week_14": 0,
+        "week_15": 77,
+        "week_16": 74,
+        "week_17": 64
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 66,
+        "active_weeks": 15
+      }
+    },
+    {
+      "player_name": "Rashod Bateman",
+      "snap_percentages": {
+        "week_1": 72,
+        "week_2": 75,
+        "week_3": 73,
+        "week_4": 56,
+        "week_5": 85,
+        "week_6": 72,
+        "week_7": 85,
+        "week_8": 80,
+        "week_9": 75,
+        "week_10": 82,
+        "week_11": 79,
+        "week_12": 78,
+        "week_13": 0,
+        "week_14": 0,
+        "week_15": 78,
+        "week_16": 73,
+        "week_17": 51
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 66,
+        "active_weeks": 15
+      }
+    },
+    {
+      "player_name": "Calvin Ridley",
+      "snap_percentages": {
+        "week_1": 85,
+        "week_2": 87,
+        "week_3": 69,
+        "week_4": 67,
+        "week_5": 0,
+        "week_6": 74,
+        "week_7": 80,
+        "week_8": 92,
+        "week_9": 79,
+        "week_10": 88,
+        "week_11": 78,
+        "week_12": 79,
+        "week_13": 77,
+        "week_14": 82,
+        "week_15": 70,
+        "week_16": 70,
+        "week_17": 82
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 74,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Marvin Harrison",
+      "snap_percentages": {
+        "week_1": 61,
+        "week_2": 80,
+        "week_3": 87,
+        "week_4": 75,
+        "week_5": 77,
+        "week_6": 0,
+        "week_7": 77,
+        "week_8": 84,
+        "week_9": 71,
+        "week_10": 80,
+        "week_11": 0,
+        "week_12": 84,
+        "week_13": 87,
+        "week_14": 75,
+        "week_15": 85,
+        "week_16": 76,
+        "week_17": 89
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 70,
+        "active_weeks": 15
+      }
+    },
+    {
+      "player_name": "Darnell Mooney",
+      "snap_percentages": {
+        "week_1": 63,
+        "week_2": 82,
+        "week_3": 78,
+        "week_4": 84,
+        "week_5": 89,
+        "week_6": 71,
+        "week_7": 84,
+        "week_8": 78,
+        "week_9": 81,
+        "week_10": 85,
+        "week_11": 72,
+        "week_12": 0,
+        "week_13": 84,
+        "week_14": 86,
+        "week_15": 0,
+        "week_16": 83,
+        "week_17": 72
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 70,
+        "active_weeks": 15
+      }
+    },
+    {
+      "player_name": "DK Metcalf",
+      "snap_percentages": {
+        "week_1": 70,
+        "week_2": 90,
+        "week_3": 86,
+        "week_4": 83,
+        "week_5": 75,
+        "week_6": 86,
+        "week_7": 84,
+        "week_8": 0,
+        "week_9": 0,
+        "week_10": 0,
+        "week_11": 76,
+        "week_12": 78,
+        "week_13": 81,
+        "week_14": 75,
+        "week_15": 72,
+        "week_16": 83,
+        "week_17": 70
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 65,
+        "active_weeks": 14
+      }
+    },
+    {
+      "player_name": "Cooper Kupp",
+      "snap_percentages": {
+        "week_1": 89,
+        "week_2": 85,
+        "week_3": 0,
+        "week_4": 0,
+        "week_5": 0,
+        "week_6": 0,
+        "week_7": 0,
+        "week_8": 76,
+        "week_9": 93,
+        "week_10": 78,
+        "week_11": 85,
+        "week_12": 91,
+        "week_13": 84,
+        "week_14": 82,
+        "week_15": 0,
+        "week_16": 76,
+        "week_17": 72
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 54,
+        "active_weeks": 11
+      }
+    },
+    {
+      "player_name": "Keenan Allen",
+      "snap_percentages": {
+        "week_1": 90,
+        "week_2": 0,
+        "week_3": 0,
+        "week_4": 70,
+        "week_5": 85,
+        "week_6": 82,
+        "week_7": 0,
+        "week_8": 75,
+        "week_9": 88,
+        "week_10": 81,
+        "week_11": 85,
+        "week_12": 95,
+        "week_13": 84,
+        "week_14": 76,
+        "week_15": 93,
+        "week_16": 88,
+        "week_17": 75
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 69,
+        "active_weeks": 14
+      }
+    },
+    {
+      "player_name": "George Pickens",
+      "snap_percentages": {
+        "week_1": 82,
+        "week_2": 80,
+        "week_3": 85,
+        "week_4": 83,
+        "week_5": 75,
+        "week_6": 77,
+        "week_7": 87,
+        "week_8": 79,
+        "week_9": 0,
+        "week_10": 89,
+        "week_11": 88,
+        "week_12": 85,
+        "week_13": 75,
+        "week_14": 0,
+        "week_15": 0,
+        "week_16": 0,
+        "week_17": 78
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 63,
+        "active_weeks": 13
+      }
+    },
+    {
+      "player_name": "Wan'Dale Robinson",
+      "snap_percentages": {
+        "week_1": 83,
+        "week_2": 70,
+        "week_3": 79,
+        "week_4": 82,
+        "week_5": 84,
+        "week_6": 84,
+        "week_7": 81,
+        "week_8": 71,
+        "week_9": 71,
+        "week_10": 82,
+        "week_11": 0,
+        "week_12": 75,
+        "week_13": 54,
+        "week_14": 87,
+        "week_15": 79,
+        "week_16": 87,
+        "week_17": 75
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 73,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Josh Downs",
+      "snap_percentages": {
+        "week_1": 0,
+        "week_2": 0,
+        "week_3": 80,
+        "week_4": 86,
+        "week_5": 80,
+        "week_6": 78,
+        "week_7": 69,
+        "week_8": 89,
+        "week_9": 76,
+        "week_10": 90,
+        "week_11": 74,
+        "week_12": 79,
+        "week_13": 0,
+        "week_14": 0,
+        "week_15": 85,
+        "week_16": 72,
+        "week_17": 72
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 61,
+        "active_weeks": 13
+      }
+    },
+    {
+      "player_name": "Quentin Johnston",
+      "snap_percentages": {
+        "week_1": 75,
+        "week_2": 80,
+        "week_3": 60,
+        "week_4": 64,
+        "week_5": 0,
+        "week_6": 80,
+        "week_7": 0,
+        "week_8": 0,
+        "week_9": 84,
+        "week_10": 56,
+        "week_11": 78,
+        "week_12": 0,
+        "week_13": 78,
+        "week_14": 84,
+        "week_15": 88,
+        "week_16": 80,
+        "week_17": 79
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 58,
+        "active_weeks": 13
+      }
+    },
+    {
+      "player_name": "Michael Pittman",
+      "snap_percentages": {
+        "week_1": 75,
+        "week_2": 81,
+        "week_3": 72,
+        "week_4": 82,
+        "week_5": 85,
+        "week_6": 70,
+        "week_7": 74,
+        "week_8": 67,
+        "week_9": 63,
+        "week_10": 0,
+        "week_11": 78,
+        "week_12": 81,
+        "week_13": 78,
+        "week_14": 0,
+        "week_15": 81,
+        "week_16": 80,
+        "week_17": 87
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 68,
+        "active_weeks": 15
+      }
+    },
+    {
+      "player_name": "Alec Pierce",
+      "snap_percentages": {
+        "week_1": 76,
+        "week_2": 75,
+        "week_3": 61,
+        "week_4": 52,
+        "week_5": 83,
+        "week_6": 0,
+        "week_7": 73,
+        "week_8": 69,
+        "week_9": 77,
+        "week_10": 80,
+        "week_11": 78,
+        "week_12": 79,
+        "week_13": 79,
+        "week_14": 0,
+        "week_15": 0,
+        "week_16": 0,
+        "week_17": 88
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 57,
+        "active_weeks": 13
+      }
+    },
+    {
+      "player_name": "DeAndre Hopkins",
+      "snap_percentages": {
+        "week_1": 41,
+        "week_2": 45,
+        "week_3": 66,
+        "week_4": 68,
+        "week_5": 0,
+        "week_6": 71,
+        "week_7": 42,
+        "week_8": 68,
+        "week_9": 79,
+        "week_10": 62,
+        "week_11": 70,
+        "week_12": 65,
+        "week_13": 65,
+        "week_14": 69,
+        "week_15": 74,
+        "week_16": 60,
+        "week_17": 53
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 59,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Deebo Samuel",
+      "snap_percentages": {
+        "week_1": 84,
+        "week_2": 90,
+        "week_3": 0,
+        "week_4": 71,
+        "week_5": 62,
+        "week_6": 77,
+        "week_7": 0,
+        "week_8": 82,
+        "week_9": 0,
+        "week_10": 84,
+        "week_11": 75,
+        "week_12": 70,
+        "week_13": 76,
+        "week_14": 75,
+        "week_15": 80,
+        "week_16": 84,
+        "week_17": 60
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 63,
+        "active_weeks": 14
+      }
+    },
+    {
+      "player_name": "Jalen Tolbert",
+      "snap_percentages": {
+        "week_1": 50,
+        "week_2": 84,
+        "week_3": 77,
+        "week_4": 76,
+        "week_5": 94,
+        "week_6": 76,
+        "week_7": 0,
+        "week_8": 71,
+        "week_9": 84,
+        "week_10": 78,
+        "week_11": 74,
+        "week_12": 79,
+        "week_13": 79,
+        "week_14": 0,
+        "week_15": 55,
+        "week_16": 73,
+        "week_17": 78
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.287Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 66,
+        "active_weeks": 15
+      }
+    },
+    {
+      "player_name": "Jaylen Waddle",
+      "snap_percentages": {
+        "week_1": 64,
+        "week_2": 67,
+        "week_3": 65,
+        "week_4": 73,
+        "week_5": 65,
+        "week_6": 0,
+        "week_7": 35,
+        "week_8": 65,
+        "week_9": 51,
+        "week_10": 70,
+        "week_11": 65,
+        "week_12": 74,
+        "week_13": 66,
+        "week_14": 76,
+        "week_15": 0,
+        "week_16": 0,
+        "week_17": 0
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.288Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 49,
+        "active_weeks": 13
+      }
+    },
+    {
+      "player_name": "Demario Douglas",
+      "snap_percentages": {
+        "week_1": 67,
+        "week_2": 0,
+        "week_3": 68,
+        "week_4": 68,
+        "week_5": 73,
+        "week_6": 71,
+        "week_7": 63,
+        "week_8": 60,
+        "week_9": 68,
+        "week_10": 68,
+        "week_11": 71,
+        "week_12": 72,
+        "week_13": 70,
+        "week_14": 0,
+        "week_15": 63,
+        "week_16": 65,
+        "week_17": 67
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.288Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 60,
+        "active_weeks": 15
+      }
+    },
+    {
+      "player_name": "Rome Odunze",
+      "snap_percentages": {
+        "week_1": 59,
+        "week_2": 62,
+        "week_3": 82,
+        "week_4": 58,
+        "week_5": 73,
+        "week_6": 47,
+        "week_7": 0,
+        "week_8": 69,
+        "week_9": 72,
+        "week_10": 70,
+        "week_11": 78,
+        "week_12": 74,
+        "week_13": 67,
+        "week_14": 68,
+        "week_15": 69,
+        "week_16": 72,
+        "week_17": 55
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.288Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 63,
+        "active_weeks": 16
+      }
+    },
+    {
+      "player_name": "Ray-Ray McCloud",
+      "snap_percentages": {
+        "week_1": 73,
+        "week_2": 69,
+        "week_3": 68,
+        "week_4": 67,
+        "week_5": 73,
+        "week_6": 62,
+        "week_7": 60,
+        "week_8": 69,
+        "week_9": 62,
+        "week_10": 64,
+        "week_11": 68,
+        "week_12": 0,
+        "week_13": 74,
+        "week_14": 72,
+        "week_15": 52,
+        "week_16": 69,
+        "week_17": 47
+      },
+      "metadata": {
+        "source": "generated",
+        "last_updated": "2025-07-24T02:07:13.288Z",
+        "total_weeks": 17,
+        "avg_snap_pct": 62,
+        "active_weeks": 16
+      }
+    }
+  ]
+}

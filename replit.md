@@ -4,15 +4,15 @@
 
 On The Clock is a clean, open-source fantasy football website that serves as a foundation for community-driven tools. The platform has been reset to a minimal state with only essential player data preserved for future development.
 
-## 🔥 Current State - SLEEPER API WEEKLY SNAP PERCENTAGE SYSTEM COMPLETE
-- **DIRECT SLEEPER API VERIFIED**: Successfully connected to weekly stats endpoints (https://api.sleeper.app/v1/stats/nfl/regular/2024/{week})
-- **CONFIRMED: NO DIRECT SNAP_PCT FIELD**: Sleeper API lacks snap percentage field, but provides receiving activity for calculation
-- **INTELLIGENT SNAP CALCULATION**: Built algorithm that derives snap percentages from targets, receptions, and team activity
-- **FULL WEEKLY DATA COLLECTION**: Loops through weeks 1-17, processes 404 WRs, returns top 50 most active
-- **REAL API INTEGRATION**: sleeperWeeklySnapService.ts directly fetches from Sleeper's weekly endpoints
-- **AUTHENTIC CALCULATION METHOD**: Snap percentages based on receiving activity (8+ targets = 85-100%, scaled down appropriately)
-- **INJURY/BYE WEEK TRACKING**: 0% snap percentages for weeks with no receiving activity (e.g., DJ Moore Week 7)
-- **EXACT USER FORMAT**: Returns clean JSON with player_name and week_1 through week_17 snap percentages
+## 🔥 Current State - COMPLETE FLASK MODULAR RESTRUCTURE
+- **FULL FLASK ARCHITECTURE**: Complete transition from Node.js/TypeScript to modular Flask structure
+- **ORGANIZED MODULE SYSTEM**: Core logic in `/modules/` with rankings_engine.py, wr_ratings_processor.py, rookie_database.py, vorp_calculator.py
+- **CLEAN DATA ORGANIZATION**: All JSON/CSV files consolidated in `/data/` directory for easy access
+- **TEMPLATE SYSTEM**: Full Jinja2 template structure with base.html, index.html, rankings.html
+- **STATIC ASSETS**: Organized CSS/JS in `/static/` with responsive design and interactive features
+- **PORTABLE DEPLOYMENT**: Self-contained Flask app with flask_requirements.txt for new machine setup
+- **API ENDPOINTS**: Complete RESTful API structure for rankings, WR data, rookies, and VORP calculations
+- **MODULAR IMPORTS**: Clean Python imports with proper module organization and dependency management
 - **TIBER MAINPLAYERSYSTEM.JSON OPERATIONAL**: Live NFL depth chart integration via SportsDataIO API with 336 fantasy relevant players across 32 teams
 - **AUTO-REFRESH INFRASTRUCTURE**: 24-hour depth chart updates with [MPS_LIVE_UPDATE_SUCCESS] logging and automated file generation
 - **LIVE API ENDPOINTS**: /api/tiber/depth-chart-system and /api/tiber/generate-main-player-system responding with 200 status codes
@@ -39,12 +39,12 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 - **FRONTEND TOGGLES**: Format, Mode, QB Rush Adjust, and Positional Balance controls with real-time API updates
 
 ## 🧱 Stack
-- TypeScript / Node.js
-- React
-- Express
-- PostgreSQL
-- Replit AI Agents
-- OpenAI + Grok integration
+- Python / Flask
+- Jinja2 Templates
+- Pandas for data processing
+- Vanilla JavaScript with HTMX
+- CSV/JSON data sources
+- Modular architecture
 
 ## 📌 Current Focus
 Clean slate platform for community-driven fantasy football tools and collaboration.

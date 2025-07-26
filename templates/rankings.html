@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Rankings - On The Clock{% endblock %}
+
+{% block content %}
+<div class="rankings-header">
+    <h1>🏆 VORP Rankings</h1>
+    <p>Advanced Value Over Replacement Player calculations with format-aware scaling</p>
+</div>
+
+<div class="rankings-controls">
+    <div class="control-group">
+        <label for="modeSelect">Mode:</label>
+        <select id="modeSelect" onchange="updateRankings()">
+            <option value="redraft">Redraft</option>
+            <option value="dynasty">Dynasty</option>
+        </select>
+    </div>
+    
+    <div class="control-group">
+        <label for="positionSelect">Position:</label>
+        <select id="positionSelect" onchange="updateRankings()">
+            <option value="all">All Positions</option>
+            <option value="QB">QB</option>
+            <option value="RB">RB</option>
+            <option value="WR">WR</option>
+            <option value="TE">TE</option>
+        </select>
+    </div>
+    
+    <div class="control-group">
+        <label for="formatSelect">Format:</label>
+        <select id="formatSelect" onchange="updateRankings()">
+            <option value="1qb">1QB</option>
+            <option value="superflex">Superflex</option>
+        </select>
+    </div>
+    
+    <button onclick="updateRankings()" class="update-btn">Update Rankings</button>
+</div>
+
+<div class="rankings-content">
+    <div class="rankings-stats" id="rankingsStats">
+        <div class="stat-card">
+            <h3>Total Players</h3>
+            <span id="totalPlayers">-</span>
+        </div>
+        <div class="stat-card">
+            <h3>Elite Tier</h3>
+            <span id="elitePlayers">-</span>
+        </div>
+        <div class="stat-card">
+            <h3>Premium Tier</h3>
+            <span id="premiumPlayers">-</span>
+        </div>
+    </div>
+    
+    <div class="rankings-table-container">
+        <div class="loading" id="loadingIndicator">Loading rankings...</div>
+        <div class="error-message" id="errorMessage" style="display: none;">
+            <h4>Error Loading Rankings</h4>
+            <p id="errorText"></p>
+        </div>
+        
+        <table class="rankings-table" id="rankingsTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Player</th>
+                    <th>Position</th>
+                    <th>Team</th>
+                    <th>Rating</th>
+                    <th>VORP</th>
+                    <th>Tier</th>
+                    <th>Source</th>
+                </tr>
+            </thead>
+            <tbody id="rankingsBody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let currentRankings = [];
+
+async function updateRankings() {
+    const mode = document.getElementById('modeSelect').value;
+    const position = document.getElementById('positionSelect').value;
+    const format = document.getElementById('formatSelect').value;
+    
+    showLoading();
+    
+    try {
+        const response = await fetch(`/api/rankings?mode=${mode}&position=${position}&format=${format}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            currentRankings = data.data;
+            displayRankings(currentRankings);
+            updateStats(currentRankings);
+        } else {
+            showError('Failed to load rankings: ' + data.error);
+        }
+    } catch (error) {
+        showError('Error loading rankings: ' + error.message);
+    }
+}
+
+function displayRankings(rankings) {
+    const tbody = document.getElementById('rankingsBody');
+    tbody.innerHTML = '';
+    
+    rankings.forEach((player, index) => {
+        const row = document.createElement('tr');
+        row.className = `tier-${player.tier}`;
+        
+        const tierColor = getTierColor(player.tier_label);
+        
+        row.innerHTML = `
+            <td class="rank-cell">${index + 1}</td>
+            <td class="player-cell">
+                <strong>${player.name}</strong>
+            </td>
+            <td class="position-cell">${player.position}</td>
+            <td class="team-cell">${player.team || 'UNK'}</td>
+            <td class="rating-cell">${player.final_rating.toFixed(1)}</td>
+            <td class="vorp-cell">${player.vorp || 0}</td>
+            <td class="tier-cell">
+                <span class="tier-badge" style="background-color: ${tierColor};">
+                    ${player.tier_label}
+                </span>
+            </td>
+            <td class="source-cell">${player.source}</td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    document.getElementById('rankingsTable').style.display = 'table';
+    document.getElementById('loadingIndicator').style.display = 'none';
+    document.getElementById('errorMessage').style.display = 'none';
+}
+
+function updateStats(rankings) {
+    const totalPlayers = rankings.length;
+    const elitePlayers = rankings.filter(p => p.tier_label === 'Elite').length;
+    const premiumPlayers = rankings.filter(p => p.tier_label === 'Premium').length;
+    
+    document.getElementById('totalPlayers').textContent = totalPlayers;
+    document.getElementById('elitePlayers').textContent = elitePlayers;
+    document.getElementById('premiumPlayers').textContent = premiumPlayers;
+}
+
+function getTierColor(tierLabel) {
+    const colors = {
+        'Elite': '#ff6b6b',
+        'Premium': '#4ecdc4', 
+        'Strong': '#45b7d1',
+        'Solid': '#96ceb4',
+        'Depth': '#feca57',
+        'Bench': '#a4a4a4'
+    };
+    return colors[tierLabel] || '#a4a4a4';
+}
+
+function showLoading() {
+    document.getElementById('loadingIndicator').style.display = 'block';
+    document.getElementById('rankingsTable').style.display = 'none';
+    document.getElementById('errorMessage').style.display = 'none';
+}
+
+function showError(message) {
+    document.getElementById('errorText').textContent = message;
+    document.getElementById('errorMessage').style.display = 'block';
+    document.getElementById('loadingIndicator').style.display = 'none';
+    document.getElementById('rankingsTable').style.display = 'none';
+}
+
+// Load initial rankings when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    updateRankings();
+});
+</script>
+{% endblock %}

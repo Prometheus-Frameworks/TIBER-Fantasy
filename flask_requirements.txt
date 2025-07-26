@@ -1,0 +1,22 @@
+# On The Clock - Fantasy Football Analytics Platform
+# Flask-based modular application requirements
+
+# Core Framework
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# Data Processing
+pandas>=1.5.3
+numpy>=1.24.0
+
+# HTTP Requests
+requests>=2.32.4
+
+# Optional: NFL Data Integration (if needed)
+nfl-data-py>=0.3.3
+
+# Development Dependencies (optional)
+python-dotenv>=1.0.0
+
+# Production Server (optional)
+gunicorn>=21.2.0
