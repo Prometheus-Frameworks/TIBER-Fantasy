@@ -32,28 +32,67 @@ def home():
 @app.route('/rankings')
 def rankings():
     """Rankings page with VORP calculations"""
-    return render_template('rankings.html')
+    # Get query parameters
+    mode = request.args.get('mode', 'redraft')
+    position = request.args.get('position', 'all')
+    format_type = request.args.get('format', 'standard')
+    
+    # Sample player data for demonstration
+    sample_players = [
+        {'name': 'Josh Allen', 'position': 'QB', 'team': 'BUF', 'projected_points': 285.5, 'age': 28},
+        {'name': 'Christian McCaffrey', 'position': 'RB', 'team': 'SF', 'projected_points': 245.2, 'age': 28},
+        {'name': 'Justin Jefferson', 'position': 'WR', 'team': 'MIN', 'projected_points': 220.8, 'age': 25},
+        {'name': 'Travis Kelce', 'position': 'TE', 'team': 'KC', 'projected_points': 185.3, 'age': 35},
+        {'name': 'Lamar Jackson', 'position': 'QB', 'team': 'BAL', 'projected_points': 275.0, 'age': 27},
+        {'name': 'Tyreek Hill', 'position': 'WR', 'team': 'MIA', 'projected_points': 210.5, 'age': 30},
+        {'name': 'Derrick Henry', 'position': 'RB', 'team': 'BAL', 'projected_points': 195.0, 'age': 31},
+        {'name': 'Davante Adams', 'position': 'WR', 'team': 'LV', 'projected_points': 200.0, 'age': 32}
+    ]
+    
+    # Generate rankings using the engine
+    ranked_players = rankings_engine.generate_rankings(
+        sample_players, mode, position, format_type
+    )
+    
+    return render_template('rankings.html', 
+                         players=ranked_players,
+                         mode=mode,
+                         position=position,
+                         format=format_type)
 
 @app.route('/api/rankings')
 def api_rankings():
     """API endpoint for player rankings"""
     mode = request.args.get('mode', 'redraft')  # redraft or dynasty
     position = request.args.get('position', 'all')  # QB, RB, WR, TE, or all
-    format_type = request.args.get('format', '1qb')  # 1qb or superflex
+    format_type = request.args.get('format', 'standard')  # standard, ppr, superflex
+    
+    # Sample data - in production this would come from your data source
+    sample_players = [
+        {'name': 'Josh Allen', 'position': 'QB', 'team': 'BUF', 'projected_points': 285.5, 'age': 28},
+        {'name': 'Christian McCaffrey', 'position': 'RB', 'team': 'SF', 'projected_points': 245.2, 'age': 28},
+        {'name': 'Justin Jefferson', 'position': 'WR', 'team': 'MIN', 'projected_points': 220.8, 'age': 25},
+        {'name': 'Travis Kelce', 'position': 'TE', 'team': 'KC', 'projected_points': 185.3, 'age': 35},
+        {'name': 'Lamar Jackson', 'position': 'QB', 'team': 'BAL', 'projected_points': 275.0, 'age': 27},
+        {'name': 'Tyreek Hill', 'position': 'WR', 'team': 'MIA', 'projected_points': 210.5, 'age': 30},
+        {'name': 'Derrick Henry', 'position': 'RB', 'team': 'BAL', 'projected_points': 195.0, 'age': 31},
+        {'name': 'Davante Adams', 'position': 'WR', 'team': 'LV', 'projected_points': 200.0, 'age': 32}
+    ]
     
     try:
-        rankings = rankings_engine.get_rankings(
-            mode=mode,
-            position=position,
-            format_type=format_type
+        rankings = rankings_engine.generate_rankings(
+            sample_players, mode, position, format_type
         )
+        
         return jsonify({
             'success': True,
             'data': rankings,
             'mode': mode,
             'position': position,
-            'format': format_type
+            'format': format_type,
+            'total': len(rankings)
         })
+        
     except Exception as e:
         return jsonify({
             'success': False,

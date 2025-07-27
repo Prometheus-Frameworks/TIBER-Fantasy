@@ -40,14 +40,22 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 
 ## 🧱 Stack
 - Python / Flask
-- Jinja2 Templates
-- Pandas for data processing
-- Vanilla JavaScript with HTMX
+- Jinja2 Templates with Base Template System
+- Comprehensive VORP Calculator Module
+- Rankings Engine with Format-Aware Scaling
+- Interactive HTML Tables with Tier Visualization
 - CSV/JSON data sources
 - Modular architecture
 
 ## 📌 Current Focus
-Clean slate platform for community-driven fantasy football tools and collaboration.
+**✅ COMPLETE VORP RANKINGS SYSTEM OPERATIONAL**
+- Interactive rankings table with tier-based color coding
+- Dynasty vs redraft mode toggles with age-penalty calculations
+- Format-aware scaling (Standard/PPR/Superflex) with position multipliers
+- Real-time filtering by position (QB/RB/WR/TE/All)
+- Comprehensive Flask backend with JSON API endpoints
+- Beautiful Jinja2 templates with responsive design
+- Modular Python architecture ready for data source integration
 
 ## System Architecture
 

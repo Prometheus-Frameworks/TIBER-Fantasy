@@ -3,36 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}On The Clock - Fantasy Football Analytics{% endblock %}</title>
-    <link href="/static/css/style.css" rel="stylesheet">
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>{% block title %}On The Clock{% endblock %}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .nav-bar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+        .nav-brand {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .nav-links a:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <h1>⏰ On The Clock</h1>
-                <p>Fantasy Football Analytics</p>
-            </div>
+    <nav class="nav-bar">
+        <div class="nav-content">
+            <a href="/" class="nav-brand">On The Clock</a>
             <div class="nav-links">
-                <a href="/" class="nav-link">Home</a>
-                <a href="/rankings" class="nav-link">Rankings</a>
+                <a href="/">Home</a>
+                <a href="/rankings">Rankings</a>
+                <a href="/api/rankings">API</a>
             </div>
         </div>
     </nav>
-
-    <main class="main-content">
+    
+    <main>
         {% block content %}{% endblock %}
     </main>
-
-    <footer class="footer">
-        <div class="footer-content">
-            <p>&copy; 2025 On The Clock - Community-driven fantasy football platform</p>
-            <p>Clean, modular, and portable Flask architecture</p>
-        </div>
-    </footer>
-
-    <script src="/static/js/app.js"></script>
 </body>
 </html>
