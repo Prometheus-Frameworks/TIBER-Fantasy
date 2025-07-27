@@ -49,7 +49,7 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 
 ## 📌 Current State - FLASK BLUEPRINT ARCHITECTURE COMPLETE
 **✅ FLASK BLUEPRINT SYSTEM OPERATIONAL**
-- Created modular Flask Blueprint architecture with `/blueprints/rankings.py`
+- Created modular Flask Blueprint architecture with `/routes/rankings.py`
 - Implemented your exact Blueprint structure with `batch_assign_vorp` function
 - Enhanced VORP Engine with batch processing capabilities
 - Format-aware positional baselines (QB: 220, RB: 160, WR: 170, TE: 130)

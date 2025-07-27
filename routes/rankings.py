@@ -1,5 +1,5 @@
 """
-Rankings Blueprint - Flask Blueprint for VORP Rankings
+Rankings Routes - Flask Blueprint for VORP Rankings
 On The Clock Fantasy Football Analytics Platform
 
 Handles all ranking-related routes with modular Flask Blueprint architecture.

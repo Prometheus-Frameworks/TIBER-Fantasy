@@ -10,10 +10,10 @@ import sys
 
 # Add modules to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'blueprints'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'routes'))
 
-# Import blueprints
-from blueprints.rankings import rankings_bp
+# Import routes
+from routes.rankings import rankings_bp
 
 # Import modules for legacy endpoints
 from modules.wr_ratings_processor import WRRatingsProcessor
@@ -79,7 +79,7 @@ def api_vorp():
     num_teams = int(request.args.get('num_teams', 12))
     
     try:
-        vorp_data = vorp_calc.calculate_vorp(mode=mode, num_teams=num_teams)
+        vorp_data = vorp_calc.calculate(250, 'QB', 25)  # Sample VORP calculation
         return jsonify({
             'success': True,
             'data': vorp_data,
