@@ -1,126 +1,190 @@
 """
-VORP (Value Over Replacement Player)
+VORP Calculator - Dynasty-Aware Value Over Replacement Player Engine
+On The Clock Fantasy Football Analytics Platform
 
-Definition:
-Value Over Replacement Player estimates how much more fantasy value a player provides compared to a baseline replacement-level player at their position.
-
-Baseline Defaults (PPR, redraft/dynasty hybrid):
-- QB: QB24 (approx. 15.0 PPG)
-- RB: RB36 (approx. 10.5 PPG)
-- WR: WR48 (approx. 10.0 PPG)
-- TE: TE12 (approx. 8.5 PPG)
-
-Formula:
-VORP = Projected Points - Replacement Baseline
-* Dynasty Adjustments:
-    - Age penalty (older players lose 0.5–1.0 pts/year after age 28–30)
-    - Position scarcity weighting is inherent in the baseline
+Calculates VORP with position-specific baselines and age-based penalties
+for accurate dynasty player valuations.
 """
 
-from typing import List, Dict, Any, Optional
-import math
+from typing import Dict, Tuple, Optional
+
+
+# Position-specific replacement baselines (16-week season)
+POSITION_BASELINES = {
+    'QB': 240.0,  # 15.0 PPG × 16 weeks
+    'RB': 168.0,  # 10.5 PPG × 16 weeks
+    'WR': 160.0,  # 10.0 PPG × 16 weeks
+    'TE': 136.0   #  8.5 PPG × 16 weeks
+}
+
+# Age penalty thresholds and rates
+AGE_PENALTY_CONFIG = {
+    'QB': {'threshold': 30, 'rate': 0.5},   # -0.5 per year after 30
+    'RB': {'threshold': 28, 'rate': 1.0},   # -1.0 per year after 28
+    'WR': {'threshold': 28, 'rate': 1.0},   # -1.0 per year after 28
+    'TE': {'threshold': None, 'rate': 0.0}  # No age penalties for TE
+}
+
 
 def get_replacement_baseline(position: str) -> float:
-    baselines = {
-        "QB": 240.0,
-        "RB": 168.0,
-        "WR": 160.0,
-        "TE": 136.0
-    }
-    return baselines.get(position.upper(), 0.0)
+    """
+    Get the replacement-level baseline for a given position.
+    
+    Args:
+        position: Player position ('QB', 'RB', 'WR', 'TE')
+        
+    Returns:
+        Replacement baseline fantasy points for the position
+    """
+    return POSITION_BASELINES.get(position.upper(), 0.0)
+
+
+def calculate_age_penalty(position: str, age: int) -> float:
+    """
+    Calculate age-based dynasty penalty for a player.
+    
+    Args:
+        position: Player position ('QB', 'RB', 'WR', 'TE')
+        age: Player age in years
+        
+    Returns:
+        Age penalty in VORP points (negative value)
+    """
+    config = AGE_PENALTY_CONFIG.get(position.upper(), {'threshold': None, 'rate': 0.0})
+    
+    if config['threshold'] is None or age <= config['threshold']:
+        return 0.0
+    
+    years_over = age - config['threshold']
+    return years_over * config['rate']
+
 
 def calculate_vorp(projected_points: float, position: str, age: int) -> float:
+    """
+    Calculate Value Over Replacement Player (VORP) with dynasty adjustments.
+    
+    Formula: VORP = Projected Points - Replacement Baseline - Age Penalty
+    
+    Args:
+        projected_points: Player's projected fantasy points
+        position: Player position ('QB', 'RB', 'WR', 'TE')
+        age: Player age for dynasty penalty calculation
+        
+    Returns:
+        VORP score (can be negative for below-replacement players)
+    """
     baseline = get_replacement_baseline(position)
-    vorp = projected_points - baseline
+    age_penalty = calculate_age_penalty(position, age)
+    
+    return projected_points - baseline - age_penalty
 
-    # Dynasty Age Penalty
-    if position.upper() in ["RB", "WR"] and age >= 29:
-        vorp -= (age - 28) * 1.0
-    elif position.upper() == "QB" and age >= 31:
-        vorp -= (age - 30) * 0.5
 
-    return round(vorp, 2)
+def calculate_player_vorp(player_data: Dict) -> Dict:
+    """
+    Calculate comprehensive VORP analysis for a player.
+    
+    Args:
+        player_data: Dictionary with 'projected_points', 'position', 'age' keys
+        
+    Returns:
+        Dictionary with VORP breakdown and analysis
+    """
+    projected_points = player_data.get('projected_points', 0.0)
+    position = player_data.get('position', 'WR')
+    age = player_data.get('age', 25)
+    
+    baseline = get_replacement_baseline(position)
+    age_penalty = calculate_age_penalty(position, age)
+    vorp = calculate_vorp(projected_points, position, age)
+    
+    return {
+        'vorp': round(vorp, 1),
+        'projected_points': projected_points,
+        'replacement_baseline': baseline,
+        'age_penalty': age_penalty,
+        'raw_vorp': projected_points - baseline,
+        'position': position.upper(),
+        'age': age,
+        'tier': get_vorp_tier(vorp)
+    }
+
+
+def get_vorp_tier(vorp: float) -> str:
+    """
+    Classify player into VORP-based tiers.
+    
+    Args:
+        vorp: Player's VORP score
+        
+    Returns:
+        Tier classification string
+    """
+    if vorp >= 80:
+        return 'Elite'
+    elif vorp >= 60:
+        return 'Premium'
+    elif vorp >= 40:
+        return 'Solid'
+    elif vorp >= 20:
+        return 'Depth'
+    elif vorp >= 0:
+        return 'Replacement'
+    else:
+        return 'Below Replacement'
+
 
 class VORPCalculator:
-    def __init__(self):
-        # Use the new baseline system
-        pass
+    """
+    Dynasty-aware VORP calculation engine for fantasy football player analysis.
+    """
     
-    def calculate_vorp(self, players: List[Dict[str, Any]], 
-                      mode: str = 'redraft', num_teams: int = 12) -> List[Dict[str, Any]]:
+    def __init__(self):
+        self.baselines = POSITION_BASELINES.copy()
+        self.age_config = AGE_PENALTY_CONFIG.copy()
+    
+    def set_custom_baseline(self, position: str, baseline: float) -> None:
+        """Set custom replacement baseline for a position."""
+        self.baselines[position.upper()] = baseline
+    
+    def calculate(self, projected_points: float, position: str, age: int) -> float:
+        """Calculate VORP score for a player using instance baselines."""
+        baseline = self.baselines.get(position.upper(), 0.0)
+        age_penalty = calculate_age_penalty(position, age)
+        return projected_points - baseline - age_penalty
+    
+    def analyze_player(self, player_data: Dict) -> Dict:
+        """Get comprehensive VORP analysis for a player."""
+        return calculate_player_vorp(player_data)
+    
+    def compare_players(self, players: list) -> list:
         """
-        Calculate VORP for all players using new baseline system
+        Compare multiple players by VORP score.
         
         Args:
             players: List of player dictionaries
-            mode: 'redraft' or 'dynasty'
-            num_teams: League size for baseline calculation
             
         Returns:
-            Players with VORP scores added
+            List of players sorted by VORP (descending)
         """
+        analyzed_players = []
+        
         for player in players:
-            pos = player['position'].split(',')[0].strip()
-            projected_points = player.get('fantasy_points', 0) * 17  # Convert to season total
-            age = player.get('age', 25)  # Default age if not provided
-            
-            # Calculate VORP using new formula
-            vorp_score = calculate_vorp(projected_points, pos, age)
-            
-            player['vorp'] = vorp_score
-            player['baseline'] = get_replacement_baseline(pos)
-            player['projected_season_points'] = projected_points
-            
-        return players
-    
-    def get_vorp_tier_breakpoints(self, vorp_scores: List[float]) -> Dict[int, float]:
-        """Calculate tier breakpoints based on VORP distribution"""
-        if not vorp_scores:
-            return {}
-            
-        sorted_scores = sorted(vorp_scores, reverse=True)
+            analysis = self.analyze_player(player)
+            analysis['name'] = player.get('name', 'Unknown')
+            analyzed_players.append(analysis)
         
-        # Define tier breakpoints based on VORP ranges
-        tier_breakpoints = {
-            1: 80.0,   # Elite (80+ VORP)
-            2: 50.0,   # Premium (50-79 VORP)
-            3: 20.0,   # Strong (20-49 VORP)
-            4: 0.0,    # Solid (0-19 VORP)
-            5: -20.0   # Depth (negative VORP)
-        }
-        
-        return tier_breakpoints
+        return sorted(analyzed_players, key=lambda x: x['vorp'], reverse=True)
     
-    def calculate_player_vorp(self, projected_points: float, position: str, age: int = 25) -> Dict[str, Any]:
+    def get_position_rankings(self, players: list, position: str) -> list:
         """
-        Calculate individual player VORP with detailed breakdown
+        Get VORP rankings for a specific position.
         
         Args:
-            projected_points: Season projected fantasy points
-            position: Player position (QB, RB, WR, TE)
-            age: Player age for dynasty adjustments
+            players: List of player dictionaries
+            position: Position to filter ('QB', 'RB', 'WR', 'TE')
             
         Returns:
-            Dictionary with VORP calculation details
+            List of players at the position sorted by VORP
         """
-        baseline = get_replacement_baseline(position)
-        raw_vorp = projected_points - baseline
-        
-        # Apply age penalty for dynasty evaluation
-        age_penalty = 0.0
-        if position.upper() in ["RB", "WR"] and age >= 29:
-            age_penalty = (age - 28) * 1.0
-        elif position.upper() == "QB" and age >= 31:
-            age_penalty = (age - 30) * 0.5
-            
-        final_vorp = raw_vorp - age_penalty
-        
-        return {
-            'vorp': round(final_vorp, 2),
-            'baseline': baseline,
-            'raw_vorp': round(raw_vorp, 2),
-            'age_penalty': round(age_penalty, 2),
-            'projected_points': projected_points,
-            'position': position.upper(),
-            'age': age
-        }
+        position_players = [p for p in players if p.get('position', '').upper() == position.upper()]
+        return self.compare_players(position_players)
