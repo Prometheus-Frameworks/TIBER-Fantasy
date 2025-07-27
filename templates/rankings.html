@@ -235,7 +235,11 @@
                 {% for player in players %}
                 <tr {% if player.vorp >= 80 %}class="tier-1"{% elif player.vorp >= 60 %}class="tier-2"{% elif player.vorp >= 40 %}class="tier-3"{% elif player.vorp >= 20 %}class="tier-4"{% endif %}>
                     <td class="rank-cell">{{ loop.index }}</td>
-                    <td class="player-cell">{{ player.name }}</td>
+                    <td class="player-cell">
+                        <a href="/player/{{ player.name.lower().replace(' ', '-') }}" style="color: inherit; text-decoration: none;">
+                            {{ player.name }}
+                        </a>
+                    </td>
                     <td class="position-cell pos-{{ player.position }}">{{ player.position }}</td>
                     <td class="team-cell">{{ player.team }}</td>
                     <td class="points-cell">{{ "%.1f"|format(player.projected_points) }}</td>

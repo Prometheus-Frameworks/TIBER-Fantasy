@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}{{ player.name }} - Player Profile - On The Clock{% endblock %}
+
+{% block extra_css %}
+<style>
+    .player-profile {
+        max-width: 800px;
+        margin: 40px auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .profile-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px;
+        text-align: center;
+    }
+    
+    .profile-header h2 {
+        margin: 0 0 10px 0;
+        font-size: 2.5rem;
+        font-weight: 300;
+    }
+    
+    .position-badge {
+        display: inline-block;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-top: 10px;
+    }
+    
+    .pos-QB { background: #e3f2fd; color: #1976d2; }
+    .pos-RB { background: #e8f5e8; color: #388e3c; }
+    .pos-WR { background: #fff3e0; color: #f57c00; }
+    .pos-TE { background: #fce4ec; color: #c2185b; }
+    
+    .profile-content {
+        padding: 40px;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: #f8f9fa;
+        padding: 25px;
+        border-radius: 8px;
+        text-align: center;
+        border-left: 4px solid #667eea;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #495057;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .vorp-highlight {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        border-left: 4px solid #155724;
+    }
+    
+    .vorp-highlight .stat-value {
+        color: white;
+    }
+    
+    .vorp-highlight .stat-label {
+        color: rgba(255,255,255,0.8);
+    }
+    
+    .tier-info {
+        background: #e9ecef;
+        padding: 20px;
+        border-radius: 8px;
+        margin-top: 25px;
+    }
+    
+    .tier-badge {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        margin-right: 15px;
+    }
+    
+    .tier-elite { background: #28a745; color: white; }
+    .tier-premium { background: #ffc107; color: #212529; }
+    .tier-solid { background: #fd7e14; color: white; }
+    .tier-depth { background: #dc3545; color: white; }
+    .tier-replacement { background: #6c757d; color: white; }
+    
+    .analysis-section {
+        margin-top: 30px;
+        padding: 25px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .analysis-section h3 {
+        color: #495057;
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+    }
+    
+    .analysis-section p {
+        color: #6c757d;
+        line-height: 1.6;
+        margin-bottom: 10px;
+    }
+    
+    .back-link {
+        display: inline-block;
+        margin: 20px 0;
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s;
+    }
+    
+    .back-link:hover {
+        color: #764ba2;
+    }
+    
+    @media (max-width: 768px) {
+        .player-profile {
+            margin: 20px;
+        }
+        
+        .profile-header {
+            padding: 25px 20px;
+        }
+        
+        .profile-header h2 {
+            font-size: 2rem;
+        }
+        
+        .profile-content {
+            padding: 25px 20px;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="player-profile">
+    <div class="profile-header">
+        <h2>{{ player.name }} – {{ player.position }}</h2>
+        <span class="position-badge pos-{{ player.position }}">{{ player.position }}</span>
+        {% if player.team %}
+        <p style="margin: 10px 0 0 0; opacity: 0.9;">{{ player.team }}</p>
+        {% endif %}
+    </div>
+    
+    <div class="profile-content">
+        <a href="/rankings" class="back-link">← Back to Rankings</a>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ "%.1f"|format(player.projected_points) }}</div>
+                <div class="stat-label">Projected Points</div>
+            </div>
+            
+            <div class="stat-card vorp-highlight">
+                <div class="stat-value">{{ "%.1f"|format(player.vorp) }}</div>
+                <div class="stat-label">Value Over Replacement (VORP)</div>
+            </div>
+            
+            {% if player.age %}
+            <div class="stat-card">
+                <div class="stat-value">{{ player.age }}</div>
+                <div class="stat-label">Age</div>
+            </div>
+            {% endif %}
+            
+            {% if player.rank %}
+            <div class="stat-card">
+                <div class="stat-value">#{{ player.rank }}</div>
+                <div class="stat-label">Overall Rank</div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="tier-info">
+            <strong>Player Tier:</strong>
+            {% if player.vorp >= 80 %}
+                <span class="tier-badge tier-elite">Elite (80+ VORP)</span>
+                <span>Foundational fantasy asset with elite production and consistency</span>
+            {% elif player.vorp >= 60 %}
+                <span class="tier-badge tier-premium">Premium (60-79 VORP)</span>
+                <span>High-end starter with strong weekly upside</span>
+            {% elif player.vorp >= 40 %}
+                <span class="tier-badge tier-solid">Solid (40-59 VORP)</span>
+                <span>Reliable starter with consistent production</span>
+            {% elif player.vorp >= 20 %}
+                <span class="tier-badge tier-depth">Depth (20-39 VORP)</span>
+                <span>Quality depth piece with streaming potential</span>
+            {% else %}
+                <span class="tier-badge tier-replacement">Replacement (0-19 VORP)</span>
+                <span>Replacement-level player for emergency situations</span>
+            {% endif %}
+        </div>
+        
+        {% if player.analysis %}
+        <div class="analysis-section">
+            <h3>VORP Analysis</h3>
+            {{ player.analysis|safe }}
+        </div>
+        {% endif %}
+        
+        <div class="analysis-section">
+            <h3>VORP Methodology</h3>
+            <p><strong>Value Over Replacement Player (VORP)</strong> measures how much more valuable a player is compared to a typical replacement-level player at their position.</p>
+            
+            <p><strong>Position Baselines:</strong>
+            QB: 240 points | RB: 168 points | WR: 160 points | TE: 136 points</p>
+            
+            {% if player.vorp > 0 %}
+            <p><strong>{{ player.name }}'s Value:</strong> Projects {{ "%.1f"|format(player.vorp) }} more points than a replacement {{ player.position }}, making them a valuable fantasy asset.</p>
+            {% else %}
+            <p><strong>{{ player.name }}'s Value:</strong> Projects below replacement level, indicating limited fantasy value in most formats.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
