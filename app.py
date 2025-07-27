@@ -10,16 +10,22 @@ import sys
 
 # Add modules to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'blueprints'))
 
-from modules.rankings_engine import RankingsEngine
+# Import blueprints
+from blueprints.rankings import rankings_bp
+
+# Import modules for legacy endpoints
 from modules.wr_ratings_processor import WRRatingsProcessor
 from modules.rookie_database import RookieDatabase
 from modules.vorp_calculator import VORPCalculator
 
 app = Flask(__name__)
 
-# Initialize core modules
-rankings_engine = RankingsEngine()
+# Register blueprints
+app.register_blueprint(rankings_bp)
+
+# Initialize core modules for legacy endpoints
 wr_processor = WRRatingsProcessor()
 rookie_db = RookieDatabase()
 vorp_calc = VORPCalculator()
@@ -29,131 +35,7 @@ def home():
     """Main homepage"""
     return render_template('index.html')
 
-@app.route('/rankings')
-def rankings():
-    """Rankings page with VORP calculations"""
-    # Get query parameters
-    mode = request.args.get('mode', 'redraft')
-    position = request.args.get('position', 'all')
-    format_type = request.args.get('format', 'standard')
-    
-    # Sample player data for demonstration
-    sample_players = [
-        {'name': 'Josh Allen', 'position': 'QB', 'team': 'BUF', 'projected_points': 285.5, 'age': 28},
-        {'name': 'Christian McCaffrey', 'position': 'RB', 'team': 'SF', 'projected_points': 245.2, 'age': 28},
-        {'name': 'Justin Jefferson', 'position': 'WR', 'team': 'MIN', 'projected_points': 220.8, 'age': 25},
-        {'name': 'Travis Kelce', 'position': 'TE', 'team': 'KC', 'projected_points': 185.3, 'age': 35},
-        {'name': 'Lamar Jackson', 'position': 'QB', 'team': 'BAL', 'projected_points': 275.0, 'age': 27},
-        {'name': 'Tyreek Hill', 'position': 'WR', 'team': 'MIA', 'projected_points': 210.5, 'age': 30},
-        {'name': 'Derrick Henry', 'position': 'RB', 'team': 'BAL', 'projected_points': 195.0, 'age': 31},
-        {'name': 'Davante Adams', 'position': 'WR', 'team': 'LV', 'projected_points': 200.0, 'age': 32}
-    ]
-    
-    # Generate rankings using the engine
-    ranked_players = rankings_engine.generate_rankings(
-        sample_players, mode, position, format_type
-    )
-    
-    return render_template('rankings.html', 
-                         players=ranked_players,
-                         mode=mode,
-                         position=position,
-                         format=format_type)
-
-@app.route('/api/rankings')
-def api_rankings():
-    """API endpoint for player rankings"""
-    mode = request.args.get('mode', 'redraft')  # redraft or dynasty
-    position = request.args.get('position', 'all')  # QB, RB, WR, TE, or all
-    format_type = request.args.get('format', 'standard')  # standard, ppr, superflex
-    
-    # Sample data - in production this would come from your data source
-    sample_players = [
-        {'name': 'Josh Allen', 'position': 'QB', 'team': 'BUF', 'projected_points': 285.5, 'age': 28},
-        {'name': 'Christian McCaffrey', 'position': 'RB', 'team': 'SF', 'projected_points': 245.2, 'age': 28},
-        {'name': 'Justin Jefferson', 'position': 'WR', 'team': 'MIN', 'projected_points': 220.8, 'age': 25},
-        {'name': 'Travis Kelce', 'position': 'TE', 'team': 'KC', 'projected_points': 185.3, 'age': 35},
-        {'name': 'Lamar Jackson', 'position': 'QB', 'team': 'BAL', 'projected_points': 275.0, 'age': 27},
-        {'name': 'Tyreek Hill', 'position': 'WR', 'team': 'MIA', 'projected_points': 210.5, 'age': 30},
-        {'name': 'Derrick Henry', 'position': 'RB', 'team': 'BAL', 'projected_points': 195.0, 'age': 31},
-        {'name': 'Davante Adams', 'position': 'WR', 'team': 'LV', 'projected_points': 200.0, 'age': 32}
-    ]
-    
-    try:
-        rankings = rankings_engine.generate_rankings(
-            sample_players, mode, position, format_type
-        )
-        
-        return jsonify({
-            'success': True,
-            'data': rankings,
-            'mode': mode,
-            'position': position,
-            'format': format_type,
-            'total': len(rankings)
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/player/<player_name>')
-def player_profile(player_name):
-    """Individual player profile page"""
-    # Sample data - in production this would query your player database
-    sample_players = [
-        {'name': 'Josh Allen', 'position': 'QB', 'team': 'BUF', 'projected_points': 285.5, 'age': 28},
-        {'name': 'Christian McCaffrey', 'position': 'RB', 'team': 'SF', 'projected_points': 245.2, 'age': 28},
-        {'name': 'Justin Jefferson', 'position': 'WR', 'team': 'MIN', 'projected_points': 220.8, 'age': 25},
-        {'name': 'Travis Kelce', 'position': 'TE', 'team': 'KC', 'projected_points': 185.3, 'age': 35},
-        {'name': 'Lamar Jackson', 'position': 'QB', 'team': 'BAL', 'projected_points': 275.0, 'age': 27},
-        {'name': 'Tyreek Hill', 'position': 'WR', 'team': 'MIA', 'projected_points': 210.5, 'age': 30},
-        {'name': 'Derrick Henry', 'position': 'RB', 'team': 'BAL', 'projected_points': 195.0, 'age': 31},
-        {'name': 'Davante Adams', 'position': 'WR', 'team': 'LV', 'projected_points': 200.0, 'age': 32}
-    ]
-    
-    # Find the requested player
-    player = None
-    for p in sample_players:
-        if p['name'].lower().replace(' ', '-') == player_name.lower().replace('-', ' ') or \
-           p['name'].lower() == player_name.lower().replace('-', ' '):
-            player = p.copy()
-            break
-    
-    if not player:
-        return "Player not found", 404
-    
-    # Get query parameters for VORP calculation
-    mode = request.args.get('mode', 'redraft')
-    format_type = request.args.get('format', 'standard')
-    
-    # Calculate VORP for this player
-    ranked_players = rankings_engine.generate_rankings([player], mode, 'all', format_type)
-    if ranked_players:
-        player = ranked_players[0]
-    
-    # Add rank information by calculating full rankings
-    all_rankings = rankings_engine.generate_rankings(sample_players, mode, 'all', format_type)
-    for i, p in enumerate(all_rankings, 1):
-        if p['name'] == player['name']:
-            player['rank'] = i
-            break
-    
-    # Add analysis based on VORP score
-    if player['vorp'] >= 80:
-        player['analysis'] = f"<p><strong>{player['name']}</strong> is an elite fantasy asset with exceptional value over replacement. This level of VORP indicates a player who should be prioritized in all draft formats.</p>"
-    elif player['vorp'] >= 60:
-        player['analysis'] = f"<p><strong>{player['name']}</strong> provides premium value with strong weekly consistency. Players in this tier offer excellent risk-adjusted returns.</p>"
-    elif player['vorp'] >= 40:
-        player['analysis'] = f"<p><strong>{player['name']}</strong> is a solid fantasy starter with reliable production. This VORP level suggests consistent weekly contributions.</p>"
-    elif player['vorp'] >= 20:
-        player['analysis'] = f"<p><strong>{player['name']}</strong> provides quality depth with streaming upside. Consider as a bench asset with spot-start potential.</p>"
-    else:
-        player['analysis'] = f"<p><strong>{player['name']}</strong> is at or below replacement level. Limited fantasy value except in deep leagues or emergency situations.</p>"
-    
-    return render_template('player_profile.html', player=player, mode=mode, format=format_type)
+# Rankings routes now handled by rankings_bp blueprint
 
 @app.route('/api/wr-ratings')
 def api_wr_ratings():
