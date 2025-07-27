@@ -38,6 +38,14 @@ try:
     print("✅ Rookie Blueprint registered successfully")
 except Exception as e:
     print(f"❌ Rookie Blueprint registration failed: {e}")
+
+# Import and register VORP deltas blueprint
+try:
+    from routes.vorp_deltas import vorp_bp
+    app.register_blueprint(vorp_bp)
+    print("✅ VORP Deltas Blueprint registered successfully")
+except Exception as e:
+    print(f"❌ VORP Deltas Blueprint registration failed: {e}")
 app.register_blueprint(rookie_bp)
 
 # Initialize core modules for legacy endpoints

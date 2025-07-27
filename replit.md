@@ -47,7 +47,7 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 - CSV/JSON data sources
 - Modular architecture
 
-## 📌 Current State - COMPLETE FIVE-BLUEPRINT MODULAR SYSTEM
+## 📌 Current State - COMPLETE SIX-BLUEPRINT MODULAR SYSTEM
 **✅ COMPREHENSIVE BLUEPRINT ECOSYSTEM OPERATIONAL**
 - Implemented your exact Blueprint patterns with full modular architecture
 - `rankings_bp = Blueprint('rankings_bp', __name__)` for player rankings
@@ -55,12 +55,15 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 - `dynasty_bp = Blueprint('dynasty_bp', __name__)` for decline detection
 - `regression_bp = Blueprint('regression_bp', __name__)` for regression analysis
 - `rookie_bp = Blueprint('rookie_bp', __name__)` for rookie breakout detection
+- `vorp_bp = Blueprint('vorp_deltas', __name__)` for weekly VORP delta tracking
 - `batch_assign_vorp(players, format_type)` function signature across all modules
 - `get_all_players(format_type)` intake module for consistent data sourcing
-- JSON API endpoints: `/rankings`, `/trade-eval`, `/dynasty-decline`, `/regression-models`, `/rookie-watch`
+- JSON API endpoints: `/rankings`, `/trade-eval`, `/dynasty-decline`, `/regression-models`, `/rookie-watch`, `/vorp-deltas`
 - Rookie breakout detection with your exact criteria: snap_share_proj > 0.6 AND yds_per_route > 1.8
 - Complete rookie analysis system with rankings, comparisons, draft guide, and individual profiles
 - Dynasty outlook assessment and risk factor identification for rookie prospects
+- Weekly VORP delta tracking with exact implementation: delta = week_8 - week_7, sorted by delta descending
+- Comprehensive VORP trend analysis with momentum tracking and weekly summaries
 - Integrated with consolidated rookie database (52-player 2025 draft class) with fallback sample data
 
 ## System Architecture
