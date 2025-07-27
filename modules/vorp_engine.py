@@ -9,17 +9,19 @@ from typing import List, Dict
 from .vorp_calculator import calculate_vorp, VORPCalculator
 
 
-def batch_assign_vorp(player_list: List[Dict], positional_baselines: Dict[str, float]) -> List[Dict]:
+def batch_assign_vorp(player_list: List[Dict], format_type: str) -> List[Dict]:
     """
     Assign VORP scores to a list of players using batch processing.
     
     Args:
         player_list: List of player dictionaries with 'projected_points' and 'position'
-        positional_baselines: Dictionary mapping positions to baseline point values
+        format_type: Format type string ('dynasty', 'redraft', 'ppr', 'superflex')
         
     Returns:
         List of players with 'vorp' field added
     """
+    # Get format-specific baselines
+    positional_baselines = get_positional_baselines(format_type)
     processed_players = []
     
     for player in player_list:

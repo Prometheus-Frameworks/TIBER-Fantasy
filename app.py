@@ -12,7 +12,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'routes'))
 
-# Import routes
+# Import routes  
 from routes.rankings import rankings_bp
 
 # Import modules for legacy endpoints

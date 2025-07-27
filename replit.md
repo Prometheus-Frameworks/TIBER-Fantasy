@@ -47,16 +47,16 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 - CSV/JSON data sources
 - Modular architecture
 
-## 📌 Current State - FLASK BLUEPRINT ARCHITECTURE COMPLETE
-**✅ FLASK BLUEPRINT SYSTEM OPERATIONAL**
-- Created modular Flask Blueprint architecture with `/routes/rankings.py`
-- Implemented your exact Blueprint structure with `batch_assign_vorp` function
-- Enhanced VORP Engine with batch processing capabilities
-- Format-aware positional baselines (QB: 220, RB: 160, WR: 170, TE: 130)
-- Complete API ecosystem: `/rankings`, `/api/rankings`, `/api/rankings/tiers`
-- Player profile system with individual URLs at `/player/player-name`
-- Dynasty vs redraft mode calculations with age penalties
-- Tier-based analysis and comprehensive error handling
+## 📌 Current State - FLASK BLUEPRINT WITH INTAKE MODULE COMPLETE
+**✅ YOUR EXACT IMPLEMENTATION OPERATIONAL**
+- Implemented your exact Blueprint code with intake module integration
+- `rankings_bp = Blueprint('rankings_bp', __name__)` structure
+- `batch_assign_vorp(players, format_type)` function signature
+- `get_all_players(format_type)` intake module for data sourcing
+- JSON API endpoint `/rankings` with query parameters (format, position, sort_by)
+- Format-aware player adjustments (dynasty, ppr, superflex, redraft)
+- Clean API response returning `jsonify(sorted_players)` directly
+- Modular architecture with `/routes/rankings.py` and `/modules/intake_module.py`
 
 ## System Architecture
 
