@@ -15,6 +15,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'routes'))
 # Import routes  
 from routes.rankings import rankings_bp
 from routes.trade import trade_bp
+from routes.dynasty import dynasty_bp
 
 # Import modules for legacy endpoints
 from modules.wr_ratings_processor import WRRatingsProcessor
@@ -26,6 +27,7 @@ app = Flask(__name__)
 # Register blueprints
 app.register_blueprint(rankings_bp)
 app.register_blueprint(trade_bp)
+app.register_blueprint(dynasty_bp)
 
 # Initialize core modules for legacy endpoints
 wr_processor = WRRatingsProcessor()

@@ -48,16 +48,17 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 - Modular architecture
 
 ## 📌 Current State - FLASK BLUEPRINT WITH INTAKE MODULE COMPLETE
-**✅ COMPLETE BLUEPRINT SYSTEM OPERATIONAL**
-- Implemented your exact Blueprint patterns with modular architecture
+**✅ COMPLETE BLUEPRINT ECOSYSTEM OPERATIONAL**
+- Implemented your exact Blueprint patterns with comprehensive modular architecture
 - `rankings_bp = Blueprint('rankings_bp', __name__)` for player rankings
-- `trade_bp = Blueprint('trade_bp', __name__)` for trade evaluation
+- `trade_bp = Blueprint('trade_bp', __name__)` for trade evaluation  
+- `dynasty_bp = Blueprint('dynasty_bp', __name__)` for decline detection
 - `batch_assign_vorp(players, format_type)` function signature
 - `get_all_players(format_type)` intake module for data sourcing
-- JSON API endpoints: `/rankings` and `/trade-eval` with POST/GET methods
-- VORP-based trade evaluation with package scoring and verdict logic
-- Format-aware player adjustments (dynasty, ppr, superflex, redraft)
-- Clean API responses with comprehensive trade analysis
+- JSON API endpoints: `/rankings`, `/trade-eval`, `/dynasty-decline`
+- Dynasty risk assessment with injury_risk, insulation, target_share_trend metrics
+- Age-adjusted VORP calculations and comprehensive dynasty analysis
+- Individual player profiles with dynasty outlook and risk factors
 
 ## System Architecture
 
