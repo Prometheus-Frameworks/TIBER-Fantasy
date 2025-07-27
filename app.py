@@ -31,6 +31,15 @@ app.register_blueprint(trade_bp)
 app.register_blueprint(dynasty_bp)
 app.register_blueprint(regression_bp)
 
+# Import and register rookie blueprint with unique name
+try:
+    from routes.rookie import rookie_bp
+    app.register_blueprint(rookie_bp, name='rookie_watch_bp')
+    print("✅ Rookie Blueprint registered successfully")
+except Exception as e:
+    print(f"❌ Rookie Blueprint registration failed: {e}")
+app.register_blueprint(rookie_bp)
+
 # Initialize core modules for legacy endpoints
 wr_processor = WRRatingsProcessor()
 rookie_db = RookieDatabase()
