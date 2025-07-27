@@ -5,11 +5,13 @@ Dynasty-aware Value Over Replacement Player calculation testing
 
 import unittest
 from modules.vorp_calculator import (
-    calculate_vorp, 
+    calculate_vorp,
+    calculate_vorp_with_age, 
     calculate_age_penalty, 
     get_replacement_baseline,
     calculate_player_vorp,
     get_vorp_tier,
+    batch_assign_vorp,
     VORPCalculator
 )
 
@@ -50,43 +52,42 @@ class TestVORPCalculator(unittest.TestCase):
     
     def test_basic_vorp_calculation(self):
         """Test basic VORP calculations without age penalties"""
-        # Young RB at baseline
-        self.assertEqual(calculate_vorp(168.0, 'RB', 25), 0.0)
+        # Test simplified VORP function
+        self.assertEqual(calculate_vorp(200.0, 160.0), 40.0)
+        self.assertEqual(calculate_vorp(168.0, 168.0), 0.0)
+        self.assertEqual(calculate_vorp(300.0, 240.0), 60.0)
         
-        # Elite QB no penalty
-        self.assertEqual(calculate_vorp(300.0, 'QB', 28), 60.0)
-        
-        # WR above replacement
-        self.assertEqual(calculate_vorp(200.0, 'WR', 26), 40.0)
-        
-        # TE at baseline
-        self.assertEqual(calculate_vorp(136.0, 'TE', 30), 0.0)
+        # Test dynasty VORP with age
+        self.assertEqual(calculate_vorp_with_age(168.0, 'RB', 25), 0.0)
+        self.assertEqual(calculate_vorp_with_age(300.0, 'QB', 28), 60.0)
+        self.assertEqual(calculate_vorp_with_age(200.0, 'WR', 26), 40.0)
+        self.assertEqual(calculate_vorp_with_age(136.0, 'TE', 30), 0.0)
     
     def test_vorp_with_age_penalties(self):
         """Test VORP calculations with age penalties applied"""
         # Aging RB: 250 points, age 30
         # 250 - 168 - (30-28)*1.0 = 80.0
-        self.assertEqual(calculate_vorp(250.0, 'RB', 30), 80.0)
+        self.assertEqual(calculate_vorp_with_age(250.0, 'RB', 30), 80.0)
         
         # Senior QB: 300 points, age 35
         # 300 - 240 - (35-30)*0.5 = 57.5
-        self.assertEqual(calculate_vorp(300.0, 'QB', 35), 57.5)
+        self.assertEqual(calculate_vorp_with_age(300.0, 'QB', 35), 57.5)
         
         # Veteran WR: 220 points, age 32
         # 220 - 160 - (32-28)*1.0 = 56.0
-        self.assertEqual(calculate_vorp(220.0, 'WR', 32), 56.0)
+        self.assertEqual(calculate_vorp_with_age(220.0, 'WR', 32), 56.0)
         
         # Old TE (no penalty): 180 points, age 35
         # 180 - 136 - 0 = 44.0
-        self.assertEqual(calculate_vorp(180.0, 'TE', 35), 44.0)
+        self.assertEqual(calculate_vorp_with_age(180.0, 'TE', 35), 44.0)
     
     def test_negative_vorp_scores(self):
         """Test below-replacement player calculations"""
         # Bad young QB
-        self.assertEqual(calculate_vorp(200.0, 'QB', 25), -40.0)
+        self.assertEqual(calculate_vorp_with_age(200.0, 'QB', 25), -40.0)
         
         # Aging backup RB
-        self.assertEqual(calculate_vorp(150.0, 'RB', 31), -21.0)  # 150-168-3 = -21
+        self.assertEqual(calculate_vorp_with_age(150.0, 'RB', 31), -21.0)  # 150-168-3 = -21
     
     def test_vorp_tiers(self):
         """Test VORP tier classifications"""
@@ -167,6 +168,34 @@ class TestVORPCalculator(unittest.TestCase):
         self.assertEqual(len(qb_rankings), 2)
         self.assertEqual(qb_rankings[0]['name'], 'QB1')  # 280-240 = 40
         self.assertEqual(qb_rankings[1]['name'], 'QB2')  # 260-240-1.5 = 18.5
+    
+    def test_batch_assign_vorp(self):
+        """Test batch VORP assignment functionality"""
+        players = [
+            {'name': 'QB1', 'position': 'QB', 'projected_points': 280.0},
+            {'name': 'RB1', 'position': 'RB', 'projected_points': 200.0},
+            {'name': 'WR1', 'position': 'WR', 'projected_points': 180.0}
+        ]
+        
+        baseline_dict = {'QB': 240.0, 'RB': 168.0, 'WR': 160.0}
+        
+        result = batch_assign_vorp(players, baseline_dict)
+        
+        self.assertEqual(result[0]['vorp'], 40.0)  # 280-240
+        self.assertEqual(result[1]['vorp'], 32.0)  # 200-168
+        self.assertEqual(result[2]['vorp'], 20.0)  # 180-160
+    
+    def test_calculator_batch_process(self):
+        """Test VORPCalculator batch processing"""
+        players = [
+            {'name': 'Player A', 'position': 'QB', 'projected_points': 300.0},
+            {'name': 'Player B', 'position': 'RB', 'projected_points': 220.0}
+        ]
+        
+        result = self.calculator.batch_process(players)
+        
+        self.assertEqual(result[0]['vorp'], 60.0)  # 300-240
+        self.assertEqual(result[1]['vorp'], 52.0)  # 220-168
 
 
 if __name__ == '__main__':
