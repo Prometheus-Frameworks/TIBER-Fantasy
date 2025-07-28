@@ -85,6 +85,7 @@ try:
     from routes.target_competition_generator_routes import register_target_competition_generator_routes
     from routes.target_competition_2025_routes import register_target_competition_2025_routes
     from routes.roster_shift_routes import register_roster_shift_routes
+    from routes.player_usage_context_routes import register_player_usage_context_routes
     app.register_blueprint(enhanced_rookie_bp)
     register_target_competition_routes(app)
     register_tcip_routes(app)
@@ -92,6 +93,7 @@ try:
     register_target_competition_generator_routes(app)
     register_target_competition_2025_routes(app)
     register_roster_shift_routes(app)
+    register_player_usage_context_routes(app)
     print("✅ Enhanced Rookie Evaluation Blueprint registered successfully")
     print("✅ Target Competition Evaluator v1.0 Blueprint registered successfully")
     print("✅ TCIP (Target Competition Inference Pipeline) v1.0 Blueprint registered successfully")
@@ -99,6 +101,7 @@ try:
     print("✅ Target Competition Context Generator v1.0 Blueprint registered successfully")
     print("✅ Target Competition 2025 Class Blueprint registered successfully")
     print("✅ Roster Shift Listener v1.0 Blueprint registered successfully")
+    print("✅ Player Usage Context Module Blueprint registered successfully")
 except Exception as e:
     print(f"❌ Enhanced Rookie Evaluation Blueprint registration failed: {e}")
 
@@ -121,6 +124,11 @@ def target_competition_2025():
 def roster_moves():
     """NFL Roster Moves page"""
     return render_template('roster_moves.html')
+
+@app.route('/2025-tier-view')
+def tier_view_2025():
+    """2025 Dynasty Tier View page"""
+    return render_template('tier_view_2025.html')
 
 # Rankings routes now handled by rankings_bp blueprint
 

@@ -409,6 +409,49 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 
 **Ready for Expansion**: User alerts system, RSS output feed, optional webhook notifications, and ShiftImpactAnalyzer v1 module integration prepared.
 
+## 🏆 Player Usage Context Module - Complete Dynasty Integration
+
+**Module Purpose**: Provides tier estimations, alpha usage scores, draft capital analysis, and context notes for dynasty rankings with comprehensive system integration.
+
+**Core Implementation**:
+- **Dynasty Tier Estimations**: Tier 1 (elite dynasty assets), Tier 1-2 Borderline (high-end WR2), Tier 2 (solid WR2), Tier 3 (WR3/Flex), Tier 4 (deep stashes)
+- **Alpha Usage Scores**: 85-100 scale measuring player usage potential and target share projections
+- **Draft Capital Context**: Top 10 Pick, Round 1, Day 2 Veteran classifications with dynasty impact analysis
+- **Context Notes**: Comprehensive dynasty analysis including competition, scheme changes, injury history, and breakout potential
+
+**Player Database (4 Featured Players)**:
+- **Luther Burden (CHI)**: Tier 1, Alpha Score 91, Top 10 Pick - Elite rookie battling DJ Moore, Rome Odunze, Colston Loveland for targets
+- **Travis Hunter (ARI)**: Tier 1, Alpha Score 89, Top 10 Pick - Featured usage alongside Brian Thomas Jr. with elite upside
+- **Chris Godwin (TB)**: Tier 2, Alpha Score 76, Day 2 Veteran - WR1 pace early 2024, IR mid-season, OC Liam Coen departed
+- **Emeka Egbuka (TB)**: Tier 1-2 Borderline, Alpha Score 81, Round 1 - Immediate opportunity due to Godwin injury and scheme changes
+
+**System Integration Architecture**:
+- **Dynasty Tier Recalibrator**: Automatic tier reassessment based on alpha usage score thresholds
+- **Roster Competition Estimator**: Target competition analysis integration with usage context
+- **Player Usage Forecast Module**: Projection updates based on tier changes and context shifts
+- **OASIS Context Evaluator**: Offensive scheme analysis integration with dynasty tier evaluation
+
+**Roster Shift Integration**:
+- **High-Impact Processing**: Processes roster changes with fantasy impact rating ≥ 3
+- **Score Adjustment Logic**: Coaching changes (-3), player additions (-5), releases (+5), injuries (+4 to +8)
+- **Dynamic Tier Recalculation**: Automatic tier updates when alpha usage scores shift ≥ 5 points
+- **Cross-Reference Capability**: Validates roster changes against current usage context
+
+**Frontend Integration - /2025-tier-view**:
+- **Tier-Based Display**: Players organized by dynasty tier with color-coded headers and badges
+- **Alpha Usage Visualization**: Prominent score display (24px font) with "Alpha Score" labeling
+- **Position Filtering**: WR/RB/QB/TE toggle buttons with responsive grid layout
+- **Context Cards**: Player cards with draft capital, team info, and comprehensive context notes
+- **Real-time Updates**: Live data loading with refresh capability and tier-specific styling
+
+**API Endpoints Complete**:
+- `/api/player-usage-context` - All players with usage context
+- `/api/player-usage-context/tiers` - Players organized by tier
+- `/api/player-usage-context/player/<name>` - Individual player context
+- `/api/player-usage-context/summary` - Context summary with tier distribution
+- `/api/player-usage-context/update/<name>` - Update player context
+- `/api/player-usage-context/recalculate-tier/<name>` - Trigger tier recalculation
+
 ## 🧱 Stack
 - Python / Flask
 - Jinja2 Templates with Base Template System

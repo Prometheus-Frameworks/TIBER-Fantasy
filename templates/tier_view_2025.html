@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2025 Dynasty Tier View | On The Clock</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8fafc;
+            color: #1f2937;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #111827;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 32px;
+        }
+        
+        .position-filter {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: white;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .filter-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        .filter-btn:hover {
+            border-color: #3b82f6;
+        }
+        
+        .tier-section {
+            margin-bottom: 40px;
+        }
+        
+        .tier-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding: 16px 20px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tier-1 { border-left-color: #10b981; }
+        .tier-1-2 { border-left-color: #3b82f6; }
+        .tier-2 { border-left-color: #f59e0b; }
+        .tier-3 { border-left-color: #ef4444; }
+        .tier-4 { border-left-color: #6b7280; }
+        
+        .tier-badge {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: white;
+        }
+        
+        .tier-1 .tier-badge { background: #10b981; }
+        .tier-1-2 .tier-badge { background: #3b82f6; }
+        .tier-2 .tier-badge { background: #f59e0b; }
+        .tier-3 .tier-badge { background: #ef4444; }
+        .tier-4 .tier-badge { background: #6b7280; }
+        
+        .tier-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+            margin: 0;
+        }
+        
+        .tier-description {
+            font-size: 14px;
+            color: #6b7280;
+            margin: 4px 0 0 0;
+        }
+        
+        .tier-count {
+            margin-left: auto;
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+        
+        .player-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .player-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        
+        .player-info {
+            flex: 1;
+        }
+        
+        .player-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+            margin: 0 0 4px 0;
+        }
+        
+        .player-team {
+            font-size: 14px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+        
+        .alpha-score {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        
+        .score-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+            line-height: 1;
+        }
+        
+        .score-label {
+            font-size: 10px;
+            color: #6b7280;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        
+        .draft-capital {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #f3f4f6;
+            color: #374151;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+        
+        .context-notes {
+            font-size: 14px;
+            color: #4b5563;
+            line-height: 1.5;
+            border-top: 1px solid #f3f4f6;
+            padding-top: 12px;
+            margin-top: 12px;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #6b7280;
+            font-style: italic;
+            padding: 40px;
+        }
+        
+        .error {
+            background: #fef2f2;
+            border: 1px solid #f87171;
+            color: #dc2626;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .no-players {
+            text-align: center;
+            color: #6b7280;
+            font-style: italic;
+            padding: 40px;
+        }
+        
+        .refresh-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 12px;
+        }
+        
+        .refresh-btn:hover {
+            background: #2563eb;
+        }
+        
+        @media (max-width: 768px) {
+            .players-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tier-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            
+            .tier-count {
+                margin-left: 0;
+            }
+            
+            .position-filter {
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏆 2025 Dynasty Tier View</h1>
+        <p class="subtitle">Player usage context with tier estimations and alpha usage scores</p>
+        
+        <div class="position-filter">
+            <button class="filter-btn active" data-position="all">All Positions</button>
+            <button class="filter-btn" data-position="WR">Wide Receivers</button>
+            <button class="filter-btn" data-position="RB">Running Backs</button>
+            <button class="filter-btn" data-position="QB">Quarterbacks</button>
+            <button class="filter-btn" data-position="TE">Tight Ends</button>
+            <button class="refresh-btn" onclick="loadPlayerData()">Refresh</button>
+        </div>
+        
+        <div id="tierContainer">
+            <div class="loading">Loading dynasty tier data...</div>
+        </div>
+    </div>
+
+    <script>
+        let allPlayers = [];
+        let currentPosition = 'all';
+        
+        async function loadPlayerData() {
+            try {
+                const container = document.getElementById('tierContainer');
+                container.innerHTML = '<div class="loading">Loading dynasty tier data...</div>';
+                
+                const response = await fetch('/api/player-usage-context/tiers');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to load tier data');
+                }
+                
+                const tiers = data.tiers;
+                allPlayers = [];
+                
+                // Flatten all players for filtering
+                Object.values(tiers).forEach(playerList => {
+                    allPlayers.push(...playerList);
+                });
+                
+                displayTiers(tiers);
+                
+            } catch (error) {
+                console.error('Error loading tier data:', error);
+                const container = document.getElementById('tierContainer');
+                container.innerHTML = `<div class="error">Failed to load tier data: ${error.message}</div>`;
+            }
+        }
+        
+        function displayTiers(tiers) {
+            const container = document.getElementById('tierContainer');
+            container.innerHTML = '';
+            
+            const tierOrder = ['Tier 1', 'Tier 1-2 Borderline', 'Tier 2', 'Tier 3', 'Tier 4'];
+            const tierDescriptions = {
+                'Tier 1': 'Elite dynasty assets with WR1 upside',
+                'Tier 1-2 Borderline': 'High-end WR2 with WR1 spike potential',
+                'Tier 2': 'Solid WR2 with target share consistency',
+                'Tier 3': 'WR3/Flex options with situational value',
+                'Tier 4': 'Deep roster stashes with development potential'
+            };
+            
+            tierOrder.forEach(tierName => {
+                if (!tiers[tierName]) return;
+                
+                let players = tiers[tierName];
+                
+                // Filter by position if needed
+                if (currentPosition !== 'all') {
+                    players = players.filter(player => player.position === currentPosition);
+                }
+                
+                if (players.length === 0) return;
+                
+                const tierSection = createTierSection(tierName, players, tierDescriptions[tierName]);
+                container.appendChild(tierSection);
+            });
+            
+            if (container.children.length === 0) {
+                container.innerHTML = '<div class="no-players">No players found for the selected position</div>';
+            }
+        }
+        
+        function createTierSection(tierName, players, description) {
+            const section = document.createElement('div');
+            section.className = 'tier-section';
+            
+            const tierClass = tierName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+            
+            section.innerHTML = `
+                <div class="tier-header ${tierClass}">
+                    <div>
+                        <span class="tier-badge">${tierName}</span>
+                        <h2 class="tier-title">${tierName}</h2>
+                        <p class="tier-description">${description}</p>
+                    </div>
+                    <div class="tier-count">${players.length} player${players.length !== 1 ? 's' : ''}</div>
+                </div>
+                <div class="players-grid">
+                    ${players.map(player => createPlayerCard(player)).join('')}
+                </div>
+            `;
+            
+            return section;
+        }
+        
+        function createPlayerCard(player) {
+            return `
+                <div class="player-card">
+                    <div class="player-header">
+                        <div class="player-info">
+                            <h3 class="player-name">${player.player_name}</h3>
+                            <div class="player-team">${player.team} • ${player.position}</div>
+                        </div>
+                        <div class="alpha-score">
+                            <div class="score-value">${player.alpha_usage_score}</div>
+                            <div class="score-label">Alpha Score</div>
+                        </div>
+                    </div>
+                    
+                    <div class="draft-capital">${player.draft_capital}</div>
+                    
+                    <div class="context-notes">${player.context_notes}</div>
+                </div>
+            `;
+        }
+        
+        function filterByPosition(position) {
+            currentPosition = position;
+            
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.querySelector(`[data-position="${position}"]`).classList.add('active');
+            
+            // Re-display with current data
+            if (allPlayers.length > 0) {
+                // Reconstruct tiers from allPlayers
+                const tiers = {};
+                allPlayers.forEach(player => {
+                    const tier = player.tier_estimate;
+                    if (!tiers[tier]) tiers[tier] = [];
+                    tiers[tier].push(player);
+                });
+                
+                displayTiers(tiers);
+            }
+        }
+        
+        // Event listeners for position filters
+        document.querySelectorAll('.filter-btn[data-position]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                filterByPosition(e.target.dataset.position);
+            });
+        });
+        
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', loadPlayerData);
+    </script>
+</body>
+</html>
