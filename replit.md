@@ -347,6 +347,38 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 
 **Module Expansion Ready**: Foundation built for veterans and players returning from injury with expandable data structure and API architecture.
 
+## 🔄 Roster Shift Listener v1.0 - Complete NFL Transaction Monitoring
+
+**Module Purpose**: Tracks all player-related NFL transactions that could impact dynasty context including trades, signings, releases, coaching changes, injuries, and retirements.
+
+**Core Implementation**:
+- **Daily Monitoring**: Checks official NFL team rosters, transaction feeds, and major news aggregators at least once daily
+- **Centralized Logging**: All events logged to `/data/roster_shift_log.json` with standardized format
+- **Transaction Categories**: Coaching changes, player additions/releases, injury reports, retirements, suspensions, contract extensions, depth chart changes
+- **Fantasy Impact Assessment**: Automatic impact rating (High/Medium/Low) based on transaction type and context
+
+**Data Structure**:
+- **Date/Timestamp**: ISO format tracking for all entries
+- **Team Identification**: NFL team codes with full team name mapping
+- **Transaction Types**: 8 categories covering all roster-affecting changes
+- **Impact Analysis**: Fantasy football relevance scoring for dynasty context
+- **Source Attribution**: Transaction source tracking for validation
+
+**API Integration**:
+- `/api/roster-shifts` - All roster shift entries
+- `/api/roster-shifts/recent` - Recent shifts (configurable days)
+- `/api/roster-shifts/team/<code>` - Team-specific transaction history
+- `/api/roster-shifts/summary` - High-level activity summary
+- `/api/roster-shifts/log-*` - Manual entry endpoints for coaching changes, player transactions, injuries
+
+**Module Integration Ready**:
+- **Dynasty Tier Recalibration**: Roster changes trigger tier reassessment
+- **Player Usage Forecasts**: Transaction data informs usage projections
+- **OASIS Context Evaluator**: Coaching changes update offensive scheme analysis
+- **Roster Competition Estimator**: Player movements affect target competition tiers
+
+**Sample Entries**: Automated creation of sample transactions including Liam Coen (JAX OC), Brian Thomas Jr. trade to CHI, and Chris Godwin injury report for testing and validation purposes.
+
 ## 🧱 Stack
 - Python / Flask
 - Jinja2 Templates with Base Template System

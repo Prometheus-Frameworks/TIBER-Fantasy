@@ -1,0 +1,45 @@
+[
+  {
+    "date": "2025-07-28",
+    "timestamp": "2025-07-28T15:25:34.441752",
+    "team": "JAX",
+    "type": "coaching_change",
+    "details": {
+      "position": "OC",
+      "name_in": "Liam Coen",
+      "name_out": "Press Taylor",
+      "impact_note": "Scheme shift likely to benefit slot WR usage."
+    },
+    "source": "RosterShiftListener.v1",
+    "fantasy_impact": "High - Offensive scheme changes likely"
+  },
+  {
+    "date": "2025-07-28",
+    "timestamp": "2025-07-28T15:25:34.442947",
+    "team": "CHI",
+    "type": "player_addition",
+    "details": {
+      "player_name": "Brian Thomas Jr.",
+      "action": "acquired",
+      "method": "trade",
+      "note": "Expected to compete for WR1 role."
+    },
+    "source": "RosterShiftListener.v1",
+    "fantasy_impact": "Medium - Roster competition increases"
+  },
+  {
+    "date": "2025-07-28",
+    "timestamp": "2025-07-28T15:25:34.444412",
+    "team": "TB",
+    "type": "injury_report",
+    "details": {
+      "player_name": "Chris Godwin",
+      "injury_type": "Ankle",
+      "severity": "Minor",
+      "expected_return": "Week 1",
+      "impact_note": "Minor Ankle - monitoring replacement usage"
+    },
+    "source": "RosterShiftListener.v1",
+    "fantasy_impact": "High - Playing time disruption"
+  }
+]
