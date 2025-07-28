@@ -503,6 +503,8 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 
 **Combined Security Framework**: Tiber identity validation integrated with ecosystem lock protocol providing dual-layer security - scope boundaries prevent unauthorized domain access while identity validation ensures all operations remain within fantasy football contexts with proper escalation for edge cases.
 
+**Boot Sequence Integration**: Tiber initiation sequence displays doctrine on app startup and validates system lock to on-the-clock.app domain with fantasy_football context, ensuring security boundaries are established before any Flask operations begin.
+
 ## 🧱 Stack
 - Python / Flask
 - Jinja2 Templates with Base Template System

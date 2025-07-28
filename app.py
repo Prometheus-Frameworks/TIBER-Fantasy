@@ -7,8 +7,8 @@ Flask-based modular application for VORP rankings and player analysis
 from flask import Flask, render_template, jsonify, request
 import os
 import sys
-from tiber_scope import tiber_scope_middleware, log_access_attempt
-from tiber_identity import get_tiber_identity, get_doctrine, validate_request_domain
+from tiber_scope import tiber_scope_middleware, log_access_attempt, validate_environment
+from tiber_identity import get_tiber_identity, get_doctrine, validate_request_domain, TIBER_DOCTRINE
 
 # Add modules to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
@@ -24,6 +24,12 @@ from routes.regression import regression_bp
 from modules.wr_ratings_processor import WRRatingsProcessor
 from modules.rookie_database import RookieDatabase
 from modules.vorp_calculator import VORPCalculator
+
+print(">>> TIBER INITIATED")
+print(TIBER_DOCTRINE)
+
+# Lock to our system
+validate_environment(domain="on-the-clock.app", context="fantasy_football")
 
 app = Flask(__name__)
 
