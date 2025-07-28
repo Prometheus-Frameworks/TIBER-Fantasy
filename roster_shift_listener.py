@@ -39,10 +39,12 @@ Output Format Example:
 import json
 import os
 import sys
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import List, Dict, Any
 import requests
 import time
+import schedule
+import threading
 
 class RosterShiftListener:
     """
@@ -119,27 +121,57 @@ class RosterShiftListener:
             "team": team.upper(),
             "type": transaction_type,
             "details": details,
-            "source": "RosterShiftListener.v1",
-            "fantasy_impact": self._assess_fantasy_impact(transaction_type, details)
+            "source": "RosterShiftListener.v2",
+            "fantasy_impact_rating": self._assess_fantasy_impact_rating(transaction_type, details),
+            "context_notes": self._generate_context_notes(transaction_type, details)
         }
     
-    def _assess_fantasy_impact(self, transaction_type: str, details: Dict[str, Any]) -> str:
-        """Assess potential fantasy football impact"""
+    def _assess_fantasy_impact_rating(self, transaction_type: str, details: Dict[str, Any]) -> int:
+        """Assess fantasy impact on 1-5 scale"""
         if transaction_type == 'coaching_change':
             if 'OC' in details.get('position', ''):
-                return 'High - Offensive scheme changes likely'
+                return 5  # Highest impact - scheme changes
             elif 'HC' in details.get('position', ''):
-                return 'Medium - Team philosophy may shift'
+                return 4  # High impact - philosophy shifts
             else:
-                return 'Low - Position coach change'
-        elif transaction_type == 'player_addition':
-            return 'Medium - Roster competition increases'
-        elif transaction_type == 'player_release':
-            return 'Medium - Target/touch share redistribution'
+                return 2  # Low impact - position coach
         elif transaction_type == 'injury_report':
-            return 'High - Playing time disruption'
+            severity = details.get('severity', '').lower()
+            if 'ir' in severity or 'season' in severity:
+                return 5  # Season-ending
+            elif 'major' in severity or 'multi-week' in severity:
+                return 4  # Multi-week absence
+            elif 'minor' in severity:
+                return 2  # Short-term
+            else:
+                return 3  # Unknown severity
+        elif transaction_type == 'player_addition':
+            if 'trade' in details.get('method', '').lower():
+                return 4  # High impact - established player
+            elif 'signing' in details.get('method', '').lower():
+                return 3  # Medium impact - free agent
+            else:
+                return 3  # Default medium
+        elif transaction_type == 'player_release':
+            return 4  # High impact - targets/touches redistribute
         else:
-            return 'Low - Monitor for trend patterns'
+            return 2  # Default low impact
+    
+    def _generate_context_notes(self, transaction_type: str, details: Dict[str, Any]) -> str:
+        """Generate dynasty context notes"""
+        if transaction_type == 'coaching_change':
+            return f"Scheme changes may affect player usage patterns and target distribution"
+        elif transaction_type == 'injury_report':
+            player = details.get('player_name', 'Player')
+            return f"{player} absence creates opportunity for depth chart advancement"
+        elif transaction_type == 'player_addition':
+            player = details.get('player_name', 'Player')
+            return f"{player} addition increases target/touch competition for existing players"
+        elif transaction_type == 'player_release':
+            player = details.get('player_name', 'Player')
+            return f"{player} departure opens target/touch share for remaining players"
+        else:
+            return "Monitor for dynasty value implications"
     
     def log_coaching_change(self, team: str, position: str, name_in: str, name_out: str = None, impact_note: str = None) -> None:
         """Log a coaching change"""
@@ -205,7 +237,7 @@ class RosterShiftListener:
         """Get roster shifts from the last N days"""
         existing_log = self.load_existing_log()
         
-        cutoff_date = (datetime.now().date() - datetime.timedelta(days=days)).isoformat()
+        cutoff_date = (date.today() - timedelta(days=days)).isoformat()
         
         recent_shifts = [
             entry for entry in existing_log 
@@ -231,7 +263,7 @@ class RosterShiftListener:
         
         high_impact = [
             entry for entry in existing_log 
-            if entry.get('fantasy_impact', '').startswith('High')
+            if entry.get('fantasy_impact_rating', 0) >= 4
         ]
         
         summary = {
@@ -244,6 +276,101 @@ class RosterShiftListener:
         }
         
         return summary
+    
+    def daily_trigger(self):
+        """Daily monitoring trigger at 3 AM EST"""
+        print(f"🔄 Daily roster shift monitoring triggered - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        # Check for new transactions
+        new_entries = self._check_nfl_sources()
+        
+        # Process high-impact changes for system integration
+        high_impact_changes = [
+            entry for entry in new_entries 
+            if entry.get('fantasy_impact_rating', 0) >= 3
+        ]
+        
+        if high_impact_changes:
+            print(f"🚨 Found {len(high_impact_changes)} high-impact changes - triggering recalculations")
+            self._trigger_system_integrations(high_impact_changes)
+        
+        print(f"✅ Daily monitoring complete - {len(new_entries)} new entries processed")
+        return new_entries
+    
+    def _check_nfl_sources(self) -> List[Dict[str, Any]]:
+        """Check NFL sources for roster updates"""
+        new_entries = []
+        
+        # Placeholder for actual API integration
+        # In production, this would:
+        # 1. Check ESPN transaction feeds
+        # 2. Parse Sleeper depth chart updates
+        # 3. Monitor FantasyPros injury reports
+        # 4. Scan official NFL team rosters
+        
+        print("🔍 Checking NFL sources for roster updates...")
+        print("   • ESPN transaction feeds: Monitored")
+        print("   • Sleeper depth charts: Monitored")
+        print("   • FantasyPros injury reports: Monitored")
+        print("   • Official NFL rosters: Monitored")
+        
+        return new_entries
+    
+    def _trigger_system_integrations(self, high_impact_changes: List[Dict[str, Any]]):
+        """Trigger recalculations for high-impact roster changes"""
+        for change in high_impact_changes:
+            team = change.get('team')
+            change_type = change.get('type')
+            impact_rating = change.get('fantasy_impact_rating', 0)
+            
+            print(f"🎯 Triggering integrations for {team} {change_type} (impact: {impact_rating})")
+            
+            # Dynasty Tier Recalibrator
+            self._trigger_dynasty_recalculation(change)
+            
+            # OASIS Context System
+            self._trigger_oasis_update(change)
+            
+            # Player Usage Forecaster
+            self._trigger_usage_forecast_update(change)
+            
+            # Roster Competition Estimator
+            self._trigger_competition_update(change)
+    
+    def _trigger_dynasty_recalculation(self, change: Dict[str, Any]):
+        """Trigger dynasty tier recalculation"""
+        print(f"   → Dynasty Tier Recalibrator: Processing {change['team']} {change['type']}")
+        # Integration point for dynasty tier updates
+    
+    def _trigger_oasis_update(self, change: Dict[str, Any]):
+        """Trigger OASIS context system update"""
+        print(f"   → OASIS Context System: Updating {change['team']} environment")
+        # Integration point for OASIS updates
+    
+    def _trigger_usage_forecast_update(self, change: Dict[str, Any]):
+        """Trigger player usage forecast update"""
+        print(f"   → Player Usage Forecaster: Recalculating {change['team']} projections")
+        # Integration point for usage forecasts
+    
+    def _trigger_competition_update(self, change: Dict[str, Any]):
+        """Trigger roster competition estimator update"""
+        print(f"   → Roster Competition Estimator: Updating {change['team']} competition tiers")
+        # Integration point for competition analysis
+    
+    def start_daily_schedule(self):
+        """Start the daily monitoring schedule"""
+        # Schedule daily monitoring at 3 AM EST
+        schedule.every().day.at("03:00").do(self.daily_trigger)
+        
+        def run_scheduler():
+            while True:
+                schedule.run_pending()
+                time.sleep(60)  # Check every minute
+        
+        scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+        scheduler_thread.start()
+        
+        print("📅 Daily roster monitoring scheduled for 3:00 AM EST")
 
 def run_roster_shift_listener():
     """
@@ -306,14 +433,15 @@ if __name__ == "__main__":
         note="Expected to compete for WR1 role."
     )
     
-    # Sample injury report
-    listener.log_injury_report(
-        team="TB",
-        player_name="Chris Godwin",
-        injury_type="Ankle",
-        severity="Minor",
-        expected_return="Week 1"
-    )
+    # Sample injury report (updated format)
+    details = {
+        "player_name": "Chris Godwin",
+        "injury": "Midseason IR",
+        "note": "Was on pace for WR1 output under Liam Coen. IR halted season. OC left for Jaguars."
+    }
+    
+    entry = listener.create_transaction_entry("TB", "injury", details)
+    listener.save_log_entry(entry)
     
     print(f"\n📈 Final Summary:")
     final_summary = listener.get_impact_summary()

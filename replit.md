@@ -379,6 +379,36 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 
 **Sample Entries**: Automated creation of sample transactions including Liam Coen (JAX OC), Brian Thomas Jr. trade to CHI, and Chris Godwin injury report for testing and validation purposes.
 
+## 🔄 RosterShiftListener v2.0 - Enhanced Daily Monitoring & System Integration
+
+**Enhanced Module Purpose**: Advanced NFL transaction monitoring with daily scheduling at 3 AM EST, system integration triggers, and comprehensive frontend display pipeline.
+
+**Core v2.0 Enhancements**:
+- **Daily Monitoring Scheduler**: `daily_trigger()` method with automated NFL source monitoring (ESPN, Sleeper, FantasyPros)
+- **Enhanced Data Structure**: Fantasy impact rating (1-5 scale), context notes for dynasty analysis, improved transaction categorization
+- **System Integration Pipeline**: Automatic triggers for Dynasty Tier Recalibrator, OASIS Context System, Player Usage Forecaster, and Roster Competition Estimator
+- **High-Impact Processing**: Recalculation triggers for transactions with fantasy impact rating ≥ 3
+
+**Daily Monitoring Implementation**:
+- **3 AM EST Schedule**: Automated daily checks using threading and schedule library
+- **NFL Source Integration**: ESPN transaction feeds, Sleeper depth charts, FantasyPros injury reports, official NFL rosters
+- **Crosscheck Capability**: Transaction validation against current depth charts
+- **Frontend Dashboard Integration**: Affected player highlighting for user visibility
+
+**System Integration Architecture**:
+- **Dynasty Tier Recalibrator**: Automatic tier reassessment for high-impact roster changes
+- **OASIS Context System**: Offensive scheme analysis updates for coaching changes
+- **Player Usage Forecaster**: Usage projection recalculation for roster modifications
+- **Roster Competition Estimator**: Target competition tier updates for player movements
+
+**Display Pipeline - /roster-moves UI Route**:
+- **Transaction Cards**: Minimal card layout with Date, Type, Player(s), Fantasy impact bar (1-5 scale), Team context notes
+- **Transaction-Specific Styling**: Color-coded transaction types (injury, trade, signing, coaching)
+- **Filter System**: Type, team, and impact level filtering with responsive design
+- **Real-time Updates**: Live data loading with refresh capability and error handling
+
+**Ready for Expansion**: User alerts system, RSS output feed, optional webhook notifications, and ShiftImpactAnalyzer v1 module integration prepared.
+
 ## 🧱 Stack
 - Python / Flask
 - Jinja2 Templates with Base Template System

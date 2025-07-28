@@ -117,6 +117,11 @@ def target_competition_2025():
     """Target Competition 2025 Class page"""
     return render_template('target_competition_2025.html')
 
+@app.route('/roster-moves')
+def roster_moves():
+    """NFL Roster Moves page"""
+    return render_template('roster_moves.html')
+
 # Rankings routes now handled by rankings_bp blueprint
 
 @app.route('/api/wr-ratings')
