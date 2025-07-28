@@ -19,16 +19,24 @@ def load_tier_data(filename: str = "2025_tiers.json") -> List[Dict[str, Any]]:
             with open(filename, 'r') as f:
                 return json.load(f)
         
-        # Create sample tier data if file doesn't exist
+        # Create sample tier data with S/A/B/C/D tier system and notes
         sample_data = [
-            {"name": "Travis Hunter", "position": "WR", "tier": 1, "team": "JAX", "dynasty_score": 95},
-            {"name": "Luther Burden III", "position": "WR", "tier": 2, "team": "CHI", "dynasty_score": 88},
-            {"name": "Tetairoa McMillan", "position": "WR", "tier": 2, "team": "ARI", "dynasty_score": 85},
-            {"name": "Cam Ward", "position": "QB", "tier": 2, "team": "MIA", "dynasty_score": 82},
-            {"name": "Dylan Sampson", "position": "RB", "tier": 3, "team": "TEN", "dynasty_score": 78},
-            {"name": "Colston Loveland", "position": "TE", "tier": 2, "team": "CHI", "dynasty_score": 80},
-            {"name": "Emeka Egbuka", "position": "WR", "tier": 2, "team": "TB", "dynasty_score": 83},
-            {"name": "Will Campbell", "position": "RB", "tier": 3, "team": "HOU", "dynasty_score": 75}
+            {"name": "Travis Hunter", "position": "WR", "tier": "S", "team": "JAX", "dynasty_score": 95, 
+             "note": "Elite opportunity - minimal target competition beyond Brian Thomas Jr. Instant WR1 upside with 2nd overall draft capital."},
+            {"name": "Luther Burden III", "position": "WR", "tier": "A", "team": "CHI", "dynasty_score": 88,
+             "note": "Strong opportunity - battling DJ Moore, Rome Odunze for targets but has slot role clarity and elite athletic profile."},
+            {"name": "Tetairoa McMillan", "position": "WR", "tier": "B", "team": "ARI", "dynasty_score": 85,
+             "note": "Manageable competition - clear WR2 role available with Kyler Murray connection and red zone size advantage."},
+            {"name": "Cam Ward", "position": "QB", "tier": "A", "team": "MIA", "dynasty_score": 82,
+             "note": "Strong opportunity - immediate starter with elite arm talent and rushing upside in fantasy-friendly offense."},
+            {"name": "Dylan Sampson", "position": "RB", "tier": "C", "team": "TEN", "dynasty_score": 78,
+             "note": "Challenging competition - competing with Tony Pollard for touches but has goal-line size and college production."},
+            {"name": "Colston Loveland", "position": "TE", "tier": "B", "team": "CHI", "dynasty_score": 80,
+             "note": "Manageable competition - clear TE1 role with Caleb Williams connection and red zone target upside."},
+            {"name": "Emeka Egbuka", "position": "WR", "tier": "D", "team": "TB", "dynasty_score": 83,
+             "note": "Severe competition - entering crowded room with Mike Evans, Chris Godwin returning from injury. Volume concerns."},
+            {"name": "Will Campbell", "position": "RB", "tier": "C", "team": "HOU", "dynasty_score": 75,
+             "note": "Challenging competition - behind Joe Mixon and Dameon Pierce on depth chart. Special teams role likely year one."}
         ]
         
         # Save sample data for future use
@@ -55,9 +63,10 @@ def show_tiers():
             grouped[pos] = []
         grouped[pos].append(player)
     
-    # Sort players within each position by tier, then by dynasty score
+    # Sort players within each position by tier (S->A->B->C->D), then by dynasty score
+    tier_order = {"S": 1, "A": 2, "B": 3, "C": 4, "D": 5}
     for pos in grouped:
-        grouped[pos].sort(key=lambda x: (x.get("tier", 99), -x.get("dynasty_score", 0)))
+        grouped[pos].sort(key=lambda x: (tier_order.get(x.get("tier", "C"), 3), -x.get("dynasty_score", 0)))
 
     return render_template("tiers.html", grouped=grouped)
 
@@ -73,9 +82,10 @@ def api_tiers_2025():
             grouped[pos] = []
         grouped[pos].append(player)
     
-    # Sort within each position
+    # Sort within each position by tier (S->A->B->C->D), then by dynasty score
+    tier_order = {"S": 1, "A": 2, "B": 3, "C": 4, "D": 5}
     for pos in grouped:
-        grouped[pos].sort(key=lambda x: (x.get("tier", 99), -x.get("dynasty_score", 0)))
+        grouped[pos].sort(key=lambda x: (tier_order.get(x.get("tier", "C"), 3), -x.get("dynasty_score", 0)))
 
     return jsonify({
         'success': True,
@@ -90,8 +100,9 @@ def api_tiers_by_position(position: str):
     data = load_tier_data("2025_tiers.json")
     position_players = [p for p in data if p.get("position", "").upper() == position.upper()]
     
-    # Sort by tier, then dynasty score
-    position_players.sort(key=lambda x: (x.get("tier", 99), -x.get("dynasty_score", 0)))
+    # Sort by tier (S->A->B->C->D), then dynasty score
+    tier_order = {"S": 1, "A": 2, "B": 3, "C": 4, "D": 5}
+    position_players.sort(key=lambda x: (tier_order.get(x.get("tier", "C"), 3), -x.get("dynasty_score", 0)))
     
     return jsonify({
         'success': True,
