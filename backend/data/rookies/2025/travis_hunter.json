@@ -1,19 +1,19 @@
 {
   "player_name": "Travis Hunter",
   "position": "WR",
-  "nfl_team": "TBD",
-  "draft_capital": "Round 1",
+  "nfl_team": "JAX",
+  "draft_capital": "Round 1 (Pick 2)",
   "college_stats": {
     "2024": {
-      "receptions": 92,
-      "receiving_yards": 1152,
-      "touchdowns": 14
+      "receptions": 96,
+      "receiving_yards": 1258,
+      "touchdowns": 15
     }
   },
   "athleticism": "Elite",
-  "context_notes": "Two-way star who played both WR and CB, incredible route precision and contested catch ability",
+  "context_notes": "Heisman winner; explosive two-way WR/CB at Colorado; unique deployment limited offensive snaps but elite tape and awards.",
   "star_rating": 5.0,
   "dynasty_tier": "Tier 1",
   "rookie_flag": true,
-  "future_ceiling_summary": "Generational talent with potential for immediate WR1 production and long-term elite status"
+  "future_ceiling_summary": "Generational athlete with dual-role upside; ceiling as elite WR1 if fully leaned into offense."
 }

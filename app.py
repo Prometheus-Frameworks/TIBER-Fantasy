@@ -55,6 +55,28 @@ try:
 except Exception as e:
     print(f"❌ Rookie TE Insulation Blueprint registration failed: {e}")
 
+# Import and register rookie pipeline blueprints
+try:
+    from routes.rookie_rankings import rookie_rankings_bp
+    app.register_blueprint(rookie_rankings_bp)
+    print("✅ Rookie Rankings Blueprint registered successfully")
+except Exception as e:
+    print(f"❌ Rookie Rankings Blueprint registration failed: {e}")
+
+try:
+    from routes.draft_room import draft_room_bp
+    app.register_blueprint(draft_room_bp)
+    print("✅ Draft Room Blueprint registered successfully")
+except Exception as e:
+    print(f"❌ Draft Room Blueprint registration failed: {e}")
+
+try:
+    from routes.future_rookies import future_rookies_bp
+    app.register_blueprint(future_rookies_bp)
+    print("✅ Future Rookies Blueprint registered successfully")
+except Exception as e:
+    print(f"❌ Future Rookies Blueprint registration failed: {e}")
+
 # Initialize core modules for legacy endpoints
 wr_processor = WRRatingsProcessor()
 rookie_db = RookieDatabase()

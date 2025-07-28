@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rookie Rankings - On The Clock</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 20px;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        select, button {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+            cursor: pointer;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .toggle-group {
+            display: flex;
+            gap: 10px;
+        }
+        .toggle-btn {
+            padding: 5px 12px;
+            font-size: 12px;
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+        }
+        .toggle-btn.active {
+            background: #28a745;
+            color: white;
+        }
+        .rankings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .rankings-table th,
+        .rankings-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .rankings-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        .rankings-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        .tier-badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .tier-1 { background: #d4edda; color: #155724; }
+        .tier-2 { background: #d1ecf1; color: #0c5460; }
+        .tier-3 { background: #fff3cd; color: #856404; }
+        .tier-4 { background: #f8d7da; color: #721c24; }
+        .tier-5 { background: #f1f3f4; color: #495057; }
+        .star-rating {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .team-tag {
+            background: #007bff;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        .rookie-flag {
+            background: #28a745;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: bold;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏈 Rookie Rankings</h1>
+            <div class="live-indicator">
+                <span id="updateStatus">●</span> Live Updates
+            </div>
+        </div>
+
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-item">
+                <div class="stat-value" id="totalRookies">5</div>
+                <div class="stat-label">Total Rookies</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="avgStarRating">4.2</div>
+                <div class="stat-label">Avg Rating</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="tier1Count">2</div>
+                <div class="stat-label">Tier 1</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="topPosition">WR</div>
+                <div class="stat-label">Top Position</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <select id="yearSelect">
+                <option value="2025" selected>2025 Draft Class</option>
+            </select>
+
+            <select id="positionFilter">
+                <option value="">All Positions</option>
+                <option value="QB">Quarterbacks</option>
+                <option value="RB">Running Backs</option>
+                <option value="WR">Wide Receivers</option>
+                <option value="TE">Tight Ends</option>
+            </select>
+
+            <select id="sortBy">
+                <option value="tier_weight">Tier Weight</option>
+                <option value="star_rating">Star Rating</option>
+                <option value="draft_capital">Draft Capital</option>
+                <option value="dynasty_tier">Dynasty Tier</option>
+                <option value="name">Name (A-Z)</option>
+            </select>
+
+            <div class="toggle-group">
+                <button class="toggle-btn" id="notesToggle">Show Notes</button>
+                <button class="toggle-btn" id="ceilingToggle">Show Ceiling</button>
+            </div>
+
+            <button onclick="refreshRankings()">🔄 Refresh</button>
+        </div>
+
+        <div id="loadingIndicator" class="loading" style="display: none;">
+            Loading rookie rankings...
+        </div>
+
+        <div id="errorContainer"></div>
+
+        <table class="rankings-table" id="rankingsTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Player</th>
+                    <th>Position</th>
+                    <th>Team</th>
+                    <th>Dynasty Tier</th>
+                    <th>Star Rating</th>
+                    <th>Draft Capital</th>
+                    <th>Tier Weight</th>
+                    <th class="notes-column" style="display: none;">Notes</th>
+                    <th class="ceiling-column" style="display: none;">Ceiling</th>
+                </tr>
+            </thead>
+            <tbody id="rankingsBody">
+                <tr>
+                    <td>1</td>
+                    <td><strong>Travis Hunter</strong> <span class="rookie-flag">ROOKIE</span></td>
+                    <td>WR</td>
+                    <td><span class="team-tag">JAX</span></td>
+                    <td><span class="tier-badge tier-1">Tier 1</span></td>
+                    <td><span class="star-rating">★★★★★</span> 5.0</td>
+                    <td>Round 1 (Pick 2)</td>
+                    <td><strong>97.5</strong></td>
+                    <td class="notes-column" style="display: none;">Heisman winner; explosive two-way WR/CB at Colorado</td>
+                    <td class="ceiling-column" style="display: none;">Generational athlete with dual-role upside</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><strong>Luther Burden III</strong> <span class="rookie-flag">ROOKIE</span></td>
+                    <td>WR</td>
+                    <td><span class="team-tag">TBD</span></td>
+                    <td><span class="tier-badge tier-2">Tier 2</span></td>
+                    <td><span class="star-rating">★★★★☆</span> 4.5</td>
+                    <td>Round 1</td>
+                    <td><strong>85.0</strong></td>
+                    <td class="notes-column" style="display: none;">Elite route runner with excellent hands</td>
+                    <td class="ceiling-column" style="display: none;">WR1 upside with consistent production</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>Cam Ward</strong> <span class="rookie-flag">ROOKIE</span></td>
+                    <td>QB</td>
+                    <td><span class="team-tag">TBD</span></td>
+                    <td><span class="tier-badge tier-2">Tier 2</span></td>
+                    <td><span class="star-rating">★★★★</span> 4.2</td>
+                    <td>Round 1</td>
+                    <td><strong>82.5</strong></td>
+                    <td class="notes-column" style="display: none;">Dual-threat QB with strong arm talent</td>
+                    <td class="ceiling-column" style="display: none;">QB1 potential with mobility upside</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>Tetairoa McMillan</strong> <span class="rookie-flag">ROOKIE</span></td>
+                    <td>WR</td>
+                    <td><span class="team-tag">TBD</span></td>
+                    <td><span class="tier-badge tier-2">Tier 2</span></td>
+                    <td><span class="star-rating">★★★★</span> 4.0</td>
+                    <td>Round 1</td>
+                    <td><strong>80.0</strong></td>
+                    <td class="notes-column" style="display: none;">Big-body receiver with red zone upside</td>
+                    <td class="ceiling-column" style="display: none;">WR2 with touchdown upside</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td><strong>Dylan Sampson</strong> <span class="rookie-flag">ROOKIE</span></td>
+                    <td>RB</td>
+                    <td><span class="team-tag">TBD</span></td>
+                    <td><span class="tier-badge tier-3">Tier 3</span></td>
+                    <td><span class="star-rating">★★★☆</span> 3.5</td>
+                    <td>Round 2</td>
+                    <td><strong>70.0</strong></td>
+                    <td class="notes-column" style="display: none;">Workhorse back with good vision</td>
+                    <td class="ceiling-column" style="display: none;">RB2 potential with consistent touches</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let showNotes = false;
+        let showCeiling = false;
+
+        document.getElementById('notesToggle').addEventListener('click', toggleNotes);
+        document.getElementById('ceilingToggle').addEventListener('click', toggleCeiling);
+
+        function toggleNotes() {
+            showNotes = !showNotes;
+            const btn = document.getElementById('notesToggle');
+            const columns = document.querySelectorAll('.notes-column');
+            
+            if (showNotes) {
+                btn.textContent = 'Hide Notes';
+                btn.classList.add('active');
+                columns.forEach(col => col.style.display = 'table-cell');
+            } else {
+                btn.textContent = 'Show Notes';
+                btn.classList.remove('active');
+                columns.forEach(col => col.style.display = 'none');
+            }
+        }
+
+        function toggleCeiling() {
+            showCeiling = !showCeiling;
+            const btn = document.getElementById('ceilingToggle');
+            const columns = document.querySelectorAll('.ceiling-column');
+            
+            if (showCeiling) {
+                btn.textContent = 'Hide Ceiling';
+                btn.classList.add('active');
+                columns.forEach(col => col.style.display = 'table-cell');
+            } else {
+                btn.textContent = 'Show Ceiling';
+                btn.classList.remove('active');
+                columns.forEach(col => col.style.display = 'none');
+            }
+        }
+
+        function refreshRankings() {
+            location.reload();
+        }
+
+        // Live update indicator
+        setInterval(() => {
+            const indicator = document.getElementById('updateStatus');
+            indicator.style.color = indicator.style.color === 'rgb(40, 167, 69)' ? '#6c757d' : '#28a745';
+        }, 3000);
+    </script>
+</body>
+</html>

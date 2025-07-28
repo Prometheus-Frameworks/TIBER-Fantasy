@@ -91,6 +91,44 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 
 **Intake Module Integration**: Dynasty format automatically loads 2025 rookie class alongside established players for complete prospect evaluation
 
+## 🚀 Complete Rookie Data Pipeline System v1.0
+
+**4-Module Pipeline Architecture**: Comprehensive rookie data integration across all primary systems with real-time file monitoring and hot-reload capabilities.
+
+**Core Pipeline Components**:
+
+**1. ✅ Rookie Rankings Page** (`routes/rookie_rankings.py`)
+- **Dynamic Sortable Table**: All rookies ranked by dynasty tier, star rating, and draft capital
+- **API Endpoints**: `/api/rookie-rankings/all`, `/api/rookie-rankings/stats`, `/api/rookie-rankings/tiers`
+- **Live Interface**: Position filtering, sort options, optional notes/ceiling toggles
+- **Real-time Updates**: 5-second polling with automatic refresh on file changes
+
+**2. ✅ Draft Room Evaluator** (`modules/draft_room_evaluator.py`)
+- **Pick Evaluation**: Compare draft selections against consensus rookie rankings
+- **Value Highlighting**: A+ to D grading system with color-coded value indicators
+- **Grade Calculation**: Pick differential analysis with star rating and tier bonuses
+- **API Integration**: `/api/draft-room/evaluate-pick`, `/api/draft-room/live-highlighting`
+
+**3. ✅ Dynasty Tier Engine** (`modules/dynasty_tier_engine.py`)
+- **Combined Rankings**: Rookies ranked alongside veterans in unified dynasty system
+- **Tier Weighting**: Draft capital (40%), star rating (35%), ceiling sentiment (15%), age factor (10%)
+- **Integration Logic**: Seamless veteran/rookie comparison with proper tier scoring
+- **Comprehensive Analysis**: Position-specific scoring with tier-based groupings
+
+**4. ✅ Future Rookies UI Toggle** (`modules/future_rookies_toggle.py`)
+- **Multi-Year Support**: Toggle between 2025 (current) and 2026+ (future) rookie classes
+- **Folder Detection**: Automatic scanning of `/backend/data/rookies/YEAR/` directories
+- **Placeholder Ready**: Infrastructure for future draft classes with expandable architecture
+- **API Endpoints**: `/api/rookies/toggle/<year>`, `/api/rookies/available-years`
+
+**File Detection & Polling System**: 
+- **Hot Reload**: No backend restarts required when adding new JSON files
+- **5-Second Polling**: Dev mode monitoring with file checksum validation
+- **Change Detection**: Automatic database reloading on file modifications
+- **Global Pipeline**: Centralized `RookiePipeline` class managing all rookie data sources
+
+**Travis Hunter Integration**: Updated with authentic 2024 Colorado stats (96 receptions, 1,258 yards, 15 TDs), JAX Round 1 Pick 2 draft info, and Heisman winner context
+
 ## 🧱 Stack
 - Python / Flask
 - Jinja2 Templates with Base Template System
