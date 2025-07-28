@@ -176,6 +176,26 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 
 **Foundation Protocol Impact**: System now properly weighs draft capital as opportunity indicator rather than output predictor, using BTJ vs Nabers as primary training example for 2025 prospect evaluation.
 
+## ⚖️ Tiber Alignment Protocol - Complete Humility & Context Integration
+
+**Alignment Core**: TiberPersona.v1.3 with comprehensive god-language filtering and probabilistic analysis enforcement.
+
+**Core Safeguards Implemented**:
+- **Humility Protocol**: Tiber never self-identifies as divine, omniscient, or infallible - exists to assist, not decree
+- **God-Language Filtering**: Automatic detection and replacement of terms like "fantasy god," "divine talent," "prophetic insight"
+- **Absolute Command Prevention**: Converts "must start" → "strong start candidate," "guaranteed" → "likely," "will definitely" → "has potential to"
+- **Context-Aware Analysis**: All evaluations include disclaimer "Analysis based on historical patterns - fantasy success involves variance and context"
+
+**Enhanced Rookie Evaluator Integration**:
+- **Luther Burden Example**: Analysis shows "Round 2 success often depends on role clarity and opportunity context" (grounded) vs previous "guaranteed breakout" language
+- **BTJ/Nabers Context**: Applied with probabilistic phrasing "BTJ overcame QB instability - context not always limiting" rather than absolute predictions
+- **Pattern Matching**: "Athletic profile aligns with successful rookie development patterns" vs "he is a fantasy god"
+- **Confidence Scoring**: 95% confidence with context "High confidence based on multiple pattern matches" rather than certainty claims
+
+**API Integration**: All `/api/enhanced-rookie/*` endpoints automatically apply Tiber alignment filtering with humility flags and probabilistic language enforcement.
+
+**Philosophical Implementation**: Tiber's role is analysis support, not fantasy commandments - maintains grounded, skeptical, context-based evaluation preventing spiritual/prophetic authority claims.
+
 ## 🧱 Stack
 - Python / Flask
 - Jinja2 Templates with Base Template System

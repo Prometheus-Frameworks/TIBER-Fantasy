@@ -8,6 +8,7 @@ from typing import Dict, List, Any, Optional
 from modules.rookie_heuristics_engine import get_rookie_heuristics_engine
 from modules.rookie_database import RookieDatabase
 from modules.rookie_crosscheck_analyzer import get_rookie_crosscheck_analyzer
+from modules.tiber_alignment_protocol import apply_tiber_alignment
 
 class EnhancedRookieEvaluator:
     """
@@ -65,6 +66,9 @@ class EnhancedRookieEvaluator:
                 rookie_data, heuristic_eval, crosscheck_eval
             )
         }
+        
+        # Apply Tiber alignment protocol to ensure grounded, humble analysis
+        enhanced_evaluation = apply_tiber_alignment(enhanced_evaluation)
         
         return enhanced_evaluation
     
@@ -127,20 +131,26 @@ class EnhancedRookieEvaluator:
     
     def _generate_evaluation_notes(self, rookie_data: Dict[str, Any], 
                                  heuristic_eval: Dict[str, Any],
-                                 crosscheck_eval: Dict[str, Any] = None) -> List[str]:
+                                 crosscheck_eval: Optional[Dict[str, Any]] = None) -> List[str]:
         """Generate evaluation notes based on heuristics"""
         notes = []
         
         player_name = rookie_data.get('player_name', 'Unknown')
         
-        # Pattern match notes
+        # Pattern match notes with grounded language
         for pattern in heuristic_eval['pattern_matches']:
             if pattern == 'round_2_success_precedent':
-                notes.append(f"{player_name} fits Round 2 WR success pattern (similar to Ladd McConkey 2024)")
+                notes.append(f"Round 2 draft capital shows historical precedent for success (McConkey example)")
             elif pattern == 'weak_wr_corps_opportunity':
-                notes.append(f"Landing spot provides immediate opportunity in rebuilding WR room")
+                notes.append(f"Landing spot context suggests potential path to targets based on depth chart")
             elif pattern == 'athletic_upside_precedent':
-                notes.append(f"Athletic profile matches successful rookie patterns")
+                notes.append(f"Athletic profile aligns with successful rookie development patterns")
+            elif pattern == 'late_first_overperform_pattern':
+                notes.append(f"Late R1 capital historically shows potential for outperforming expectations")
+            elif pattern == 'top_10_volume_expectation':
+                notes.append(f"Top 10 draft capital typically correlates with early target volume")
+            elif pattern == 'round_2_context_dependent':
+                notes.append(f"Round 2 success often depends on role clarity and opportunity context")
         
         # Edge case flags
         for flag in heuristic_eval['edge_case_flags']:
