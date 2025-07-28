@@ -186,8 +186,56 @@ def get_pattern_matches(player_name):
             'edge_case_flags': enhanced_eval['edge_case_flags'],
             'heuristic_boost': enhanced_eval['heuristic_adjustment'],
             'confidence_level': enhanced_eval['confidence_modifier'],
+            'btj_vs_nabers_context': enhanced_eval.get('btj_vs_nabers_context', []),
+            'crosscheck_flags': enhanced_eval.get('crosscheck_flags', []),
             'precedent_analysis': enhanced_eval['evaluation_notes']
         })
         
     except Exception as e:
         return jsonify({'error': f'Pattern matching failed: {str(e)}'}), 500
+
+@enhanced_rookie_bp.route('/api/enhanced-rookie/btj-vs-nabers-analysis', methods=['GET'])
+def get_btj_vs_nabers_analysis():
+    """Get comprehensive BTJ vs Nabers crosscheck analysis"""
+    try:
+        from modules.rookie_crosscheck_analyzer import get_rookie_crosscheck_analyzer
+        analyzer = get_rookie_crosscheck_analyzer()
+        
+        summary = analyzer.get_crosscheck_summary()
+        btj_nabers = summary['crosscheck_insights']['btj_vs_nabers_lessons']
+        
+        return jsonify({
+            'success': True,
+            'btj_vs_nabers_analysis': btj_nabers,
+            'key_insights': {
+                'draft_capital_lesson': 'Late R1 vs Top 10 - BTJ outproduced despite lower capital',
+                'performance_comparison': 'BTJ: 1282 yards, 10 TDs vs Nabers: 1204 yards, 7 TDs',
+                'context_analysis': 'Both overcame poor QB play differently - BTJ with big plays, Nabers with volume',
+                'projection_implications': btj_nabers['projection_implications']
+            },
+            'crosscheck_lessons': summary['key_lessons'],
+            'evaluator_guidance': summary['btj_vs_nabers_key_takeaway']
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'BTJ vs Nabers analysis failed: {str(e)}'}), 500
+
+@enhanced_rookie_bp.route('/api/enhanced-rookie/crosscheck-summary', methods=['GET'])
+def get_crosscheck_summary():
+    """Get complete crosscheck analysis summary"""
+    try:
+        from modules.rookie_crosscheck_analyzer import get_rookie_crosscheck_analyzer
+        analyzer = get_rookie_crosscheck_analyzer()
+        
+        summary = analyzer.get_crosscheck_summary()
+        
+        return jsonify({
+            'success': True,
+            'crosscheck_summary': summary,
+            'foundation_protocol_status': 'active',
+            'case_studies_analyzed': 3,
+            'patterns_identified': len(summary['crosscheck_insights'])
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Crosscheck summary failed: {str(e)}'}), 500

@@ -61,30 +61,43 @@ class RookieHeuristicsEngine:
         patterns = {
             'top_10_picks': [],
             'late_first_picks': [],
-            'second_round_picks': []
+            'second_round_picks': [],
+            'capital_vs_output_insights': []
         }
         
         for case in self.case_studies:
             draft_capital = case.get('draft_capital', '')
+            actual_stats = case.get('actual_2024_stats', {})
+            context_notes = case.get('context_notes', '')
+            
+            case_data = {
+                'name': case['player_name'],
+                'impact': case['rookie_impact'],
+                'tier': case['dynasty_tier'],
+                'actual_output': actual_stats.get('fantasy_finish', 'Unknown'),
+                'context': context_notes
+            }
             
             if 'Top 10' in draft_capital:
-                patterns['top_10_picks'].append({
-                    'name': case['player_name'],
-                    'impact': case['rookie_impact'],
-                    'tier': case['dynasty_tier']
-                })
+                patterns['top_10_picks'].append(case_data)
+                # Analyze if high draft capital matched performance
+                if actual_stats and 'WR6' in actual_stats.get('fantasy_finish', ''):
+                    patterns['capital_vs_output_insights'].append({
+                        'pattern': 'top_10_met_expectations',
+                        'example': case['player_name'],
+                        'note': 'High draft capital justified by elite volume metrics'
+                    })
             elif 'Late' in draft_capital:
-                patterns['late_first_picks'].append({
-                    'name': case['player_name'],
-                    'impact': case['rookie_impact'],
-                    'tier': case['dynasty_tier']
-                })
+                patterns['late_first_picks'].append(case_data)
+                # BTJ outperformed draft position
+                if actual_stats and 'WR12' in actual_stats.get('fantasy_finish', ''):
+                    patterns['capital_vs_output_insights'].append({
+                        'pattern': 'late_first_overperformed',
+                        'example': case['player_name'],
+                        'note': 'Lower draft capital but higher fantasy output than Top 10 picks'
+                    })
             elif 'Round 2' in draft_capital:
-                patterns['second_round_picks'].append({
-                    'name': case['player_name'],
-                    'impact': case['rookie_impact'],
-                    'tier': case['dynasty_tier']
-                })
+                patterns['second_round_picks'].append(case_data)
         
         return patterns
     
@@ -187,55 +200,72 @@ class RookieHeuristicsEngine:
     def evaluate_2025_wr_with_heuristics(self, wr_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Apply learned heuristics to evaluate a 2025 WR prospect.
-        Returns refined evaluation with confidence adjustments.
+        Returns refined evaluation with confidence adjustments based on 2024 case studies.
         """
         if not self.heuristics:
             return {
                 'heuristic_adjustment': 0,
                 'confidence_modifier': 1.0,
                 'pattern_matches': [],
-                'edge_case_flags': []
+                'edge_case_flags': [],
+                'btj_vs_nabers_context': []
             }
         
         evaluation = {
             'heuristic_adjustment': 0,
             'confidence_modifier': 1.0,
             'pattern_matches': [],
-            'edge_case_flags': []
+            'edge_case_flags': [],
+            'btj_vs_nabers_context': []
         }
         
-        # Analyze draft capital patterns
+        # BTJ vs Nabers lesson: Don't auto-rank by draft capital alone
         draft_capital = wr_data.get('draft_capital', '')
-        if 'Round 2' in draft_capital:
-            # Check if this matches successful Round 2 pattern (like McConkey)
+        context_notes = wr_data.get('context_notes', '')
+        
+        # Analyze draft capital with BTJ/Nabers context
+        if 'Round 1' in draft_capital and 'Late' in draft_capital:
+            # Late first round - BTJ pattern (outperformed expectations)
+            evaluation['pattern_matches'].append('late_first_overperform_pattern')
+            evaluation['btj_vs_nabers_context'].append('BTJ showed late R1 picks can outproduce Top 10')
+            evaluation['heuristic_adjustment'] += 3  # Don't penalize late R1
+            
+        elif 'Round 1' in draft_capital and ('Top' in draft_capital or 'Pick' in draft_capital):
+            # Top 10 pick - Nabers pattern (high volume, context dependent)
+            evaluation['pattern_matches'].append('top_10_volume_expectation')
+            evaluation['btj_vs_nabers_context'].append('Nabers had elite volume but context matters for TDs')
+            # Don't auto-boost - need context analysis
+            
+        elif 'Round 2' in draft_capital:
+            # Round 2 - McConkey pattern (role-dependent success)
             round2_patterns = self.heuristics['draft_capital_patterns']['second_round_picks']
             if round2_patterns:
-                evaluation['pattern_matches'].append('round_2_success_precedent')
-                evaluation['heuristic_adjustment'] += 2  # Slight boost for R2 WRs
+                evaluation['pattern_matches'].append('round_2_context_dependent')
+                evaluation['heuristic_adjustment'] += 2
         
-        # Analyze college production context
-        college_stats = wr_data.get('college_stats', {}).get('2024', {})
-        receptions = college_stats.get('receptions', 0)
+        # Context-aware evaluation (BTJ thrived despite QB issues)
+        if 'poor' in context_notes.lower() or 'scheme' in context_notes.lower():
+            evaluation['edge_case_flags'].append('context_excuse_flag')
+            # BTJ lesson: players can overcome poor context
+            evaluation['btj_vs_nabers_context'].append('BTJ overcame QB instability - context not always limiting')
+            evaluation['confidence_modifier'] = 0.95  # Slight caution but not major penalty
         
-        if receptions < 50:
-            # Low volume - check if this could be a scheme/QB issue (like poor context)
-            context_notes = wr_data.get('context_notes', '')
-            if 'poor' in context_notes.lower() or 'scheme' in context_notes.lower():
-                evaluation['edge_case_flags'].append('low_volume_context_excuse')
-                evaluation['confidence_modifier'] = 0.9  # Slightly less confident
-        
-        # Check for trait combinations
+        # Athleticism with performance correlation
         athleticism = wr_data.get('athleticism', '')
         if 'Above Average' in athleticism:
             trait_patterns = self.heuristics.get('trait_combinations', {})
             if 'athletic' in trait_patterns:
                 evaluation['pattern_matches'].append('athletic_upside_precedent')
+                # BTJ showed athletic traits translate to production
+                evaluation['heuristic_adjustment'] += 1
         
-        # Landing spot analysis
+        # Landing spot analysis with volume expectations
         team = wr_data.get('nfl_team', '')
-        if team == 'CHI':  # Chicago rebuilding WR corps
+        if team == 'CHI':
             evaluation['pattern_matches'].append('weak_wr_corps_opportunity')
-            evaluation['heuristic_adjustment'] += 3  # Boost for opportunity
+            # Nabers pattern: weak WR corps = guaranteed volume
+            evaluation['btj_vs_nabers_context'].append('CHI similar to NYG - weak WR room guarantees targets')
+            evaluation['heuristic_adjustment'] += 3
         
         return evaluation
     

@@ -7,6 +7,7 @@ Combines base rookie evaluation with learned patterns from 2024 success cases.
 from typing import Dict, List, Any, Optional
 from modules.rookie_heuristics_engine import get_rookie_heuristics_engine
 from modules.rookie_database import RookieDatabase
+from modules.rookie_crosscheck_analyzer import get_rookie_crosscheck_analyzer
 
 class EnhancedRookieEvaluator:
     """
@@ -16,6 +17,7 @@ class EnhancedRookieEvaluator:
     
     def __init__(self):
         self.heuristics_engine = get_rookie_heuristics_engine()
+        self.crosscheck_analyzer = get_rookie_crosscheck_analyzer()
         self.base_evaluations = {}
         
     def evaluate_rookie_with_heuristics(self, rookie_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -29,12 +31,20 @@ class EnhancedRookieEvaluator:
         # Apply heuristics if available
         if rookie_data.get('position') == 'WR':
             heuristic_eval = self.heuristics_engine.evaluate_2025_wr_with_heuristics(rookie_data)
+            crosscheck_eval = self.crosscheck_analyzer.apply_crosscheck_to_2025_prospect(rookie_data)
         else:
             heuristic_eval = {
                 'heuristic_adjustment': 0,
                 'confidence_modifier': 1.0,
                 'pattern_matches': [],
-                'edge_case_flags': []
+                'edge_case_flags': [],
+                'btj_vs_nabers_context': []
+            }
+            crosscheck_eval = {
+                'crosscheck_flags': [],
+                'btj_nabers_context': [],
+                'projection_adjustments': [],
+                'confidence_modifiers': []
             }
         
         # Combine evaluations
@@ -45,11 +55,14 @@ class EnhancedRookieEvaluator:
             'confidence_modifier': heuristic_eval['confidence_modifier'],
             'pattern_matches': heuristic_eval['pattern_matches'],
             'edge_case_flags': heuristic_eval['edge_case_flags'],
+            'btj_vs_nabers_context': heuristic_eval.get('btj_vs_nabers_context', []),
+            'crosscheck_flags': crosscheck_eval.get('crosscheck_flags', []),
+            'projection_adjustments': crosscheck_eval.get('projection_adjustments', []),
             'final_tier_weight': self._calculate_enhanced_tier_weight(
                 base_evaluation, heuristic_eval
             ),
             'evaluation_notes': self._generate_evaluation_notes(
-                rookie_data, heuristic_eval
+                rookie_data, heuristic_eval, crosscheck_eval
             )
         }
         
@@ -113,7 +126,8 @@ class EnhancedRookieEvaluator:
         return min(max(enhanced_weight, 0), 100)
     
     def _generate_evaluation_notes(self, rookie_data: Dict[str, Any], 
-                                 heuristic_eval: Dict[str, Any]) -> List[str]:
+                                 heuristic_eval: Dict[str, Any],
+                                 crosscheck_eval: Dict[str, Any] = None) -> List[str]:
         """Generate evaluation notes based on heuristics"""
         notes = []
         
@@ -132,6 +146,18 @@ class EnhancedRookieEvaluator:
         for flag in heuristic_eval['edge_case_flags']:
             if flag == 'low_volume_context_excuse':
                 notes.append(f"Low college volume potentially explained by poor context (scheme/QB)")
+        
+        # BTJ vs Nabers context
+        for context in heuristic_eval.get('btj_vs_nabers_context', []):
+            notes.append(f"BTJ/Nabers lesson: {context}")
+        
+        # Crosscheck insights
+        if crosscheck_eval:
+            for adjustment in crosscheck_eval.get('projection_adjustments', []):
+                notes.append(f"Crosscheck: {adjustment}")
+            
+            for flag in crosscheck_eval.get('crosscheck_flags', []):
+                notes.append(f"Analysis flag: {flag}")
         
         # Adjustment explanation
         adjustment = heuristic_eval['heuristic_adjustment']

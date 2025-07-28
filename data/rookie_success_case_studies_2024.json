@@ -12,10 +12,20 @@
         "touchdowns": 14
       }
     },
+    "actual_2024_stats": {
+      "receptions": 109,
+      "receiving_yards": 1204,
+      "touchdowns": 7,
+      "targets": 170,
+      "games_played": 15,
+      "fantasy_finish": "WR6-7 in PPR"
+    },
     "rookie_projection": "Immediate WR1 usage on weak WR corps",
-    "traits": ["explosive", "yards-after-catch", "alpha traits"],
-    "rookie_impact": "High-end breakout candidate",
-    "dynasty_tier": "Tier 1"
+    "actual_outcome": "Met expectations - elite volume but limited by QB play and touchdowns",
+    "traits": ["explosive", "yards-after-catch", "alpha traits", "elite route-running", "separation"],
+    "rookie_impact": "Immediate WR1 volume - highest expected fantasy points since 2000",
+    "dynasty_tier": "Tier 1",
+    "context_notes": "170 targets (2nd in NFL), 91 Open Score, hampered by poor QB play and TD variance"
   },
   {
     "player_name": "Brian Thomas Jr.",
@@ -30,10 +40,19 @@
         "touchdowns": 17
       }
     },
+    "actual_2024_stats": {
+      "receptions": 87,
+      "receiving_yards": 1282,
+      "touchdowns": 10,
+      "games_played": 17,
+      "fantasy_finish": "WR12 in PPR"
+    },
     "rookie_projection": "Competes for WR1 usage with Ridley gone",
-    "traits": ["athletic", "vertical threat", "contested catch"],
-    "rookie_impact": "Boom-bust ceiling WR2/Flex",
-    "dynasty_tier": "Tier 2"
+    "actual_outcome": "Exceeded expectations - franchise rookie records despite QB instability",
+    "traits": ["athletic", "vertical threat", "contested catch", "big-play ability"],
+    "rookie_impact": "Immediate WR1 production - outperformed draft position",
+    "dynasty_tier": "Tier 1 (upgraded from Tier 2)",
+    "context_notes": "Thrived with backup QB Mac Jones, showed consistency with 6 straight 10+ target games"
   },
   {
     "player_name": "Ladd McConkey",
