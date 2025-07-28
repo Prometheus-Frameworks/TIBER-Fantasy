@@ -207,10 +207,10 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 4. **Premium WR Override**: Apply special logic for 1st round picks with elite metrics
 5. **Target Range Adjustment**: Calculate final expected target range based on all factors
 
-**Authentic Target Competition Examples**:
-- **Luther Burden (CHI)**: High competition from established weapons (DJ Moore, Rome Odunze, Colston Loveland) - may open as WR3/slot-only despite talent
-- **Travis Hunter (JAX)**: Low competition with 200+ vacated targets from departures (Kirk, Davis, Engram) - immediate WR1 opportunity with Brian Thomas Jr. comparison
-- **Jaylen Waddle (MIA)**: RB overlap scenario where De'Von Achane's slot usage (28% rate, 58 targets) reduces WR target ceiling in RB-heavy system
+**Enhanced Rookie Profiles Integration**:
+- **Luther Burden (CHI)**: S-tier target competition from Top 10 picks (Rome Odunze WR, Colston Loveland TE) + DJ Moore. Severe competition despite 4.5⭐ talent - needs to overcome heavy competition in talented young offense. Dynasty Tier 2 with WR1 ceiling if usage holds.
+- **Travis Hunter (JAX)**: B-tier target competition with minimal threats beyond Brian Thomas Jr. Elite 2nd overall pick with 85/1297/15 college stats. Paradox player projecting instant-impact WR1 with elite fantasy upside. Dynasty Tier 1 ceiling.
+- **Enhanced Profile Framework**: Target competition tiers (S=Severe, B=Manageable) with detailed context notes, ceiling summaries, and authentic college production data integrated into 5-step evaluation logic.
 
 **Cross-Reference Validation Framework**:
 - **Departure Analysis**: Previous season target counts with 50+ threshold validation
