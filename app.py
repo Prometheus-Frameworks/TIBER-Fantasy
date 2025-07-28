@@ -79,8 +79,11 @@ except Exception as e:
 
 try:
     from routes.enhanced_rookie_evaluation import enhanced_rookie_bp
+    from routes.target_competition_routes import register_target_competition_routes
     app.register_blueprint(enhanced_rookie_bp)
+    register_target_competition_routes(app)
     print("✅ Enhanced Rookie Evaluation Blueprint registered successfully")
+    print("✅ Target Competition Evaluator v1.0 Blueprint registered successfully")
 except Exception as e:
     print(f"❌ Enhanced Rookie Evaluation Blueprint registration failed: {e}")
 
