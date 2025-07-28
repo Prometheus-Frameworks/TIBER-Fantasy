@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 from modules.rookie_database import RookieDatabase, RookiePlayer
+from modules.rookie_heuristics_engine import get_rookie_heuristics_engine
 
 class RookiePipeline:
     """

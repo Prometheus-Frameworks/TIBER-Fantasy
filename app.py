@@ -77,6 +77,13 @@ try:
 except Exception as e:
     print(f"❌ Future Rookies Blueprint registration failed: {e}")
 
+try:
+    from routes.enhanced_rookie_evaluation import enhanced_rookie_bp
+    app.register_blueprint(enhanced_rookie_bp)
+    print("✅ Enhanced Rookie Evaluation Blueprint registered successfully")
+except Exception as e:
+    print(f"❌ Enhanced Rookie Evaluation Blueprint registration failed: {e}")
+
 # Initialize core modules for legacy endpoints
 wr_processor = WRRatingsProcessor()
 rookie_db = RookieDatabase()

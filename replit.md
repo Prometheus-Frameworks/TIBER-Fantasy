@@ -129,6 +129,30 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 
 **Travis Hunter Integration**: Updated with authentic 2024 Colorado stats (96 receptions, 1,258 yards, 15 TDs), JAX Round 1 Pick 2 draft info, and Heisman winner context
 
+## 🧠 Tiber Rookie Evaluation Heuristics Engine v1.0
+
+**Machine Learning from Historical Patterns**: Tiber now learns from 2024 rookie WR success cases (Malik Nabers, Brian Thomas Jr., Ladd McConkey) to refine 2025 class evaluations.
+
+**Case Study Integration**: 
+- `rookie_success_case_studies_2024.json` - Training data file with college stats, draft capital, traits, and rookie impact
+- **Malik Nabers Pattern**: Top 10 pick + explosive college production (89 rec, 1569 yards) = Tier 1 immediate impact
+- **Brian Thomas Jr. Pattern**: Late Round 1 + athletic vertical threat (68 rec, 1177 yards, 17 TDs) = Tier 2 boom-bust ceiling
+- **Ladd McConkey Pattern**: Round 2 + low volume but elite traits (30 rec, 478 yards) = Tier 3 PPR floor success
+
+**Heuristics Engine Components**:
+1. **Draft Capital Patterns**: Top 10 vs Late R1 vs Round 2 success rates and impact correlation
+2. **Production Thresholds**: High volume (80+ rec) vs moderate (50-79) vs low volume (<50) analysis
+3. **Trait Combinations**: Athletic, explosive, separator, route runner success pattern mapping
+4. **Landing Spot Contexts**: Weak WR corps opportunity vs competition scenarios vs offensive systems
+
+**Enhanced Rookie Evaluator**: 
+- **Luther Burden Analysis**: +5 tier weight boost based on Round 2 success precedent, CHI opportunity, athletic profile
+- **Pattern Matching**: Round 2 success precedent (McConkey), weak WR corps opportunity (CHI), athletic upside precedent
+- **Confidence Modifiers**: 100% confidence with multiple pattern matches, 90% for edge cases with context flags
+- **API Integration**: `/api/enhanced-rookie/evaluate-all`, `/api/enhanced-rookie/luther-burden-analysis`, `/api/enhanced-rookie/pattern-matches`
+
+**Machine Learning Logic**: Does not override base rankings but provides heuristic adjustments and confidence modifiers for edge-case scenarios (poor scheme fits, injury history, boom-bust traits). Uses historical precedent to inform weighting decisions rather than replacing dynasty tier classifications.
+
 ## 🧱 Stack
 - Python / Flask
 - Jinja2 Templates with Base Template System

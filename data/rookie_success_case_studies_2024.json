@@ -1,0 +1,56 @@
+[
+  {
+    "player_name": "Malik Nabers",
+    "nfl_team": "NYG",
+    "position": "WR",
+    "draft_class": 2024,
+    "draft_capital": "Round 1 (Top 10)",
+    "college_stats": {
+      "2023": {
+        "receptions": 89,
+        "receiving_yards": 1569,
+        "touchdowns": 14
+      }
+    },
+    "rookie_projection": "Immediate WR1 usage on weak WR corps",
+    "traits": ["explosive", "yards-after-catch", "alpha traits"],
+    "rookie_impact": "High-end breakout candidate",
+    "dynasty_tier": "Tier 1"
+  },
+  {
+    "player_name": "Brian Thomas Jr.",
+    "nfl_team": "JAX",
+    "position": "WR",
+    "draft_class": 2024,
+    "draft_capital": "Round 1 (Late)",
+    "college_stats": {
+      "2023": {
+        "receptions": 68,
+        "receiving_yards": 1177,
+        "touchdowns": 17
+      }
+    },
+    "rookie_projection": "Competes for WR1 usage with Ridley gone",
+    "traits": ["athletic", "vertical threat", "contested catch"],
+    "rookie_impact": "Boom-bust ceiling WR2/Flex",
+    "dynasty_tier": "Tier 2"
+  },
+  {
+    "player_name": "Ladd McConkey",
+    "nfl_team": "LAC",
+    "position": "WR",
+    "draft_class": 2024,
+    "draft_capital": "Round 2",
+    "college_stats": {
+      "2023": {
+        "receptions": 30,
+        "receiving_yards": 478,
+        "touchdowns": 2
+      }
+    },
+    "rookie_projection": "Slot/PPR floor in a rebuilding WR room",
+    "traits": ["separator", "high IQ", "precise route runner"],
+    "rookie_impact": "Immediate PPR flex candidate",
+    "dynasty_tier": "Tier 3"
+  }
+]
