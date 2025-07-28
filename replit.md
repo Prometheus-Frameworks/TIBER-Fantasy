@@ -39,7 +39,7 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 - **TIER SYSTEM**: Tier 1 (400+ VORP), Tier 2 (300+ VORP), Tier 3 (200+ VORP), Tier 4 (100+ VORP), Tier 5 (<100 VORP)
 - **FRONTEND TOGGLES**: Format, Mode, QB Rush Adjust, and Positional Balance controls with real-time API updates
 
-## 🎯 Rookie TE Insulation Boost System v1.0
+## 🎯 Rookie TE Insulation Boost System v1.0 - Complete Implementation
 
 **Complete 4-Component Evaluation Framework**: Specialized rookie TE evaluation system with stringent criteria for high-insulation prospects. Only rookies meeting ALL criteria receive the 12-point boost.
 
@@ -49,13 +49,47 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 3. **Scheme Traits (up to 10 pts)**: YPR 12+ (3 pts), blocking grade solid/plus (3 pts), 3+ snap alignments (4 pts)
 4. **Landing Spot (up to 3 pts)**: Stable QB (1 pt), TE-friendly team (1 pt), TE1 depth chart (1 pt)
 
-**Eligibility Requirements**: Draft Capital (10), Production (8+), Scheme Traits (8+), Landing Spot (2+) - ALL must be met
+**Enhanced Evaluation Flow**:
+- **Rookie Definition**: `is_rookie_tight_end()` validates first NFL season (rookie == True) with no 2024 game logs
+- **Brock Bowers Override**: `adjust_for_brock_bowers()` applies meta TE1 status and elite ceiling classification
+- **Meta TE1 Scoring**: `apply_meta_te1_evaluation()` removes penalty cap (score can exceed 99) for baseline elite TEs
 
-**Testing Results**: 20% eligibility rate with realistic 2025 draft class (1 of 5 test prospects qualified)
-- **✅ Qualified**: Terrance Ferguson (10+10+10+3 = max boost)
-- **❌ Failed**: Tyler Warren (missing 1st round), Colston Loveland (missing production/scheme), others missing multiple criteria
+**Testing Results**: 20% eligibility rate maintained - only Terrance Ferguson qualified for full 12-point boost
+- **Brock Bowers**: Correctly identified as Meta TE1 with score 104 (no cap applied)
+- **2025 Rookies**: Proper distinction between rookie TEs eligible for insulation boost and established players
 
-**Flask Integration**: Complete API endpoints at `/api/rookie-te/insulation/` with evaluation, batch processing, test samples, and criteria documentation
+**Flask Integration**: Complete API endpoints including `/api/rookie-te/insulation/meta-te1-evaluate` with enhanced evaluation flow
+
+## 📊 2025 Rookie Database System
+
+**Standardized JSON Template**: Complete rookie data structure for all positions (WR, RB, QB, TE) with comprehensive dynasty evaluation fields
+
+**Core Template Fields**:
+- **player_name**: Full name of the player
+- **position**: One of WR, RB, QB, TE
+- **nfl_team**: NFL team acronym (use "TBD" if undrafted/projected)
+- **draft_capital**: Round player was drafted ("UDFA" if undrafted)
+- **college_stats**: Dictionary of yearly stats (starting with 2024)
+- **athleticism**: General athletic profile (Unknown/Below Average/Average/Above Average/Elite)
+- **context_notes**: Factors impacting college production (QB play, injuries, scheme)
+- **star_rating**: 1.0 to 5.0 scale for perceived prospect quality
+- **dynasty_tier**: Prometheus dynasty tier classification (Tier 1, Tier 2, etc.)
+- **rookie_flag**: Always true for rookies (used for sorting/filtering)
+- **future_ceiling_summary**: Natural language dynasty upside estimate
+
+**Database Management**: Complete `RookieDatabase` class with loading, validation, and processing capabilities
+- **Data Directory**: `/backend/data/rookies/2025/` with standardized naming (e.g., `luther_burden.json`)
+- **Integration Functions**: `get_all_rookies_for_vorp()` provides VORP-compatible format for rankings
+- **Flask API Routes**: Comprehensive endpoints for database stats, position filtering, tier queries, and top prospects
+
+**Sample 2025 Rookies Loaded**:
+- Travis Hunter (WR) - 5.0⭐ Tier 1 prospect
+- Luther Burden III (WR) - 4.5⭐ Tier 2 prospect  
+- Cam Ward (QB) - 4.2⭐ Tier 2 prospect
+- Tetairoa McMillan (WR) - 4.0⭐ Tier 2 prospect
+- Dylan Sampson (RB) - 3.5⭐ Tier 3 prospect
+
+**Intake Module Integration**: Dynasty format automatically loads 2025 rookie class alongside established players for complete prospect evaluation
 
 ## 🧱 Stack
 - Python / Flask

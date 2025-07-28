@@ -6,6 +6,7 @@ Provides centralized player data loading with format-aware processing.
 """
 
 from typing import List, Dict
+from modules.rookie_database import get_all_rookies_for_vorp
 
 
 def get_all_players(format_type: str = 'dynasty') -> List[Dict]:
@@ -18,7 +19,16 @@ def get_all_players(format_type: str = 'dynasty') -> List[Dict]:
     Returns:
         List of player dictionaries with required fields
     """
-    # Base player dataset
+    # Load 2025 rookie class for dynasty format
+    rookies = []
+    if format_type == 'dynasty':
+        try:
+            rookies = get_all_rookies_for_vorp(format_type)
+            print(f"✅ Loaded {len(rookies)} rookies from 2025 draft class")
+        except Exception as e:
+            print(f"⚠️ Failed to load rookies: {e}")
+    
+    # Base established player dataset
     base_players = [
         {'name': 'Josh Allen', 'position': 'QB', 'team': 'BUF', 'projected_points': 285.5, 'age': 28},
         {'name': 'Christian McCaffrey', 'position': 'RB', 'team': 'SF', 'projected_points': 245.2, 'age': 28},
@@ -42,10 +52,13 @@ def get_all_players(format_type: str = 'dynasty') -> List[Dict]:
         {'name': 'Jayden Daniels', 'position': 'QB', 'team': 'WAS', 'projected_points': 255.0, 'age': 24}
     ]
     
+    # Combine established players with rookies for dynasty
+    all_players = base_players + rookies
+    
     # Apply format-specific adjustments
     if format_type == 'dynasty':
         # Dynasty format - no immediate adjustments, age will factor into VORP
-        return base_players
+        return all_players
     
     elif format_type == 'ppr':
         # PPR format - boost pass-catching players

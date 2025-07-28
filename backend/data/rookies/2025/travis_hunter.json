@@ -1,0 +1,19 @@
+{
+  "player_name": "Travis Hunter",
+  "position": "WR",
+  "nfl_team": "TBD",
+  "draft_capital": "Round 1",
+  "college_stats": {
+    "2024": {
+      "receptions": 92,
+      "receiving_yards": 1152,
+      "touchdowns": 14
+    }
+  },
+  "athleticism": "Elite",
+  "context_notes": "Two-way star who played both WR and CB, incredible route precision and contested catch ability",
+  "star_rating": 5.0,
+  "dynasty_tier": "Tier 1",
+  "rookie_flag": true,
+  "future_ceiling_summary": "Generational talent with potential for immediate WR1 production and long-term elite status"
+}

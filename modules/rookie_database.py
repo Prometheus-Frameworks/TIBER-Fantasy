@@ -1,134 +1,231 @@
+#!/usr/bin/env python3
 """
-Rookie Database - 2025 NFL Draft Class Management
-Complete 52-player rookie database with comprehensive position coverage
+Rookie Database Management Module
+Handles loading, validation, and processing of 2025 rookie class data.
+Integrates with standardized JSON template for comprehensive prospect evaluation.
 """
 
 import json
 import os
-from typing import List, Dict, Any, Optional
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass
+from pathlib import Path
+
+@dataclass
+class RookiePlayer:
+    """Standardized rookie player data structure"""
+    player_name: str
+    position: str
+    nfl_team: str
+    draft_capital: str
+    college_stats: Dict[str, Dict[str, int]]
+    athleticism: str
+    context_notes: str
+    star_rating: float
+    dynasty_tier: str
+    rookie_flag: bool
+    future_ceiling_summary: str
+    
+    def __post_init__(self):
+        """Validate data after initialization"""
+        if self.position not in ['WR', 'RB', 'QB', 'TE']:
+            raise ValueError(f"Invalid position: {self.position}")
+        
+        if not (1.0 <= self.star_rating <= 5.0):
+            raise ValueError(f"Star rating must be between 1.0-5.0: {self.star_rating}")
+        
+        if self.athleticism not in ['Unknown', 'Below Average', 'Average', 'Above Average', 'Elite']:
+            raise ValueError(f"Invalid athleticism rating: {self.athleticism}")
 
 class RookieDatabase:
-    def __init__(self):
-        self.json_path = os.path.join('data', 'rookies.json')
-        self._rookie_data = None
-        
-    def get_rookies(self, position: str = 'all') -> List[Dict[str, Any]]:
-        """
-        Get rookies filtered by position
-        
-        Args:
-            position: 'QB', 'RB', 'WR', 'TE', 'K', or 'all'
-            
-        Returns:
-            List of rookie players
-        """
-        if self._rookie_data is None:
-            self._load_rookie_data()
-            
-        if position == 'all':
-            return self._rookie_data
-            
-        # Filter by position (handle multi-position players)
-        filtered_rookies = []
-        for rookie in self._rookie_data:
-            player_positions = rookie.get('position', '').split(',')
-            player_positions = [pos.strip() for pos in player_positions]
-            
-            if position in player_positions:
-                filtered_rookies.append(rookie)
-                
-        return filtered_rookies
+    """
+    Manages 2025 rookie class data with comprehensive loading and filtering capabilities.
+    Supports position-specific queries, tier filtering, and dynasty evaluation integration.
+    """
     
-    def _load_rookie_data(self):
-        """Load rookie data from JSON file"""
-        try:
-            with open(self.json_path, 'r') as f:
-                self._rookie_data = json.load(f)
-                
-            print(f"🔥 Loaded {len(self._rookie_data)} rookies from 2025 draft class")
-            
-            # Show position breakdown
-            position_counts = {}
-            adp_range = {'min': 999, 'max': 0}
-            
-            for rookie in self._rookie_data:
-                positions = rookie.get('position', '').split(',')
-                for pos in positions:
-                    pos = pos.strip()
-                    position_counts[pos] = position_counts.get(pos, 0) + 1
-                    
-                # Track ADP range
-                adp = rookie.get('adp', 999)
-                if adp < adp_range['min']:
-                    adp_range['min'] = adp
-                if adp > adp_range['max']:
-                    adp_range['max'] = adp
-                    
-            print(f"📊 Position breakdown: {position_counts}")
-            print(f"📈 ADP range: {adp_range['min']} - {adp_range['max']}")
-            
-        except FileNotFoundError:
-            print(f"❌ Rookie JSON file not found: {self.json_path}")
-            self._rookie_data = []
-        except Exception as e:
-            print(f"❌ Error loading rookie JSON: {str(e)}")
-            self._rookie_data = []
+    def __init__(self, data_directory: str = "backend/data/rookies/2025"):
+        self.data_directory = Path(data_directory)
+        self.rookies: Dict[str, RookiePlayer] = {}
+        self._load_all_rookies()
     
-    def get_rookie_by_name(self, player_name: str) -> Dict[str, Any]:
+    def _load_all_rookies(self) -> None:
+        """Load all rookie JSON files from the data directory"""
+        if not self.data_directory.exists():
+            print(f"⚠️ Rookie data directory not found: {self.data_directory}")
+            return
+        
+        json_files = list(self.data_directory.glob("*.json"))
+        
+        for json_file in json_files:
+            try:
+                with open(json_file, 'r') as f:
+                    data = json.load(f)
+                
+                rookie = RookiePlayer(**data)
+                player_key = self._create_player_key(rookie.player_name)
+                self.rookies[player_key] = rookie
+                
+            except Exception as e:
+                print(f"❌ Failed to load {json_file.name}: {e}")
+        
+        print(f"✅ Loaded {len(self.rookies)} rookies from 2025 draft class")
+    
+    def _create_player_key(self, player_name: str) -> str:
+        """Create standardized key from player name"""
+        return player_name.lower().replace(" ", "_").replace(".", "")
+    
+    def get_rookie_by_name(self, player_name: str) -> Optional[RookiePlayer]:
         """Get specific rookie by name"""
-        if self._rookie_data is None:
-            self._load_rookie_data()
-            
-        for rookie in self._rookie_data:
-            # Check both 'name' and 'player_name' fields
-            name = rookie.get('name') or rookie.get('player_name')
-            if name and name.lower() == player_name.lower():
-                return rookie
-                
-        return {}
+        key = self._create_player_key(player_name)
+        return self.rookies.get(key)
     
-    def get_top_rookies_by_adp(self, limit: int = 20) -> List[Dict[str, Any]]:
-        """Get top rookies by ADP (lowest ADP = highest draft position)"""
-        if self._rookie_data is None:
-            self._load_rookie_data()
-            
-        sorted_rookies = sorted(self._rookie_data, key=lambda x: x.get('adp', 999))
+    def get_rookies_by_position(self, position: str) -> List[RookiePlayer]:
+        """Get all rookies at specific position"""
+        if position not in ['WR', 'RB', 'QB', 'TE']:
+            return []
+        
+        return [rookie for rookie in self.rookies.values() 
+                if rookie.position == position]
+    
+    def get_rookies_by_tier(self, dynasty_tier: str) -> List[RookiePlayer]:
+        """Get all rookies in specific dynasty tier"""
+        return [rookie for rookie in self.rookies.values() 
+                if rookie.dynasty_tier == dynasty_tier]
+    
+    def get_top_prospects(self, limit: int = 10) -> List[RookiePlayer]:
+        """Get top prospects by star rating"""
+        sorted_rookies = sorted(self.rookies.values(), 
+                              key=lambda x: x.star_rating, reverse=True)
         return sorted_rookies[:limit]
     
-    def get_rookies_by_position_stats(self) -> Dict[str, Dict[str, Any]]:
-        """Get statistical breakdown by position"""
-        if self._rookie_data is None:
-            self._load_rookie_data()
+    def get_all_rookies(self) -> List[RookiePlayer]:
+        """Get all loaded rookies"""
+        return list(self.rookies.values())
+    
+    def add_rookie(self, rookie_data: Dict[str, Any]) -> bool:
+        """Add new rookie to database and save to JSON file"""
+        try:
+            rookie = RookiePlayer(**rookie_data)
+            player_key = self._create_player_key(rookie.player_name)
             
-        position_stats = {}
+            # Add to in-memory database
+            self.rookies[player_key] = rookie
+            
+            # Save to JSON file
+            filename = f"{player_key}.json"
+            file_path = self.data_directory / filename
+            
+            with open(file_path, 'w') as f:
+                json.dump(rookie_data, f, indent=2)
+            
+            print(f"✅ Added rookie: {rookie.player_name} to database")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Failed to add rookie: {e}")
+            return False
+    
+    def get_database_stats(self) -> Dict[str, Any]:
+        """Get comprehensive database statistics"""
+        if not self.rookies:
+            return {"total_rookies": 0}
         
-        for rookie in self._rookie_data:
-            positions = rookie.get('position', '').split(',')
-            for pos in positions:
-                pos = pos.strip()
-                if pos not in position_stats:
-                    position_stats[pos] = {
-                        'count': 0,
-                        'avg_adp': 0,
-                        'top_prospect': None,
-                        'adp_range': {'min': 999, 'max': 0}
-                    }
-                
-                stats = position_stats[pos]
-                stats['count'] += 1
-                
-                adp = rookie.get('adp', 999)
-                if adp < stats['adp_range']['min']:
-                    stats['adp_range']['min'] = adp
-                    stats['top_prospect'] = rookie.get('name') or rookie.get('player_name')
-                if adp > stats['adp_range']['max']:
-                    stats['adp_range']['max'] = adp
+        position_counts = {}
+        tier_counts = {}
+        athleticism_counts = {}
         
-        # Calculate average ADPs
-        for pos in position_stats:
-            pos_rookies = self.get_rookies(pos)
-            if pos_rookies:
-                avg_adp = sum(r.get('adp', 999) for r in pos_rookies) / len(pos_rookies)
-                position_stats[pos]['avg_adp'] = round(avg_adp, 1)
-                
-        return position_stats
+        for rookie in self.rookies.values():
+            # Position distribution
+            position_counts[rookie.position] = position_counts.get(rookie.position, 0) + 1
+            
+            # Tier distribution
+            tier_counts[rookie.dynasty_tier] = tier_counts.get(rookie.dynasty_tier, 0) + 1
+            
+            # Athleticism distribution
+            athleticism_counts[rookie.athleticism] = athleticism_counts.get(rookie.athleticism, 0) + 1
+        
+        avg_star_rating = sum(r.star_rating for r in self.rookies.values()) / len(self.rookies)
+        
+        return {
+            "total_rookies": len(self.rookies),
+            "position_distribution": position_counts,
+            "tier_distribution": tier_counts,
+            "athleticism_distribution": athleticism_counts,
+            "average_star_rating": round(avg_star_rating, 2),
+            "top_prospect": max(self.rookies.values(), key=lambda x: x.star_rating).player_name
+        }
+
+def get_all_rookies_for_vorp(format_type: str = "dynasty") -> List[Dict[str, Any]]:
+    """
+    Integration function for VORP calculator.
+    Returns rookie data in format compatible with existing VORP system.
+    """
+    db = RookieDatabase()
+    rookies = db.get_all_rookies()
+    
+    vorp_format_rookies = []
+    
+    for rookie in rookies:
+        # Convert to VORP-compatible format
+        vorp_rookie = {
+            "player_id": f"rookie_{rookie.player_name.lower().replace(' ', '_')}",
+            "name": rookie.player_name,
+            "position": rookie.position,
+            "team": rookie.nfl_team if rookie.nfl_team != "TBD" else "FA",
+            "projected_fpts": _estimate_rookie_projection(rookie),
+            "age": 22,  # Standard rookie age
+            "dynasty_tier": rookie.dynasty_tier,
+            "star_rating": rookie.star_rating,
+            "rookie_flag": True
+        }
+        vorp_format_rookies.append(vorp_rookie)
+    
+    return vorp_format_rookies
+
+def _estimate_rookie_projection(rookie: RookiePlayer) -> float:
+    """
+    Estimate fantasy projection based on star rating and position.
+    Conservative estimates for rookie fantasy points.
+    """
+    position_baselines = {
+        "QB": {"base": 180, "multiplier": 40},  # QB12-QB1 range
+        "RB": {"base": 120, "multiplier": 30},  # RB24-RB6 range  
+        "WR": {"base": 100, "multiplier": 25},  # WR36-WR12 range
+        "TE": {"base": 80, "multiplier": 20}    # TE12-TE6 range
+    }
+    
+    if rookie.position not in position_baselines:
+        return 50.0
+    
+    baseline = position_baselines[rookie.position]
+    projection = baseline["base"] + (rookie.star_rating * baseline["multiplier"])
+    
+    return round(projection, 1)
+
+# Global database instance
+rookie_db = RookieDatabase()
+
+if __name__ == "__main__":
+    # Test database functionality
+    db = RookieDatabase()
+    stats = db.get_database_stats()
+    
+    print("🏈 2025 ROOKIE DATABASE STATS")
+    print("=" * 40)
+    print(f"Total Rookies: {stats['total_rookies']}")
+    print(f"Top Prospect: {stats.get('top_prospect', 'None')}")
+    print(f"Average Star Rating: {stats.get('average_star_rating', 0)}")
+    
+    if stats['total_rookies'] > 0:
+        print("\n📊 Position Distribution:")
+        for pos, count in stats['position_distribution'].items():
+            print(f"  {pos}: {count}")
+        
+        print("\n🏆 Dynasty Tier Distribution:")
+        for tier, count in stats['tier_distribution'].items():
+            print(f"  {tier}: {count}")
+        
+        print("\n⚡ Top 3 Prospects:")
+        top_prospects = db.get_top_prospects(3)
+        for i, prospect in enumerate(top_prospects, 1):
+            print(f"  {i}. {prospect.player_name} ({prospect.position}) - {prospect.star_rating}⭐")
