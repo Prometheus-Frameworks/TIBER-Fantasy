@@ -207,11 +207,10 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 4. **Premium WR Override**: Apply special logic for 1st round picks with elite metrics
 5. **Target Range Adjustment**: Calculate final expected target range based on all factors
 
-**Luther Burden Case Study Results**:
-- **CHI Team Context**: 2 high-volume departures (185 total targets), 2 new arrivals (low threat)
-- **RB Overlap**: D'Andre Swift slot competition detected (22% usage rate, 45 targets)
-- **Premium Override**: Applied for Round 2 + 4.5⭐ rating + elite college production
-- **Final Assessment**: High opportunity (80-120 target range), manageable competition
+**Authentic Target Competition Examples**:
+- **Luther Burden (CHI)**: High competition from established weapons (DJ Moore, Rome Odunze, Colston Loveland) - may open as WR3/slot-only despite talent
+- **Travis Hunter (JAX)**: Low competition with 200+ vacated targets from departures (Kirk, Davis, Engram) - immediate WR1 opportunity with Brian Thomas Jr. comparison
+- **Jaylen Waddle (MIA)**: RB overlap scenario where De'Von Achane's slot usage (28% rate, 58 targets) reduces WR target ceiling in RB-heavy system
 
 **Cross-Reference Validation Framework**:
 - **Departure Analysis**: Previous season target counts with 50+ threshold validation

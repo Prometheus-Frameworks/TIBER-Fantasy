@@ -1,0 +1,41 @@
+[
+  {
+    "player_name": "Luther Burden",
+    "team": "CHI",
+    "competition_context": {
+      "high_competition": true,
+      "departures": [],
+      "arrivals": [],
+      "rb_overlap": false,
+      "overlap_with": null,
+      "notables": ["DJ Moore", "Rome Odunze", "Colston Loveland"],
+      "notes": "Three established weapons will challenge Burden for targets. He may open as WR3/slot-only."
+    }
+  },
+  {
+    "player_name": "Travis Hunter",
+    "team": "JAX",
+    "competition_context": {
+      "high_competition": false,
+      "departures": ["Christian Kirk", "Gabe Davis", "Evan Engram"],
+      "arrivals": ["Dyami Brown"],
+      "rb_overlap": false,
+      "overlap_with": null,
+      "notables": ["Brian Thomas Jr"],
+      "notes": "Vacated over 200+ targets. Hunter's elite profile and draft capital point to immediate WR1 opportunity. Brian Thomas Jr provides elite WR1 target comparison."
+    }
+  },
+  {
+    "player_name": "Jaylen Waddle",
+    "team": "MIA",
+    "competition_context": {
+      "high_competition": false,
+      "departures": [],
+      "arrivals": [],
+      "rb_overlap": true,
+      "overlap_with": "De'Von Achane",
+      "notables": [],
+      "notes": "Achane's role in short passing game reduced Waddle's target ceiling. WR2s in RB-heavy systems require adjusted expectations."
+    }
+  }
+]
