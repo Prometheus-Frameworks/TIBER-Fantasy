@@ -1,0 +1,58 @@
+[
+    {
+        "name": "Travis Hunter",
+        "position": "WR",
+        "tier": 1,
+        "team": "JAX",
+        "dynasty_score": 95
+    },
+    {
+        "name": "Luther Burden III",
+        "position": "WR",
+        "tier": 2,
+        "team": "CHI",
+        "dynasty_score": 88
+    },
+    {
+        "name": "Tetairoa McMillan",
+        "position": "WR",
+        "tier": 2,
+        "team": "ARI",
+        "dynasty_score": 85
+    },
+    {
+        "name": "Cam Ward",
+        "position": "QB",
+        "tier": 2,
+        "team": "MIA",
+        "dynasty_score": 82
+    },
+    {
+        "name": "Dylan Sampson",
+        "position": "RB",
+        "tier": 3,
+        "team": "TEN",
+        "dynasty_score": 78
+    },
+    {
+        "name": "Colston Loveland",
+        "position": "TE",
+        "tier": 2,
+        "team": "CHI",
+        "dynasty_score": 80
+    },
+    {
+        "name": "Emeka Egbuka",
+        "position": "WR",
+        "tier": 2,
+        "team": "TB",
+        "dynasty_score": 83
+    },
+    {
+        "name": "Will Campbell",
+        "position": "RB",
+        "tier": 3,
+        "team": "HOU",
+        "dynasty_score": 75
+    }
+]

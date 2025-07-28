@@ -136,6 +136,14 @@ try:
 except Exception as e:
     print(f"❌ Enhanced Rookie Evaluation Blueprint registration failed: {e}")
 
+# Import and register Tiers2025Display blueprint
+try:
+    from components.Tiers2025Display import tiers_bp
+    app.register_blueprint(tiers_bp)
+    print("✅ Tiers2025Display Blueprint registered successfully")
+except Exception as e:
+    print(f"❌ Tiers2025Display Blueprint registration failed: {e}")
+
 # Initialize core modules for legacy endpoints
 wr_processor = WRRatingsProcessor()
 rookie_db = RookieDatabase()

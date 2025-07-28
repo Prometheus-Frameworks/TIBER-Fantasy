@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2025 Dynasty Tiers - On The Clock</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .header p {
+            margin: 10px 0 0;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .position-section {
+            margin-bottom: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .position-header {
+            padding: 20px;
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: white;
+            text-align: center;
+        }
+        
+        .position-header.QB { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+        .position-header.RB { background: linear-gradient(135deg, #4ecdc4, #44a08d); }
+        .position-header.WR { background: linear-gradient(135deg, #45b7d1, #96c93d); }
+        .position-header.TE { background: linear-gradient(135deg, #f9ca24, #f0932b); }
+        
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .player-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #ddd;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .player-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .player-card.tier-1 { border-left-color: #e74c3c; }
+        .player-card.tier-2 { border-left-color: #f39c12; }
+        .player-card.tier-3 { border-left-color: #f1c40f; }
+        .player-card.tier-4 { border-left-color: #2ecc71; }
+        .player-card.tier-5 { border-left-color: #3498db; }
+        
+        .player-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            color: #2c3e50;
+        }
+        
+        .player-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .player-team {
+            background: #ecf0f1;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #7f8c8d;
+        }
+        
+        .tier-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .tier-badge.tier-1 { background: #e74c3c; }
+        .tier-badge.tier-2 { background: #f39c12; }
+        .tier-badge.tier-3 { background: #f1c40f; color: #333; }
+        .tier-badge.tier-4 { background: #2ecc71; }
+        .tier-badge.tier-5 { background: #3498db; }
+        
+        .dynasty-score {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2c3e50;
+            text-align: center;
+            margin-top: 8px;
+        }
+        
+        .score-label {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            text-align: center;
+            margin-top: -5px;
+        }
+        
+        .no-players {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .position-header { font-size: 1.5rem; }
+            .players-grid { 
+                grid-template-columns: 1fr;
+                padding: 15px;
+            }
+            .player-card { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏆 2025 Dynasty Tiers</h1>
+        <p>Player rankings organized by position and dynasty value</p>
+    </div>
+
+    {% if grouped %}
+        {% for position, players in grouped.items() %}
+        <div class="position-section">
+            <div class="position-header {{ position }}">
+                {{ position }} - {{ players|length }} Players
+            </div>
+            
+            {% if players %}
+            <div class="players-grid">
+                {% for player in players %}
+                <div class="player-card tier-{{ player.tier }}">
+                    <h3 class="player-name">{{ player.name }}</h3>
+                    
+                    <div class="player-details">
+                        <span class="player-team">{{ player.team }}</span>
+                        <span class="tier-badge tier-{{ player.tier }}">Tier {{ player.tier }}</span>
+                    </div>
+                    
+                    <div class="dynasty-score">{{ player.dynasty_score }}</div>
+                    <div class="score-label">Dynasty Score</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="no-players">No players available for this position</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="position-section">
+        <div class="no-players">
+            <h3>No tier data available</h3>
+            <p>Please check that the tier data file exists and contains valid player information.</p>
+        </div>
+    </div>
+    {% endif %}
+</body>
+</html>
