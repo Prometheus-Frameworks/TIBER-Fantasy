@@ -46,7 +46,14 @@ try:
     print("✅ VORP Deltas Blueprint registered successfully")
 except Exception as e:
     print(f"❌ VORP Deltas Blueprint registration failed: {e}")
-app.register_blueprint(rookie_bp)
+
+# Import and register rookie TE insulation blueprint
+try:
+    from routes.rookie_te_insulation import rookie_te_bp
+    app.register_blueprint(rookie_te_bp)
+    print("✅ Rookie TE Insulation Blueprint registered successfully")
+except Exception as e:
+    print(f"❌ Rookie TE Insulation Blueprint registration failed: {e}")
 
 # Initialize core modules for legacy endpoints
 wr_processor = WRRatingsProcessor()

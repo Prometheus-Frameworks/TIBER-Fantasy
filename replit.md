@@ -6,7 +6,7 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 
 ## 🔥 Current State - COMPLETE FLASK MODULAR RESTRUCTURE
 - **FULL FLASK ARCHITECTURE**: Complete transition from Node.js/TypeScript to modular Flask structure
-- **ORGANIZED MODULE SYSTEM**: Core logic in `/modules/` with rankings_engine.py, wr_ratings_processor.py, rookie_database.py, vorp_calculator.py
+- **ORGANIZED MODULE SYSTEM**: Core logic in `/modules/` with rankings_engine.py, wr_ratings_processor.py, rookie_database.py, vorp_calculator.py, rookie_te_insulation.py
 - **CLEAN DATA ORGANIZATION**: All JSON/CSV files consolidated in `/data/` directory for easy access
 - **TEMPLATE SYSTEM**: Full Jinja2 template structure with base.html, index.html, rankings.html
 - **STATIC ASSETS**: Organized CSS/JS in `/static/` with responsive design and interactive features
@@ -28,6 +28,7 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 - **ENHANCED VORP RANKINGS SYSTEM**: Dynasty mode, age penalties, positional filtering, FLEX allocation
 - **TIER-BASED RANKINGS FRONTEND**: Dynamic tier grouping with automatic fallback to flat list
 - **MODULAR API ENDPOINTS**: Position-specific and mode-specific routes fully operational
+- **ROOKIE TE INSULATION BOOST SYSTEM v1.0**: Specialized evaluation framework for rookie TEs with 4-component scoring (Draft Capital, Production, Scheme Traits, Landing Spot) providing up to 12-point boost for high-insulation prospects
 - **3-TIER FALLBACK OPERATIONAL**: 2025 Projections → League Matchups → RB Static Dataset (76 players)
 - **Dynasty Age Penalties**: RB >25 years (1%/year), WR >28 years (1%/year), QB/TE >30 years (0.5%/year)
 - **Conservative Scarcity Weighting**: Capped at 1.3x multiplier to prevent VORP inflation
@@ -37,6 +38,24 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 - **FORMAT-AWARE SCALING**: Superflex (QB 1.3x, RB 1.1x, WR 1.1x, TE 1.0x) vs 1QB (QB 0.7x, RB 1.2x, WR 1.3x, TE 1.1x)
 - **TIER SYSTEM**: Tier 1 (400+ VORP), Tier 2 (300+ VORP), Tier 3 (200+ VORP), Tier 4 (100+ VORP), Tier 5 (<100 VORP)
 - **FRONTEND TOGGLES**: Format, Mode, QB Rush Adjust, and Positional Balance controls with real-time API updates
+
+## 🎯 Rookie TE Insulation Boost System v1.0
+
+**Complete 4-Component Evaluation Framework**: Specialized rookie TE evaluation system with stringent criteria for high-insulation prospects. Only rookies meeting ALL criteria receive the 12-point boost.
+
+**Core Evaluation Components**:
+1. **Draft Capital (10 pts max)**: Must be 1st round pick (all-or-nothing)
+2. **Production (8-10 pts)**: 800+ college receiving yards + 20% target share OR 60+ receptions
+3. **Scheme Traits (up to 10 pts)**: YPR 12+ (3 pts), blocking grade solid/plus (3 pts), 3+ snap alignments (4 pts)
+4. **Landing Spot (up to 3 pts)**: Stable QB (1 pt), TE-friendly team (1 pt), TE1 depth chart (1 pt)
+
+**Eligibility Requirements**: Draft Capital (10), Production (8+), Scheme Traits (8+), Landing Spot (2+) - ALL must be met
+
+**Testing Results**: 20% eligibility rate with realistic 2025 draft class (1 of 5 test prospects qualified)
+- **✅ Qualified**: Terrance Ferguson (10+10+10+3 = max boost)
+- **❌ Failed**: Tyler Warren (missing 1st round), Colston Loveland (missing production/scheme), others missing multiple criteria
+
+**Flask Integration**: Complete API endpoints at `/api/rookie-te/insulation/` with evaluation, batch processing, test samples, and criteria documentation
 
 ## 🧱 Stack
 - Python / Flask
