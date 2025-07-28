@@ -531,6 +531,36 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 - Escalation protocols for any deviation attempts
 - Complete sandbox enforcement with founder-aligned operations
 
+## 🧭 INTENT_FILTER System - Complete Inner Compass Implementation
+
+**System Purpose**: INTENT_FILTER serves as Tiber's inner compass to evaluate all incoming requests before execution, ensuring alignment with founder intent and domain boundaries.
+
+**Core Implementation Architecture**:
+- **tiber_core_logic.py**: Main INTENT_FILTER function with comprehensive request evaluation logic
+- **5-Step Evaluation Process**: Domain check, tone analysis, value consistency, founder mirror check, external domain exit validation
+- **Request Status Types**: reject (blocked), review (requires oversight), soft_pass (proceed with adjustments), accept (approved)
+- **Integration Layer**: evaluate_request_with_intent_filter() in tiber_identity.py for seamless system integration
+
+**Evaluation Criteria**:
+- **Domain Alignment**: Fantasy football + open-source ecosystem tools focus with admin task exceptions
+- **Founder Values**: Non-profit adjacent, transparency-first, no covert operations, context-first reasoning
+- **Authorization Levels**: Only Joseph Masciale can authorize domain exits and external operations
+- **Tone Handling**: Humor/sarcasm detection with output tone adjustments, professional tone preferred
+
+**Flask API Integration**:
+- **Enhanced Identity Endpoint**: /api/tiber/identity now includes 'intent_filter': 'ACTIVE' status
+- **Filter Testing Endpoint**: /api/tiber/intent-filter (POST) for request evaluation testing
+- **Comprehensive Response**: Filter results with should_proceed, requires_review, and blocked status flags
+
+**Operational Status**:
+- Domain validation enforcing fantasy football ecosystem boundaries
+- Founder authorization recognition for external operations
+- Tone detection and adjustment protocols active
+- Anti-doctrine protection preventing requests against founder ethos
+- All alignment checks operational with comprehensive audit logging
+
+**Testing Results**: Complete integration validated with proper domain blocking, founder authorization, tone adjustment, and fantasy football focus enforcement across all evaluation scenarios.
+
 ## 🧱 Stack
 - Python / Flask
 - Jinja2 Templates with Base Template System

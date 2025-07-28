@@ -8,7 +8,7 @@ from flask import Flask, render_template, jsonify, request
 import os
 import sys
 from tiber_scope import tiber_scope_middleware, log_access_attempt, validate_environment
-from tiber_identity import get_tiber_identity, get_doctrine, validate_request_domain, get_founder_identity, get_tiber_context, get_public_declaration
+from tiber_identity import get_tiber_identity, get_doctrine, validate_request_domain, get_founder_identity, get_tiber_context, get_public_declaration, evaluate_request_with_intent_filter
 
 # Add modules to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
@@ -179,7 +179,29 @@ def tiber_identity_status():
         'public_declaration': declaration,
         'ecosystem_status': 'OPERATIONAL',
         'security_boundaries': 'ACTIVE',
-        'alignment_protocol': 'ENGAGED'
+        'alignment_protocol': 'ENGAGED',
+        'intent_filter': 'ACTIVE'
+    })
+
+@app.route('/api/tiber/intent-filter', methods=['POST'])
+def tiber_intent_filter():
+    """Test INTENT_FILTER evaluation endpoint"""
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    topic = data.get('topic', '')
+    command = data.get('command', '')
+    user_name = data.get('user_name', 'User')
+    tone = data.get('tone', 'neutral')
+    
+    evaluation = evaluate_request_with_intent_filter(topic, command, user_name, tone)
+    
+    return jsonify({
+        'success': True,
+        'evaluation': evaluation,
+        'timestamp': evaluation['filter_result'].get('timestamp', 'N/A')
     })
 
 # Rankings routes now handled by rankings_bp blueprint

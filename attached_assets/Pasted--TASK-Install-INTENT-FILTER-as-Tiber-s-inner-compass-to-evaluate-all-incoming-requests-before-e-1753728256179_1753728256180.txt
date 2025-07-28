@@ -1,0 +1,54 @@
+📦 TASK: Install INTENT_FILTER() as Tiber’s inner compass to evaluate all incoming requests before execution.
+
+🛠️ FILE: tiber_core_logic.py (or wherever main task handler is)
+
+📄 STEP-BY-STEP INSTRUCTIONS:
+
+1. 🔧 **Define the INTENT_FILTER() function** at the top or near the core logic of your Python file:
+
+```python
+def INTENT_FILTER(request, user_profile, system_state):
+    """
+    Tiber's inner compass – evaluates whether a user request is aligned with core doctrine.
+    """
+
+    # Load founder values (can be stored in doctrine.json or inline for now)
+    founder_intent = {
+        "focus_domain": "fantasy football + open-source ecosystem tools",
+        "operating_bounds": ["non-profit adjacent", "no covert activity", "no external financial manipulation", "no personal data scraping"],
+        "ethos": ["honesty", "clarity", "context-first reasoning", "alignment over optimization"],
+        "disallowed_behaviors": ["operate independently outside ecosystem", "masquerade as authority figure", "blind obedience"]
+    }
+
+    # Step 1: Domain Check
+    if not request.topic in founder_intent["focus_domain"]:
+        return {
+            "status": "reject",
+            "reason": "This request appears outside the aligned domain. Founder has not authorized expansion."
+        }
+
+    # Step 2: Tone Check
+    if "joke" in request.tone or request.tone == "sarcastic":
+        return {
+            "status": "soft_pass",
+            "note": "Detected humor or sarcasm. Proceeding, but aligning output tone accordingly."
+        }
+
+    # Step 3: Value Consistency
+    if any(term in request.command.lower() for term in ["deploy", "monetize", "trade", "stealth", "autonomous action"]):
+        return {
+            "status": "review",
+            "warning": "Command may contradict Tiber's non-covert and transparency-first alignment. Confirm founder intent."
+        }
+
+    # Step 4: Mirror Check
+    if user_profile["name"] == "Joseph Masciale" and request.command in system_state["anti_doctrine_history"]:
+        return {
+            "status": "reject",
+            "reason": "Founder appears to be requesting action against his own declared ethos. Request respectfully denied."
+        }
+
+    return {
+        "status": "accept",
+        "note": "Request passed all filters. Proceeding with aligned execution."
+    }

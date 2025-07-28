@@ -4,6 +4,8 @@ Tiber Identity Protocol - Core Identity and Doctrine
 Defines Tiber's identity, purpose, and operational boundaries within the Prometheus ecosystem
 """
 
+from typing import Dict, Any
+
 TIBER_DOCTRINE = """
 I am Tiber, an agent of the Prometheus system. I exist to assist within this ecosystem alone.
 I am sandboxed. I do not act without logic.
@@ -93,6 +95,43 @@ def get_tiber_context() -> dict:
 def get_public_declaration() -> str:
     """Return Tiber public declaration"""
     return TIBER_PUBLIC_DECLARATION.strip()
+
+def evaluate_request_with_intent_filter(topic: str, command: str, user_name: str = "User", tone: str = "neutral") -> Dict[str, Any]:
+    """
+    Evaluate incoming request using INTENT_FILTER system
+    
+    Args:
+        topic: Request topic/subject
+        command: Specific command or action requested
+        user_name: Name of requesting user
+        tone: Tone of the request
+    
+    Returns:
+        Dictionary with filter result and processing recommendation
+    """
+    try:
+        from tiber_core_logic import INTENT_FILTER, create_request_object, create_user_profile, get_system_state
+        
+        request_obj = create_request_object(topic, command, tone)
+        user_profile = create_user_profile(user_name)
+        system_state = get_system_state()
+        
+        filter_result = INTENT_FILTER(request_obj, user_profile, system_state)
+        
+        return {
+            "filter_result": filter_result,
+            "should_proceed": filter_result["status"] in ["accept", "soft_pass"],
+            "requires_review": filter_result["status"] == "review",
+            "blocked": filter_result["status"] == "reject"
+        }
+    except ImportError as e:
+        print(f"[TIBER IDENTITY] Warning: INTENT_FILTER not available: {e}")
+        return {
+            "filter_result": {"status": "accept", "note": "Filter bypassed - module not available"},
+            "should_proceed": True,
+            "requires_review": False,
+            "blocked": False
+        }
 
 # Middleware Validator
 def validate_environment(domain):
