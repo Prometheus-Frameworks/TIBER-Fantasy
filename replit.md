@@ -287,6 +287,41 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 
 **Tiber Alignment Integration**: Automatic filtering of absolute language ("must start" → "projects for strong usage") maintaining grounded, probabilistic analysis throughout all context generation and display.
 
+## 🎯 Dynamic Target Competition Context Generator v1.0 - Complete Installation
+
+**Module Purpose**: Evaluate a player's real-world target competition using weighted system of teammate usage, draft capital, team changes, and vacated targets with dynamic generation capabilities.
+
+**Logic Chain Processing**:
+1. **Input Analysis**: player_name, team, teammates (from depth chart), prometheus_tier, projected_targets, vacated_targets, offensive_coordinator_change
+2. **Threat Identification**: Identify projected major target earners (>=80 targets OR Tier 1/2)
+3. **Tier Assignment**: S (3+ threats) → A (2 threats) → B (1 threat) → C (no threats, 100+ vacated) → D (minimal competition)
+4. **Context Generation**: OC change evaluation, vacated target opportunity, natural language context notes
+5. **Role Projection**: Dynamic projected role based on competition tier and player skillset
+
+**Tier Mapping Framework**:
+- **S-tier**: 3+ elite or high-volume target earners (e.g., DJ Moore, Rome Odunze, Loveland)
+- **A-tier**: 2 elite target earners or one elite + 1 fringe Tier 2
+- **B-tier**: 1 major target threat
+- **C-tier**: No threats but moderate target floor expected
+- **D-tier**: Vacated room and little to no current threat
+
+**Dynamic Role Projections**:
+- **S-tier**: WR3 or flex option with weekly volatility
+- **A-tier**: WR2 with upside depending on QB play
+- **B-tier**: WR2 with floor and situational spike potential
+- **C-tier**: Clear WR2 candidate with breakout upside
+- **D-tier**: Potential WR1 breakout, massive opportunity
+
+**Enhanced Context Generation**: OC change flags, vacated target analysis, crowded target tree warnings, and opportunity identification with grounded language enforcement preventing absolute predictions.
+
+**API Endpoints Complete**:
+- `/api/target-competition-generator/evaluate` - Dynamic evaluation using team data and context factors
+- `/api/target-competition-generator/batch-evaluate` - Batch processing for multiple players
+- `/api/target-competition-generator/examples` - Input format examples and usage guidelines
+- `/api/target-competition-generator/test` - Generator validation and functionality testing
+
+**Cross-Reference Integration**: Ready for game log verification, contextNotes module integration, and Prometheus tier system deferrals per specification reminders.
+
 ## 🧱 Stack
 - Python / Flask
 - Jinja2 Templates with Base Template System

@@ -24,6 +24,15 @@ class TargetCompetitionContext:
             'D': 'Wide open depth chart — opportunity is ripe'
         }
         
+        # Tier mapping for dynamic evaluation
+        self.tier_mapping = {
+            'S': '3+ elite or high-volume target earners (e.g., DJ Moore, Rome Odunze, Loveland)',
+            'A': '2 elite target earners or one elite + 1 fringe Tier 2',
+            'B': '1 major target threat',
+            'C': 'No threats but moderate target floor expected',
+            'D': 'Vacated room and little to no current threat'
+        }
+        
         # Enhanced player database with contextual information
         self.player_contexts = {
             'Luther Burden': {
@@ -97,9 +106,95 @@ class TargetCompetitionContext:
         
         self.tcip = get_tcip_pipeline()
     
+    def target_competition_context_generator(self, player_name: str, team_data: Dict[str, Any], 
+                                           vacated_targets: int = 0, oc_change: bool = False) -> Dict[str, Any]:
+        """
+        Dynamic target competition context generator using weighted system of teammate usage,
+        draft capital, team changes, and vacated targets.
+        """
+        teammates = team_data.get('teammates', [])
+        threats = []
+        
+        # Identify projected major target earners (>=80 targets OR Tier 1/2)
+        for mate in teammates:
+            projected_targets = mate.get('projected_targets', 0)
+            prometheus_tier = mate.get('prometheus_tier', 'Tier 5')
+            
+            if projected_targets >= 80 or prometheus_tier in ['Tier 1', 'Tier 2']:
+                threats.append({
+                    'name': mate['name'],
+                    'note': mate.get('note', f"High usage or tiered threat ({projected_targets} proj targets, {prometheus_tier})")
+                })
+        
+        threat_count = len(threats)
+        
+        # Assign competition tier based on threat count and vacated targets
+        if threat_count >= 3:
+            tier = 'S'
+        elif threat_count == 2:
+            tier = 'A'
+        elif threat_count == 1:
+            tier = 'B'
+        elif threat_count == 0 and vacated_targets > 100:
+            tier = 'C'
+        else:
+            tier = 'D'
+        
+        # Generate projected role based on tier
+        projected_role_mapping = {
+            'S': 'WR3 or flex option with weekly volatility',
+            'A': 'WR2 with upside depending on QB play',
+            'B': 'WR2 with floor and situational spike potential',
+            'C': 'Clear WR2 candidate with breakout upside',
+            'D': 'Potential WR1 breakout, massive opportunity'
+        }
+        
+        projected_role = projected_role_mapping.get(tier, 'Unknown role projection')
+        
+        # Generate context note with OC change and target analysis
+        context_note = f"OC change: {'Yes' if oc_change else 'No'}. {threat_count} major threats. Vacated targets: {vacated_targets}."
+        
+        # Enhanced context for specific scenarios
+        if oc_change and vacated_targets > 50:
+            context_note += " Scheme uncertainty creates both risk and opportunity."
+        elif threat_count >= 3:
+            context_note += " Crowded target tree limits ceiling unless injuries occur."
+        elif threat_count == 0 and vacated_targets > 100:
+            context_note += " Clear path to significant target volume in depleted offense."
+        
+        return {
+            'competition_tier': tier,
+            'projected_role': projected_role,
+            'competition': threats,
+            'vacated_targets': vacated_targets,
+            'context_note': context_note,
+            'threat_count': threat_count,
+            'oc_change': oc_change,
+            'tier_reasoning': self.tier_mapping.get(tier, 'Standard evaluation'),
+            'generated_by': 'targetCompetitionContextGenerator'
+        }
+    
     def get_player_context(self, player_name: str, 
-                          include_tcip_analysis: bool = True) -> Dict[str, Any]:
-        """Get enhanced context for a specific player"""
+                          include_tcip_analysis: bool = True,
+                          team_data: Dict[str, Any] = None,
+                          vacated_targets: int = 0,
+                          oc_change: bool = False) -> Dict[str, Any]:
+        """Get enhanced context for a specific player with optional dynamic generation"""
+        
+        # If team_data provided, use dynamic generator
+        if team_data:
+            context_data = self.target_competition_context_generator(
+                player_name, team_data, vacated_targets, oc_change
+            )
+            
+            # Convert to standard format
+            context_data.update({
+                'name': player_name,
+                'team': team_data.get('team', 'TBD'),
+                'tier_definition': self.competition_tier_scale.get(context_data['competition_tier'], 'Standard competition level')
+            })
+            
+            return context_data
         
         # Check if player has predefined context
         context_data = self.player_contexts.get(player_name)
