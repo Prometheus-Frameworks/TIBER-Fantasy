@@ -8,6 +8,7 @@ from flask import Flask, render_template, jsonify, request
 import os
 import sys
 from tiber_scope import tiber_scope_middleware, log_access_attempt
+from tiber_identity import get_tiber_identity, get_doctrine, validate_request_domain
 
 # Add modules to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
@@ -151,6 +152,21 @@ def roster_moves():
 def tier_view_2025():
     """2025 Dynasty Tier View page"""
     return render_template('tier_view_2025.html')
+
+@app.route('/api/tiber/identity')
+def tiber_identity_status():
+    """Tiber identity and system status endpoint"""
+    identity = get_tiber_identity()
+    doctrine = get_doctrine()
+    
+    return jsonify({
+        'success': True,
+        'tiber_identity': identity,
+        'doctrine': doctrine,
+        'ecosystem_status': 'OPERATIONAL',
+        'security_boundaries': 'ACTIVE',
+        'alignment_protocol': 'ENGAGED'
+    })
 
 # Rankings routes now handled by rankings_bp blueprint
 
