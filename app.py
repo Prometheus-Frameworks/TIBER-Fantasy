@@ -7,6 +7,7 @@ Flask-based modular application for VORP rankings and player analysis
 from flask import Flask, render_template, jsonify, request
 import os
 import sys
+from tiber_scope import tiber_scope_middleware, log_access_attempt
 
 # Add modules to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
@@ -24,6 +25,27 @@ from modules.rookie_database import RookieDatabase
 from modules.vorp_calculator import VORPCalculator
 
 app = Flask(__name__)
+
+# Tiber Scope Security Middleware
+@app.before_request
+def apply_tiber_scope():
+    """Apply Tiber scope boundaries to all requests"""
+    try:
+        # Get request domain (fallback to localhost for development)
+        domain = request.headers.get('Host', 'localhost').split(':')[0]
+        
+        # Default to fantasy_football context for all app requests
+        context = "fantasy_football"
+        
+        # Apply Tiber scope validation
+        tiber_scope_middleware(domain, context)
+        
+    except PermissionError as e:
+        return jsonify({
+            'error': 'Access Denied',
+            'message': str(e),
+            'tiber_scope': 'VIOLATION'
+        }), 403
 
 # Register blueprints
 app.register_blueprint(rankings_bp)

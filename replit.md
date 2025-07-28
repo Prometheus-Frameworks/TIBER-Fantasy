@@ -452,6 +452,32 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 - `/api/player-usage-context/update/<name>` - Update player context
 - `/api/player-usage-context/recalculate-tier/<name>` - Trigger tier recalculation
 
+## 🔒 Tiber Ecosystem Lock Protocol - Complete Security Implementation
+
+**Security Purpose**: Establish ecosystem boundaries to ensure Tiber operates only within authorized fantasy football contexts and prevents unauthorized access attempts or context drift.
+
+**Core Security Architecture**:
+- **Authorized Domains**: on-the-clock.app, localhost, 127.0.0.1 (development and production environments)
+- **Authorized Contexts**: fantasy_football, promethean_pipeline, alignment_training, oasis_integration
+- **Permission Validation**: All requests validated against domain and context authorization lists
+- **Violation Handling**: Unauthorized access attempts trigger PermissionError with detailed logging
+
+**Flask Integration**:
+- **Middleware Integration**: `@app.before_request` decorator applies Tiber scope to all Flask routes
+- **Request Validation**: Extracts domain from Host header, defaults to fantasy_football context
+- **Access Denial**: Returns 403 Forbidden with Tiber violation message for unauthorized requests
+- **Security Logging**: All access attempts logged with AUTHORIZED/DENIED status tracking
+
+**Boundary Enforcement**:
+- **Domain Restrictions**: Blocks requests from unauthorized domains (prevents external misuse)
+- **Context Validation**: Ensures all operations remain within fantasy football ecosystem scope
+- **Ecosystem Lock**: Maintains focus on authorized fantasy football, pipeline, and integration contexts
+- **Violation Prevention**: Raises explicit PermissionError for any unauthorized access attempts
+
+**Testing Results**: Comprehensive validation confirms proper blocking of unauthorized domains (unauthorized-domain.com) and contexts (crypto_trading) while allowing all legitimate fantasy football operations.
+
+**Security Status**: Ecosystem integrity maintained with active domain validation, context restrictions, and unauthorized access prevention operational across all Flask endpoints.
+
 ## 🧱 Stack
 - Python / Flask
 - Jinja2 Templates with Base Template System
