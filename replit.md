@@ -322,6 +322,31 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 
 **Cross-Reference Integration**: Ready for game log verification, contextNotes module integration, and Prometheus tier system deferrals per specification reminders.
 
+## 📊 Target Competition 2025 Class Module - Complete Integration
+
+**Module Purpose**: Serve structured target competition data for the 2025 fantasy season at `/api/target-competition` endpoint with clean tier-based frontend display.
+
+**Core Implementation**:
+- **API Endpoint**: `/api/target-competition` serving structured JSON data for Luther Burden, Travis Hunter, and Chris Godwin
+- **Individual Player Lookup**: `/api/target-competition/player/<name>` for specific player analysis
+- **Tier Grouping**: `/api/target-competition/tiers` organizing players by S/A/B/C/D competition levels
+- **Frontend Page**: `/target-competition-2025` with dedicated UI section titled "📊 Target Competition – 2025 Class"
+
+**Player Data Structure**:
+- **Full Details**: player_name, team, position, draft_capital for each prospect
+- **Competition Overview**: WR1/WR2/TE1 position mappings with notes on existing players
+- **Tier Ratings**: S-tier (elite opportunity) to D-tier (severe competition) classifications  
+- **Vacated Targets**: High/Moderate/Minimal analysis of available target volume
+- **Summary Insights**: 1-3 sentence analysis of each player's situation
+
+**Frontend Integration**:
+- **Responsive Design**: Grid-based player blocks with tier-based color coding
+- **Interactive Elements**: Hover effects, tier legend, and competition breakdowns
+- **Mobile Optimized**: Responsive layout adapting to different screen sizes
+- **Homepage Integration**: New feature card linking to Target Competition 2025 analysis
+
+**Module Expansion Ready**: Foundation built for veterans and players returning from injury with expandable data structure and API architecture.
+
 ## 🧱 Stack
 - Python / Flask
 - Jinja2 Templates with Base Template System

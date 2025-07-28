@@ -83,16 +83,19 @@ try:
     from routes.tcip_routes import register_tcip_routes
     from routes.target_competition_context_routes import register_target_competition_context_routes
     from routes.target_competition_generator_routes import register_target_competition_generator_routes
+    from routes.target_competition_2025_routes import register_target_competition_2025_routes
     app.register_blueprint(enhanced_rookie_bp)
     register_target_competition_routes(app)
     register_tcip_routes(app)
     register_target_competition_context_routes(app)
     register_target_competition_generator_routes(app)
+    register_target_competition_2025_routes(app)
     print("✅ Enhanced Rookie Evaluation Blueprint registered successfully")
     print("✅ Target Competition Evaluator v1.0 Blueprint registered successfully")
     print("✅ TCIP (Target Competition Inference Pipeline) v1.0 Blueprint registered successfully")
     print("✅ Target Competition Context Module v1.0 Blueprint registered successfully")
     print("✅ Target Competition Context Generator v1.0 Blueprint registered successfully")
+    print("✅ Target Competition 2025 Class Blueprint registered successfully")
 except Exception as e:
     print(f"❌ Enhanced Rookie Evaluation Blueprint registration failed: {e}")
 
@@ -105,6 +108,11 @@ vorp_calc = VORPCalculator()
 def home():
     """Main homepage"""
     return render_template('index.html')
+
+@app.route('/target-competition-2025')
+def target_competition_2025():
+    """Target Competition 2025 Class page"""
+    return render_template('target_competition_2025.html')
 
 # Rankings routes now handled by rankings_bp blueprint
 
