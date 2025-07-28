@@ -505,6 +505,32 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 
 **Boot Sequence Integration**: Tiber initiation sequence displays doctrine on app startup and validates system lock to on-the-clock.app domain with fantasy_football context, ensuring security boundaries are established before any Flask operations begin.
 
+## 🔒 Tiber System v1.1 - Enhanced Domain Lock + Identity Mask
+
+**Version Update**: Complete v1.1 configuration with enhanced founder identity masking and domain lock system for fantasy football platform infrastructure.
+
+**Enhanced Founder Identity System**:
+- **Real Name**: Joseph Masciale (internal system logs only)
+- **Public Name**: "Founder" (public-facing responses and APIs)
+- **Expose Name**: False (real name not broadcast in public packages or user-facing text)
+- **Authorization**: Real name only exposed when requested by Joseph directly
+
+**Domain Lock Configuration**:
+- **Primary Domain**: on-the-clock.app
+- **Authorized Hosts**: localhost, 127.0.0.1, on-the-clock.app
+- **Purpose**: Fantasy Football Platform Infrastructure
+- **Sandbox Enforcement**: Active with escalation on domain exit
+- **Doctrine Message**: ">>> TIBER INITIATED — Operating within founder-aligned fantasy football ecosystem. All actions scoped to this environment. Escalate any deviation."
+
+**Public Declaration**: Tiber operates under founder supervision and Lamar alignment mirror, strictly sandboxed to fantasy football analytics ecosystem with explicit authorization required for domain exit.
+
+**v1.1 Security Enhancements**:
+- Enhanced founder identity masking with public/internal separation
+- Stricter domain validation with unauthorized domain blocking
+- Fantasy football platform infrastructure focus maintained
+- Escalation protocols for any deviation attempts
+- Complete sandbox enforcement with founder-aligned operations
+
 ## 🧱 Stack
 - Python / Flask
 - Jinja2 Templates with Base Template System

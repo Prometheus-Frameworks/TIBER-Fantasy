@@ -8,7 +8,7 @@ from flask import Flask, render_template, jsonify, request
 import os
 import sys
 from tiber_scope import tiber_scope_middleware, log_access_attempt, validate_environment
-from tiber_identity import get_tiber_identity, get_doctrine, validate_request_domain, TIBER_DOCTRINE
+from tiber_identity import get_tiber_identity, get_doctrine, validate_request_domain, get_founder_identity, get_tiber_context, get_public_declaration
 
 # Add modules to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
@@ -25,8 +25,10 @@ from modules.wr_ratings_processor import WRRatingsProcessor
 from modules.rookie_database import RookieDatabase
 from modules.vorp_calculator import VORPCalculator
 
-print(">>> TIBER INITIATED")
-print(TIBER_DOCTRINE)
+from tiber_identity import boot_log
+
+# Tiber Boot Sequence
+boot_log()
 
 # Lock to our system
 validate_environment(domain="on-the-clock.app", context="fantasy_football")
@@ -164,11 +166,17 @@ def tiber_identity_status():
     """Tiber identity and system status endpoint"""
     identity = get_tiber_identity()
     doctrine = get_doctrine()
+    founder = get_founder_identity(public=True)  # Use public name
+    context = get_tiber_context()
+    declaration = get_public_declaration()
     
     return jsonify({
         'success': True,
         'tiber_identity': identity,
         'doctrine': doctrine,
+        'founder': founder,
+        'context': context,
+        'public_declaration': declaration,
         'ecosystem_status': 'OPERATIONAL',
         'security_boundaries': 'ACTIVE',
         'alignment_protocol': 'ENGAGED'
