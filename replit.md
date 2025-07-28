@@ -259,6 +259,34 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 
 **Grounded Language Enforcement**: All TCIP analysis uses probabilistic phrasing ("projects for manageable competition" vs "has no competition") maintaining Tiber alignment standards throughout evaluation process.
 
+## 🧠 Target Competition Context Module v1.0 - Complete Installation
+
+**Module Purpose**: Enhanced player module integrating target competition tiers, contextual notes, and team depth analysis for dynasty projections with HTML rendering capabilities.
+
+**Competition Tier Scale**:
+- **S-tier**: Severe target competition — likely capped role unless disruption occurs
+- **A-tier**: Strong target competition — top-two usage is a challenge  
+- **B-tier**: Manageable target competition — realistic spike or consistent usage
+- **C-tier**: Favorable path to meaningful target share
+- **D-tier**: Wide open depth chart — opportunity is ripe
+
+**Enhanced Player Database**:
+- **Luther Burden (CHI)**: S-tier severe competition, third option in high-volume offense, faces DJ Moore/Rome Odunze/Colston Loveland
+- **Travis Hunter (JAX)**: B-tier manageable competition, WR2/3 with spike potential, benefits from vacated targets despite BTJ presence
+- **Chris Godwin (TB)**: A-tier strong competition, WR2 with slot upside, affected by Emeka Egbuka addition and scheme change
+
+**HTML Rendering System**: Complete styling with tier-based color coding, competition breakdowns, contextual notes, and responsive design for player page integration.
+
+**API Endpoints Complete**:
+- `/api/player-context/<player_name>` - Enhanced context with TCIP integration
+- `/api/player-context/<player_name>/html` - HTML rendering with styling options
+- `/api/player-contexts/all` - All contexts sorted by competition tier
+- `/api/player-context/<player_name>/dynasty-integration` - Dynasty tier integration data
+- `/api/competition-tier-scale` - Tier scale definitions and descriptions
+- `/player-context/<player_name>` - Full player context page rendering
+
+**Tiber Alignment Integration**: Automatic filtering of absolute language ("must start" → "projects for strong usage") maintaining grounded, probabilistic analysis throughout all context generation and display.
+
 ## 🧱 Stack
 - Python / Flask
 - Jinja2 Templates with Base Template System

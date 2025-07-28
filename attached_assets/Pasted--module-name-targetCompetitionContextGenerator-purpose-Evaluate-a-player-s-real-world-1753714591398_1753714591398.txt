@@ -1,0 +1,47 @@
+{
+  "module_name": "targetCompetitionContextGenerator",
+  "purpose": "Evaluate a player's real-world target competition using a weighted system of teammate usage, draft capital, team changes, and vacated targets.",
+  "logic_chain": {
+    "inputs": [
+      "player_name",
+      "team",
+      "teammates (from depth chart)",
+      "prometheus_tier (if available)",
+      "projected_targets",
+      "vacated_targets",
+      "offensive_coordinator_change"
+    ],
+    "processing": [
+      "Identify projected major target earners on team (>=80 targets OR Tier 1/2)",
+      "Count # of legitimate competition threats",
+      "Assign a competition tier: S (crowded elite) → D (no threat, opportunity rich)",
+      "Evaluate context such as OC change and vacated target opportunity",
+      "Generate a natural language context note",
+      "Assign projected role based on competition and player skillset"
+    ]
+  },
+  "tier_mapping": {
+    "S": "3+ elite or high-volume target earners (e.g., DJ Moore, Rome Odunze, Loveland)",
+    "A": "2 elite target earners or one elite + 1 fringe Tier 2",
+    "B": "1 major target threat",
+    "C": "No threats but moderate target floor expected",
+    "D": "Vacated room and little to no current threat"
+  },
+  "output_format": {
+    "competition_tier": "A",
+    "projected_role": "WR2 with upside due to RAC and slot usage",
+    "competition": [
+      { "name": "Rome Odunze", "note": "Top 10 pick, projected alpha role" },
+      { "name": "DJ Moore", "note": "Proven WR1 with heavy usage history" }
+    ],
+    "vacated_targets": 112,
+    "context_note": "Ben Johnson arrival and spread usage expected. Target distribution likely tighter than 2024.",
+    "generated_by": "targetCompetitionContextGenerator"
+  },
+  "example_players": ["Luther Burden", "Travis Hunter", "Chris Godwin"],
+  "reminders": [
+    "Cross-reference game logs to verify scoring and usage claims.",
+    "Use contextNotes module if OC change, injury, or depth chart anomaly is flagged.",
+    "If conflict between modules, defer to Prometheus tiering unless manually overridden."
+  ]
+}
