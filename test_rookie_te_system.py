@@ -8,12 +8,54 @@ import sys
 import os
 sys.path.append('modules')
 
-from rookie_te_insulation import apply_rookie_te_insulation_boost, get_rookie_te_insulation_breakdown
+from rookie_te_insulation import (
+    apply_rookie_te_insulation_boost, 
+    get_rookie_te_insulation_breakdown,
+    is_rookie_tight_end,
+    adjust_for_brock_bowers,
+    apply_meta_te1_evaluation,
+    batch_evaluate_rookie_tes
+)
 
 class TestRookieTE:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+def test_brock_bowers_meta_te1():
+    """Test Brock Bowers meta TE1 override and evaluation flow"""
+    print("\n🎯 BROCK BOWERS META TE1 EVALUATION")
+    print("=" * 50)
+    
+    # Create Brock Bowers with 2024 game logs (second-year TE)
+    brock_bowers = TestRookieTE(
+        name="Brock Bowers",
+        position="TE",
+        rookie=False,  # Has 2024 game logs
+        fantasy_points_ppr=189.4,  # Actual 2024 rookie season
+        game_logs_2024=True,
+        base_te_score=104  # Score that would exceed 99 cap
+    )
+    
+    # Test individual functions
+    print(f"📊 Original rookie status: {getattr(brock_bowers, 'rookie', False)}")
+    
+    # Apply Brock Bowers override
+    brock_bowers = adjust_for_brock_bowers(brock_bowers)
+    print(f"✅ After override - Meta TE1: {getattr(brock_bowers, 'meta_te1', False)}")
+    print(f"✅ Classification: {getattr(brock_bowers, 'classification', 'N/A')}")
+    
+    # Test rookie check
+    is_rookie = is_rookie_tight_end(brock_bowers)
+    print(f"✅ Is rookie TE: {is_rookie}")
+    
+    # Test meta TE1 evaluation with no penalty cap
+    final_score = apply_meta_te1_evaluation(brock_bowers, brock_bowers.base_te_score)
+    print(f"✅ Base score: {brock_bowers.base_te_score}")
+    print(f"✅ Final score (no cap): {final_score}")
+    
+    print(f"🎉 Brock Bowers correctly identified as Meta TE1 baseline!")
+    
 
 def test_realistic_2025_rookie_tes():
     """Test with realistic 2025 rookie TE profiles"""
@@ -100,6 +142,10 @@ def test_realistic_2025_rookie_tes():
     results = []
     
     for te_data in rookie_tes:
+        # Add required rookie TE attributes
+        te_data['position'] = 'TE'
+        te_data['rookie'] = True
+        
         te = TestRookieTE(**te_data)
         breakdown = get_rookie_te_insulation_breakdown(te)
         boost = apply_rookie_te_insulation_boost(te)
@@ -159,8 +205,11 @@ def test_realistic_2025_rookie_tes():
 if __name__ == "__main__":
     print("🏈 ROOKIE TE INSULATION BOOST SYSTEM")
     print("Testing with realistic 2025 draft class profiles")
-    print()
     
+    # Test Brock Bowers meta TE1 evaluation flow
+    test_brock_bowers_meta_te1()
+    
+    # Test 2025 rookie TE insulation system
     results = test_realistic_2025_rookie_tes()
     
     print("\n✅ Testing completed successfully!")

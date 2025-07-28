@@ -9,7 +9,11 @@ import json
 import os
 from modules.rookie_te_insulation import (
     apply_rookie_te_insulation_boost, 
-    get_rookie_te_insulation_breakdown
+    get_rookie_te_insulation_breakdown,
+    is_rookie_tight_end,
+    adjust_for_brock_bowers,
+    apply_meta_te1_evaluation,
+    batch_evaluate_rookie_tes
 )
 
 # Create blueprint for rookie TE insulation routes
@@ -118,6 +122,53 @@ def get_test_samples():
             'max_boost': 12
         }
     })
+
+@rookie_te_bp.route('/api/rookie-te/insulation/meta-te1-evaluate', methods=['POST'])
+def evaluate_with_meta_te1():
+    """
+    Enhanced evaluation that includes Brock Bowers meta TE1 override and 
+    proper rookie definition checking. Follows the complete evaluation flow.
+    """
+    try:
+        player_data = request.get_json()
+        
+        if not player_data:
+            return jsonify({'error': 'No player data provided'}), 400
+        
+        # Create player object
+        player = RookieTEPlayer(**player_data)
+        
+        # Step 1: Apply Brock Bowers override first
+        player = adjust_for_brock_bowers(player)
+        
+        # Step 2: Check if player is rookie TE
+        is_rookie = is_rookie_tight_end(player)
+        
+        # Step 3: Get evaluation breakdown
+        breakdown = get_rookie_te_insulation_breakdown(player)
+        
+        # Step 4: Apply meta TE1 evaluation if base score provided
+        final_score = None
+        if hasattr(player, 'base_te_score'):
+            final_score = apply_meta_te1_evaluation(player, player.base_te_score)
+        
+        response = {
+            'player_name': getattr(player, 'name', 'Unknown'),
+            'is_rookie_te': is_rookie,
+            'meta_te1': getattr(player, 'meta_te1', False),
+            'classification': getattr(player, 'classification', 'Standard TE'),
+            'insulation_boost': breakdown.get('insulation_boost', 0),
+            'final_score': final_score,
+            'detailed_breakdown': breakdown,
+            'evaluation_flow_complete': True,
+            'system_version': 'v1.0-enhanced'
+        }
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        return jsonify({'error': f'Enhanced evaluation failed: {str(e)}'}), 500
+
 
 @rookie_te_bp.route('/api/rookie-te/insulation/batch-evaluate', methods=['POST'])
 def batch_evaluate_rookie_tes():

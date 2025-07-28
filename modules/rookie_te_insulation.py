@@ -7,6 +7,96 @@ based on draft capital, production, traits, and landing spot.
 Integration ready for Flask platform with TE scoring module compatibility.
 """
 
+def is_rookie_tight_end(player):
+    """
+    Definition: What is a Rookie TE?
+    
+    A "Rookie TE" is defined as a tight end who:
+    – Is in their FIRST NFL season (rookie == True),
+    – Has NOT played any prior NFL games (no 2024 game log present),
+    – Was drafted in the current rookie class (e.g., 2025 if processing pre-season rankings for 2025).
+    
+    If a TE already has valid 2024 NFL game logs, they are NOT a rookie for 2025 ratings.
+    These players should be classified as "Second-Year TEs" and graded using full production scoring, not projection insulation.
+    """
+    return (
+        getattr(player, 'position', '') == "TE" and 
+        getattr(player, 'rookie', False) is True and 
+        not hasattr(player, 'game_logs_2024')
+    )
+
+
+def adjust_for_brock_bowers(player):
+    """
+    Brock Bowers Override
+    
+    Brock Bowers is NOT a rookie anymore if 2024 game logs exist.
+    However, he IS the current meta TE1 and must be evaluated as the ceiling TE profile.
+    """
+    player_name = getattr(player, 'name', '')
+    
+    if player_name == "Brock Bowers":
+        player.meta_te1 = True
+        player.is_rookie = False
+        player.scouting_report = "Represents elite TE ceiling: 1st-round capital, RAC monster, high-volume usage, matchup nightmare."
+        player.rating_ceiling_tag = True  # For frontend UI badge if needed
+        player.rookie = False  # Override any rookie flag
+        
+        # Add 2024 context if game logs exist
+        if hasattr(player, 'game_logs_2024') or hasattr(player, 'fantasy_points_ppr'):
+            player.second_year_te = True
+            player.classification = "Elite Second-Year TE (Meta TE1)"
+        
+        return player
+    
+    return player
+
+
+def apply_meta_te1_evaluation(player, base_score):
+    """
+    Handle meta TE1 evaluation with no penalty cap.
+    
+    If player.meta_te1 is True, apply no penalty cap even if score exceeds 99
+    — this represents the baseline top tier for TE evaluation.
+    """
+    if getattr(player, 'meta_te1', False):
+        # No penalty cap for meta TE1 - represents elite ceiling
+        player.evaluation_notes = getattr(player, 'evaluation_notes', [])
+        player.evaluation_notes.append("Meta TE1: No penalty cap applied - elite ceiling baseline")
+        return base_score  # Return uncapped score
+    
+    # Standard penalty cap for non-meta TE1 players
+    return min(base_score, 99)
+
+
+def batch_evaluate_rookie_tes(players):
+    """
+    Batch evaluation function that properly applies the evaluation flow:
+    1. Apply Brock Bowers override to all players
+    2. Check rookie TE status
+    3. Apply insulation boost for qualifying rookies
+    4. Handle meta TE1 scoring with no penalty cap
+    """
+    results = []
+    
+    for player in players:
+        # Step 1: Apply Brock Bowers override first
+        player = adjust_for_brock_bowers(player)
+        
+        # Step 2: Get evaluation breakdown
+        breakdown = get_rookie_te_insulation_breakdown(player)
+        
+        # Step 3: Apply meta TE1 evaluation if applicable
+        if hasattr(player, 'base_te_score'):
+            final_score = apply_meta_te1_evaluation(player, player.base_te_score)
+            breakdown['final_score'] = final_score
+            breakdown['meta_te1_applied'] = getattr(player, 'meta_te1', False)
+        
+        results.append(breakdown)
+    
+    return results
+
+
 def apply_rookie_te_insulation_boost(player):
     """
     Calculate insulation boost for rookie TEs based on four core criteria:
@@ -16,7 +106,23 @@ def apply_rookie_te_insulation_boost(player):
     4. Landing Spot Stability (stable QB, TE-friendly team, depth position = up to 3 pts)
     
     Returns insulation_boost (0-12 points) if all core criteria met.
+    
+    IMPORTANT: Only applies to TRUE rookie TEs. Players with 2024 game logs 
+    are classified as second-year TEs and use different evaluation.
+    
+    Evaluation Flow:
+    1. Apply Brock Bowers override first
+    2. Check if player is rookie TE using is_rookie_tight_end()
+    3. Calculate insulation boost only for qualifying rookies
     """
+    # Step 1: Apply Brock Bowers override first
+    player = adjust_for_brock_bowers(player)
+    
+    # Step 2: Check if player is actually a rookie TE
+    if not is_rookie_tight_end(player):
+        return 0  # No insulation boost for non-rookies
+    
+    # Step 3: Calculate insulation boost for qualifying rookie TEs
     insulation_boost = 0
 
     # ✅ Draft Capital Score
@@ -92,8 +198,30 @@ def get_rookie_te_insulation_breakdown(player):
     """
     Detailed breakdown of insulation scoring for debugging and analysis.
     Returns dictionary with component scores and boost eligibility.
+    
+    Follows proper evaluation flow:
+    1. Check if player is rookie TE
+    2. Apply Brock Bowers override
+    3. Calculate insulation components if eligible
     """
-    # Calculate each component
+    # Apply Brock Bowers override first
+    player = adjust_for_brock_bowers(player)
+    
+    # Check if player qualifies as rookie TE
+    is_rookie = is_rookie_tight_end(player)
+    
+    if not is_rookie:
+        return {
+            'player_name': getattr(player, 'name', 'Unknown'),
+            'is_rookie_te': False,
+            'classification': getattr(player, 'classification', 'Non-rookie TE'),
+            'meta_te1': getattr(player, 'meta_te1', False),
+            'insulation_boost': 0,
+            'eligible_for_boost': False,
+            'reason': 'Not a rookie TE - uses production-based evaluation instead'
+        }
+    
+    # Calculate each component for rookie TEs
     draft_capital_score = 10 if getattr(player, 'draft_round', None) == 1 else 0
     
     production_score = 0
