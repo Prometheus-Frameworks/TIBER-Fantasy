@@ -270,10 +270,10 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 - **C-tier**: Favorable path to meaningful target share
 - **D-tier**: Wide open depth chart — opportunity is ripe
 
-**Enhanced Player Database**:
-- **Luther Burden (CHI)**: S-tier severe competition, third option in high-volume offense, faces DJ Moore/Rome Odunze/Colston Loveland
-- **Travis Hunter (JAX)**: B-tier manageable competition, WR2/3 with spike potential, benefits from vacated targets despite BTJ presence
-- **Chris Godwin (TB)**: A-tier strong competition, WR2 with slot upside, affected by Emeka Egbuka addition and scheme change
+**Enhanced Player Database (2025 Update)**:
+- **Luther Burden (CHI)**: A-tier strong competition (was S-tier), WR2/3 with role volatility potential due to Rome Odunze's 2024 struggles creating opportunity
+- **Travis Hunter (JAX)**: S-tier elite opportunity (was B-tier), alpha WR with sky-high ceiling due to wide-open depth chart and high vacated targets
+- **Chris Godwin (TB)**: B-tier manageable competition (was A-tier), WR2 with slot consistency but reduced volume due to Egbuka addition and Liam Coen departure
 
 **HTML Rendering System**: Complete styling with tier-based color coding, competition breakdowns, contextual notes, and responsive design for player page integration.
 

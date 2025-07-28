@@ -24,83 +24,97 @@ class TargetCompetitionContext:
             'D': 'Wide open depth chart — opportunity is ripe'
         }
         
-        # Tier mapping for dynamic evaluation
+        # Tier mapping for dynamic evaluation (2025 Update)
         self.tier_mapping = {
-            'S': '3+ elite or high-volume target earners (e.g., DJ Moore, Rome Odunze, Loveland)',
-            'A': '2 elite target earners or one elite + 1 fringe Tier 2',
-            'B': '1 major target threat',
-            'C': 'No threats but moderate target floor expected',
-            'D': 'Vacated room and little to no current threat'
+            'S': 'Elite opportunity - Wide open depth chart with minimal competition',
+            'A': 'Strong competition - Multiple high-capital players but role volatility possible',
+            'B': 'Manageable competition - Established veterans present but upside available',
+            'C': 'Moderate competition - Some target share competition with defined roles',
+            'D': 'Severe competition - Crowded target tree with limited ceiling'
         }
         
-        # Enhanced player database with contextual information
+        # Enhanced player database with contextual information (2025 Update)
         self.player_contexts = {
             'Luther Burden': {
                 'name': 'Luther Burden',
                 'team': 'CHI',
-                'competition_tier': 'S',
-                'projected_role': 'Third option in high-volume passing offense',
+                'position': 'WR',
+                'draft_capital': 'Round 2',
+                'competition_tier': 'A',
+                'projected_role': 'WR2/3 with role volatility potential',
                 'competition': [
                     {
-                        'name': 'DJ Moore',
-                        'position': 'WR',
-                        'note': 'Tier 1, 130+ target pace'
+                        'name': 'Rome Odunze',
+                        'position': 'WR1',
+                        'note': 'Top 10 Pick, underwhelming 2024 season'
                     },
                     {
-                        'name': 'Rome Odunze',
-                        'position': 'WR', 
-                        'note': 'Top-10 rookie, projected WR2 role'
+                        'name': 'DJ Moore',
+                        'position': 'WR2',
+                        'note': 'Established Vet'
                     },
                     {
                         'name': 'Colston Loveland',
-                        'position': 'TE',
-                        'note': 'Top-10 rookie, red zone threat'
+                        'position': 'TE1',
+                        'note': 'Top 10 Pick'
                     }
                 ],
-                'context_note': 'Burden enters a crowded receiving room with elite talents already commanding attention. Despite his pedigree, early career ceiling may be capped unless a key player falters.'
+                'vacated_targets': 'Minimal',
+                'context_note': 'Burden enters a crowded WR room featuring high-capital players. Odunze\'s 2024 struggles could create volatility in roles, but alpha usage is unlikely early.'
             },
             'Travis Hunter': {
                 'name': 'Travis Hunter',
                 'team': 'JAX',
-                'competition_tier': 'B',
-                'projected_role': 'Likely WR2/3 with spike potential',
+                'position': 'WR',
+                'draft_capital': '2nd Overall Pick',
+                'competition_tier': 'S',
+                'projected_role': 'Alpha WR with elite ceiling',
                 'competition': [
                     {
-                        'name': 'Brian Thomas Jr.',
-                        'position': 'WR',
-                        'note': 'Top-20 pick, WR1 expectations'
+                        'name': 'Travis Hunter',
+                        'position': 'WR1',
+                        'note': 'Clear alpha role'
                     },
                     {
                         'name': 'Dyami Brown',
-                        'position': 'WR',
-                        'note': 'Depth role, minor threat'
+                        'position': 'WR2',
+                        'note': 'Mid-tier FA'
                     },
                     {
-                        'name': 'Vacated Targets',
-                        'position': 'Departures',
-                        'note': 'Christian Kirk, Evan Engram, Gabe Davis all off the roster'
+                        'name': 'Noah Fant / Rookie Depth',
+                        'position': 'TE1',
+                        'note': 'Limited target competition'
                     }
                 ],
-                'context_note': 'Hunter benefits from a fluid WR room. BTJ projects as the alpha, but Hunter could see efficient usage and spike weeks, especially if used creatively or if BTJ gets bracketed.'
+                'vacated_targets': 'High (Kirk, Engram, Davis all gone)',
+                'context_note': 'Hunter walks into a wide-open WR room. Elite draft capital plus high vacated targets gives him a clean path to alpha usage and sky-high ceiling.'
             },
             'Chris Godwin': {
                 'name': 'Chris Godwin',
                 'team': 'TB',
-                'competition_tier': 'A',
-                'projected_role': 'Likely WR2 with slot upside',
+                'position': 'WR',
+                'draft_capital': 'Day 2',
+                'competition_tier': 'B',
+                'projected_role': 'WR2 with slot consistency',
                 'competition': [
                     {
                         'name': 'Emeka Egbuka',
-                        'position': 'WR',
-                        'note': 'Round 1 rookie with alpha trajectory'
+                        'position': 'WR1',
+                        'note': '1st Round Rookie'
                     },
                     {
-                        'name': 'Scheme Change',
-                        'position': 'OC Change',
-                        'note': 'Liam Coen (slot-heavy) departs for Jacksonville'
+                        'name': 'Chris Godwin',
+                        'position': 'WR2',
+                        'note': 'Returning from IR'
+                    },
+                    {
+                        'name': 'Cade Otton',
+                        'position': 'TE1',
+                        'note': 'Established option'
                     }
                 ],
-                'context_note': 'Godwin was on WR1 pace in Liam Coen\'s scheme before mid-season injury. With Egbuka drafted and the offensive coordinator gone, Godwin\'s target share outlook is shakier entering 2025.'
+                'vacated_targets': 'Moderate',
+                'context_note': 'Godwin returns from IR into a reshuffled offense. With Liam Coen gone and Egbuka added, his volume might trend down, but slot consistency still viable.'
             }
         }
         
