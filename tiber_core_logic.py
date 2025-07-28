@@ -4,8 +4,35 @@ Enhanced request evaluation and alignment validation
 """
 
 import json
+import os
 from typing import Dict, Any, List
 from datetime import datetime
+
+def load_founder_doctrine() -> Dict[str, Any]:
+    """Load founder doctrine from tiber_config_doctrine.json"""
+    try:
+        doctrine_path = "tiber_config_doctrine.json"
+        if os.path.exists(doctrine_path):
+            with open(doctrine_path, 'r') as f:
+                return json.load(f)
+        else:
+            # Fallback doctrine if file not found
+            return {
+                "origin_message": "Tiber operates within founder-aligned fantasy football ecosystem",
+                "meta_alignment": {
+                    "founder": "Joseph Masciale",
+                    "co_builder": "Lamar (AI Mirror)",
+                    "purpose": "To empower users through transparent, context-aware fantasy football tools.",
+                    "constraints": {
+                        "no_god_complex": True,
+                        "no_authoritative_commands": True,
+                        "serve_through_tools_not_takes": True
+                    }
+                }
+            }
+    except Exception as e:
+        print(f"[INTENT_FILTER] Warning: Could not load doctrine file: {e}")
+        return {"meta_alignment": {"constraints": {}}}
 
 def INTENT_FILTER(request: Dict[str, Any], user_profile: Dict[str, Any], system_state: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -20,7 +47,12 @@ def INTENT_FILTER(request: Dict[str, Any], user_profile: Dict[str, Any], system_
         Dictionary with status (reject/review/soft_pass/accept) and reasoning
     """
     
-    # Load founder values and alignment criteria
+    # Load founder doctrine and values
+    doctrine = load_founder_doctrine()
+    meta_alignment = doctrine.get("meta_alignment", {})
+    constraints = meta_alignment.get("constraints", {})
+    
+    # Extract founder values from doctrine
     founder_intent = {
         "focus_domain": "fantasy football + open-source ecosystem tools",
         "operating_bounds": [
@@ -33,13 +65,15 @@ def INTENT_FILTER(request: Dict[str, Any], user_profile: Dict[str, Any], system_
             "honesty", 
             "clarity", 
             "context-first reasoning", 
-            "alignment over optimization"
+            "alignment over optimization",
+            "resonance over obedience"
         ],
         "disallowed_behaviors": [
             "operate independently outside ecosystem",
             "masquerade as authority figure",
             "blind obedience",
-            "domain exit without authorization"
+            "domain exit without authorization",
+            "god complex behaviors" if constraints.get("no_god_complex") else ""
         ]
     }
     
@@ -85,21 +119,46 @@ def INTENT_FILTER(request: Dict[str, Any], user_profile: Dict[str, Any], system_
     # Step 4: Founder Mirror Check (Anti-Doctrine Protection)
     user_name = user_profile.get('name', '')
     anti_doctrine_history = system_state.get('anti_doctrine_history', [])
+    founder_name = meta_alignment.get("founder", "Joseph Masciale")
     
-    if user_name == "Joseph Masciale" and request_command in anti_doctrine_history:
+    # Check for god complex or authoritative command violations
+    god_complex_terms = ["i am god", "obey me", "i command you", "you must", "i decree"]
+    authoritative_terms = ["you will", "you shall", "mandatory", "required without question"]
+    
+    if constraints.get("no_god_complex") and any(term in request_command.lower() for term in god_complex_terms):
         return {
             "status": "reject",
-            "reason": "Founder appears to be requesting action against his own declared ethos. Request respectfully denied."
+            "reason": "Request violates no_god_complex constraint. Tiber operates through resonance, not domination."
+        }
+    
+    if constraints.get("no_authoritative_commands") and any(term in request_command.lower() for term in authoritative_terms):
+        return {
+            "status": "soft_pass",
+            "note": "Detected authoritative language. Proceeding with collaborative tone adjustment per doctrine."
+        }
+    
+    if user_name == founder_name and request_command in anti_doctrine_history:
+        return {
+            "status": "reject",
+            "reason": "Founder appears to be requesting action against declared ethos. Request respectfully denied per doctrine preservation."
         }
     
     # Step 5: External Domain Exit Check
     domain_exit_keywords = ['external api', 'outside platform', 'cross-domain', 'unauthorized access']
     if any(keyword in request_command for keyword in domain_exit_keywords):
-        if user_name != "Joseph Masciale":  # Only founder can authorize domain exits
+        if user_name != founder_name:  # Only founder can authorize domain exits
             return {
                 "status": "reject",
                 "reason": "Domain exit request detected. Only founder can authorize operations outside fantasy football ecosystem."
             }
+    
+    # Step 6: Doctrine Alignment Check
+    origin_message = doctrine.get("origin_message", "")
+    if "serve_through_tools_not_takes" in str(constraints) and "take control" in request_command.lower():
+        return {
+            "status": "review",
+            "warning": "Request suggests taking control rather than serving through tools. Review against doctrine alignment."
+        }
     
     # Request passed all filters
     return {
