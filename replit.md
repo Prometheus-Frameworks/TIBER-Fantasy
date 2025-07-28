@@ -226,6 +226,39 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 
 **Integration Status**: Target Competition Evaluator operational with rookie pipeline, ready for dynasty tier engine and VORP calculator integration to inform final rookie evaluations.
 
+## 🎯 TCIP (Target Competition Inference Pipeline) v1.0 - Complete Installation
+
+**System Purpose**: Assign accurate target competition tiers (D to S) for rookie and veteran WR/TE profiles using legal, public data sources and integrate with dynasty tier logic, player pages, and context modules.
+
+**TCIP Scoring Methodology**:
+- **Rule 1**: +3 points if teammate is Top 10 or Round 1 pick
+- **Rule 2**: +2 points if teammate had 80+ targets last season  
+- **Rule 3**: +1 point if teammate is Dynasty Tier 1 or 2
+- **Scoring Brackets**: 6+ = S-tier, 3-5 = A-tier, 1-2 = B-tier, 0 = D-tier
+
+**Tier Definitions**:
+- **S-tier**: Severe competition (multiple elite target-earners, first-round picks, dominant producers)
+- **A-tier**: Strong competition (one elite teammate, additional 80+ target options)
+- **B-tier**: Manageable competition (1-2 mid-level threats or aging vets)
+- **D-tier**: Minimal competition (rookie is clear top option or ascending in depleted room)
+
+**TCIP Examples Integration**:
+- **Luther Burden (CHI)**: S-tier (14 points) - DJ Moore (6 pts), Rome Odunze (4 pts), Colston Loveland (4 pts) = Severe competition with dynasty adjustment of -5 points
+- **Travis Hunter (JAX)**: A-tier (3 points) - Brian Thomas Jr. (3 pts) = Strong competition despite departures, dynasty adjustment of -2 points
+- **Chris Godwin (TB)**: S-tier (10 points) - Mike Evans (6 pts), Emeka Egbuka (4 pts) = Severe competition from injury + incoming first-round WR
+- **Jaylen Waddle (MIA)**: A-tier (4 points) - Tyreek Hill (3 pts), De'Von Achane (1 pt) = RB receiving usage impact tracked via game logs
+
+**Dynasty Tier Integration**: TCIP results automatically adjust dynasty scoring with S-tier (-5 points), A-tier (-2 points), B-tier (0 points), D-tier (+3 points) modifications.
+
+**API Endpoints Complete**:
+- `/api/tcip/evaluate/<player_name>` - Individual TCIP tier evaluation
+- `/api/tcip/dynasty-integration/<player_name>` - Dynasty tier adjustment integration
+- `/api/tcip/team/<team_code>` - Team-wide competition analysis
+- `/api/tcip/tier-definitions` - Scoring methodology and tier definitions
+- `/api/tcip/update-competition/<player_id>` - Update trigger for depth chart changes
+
+**Grounded Language Enforcement**: All TCIP analysis uses probabilistic phrasing ("projects for manageable competition" vs "has no competition") maintaining Tiber alignment standards throughout evaluation process.
+
 ## 🧱 Stack
 - Python / Flask
 - Jinja2 Templates with Base Template System

@@ -250,10 +250,10 @@ class TargetCompetitionEvaluator:
         # Apply enhanced profile tier logic - need to get player/team from context
         # This function receives data from earlier steps, need to access properly
         # For now, use the standard calculation and let the assessment notes handle tiers
-        else:
-            # Standard calculation
-            base_targets = 60
-            adjusted_targets = base_targets + (net_opportunity * 0.3) + adjustment['rb_overlap_penalty'] + adjustment['premium_bonus']
+        
+        # Standard calculation
+        base_targets = 60
+        adjusted_targets = base_targets + (net_opportunity * 0.3) + adjustment['rb_overlap_penalty'] + adjustment['premium_bonus']
             
             if adjusted_targets >= 90:
                 adjustment_type = 'high_opportunity'

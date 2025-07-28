@@ -1,0 +1,85 @@
+{
+  "task": "Install Target Competition Inference Pipeline (TCIP)",
+  "goals": [
+    "Assign accurate target competition tiers (D to S) for rookie and veteran WR/TE profiles.",
+    "Use legal, public data sources only (Sleeper, ESPN, team depth charts, internal game logs).",
+    "Integrate competition tiers into dynasty tier logic, player pages, and context modules."
+  ],
+  "definitions": {
+    "target_competition_tier": {
+      "S": "Severe competition (multiple elite target-earners, first-round picks, dominant producers)",
+      "A": "Strong competition (one elite teammate, additional 80+ target options)",
+      "B": "Manageable competition (1-2 mid-level threats or aging vets)",
+      "D": "Minimal competition (rookie is clear top option or ascending in depleted room)"
+    }
+  },
+  "methodology": {
+    "competition_evaluation_logic": {
+      "rule_1": "Add +3 if teammate is top 10 or round 1 pick",
+      "rule_2": "Add +2 if teammate had over 80 targets last season",
+      "rule_3": "Add +1 if teammate is ranked Dynasty Tier 1 or 2",
+      "scoring_brackets": {
+        "6+": "S-tier",
+        "3-5": "A-tier",
+        "1-2": "B-tier",
+        "0": "D-tier"
+      }
+    },
+    "data_sources": [
+      "Sleeper API (roster, depth chart, targets)",
+      "Internal game logs (e.g. Waddle/Achane target impact)",
+      "2025 rookie profiles with teammate mapping",
+      "Dynasty tier system for known players"
+    ]
+  },
+  "examples": [
+    {
+      "player": "Luther Burden",
+      "team": "CHI",
+      "competition": [
+        "DJ Moore (Tier 1)",
+        "Rome Odunze (Top 10 pick)",
+        "Colston Loveland (Top 10 pick)"
+      ],
+      "tier_result": "S",
+      "note": "Severe target competition with two elite rookie teammates and WR1-caliber DJ Moore."
+    },
+    {
+      "player": "Travis Hunter",
+      "team": "JAX",
+      "competition": [
+        "Brian Thomas Jr. (Top 20 pick, confirmed via college game logs as alpha)",
+        "Dyami Brown (limited impact)",
+        "Vacated targets from Kirk, Engram, Gabe Davis"
+      ],
+      "tier_result": "B",
+      "note": "Despite BTJ’s presence, Jaguars lost major receiving volume and Hunter has strong usage upside."
+    },
+    {
+      "player": "Chris Godwin",
+      "team": "TB",
+      "competition": [
+        "Emeka Egbuka (Round 1 pick)",
+        "Mike Evans (status uncertain)",
+        "New scheme post-Coen"
+      ],
+      "tier_result": "A",
+      "note": "Godwin was on WR1 pace in 2024. Injury and incoming first-round WR shifts projection risk upward."
+    },
+    {
+      "player": "Jaylen Waddle",
+      "team": "MIA",
+      "impact_reference": "De'Von Achane's increased receiving usage in 2024 led to lower target share for Waddle, tracked via game logs."
+    }
+  ],
+  "system_behavior": {
+    "integration": "Dynasty Tier Engine",
+    "display": "Player Pages — show competition tier, main competitors, and context note",
+    "updates": "Trigger `update_target_competition(player_id)` when depth chart, injury, or trade changes detected"
+  },
+  "tone_guidance": {
+    "absolute_language": "avoid",
+    "example": "Say 'projects for manageable competition' instead of 'has no competition'",
+    "goal": "Maintain grounded, context-aware phrasing — never act as fantasy 'god'"
+  }
+}
