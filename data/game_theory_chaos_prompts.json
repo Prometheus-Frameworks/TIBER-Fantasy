@@ -58,6 +58,51 @@
           "chaos_sensitivity": "How sensitive is your win probability to external factors",
           "fragile_vs_antifragile": "Building lineups that benefit from chaos vs break from it"
         }
+      },
+      {
+        "id": "mock_3",
+        "type": "game_theory",
+        "title": "The Inflection Pivot", 
+        "scenario": {
+          "user_profile": {
+            "experience": "Veteran dynasty manager",
+            "league_type": "High-stakes Superflex",
+            "last_season_finish": "4th place",
+            "roster_status": "Aging core (Ekeler, Diggs, Kittle)",
+            "draft_capital": ["1.06", "2.02"],
+            "reputation": "Calculated trader",
+            "goal": "Win now while avoiding 2026 cliff fall"
+          },
+          "trade_offer": {
+            "send": ["Austin Ekeler", "2.02 pick"],
+            "receive": ["Jahmyr Gibbs"],
+            "context": "Future-proofing vs immediate impact decision"
+          },
+          "user_concerns": {
+            "fear_1": "Ekeler dies on roster (aging asset waste)",
+            "fear_2": "Gibbs might not be tier-jumper (overpay risk)", 
+            "fear_3": "Reputation damage from bad calculated trade",
+            "goal_tension": "Win now vs future-proof balance"
+          }
+        },
+        "analysis_framework": {
+          "game_theory_elements": [
+            "Nash equilibrium of aging asset management",
+            "Information asymmetry between contenders and rebuilders",
+            "Reputation effects on future trade negotiations",
+            "Win-now vs future value optimization"
+          ],
+          "decision_matrix": {
+            "ekeler_scenarios": ["productive_2025", "cliff_fall_2025", "injury_risk"],
+            "gibbs_scenarios": ["breakout_star", "solid_rb2", "sophomore_slump"],
+            "pick_value": ["hit_rate_analysis", "positional_scarcity", "draft_class_strength"]
+          },
+          "meta_considerations": [
+            "How this trade affects league perception of user strategy",
+            "Impact on future trade partner willingness",
+            "Signaling effects to other managers about win-now timeline"
+          ]
+        }
       }
     ],
     "exploration_objectives": {
