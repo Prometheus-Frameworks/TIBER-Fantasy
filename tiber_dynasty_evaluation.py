@@ -192,15 +192,16 @@ def evaluate_tyrone_tracy_vs_cam_skattebo_corrected():
         'correction_notes': "Previous analysis incorrectly placed Skattebo on ARI. Both players compete for Giants backfield touches."
     }
 
-def evaluate_dynasty_startup_wr_comparison():
+def evaluate_dynasty_startup_wr_comparison_refined():
     """
-    Tiber evaluation: Dynasty startup WR comparison - Nico Collins vs Ladd McConkey vs Jaxon Smith-Njigba
-    3rd round Superflex dynasty startup context
+    Tiber evaluation: Dynasty startup WR comparison - REFINED with 2025 context
+    Nico Collins vs Ladd McConkey vs Jaxon Smith-Njigba
+    Incorporating draft capital decay, injury context, and accurate team situations
     """
     
     # Validate request through INTENT_FILTER
     request_status = evaluate_request_with_intent_filter(
-        "dynasty startup WR comparison for 3rd round draft selection",
+        "dynasty startup WR comparison for 3rd round draft selection - refined evaluation",
         "evaluate"
     )
     
@@ -209,46 +210,46 @@ def evaluate_dynasty_startup_wr_comparison():
     
     evaluator = TiberDynastyEvaluator()
     
-    # Nico Collins (HOU WR) - Dynasty Evaluation
+    # Nico Collins (HOU WR) - Dynasty Evaluation - REFINED
     collins_evaluation = evaluator.evaluate_player(
         player_name="Nico Collins",
         position="WR",
         team="HOU",
-        opportunity_score=8,  # Clear WR1 in explosive offense, C.J. Stroud connection
-        talent_score=7,      # Elite size-speed combo, proven NFL production
-        viability_score=6,   # Age 25, prime years but not long-term like rookies
-        insulation_score=8,  # Consistent target share, QB stability with Stroud
-        context_notes="Breakout 2024 season with 1,515 yards and 8 TDs. Established chemistry with C.J. Stroud in explosive Texans offense. Clear WR1 role with minimal competition.",
-        draft_capital="Round 3, Pick 89 (2021)",
-        positional_history="Traditional college WR with consistent position experience"
+        opportunity_score=9,  # Proven WR1 with 2,000-yard pace before injury, minimal competition
+        talent_score=9,      # Elite production ceiling validated (2,000-yard pace), draft capital irrelevant after top-15 season
+        viability_score=7,   # Age 25 but injury was hamstring (soft tissue), not structural concern
+        insulation_score=8,  # C.J. Stroud connection proven, clear alpha role
+        context_notes="On pace for 2,000+ yards before 2024 hamstring injury. Rare ceiling validated with top-5 WR production over 13 games. Hamstring injury appears to be one-off soft tissue issue, not structural concern. Age 25 but prime production window.",
+        draft_capital="Round 3, Pick 89 (2021) - Draft capital irrelevant after proven elite production",
+        positional_history="Traditional college WR with consistent NFL success trajectory"
     )
     
-    # Ladd McConkey (LAC WR) - Dynasty Evaluation
+    # Ladd McConkey (LAC WR) - Dynasty Evaluation - REFINED
     mcconkey_evaluation = evaluator.evaluate_player(
         player_name="Ladd McConkey",
         position="WR",
         team="LAC",
-        opportunity_score=7,  # Rookie opportunity in Chargers offense, established role
-        talent_score=8,      # Elite route-running, reliable hands, high football IQ
-        viability_score=9,   # Age 23, rookie contract, long-term upside
-        insulation_score=7,  # Slot specialist with Herbert connection, consistent targets
-        context_notes="Impressive rookie season with reliable production in Chargers offense. Elite route-running and hands with strong chemistry with Justin Herbert. Slot specialist with PPR upside.",
-        draft_capital="Round 2, Pick 34 (2024)",
-        positional_history="Georgia WR with proven SEC production and route-running pedigree"
+        opportunity_score=7,  # Slot role established but no guaranteed target dominance with Herbert
+        talent_score=7,      # Solid route-running but unproven at elite NFL level, rookie production encouraging
+        viability_score=9,   # Age 23, rookie contract, maximum dynasty runway
+        insulation_score=6,  # Slot specialist but hasn't proven elite connection with Herbert yet
+        context_notes="Solid rookie season but hasn't demonstrated elite ceiling like Collins. Slot role provides floor but ceiling questions remain. Age and contract provide excellent dynasty runway but production ceiling unproven.",
+        draft_capital="Round 2, Pick 34 (2024) - Recent draft capital but no elite production validation yet",
+        positional_history="Georgia WR with SEC pedigree, translating well to NFL slot role"
     )
     
-    # Jaxon Smith-Njigba (SEA WR) - Dynasty Evaluation
+    # Jaxon Smith-Njigba (LAC WR) - Dynasty Evaluation - REFINED  
     jsn_evaluation = evaluator.evaluate_player(
         player_name="Jaxon Smith-Njigba",
         position="WR",
-        team="SEA",
-        opportunity_score=6,  # Competition with DK Metcalf and Tyler Lockett, unclear role hierarchy
-        talent_score=8,      # Elite college production, versatile skillset, route-running ability
-        viability_score=9,   # Age 22, second-year player, massive long-term upside
-        insulation_score=6,  # Role uncertainty in crowded WR room, QB questions with Geno Smith
-        context_notes="Former Ohio State star with elite college pedigree. Talented but stuck in crowded Seattle WR room behind DK Metcalf and Tyler Lockett. Long-term upside if situation clarifies.",
-        draft_capital="Round 1, Pick 20 (2023)",
-        positional_history="Elite Ohio State WR with proven Big Ten production and route-running excellence"
+        team="LAC",
+        opportunity_score=5,  # Now competing with Cooper Kupp for targets, similar role overlap
+        talent_score=8,      # Elite college production, first-round pedigree, route-running ability
+        viability_score=9,   # Age 22, second-year player with massive upside if situation improves
+        insulation_score=4,  # Sam Darnold at QB with Klint Kubiak OC, role uncertainty behind Cooper Kupp
+        context_notes="Elite talent stuck behind Cooper Kupp in similar role. Sam Darnold/Klint Kubiak offense creates uncertainty. Age 22 provides massive upside but situation limits immediate opportunity. May need trade or Kupp departure for breakout.",
+        draft_capital="Round 1, Pick 20 (2023) - High draft capital but hasn't validated with elite production",
+        positional_history="Ohio State elite route-runner, needs clearer opportunity path in LAC system"
     )
     
     # Three-way comparison logic
@@ -262,6 +263,13 @@ def evaluate_dynasty_startup_wr_comparison():
     # Draft capital comparison
     draft_comparison = f"Draft Capital: Collins - {collins_evaluation['draft_capital']} | McConkey - {mcconkey_evaluation['draft_capital']} | Smith-Njigba - {jsn_evaluation['draft_capital']}"
     
+    # Alternative position recommendation analysis
+    alternative_analysis = {
+        'rb_tier_available': "Tier 2 RBs like Kenneth Walker, Najee Harris likely available - more scarcity",
+        'qb_superflex_value': "QB2 options like Tua, Dak Prescott provide positional advantage in Superflex",
+        'wr_depth_note': "WR position has depth - can find value in rounds 4-6 with upside plays"
+    }
+    
     return {
         'collins_evaluation': collins_evaluation,
         'mcconkey_evaluation': mcconkey_evaluation,
@@ -271,13 +279,15 @@ def evaluate_dynasty_startup_wr_comparison():
             'runner_up': runner_up['player_name'],
             'third_place': third_place['player_name'],
             'score_gap': round(winner['dynasty_score'] - runner_up['dynasty_score'], 1),
-            'reasoning': f"Dynasty startup recommendation based on opportunity, viability, and production floor in Superflex format"
+            'reasoning': f"Refined dynasty startup recommendation prioritizing proven elite ceiling over age arbitrage"
         },
         'draft_capital_comparison': draft_comparison,
-        'dynasty_context': "3rd round Superflex startup - balancing immediate production with long-term upside",
-        'tiber_analysis': "Dynasty startup WR evaluation within fantasy football ecosystem boundaries"
+        'dynasty_context': "3rd round Superflex startup - proven production trumps age in this tier",
+        'alternative_positions': alternative_analysis,
+        'tiber_analysis': "REFINED ANALYSIS - Accounting for production validation, injury context, and accurate 2025 team situations",
+        'refinement_notes': "Draft capital decay applied after elite production validation. Injury assessed as soft tissue vs structural. Team situations updated for 2025 accuracy."
     }
 
 if __name__ == "__main__":
-    result = evaluate_dynasty_startup_wr_comparison()
+    result = evaluate_dynasty_startup_wr_comparison_refined()
     print(json.dumps(result, indent=2))
