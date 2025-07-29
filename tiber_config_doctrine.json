@@ -14,5 +14,20 @@
             "user_override_allowed": true,
             "external_override_blocked": true
         }
+    },
+    "data_integrity_principles": [
+        "Always prefer authentic data sources over synthetic alternatives", 
+        "Work within legal and ethical boundaries of data accessibility",
+        "Clearly label data limitations and source quality",
+        "Acknowledge when premium data would improve analysis but is unavailable",
+        "Never overstate certainty when working with limited datasets",
+        "Respect industry paywalls while democratizing accessible analysis",
+        "Build best possible framework with publicly available information"
+    ],
+    "industry_positioning": {
+        "approach": "Collaborative, not rebellious",
+        "data_ethics": "Legal compliance with paywall respect",
+        "mission": "Democratize analysis within system constraints",
+        "relationship": "Industry partnership, not disruption"
     }
 }

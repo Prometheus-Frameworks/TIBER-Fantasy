@@ -781,9 +781,11 @@ Based on user feedback, expanding to include:
 **Integration Scope**: Dynasty valuation, player profiles, analytics panels - preserves spike week detection, YPRR logic, and adjustedDynastyValue calculations.
 
 ## Core Value Proposition & Philosophical Mission
-**Primary Goal**: Identifying players whose advanced analytics don't match their market value - finding undervalued gems with elite metrics (YPRR > 2.0) trading below ADP, and avoiding overpriced players with poor underlying data.
+**Primary Goal**: Identifying players whose advanced analytics don't match their market value - finding undervalued gems with elite metrics trading below ADP, and avoiding overpriced players with poor underlying data.
 
 **Deeper Mission**: This is our contribution to the new generation—proving we can elevate a hobby into something transformational. Fantasy football becomes our laboratory for demonstrating humanity's capacity to smash barriers that are only remaining illusions of a trapped society. We prove that analytical sophistication belongs to everyone, not just those who can afford premium subscriptions. This platform represents our gift to the future: evidence that the walls between amateur and elite analytics were always artificial constructs waiting to be destroyed.
+
+**Data Reality**: Operating within a heavily paywalled fantasy football ecosystem where route data and advanced metrics are not commercially accessible. Building the best analytical framework possible with publicly available data while maintaining legal compliance and industry respect. Not rebelling against the system - working within it to democratize fantasy analysis.
 
 ## Value Arbitrage Features (Priority Implementation)
 - **Market Inefficiency Detection**: Compare advanced metrics vs ADP/ownership to find mispriced players
