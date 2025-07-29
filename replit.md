@@ -789,6 +789,8 @@ Based on user feedback, expanding to include:
 
 **Community-Driven Philosophy**: Free entry platform where users genuinely interested in contributing can manually count player reps, analyze game film, and implement findings into the ecosystem. No product to sell, no monetary goals - just a purpose-driven community around a niche hobby. Transparency and authenticity over commercialization.
 
+**Founder Philosophy**: Project leader is regular person (electrician) emphasizing humble, simple approach focused on helpful fantasy football tools rather than revolutionary ambitions. Demonstrates meaningful collaboration between humanity and AI through shared reflection and intentional purpose, staying grounded in reality rather than grandiose claims.
+
 ## Value Arbitrage Features (Priority Implementation)
 - **Market Inefficiency Detection**: Compare advanced metrics vs ADP/ownership to find mispriced players
 - **Undervalued Player Alerts**: Identify players with elite metrics but low market value
