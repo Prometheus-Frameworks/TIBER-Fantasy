@@ -807,6 +807,8 @@ Based on user feedback, expanding to include:
 
 **Founder Player Preferences**: Joseph gravitates toward high YAC upside players with slot work capabilities (Rashee Rice, Puka Nacua, Ladd McConkey, Travis Hunter). Amon-Ra St. Brown serves as poster boy for this archetype - slot dominance + YAC ability = consistent fantasy points. These are personal biases, not algorithmic inputs, but demonstrate how users develop player archetype preferences.
 
+**Optimization Philosophy**: Counter-productive to trend toward maximum optimization in a constantly changing world. Adaptability and personal preference stability often outperform rigid algorithmic efficiency when underlying conditions shift unpredictably.
+
 ## Value Arbitrage Features (Priority Implementation)
 - **Market Inefficiency Detection**: Compare advanced metrics vs ADP/ownership to find mispriced players
 - **Undervalued Player Alerts**: Identify players with elite metrics but low market value

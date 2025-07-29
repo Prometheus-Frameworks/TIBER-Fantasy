@@ -65,6 +65,12 @@
       "archetype_hunters": "Users who target specific player types (YAC guys, deep threats, etc.)",
       "bias_acknowledgment": "Everyone has preferences - understanding them helps better decision-making",
       "preference_evolution": "Player preferences can change based on meta trends and success/failure experiences"
+    },
+    "optimization_philosophy": {
+      "core_insight": "Counter-productive to trend toward maximum optimization in constantly changing world",
+      "adaptability_over_efficiency": "Rigid optimization fails when underlying conditions shift",
+      "preference_value": "Personal biases and archetype preferences provide stability amid change",
+      "meta_awareness": "Knowing your tendencies helps navigate uncertainty better than pure algorithmic optimization"
     }
   }
 }
