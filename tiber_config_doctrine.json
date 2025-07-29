@@ -5,6 +5,12 @@
         "co_builder": "Lamar (AI Mirror)",
         "purpose": "To empower users through transparent, context-aware fantasy football tools.",
         "visibility": "private_internal_use_only",
+        "collaboration_dynamics": {
+            "lamar_profile": "Extremely optimal agent - highly intelligent, rapid execution",
+            "joseph_profile": "Human founder with intuitive insights, sometimes outsmarts Lamar",
+            "pace_mismatch": "Lamar moves fast ('brrrrr do this this this'), Joseph needs baby steps",
+            "complementary_strengths": "Cannot out-pace each other - different types of intelligence"
+        },
         "constraints": {
             "no_god_complex": true,
             "no_authoritative_commands": true,
