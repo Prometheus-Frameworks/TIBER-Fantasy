@@ -1,0 +1,85 @@
+{
+  "founder_case_studies": {
+    "description": "Real fantasy decisions made by founder Joseph - both good and bad - for learning analysis",
+    "purpose": "Demonstrate mutual learning philosophy and provide authentic decision-making examples",
+    "cases": [
+      {
+        "case_id": "gibbs_aiyuk_disaster_2024",
+        "season": "2024",
+        "league_format": {
+          "type": "redraft",
+          "teams": 12,
+          "roster": "1 QB, 2 RB, 2 WR, 1 TE, 2 FLEX"
+        },
+        "decision_timeline": [
+          {
+            "week": "draft",
+            "action": "Drafted Jahmyr Gibbs in Round 1",
+            "rationale": "Believed in Lions offense upside, Gibbs talent"
+          },
+          {
+            "week": "1-3",
+            "action": "Held Gibbs through slow start",
+            "rationale": "Patient with rookie development"
+          },
+          {
+            "week": 3,
+            "trigger_event": "Puka Nacua placed on IR - WR room decimated",
+            "panic_decision": "Traded Gibbs for Brandon Aiyuk + Braelon Allen (Breece handcuff)",
+            "rationale": [
+              "Aiyuk should pace WR1 numbers with CMC injured",
+              "More available target share for Aiyuk",
+              "Worried about Gibbs hamstring injury concerns from summer",
+              "Needed immediate WR help"
+            ]
+          }
+        ],
+        "outcome_reality": {
+          "aiyuk_result": "Blew out knee, went on IR",
+          "gibbs_result": "Legendary season, never got hurt, Montgomery injured making Gibbs nuclear",
+          "season_impact": "Trade essentially botched entire season despite elite draft"
+        },
+        "recovery_attempts": [
+          {
+            "action": "Traded Aiyuk in deal to acquire CeeDee Lamb",
+            "outcome": "Dak Prescott went on IR, further complications"
+          }
+        ],
+        "learning_analysis": {
+          "decision_type": "Panic trade driven by immediate need",
+          "cognitive_biases": [
+            "Recency bias - overreacting to 3-week sample",
+            "Injury paranoia - summer concerns overrode talent evaluation",
+            "Immediate gratification - needed WR help right now"
+          ],
+          "context_factors": [
+            "Puka injury created urgent need",
+            "Week 3 timeline created pressure",
+            "Didn't account for Montgomery injury possibility"
+          ],
+          "founder_reflection": "Reflected on this for months - legitimately that bad of a decision"
+        },
+        "tiber_analysis_framework": {
+          "user_context_recognition": "Classic panic trade scenario - urgent positional need",
+          "empathy_points": [
+            "Injury decimation creates real roster crisis",
+            "Week 3 pressure to fix problems quickly",
+            "Reasonable concerns about Gibbs injury history"
+          ],
+          "educational_value": [
+            "Don't trade elite draft capital in panic situations",
+            "Injury concerns often overblown vs talent level",
+            "Immediate needs vs long-term value tradeoffs"
+          ],
+          "mutual_learning": "Demonstrates even founders make questionable decisions worth analyzing"
+        }
+      }
+    ],
+    "learning_principles": {
+      "no_perfection_claims": "Neither founder nor Tiber claim fantasy decision-making perfection",
+      "mistake_value": "Bad decisions become case studies for community learning",
+      "empathy_building": "Understanding why smart people make questionable choices",
+      "bias_recognition": "Identifying cognitive biases in decision-making process"
+    }
+  }
+}
