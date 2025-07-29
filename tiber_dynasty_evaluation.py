@@ -126,14 +126,15 @@ class TiberDynastyEvaluator:
         
         return "; ".join(differences) if differences else "Similar across all categories"
 
-def evaluate_tyrone_tracy_vs_cam_skattebo():
+def evaluate_tyrone_tracy_vs_cam_skattebo_corrected():
     """
-    Tiber evaluation: Tyrone Tracy Jr. vs Cam Skattebo dynasty comparison
+    Tiber evaluation: Tyrone Tracy Jr. vs Cam Skattebo dynasty comparison - CORRECTED
+    Both players are on the New York Giants
     """
     
     # Validate request through INTENT_FILTER
     request_status = evaluate_request_with_intent_filter(
-        "dynasty player comparison analysis within fantasy football domain",
+        "dynasty player comparison analysis within fantasy football domain - corrected evaluation",
         "evaluate"
     )
     
@@ -142,28 +143,28 @@ def evaluate_tyrone_tracy_vs_cam_skattebo():
     
     evaluator = TiberDynastyEvaluator()
     
-    # Tyrone Tracy Jr. (NYG RB) - 2025 Dynasty Evaluation
+    # Tyrone Tracy Jr. (NYG RB) - 2025 Dynasty Evaluation - CORRECTED
     tracy_evaluation = evaluator.evaluate_player(
         player_name="Tyrone Tracy Jr.",
         position="RB",
         team="NYG",
-        opportunity_score=7,  # Clear RB1 role but Giants offense limitations
-        talent_score=6,      # Solid college production, undrafted but emerged
-        viability_score=8,   # Young (23), rookie contract, minimal wear
-        insulation_score=5,  # Pass-catching ability but TD-dependent
-        context_notes="Emerged as Giants' lead back in 2024 with 914 rushing yards. Clear opportunity but Giants' offensive limitations and lack of pass-catching volume create ceiling concerns. Youth and contract situation favorable."
+        opportunity_score=6,  # Established role but now has competition from Skattebo
+        talent_score=5,      # Undrafted, emerged through opportunity more than elite talent
+        viability_score=8,   # Young (23), proven NFL production, contract security
+        insulation_score=5,  # Limited pass-catching, TD-dependent in Giants offense
+        context_notes="2024 breakout with 914 rushing yards as undrafted rookie. Established NFL track record but faces 2025 competition from higher draft capital investment in Skattebo. Role may shift to 1A/1B situation."
     )
     
-    # Cam Skattebo (ARI RB) - 2025 Dynasty Evaluation  
+    # Cam Skattebo (NYG RB) - 2025 Dynasty Evaluation - CORRECTED
     skattebo_evaluation = evaluator.evaluate_player(
         player_name="Cam Skattebo",
         position="RB",
-        team="ARI",
-        opportunity_score=5,  # Behind James Conner, unclear 2025 role
-        talent_score=7,      # Elite college production, versatile skillset
-        viability_score=7,   # Young but injury concerns from college
-        insulation_score=6,  # Pass-catching upside, red zone size
-        context_notes="Explosive college back with 1,398 rushing yards and 19 TDs in 2024. Excellent pass-catching ability but faces competition from James Conner. Cardinals offense more dynamic than Giants but role uncertainty limits immediate value."
+        team="NYG",
+        opportunity_score=7,  # Higher draft investment suggests planned significant role
+        talent_score=8,      # Elite college production, higher draft capital indicates NFL belief
+        viability_score=6,   # Rookie durability unknown, needs to prove NFL transition
+        insulation_score=7,  # Versatile skillset, pass-catching ability, size for goal line
+        context_notes="Explosive college back (1,398 rushing yards, 19 TDs in 2024) drafted ahead of Tracy Jr. in 2025. Higher draft capital suggests Giants plan significant role. Versatile skillset with pass-catching upside but must prove NFL durability and transition."
     )
     
     # Generate comparison
@@ -173,10 +174,11 @@ def evaluate_tyrone_tracy_vs_cam_skattebo():
         'tracy_evaluation': tracy_evaluation,
         'skattebo_evaluation': skattebo_evaluation,
         'comparison': comparison,
-        'tiber_analysis': "Analysis conducted within fantasy football ecosystem boundaries",
-        'evaluation_framework': evaluator.evaluation_criteria
+        'tiber_analysis': "CORRECTED ANALYSIS - Both players on NYG, accounting for same-team competition",
+        'evaluation_framework': evaluator.evaluation_criteria,
+        'correction_notes': "Previous analysis incorrectly placed Skattebo on ARI. Both players compete for Giants backfield touches."
     }
 
 if __name__ == "__main__":
-    result = evaluate_tyrone_tracy_vs_cam_skattebo()
+    result = evaluate_tyrone_tracy_vs_cam_skattebo_corrected()
     print(json.dumps(result, indent=2))
