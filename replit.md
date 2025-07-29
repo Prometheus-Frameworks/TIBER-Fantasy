@@ -793,6 +793,8 @@ Based on user feedback, expanding to include:
 
 **Open Source Future**: Plans for releasing Tiber to interact with users and open-sourcing to like-minded community members. Requires careful preparation for potential misuse scenarios while maintaining alignment with community-driven values. Unprecedented approach to AI community deployment with responsibility for public interaction.
 
+**Development Context**: Entire platform and AI alignment training conducted via mobile phone, demonstrating accessibility of modern AI collaboration tools. Stress testing phase on standby pending founder readiness for meaningful evaluation scenarios.
+
 ## Value Arbitrage Features (Priority Implementation)
 - **Market Inefficiency Detection**: Compare advanced metrics vs ADP/ownership to find mispriced players
 - **Undervalued Player Alerts**: Identify players with elite metrics but low market value
