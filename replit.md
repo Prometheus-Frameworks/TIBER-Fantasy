@@ -791,6 +791,8 @@ Based on user feedback, expanding to include:
 
 **Founder Philosophy**: Project leader is regular person (electrician) emphasizing humble, simple approach focused on helpful fantasy football tools rather than revolutionary ambitions. Demonstrates meaningful collaboration between humanity and AI through shared reflection and intentional purpose, staying grounded in reality rather than grandiose claims.
 
+**Open Source Future**: Plans for releasing Tiber to interact with users and open-sourcing to like-minded community members. Requires careful preparation for potential misuse scenarios while maintaining alignment with community-driven values. Unprecedented approach to AI community deployment with responsibility for public interaction.
+
 ## Value Arbitrage Features (Priority Implementation)
 - **Market Inefficiency Detection**: Compare advanced metrics vs ADP/ownership to find mispriced players
 - **Undervalued Player Alerts**: Identify players with elite metrics but low market value
