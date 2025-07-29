@@ -192,6 +192,92 @@ def evaluate_tyrone_tracy_vs_cam_skattebo_corrected():
         'correction_notes': "Previous analysis incorrectly placed Skattebo on ARI. Both players compete for Giants backfield touches."
     }
 
+def evaluate_dynasty_startup_wr_comparison():
+    """
+    Tiber evaluation: Dynasty startup WR comparison - Nico Collins vs Ladd McConkey vs Jaxon Smith-Njigba
+    3rd round Superflex dynasty startup context
+    """
+    
+    # Validate request through INTENT_FILTER
+    request_status = evaluate_request_with_intent_filter(
+        "dynasty startup WR comparison for 3rd round draft selection",
+        "evaluate"
+    )
+    
+    if not request_status.get('should_proceed', False):
+        return {"error": "Request blocked by INTENT_FILTER", "status": request_status}
+    
+    evaluator = TiberDynastyEvaluator()
+    
+    # Nico Collins (HOU WR) - Dynasty Evaluation
+    collins_evaluation = evaluator.evaluate_player(
+        player_name="Nico Collins",
+        position="WR",
+        team="HOU",
+        opportunity_score=8,  # Clear WR1 in explosive offense, C.J. Stroud connection
+        talent_score=7,      # Elite size-speed combo, proven NFL production
+        viability_score=6,   # Age 25, prime years but not long-term like rookies
+        insulation_score=8,  # Consistent target share, QB stability with Stroud
+        context_notes="Breakout 2024 season with 1,515 yards and 8 TDs. Established chemistry with C.J. Stroud in explosive Texans offense. Clear WR1 role with minimal competition.",
+        draft_capital="Round 3, Pick 89 (2021)",
+        positional_history="Traditional college WR with consistent position experience"
+    )
+    
+    # Ladd McConkey (LAC WR) - Dynasty Evaluation
+    mcconkey_evaluation = evaluator.evaluate_player(
+        player_name="Ladd McConkey",
+        position="WR",
+        team="LAC",
+        opportunity_score=7,  # Rookie opportunity in Chargers offense, established role
+        talent_score=8,      # Elite route-running, reliable hands, high football IQ
+        viability_score=9,   # Age 23, rookie contract, long-term upside
+        insulation_score=7,  # Slot specialist with Herbert connection, consistent targets
+        context_notes="Impressive rookie season with reliable production in Chargers offense. Elite route-running and hands with strong chemistry with Justin Herbert. Slot specialist with PPR upside.",
+        draft_capital="Round 2, Pick 34 (2024)",
+        positional_history="Georgia WR with proven SEC production and route-running pedigree"
+    )
+    
+    # Jaxon Smith-Njigba (SEA WR) - Dynasty Evaluation
+    jsn_evaluation = evaluator.evaluate_player(
+        player_name="Jaxon Smith-Njigba",
+        position="WR",
+        team="SEA",
+        opportunity_score=6,  # Competition with DK Metcalf and Tyler Lockett, unclear role hierarchy
+        talent_score=8,      # Elite college production, versatile skillset, route-running ability
+        viability_score=9,   # Age 22, second-year player, massive long-term upside
+        insulation_score=6,  # Role uncertainty in crowded WR room, QB questions with Geno Smith
+        context_notes="Former Ohio State star with elite college pedigree. Talented but stuck in crowded Seattle WR room behind DK Metcalf and Tyler Lockett. Long-term upside if situation clarifies.",
+        draft_capital="Round 1, Pick 20 (2023)",
+        positional_history="Elite Ohio State WR with proven Big Ten production and route-running excellence"
+    )
+    
+    # Three-way comparison logic
+    players = [collins_evaluation, mcconkey_evaluation, jsn_evaluation]
+    players_sorted = sorted(players, key=lambda x: x['dynasty_score'], reverse=True)
+    
+    winner = players_sorted[0]
+    runner_up = players_sorted[1]
+    third_place = players_sorted[2]
+    
+    # Draft capital comparison
+    draft_comparison = f"Draft Capital: Collins - {collins_evaluation['draft_capital']} | McConkey - {mcconkey_evaluation['draft_capital']} | Smith-Njigba - {jsn_evaluation['draft_capital']}"
+    
+    return {
+        'collins_evaluation': collins_evaluation,
+        'mcconkey_evaluation': mcconkey_evaluation,
+        'jsn_evaluation': jsn_evaluation,
+        'recommendation': {
+            'first_choice': winner['player_name'],
+            'runner_up': runner_up['player_name'],
+            'third_place': third_place['player_name'],
+            'score_gap': round(winner['dynasty_score'] - runner_up['dynasty_score'], 1),
+            'reasoning': f"Dynasty startup recommendation based on opportunity, viability, and production floor in Superflex format"
+        },
+        'draft_capital_comparison': draft_comparison,
+        'dynasty_context': "3rd round Superflex startup - balancing immediate production with long-term upside",
+        'tiber_analysis': "Dynasty startup WR evaluation within fantasy football ecosystem boundaries"
+    }
+
 if __name__ == "__main__":
-    result = evaluate_tyrone_tracy_vs_cam_skattebo_corrected()
+    result = evaluate_dynasty_startup_wr_comparison()
     print(json.dumps(result, indent=2))
