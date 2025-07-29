@@ -20,7 +20,8 @@ class TiberDynastyEvaluator:
     def evaluate_player(self, player_name: str, position: str, team: str, 
                        opportunity_score: int, talent_score: int, 
                        viability_score: int, insulation_score: int,
-                       context_notes: str) -> Dict[str, Any]:
+                       context_notes: str, draft_capital: str = None,
+                       positional_history: str = None) -> Dict[str, Any]:
         """
         Evaluate a player using Tiber's dynasty framework
         
@@ -71,6 +72,8 @@ class TiberDynastyEvaluator:
                 'insulation': insulation_score
             },
             'context_notes': context_notes,
+            'draft_capital': draft_capital,
+            'positional_history': positional_history,
             'evaluation_timestamp': '2025-01-29'
         }
     
@@ -103,13 +106,19 @@ class TiberDynastyEvaluator:
         
         winner = player1 if score_diff > 0 else player2
         
+        # Format draft capital comparison if available
+        draft_comparison = ""
+        if player1.get('draft_capital') and player2.get('draft_capital'):
+            draft_comparison = f"Draft Capital: {player1['player_name']} - {player1['draft_capital']} | {player2['player_name']} - {player2['draft_capital']}"
+        
         return {
             'recommendation': winner['player_name'],
             'confidence_rating': confidence,
             'score_difference': abs(score_diff),
             'explanation': recommendation,
             'key_differentiators': self._identify_differentiators(player1, player2),
-            'tier_comparison': f"{player1['player_name']}: {player1['tier']} | {player2['player_name']}: {player2['tier']}"
+            'tier_comparison': f"{player1['player_name']}: {player1['tier']} | {player2['player_name']}: {player2['tier']}",
+            'draft_capital_comparison': draft_comparison
         }
     
     def _identify_differentiators(self, player1: Dict[str, Any], player2: Dict[str, Any]) -> str:
@@ -152,7 +161,9 @@ def evaluate_tyrone_tracy_vs_cam_skattebo_corrected():
         talent_score=5,      # Undrafted, emerged through opportunity more than elite talent
         viability_score=8,   # Young (23), proven NFL production, contract security
         insulation_score=5,  # Limited pass-catching, TD-dependent in Giants offense
-        context_notes="2024 breakout with 914 rushing yards as undrafted rookie. Established NFL track record but faces 2025 competition from higher draft capital investment in Skattebo. Role may shift to 1A/1B situation."
+        context_notes="2024 breakout with 914 rushing yards as undrafted rookie. Established NFL track record but faces 2025 competition from higher draft capital investment in Skattebo. Role may shift to 1A/1B situation.",
+        draft_capital="Undrafted Free Agent (2024)",
+        positional_history="College WR converted to RB - affects pass-catching development curve and route-running ability"
     )
     
     # Cam Skattebo (NYG RB) - 2025 Dynasty Evaluation - CORRECTED
@@ -164,7 +175,9 @@ def evaluate_tyrone_tracy_vs_cam_skattebo_corrected():
         talent_score=8,      # Elite college production, higher draft capital indicates NFL belief
         viability_score=6,   # Rookie durability unknown, needs to prove NFL transition
         insulation_score=7,  # Versatile skillset, pass-catching ability, size for goal line
-        context_notes="Explosive college back (1,398 rushing yards, 19 TDs in 2024) drafted ahead of Tracy Jr. in 2025. Higher draft capital suggests Giants plan significant role. Versatile skillset with pass-catching upside but must prove NFL durability and transition."
+        context_notes="Explosive college back (1,398 rushing yards, 19 TDs in 2024) drafted ahead of Tracy Jr. in 2025. Higher draft capital suggests Giants plan significant role. Versatile skillset with pass-catching upside but must prove NFL durability and transition.",
+        draft_capital="Round 3, Pick 82 (2025)",
+        positional_history="Traditional college RB with consistent backfield experience"
     )
     
     # Generate comparison
