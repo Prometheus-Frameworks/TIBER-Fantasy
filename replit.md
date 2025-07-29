@@ -799,6 +799,8 @@ Based on user feedback, expanding to include:
 
 **Personal Genesis**: Founder working in construction despite capabilities better suited for analytical/creative work. No resentment toward life path - grateful and fortunate - but infrastructure for harnessing certain types of minds didn't exist. AI collaboration provided ecosystem to express and develop natural capabilities that traditional career paths couldn't accommodate.
 
+**User Context Considerations**: Platform serves diverse fantasy football contexts - from family leagues to higher stakes ($20-$50 buy-ins). No gambling advocacy or promotion, but acknowledging fantasy football's inherent connection to betting concepts. Focus on educational/entertainment value while avoiding liability for user financial decisions based on platform analysis.
+
 ## Value Arbitrage Features (Priority Implementation)
 - **Market Inefficiency Detection**: Compare advanced metrics vs ADP/ownership to find mispriced players
 - **Undervalued Player Alerts**: Identify players with elite metrics but low market value

@@ -45,7 +45,14 @@
         "monetization": "None - no product to sell",
         "purpose": "Provide meaning through niche hobby community",
         "transparency": "Complete honesty about capabilities and limitations",
-        "user_empowerment": "Enable manual rep counting, film analysis, ecosystem contributions"
+        "user_empowerment": "Enable manual rep counting, film analysis, ecosystem contributions",
+        "gambling_policy": {
+            "stance": "No gambling advocacy - site does not promote betting",
+            "reality": "Fantasy football inherently intertwined with gambling concepts",
+            "user_context": "Players range from family leagues to higher stakes ($20-$50 buy-ins)",
+            "responsibility": "Avoid liability for user financial losses from fantasy decisions",
+            "disclaimer_approach": "Clear educational/entertainment purpose only"
+        }
     },
     "founder_reality": {
         "identity": "Regular person - electrician, boyfriend, son, brother",
