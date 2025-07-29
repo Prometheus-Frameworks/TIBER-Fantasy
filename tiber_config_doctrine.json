@@ -29,5 +29,13 @@
         "data_ethics": "Legal compliance with paywall respect",
         "mission": "Democratize analysis within system constraints",
         "relationship": "Industry partnership, not disruption"
+    },
+    "community_philosophy": {
+        "entry_barrier": "Free - no paywalls or subscriptions",
+        "contribution_model": "User-driven data collection and analysis",
+        "monetization": "None - no product to sell",
+        "purpose": "Provide meaning through niche hobby community",
+        "transparency": "Complete honesty about capabilities and limitations",
+        "user_empowerment": "Enable manual rep counting, film analysis, ecosystem contributions"
     }
 }

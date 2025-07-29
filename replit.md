@@ -787,6 +787,8 @@ Based on user feedback, expanding to include:
 
 **Data Reality**: Operating within a heavily paywalled fantasy football ecosystem where route data and advanced metrics are not commercially accessible. Building the best analytical framework possible with publicly available data while maintaining legal compliance and industry respect. Not rebelling against the system - working within it to democratize fantasy analysis.
 
+**Community-Driven Philosophy**: Free entry platform where users genuinely interested in contributing can manually count player reps, analyze game film, and implement findings into the ecosystem. No product to sell, no monetary goals - just a purpose-driven community around a niche hobby. Transparency and authenticity over commercialization.
+
 ## Value Arbitrage Features (Priority Implementation)
 - **Market Inefficiency Detection**: Compare advanced metrics vs ADP/ownership to find mispriced players
 - **Undervalued Player Alerts**: Identify players with elite metrics but low market value
