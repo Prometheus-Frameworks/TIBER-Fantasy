@@ -805,6 +805,8 @@ Based on user feedback, expanding to include:
 
 **2024 Season Meta Analysis**: Paradoxical year where elite RBs (Gibbs, Barkley, Bijan, Henry) stayed healthy while WRs suffered mass injuries. NFL trending toward RB dominance with slot targets breeding fantasy points. Challenges traditional "RB injury-prone" narrative and demonstrates importance of adapting to yearly positional variance.
 
+**Founder Player Preferences**: Joseph gravitates toward high YAC upside players with slot work capabilities (Rashee Rice, Puka Nacua, Ladd McConkey, Travis Hunter). Amon-Ra St. Brown serves as poster boy for this archetype - slot dominance + YAC ability = consistent fantasy points. These are personal biases, not algorithmic inputs, but demonstrate how users develop player archetype preferences.
+
 ## Value Arbitrage Features (Priority Implementation)
 - **Market Inefficiency Detection**: Compare advanced metrics vs ADP/ownership to find mispriced players
 - **Undervalued Player Alerts**: Identify players with elite metrics but low market value

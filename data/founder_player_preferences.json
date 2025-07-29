@@ -1,0 +1,70 @@
+{
+  "founder_player_preferences": {
+    "description": "Joseph's personal player preferences and biases - not algorithmic inputs but valuable context for understanding user types",
+    "preference_philosophy": "High YAC upside and slot work - players who can create after the catch",
+    "preferred_player_archetype": {
+      "primary_traits": ["high_yac_potential", "slot_usage", "after_catch_ability"],
+      "poster_boy_example": "Amon-Ra St. Brown - demonstrates this archetype perfectly over recent years",
+      "value_philosophy": "Slot targets breed fantasy points through consistent volume and YAC opportunities"
+    },
+    "current_favorites": [
+      {
+        "player_name": "Rashee Rice",
+        "position": "WR",
+        "team": "KC",
+        "appeal_factors": ["slot_work", "yac_ability", "consistent_targets"],
+        "archetype_fit": "High YAC slot receiver in high-volume offense"
+      },
+      {
+        "player_name": "Puka Nacua", 
+        "position": "WR",
+        "team": "LA",
+        "appeal_factors": ["yac_monster", "slot_versatility", "target_magnet"],
+        "archetype_fit": "YAC specialist with elite after-catch ability",
+        "personal_note": "Ironically went on IR causing founder's panic Gibbs trade"
+      },
+      {
+        "player_name": "Ladd McConkey",
+        "position": "WR", 
+        "team": "LAC",
+        "appeal_factors": ["slot_work", "yac_potential", "route_running"],
+        "archetype_fit": "Reliable slot option with YAC upside"
+      },
+      {
+        "player_name": "Travis Hunter",
+        "position": "WR",
+        "team": "TBD",
+        "appeal_factors": ["elite_athlete", "yac_potential", "versatility"],
+        "archetype_fit": "Ultimate ceiling play with YAC ability",
+        "draft_status": "2025 rookie - top prospect"
+      }
+    ],
+    "archetype_analysis": {
+      "amon_ra_model": {
+        "player": "Amon-Ra St. Brown",
+        "team": "DET", 
+        "why_poster_boy": "Perfect combination of slot usage, YAC ability, and consistent fantasy production",
+        "key_traits": ["slot_dominance", "after_catch_creation", "target_reliability"],
+        "success_factors": "High-volume slot role + elite YAC skills = consistent fantasy points"
+      },
+      "identifying_traits": [
+        "High targets from slot alignment",
+        "Above-average yards after catch metrics",
+        "Ability to create separation in short/intermediate routes", 
+        "Reliable hands for consistent volume",
+        "Usage in designed YAC concepts (screens, slants, crossers)"
+      ]
+    },
+    "platform_integration": {
+      "algorithmic_note": "These are personal preferences, not algorithmic inputs",
+      "user_context_value": "Demonstrates how different users have player archetypes they gravitate toward",
+      "educational_framework": "Can teach users to identify their own preferred player types",
+      "bias_awareness": "Shows how personal biases influence player evaluation and roster construction"
+    },
+    "user_type_recognition": {
+      "archetype_hunters": "Users who target specific player types (YAC guys, deep threats, etc.)",
+      "bias_acknowledgment": "Everyone has preferences - understanding them helps better decision-making",
+      "preference_evolution": "Player preferences can change based on meta trends and success/failure experiences"
+    }
+  }
+}
