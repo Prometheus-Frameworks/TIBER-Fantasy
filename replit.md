@@ -593,9 +593,17 @@ On The Clock is a clean, open-source fantasy football website that serves as a f
 **Integration Status**:
 - Successfully registered with Flask app as tiers_bp Blueprint
 - Template system integrated with app template directory
-- Sample data includes 8 players across 4 positions (WR, QB, RB, TE)
+- User-provided player data stored in data/2025_tiers.json (3 WR players)
 - All API endpoints operational and returning proper JSON responses
 - Component ready for 2025 dynasty tier visualization
+
+**File Organization Complete**:
+- **Display Logic**: components/Tiers2025Display.py (Flask Blueprint)
+- **HTML Template**: templates/tiers.html (S/A/B/C/D tier styling)
+- **Player Data**: data/2025_tiers.json (Luther Burden, Travis Hunter, Chris Godwin)
+- **Utility Functions**: utils/load_player_data.py (data loading, sorting, grouping)
+- **Route Registration**: /tiers endpoint registered in main Flask app
+- **Modular References**: All utility functions properly imported and referenced
 
 ## 🧱 Stack
 - Python / Flask

@@ -1,66 +1,26 @@
 [
     {
+        "name": "Luther Burden",
+        "position": "WR",
+        "tier": "A",
+        "team": "CHI",
+        "dynasty_score": 88,
+        "note": "Elite skillset, but shares targets with DJ Moore and Rome Odunze"
+    },
+    {
         "name": "Travis Hunter",
         "position": "WR",
         "tier": "S",
         "team": "JAX",
         "dynasty_score": 95,
-        "note": "Elite opportunity - minimal target competition beyond Brian Thomas Jr. Instant WR1 upside with 2nd overall draft capital."
+        "note": "Projected alpha with vacated targets after Kirk, Engram, Gabe Davis exits"
     },
     {
-        "name": "Luther Burden III",
-        "position": "WR",
-        "tier": "A",
-        "team": "CHI",
-        "dynasty_score": 88,
-        "note": "Strong opportunity - battling DJ Moore, Rome Odunze for targets but has slot role clarity and elite athletic profile."
-    },
-    {
-        "name": "Tetairoa McMillan",
+        "name": "Chris Godwin",
         "position": "WR",
         "tier": "B",
-        "team": "ARI",
-        "dynasty_score": 85,
-        "note": "Manageable competition - clear WR2 role available with Kyler Murray connection and red zone size advantage."
-    },
-    {
-        "name": "Cam Ward",
-        "position": "QB",
-        "tier": "A",
-        "team": "MIA",
-        "dynasty_score": 82,
-        "note": "Strong opportunity - immediate starter with elite arm talent and rushing upside in fantasy-friendly offense."
-    },
-    {
-        "name": "Dylan Sampson",
-        "position": "RB",
-        "tier": "C",
-        "team": "TEN",
-        "dynasty_score": 78,
-        "note": "Challenging competition - competing with Tony Pollard for touches but has goal-line size and college production."
-    },
-    {
-        "name": "Colston Loveland",
-        "position": "TE",
-        "tier": "B",
-        "team": "CHI",
-        "dynasty_score": 80,
-        "note": "Manageable competition - clear TE1 role with Caleb Williams connection and red zone target upside."
-    },
-    {
-        "name": "Emeka Egbuka",
-        "position": "WR",
-        "tier": "D",
         "team": "TB",
         "dynasty_score": 83,
-        "note": "Severe competition - entering crowded room with Mike Evans, Chris Godwin returning from injury. Volume concerns."
-    },
-    {
-        "name": "Will Campbell",
-        "position": "RB",
-        "tier": "C",
-        "team": "HOU",
-        "dynasty_score": 75,
-        "note": "Challenging competition - behind Joe Mixon and Dameon Pierce on depth chart. Special teams role likely year one."
+        "note": "Was on WR1 pace pre-injury, now competes with Emeka Egbuka"
     }
 ]
