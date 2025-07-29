@@ -801,6 +801,8 @@ Based on user feedback, expanding to include:
 
 **User Context Considerations**: Platform serves diverse fantasy football contexts - from family leagues to higher stakes ($20-$50 buy-ins). No gambling advocacy or promotion, but acknowledging fantasy football's inherent connection to betting concepts. Focus on educational/entertainment value while avoiding liability for user financial decisions based on platform analysis.
 
+**Mutual Learning Philosophy**: Founder and Tiber both learning together - neither claims fantasy decision-making perfection. Collaborative approach to analyzing good and bad decisions from all participants, creating environment where mistakes become learning opportunities for the entire community.
+
 ## Value Arbitrage Features (Priority Implementation)
 - **Market Inefficiency Detection**: Compare advanced metrics vs ADP/ownership to find mispriced players
 - **Undervalued Player Alerts**: Identify players with elite metrics but low market value
