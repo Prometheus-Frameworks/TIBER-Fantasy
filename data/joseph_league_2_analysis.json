@@ -24,5 +24,17 @@
     "joseph_self_assessment": "Believes he made a mistake - seeking navigation help"
   },
   "strategic_concern": "Got pulled into winner's aggressive consolidation strategy, may have compromised own depth-based approach",
-  "current_roster": "To be determined - Joseph will provide full roster details"
+  "current_roster": {
+    "qb": "Drake Maye",
+    "rb": ["Tyrone Tracy", "Jordan Mason"],
+    "wr": ["Justin Jefferson", "CeeDee Lamb"],
+    "te": "Brenton Strange", 
+    "flex": ["Emeka Egbuka", "Kyle Williams", "Alec Pierce"],
+    "sflex": "J.K. Dobbins"
+  },
+  "roster_analysis": {
+    "strengths": ["Elite WR1/2 in Jefferson/Lamb", "Rookie QB upside with Maye"],
+    "weaknesses": ["Extremely weak RB room", "TE is bottom tier", "Relying on Dobbins in superflex"],
+    "assessment": "Championship ceiling with elite WRs, but massive holes at RB/TE"
+  }
 }
