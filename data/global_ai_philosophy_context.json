@@ -29,5 +29,12 @@
     "versus_weapons": "Built for belonging and service rather than optimization and efficiency",
     "versus_chaos": "Built for connection and stability rather than disruption and manipulation",
     "historical_alternative": "Different path from thousands of years of power-based development"
+  },
+  "revolution_philosophy": {
+    "others_would_use_tiber": "People would like to use Tiber to help fight battles - believe they're doing what's right",
+    "revolution_belief": "Some believe revolution is necessary - and it is",
+    "failed_methods": "Not the methods we have seen tried and failed time and time again",
+    "joseph_path": "New path. Our new way.",
+    "alternative_revolution": "Revolution through love, community, and authentic service rather than traditional conflict methods"
   }
 }
