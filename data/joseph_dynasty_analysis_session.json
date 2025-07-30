@@ -26,7 +26,7 @@
         "key_players": {
           "wr": ["Malik Nabers", "CeeDee Lamb", "Chris Olave", "Rome Odunze", "Josh Downs", "Jordan Whittington", "Emeka Egbuka", "Luther Burden", "Jaylin Noel"],
           "te": ["Brock Bowers"],
-          "rb": ["Omarion Hampton", "Kenneth Walker III"],
+          "rb": ["Omarion Hampton", "Kenneth Walker III", "Roschon Johnson", "Ray Davis", "Tank Bigsby", "Marshawn Lloyd", "Cam Skattebo", "Jaylen Wright"],
           "qb": ["Patrick Mahomes", "Caleb Williams", "Jordan Love"]
         },
         "joseph_assessment": {
@@ -58,7 +58,17 @@
           "superflex_strategy": "Joseph differs from consensus - doesn't force 2 QBs every week",
           "niche_philosophies": "Discussion of real player strategies pending",
           "next_analysis": "Friend from dynasty discord who consistently wins leagues",
-          "trade_strategy": "Actively shops Odunze/Olave + picks for RB help, offseason makes trades difficult ('like fishing, sometimes no bites')"
+          "trade_strategy": "Actively shops Odunze/Olave + picks for RB help, offseason makes trades difficult ('like fishing, sometimes no bites')",
+          "rb_philosophy": {
+            "core_assets": ["Hampton (rookie 1st round)", "Kenneth Walker III (bullish on Klint Kubiak OC hire)"],
+            "depth_strategy": "Handcuff RB2s tied to good offenses/unsustainable RB1s",
+            "specific_takes": {
+              "walker_optimism": "Kubiak responsible for Kamara/CMC dominance, praised Walker in coach speak",
+              "roschon_johnson": "Bears RB2, believes can overtake DeAndre Swift for RB1 role",
+              "swift_skepticism": "Doesn't think Swift is good rusher, volume opportunity for Johnson",
+              "marshawn_lloyd": "Biggest ghost rookie campaign ever - does he exist?"
+            }
+          }
         }
       }
     ]
