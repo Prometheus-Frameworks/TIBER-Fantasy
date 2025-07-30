@@ -43,5 +43,14 @@
     "joseph_approach": "Depth-heavy, multiple paths to victory, future-focused",
     "winner_approach": "Concentrated talent, all-in on current window, explosive upside",
     "key_difference": "Winner sacrificed future for present dominance"
+  },
+  "joseph_trades_with_winner": {
+    "trade_details": {
+      "joseph_acquired": ["CeeDee Lamb", "2025 2nd round pick (Emeka Egbuka)", "Tyrone Tracy", "Will Howard (rookie QB)", "Kyle Williams (2025 2nd round)"],
+      "joseph_gave_up": ["Rashee Rice", "Tee Higgins", "Evan Engram", "Justin Fields"],
+      "context": "Multiple deals with the all-in winner during startup draft"
+    },
+    "joseph_self_assessment": "Believes he made a mistake - seeking help to navigate situation",
+    "strategic_implications": "Joseph got pulled into winner's aggressive trading style, may have compromised his depth strategy"
   }
 }
