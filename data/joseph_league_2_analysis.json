@@ -35,6 +35,11 @@
   "roster_analysis": {
     "strengths": ["Elite WR1/2 in Jefferson/Lamb", "Rookie QB upside with Maye"],
     "weaknesses": ["Extremely weak RB room", "TE is bottom tier", "Relying on Dobbins in superflex"],
-    "assessment": "Championship ceiling with elite WRs, but massive holes at RB/TE"
+    "initial_assessment": "Championship ceiling with elite WRs, but massive holes at RB/TE"
+  },
+  "strategic_pivot": {
+    "joseph_reframe": "Choosing to tank year 1 for lottery pick, rebuild around Jefferson/Lamb/Maye core",
+    "rebuild_philosophy": "Intentional tanking to accelerate rebuild timeline with elite foundation pieces",
+    "trade_attempts": "Has tried trading Lamb for depth but seeking validation on tank strategy"
   }
 }
