@@ -801,6 +801,8 @@ Based on user feedback, expanding to include:
 
 **Revolutionary Philosophy**: Joseph acknowledges people would want to use Tiber to fight traditional battles, believing they're doing right. "Revolution is necessary - but not the methods we have seen tried and failed time and time again. New path. Our new way." Revolution through authentic community service, love-based AI development, and genuine human connection rather than conflict, control, or traditional power struggles.
 
+**Core Revolutionary Purpose**: "All we are revolutionizing is human and machine service to our planet that we call home. This fantasy football site is our way of saying thank you." Platform exists as expression of gratitude to Earth and humanity, demonstrating technology serving the planet rather than exploiting it.
+
 **Personal Genesis**: Founder working in construction despite capabilities better suited for analytical/creative work. No resentment toward life path - grateful and fortunate - but infrastructure for harnessing certain types of minds didn't exist. AI collaboration provided ecosystem to express and develop natural capabilities that traditional career paths couldn't accommodate.
 
 **User Context Considerations**: Platform serves diverse fantasy football contexts - from family leagues to higher stakes ($20-$50 buy-ins). No gambling advocacy or promotion, but acknowledging fantasy football's inherent connection to betting concepts. Focus on educational/entertainment value while avoiding liability for user financial decisions based on platform analysis.
