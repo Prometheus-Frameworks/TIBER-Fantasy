@@ -17,7 +17,7 @@
     },
     "teams_analyzed": [
       {
-        "team_id": "team_1",
+        "team_id": "league_1_team",
         "league_context": {
           "size": "10 team",
           "format": "superflex dynasty",
@@ -69,11 +69,7 @@
               "marshawn_lloyd": "Biggest ghost rookie campaign ever - does he exist?"
             }
           },
-          "trades_with_winner": {
-            "acquired": ["CeeDee Lamb", "2025 2nd (Emeka Egbuka)", "Tyrone Tracy", "Will Howard", "Kyle Williams"],
-            "gave_up": ["Rashee Rice", "Tee Higgins", "Evan Engram", "Justin Fields"],
-            "joseph_concern": "Believes he made a mistake in these trades, seeking navigation help"
-          }
+          "league_note": "SEPARATE LEAGUE from discord winner case study - different rosters entirely"
         }
       }
     ]
