@@ -24,7 +24,7 @@
           "note": "10 teams = stronger rosters at face value"
         },
         "key_players": {
-          "wr": ["Malik Nabers", "CeeDee Lamb"],
+          "wr": ["Malik Nabers", "CeeDee Lamb", "Chris Olave", "Rome Odunze", "Josh Downs", "Jordan Whittington", "Emeka Egbuka", "Luther Burden", "Jaylin Noel"],
           "te": ["Brock Bowers"],
           "rb": ["Omarion Hampton", "Kenneth Walker III"],
           "qb": ["Patrick Mahomes", "Caleb Williams", "Jordan Love"]
@@ -56,7 +56,8 @@
           "jayden_daniels_adp": "Going 1.01 in majority of dynasty startup drafts",
           "joseph_preference": "Believes Josh Allen should be 1.01 over Daniels",
           "superflex_strategy": "Joseph differs from consensus - doesn't force 2 QBs every week",
-          "niche_philosophies": "Discussion of real player strategies pending"
+          "niche_philosophies": "Discussion of real player strategies pending",
+          "next_analysis": "Friend from dynasty discord who consistently wins leagues"
         }
       }
     ]
