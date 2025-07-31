@@ -46,6 +46,14 @@
       "conviction_stance": "I'll go with my gut here",
       "target_context": "240 vacated targets - plenty of opportunity for multiple receivers"
     },
+    "deeper_motivation": {
+      "not_about_money": "Not about the $400 from league mates",
+      "not_about_bragging": "Not about the 'I told you so' moments",
+      "core_satisfaction": "Trusting my intuition paid off - I believe in myself",
+      "joseph_philosophy": "Sometimes it's worth it just to try",
+      "personal_validation": "The satisfaction comes from self-belief being rewarded",
+      "conviction_reward": "When your gut feeling succeeds, it validates your analytical instincts"
+    },
     "conviction_factors": {
       "talent_grade": "Generational - once in a decade type athlete",
       "situation_grade": "Excellent - clear path to targets and usage",
