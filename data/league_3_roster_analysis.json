@@ -1,0 +1,35 @@
+{
+  "league_analysis": {
+    "roster_composition": {
+      "QB": ["Caleb Williams"],
+      "RB": ["Bijan Robinson", "Jaylen Wright"],
+      "WR": ["Puka Nacua", "Ladd McConkey", "Travis Hunter"],
+      "TE": ["T.J. Hockenson"],
+      "FLEX": ["Tyler Warren", "Luther Burden"],
+      "SFLEX": ["J.J. McCarthy"]
+    },
+    "deduced_league_settings": {
+      "format": "Superflex",
+      "evidence_superflex": "SFLEX position explicitly listed with J.J. McCarthy (QB) in that slot",
+      "scoring_system": "PPR",
+      "evidence_ppr": "Heavy WR investment (5 WRs rostered) suggests PPR scoring system favoring reception volume",
+      "te_premium": "Likely YES",
+      "evidence_tep": "Tyler Warren (TE) valued enough for FLEX position, suggests TE premium scoring",
+      "estimated_league_size": "12-14 teams",
+      "evidence_league_size": "High-end rookies like Travis Hunter and Luther Burden rostered, suggests deeper league with scarcity"
+    },
+    "roster_construction_analysis": {
+      "qb_strategy": "Youth-focused rebuild - Caleb Williams (rookie) + J.J. McCarthy (rookie backup)",
+      "rb_strategy": "Elite starter + developmental piece - Bijan Robinson (proven) + Jaylen Wright (upside)",
+      "wr_strategy": "Rookie-heavy WR room - 3 of 5 WRs are rookies/2nd year (Hunter, Burden, McConkey)",
+      "te_strategy": "Veteran stability + rookie upside - Hockenson (proven) + Warren (rookie TE)",
+      "overall_approach": "Aggressive youth movement with championship timeline 2-3 years out"
+    },
+    "dynasty_evaluation": {
+      "timeline": "Rebuilding/Competitive Window Opening 2026-2027",
+      "strength_areas": ["QB foundation", "WR upside", "Youth across roster"],
+      "concern_areas": ["RB depth beyond Bijan", "Immediate 2025 competitiveness"],
+      "draft_capital_concentration": "Heavy investment in 2024 rookie class"
+    }
+  }
+}
