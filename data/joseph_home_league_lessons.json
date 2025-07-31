@@ -1,0 +1,53 @@
+{
+  "lessons_learned": {
+    "conviction_based_drafting": {
+      "principle": "Target your actual favorite players rather than consensus 'safe' picks",
+      "examples": [
+        "Travis Hunter at 1.02 - must-have player fell into lap",
+        "Luther Burden reach at 1.11 - traded Fields to get his guy",
+        "Early identification of Ladd McConkey before market caught up"
+      ],
+      "emotional_payoff": "Building roster with players you genuinely love creates deeper satisfaction",
+      "application": "Home leagues especially - bragging rights with your actual favorites beats optimal but boring"
+    },
+    "strategic_patience_in_rebuilds": {
+      "principle": "Teardown positioning can be championship foundation if executed properly",
+      "process": [
+        "Accept 2nd to last position for maximum draft capital",
+        "Convert veterans to assets (Puka trade, Fields to 1.11)",
+        "Target youth with elite situations (McCarthy + KOC system)"
+      ],
+      "timeline": "2-3 year competitive window planning vs immediate gratification",
+      "application": "Dynasty rebuilds require discipline to position for future rather than patch current holes"
+    },
+    "market_inefficiency_identification": {
+      "principle": "Act when you see value before consensus catches up",
+      "examples": [
+        "Puka acquisition when market assumed Kupp would return to form",
+        "Tyler Warren steal at 2.04 when projected much higher",
+        "J.J. McCarthy trade for long-term superflex value"
+      ],
+      "timing": "Strike when you have conviction but market hasn't adjusted",
+      "application": "Trust your analysis over popular opinion when backed by evidence"
+    },
+    "positional_injury_assumptions": {
+      "lesson": "Don't let positional injury narratives drive all roster decisions",
+      "example": "Achane trade based on RB safety fears - then Puka gets hurt instead",
+      "balance": "Consider injury risk but don't let it override value analysis",
+      "application": "Process over results - evaluate decisions based on information available at time"
+    }
+  },
+  "tiber_questions": {
+    "roster_construction": "How do you balance emotional connection to players vs pure analytical optimization?",
+    "rebuild_timeline": "What's the optimal teardown approach for different league contexts?",
+    "market_timing": "How do you identify when market inefficiencies are actionable vs temporary?",
+    "conviction_vs_consensus": "When should personal player evaluation override expert consensus rankings?"
+  },
+  "best_applications": {
+    "home_leagues": "Conviction-based building especially valuable for emotional investment and bragging rights",
+    "dynasty_formats": "Long-term thinking allows for strategic positioning and patient asset conversion",
+    "superflex_leagues": "QB foundation building through youth and situation analysis",
+    "rebuild_scenarios": "Convert veteran assets to youth with better long-term timelines",
+    "community_platforms": "Help users identify their 'conviction players' rather than just consensus rankings"
+  }
+}
