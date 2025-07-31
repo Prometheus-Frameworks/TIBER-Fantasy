@@ -58,6 +58,14 @@
         "decision_impact": "Caused trade decision that didn't age well in injury context",
         "learning": "RB injury assumptions can lead to suboptimal roster decisions",
         "connection_to_yesterday": "Discussed how RB safety fears influenced decision-making"
+      },
+      "rookie_draft_strategy": {
+        "draft_position": "2nd last pick in rookie draft",
+        "travis_hunter_selection": "Took Travis Hunter at 1.02 - fell into Joseph's lap as fate would have it",
+        "hunter_conviction": "Travis Hunter was a must have player",
+        "mcconkey_timing": "Was early on Ladd McConkey",
+        "draft_outcome": "Rejoice! - Successfully landed both target players",
+        "strategic_approach": "Targeted specific players with high conviction rather than BPA"
       }
     }
   }
