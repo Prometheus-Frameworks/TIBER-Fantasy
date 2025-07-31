@@ -11,10 +11,10 @@
     "deduced_league_settings": {
       "format": "Superflex",
       "evidence_superflex": "SFLEX position explicitly listed with J.J. McCarthy (QB) in that slot",
-      "scoring_system": "PPR",
+      "scoring_system": "PPR", 
       "evidence_ppr": "Heavy WR investment (5 WRs rostered) suggests PPR scoring system favoring reception volume",
-      "te_premium": "Likely YES",
-      "evidence_tep": "Tyler Warren (TE) valued enough for FLEX position, suggests TE premium scoring",
+      "te_premium": "NO - CORRECTED",
+      "evidence_tep_correction": "Joseph clarified no TEP - Tyler Warren in FLEX due to roster depth limitations, not TE premium",
       "estimated_league_size": "12-14 teams",
       "evidence_league_size": "High-end rookies like Travis Hunter and Luther Burden rostered, suggests deeper league with scarcity"
     },
@@ -30,6 +30,18 @@
       "strength_areas": ["QB foundation", "WR upside", "Youth across roster"],
       "concern_areas": ["RB depth beyond Bijan", "Immediate 2025 competitiveness"],
       "draft_capital_concentration": "Heavy investment in 2024 rookie class"
+    },
+    "joseph_context": {
+      "league_significance": "Home league with close real life friends - bragging rights and fun",
+      "rebuild_timeline": "Tear down rebuild a few months ago with drastic changes and well-timed moves",
+      "emergence_status": "Something is starting to emerge from the rebuild",
+      "personal_favorites": {
+        "wr_core": "Puka Nacua, Ladd McConkey, Travis Hunter - Joseph's three favorite players",
+        "emotional_connection": "WR core is special (tears roll down cheek)",
+        "other_favorites": ["Bijan Robinson", "Luther Burden"],
+        "bias_acknowledgment": "Don't let my bias carry too much weight"
+      },
+      "roster_depth_reality": "Team weak in depth, pulling together what's available"
     }
   }
 }
