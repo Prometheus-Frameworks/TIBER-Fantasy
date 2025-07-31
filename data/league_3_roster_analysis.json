@@ -42,6 +42,23 @@
         "bias_acknowledgment": "Don't let my bias carry too much weight"
       },
       "roster_depth_reality": "Team weak in depth, pulling together what's available"
+    },
+    "key_trades_analysis": {
+      "puka_acquisition": {
+        "timing": "Last offseason",
+        "trade_details": "Traded away De'Von Achane to acquire Puka Nacua",
+        "market_context": "People assumed Round 5 pick would be usurped by Cooper Kupp",
+        "joseph_insight": "Clear to Joseph that Puka already had usurped Kupp",
+        "strategy": "Flipped high-value RB into WR for longevity concerns",
+        "outcome": "Puka became cemented as top 5 WR as Joseph predicted",
+        "irony": "Puka gets hurt, Achane doesn't - fantasy football luck"
+      },
+      "rb_safety_assumption": {
+        "influence": "Affected by assumption that RBs were not safe",
+        "decision_impact": "Caused trade decision that didn't age well in injury context",
+        "learning": "RB injury assumptions can lead to suboptimal roster decisions",
+        "connection_to_yesterday": "Discussed how RB safety fears influenced decision-making"
+      }
     }
   }
 }
