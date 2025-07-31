@@ -81,6 +81,18 @@
       "rb_room_addition": {
         "jordan_mason": "Added to RB room - one of Joseph's 'my guys' for 2025",
         "personal_conviction": "Joseph thinks Mason is going to be good"
+      },
+      "additional_draft_moves": {
+        "justin_fields_trade": {
+          "trade_details": "Traded away Justin Fields to acquire 1.11 pick",
+          "draft_selection": "Reached on Luther Burden at 1.11",
+          "conviction_pick": "Another personal favorite player selection"
+        },
+        "tyler_warren_steal": {
+          "draft_position": "2.04 - Tyler Warren fell to Joseph",
+          "outcome": "SOMEHOW landed Warren much later than expected",
+          "value": "Exceptional draft value for rookie TE with upside"
+        }
       }
     }
   }
