@@ -48,7 +48,7 @@ export interface IStorage {
   }): Promise<void>;
   
   // Player operations
-  getPlayer(id: number): Promise<Player | undefined>;
+  getPlayer(id: string | number): Promise<Player | undefined>;
   getPlayerByExternalId(externalId: string): Promise<Player | undefined>;
   getPlayerBySleeperIdFromMemory(sleeperId: string): Promise<Player | undefined>;
   getAllPlayers(): Promise<Player[]>;
@@ -249,8 +249,9 @@ export class MemStorage implements IStorage {
     }
   }
 
-  async getPlayer(id: number): Promise<Player | undefined> {
-    return this.players.get(id);
+  async getPlayer(id: string | number): Promise<Player | undefined> {
+    const numericId = typeof id === 'string' ? parseInt(id) : id;
+    return this.players.get(numericId);
   }
 
   async getAvailablePlayers(position?: string): Promise<Player[]> {

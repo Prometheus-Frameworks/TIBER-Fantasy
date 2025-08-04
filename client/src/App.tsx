@@ -58,6 +58,7 @@ import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
 // FantasyProTest removed - service deprecated
 import HowYouCanContribute from "@/pages/how-you-can-contribute";
 import RBDraftCapitalContext from "@/pages/RBDraftCapitalContext";
+import PlayerCompass from "@/pages/PlayerCompass";
 
 function Router() {
   return (
@@ -75,6 +76,7 @@ function Router() {
       <Route path="/rankings" component={Rankings} />
       <Route path="/compare-league" component={CompareLeaguePage} />
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
+      <Route path="/player-compass" component={PlayerCompass} />
       <Route path="/data-sources" component={DataSourcesPage} />
       <Route path="/adp" component={CleanADP} />
       <Route path="/oasis" component={Oasis} />

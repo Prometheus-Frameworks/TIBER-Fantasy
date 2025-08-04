@@ -52,6 +52,7 @@ import { sleeperWeeklySnapService } from './services/sleeperWeeklySnapService';
 import { sleeperStrictSnapService } from './services/sleeperStrictSnapService';
 import { wrRatingsService } from './services/wrRatingsService';
 import { wrGameLogsService } from './services/wrGameLogsService';
+import compassRoutes from './routes/compassRoutes';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -1174,6 +1175,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Player Compass routes
+  app.use('/api/compass', compassRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

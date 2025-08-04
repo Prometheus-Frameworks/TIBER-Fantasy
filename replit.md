@@ -9,6 +9,7 @@ League focus: Dynasty leagues (skill positions only - QB, RB, WR, TE). No kicker
 Future consideration: May add redraft emphasis later.
 Mission commitment: Strictly avoid all paywall partnerships or data sources. Maintain complete independence and free access to all platform features.
 Community Discussion Philosophy: Transform statistical insights into meaningful conversations that help real people make better fantasy decisions (example: RB age cliff data → nuanced CMC contending window analysis).
+Player Evaluation System: "Player Compass" - Dynamic, context-aware player profiles with tiers, scenario scores, and decision-making guidance instead of rigid rankings. Emphasizes flexibility and serves multiple team strategies.
 
 ## System Architecture
 
