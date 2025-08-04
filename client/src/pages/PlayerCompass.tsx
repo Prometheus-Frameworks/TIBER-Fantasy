@@ -159,7 +159,7 @@ export default function PlayerCompass() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="text-center space-y-2">
+      <div className="text-center space-y-4">
         <div className="flex items-center justify-center space-x-2">
           <Compass className="w-8 h-8 text-blue-600" />
           <h1 className="text-3xl font-bold">Player Compass</h1>
@@ -169,6 +169,56 @@ export default function PlayerCompass() {
           No rigid rankings - just flexible evaluation that serves your strategy.
         </p>
       </div>
+
+      {/* What is Player Compass */}
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Compass className="w-5 h-5 text-blue-600" />
+              <h2 className="text-xl font-semibold">What is Player Compass?</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <h3 className="font-medium">No Rigid Rankings</h3>
+                </div>
+                <p className="text-muted-foreground">
+                  Instead of telling you "Player X is better than Player Y," we show you all directions clearly and let you choose your path based on your team's situation.
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <h3 className="font-medium">Context-Aware Guidance</h3>
+                </div>
+                <p className="text-muted-foreground">
+                  Different scores for contending vs rebuilding teams. A player might be perfect for your championship push but wrong for your rebuild.
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  <h3 className="font-medium">Decision Support</h3>
+                </div>
+                <p className="text-muted-foreground">
+                  Key insights, risk factors, and scenario analysis help you make informed decisions that match your team's timeline and goals.
+                </p>
+              </div>
+            </div>
+            
+            <div className="pt-2 border-t border-blue-200 dark:border-blue-800">
+              <p className="text-sm text-muted-foreground">
+                <strong>How to use:</strong> Filter players by position, tier, or scenario values. Click any player for detailed analysis including age context, opportunity metrics, and tailored insights for your team's situation.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Filters */}
       <Card>
