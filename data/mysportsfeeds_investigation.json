@@ -1,0 +1,103 @@
+{
+  "mysportsfeeds_investigation": {
+    "investigation_date": "2025-01-04",
+    "current_status": "CREDENTIALS_CONFIGURED_BUT_UNUSED",
+    "api_overview": {
+      "service_name": "MySportsFeeds",
+      "current_version": "v2.1",
+      "authentication": "Basic Auth (API_KEY + 'MYSPORTSFEEDS' as password)",
+      "cost": "Free tier for non-commercial use, affordable commercial plans",
+      "data_formats": ["JSON", "XML", "CSV"]
+    },
+    "valuable_endpoints_for_on_the_clock": {
+      "injury_reports": {
+        "endpoint": "/nfl/{season}/injuries.json",
+        "value_proposition": "Real-time injury status - critical for dynasty evaluation",
+        "fantasy_impact": "High - injury updates directly affect player values",
+        "current_limitation": "Basic text descriptions, but roadmap includes enhanced reporting"
+      },
+      "player_stats": {
+        "endpoint": "/nfl/{season}/cumulative_player_stats.json",
+        "value_proposition": "Season-long statistical data for evaluation",
+        "fantasy_impact": "Medium - complements existing Sleeper data",
+        "note": "May duplicate what you already get from Sleeper API"
+      },
+      "game_logs": {
+        "endpoint": "/nfl/{season}/week/{week}/player_gamelogs.json",
+        "value_proposition": "Weekly performance tracking",
+        "fantasy_impact": "Medium - supplements your existing game log data",
+        "note": "Sleeper already provides this effectively"
+      },
+      "roster_updates": {
+        "endpoint": "/nfl/{season}/roster_players.json",
+        "value_proposition": "Official roster changes and depth chart updates",
+        "fantasy_impact": "High - feeds directly into your Roster Shift Listener system",
+        "integration_potential": "Excellent match for existing roster_shift_listener.py"
+      },
+      "weekly_games": {
+        "endpoint": "/nfl/{season}/week/{week}/games.json",
+        "value_proposition": "Game schedules and results",
+        "fantasy_impact": "Low - ESPN and other free sources provide this",
+        "recommendation": "Not priority"
+      }
+    },
+    "strategic_value_assessment": {
+      "high_value_features": [
+        "Injury reports - crucial for dynasty evaluation",
+        "Roster updates - would automate your Roster Shift Listener",
+        "Official depth chart data - affects target competition analysis"
+      ],
+      "medium_value_features": [
+        "Player statistics - duplicates Sleeper but could provide verification",
+        "Game logs - supplements existing data sources"
+      ],
+      "low_value_features": [
+        "Schedules and scores - easily available elsewhere",
+        "Team standings - not critical for dynasty focus"
+      ]
+    },
+    "integration_opportunities": {
+      "roster_shift_automation": {
+        "current_state": "Manual entry via roster_shift_listener.py",
+        "msf_enhancement": "Automate with real-time roster updates",
+        "implementation": "Replace manual monitoring with MSF roster endpoints",
+        "benefit": "Turn reactive system into proactive automated monitoring"
+      },
+      "injury_tracking": {
+        "current_state": "Manual monitoring of injury reports",
+        "msf_enhancement": "Automatic injury status updates",
+        "implementation": "Feed MSF injury data into dynasty tier adjustments",
+        "benefit": "Real-time injury impact on player valuations"
+      },
+      "data_verification": {
+        "current_state": "Single-source Sleeper data",
+        "msf_enhancement": "Cross-verification of statistical data",
+        "implementation": "Compare MSF vs Sleeper for data quality assurance",
+        "benefit": "Increased confidence in analytical accuracy"
+      }
+    },
+    "cost_benefit_analysis": {
+      "free_tier_limitations": "Non-commercial use only",
+      "commercial_cost": "20-30% discount vs USD pricing (Canadian company)",
+      "value_proposition": "Strong if injury reports and roster automation justify cost",
+      "recommendation": "Test free tier first, evaluate automation benefits"
+    },
+    "implementation_recommendation": {
+      "priority": "MEDIUM-HIGH",
+      "reasoning": [
+        "Injury reports would significantly enhance dynasty analysis",
+        "Roster automation aligns perfectly with existing Roster Shift Listener",
+        "Free tier allows risk-free evaluation",
+        "Complements rather than duplicates existing Sleeper integration"
+      ],
+      "suggested_approach": [
+        "Set up free tier access with existing MSF credentials",
+        "Focus on injury reports and roster updates endpoints",
+        "Test integration with roster_shift_listener.py",
+        "Evaluate data quality vs existing sources",
+        "Make commercial decision based on automation value"
+      ],
+      "integration_effort": "Low-Medium - existing infrastructure supports it"
+    }
+  }
+}
