@@ -144,6 +144,14 @@ try:
 except Exception as e:
     print(f"❌ Tiers2025Display Blueprint registration failed: {e}")
 
+# Import and register MySportsFeeds blueprint
+try:
+    from routes.mysportsfeeds_routes import register_mysportsfeeds_routes
+    register_mysportsfeeds_routes(app)
+    print("✅ MySportsFeeds Blueprint registered successfully")
+except Exception as e:
+    print(f"❌ MySportsFeeds Blueprint registration failed: {e}")
+
 # Initialize core modules for legacy endpoints
 wr_processor = WRRatingsProcessor()
 rookie_db = RookieDatabase()
