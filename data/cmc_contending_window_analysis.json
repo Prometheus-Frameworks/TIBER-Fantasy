@@ -1,0 +1,76 @@
+{
+  "analysis_type": "CMC Contending Window Strategy",
+  "date_created": "2025-01-04",
+  "scenario": "Dynasty teams in championship contention considering CMC acquisition",
+  "historical_context": {
+    "age_29_elite_rb_precedent": "5 of 63+ seasons (7.9%)",
+    "typical_decline_pattern": "Sharp drop after age 28-29",
+    "championship_window_urgency": "Win-now teams have different risk tolerance"
+  },
+  "contending_team_analysis": {
+    "potential_buy_case": {
+      "team_profile": "Strong at other positions, RB is missing piece",
+      "championship_timeline": "2025 season only (all-in mentality)",
+      "risk_tolerance": "High - championship or bust",
+      "acquisition_cost": "Likely requires premium assets (1st round pick + young talent)"
+    },
+    "strategic_considerations": [
+      "CMC could provide 12-16 weeks of elite production in 2025",
+      "Playoff schedule and matchups matter more than season-long consistency",
+      "Insurance policy needed (handcuff/backup plan)",
+      "Window closes rapidly - 2026 becomes much riskier"
+    ]
+  },
+  "buy_scenarios_ranked": {
+    "green_light_buy": {
+      "team_situation": "Championship favorite missing only RB production",
+      "acquisition_cost": "Reasonable (not overpaying for age 29 season)",
+      "timeline": "2025 only - willing to rebuild after",
+      "example": "Strong QB/WR/TE core, weak RB room, legitimate title shot"
+    },
+    "yellow_light_caution": {
+      "team_situation": "Competitive but not overwhelming favorite",
+      "risk": "Moderate - CMC could be difference maker or bust",
+      "strategy": "Only if price reflects age risk (discounted from peak value)"
+    },
+    "red_light_avoid": {
+      "team_situation": "Multi-year window or rebuilding",
+      "reasoning": "Age cliff makes 2026+ extremely risky",
+      "better_strategy": "Target younger RBs for sustained contention"
+    }
+  },
+  "trade_framework": {
+    "max_price_contender_should_pay": {
+      "dynasty_value": "Mid-1st round pick equivalent",
+      "reasoning": "Accounts for age risk while valuing 2025 championship potential",
+      "not_worth": "Multiple 1sts or young elite talent"
+    },
+    "ideal_package_examples": [
+      "Late 2025 1st + aging veteran",
+      "2026 1st (if projected late)",
+      "Current productive veteran + mid-round pick"
+    ],
+    "overpay_red_flags": [
+      "Early 2025 1st round pick",
+      "Young elite talent (Bijan, Breece tier)",
+      "Multiple premium assets"
+    ]
+  },
+  "championship_math": {
+    "cmc_2025_floor": "RB12-15 (injury/decline concerns)",
+    "cmc_2025_ceiling": "RB1-3 (beats age odds)",
+    "championship_impact": "Could be 3-5 point per week difference in playoffs",
+    "risk_assessment": "High reward, high risk - championship or bust mentality required"
+  },
+  "tiber_recommendation": {
+    "verdict": "CONDITIONAL BUY for true contenders only",
+    "requirements": [
+      "Team must be legitimate championship favorite",
+      "RB must be the primary missing piece",
+      "Willing to accept 2026+ rebuild scenario",
+      "Can acquire at reasonable (not premium) price"
+    ],
+    "exit_strategy": "Plan immediate post-2025 roster restructure",
+    "insurance_policy": "Handcuff Jordan Mason or have backup RB plan"
+  }
+}
