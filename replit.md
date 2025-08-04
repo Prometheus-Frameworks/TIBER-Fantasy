@@ -8,6 +8,7 @@ Preferred communication style: Simple, everyday language.
 League focus: Dynasty leagues (skill positions only - QB, RB, WR, TE). No kickers or defense.
 Future consideration: May add redraft emphasis later.
 Mission commitment: Strictly avoid all paywall partnerships or data sources. Maintain complete independence and free access to all platform features.
+Community Discussion Philosophy: Transform statistical insights into meaningful conversations that help real people make better fantasy decisions (example: RB age cliff data → nuanced CMC contending window analysis).
 
 ## System Architecture
 
