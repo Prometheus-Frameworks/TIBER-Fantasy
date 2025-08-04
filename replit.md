@@ -35,9 +35,8 @@ The platform utilizes a modular Flask backend for its core logic and API endpoin
 - **Data**: CSV/JSON, PostgreSQL, Drizzle ORM, Drizzle Kit
 
 ## External Dependencies
-- **SportsDataIO**: For live NFL depth chart integration and authentic player data.
+- **MySportsFeeds API**: For real-time injury reports and NFL roster automation (infrastructure ready, account verification needed).
 - **Sleeper API**: For comprehensive player projections, game logs, ADP data, and league sync capabilities.
-- **Fantasy Football Calculator API**: For real-time dynasty ADP data.
 - **NFL-Data-Py**: For historical NFL analytical data.
 - **R Server**: External API for OASIS (Offensive Architecture Scoring & Insight System) data.
 - **Axios**: For making HTTP requests to external APIs.
@@ -45,4 +44,9 @@ The platform utilizes a modular Flask backend for its core logic and API endpoin
 - **Recharts**: For charting and data visualization.
 - **connect-pg-simple**: For PostgreSQL-based session storage.
 - **@neondatabase/serverless**: PostgreSQL connection for serverless environments.
+
+### Recently Removed Dependencies (2025-01-04)
+- **FantasyPros API**: Removed due to complete authentication failure (all 52 endpoints returned 403 Forbidden).
+- **SportsDataIO**: Removed due to minimal usage (testing only) and cost inefficiency.
+- **Fantasy Football Calculator API**: Previously deprecated by Tiber directive.
 ```

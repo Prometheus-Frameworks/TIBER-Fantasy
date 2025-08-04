@@ -36,14 +36,12 @@ interface MSFPlayerSnaps {
 }
 
 export class SnapPercentageService {
-  private sportsDataApiKey: string;
   private msfUsername: string;
   private msfPassword: string;
   private cache: Map<string, SnapData[]> = new Map();
   private cacheExpiry: number = 5 * 60 * 1000; // 5 minutes
 
   constructor() {
-    this.sportsDataApiKey = process.env.SPORTSDATA_API_KEY || '';
     this.msfUsername = process.env.MSF_USERNAME || '';
     this.msfPassword = process.env.MSF_PASSWORD || '';
   }

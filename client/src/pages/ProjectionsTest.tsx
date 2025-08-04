@@ -212,25 +212,25 @@ Christian McCaffrey,RB,SF,1500,14`,
               </CardContent>
             </Card>
 
-            {/* FantasyPros Input */}
+            {/* MySportsFeeds Input - Replacing FantasyPros */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileSpreadsheet className="h-5 w-5" />
-                  FantasyPros Projections
+                  MySportsFeeds Data
                 </CardTitle>
                 <div className="flex gap-2">
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => loadExample('fantasyProsJSON')}
+                    onClick={() => loadExample('oasisJSON')}
                   >
                     Load JSON Example
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => loadExample('fantasyProsCSV')}
+                    onClick={() => loadExample('oasisCSV')}
                   >
                     Load CSV Example
                   </Button>
@@ -238,7 +238,7 @@ Christian McCaffrey,RB,SF,1500,14`,
               </CardHeader>
               <CardContent className="space-y-4">
                 <Textarea
-                  placeholder="Enter FantasyPros projections data (JSON or CSV format)..."
+                  placeholder="Enter MySportsFeeds data (JSON or CSV format)..."
                   value={fantasyProsData}
                   onChange={(e) => setFantasyProsData(e.target.value)}
                   rows={8}
@@ -250,7 +250,7 @@ Christian McCaffrey,RB,SF,1500,14`,
                   className="w-full"
                 >
                   <Upload className="h-4 w-4 mr-2" />
-                  Ingest FantasyPros Data
+                  Ingest MySportsFeeds Data
                 </Button>
               </CardContent>
             </Card>

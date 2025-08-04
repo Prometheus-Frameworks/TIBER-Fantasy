@@ -55,7 +55,7 @@ import SleeperDatabase from "@/pages/sleeper-database";
 import PrometheusBenchmarks from "@/pages/PrometheusBenchmarks";
 import CommunityPosts from "@/pages/CommunityPosts";
 import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
-import FantasyProTest from "@/pages/FantasyProTest";
+// FantasyProTest removed - service deprecated
 import HowYouCanContribute from "@/pages/how-you-can-contribute";
 import RBDraftCapitalContext from "@/pages/RBDraftCapitalContext";
 
@@ -110,7 +110,7 @@ function Router() {
       <Route path="/projections-test" component={ProjectionsTest} />
       <Route path="/data-ingestion" component={DataIngestion} />
       <Route path="/reflect" component={Reflect} />
-      <Route path="/fantasypros-test" component={FantasyProTest} />
+      {/* FantasyProTest route removed - service deprecated */}
       <Route component={NotFound} />
     </Switch>
   );
