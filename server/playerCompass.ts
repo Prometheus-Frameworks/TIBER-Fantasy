@@ -179,80 +179,109 @@ export class PlayerCompassService {
     // Get anchor score (base talent score 0-100)
     const anchorScore = playerData.prometheusScore || this.estimatePrometheusScore(playerData);
     
-    // 🧭 NORTH (Tier Score - Core Talent): Scale to proper 0-10 range
-    const tierScore = Math.min(10, anchorScore / 10);
+    // 🧭 NORTH (Volume/Talent): Scale anchor score to 0-10 range
+    const northScore = anchorScore / 12.0; // Grok's proven formula
     
-    // 🧭 EAST (Context Tags): Calculate tag-based adjustments
+    // 🧭 EAST (Scheme + Environment): Grok's enhanced context tag system
+    const contextTagModifiers: Record<string, number> = {
+      'usage_security': 0.6,
+      'target_competition': 0.15,
+      'role_clarity': 0.2,
+      'breakout_candidate': 0.15,
+      'scheme_fit': 0.1,
+      'elite': 0.3,
+      'injury_prone': -0.2,
+      // Legacy tag mapping for compatibility
+      'Usage-Secure': 0.6,
+      'Target-Competition': -0.15,
+      'Breakout-Candidate': 0.15,
+      'Dynasty-Build': 0.15,
+      'Alpha-Potential': 0.2,
+      'Injury-Risk': -0.2
+    };
+    
+    let eastScore = 5.0; // Neutral baseline (Grok's approach)
     const contextTags = this.generateContextTags(playerData);
-    let contextTagAdjustment = 0;
+    const tagModifier = contextTags.reduce((sum, tag) => {
+      return sum + (contextTagModifiers[tag] || 0.0);
+    }, 0);
     
-    contextTags.forEach(tag => {
-      switch (tag) {
-        case 'Win-Now': contextTagAdjustment += 0.1; break;
-        case 'Dynasty-Build': contextTagAdjustment += 0.15; break;
-        case 'Boom-Bust': contextTagAdjustment -= 0.2; break;
-        case 'Usage-Secure': contextTagAdjustment += 0.25; break;
-        case 'Floor-Play': contextTagAdjustment += 0.1; break;
-        case 'Alpha-Potential': contextTagAdjustment += 0.2; break;
-        case 'Target-Competition': contextTagAdjustment -= 0.15; break;
-        case 'Age-Concern': contextTagAdjustment -= 0.1; break;
-        case 'Injury-Risk': contextTagAdjustment -= 0.25; break;
-        case 'Breakout-Candidate': contextTagAdjustment += 0.15; break;
-      }
-    });
+    eastScore = Math.min(10, Math.max(0, eastScore + tagModifier));
     
-    // 🧭 SOUTH (Scenario Score): Average of contending and rebuilding fit (scaled down)
+    // 🧭 SOUTH (Age/Risk): Grok's refined age factor approach
     const contendingFit = Math.min(10, (anchorScore / 10) * (playerData.age <= 30 ? 1.0 : 0.85));
     const rebuildingFit = Math.min(10, (anchorScore / 10) * this.getAgeMultiplier(playerData.age, playerData.position).dynasty);
-    const scenarioScore = (contendingFit + rebuildingFit) / 2;
+    const baseScenario = (contendingFit + rebuildingFit) / 2.0;
     
-    // 🧭 WEST (Market Efficiency/Value): Dynasty value vs current market perception
-    let marketEfficiencyScore = 5.0; // Base score of 5 (neutral)
+    // Apply Grok's age factor refinement
+    let ageFactor: number;
+    if (playerData.age <= 24) {
+      ageFactor = 1.1; // Prime dynasty window
+    } else if (playerData.age <= 27) {
+      ageFactor = 1.0; // Peak years
+    } else if (playerData.age <= 30) {
+      ageFactor = 0.9; // Slight decline
+    } else {
+      ageFactor = 0.75; // Higher risk
+    }
     
-    // Age vs Production efficiency (young + productive = undervalued)
+    const southScore = baseScenario * ageFactor;
+    
+    // 🧭 WEST (Market Efficiency): Grok's dynasty value vs market perception
+    const contractModifiers: Record<string, number> = {
+      'long_term': 0.2,
+      'medium_term': 0.1,
+      'expiring': -0.2,
+      // Legacy mapping
+      'Secure': 0.2,
+      'Active': 0.1,
+      'Expiring': -0.2
+    };
+    
+    let westScore = 5.0; // Neutral baseline
+    
+    // Young elite = dynasty gold
     if (playerData.age <= 25 && anchorScore >= 85) {
-      marketEfficiencyScore += 2.0; // Young elite = great dynasty value
-    } else if (playerData.age >= 30 && anchorScore >= 80) {
-      marketEfficiencyScore -= 1.5; // Aging but productive = sell-high candidate
+      westScore += 2.0;
+    }
+    // Aging productive = sell window  
+    else if (playerData.age >= 30 && anchorScore >= 80) {
+      westScore -= 1.5;
     }
     
-    // Target share efficiency (high production with lower target share = efficient)
-    const targetShare = playerData.targetShare || 0;
+    // Efficiency metrics
+    const targetShare = playerData.targetShare || 0.2;
     if (targetShare <= 0.18 && anchorScore >= 80) {
-      marketEfficiencyScore += 1.0; // Efficient with targets
+      westScore += 1.0; // Efficient production
     } else if (targetShare >= 0.28) {
-      marketEfficiencyScore -= 0.5; // High target dependency
+      westScore -= 0.5; // Target dependent
     }
     
-    // Contract/stability value
-    if (playerData.contractStatus === 'Secure' || playerData.contractStatus === 'Active') {
-      marketEfficiencyScore += 0.5; // Stable situation
-    } else if (playerData.contractStatus === 'Expiring') {
-      marketEfficiencyScore -= 0.5; // Uncertainty
-    }
+    // Contract stability (Grok's approach)
+    const contractMod = contractModifiers[playerData.contractStatus || 'medium_term'] || 0.0;
+    westScore += contractMod;
     
-    // Injury risk vs opportunity
-    if (playerData.injuryHistory && playerData.injuryHistory.length > 0) {
-      marketEfficiencyScore -= 1.0; // Injury risk reduces dynasty value
-    }
+    westScore = Math.min(10, Math.max(0, westScore));
     
-    // Cap the market efficiency score
-    const keyInsightAdjustment = Math.min(10, Math.max(0, marketEfficiencyScore)) - 5; // Convert to adjustment (-5 to +5)
+    // Calculate final compass score: Grok's equal 25% weighting framework
+    const north = northScore;
+    const east = eastScore;
+    const south = southScore;
+    const west = westScore;
     
-    // Calculate final compass score: Equal 25% weighting for all four directions
-    const rawScore = (tierScore * 0.25) + (contextTagAdjustment * 0.25) + (scenarioScore * 0.25) + (keyInsightAdjustment * 0.25);
-    const finalScore = Math.min(10, Math.max(1, rawScore)); // Floor at 1, ceiling at 10
+    const finalScore = (north * 0.25) + (east * 0.25) + (south * 0.25) + (west * 0.25);
+    const cappedScore = Math.min(10.0, Math.max(1.0, finalScore)); // Grok's floor/ceiling
     
     // Optional debug logging (disabled in production)
     // console.log(`🧭 DEBUG ${playerData.name}: Anchor=${anchorScore}, Tier=${tierScore.toFixed(2)}, Tags=${contextTagAdjustment}, Scenario=${scenarioScore.toFixed(2)}, Insights=${keyInsightAdjustment}, Final=${finalScore.toFixed(2)}`);
     
     return {
       anchor_score: anchorScore,
-      tier_score: Math.round(tierScore * 100) / 100,
-      context_tag_adjustment: Math.round(contextTagAdjustment * 100) / 100,
-      scenario_score: Math.round(scenarioScore * 100) / 100,
-      key_insight_adjustment: Math.round(keyInsightAdjustment * 100) / 100,
-      final_compass_score: Math.round(finalScore * 100) / 100
+      tier_score: Math.round(north * 100) / 100,
+      context_tag_adjustment: Math.round(east * 100) / 100,
+      scenario_score: Math.round(south * 100) / 100,
+      key_insight_adjustment: Math.round(west * 100) / 100,
+      final_compass_score: Math.round(cappedScore * 100) / 100
     };
   }
 
