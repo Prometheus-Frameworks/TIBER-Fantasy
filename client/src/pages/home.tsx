@@ -9,7 +9,8 @@ import {
   Target, 
   Crown,
   Brain,
-  ArrowRight
+  ArrowRight,
+  Compass
 } from "lucide-react";
 
 export default function Home() {
@@ -27,15 +28,16 @@ export default function Home() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/player-compass">
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg">
+                <Compass className="mr-2 h-5 w-5" />
+                Player Compass
+              </Button>
+            </Link>
             <Link href="/rankings">
               <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 text-lg">
                 <Trophy className="mr-2 h-5 w-5" />
                 View Rankings
-              </Button>
-            </Link>
-            <Link href="/about">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg">
-                Learn More
               </Button>
             </Link>
             <Link href="/dashboard">
@@ -55,19 +57,21 @@ export default function Home() {
           </h2>
           
           <div className="grid md:grid-cols-3 gap-6">
-            <Card className="bg-white/70 backdrop-blur border-0 shadow-lg hover:shadow-xl transition-shadow">
-              <CardHeader className="text-center">
-                <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                  <BarChart3 className="h-6 w-6 text-blue-600" />
-                </div>
-                <CardTitle className="text-xl text-slate-700">Player Analysis</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <p className="text-slate-600">
-                  Comprehensive player evaluation and analytics
-                </p>
-              </CardContent>
-            </Card>
+            <Link href="/player-compass">
+              <Card className="bg-white/70 backdrop-blur border-0 shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                <CardHeader className="text-center">
+                  <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                    <Compass className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <CardTitle className="text-xl text-slate-700">Player Compass</CardTitle>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <p className="text-slate-600">
+                    Navigate dynasty decisions with context-aware player guidance
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
 
             <Card className="bg-white/70 backdrop-blur border-0 shadow-lg hover:shadow-xl transition-shadow">
               <CardHeader className="text-center">
