@@ -229,8 +229,8 @@ export class PlayerCompassService {
     const rawScore = (tierScore * 0.4) + (contextTagAdjustment * 0.1) + (scenarioScore * 0.4) + (keyInsightAdjustment * 0.1);
     const finalScore = Math.min(10, Math.max(1, rawScore)); // Floor at 1, ceiling at 10
     
-    // Debug logging for score breakdowns
-    console.log(`🧭 DEBUG ${playerData.name}: Anchor=${anchorScore}, Tier=${tierScore.toFixed(2)}, Tags=${contextTagAdjustment}, Scenario=${scenarioScore.toFixed(2)}, Insights=${keyInsightAdjustment}, Final=${finalScore.toFixed(2)}`);
+    // Optional debug logging (disabled in production)
+    // console.log(`🧭 DEBUG ${playerData.name}: Anchor=${anchorScore}, Tier=${tierScore.toFixed(2)}, Tags=${contextTagAdjustment}, Scenario=${scenarioScore.toFixed(2)}, Insights=${keyInsightAdjustment}, Final=${finalScore.toFixed(2)}`);
     
     return {
       anchor_score: anchorScore,

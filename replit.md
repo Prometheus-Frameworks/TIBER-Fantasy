@@ -48,7 +48,7 @@ The platform utilizes a modular Flask backend for its core logic and API endpoin
 - **@neondatabase/serverless**: PostgreSQL connection for serverless environments.
 
 ### Recent Changes (2025-01-05)
-- **Player Compass v1 Scoring System**: Implemented multidimensional dynasty ceiling calculation replacing previous inflated scores (9.7-10 range). New system uses four directional factors: NORTH (tier score via anchor_score/12), EAST (context tag adjustments), SOUTH (scenario average), WEST (key insight modifiers). Final score = (N+E+S+W)/4, capped at 10, rounded to 2 decimals.
+- **Player Compass v1 Scoring System**: Implemented multidimensional dynasty ceiling calculation replacing previous inflated scores (9.7-10 range). New system uses four directional factors with weighted scoring: NORTH (tier score 40%), EAST (context tags 10%), SOUTH (scenario score 40%), WEST (key insights 10%). Core factors: volume, scheme + offensive environment, age/injury risk. Reference implementation complete for WR position module - template for QB/RB/TE expansion.
 
 ### Recently Removed Dependencies (2025-01-04)
 - **FantasyPros API**: Removed due to complete authentication failure (all 52 endpoints returned 403 Forbidden).
