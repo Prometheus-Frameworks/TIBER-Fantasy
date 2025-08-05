@@ -65,11 +65,11 @@ interface CompassFilters {
 
 export default function PlayerCompass() {
   const [filters, setFilters] = useState<CompassFilters>({
-    position: '',
-    tier: '',
+    position: 'all',
+    tier: 'all',
     minAge: '',
     maxAge: '',
-    scenario: '',
+    scenario: 'all',
     minScenarioValue: ''
   });
 
@@ -81,11 +81,11 @@ export default function PlayerCompass() {
     queryFn: async () => {
       const params = new URLSearchParams();
       
-      if (filters.position) params.append('positions', filters.position);
-      if (filters.tier) params.append('tiers', filters.tier);
+      if (filters.position && filters.position !== 'all') params.append('positions', filters.position);
+      if (filters.tier && filters.tier !== 'all') params.append('tiers', filters.tier);
       if (filters.minAge) params.append('minAge', filters.minAge);
       if (filters.maxAge) params.append('maxAge', filters.maxAge);
-      if (filters.scenario && filters.minScenarioValue) {
+      if (filters.scenario && filters.scenario !== 'all' && filters.minScenarioValue) {
         params.append('scenario', filters.scenario);
         params.append('minScenarioValue', filters.minScenarioValue);
       }
@@ -240,7 +240,7 @@ export default function PlayerCompass() {
                   <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Positions</SelectItem>
+                  <SelectItem value="all">All Positions</SelectItem>
                   <SelectItem value="QB">QB</SelectItem>
                   <SelectItem value="RB">RB</SelectItem>
                   <SelectItem value="WR">WR</SelectItem>
@@ -259,7 +259,7 @@ export default function PlayerCompass() {
                   <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Tiers</SelectItem>
+                  <SelectItem value="all">All Tiers</SelectItem>
                   <SelectItem value="Elite">Elite</SelectItem>
                   <SelectItem value="High-End">High-End</SelectItem>
                   <SelectItem value="Solid">Solid</SelectItem>
@@ -301,7 +301,7 @@ export default function PlayerCompass() {
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any Scenario</SelectItem>
+                  <SelectItem value="all">Any Scenario</SelectItem>
                   <SelectItem value="contendingTeam">Contending</SelectItem>
                   <SelectItem value="rebuildingTeam">Rebuilding</SelectItem>
                   <SelectItem value="dynastyCeiling">Dynasty Ceiling</SelectItem>
@@ -328,11 +328,11 @@ export default function PlayerCompass() {
             <Button
               variant="outline"
               onClick={() => setFilters({
-                position: '',
-                tier: '',
+                position: 'all',
+                tier: 'all',
                 minAge: '',
                 maxAge: '',
-                scenario: '',
+                scenario: 'all',
                 minScenarioValue: ''
               })}
             >
