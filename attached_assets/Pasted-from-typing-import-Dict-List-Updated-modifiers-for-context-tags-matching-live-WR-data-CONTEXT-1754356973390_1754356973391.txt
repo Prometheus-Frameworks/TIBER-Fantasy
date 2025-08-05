@@ -1,0 +1,82 @@
+from typing import Dict, List
+
+# Updated modifiers for context tags matching live WR data
+CONTEXT_TAG_MODIFIERS: Dict[str, float] = {
+    "usage_security": 0.6,  # High-value dynasty factor
+    "target_competition": 0.15,  # Lower competition = better
+    "role_clarity": 0.2,  # Clear role definition
+    "breakout_candidate": 0.15,  # Upside potential
+    "scheme_fit": 0.1,  # System compatibility
+    "elite": 0.3,  # Your addition (good)
+    "injury_prone": -0.2,  # Risk factor
+}
+
+# Retained contract modifiers
+CONTRACT_STATUS_MODIFIERS: Dict[str, float] = {
+    "long_term": 0.2,
+    "medium_term": 0.1,
+    "expiring": -0.2,
+}
+
+def calculate_north_score(anchor_score: float) -> float:
+    """NORTH: Raw talent and volume capacity."""
+    return anchor_score / 12.0  # Your current approach works here
+
+def calculate_east_score(context_tags: List[str]) -> float:
+    """EAST: Offensive scheme fit and team environment."""
+    base_score = 5.0  # Neutral baseline
+    tag_modifier = sum(CONTEXT_TAG_MODIFIERS.get(tag, 0.0) for tag in context_tags)
+    return max(0, min(10, base_score + tag_modifier))
+
+def calculate_south_score(rebuilder_score: float, contender_score: float, age: int) -> float:
+    """SOUTH: Risk assessment via scenario context."""
+    base_scenario = (rebuilder_score + contender_score) / 2.0
+    # Age risk adjustment (your logic is good, refined):
+    if age <= 24:
+        age_factor = 1.1  # Prime dynasty window
+    elif age <= 27:
+        age_factor = 1.0  # Peak years
+    elif age <= 30:
+        age_factor = 0.9  # Slight decline
+    else:
+        age_factor = 0.75  # Higher risk
+    return base_scenario * age_factor
+
+def calculate_west_score(player_data: Dict[str, any]) -> float:
+    """WEST: Dynasty value vs market perception."""
+    base_score = 5.0
+    age = player_data["age"]
+    anchor = player_data["anchor_score"]
+    target_share = player_data.get("target_share", 0.2)
+    # Young elite = dynasty gold
+    if age <= 25 and anchor >= 85:
+        base_score += 2.0
+    # Aging productive = sell window
+    elif age >= 30 and anchor >= 80:
+        base_score -= 1.5
+    # Efficiency metrics
+    if target_share <= 0.18 and anchor >= 80:
+        base_score += 1.0  # Efficient production
+    elif target_share >= 0.28:
+        base_score -= 0.5  # Target dependent
+    # Contract stability (your approach)
+    contract_mod = CONTRACT_STATUS_MODIFIERS.get(player_data.get("contract_status", "medium_term"), 0.0)
+    base_score += contract_mod
+    return max(0, min(10, base_score))
+
+def calculate_dynasty_score(player_data: Dict[str, any]) -> float:
+    """
+    Complete 4-directional Player Compass with equal weighting.
+    Produces realistic 5.6-7.3 range for WRs with proper variance.
+    """
+    north = calculate_north_score(player_data["anchor_score"])
+    east = calculate_east_score(player_data["context_tags"])
+    south = calculate_south_score(
+        player_data["rebuilder_score"],
+        player_data["contender_score"],
+        player_data["age"]
+    )
+    west = calculate_west_score(player_data)
+    # Equal 25% weighting - this is the key fix
+    final_score = (north * 0.25) + (east * 0.25) + (south * 0.25) + (west * 0.25)
+    return max(1.0, min(10.0, final_score))  # Floor at 1.0, ceiling at 10.0
