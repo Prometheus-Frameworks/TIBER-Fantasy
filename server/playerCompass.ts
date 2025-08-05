@@ -139,7 +139,7 @@ export class PlayerCompassService {
   }
 
   /**
-   * Calculate scenario-specific values
+   * Calculate scenario-specific values using Player Compass v1 methodology
    */
   private calculateScenarios(playerData: any): CompassScenarios {
     const baseScore = playerData.prometheusScore || this.estimatePrometheusScore(playerData);
@@ -147,14 +147,102 @@ export class PlayerCompassService {
     // Age adjustments for different scenarios
     const ageMultiplier = this.getAgeMultiplier(playerData.age, playerData.position);
     
+    // Calculate Player Compass v1 final score for dynasty ceiling
+    const compassResult = this.calculatePlayerCompassScore(playerData);
+    
     return {
       contendingTeam: Math.min(10, baseScore / 10 * (playerData.age <= 30 ? 1.1 : 0.9)),
       rebuildingTeam: Math.min(10, baseScore / 10 * ageMultiplier.dynasty),
       redraftAppeal: Math.min(10, baseScore / 10 * ageMultiplier.redraft),
-      dynastyCeiling: Math.min(10, baseScore / 10 * ageMultiplier.ceiling),
+      dynastyCeiling: compassResult.final_compass_score, // Use new Player Compass v1 score
       injuryReplacement: Math.min(10, (baseScore / 10) * 0.8), // Slightly lower for replacement context
       playoffReliability: Math.min(10, baseScore / 10 * (playerData.consistencyScore || 0.75))
     };
+  }
+
+  /**
+   * Player Compass v1 - Multidimensional scoring model
+   * Framework: Derive player fit using four weighted directional factors
+   */
+  private calculatePlayerCompassScore(playerData: any): {
+    anchor_score: number;
+    tier_score: number;
+    context_tag_adjustment: number;
+    scenario_score: number;
+    key_insight_adjustment: number;
+    final_compass_score: number;
+  } {
+    // Get anchor score (base talent score 0-100)
+    const anchorScore = playerData.prometheusScore || this.estimatePrometheusScore(playerData);
+    
+    // 🧭 NORTH (Tier Score - Core Talent): Normalize with (anchor_score / 12)
+    const tierScore = anchorScore / 12;
+    
+    // 🧭 EAST (Context Tags): Calculate tag-based adjustments
+    const contextTags = this.generateContextTags(playerData);
+    let contextTagAdjustment = 0;
+    
+    contextTags.forEach(tag => {
+      switch (tag) {
+        case 'Win-Now': contextTagAdjustment += 0.1; break;
+        case 'Dynasty-Build': contextTagAdjustment += 0.15; break;
+        case 'Boom-Bust': contextTagAdjustment -= 0.2; break;
+        case 'Usage-Secure': contextTagAdjustment += 0.25; break;
+        case 'Floor-Play': contextTagAdjustment += 0.1; break;
+        case 'Alpha-Potential': contextTagAdjustment += 0.2; break;
+        case 'Target-Competition': contextTagAdjustment -= 0.15; break;
+        case 'Age-Concern': contextTagAdjustment -= 0.1; break;
+        case 'Injury-Risk': contextTagAdjustment -= 0.25; break;
+        case 'Breakout-Candidate': contextTagAdjustment += 0.15; break;
+      }
+    });
+    
+    // 🧭 SOUTH (Scenario Score): Average of contending and rebuilding fit
+    const contendingFit = Math.min(10, anchorScore / 10 * (playerData.age <= 30 ? 1.1 : 0.9));
+    const rebuildingFit = Math.min(10, anchorScore / 10 * this.getAgeMultiplier(playerData.age, playerData.position).dynasty);
+    const scenarioScore = (contendingFit + rebuildingFit) / 2;
+    
+    // 🧭 WEST (Key Insights / Adjustments): Context-based modifiers
+    let keyInsightAdjustment = 0;
+    
+    // Age adjustments
+    if (playerData.age >= 30) keyInsightAdjustment -= 0.3;
+    
+    // Injury adjustments
+    if (playerData.injuryStatus === 'Injured' || (playerData.injuryHistory && playerData.injuryHistory.length > 0)) {
+      keyInsightAdjustment -= 0.2;
+    }
+    
+    // Competition level (based on target share)
+    const targetShare = playerData.targetShare || 0;
+    if (targetShare >= 0.25) keyInsightAdjustment += 0.1; // Low competition
+    else if (targetShare <= 0.15) keyInsightAdjustment -= 0.1; // High competition
+    
+    // Contract status
+    if (playerData.contractStatus === 'Secure' || playerData.contractStatus === 'Active') {
+      keyInsightAdjustment += 0.2;
+    } else if (playerData.contractStatus === 'Expiring' || playerData.contractStatus === 'Volatile') {
+      keyInsightAdjustment -= 0.2;
+    }
+    
+    // Calculate final compass score: (N + E + S + W) / 4, capped at 10
+    const finalScore = Math.min(10, (tierScore + contextTagAdjustment + scenarioScore + keyInsightAdjustment) / 4);
+    
+    return {
+      anchor_score: anchorScore,
+      tier_score: Math.round(tierScore * 100) / 100,
+      context_tag_adjustment: Math.round(contextTagAdjustment * 100) / 100,
+      scenario_score: Math.round(scenarioScore * 100) / 100,
+      key_insight_adjustment: Math.round(keyInsightAdjustment * 100) / 100,
+      final_compass_score: Math.round(finalScore * 100) / 100
+    };
+  }
+
+  /**
+   * Add debugging endpoint to see compass calculation breakdown
+   */
+  getCompassCalculationBreakdown(playerData: any) {
+    return this.calculatePlayerCompassScore(playerData);
   }
 
   /**

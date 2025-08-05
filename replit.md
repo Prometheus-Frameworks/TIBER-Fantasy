@@ -47,6 +47,9 @@ The platform utilizes a modular Flask backend for its core logic and API endpoin
 - **connect-pg-simple**: For PostgreSQL-based session storage.
 - **@neondatabase/serverless**: PostgreSQL connection for serverless environments.
 
+### Recent Changes (2025-01-05)
+- **Player Compass v1 Scoring System**: Implemented multidimensional dynasty ceiling calculation replacing previous inflated scores (9.7-10 range). New system uses four directional factors: NORTH (tier score via anchor_score/12), EAST (context tag adjustments), SOUTH (scenario average), WEST (key insight modifiers). Final score = (N+E+S+W)/4, capped at 10, rounded to 2 decimals.
+
 ### Recently Removed Dependencies (2025-01-04)
 - **FantasyPros API**: Removed due to complete authentication failure (all 52 endpoints returned 403 Forbidden).
 - **SportsDataIO**: Removed due to minimal usage (testing only) and cost inefficiency.
