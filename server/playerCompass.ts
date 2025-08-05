@@ -175,8 +175,8 @@ export class PlayerCompassService {
     // Get anchor score (base talent score 0-100)
     const anchorScore = playerData.prometheusScore || this.estimatePrometheusScore(playerData);
     
-    // 🧭 NORTH (Tier Score - Core Talent): Normalize with (anchor_score / 12)
-    const tierScore = anchorScore / 12;
+    // 🧭 NORTH (Tier Score - Core Talent): Scale to proper 0-10 range
+    const tierScore = Math.min(10, anchorScore / 10);
     
     // 🧭 EAST (Context Tags): Calculate tag-based adjustments
     const contextTags = this.generateContextTags(playerData);
@@ -197,9 +197,9 @@ export class PlayerCompassService {
       }
     });
     
-    // 🧭 SOUTH (Scenario Score): Average of contending and rebuilding fit
-    const contendingFit = Math.min(10, anchorScore / 10 * (playerData.age <= 30 ? 1.1 : 0.9));
-    const rebuildingFit = Math.min(10, anchorScore / 10 * this.getAgeMultiplier(playerData.age, playerData.position).dynasty);
+    // 🧭 SOUTH (Scenario Score): Average of contending and rebuilding fit (scaled down)
+    const contendingFit = Math.min(10, (anchorScore / 10) * (playerData.age <= 30 ? 1.0 : 0.85));
+    const rebuildingFit = Math.min(10, (anchorScore / 10) * this.getAgeMultiplier(playerData.age, playerData.position).dynasty);
     const scenarioScore = (contendingFit + rebuildingFit) / 2;
     
     // 🧭 WEST (Key Insights / Adjustments): Context-based modifiers
@@ -225,8 +225,12 @@ export class PlayerCompassService {
       keyInsightAdjustment -= 0.2;
     }
     
-    // Calculate final compass score: (N + E + S + W) / 4, capped at 10
-    const finalScore = Math.min(10, (tierScore + contextTagAdjustment + scenarioScore + keyInsightAdjustment) / 4);
+    // Calculate final compass score: Weighted average with proper scaling
+    const rawScore = (tierScore * 0.4) + (contextTagAdjustment * 0.1) + (scenarioScore * 0.4) + (keyInsightAdjustment * 0.1);
+    const finalScore = Math.min(10, Math.max(1, rawScore)); // Floor at 1, ceiling at 10
+    
+    // Debug logging for score breakdowns
+    console.log(`🧭 DEBUG ${playerData.name}: Anchor=${anchorScore}, Tier=${tierScore.toFixed(2)}, Tags=${contextTagAdjustment}, Scenario=${scenarioScore.toFixed(2)}, Insights=${keyInsightAdjustment}, Final=${finalScore.toFixed(2)}`);
     
     return {
       anchor_score: anchorScore,
