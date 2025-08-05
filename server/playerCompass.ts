@@ -163,6 +163,10 @@ export class PlayerCompassService {
   /**
    * Player Compass v1 - Multidimensional scoring model
    * Framework: Derive player fit using four weighted directional factors
+   * NORTH: Volume/Talent (Tier Score)
+   * EAST: Scheme + Offensive Environment (Context Tags) 
+   * SOUTH: Age/Injury Risk (Scenario Score)
+   * WEST: Market Efficiency/Value (Key Insights)
    */
   private calculatePlayerCompassScore(playerData: any): {
     anchor_score: number;
@@ -202,31 +206,41 @@ export class PlayerCompassService {
     const rebuildingFit = Math.min(10, (anchorScore / 10) * this.getAgeMultiplier(playerData.age, playerData.position).dynasty);
     const scenarioScore = (contendingFit + rebuildingFit) / 2;
     
-    // 🧭 WEST (Key Insights / Adjustments): Context-based modifiers
-    let keyInsightAdjustment = 0;
+    // 🧭 WEST (Market Efficiency/Value): Dynasty value vs current market perception
+    let marketEfficiencyScore = 5.0; // Base score of 5 (neutral)
     
-    // Age adjustments
-    if (playerData.age >= 30) keyInsightAdjustment -= 0.3;
-    
-    // Injury adjustments
-    if (playerData.injuryStatus === 'Injured' || (playerData.injuryHistory && playerData.injuryHistory.length > 0)) {
-      keyInsightAdjustment -= 0.2;
+    // Age vs Production efficiency (young + productive = undervalued)
+    if (playerData.age <= 25 && anchorScore >= 85) {
+      marketEfficiencyScore += 2.0; // Young elite = great dynasty value
+    } else if (playerData.age >= 30 && anchorScore >= 80) {
+      marketEfficiencyScore -= 1.5; // Aging but productive = sell-high candidate
     }
     
-    // Competition level (based on target share)
+    // Target share efficiency (high production with lower target share = efficient)
     const targetShare = playerData.targetShare || 0;
-    if (targetShare >= 0.25) keyInsightAdjustment += 0.1; // Low competition
-    else if (targetShare <= 0.15) keyInsightAdjustment -= 0.1; // High competition
-    
-    // Contract status
-    if (playerData.contractStatus === 'Secure' || playerData.contractStatus === 'Active') {
-      keyInsightAdjustment += 0.2;
-    } else if (playerData.contractStatus === 'Expiring' || playerData.contractStatus === 'Volatile') {
-      keyInsightAdjustment -= 0.2;
+    if (targetShare <= 0.18 && anchorScore >= 80) {
+      marketEfficiencyScore += 1.0; // Efficient with targets
+    } else if (targetShare >= 0.28) {
+      marketEfficiencyScore -= 0.5; // High target dependency
     }
     
-    // Calculate final compass score: Weighted average with proper scaling
-    const rawScore = (tierScore * 0.4) + (contextTagAdjustment * 0.1) + (scenarioScore * 0.4) + (keyInsightAdjustment * 0.1);
+    // Contract/stability value
+    if (playerData.contractStatus === 'Secure' || playerData.contractStatus === 'Active') {
+      marketEfficiencyScore += 0.5; // Stable situation
+    } else if (playerData.contractStatus === 'Expiring') {
+      marketEfficiencyScore -= 0.5; // Uncertainty
+    }
+    
+    // Injury risk vs opportunity
+    if (playerData.injuryHistory && playerData.injuryHistory.length > 0) {
+      marketEfficiencyScore -= 1.0; // Injury risk reduces dynasty value
+    }
+    
+    // Cap the market efficiency score
+    const keyInsightAdjustment = Math.min(10, Math.max(0, marketEfficiencyScore)) - 5; // Convert to adjustment (-5 to +5)
+    
+    // Calculate final compass score: Equal 25% weighting for all four directions
+    const rawScore = (tierScore * 0.25) + (contextTagAdjustment * 0.25) + (scenarioScore * 0.25) + (keyInsightAdjustment * 0.25);
     const finalScore = Math.min(10, Math.max(1, rawScore)); // Floor at 1, ceiling at 10
     
     // Optional debug logging (disabled in production)
