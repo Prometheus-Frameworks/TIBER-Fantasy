@@ -23,12 +23,14 @@ function loadRBProjections(): RBProjection[] {
 
   try {
     const filePath = path.join(process.cwd(), 'server', 'data', 'rb_projections_2025.json');
+    console.log(`🔍 Loading RB projections from: ${filePath}`);
     const fileContent = fs.readFileSync(filePath, 'utf-8');
     rbProjectionsCache = JSON.parse(fileContent) as RBProjection[];
     console.log(`📊 Loaded ${rbProjectionsCache.length} RB projections from static dataset`);
     return rbProjectionsCache;
   } catch (error) {
     console.error('❌ Error loading RB projections:', error);
+    console.error('❌ File path attempted:', path.join(process.cwd(), 'server', 'data', 'rb_projections_2025.json'));
     return [];
   }
 }

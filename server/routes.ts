@@ -1115,6 +1115,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let rbProjections = getAllRBProjections();
       console.log(`📊 Found ${rbProjections.length} RB projections for compass calculation`);
       
+      if (rbProjections.length === 0) {
+        console.log('❌ No RB projections loaded - check rb_projections_2025.json file');
+        return res.status(500).json({ 
+          error: 'No RB projections available',
+          position: 'RB',
+          rankings: [],
+          success: false
+        });
+      }
+      
       // Use top 20 RBs for compass analysis to avoid overwhelming the display
       if (rbProjections.length > 20) {
         rbProjections = rbProjections.slice(0, 20);

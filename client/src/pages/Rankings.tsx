@@ -28,7 +28,7 @@ const Rankings: React.FC = () => {
   const [selectedPosition, setSelectedPosition] = useState<'WR' | 'RB' | 'QB' | 'TE'>('WR');
   
   const { data: rankingsResponse, isLoading, error } = useQuery({
-    queryKey: [`/api/compass/${selectedPosition.toLowerCase()}`],
+    queryKey: [selectedPosition === 'RB' ? '/api/rb-compass' : `/api/compass/${selectedPosition.toLowerCase()}`],
     retry: false,
   });
 
@@ -52,14 +52,18 @@ const Rankings: React.FC = () => {
     );
   }
 
-  if (error || (!rankingsResponse?.success && !rankingsResponse?.rankings)) {
+  if (error) {
+    console.error('Rankings API Error:', error);
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">WR Rankings 2024</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">{selectedPosition} Rankings 2024</h1>
           <div className="bg-red-50 border border-red-200 rounded-lg p-6">
             <p className="text-red-800">
-              Error loading rankings data. Please try again later.
+              Error loading {selectedPosition} rankings data. Please refresh the page.
+            </p>
+            <p className="text-red-600 text-sm mt-2">
+              Error: {error.message}
             </p>
           </div>
         </div>
@@ -67,7 +71,36 @@ const Rankings: React.FC = () => {
     );
   }
 
-  const rankings: PlayerRankingData[] = rankingsResponse?.rankings || [];
+  // Handle different response formats for RB vs WR
+  const rankings: PlayerRankingData[] = selectedPosition === 'RB' 
+    ? (rankingsResponse?.rb_compass || []).map((rb: any) => ({
+        player_name: rb.player_name,
+        name: rb.player_name,
+        team: rb.team,
+        position: 'RB',
+        compass: {
+          score: rb.compass_scores?.final_score || 0,
+          north: rb.compass_scores?.north || 0,
+          east: rb.compass_scores?.east || 0,
+          south: rb.compass_scores?.south || 0,
+          west: rb.compass_scores?.west || 0
+        },
+        dynastyScore: rb.compass_scores?.final_score || 0,
+        projected_points: rb.season_stats?.total_carries || 0,
+        archetype: rb.compass_scores?.tier || 'N/A',
+        fpg: rb.season_stats?.total_carries || 0,
+        vorp: rb.compass_scores?.final_score || 0
+      }))
+    : (rankingsResponse?.rankings || []);
+  
+  // Debug logging
+  console.log('Rankings Response:', {
+    position: selectedPosition,
+    hasResponse: !!rankingsResponse,
+    success: rankingsResponse?.success,
+    rankingsCount: rankings.length,
+    algorithm: rankingsResponse?.algorithm
+  });
 
   const getArchetypeColor = (archetype: string) => {
     switch (archetype) {
@@ -114,11 +147,12 @@ const Rankings: React.FC = () => {
           </div>
           <p className="text-gray-600">
             {selectedPosition === 'WR' ? 'Based on adjusted ratings from WR_2024_Ratings_With_Tags.csv' : 
-             selectedPosition === 'RB' ? 'Based on Kimi K2 4-directional compass methodology' : 
+             selectedPosition === 'RB' ? 'Based on authentic RB compass methodology with 4-directional scoring' : 
              'Coming Soon'}
           </p>
           <div className="mt-4 text-sm text-gray-500">
-            Total Players: {rankings.length} | Data Source: CSV File
+            Total Players: {rankings.length} | 
+            {selectedPosition === 'RB' ? 'Data Source: RB Compass System' : 'Data Source: CSV File'}
           </div>
         </div>
 
