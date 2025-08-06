@@ -308,6 +308,42 @@ export function computeComponents(rawData: any, position: string): CompassCompon
   }
 }
 
+// Enhanced WR calculation with team context and draft capital
+export function calculateEnhancedWRCompass(player: any, teamContext?: any, draftCapital?: any): CompassComponents {
+  try {
+    // Enhanced North score (Volume/Talent) with draft capital
+    let north = calculateWRNorthScore(player.anchor_score || 70);
+    if (draftCapital && draftCapital.round <= 2) {
+      north += 1.0; // Boost for high draft capital
+    }
+    
+    // Enhanced East score (Environment) with team context
+    let east = calculateWREastScore(player.context_tags);
+    if (teamContext) {
+      const passVolumeBonus = (teamContext.passAttempts - 500) / 100; // Scale pass volume
+      east += Math.max(-1.0, Math.min(2.0, passVolumeBonus));
+    }
+    
+    // Standard South/West calculations
+    const south = calculateWRSouthScore(player.rebuilder_score, player.contender_score, player.age);
+    const west = calculateWRWestScore(player);
+    
+    // Calculate final score with equal weighting
+    const score = (north * 0.25) + (east * 0.25) + (south * 0.25) + (west * 0.25);
+    
+    return {
+      score: Math.max(1.0, Math.min(10.0, score)),
+      north: Math.max(1.0, Math.min(10.0, north)),
+      east: Math.max(1.0, Math.min(10.0, east)),
+      south,
+      west
+    };
+  } catch (error) {
+    console.warn('Enhanced WR compass calculation error:', error);
+    return computeComponents(player, 'wr');
+  }
+}
+
 // Helper function to get compass data via Python backend
 export async function getCompassDataFromPython(playerName: string, position: string): Promise<any> {
   try {

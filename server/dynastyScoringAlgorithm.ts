@@ -1,6 +1,7 @@
 /**
- * Dynasty Scoring Algorithm Implementation
- * Advanced dynasty player evaluation with weighted component scoring
+ * [DEPRECATED] Dynasty Scoring Algorithm Implementation
+ * SUPERSEDED BY: Compass methodology with 25% equal weighting
+ * STATUS: Being migrated to compass system - DO NOT USE
  */
 
 export interface DynastyScoringResult {

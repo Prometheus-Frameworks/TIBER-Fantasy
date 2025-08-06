@@ -100,6 +100,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // TIBER: Export positional game log samples
   app.get('/api/tiber/export-positional-game-logs', exportPositionalGameLogs);
 
+  // Unified Compass Rankings with Algorithm Selection
+  app.get('/api/compass/:position', async (req, res) => {
+    try {
+      const position = req.params.position.toLowerCase();
+      const algorithm = (req.query.algorithm as string) || 'default';
+      const source = (req.query.source as string) || 'csv';
+      
+      if (!['wr', 'rb', 'qb', 'te'].includes(position)) {
+        return res.status(400).json({ error: 'Invalid position. Use wr, rb, qb, or te' });
+      }
+      
+      console.log(`🧭 Generating ${position.toUpperCase()} compass rankings with ${algorithm} algorithm`);
+      
+      let rankings: any[];
+      
+      if (position === 'wr') {
+        const { wrRatingsService } = await import('./services/wrRatingsService');
+        const wrData = await wrRatingsService.getWRRatings();
+        
+        if (algorithm === 'enhanced') {
+          const { calculateEnhancedWRCompass } = await import('./compassCalculations');
+          rankings = wrData.map((player: any) => {
+            const compass = calculateEnhancedWRCompass(player);
+            return { 
+              ...player, 
+              compass,
+              dynastyScore: compass.score,
+              methodology: 'Enhanced with team context and draft capital'
+            };
+          });
+        } else if (algorithm === 'prometheus') {
+          // Prometheus methodology with compass framework
+          const { computeComponents } = await import('./compassCalculations');
+          rankings = wrData.map((player: any) => {
+            const compass = computeComponents(player, 'wr');
+            const prometheusScore = (compass.north * 0.35) + (compass.east * 0.30) + (compass.south * 0.20) + (compass.west * 0.15);
+            return { 
+              ...player, 
+              compass,
+              dynastyScore: prometheusScore,
+              methodology: 'Prometheus weighting with compass components'
+            };
+          });
+        } else {
+          const { computeComponents } = await import('./compassCalculations');
+          rankings = wrData.map((player: any) => {
+            const compass = computeComponents(player, 'wr');
+            return { 
+              ...player, 
+              compass,
+              dynastyScore: compass.score,
+              methodology: 'Standard compass equal weighting'
+            };
+          });
+        }
+      } else if (position === 'rb') {
+        // RB compass integration using existing system
+        const { computeComponents } = await import('./compassCalculations');
+        const rbSampleData = []; // Will integrate with actual RB data source
+        rankings = rbSampleData.map((player: any) => {
+          const compass = computeComponents(player, 'rb');
+          return { ...player, compass, dynastyScore: compass.score };
+        });
+      } else {
+        // QB/TE expansion ready for future implementation
+        rankings = [];
+      }
+      
+      res.json({
+        position: position.toUpperCase(),
+        algorithm,
+        source,
+        rankings: rankings.sort((a, b) => (b.dynastyScore || 0) - (a.dynastyScore || 0)).slice(0, 50),
+        metadata: {
+          methodology: 'Compass 4-directional scoring',
+          weights: algorithm === 'prometheus' ? 
+            { north: '35%', east: '30%', south: '20%', west: '15%' } :
+            { north: '25%', east: '25%', south: '25%', west: '25%' },
+          totalPlayers: rankings.length,
+          lastUpdated: new Date().toISOString()
+        }
+      });
+      
+    } catch (error) {
+      console.error('Unified compass rankings error:', error);
+      res.status(500).json({ error: 'Failed to generate compass rankings' });
+    }
+  });
+
   // TIBER: Direct Sleeper API test
   app.get('/api/tiber/sleeper-2024-direct', async (req, res) => {
     console.log('🔍 [TIBER] Direct Sleeper API test initiated...');

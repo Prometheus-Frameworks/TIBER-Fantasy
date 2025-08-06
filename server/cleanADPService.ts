@@ -1,5 +1,7 @@
 /**
- * Clean ADP Service - Simple Sleeper API integration
+ * [DEPRECATED] Clean ADP Service - Simple Sleeper API integration
+ * SUPERSEDED BY: realTimeADPService.ts (primary ADP service)
+ * STATUS: Use realTimeADPService.ts instead
  */
 
 interface SleeperPlayerInfo {

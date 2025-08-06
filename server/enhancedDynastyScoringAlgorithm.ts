@@ -1,7 +1,7 @@
 /**
- * Prometheus Dynasty Algorithm v2.0 - Corrected Implementation
- * Our proprietary algorithm specification: Production (40%), Opportunity (35%), Age (20%), Stability (15%)
- * Uses expert consensus as validation benchmark, targeting 92% alignment for accuracy
+ * [DEPRECATED] Prometheus Dynasty Algorithm v2.0 
+ * SUPERSEDED BY: Compass methodology with 25% equal weighting across positions
+ * STATUS: Being migrated to unified compass system - DO NOT USE
  */
 
 export interface PrometheusDynastyScore {

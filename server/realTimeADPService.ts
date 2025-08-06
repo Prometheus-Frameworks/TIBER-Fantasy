@@ -1,5 +1,6 @@
 /**
- * Real-Time ADP Service
+ * [PRIMARY] Real-Time ADP Service
+ * Primary ADP service - other ADP services deprecated in favor of this one
  * Fetches authentic dynasty startup draft data from multiple sources
  */
 
