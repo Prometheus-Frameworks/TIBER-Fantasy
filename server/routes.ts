@@ -53,6 +53,7 @@ import { sleeperStrictSnapService } from './services/sleeperStrictSnapService';
 import { wrRatingsService } from './services/wrRatingsService';
 import { wrGameLogsService } from './services/wrGameLogsService';
 import compassRoutes from './routes/compassRoutes';
+import rbCompassRoutes from './routes/rbCompassRoutes';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -1178,6 +1179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Player Compass routes
   app.use('/api/compass', compassRoutes);
+  app.use('/api/rb-compass', rbCompassRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
