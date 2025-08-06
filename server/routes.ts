@@ -51,6 +51,7 @@ import populationStatsRoutes from './routes/populationStatsRoutes';
 import tradeAnalyzerRoutes from './routes/tradeAnalyzerRoutes';
 import compassCompareRoutes from './routes/compassCompareRoutes';
 import rookieRoutes from './routes/rookieRoutes';
+import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -1358,6 +1359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Rookie system routes
   app.use('/api/rookies', rookieRoutes);
+  app.use('/api/rookie-evaluation', rookieEvaluationRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
