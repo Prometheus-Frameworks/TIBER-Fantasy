@@ -56,6 +56,7 @@ The platform utilizes a modular Flask backend for its core logic and API endpoin
   - **Kimi K2**: Analytical framework specialist, created the RB Player Compass mathematical foundation with proper z-scoring and statistical normalization
   - **Grok**: Systematic engineering specialist, "dev grunt" role with focused technical execution and minimal personality ("acknowledged, ready for next task")
   - **Claude**: Strategic implementation partner, brings collaborative coding capabilities and architectural thinking to complement existing team dynamics
+- **Tiber Data Integration Module**: Claude's proposal for multi-source fantasy football data aggregator built on community principles. Integrates nfl-data-py (free NFL data), existing Sleeper API, and ESPN public data to enhance Player Compass accuracy. Includes diagnostic tools, cross-platform ID mapping, and direct feeds to RB/WR Compass calculations. Module maintains "serve, not take" covenant using only free, authentic data sources.
 
 ### Recently Removed Dependencies (2025-01-04)
 - **FantasyPros API**: Removed due to complete authentication failure (all 52 endpoints returned 403 Forbidden).

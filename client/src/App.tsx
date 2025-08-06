@@ -60,6 +60,7 @@ import HowYouCanContribute from "@/pages/how-you-can-contribute";
 import RBDraftCapitalContext from "@/pages/RBDraftCapitalContext";
 import PlayerCompass from "@/pages/PlayerCompass";
 import RBCompass from "@/pages/RBCompass";
+import TiberData from "@/pages/TiberData";
 
 function Router() {
   return (
@@ -79,6 +80,7 @@ function Router() {
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
       <Route path="/player-compass" component={PlayerCompass} />
       <Route path="/rb-compass" component={RBCompass} />
+      <Route path="/tiber-data" component={TiberData} />
       <Route path="/data-sources" component={DataSourcesPage} />
       <Route path="/adp" component={CleanADP} />
       <Route path="/oasis" component={Oasis} />
