@@ -61,6 +61,7 @@ import RBDraftCapitalContext from "@/pages/RBDraftCapitalContext";
 import PlayerCompass from "@/pages/PlayerCompass";
 import RBCompass from "@/pages/RBCompass";
 import TiberData from "@/pages/TiberData";
+import TradeAnalyzer from "@/pages/TradeAnalyzer";
 
 function Router() {
   return (
@@ -81,6 +82,7 @@ function Router() {
       <Route path="/player-compass" component={PlayerCompass} />
       <Route path="/rb-compass" component={RBCompass} />
       <Route path="/tiber-data" component={TiberData} />
+      <Route path="/trade-analyzer" component={TradeAnalyzer} />
       <Route path="/data-sources" component={DataSourcesPage} />
       <Route path="/adp" component={CleanADP} />
       <Route path="/oasis" component={Oasis} />
