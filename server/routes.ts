@@ -1111,8 +1111,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get population stats for z-scoring
       const populationStats = await calculateRBPopulationStats();
       
-      // Get RB projections and transform to compass format
-      const rbProjections = getAllRBProjections();
+      // Get authentic RB projections data (76 players available)
+      let rbProjections = getAllRBProjections();
+      console.log(`📊 Found ${rbProjections.length} RB projections for compass calculation`);
+      
+      // Use top 20 RBs for compass analysis to avoid overwhelming the display
+      if (rbProjections.length > 20) {
+        rbProjections = rbProjections.slice(0, 20);
+        console.log(`🎯 Using top ${rbProjections.length} RBs for compass rankings`);
+      }
       const compassRankings = rbProjections.map((player: any, index: number) => {
         const payload = {
           rush_attempts: player.rush_yds ? Math.round(player.rush_yds / 4.2) : 150, // Estimate from yards
@@ -1154,6 +1161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         algorithm: 'kimi_k2_compass',
         source: 'Kimi K2 4-directional evaluation with z-scoring',
         rankings: compassRankings,
+        success: true,
         metadata: {
           total_players: compassRankings.length,
           population_stats: populationStats,

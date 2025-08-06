@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-interface WRRankingData {
+interface PlayerRankingData {
   player_name?: string;
   name?: string;
   team: string;
@@ -9,15 +9,26 @@ interface WRRankingData {
   adjusted_rating?: number;
   archetype_tag?: string;
   archetype?: string;
-  fpg: number;
-  vorp: number;
-  compass?: any;
+  fpg?: number;
+  vorp?: number;
+  compass?: {
+    score: number;
+    north?: number;
+    east?: number;
+    south?: number;
+    west?: number;
+  };
   dynastyScore?: number;
+  projected_points?: number;
+  adp?: number;
+  position?: string;
 }
 
 const Rankings: React.FC = () => {
+  const [selectedPosition, setSelectedPosition] = useState<'WR' | 'RB' | 'QB' | 'TE'>('WR');
+  
   const { data: rankingsResponse, isLoading, error } = useQuery({
-    queryKey: ['/api/compass/wr'],
+    queryKey: [`/api/compass/${selectedPosition.toLowerCase()}`],
     retry: false,
   });
 
@@ -41,7 +52,7 @@ const Rankings: React.FC = () => {
     );
   }
 
-  if (error || !rankingsResponse?.success) {
+  if (error || (!rankingsResponse?.success && !rankingsResponse?.rankings)) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-6xl mx-auto">
@@ -56,7 +67,7 @@ const Rankings: React.FC = () => {
     );
   }
 
-  const rankings: WRRankingData[] = rankingsResponse?.rankings || [];
+  const rankings: PlayerRankingData[] = rankingsResponse?.rankings || [];
 
   const getArchetypeColor = (archetype: string) => {
     switch (archetype) {
@@ -88,9 +99,23 @@ const Rankings: React.FC = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">WR Rankings 2024</h1>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-3xl font-bold text-gray-900">{selectedPosition} Rankings 2024</h1>
+            <select 
+              className="border rounded px-3 py-2"
+              value={selectedPosition}
+              onChange={(e) => setSelectedPosition(e.target.value as 'WR' | 'RB' | 'QB' | 'TE')}
+            >
+              <option value="WR">Wide Receivers</option>
+              <option value="RB">Running Backs</option>
+              <option value="QB">Quarterbacks (Coming Soon)</option>
+              <option value="TE">Tight Ends (Coming Soon)</option>
+            </select>
+          </div>
           <p className="text-gray-600">
-            Based on adjusted ratings from WR_2024_Ratings_With_Tags.csv
+            {selectedPosition === 'WR' ? 'Based on adjusted ratings from WR_2024_Ratings_With_Tags.csv' : 
+             selectedPosition === 'RB' ? 'Based on Kimi K2 4-directional compass methodology' : 
+             'Coming Soon'}
           </p>
           <div className="mt-4 text-sm text-gray-500">
             Total Players: {rankings.length} | Data Source: CSV File
@@ -118,10 +143,10 @@ const Rankings: React.FC = () => {
                     Archetype
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    FPG
+                    {selectedPosition === 'RB' ? 'Proj Pts' : 'FPG'}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    VORP
+                    {selectedPosition === 'RB' ? 'Compass' : 'VORP'}
                   </th>
                 </tr>
               </thead>
@@ -159,10 +184,10 @@ const Rankings: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                      {player.fpg.toFixed(1)}
+                      {selectedPosition === 'RB' ? (player.projected_points?.toFixed(0) || 'N/A') : (player.fpg?.toFixed(1) || 'N/A')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {player.vorp.toFixed(2)}
+                      {selectedPosition === 'RB' ? (player.compass?.score?.toFixed(1) || 'N/A') : (player.vorp?.toFixed(2) || 'N/A')}
                     </td>
                   </tr>
                 ))}
