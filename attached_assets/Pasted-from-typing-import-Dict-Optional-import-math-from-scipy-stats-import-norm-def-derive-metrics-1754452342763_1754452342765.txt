@@ -1,0 +1,144 @@
+from typing import Dict, Optional
+
+import math
+from scipy.stats import norm
+
+def derive_metrics(payload: Dict[str, any]) -> Dict[str, any]:
+    """Derive required metrics from raw payload; impute medians on nulls."""
+    # Medians (configurable; based on typical league avgs)
+    MEDIANS = {
+        'rush_att': 15.0, 'tgt_share': 0.15, 'gl_carries': 2.0,
+        'yac_per_att': 2.5, 'breakaway_pct': 0.05,
+        'ol_rank': 16, 'oc_run_rate': 0.45, 'pos_snap_pct': 0.65,
+        'neutral_script_rate': 0.5,  # Impute if missing
+        'age': 26, 'games_missed_2yr': 2, 'fum_rate': 0.01,
+        'proj_rank': 18, 'adp_rank': 18, 'pos_scarcity_z': 0.0, 'contract_yrs': 1
+    }
+
+    # North derivations
+    rush_att = payload.get('rush_attempts') or MEDIANS['rush_att']
+    # tgt_share: Approximate from receiving_targets and assumed team att (e.g., 35 avg RB targets context; refine w/ team data)
+    receiving_targets = payload.get('receiving_targets') or 4.0
+    tgt_share = receiving_targets / 35.0 if receiving_targets else MEDIANS['tgt_share']  # Placeholder; need team_pass_att
+    gl_carries = payload.get('goal_line_carries') or MEDIANS['gl_carries']
+    yac_per_att = payload.get('yac_per_attempt') or MEDIANS['yac_per_att']
+    breakaway_runs = payload.get('breakaway_runs') or 0
+    breakaway_pct = breakaway_runs / rush_att if rush_att > 0 else MEDIANS['breakaway_pct']
+
+    player_metrics = {
+        'rush_att': rush_att,
+        'tgt_share': tgt_share,
+        'gl_carries': gl_carries,
+        'yac_per_att': yac_per_att,
+        'breakaway_pct': breakaway_pct
+    }
+
+    # East derivations
+    ol_grade = payload.get('ol_run_block_grade')
+    ol_rank = math.ceil((90 - (ol_grade or 75)) / (90 / 32)) if ol_grade else MEDIANS['ol_rank']  # Grade to rank approx
+    oc_run_rate = payload.get('team_rush_rate') or MEDIANS['oc_run_rate']
+    pos_snap_pct = payload.get('snap_pct') or MEDIANS['pos_snap_pct']
+    neutral_script_rate = payload.get('team_red_zone_efficiency') or MEDIANS['neutral_script_rate']  # Proxy if missing true rate
+
+    # South
+    age = payload.get('age') or MEDIANS['age']
+    games_missed_2yr = payload.get('injury_games_missed_last2') or MEDIANS['games_missed_2yr']
+    fum_rate = payload.get('fumble_rate_per_touch') or MEDIANS['fum_rate']
+    contract_yrs = payload.get('contract_years_left') or MEDIANS['contract_yrs']
+
+    # West derivations
+    adp_rank = round(payload.get('dynasty_adp') or MEDIANS['adp_rank'])
+    # proj_rank: Derive from adp + market_gap
+    market_gap = payload.get('market_efficiency_gap') or 0
+    proj_rank = adp_rank + market_gap if market_gap else MEDIANS['proj_rank']
+    # pos_scarcity_z: Approximate from draft_capital/replacement; e.g., Round 1 = high scarcity
+    draft_capital = payload.get('draft_capital', 'Undrafted')
+    scarcity_z = 1.5 if 'Round 1' in draft_capital else 0.5 if 'Round 2' in draft_capital else MEDIANS['pos_scarcity_z']
+
+    return {
+        'player_metrics': player_metrics,
+        'population_stats': {},  # Assume external; for z-score, need to inject or compute
+        'ol_rank': ol_rank,
+        'oc_run_rate': oc_run_rate,
+        'pos_snap_pct': pos_snap_pct,
+        'neutral_script_rate': neutral_script_rate,
+        'age': age,
+        'games_missed_2yr': games_missed_2yr,
+        'fum_rate': fum_rate,
+        'proj_rank': proj_rank,
+        'adp_rank': adp_rank,
+        'pos_scarcity_z': scarcity_z,
+        'contract_yrs': contract_yrs
+    }
+
+def calculate_north_score(player_metrics: Dict[str, float], population_stats: Dict[str, Dict[str, float]]) -> float:
+    """NORTH: Volume and talent metrics z-scored and normalized."""
+    metrics = ['rush_att', 'tgt_share', 'gl_carries', 'yac_per_att', 'breakaway_pct']
+    z_scores = []
+    for metric in metrics:
+        if metric in player_metrics and metric in population_stats:
+            mean = population_stats[metric]['mean']
+            std = population_stats[metric]['std']
+            val = player_metrics[metric]
+            z = (val - mean) / std if std > 0 else 0
+            z_scores.append(z)
+    if not z_scores:
+        return 5.0
+    average_z = sum(z_scores) / len(z_scores)
+    volume_score = norm.cdf(average_z)
+    return 10 * volume_score
+
+def calculate_east_score(ol_rank: int, oc_run_rate: float, pos_snap_pct: float, neutral_script_rate: float) -> float:
+    """EAST: Environment factors normalized and averaged."""
+    ol_norm = (33 - ol_rank) / 32.0
+    run_norm = min(1.0, oc_run_rate / 0.5)
+    snap_norm = pos_snap_pct
+    neutral_norm = neutral_script_rate
+    multiplier = (ol_norm + run_norm + snap_norm + neutral_norm) / 4.0
+    return 10 * multiplier
+
+def calculate_south_score(age: int, games_missed_2yr: int, fum_rate: float) -> float:
+    """SOUTH: Longevity via risk penalties."""
+    if age <= 24:
+        age_pen = 0.0
+    elif age <= 26:
+        age_pen = 0.05
+    elif age == 27:
+        age_pen = 0.15
+    elif age == 28:
+        age_pen = 0.25
+    elif age == 29:
+        age_pen = 0.35
+    else:
+        age_pen = 0.5
+    inj_pen = games_missed_2yr * 0.02
+    fum_pen = fum_rate * 5.0  # Adjustable based on fum_rate scale
+    risk_penalty = age_pen + inj_pen + fum_pen
+    longevity = max(0.0, 1.0 - risk_penalty)
+    return 10 * longevity
+
+def calculate_west_score(derived_data: Dict[str, any]) -> float:
+    """WEST: Market efficiency metrics averaged."""
+    proj_rank = derived_data['proj_rank']
+    adp_rank = derived_data['adp_rank']
+    efficiency = 1 - abs(proj_rank - adp_rank) / 36.0
+    pos_scarcity_z = derived_data.get('pos_scarcity_z', 0.0)
+    scarcity_norm = norm.cdf(pos_scarcity_z)
+    contract_yrs = derived_data.get('contract_yrs', 1)
+    contract_norm = min(1.0, contract_yrs / 3.0)
+    ratio = (efficiency + scarcity_norm + contract_norm) / 3.0
+    return 10 * ratio
+
+def calculate_rb_compass(payload: Dict[str, any], population_stats: Optional[Dict[str, Dict[str, float]]] = None) -> float:
+    """
+    Adapted for canonical payload; derives inputs, imputes nulls.
+    population_stats required for z-scores; external inject.
+    """
+    derived = derive_metrics(payload)
+    derived['population_stats'] = population_stats or {}  # Fallback empty; z=0
+    north = calculate_north_score(derived['player_metrics'], derived['population_stats'])
+    east = calculate_east_score(derived['ol_rank'], derived['oc_run_rate'], derived['pos_snap_pct'], derived['neutral_script_rate'])
+    south = calculate_south_score(derived['age'], derived['games_missed_2yr'], derived['fum_rate'])
+    west = calculate_west_score(derived)
+    final_score = (north * 0.25) + (east * 0.25) + (south * 0.25) + (west * 0.25)
+    return max(1.0, min(10.0, final_score))

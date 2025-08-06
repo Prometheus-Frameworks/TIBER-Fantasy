@@ -1100,6 +1100,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RB Compass API endpoints - Kimi K2's 4-directional system
+  app.get('/api/compass/rb', async (req: Request, res: Response) => {
+    try {
+      const { calculateRBPopulationStats } = await import('./rbPopulationStats');
+      const { calculateRBCompassDetailed } = await import('./rbCompassCalculations');
+      
+      console.log('🧭 Generating RB compass rankings with Kimi K2 methodology');
+      
+      // Get population stats for z-scoring
+      const populationStats = await calculateRBPopulationStats();
+      
+      // Get RB projections and transform to compass format
+      const rbProjections = getAllRBProjections();
+      const compassRankings = rbProjections.map((player: any, index: number) => {
+        const payload = {
+          rush_attempts: player.rush_yds ? Math.round(player.rush_yds / 4.2) : 150, // Estimate from yards
+          receiving_targets: player.receptions ? Math.round(player.receptions * 1.2) : 25,
+          goal_line_carries: player.rush_tds || 4,
+          age: 26, // Default, will be replaced with real data
+          snap_pct: 0.65,
+          dynasty_adp: player.adp || (index + 1) * 3,
+          draft_capital: index < 10 ? 'Round 1' : index < 20 ? 'Round 2' : 'Round 3+'
+        };
+        
+        const compass = calculateRBCompassDetailed(payload, populationStats);
+        
+        return {
+          player_name: player.player,
+          name: player.player,
+          team: player.team,
+          position: 'RB',
+          compass: {
+            score: compass.score,
+            north: compass.north,
+            east: compass.east,
+            south: compass.south,
+            west: compass.west
+          },
+          dynastyScore: compass.score,
+          rating: compass.score.toFixed(1),
+          methodology: compass.methodology,
+          adp: player.adp,
+          projected_points: player.points
+        };
+      });
+      
+      // Sort by compass score
+      compassRankings.sort((a, b) => b.compass.score - a.compass.score);
+      
+      res.json({
+        position: 'RB',
+        algorithm: 'kimi_k2_compass',
+        source: 'Kimi K2 4-directional evaluation with z-scoring',
+        rankings: compassRankings,
+        metadata: {
+          total_players: compassRankings.length,
+          population_stats: populationStats,
+          methodology: "25% Volume/Talent (NORTH) + 25% Environment (EAST) + 25% Risk (SOUTH) + 25% Value (WEST)"
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ RB Compass API Error:', error);
+      res.status(500).json({ error: 'Failed to generate RB compass rankings' });
+    }
+  });
+
   // 📊 WR 2024 RATINGS API - CSV-based WR player data endpoints
 
   // Get all WR rankings (for /rankings page)
