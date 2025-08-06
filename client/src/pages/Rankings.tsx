@@ -27,16 +27,27 @@ interface PlayerRankingData {
 const Rankings: React.FC = () => {
   const [selectedPosition, setSelectedPosition] = useState<'WR' | 'RB' | 'QB' | 'TE'>('WR');
   
-  const { data: rankingsResponse, isLoading, error } = useQuery({
-    queryKey: [selectedPosition === 'RB' ? '/api/rb-compass' : `/api/compass/${selectedPosition.toLowerCase()}`],
+  // Force cache refresh when position changes
+  const apiEndpoint = selectedPosition === 'RB' ? '/api/rb-compass' : `/api/compass/${selectedPosition.toLowerCase()}`;
+  
+  const { data: rankingsResponse, isLoading, error, refetch } = useQuery({
+    queryKey: [apiEndpoint, selectedPosition],
     retry: false,
+    staleTime: 0, // Always refetch
+    cacheTime: 0, // Don't cache
   });
+
+  // Force refresh when position changes
+  React.useEffect(() => {
+    refetch();
+  }, [selectedPosition, refetch]);
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">WR Rankings 2024</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">{selectedPosition} Rankings 2024</h1>
+          <p className="text-sm text-gray-500 mb-4">Loading from: {apiEndpoint}</p>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="animate-pulse">
               <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
@@ -60,11 +71,26 @@ const Rankings: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900 mb-6">{selectedPosition} Rankings 2024</h1>
           <div className="bg-red-50 border border-red-200 rounded-lg p-6">
             <p className="text-red-800">
-              Error loading {selectedPosition} rankings data. Please refresh the page.
+              Error loading {selectedPosition} rankings data.
             </p>
             <p className="text-red-600 text-sm mt-2">
+              API Endpoint: {apiEndpoint}
+            </p>
+            <p className="text-red-600 text-sm mt-1">
               Error: {error.message}
             </p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Hard Refresh Page
+            </button>
+            <button 
+              onClick={() => refetch()} 
+              className="mt-4 ml-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            >
+              Retry Request
+            </button>
           </div>
         </div>
       </div>
@@ -96,10 +122,13 @@ const Rankings: React.FC = () => {
   // Debug logging
   console.log('Rankings Response:', {
     position: selectedPosition,
+    apiEndpoint,
     hasResponse: !!rankingsResponse,
     success: rankingsResponse?.success,
     rankingsCount: rankings.length,
-    algorithm: rankingsResponse?.algorithm
+    algorithm: rankingsResponse?.algorithm,
+    rbCompassCount: rankingsResponse?.rb_compass?.length,
+    totalPlayers: rankingsResponse?.total_players
   });
 
   const getArchetypeColor = (archetype: string) => {
@@ -152,7 +181,8 @@ const Rankings: React.FC = () => {
           </p>
           <div className="mt-4 text-sm text-gray-500">
             Total Players: {rankings.length} | 
-            {selectedPosition === 'RB' ? 'Data Source: RB Compass System' : 'Data Source: CSV File'}
+            {selectedPosition === 'RB' ? 'Data Source: RB Compass System' : 'Data Source: CSV File'} |
+            API: {apiEndpoint}
           </div>
         </div>
 
