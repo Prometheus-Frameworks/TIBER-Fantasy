@@ -50,6 +50,7 @@ import tiberDataRoutes from './routes/tiberDataRoutes';
 import populationStatsRoutes from './routes/populationStatsRoutes';
 import tradeAnalyzerRoutes from './routes/tradeAnalyzerRoutes';
 import compassCompareRoutes from './routes/compassCompareRoutes';
+import rookieRoutes from './routes/rookieRoutes';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -1354,6 +1355,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/population-stats', populationStatsRoutes);
   app.use('/api/trade-analyzer', tradeAnalyzerRoutes);
   app.use('/api/compass-compare', compassCompareRoutes);
+  
+  // Rookie system routes
+  app.use('/api/rookies', rookieRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
