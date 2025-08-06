@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowRight, TrendingUp, TrendingDown, Users, Calculator } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -39,6 +40,7 @@ interface TradeAnalysisResponse {
 export default function TradeAnalyzer() {
   const [player1Name, setPlayer1Name] = useState('');
   const [player2Name, setPlayer2Name] = useState('');
+  const [position, setPosition] = useState('wr');
   const [analysis, setAnalysis] = useState<TradeAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -62,7 +64,8 @@ export default function TradeAnalyzer() {
         },
         body: JSON.stringify({
           player1: player1Name.trim(),
-          player2: player2Name.trim()
+          player2: player2Name.trim(),
+          position: position
         }),
       });
 
@@ -79,8 +82,8 @@ export default function TradeAnalyzer() {
       setAnalysis(data);
       
       toast({
-        title: "Trade Analysis Complete",
-        description: `Compared ${data.player1.name} vs ${data.player2.name}`,
+        title: "Trade Analysis Complete", 
+        description: `Compared ${data.player1.name} vs ${data.player2.name} (${position.toUpperCase()})`,
       });
 
     } catch (error) {
@@ -192,7 +195,24 @@ export default function TradeAnalyzer() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div className="space-y-2">
+              <label htmlFor="position" className="text-sm font-medium">
+                Position
+              </label>
+              <Select value={position} onValueChange={setPosition}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Position" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="wr">WR (Wide Receiver)</SelectItem>
+                  <SelectItem value="rb">RB (Running Back)</SelectItem>
+                  <SelectItem value="qb" disabled>QB (Coming Soon)</SelectItem>
+                  <SelectItem value="te" disabled>TE (Coming Soon)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
             <div className="space-y-2">
               <label htmlFor="player1" className="text-sm font-medium">
                 Player 1
@@ -204,10 +224,6 @@ export default function TradeAnalyzer() {
                 onChange={(e) => setPlayer1Name(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && analyzeTrade()}
               />
-            </div>
-            
-            <div className="flex justify-center">
-              <ArrowRight className="w-6 h-6 text-gray-400" />
             </div>
             
             <div className="space-y-2">
@@ -222,15 +238,20 @@ export default function TradeAnalyzer() {
                 onKeyPress={(e) => e.key === 'Enter' && analyzeTrade()}
               />
             </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium opacity-0">Action</label>
+              <Button 
+                onClick={analyzeTrade} 
+                disabled={loading || !player1Name.trim() || !player2Name.trim()}
+                className="w-full"
+              >
+                {loading ? 'Analyzing...' : 'Analyze Trade'}
+              </Button>
+            </div>
           </div>
 
-          <Button 
-            onClick={analyzeTrade} 
-            disabled={loading || !player1Name.trim() || !player2Name.trim()}
-            className="w-full"
-          >
-            {loading ? 'Analyzing Trade...' : 'Analyze Trade'}
-          </Button>
+
         </CardContent>
       </Card>
 

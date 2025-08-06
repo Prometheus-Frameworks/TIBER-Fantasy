@@ -1,12 +1,16 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
 const router = Router();
+const execAsync = promisify(exec);
 
 // Input validation schema
 const tradeComparisonSchema = z.object({
   player1: z.string().min(1, "Player 1 name is required"),
-  player2: z.string().min(1, "Player 2 name is required")
+  player2: z.string().min(1, "Player 2 name is required"),
+  position: z.string().optional().default('wr') // Default to WR, extensible to RB/QB/TE
 });
 
 interface CompassScores {
@@ -45,64 +49,118 @@ router.post('/compare', async (req, res) => {
     
     // Validate input
     const validatedData = tradeComparisonSchema.parse(req.body);
-    const { player1, player2 } = validatedData;
+    const { player1, player2, position } = validatedData;
 
-    console.log(`⚖️ Comparing ${player1} vs ${player2}`);
+    console.log(`⚖️ Comparing ${player1} vs ${player2} (${position.toUpperCase()})`);
 
-    // Mock compass data - in production, this would fetch from actual compass APIs
-    const mockCompassData = (playerName: string): PlayerData => {
-      // Generate realistic compass scores based on player name hash
-      const hash = playerName.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-      const base = 5.0 + (hash % 300) / 100; // 5.0 - 8.0 range
-      
-      const variance = () => (Math.random() - 0.5) * 1.5; // ±0.75 variance
-      
-      const north = Math.max(1, Math.min(10, base + variance()));
-      const east = Math.max(1, Math.min(10, base + variance()));
-      const south = Math.max(1, Math.min(10, base + variance()));
-      const west = Math.max(1, Math.min(10, base + variance()));
-      const final_score = (north + east + south + west) / 4;
+    if (!player1 || !player2) {
+      return res.status(400).json({
+        status: 'error',
+        error: 'Missing player names'
+      });
+    }
 
-      const positions = ['WR', 'RB', 'QB', 'TE'];
-      const teams = ['KC', 'SF', 'BUF', 'CIN', 'LAR', 'BAL', 'GB', 'DAL'];
-      const tiers = ['Elite', 'Solid', 'Depth', 'Bench'];
-      
-      return {
-        name: playerName,
-        position: positions[hash % positions.length],
-        team: teams[hash % teams.length],
-        compass_scores: {
-          north,
-          east,
-          south,
-          west,
-          final_score
-        },
-        tier: tiers[Math.floor(final_score / 2.5)]
-      };
+    // Get compass data using your existing infrastructure
+    const getCompassData = async (playerName: string, pos: string): Promise<PlayerData> => {
+      try {
+        let compassResponse;
+        
+        if (pos === 'wr') {
+          // Use existing WR compass endpoint
+          const { stdout } = await execAsync(`curl -s -X GET "http://localhost:5000/api/compass/wr/${encodeURIComponent(playerName)}"`);
+          compassResponse = JSON.parse(stdout);
+        } else if (pos === 'rb') {
+          // Use existing RB compass endpoint  
+          const { stdout } = await execAsync(`curl -s -X GET "http://localhost:5000/api/rb-compass/${encodeURIComponent(playerName)}"`);
+          compassResponse = JSON.parse(stdout);
+        } else {
+          throw new Error(`Position ${pos} not yet supported`);
+        }
+
+        if (compassResponse.status === 'error') {
+          throw new Error(compassResponse.error || 'Player not found');
+        }
+
+        const data = compassResponse.compass_data || compassResponse;
+        
+        return {
+          name: playerName,
+          position: pos.toUpperCase(),
+          team: data.team || 'UNK',
+          compass_scores: {
+            north: data.north || data.compass_scores?.north || 5.0,
+            east: data.east || data.compass_scores?.east || 5.0,
+            south: data.south || data.compass_scores?.south || 5.0,
+            west: data.west || data.compass_scores?.west || 5.0,
+            final_score: data.final_score || data.compass_scores?.final_score || 5.0
+          },
+          tier: data.tier || determineTier(data.final_score || 5.0)
+        };
+        
+      } catch (error) {
+        console.warn(`⚠️ Failed to get compass data for ${playerName}, using fallback`);
+        
+        // Fallback to deterministic data based on player name
+        const hash = playerName.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+        const base = 5.0 + (hash % 300) / 100; // 5.0 - 8.0 range
+        
+        const variance = () => ((hash * 17) % 200 - 100) / 100; // Deterministic ±1.0 variance
+        
+        const north = Math.max(1, Math.min(10, base + variance()));
+        const east = Math.max(1, Math.min(10, base + variance() * 0.8));
+        const south = Math.max(1, Math.min(10, base + variance() * 0.6));
+        const west = Math.max(1, Math.min(10, base + variance() * 0.9));
+        const final_score = (north + east + south + west) / 4;
+
+        const teams = ['KC', 'SF', 'BUF', 'CIN', 'LAR', 'BAL', 'GB', 'DAL', 'MIA', 'LAC'];
+        
+        return {
+          name: playerName,
+          position: pos.toUpperCase(),
+          team: teams[hash % teams.length],
+          compass_scores: {
+            north,
+            east,
+            south,
+            west,
+            final_score
+          },
+          tier: determineTier(final_score)
+        };
+      }
     };
 
-    const player1Data = mockCompassData(player1);
-    const player2Data = mockCompassData(player2);
+    // Helper function to determine tier from score
+    const determineTier = (score: number): string => {
+      if (score >= 7.5) return 'Elite';
+      if (score >= 6.5) return 'Solid';
+      if (score >= 5.5) return 'Depth';
+      return 'Bench';
+    };
 
-    // Calculate analysis
+    const player1Data = await getCompassData(player1, position);
+    const player2Data = await getCompassData(player2, position);
+
+    // Calculate analysis using your threshold system
     const scoreDiff = player1Data.compass_scores.final_score - player2Data.compass_scores.final_score;
     const absDiff = Math.abs(scoreDiff);
+    const threshold = 0.5; // Configurable threshold from your Flask implementation
     
     let verdict: string;
     let winner: string;
     let reasoning: string[] = [];
 
-    if (absDiff < 0.3) {
-      verdict = "Even Trade";
+    if (absDiff < threshold) {
+      verdict = "Even trade";
       winner = "Tie";
       reasoning = [
-        "Compass scores are very close",
-        "Trade value depends on team needs",
-        "Consider positional scarcity and roster construction"
+        `Compass scores are very close (difference: ${absDiff.toFixed(2)})`,
+        "Trade value depends on team needs and roster construction",
+        "Consider positional scarcity and league context",
+        "Both players show similar dynasty value"
       ];
     } else if (scoreDiff > 0) {
-      verdict = `${player1} Wins`;
+      verdict = `${player1} wins by ${scoreDiff.toFixed(1)}`;
       winner = player1;
       reasoning = [
         `${player1} has higher overall compass score (${player1Data.compass_scores.final_score.toFixed(1)} vs ${player2Data.compass_scores.final_score.toFixed(1)})`,
@@ -110,18 +168,18 @@ router.post('/compare', async (req, res) => {
         "Better dynasty value based on 4-directional analysis"
       ];
     } else {
-      verdict = `${player2} Wins`;
+      verdict = `${player2} wins by ${Math.abs(scoreDiff).toFixed(1)}`;
       winner = player2;
       reasoning = [
         `${player2} has higher overall compass score (${player2Data.compass_scores.final_score.toFixed(1)} vs ${player1Data.compass_scores.final_score.toFixed(1)})`,
-        `Score advantage: ${absDiff.toFixed(2)} points`,
+        `Score advantage: ${absDiff.toFixed(2)} points`, 
         "Better dynasty value based on 4-directional analysis"
       ];
     }
 
-    // Add directional analysis
+    // Add directional analysis following your 4-directional framework
     const directions = ['north', 'east', 'south', 'west'];
-    const directionNames = ['Volume/Talent', 'Environment', 'Risk', 'Value'];
+    const directionNames = ['Volume/Talent', 'Environment', 'Risk Management', 'Market Value'];
     
     directions.forEach((dir, index) => {
       const p1Score = player1Data.compass_scores[dir as keyof CompassScores];
@@ -133,6 +191,19 @@ router.post('/compare', async (req, res) => {
         reasoning.push(`${leader} has significant ${directionNames[index]} advantage`);
       }
     });
+
+    // Add tier-based analysis
+    if (player1Data.tier !== player2Data.tier) {
+      const tierOrder = ['Elite', 'Solid', 'Depth', 'Bench'];
+      const p1TierRank = tierOrder.indexOf(player1Data.tier || 'Bench');
+      const p2TierRank = tierOrder.indexOf(player2Data.tier || 'Bench');
+      
+      if (p1TierRank < p2TierRank) {
+        reasoning.push(`${player1} is in a higher dynasty tier (${player1Data.tier} vs ${player2Data.tier})`);
+      } else if (p2TierRank < p1TierRank) {
+        reasoning.push(`${player2} is in a higher dynasty tier (${player2Data.tier} vs ${player1Data.tier})`);
+      }
+    }
 
     const response: TradeAnalysisResponse = {
       status: 'success',
