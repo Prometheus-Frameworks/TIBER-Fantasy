@@ -55,6 +55,7 @@ import { wrGameLogsService } from './services/wrGameLogsService';
 import compassRoutes from './routes/compassRoutes';
 import rbCompassRoutes from './routes/rbCompassRoutes';
 import tiberDataRoutes from './routes/tiberDataRoutes';
+import populationStatsRoutes from './routes/populationStatsRoutes';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -1182,6 +1183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/compass', compassRoutes);
   app.use('/api/rb-compass', rbCompassRoutes);
   app.use('/api/tiber-data', tiberDataRoutes);
+  app.use('/api/population-stats', populationStatsRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
