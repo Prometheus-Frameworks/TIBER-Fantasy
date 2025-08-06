@@ -2,17 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 interface WRRankingData {
-  name: string;
+  player_name?: string;
+  name?: string;
   team: string;
-  rating: number;
-  archetype: string;
+  rating?: number;
+  adjusted_rating?: number;
+  archetype_tag?: string;
+  archetype?: string;
   fpg: number;
   vorp: number;
+  compass?: any;
+  dynastyScore?: number;
 }
 
 const Rankings: React.FC = () => {
   const { data: rankingsResponse, isLoading, error } = useQuery({
-    queryKey: ['/api/wr-ratings/rankings'],
+    queryKey: ['/api/compass/wr'],
     retry: false,
   });
 
@@ -51,7 +56,7 @@ const Rankings: React.FC = () => {
     );
   }
 
-  const rankings: WRRankingData[] = rankingsResponse.data || [];
+  const rankings: WRRankingData[] = rankingsResponse?.rankings || [];
 
   const getArchetypeColor = (archetype: string) => {
     switch (archetype) {
@@ -123,11 +128,11 @@ const Rankings: React.FC = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {rankings.map((player, index) => (
                   <tr 
-                    key={`${player.name}-${index}`} 
+                    key={`${player.name || player.player_name}-${index}`} 
                     className="hover:bg-gray-50 cursor-pointer"
                     onClick={() => {
                       // Navigate to player profile page
-                      window.location.href = `/player/${encodeURIComponent(player.name)}`;
+                      window.location.href = `/player/${encodeURIComponent(player.name || player.player_name || '')}`;
                     }}
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -135,7 +140,7 @@ const Rankings: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {player.name}
+                        {player.name || player.player_name}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -144,13 +149,13 @@ const Rankings: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={getRatingColor(player.rating)}>
-                        {player.rating}
+                      <span className={getRatingColor(player.rating || player.adjusted_rating || 0)}>
+                        {player.rating || player.adjusted_rating || 'N/A'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getArchetypeColor(player.archetype)}`}>
-                        {player.archetype}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getArchetypeColor(player.archetype || player.archetype_tag || 'balanced')}`}>
+                        {player.archetype || player.archetype_tag || 'balanced'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">

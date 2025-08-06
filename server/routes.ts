@@ -7,21 +7,13 @@ import { adpSyncService } from "./adpSyncService";
 import { storage } from "./storage";
 import { teamSyncService } from "./teamSync";
 import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generateWaiverRecommendations } from "./analytics";
-import { sportsDataAPI } from "./sportsdata";
-import { playerAnalysisCache } from "./playerAnalysisCache";
-import { espnAPI } from "./espnAPI";
-import { playerMapping } from "./playerMapping";
-import { dataRefreshService } from "./dataRefresh";
-import { realTimeADPUpdater } from "./realTimeADPUpdater";
-import { dataIntegrityFixer } from "./dataIntegrityFixer";
+// Removed deprecated imports
 import { PlayerFilteringService } from "./playerFiltering";
 import { db } from "./db";
 import { dynastyTradeHistory, players as playersTable } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { z } from "zod";
-import { fantasyProsAPI } from './services/fantasyProsAPI';
-import { dataIngestionService } from './services/dataIngestionService';
-import { fantasyProService } from './services/fantasyProService';
+// Removed deprecated fantasy services
 import { rbDraftCapitalService } from './rbDraftCapitalContext';
 import cron from 'node-cron';
 import { registerSleeperTestRoutes } from './api/sleeper-test';
@@ -117,7 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (position === 'wr') {
         const { wrRatingsService } = await import('./services/wrRatingsService');
-        const wrData = await wrRatingsService.getWRRatings();
+        const wrData = wrRatingsService.getAllWRPlayers();
         
         if (algorithm === 'enhanced') {
           const { calculateEnhancedWRCompass } = await import('./compassCalculations');
