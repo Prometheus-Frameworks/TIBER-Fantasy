@@ -75,26 +75,10 @@ export default function PlayerCompass() {
 
   const [selectedProfile, setSelectedProfile] = useState<CompassProfile | null>(null);
 
-  // Fetch compass profiles with filters
-  const { data: compassData, isLoading, error } = useQuery({
-    queryKey: ['/api/compass/players', filters],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      
-      if (filters.position && filters.position !== 'all') params.append('positions', filters.position);
-      if (filters.tier && filters.tier !== 'all') params.append('tiers', filters.tier);
-      if (filters.minAge) params.append('minAge', filters.minAge);
-      if (filters.maxAge) params.append('maxAge', filters.maxAge);
-      if (filters.scenario && filters.scenario !== 'all' && filters.minScenarioValue) {
-        params.append('scenario', filters.scenario);
-        params.append('minScenarioValue', filters.minScenarioValue);
-      }
-      
-      const response = await fetch(`/api/compass/players?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch compass data');
-      return response.json();
-    }
-  });
+  // Redirect users to specific position compass pages
+  const isLoading = false;
+  const error = null;
+  const compassData = { profiles: [] };
 
   const getTierColor = (tier: string) => {
     switch (tier) {
@@ -168,6 +152,48 @@ export default function PlayerCompass() {
           Navigate your dynasty decisions with context-aware player guidance. 
           No rigid rankings - just flexible evaluation that serves your strategy.
         </p>
+      </div>
+
+      {/* Position-Specific Compass Navigation */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => window.location.href = '/wr-compass'}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              🏈 WR Player Compass
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">
+              50 wide receivers with 4-directional dynasty analysis
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => window.location.href = '/rb-compass'}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              🏃 RB Player Compass
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">
+              Running back dynasty evaluation with authentic data
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => window.location.href = '/te-compass'}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              ⚡ TE Player Compass
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">
+              10 tight ends with position-specific dynasty factors
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* What is Player Compass */}
