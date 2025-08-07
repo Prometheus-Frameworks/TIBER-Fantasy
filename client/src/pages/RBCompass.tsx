@@ -112,6 +112,17 @@ export default function RBCompass() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between mb-4">
+        <Button 
+          variant="outline" 
+          onClick={() => window.history.back()} 
+          className="flex items-center gap-2"
+        >
+          ← Back
+        </Button>
+        <div className="flex-1" />
+      </div>
+      
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold">RB Player Compass</h1>
         <p className="text-gray-600">4-Directional Dynasty Evaluation System</p>

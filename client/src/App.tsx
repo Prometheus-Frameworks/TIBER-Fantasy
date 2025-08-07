@@ -61,6 +61,7 @@ import RBDraftCapitalContext from "@/pages/RBDraftCapitalContext";
 import PlayerCompass from "@/pages/PlayerCompass";
 import RBCompass from "@/pages/RBCompass";
 import TECompass from "@/pages/TECompass";
+import WRCompass from "@/pages/WRCompass";
 
 import TiberData from "@/pages/TiberData";
 import TradeAnalyzer from "@/pages/TradeAnalyzer";
@@ -82,6 +83,7 @@ function Router() {
       <Route path="/compare-league" component={CompareLeaguePage} />
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
       <Route path="/player-compass" component={PlayerCompass} />
+      <Route path="/wr-compass" component={WRCompass} />
       <Route path="/rb-compass" component={RBCompass} />
       <Route path="/te-compass" component={TECompass} />
       <Route path="/tiber-data" component={TiberData} />
