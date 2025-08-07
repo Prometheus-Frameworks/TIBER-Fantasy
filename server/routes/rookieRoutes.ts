@@ -38,6 +38,46 @@ router.get('/', async (req, res) => {
 });
 
 /**
+ * GET /api/rookies/position/:position
+ * Get rookies by specific position (QB, RB, WR, TE)
+ */
+router.get('/position/:position', async (req, res) => {
+  try {
+    const position = req.params.position.toUpperCase() as 'QB' | 'RB' | 'WR' | 'TE';
+    
+    if (!['QB', 'RB', 'WR', 'TE'].includes(position)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid position',
+        valid_positions: ['QB', 'RB', 'WR', 'TE']
+      });
+    }
+    
+    console.log(`🏈 Fetching ${position} rookies...`);
+    
+    const rookies = rookieStorageService.getRookiesByPosition(position);
+    const topRookies = rookieStorageService.getTopRookiesByPosition(position, 20);
+    
+    res.json({
+      success: true,
+      position,
+      rookies: rookies,
+      top_rookies: topRookies,
+      count: rookies.length,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error(`❌ Error fetching ${req.params.position} rookies:`, error);
+    res.status(500).json({
+      success: false,
+      error: `Failed to fetch ${req.params.position} rookie data`,
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * GET /api/rookies/:position
  * Get rookies by specific position (QB, RB, WR, TE)
  */

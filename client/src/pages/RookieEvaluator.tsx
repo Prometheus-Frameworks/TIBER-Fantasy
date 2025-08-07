@@ -8,14 +8,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, TrendingUp, TrendingDown, Target, Users, Star, GraduationCap } from 'lucide-react';
 
 interface RookieData {
-  name: string;
+  // Name field variations
+  name?: string;
+  player_name?: string;
+  // Position and team
   position: 'QB' | 'RB' | 'WR' | 'TE';
   team: string;
+  // ADP and draft info  
   adp?: number;
   college?: string;
   draft_round?: number;
   draft_pick?: number;
+  // Projection variations
   projected_points?: number;
+  proj_points?: number;
+  points?: number;
+  // Compass scores
   compass_score?: number;
   tier?: string;
   north_score?: number;
@@ -25,6 +33,17 @@ interface RookieData {
   draft_capital_tier?: string;
   evaluation_notes?: string[];
   dynasty_projection?: string;
+  // Stats variations
+  rec?: number;
+  receptions?: number;
+  rec_yds?: number;
+  rec_yards?: number;
+  rec_td?: number;
+  rec_tds?: number;
+  rush_yds?: number;
+  rush_yards?: number;
+  rush_td?: number;
+  rush_tds?: number;
 }
 
 interface RookieEvaluationResponse {
@@ -191,8 +210,9 @@ export default function RookieEvaluator() {
   };
 
   const filteredRookies = rookies.filter(rookie => {
-    if (!rookie.name || !rookie.team) return false;
-    return rookie.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const playerName = rookie.name || rookie.player_name;
+    if (!playerName || !rookie.team) return false;
+    return playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
            rookie.team.toLowerCase().includes(searchTerm.toLowerCase()) ||
            (rookie.college && rookie.college.toLowerCase().includes(searchTerm.toLowerCase()));
   });
@@ -284,10 +304,10 @@ export default function RookieEvaluator() {
           {/* Rookies Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredRookies.map((rookie, index) => (
-              <Card key={`${rookie.name}-${index}`} className="hover:shadow-lg transition-shadow">
+              <Card key={`${rookie.name || rookie.player_name}-${index}`} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">{rookie.name}</CardTitle>
+                    <CardTitle className="text-lg">{rookie.name || rookie.player_name}</CardTitle>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">{rookie.position}</Badge>
                       {rookie.tier && (
@@ -319,10 +339,14 @@ export default function RookieEvaluator() {
                         <div>Draft: Round {rookie.draft_round}</div>
                       )}
                       {rookie.adp && (
-                        <div>ADP: {rookie.adp}</div>
+                        <div>ADP: {Math.round(rookie.adp * 10) / 10}</div>
                       )}
-                      {rookie.projected_points && (
-                        <div>Proj: {rookie.projected_points} pts</div>
+                      {(rookie.projected_points || rookie.proj_points || rookie.points) && (
+                        <div>Proj: {Math.round((rookie.projected_points || rookie.proj_points || rookie.points) * 10) / 10} pts</div>
+                      )}
+                      {/* Stats preview */}
+                      {(rookie.rec || rookie.receptions) && (
+                        <div>Rec: {rookie.rec || rookie.receptions} | {rookie.rec_yds || rookie.rec_yards || 0} yds</div>
                       )}
                     </div>
 
