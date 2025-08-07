@@ -102,7 +102,7 @@ const getCompassIcon = (direction: string) => {
 };
 
 export default function RookieEvaluator() {
-  const [rookies, setRookies] = useState<RookieData[]>([]);
+  const [rookies, setRookies] = useState<RookieData[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -122,8 +122,44 @@ export default function RookieEvaluator() {
   const [singleEvaluation, setSingleEvaluation] = useState<any>(null);
   const [evaluating, setEvaluating] = useState(false);
 
+  // Specialized fetch function following your pattern
+  const fetchRookieTEs = async () => {
+    try {
+      const res = await fetch('/api/rookies/te');
+
+      const contentType = res.headers.get('content-type');
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.status}`);
+      }
+
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        throw new Error(`Expected JSON but got:\n${text.slice(0, 300)}`);
+      }
+
+      const data = await res.json();
+      return data;
+
+    } catch (err) {
+      console.error("🔥 Rookie TE Fetch Failed:", err.message);
+      return null;
+    }
+  };
+
   useEffect(() => {
-    fetchRookies();
+    if (selectedPosition === 'TE') {
+      fetchRookieTEs().then(data => {
+        if (data) {
+          setRookies(data.rookies || []);
+          setLoading(false);
+        } else {
+          setError('Failed to load TE rookies');
+          setLoading(false);
+        }
+      });
+    } else {
+      fetchRookies();
+    }
   }, [selectedPosition]);
 
   const fetchRookies = async () => {
@@ -209,13 +245,24 @@ export default function RookieEvaluator() {
     }
   };
 
-  const filteredRookies = rookies.filter(rookie => {
+  const filteredRookies = rookies ? rookies.filter(rookie => {
     const playerName = rookie.name || rookie.player_name;
     if (!playerName || !rookie.team) return false;
     return playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
            rookie.team.toLowerCase().includes(searchTerm.toLowerCase()) ||
            (rookie.college && rookie.college.toLowerCase().includes(searchTerm.toLowerCase()));
-  });
+  }) : [];
+
+  // Early return with your pattern if rookies is null
+  if (!rookies) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">🛠 Rookie data unavailable. Check console for details.</div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading && rookies.length === 0) {
     return (
@@ -248,7 +295,7 @@ export default function RookieEvaluator() {
         </div>
         <p className="text-gray-600">College-to-NFL Dynasty Analysis System</p>
         <div className="text-sm text-gray-500">
-          {rookies.length} prospects loaded across all positions
+          {rookies?.length || 0} prospects loaded across all positions
         </div>
       </div>
 
