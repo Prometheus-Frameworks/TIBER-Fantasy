@@ -1,0 +1,18 @@
+{
+  "name": "Travis Kelce",
+  "team": "KC",
+  "position": "TE",
+  "age": 35,
+  "rookie_status": "Veteran",
+  "games_played": 17,
+  "targets": 133,
+  "receptions": 97,
+  "receiving_yards": 823,
+  "receiving_touchdowns": 5,
+  "yards_per_reception": 8.5,
+  "yards_after_catch": 325,
+  "red_zone_targets": 26,
+  "pff_receiving_grade": 70.5,
+  "pff_pass_blocking_grade": 58.2,
+  "notes": "Led all TEs in red-zone targets (26) but career-low YPR."
+}
