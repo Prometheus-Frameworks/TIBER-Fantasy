@@ -286,16 +286,32 @@ def evaluate_rookie(player: Dict[str, Any]) -> Dict[str, Any]:
     """
     position = player.get("position", "").upper()
     
-    # Handle special cases
+    # Handle special cases - Travis Hunter reality check
     if "Travis Hunter" in player.get("name", ""):
-        return {
+        # Evaluate him as a WR first, then add two-way bonus
+        wr_result = evaluate_wr(player)
+        
+        # Add reasonable two-way player bonus (not insane)
+        two_way_bonus = 8.0  # Solid bonus for versatility
+        adjusted_score = wr_result["score"] + two_way_bonus
+        
+        # Create proper evaluation result
+        result = {
             "name": "Travis Hunter",
             "position": "WR/CB",
-            "tier": "Σ",  # Beyond S-tier
-            "score": 999.99,
-            "traits": ["two_way_player", "generational", "position_breaker"],
-            "notes": "System exception: Evaluate as both WR and CB. Draft immediately."
+            "tier": assign_tier(adjusted_score, "WR"),
+            "score": round(adjusted_score, 2),
+            "traits": wr_result["traits"] + ["two_way_player", "cb_skills"],
+            "notes": f"Two-way player evaluation: WR base {wr_result['score']:.1f} + versatility bonus {two_way_bonus}"
         }
+        
+        # Add dynasty-specific flags
+        result["flags"] = determine_flags(result, player) + ["positional_flexibility"]
+        
+        # Add compass integration data
+        result["compass_ready"] = prepare_compass_data(player, "WR")
+        
+        return result
     
     # Standard evaluation routing
     evaluators = {
