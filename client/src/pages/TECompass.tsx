@@ -100,13 +100,16 @@ export default function TECompass() {
   const fetchTECompassData = async () => {
     try {
       setLoading(true);
+      console.log('TECompass: Fetching TE data from /api/compass/te');
       const response = await fetch('/api/compass/te');
       if (!response.ok) {
-        throw new Error('Failed to fetch TE compass data');
+        throw new Error(`Failed to fetch TE compass data: ${response.status}`);
       }
       const data = await response.json();
+      console.log('TECompass: Data received:', data.metadata?.totalPlayers, 'TEs');
       setTeData(data);
     } catch (err) {
+      console.error('TECompass: Error fetching data:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
@@ -143,10 +146,12 @@ export default function TECompass() {
     );
   }
 
+  console.log('TECompass: Component rendering, loading:', loading, 'error:', error, 'data:', !!teData);
+  
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold">TE Player Compass</h1>
+        <h1 className="text-3xl font-bold">TE Player Compass (Working!)</h1>
         <p className="text-gray-600">4-Directional Dynasty Evaluation System</p>
         <div className="text-sm text-gray-500">
           Analyzing {teData?.metadata.totalPlayers || 0} Tight Ends
