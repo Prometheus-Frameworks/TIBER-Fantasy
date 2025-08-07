@@ -46,6 +46,7 @@ import { wrRatingsService } from './services/wrRatingsService';
 import { wrGameLogsService } from './services/wrGameLogsService';
 import compassRoutes from './routes/compassRoutes';
 import rbCompassRoutes from './routes/rbCompassRoutes';
+import teCompassRoutes from './routes/teCompassRoutes';
 import tiberDataRoutes from './routes/tiberDataRoutes';
 import populationStatsRoutes from './routes/populationStatsRoutes';
 import tradeAnalyzerRoutes from './routes/tradeAnalyzerRoutes';
@@ -158,8 +159,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const compass = computeComponents(player, 'rb');
           return { ...player, compass, dynastyScore: compass.score };
         });
+      } else if (position === 'te') {
+        // TE compass integration using new TE system
+        const { teCompassDataAdapter } = await import('./teCompassDataAdapter');
+        const { calculateTECompass } = await import('./teCompassCalculations');
+        const teData = await teCompassDataAdapter.getAllTEPlayers();
+        rankings = teData.map((player: any) => {
+          const compass = calculateTECompass(player);
+          return { 
+            ...player, 
+            compass,
+            dynastyScore: compass.score,
+            methodology: 'TE Compass 4-directional equal weighting'
+          };
+        });
       } else {
-        // QB/TE expansion ready for future implementation
+        // QB expansion ready for future implementation
         rankings = [];
       }
       
@@ -1353,6 +1368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Compass routes
   app.use('/api/compass', compassRoutes);
   app.use('/api/rb-compass', rbCompassRoutes);
+  app.use('/api/te-compass', teCompassRoutes);
   app.use('/api/tiber-data', tiberDataRoutes);
   app.use('/api/population-stats', populationStatsRoutes);
   app.use('/api/trade-analyzer', tradeAnalyzerRoutes);
