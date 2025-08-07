@@ -62,6 +62,7 @@ import PlayerCompass from "@/pages/PlayerCompass";
 import RBCompass from "@/pages/RBCompass";
 import TECompass from "@/pages/TECompass";
 import WRCompass from "@/pages/WRCompass";
+import RookieEvaluator from "@/pages/RookieEvaluator";
 
 import TiberData from "@/pages/TiberData";
 import TradeAnalyzer from "@/pages/TradeAnalyzer";
@@ -86,6 +87,7 @@ function Router() {
       <Route path="/wr-compass" component={WRCompass} />
       <Route path="/rb-compass" component={RBCompass} />
       <Route path="/te-compass" component={TECompass} />
+      <Route path="/rookie-evaluator" component={RookieEvaluator} />
       <Route path="/tiber-data" component={TiberData} />
       <Route path="/trade-analyzer" component={TradeAnalyzer} />
       <Route path="/data-sources" component={DataSourcesPage} />

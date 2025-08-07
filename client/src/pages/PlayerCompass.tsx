@@ -196,6 +196,22 @@ export default function PlayerCompass() {
         </Card>
       </div>
 
+      {/* Rookie Evaluator Card */}
+      <div className="mb-8">
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => window.location.href = '/rookie-evaluator'}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              🎓 Rookie Evaluator
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">
+              College-to-NFL dynasty analysis with comprehensive evaluation system
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* What is Player Compass */}
       <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
         <CardContent className="p-6">
