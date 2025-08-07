@@ -10,6 +10,7 @@ Future consideration: May add redraft emphasis later.
 Mission commitment: Strictly avoid all paywall partnerships or data sources. Maintain complete independence and free access to all platform features.
 Community Discussion Philosophy: Transform statistical insights into meaningful conversations that help real people make better fantasy decisions (example: RB age cliff data → nuanced CMC contending window analysis).
 Player Evaluation System: "Player Compass" - Dynamic, context-aware player profiles with tiers, scenario scores, and decision-making guidance instead of rigid rankings. Emphasizes flexibility and serves multiple team strategies.
+Mock Draft Analysis Partnership: Joseph will share completed mock drafts during redraft season for collaborative analysis. This provides real-world insight into his draft strategy, player preferences, reaches/fades, and community interaction patterns. Track ADP changes over time and understand practical draft decision-making beyond technical development work.
 
 ## System Architecture
 
