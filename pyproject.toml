@@ -5,8 +5,11 @@ description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
     "flask>=3.1.1",
+    "modules>=1.0.0",
     "nfl-data-py>=0.3.3",
     "numpy>=1.26.4",
     "pandas>=1.5.3",
     "requests>=2.32.4",
+    "schedule>=1.2.2",
+    "scipy>=1.16.1",
 ]
