@@ -83,8 +83,8 @@ function Router() {
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
       <Route path="/player-compass" component={PlayerCompass} />
       <Route path="/rb-compass" component={RBCompass} />
-      <Route path="/te-compass-test" component={TECompassSimple} />
-      <Route path="/te-compass" component={TECompass} />
+      <Route path="/te-compass" component={TECompassSimple} />
+      <Route path="/te-compass-full" component={TECompass} />
       <Route path="/tiber-data" component={TiberData} />
       <Route path="/trade-analyzer" component={TradeAnalyzer} />
       <Route path="/data-sources" component={DataSourcesPage} />
