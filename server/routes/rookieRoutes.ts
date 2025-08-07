@@ -249,4 +249,42 @@ router.get('/stats/summary', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/rookies/te
+ * Get rookie TEs with authentic data following Flask pattern
+ */
+router.get('/te', async (req, res) => {
+  try {
+    const authenticTEPath = path.join(process.cwd(), 'data', 'rookie_tes_authentic.json');
+    
+    if (!fs.existsSync(authenticTEPath)) {
+      return res.status(404).json({
+        success: false,
+        error: 'Authentic TE data not found'
+      });
+    }
+
+    const data = fs.readFileSync(authenticTEPath, 'utf8');
+    const rookieTEs = JSON.parse(data);
+
+    console.log(`🏈 Fetching ${rookieTEs.length} authentic rookie TEs...`);
+
+    res.json({
+      success: true,
+      rookies: rookieTEs,
+      count: rookieTEs.length,
+      data_source: 'authentic_nfl_data',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('🔥 Rookie TE Fetch Failed:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch rookie TE data',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;

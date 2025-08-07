@@ -44,6 +44,19 @@ interface RookieData {
   rush_yards?: number;
   rush_td?: number;
   rush_tds?: number;
+  // Flask authentic data structure
+  receiving_yards?: number;
+  receiving_touchdowns?: number;
+  yards_per_reception?: number;
+  yards_after_catch?: number;
+  red_zone_targets?: number;
+  pff_receiving_grade?: number;
+  pff_pass_blocking_grade?: number;
+  targets?: number;
+  games_played?: number;
+  age?: number;
+  rookie_status?: string;
+  notes?: string;
 }
 
 interface RookieEvaluationResponse {
@@ -391,9 +404,16 @@ export default function RookieEvaluator() {
                       {(rookie.projected_points || rookie.proj_points || rookie.points) && (
                         <div>Proj: {Math.round((rookie.projected_points || rookie.proj_points || rookie.points) * 10) / 10} pts</div>
                       )}
-                      {/* Stats preview */}
-                      {(rookie.rec || rookie.receptions) && (
-                        <div>Rec: {rookie.rec || rookie.receptions} | {rookie.rec_yds || rookie.rec_yards || 0} yds</div>
+                      {/* Enhanced stats preview with Flask data structure */}
+                      {(rookie.rec || rookie.receptions || rookie.receiving_yards) && (
+                        <div>
+                          {rookie.receptions && <span>Rec: {rookie.receptions}</span>}
+                          {rookie.receiving_yards && <span> | {rookie.receiving_yards} yds</span>}
+                          {rookie.receiving_touchdowns && <span> | {rookie.receiving_touchdowns} TD</span>}
+                        </div>
+                      )}
+                      {rookie.pff_receiving_grade && (
+                        <div>PFF Grade: {rookie.pff_receiving_grade}</div>
                       )}
                     </div>
 
