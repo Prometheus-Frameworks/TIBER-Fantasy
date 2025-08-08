@@ -4,13 +4,13 @@ function Nav() {
   const [location] = useLocation();
   
   return (
-    <header className="sticky top-0 z-50 backdrop-blur bg-white/70 border-b">
+    <header className="sticky top-0 z-50 backdrop-blur bg-white/70 border-b safe-top">
       <nav className="mx-auto max-w-screen-md px-4 py-3 flex items-center justify-between">
         <Link href="/" className="text-lg font-extrabold tracking-tight">ON THE CLOCK</Link>
 
         <div className="flex items-center gap-2">
-          <Link href="/about" className="px-3 py-1.5 text-sm rounded-md border hover:bg-gray-50">About</Link>
-          <Link href="/dashboard" className="px-3 py-1.5 text-sm rounded-md bg-black text-white hover:opacity-90">Get Started</Link>
+          <Link href="/login" className="px-3 py-1.5 text-sm rounded-md border hover:bg-gray-50">Log in</Link>
+          <Link href="/signup" className="px-3 py-1.5 text-sm rounded-md bg-black text-white hover:opacity-90">Sign up</Link>
         </div>
       </nav>
 
@@ -19,14 +19,14 @@ function Nav() {
         <div className="flex gap-3 overflow-x-auto no-scrollbar text-sm">
           {[
             { label: "Home", href: "/#tools" },
-            { label: "Player Compass", href: "/player-compass" },
-            { label: "Rankings", href: "/rankings" },
+            { label: "Compass", href: "/player-compass" },
+            { label: "Ranks", href: "/rankings" },
             { label: "Rookies", href: "/rookie-evaluator" },
-            { label: "Draft Tools", href: "/draft-room" },
+            { label: "Draft", href: "/draft-room" },
           ].map((link) => (
             <Link
               key={link.label}
-              className={`px-3 py-1.5 rounded-full transition-colors ${
+              className={`px-3 py-1.5 rounded-full transition-colors whitespace-nowrap ${
                 (link.href === "/#tools" && location === "/") || link.href === location
                   ? "bg-gray-900 text-white"
                   : "bg-gray-100 hover:bg-gray-200"
@@ -94,7 +94,7 @@ export default function HomePage() {
       {/* TILES */}
       <section className="mx-auto max-w-screen-md px-4 space-y-5 mt-8">
         <Tile icon="🧭" title="Player Compass" desc="Context-aware guidance for dynasty decisions" href="/player-compass" />
-        <Tile icon="👥" title="Team Management" desc="Sync and analyze your leagues" href="/sync" />
+        <Tile icon="👥" title="Team Management" desc="Sync and analyze your leagues" href="/teams" />
         <Tile icon="🏆" title="Draft Tools" desc="Prep and dominate your draft" href="/draft-room" />
       </section>
 

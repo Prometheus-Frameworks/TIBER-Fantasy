@@ -44,6 +44,20 @@ button, a, [role="button"] {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Hide scrollbars */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe area support for iOS notch */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
 /* Homepage header styling */
 .homepage-header {
   text-align: center;

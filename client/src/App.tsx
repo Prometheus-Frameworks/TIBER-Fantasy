@@ -55,6 +55,9 @@ import SleeperDatabase from "@/pages/sleeper-database";
 import PrometheusBenchmarks from "@/pages/PrometheusBenchmarks";
 import CommunityPosts from "@/pages/CommunityPosts";
 import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
+import Login from "@/pages/login";
+import Signup from "@/pages/signup";
+import Teams from "@/pages/teams";
 // FantasyProTest removed - service deprecated
 import HowYouCanContribute from "@/pages/how-you-can-contribute";
 import RBDraftCapitalContext from "@/pages/RBDraftCapitalContext";
@@ -91,6 +94,9 @@ function Router() {
       <Route path="/tiber-data" component={TiberData} />
       <Route path="/trade-analyzer" component={TradeAnalyzer} />
       <Route path="/data-sources" component={DataSourcesPage} />
+      <Route path="/login" component={Login} />
+      <Route path="/signup" component={Signup} />
+      <Route path="/teams" component={Teams} />
       <Route path="/adp" component={CleanADP} />
       <Route path="/oasis" component={Oasis} />
       <Route path="/draft-room" component={DraftRoom} />
