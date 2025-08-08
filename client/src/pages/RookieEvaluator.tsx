@@ -120,6 +120,7 @@ export default function RookieEvaluator() {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPosition, setSelectedPosition] = useState<string>('ALL');
+  const [sortBy, setSortBy] = useState<'adp' | 'points' | 'position' | 'team'>('adp');
   const [evaluationMode, setEvaluationMode] = useState<'typescript' | 'python'>('typescript');
 
   // Single player evaluation state
@@ -154,7 +155,7 @@ export default function RookieEvaluator() {
       return data;
 
     } catch (err) {
-      console.error("🔥 Rookie TE Fetch Failed:", err.message);
+      console.error("🔥 Rookie TE Fetch Failed:", err instanceof Error ? err.message : 'Unknown error');
       return null;
     }
   };
@@ -258,13 +259,33 @@ export default function RookieEvaluator() {
     }
   };
 
-  const filteredRookies = rookies ? rookies.filter(rookie => {
-    const playerName = rookie.name || rookie.player_name;
-    if (!playerName || !rookie.team) return false;
-    return playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           rookie.team.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           (rookie.college && rookie.college.toLowerCase().includes(searchTerm.toLowerCase()));
-  }) : [];
+  const filteredAndSortedRookies = rookies ? rookies
+    .filter(rookie => {
+      const playerName = rookie.name || rookie.player_name;
+      if (!playerName || !rookie.team) return false;
+      return playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             rookie.team.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             (rookie.college && rookie.college.toLowerCase().includes(searchTerm.toLowerCase()));
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'adp':
+          const adpA = a.adp || 999;
+          const adpB = b.adp || 999;
+          return adpA - adpB; // Low to high
+        case 'points':
+          const pointsA = a.projected_points || a.proj_points || a.points || 0;
+          const pointsB = b.projected_points || b.proj_points || b.points || 0;
+          return pointsB - pointsA; // High to low
+        case 'position':
+          const posOrder = { 'QB': 1, 'RB': 2, 'WR': 3, 'TE': 4 };
+          return (posOrder[a.position] || 5) - (posOrder[b.position] || 5);
+        case 'team':
+          return a.team.localeCompare(b.team);
+        default:
+          return 0;
+      }
+    }) : [];
 
   // Early return with your pattern if rookies is null
   if (!rookies) {
@@ -327,11 +348,11 @@ export default function RookieEvaluator() {
         </TabsList>
 
         <TabsContent value="database" className="space-y-6">
-          {/* Position Filter */}
+          {/* Filters and Search */}
           <Card>
             <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
                   <Select value={selectedPosition} onValueChange={setSelectedPosition}>
                     <SelectTrigger>
                       <SelectValue placeholder="All Positions" />
@@ -345,12 +366,25 @@ export default function RookieEvaluator() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex-1">
+                <div>
+                  <Select value={sortBy} onValueChange={(value: 'adp' | 'points' | 'position' | 'team') => setSortBy(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sort by..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="adp">ADP (Low → High)</SelectItem>
+                      <SelectItem value="points">Points (High → Low)</SelectItem>
+                      <SelectItem value="position">Position</SelectItem>
+                      <SelectItem value="team">Team</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
                       type="text"
-                      placeholder="Search rookies by name, team, or college..."
+                      placeholder="Search rookies..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
@@ -362,27 +396,27 @@ export default function RookieEvaluator() {
           </Card>
 
           {/* Rookies Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredRookies.map((rookie, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {filteredAndSortedRookies.map((rookie, index) => (
               <Card key={`${rookie.name || rookie.player_name}-${index}`} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
+                <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">{rookie.name || rookie.player_name}</CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{rookie.position}</Badge>
+                    <CardTitle className="text-xl font-bold">{rookie.name || rookie.player_name}</CardTitle>
+                    <div className="flex items-center gap-1">
+                      <Badge variant="outline" className="text-xs">{rookie.position}</Badge>
                       {rookie.tier && (
-                        <Badge className={`${getTierColor(rookie.tier)} text-white`}>
+                        <Badge className={`${getTierColor(rookie.tier)} text-white text-xs`}>
                           {rookie.tier}
                         </Badge>
                       )}
                     </div>
                   </div>
-                  <CardDescription>
+                  <CardDescription className="text-sm font-medium">
                     {rookie.team} {rookie.college && `• ${rookie.college}`}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="pt-0">
+                  <div className="space-y-2">
                     {/* Compass Score */}
                     {rookie.compass_score && (
                       <div className="text-center">
@@ -399,10 +433,12 @@ export default function RookieEvaluator() {
                         <div>Draft: Round {rookie.draft_round}</div>
                       )}
                       {rookie.adp && (
-                        <div>ADP: {Math.round(rookie.adp * 10) / 10}</div>
+                        <div className="font-semibold text-blue-700">ADP: {Math.round(rookie.adp * 10) / 10}</div>
                       )}
                       {(rookie.projected_points || rookie.proj_points || rookie.points) && (
-                        <div>Proj: {Math.round((rookie.projected_points || rookie.proj_points || rookie.points) * 10) / 10} pts</div>
+                        <div className="font-semibold text-green-700">
+                          Proj: {Math.round(((rookie.projected_points || rookie.proj_points || rookie.points) as number) * 10) / 10} pts
+                        </div>
                       )}
                       {/* Enhanced stats preview with Flask data structure */}
                       {(rookie.rec || rookie.receptions || rookie.receiving_yards) && (
@@ -419,34 +455,34 @@ export default function RookieEvaluator() {
 
                     {/* Compass Directions */}
                     {rookie.north_score !== undefined && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="text-center p-2 bg-red-50 rounded">
+                      <div className="grid grid-cols-2 gap-1">
+                        <div className="text-center p-1 bg-red-50 rounded">
                           <div className="flex items-center justify-center gap-1">
                             {getCompassIcon('north')}
-                            <span className="text-sm font-semibold">N</span>
+                            <span className="text-xs font-semibold">N</span>
                           </div>
-                          <div className="text-sm">{rookie.north_score}</div>
+                          <div className="text-xs">{rookie.north_score}</div>
                         </div>
-                        <div className="text-center p-2 bg-blue-50 rounded">
+                        <div className="text-center p-1 bg-blue-50 rounded">
                           <div className="flex items-center justify-center gap-1">
                             {getCompassIcon('east')}
-                            <span className="text-sm font-semibold">E</span>
+                            <span className="text-xs font-semibold">E</span>
                           </div>
-                          <div className="text-sm">{rookie.east_score}</div>
+                          <div className="text-xs">{rookie.east_score}</div>
                         </div>
-                        <div className="text-center p-2 bg-green-50 rounded">
+                        <div className="text-center p-1 bg-green-50 rounded">
                           <div className="flex items-center justify-center gap-1">
                             {getCompassIcon('south')}
-                            <span className="text-sm font-semibold">S</span>
+                            <span className="text-xs font-semibold">S</span>
                           </div>
-                          <div className="text-sm">{rookie.south_score}</div>
+                          <div className="text-xs">{rookie.south_score}</div>
                         </div>
-                        <div className="text-center p-2 bg-yellow-50 rounded">
+                        <div className="text-center p-1 bg-yellow-50 rounded">
                           <div className="flex items-center justify-center gap-1">
                             {getCompassIcon('west')}
-                            <span className="text-sm font-semibold">W</span>
+                            <span className="text-xs font-semibold">W</span>
                           </div>
-                          <div className="text-sm">{rookie.west_score}</div>
+                          <div className="text-xs">{rookie.west_score}</div>
                         </div>
                       </div>
                     )}
@@ -456,7 +492,7 @@ export default function RookieEvaluator() {
             ))}
           </div>
 
-          {filteredRookies.length === 0 && !loading && (
+          {filteredAndSortedRookies.length === 0 && !loading && (
             <Card>
               <CardContent className="p-6 text-center">
                 <div className="text-gray-500">No rookies found matching your criteria.</div>
