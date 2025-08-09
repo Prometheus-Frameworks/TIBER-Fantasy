@@ -1,109 +1,60 @@
 import { Link, useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Trophy, Users, Target, Database } from "lucide-react";
+import { Trophy } from "lucide-react";
+
+const tabs = [
+  { href: "/", label: "Home" },
+  { href: "/rankings", label: "Rankings" },
+  { href: "/analytics", label: "Analytics" },
+  { href: "/weekly-data", label: "Weekly Data" },
+  { href: "/trade-analyzer", label: "Trade Analyzer" },
+  { href: "/oasis", label: "OASIS" },
+];
 
 export default function Navigation() {
   const [location] = useLocation();
 
-  const isActive = (path: string) => location === path;
+  const isActive = (path: string) => {
+    if (path === "/") return location === "/";
+    return location.startsWith(path);
+  };
 
   return (
-    <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-      <div className="container mx-auto px-6">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
+    <>
+      {/* Header */}
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+        <div className="mx-auto max-w-6xl px-4 py-4">
           <Link href="/">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <Trophy className="h-8 w-8 text-yellow-600" />
               <span className="text-2xl font-bold text-gray-900 dark:text-white">
                 On The Clock
               </span>
             </div>
           </Link>
-
-          {/* Navigation Links */}
-          <div className="hidden md:flex items-center space-x-1">
-            <Link href="/">
-              <Button 
-                variant={isActive("/") ? "default" : "ghost"}
-                size="sm"
-              >
-                Home
-              </Button>
-            </Link>
-
-            <Link href="/rankings">
-              <Button 
-                variant={isActive("/rankings") ? "default" : "ghost"}
-                size="sm"
-                className="flex items-center space-x-1"
-              >
-                <TrendingUp className="h-4 w-4" />
-                <span>Rankings</span>
-              </Button>
-            </Link>
-
-            <Link href="/analytics">
-              <Button 
-                variant={isActive("/analytics") ? "default" : "ghost"}
-                size="sm"
-              >
-                Analytics
-              </Button>
-            </Link>
-
-            <Link href="/trade-evaluator">
-              <Button 
-                variant={isActive("/trade-evaluator") ? "default" : "ghost"}
-                size="sm"
-                className="flex items-center space-x-1"
-              >
-                <Target className="h-4 w-4" />
-                <span>Trade Evaluator</span>
-              </Button>
-            </Link>
-
-            <Link href="/weekly-data">
-              <Button 
-                variant={isActive("/weekly-data") ? "default" : "ghost"}
-                size="sm"
-                className="flex items-center space-x-1"
-              >
-                <Database className="h-4 w-4" />
-                <span>Weekly Data</span>
-              </Button>
-            </Link>
-
-            <Link href="/oasis">
-              <Button 
-                variant={isActive("/oasis") ? "default" : "ghost"}
-                size="sm"
-                className="flex items-center space-x-1"
-              >
-                <Users className="h-4 w-4" />
-                <span>OASIS</span>
-              </Button>
-            </Link>
-
-            <Link href="/about">
-              <Button 
-                variant={isActive("/about") ? "default" : "ghost"}
-                size="sm"
-              >
-                About
-              </Button>
-            </Link>
-          </div>
-
-          {/* Mobile menu placeholder */}
-          <div className="md:hidden">
-            <Button variant="ghost" size="sm">
-              Menu
-            </Button>
-          </div>
         </div>
-      </div>
-    </nav>
+      </header>
+
+      {/* Navigation Tabs */}
+      <nav className="w-full border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div className="mx-auto max-w-6xl px-4 flex gap-6 overflow-x-auto">
+          {tabs.map(tab => {
+            const active = isActive(tab.href);
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className={`py-3 border-b-2 whitespace-nowrap text-sm font-medium transition-colors ${
+                  active 
+                    ? "border-yellow-600 text-yellow-600 dark:text-yellow-500" 
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                }`}
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }

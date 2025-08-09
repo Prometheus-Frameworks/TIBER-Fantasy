@@ -70,6 +70,7 @@ import RookieEvaluator from "@/pages/RookieEvaluator";
 import TiberData from "@/pages/TiberData";
 import TradeAnalyzer from "@/pages/TradeAnalyzer";
 import WeeklyData from "@/pages/WeeklyData";
+import Navigation from "@/components/Navigation";
 
 function Router() {
   return (
@@ -143,8 +144,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <Navigation />
+        <main className="mx-auto max-w-6xl px-4 py-6">
+          <Router />
+        </main>
         <Toaster />
-        <Router />
       </TooltipProvider>
     </QueryClientProvider>
   );
