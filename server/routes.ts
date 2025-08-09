@@ -1381,45 +1381,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/python-rookie', pythonRookieRoutes);
   app.use('/api/redraft', redraftWeeklyRoutes);
 
-  // OASIS API Routes
-  app.get('/api/oasis/teams', async (req, res) => {
+  // OASIS Proxy Routes - Efficient upstream caching with ETags
+  const oasisCache = new Map();
+  const OASIS_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+  app.get('/api/oasis/*', async (req, res) => {
+    const base = process.env.OASIS_R_BASE;
+    const pathParam = req.params && typeof req.params === 'object' ? req.params['0'] : '';
+    const queryString = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+    const upstream = base ? `${base}/${pathParam}${queryString}` : null;
+    const now = Date.now();
+    const hit = upstream ? oasisCache.get(upstream) : null;
+    const headers: Record<string, string> = {};
+    
+    if (hit?.etag && (now - hit.ts) < OASIS_TTL_MS) {
+      headers["If-None-Match"] = hit.etag;
+    }
+
     try {
-      const { oasisApiService } = await import('./services/oasisApiService.js');
-      const teams = await oasisApiService.fetchOasisData();
-      const cacheStatus = oasisApiService.getCacheStatus();
+      if (!upstream) {
+        throw new Error("OASIS_R_BASE environment variable not set");
+      }
       
-      res.json({
-        success: true,
-        teams,
-        cacheStatus,
-        timestamp: new Date().toISOString()
-      });
+      const response = await fetch(upstream, { headers });
+      
+      if (response.status === 304 && hit) {
+        return res.json(hit.data);
+      }
+      
+      const etag = response.headers.get("etag");
+      const data = await response.json();
+      
+      if (etag) {
+        oasisCache.set(upstream, { ts: now, etag, data });
+      }
+      
+      return res.json(data);
     } catch (error) {
-      console.error('OASIS API error:', error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
+      console.error('OASIS upstream error:', error);
+      return res.status(502).json({
+        error: "OASIS upstream unavailable",
+        detail: String(error)
       });
     }
   });
 
-  app.post('/api/oasis/clear-cache', async (req, res) => {
-    try {
-      const { oasisApiService } = await import('./services/oasisApiService.js');
-      oasisApiService.clearCache();
-      
-      res.json({
-        success: true,
-        message: 'OASIS cache cleared',
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+  // OASIS endpoint discovery
+  app.get("/api/oasis/_index", (_req, res) => {
+    res.json({ 
+      endpoints: [
+        "/teams",
+        "/metrics/offense", 
+        "/metrics/defense",
+        "/targets/distribution"
+      ]
+    });
+  });
+
+  // OASIS debug endpoint - tests all available endpoints
+  app.get("/api/oasis/_debug", async (req, res) => {
+    const list = ["/teams", "/metrics/offense", "/targets/distribution"];
+    const out: Record<string, any> = {};
+    
+    for (const p of list) {
+      try {
+        const response = await fetch(`${req.protocol}://${req.get("host")}/api/oasis${p}`);
+        const json = await response.json();
+        out[p] = { 
+          ok: true, 
+          count: Array.isArray(json) ? json.length : undefined, 
+          keys: Array.isArray(json) && json[0] ? Object.keys(json[0]) : Object.keys(json || {}) 
+        };
+      } catch (error) { 
+        out[p] = { ok: false, error: String(error) }; 
+      }
     }
+    res.json(out);
   });
 
   const httpServer = createServer(app);
