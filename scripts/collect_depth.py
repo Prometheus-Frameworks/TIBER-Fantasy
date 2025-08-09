@@ -20,9 +20,14 @@ def collect_depth_charts():
         
         print(f"✅ Loaded {len(df):,} depth chart records for 2024")
         
-        # Standardize team codes (JAX → JAC)
-        team_mapping = {'JAX': 'JAC'}
-        df['team'] = df['team'].replace(team_mapping)
+        # Standardize team codes (JAX → JAC) if team column exists
+        if 'team' in df.columns:
+            team_mapping = {'JAX': 'JAC'}
+            df['team'] = df['team'].replace(team_mapping)
+        elif 'club' in df.columns:
+            df = df.rename(columns={'club': 'team'})
+            team_mapping = {'JAX': 'JAC'}
+            df['team'] = df['team'].replace(team_mapping)
         
         # Handle gsis_id mapping if present
         if 'gsis_id' in df.columns and 'player_id' not in df.columns:

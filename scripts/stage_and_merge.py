@@ -40,6 +40,12 @@ def normalize_and_merge():
     df_stats = pd.DataFrame(stats_records) if stats_records else pd.DataFrame()
     df_depth = pd.DataFrame(depth_records) if depth_records else pd.DataFrame()
     
+    # Standardize depth chart columns
+    if not df_depth.empty and 'club_code' in df_depth.columns:
+        df_depth = df_depth.rename(columns={'club_code': 'team'})
+    if not df_depth.empty and 'depth_team' in df_depth.columns:
+        df_depth = df_depth.rename(columns={'depth_team': 'depth_rank'})
+    
     # Create staging data (normalized stats)
     staging_records = []
     
@@ -73,10 +79,16 @@ def normalize_and_merge():
     warehouse_records = []
     
     if not df_stats.empty and not df_depth.empty:
-        # Merge on player_id, season, week, team
+        # Merge on available columns
+        merge_cols = ['player_id', 'season']
+        if 'week' in df_stats.columns and 'week' in df_depth.columns:
+            merge_cols.append('week')
+        if 'team' in df_stats.columns and 'team' in df_depth.columns:
+            merge_cols.append('team')
+            
         merged_df = df_stats.merge(
             df_depth,
-            on=['player_id', 'season', 'week', 'team'],
+            on=merge_cols,
             how='left',
             suffixes=('', '_depth')
         )

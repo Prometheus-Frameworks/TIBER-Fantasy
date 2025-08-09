@@ -16,21 +16,23 @@ def collect_weekly_stats():
     
     try:
         # Use nfl-data-py to get weekly stats for 2024
-        df = nfl.import_weekly_data([2024], columns=[
-            'player_id', 'season', 'week', 'recent_team', 'position', 
-            'targets', 'receptions', 'receiving_yards', 'receiving_tds',
-            'rushing_attempts', 'rushing_yards', 'rushing_tds', 
-            'fantasy_points_ppr'
-        ])
+        df = nfl.import_weekly_data([2024])
         
         print(f"✅ Loaded {len(df):,} weekly stat records for 2024")
         
-        # Standardize column names and team codes
-        df = df.rename(columns={
-            'recent_team': 'team',
-            'rushing_attempts': 'rushing_att',
-            'fantasy_points_ppr': 'fantasy_ppr'
-        })
+        # Standardize column names and team codes  
+        column_renames = {}
+        if 'recent_team' in df.columns:
+            column_renames['recent_team'] = 'team'
+        if 'rushing_attempts' in df.columns:
+            column_renames['rushing_attempts'] = 'rushing_att'
+        elif 'carries' in df.columns:
+            column_renames['carries'] = 'rushing_att'
+        if 'fantasy_points_ppr' in df.columns:
+            column_renames['fantasy_points_ppr'] = 'fantasy_ppr'
+        
+        if column_renames:
+            df = df.rename(columns=column_renames)
         
         # Standardize team codes (JAX → JAC)
         team_mapping = {'JAX': 'JAC'}
