@@ -1,4 +1,5 @@
 import RookieClass2025 from "@/components/RookieClass2025";
+import UsageLeaders from "@/components/UsageLeaders";
 
 // Feature flag for production readiness
 const READY = process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_REDRAFT_READY === "1";
@@ -19,13 +20,18 @@ export default function RedraftPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <h1 className="text-2xl font-semibold">Redraft 2025</h1>
+
       <section>
-        <h2 className="text-lg font-medium mb-2">Rookie Spotlight (Class of 2025)</h2>
+        <h2 className="text-lg font-medium mb-2">Usage Leaders (Week 1)</h2>
+        <UsageLeaders season={2024} week={1} limit={50} />
+      </section>
+
+      <section>
+        <h2 className="text-lg font-medium mb-2">Rookie Spotlight — Class of 2025</h2>
         <RookieClass2025 season={2024} week={1} />
       </section>
-      {/* Add more redraft widgets here: weekly usage, ADP, etc. */}
     </div>
   );
 }

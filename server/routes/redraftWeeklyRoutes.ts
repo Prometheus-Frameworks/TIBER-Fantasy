@@ -44,6 +44,8 @@ router.get('/weekly', async (req: Request, res: Response) => {
     const posParam = (req.query.pos as string) ?? 'QB,RB,WR,TE,K,DST';
     const limit = Number(req.query.limit ?? 200);
     const cursor = (req.query.cursor as string) ?? '';
+    const sort = ((req.query.sort as string) ?? 'routes').toLowerCase();
+    const order = ((req.query.order as string) ?? 'desc').toLowerCase();
 
     const allowedPos = new Set(
       posParam.split(',').map(s => s.trim().toUpperCase())
@@ -122,6 +124,13 @@ router.get('/weekly', async (req: Request, res: Response) => {
     }
 
     rl.close();
+
+    // Sort rows by the requested metric
+    rows.sort((a: any, b: any) => {
+      const av = a[sort] ?? -Infinity;
+      const bv = b[sort] ?? -Infinity;
+      return order === 'asc' ? (av - bv) : (bv - av);
+    });
 
     const next_cursor = rows.length >= limit && rows.length > 0 
       ? rows[rows.length - 1].player_id 
