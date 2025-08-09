@@ -54,6 +54,7 @@ import compassCompareRoutes from './routes/compassCompareRoutes';
 import rookieRoutes from './routes/rookieRoutes';
 import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
 import pythonRookieRoutes from './routes/pythonRookieRoutes';
+import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -1378,6 +1379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/rookies', rookieRoutes);
   app.use('/api/rookie-evaluation', rookieEvaluationRoutes);
   app.use('/api/python-rookie', pythonRookieRoutes);
+  app.use('/api/redraft', redraftWeeklyRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

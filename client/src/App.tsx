@@ -69,6 +69,7 @@ import RookieEvaluator from "@/pages/RookieEvaluator";
 
 import TiberData from "@/pages/TiberData";
 import TradeAnalyzer from "@/pages/TradeAnalyzer";
+import WeeklyData from "@/pages/WeeklyData";
 
 function Router() {
   return (
@@ -93,6 +94,7 @@ function Router() {
       <Route path="/rookie-evaluator" component={RookieEvaluator} />
       <Route path="/tiber-data" component={TiberData} />
       <Route path="/trade-analyzer" component={TradeAnalyzer} />
+      <Route path="/weekly-data" component={WeeklyData} />
       <Route path="/data-sources" component={DataSourcesPage} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />

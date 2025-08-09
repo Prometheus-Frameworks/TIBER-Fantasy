@@ -1,0 +1,210 @@
+Hell yeah—let’s wire this into the UI so it’s not just a pile of JSONLs sitting in a folder.
+
+# Game plan (no fluff)
+
+1. **Expose a tiny API over the warehouse file.**
+2. **Client hits that API with filters (season/week/team/position).**
+3. **Render a tight, virtualized list with sort + search.**
+4. **Ship a 5-row preview widget anywhere we want (rookies page, team page, etc.).**
+
+---
+
+# 1) API contract (what the front end will call)
+
+**Route:** `/api/redraft/weekly`
+**Query params:**
+
+* `season` (int, required)
+* `week` (int, optional; defaults to latest in file)
+* `team` (string, optional, e.g. “KC”)
+* `pos` (string, optional; default: `QB,RB,WR,TE,K,DST`)
+* `limit` (int, default 200) / `cursor` (string) for pagination
+
+**Response (JSON):**
+
+```json
+{
+  "data": [
+    {
+      "player_id":"00-0036355","player_name":"Puka Nacua",
+      "season":2024,"week":1,"team":"LAR","position":"WR",
+      "snap_pct":0.94,"routes":38,"targets":12,"air_yards":128,
+      "receptions":9,"fantasy_ppr":24.6,"depth_rank":1
+    }
+  ],
+  "next_cursor":"w24-kc-001"
+}
+```
+
+**Why this:** simple, cacheable, and you’re not downloading the whole warehouse file on mobile.
+
+---
+
+# 2) Next.js (App Router) – API handler
+
+Drop this as `app/api/redraft/weekly/route.ts` (adjust paths if you’re not on Next).
+
+```ts
+import { NextRequest, NextResponse } from "next/server";
+import fs from "node:fs";
+import readline from "node:readline";
+
+const WAREHOUSE = "warehouse/2024_weekly.jsonl";
+const FANTASY = new Set(["QB","RB","WR","TE","K","DST"]);
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const season = Number(searchParams.get("season") ?? 2024);
+  const week = searchParams.get("week");
+  const team = searchParams.get("team")?.toUpperCase() ?? "";
+  const posParam = searchParams.get("pos") ?? "QB,RB,WR,TE,K,DST";
+  const limit = Number(searchParams.get("limit") ?? 200);
+  const cursor = searchParams.get("cursor") ?? ""; // optional
+
+  const allowedPos = new Set(posParam.split(",").map(s => s.trim().toUpperCase()));
+  const startAfter = cursor; // simple cursor on player_id for MVP
+
+  const file = fs.createReadStream(WAREHOUSE, { encoding: "utf8" });
+  const rl = readline.createInterface({ input: file, crlfDelay: Infinity });
+
+  const rows:any[] = [];
+  let passedCursor = !startAfter;
+  for await (const line of rl) {
+    if (!line) continue;
+    const r = JSON.parse(line);
+    if (r.season !== season) continue;
+    if (week && String(r.week) !== week) continue;
+    if (team && r.team !== team) continue;
+    if (!allowedPos.has(r.position)) continue;
+
+    // cursor gate
+    if (!passedCursor) {
+      if (r.player_id === startAfter) passedCursor = true;
+      continue;
+    }
+
+    rows.push({
+      player_id: r.player_id,
+      player_name: r.player_name ?? null,
+      season: r.season, week: r.week,
+      team: r.team, position: r.position,
+      snap_pct: r.snap_pct ?? null,
+      routes: r.routes ?? null, targets: r.targets ?? null,
+      air_yards: r.air_yards ?? null,
+      receptions: r.receptions ?? null,
+      fantasy_ppr: r.fantasy_ppr ?? null,
+      depth_rank: r.position_depth ?? r.depth_rank ?? null
+    });
+    if (rows.length >= limit) break;
+  }
+
+  const next_cursor = rows.length ? rows[rows.length-1].player_id : null;
+  return NextResponse.json({ data: rows, next_cursor });
+}
+```
+
+---
+
+# 3) React client – friendly table w/ controls
+
+Use whatever state lib you like; here’s plain React with fetch.
+
+```tsx
+import { useEffect, useState } from "react";
+
+type Row = {
+  player_id:string; player_name:string|null; team:string; position:string;
+  season:number; week:number; snap_pct:number|null; routes:number|null;
+  targets:number|null; fantasy_ppr:number|null; depth_rank:number|null;
+};
+
+export default function WeeklyTable() {
+  const [week, setWeek] = useState<number>(1);
+  const [team, setTeam] = useState<string>("");
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    const params = new URLSearchParams({
+      season: "2024",
+      week: String(week),
+      pos: "QB,RB,WR,TE,K,DST",
+      team: team.toUpperCase(),
+      limit: "200"
+    });
+    const res = await fetch(`/api/redraft/weekly?${params.toString()}`);
+    const json = await res.json();
+    setRows(json.data);
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [week, team]);
+
+  return (
+    <div className="p-4">
+      <div className="flex gap-3 items-center mb-3">
+        <label>Week
+          <select value={week} onChange={e=>setWeek(Number(e.target.value))}>
+            {Array.from({length: 18}, (_,i)=>i+1).map(w=> <option key={w} value={w}>{w}</option>)}
+          </select>
+        </label>
+        <input placeholder="Team (e.g. KC)" value={team}
+               onChange={e=>setTeam(e.target.value)} className="border px-2 py-1"/>
+      </div>
+
+      {loading ? <div>Loading…</div> : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left">
+              <th>Player</th><th>Team</th><th>Pos</th>
+              <th>Snap%</th><th>Routes</th><th>Tgt</th><th>PPR</th><th>Depth</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(r=>(
+              <tr key={r.player_id} className="border-t">
+                <td>{r.player_name ?? r.player_id}</td>
+                <td>{r.team}</td>
+                <td>{r.position}</td>
+                <td>{r.snap_pct == null ? "-" : (r.snap_pct*100).toFixed(0)}</td>
+                <td>{r.routes ?? "-"}</td>
+                <td>{r.targets ?? "-"}</td>
+                <td>{r.fantasy_ppr ?? "-"}</td>
+                <td>{r.depth_rank ?? "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+```
+
+**Upgrade later:** drop in list virtualization (e.g., `react-virtuoso`) if you pull more than \~500 rows at once.
+
+---
+
+# 4) Quick “rookie spotlight” widget (reuse the API)
+
+If you want a tiny component for the rookies page:
+
+```tsx
+function RookieSpotlight({ team = "", week = 1 }) {
+  // call the same API with ?pos=WR,RB,TE,QB and a rookie filter when you add it
+  // (for MVP, just filter client-side by season=first NFL season if you have it)
+  return <div>/* render 5 rookies with routes/targets + mini trend bars */</div>;
+}
+```
+
+---
+
+# What to tell Tiber right now
+
+* Keep writing **JSONL** to `warehouse/2024_weekly.jsonl` (fantasy positions only).
+* Confirm the warehouse file has:
+  `player_id, player_name, season, week, team, position, snap_pct, routes, targets, air_yards, receptions, fantasy_ppr, depth_rank`.
+* Then drop in the **API handler** and **table component** above.
+
+If you want me to make a tiny **rookie-only endpoint** (`/api/redraft/rookies`) I can spec that too, but this gets the front end unblocked today.

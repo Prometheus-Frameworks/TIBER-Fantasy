@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Trophy, Users, Target } from "lucide-react";
+import { TrendingUp, Trophy, Users, Target, Database } from "lucide-react";
 
 export default function Navigation() {
   const [location] = useLocation();
@@ -61,6 +61,17 @@ export default function Navigation() {
               >
                 <Target className="h-4 w-4" />
                 <span>Trade Evaluator</span>
+              </Button>
+            </Link>
+
+            <Link href="/weekly-data">
+              <Button 
+                variant={isActive("/weekly-data") ? "default" : "ghost"}
+                size="sm"
+                className="flex items-center space-x-1"
+              >
+                <Database className="h-4 w-4" />
+                <span>Weekly Data</span>
               </Button>
             </Link>
 
