@@ -3,6 +3,8 @@ import { Trophy } from "lucide-react";
 
 const tabs = [
   { href: "/", label: "Home" },
+  { href: "/redraft", label: "Redraft" },
+  { href: "/dynasty", label: "Dynasty" },
   { href: "/rankings", label: "Rankings" },
   { href: "/analytics", label: "Analytics" },
   { href: "/weekly-data", label: "Weekly Data" },
