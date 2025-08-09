@@ -219,20 +219,20 @@ export default function WeeklyDataTable() {
                         {record.player_id}
                       </td>
                       <td className="py-2 px-1">
-                        <Badge variant="outline" className="text-xs">
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">
                           {record.team}
-                        </Badge>
+                        </span>
                       </td>
                       <td className="py-2 px-1">
-                        <Badge className={`text-xs ${getPositionBadgeColor(record.position)}`}>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${getPositionBadgeColor(record.position)}`}>
                           {record.position}
-                        </Badge>
+                        </span>
                       </td>
                       <td className="py-2 px-1 text-right">
                         {record.depth_rank && (
-                          <Badge className={`text-xs ${getDepthRankBadge(record.depth_rank)}`}>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${getDepthRankBadge(record.depth_rank)}`}>
                             {record.depth_rank}
-                          </Badge>
+                          </span>
                         )}
                       </td>
                       <td className="py-2 px-1 text-right">{record.targets || "-"}</td>

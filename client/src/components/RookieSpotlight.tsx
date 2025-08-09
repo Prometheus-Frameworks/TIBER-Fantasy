@@ -81,9 +81,9 @@ export default function RookieSpotlight({ team = "", week = 1, limit = 5 }: Rook
           <TrendingUp className="h-5 w-5" />
           Week {week} Top Performers
           {team && (
-            <Badge variant="outline" className="ml-2">
+            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 ml-2">
               {team.toUpperCase()}
-            </Badge>
+            </span>
           )}
         </CardTitle>
       </CardHeader>
@@ -107,16 +107,16 @@ export default function RookieSpotlight({ team = "", week = 1, limit = 5 }: Rook
                       {record.player_id}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Badge variant="outline" className="text-xs">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">
                         {record.team}
-                      </Badge>
-                      <Badge className="text-xs">
+                      </span>
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                         {record.position}
-                      </Badge>
+                      </span>
                       {record.depth_rank && (
-                        <Badge variant="secondary" className="text-xs">
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
                           Depth #{record.depth_rank}
-                        </Badge>
+                        </span>
                       )}
                     </div>
                   </div>

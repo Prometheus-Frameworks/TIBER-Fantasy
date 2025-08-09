@@ -70,7 +70,9 @@ router.get('/weekly', async (req: Request, res: Response) => {
       if (!line.trim()) continue;
       
       try {
-        const record = JSON.parse(line) as WarehouseRecord;
+        // Handle NaN values by replacing them with null before parsing
+        const cleanLine = line.replace(/:\s*NaN\b/g, ': null');
+        const record = JSON.parse(cleanLine) as WarehouseRecord;
         
         // Apply filters
         if (record.season !== season) continue;
