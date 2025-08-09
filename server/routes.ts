@@ -1381,6 +1381,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/python-rookie', pythonRookieRoutes);
   app.use('/api/redraft', redraftWeeklyRoutes);
 
+  // OASIS API Routes
+  app.get('/api/oasis/teams', async (req, res) => {
+    try {
+      const { oasisApiService } = await import('./services/oasisApiService.js');
+      const teams = await oasisApiService.fetchOasisData();
+      const cacheStatus = oasisApiService.getCacheStatus();
+      
+      res.json({
+        success: true,
+        teams,
+        cacheStatus,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('OASIS API error:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  app.post('/api/oasis/clear-cache', async (req, res) => {
+    try {
+      const { oasisApiService } = await import('./services/oasisApiService.js');
+      oasisApiService.clearCache();
+      
+      res.json({
+        success: true,
+        message: 'OASIS cache cleared',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
