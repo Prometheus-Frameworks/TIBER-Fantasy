@@ -44,6 +44,8 @@ The platform uses a modular Flask backend for core logic and API endpoints, and 
 - **Python Rookie Evaluator**: Production-ready module with S/A/B/C/D tier system, trait detection, dynasty flags, and position-specific scoring.
 - **OTC Redraft 2025 MVP Data Pipeline**: 4-stage automated pipeline collecting 2024 NFL data from nflfastR and nflverse APIs. Outputs 7,027 merged weekly player records with stats and depth chart positions in warehouse/2024_weekly.jsonl. Includes position filtering separating 12,384 fantasy players from 8,404 IDP players.
 - **UI/UX Decisions**: Clean, responsive design with Jinja2 templating and React components, prioritizing color-coded tier systems, interactive elements, and mobile optimization.
+- **Navigation System**: Next.js-inspired tab-based navigation with clean header separation, active state highlighting, and Wouter routing integration. Features Home, Redraft, Dynasty, Rankings, Analytics, Weekly Data, Trade Analyzer, and OASIS sections.
+- **Redraft & Dynasty Pages**: Minimal structure following user's preferred pattern with placeholder content for future feature development. Redraft focuses on seasonal tools, Dynasty emphasizes long-term strategy.
 
 ### Technical Stack
 - **Backend**: Python (Flask), Node.js (Express.js, TypeScript)
