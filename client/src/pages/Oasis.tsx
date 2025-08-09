@@ -66,9 +66,18 @@ export default function Oasis() {
           </p>
         </div>
 
+        {/* Error banners for missing endpoints */}
+        {teamsError && (
+          <Alert className="mb-4" variant="destructive">
+            <AlertDescription>
+              ⚠️ OASIS endpoint missing: teams. Check /api/oasis/_debug.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Warning banner if oasis_score is missing */}
         {teams.length > 0 && !hasOasisScore && (
-          <Alert className="mb-6">
+          <Alert className="mb-4">
             <AlertDescription>
               Warning: oasis_score field not found in API response. Check console for data structure.
             </AlertDescription>
@@ -80,15 +89,6 @@ export default function Oasis() {
           <div className="text-center py-8">
             <div className="text-gray-600">Loading teams data...</div>
           </div>
-        )}
-
-        {/* Error state */}
-        {teamsError && (
-          <Alert className="mb-6">
-            <AlertDescription>
-              Error loading teams data: {teamsError instanceof Error ? teamsError.message : 'Unknown error'}
-            </AlertDescription>
-          </Alert>
         )}
 
         {/* Teams list */}
@@ -126,11 +126,83 @@ export default function Oasis() {
           </Card>
         )}
 
+        {/* Sample Cards for Offense and Targets */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Offense Sample Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Offense Metrics Sample</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {offenseLoading ? (
+                <div className="text-gray-500">Loading offense data...</div>
+              ) : Array.isArray(offenseData) && offenseData.length > 0 ? (
+                <div className="space-y-2 text-sm">
+                  {Object.entries(offenseData[0]).slice(0, 5).map(([key, value]) => (
+                    <div key={key} className="flex justify-between">
+                      <span className="text-gray-600">{key}:</span>
+                      <span className="font-mono">{String(value)}</span>
+                    </div>
+                  ))}
+                  {Object.keys(offenseData[0]).length > 5 && (
+                    <div className="text-gray-400 text-xs">
+                      ...and {Object.keys(offenseData[0]).length - 5} more fields
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <Alert variant="destructive">
+                    <AlertDescription>
+                      ⚠️ OASIS endpoint missing: offense. Check /api/oasis/_debug.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Targets Sample Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Target Distribution Sample</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {targetsLoading ? (
+                <div className="text-gray-500">Loading targets data...</div>
+              ) : Array.isArray(targetsData) && targetsData.length > 0 ? (
+                <div className="space-y-2 text-sm">
+                  {Object.entries(targetsData[0]).slice(0, 5).map(([key, value]) => (
+                    <div key={key} className="flex justify-between">
+                      <span className="text-gray-600">{key}:</span>
+                      <span className="font-mono">{String(value)}</span>
+                    </div>
+                  ))}
+                  {Object.keys(targetsData[0]).length > 5 && (
+                    <div className="text-gray-400 text-xs">
+                      ...and {Object.keys(targetsData[0]).length - 5} more fields
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <Alert variant="destructive">
+                    <AlertDescription>
+                      ⚠️ OASIS endpoint missing: targets. Check /api/oasis/_debug.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Debug info */}
-        <div className="mt-8 text-xs text-gray-500">
-          <div>Teams: {teamsLoading ? 'Loading...' : teams.length}</div>
-          <div>Offense: {offenseLoading ? 'Loading...' : Array.isArray(offenseData) ? offenseData.length : 'N/A'}</div>
-          <div>Targets: {targetsLoading ? 'Loading...' : Array.isArray(targetsData) ? targetsData.length : 'N/A'}</div>
+        <div className="mt-8 text-xs text-gray-500 bg-gray-50 p-3 rounded">
+          <div className="font-semibold mb-1">Debug Info:</div>
+          <div>Teams: {teamsLoading ? 'Loading...' : teams.length} records</div>
+          <div>Offense: {offenseLoading ? 'Loading...' : Array.isArray(offenseData) ? offenseData.length : 'N/A'} records</div>
+          <div>Targets: {targetsLoading ? 'Loading...' : Array.isArray(targetsData) ? targetsData.length : 'N/A'} records</div>
         </div>
       </div>
     </div>
