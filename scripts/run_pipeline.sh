@@ -16,5 +16,12 @@ echo "Step 3: Staging and merging data..."
 python scripts/stage_and_merge.py
 
 echo ""
-echo "✅ Pipeline complete! Check warehouse/2024_weekly.jsonl"
+echo "Step 4: Filtering positions (optional)..."
+python scripts/filter_positions.py
+
+echo ""
+echo "✅ Pipeline Complete!"
+echo "================================================"
+echo "📊 Main Output: warehouse/2024_weekly.jsonl"
+echo "🔍 Position Filters: depth_charts_fantasy.jsonl, depth_charts_idp.jsonl"
 echo "================================================"

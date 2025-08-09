@@ -42,17 +42,19 @@ The platform uses a modular Flask backend for core logic and API endpoints, and 
 - **Player Compass System**: Implements a 4-directional evaluation (NORTH: Volume/Talent, EAST: Scheme/Offensive Environment, SOUTH: Age/Injury Risk, WEST: Market Efficiency/Dynasty Value) for WR, RB, and TE positions, with plans for QB expansion.
 - **Trade Analyzer v2.0**: React-based frontend with Flask-style backend integration, featuring position selection, 4-directional compass visualization, threshold-based analysis, and detailed reasoning.
 - **Python Rookie Evaluator**: Production-ready module with S/A/B/C/D tier system, trait detection, dynasty flags, and position-specific scoring.
+- **OTC Redraft 2025 MVP Data Pipeline**: 4-stage automated pipeline collecting 2024 NFL data from nflfastR and nflverse APIs. Outputs 7,027 merged weekly player records with stats and depth chart positions in warehouse/2024_weekly.jsonl. Includes position filtering separating 12,384 fantasy players from 8,404 IDP players.
 - **UI/UX Decisions**: Clean, responsive design with Jinja2 templating and React components, prioritizing color-coded tier systems, interactive elements, and mobile optimization.
 
 ### Technical Stack
 - **Backend**: Python (Flask), Node.js (Express.js, TypeScript)
 - **Frontend**: React 18, TypeScript, Jinja2, Wouter, TanStack Query, shadcn/ui (Radix UI), Tailwind CSS
-- **Data**: CSV/JSON, PostgreSQL, Drizzle ORM, Drizzle Kit
+- **Data**: CSV/JSON, PostgreSQL, Drizzle ORM, Drizzle Kit, JSONL format
+- **Data Pipeline**: Python with nfl-data-py, pandas for multi-source NFL data processing
 
 ## External Dependencies
 - **MySportsFeeds API**: For real-time injury reports and NFL roster automation.
 - **Sleeper API**: For player projections, game logs, ADP data, and league sync.
-- **NFL-Data-Py**: For historical NFL analytical data.
+- **NFL-Data-Py**: For 2024 weekly statistics via nflfastR, depth charts via nflverse APIs.
 - **R Server**: External API for OASIS (Offensive Architecture Scoring & Insight System) data.
 - **Axios**: For making HTTP requests.
 - **Zod**: For runtime type validation.
