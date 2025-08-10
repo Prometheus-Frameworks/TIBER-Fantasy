@@ -1459,6 +1459,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(out);
   });
 
+  // Preseason Intelligence API - serves Week 1 observations for dynasty evaluation
+  app.get('/api/preseason/week1-intel', async (req, res) => {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      const intelFile = path.join(process.cwd(), 'data', 'preseason_week1_intel.json');
+      
+      if (fs.existsSync(intelFile)) {
+        const intelligence = JSON.parse(fs.readFileSync(intelFile, 'utf-8'));
+        
+        res.json({
+          success: true,
+          data: intelligence,
+          count: intelligence.length,
+          source: 'Preseason Week 1 Game Film Analysis',
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          error: 'Preseason intelligence file not found',
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('Error loading preseason intelligence:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Dynasty impact summary from preseason observations
+  app.get('/api/preseason/dynasty-impact', async (req, res) => {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      const intelFile = path.join(process.cwd(), 'data', 'preseason_week1_intel.json');
+      
+      if (fs.existsSync(intelFile)) {
+        const intelligence = JSON.parse(fs.readFileSync(intelFile, 'utf-8'));
+        
+        // Categorize by dynasty impact
+        const impactSummary = {
+          major_positive: intelligence.filter((item: any) => item.details.dynasty_impact === 'major_positive'),
+          positive: intelligence.filter((item: any) => item.details.dynasty_impact === 'positive'),
+          concerning: intelligence.filter((item: any) => item.details.dynasty_impact === 'concerning'),
+          negative: intelligence.filter((item: any) => item.details.dynasty_impact?.includes('negative'))
+        };
+        
+        res.json({
+          success: true,
+          summary: impactSummary,
+          total_observations: intelligence.length,
+          source: 'Preseason Week 1 Dynasty Analysis',
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          error: 'Preseason intelligence file not found'
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
