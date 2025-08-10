@@ -21,7 +21,8 @@ Joseph's Draft Philosophy & Strategy:
 - Avoids overpriced players with TD regression risk (Terry McLaurin example)
 - Film scouting and early prospect identification (Matthew Golden story vs Mike)
 
-2025 Preseason Intelligence (Week 1):
+2025 Preseason Intelligence (Week 1) - Observational Data for Context:
+Note: These are early signals to stay informed, not gospel for player evaluation decisions.
 - Blake Corum ahead of Jarquez Hunter in Auburn depth chart
 - Wan'Dale Robinson NYG: Playing half snaps out wide (role expansion signal)
 - Jaylin Noel HOU: Limited to 11 personnel only (concerning usage restriction)
