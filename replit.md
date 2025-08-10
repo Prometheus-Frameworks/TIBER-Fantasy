@@ -21,19 +21,10 @@ Joseph's Draft Philosophy & Strategy:
 - Avoids overpriced players with TD regression risk (Terry McLaurin example)
 - Film scouting and early prospect identification (Matthew Golden story vs Mike)
 
-2025 Preseason Intelligence (Week 1) - Observational Data for Context:
-Note: These are early signals to stay informed, not gospel for player evaluation decisions.
-- Blake Corum ahead of Jarquez Hunter in Auburn depth chart
-- Wan'Dale Robinson NYG: Playing half snaps out wide (role expansion signal)
-- Jaylin Noel HOU: Limited to 11 personnel only (concerning usage restriction)
-- Kenneth Gainwell PHI: Starting over rookie Kaleb Johnson (veteran priority)
-- ETN JAX: Every snap with starters (clear RB1 status)
-- Brashard Smith KC: 5th RB to play (dynasty fade signal)
-- Chig Okonkwo MIA: Every snap with Cam Ward (QB-TE chemistry building)
-- Rachaad White/Tyjae Spears injured: Pollard and Sean Tucker dynasty arrows up
-- Braelon Allen/Isaiah Davis NYJ: Both cutting into Breece Hall snaps (committee concern)
-- RJ Harvey DEN: Out-touched JK Dobbins 8-1 with starters (major depth chart shift)
-- Marvin Mims DEN: 16 of 19 snaps with starters (opportunity emergence)
+Intelligence Feed System:
+- Simple API endpoints ready for real-time updates when season starts
+- Preseason observations archived but not weighted in analysis
+- Ready to receive meaningful intel updates during regular season
 
 ## System Architecture
 

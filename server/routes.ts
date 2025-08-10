@@ -1459,73 +1459,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(out);
   });
 
-  // Preseason Intelligence API - serves Week 1 observations for dynasty evaluation
-  app.get('/api/preseason/week1-intel', async (req, res) => {
+  // Intelligence Feed API - ready for real season updates
+  app.get('/api/intel/current', async (req, res) => {
     try {
       const fs = await import('fs');
       const path = await import('path');
       
-      const intelFile = path.join(process.cwd(), 'data', 'preseason_week1_intel.json');
+      const intelFile = path.join(process.cwd(), 'data', 'current_intel.json');
       
       if (fs.existsSync(intelFile)) {
         const intelligence = JSON.parse(fs.readFileSync(intelFile, 'utf-8'));
-        
         res.json({
           success: true,
           data: intelligence,
-          count: intelligence.length,
-          source: 'Preseason Week 1 Game Film Analysis',
           timestamp: new Date().toISOString()
         });
       } else {
-        res.status(404).json({
-          success: false,
-          error: 'Preseason intelligence file not found',
+        res.json({
+          success: true,
+          data: [],
+          message: 'No current intelligence - ready for season updates',
           timestamp: new Date().toISOString()
         });
       }
     } catch (error) {
-      console.error('Error loading preseason intelligence:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
 
-  // Dynasty impact summary from preseason observations
-  app.get('/api/preseason/dynasty-impact', async (req, res) => {
+  // Add new intelligence entry
+  app.post('/api/intel/add', async (req, res) => {
     try {
       const fs = await import('fs');
       const path = await import('path');
       
-      const intelFile = path.join(process.cwd(), 'data', 'preseason_week1_intel.json');
+      const intelFile = path.join(process.cwd(), 'data', 'current_intel.json');
+      const entry = {
+        ...req.body,
+        timestamp: new Date().toISOString(),
+        id: Date.now().toString()
+      };
       
+      let intelligence = [];
       if (fs.existsSync(intelFile)) {
-        const intelligence = JSON.parse(fs.readFileSync(intelFile, 'utf-8'));
-        
-        // Categorize by dynasty impact
-        const impactSummary = {
-          major_positive: intelligence.filter((item: any) => item.details.dynasty_impact === 'major_positive'),
-          positive: intelligence.filter((item: any) => item.details.dynasty_impact === 'positive'),
-          concerning: intelligence.filter((item: any) => item.details.dynasty_impact === 'concerning'),
-          negative: intelligence.filter((item: any) => item.details.dynasty_impact?.includes('negative'))
-        };
-        
-        res.json({
-          success: true,
-          summary: impactSummary,
-          total_observations: intelligence.length,
-          source: 'Preseason Week 1 Dynasty Analysis',
-          timestamp: new Date().toISOString()
-        });
-      } else {
-        res.status(404).json({
-          success: false,
-          error: 'Preseason intelligence file not found'
-        });
+        intelligence = JSON.parse(fs.readFileSync(intelFile, 'utf-8'));
       }
+      
+      intelligence.push(entry);
+      fs.writeFileSync(intelFile, JSON.stringify(intelligence, null, 2));
+      
+      res.json({
+        success: true,
+        message: 'Intelligence entry added',
+        entry,
+        total: intelligence.length
+      });
     } catch (error) {
       res.status(500).json({
         success: false,
