@@ -6,6 +6,9 @@ import { ArrowUp, ArrowDown, TrendingUp, Users, Target, Brain } from "lucide-rea
 import WRCompass from "@/components/WRCompass";
 import HealthWidget from "@/components/HealthWidget";
 
+const titleCase = (s: string) => s.replace(/\b\w/g, c => c.toUpperCase());
+const two = (n: number) => Number.isFinite(n) ? n.toFixed(2) : '0.00';
+
 interface VORPPlayer {
   player_name: string;
   position: string;

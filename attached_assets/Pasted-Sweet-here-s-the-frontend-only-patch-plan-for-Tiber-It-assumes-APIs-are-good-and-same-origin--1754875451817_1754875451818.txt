@@ -1,0 +1,141 @@
+Sweet — here’s the **frontend-only patch plan** for Tiber. It assumes APIs are good and same-origin is set. It’s written so you can paste it straight to him.
+
+---
+
+# Tiber — Frontend Wire & Polish (APIs confirmed working)
+
+**Rules:** Do these in order. After each step, post the diff or commit message and 1–2 screenshots.
+
+## 1) WR Compass: search + render polish
+
+**Files:** `client/src/components/WRCompass.tsx`, `client/src/pages/WRCompass.tsx`
+
+* Normalize search on both sides: name | team | alias.
+
+```ts
+const norm = (s:string='') => s.normalize().toLowerCase().trim();
+const matches = (p:any,q:string) => {
+  const nq = norm(q);
+  return [p.name, p.team, p.alias].some(v => norm(v||'').includes(nq));
+};
+```
+
+* Render compass sub-scores to **1 decimal**; add mini-bars (CSS only).
+* Title-case names at render.
+
+```ts
+const titleCase = (s:string) => s.replace(/\b\w/g,c=>c.toUpperCase());
+```
+
+**Done when:** typing “wadd”, “mia”, “puka” returns rows; sub-scores show 1 decimal.
+
+## 2) Rookie Spotlight: IDs → names
+
+**Files:** `client/src/components/RookieClass2025.tsx`, `client/src/pages/RookieEvaluator.tsx`
+
+* Build `playerIndex` from `/api/rookies` response (or import if exists).
+
+```ts
+const nameOf = (id:string, idx:Record<string,any>) => idx[id]?.name ?? id;
+```
+
+* Replace any `player_id` renders with `nameOf(player_id, playerIndex)`.
+* Add chips: `pos • team • depth • targets/rec` if fields exist; hide if missing.
+  **Done when:** no raw IDs visible; cards show clean `Name • Team • Pos`.
+
+## 3) Analytics → VORP table
+
+**File:** `client/src/pages/Analytics.tsx`
+
+* Fetch `/api/analytics/vorp?season=2025&pos=WR` on mount.
+* Table columns: `Rank, Name, Team, Age, VORP, Tier`.
+* `VORP` to **2 decimals**; name title-cased; skeleton while loading (no “No data” flash).
+
+```ts
+const two = (n:number) => Number.isFinite(n) ? n.toFixed(2) : '0.00';
+```
+
+**Done when:** top 50 render consistently; refresh doesn’t flash empty.
+
+## 4) Dynasty page: ship thin vertical
+
+**File:** `client/src/pages/Dynasty.tsx` (or existing)
+
+* Reuse VORP data; add columns: `Name • Age • Tier • Market(ADP) • Risk`.
+* Link name → player page route if available (otherwise no-op).
+  **Done when:** non-empty table of 20 rows renders; stable sort by VORP.
+
+## 5) Weekly Data: nulls → zeros + sort
+
+**File:** `client/src/components/WeeklyDataTable.tsx`
+
+* Assume backend now coerces nulls; still guard UI:
+
+```ts
+const z = (v:any) => (v == null ? 0 : v);
+```
+
+* Ensure numeric columns sort properly (coerce to number before compare).
+  **Done when:** no dashes; sorting by targets/receptions/rush\_attempts works.
+
+## 6) Health widget
+
+**File:** `client/src/components/HealthWidget.tsx`
+
+* Poll `/api/health` every 60s.
+* Badge per key: `ok` (green), `stale` (yellow), `down` (red).
+* Clicking badge opens raw JSON modal for debugging.
+  **Done when:** statuses reflect real endpoint states; modal shows payload.
+
+## 7) Shared formatting utils (DRY)
+
+**File:** `client/src/lib/format.ts`
+
+* Export: `titleCase`, `norm`, `one(n)`, `two(n)`.
+
+```ts
+export const one = (n:number) => Number.isFinite(n) ? n.toFixed(1) : '0.0';
+export const two = (n:number) => Number.isFinite(n) ? n.toFixed(2) : '0.00';
+```
+
+* Replace inline helpers across components.
+  **Done when:** no duplicate format functions in components.
+
+## 8) Empty states & errors (tight copies)
+
+* Empty search (WR Compass): `No WRs match “${query}”. Try a team code like “MIA”.`
+* VORP empty: `No VORP rows for ${pos}/${season}.`
+* Rookie card fallback: `Unknown Player` (should not appear after join).
+* Surface fetch errors with a small inline alert; console log full error.
+
+## 9) The “minor filter adjustment” endpoint (frontend guard)
+
+If VORP returns 0 rows due to casing/season:
+
+* Force `pos=WR` default if query missing.
+* When query changes, debounce 250ms and refetch.
+* Show the exact GET URL under the table in tiny gray text (dev-only) to debug.
+
+---
+
+### Quick smoke tests (copy/paste for you)
+
+* WR search: `wadd`, `mia`, `puka` → results
+* Rookie cards: no raw IDs
+* VORP: stable render, 2-decimals, no flash
+* Dynasty: 20 rows, sorts by VORP
+* Weekly table: zeros not dashes; sort works
+* Health widget: shows `ok/stale/down`, modal opens
+
+**Commit cadence:** one commit per section above.
+**Commit msg examples:**
+
+* `feat(wr): normalize search & 1-decimal compass`
+* `fix(rookies): map player_id to name via playerIndex`
+* `feat(analytics): VORP table + skeleton + 2-decimals`
+* `feat(dynasty): thin table with market/risk`
+* `fix(weekly): coerce nulls to zero & sortable cols`
+* `feat(health): badge + modal + 60s poll`
+* `refactor(ui): centralize format utils`
+
+Ping me with the one endpoint that needed the filter tweak if it still acts up — I’ll give you the exact front/back line to drop in.

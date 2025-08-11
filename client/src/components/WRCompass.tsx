@@ -6,6 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Search, Navigation } from 'lucide-react';
 
+const norm = (s: string = '') => s.normalize().toLowerCase().trim();
+const titleCase = (s: string) => s.replace(/\b\w/g, c => c.toUpperCase());
+
+const matches = (p: any, q: string) => {
+  const nq = norm(q);
+  return [p.name, p.team, p.alias].some((v: string) => norm(v || '').includes(nq));
+};
+
 interface WRPlayer {
   id: string;
   name: string;
@@ -43,12 +51,7 @@ export default function WRCompass() {
 
   const filteredData = wrData.filter((player) => {
     if (!search) return true;
-    const searchLower = search.toLowerCase();
-    return (
-      player.name?.toLowerCase().includes(searchLower) ||
-      player.team?.toLowerCase().includes(searchLower) ||
-      player.alias?.toLowerCase().includes(searchLower)
-    );
+    return matches(player, search);
   });
 
   const getCompassColor = (score: number) => {
@@ -59,11 +62,7 @@ export default function WRCompass() {
     return 'bg-red-500';
   };
 
-  const titleCase = (str: string) => {
-    return str?.split(' ').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    ).join(' ') || '';
-  };
+
 
   return (
     <Card>
@@ -101,7 +100,7 @@ export default function WRCompass() {
         ) : filteredData.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             {search ? (
-              <>No WRs match '{search}'. Try team: 'CIN' or name: 'Chase'.</>
+              <>No WRs match "{search}". Try a team code like "MIA".</>
             ) : (
               <>No WR data available.</>
             )}

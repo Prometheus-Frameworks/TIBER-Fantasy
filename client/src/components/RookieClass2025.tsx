@@ -11,12 +11,17 @@ interface RookieClass2025Props {
 
 interface WarehouseRecord {
   player_id: string;
+  player_name: string;
   team: string;
   position: string;
   targets?: number | null;
   receptions?: number | null;
   fantasy_ppr?: number | null;
   depth_rank?: string | null;
+  college?: string;
+  adp?: number;
+  tier?: string;
+  dynasty_score?: number;
 }
 
 export default function RookieClass2025({ season, week, limit = 8 }: RookieClass2025Props) {
@@ -27,6 +32,16 @@ export default function RookieClass2025({ season, week, limit = 8 }: RookieClass
 
   // Use actual rookie data from API
   const rookieData = data?.rookies?.slice(0, limit) || [];
+  
+  // Build player index for name lookup
+  const playerIndex: Record<string, any> = {};
+  rookieData.forEach((player: any) => {
+    if (player.player_id) {
+      playerIndex[player.player_id] = player;
+    }
+  });
+  
+  const nameOf = (id: string, idx: Record<string, any>) => idx[id]?.player_name ?? idx[id]?.name ?? id;
 
   const getPositionColor = (position: string) => {
     switch (position) {
@@ -97,7 +112,7 @@ export default function RookieClass2025({ season, week, limit = 8 }: RookieClass
           </div>
         ) : (
           <div className="space-y-3">
-            {rookieData.map((record, index) => (
+            {rookieData.map((record: any, index: number) => (
               <div
                 key={`${record.player_id}-${index}`}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -109,19 +124,37 @@ export default function RookieClass2025({ season, week, limit = 8 }: RookieClass
                   
                   <div>
                     <div className="font-semibold text-sm">
-                      {record.player_id}
+                      {nameOf(record.player_id, playerIndex)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${getPositionColor(record.position)}`}>
+                    <div className="flex items-center gap-1 mt-1 text-xs">
+                      <Badge className={getPositionColor(record.position)}>
                         {record.position}
-                      </span>
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">
-                        {record.team}
-                      </span>
+                      </Badge>
+                      <span>•</span>
+                      <span>{record.team}</span>
+                      {record.college && (
+                        <>
+                          <span>•</span>
+                          <span>{record.college}</span>
+                        </>
+                      )}
                       {record.depth_rank && (
-                        <span className="text-xs text-muted-foreground">
-                          #{record.depth_rank} depth
-                        </span>
+                        <>
+                          <span>•</span>
+                          <span>#{record.depth_rank} depth</span>
+                        </>
+                      )}
+                      {record.targets && (
+                        <>
+                          <span>•</span>
+                          <span>{record.targets} targets</span>
+                        </>
+                      )}
+                      {record.receptions && (
+                        <>
+                          <span>•</span>
+                          <span>{record.receptions} rec</span>
+                        </>
                       )}
                     </div>
                   </div>

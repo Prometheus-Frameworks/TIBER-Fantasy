@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Search, Filter } from "lucide-react";
 
+const z = (v: any) => (v == null ? 0 : v);
+
 interface WarehouseRecord {
   player_id: string;
   player_name?: string;
