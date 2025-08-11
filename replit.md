@@ -24,9 +24,10 @@ Joseph's Draft Philosophy & Strategy:
 Intelligence Feed System:
 - Simple API endpoints ready for real-time updates when season starts
 - Preseason observations archived but not weighted in analysis (Week 1 preseason intel stored in data/preseason_intel_week1.json)
+- Intel sourced from trusted X/Twitter accounts, not personal observations
 - `/api/intel` endpoint serves scouting reports with filtering by player, position, and signal strength
 - Ready to receive meaningful intel updates during regular season
-- Current Week 1 preseason intel includes: Travis Hunter slot work, RJ Harvey as DEN 1A, Tony Pollard workhorse role, Jerome Ford starting 1A, Josh Reynolds NYJ WR2, and LAC TE room concerns
+- Current Week 1 preseason intel includes: Travis Hunter slot work, RJ Harvey as DEN 1A, Tony Pollard workhorse role, Jerome Ford starting 1A, Josh Reynolds NYJ WR2, Rico Dowdle CAR involvement, and LAC TE room concerns
 
 ## System Architecture
 

@@ -66,7 +66,7 @@ export default function PreseasonIntel() {
     {
       player: "Rico Dowdle",
       position: "RB",
-      team: "DAL",
+      team: "CAR",
       signal: "BUY",
       strength: "medium",
       note: "Will be very involved as 1B - easy buy at cost",
@@ -123,7 +123,7 @@ export default function PreseasonIntel() {
           </Badge>
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Scouting reports from X/Twitter • Preseason observations • Not weighted in rankings
+          Intel from trusted X/Twitter accounts • Preseason observations only • Not weighted in rankings
         </p>
       </CardHeader>
       <CardContent>
