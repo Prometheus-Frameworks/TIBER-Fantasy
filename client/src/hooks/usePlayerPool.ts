@@ -1,53 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
+import { api, usePlayerPool as usePlayerPoolConfig, type PlayerPoolFilters } from "@/lib/playerPool";
 
-export interface PlayerPoolEntry {
-  id: string;
-  name: string;
-  team: string;
-  pos: string;
-  aliases: string[];
-}
+// Re-export types and utilities
+export { nameOf, playerOf, api } from "@/lib/playerPool";
+export type { PlayerPoolEntry, PlayerPoolFilters } from "@/lib/playerPool";
 
-export function usePlayerPool() {
-  return useQuery({
-    queryKey: ['/api/players/pool'],
-    queryFn: async () => {
-      const response = await fetch('/api/players/pool');
-      const result = await response.json();
-      return result.data as PlayerPoolEntry[];
-    },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    cacheTime: 10 * 60 * 1000, // Keep in memory for 10 minutes
-  });
+export function usePlayerPool(filters: PlayerPoolFilters = {}) {
+  return useQuery(usePlayerPoolConfig(filters));
 }
 
 export function usePlayerSearch(query: string, position?: string) {
-  return useQuery({
-    queryKey: ['/api/players/search', query, position],
-    queryFn: async () => {
-      if (!query || query.length < 2) return [];
-      
-      const params = new URLSearchParams({ search: query });
-      if (position) params.append('pos', position);
-      
-      const response = await fetch(`/api/players/search?${params}`);
-      const result = await response.json();
-      return result.data as PlayerPoolEntry[];
-    },
-    enabled: query.length >= 2,
-    staleTime: 2 * 60 * 1000, // Cache search results for 2 minutes
+  return usePlayerPool({ 
+    search: query, 
+    pos: position, 
+    limit: 50 
   });
 }
 
 export function usePlayer(id: string) {
   return useQuery({
     queryKey: ['/api/players', id],
-    queryFn: async () => {
-      const response = await fetch(`/api/players/${id}`);
-      const result = await response.json();
-      return result.data as PlayerPoolEntry;
-    },
+    queryFn: () => api.getPlayer(id),
     enabled: !!id,
-    staleTime: 10 * 60 * 1000, // Cache individual players for 10 minutes
+    staleTime: 10 * 60 * 1000,
   });
 }

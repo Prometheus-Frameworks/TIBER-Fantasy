@@ -93,6 +93,23 @@ class PlayerPoolService {
   isLoaded(): boolean {
     return this.loaded;
   }
+
+  reload(): void {
+    console.log('🔄 Reloading player pool...');
+    this.loadData();
+  }
+
+  getStats() {
+    const stats: Record<string, number> = {};
+    for (const player of this.pool) {
+      stats[player.pos] = (stats[player.pos] || 0) + 1;
+    }
+    return {
+      total: this.pool.length,
+      positions: stats,
+      lastLoaded: this.loaded ? new Date().toISOString() : null
+    };
+  }
 }
 
 // Export singleton instance

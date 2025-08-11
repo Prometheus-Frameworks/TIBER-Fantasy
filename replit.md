@@ -36,6 +36,8 @@ The platform uses a modular Flask backend for core logic and API endpoints, and 
 
 **Type-Safe API Client Implementation**: Created comprehensive API client (apiClient.ts) with full TypeScript interfaces matching OpenAPI 3.1 specification. Features timeout handling, same-origin optimization, standardized envelope responses, and helper formatting functions. Successfully integrated with real backend serving authentic NFL data including live WR rankings with VORP calculations for players like Ja'Marr Chase (290 pts), Justin Jefferson (285 pts), and CeeDee Lamb (280 pts).
 
+**Canonical Player Pool System (COMPLETE)**: Implemented unified player directory system that eliminates scattered data sources across the platform. Built `scripts/buildPlayerPool.ts` that aggregates data from 7 real endpoints (/api/redraft/rankings, /api/dynasty/rankings, /api/vorp, /api/wr, /api/rookies, /api/usage-leaders, /api/compass/wr) into consolidated player_pool.json and player_index.json files. Created unified `/api/player-pool` endpoint with advanced filtering (pos, team, search, limit) and instant search capabilities. Added `nameOf(id)` utility function for consistent player name display across all components. System currently contains 101 players (67 WR, 22 RB, 7 TE, 5 QB) with intelligent alias support and case-insensitive search. All acceptance criteria verified: `/api/player-pool?pos=WR&search=wadd` returns "Jaylen Waddle" correctly.
+
 ### Key Features & Technical Implementations
 - **Modular Flask Architecture**: Core logic in `/modules/` and data in `/data/`.
 - **API Endpoints**: RESTful API for rankings, player data, rookies, VORP, and roster shifts.

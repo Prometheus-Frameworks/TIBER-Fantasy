@@ -1644,17 +1644,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CANONICAL PLAYER POOL API - Single source of truth for player directory
-  app.get('/api/players/pool', async (req: Request, res: Response) => {
+  // UNIFIED CANONICAL PLAYER POOL API
+  app.get('/api/player-pool', async (req: Request, res: Response) => {
     try {
-      const allPlayers = playerPoolService.getAllPlayers();
+      const pos = req.query.pos as string;
+      const team = req.query.team as string;
+      const search = req.query.search as string || '';
+      const limit = parseInt(req.query.limit as string) || 200;
+      
+      console.log(`🔍 [PLAYER POOL] pos=${pos || 'ALL'} team=${team || 'ALL'} search="${search}" limit=${limit}`);
+      
+      let players = playerPoolService.getAllPlayers();
+      
+      // Apply position filter
+      if (pos) {
+        players = players.filter(p => p.pos === pos.toUpperCase());
+      }
+      
+      // Apply team filter  
+      if (team) {
+        players = players.filter(p => p.team === team.toUpperCase());
+      }
+      
+      // Apply search filter
+      if (search && search.length >= 2) {
+        players = playerPoolService.searchPlayers(search, pos, players.length);
+      }
+      
+      // Apply limit
+      const results = players.slice(0, limit);
+      
+      console.log(`✅ [PLAYER POOL] Returning ${results.length} players`);
+      
       res.json({
         ok: true,
-        data: allPlayers,
+        data: results,
         meta: { 
-          total: allPlayers.length,
-          source: 'canonical_player_pool',
-          timestamp: new Date().toISOString()
+          rows: results.length,
+          ts: Date.now(),
+          filters: { pos, team, search },
+          source: 'canonical_player_pool'
         }
       });
     } catch (error) {
@@ -1663,44 +1692,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player search using canonical pool
-  app.get('/api/players/search', async (req: Request, res: Response) => {
+  // Rebuild player pool from real endpoints (admin)
+  app.post('/api/player-pool/rebuild', async (req: Request, res: Response) => {
     try {
-      const search = req.query.search as string || '';
-      const pos = req.query.pos as string;
-      const limit = parseInt(req.query.limit as string) || 50;
+      console.log('🔄 [REBUILD] Starting player pool rebuild...');
       
-      console.log(`🔍 [PLAYER SEARCH] Searching "${search}" pos=${pos} limit=${limit}`);
+      const { buildPlayerPool } = await import('../scripts/buildPlayerPool');
+      await buildPlayerPool();
       
-      if (!search || search.length < 2) {
-        return res.json({ 
-          ok: true, 
-          data: [], 
-          meta: { query: search, position: pos, results: 0 }
-        });
-      }
-      
-      const results = playerPoolService.searchPlayers(search, pos, limit);
-      
-      console.log(`✅ [PLAYER SEARCH] Found ${results.length} results for "${search}"`);
+      // Reload the service
+      playerPoolService.reload();
       
       res.json({
         ok: true,
-        data: results,
-        meta: { 
-          query: search,
-          position: pos,
-          results: results.length,
-          source: 'canonical_player_pool'
-        }
+        message: 'Player pool rebuilt successfully',
+        timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('❌ Player Search Error:', error);
-      res.status(500).json({ error: 'Failed to search players' });
+      console.error('❌ Rebuild Error:', error);
+      res.status(500).json({ 
+        ok: false,
+        error: error instanceof Error ? error.message : 'Rebuild failed'
+      });
     }
   });
 
-  // Get player by ID using canonical pool
+  // Legacy endpoints for backward compatibility
+  app.get('/api/players/pool', async (req: Request, res: Response) => {
+    // Redirect to unified endpoint
+    const query = new URLSearchParams(req.query as any).toString();
+    res.redirect(`/api/player-pool?${query}`);
+  });
+
+  app.get('/api/players/search', async (req: Request, res: Response) => {
+    // Redirect to unified endpoint
+    const query = new URLSearchParams(req.query as any).toString();
+    res.redirect(`/api/player-pool?${query}`);
+  });
+
   app.get('/api/players/:id', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -1856,7 +1885,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         vorp: 'ok',
         weekly: 'ok',
         intel: 'ok',
-        oasis: 'ok'
+        oasis: 'ok',
+        player_pool: playerPoolService.isLoaded() ? 'ok' : 'down'
       };
 
       // Test each endpoint

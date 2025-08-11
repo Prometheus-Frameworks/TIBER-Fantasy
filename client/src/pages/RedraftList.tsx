@@ -1,6 +1,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { mapPlayerLite, PlayerLite } from "@/data/adapters";
 import { useLocation } from "wouter";
+import { nameOf, api } from "@/hooks/usePlayerPool";
 
 const RANK_LIMIT = 50;
 const norm = (s='') => s.normalize().toLowerCase().trim();
@@ -30,11 +31,15 @@ export default function RedraftList() {
           data = (fb.data || []).map(mapPlayerLite);
         }
         
-        // Final fallback: Use WR CSV data which we know works  
+        // Final fallback: Use canonical player pool  
         if (!data.length) {
-          response = await fetch(`/api/wr?limit=${RANK_LIMIT}`);
-          const wr = await response.json();
-          data = (Array.isArray(wr) ? wr : wr.data || []).map(mapPlayerLite);
+          const players = await api.playerPool({ pos: 'WR', limit: RANK_LIMIT });
+          data = players.map((p: any) => ({
+            id: p.id,
+            name: nameOf(p.id), // Use canonical name lookup
+            team: p.team,
+            pos: p.pos
+          }));
         }
         
         if (alive) {
@@ -62,13 +67,12 @@ export default function RedraftList() {
       );
       setRows(local);
       
-      // Network search - use canonical player pool
+      // Network search - use canonical player pool API
       try {
-        const response = await fetch(`/api/players/search?search=${encodeURIComponent(q)}&pos=WR&limit=${RANK_LIMIT}`);
-        const res = await response.json();
-        const searchResults = (res.data || []).map((p: any) => ({
+        const players = await api.playerPool({ search: q, pos: 'WR', limit: RANK_LIMIT });
+        const searchResults = players.map((p: any) => ({
           id: p.id,
-          name: p.name,
+          name: nameOf(p.id), // Use canonical name lookup
           team: p.team,
           pos: p.pos
         }));
