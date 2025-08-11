@@ -20,28 +20,13 @@ interface WarehouseRecord {
 }
 
 export default function RookieClass2025({ season, week, limit = 8 }: RookieClass2025Props) {
-  const { data, isLoading } = useQuery<{ data: WarehouseRecord[] }>({
-    queryKey: ['/api/redraft/weekly', 'rookie-class-2025', { season, week }],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        season: String(season),
-        week: String(week),
-        pos: "WR,RB,TE,QB",
-        limit: "50" // Get more to filter for rookies
-      });
-      const response = await fetch(`/api/redraft/weekly?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch rookie class data');
-      }
-      return response.json();
-    }
+  const { data, isLoading } = useQuery({
+    queryKey: ['/api/rookies'],
+    queryFn: () => fetch('/api/rookies').then(r => r.json()),
   });
 
-  // Filter and sort for top performers (simulating rookie identification)
-  const rookieData = data?.data
-    .filter(record => record.fantasy_ppr && record.fantasy_ppr > 0)
-    .sort((a, b) => (b.fantasy_ppr || 0) - (a.fantasy_ppr || 0))
-    .slice(0, limit) || [];
+  // Use actual rookie data from API
+  const rookieData = data?.rookies?.slice(0, limit) || [];
 
   const getPositionColor = (position: string) => {
     switch (position) {
@@ -58,6 +43,17 @@ export default function RookieClass2025({ season, week, limit = 8 }: RookieClass
     if (index === 1) return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     if (index === 2) return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
     return 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200';
+  };
+
+  const getTierColor = (tier: string) => {
+    switch (tier?.toLowerCase()) {
+      case 's': case 'elite': return 'bg-purple-500 text-white';
+      case 'a': case 'tier-1': return 'bg-blue-500 text-white';
+      case 'b': case 'tier-2': return 'bg-green-500 text-white';
+      case 'c': case 'tier-3': return 'bg-yellow-500 text-white';
+      case 'd': case 'tier-4': return 'bg-red-500 text-white';
+      default: return 'bg-gray-500 text-white';
+    }
   };
 
   if (isLoading) {

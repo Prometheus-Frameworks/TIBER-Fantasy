@@ -1653,7 +1653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate usage leaders from WR data
       const wrData = wrRatingsService.getAllWRPlayers();
       const leaders = wrData
-        .filter((player: any) => player.targets && player.targets > 50)
+        .filter((player: any) => player.targets && player.targets > 40) // Lower threshold for CSV data
         .map((player: any) => ({
           player_name: player.player_name,
           position: 'WR',
@@ -1665,7 +1665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .sort((a: any, b: any) => b.target_share - a.target_share)
         .slice(0, 20);
 
-      res.json({ leaders });
+      res.json({ ok: true, data: leaders, meta: { rows: leaders.length, ts: Date.now() } });
     } catch (error) {
       console.error('❌ [USAGE] Error:', error);
       res.status(500).json({ error: 'Failed to fetch usage leaders' });

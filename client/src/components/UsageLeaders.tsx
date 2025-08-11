@@ -14,7 +14,8 @@ interface UsageLeader {
 
 export default function UsageLeaders() {
   const { data, isLoading } = useQuery({
-    queryKey: ['/api/weekly-data/usage-leaders'],
+    queryKey: ['/api/usage-leaders'],
+    queryFn: () => fetch('/api/usage-leaders').then(r => r.json()),
   });
 
   if (isLoading) {

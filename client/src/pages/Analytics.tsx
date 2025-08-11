@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUp, ArrowDown, TrendingUp, Users, Target, Brain } from "lucide-react";
+import WRCompass from "@/components/WRCompass";
+import HealthWidget from "@/components/HealthWidget";
 
 interface VORPPlayer {
   player_name: string;
@@ -38,7 +40,8 @@ interface UsageLeader {
 
 export default function Analytics() {
   const { data: vorpData, isLoading: vorpLoading } = useQuery({
-    queryKey: ['/api/vorp-rankings'],
+    queryKey: ['/api/analytics/vorp'],
+    queryFn: () => fetch('/api/analytics/vorp?season=2025&pos=WR').then(r => r.json()),
   });
 
   const { data: intelData, isLoading: intelLoading } = useQuery({
@@ -47,10 +50,12 @@ export default function Analytics() {
 
   const { data: usageData, isLoading: usageLoading } = useQuery({
     queryKey: ['/api/usage-leaders'],
+    queryFn: () => fetch('/api/usage-leaders').then(r => r.json()),
   });
 
   const { data: rookieData, isLoading: rookieLoading } = useQuery({
-    queryKey: ['/api/rookies/evaluation-summary'],
+    queryKey: ['/api/rookies'],
+    queryFn: () => fetch('/api/rookies').then(r => r.json()),
   });
 
   const getImpactColor = (impact: string) => {
@@ -76,21 +81,25 @@ export default function Analytics() {
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center space-x-3 mb-6">
-        <Brain className="h-8 w-8 text-blue-600" />
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Analytics Dashboard
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Advanced player insights and dynasty intelligence
-          </p>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center space-x-3">
+          <Brain className="h-8 w-8 text-blue-600" />
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Analytics Dashboard
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Advanced player insights and dynasty intelligence
+            </p>
+          </div>
         </div>
+        <HealthWidget />
       </div>
 
       <Tabs defaultValue="vorp" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="vorp">VORP Rankings</TabsTrigger>
+          <TabsTrigger value="compass">WR Compass</TabsTrigger>
           <TabsTrigger value="intel">Intelligence Feed</TabsTrigger>
           <TabsTrigger value="usage">Usage Leaders</TabsTrigger>
           <TabsTrigger value="rookies">Rookie Eval</TabsTrigger>
@@ -113,34 +122,49 @@ export default function Analytics() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {(vorpData as any)?.players?.slice(0, 20)?.map((player: VORPPlayer, idx: number) => (
-                    <div key={idx} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <Badge className={getTierColor(player.tier)}>
-                          {player.tier}
-                        </Badge>
-                        <div>
-                          <div className="font-medium">{player.player_name}</div>
-                          <div className="text-sm text-gray-500">
-                            {player.position} • {player.team}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-lg">{player.vorp_score?.toFixed(1)}</div>
-                        <div className="text-sm text-gray-500">VORP</div>
-                      </div>
-                    </div>
-                  )) || (
-                    <div className="text-center py-8 text-gray-500">
-                      No VORP data available
-                    </div>
-                  )}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">Rank</th>
+                        <th className="text-left p-2">Name</th>
+                        <th className="text-left p-2">Team</th>
+                        <th className="text-left p-2">Age</th>
+                        <th className="text-left p-2">VORP</th>
+                        <th className="text-left p-2">Tier</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.isArray(vorpData) ? vorpData.slice(0, 20).map((player: any, idx: number) => (
+                        <tr key={player.id || idx} className="border-b hover:bg-gray-50">
+                          <td className="p-2">{idx + 1}</td>
+                          <td className="p-2 font-medium">{player.name}</td>
+                          <td className="p-2">{player.team}</td>
+                          <td className="p-2">{player.age}</td>
+                          <td className="p-2 font-bold">{player.vorp.toFixed(2)}</td>
+                          <td className="p-2">
+                            <Badge className={getTierColor(player.tier)}>
+                              {player.tier}
+                            </Badge>
+                          </td>
+                        </tr>
+                      )) : (
+                        <tr>
+                          <td colSpan={6} className="text-center py-8 text-gray-500">
+                            No VORP data available
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="compass" className="space-y-4">
+          <WRCompass />
         </TabsContent>
 
         <TabsContent value="intel" className="space-y-4">
