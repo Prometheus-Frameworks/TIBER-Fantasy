@@ -11,45 +11,60 @@ const titleCase = (s: string) => s.replace(/\b\w/g, c => c.toUpperCase());
 
 const matches = (p: any, q: string) => {
   const nq = norm(q);
-  return [p.name, p.team, p.alias].some((v: string) => norm(v || '').includes(nq));
+  return [p.name, p.displayName, p.player_name, p.team, p.alias].some((v: string) => norm(v || '').includes(nq));
 };
 
 interface WRPlayer {
-  id: string;
-  name: string;
+  player_name: string;
+  name?: string;
   team: string;
-  pos: string;
+  pos?: string;
   compass: {
     north: number;
     east: number;
     south: number;
     west: number;
+    score?: number;
   };
-  alias: string;
-  age: number;
-  adp: number;
+  alias?: string;
+  age?: number;
+  adp?: number;
+  fpg?: number;
+  rating?: number;
+  adjusted_rating?: number;
 }
 
 interface WRSearchResponse {
-  ok?: boolean;
-  data?: WRPlayer[];
-  length?: number;
+  data: WRPlayer[];
+  metadata?: any;
 }
 
 export default function WRCompass() {
   const [search, setSearch] = useState('');
   
   const { data: wrResponse, isLoading } = useQuery<WRPlayer[] | WRSearchResponse>({
-    queryKey: ['/api/wr', search],
-    queryFn: () => fetch(`/api/wr?search=${encodeURIComponent(search)}&limit=20`).then(r => r.json()),
+    queryKey: ['/api/compass/wr', search],
+    queryFn: async () => {
+      const url = `/api/compass/wr?search=${encodeURIComponent(search)}&limit=50`;
+      console.log('WRCompass: Fetching WR data from', url);
+      const response = await fetch(url);
+      const data = await response.json();
+      console.log('WRCompass: Successfully loaded', data?.data?.length || 0, 'WRs');
+      return data;
+    },
   });
 
-  // Handle different response formats
-  const wrData = Array.isArray(wrResponse) 
-    ? wrResponse 
-    : (wrResponse as WRSearchResponse)?.data || [];
+  // Handle response format - expect envelope with data array
+  const wrData = (wrResponse as WRSearchResponse)?.data || [];
+  
+  // Ensure proper naming for display
+  const mappedData = wrData.map((player: any) => ({
+    ...player,
+    name: player.name || player.player_name || 'Unknown Player',
+    displayName: player.player_name || player.name || 'Unknown Player'
+  }));
 
-  const filteredData = wrData.filter((player) => {
+  const filteredData = mappedData.filter((player) => {
     if (!search) return true;
     return matches(player, search);
   });
@@ -108,14 +123,14 @@ export default function WRCompass() {
         ) : (
           <div className="space-y-4">
             {filteredData.slice(0, 12).map((player) => (
-              <div key={player.id} className="border rounded-lg p-4 hover:bg-gray-50">
+              <div key={player.displayName + player.team} className="border rounded-lg p-4 hover:bg-gray-50">
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <h3 className="font-semibold text-lg">{titleCase(player.name)}</h3>
+                    <h3 className="font-semibold text-lg">{titleCase(player.displayName)}</h3>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Badge variant="outline">{player.team}</Badge>
-                      <span>Age {player.age}</span>
-                      <span>ADP {player.adp}</span>
+                      {player.fpg && <span>{player.fpg.toFixed(1)} FPG</span>}
+                      {player.adjusted_rating && <span>Rating: {player.adjusted_rating}</span>}
                     </div>
                   </div>
                 </div>
@@ -170,6 +185,14 @@ export default function WRCompass() {
           </div>
         )}
       </CardContent>
+      
+      {/* Dev Footer */}
+      <div className="px-6 py-2 bg-gray-50 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-400 border-t">
+        <div className="flex justify-between items-center">
+          <span>GET: /api/compass/wr?search={encodeURIComponent(search)}&limit=50</span>
+          <span>Rows: {filteredData.length}</span>
+        </div>
+      </div>
     </Card>
   );
 }
