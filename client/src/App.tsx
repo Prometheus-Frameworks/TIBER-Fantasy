@@ -72,6 +72,7 @@ import TiberData from "@/pages/TiberData";
 import TradeAnalyzer from "@/pages/TradeAnalyzer";
 import WeeklyData from "@/pages/WeeklyData";
 import Redraft from "@/pages/Redraft";
+import RedraftHub from "@/pages/RedraftHub";
 import Dynasty from "@/pages/Dynasty";
 import Navigation from "@/components/Navigation";
 import Analytics from "@/pages/Analytics";
@@ -100,7 +101,7 @@ function Router() {
       <Route path="/tiber-data" component={TiberData} />
       <Route path="/trade-analyzer" component={TradeAnalyzer} />
       <Route path="/weekly-data" component={WeeklyData} />
-      <Route path="/redraft" component={Redraft} />
+      <Route path="/redraft" component={RedraftHub} />
       <Route path="/dynasty" component={Dynasty} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/api-test" component={lazy(() => import("@/pages/ApiTest"))} />
