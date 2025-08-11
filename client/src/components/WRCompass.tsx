@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useTransition, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -41,11 +41,21 @@ interface WRSearchResponse {
 
 export default function WRCompass() {
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [isPending, startTransition] = useTransition();
+
+  // Debounce search input to avoid excessive API calls
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [search]);
   
   const { data: wrResponse, isLoading } = useQuery<WRPlayer[] | WRSearchResponse>({
-    queryKey: ['/api/compass/wr', search],
+    queryKey: ['/api/compass/wr', debouncedSearch],
     queryFn: async () => {
-      const url = `/api/compass/wr?search=${encodeURIComponent(search)}&limit=50`;
+      const url = `/api/compass/wr?search=${encodeURIComponent(debouncedSearch)}&limit=50`;
       console.log('WRCompass: Fetching WR data from', url);
       const response = await fetch(url);
       const data = await response.json();
@@ -75,10 +85,10 @@ export default function WRCompass() {
   });
 
   const filteredData = mappedData.filter((player) => {
-    if (!search) return true;
-    return matches(player, search);
+    if (!debouncedSearch) return true;
+    return matches(player, debouncedSearch);
   });
-  console.log('WRCompass: Filtered', filteredData.length, 'players for search:', search);
+  console.log('WRCompass: Filtered', filteredData.length, 'players for search:', debouncedSearch);
 
   const getCompassColor = (score: number) => {
     if (score >= 80) return 'bg-green-500';
@@ -105,9 +115,19 @@ export default function WRCompass() {
           <Input
             placeholder="Search by name, team, or alias..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              startTransition(() => {
+                setSearch(value);
+              });
+            }}
             className="pl-10"
           />
+          {(isPending || (search !== debouncedSearch)) && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500">
+              Searching...
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -127,8 +147,8 @@ export default function WRCompass() {
           <div className="text-center py-8 text-gray-500">
             {!wrResponse ? (
               <>Loading WR compass data...</>
-            ) : search ? (
-              <>No WRs match "{search}". Try a team code like "MIA".</>
+            ) : debouncedSearch ? (
+              <>No WRs match "{debouncedSearch}". Try a team code like "MIA".</>
             ) : (
               <>No WR data available. Check API connection.</>
             )}
@@ -211,7 +231,7 @@ export default function WRCompass() {
       {/* Dev Footer */}
       {process.env.NODE_ENV === 'development' && (
         <pre style={{fontSize:12,opacity:.7,whiteSpace:'pre-wrap'}} className="px-6 py-2 bg-gray-50 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-400 border-t">
-          {`GET /api/compass/wr?search=${encodeURIComponent(search)}&limit=50
+          {`GET /api/compass/wr?search=${encodeURIComponent(debouncedSearch)}&limit=50
 rows: ${filteredData?.length ?? 0}
 first: ${filteredData?.[0]?.displayName ?? '—'}
 data length: ${wrData?.length ?? 0}
