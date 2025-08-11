@@ -1,0 +1,96 @@
+Progress! You’ve got data on screen — now let’s fix the three snags fast:
+
+What’s broken (and why)
+	•	Only 10 WRs → your rankings request (or server default) is capping at limit=10.
+	•	“View” does nothing → button isn’t wired to a route.
+	•	Search “Waddle” shows nothing → either you’re not calling the search endpoint, or filtering is too strict/case‑sensitive.
+	•	Rookies empty → page isn’t hitting /api/rookies?class=2025&pos=WR (or it is, but you’re not mapping player_id → name).
+
+Below is copy‑paste for Tiber. It’s tight and will close all four.
+
+⸻
+
+Task: Redraft WR list — increase rows, wire view, fix search, populate rookies
+
+1) Fetch 50+ WRs (not 10)
+
+In the Redraft list component, always pass limit:
+
+const RANK_LIMIT = 50;
+const res = await api.redraftRankings({ pos: "WR", season: 2025, limit: RANK_LIMIT });
+
+If server still returns 10, patch the route default on the backend:
+
+// /api/redraft/rankings handler
+const limit = Math.min(Number(req.query.limit ?? 50), 200);
+res.json(rows.slice(0, limit));
+
+Add a tiny dev footer on the page:
+
+{import.meta.env.DEV && <div className="text-xs opacity-60">rows: {rows.length}</div>}
+
+2) Wire the “View” button
+
+Decide the destination (temporary OK):
+	•	Option A: Player Compass → /player-compass?id=${p.id}
+	•	Option B: Player page → /player/${p.id}
+
+import { useNavigate } from "react-router-dom";
+const nav = useNavigate();
+// ...
+<button onClick={() => nav(`/player-compass?id=${p.id}`)} className="text-blue-600 text-sm">View</button>
+
+3) Make search actually return “Waddle”
+
+Use the real search endpoint when q.length >= 2, and normalize comparisons. Also show client‑side results immediately while the network returns.
+
+const norm = (s='') => s.normalize().toLowerCase().trim();
+
+useEffect(() => {
+  const id = setTimeout(async () => {
+    const qn = norm(q);
+    if (qn.length < 2) return; // keep rankings view
+    // optimistic local filter
+    const local = baseRows.filter(p =>
+      [p.name, p.team, p.id].some(v => norm(v||'').includes(qn))
+    );
+    setRows(local);
+    // network search
+    const res = await api.redraftPlayers({ search: q, pos: "WR", limit: 50 });
+    setRows((res.data || []).map(mapPlayerLite));
+  }, 250);
+  return () => clearTimeout(id);
+}, [q, baseRows]);
+
+(Where baseRows is the rankings you loaded on mount.)
+
+4) Rookies: hit correct endpoint + map names
+
+Ensure the page calls:
+
+const rook = await api.rookies({ classYear: 2025, pos: "WR" });
+setRookies(rook.data.map(r => ({
+  id: r.player_id,
+  name: r.name ?? playerIndex[r.player_id]?.name ?? "Unknown",
+  team: r.team, pos: r.pos, depth: r.depth ?? 0, targets: r.targets ?? 0, receptions: r.receptions ?? 0
+})));
+
+If you’re showing QB in the pills like the screenshot, you’re either not sending pos=WR or not reading it. Log the GET visibly:
+
+{import.meta.env.DEV && <small>GET /api/rookies?class=2025&pos=WR • rows: {rookies.length}</small>}
+
+5) Acceptance (send screenshots)
+	•	/redraft shows ≥ 50 WRs (numbers 1–50) without typing.
+	•	Tapping View navigates somewhere (compass or player page).
+	•	Typing “Waddle” shows Jaylen Waddle in results.
+	•	Rookie Spotlight lists WRs with names (no raw IDs), not QBs.
+
+Commit msgs
+	•	feat(redraft): fetch 50 WR rankings + wire View button
+	•	feat(search): normalize + optimistic local filter + network search
+	•	fix(rookies): enforce pos=WR and map player_id → name
+	•	chore(dev): add tiny GET/debug lines
+
+⸻
+
+Joe, this is just glue. You’ve got real data; we’re just telling the UI where to look and not to bail early. Ship these and you’ll see the list fill out, “View” work, and “Waddle” pop like he should.

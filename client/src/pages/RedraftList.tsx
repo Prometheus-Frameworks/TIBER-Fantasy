@@ -1,11 +1,17 @@
 import { useEffect, useState, useTransition } from "react";
 import { mapPlayerLite, PlayerLite } from "@/data/adapters";
+import { useLocation } from "wouter";
+
+const RANK_LIMIT = 50;
+const norm = (s='') => s.normalize().toLowerCase().trim();
 
 export default function RedraftList() {
   const [rows, setRows] = useState<PlayerLite[]>([]);
+  const [baseRows, setBaseRows] = useState<PlayerLite[]>([]);
   const [q, setQ] = useState("");
   const [isPending, startTransition] = useTransition();
   const [err, setErr] = useState<string>("");
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     let alive = true;
@@ -13,25 +19,28 @@ export default function RedraftList() {
       try {
         setErr("");
         // Primary: Try redraft rankings endpoint
-        let response = await fetch('/api/redraft/rankings?pos=WR&season=2025&limit=50');
+        let response = await fetch(`/api/redraft/rankings?pos=WR&season=2025&limit=${RANK_LIMIT}`);
         let res = await response.json();
         let data = (res.data || []).map(mapPlayerLite);
         
         // Fallback: If rankings empty, try dynasty value endpoint
         if (!data.length) {
-          response = await fetch('/api/dynasty/value?pos=WR&season=2025&limit=50');
+          response = await fetch(`/api/dynasty/value?pos=WR&season=2025&limit=${RANK_LIMIT}`);
           const fb = await response.json();
           data = (fb.data || []).map(mapPlayerLite);
         }
         
         // Final fallback: Try VORP rankings which we know works
         if (!data.length) {
-          response = await fetch('/api/rankings?position=WR&limit=50');
+          response = await fetch(`/api/rankings?position=WR&limit=${RANK_LIMIT}`);
           const vorp = await response.json();
           data = (vorp.players || vorp.data || []).map(mapPlayerLite);
         }
         
-        if (alive) setRows(data);
+        if (alive) {
+          setRows(data);
+          setBaseRows(data);
+        }
       } catch (e:any) {
         setErr(e?.message || "load failed");
       }
@@ -41,17 +50,29 @@ export default function RedraftList() {
 
   useEffect(() => {
     const id = setTimeout(async () => {
+      const qn = norm(q);
+      if (qn.length < 2) {
+        setRows(baseRows); // Reset to original rankings
+        return;
+      }
+      
+      // Optimistic local filter
+      const local = baseRows.filter(p =>
+        [p.name, p.team, p.id].some(v => norm(v||'').includes(qn))
+      );
+      setRows(local);
+      
+      // Network search
       try {
-        if (q.trim().length < 2) return; // keep rankings view
-        const response = await fetch(`/api/redraft/players?search=${encodeURIComponent(q)}&pos=WR&limit=50`);
+        const response = await fetch(`/api/redraft/players?search=${encodeURIComponent(q)}&pos=WR&limit=${RANK_LIMIT}`);
         const res = await response.json();
         setRows((res.data || []).map(mapPlayerLite));
       } catch (e:any) { 
         console.error("search", e); 
       }
-    }, 200);
+    }, 250);
     return () => clearTimeout(id);
-  }, [q]);
+  }, [q, baseRows]);
 
   return (
     <div className="p-4">
@@ -84,15 +105,21 @@ export default function RedraftList() {
                   <div className="text-sm opacity-70">{p.team} • {p.pos}</div>
                 </div>
               </div>
-              <button className="text-blue-600 text-sm hover:underline">View</button>
+              <button 
+                onClick={() => setLocation(`/wr-compass?search=${encodeURIComponent(p.name)}`)} 
+                className="text-blue-600 text-sm hover:underline"
+              >
+                View
+              </button>
             </li>
           ))}
         </ul>
       )}
 
       {import.meta.env.DEV && (
-        <div className="text-xs opacity-60 mt-4">
-          rows: {rows.length} • q: "{q}"
+        <div className="text-xs opacity-60 mt-4 space-y-1">
+          <div>GET /api/redraft/rankings?pos=WR&season=2025&limit={RANK_LIMIT}</div>
+          <div>rows: {rows.length} • baseRows: {baseRows.length} • q: "{q}"</div>
         </div>
       )}
     </div>
