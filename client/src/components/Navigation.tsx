@@ -11,6 +11,7 @@ const tabs = [
   { href: "/trade-analyzer", label: "Trade Analyzer" },
   { href: "/api-test", label: "API Test" },
   { href: "/api-demo", label: "API Demo" },
+  { href: "/api-comprehensive", label: "API Complete" },
   { href: "/oasis", label: "OASIS" },
 ];
 

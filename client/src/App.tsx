@@ -105,6 +105,7 @@ function Router() {
       <Route path="/analytics" component={Analytics} />
       <Route path="/api-test" component={lazy(() => import("@/pages/ApiTest"))} />
       <Route path="/api-demo" component={lazy(() => import("@/pages/ApiDemo"))} />
+      <Route path="/api-comprehensive" component={lazy(() => import("@/pages/ApiComprehensive"))} />
       <Route path="/data-sources" component={DataSourcesPage} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />

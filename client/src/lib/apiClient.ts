@@ -88,6 +88,30 @@ export interface UsageRow {
   slot_rate?: number;
 }
 
+export interface ADPSyncStatus {
+  source: "sleeper" | "espn" | "yahoo" | string;
+  status: "idle" | "running" | "success" | "error";
+  last_run?: string; // ISO
+  rows?: number;
+  message?: string;
+}
+
+export interface UsageLeader {
+  id: string;
+  name?: string;
+  team?: string;
+  pos?: Pos;
+  metric: string;         // e.g., "tgt_share"
+  value: number;          // leader value
+  season?: number;
+  week?: number;
+}
+
+export interface WeekMeta {
+  season: number;
+  weeks: number[];        // e.g., [1,2,...,18]
+}
+
 export interface VersionResponse { build: string; commit?: string; pid?: number; }
 export type HealthResponse = Record<"redraft"|"dynasty"|"oasis"|"trends"|"compass"|"rookies"|"usage2024"|string, HealthStatus>;
 
@@ -251,6 +275,65 @@ export class API {
   }
   usagePlayer(id: string, season = 2024) {
     return this.get<RowEnvelope<UsageRow>>(`/api/usage/player/${encodeURIComponent(id)}?season=${season}`);
+  }
+
+  // ---------- ADP sync/status (real backend tools) ----------
+  adpSync(source: "sleeper" | "espn" | "yahoo" = "sleeper") {
+    const path = `/api/adp/sync`;
+    const url = `${this.base}${path}`;
+    const req = fetch(url, {
+      method: "POST",
+      headers: { ...this.headers, "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ source })
+    }).then(async (r) => {
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) throw new ApiError(`POST ${path} failed`, r.status, url, body);
+      return body as RowEnvelope<{ started: boolean; source: string }>;
+    });
+    return withTimeout(req, this.timeout, url);
+  }
+
+  adpStatus() {
+    return this.get<RowEnvelope<ADPSyncStatus>>(`/api/adp/status`);
+  }
+
+  // ---------- Usage leaders (legacy route) ----------
+  usageLeaders(params?: { metric?: string; pos?: Pos; season?: number; week?: number; limit?: number }) {
+    const q = new URLSearchParams();
+    if (params?.metric) q.set("metric", params.metric);
+    if (params?.pos) q.set("pos", params.pos);
+    if (params?.season) q.set("season", String(params.season));
+    if (params?.week) q.set("week", String(params.week));
+    q.set("limit", String(params?.limit ?? 50));
+    return this.get<RowsEnvelope<UsageLeader>>(`/api/usage-leaders?${q.toString()}`);
+  }
+
+  // ---------- Redraft available weeks ----------
+  redraftWeeks(season = 2025) {
+    return this.get<RowEnvelope<WeekMeta>>(`/api/redraft/weeks?season=${season}`);
+  }
+
+  // ---------- Legacy weekly alias ----------
+  weeklyLegacy(params?: { season?: number; week?: number; pos?: Pos }) {
+    const q = new URLSearchParams();
+    if (params?.season) q.set("season", String(params.season));
+    if (params?.week) q.set("week", String(params.week));
+    if (params?.pos) q.set("pos", params.pos);
+    return this.get<RowsEnvelope<Record<string, number | string>>>(`/api/weekly?${q.toString()}`);
+  }
+
+  // ---------- Compass legacy alias ----------
+  compassWRLegacy(params?: { search?: string; limit?: number }) {
+    const q = new URLSearchParams();
+    if (params?.search) q.set("search", params.search);
+    q.set("limit", String(params?.limit ?? 50));
+    return this.get<RowsEnvelope<CompassRow>>(`/api/compass/wr?${q.toString()}`);
+  }
+
+  // ---------- Rookies TE subset ----------
+  rookiesTELegacy(classYear = 2025) {
+    return this.get<RowsEnvelope<RookieRow>>(`/api/rookies/te?class=${classYear}`);
   }
 }
 
