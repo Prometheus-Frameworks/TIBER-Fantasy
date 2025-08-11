@@ -50,12 +50,14 @@ export default function WRCompass() {
       const response = await fetch(url);
       const data = await response.json();
       console.log('WRCompass: Successfully loaded', data?.data?.length || 0, 'WRs');
+      console.log('WRCompass: Sample player:', data?.data?.[0]);
       return data;
     },
   });
 
   // Handle response format - expect envelope with data array
   const wrData = (wrResponse as WRSearchResponse)?.data || [];
+  console.log('WRCompass: Processing', wrData.length, 'players');
   
   // Ensure proper naming for display
   const mappedData = wrData.map((player: any) => ({
@@ -63,11 +65,13 @@ export default function WRCompass() {
     name: player.name || player.player_name || 'Unknown Player',
     displayName: player.player_name || player.name || 'Unknown Player'
   }));
+  console.log('WRCompass: Mapped', mappedData.length, 'players, sample:', mappedData[0]);
 
   const filteredData = mappedData.filter((player) => {
     if (!search) return true;
     return matches(player, search);
   });
+  console.log('WRCompass: Filtered', filteredData.length, 'players for search:', search);
 
   const getCompassColor = (score: number) => {
     if (score >= 80) return 'bg-green-500';
