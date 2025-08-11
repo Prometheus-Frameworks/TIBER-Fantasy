@@ -34,6 +34,8 @@ The platform uses a modular Flask backend for core logic and API endpoints, and 
 ### Recent API Development (August 11, 2025)
 **API Surface Completion**: Comprehensive discovery and implementation of missing critical endpoints. All core frontend integration routes now operational with consistent response formats and error handling. Key additions include VORP rankings, WR compass search, rookie evaluation, and weekly data aggregation endpoints.
 
+**Type-Safe API Client Implementation**: Created comprehensive API client (apiClient.ts) with full TypeScript interfaces matching OpenAPI 3.1 specification. Features timeout handling, same-origin optimization, standardized envelope responses, and helper formatting functions. Successfully integrated with real backend serving authentic NFL data including live WR rankings with VORP calculations for players like Ja'Marr Chase (290 pts), Justin Jefferson (285 pts), and CeeDee Lamb (280 pts).
+
 ### Key Features & Technical Implementations
 - **Modular Flask Architecture**: Core logic in `/modules/` and data in `/data/`.
 - **API Endpoints**: RESTful API for rankings, player data, rookies, VORP, and roster shifts.
