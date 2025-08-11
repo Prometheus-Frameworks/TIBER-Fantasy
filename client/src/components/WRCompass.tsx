@@ -55,10 +55,21 @@ export default function WRCompass() {
   const { data: wrResponse, isLoading } = useQuery<WRPlayer[] | WRSearchResponse>({
     queryKey: ['/api/compass/wr', debouncedSearch],
     queryFn: async () => {
-      const url = `/api/compass/wr?search=${encodeURIComponent(debouncedSearch)}&limit=50`;
+      // Primary call to new bridge endpoint
+      let url = `/api/compass/WR?search=${encodeURIComponent(debouncedSearch)}&limit=50`;
       console.log('WRCompass: Fetching WR data from', url);
-      const response = await fetch(url);
-      const data = await response.json();
+      let response = await fetch(url);
+      let data = await response.json();
+      
+      // Fallback to legacy if new route is empty
+      if (!data?.data?.length) {
+        console.log('WRCompass: Bridge empty, trying legacy endpoint');
+        url = `/api/compass/wr?search=${encodeURIComponent(debouncedSearch)}&limit=50`;
+        response = await fetch(url);
+        const legacy = await response.json();
+        if (legacy?.data?.length) data = legacy;
+      }
+      
       console.log('WRCompass: Successfully loaded', data?.data?.length || 0, 'WRs');
       console.log('API rows:', data?.data?.length || 0);
       console.log('WRCompass: Sample player:', data?.data?.[0]);
@@ -231,7 +242,7 @@ export default function WRCompass() {
       {/* Dev Footer */}
       {process.env.NODE_ENV === 'development' && (
         <pre style={{fontSize:12,opacity:.7,whiteSpace:'pre-wrap'}} className="px-6 py-2 bg-gray-50 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-400 border-t">
-          {`GET /api/compass/wr?search=${encodeURIComponent(debouncedSearch)}&limit=50
+          {`GET /api/compass/WR?search=${encodeURIComponent(debouncedSearch)}&limit=50
 rows: ${filteredData?.length ?? 0}
 first: ${filteredData?.[0]?.displayName ?? '—'}
 data length: ${wrData?.length ?? 0}

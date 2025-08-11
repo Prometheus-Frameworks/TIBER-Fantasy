@@ -1433,6 +1433,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/compass', compassRoutes);
   app.use('/api/rb-compass', rbCompassRoutes);
   app.use('/api/te-compass', teCompassRoutes);
+
+  // --- COMPASS BRIDGE: normalize and guarantee data for new endpoint ---
+  app.get("/api/compass/WR", async (req, res) => {
+    try {
+      const limit = Number(req.query.limit ?? 50);
+      const host = `${req.protocol}://${req.get("host")}`;
+
+      // Pull from legacy endpoint that currently has data
+      const r = await fetch(`${host}/api/compass/wr?limit=${limit}`);
+      const j = await r.json().catch(() => ({}));
+
+      const rows = (j?.data ?? j?.players ?? j ?? []).map((p: any) => ({
+        id: p.id ?? p.player_id ?? p.slug ?? "",
+        name: p.name ?? p.full_name ?? p.alias ?? "Unknown Player",
+        team: String(p.team ?? p.nfl_team ?? "").toUpperCase(),
+        pos: String(p.pos ?? "WR").toUpperCase(),
+        compass: p.compass ?? {
+          north: Number(p.north ?? 0),
+          east:  Number(p.east  ?? 0),
+          south: Number(p.south ?? 0),
+          west:  Number(p.west  ?? 0),
+        },
+      }));
+
+      console.log(`🧭 Compass bridge served ${rows.length} WR players`);
+      res.json({ ok: true, data: rows, meta: { rows: rows.length, ts: Math.floor(Date.now()/1000) } });
+    } catch (e) {
+      console.error("compassBridge", e);
+      res.status(500).json({ ok: false, error: "compass bridge failed" });
+    }
+  });
   app.use('/api/tiber-data', tiberDataRoutes);
   app.use('/api/population-stats', populationStatsRoutes);
   app.use('/api/trade-analyzer', tradeAnalyzerRoutes);

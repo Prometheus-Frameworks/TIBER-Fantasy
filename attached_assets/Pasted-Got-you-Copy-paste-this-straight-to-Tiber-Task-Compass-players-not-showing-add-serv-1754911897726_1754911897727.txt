@@ -1,0 +1,89 @@
+Got you. Copy-paste this straight to Tiber.
+
+---
+
+**Task: Compass players not showing — add server-side bridge + frontend fallback**
+
+**Goal:** Ensure `/player-compass` always shows players tonight. Bridge the legacy route to the new namespace and add a tiny UI fallback.
+
+### 1) Server — bridge `/api/compass/WR` to legacy and normalize shape
+
+**Add this route to the Express API (where other `/api/*` routes live).**
+If routes are modular, put it in the compass router; otherwise drop it near the bottom before the catch-all.
+
+```ts
+// --- COMPASS BRIDGE: normalize and guarantee data for new endpoint ---
+app.get("/api/compass/WR", async (req, res) => {
+  try {
+    const limit = Number(req.query.limit ?? 50);
+    const host = `${req.protocol}://${req.get("host")}`;
+
+    // Pull from legacy endpoint that currently has data
+    const r = await fetch(`${host}/api/compass/wr?limit=${limit}`);
+    const j = await r.json().catch(() => ({}));
+
+    const rows = (j?.data ?? j?.players ?? j ?? []).map((p: any) => ({
+      id: p.id ?? p.player_id ?? p.slug ?? "",
+      name: p.name ?? p.full_name ?? p.alias ?? "Unknown Player",
+      team: String(p.team ?? p.nfl_team ?? "").toUpperCase(),
+      pos: String(p.pos ?? "WR").toUpperCase(),
+      compass: p.compass ?? {
+        north: Number(p.north ?? 0),
+        east:  Number(p.east  ?? 0),
+        south: Number(p.south ?? 0),
+        west:  Number(p.west  ?? 0),
+      },
+    }));
+
+    res.json({ ok: true, data: rows, meta: { rows: rows.length, ts: Math.floor(Date.now()/1000) } });
+  } catch (e) {
+    console.error("compassBridge", e);
+    res.status(500).json({ ok: false, error: "compass bridge failed" });
+  }
+});
+```
+
+**Restart the server** after adding this.
+
+### 2) Frontend — one-shot fallback to legacy if new route is empty
+
+In the Player Compass/WRCompass component **after** you call the API, add:
+
+```ts
+// primary call
+let res = await api.compassPos("WR", { limit: 50 });
+
+// if empty, try legacy once so UI never shows blank
+if (!res?.data?.length) {
+  const legacy = await api.compassWRLegacy({ limit: 50 });
+  if (legacy?.data?.length) res = legacy;
+}
+
+setRows(res.data || []);
+```
+
+### 3) Tiny dev debug (optional but helpful)
+
+Render this at the bottom of the component in dev only:
+
+```tsx
+{import.meta.env.DEV && (
+  <small style={{opacity:.6}}>
+    rows: {rows.length}
+  </small>
+)}
+```
+
+### 4) Acceptance
+
+* `GET /api/compass/WR?limit=5` returns `data.length >= 1` (server log shows bridge hit).
+* `/player-compass` renders a list with visible compass sub-scores (1 decimal).
+* If the new pipeline later feeds `/api/compass/WR` directly, the bridge still works transparently.
+
+**Commit msgs:**
+
+* `feat(api): compass bridge normalizes /api/compass/WR from legacy source`
+* `feat(ui): compass page fallback to legacy when new route empty`
+* `chore(ui): add dev debug row count`
+
+Post a before/after screenshot of `/player-compass` showing players.
