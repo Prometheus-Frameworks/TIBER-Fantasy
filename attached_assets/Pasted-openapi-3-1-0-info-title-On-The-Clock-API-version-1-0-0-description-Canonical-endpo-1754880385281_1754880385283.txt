@@ -1,0 +1,444 @@
+openapi: 3.1.0
+info:
+  title: On The Clock API
+  version: "1.0.0"
+  description: Canonical endpoints for redraft, dynasty, OASIS, trends, compass, rookies, and usage (2024+).
+servers:
+  - url: /
+paths:
+  /api/version:
+    get:
+      summary: Build/version info
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionResponse"
+
+  /api/health:
+    get:
+      summary: Service health snapshot
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  # ---------------- REDRAFT ----------------
+  /api/redraft/rankings:
+    get:
+      summary: Redraft rankings for a position/season
+      parameters:
+        - { name: pos, in: query, required: true, schema: { $ref: "#/components/schemas/Pos" } }
+        - { name: season, in: query, required: false, schema: { type: integer, default: 2025 } }
+        - { name: format, in: query, required: false, schema: { type: string, enum: [PPR, HalfPPR, Standard], default: PPR } }
+        - { name: limit, in: query, required: false, schema: { type: integer, default: 200, minimum: 1, maximum: 1000 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RowsEnvelope"
+              examples:
+                default:
+                  value:
+                    ok: true
+                    data:
+                      - id: puka-nacua
+                        name: Puka Nacua
+                        team: LAR
+                        pos: WR
+                        rank: 8
+                        proj_pts: 272.4
+                        tier: A
+                        adp: 18.6
+                    meta: { rows: 1, season: 2025, ts: 1733960000 }
+
+  /api/redraft/weekly:
+    get:
+      summary: Weekly stat/projection rows
+      parameters:
+        - { name: season, in: query, schema: { type: integer, default: 2025 } }
+        - { name: week, in: query, schema: { type: integer, minimum: 1, maximum: 18 } }
+        - { name: pos, in: query, schema: { $ref: "#/components/schemas/Pos" } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RowsEnvelope" }
+
+  /api/redraft/players:
+    get:
+      summary: Search redraft players
+      parameters:
+        - { name: search, in: query, schema: { type: string } }
+        - { name: pos, in: query, schema: { $ref: "#/components/schemas/Pos" } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RowsEnvelope" }
+
+  /api/redraft/adp:
+    get:
+      summary: Redraft ADP by source
+      parameters:
+        - { name: source, in: query, schema: { type: string, enum: [sleeper, espn, yahoo], default: sleeper } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RowsEnvelope" }
+
+  # ---------------- DYNASTY ----------------
+  /api/dynasty/rankings:
+    get:
+      summary: Dynasty rankings
+      parameters:
+        - { name: pos, in: query, required: true, schema: { $ref: "#/components/schemas/Pos" } }
+        - { name: season, in: query, schema: { type: integer, default: 2025 } }
+        - { name: limit, in: query, schema: { type: integer, default: 200 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RowsEnvelope" }
+
+  /api/dynasty/value:
+    get:
+      summary: Dynasty value/VORP table
+      parameters:
+        - { name: pos, in: query, required: true, schema: { $ref: "#/components/schemas/Pos" } }
+        - { name: season, in: query, schema: { type: integer, default: 2025 } }
+        - { name: limit, in: query, schema: { type: integer, default: 200 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RowsEnvelope"
+              examples:
+                default:
+                  value:
+                    ok: true
+                    data:
+                      - id: garrett-wilson
+                        name: Garrett Wilson
+                        team: NYJ
+                        pos: WR
+                        age: 25
+                        tier: A
+                        vorp: 42.73
+                        season: 2025
+                        market_adp: 12.3
+                        risk: Low
+                    meta: { rows: 1, season: 2025, ts: 1733960000 }
+
+  # ---------------- OASIS ----------------
+  /api/oasis/teams:
+    get:
+      summary: OASIS environment/team-level metrics
+      parameters:
+        - { name: season, in: query, schema: { type: integer, default: 2025 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RowsEnvelope" }
+
+  /api/oasis/team/{teamId}:
+    get:
+      summary: OASIS metrics for a specific team
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema: { type: string, example: MIA }
+        - { name: season, in: query, schema: { type: integer, default: 2025 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RowEnvelope" }
+
+  # ---------------- TRENDS ----------------
+  /api/trends/player/{id}:
+    get:
+      summary: Time-series trend for a player/metric
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, example: puka-nacua } }
+        - { name: metric, in: query, required: true, schema: { type: string, example: tgt_share } }
+        - { name: window, in: query, schema: { type: integer, default: 5, minimum: 1, maximum: 18 } }
+        - { name: season, in: query, schema: { type: integer, default: 2025 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RowEnvelope" }
+
+  /api/trends/leaders:
+    get:
+      summary: Trend leaders by metric/pos
+      parameters:
+        - { name: metric, in: query, required: true, schema: { type: string, example: route_win } }
+        - { name: pos, in: query, schema: { $ref: "#/components/schemas/Pos" } }
+        - { name: season, in: query, schema: { type: integer, default: 2025 } }
+        - { name: limit, in: query, schema: { type: integer, default: 50 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RowsEnvelope" }
+
+  # ---------------- COMPASS ----------------
+  /api/compass/{pos}:
+    get:
+      summary: Player compass for a position
+      parameters:
+        - { name: pos, in: path, required: true, schema: { $ref: "#/components/schemas/Pos" } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 50 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RowsEnvelope" }
+
+  /api/compass/player/{id}:
+    get:
+      summary: Compass for a single player
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RowEnvelope" }
+
+  # ---------------- ROOKIES ----------------
+  /api/rookies:
+    get:
+      summary: Rookie class list
+      parameters:
+        - { name: class, in: query, schema: { type: integer, default: 2025 } }
+        - { name: pos, in: query, schema: { $ref: "#/components/schemas/Pos" } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RowsEnvelope" }
+
+  /api/rookies/player/{id}:
+    get:
+      summary: Rookie card details
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RowEnvelope" }
+
+  # ---------------- USAGE (2024 default) ----------------
+  /api/usage/summary:
+    get:
+      summary: Usage summary by season/pos (2024 default)
+      parameters:
+        - { name: season, in: query, schema: { type: integer, default: 2024 } }
+        - { name: pos, in: query, schema: { $ref: "#/components/schemas/Pos" } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RowsEnvelope" }
+
+  /api/usage/player/{id}:
+    get:
+      summary: Player usage profile for a season (2024 default)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: season, in: query, schema: { type: integer, default: 2024 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RowEnvelope" }
+
+components:
+  schemas:
+    # ---- primitives ----
+    Pos:
+      type: string
+      enum: [QB, RB, WR, TE]
+    Team:
+      type: string
+      example: LAR
+    EnvelopeMeta:
+      type: object
+      properties:
+        rows: { type: integer }
+        season: { type: integer }
+        ts: { type: integer, description: "epoch seconds" }
+
+    # ---- shared objects ----
+    PlayerLite:
+      type: object
+      required: [id, name, team, pos]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        team: { $ref: "#/components/schemas/Team" }
+        pos: { $ref: "#/components/schemas/Pos" }
+
+    Compass:
+      type: object
+      required: [north, east, south, west]
+      properties:
+        north: { type: number }
+        east: { type: number }
+        south: { type: number }
+        west: { type: number }
+
+    RedraftRow:
+      allOf:
+        - $ref: "#/components/schemas/PlayerLite"
+        - type: object
+          properties:
+            rank: { type: integer }
+            proj_pts: { type: number }
+            tier: { type: string }
+            adp: { type: number }
+
+    DynastyRow:
+      allOf:
+        - $ref: "#/components/schemas/PlayerLite"
+        - type: object
+          properties:
+            age: { type: integer }
+            tier: { type: string }
+            vorp: { type: number }
+            season: { type: integer }
+            market_adp: { type: number }
+            risk: { type: string, enum: [Low, Medium, High] }
+
+    OasisTeamRow:
+      type: object
+      properties:
+        team: { $ref: "#/components/schemas/Team" }
+        off_env: { type: number, description: "offensive environment score" }
+        pass_block: { type: number }
+        pace: { type: number }
+        target_dist:
+          type: object
+          additionalProperties: { type: number }
+          example: { WR: 0.58, TE: 0.17, RB: 0.25 }
+
+    TrendSeries:
+      type: object
+      properties:
+        id: { type: string }
+        metric: { type: string }
+        points:
+          type: array
+          items:
+            type: object
+            properties:
+              week: { type: integer }
+              value: { type: number }
+
+    CompassRow:
+      allOf:
+        - $ref: "#/components/schemas/PlayerLite"
+        - type: object
+          properties:
+            compass: { $ref: "#/components/schemas/Compass" }
+
+    RookieRow:
+      type: object
+      required: [player_id, pos, team]
+      properties:
+        player_id: { type: string }
+        name: { type: string }
+        team: { $ref: "#/components/schemas/Team" }
+        pos: { $ref: "#/components/schemas/Pos" }
+        depth: { type: integer }
+        targets: { type: number }
+        receptions: { type: number }
+
+    UsageRow:
+      type: object
+      properties:
+        id: { type: string }
+        season: { type: integer }
+        snap_share: { type: number }
+        route_share: { type: number }
+        tgt_share: { type: number }
+        yprr: { type: number }
+        slot_rate: { type: number }
+
+    # ---- envelopes ----
+    RowsEnvelope:
+      type: object
+      properties:
+        ok: { type: boolean, default: true }
+        data:
+          type: array
+          items:
+            oneOf:
+              - $ref: "#/components/schemas/RedraftRow"
+              - $ref: "#/components/schemas/DynastyRow"
+              - $ref: "#/components/schemas/OasisTeamRow"
+              - $ref: "#/components/schemas/TrendSeries"
+              - $ref: "#/components/schemas/CompassRow"
+              - $ref: "#/components/schemas/RookieRow"
+              - $ref: "#/components/schemas/UsageRow"
+        meta: { $ref: "#/components/schemas/EnvelopeMeta" }
+
+    RowEnvelope:
+      type: object
+      properties:
+        ok: { type: boolean, default: true }
+        data:
+          oneOf:
+            - $ref: "#/components/schemas/RedraftRow"
+            - $ref: "#/components/schemas/DynastyRow"
+            - $ref: "#/components/schemas/OasisTeamRow"
+            - $ref: "#/components/schemas/TrendSeries"
+            - $ref: "#/components/schemas/CompassRow"
+            - $ref: "#/components/schemas/RookieRow"
+            - $ref: "#/components/schemas/UsageRow"
+        meta: { $ref: "#/components/schemas/EnvelopeMeta" }
+
+    VersionResponse:
+      type: object
+      properties:
+        build: { type: string }
+        commit: { type: string }
+        pid: { type: integer }
+
+    HealthResponse:
+      type: object
+      additionalProperties:
+        type: string
+        enum: [ok, stale, down]

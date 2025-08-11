@@ -9,6 +9,7 @@ const tabs = [
   { href: "/analytics", label: "Analytics" },
   { href: "/weekly-data", label: "Weekly Data" },
   { href: "/trade-analyzer", label: "Trade Analyzer" },
+  { href: "/api-test", label: "API Test" },
   { href: "/oasis", label: "OASIS" },
 ];
 

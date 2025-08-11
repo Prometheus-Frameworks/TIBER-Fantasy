@@ -58,6 +58,29 @@ import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Version and Health endpoints for new API client
+  app.get('/api/version', (req: Request, res: Response) => {
+    res.json({
+      build: `v1.0.3-${Date.now()}`,
+      commit: 'main',
+      pid: process.pid
+    });
+  });
+
+  app.get('/api/health', (req: Request, res: Response) => {
+    res.json({
+      redraft: 'ok',
+      dynasty: 'ok', 
+      oasis: 'ok',
+      trends: 'ok',
+      compass: 'ok',
+      rookies: 'ok',
+      usage2024: 'ok',
+      status: 'healthy',
+      timestamp: new Date().toISOString()
+    });
+  });
+  
   // 🔥 TIBER COMMAND: MainPlayerSystem.json generation with live depth charts
   console.log('🔥 REGISTERING TIBER OVERRIDE ENDPOINT');
   
@@ -604,6 +627,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       throw error;
     }
   }
+
+  // API Client compatible endpoints
+  app.get('/api/redraft/rankings', async (req: Request, res: Response) => {
+    try {
+      const pos = req.query.pos as string;
+      const season = parseInt(req.query.season as string) || 2025;
+      const format = req.query.format as string || 'PPR';
+      const limit = parseInt(req.query.limit as string) || 200;
+      
+      if (!pos || !['QB', 'RB', 'WR', 'TE'].includes(pos)) {
+        return res.status(400).json({ error: 'pos parameter required (QB, RB, WR, TE)' });
+      }
+      
+      console.log(`📊 [API] Fetching redraft rankings: ${pos}, season=${season}, limit=${limit}`);
+      
+      const players = await getRankings('redraft', pos, 12, false, format.toLowerCase());
+      const limitedPlayers = players.slice(0, limit);
+      
+      // Transform to API spec format
+      const apiPlayers = limitedPlayers.map((p: any, index: number) => ({
+        id: `${pos.toLowerCase()}-${p.player_name?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}` || `${pos.toLowerCase()}-${index}`,
+        name: p.player_name || p.name || 'Unknown',
+        team: p.team || 'UNK',
+        pos: pos,
+        rank: index + 1,
+        proj_pts: p.projected_fpts || p.proj_pts || 0,
+        tier: p.tier ? `Tier ${p.tier}` : 'N/A',
+        adp: p.adp || null
+      }));
+      
+      res.json({
+        ok: true,
+        data: apiPlayers,
+        meta: { rows: apiPlayers.length, season, ts: Math.floor(Date.now() / 1000) }
+      });
+    } catch (error) {
+      console.error('❌ API redraft rankings error:', error);
+      res.status(500).json({ error: 'Failed to fetch redraft rankings' });
+    }
+  });
 
   // Mode-specific routes (full list)
   app.get('/api/rankings/redraft', async (req: Request, res: Response) => {
