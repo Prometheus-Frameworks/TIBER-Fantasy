@@ -1,0 +1,91 @@
+{
+  "title": "Week 1 Preseason Intelligence Report",
+  "date": "2025-08-11",
+  "source": "X/Twitter Scouting",
+  "confidence": "medium",
+  "intel_type": "preseason_observations",
+  "insights": [
+    {
+      "player": "Travis Hunter",
+      "position": "WR",
+      "team": "COL",
+      "signal": "BUY",
+      "strength": "strong",
+      "note": "Going to play a ton of offense, and get a lot of slot work - huge rookie year coming on offense",
+      "tags": ["rookie", "slot_work", "usage_boost", "two_way_player"]
+    },
+    {
+      "player": "RJ Harvey",
+      "position": "RB",
+      "team": "DEN", 
+      "signal": "BUY",
+      "strength": "strong",
+      "note": "Is the 1A in Denver from Week 1🔨",
+      "tags": ["rb1", "week1_starter", "depth_chart"]
+    },
+    {
+      "player": "TreVeyon Henderson",
+      "position": "RB",
+      "team": "OSU",
+      "signal": "BUY", 
+      "strength": "medium",
+      "note": "Going to be an explosive play machine💣",
+      "tags": ["big_plays", "college", "explosive"]
+    },
+    {
+      "player": "Tony Pollard",
+      "position": "RB",
+      "team": "TEN",
+      "signal": "BUY",
+      "strength": "strong",
+      "note": "Will have a workhorse role with Tyjae high ankle sprain - he should rise quickly in ADP",
+      "tags": ["injury_boost", "workhorse", "adp_rise", "volume"]
+    },
+    {
+      "player": "Kyle Williams",
+      "position": "RB",
+      "team": "Unknown",
+      "signal": "BUY",
+      "strength": "medium",
+      "note": "Talent will earn him a starting role quickly - continuing to buy",
+      "tags": ["talent", "depth_chart_rise", "sleeper"]
+    },
+    {
+      "player": "Josh Reynolds",
+      "position": "WR",
+      "team": "NYJ",
+      "signal": "BUY",
+      "strength": "medium", 
+      "note": "WR2 for NYJ - because who else?",
+      "tags": ["wr2", "depth_chart", "target_share"]
+    },
+    {
+      "player": "Rico Dowdle",
+      "position": "RB",
+      "team": "DAL",
+      "signal": "BUY",
+      "strength": "medium",
+      "note": "Will be very involved as 1B - easy buy at cost",
+      "tags": ["rb2", "value", "committee"]
+    },
+    {
+      "player": "Jerome Ford",
+      "position": "RB", 
+      "team": "CLE",
+      "signal": "BUY",
+      "strength": "medium",
+      "note": "Will start season as the Browns 1A - he's too cheap",
+      "tags": ["rb1", "value", "adp_discount"]
+    }
+  ],
+  "team_notes": [
+    {
+      "team": "LAC",
+      "position": "TE",
+      "signal": "AVOID",
+      "note": "Chargers TE room is going to be a mess - avoid all of them",
+      "tags": ["committee", "unclear_roles", "avoid"]
+    }
+  ],
+  "summary": "Week 1 preseason observations showing key role clarifications, injury impacts (Pollard boost), and position battles. Strong signals on rookie usage (Travis Hunter) and backfield clarity (RJ Harvey, Jerome Ford)."
+}

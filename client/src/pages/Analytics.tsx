@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowUp, ArrowDown, TrendingUp, Users, Target, Brain } from "lucide-react";
 import WRCompass from "@/components/WRCompass";
 import HealthWidget from "@/components/HealthWidget";
+import PreseasonIntel from "@/components/PreseasonIntel";
 
 const titleCase = (s: string) => s.replace(/\b\w/g, c => c.toUpperCase());
 const two = (n: number) => Number.isFinite(n) ? n.toFixed(2) : '0.00';
@@ -171,50 +172,7 @@ export default function Analytics() {
         </TabsContent>
 
         <TabsContent value="intel" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Target className="h-5 w-5" />
-                <span>Intelligence Feed</span>
-              </CardTitle>
-              <CardDescription>
-                Real-time roster shifts and dynasty impact analysis
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {intelLoading ? (
-                <div className="flex items-center justify-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {(intelData as any)?.data?.length > 0 ? (intelData as any).data.map((entry: IntelEntry, idx: number) => (
-                    <div key={idx} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="outline">{entry.team}</Badge>
-                          <Badge className={getImpactColor(entry.details.dynasty_impact || '')}>
-                            {entry.details.dynasty_impact?.replace('_', ' ')}
-                          </Badge>
-                        </div>
-                        <span className="text-sm text-gray-500">{entry.date}</span>
-                      </div>
-                      <div className="font-medium mb-1">
-                        {entry.details.player_name} ({entry.details.position})
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {entry.details.note}
-                      </div>
-                    </div>
-                  )) : (
-                    <div className="text-center py-8 text-gray-500">
-                      {(intelData as any)?.message || "No current intelligence - ready for season updates"}
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <PreseasonIntel />
         </TabsContent>
 
         <TabsContent value="usage" className="space-y-4">

@@ -1968,6 +1968,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Intelligence feed endpoint - Preseason scouting reports
+  app.get('/api/intel', async (req, res) => {
+    try {
+      const { type, player, position, signal } = req.query;
+      
+      // Load preseason intel data
+      const fs = require('fs');
+      const path = require('path');
+      const intelPath = path.join(process.cwd(), 'data', 'preseason_intel_week1.json');
+      
+      if (!fs.existsSync(intelPath)) {
+        return res.json({ ok: true, data: [], message: 'No intel data available' });
+      }
+      
+      const intelData = JSON.parse(fs.readFileSync(intelPath, 'utf8'));
+      let results = intelData.insights || [];
+      
+      // Apply filters
+      if (player) {
+        results = results.filter((item: any) => 
+          item.player.toLowerCase().includes(player.toString().toLowerCase())
+        );
+      }
+      
+      if (position) {
+        results = results.filter((item: any) => 
+          item.position.toLowerCase() === position.toString().toLowerCase()
+        );
+      }
+      
+      if (signal) {
+        results = results.filter((item: any) => 
+          item.signal.toLowerCase() === signal.toString().toLowerCase()
+        );
+      }
+      
+      // Add team notes if requested
+      let teamNotes = [];
+      if (req.query.include_teams === 'true') {
+        teamNotes = intelData.team_notes || [];
+      }
+      
+      res.json({
+        ok: true,
+        data: results,
+        team_notes: teamNotes,
+        meta: {
+          source: intelData.source,
+          date: intelData.date,
+          total_insights: results.length,
+          filters_applied: { player, position, signal }
+        }
+      });
+    } catch (error) {
+      console.error('❌ [INTEL] Error:', error);
+      res.status(500).json({ error: 'Failed to fetch intelligence data' });
+    }
+  });
+
   // Health check endpoint - Lamar's request
   app.get('/api/health', async (req, res) => {
     try {
