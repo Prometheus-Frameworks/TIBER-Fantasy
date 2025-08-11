@@ -144,5 +144,111 @@
       "dynasty_impact": "positive",
       "note": "Strong starter snap count (16/19) - opportunity emergence signal"
     }
+  },
+  {
+    "date": "2025-08-10",
+    "source": "Saturday 8/9 Preseason Games",
+    "type": "wr_hierarchy_clarity",
+    "team": "NYJ",
+    "details": {
+      "player_name": "Josh Reynolds",
+      "position": "WR",
+      "movement": "clear_wr2_status",
+      "dynasty_impact": "positive",
+      "note": "Established as clear WR2 for Jets behind Garrett Wilson"
+    }
+  },
+  {
+    "date": "2025-08-10",
+    "source": "Saturday 8/9 Preseason Games",
+    "type": "rb_workload_dominance",
+    "team": "DEN",
+    "details": {
+      "player_name": "RJ Harvey",
+      "position": "RB",
+      "movement": "dominating_touches_8_to_1_over_dobbins",
+      "target_share": "18%",
+      "dynasty_impact": "major_positive",
+      "note": "8 touches to Dobbins' 1 with 18% target share - major opportunity"
+    }
+  },
+  {
+    "date": "2025-08-10",
+    "source": "Saturday 8/9 Preseason Games",
+    "type": "rb_committee_deepening",
+    "team": "NYJ",
+    "details": {
+      "player_name": "Breece Hall",
+      "position": "RB",
+      "movement": "three_way_split_50_percent_snaps",
+      "competitors": ["Braelon Allen", "Isaiah Davis"],
+      "dynasty_impact": "concerning",
+      "note": "50% snap share in 3-way committee with Allen and Davis"
+    }
+  },
+  {
+    "date": "2025-08-10",
+    "source": "Saturday 8/9 Preseason Games",
+    "type": "wr_depth_chart_establishment",
+    "team": "TEN",
+    "details": {
+      "player_name": "Van Jefferson",
+      "position": "WR",
+      "movement": "established_as_wr3",
+      "beaten_players": ["Ayomanor", "Dike"],
+      "dynasty_impact": "neutral",
+      "note": "Currently 3rd WR ahead of Ayomanor and Dike"
+    }
+  },
+  {
+    "date": "2025-08-10",
+    "source": "Saturday 8/9 Preseason Games",
+    "type": "rb_opportunity_creation",
+    "team": "ARI",
+    "details": {
+      "player_name": "Trey Benson",
+      "position": "RB",
+      "movement": "entire_second_drive_with_starters",
+      "dynasty_impact": "positive",
+      "note": "Got entire 2nd drive with starting offense"
+    }
+  },
+  {
+    "date": "2025-08-10",
+    "source": "Saturday 8/9 Preseason Games",
+    "type": "injury_concern",
+    "team": "GB",
+    "details": {
+      "player_name": "Jayden Reed",
+      "position": "WR",
+      "movement": "in_boot",
+      "dynasty_impact": "concerning",
+      "note": "Spotted in walking boot - injury concern"
+    }
+  },
+  {
+    "date": "2025-08-10",
+    "source": "Saturday 8/9 Preseason Games",
+    "type": "wr_hierarchy_establishment",
+    "team": "DEN",
+    "details": {
+      "players_affected": ["Courtland Sutton", "Marvin Mims", "Troy Franklin", "Lil'Jordan Humphrey", "Pat Bryant"],
+      "hierarchy": "Sutton/Mims top 2, Vele/Franklin split WR3, Bryant WR5",
+      "dynasty_impact": "mixed",
+      "note": "Clear WR1/WR2 established, competition for remaining spots"
+    }
+  },
+  {
+    "date": "2025-08-10",
+    "source": "Saturday 8/9 Preseason Games",
+    "type": "two_way_player_usage",
+    "team": "COL",
+    "details": {
+      "player_name": "Travis Hunter",
+      "position": "WR/CB",
+      "movement": "11_of_12_first_team_offense_snaps",
+      "dynasty_impact": "positive",
+      "note": "Dominant offensive usage - 11 of 12 first team snaps"
+    }
   }
 ]
