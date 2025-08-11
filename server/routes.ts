@@ -44,6 +44,7 @@ import { sleeperWeeklySnapService } from './services/sleeperWeeklySnapService';
 import { sleeperStrictSnapService } from './services/sleeperStrictSnapService';
 import { wrRatingsService } from './services/wrRatingsService';
 import { wrGameLogsService } from './services/wrGameLogsService';
+import { playerPoolService } from './playerPool';
 import compassRoutes from './routes/compassRoutes';
 import rbCompassRoutes from './routes/rbCompassRoutes';
 import teCompassRoutes from './routes/teCompassRoutes';
@@ -1640,6 +1641,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('❌ [WR] Error:', error);
       res.status(500).json({ error: 'Failed to fetch WR data' });
+    }
+  });
+
+  // CANONICAL PLAYER POOL API - Single source of truth for player directory
+  app.get('/api/players/pool', async (req: Request, res: Response) => {
+    try {
+      const allPlayers = playerPoolService.getAllPlayers();
+      res.json({
+        ok: true,
+        data: allPlayers,
+        meta: { 
+          total: allPlayers.length,
+          source: 'canonical_player_pool',
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('❌ Player Pool Error:', error);
+      res.status(500).json({ error: 'Failed to fetch player pool' });
+    }
+  });
+
+  // Player search using canonical pool
+  app.get('/api/players/search', async (req: Request, res: Response) => {
+    try {
+      const search = req.query.search as string || '';
+      const pos = req.query.pos as string;
+      const limit = parseInt(req.query.limit as string) || 50;
+      
+      console.log(`🔍 [PLAYER SEARCH] Searching "${search}" pos=${pos} limit=${limit}`);
+      
+      if (!search || search.length < 2) {
+        return res.json({ 
+          ok: true, 
+          data: [], 
+          meta: { query: search, position: pos, results: 0 }
+        });
+      }
+      
+      const results = playerPoolService.searchPlayers(search, pos, limit);
+      
+      console.log(`✅ [PLAYER SEARCH] Found ${results.length} results for "${search}"`);
+      
+      res.json({
+        ok: true,
+        data: results,
+        meta: { 
+          query: search,
+          position: pos,
+          results: results.length,
+          source: 'canonical_player_pool'
+        }
+      });
+    } catch (error) {
+      console.error('❌ Player Search Error:', error);
+      res.status(500).json({ error: 'Failed to search players' });
+    }
+  });
+
+  // Get player by ID using canonical pool
+  app.get('/api/players/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const player = playerPoolService.getPlayerById(id);
+      
+      if (!player) {
+        return res.status(404).json({
+          ok: false,
+          error: `Player not found: ${id}`
+        });
+      }
+      
+      res.json({
+        ok: true,
+        data: player,
+        source: 'canonical_player_pool'
+      });
+    } catch (error) {
+      console.error('❌ Player Lookup Error:', error);
+      res.status(500).json({ error: 'Failed to fetch player' });
     }
   });
 
