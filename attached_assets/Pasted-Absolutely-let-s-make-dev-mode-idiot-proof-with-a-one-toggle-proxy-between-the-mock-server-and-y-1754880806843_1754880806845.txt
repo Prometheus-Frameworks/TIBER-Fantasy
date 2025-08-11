@@ -1,0 +1,186 @@
+Absolutely—let’s make dev mode idiot-proof with a **one-toggle proxy** between the mock server and your real backend.
+
+## Goal
+
+* `npm run dev` → Vite serves the UI and **proxies `/api/*`** to either the **mock server** or your **real API**, based on a single flag.
+* Zero code changes in components. Flip a flag, reload, done.
+
+---
+
+# 1) Add env flags
+
+Create two files in the frontend root:
+
+**`.env.development`**
+
+```
+VITE_USE_MOCK=true
+VITE_API_TARGET=http://localhost:5000
+```
+
+**`.env.production`**
+
+```
+VITE_USE_MOCK=false
+VITE_API_TARGET=/   # same-origin in prod
+```
+
+> `VITE_USE_MOCK` decides where `/api/*` gets proxied.
+> `VITE_API_TARGET` is the real API base (ignored if mock is on).
+
+---
+
+# 2) Vite proxy (conditional)
+
+**`vite.config.ts`**
+
+```ts
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+const USE_MOCK = process.env.VITE_USE_MOCK === "true";
+const API_TARGET = process.env.VITE_API_TARGET || "http://localhost:5000";
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 5173,
+    proxy: {
+      "/api": {
+        target: USE_MOCK ? "http://localhost:5000" : API_TARGET,
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
+  define: {
+    __BUILD__: JSON.stringify(new Date().toISOString()),
+  },
+});
+```
+
+> In dev, your frontend always calls relative `/api/...`. Vite forwards to mock or real automatically.
+
+---
+
+# 3) NPM scripts (one command to rule them all)
+
+Install helpers:
+
+```bash
+npm i -D concurrently nodemon
+```
+
+**`package.json`**
+
+```json
+{
+  "scripts": {
+    "dev": "concurrently -k -n MOCK,VITE \"npm:mock\" \"npm:vite\"",
+    "vite": "vite",
+    "mock": "nodemon --watch mockServer.ts --exec \"node --loader ts-node/esm mockServer.ts\"",
+    "dev:real": "cross-env VITE_USE_MOCK=false VITE_API_TARGET=http://localhost:4000 concurrently -k -n VITE \"npm:vite\"",
+    "build": "vite build",
+    "preview": "vite preview"
+  }
+}
+```
+
+> * `npm run dev` → runs **mock** + **vite** with `VITE_USE_MOCK=true`.
+> * `npm run dev:real` → proxies to your **real backend** (change `http://localhost:4000` to your server).
+
+*(If you’re not using TS/ESM for the mock, adjust the nodemon exec to `node mockServer.js`.)*
+
+---
+
+# 4) API client—no baseUrl needed
+
+Since Vite proxies `/api`, your client can keep same-origin calls:
+
+```ts
+// apiClient.ts
+export const api = new API({
+  baseUrl: "", // stay empty; Vite handles proxy in dev, same-origin in prod
+  timeoutMs: 10000
+});
+```
+
+If you *do* deploy the API separately in prod, you can still respect `VITE_API_TARGET`:
+
+```ts
+const base = import.meta.env.PROD ? (import.meta.env.VITE_API_TARGET || "") : "";
+export const api = new API({ baseUrl: base });
+```
+
+---
+
+# 5) Quick verify
+
+1. Run:
+
+```bash
+npm run dev
+```
+
+2. Open the app → Footer should show the build timestamp.
+3. Hit DevTools console:
+
+```js
+fetch('/api/version').then(r=>r.json())
+```
+
+You should see the **mock** version `{ build: ISO, commit: "mock" }`.
+
+4. Flip to real backend:
+
+```bash
+npm run dev:real
+```
+
+Refresh and call `/api/version` again — you should see your real server’s payload.
+
+---
+
+# 6) Hot toggling (optional UI switch)
+
+Add a tiny dev-only toggle to flip mock/real without changing scripts:
+
+```ts
+// devToggle.ts
+export function setMockMode(on: boolean) {
+  localStorage.setItem("VITE_USE_MOCK", on ? "true" : "false");
+  alert(`Mock mode ${on ? "ON" : "OFF"} — restart dev server to apply.`);
+}
+```
+
+Vite reads env at startup, so you still restart `npm run dev`, but you won’t forget the state.
+
+---
+
+# 7) Common gotchas (and fixes)
+
+* **Two servers on 5000** → kill the old process (`pkill -f node`) then `npm run dev` again.
+* **Proxy not switching** → confirm `process.env.VITE_USE_MOCK` prints in `vite.config.ts` log.
+* **CORS errors** → if you bypass Vite and call real backend directly, ensure the backend has `cors({ origin: 'http://localhost:5173', credentials: true })`.
+* **Service worker** still caching old bundle → unregister in Application tab, hard reload.
+
+---
+
+# 8) Health check in UI (tiny but clutch)
+
+Call once on mount:
+
+```ts
+import { api } from "@/lib/apiClient";
+useEffect(() => {
+  api.health().then(h => console.info("HEALTH", h));
+  api.version().then(v => console.info("VERSION", v));
+}, []);
+```
+
+* **Mock mode** should print `commit: "mock"`.
+* **Real mode** should print your real commit/pid.
+
+---
+
+That’s it. Now you can sprint on the frontend with the mock API, and swap to the real backend in one command when you’re ready. If anything’s fuzzy, paste your `vite.config.ts` and scripts; I’ll sanity-check them.

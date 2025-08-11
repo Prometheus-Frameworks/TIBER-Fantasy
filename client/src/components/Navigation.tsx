@@ -10,6 +10,7 @@ const tabs = [
   { href: "/weekly-data", label: "Weekly Data" },
   { href: "/trade-analyzer", label: "Trade Analyzer" },
   { href: "/api-test", label: "API Test" },
+  { href: "/api-demo", label: "API Demo" },
   { href: "/oasis", label: "OASIS" },
 ];
 
