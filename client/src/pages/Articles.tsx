@@ -101,28 +101,28 @@ export default function Articles() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 max-w-6xl">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <BookOpen className="h-8 w-8 text-blue-600" />
-          <h1 className="text-3xl font-bold">Articles & Analysis</h1>
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+          <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 flex-shrink-0" />
+          <h1 className="text-2xl sm:text-3xl font-bold">Articles & Analysis</h1>
         </div>
-        <p className="text-lg text-muted-foreground max-w-3xl">
+        <p className="text-base sm:text-lg text-muted-foreground max-w-3xl">
           In-depth dynasty analysis, strategic frameworks, and community insights. 
           Transform data into actionable intelligence for smarter fantasy decisions.
         </p>
       </div>
 
       {/* Category Filter */}
-      <div className="mb-8">
-        <div className="flex flex-wrap gap-2">
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-wrap gap-1 sm:gap-2">
           {categories.map((category) => (
             <Button
               key={category}
               variant="outline" 
               size="sm"
-              className="hover:bg-primary hover:text-primary-foreground"
+              className="hover:bg-primary hover:text-primary-foreground text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2"
             >
               {category}
             </Button>
