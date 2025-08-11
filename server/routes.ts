@@ -1465,6 +1465,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ ok: false, error: "compass bridge failed" });
     }
   });
+
+  // 🏈 UNIFIED PLAYER POOL - Single source of truth for all player data
+  app.get('/api/unified-players', async (req, res) => {
+    try {
+      const { unifiedPlayerService } = await import('./unifiedPlayerService');
+      
+      const filters = {
+        pos: req.query.pos as string,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
+        search: req.query.search as string,
+        minRank: req.query.minRank ? parseInt(req.query.minRank as string) : undefined,
+        maxRank: req.query.maxRank ? parseInt(req.query.maxRank as string) : undefined,
+      };
+
+      const players = await unifiedPlayerService.getPlayerPool(filters);
+      const metadata = unifiedPlayerService.getMetadata();
+
+      console.log(`🏈 Unified Players API: ${players.length} players returned`);
+      
+      res.json({
+        ok: true,
+        data: players,
+        meta: {
+          ...metadata,
+          filters_applied: filters,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Unified Players API Error:', error);
+      res.status(500).json({
+        ok: false,
+        error: 'Failed to fetch unified player data',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/unified-players/:id', async (req, res) => {
+    try {
+      const { unifiedPlayerService } = await import('./unifiedPlayerService');
+      
+      const player = await unifiedPlayerService.getPlayer(req.params.id);
+      
+      if (player) {
+        res.json({
+          ok: true,
+          data: player,
+          meta: {
+            last_updated: player.last_updated
+          }
+        });
+      } else {
+        res.status(404).json({
+          ok: false,
+          error: 'Player not found',
+          id: req.params.id
+        });
+      }
+
+    } catch (error) {
+      console.error('❌ Unified Player API Error:', error);
+      res.status(500).json({
+        ok: false,
+        error: 'Failed to fetch player data'
+      });
+    }
+  });
+
+  app.post('/api/unified-players/refresh', async (req, res) => {
+    try {
+      const { unifiedPlayerService } = await import('./unifiedPlayerService');
+      
+      console.log('🔄 Force refreshing unified player pool...');
+      await unifiedPlayerService.forceRefresh();
+      const metadata = unifiedPlayerService.getMetadata();
+      
+      res.json({
+        ok: true,
+        message: 'Player pool refreshed successfully',
+        meta: metadata
+      });
+
+    } catch (error) {
+      console.error('❌ Player Pool Refresh Error:', error);
+      res.status(500).json({
+        ok: false,
+        error: 'Failed to refresh player pool'
+      });
+    }
+  });
   app.use('/api/tiber-data', tiberDataRoutes);
   app.use('/api/population-stats', populationStatsRoutes);
   app.use('/api/trade-analyzer', tradeAnalyzerRoutes);

@@ -1,5 +1,5 @@
 import { useState, useTransition, useMemo } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { usePlayerPool, nameOf } from "@/hooks/usePlayerPool";
-import { api, type RedraftPlayer as ApiRedraftPlayer } from "@/lib/redraftApi";
+import { unifiedApi, type UnifiedPlayer } from "@/lib/unifiedApi";
 import { 
   Search,
   ArrowRight,
@@ -25,7 +25,7 @@ const TABS = [
   { key: "TRADE", label: "Trade Analyzer" },
 ];
 
-type RedraftPlayer = ApiRedraftPlayer;
+type RedraftPlayer = UnifiedPlayer;
 
 // Custom TabBar component with query param routing
 function TabBar({ tabs, active, onSelect }: {
@@ -66,75 +66,56 @@ function useSearchParams() {
   return [searchParams, setSearchParams] as const;
 }
 
-// Shared rankings loader function - exactly as specified
-async function loadRankings(pos: string): Promise<any[]> {
+// Unified rankings loader using the new consolidated API
+async function loadRankings(pos: string): Promise<UnifiedPlayer[]> {
   if (pos === "ALL") {
-    const [qb, rb, wr, te] = await Promise.all([
-      api.redraftRankings({ pos: "QB", season: "2025", limit: 50 }),
-      api.redraftRankings({ pos: "RB", season: "2025", limit: 50 }),
-      api.redraftRankings({ pos: "WR", season: "2025", limit: 50 }),
-      api.redraftRankings({ pos: "TE", season: "2025", limit: 50 }),
-    ]);
-    
-    // Merge all positions - should be ~200 rows total
-    return [
-      ...(qb.data || []),
-      ...(rb.data || []),
-      ...(wr.data || []),
-      ...(te.data || [])
-    ];
+    // Load all positions from unified API
+    return await unifiedApi.getRedraftRankings(undefined, 200);
   }
   
-  const result = await api.redraftRankings({ pos, season: "2025", limit: 50 });
-  return result.data || [];
+  return await unifiedApi.getRedraftRankings(pos, 50);
 }
 
-// Search function - parallel for ALL, single for specific positions
-async function searchPlayers(search: string, pos: string): Promise<any[]> {
-  if (pos === "ALL") {
-    // For ALL, search across all positions in parallel and merge
-    const results = await Promise.all([
-      fetch(`/api/redraft/rankings?search=${search}&pos=QB&limit=50`).then(r => r.json()),
-      fetch(`/api/redraft/rankings?search=${search}&pos=RB&limit=50`).then(r => r.json()),
-      fetch(`/api/redraft/rankings?search=${search}&pos=WR&limit=50`).then(r => r.json()),
-      fetch(`/api/redraft/rankings?search=${search}&pos=TE&limit=50`).then(r => r.json()),
-    ]);
-    
-    return results.flatMap(result => result.data || []);
-  }
-  
-  // Single position search
-  const response = await fetch(`/api/redraft/rankings?search=${search}&pos=${pos}&limit=50`);
-  const data = await response.json();
-  return data.data || [];
+// Unified search function using the new consolidated API
+async function searchPlayers(search: string, pos: string): Promise<UnifiedPlayer[]> {
+  const searchPos = pos === "ALL" ? undefined : pos;
+  return await unifiedApi.searchPlayers(search, searchPos, 50);
 }
 
-// Player row component with exact layout specification
-function PlayerRow({ player, index }: { player: any; index: number }) {
-  const playerName = player.name || nameOf(player.id);
-  
+// Player row component with exact layout specification using UnifiedPlayer
+function PlayerRow({ player, index }: { player: UnifiedPlayer; index: number }) {
   return (
-    <div className="flex items-center justify-between p-3 border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+    <div className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 border-b">
       <div className="flex items-center space-x-3">
-        <Badge variant="outline" className="w-8 h-8 flex items-center justify-center text-xs">
-          #{index + 1}
-        </Badge>
+        <span className="text-sm font-mono text-muted-foreground w-8">
+          #{player.rank}
+        </span>
         <div>
-          <div className="font-semibold text-sm" style={{ textTransform: 'capitalize' }}>
-            {playerName}
+          <div className="font-medium capitalize">
+            {player.name}
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-sm text-muted-foreground">
             {player.team} • {player.pos}
           </div>
         </div>
       </div>
-      <a
-        href={`/player-compass?id=${player.id}`}
-        className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm"
-      >
-        <span>View</span>
-        <ArrowRight className="h-3 w-3" />
-      </a>
+      <div className="flex items-center space-x-2">
+        <span className="text-sm text-muted-foreground">
+          {Math.round(player.proj_pts)} pts
+        </span>
+        {player.tier && (
+          <span className="text-xs px-2 py-1 bg-muted rounded">
+            {player.tier}
+          </span>
+        )}
+        <Link 
+          href={`/player-compass?id=${player.id}`}
+          className="text-sm text-blue-600 hover:text-blue-800 flex items-center space-x-1"
+        >
+          <span>View</span>
+          <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
     </div>
   );
 }
@@ -209,15 +190,10 @@ function RankingsList({ pos }: { pos: string }) {
 function WaiversList() {
   const [searchQuery, setSearchQuery] = useState("");
   
-  // Load rankings to get extended list for waivers (ranks 51-200)
+  // Load waiver wire players from unified API (ranks 51-200)
   const { data: allRankings = [] } = useQuery({
     queryKey: ['waivers'],
-    queryFn: async () => {
-      // Get extended rankings list to slice 51-200
-      const response = await fetch('/api/redraft/rankings?pos=WR&limit=200');
-      const data = await response.json();
-      return data.data || [];
-    },
+    queryFn: () => unifiedApi.getWaiverWire(150),
     staleTime: 5 * 60 * 1000,
   });
   
