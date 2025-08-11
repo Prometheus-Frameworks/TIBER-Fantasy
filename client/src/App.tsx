@@ -72,7 +72,7 @@ import TiberData from "@/pages/TiberData";
 import TradeAnalyzer from "@/pages/TradeAnalyzer";
 import WeeklyData from "@/pages/WeeklyData";
 import Redraft from "@/pages/Redraft";
-import RedraftHub from "@/pages/RedraftHub";
+import RedraftHub from "@/pages/RedraftHubNew";
 import Dynasty from "@/pages/Dynasty";
 import Navigation from "@/components/Navigation";
 import Analytics from "@/pages/Analytics";
