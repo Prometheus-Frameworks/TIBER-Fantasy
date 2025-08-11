@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { usePlayerPool, nameOf } from "@/hooks/usePlayerPool";
-import { loadRankings, loadEnhancedRankings, api, type RedraftPlayer } from "@/lib/redraftApi";
+import { loadRankings, loadEnhancedRankings, loadWaivers, api, type RedraftPlayer } from "@/lib/redraftApi";
 import { 
   Users, 
   TrendingUp, 
@@ -83,6 +83,15 @@ function useUsageLeaders() {
   return useQuery({
     queryKey: ['usage-leaders'],
     queryFn: () => api.usageLeaders({ limit: 30 }),
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+}
+
+// Waivers data hook
+function useWaivers(position: "QB" | "RB" | "WR" | "TE" | "ALL" = "ALL") {
+  return useQuery({
+    queryKey: ['waivers', position],
+    queryFn: () => loadWaivers(position),
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 }
@@ -279,35 +288,101 @@ function PositionTab({ position }: { position: "QB" | "RB" | "WR" | "TE" | "ALL"
   );
 }
 
-// Waivers tab with trending players
+// Waivers tab with trending players and waiver candidates
 function WaiversTab() {
+  const [selectedPos, setSelectedPos] = useState<"QB" | "RB" | "WR" | "TE" | "ALL">("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+  
   const { data: usageResponse } = useUsageLeaders();
+  const { data: waiverPlayers, isLoading } = useWaivers(selectedPos);
   const usageData = usageResponse?.data || [];
+  
+  // Filter waiver players by search
+  const filteredWaivers = waiverPlayers?.filter(player =>
+    player.player_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    player.team?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
   
   return (
     <div className="space-y-4">
+      {/* Usage Leaders Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Zap className="h-5 w-5" />
-            <span>Trending on Waivers</span>
+            <span>Trending Usage</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {usageData?.slice(0, 15).map((player: any, index: number) => (
-              <div key={player.player_id || index} className="flex items-center justify-between">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {usageData?.slice(0, 12).map((player: any, index: number) => (
+              <div key={player.player_id || index} className="flex items-center justify-between p-2 border rounded">
                 <div>
-                  <div className="font-medium">{player.player_name || nameOf(player.id)}</div>
-                  <div className="text-sm text-gray-500">{player.team} • {player.position}</div>
+                  <div className="font-medium text-sm">{player.player_name}</div>
+                  <div className="text-xs text-gray-500">{player.team} • {player.position}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-medium">{player.usage_rate?.toFixed(1)}%</div>
+                  <div className="text-sm font-medium">{player.usage_score}%</div>
                   <div className="text-xs text-gray-500">Usage</div>
                 </div>
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Waiver Wire Candidates Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Target className="h-5 w-5" />
+              <span>Waiver Wire Candidates</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Select value={selectedPos} onValueChange={(value) => setSelectedPos(value as any)}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All</SelectItem>
+                  <SelectItem value="QB">QB</SelectItem>
+                  <SelectItem value="RB">RB</SelectItem>
+                  <SelectItem value="WR">WR</SelectItem>
+                  <SelectItem value="TE">TE</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardTitle>
+          <div className="relative mt-2">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search waiver candidates..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin h-6 w-6 border-2 border-gray-300 border-t-blue-500 rounded-full"></div>
+            </div>
+          ) : (
+            <div className="max-h-80 overflow-y-auto">
+              <div className="space-y-1">
+                {filteredWaivers.slice(0, 30).map((player, index) => (
+                  <PlayerRankingCard
+                    key={player.id || index}
+                    player={player}
+                    rank={index + 51} // Start ranking from 51
+                    showVORP={false}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

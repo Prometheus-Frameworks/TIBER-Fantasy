@@ -92,3 +92,16 @@ export async function loadEnhancedRankings(pos: "QB" | "RB" | "WR" | "TE" | "ALL
   
   return enhancedPlayers;
 }
+
+// Waivers loader - shows players ranked 51-200 as waiver candidates
+export async function loadWaivers(pos: "QB" | "RB" | "WR" | "TE" | "ALL"): Promise<RedraftPlayer[]> {
+  // Default to WR if ALL positions requested (most relevant for waivers)
+  const targetPos = pos === "ALL" ? "WR" : pos;
+  
+  // Get extended rankings (up to 200 players)
+  const result = await api.redraftRankings({ pos: targetPos, limit: 200 });
+  const allPlayers = result.data || [];
+  
+  // Return players ranked 51-200 as waiver candidates
+  return allPlayers.slice(50, 200);
+}
