@@ -76,6 +76,7 @@ import RedraftHub from "@/pages/RedraftHubNew";
 import Dynasty from "@/pages/Dynasty";
 import Navigation from "@/components/Navigation";
 import Analytics from "@/pages/Analytics";
+import Articles from "@/pages/Articles";
 
 function Router() {
   return (
@@ -104,6 +105,7 @@ function Router() {
       <Route path="/redraft" component={RedraftHub} />
       <Route path="/dynasty" component={Dynasty} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/articles" component={Articles} />
       <Route path="/api-test" component={lazy(() => import("@/pages/ApiTest"))} />
       <Route path="/api-demo" component={lazy(() => import("@/pages/ApiDemo"))} />
       <Route path="/api-comprehensive" component={lazy(() => import("@/pages/ApiComprehensive"))} />

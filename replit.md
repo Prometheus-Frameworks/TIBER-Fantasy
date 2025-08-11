@@ -34,7 +34,10 @@ Intelligence Feed System:
 ### Core Design
 The platform uses a modular Flask backend for core logic and API endpoints, and a React 18 frontend with TypeScript, Tailwind CSS, TanStack Query, and shadcn/ui. This structure ensures scalability and a responsive user experience.
 
-### Recent API Development (August 11, 2025)
+### Recent Development (August 11, 2025)
+**Articles & Analysis Hub**: Added dedicated "Articles & Analysis" navigation section featuring categorized content including Player Analysis, Position Strategy, Dynasty Strategy, Rookie Analysis, Methodology, and Intelligence reports. Includes featured articles highlighting Travis Hunter analysis and RB committee navigation strategies. Ready for community contributions and user-generated content expansion.
+
+### API Development Completion (August 11, 2025)
 **API Surface Completion**: Comprehensive discovery and implementation of missing critical endpoints. All core frontend integration routes now operational with consistent response formats and error handling. Key additions include VORP rankings, WR compass search, rookie evaluation, and weekly data aggregation endpoints.
 
 **Type-Safe API Client Implementation**: Created comprehensive API client (apiClient.ts) with full TypeScript interfaces matching OpenAPI 3.1 specification. Features timeout handling, same-origin optimization, standardized envelope responses, and helper formatting functions. Successfully integrated with real backend serving authentic NFL data including live WR rankings with VORP calculations for players like Ja'Marr Chase (290 pts), Justin Jefferson (285 pts), and CeeDee Lamb (280 pts).
@@ -61,7 +64,7 @@ The platform uses a modular Flask backend for core logic and API endpoints, and 
 - **Python Rookie Evaluator**: Production-ready module with S/A/B/C/D tier system, trait detection, dynasty flags, and position-specific scoring.
 - **OTC Redraft 2025 MVP Data Pipeline**: 4-stage automated pipeline collecting 2024 NFL data from nflfastR and nflverse APIs. Outputs 7,027 merged weekly player records with stats and depth chart positions in warehouse/2024_weekly.jsonl. Includes position filtering separating 12,384 fantasy players from 8,404 IDP players.
 - **UI/UX Decisions**: Clean, responsive design with Jinja2 templating and React components, prioritizing color-coded tier systems, interactive elements, and mobile optimization.
-- **Navigation System**: Next.js-inspired tab-based navigation with clean header separation, active state highlighting, and Wouter routing integration. Features Home, Redraft, Dynasty, Rankings, Analytics, Weekly Data, Trade Analyzer, and OASIS sections.
+- **Navigation System**: Next.js-inspired tab-based navigation with clean header separation, active state highlighting, and Wouter routing integration. Features Home, Redraft, Dynasty, Rankings, Analytics, Articles & Analysis, Weekly Data, Trade Analyzer, and OASIS sections.
 - **Redraft & Dynasty Pages**: Minimal structure following user's preferred pattern with placeholder content for future feature development. Redraft focuses on seasonal tools, Dynasty emphasizes long-term strategy.
 
 ### Technical Stack
