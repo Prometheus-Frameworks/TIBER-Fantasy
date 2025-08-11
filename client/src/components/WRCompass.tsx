@@ -50,6 +50,7 @@ export default function WRCompass() {
       const response = await fetch(url);
       const data = await response.json();
       console.log('WRCompass: Successfully loaded', data?.data?.length || 0, 'WRs');
+      console.log('API rows:', data?.data?.length || 0);
       console.log('WRCompass: Sample player:', data?.data?.[0]);
       return data;
     },
@@ -58,6 +59,7 @@ export default function WRCompass() {
   // Handle response format - expect envelope with data array
   const wrData = (wrResponse as WRSearchResponse)?.data || [];
   console.log('WRCompass: Processing', wrData.length, 'players');
+  console.log('LEGACY rows:', wrData.length);
   
   // Ensure proper naming for display
   const mappedData = wrData.map((player: any) => ({
@@ -66,6 +68,11 @@ export default function WRCompass() {
     displayName: player.player_name || player.name || 'Unknown Player'
   }));
   console.log('WRCompass: Mapped', mappedData.length, 'players, sample:', mappedData[0]);
+  
+  // Add health check
+  fetch('/api/health').then(r => r.json()).then(health => {
+    console.log('/api/health object:', health);
+  });
 
   const filteredData = mappedData.filter((player) => {
     if (!search) return true;
