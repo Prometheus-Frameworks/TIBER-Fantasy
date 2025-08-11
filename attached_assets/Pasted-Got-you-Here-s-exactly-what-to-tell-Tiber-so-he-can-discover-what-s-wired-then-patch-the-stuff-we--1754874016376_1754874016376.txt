@@ -1,0 +1,128 @@
+Got you. Here’s exactly what to tell Tiber so he can discover what’s wired, then patch the stuff we flagged.
+
+1) Discovery – “show me what I’ve got”
+
+Copy‑paste these to Tiber:
+
+A. List my API routes + handlers
+
+Search the repo for API routes and return a table with: HTTP method, path, handler file, and function name. Use ripgrep if available.
+	•	Also show any app.get('/api or router.get('/api patterns.
+	•	Output as a markdown table.
+
+B. Show response shapes (“schemas”)
+
+For each API you found, show the TypeScript types or inferred JSON shape returned. If no explicit types exist, infer from the handler code and sample responses. Summarize as interfaces, one per route.
+
+C. Find data sources
+
+For WRs, rookies, weekly data, and VORP, show where the data comes from (file, DB, or external API). Return file paths and the exact line where the fetch/read happens.
+
+D. Find the consumers
+
+Find all components/pages that call:
+	•	/api/wr
+	•	/api/rookies
+	•	/api/analytics/vorp
+	•	/api/weekly
+For each, list the file and the code snippet that parses or filters the response (so we can spot field name mismatches).
+
+E. Generate a mini OpenAPI
+
+Produce a minimal OpenAPI (YAML) for our current APIs with request/response schemas. Save to docs/openapi.yaml.
+
+That gives us the route signatures and shapes you asked about.
+
+⸻
+
+2) Patches — ready-to-send tasks
+
+WR Compass: empty search
+
+In the WR Compass page/component, normalize search on both sides and include team/alias keys. Add:
+
+const norm = (s:string='') => s.normalize().toLowerCase().trim();
+const matches = (p:any,q:string) =>
+  norm(p.name).includes(q) || norm(p.team).includes(q) || norm(p.alias||'').includes(q);
+
+Ensure /api/wr returns { id, name, team, pos, compass, alias? }. If names aren’t present, join with the master playerIndex before sending.
+
+Rookie Spotlight: IDs → names
+
+In the rookies API or the redraft card mapper, join player_id to name via playerIndex. Implement:
+
+const nameOf = (id:string) => playerIndex[id]?.name ?? id;
+
+Replace any direct player_id render with nameOf(player_id).
+
+Trade Analyzer: casing/decimals
+
+Add a titleCase util and ensure sub-scores render to one decimal:
+
+export const titleCase = (s:string) => s.replace(/\b\w/g, c => c.toUpperCase());
+const oneDec = (n:number) => Number.isFinite(n) ? n.toFixed(1) : '0.0';
+
+Apply to player names and compass sub-scores.
+
+Weekly Data: nulls → zeros (server‑side)
+
+In the weekly API, coerce nullables:
+
+const z = (v:any) => (v == null ? 0 : v);
+row.targets = z(row.targets);
+row.receptions = z(row.receptions);
+row.rush_attempts = z(row.rush_attempts);
+
+VORP: minimal endpoint + client wire
+
+Create GET /api/analytics/vorp?season=2025&pos=WR returning:
+
+type VORPRow = { id:string; name:string; team:string; pos:'QB'|'RB'|'WR'|'TE'; age:number; vorp:number; tier?:string };
+
+Source can be a cached JSON for now. Add a 5‑min cache. On the client, fetch on mount with a loading skeleton and default season=2025&pos=WR.
+
+Dynasty page: ship a thin table
+
+Add a DynastyMiniTable showing Name • Age • Tier • Market(ADP) • Risk. Reuse VORP + playerIndex. Show top 20; no empty page.
+
+Health check
+
+Add /api/health that pings wr, rookies, vorp, weekly and reports ok | down | stale(<minutes>). Log stale thresholds at 15m.
+
+Shared types (stop silent breaks)
+
+Create /shared/types.ts with:
+
+export type PlayerLite = { id:string; name:string; team:string; pos:string };
+export type Compass = { north:number; east:number; south:number; west:number };
+export type WRRecord = PlayerLite & { compass?:Compass; alias?:string; age?:number; adp?:number };
+
+Update routes to return these shapes and validate at the edge.
+
+⸻
+
+3) Validation prompts (quick tests)
+
+Curl tests
+
+Run these and paste the first 2 rows:
+
+curl -s http://localhost:3000/api/wr | jq '.[0:2]'
+curl -s "http://localhost:3000/api/analytics/vorp?season=2025&pos=WR" | jq '.[0:2]'
+curl -s http://localhost:3000/api/health | jq
+
+UI checks
+
+	•	Typing “wadd”, “mia”, “puka” in WR search returns rows.
+	•	Redraft rookie cards show names, not IDs.
+	•	Analytics/VORP renders top rows without “No data” after load.
+
+⸻
+
+4) If Tiber can’t find something
+
+Tell him:
+
+If a route or dataset is missing, scaffold it with a placeholder JSON in data/seed/… and a 5‑minute cache layer. Wire the UI to that now; we’ll swap to live data later.
+
+Short, sharp, gets you moving. If you paste Tiber’s route table back here, I’ll spot the mismatches and give you the exact join/filter lines to drop in.
