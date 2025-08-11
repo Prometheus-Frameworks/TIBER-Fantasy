@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { usePlayerPool, nameOf } from "@/hooks/usePlayerPool";
+import { loadRankings, loadEnhancedRankings, api, type RedraftPlayer } from "@/lib/redraftApi";
 import { 
   Users, 
   TrendingUp, 
@@ -67,46 +68,22 @@ function useSearchParams() {
   return [searchParams, setSearchParams] as const;
 }
 
-interface RedraftPlayer {
-  id: string;
-  name: string;
-  team: string;
-  pos: string;
-  adp?: number;
-  projPoints?: number;
-  vorp?: number;
-  tier?: string;
-}
-
-// Position-specific redraft rankings
-function useRedraftRankings(position?: string) {
+// Enhanced redraft rankings hook using shared loader
+function useRedraftRankings(position: "QB" | "RB" | "WR" | "TE" | "ALL") {
   return useQuery({
-    queryKey: ['/api/redraft/rankings', position],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (position && position !== 'ALL') params.append('pos', position);
-      params.append('season', '2025');
-      params.append('limit', '100');
-      
-      const response = await fetch(`/api/redraft/rankings?${params}`);
-      const data = await response.json();
-      return data.data || [];
-    },
+    queryKey: ['redraft-rankings', position],
+    queryFn: () => loadEnhancedRankings(position),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 }
 
-// VORP rankings for value analysis
-function useVORPRankings(position?: string) {
+// Usage leaders for waivers tab
+function useUsageLeaders() {
   return useQuery({
-    queryKey: ['/api/analytics/vorp', position],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (position && position !== 'ALL') params.append('position', position);
-      
-      const response = await fetch(`/api/analytics/vorp?${params}`);
-      const data = await response.json();
-      return Array.isArray(data) ? data : [];
-    },
+    queryKey: ['usage-leaders'],
+    queryFn: () => api.usageLeaders({ limit: 30 }),
+    staleTime: 10 * 60 * 1000, // 10 minutes
   });
 }
 
@@ -116,6 +93,10 @@ function PlayerRankingCard({ player, rank, showVORP = false }: {
   rank: number; 
   showVORP?: boolean; 
 }) {
+  const playerName = player.player_name || nameOf(player.id);
+  const playerTeam = player.team;
+  const playerPos = player.position;
+  
   return (
     <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
       <div className="flex items-center space-x-3">
@@ -125,23 +106,23 @@ function PlayerRankingCard({ player, rank, showVORP = false }: {
           </Badge>
         </div>
         <div className="flex-grow">
-          <div className="font-semibold text-sm">{nameOf(player.id)}</div>
+          <div className="font-semibold text-sm">{playerName}</div>
           <div className="text-xs text-gray-500 dark:text-gray-400">
-            {player.team} • {player.pos}
+            {playerTeam} • {playerPos}
             {player.adp && ` • ADP ${player.adp.toFixed(1)}`}
           </div>
         </div>
       </div>
       <div className="flex items-center space-x-2 text-right">
-        {showVORP && player.vorp && (
+        {showVORP && player.vorp && player.vorp > 0 && (
           <div className="text-xs">
             <div className="font-medium">{player.vorp.toFixed(1)}</div>
             <div className="text-gray-500 dark:text-gray-400">VORP</div>
           </div>
         )}
-        {player.projPoints && (
+        {player.projected_points && player.projected_points > 0 && (
           <div className="text-xs">
-            <div className="font-medium">{player.projPoints.toFixed(1)}</div>
+            <div className="font-medium">{player.projected_points.toFixed(1)}</div>
             <div className="text-gray-500 dark:text-gray-400">Proj</div>
           </div>
         )}
@@ -151,42 +132,17 @@ function PlayerRankingCard({ player, rank, showVORP = false }: {
 }
 
 // Position-specific tab content
-function PositionTab({ position }: { position: string }) {
+function PositionTab({ position }: { position: "QB" | "RB" | "WR" | "TE" | "ALL" }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("rank");
   
-  const { data: redraftData, isLoading: redraftLoading } = useRedraftRankings(position);
-  const { data: vorpData, isLoading: vorpLoading } = useVORPRankings(position);
-  const { data: poolPlayers } = usePlayerPool({ pos: position !== 'ALL' ? position : undefined });
-  
-  // Merge data sources for comprehensive view
-  const mergedPlayers = poolPlayers?.map((player, index) => {
-    const redraftMatch = redraftData?.find((r: any) => 
-      r.player_name?.toLowerCase().includes(player.name.toLowerCase()) ||
-      r.id === player.id
-    );
-    const vorpMatch = vorpData?.find((v: any) => 
-      v.player_name?.toLowerCase().includes(player.name.toLowerCase()) ||
-      v.id === player.id
-    );
-    
-    return {
-      id: player.id,
-      name: player.name,
-      team: player.team,
-      pos: player.pos,
-      adp: redraftMatch?.adp,
-      projPoints: redraftMatch?.projected_points || vorpMatch?.projected_points,
-      vorp: vorpMatch?.vorp,
-      tier: redraftMatch?.tier || vorpMatch?.tier
-    };
-  }) || [];
+  const { data: redraftPlayers, isLoading } = useRedraftRankings(position);
   
   // Filter by search
-  const filteredPlayers = mergedPlayers.filter(player =>
-    nameOf(player.id).toLowerCase().includes(searchQuery.toLowerCase()) ||
-    player.team.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPlayers = redraftPlayers?.filter(player =>
+    player.player_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    player.team?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
   
   // Sort players
   const sortedPlayers = filteredPlayers.sort((a, b) => {
@@ -194,15 +150,13 @@ function PositionTab({ position }: { position: string }) {
       case 'vorp':
         return (b.vorp || 0) - (a.vorp || 0);
       case 'projected':
-        return (b.projPoints || 0) - (a.projPoints || 0);
+        return (b.projected_points || 0) - (a.projected_points || 0);
       case 'adp':
         return (a.adp || 999) - (b.adp || 999);
       default:
         return 0; // Keep original order (rank)
     }
   });
-  
-  const isLoading = redraftLoading || vorpLoading;
   
   return (
     <div className="space-y-4">
@@ -262,7 +216,7 @@ function PositionTab({ position }: { position: string }) {
               <TrendingUp className="h-4 w-4 text-purple-500" />
               <div className="text-sm">
                 <div className="font-semibold">
-                  {Math.round(filteredPlayers.reduce((sum, p) => sum + (p.projPoints || 0), 0) / Math.max(filteredPlayers.length, 1))}
+                  {Math.round(filteredPlayers.reduce((sum, p) => sum + (p.projected_points || 0), 0) / Math.max(filteredPlayers.length, 1))}
                 </div>
                 <div className="text-gray-500">Avg Proj</div>
               </div>
@@ -275,9 +229,9 @@ function PositionTab({ position }: { position: string }) {
               <Trophy className="h-4 w-4 text-yellow-500" />
               <div className="text-sm">
                 <div className="font-semibold">
-                  {filteredPlayers.filter(p => p.tier && ['Elite', 'High-End'].includes(p.tier)).length}
+                  {filteredPlayers.filter(p => p.vorp && p.vorp > 200).length}
                 </div>
-                <div className="text-gray-500">Elite Tier</div>
+                <div className="text-gray-500">High VORP</div>
               </div>
             </div>
           </CardContent>
@@ -327,14 +281,8 @@ function PositionTab({ position }: { position: string }) {
 
 // Waivers tab with trending players
 function WaiversTab() {
-  const { data: usageData } = useQuery({
-    queryKey: ['/api/usage-leaders'],
-    queryFn: async () => {
-      const response = await fetch('/api/usage-leaders?limit=30');
-      const data = await response.json();
-      return data.data || [];
-    },
-  });
+  const { data: usageResponse } = useUsageLeaders();
+  const usageData = usageResponse?.data || [];
   
   return (
     <div className="space-y-4">
@@ -407,7 +355,7 @@ export default function RedraftHub() {
       case "TRADE":
         return <TradeAnalyzerTab />;
       default:
-        return <PositionTab position={pos === "ALL" ? "ALL" : pos} />;
+        return <PositionTab position={pos as "QB" | "RB" | "WR" | "TE" | "ALL"} />;
     }
   };
   
