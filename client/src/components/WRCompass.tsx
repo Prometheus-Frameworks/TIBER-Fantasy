@@ -69,7 +69,7 @@ export default function WRCompass() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Navigation className="h-5 w-5" />
-          WR Player Compass
+          WR Player Compass v1.0.3 ⚡
         </CardTitle>
         <CardDescription>
           4-directional player evaluation: Volume/Talent (N), Scheme/Environment (E), Age/Risk (S), Market Value (W)

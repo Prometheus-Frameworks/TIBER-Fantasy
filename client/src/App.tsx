@@ -154,6 +154,9 @@ function App() {
         <main className="mx-auto max-w-6xl px-4 py-6">
           <Router />
         </main>
+        <footer className="text-center py-2 text-xs text-gray-500 border-t bg-white dark:bg-gray-800">
+          build: v1.0.3-{new Date().toISOString().slice(0, 16)}
+        </footer>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
