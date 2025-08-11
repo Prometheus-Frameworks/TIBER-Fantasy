@@ -9,7 +9,8 @@ const tabs = [
   { href: "/analytics", label: "Analytics" },
   { href: "/articles", label: "Articles & Analysis" },
   { href: "/weekly-data", label: "Weekly Data" },
-  { href: "/trade-analyzer", label: "Trade Analyzer" },
+  { href: "/trade-analyzer-new", label: "Trade Analyzer" },
+  { href: "/waivers", label: "Waivers" },
   { href: "/oasis", label: "OASIS" },
 ];
 

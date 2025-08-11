@@ -70,6 +70,8 @@ import RookieEvaluator from "@/pages/RookieEvaluator";
 
 import TiberData from "@/pages/TiberData";
 import TradeAnalyzer from "@/pages/TradeAnalyzer";
+import TradeAnalyzerNew from "@/pages/TradeAnalyzerNew";
+import Waivers from "@/pages/Waivers";
 import WeeklyData from "@/pages/WeeklyData";
 import Redraft from "@/pages/Redraft";
 import RedraftHub from "@/pages/RedraftHubNew";
@@ -77,6 +79,7 @@ import Dynasty from "@/pages/Dynasty";
 import Navigation from "@/components/Navigation";
 import Analytics from "@/pages/Analytics";
 import Articles from "@/pages/Articles";
+import HealthBadge from "@/components/HealthBadge";
 
 function Router() {
   return (
@@ -101,6 +104,8 @@ function Router() {
       <Route path="/rookie-evaluator" component={RookieEvaluator} />
       <Route path="/tiber-data" component={TiberData} />
       <Route path="/trade-analyzer" component={TradeAnalyzer} />
+      <Route path="/trade-analyzer-new" component={TradeAnalyzerNew} />
+      <Route path="/waivers" component={Waivers} />
       <Route path="/weekly-data" component={WeeklyData} />
       <Route path="/redraft" component={RedraftHub} />
       <Route path="/dynasty" component={Dynasty} />
@@ -116,7 +121,7 @@ function Router() {
       <Route path="/adp" component={CleanADP} />
       <Route path="/oasis" component={Oasis} />
       <Route path="/draft-room" component={DraftRoom} />
-      <Route path="/player/:playerName" component={PlayerProfile} />
+      <Route path="/player/:id" component={PlayerProfile} />
       <Route path="/enhanced-player/:id" component={EnhancedPlayerProfile} />
       <Route path="/player-pool" component={FullPlayerPool} />
       <Route path="/about" component={About} />
@@ -154,6 +159,9 @@ function Router() {
 }
 
 function App() {
+  // Check for demo mode
+  const isDemoMode = window.location.search.includes('demo=1');
+  
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -161,8 +169,18 @@ function App() {
         <main className="mx-auto max-w-6xl px-4 py-6">
           <Router />
         </main>
-        <footer className="text-center py-2 text-xs text-gray-500 border-t bg-white dark:bg-gray-800">
-          build: v1.0.3-{new Date().toISOString().slice(0, 16)}
+        <footer className="border-t bg-white dark:bg-gray-800 py-3 px-4">
+          <div className="mx-auto max-w-6xl flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                build: v1.0.3-{new Date().toISOString().slice(0, 16)}
+              </span>
+              <HealthBadge isDemoMode={isDemoMode} />
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              Backend Spine: Live • Ratings Engine: Active
+            </div>
+          </div>
         </footer>
         <Toaster />
       </TooltipProvider>
