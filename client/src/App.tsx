@@ -73,6 +73,7 @@ import WeeklyData from "@/pages/WeeklyData";
 import Redraft from "@/pages/Redraft";
 import Dynasty from "@/pages/Dynasty";
 import Navigation from "@/components/Navigation";
+import Analytics from "@/pages/Analytics";
 
 function Router() {
   return (
@@ -100,6 +101,7 @@ function Router() {
       <Route path="/weekly-data" component={WeeklyData} />
       <Route path="/redraft" component={Redraft} />
       <Route path="/dynasty" component={Dynasty} />
+      <Route path="/analytics" component={Analytics} />
       <Route path="/data-sources" component={DataSourcesPage} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
