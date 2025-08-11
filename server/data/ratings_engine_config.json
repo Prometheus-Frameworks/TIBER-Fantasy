@@ -1,0 +1,21 @@
+{
+  "weights": {
+    "talent": 0.35,
+    "opportunity": 0.25,
+    "consistency": 0.2,
+    "upside": 0.15,
+    "floor": 0.05
+  },
+  "age_penalty": {
+    "qb_peak": 32,
+    "rb_peak": 27,
+    "wr_peak": 29,
+    "te_peak": 30
+  },
+  "tier_thresholds": {
+    "s_tier": 90,
+    "a_tier": 80,
+    "b_tier": 70,
+    "c_tier": 60
+  }
+}

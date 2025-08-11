@@ -68,18 +68,235 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.get('/api/health', (req: Request, res: Response) => {
-    res.json({
-      redraft: 'ok',
-      dynasty: 'ok', 
-      oasis: 'ok',
-      trends: 'ok',
-      compass: 'ok',
-      rookies: 'ok',
-      usage2024: 'ok',
-      status: 'healthy',
-      timestamp: new Date().toISOString()
-    });
+  app.get('/api/health', async (req: Request, res: Response) => {
+    try {
+      // Import services for health checks
+      const { sleeperSyncService } = await import('./services/sleeperSyncService');
+      const { logsProjectionsService } = await import('./services/logsProjectionsService');
+      const { ratingsEngineService } = await import('./services/ratingsEngineService');
+
+      // Perform health checks
+      const [
+        sleeperStatus,
+        dataStats,
+        ratingsStats
+      ] = await Promise.all([
+        sleeperSyncService.getSyncStatus(),
+        logsProjectionsService.getDataSummary(),
+        ratingsEngineService.getRatingsSummary()
+      ]);
+
+      const healthStatus = {
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        version: 'v1.0.3',
+        services: {
+          sleeper_sync: {
+            status: sleeperStatus.cache_exists ? 'ok' : 'degraded',
+            players_count: sleeperStatus.players_count,
+            cache_stale: sleeperStatus.cache_stale,
+            last_sync: sleeperStatus.last_sync
+          },
+          logs_projections: {
+            status: dataStats.game_logs_count > 0 ? 'ok' : 'empty',
+            game_logs: dataStats.game_logs_count,
+            projections: dataStats.projections_count,
+            season_stats: dataStats.season_stats_count,
+            last_updated: dataStats.last_updated
+          },
+          ratings_engine: {
+            status: ratingsStats.total_players > 0 ? 'ok' : 'empty',
+            total_players: ratingsStats.total_players,
+            by_position: ratingsStats.by_position,
+            by_tier: ratingsStats.by_tier
+          },
+          legacy: {
+            redraft: 'ok',
+            dynasty: 'ok', 
+            oasis: 'ok',
+            trends: 'ok',
+            compass: 'ok',
+            rookies: 'ok',
+            usage2024: 'ok'
+          }
+        }
+      };
+
+      res.json(healthStatus);
+    } catch (error) {
+      res.status(500).json({
+        status: 'error',
+        message: 'Health check failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // ===== BACKEND SPINE: SLEEPER SYNC ENDPOINTS =====
+  app.get('/api/sleeper/sync', async (req: Request, res: Response) => {
+    try {
+      const { sleeperSyncService } = await import('./services/sleeperSyncService');
+      const result = await sleeperSyncService.syncPlayers();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/sleeper/players', async (req: Request, res: Response) => {
+    try {
+      const { sleeperSyncService } = await import('./services/sleeperSyncService');
+      const { position, search, limit } = req.query;
+      
+      let players = await sleeperSyncService.getPlayers();
+      
+      if (position) {
+        players = await sleeperSyncService.getPlayersByPosition(position as string);
+      }
+      
+      if (search) {
+        players = await sleeperSyncService.searchPlayers(search as string);
+      }
+      
+      if (limit) {
+        players = players.slice(0, parseInt(limit as string));
+      }
+      
+      res.json({
+        ok: true,
+        data: players,
+        count: players.length
+      });
+    } catch (error) {
+      res.status(500).json({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/sleeper/status', async (req: Request, res: Response) => {
+    try {
+      const { sleeperSyncService } = await import('./services/sleeperSyncService');
+      const status = await sleeperSyncService.getSyncStatus();
+      res.json(status);
+    } catch (error) {
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // ===== BACKEND SPINE: LOGS & PROJECTIONS ENDPOINTS =====
+  app.get('/api/logs/player/:playerId', async (req: Request, res: Response) => {
+    try {
+      const { logsProjectionsService } = await import('./services/logsProjectionsService');
+      const { playerId } = req.params;
+      const { season } = req.query;
+      
+      const logs = await logsProjectionsService.getPlayerGameLogs(
+        playerId, 
+        season ? parseInt(season as string) : 2024
+      );
+      
+      res.json({
+        ok: true,
+        data: logs,
+        count: logs.length
+      });
+    } catch (error) {
+      res.status(500).json({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/projections/player/:playerId', async (req: Request, res: Response) => {
+    try {
+      const { logsProjectionsService } = await import('./services/logsProjectionsService');
+      const { playerId } = req.params;
+      const { season } = req.query;
+      
+      const projections = await logsProjectionsService.getPlayerProjections(
+        playerId,
+        season ? parseInt(season as string) : 2025
+      );
+      
+      res.json({
+        ok: true,
+        data: projections,
+        count: projections.length
+      });
+    } catch (error) {
+      res.status(500).json({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // ===== BACKEND SPINE: RATINGS ENGINE ENDPOINTS =====
+  app.get('/api/ratings', async (req: Request, res: Response) => {
+    try {
+      const { ratingsEngineService } = await import('./services/ratingsEngineService');
+      const { position, format, limit } = req.query;
+      
+      if (position) {
+        const rankings = await ratingsEngineService.getPositionRankings(
+          position as string,
+          format as string || 'dynasty'
+        );
+        res.json({
+          ok: true,
+          data: rankings
+        });
+      } else {
+        const topPlayers = await ratingsEngineService.getTopPlayers(
+          limit ? parseInt(limit as string) : 100,
+          format as string || 'dynasty'
+        );
+        res.json({
+          ok: true,
+          data: topPlayers,
+          count: topPlayers.length
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/ratings/player/:playerId', async (req: Request, res: Response) => {
+    try {
+      const { ratingsEngineService } = await import('./services/ratingsEngineService');
+      const { playerId } = req.params;
+      
+      const rating = await ratingsEngineService.getPlayerRating(playerId);
+      
+      if (!rating) {
+        return res.status(404).json({
+          ok: false,
+          error: 'Player rating not found'
+        });
+      }
+      
+      res.json({
+        ok: true,
+        data: rating
+      });
+    } catch (error) {
+      res.status(500).json({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   });
   
   // 🔥 TIBER COMMAND: MainPlayerSystem.json generation with live depth charts

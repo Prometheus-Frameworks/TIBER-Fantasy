@@ -1,0 +1,27 @@
+[
+  {
+    "player_id": "josh_allen",
+    "player_name": "Josh Allen",
+    "position": "QB",
+    "team": "BUF",
+    "season": 2024,
+    "games_played": 17,
+    "season_totals": {
+      "pass_yds": 4306,
+      "pass_tds": 28,
+      "pass_int": 6,
+      "rush_yds": 523,
+      "rush_tds": 12,
+      "fantasy_points": 388.2,
+      "fantasy_points_ppr": 388.2
+    },
+    "per_game_averages": {
+      "pass_yds": 253.3,
+      "pass_tds": 1.6,
+      "rush_yds": 30.8,
+      "rush_tds": 0.7,
+      "fantasy_points": 22.8,
+      "fantasy_points_ppr": 22.8
+    }
+  }
+]

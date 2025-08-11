@@ -1,0 +1,325 @@
+{
+  "info": {
+    "name": "On The Clock - Backend Spine API v1",
+    "description": "Complete backend spine endpoints for Sleeper sync, logs/projections, ratings engine, and health monitoring",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "{{replit_url}}",
+      "type": "string",
+      "description": "Base URL for the API (use your Replit URL)"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Comprehensive health check of all backend spine services"
+          }
+        },
+        {
+          "name": "API Version",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/version",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "version"]
+            },
+            "description": "Get API version and build information"
+          }
+        }
+      ],
+      "description": "Health monitoring and system status endpoints"
+    },
+    {
+      "name": "Sleeper Sync Service",
+      "item": [
+        {
+          "name": "Sync Players from Sleeper",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sleeper/sync",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sleeper", "sync"]
+            },
+            "description": "Trigger sync of NFL players from Sleeper API with cache fallback"
+          }
+        },
+        {
+          "name": "Get All Players",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sleeper/players",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sleeper", "players"]
+            },
+            "description": "Get all cached Sleeper players"
+          }
+        },
+        {
+          "name": "Get Players by Position",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sleeper/players?position=WR",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sleeper", "players"],
+              "query": [
+                {
+                  "key": "position",
+                  "value": "WR",
+                  "description": "Filter by position (QB, RB, WR, TE)"
+                }
+              ]
+            },
+            "description": "Get players filtered by position"
+          }
+        },
+        {
+          "name": "Search Players",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sleeper/players?search=chase",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sleeper", "players"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "chase",
+                  "description": "Search players by name"
+                }
+              ]
+            },
+            "description": "Search players by name"
+          }
+        },
+        {
+          "name": "Sleeper Sync Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sleeper/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sleeper", "status"]
+            },
+            "description": "Get Sleeper sync status and cache information"
+          }
+        }
+      ],
+      "description": "Sleeper API integration with cache fallback system"
+    },
+    {
+      "name": "Logs & Projections",
+      "item": [
+        {
+          "name": "Get Player Game Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/logs/player/josh_allen?season=2024",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "logs", "player", "josh_allen"],
+              "query": [
+                {
+                  "key": "season",
+                  "value": "2024",
+                  "description": "Season year (default: 2024)"
+                }
+              ]
+            },
+            "description": "Get game logs for a specific player"
+          }
+        },
+        {
+          "name": "Get Player Projections",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/projections/player/josh_allen?season=2025",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projections", "player", "josh_allen"],
+              "query": [
+                {
+                  "key": "season",
+                  "value": "2025",
+                  "description": "Season year (default: 2025)"
+                }
+              ]
+            },
+            "description": "Get weekly projections for a specific player"
+          }
+        }
+      ],
+      "description": "Game logs and projection data endpoints"
+    },
+    {
+      "name": "Ratings Engine v1",
+      "item": [
+        {
+          "name": "Get Top Players (All Positions)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ratings?format=dynasty&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ratings"],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "dynasty",
+                  "description": "Format: dynasty, redraft, half_ppr, full_ppr, superflex"
+                },
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Number of players to return (default: 100)"
+                }
+              ]
+            },
+            "description": "Get top-rated players across all positions"
+          }
+        },
+        {
+          "name": "Get Position Rankings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ratings?position=WR&format=dynasty",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ratings"],
+              "query": [
+                {
+                  "key": "position",
+                  "value": "WR",
+                  "description": "Position: QB, RB, WR, TE"
+                },
+                {
+                  "key": "format",
+                  "value": "dynasty",
+                  "description": "Format: dynasty, redraft, half_ppr, full_ppr, superflex"
+                }
+              ]
+            },
+            "description": "Get rankings for a specific position"
+          }
+        },
+        {
+          "name": "Get Player Rating",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ratings/player/jamarr_chase",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ratings", "player", "jamarr_chase"]
+            },
+            "description": "Get detailed rating for a specific player"
+          }
+        },
+        {
+          "name": "Ratings Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/ratings/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ratings", "summary"]
+            },
+            "description": "Get ratings engine summary statistics"
+          }
+        }
+      ],
+      "description": "Player ratings and rankings engine endpoints"
+    },
+    {
+      "name": "Legacy Endpoints (Sample)",
+      "item": [
+        {
+          "name": "Player Pool",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/player-pool?pos=WR&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "player-pool"],
+              "query": [
+                {
+                  "key": "pos",
+                  "value": "WR",
+                  "description": "Position filter"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Limit results"
+                }
+              ]
+            },
+            "description": "Existing player pool endpoint (for compatibility)"
+          }
+        },
+        {
+          "name": "Redraft Rankings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/redraft/rankings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "redraft", "rankings"]
+            },
+            "description": "Existing redraft rankings endpoint"
+          }
+        }
+      ],
+      "description": "Legacy endpoints that should continue working"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-set baseUrl if running on Replit",
+          "if (pm.variables.get('baseUrl') === '{{replit_url}}') {",
+          "    // Replace with your actual Replit URL",
+          "    pm.variables.set('baseUrl', 'https://your-repl-name.your-username.repl.co');",
+          "}"
+        ]
+      }
+    }
+  ]
+}

@@ -37,6 +37,27 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize backend spine services with sample data
+  try {
+    console.log('🚀 Initializing backend spine services...');
+    
+    const { sleeperSyncService } = await import('./services/sleeperSyncService');
+    const { logsProjectionsService } = await import('./services/logsProjectionsService');  
+    const { ratingsEngineService } = await import('./services/ratingsEngineService');
+    
+    await Promise.all([
+      logsProjectionsService.loadSampleData(),
+      ratingsEngineService.generateSampleRatings()
+    ]);
+    
+    // Attempt initial Sleeper sync (will fallback to cache gracefully)
+    await sleeperSyncService.syncPlayers();
+    
+    console.log('✅ Backend spine services initialized');
+  } catch (error) {
+    console.warn('⚠️ Backend spine initialization warning:', error);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

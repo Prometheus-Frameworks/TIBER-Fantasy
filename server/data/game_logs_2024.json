@@ -1,0 +1,42 @@
+[
+  {
+    "player_id": "josh_allen",
+    "player_name": "Josh Allen",
+    "position": "QB",
+    "team": "BUF",
+    "week": 1,
+    "season": 2024,
+    "opponent": "NYJ",
+    "game_date": "2024-09-09",
+    "stats": {
+      "pass_att": 34,
+      "pass_cmp": 26,
+      "pass_yds": 297,
+      "pass_tds": 2,
+      "pass_int": 0,
+      "rush_att": 8,
+      "rush_yds": 54,
+      "rush_tds": 2,
+      "fantasy_points": 31.2,
+      "fantasy_points_ppr": 31.2
+    }
+  },
+  {
+    "player_id": "jamarr_chase",
+    "player_name": "Ja'Marr Chase",
+    "position": "WR",
+    "team": "CIN",
+    "week": 1,
+    "season": 2024,
+    "opponent": "NE",
+    "game_date": "2024-09-08",
+    "stats": {
+      "targets": 12,
+      "receptions": 6,
+      "rec_yds": 62,
+      "rec_tds": 1,
+      "fantasy_points": 18.2,
+      "fantasy_points_ppr": 24.2
+    }
+  }
+]
