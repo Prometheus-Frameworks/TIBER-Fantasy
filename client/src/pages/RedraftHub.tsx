@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { usePlayerPool, nameOf } from "@/hooks/usePlayerPool";
 import { loadRankings, loadEnhancedRankings, loadWaivers, api, type RedraftPlayer } from "@/lib/redraftApi";
 import RankingsList from "@/components/RankingsList";
+import WaiversList from "@/components/WaiversList";
 import { 
   Users, 
   TrendingUp, 
@@ -80,8 +81,8 @@ function useUsageLeaders() {
   });
 }
 
-// Waivers data hook
-function useWaivers(position: "QB" | "RB" | "WR" | "TE" | "ALL" = "ALL") {
+// Waivers data hook with position parameter
+function useWaivers(position: "QB" | "RB" | "WR" | "TE" | "ALL" = "WR") {
   return useQuery({
     queryKey: ['waivers', position],
     queryFn: () => loadWaivers(position),
@@ -239,9 +240,13 @@ export default function RedraftHub() {
   
   // Render content based on current tab
   const renderContent = () => {
+    if (pos === "WAV") {
+      const filterPos = sp.get("fpos") as "QB" | "RB" | "WR" | "TE" || "WR";
+      const { data: waiverRows } = useWaivers(filterPos);
+      return <WaiversList rows={waiverRows || []} title={`${filterPos} Waiver Wire`} />;
+    }
+    
     switch (pos) {
-      case "WAV":
-        return <WaiversTab />;
       case "TRADE":
         return <TradeAnalyzerTab />;
       default:

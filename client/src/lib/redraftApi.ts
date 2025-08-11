@@ -43,6 +43,17 @@ export const api = {
     
     const response = await fetch(`/api/usage-leaders?${query}`);
     return response.json();
+  },
+
+  async redraftPlayers(params: { search?: string; pos?: string; limit?: number }): Promise<RedraftPlayer[]> {
+    const query = new URLSearchParams();
+    if (params.search) query.append('search', params.search);
+    if (params.pos) query.append('pos', params.pos);
+    query.append('limit', (params.limit || 50).toString());
+    
+    const response = await fetch(`/api/redraft/rankings?${query}`);
+    const data = await response.json();
+    return data.data || [];
   }
 };
 
@@ -67,6 +78,23 @@ export async function loadRankings(pos: "QB" | "RB" | "WR" | "TE" | "ALL"): Prom
   
   const result = await api.redraftRankings({ pos, limit: 50 });
   return result.data || [];
+}
+
+// Enhanced search function for redraft players
+export async function searchRedraftPlayers(search: string, pos: "QB" | "RB" | "WR" | "TE" | "ALL"): Promise<RedraftPlayer[]> {
+  if (pos === "ALL") {
+    // Search each position in parallel and merge results
+    const [qbResults, rbResults, wrResults, teResults] = await Promise.all([
+      api.redraftPlayers({ search, pos: "QB", limit: 50 }),
+      api.redraftPlayers({ search, pos: "RB", limit: 50 }),
+      api.redraftPlayers({ search, pos: "WR", limit: 50 }),
+      api.redraftPlayers({ search, pos: "TE", limit: 50 }),
+    ]);
+    
+    return [...qbResults, ...rbResults, ...wrResults, ...teResults];
+  }
+  
+  return api.redraftPlayers({ search, pos, limit: 50 });
 }
 
 // Enhanced data merger that combines rankings with VORP and usage data

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { nameOf } from "@/hooks/usePlayerPool";
-import { loadEnhancedRankings, type RedraftPlayer } from "@/lib/redraftApi";
+import { loadEnhancedRankings, searchRedraftPlayers, type RedraftPlayer } from "@/lib/redraftApi";
 import { 
   Users, 
   TrendingUp, 
@@ -70,12 +70,26 @@ export default function RankingsList({ pos, title, showStats = true, maxPlayers 
   const [sortBy, setSortBy] = useState("rank");
   
   const position = pos || "ALL";
-  const { data: redraftPlayers, isLoading } = useQuery({
+  
+  // Load initial rankings on mount
+  const { data: initialPlayers, isLoading: initialLoading } = useQuery({
     queryKey: ['redraft-rankings', position],
     queryFn: () => loadEnhancedRankings(position),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
+  
+  // Search query with debounced search
+  const { data: searchResults, isLoading: searchLoading } = useQuery({
+    queryKey: ['redraft-search', position, searchQuery],
+    queryFn: () => searchRedraftPlayers(searchQuery, position),
+    enabled: searchQuery.length > 0,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+  
+  // Use search results if searching, otherwise use initial data
+  const redraftPlayers = searchQuery.length > 0 ? searchResults : initialPlayers;
+  const isLoading = searchQuery.length > 0 ? searchLoading : initialLoading;
   
   // Filter by search
   const filteredPlayers = redraftPlayers?.filter(player =>
