@@ -116,12 +116,23 @@ export default function WRCompass() {
               </div>
             ))}
           </div>
-        ) : filteredData.length === 0 ? (
+        ) : !wrResponse || filteredData.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            {search ? (
+            {!wrResponse ? (
+              <>Loading WR compass data...</>
+            ) : search ? (
               <>No WRs match "{search}". Try a team code like "MIA".</>
             ) : (
-              <>No WR data available.</>
+              <>No WR data available. Check API connection.</>
+            )}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mt-4 text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded">
+                wrResponse: {JSON.stringify(!!wrResponse)}<br/>
+                wrData length: {wrData?.length ?? 0}<br/>
+                mappedData length: {mappedData?.length ?? 0}<br/>
+                filteredData length: {filteredData?.length ?? 0}<br/>
+                first player: {JSON.stringify(mappedData?.[0]?.displayName)}
+              </div>
             )}
           </div>
         ) : (
@@ -191,12 +202,15 @@ export default function WRCompass() {
       </CardContent>
       
       {/* Dev Footer */}
-      <div className="px-6 py-2 bg-gray-50 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-400 border-t">
-        <div className="flex justify-between items-center">
-          <span>GET: /api/compass/wr?search={encodeURIComponent(search)}&limit=50</span>
-          <span>Rows: {filteredData.length}</span>
-        </div>
-      </div>
+      {process.env.NODE_ENV === 'development' && (
+        <pre style={{fontSize:12,opacity:.7,whiteSpace:'pre-wrap'}} className="px-6 py-2 bg-gray-50 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-400 border-t">
+          {`GET /api/compass/wr?search=${encodeURIComponent(search)}&limit=50
+rows: ${filteredData?.length ?? 0}
+first: ${filteredData?.[0]?.displayName ?? '—'}
+data length: ${wrData?.length ?? 0}
+mapped length: ${mappedData?.length ?? 0}`}
+        </pre>
+      )}
     </Card>
   );
 }
