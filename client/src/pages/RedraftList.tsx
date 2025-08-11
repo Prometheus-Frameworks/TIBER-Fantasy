@@ -30,11 +30,11 @@ export default function RedraftList() {
           data = (fb.data || []).map(mapPlayerLite);
         }
         
-        // Final fallback: Try VORP rankings which we know works
+        // Final fallback: Use WR CSV data which we know works  
         if (!data.length) {
-          response = await fetch(`/api/rankings?position=WR&limit=${RANK_LIMIT}`);
-          const vorp = await response.json();
-          data = (vorp.players || vorp.data || []).map(mapPlayerLite);
+          response = await fetch(`/api/wr?limit=${RANK_LIMIT}`);
+          const wr = await response.json();
+          data = (Array.isArray(wr) ? wr : wr.data || []).map(mapPlayerLite);
         }
         
         if (alive) {
@@ -62,11 +62,12 @@ export default function RedraftList() {
       );
       setRows(local);
       
-      // Network search
+      // Network search - use the working /api/wr endpoint
       try {
-        const response = await fetch(`/api/redraft/players?search=${encodeURIComponent(q)}&pos=WR&limit=${RANK_LIMIT}`);
+        const response = await fetch(`/api/wr?search=${encodeURIComponent(q)}&limit=${RANK_LIMIT}`);
         const res = await response.json();
-        setRows((res.data || []).map(mapPlayerLite));
+        const searchResults = (Array.isArray(res) ? res : res.data || []).map(mapPlayerLite);
+        setRows(searchResults);
       } catch (e:any) { 
         console.error("search", e); 
       }
