@@ -1,0 +1,137 @@
+Fair pivot. If Compass keeps fighting you, prove the pipeline by **pulling Redraft players to screen**—no excuses. Here’s a copy-paste task list for Tiber that will 100% render players in the UI tonight.
+
+---
+
+# Task for Tiber — “Redraft First Render” (guaranteed player list)
+
+**Goal:** `/redraft` must show players even if search is empty. Use real endpoints only.
+
+## 1) Data flow (no guesswork)
+
+* Primary: `GET /api/redraft/rankings?pos=WR&season=2025&limit=50`
+* Search (≥2 chars): `GET /api/redraft/players?search={q}&pos=WR&limit=50`
+* Fallback (if rankings empty): `GET /api/dynasty/value?pos=WR&season=2025&limit=50` (use only `id,name,team,pos`)
+
+## 2) Adapter (map to one shape)
+
+Create/extend `client/src/data/adapters.ts`:
+
+```ts
+export type PlayerLite = { id:string; name:string; team:string; pos:"QB"|"RB"|"WR"|"TE" };
+const title = (s='') => s.replace(/\b\w/g,c=>c.toUpperCase());
+
+export const mapPlayerLite = (r:any): PlayerLite => ({
+  id: r.id ?? r.player_id ?? r.slug ?? "",
+  name: title(r.name ?? r.full_name ?? "Unknown Player"),
+  team: String(r.team ?? r.nfl_team ?? "").toUpperCase(),
+  pos: String(r.pos ?? r.position ?? "WR").toUpperCase() as PlayerLite["pos"],
+});
+```
+
+## 3) Component (drop-in list)
+
+Create `client/src/pages/RedraftList.tsx` (or wire into your Redraft page):
+
+```tsx
+import { useEffect, useState, useTransition } from "react";
+import { api } from "@/lib/apiClient";
+import { mapPlayerLite, PlayerLite } from "@/data/adapters";
+
+export default function RedraftList() {
+  const [rows, setRows] = useState<PlayerLite[]>([]);
+  const [q, setQ] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const [err, setErr] = useState<string>("");
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        setErr("");
+        const res = await api.redraftRankings({ pos: "WR", season: 2025, limit: 50 });
+        let data = (res.data || []).map(mapPlayerLite);
+        if (!data.length) {
+          const fb = await api.dynastyValue({ pos: "WR", season: 2025, limit: 50 });
+          data = (fb.data || []).map(mapPlayerLite);
+        }
+        if (alive) setRows(data);
+      } catch (e:any) {
+        setErr(e?.message || "load failed");
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  useEffect(() => {
+    const id = setTimeout(async () => {
+      try {
+        if (q.trim().length < 2) return; // keep rankings view
+        const res = await api.redraftPlayers({ search: q, pos: "WR", limit: 50 });
+        setRows((res.data || []).map(mapPlayerLite));
+      } catch (e:any) { console.error("search", e); }
+    }, 200);
+    return () => clearTimeout(id);
+  }, [q]);
+
+  return (
+    <div className="p-4">
+      <input
+        placeholder="Search WRs (min 2 chars)"
+        value={q}
+        onChange={(e)=>startTransition(()=>setQ(e.target.value))}
+        className="w-full border rounded px-3 py-2"
+      />
+      {isPending && <div className="text-sm opacity-60 mt-1">Searching…</div>}
+      {err && <div className="text-red-600 text-sm mt-2">{err}</div>}
+
+      {rows.length === 0 ? (
+        <div className="mt-6 opacity-70">No players yet. Try a different query.</div>
+      ) : (
+        <ul className="mt-4 space-y-2">
+          {rows.map(p => (
+            <li key={p.id} className="border rounded p-3 flex items-center justify-between">
+              <div>
+                <div className="font-medium">{p.name}</div>
+                <div className="text-sm opacity-70">{p.team} • {p.pos}</div>
+              </div>
+              <button className="text-blue-600 text-sm">View</button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {import.meta.env.DEV && (
+        <div className="text-xs opacity-60 mt-4">
+          rows: {rows.length} • q: “{q}”
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+## 4) Route it
+
+In your router, map `/redraft` (or a tab on the Redraft page) to `RedraftList`.
+
+## 5) Acceptance (must pass)
+
+* Visiting `/redraft` (no typing) **shows 50 WRs** (from rankings or fallback).
+* Typing “wadd” returns Waddle, etc. (search path).
+* No suspension overlay; input stays responsive (we used `startTransition` + debounce).
+* Dev debug shows `rows: N` > 0.
+
+## 6) Nice-to-have (fast polish)
+
+* Add team code filter (dropdown: ALL, MIA, DAL, etc.) that filters client-side.
+* Link item “View” to your player page/compass when that’s stable.
+
+**Commit msgs:**
+
+* `feat(redraft): guaranteed WR list from rankings with search + fallback`
+* `chore(adapter): mapPlayerLite canonicalizes id/name/team/pos`
+* `fix(ui): wrap search updates in startTransition and debounce fetch`
+
+---
+
+Joe, this bypasses the Compass mess and proves the stack. If this page doesn’t render players, then yeah, the backend’s not giving us anything usable—and we’ll know it in five minutes. But nine times out of ten, this renders and you’re back in motion.
