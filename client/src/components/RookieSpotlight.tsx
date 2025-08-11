@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Users, Target } from "lucide-react";
+import { nameOf } from "@/hooks/usePlayerPool";
 
 interface WarehouseRecord {
   player_id: string;
@@ -104,7 +105,7 @@ export default function RookieSpotlight({ team = "", week = 1, limit = 5 }: Rook
                   <div className="text-2xl">{getPositionIcon(record.position)}</div>
                   <div>
                     <div className="font-medium text-sm">
-                      {record.player_id}
+                      {nameOf(record.player_id)}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">

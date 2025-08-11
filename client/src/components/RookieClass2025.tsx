@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Star, Calendar } from "lucide-react";
+import { nameOf } from "@/hooks/usePlayerPool";
 
 interface RookieClass2025Props {
   season: number;
@@ -124,7 +125,7 @@ export default function RookieClass2025({ season, week, limit = 8 }: RookieClass
                   
                   <div>
                     <div className="font-semibold text-sm">
-                      {nameOf(record.player_id, playerIndex)}
+                      {nameOf(record.player_id)}
                     </div>
                     <div className="flex items-center gap-1 mt-1 text-xs">
                       <Badge className={getPositionColor(record.position)}>
