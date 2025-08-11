@@ -133,7 +133,12 @@ export default function WaiversList({ rows, title = "Waiver Wire Candidates" }: 
                         </Badge>
                       </div>
                       <div className="flex-grow">
-                        <div className="font-semibold text-sm">{player.player_name}</div>
+                        <a 
+                          href={`/player-compass?id=${player.id}`}
+                          className="font-semibold text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                        >
+                          {player.player_name}
+                        </a>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {player.team} • {player.position}
                           {player.adp && ` • ADP ${player.adp.toFixed(1)}`}

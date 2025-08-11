@@ -40,7 +40,12 @@ function PlayerRankingCard({ player, rank, showVORP = false }: {
           </Badge>
         </div>
         <div className="flex-grow">
-          <div className="font-semibold text-sm">{playerName}</div>
+          <a 
+            href={`/player-compass?id=${player.id}`}
+            className="font-semibold text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            {playerName}
+          </a>
           <div className="text-xs text-gray-500 dark:text-gray-400">
             {playerTeam} • {playerPos}
             {player.adp && ` • ADP ${player.adp.toFixed(1)}`}

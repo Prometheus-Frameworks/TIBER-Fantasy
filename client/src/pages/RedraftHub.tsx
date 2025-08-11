@@ -43,10 +43,10 @@ function TabBar({ tabs, active, onSelect }: {
         <button
           key={tab.key}
           onClick={() => onSelect(tab.key)}
-          className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
             active === tab.key
-              ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100"
-              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              ? "bg-black text-white shadow-sm"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
           }`}
         >
           {tab.label}
@@ -246,12 +246,12 @@ export default function RedraftHub() {
       return <WaiversList rows={waiverRows || []} title={`${filterPos} Waiver Wire`} />;
     }
     
-    switch (pos) {
-      case "TRADE":
-        return <TradeAnalyzerTab />;
-      default:
-        return <PositionTab position={pos as "QB" | "RB" | "WR" | "TE" | "ALL"} />;
+    if (pos === "TRADE") {
+      return <TradeAnalyzerTab />;
     }
+    
+    // All other tabs use RankingsList component
+    return <PositionTab position={pos as "QB" | "RB" | "WR" | "TE" | "ALL"} />;
   };
   
   return (
