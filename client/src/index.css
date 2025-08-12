@@ -65,6 +65,14 @@ a:hover {
   .card { border-radius: 12px; }
 }
 
+/* Enhanced animations */
+@keyframes ping-slow { 
+  0%{transform:scale(1);opacity:.3} 
+  80%{transform:scale(1.08);opacity:0} 
+  100%{opacity:0} 
+}
+.animate-ping-slow{ animation: ping-slow 2.2s cubic-bezier(0,0,.2,1) infinite; }
+
 /* Mobile-first performance optimizations for iOS, Android, and desktop */
 * {
   /* Improve scrolling performance on mobile devices */

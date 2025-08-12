@@ -89,10 +89,10 @@ import Dynasty from "@/pages/Dynasty";
 import Navigation from "@/components/Navigation";
 import Analytics from "@/pages/Analytics";
 import Articles from "@/pages/Articles";
-import HealthBadge from "@/components/HealthBadge";
+
 import FounderModal from "@/components/FounderModal";
 import Footer from "@/components/Footer";
-import HealthBar from "@/components/HealthBar";
+
 import AdaptiveConsensusDemo from "@/pages/AdaptiveConsensusDemo";
 import CurvesDemo from "@/pages/CurvesDemo";
 import InjuryProfilesDemo from "@/pages/InjuryProfilesDemo";
@@ -213,7 +213,6 @@ function App() {
           <Router />
         </main>
         <Footer />
-        <HealthBar />
         <FounderModal />
         <Toaster />
       </TooltipProvider>

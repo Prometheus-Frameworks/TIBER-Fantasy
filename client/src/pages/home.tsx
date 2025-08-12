@@ -1,83 +1,46 @@
-import { Link } from "wouter";
+import GlowCard from "@/components/GlowCard";
+import GlowCTA from "@/components/GlowCTA";
+import { Section } from "@/components/Section";
+import { Trophy, Compass, Users, Sparkles } from "lucide-react";
 
-export default function Home() {
-  const coreFeatures = [
-    {
-      href: "/compass",
-      title: "Player Compass",
-      description: "Context-aware dynasty guidance",
-      icon: "🧭"
-    },
-    {
-      href: "/consensus", 
-      title: "OTC Consensus",
-      description: "Community boards & tiers",
-      icon: "📊"
-    },
-    {
-      href: "/rookies",
-      title: "2025 Rookies", 
-      description: "Rookie evaluation system",
-      icon: "⭐"
-    }
-  ];
-
-  const additionalTools = [
-    { href:'/dashboard', title:'Dashboard', desc:'Personal league management' },
-    { href:'/analytics', title:'Analytics', desc:'Statistical analysis and trends' }
-  ];
-
+export default function Home(){
   return (
-    <div>
-      {/* Hero Section */}
-      <section className="container-tight section">
-        <h1 className="h-hero text-4xl md:text-5xl font-semibold text-ink">
-          On The Clock
-        </h1>
-        <p className="mt-2 text-base md:text-lg text-body">
-          Fantasy football tools. Community-driven. No paywalls, just signal.
+    <main className="mx-auto max-w-6xl px-4 pb-16">
+      {/* Hero */}
+      <div className="pt-8 md:pt-12">
+        <p className="text-sm uppercase tracking-widest text-gold flex items-center gap-2">
+          <Trophy className="h-4 w-4" /> On The Clock
         </p>
-        <div className="mt-4">
-          <Link href="/consensus" className="inline-flex items-center px-4 py-2 rounded-md bg-gold text-white hover:bg-gold/90 transition-colors">
-            View OTC Consensus
-          </Link>
+        <h1 className="mt-2 text-4xl md:text-5xl font-semibold tracking-tight text-ink">
+          Fantasy football tools. Community‑driven.
+        </h1>
+        <p className="mt-3 max-w-2xl text-body">
+          No paywalls, just signal. Draft smarter with consensus boards and context‑aware guidance.
+        </p>
+        <div className="mt-6">
+          <GlowCTA>View OTC Consensus</GlowCTA>
         </div>
-      </section>
+      </div>
 
       {/* Core Systems */}
-      <section className="container-tight section">
-        <div className="flex items-end justify-between">
-          <h2 className="h-section text-2xl font-semibold text-ink">Core Systems</h2>
-          <Link href="/all-tools" className="text-sm text-body hover:text-plum">See all</Link>
-        </div>
+      <Section 
+        title="Core Systems" 
+        action={<a href="/systems" className="text-sm text-body hover:text-plum transition-colors">See all</a>} 
+      />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <GlowCard title="Player Compass" subtitle="Context‑aware dynasty guidance" icon={<Compass/>} href="/compass" />
+        <GlowCard title="OTC Consensus" subtitle="Community boards & tiers" icon={<Users/>} href="/consensus" />
+        <GlowCard title="Draft Command" subtitle="Real‑time draft aids" icon={<Sparkles/>} href="/draft" />
+      </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-          {coreFeatures.map((feature) => (
-            <Link key={feature.href} href={feature.href} className="card p-4 md:p-5 hover:shadow-lg transition-shadow">
-              <h3 className="text-lg font-medium text-ink">{feature.title}</h3>
-              <p className="mt-1 text-sm text-body">{feature.description}</p>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Additional Tools */}
-      <section className="container-tight section-sm">
-        <h2 className="h-section text-xl font-semibold text-ink">Additional Tools</h2>
-        <ul className="divide-y divide-line border border-line rounded-card bg-white">
-          {additionalTools.map((tool) => (
-            <li key={tool.href} className="px-4 py-3 md:px-5 md:py-3.5 hover:bg-haze transition-colors">
-              <Link href={tool.href} className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm md:text-base font-medium text-ink">{tool.title}</div>
-                  <div className="text-xs md:text-sm text-body">{tool.desc}</div>
-                </div>
-                <span className="text-body">→</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </div>
+      {/* Quick Links */}
+      <Section title="Quick Links" />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <GlowCard title="2025 Rookies" subtitle="Class preview & comps" href="/rookies" />
+        <GlowCard title="Articles & Analysis" subtitle="Buy/Sell, Waivers, Usage" href="/articles" />
+        <GlowCard title="Consensus Transparency" subtitle="Methodology & audit trail" href="/consensus/transparency" />
+        <GlowCard title="Dashboard" subtitle="Sync Sleeper leagues" href="/dashboard" />
+      </div>
+    </main>
   );
 }

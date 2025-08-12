@@ -29,17 +29,13 @@ export default function HealthBar({ className }: HealthBarProps) {
   if (health === null) return null;
 
   return (
-    <div className={`fixed bottom-3 left-1/2 -translate-x-1/2 z-40 ${className || ''}`}>
-      <div className="rounded-full bg-white/90 backdrop-blur px-3 py-1.5 shadow-card border border-line flex items-center gap-2">
-        <span 
-          className="w-2 h-2 rounded-full" 
-          style={{ background: isOk ? '#16a34a' : '#ef4444' }}
-        />
-        <span className="text-xs text-ink">
-          {isOk ? 'Healthy' : 'Degraded'}
+    <div className="fixed bottom-4 right-4 z-40">
+      <div className="flex items-center gap-2 rounded-full border border-line bg-white/90 px-3 py-1.5 shadow-card backdrop-blur">
+        <span className={`relative inline-block h-2.5 w-2.5 rounded-full ${isOk ? "bg-emerald-500" : "bg-red-500"}`}>
+          <span className={`absolute inset-0 rounded-full ${isOk ? "animate-pulse bg-emerald-500/30" : "bg-red-500/30"}`} />
         </span>
-        <span className="text-[10px] text-body">
-          Spine • Ratings • Logs
+        <span className="text-xs text-ink">
+          {isOk === null ? "Checking..." : isOk ? "Healthy" : "Issues"}
         </span>
       </div>
     </div>
