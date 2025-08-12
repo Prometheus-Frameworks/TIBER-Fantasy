@@ -5,6 +5,11 @@ import {
   userRanks, consensusBoard, userProfiles 
 } from "@shared/schema";
 import { eq, and, sql, desc, asc } from "drizzle-orm";
+import { 
+  rankToScore as curvesRankToScore, 
+  scoreToRank as curvesScoreToRank, 
+  adjustRankWithMultiplier 
+} from './consensus/curves';
 
 // Configuration constants
 const ADAPTIVE_CFG = {
@@ -105,14 +110,7 @@ interface AdaptiveConsensusExplanation {
   };
 }
 
-// Helper functions
-export function rankToScore(rank: number): number {
-  return Math.max(0, 200 - rank);
-}
-
-export function scoreToRank(score: number): number {
-  return Math.max(1, 200 - score);
-}
+// Helper functions - using curves.ts for smooth transformations
 
 // Core adaptive consensus logic
 export async function gatherContext(playerId: string): Promise<AdaptiveConsensusContext> {
@@ -251,9 +249,11 @@ export function applyDynastyInjurySoftener(rank: number, ctx: AdaptiveConsensusC
                ADAPTIVE_CFG.DY_RISK.DEFAULT;
   const ageK = ADAPTIVE_CFG.DY_AGE_FACTOR(bio.age, bio.pos);
 
-  const score = rankToScore(rank);
-  const adjScore = score * baseK * riskK * ageK;
-  return scoreToRank(adjScore);
+  // Smooth rank adjustment using curves - ready for Grok's data integration
+  // When Grok provides JSON, Tiber maps year1_prod_delta/age_penalty_per_year_over → k
+  // and calls adjustRankWithMultiplier(rank, k) for precise adjustments
+  const k = baseK * riskK * ageK; // Combined multiplier: k < 1.0 pushes rank down
+  return adjustRankWithMultiplier(rank, k);
 }
 
 // Main rebuild function

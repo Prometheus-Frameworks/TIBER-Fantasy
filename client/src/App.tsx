@@ -92,6 +92,7 @@ import HealthBadge from "@/components/HealthBadge";
 import Footer from "@/components/Footer";
 import FounderModal from "@/components/FounderModal";
 import AdaptiveConsensusDemo from "@/pages/AdaptiveConsensusDemo";
+import CurvesDemo from "@/pages/CurvesDemo";
 
 function Router() {
   return (
@@ -111,6 +112,7 @@ function Router() {
       <Route path="/consensus-transparency" component={ConsensusTransparency} />
       <Route path="/experts/architect-j" component={ArchitectJProfile} />
       <Route path="/adaptive-consensus-demo" component={AdaptiveConsensusDemo} />
+      <Route path="/curves-demo" component={CurvesDemo} />
       <Route path="/compare/:username" component={CompareRankings} />
       <Route path="/consensus/redraft" component={RedraftRankings} />
       <Route path="/consensus/dynasty" component={DynastyRankings} />
