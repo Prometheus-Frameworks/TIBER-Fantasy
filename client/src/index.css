@@ -73,6 +73,12 @@ a:hover {
 }
 .animate-ping-slow{ animation: ping-slow 2.2s cubic-bezier(0,0,.2,1) infinite; }
 
+@keyframes shimmer { 
+  0%{background-position:200% 0} 
+  100%{background-position:-200% 0} 
+}
+.animate-shimmer { animation: shimmer 1.6s linear infinite; }
+
 /* Mobile-first performance optimizations for iOS, Android, and desktop */
 * {
   /* Improve scrolling performance on mobile devices */

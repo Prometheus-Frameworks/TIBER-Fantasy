@@ -34,11 +34,12 @@ export default function Navigation() {
                 <Link
                   key={tab.href}
                   href={tab.href}
-                  className={`px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`px-3 py-2 text-sm font-medium transition-colors active:translate-y-[1px] ${
                     active 
                       ? "text-ink border-b-2 border-gold" 
                       : "text-body hover:text-ink"
                   }`}
+                  aria-current={active ? "page" : undefined}
                 >
                   {tab.label}
                 </Link>
@@ -67,11 +68,12 @@ export default function Navigation() {
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`py-2 px-3 rounded-md whitespace-nowrap text-xs font-medium transition-colors flex-shrink-0 ${
+                className={`py-2 px-3 rounded-md whitespace-nowrap text-xs font-medium transition-colors flex-shrink-0 active:translate-y-[1px] ${
                   active 
                     ? "text-white bg-ink" 
                     : "text-body hover:text-ink bg-haze"
                 }`}
+                aria-current={active ? "page" : undefined}
               >
                 {tab.label}
               </Link>

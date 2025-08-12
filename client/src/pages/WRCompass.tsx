@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, TrendingUp, TrendingDown, Target, Users } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, Target, Users, RefreshCw } from 'lucide-react';
+import { SkeletonCard } from "@/components/Skeleton";
+import Button from "@/components/Button";
 
 interface WRCompassData {
   name: string;
@@ -62,73 +64,33 @@ const getCompassIcon = (direction: string) => {
 };
 
 export default function WRCompass() {
-  const [wrData, setWrData] = useState<WRCompassResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-
-  useEffect(() => {
-    fetchWRCompassData();
-  }, []);
-
-  const fetchWRCompassData = async () => {
-    try {
-      setLoading(true);
-      console.log('WRCompass: Fetching WR data from /api/compass/wr');
-      const response = await fetch('/api/compass/wr');
-      if (!response.ok) {
-        throw new Error(`Failed to fetch WR compass data: ${response.status}`);
-      }
-      const data = await response.json();
-      console.log('WRCompass: Successfully loaded', data.rankings?.length || 0, 'WRs');
-      
-      // Guard against malformed data
-      if (!data || typeof data !== 'object') {
-        throw new Error('Invalid data format received');
-      }
-      
-      if (!Array.isArray(data.rankings)) {
-        throw new Error('Rankings data is not an array');
-      }
-      
-      setWrData(data);
-    } catch (err) {
-      console.error('WRCompass: Error fetching data:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
+  
+  const { data: wrData, isLoading, refetch, isFetching, error } = useQuery<WRCompassResponse>({
+    queryKey: ["compass", "wr"],
+    queryFn: async () => {
+      const response = await fetch("/api/compass/wr");
+      if (!response.ok) throw new Error('Failed to fetch WR compass data');
+      return response.json();
     }
-  };
+  });
 
-  // Guard against malformed data in filtering
   const filteredWRs = (wrData?.rankings && Array.isArray(wrData.rankings)) 
     ? wrData.rankings.filter(wr => {
-        // Guard against malformed player objects
-        if (!wr || typeof wr !== 'object') return false;
-        if (!wr.name || !wr.team) return false;
-        
+        if (!wr?.name || !wr?.team) return false;
         return wr.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                wr.team.toLowerCase().includes(searchTerm.toLowerCase());
       })
     : [];
-
-  if (loading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading WR Player Compass...</div>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
       <div className="container mx-auto p-6">
         <Card>
           <CardContent className="p-6">
-            <div className="text-red-600">Error: {error}</div>
-            <Button onClick={fetchWRCompassData} className="mt-4">
+            <div className="text-red-600">Error: {error.message}</div>
+            <Button onClick={() => refetch()} className="mt-4" loading={isFetching}>
+              <RefreshCw className="w-4 h-4 mr-2" />
               Retry
             </Button>
           </CardContent>
@@ -139,164 +101,107 @@ export default function WRCompass() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between mb-4">
-        <Button 
-          variant="outline" 
-          onClick={() => window.history.back()} 
-          className="flex items-center gap-2"
-        >
-          ← Back
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-ink mb-2">WR Player Compass</h1>
+          <p className="text-body">Context-aware wide receiver evaluation and guidance</p>
+        </div>
+        <Button onClick={() => refetch()} loading={isFetching} variant="ghost">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Refresh
         </Button>
-        <div className="flex-1" />
       </div>
-      
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold">WR Player Compass</h1>
-        <p className="text-gray-600">4-Directional Dynasty Evaluation System</p>
-        <div className="text-sm text-gray-500">
-          Analyzing {wrData?.rankings?.length || 0} Wide Receivers
+
+      <div className="flex items-center gap-4 mb-6">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-body w-4 h-4" />
+          <Input
+            type="text"
+            placeholder="Search by player name or team..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
         </div>
       </div>
 
-      {/* Methodology Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="w-5 h-5" />
-            WR Compass Methodology
-          </CardTitle>
-          <CardDescription>
-            Equal 25% weighting across four directional components with WR-specific factors
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
-              {getCompassIcon('north')}
-              <div>
-                <div className="font-semibold">NORTH</div>
-                <div className="text-sm text-gray-600">Volume/Talent</div>
-                <div className="text-xs text-gray-500">Targets, receptions, efficiency</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-              {getCompassIcon('east')}
-              <div>
-                <div className="font-semibold">EAST</div>
-                <div className="text-sm text-gray-600">Environment</div>
-                <div className="text-xs text-gray-500">Offense scheme, QB play</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-              {getCompassIcon('south')}
-              <div>
-                <div className="font-semibold">SOUTH</div>
-                <div className="text-sm text-gray-600">Risk</div>
-                <div className="text-xs text-gray-500">Age, injury history</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg">
-              {getCompassIcon('west')}
-              <div>
-                <div className="font-semibold">WEST</div>
-                <div className="text-sm text-gray-600">Value</div>
-                <div className="text-xs text-gray-500">Dynasty value, ADP</div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Search */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              type="text"
-              placeholder="Search wide receivers by name or team..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* WR Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredWRs.map((wr) => (
-          <Card key={wr.name} className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{wr.name}</CardTitle>
-                <Badge className={`${getTierColor(wr.compass.tier)} text-white`}>
-                  {wr.compass.tier}
-                </Badge>
-              </div>
-              <CardDescription>
-                {wr.team} • Age {wr.age}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {/* Compass Score */}
-                <div className="text-center">
-                  <div className={`text-2xl font-bold ${getScoreColor(wr.compass.score)}`}>
-                    {wr.compass.score}
+      {isLoading ? (
+        <section aria-busy className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({length: 9}).map((_, i) => <SkeletonCard key={i} />)}
+        </section>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredWRs.map((wr, index) => (
+            <Card key={`${wr.name}-${index}`} className="group hover:shadow-lg transition-all duration-200 active:translate-y-[1px]">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg font-semibold text-ink">
+                      {wr.name}
+                    </CardTitle>
+                    <CardDescription className="text-sm text-body">
+                      {wr.team} • Age {wr.age}
+                    </CardDescription>
                   </div>
-                  <div className="text-sm text-gray-500">Compass Score</div>
+                  <Badge 
+                    className={`${getTierColor(wr.compass?.tier || 'Deep')} text-white`}
+                  >
+                    {wr.compass?.tier || 'N/A'}
+                  </Badge>
                 </div>
+              </CardHeader>
+              
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-body">Compass Score</span>
+                    <span className={`text-lg font-bold ${getScoreColor(wr.compass?.score || 0)}`}>
+                      {wr.compass?.score?.toFixed(1) || 'N/A'}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    {wr.compass && Object.entries({
+                      north: wr.compass.north,
+                      east: wr.compass.east,
+                      south: wr.compass.south,
+                      west: wr.compass.west
+                    }).map(([direction, value]) => (
+                      <div key={direction} className="flex items-center gap-2">
+                        {getCompassIcon(direction)}
+                        <span className="text-sm font-medium text-body capitalize">
+                          {direction}
+                        </span>
+                        <span className="text-sm font-semibold text-ink ml-auto">
+                          {value?.toFixed(1) || 'N/A'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
 
-                {/* Compass Directions */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="text-center p-2 bg-red-50 rounded">
-                    <div className="flex items-center justify-center gap-1">
-                      {getCompassIcon('north')}
-                      <span className="text-sm font-semibold">N</span>
+                  <div className="pt-3 border-t border-line">
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <div className="text-body">Targets</div>
+                        <div className="font-semibold text-ink">{wr.targets || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <div className="text-body">Rec Yards</div>
+                        <div className="font-semibold text-ink">{wr.receiving_yards || 'N/A'}</div>
+                      </div>
                     </div>
-                    <div className="text-sm">{wr.compass.north}</div>
-                  </div>
-                  <div className="text-center p-2 bg-blue-50 rounded">
-                    <div className="flex items-center justify-center gap-1">
-                      {getCompassIcon('east')}
-                      <span className="text-sm font-semibold">E</span>
-                    </div>
-                    <div className="text-sm">{wr.compass.east}</div>
-                  </div>
-                  <div className="text-center p-2 bg-green-50 rounded">
-                    <div className="flex items-center justify-center gap-1">
-                      {getCompassIcon('south')}
-                      <span className="text-sm font-semibold">S</span>
-                    </div>
-                    <div className="text-sm">{wr.compass.south}</div>
-                  </div>
-                  <div className="text-center p-2 bg-yellow-50 rounded">
-                    <div className="flex items-center justify-center gap-1">
-                      {getCompassIcon('west')}
-                      <span className="text-sm font-semibold">W</span>
-                    </div>
-                    <div className="text-sm">{wr.compass.west}</div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-                {/* Stats */}
-                <div className="text-xs text-gray-600 space-y-1">
-                  <div>Targets: {wr.targets} | Rec: {wr.receptions}</div>
-                  <div>Yards: {wr.receiving_yards} | TDs: {wr.receiving_touchdowns}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredWRs.length === 0 && !loading && (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="text-gray-500">No wide receivers found matching your search.</div>
-          </CardContent>
-        </Card>
+      {!isLoading && filteredWRs.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-body">No wide receivers found matching your search.</div>
+        </div>
       )}
     </div>
   );
