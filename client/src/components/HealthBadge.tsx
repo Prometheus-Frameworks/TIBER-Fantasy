@@ -35,6 +35,15 @@ interface HealthBadgeProps {
 }
 
 const HealthBadge: React.FC<HealthBadgeProps> = ({ isDemoMode = false }) => {
+  const [signal, setSignal] = React.useState<null | string>(null);
+
+  React.useEffect(() => {
+    fetch("/api/signal")
+      .then(r => r.json())
+      .then(j => setSignal(j?.key || null))
+      .catch(() => {});
+  }, []);
+
   const { data: healthData, isLoading, error } = useQuery<HealthStatus>({
     queryKey: ['/api/health'],
     refetchInterval: 30000, // Refresh every 30 seconds
@@ -105,6 +114,7 @@ const HealthBadge: React.FC<HealthBadgeProps> = ({ isDemoMode = false }) => {
         <span>{playerCount?.toLocaleString()} players</span>
         <span>•</span>
         <span>{version}</span>
+        {signal ? `Signal: ${signal}` : "Signal: n/a"}
         {isDemoMode && (
           <>
             <span>•</span>

@@ -5,6 +5,7 @@
 
 import fs from 'fs/promises';
 import path from 'path';
+import { applyOTCBias } from '../ratings/score';
 
 export interface PlayerRating {
   player_id: string;
@@ -318,7 +319,12 @@ class RatingsEngineService {
 
     // Calculate derived values for each rating
     for (const rating of sampleRatings) {
-      rating.overall_rating = this.calculateOverallRating(rating.components, config);
+      // Calculate base overall rating
+      const baseRating = this.calculateOverallRating(rating.components, config);
+      
+      // Apply OTC signature bias fingerprint
+      rating.overall_rating = applyOTCBias(baseRating);
+      
       rating.tier = this.calculateTier(rating.overall_rating, config);
       rating.age_adjusted_value = this.applyAgeAdjustment(
         rating.overall_rating, 

@@ -80,6 +80,7 @@ import Navigation from "@/components/Navigation";
 import Analytics from "@/pages/Analytics";
 import Articles from "@/pages/Articles";
 import HealthBadge from "@/components/HealthBadge";
+import Footer from "@/components/Footer";
 
 function Router() {
   return (
@@ -182,6 +183,7 @@ function App() {
             </div>
           </div>
         </footer>
+        <Footer />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

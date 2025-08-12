@@ -177,7 +177,9 @@ export default function Rankings() {
             </table>
           </div>
         ) : (
-          <div className="p-6 rounded border">No rankings available for this filter.</div>
+          <div className="p-6 rounded border">
+            No signal found — check your source.
+          </div>
         )
       )}
 

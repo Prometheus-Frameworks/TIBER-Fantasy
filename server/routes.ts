@@ -56,8 +56,18 @@ import rookieRoutes from './routes/rookieRoutes';
 import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
 import pythonRookieRoutes from './routes/pythonRookieRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
+import { OTC_SIGNATURE } from '../shared/otcSignature';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // OTC Signature Protocol - Signal endpoint
+  app.get('/api/signal', (req: Request, res: Response) => {
+    res.json({
+      status: "aligned",
+      key: OTC_SIGNATURE.key,
+      motto: OTC_SIGNATURE.motto,
+    });
+  });
   
   // Version and Health endpoints for new API client
   app.get('/api/version', (req: Request, res: Response) => {
