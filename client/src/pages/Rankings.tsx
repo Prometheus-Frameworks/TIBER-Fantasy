@@ -1,328 +1,174 @@
-import React, { useState, useTransition } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'wouter';
-import { Eye, TrendingUp, Trophy } from 'lucide-react';
+import { useEffect, useMemo, useState, startTransition } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 
-interface PlayerRating {
+const API_BASE = ""; // same-origin fallback
+const DEFAULT_FORMAT: "redraft" | "dynasty" = "redraft";
+const POSITIONS = ["ALL", "QB", "RB", "WR", "TE"] as const;
+
+type Position = typeof POSITIONS[number];
+
+type RatingRow = {
   player_id: string;
   player_name: string;
-  position: string;
-  team: string;
-  overall_rating: number;
-  positional_rank: number;
-  tier: 'S' | 'A' | 'B' | 'C' | 'D';
-  components: {
-    talent: number;
-    opportunity: number;
-    consistency: number;
-    upside: number;
-    floor: number;
-  };
-  format_ratings: {
-    redraft: number;
-    dynasty: number;
-    half_ppr: number;
-    full_ppr: number;
-    superflex: number;
-  };
-  age_adjusted_value: number;
-  breakout_probability: number;
-  last_updated: string;
+  team?: string;
+  position: "QB" | "RB" | "WR" | "TE";
+  tier?: string | number;
+  overall_rating?: number;
+  vorp?: number;
+  bye?: number | string;
+};
+
+type RatingsResponse =
+  | { ok: boolean; data: RatingRow[]; count?: number }
+  | { items: RatingRow[]; updated_at?: string }
+  | { players: RatingRow[]; updated_at?: string }
+  | RatingRow[]; // tolerate raw array too
+
+function normalize(resp: RatingsResponse | undefined): { rows: RatingRow[]; updatedAt?: string } {
+  if (!resp) return { rows: [], updatedAt: undefined };
+  if (Array.isArray(resp)) return { rows: resp, updatedAt: undefined };
+  const any = resp as any;
+  if (any?.ok && Array.isArray(any.data)) return { rows: any.data, updatedAt: any.updated_at };
+  if (Array.isArray(any?.items)) return { rows: any.items, updatedAt: any.updated_at };
+  if (Array.isArray(any?.players)) return { rows: any.players, updatedAt: any.updated_at };
+  return { rows: [], updatedAt: any?.updated_at };
 }
 
-interface RatingsResponse {
-  ok: boolean;
-  data: {
-    position: string;
-    format: string;
-    rankings: PlayerRating[];
-  };
-}
+export default function Rankings() {
+  const [pos, setPos] = useState<Position>("ALL");
+  const [format, setFormat] = useState<"redraft" | "dynasty">(DEFAULT_FORMAT);
+  const [q, setQ] = useState("");
 
-const Rankings: React.FC = () => {
-  const [selectedPosition, setSelectedPosition] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
-  const [selectedFormat, setSelectedFormat] = useState<'dynasty' | 'redraft' | 'superflex'>('dynasty');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'rating' | 'tier' | 'upside' | 'floor'>('rating');
-  const [isPending, startTransition] = useTransition();
+  const url = useMemo(() => {
+    const p = new URLSearchParams();
+    if (pos !== "ALL") p.set("pos", pos);
+    p.set("format", format);
+    p.set("limit", "200");
+    return `${API_BASE}/api/ratings?${p.toString()}`;
+  }, [pos, format]);
 
-  const { data: rankingsResponse, isLoading, error } = useQuery<RatingsResponse>({
-    queryKey: ['/api/ratings', selectedPosition, selectedFormat],
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["ratings", pos, format],
+    queryFn: async () => {
+      try {
+        const res = await fetch(url, { headers: { "accept": "application/json" } });
+        if (!res.ok) {
+          throw new Error(`API returned ${res.status}: ${res.statusText}`);
+        }
+        const json = await res.json();
+        console.debug("Rankings fetch", { url, status: res.status, keys: Object.keys(json || {}) });
+        return json as RatingsResponse;
+      } catch (err) {
+        console.error("Rankings fetch failed:", err);
+        throw err;
+      }
+    },
+    staleTime: 60_000,
     retry: 2,
-    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Handle search with transition to prevent suspense boundary issues
-  const handleSearch = (term: string) => {
-    startTransition(() => {
-      setSearchTerm(term);
-    });
-  };
+  const { rows, updatedAt } = useMemo(() => normalize(data), [data]);
 
-  const handlePositionChange = (position: typeof selectedPosition) => {
-    startTransition(() => {
-      setSelectedPosition(position);
-    });
-  };
-
-  const handleFormatChange = (format: typeof selectedFormat) => {
-    startTransition(() => {
-      setSelectedFormat(format);
-    });
-  };
-
-  // Process and filter data
-  const players = rankingsResponse?.data?.rankings || [];
-  const filteredPlayers = players
-    .filter(player => 
-      searchTerm === '' || 
-      player.player_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      player.team.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'rating': return b.overall_rating - a.overall_rating;
-        case 'tier': return a.tier.localeCompare(b.tier);
-        case 'upside': return b.components.upside - a.components.upside;
-        case 'floor': return b.components.floor - a.components.floor;
-        default: return b.overall_rating - a.overall_rating;
-      }
-    });
-
-  const getTierBadgeColor = (tier: string) => {
-    switch (tier) {
-      case 'S': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'A': return 'bg-green-100 text-green-800 border-green-200';
-      case 'B': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'C': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'D': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  if (isLoading || isPending) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="p-6">
-              <div className="animate-pulse">
-                <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-1/3 mb-6"></div>
-                <div className="flex space-x-4 mb-6">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-20"></div>
-                  ))}
-                </div>
-                <div className="space-y-4">
-                  {[...Array(10)].map((_, i) => (
-                    <div key={i} className="h-16 bg-gray-200 dark:bg-gray-600 rounded"></div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const base = pos === "ALL" ? rows : rows.filter(r => r.position === pos);
+    if (!needle) return base;
+    return base.filter(r =>
+      r.player_name?.toLowerCase().includes(needle) ||
+      r.team?.toLowerCase().includes(needle)
     );
-  }
+  }, [rows, pos, q]);
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-red-800 dark:text-red-400 mb-2">
-              Rankings Data Unavailable
-            </h3>
-            <p className="text-red-600 dark:text-red-300">
-              Unable to load player rankings. The ratings engine may be updating data or experiencing connectivity issues.
-            </p>
-            <p className="text-sm text-red-500 dark:text-red-400 mt-2">
-              Error: {error instanceof Error ? error.message : 'Unknown error'}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!players.length) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              No Rankings Available
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              Player rankings are being generated. Check back soon for updated data.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    // handle SSR/Preview transitions without React warning
+    startTransition(() => {});
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header with sticky positioning */}
-        <div className="sticky top-0 z-40 bg-gray-50 dark:bg-gray-900 pb-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
-            <div className="flex flex-col space-y-4">
-              {/* Title */}
-              <div className="flex items-center space-x-2">
-                <Trophy className="h-6 w-6 text-yellow-600" />
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Player Rankings
-                </h1>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {filteredPlayers.length} players
-                </span>
-              </div>
+    <div className="container mx-auto px-4 py-6">
+      <header className="mb-4">
+        <h1 className="text-2xl font-semibold">Player Rankings</h1>
+        <p className="text-sm text-neutral-600">
+          {format.toUpperCase()} • {pos} • {updatedAt ? `Updated ${new Date(updatedAt).toLocaleString()}` : "Live"}
+        </p>
+      </header>
 
-              {/* Position Tabs */}
-              <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                {(['ALL', 'QB', 'RB', 'WR', 'TE'] as const).map((position) => (
-                  <button
-                    key={position}
-                    onClick={() => handlePositionChange(position)}
-                    className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                      selectedPosition === position
-                        ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                    }`}
-                  >
-                    {position}
-                  </button>
-                ))}
-              </div>
+      {/* Controls */}
+      <div className="flex flex-wrap gap-2 items-center mb-4">
+        <div className="flex gap-1">
+          {POSITIONS.map(p => (
+            <button
+              key={p}
+              onClick={() => setPos(p)}
+              className={`px-3 py-1 rounded ${pos === p ? "bg-black text-white" : "bg-neutral-200"}`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1 ml-2">
+          {(["redraft","dynasty"] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setFormat(f)}
+              className={`px-3 py-1 rounded ${format === f ? "bg-black text-white" : "bg-neutral-200"}`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        <input
+          className="ml-auto border rounded px-3 py-1 w-full max-w-xs"
+          placeholder="Search name or team…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+      </div>
 
-              {/* Format & Controls */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                  {(['dynasty', 'redraft', 'superflex'] as const).map((format) => (
-                    <button
-                      key={format}
-                      onClick={() => handleFormatChange(format)}
-                      className={`px-3 py-2 text-sm font-medium rounded-md transition-colors capitalize ${
-                        selectedFormat === format
-                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                          : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                      }`}
-                    >
-                      {format}
-                    </button>
-                  ))}
-                </div>
-
-                <input
-                  type="text"
-                  placeholder="Search players..."
-                  value={searchTerm}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                />
-
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="rating">Overall Rating</option>
-                  <option value="tier">Tier</option>
-                  <option value="upside">Upside</option>
-                  <option value="floor">Floor</option>
-                </select>
-              </div>
-            </div>
+      {/* States */}
+      {isLoading && <div className="p-6 rounded border">Loading rankings…</div>}
+      {isError && (
+        <div className="p-6 rounded border border-red-300 text-red-700">
+          Failed to load rankings. {(error as any)?.message || ""}
+          <div className="mt-2">
+            <button className="text-sm underline" onClick={() => refetch()}>Retry</button>
           </div>
         </div>
+      )}
 
-        {/* Rankings Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+      {/* Table */}
+      {!isLoading && !isError && (
+        filtered.length ? (
+          <div className="overflow-auto border rounded">
+            <table className="min-w-full text-sm">
+              <thead className="bg-neutral-100 sticky top-0">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider sticky left-0 bg-gray-50 dark:bg-gray-700 z-10">
-                    Player
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Rank
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Rating
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Tier
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Talent
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Opportunity
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Upside
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Floor
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Action
-                  </th>
+                  <th className="text-left px-3 py-2">#</th>
+                  <th className="text-left px-3 py-2">Player</th>
+                  <th className="text-left px-3 py-2">Team</th>
+                  <th className="text-left px-3 py-2">Pos</th>
+                  <th className="text-right px-3 py-2">Tier</th>
+                  <th className="text-right px-3 py-2">Rating</th>
+                  <th className="text-right px-3 py-2">VORP</th>
+                  <th className="text-right px-3 py-2">Bye</th>
+                  <th className="px-3 py-2"></th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredPlayers.map((player, index) => (
-                  <tr key={player.player_id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-4 py-4 whitespace-nowrap sticky left-0 bg-white dark:bg-gray-800 z-10">
-                      <div className="flex items-center">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {player.player_name}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {player.position} • {player.team}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      #{player.positional_rank}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm">
-                      <div className="flex items-center">
-                        <span className="font-semibold text-gray-900 dark:text-white">
-                          {player.overall_rating}
-                        </span>
-                        <TrendingUp className="h-4 w-4 text-green-500 ml-1" />
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getTierBadgeColor(player.tier)}`}>
-                        {player.tier}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {player.components.talent}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {player.components.opportunity}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {player.components.upside}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {player.components.floor}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <Link href={`/player/${player.player_id}`}>
-                        <button className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-yellow-600 bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:hover:bg-yellow-900/30 transition-colors">
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </button>
+              <tbody>
+                {filtered.map((r, i) => (
+                  <tr key={r.player_id} className="border-t">
+                    <td className="px-3 py-2">{i + 1}</td>
+                    <td className="px-3 py-2">{r.player_name}</td>
+                    <td className="px-3 py-2">{r.team || "-"}</td>
+                    <td className="px-3 py-2">{r.position}</td>
+                    <td className="px-3 py-2 text-right">{r.tier ?? "-"}</td>
+                    <td className="px-3 py-2 text-right">{r.overall_rating ?? "-"}</td>
+                    <td className="px-3 py-2 text-right">{r.vorp ?? "-"}</td>
+                    <td className="px-3 py-2 text-right">{r.bye ?? "-"}</td>
+                    <td className="px-3 py-2">
+                      <Link href={`/player/${r.player_id}`}>
+                        <span className="underline">View</span>
                       </Link>
                     </td>
                   </tr>
@@ -330,18 +176,15 @@ const Rankings: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        ) : (
+          <div className="p-6 rounded border">No rankings available for this filter.</div>
+        )
+      )}
 
-        {/* Performance Footer */}
-        <div className="mt-4 text-center">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Loaded {filteredPlayers.length} players in {selectedFormat} format • 
-            Last updated: {players[0]?.last_updated ? new Date(players[0].last_updated).toLocaleTimeString() : 'Unknown'}
-          </p>
-        </div>
+      {/* Debug strip (remove later) */}
+      <div className="mt-3 text-xs text-neutral-500">
+        API: {API_BASE || "same-origin"} &middot; URL: {url}
       </div>
     </div>
   );
-};
-
-export default Rankings;
+}

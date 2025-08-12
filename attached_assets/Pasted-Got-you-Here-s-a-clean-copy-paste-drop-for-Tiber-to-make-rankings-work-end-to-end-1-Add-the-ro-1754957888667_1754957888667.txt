@@ -1,0 +1,230 @@
+Got you. Here’s a clean, copy‑paste drop for Tiber to make /rankings work end‑to‑end.
+
+1) Add the route
+
+client/src/AppRoutes.tsx (or wherever your router is)
+
+import { Routes, Route } from "react-router-dom";
+import RankingsPage from "./pages/RankingsPage"; // <-- add
+
+export default function AppRoutes() {
+  return (
+    <Routes>
+      {/* ...other routes */}
+      <Route path="/rankings" element={<RankingsPage />} /> {/* <-- add */}
+    </Routes>
+  );
+}
+
+2) Fix navbar link (if needed)
+
+client/src/components/Nav.tsx
+
+// Ensure the nav points to /rankings exactly
+<Link to="/rankings">Rankings</Link>
+
+3) Rankings page wired to /api/ratings
+
+client/src/pages/RankingsPage.tsx
+
+import { useEffect, useMemo, useState, startTransition } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+const API_BASE = import.meta.env.VITE_API_BASE || ""; // same-origin fallback
+const DEFAULT_FORMAT: "redraft" | "dynasty" = "redraft";
+const POSITIONS = ["ALL", "QB", "RB", "WR", "TE"] as const;
+
+type Position = typeof POSITIONS[number];
+
+type RatingRow = {
+  id: string;
+  name: string;
+  team?: string;
+  pos: "QB" | "RB" | "WR" | "TE";
+  tier?: string | number;
+  oasis?: number;
+  vorp?: number;
+  bye?: number | string;
+};
+
+type RatingsResponse =
+  | { items: RatingRow[]; updated_at?: string }
+  | { players: RatingRow[]; updated_at?: string }
+  | RatingRow[]; // tolerate raw array too
+
+function normalize(resp: RatingsResponse): { rows: RatingRow[]; updatedAt?: string } {
+  if (Array.isArray(resp)) return { rows: resp, updatedAt: undefined };
+  const any = resp as any;
+  if (Array.isArray(any.items)) return { rows: any.items, updatedAt: any.updated_at };
+  if (Array.isArray(any.players)) return { rows: any.players, updatedAt: any.updated_at };
+  return { rows: [], updatedAt: any?.updated_at };
+}
+
+export default function RankingsPage() {
+  const [pos, setPos] = useState<Position>("WR");
+  const [format, setFormat] = useState<"redraft" | "dynasty">(DEFAULT_FORMAT);
+  const [q, setQ] = useState("");
+
+  const url = useMemo(() => {
+    const p = new URLSearchParams();
+    if (pos !== "ALL") p.set("pos", pos);
+    p.set("format", format);
+    p.set("limit", "200");
+    return `${API_BASE}/api/ratings?${p.toString()}`;
+  }, [pos, format]);
+
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["ratings", pos, format],
+    queryFn: async () => {
+      const res = await fetch(url, { headers: { "accept": "application/json" } });
+      const json = await res.json();
+      // debug breadcrumb
+      console.debug("Rankings fetch", { url, status: res.status, keys: Object.keys(json || {}) });
+      return json as RatingsResponse;
+    },
+    staleTime: 60_000,
+  });
+
+  const { rows, updatedAt } = useMemo(() => normalize(data as RatingsResponse), [data]);
+
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const base = pos === "ALL" ? rows : rows.filter(r => r.pos === pos);
+    if (!needle) return base;
+    return base.filter(r =>
+      r.name?.toLowerCase().includes(needle) ||
+      r.team?.toLowerCase().includes(needle)
+    );
+  }, [rows, pos, q]);
+
+  useEffect(() => {
+    // handle SSR/Preview transitions without React warning
+    startTransition(() => {});
+  }, []);
+
+  return (
+    <div className="container mx-auto px-4 py-6">
+      <header className="mb-4">
+        <h1 className="text-2xl font-semibold">Player Rankings</h1>
+        <p className="text-sm text-neutral-600">
+          {format.toUpperCase()} • {pos} • {updatedAt ? `Updated ${new Date(updatedAt).toLocaleString()}` : "Live"}
+        </p>
+      </header>
+
+      {/* Controls */}
+      <div className="flex flex-wrap gap-2 items-center mb-4">
+        <div className="flex gap-1">
+          {POSITIONS.map(p => (
+            <button
+              key={p}
+              onClick={() => setPos(p)}
+              className={`px-3 py-1 rounded ${pos === p ? "bg-black text-white" : "bg-neutral-200"}`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1 ml-2">
+          {(["redraft","dynasty"] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setFormat(f)}
+              className={`px-3 py-1 rounded ${format === f ? "bg-black text-white" : "bg-neutral-200"}`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        <input
+          className="ml-auto border rounded px-3 py-1 w-full max-w-xs"
+          placeholder="Search name or team…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+      </div>
+
+      {/* States */}
+      {isLoading && <div className="p-6 rounded border">Loading rankings…</div>}
+      {isError && (
+        <div className="p-6 rounded border border-red-300 text-red-700">
+          Failed to load rankings. {(error as any)?.message || ""}
+          <div className="mt-2">
+            <button className="text-sm underline" onClick={() => refetch()}>Retry</button>
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
+      {!isLoading && !isError && (
+        filtered.length ? (
+          <div className="overflow-auto border rounded">
+            <table className="min-w-full text-sm">
+              <thead className="bg-neutral-100 sticky top-0">
+                <tr>
+                  <th className="text-left px-3 py-2">#</th>
+                  <th className="text-left px-3 py-2">Player</th>
+                  <th className="text-left px-3 py-2">Team</th>
+                  <th className="text-left px-3 py-2">Pos</th>
+                  <th className="text-right px-3 py-2">Tier</th>
+                  <th className="text-right px-3 py-2">OASIS</th>
+                  <th className="text-right px-3 py-2">VORP</th>
+                  <th className="text-right px-3 py-2">Bye</th>
+                  <th className="px-3 py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r, i) => (
+                  <tr key={r.id} className="border-t">
+                    <td className="px-3 py-2">{i + 1}</td>
+                    <td className="px-3 py-2">{r.name}</td>
+                    <td className="px-3 py-2">{r.team || "-"}</td>
+                    <td className="px-3 py-2">{r.pos}</td>
+                    <td className="px-3 py-2 text-right">{r.tier ?? "-"}</td>
+                    <td className="px-3 py-2 text-right">{r.oasis ?? "-"}</td>
+                    <td className="px-3 py-2 text-right">{r.vorp ?? "-"}</td>
+                    <td className="px-3 py-2 text-right">{r.bye ?? "-"}</td>
+                    <td className="px-3 py-2">
+                      <a className="underline" href={`/player/${r.id}`}>View</a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-6 rounded border">No rankings available for this filter.</div>
+        )
+      )}
+
+      {/* Debug strip (remove later) */}
+      <div className="mt-3 text-xs text-neutral-500">
+        API: {API_BASE || "same-origin"} &middot; URL: {url}
+      </div>
+    </div>
+  );
+}
+
+4) Quick backend shape guarantee (optional)
+
+If the API isn’t already returning a stable shape, normalize it:
+
+Expected JSON from /api/ratings
+
+{
+  "items": [
+    {"id":"00-0030564","name":"Nico Collins","team":"HOU","pos":"WR","tier":"A","oasis":6.2,"vorp":2.1,"bye":7}
+  ],
+  "updated_at":"2025-08-11T23:10:00Z"
+}
+
+5) One‑liner to verify from browser
+
+Open:
+
+/api/ratings?pos=WR&format=redraft&limit=5
+
+If you see JSON like above, the page will render.
+
+⸻
+
+Send that to Tiber. Once this route is in, your Rankings link will stop 404ing and it’ll hit live data immediately.
