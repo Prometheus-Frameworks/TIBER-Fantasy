@@ -11,6 +11,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/consensus", label: "OTC Consensus", description: "Player rankings and tiers" },
   { href: "/consensus-transparency", label: "Consensus Transparency", description: "How consensus works" },
   { href: "/experts/architect-j", label: "Architect J", description: "Founder rankings" },
+  { href: "/adaptive-consensus-demo", label: "Adaptive Consensus", description: "Test surge detection & injury system" },
   { href: "/analytics", label: "Analytics", description: "Advanced player analysis" },
   { href: "/articles", label: "Articles & Analysis", description: "Strategy and insights" },
   { href: "/weekly-data", label: "Weekly Data", description: "Game logs and stats" },

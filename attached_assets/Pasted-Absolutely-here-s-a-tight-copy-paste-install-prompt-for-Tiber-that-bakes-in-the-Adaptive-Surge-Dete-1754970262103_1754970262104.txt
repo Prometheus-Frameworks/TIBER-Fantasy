@@ -1,0 +1,230 @@
+Absolutely—here’s a tight, copy‑paste install prompt for Tiber that bakes in the Adaptive Surge Detection + Injury‑aware consensus with distinct Redraft vs Dynasty logic, while keeping equal‑weight math.
+
+⸻
+
+Commit
+
+feat(consensus-logic): adaptive surge detection + injury-aware adjustments (redraft vs dynasty), equal-weight preserved
+
+
+⸻
+
+0) Intent (read me)
+	•	Consensus remains equal‑weight across consenting contributors.
+	•	We add a context layer that:
+	•	reacts fast to legit breakouts (surge detection), and
+	•	penalizes injuries differently for Redraft vs Dynasty.
+	•	All adjustments are transparent (explainable via API).
+
+⸻
+
+1) Inputs (minimal schema)
+
+Injury feed (new or mapped)
+
+player_injuries: {
+  playerId: string,
+  status: "ACTIVE" | "OUT" | "IR" | "PUP" | "QUESTIONABLE" | "DOUBTFUL",
+  injuryType?: "ACL"|"Achilles"|"Hamstring"|"Concussion"|...,
+  datePlaced?: ISO,
+  estReturnWeeks?: number|null,
+  outForSeason?: boolean,
+  lastUpdated: ISO
+}
+
+Player bio
+
+players: { playerId, pos: "QB"|"RB"|"WR"|"TE", age: number }
+
+Usage tracker (optional but helpful)
+
+player_usage_weekly: { playerId, week, snapShare, routesRun, touches }
+
+
+⸻
+
+2) Config (constants; make env‑tunable)
+
+export const CONSENSUS_CFG = {
+  // surge
+  SURGE_WINDOW_DAYS: 7,
+  SURGE_PCT_THRESHOLD: 25,     // rank improves >25% in 7d
+  SURGE_MIN_SUBMIT_PCT: 20,    // last 7d submissions >= 20% of lifetime submits for that player
+  SURGE_DECAY_DAYS: 21,        // when surging, shorten decay window
+
+  BASE_DECAY_DAYS: 90,         // normal smoothing horizon
+
+  // redraft injury
+  RD_UNRANK_IF_OFS: true,
+  RD_DROP_6PLUS_WEEKS: 45,     // push down ~45 ranks (pos-slice) for 6-8 wk absence mid-season
+  RD_DROP_SHORT_2TO5: 15,      // smaller penalty for short absences
+  RD_RECOVERY_GAMES_MIN: 2,    // require 1–2 games before full velocity returns
+  RD_RECOVERY_SNAP_THRESH: 0.70, // snap share to remove penalty
+
+  // dynasty injury multipliers (soften except age/position risk)
+  DY_BASE_PENALTY: 0.90,       // 10% softening by default (i.e., keep player closer to pre-injury rank)
+  DY_RISK: {                   // multiplicative risk factors
+    ACL: 0.92,
+    Achilles: 0.70,
+    Hamstring: 0.96,
+    Concussion: 0.94,
+    DEFAULT: 0.95
+  },
+  DY_AGE_FACTOR: (age:number, pos:string) => {
+    if (pos==="RB" && age>=27) return 0.85;
+    if (pos==="WR" && age>=29) return 0.90;
+    if (pos==="TE" && age>=30) return 0.92;
+    return 1.0;
+  }
+};
+
+
+⸻
+
+3) Algorithm (pseudocode)
+
+// Called on write and nightly cron:
+function rebuildConsensus(format: "redraft"|"dynasty", season?: number) {
+  // 1) Equal-weight base: average user ranks (consenting only)
+  const base = computeEqualWeightAverage(format, season);
+
+  // 2) For each player, compute adjusted rank with context:
+  for (const p of base.players) {
+    const ctx = gatherContext(p.playerId); // injury, submissions, usage, bio
+
+    // 2a) Decay horizon: either BASE_DECAY_DAYS or SURGE_DECAY_DAYS if surge
+    const decayDays = isSurging(p.playerId, base, ctx) ? SURGE_DECAY_DAYS : BASE_DECAY_DAYS;
+    const smoothedRank = applyRollingSmoothing(p.rankHistory, decayDays);
+
+    // 2b) Injury adjustments (format-specific)
+    const injAdjRank = format === "redraft"
+      ? applyRedraftInjuryPenalty(smoothedRank, ctx)
+      : applyDynastyInjurySoftener(smoothedRank, ctx);
+
+    // 3) Write final rank
+    writeConsensusRow({ playerId: p.playerId, rank: round(injAdjRank), format, season, pos: p.pos, source: ctx.hasCommunity ? "community" : "seed" });
+
+    // 4) Store explanation breadcrumbs (optional)
+    writeWhyRow(p.playerId, format, season, explain(decayDays, ctx));
+  }
+}
+
+Surge detection
+
+function isSurging(playerId, base, ctx) {
+  const last7d = rankChangePct(playerId, 7);    // e.g., +40% improvement
+  const recentSubmitPct = submissionsLast7d(playerId) / Math.max(1, totalSubmissions(playerId)) * 100;
+  return last7d <= -CONSENSUS_CFG.SURGE_PCT_THRESHOLD // improving (lower is better rank)
+      && recentSubmitPct >= CONSENSUS_CFG.SURGE_MIN_SUBMIT_PCT;
+}
+
+Redraft injury penalties
+
+function applyRedraftInjuryPenalty(rank:number, ctx) {
+  const s = ctx.injury.status;
+  if (!s || s==="ACTIVE") return rank;
+
+  if (ctx.injury.outForSeason && CONSENSUS_CFG.RD_UNRANK_IF_OFS) {
+    return 9999; // effectively off the board (UI can show "UNR")
+  }
+
+  const weeks = ctx.injury.estReturnWeeks ?? 0;
+  if (weeks >= 6) return rank + CONSENSUS_CFG.RD_DROP_6PLUS_WEEKS;
+  if (weeks >= 2) return rank + CONSENSUS_CFG.RD_DROP_SHORT_2TO5;
+
+  // Recovery gate: until 1–2 games AND snap share ≥70%, keep a partial penalty (~50% of 2–5)
+  if (ctx.recentGames < CONSENSUS_CFG.RD_RECOVERY_GAMES_MIN || ctx.snapShare < CONSENSUS_CFG.RD_RECOVERY_SNAP_THRESH) {
+    return rank + Math.floor(CONSENSUS_CFG.RD_DROP_SHORT_2TO5 / 2);
+  }
+
+  return rank;
+}
+
+Dynasty injury softener
+
+function applyDynastyInjurySoftener(rank:number, ctx) {
+  const s = ctx.injury.status;
+  if (!s || s==="ACTIVE") return rank;
+
+  const bio = ctx.bio; // age, pos
+  const baseK = CONSENSUS_CFG.DY_BASE_PENALTY;
+  const riskK = CONSENSUS_CFG.DY_RISK[ctx.injury.injuryType] ?? CONSENSUS_CFG.DY_RISK.DEFAULT;
+  const ageK  = CONSENSUS_CFG.DY_AGE_FACTOR(bio.age, bio.pos);
+
+  // convert rank to a "score", apply multipliers, convert back to rank space
+  const score = rankToScore(rank);  // e.g., inverse monotonic transform
+  const adjScore = score * baseK * riskK * ageK;
+  return scoreToRank(adjScore);
+}
+
+Notes
+	•	For “Puka‑style” breakouts: surge triggers → short decay → fast climb.
+	•	For IR:
+	•	Redraft harsh, immediate, context‑aware penalty.
+	•	Dynasty softer, age/position/injury‑type aware; elite young WRs remain high.
+
+⸻
+
+4) API (transparency)
+
+Why endpoint (new)
+
+GET /api/consensus/why?playerId=xxx&format=dynasty|redraft&season=2025
+→ {
+  playerId,
+  format, season,
+  decayDays: 21|90,
+  surgeActive: true|false,
+  injury: { status, injuryType, outForSeason, estReturnWeeks },
+  gates: { recoveryGamesMet: bool, snapShareMet: bool },
+  notes: [
+    "Surge mode: 21-day decay due to +35% rank improvement & 28% recent submissions",
+    "Redraft injury penalty: +45 for 6-8 week absence (est. return wk 10)"
+  ]
+}
+
+Meta (extend existing)
+
+GET /api/consensus/meta?format=...&season=...
+→ { contributors, lastUpdatedISO, equalWeight:true, decayDaysDefault:90 }
+
+
+⸻
+
+5) UI (small touches)
+	•	On player rows, a tiny “Why?” link opens a modal using /api/consensus/why (Founder‑mode can show full JSON; public shows friendly bullets).
+	•	If rank >= 9999, show UNR (Unranked) in Redraft tables.
+
+⸻
+
+6) Tests (must pass)
+	•	Surge on breakout:
+	•	Simulate 7‑day +30% rank improvement with ≥25% recent submissions → isSurging=true and decay=21d.
+	•	No surge on small move:
+	•	+10% improvement or recent submissions < threshold → decay=90d.
+	•	Redraft IR: out‑for‑season → UNR:
+	•	outForSeason=true pushes to 9999.
+	•	Redraft 6–8 weeks:
+	•	Adds ~45 ranks; after 2 games + ≥70% snaps, penalty removed.
+	•	Dynasty young WR ACL:
+	•	Small softening (still top 24 if elite).
+	•	Dynasty RB 28yo Achilles:
+	•	Big drop due to age/position/risk factors.
+
+⸻
+
+7) Acceptance checklist
+	•	✅ Equal‑weight base preserved; context layer only adjusts velocity/placement, not contributor weights.
+	•	✅ Breakouts adjust quickly (surge) without trolls being able to trigger it (needs submission volume).
+	•	✅ Redraft/Dynasty injuries behave as specified (harsh vs soft).
+	•	✅ /api/consensus/why clearly explains adjustments.
+	•	✅ UNR logic displays as expected in Redraft.
+	•	✅ Configs tunable via code/env without redeploying logic.
+
+⸻
+
+One‑liner to Tiber
+
+Implement adaptive consensus logic: keep equal‑weight averaging; add surge detection (7‑day movement + submission volume) to shorten decay window; add injury context with harsh Redraft penalties (UNR for out‑for‑season; 6–8wk drop; recovery gate) and soft Dynasty softeners (injury‑type × age × position multipliers). Expose /api/consensus/why for transparency. Include tests & acceptance above.
+
+If you want, I can also hand Tiber a tiny rankToScore/scoreToRank helper so the Dynasty softener math is smooth and monotonic.

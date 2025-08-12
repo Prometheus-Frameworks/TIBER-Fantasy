@@ -708,3 +708,65 @@ export type ConsensusMeta = typeof consensusMeta.$inferSelect;
 export type InsertConsensusMeta = typeof consensusMeta.$inferInsert;
 export type ConsensusChangelog = typeof consensusChangelog.$inferSelect;
 export type InsertConsensusChangelog = typeof consensusChangelog.$inferInsert;
+
+// Adaptive Consensus Engine Tables
+export const playerInjuries = pgTable("player_injuries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull(),
+  status: varchar("status", { 
+    enum: ["ACTIVE", "OUT", "IR", "PUP", "QUESTIONABLE", "DOUBTFUL"] 
+  }).notNull(),
+  injuryType: varchar("injury_type", {
+    enum: ["ACL", "Achilles", "Hamstring", "Concussion", "Ankle", "Knee", "Shoulder", "Back", "Other"]
+  }),
+  datePlaced: timestamp("date_placed"),
+  estReturnWeeks: integer("est_return_weeks"),
+  outForSeason: boolean("out_for_season").default(false),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const playerBios = pgTable("player_bios", {
+  playerId: varchar("player_id").primaryKey(),
+  pos: varchar("pos", { enum: ["QB", "RB", "WR", "TE"] }).notNull(),
+  age: integer("age").notNull(),
+  team: varchar("team"),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
+export const playerUsageWeekly = pgTable("player_usage_weekly", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull(),
+  week: integer("week").notNull(),
+  season: integer("season").notNull(),
+  snapShare: real("snap_share"),
+  routesRun: integer("routes_run"),
+  touches: integer("touches"),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => [
+  uniqueIndex("usage_player_week_season").on(table.playerId, table.week, table.season),
+]);
+
+export const consensusExplanations = pgTable("consensus_explanations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull(),
+  format: varchar("format", { enum: ["dynasty", "redraft"] }).notNull(),
+  season: integer("season"),
+  decayDays: integer("decay_days").notNull(),
+  surgeActive: boolean("surge_active").default(false),
+  baseRank: real("base_rank").notNull(),
+  adjustedRank: real("adjusted_rank").notNull(),
+  explanation: jsonb("explanation").notNull(), // Full explanation object
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => [
+  uniqueIndex("explanation_player_format_season").on(table.playerId, table.format, table.season),
+]);
+
+export type PlayerInjury = typeof playerInjuries.$inferSelect;
+export type InsertPlayerInjury = typeof playerInjuries.$inferInsert;
+export type PlayerBio = typeof playerBios.$inferSelect;
+export type InsertPlayerBio = typeof playerBios.$inferInsert;
+export type PlayerUsageWeekly = typeof playerUsageWeekly.$inferSelect;
+export type InsertPlayerUsageWeekly = typeof playerUsageWeekly.$inferInsert;
+export type ConsensusExplanationRow = typeof consensusExplanations.$inferSelect;
+export type InsertConsensusExplanation = typeof consensusExplanations.$inferInsert;

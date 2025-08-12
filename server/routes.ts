@@ -67,6 +67,9 @@ import {
   getConsensusMetadata,
   compareRankings
 } from './consensusEngine';
+import { 
+  getConsensusWhy, rebuildConsensusEndpoint 
+} from './adaptiveConsensus';
 import { OTC_SIGNATURE } from '../shared/otcSignature';
 import fs from 'fs';
 import path from 'path';
@@ -2375,6 +2378,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Adaptive Consensus Engine Endpoints
+  app.get('/api/consensus/why', getConsensusWhy);
+  app.post('/api/consensus/adaptive-rebuild', rebuildConsensusEndpoint);
 
   // Add new intelligence entry
   app.post('/api/intel/add', async (req, res) => {
