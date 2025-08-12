@@ -39,20 +39,17 @@ export default function HomePage() {
           <h1 className="text-5xl font-black leading-tight">ON THE CLOCK</h1>
           <p className="mt-2 text-lg text-gray-600">Fantasy football tools. Community driven.</p>
 
-          {/* Quick Actions - converted from hero buttons */}
+          {/* Quick Actions - matching top navigation style */}
           <div className="mt-8">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" id="tools">
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-6" id="tools">
               {QUICK_ACTIONS.map((action) => (
                 <Link 
                   key={action.href}
                   href={action.href} 
-                  className="group p-4 rounded-lg border bg-white hover:shadow-md transition-all hover:-translate-y-0.5 text-left"
+                  className="py-3 px-4 sm:px-0 border-b-2 border-transparent text-sm font-medium transition-colors hover:text-yellow-600 hover:border-yellow-300 text-gray-700 flex-shrink-0"
                 >
-                  <div className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                    {action.label}
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1">{action.description}</p>
+                  {action.label}
                 </Link>
               ))}
             </div>
