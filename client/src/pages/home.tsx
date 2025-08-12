@@ -1,46 +1,5 @@
-import { Link, useLocation } from "wouter";
-
-function Nav() {
-  const [location] = useLocation();
-  
-  return (
-    <header className="sticky top-0 z-50 backdrop-blur bg-white/70 border-b safe-top">
-      <nav className="mx-auto max-w-screen-md px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="text-lg font-extrabold tracking-tight">ON THE CLOCK</Link>
-
-        <div className="flex items-center gap-2">
-          <Link href="/login" className="px-3 py-1.5 text-sm rounded-md border hover:bg-gray-50">Log in</Link>
-          <Link href="/signup" className="px-3 py-1.5 text-sm rounded-md bg-black text-white hover:opacity-90">Sign up</Link>
-        </div>
-      </nav>
-
-      {/* secondary nav */}
-      <div className="mx-auto max-w-screen-md px-4 pb-3">
-        <div className="flex gap-3 overflow-x-auto no-scrollbar text-sm">
-          {[
-            { label: "Home", href: "/#tools" },
-            { label: "Compass", href: "/player-compass" },
-            { label: "Ranks", href: "/rankings" },
-            { label: "Rookies", href: "/rookie-evaluator" },
-            { label: "Draft", href: "/draft-room" },
-          ].map((link) => (
-            <Link
-              key={link.label}
-              className={`px-3 py-1.5 rounded-full transition-colors whitespace-nowrap ${
-                (link.href === "/#tools" && location === "/") || link.href === location
-                  ? "bg-gray-900 text-white"
-                  : "bg-gray-100 hover:bg-gray-200"
-              }`}
-              href={link.href}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-      </div>
-    </header>
-  );
-}
+import { Link } from "wouter";
+import { QUICK_ACTIONS } from "../config/nav";
 
 function Tile({ icon, title, desc, href }: {
   icon: string; title: string; desc: string; href: string;
@@ -60,8 +19,6 @@ function Tile({ icon, title, desc, href }: {
 export default function HomePage() {
   return (
     <main className="min-h-dvh bg-white text-gray-900">
-      <Nav />
-
       {/* HERO */}
       <section className="relative overflow-hidden">
         {/* faint animated gradient */}
@@ -82,11 +39,23 @@ export default function HomePage() {
           <h1 className="text-5xl font-black leading-tight">ON THE CLOCK</h1>
           <p className="mt-2 text-lg text-gray-600">Fantasy football tools. Community driven.</p>
 
-          <div className="mt-8 grid grid-cols-1 gap-3" id="tools">
-            <Link href="/player-compass" className="w-full rounded-md bg-blue-600 text-white px-4 py-3 font-semibold active:scale-[.99] hover:opacity-95">🧭 Player Compass</Link>
-            <Link href="/rankings" className="w-full rounded-md bg-green-600 text-white px-4 py-3 font-semibold active:scale-[.99] hover:opacity-95">🏆 View Rankings</Link>
-            <Link href="/rookie-evaluator" className="w-full rounded-md bg-purple-600 text-white px-4 py-3 font-semibold active:scale-[.99] hover:opacity-95">🔥 2025 Rookies</Link>
-            <Link href="/dashboard" className="w-full rounded-md border px-4 py-3 font-semibold hover:bg-gray-50">Get Started</Link>
+          {/* Quick Actions - converted from hero buttons */}
+          <div className="mt-8">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" id="tools">
+              {QUICK_ACTIONS.map((action) => (
+                <Link 
+                  key={action.href}
+                  href={action.href} 
+                  className="group p-4 rounded-lg border bg-white hover:shadow-md transition-all hover:-translate-y-0.5 text-left"
+                >
+                  <div className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                    {action.label}
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">{action.description}</p>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </section>
