@@ -1,55 +1,69 @@
 import { Link } from "wouter";
 import { QUICK_ACTIONS } from "../config/nav";
+import { Compass, Users, Trophy, Zap } from "lucide-react";
 
-function Tile({ icon, title, desc, href }: {
-  icon: string; title: string; desc: string; href: string;
+function PrometheusCard({ icon: Icon, title, desc, href }: {
+  icon: any; title: string; desc: string; href: string;
 }) {
   return (
     <Link
       href={href}
-      className="block rounded-2xl border bg-white/80 p-5 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 animate-fadeIn"
+      className="block relative promethean-card rounded-xl p-6 constellation-pattern group transition-all duration-300 hover:-translate-y-1"
     >
-      <div className="text-2xl">{icon}</div>
-      <div className="mt-2 font-semibold">{title}</div>
-      <p className="text-sm text-gray-600">{desc}</p>
+      <div className="relative z-10">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-yellow-500 to-purple-600">
+            <Icon className="h-6 w-6 text-white" />
+          </div>
+          <div className="h-8 w-8 rounded-full bg-gradient-to-r from-yellow-500 to-purple-600 opacity-20 pulse-gold"></div>
+        </div>
+        <div className="text-lg font-bold text-white mb-2">{title}</div>
+        <p className="text-sm text-gray-300 leading-relaxed">{desc}</p>
+        <div className="mt-4 text-xs text-yellow-500 font-medium group-hover:text-purple-400 transition-colors">
+          EXPLORE SYSTEM →
+        </div>
+      </div>
     </Link>
   );
 }
 
 export default function HomePage() {
   return (
-    <main className="min-h-dvh bg-white text-gray-900">
+    <main className="min-h-screen promethean-bg">
       {/* HERO */}
-      <section className="relative overflow-hidden">
-        {/* faint animated gradient */}
-        <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_-10%,#eaf2ff,transparent)] animate-pulse-slow" />
-        {/* faint play diagram SVG overlay */}
-        <svg
-          className="absolute inset-0 opacity-5 pointer-events-none"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 200 200"
-        >
-          <circle cx="50" cy="50" r="4" fill="black" />
-          <circle cx="150" cy="150" r="4" fill="black" />
-          <line x1="50" y1="50" x2="150" y2="150" stroke="black" strokeWidth="1" />
-          <path d="M150 150 Q170 100 130 70" stroke="black" fill="transparent" strokeWidth="1" />
-        </svg>
+      <section className="relative overflow-hidden network-grid">
+        <div className="relative mx-auto max-w-4xl px-4 py-16 text-center">
+          {/* Main Brand */}
+          <div className="mb-8">
+            <h1 className="text-6xl font-black leading-tight text-white mb-4">
+              <span className="bg-gradient-to-r from-yellow-500 via-yellow-400 to-purple-500 bg-clip-text text-transparent">
+                ON THE CLOCK
+              </span>
+            </h1>
+            <p className="text-xl text-gray-300 font-medium">Fantasy Football. Evolved.</p>
+            <div className="mt-4 h-1 w-24 mx-auto bg-gradient-to-r from-yellow-500 to-purple-600 rounded-full"></div>
+          </div>
 
-        <div className="relative mx-auto max-w-screen-md px-4 py-14 text-center">
-          <h1 className="text-5xl font-black leading-tight">ON THE CLOCK</h1>
-          <p className="mt-2 text-lg text-gray-600">Fantasy football tools. Community driven.</p>
-
-          {/* Quick Actions - matching top navigation style */}
-          <div className="mt-8">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Quick Actions</h2>
-            <div className="flex flex-wrap justify-center gap-2 sm:gap-6" id="tools">
+          {/* Quick Actions Grid */}
+          <div className="mt-12">
+            <h2 className="text-sm font-bold text-yellow-500 uppercase tracking-wider mb-6">PROMETHEUS SYSTEMS</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {QUICK_ACTIONS.map((action) => (
                 <Link 
                   key={action.href}
                   href={action.href} 
-                  className="py-3 px-4 sm:px-0 border-b-2 border-transparent text-sm font-medium transition-colors hover:text-yellow-600 hover:border-yellow-300 text-gray-700 flex-shrink-0"
+                  className="group relative promethean-card rounded-lg p-4 text-center transition-all duration-300 hover:scale-105"
                 >
-                  {action.label}
+                  <div className="relative z-10">
+                    <div className="h-8 w-8 mx-auto mb-2 rounded-full bg-gradient-to-r from-yellow-500 to-purple-600 flex items-center justify-center">
+                      <Zap className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="text-sm font-bold text-white group-hover:text-yellow-400 transition-colors">
+                      {action.label}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">{action.description}</div>
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-purple-600/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </Link>
               ))}
             </div>
@@ -57,26 +71,52 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* TILES */}
-      <section className="mx-auto max-w-screen-md px-4 space-y-5 mt-8">
-        <Tile icon="🧭" title="Player Compass" desc="Context-aware guidance for dynasty decisions" href="/player-compass" />
-        <Tile icon="👥" title="Team Management" desc="Sync and analyze your leagues" href="/teams" />
-        <Tile icon="🏆" title="Draft Tools" desc="Prep and dominate your draft" href="/draft-room" />
+      {/* CORE SYSTEMS */}
+      <section className="mx-auto max-w-5xl px-4 py-16">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-white mb-4">Core Systems</h2>
+          <p className="text-gray-300 max-w-2xl mx-auto">
+            Advanced analytics and decision-making tools built for the modern fantasy manager.
+          </p>
+        </div>
+        
+        <div className="grid md:grid-cols-3 gap-6">
+          <PrometheusCard 
+            icon={Compass} 
+            title="Player Compass" 
+            desc="Context-aware guidance with scenario analysis, risk assessment, and dynasty decision support for every roster move." 
+            href="/compass" 
+          />
+          <PrometheusCard 
+            icon={Users} 
+            title="OTC Consensus" 
+            desc="Community-driven rankings with transparent methodology, expert boards, and real-time movement tracking." 
+            href="/consensus" 
+          />
+          <PrometheusCard 
+            icon={Trophy} 
+            title="Draft Command" 
+            desc="Prep and dominate your draft with real-time ADP, target sheets, and adaptive strategy algorithms." 
+            href="/draft-room" 
+          />
+        </div>
       </section>
 
-      {/* COMMUNITY CTA */}
-      <section className="mx-auto max-w-screen-md px-4 py-14">
-        <div className="rounded-2xl border p-6 bg-gradient-to-br from-amber-50 to-white shadow-sm animate-fadeIn">
-          <h3 className="text-2xl font-bold">Built for Community</h3>
-          <p className="text-gray-600 mt-1">
-            Open-source tools to help fantasy players make better decisions together.
-          </p>
-          <Link
-            href="/community-posts"
-            className="mt-4 inline-block px-4 py-2 rounded-md bg-amber-500 text-white font-semibold hover:opacity-90"
-          >
-            Join the Community →
-          </Link>
+      {/* PROMETHEUS IDENTITY */}
+      <section className="mx-auto max-w-4xl px-4 py-16">
+        <div className="promethean-card rounded-2xl p-8 constellation-pattern relative overflow-hidden">
+          <div className="relative z-10 text-center">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-yellow-500 to-purple-600 flex items-center justify-center glow-purple">
+              <Zap className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-4">Built by the Duo</h3>
+            <p className="text-gray-300 mb-6 leading-relaxed">
+              Open-source intelligence for the fantasy football community. No paywalls, no gatekeeping—just advanced tools that help you make better decisions.
+            </p>
+            <div className="text-xs text-yellow-500 font-medium">
+              SERVE NOT TAKE
+            </div>
+          </div>
         </div>
       </section>
     </main>
