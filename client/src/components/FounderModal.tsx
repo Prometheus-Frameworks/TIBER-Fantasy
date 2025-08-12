@@ -9,8 +9,8 @@ export default function FounderModal() {
   useEffect(() => {
     if (founderMode) {
       setShowModal(true);
-      // Fetch with founder mode header to reveal credits
-      fetch("/api/signal", { 
+      // Fetch with founder mode authentication (both header and query)
+      fetch("/api/signal?founder=1", { 
         headers: { "x-founder": "1" } 
       }).then(r => r.json()).then(setSignal).catch(() => {});
       
