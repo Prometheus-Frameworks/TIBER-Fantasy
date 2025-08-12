@@ -31,6 +31,9 @@ import Oasis from "@/pages/Oasis";
 import DraftRoom from "@/pages/DraftRoom";
 import PlayerProfile from "@/pages/PlayerProfile";
 import Rankings from "@/pages/Rankings";
+import RankingsHub from "@/pages/rankings/RankingsHub";
+import RedraftRankings from "@/pages/rankings/RedraftRankings";
+import DynastyRankings from "@/pages/rankings/DynastyRankings";
 import DynastyDeclineAnalysis from "@/pages/DynastyDeclineAnalysis";
 import RBTouchdownRegression from "@/pages/RBTouchdownRegression";
 import WRTouchdownRegression from "@/pages/WRTouchdownRegression";
@@ -96,7 +99,9 @@ function Router() {
       <Route path="/player-analysis" component={PlayerAnalysisPage} />
       <Route path="/trade-history/:id" component={TradeHistoryPage} />
       <Route path="/dynasty-values" component={DynastyValuesPage} />
-      <Route path="/rankings" component={Rankings} />
+      <Route path="/rankings" component={RankingsHub} />
+      <Route path="/rankings/redraft" component={RedraftRankings} />
+      <Route path="/rankings/dynasty" component={DynastyRankings} />
       <Route path="/compare-league" component={CompareLeaguePage} />
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
       <Route path="/player-compass" component={PlayerCompass} />
