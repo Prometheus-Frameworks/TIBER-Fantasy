@@ -208,19 +208,21 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Navigation />
-        <main className="mx-auto max-w-6xl px-4 py-6 min-h-screen">
+        <main className="mx-auto max-w-6xl px-4 py-6">
           <Router />
         </main>
-        <footer style={{ backgroundColor: 'var(--promethean-black)' }} className="border-t border-yellow-600/30 py-4 px-4">
-          <div className="mx-auto max-w-6xl flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <span className="text-xs text-gray-400">
-                build: v1.0.3-{new Date().toISOString().slice(0, 16)}
-              </span>
-              <HealthBadge isDemoMode={isDemoMode} />
-            </div>
-            <div className="text-xs text-yellow-500 font-medium">
-              Built by the Duo — Serve Not Take
+        <footer className="border-t" style={{ borderColor: 'var(--line)' }}>
+          <div className="mx-auto max-w-6xl px-4 py-8 text-sm" style={{ color: 'var(--body)' }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <span className="text-xs">
+                  build: v1.0.3-{new Date().toISOString().slice(0, 16)}
+                </span>
+                <HealthBadge isDemoMode={isDemoMode} />
+              </div>
+              <div className="text-xs">
+                Open source fantasy football tools
+              </div>
             </div>
           </div>
         </footer>

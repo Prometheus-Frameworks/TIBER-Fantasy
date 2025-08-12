@@ -1,121 +1,97 @@
 import { Link } from "wouter";
 import { QUICK_ACTIONS } from "../config/nav";
-import { Compass, Users, Trophy, Zap } from "lucide-react";
+import { Compass, Users, Trophy } from "lucide-react";
 
-function PrometheusCard({ icon: Icon, title, desc, href }: {
-  icon: any; title: string; desc: string; href: string;
+function SystemCard({ icon, title, desc, href }: {
+  icon: string; title: string; desc: string; href: string;
 }) {
   return (
     <Link
       href={href}
-      className="block relative promethean-card rounded-xl p-6 constellation-pattern group transition-all duration-300 hover:-translate-y-1"
+      className="block system-card rounded-lg p-5 hover:shadow-md transition-all"
     >
-      <div className="relative z-10">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-yellow-500 to-purple-600">
-            <Icon className="h-6 w-6 text-white" />
-          </div>
-          <div className="h-8 w-8 rounded-full bg-gradient-to-r from-yellow-500 to-purple-600 opacity-20 pulse-gold"></div>
-        </div>
-        <div className="text-lg font-bold text-white mb-2">{title}</div>
-        <p className="text-sm text-gray-300 leading-relaxed">{desc}</p>
-        <div className="mt-4 text-xs text-yellow-500 font-medium group-hover:text-purple-400 transition-colors">
-          EXPLORE SYSTEM →
-        </div>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-lg">{icon}</span>
+        <h3 className="text-base font-semibold" style={{ color: 'var(--ink)' }}>{title}</h3>
       </div>
+      <p className="text-sm" style={{ color: 'var(--body)' }}>{desc}</p>
     </Link>
   );
 }
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen promethean-bg">
+    <main className="min-h-screen bg-white">
       {/* HERO */}
-      <section className="relative overflow-hidden network-grid">
-        <div className="relative mx-auto max-w-4xl px-4 py-16 text-center">
-          {/* Main Brand */}
-          <div className="mb-8">
-            <h1 className="text-6xl font-black leading-tight text-white mb-4">
-              <span className="bg-gradient-to-r from-yellow-500 via-yellow-400 to-purple-500 bg-clip-text text-transparent">
-                ON THE CLOCK
-              </span>
-            </h1>
-            <p className="text-xl text-gray-300 font-medium">Fantasy Football. Evolved.</p>
-            <div className="mt-4 h-1 w-24 mx-auto bg-gradient-to-r from-yellow-500 to-purple-600 rounded-full"></div>
-          </div>
+      <section className="bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-16 md:py-20">
+          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight" style={{ color: 'var(--ink)' }}>
+            On The Clock
+          </h1>
+          <p className="mt-4 text-lg max-w-2xl" style={{ color: 'var(--body)' }}>
+            Fantasy football tools. Community-driven. No paywalls, just signal.
+          </p>
 
-          {/* Quick Actions Grid */}
-          <div className="mt-12">
-            <h2 className="text-sm font-bold text-yellow-500 uppercase tracking-wider mb-6">PROMETHEUS SYSTEMS</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {QUICK_ACTIONS.map((action) => (
-                <Link 
-                  key={action.href}
-                  href={action.href} 
-                  className="group relative promethean-card rounded-lg p-4 text-center transition-all duration-300 hover:scale-105"
-                >
-                  <div className="relative z-10">
-                    <div className="h-8 w-8 mx-auto mb-2 rounded-full bg-gradient-to-r from-yellow-500 to-purple-600 flex items-center justify-center">
-                      <Zap className="h-4 w-4 text-white" />
-                    </div>
-                    <div className="text-sm font-bold text-white group-hover:text-yellow-400 transition-colors">
-                      {action.label}
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">{action.description}</div>
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-purple-600/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </Link>
-              ))}
-            </div>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              href="/compass"
+              className="inline-flex items-center rounded-md px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 transition"
+              style={{ backgroundColor: 'var(--ink)' }}
+            >
+              Explore Player Compass
+            </Link>
+            <Link
+              href="/consensus"
+              className="inline-flex items-center rounded-md border px-5 py-2.5 text-sm font-medium hover:border-opacity-80 transition"
+              style={{ borderColor: 'var(--line)', color: 'var(--ink)' }}
+            >
+              View OTC Consensus
+            </Link>
           </div>
         </div>
       </section>
 
       {/* CORE SYSTEMS */}
-      <section className="mx-auto max-w-5xl px-4 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-white mb-4">Core Systems</h2>
-          <p className="text-gray-300 max-w-2xl mx-auto">
-            Advanced analytics and decision-making tools built for the modern fantasy manager.
-          </p>
-        </div>
-        
-        <div className="grid md:grid-cols-3 gap-6">
-          <PrometheusCard 
-            icon={Compass} 
-            title="Player Compass" 
-            desc="Context-aware guidance with scenario analysis, risk assessment, and dynasty decision support for every roster move." 
-            href="/compass" 
-          />
-          <PrometheusCard 
-            icon={Users} 
-            title="OTC Consensus" 
-            desc="Community-driven rankings with transparent methodology, expert boards, and real-time movement tracking." 
-            href="/consensus" 
-          />
-          <PrometheusCard 
-            icon={Trophy} 
-            title="Draft Command" 
-            desc="Prep and dominate your draft with real-time ADP, target sheets, and adaptive strategy algorithms." 
-            href="/draft-room" 
-          />
+      <section className="py-10 border-t" style={{ backgroundColor: 'var(--haze)', borderColor: 'var(--line)' }}>
+        <div className="mx-auto max-w-6xl px-4">
+          <h2 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>Core Systems</h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <SystemCard 
+              title="Player Compass" 
+              desc="Context-aware dynasty guidance" 
+              href="/compass" 
+              icon="🧭"
+            />
+            <SystemCard 
+              title="OTC Consensus" 
+              desc="Community-driven boards" 
+              href="/consensus" 
+              icon="👥"
+            />
+            <SystemCard 
+              title="Draft Command" 
+              desc="Real-time draft aids" 
+              href="/draft-room" 
+              icon="🏆"
+            />
+          </div>
         </div>
       </section>
 
-      {/* PROMETHEUS IDENTITY */}
-      <section className="mx-auto max-w-4xl px-4 py-16">
-        <div className="promethean-card rounded-2xl p-8 constellation-pattern relative overflow-hidden">
-          <div className="relative z-10 text-center">
-            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-yellow-500 to-purple-600 flex items-center justify-center glow-purple">
-              <Zap className="h-8 w-8 text-white" />
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-4">Built by the Duo</h3>
-            <p className="text-gray-300 mb-6 leading-relaxed">
-              Open-source intelligence for the fantasy football community. No paywalls, no gatekeeping—just advanced tools that help you make better decisions.
-            </p>
-            <div className="text-xs text-yellow-500 font-medium">
-              SERVE NOT TAKE
-            </div>
+      {/* ADDITIONAL TOOLS */}
+      <section className="py-10 bg-white">
+        <div className="mx-auto max-w-6xl px-4">
+          <h2 className="text-xl font-bold mb-6" style={{ color: 'var(--ink)' }}>Additional Tools</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {QUICK_ACTIONS.map((action) => (
+              <SystemCard
+                key={action.href}
+                title={action.label}
+                desc={action.description}
+                href={action.href}
+                icon="⚙️"
+              />
+            ))}
           </div>
         </div>
       </section>

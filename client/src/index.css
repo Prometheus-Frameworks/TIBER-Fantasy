@@ -2,79 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Promethean Color Scheme */
+/* Clean OTC Theme */
 :root {
-  --promethean-black: #0B0B0B;
-  --promethean-gold: #C6A300;
-  --promethean-purple: #6A0DAD;
-  --promethean-white: #FFFFFF;
-  --promethean-grey: #CCCCCC;
-  --promethean-dark-purple: #4A0875;
+  --ink: #0F1220;
+  --body: #2B2F45;
+  --gold: #F5C84B;
+  --plum: #6E56CF;
+  --haze: #F6F7FB;
+  --line: #E9ECF2;
+  --ring: #F5C84B;
 }
 
-/* Promethean Background Patterns */
-.promethean-bg {
-  background: linear-gradient(135deg, var(--promethean-black) 0%, var(--promethean-dark-purple) 100%);
+html, body {
+  background: #fff;
+  color: var(--body);
 }
 
-.constellation-pattern::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: 
-    radial-gradient(circle at 20% 30%, rgba(198, 163, 0, 0.1) 1px, transparent 1px),
-    radial-gradient(circle at 60% 70%, rgba(106, 13, 173, 0.1) 1px, transparent 1px),
-    radial-gradient(circle at 80% 20%, rgba(198, 163, 0, 0.1) 1px, transparent 1px);
-  background-size: 200px 200px, 150px 150px, 300px 300px;
-  pointer-events: none;
+a:hover {
+  color: var(--ink);
 }
 
-.network-grid::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: 
-    linear-gradient(rgba(198, 163, 0, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(198, 163, 0, 0.1) 1px, transparent 1px);
-  background-size: 50px 50px;
-  pointer-events: none;
+/* Card shadows */
+.shadow-card {
+  box-shadow: 0 8px 20px rgba(15,18,32,0.04);
 }
 
-/* Promethean Card Styles */
-.promethean-card {
-  background: var(--promethean-black);
-  border: 1px solid var(--promethean-gold);
-  transition: all 0.3s ease;
+/* Clean system cards */
+.system-card {
+  border: 1px solid var(--line);
+  background: white;
+  transition: all 0.2s ease;
 }
 
-.promethean-card:hover {
-  border-color: var(--promethean-purple);
-  box-shadow: 0 0 20px rgba(106, 13, 173, 0.3);
-}
-
-/* Promethean Animations */
-@keyframes pulse-gold {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-@keyframes glow-purple {
-  0%, 100% { box-shadow: 0 0 5px rgba(106, 13, 173, 0.3); }
-  50% { box-shadow: 0 0 20px rgba(106, 13, 173, 0.6); }
-}
-
-.pulse-gold {
-  animation: pulse-gold 3s ease-in-out infinite;
-}
-
-.glow-purple {
-  animation: glow-purple 2s ease-in-out infinite;
+.system-card:hover {
+  box-shadow: 0 12px 24px rgba(15,18,32,0.08);
 }
 
 /* OTC Consensus Engine - Fire Badge Styles */
