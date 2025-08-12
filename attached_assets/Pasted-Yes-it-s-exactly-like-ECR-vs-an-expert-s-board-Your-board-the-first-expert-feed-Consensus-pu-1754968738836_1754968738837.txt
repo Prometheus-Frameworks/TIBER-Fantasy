@@ -1,0 +1,154 @@
+Yes—it’s exactly like ECR vs an expert’s board. Your board = the first “expert” feed; Consensus = public ECR that starts as your seed and later blends in other users.
+
+Here’s a tight torch for Tiber to ship this fast.
+
+⸻
+
+Commit
+
+feat(consensus-ecr): add user boards, contributor credits, and User vs OTC Consensus compare views
+
+1) Data model
+
+// shared/types/boards.ts
+export type Format = "redraft" | "dynasty";
+export type Position = "QB" | "RB" | "WR" | "TE" | "FLEX" | "ALL";
+
+export interface UserProfile {
+  id: string;              // uuid
+  username: string;        // "Architect J"
+  isExpert?: boolean;      // true for founder/expert display
+}
+
+export interface UserRankRow {
+  id: string;
+  userId: string;
+  format: Format;
+  season?: number;         // for redraft only
+  pos: Position;           // position slice
+  playerId: string;
+  rank: number;            // rank within pos slice
+  updatedAt: string;
+}
+
+// We already have consensus_board (dynasty default, redraft scoped by season).
+// Add one table to track contributors (for credits on the page):
+export interface ConsensusContributor {
+  id: string;
+  userId: string;          // links to UserProfile
+  format: Format;
+  season?: number;
+  weight: number;          // default 1.0 (later can vary)
+  firstContributionAt: string;
+  lastContributionAt: string;
+}
+
+DB:
+	•	user_profiles (id, username, is_expert)
+	•	user_ranks (id, userId, format, season, pos, playerId, rank, updatedAt)
+	•	consensus_contributors (id, userId, format, season, weight, firstContributionAt, lastContributionAt)
+
+Seed:
+	•	Create user profile: Architect J (is_expert=true).
+
+⸻
+
+2) API
+
+// Get a user's board (position-scoped)
+GET  /api/boards/user/:username?format=dynasty|redraft&season=2025&pos=WR
+
+// Save/update a user’s board slice
+POST /api/boards/user/:username
+body: { format, season?, pos, ranks: Array<{playerId, rank}> }  // replaces slice atomically
+
+// Compare: user vs consensus
+GET  /api/boards/compare/:username?format=...&season=...&pos=WR
+// returns combined list with { playerId, name, userRank, consensusRank, delta }
+
+// Consensus (already exists):
+GET  /api/consensus?format=...&season=...&pos=WR
+
+Rules:
+	•	If format=redraft, season required; if dynasty, season must be omitted.
+	•	Username must resolve to user_profiles.username. For launch, allow only Architect J to write.
+
+⸻
+
+3) Consensus math (simple v1)
+	•	Today: Consensus == Seed (your board) until other contributors exist.
+	•	Later: weighted median/mean by contributor weights per player within the same slice (format/season/pos).
+
+For now, wire aggregation but with only one contributor (you), so Consensus mirrors your ranks 1:1 (which is what you want initially).
+
+⸻
+
+4) Frontend pages
+
+A) Your board hub (public)
+
+/experts/architect-j
+
+Shows:
+	•	Header: “Architect J — OTC Board”
+	•	Tabs: Dynasty, Redraft (2025)
+	•	Position chips: ALL, QB, RB, WR, TE
+	•	Table: Rank • Player • Team • POS • (optional) Note
+
+B) Compare view
+
+/compare/architect-j?format=dynasty&pos=WR
+
+Table with deltas (like FP ECR):
+	•	Columns: Player • User Rank • OTC Consensus • Δ
+	•	Δ = consensusRank - userRank (negative = you’re higher than consensus)
+
+C) Links
+	•	On Season HQ tile “OTC Consensus”, add a subtle link below:
+“View Architect J board → /experts/architect-j”
+	•	On Consensus pages, a pill: “Compare to Architect J”.
+
+⸻
+
+5) UI snippets (drop-in)
+
+Compare row cell (delta pill):
+
+function Delta({delta}:{delta:number}) {
+  const tone = delta === 0 ? "bg-neutral-100 text-neutral-700"
+    : delta < 0 ? "bg-emerald-100 text-emerald-700"
+    : "bg-rose-100 text-rose-700";
+  const sign = delta>0?"+": "";
+  return <span className={`px-2 py-0.5 rounded text-xs ${tone}`}>{sign}{delta}</span>;
+}
+
+Header caption on your board:
+
+<p className="text-sm text-neutral-600 mt-1">
+  First user-run board for OTC Consensus — curated by <strong>Architect J</strong>.
+</p>
+
+
+⸻
+
+6) Acceptance checklist
+	•	✅ GET /api/boards/user/architect-j?format=dynasty&pos=WR returns your WR slice.
+	•	✅ POST /api/boards/user/architect-j replaces a slice atomically (idempotent).
+	•	✅ GET /api/boards/compare/architect-j?... returns {playerId, name, userRank, consensusRank, delta}.
+	•	✅ /experts/architect-j renders your board per format/pos; /compare/architect-j shows User vs Consensus with Δ pills.
+	•	✅ With only your data present, Consensus == your board (Δ = 0).
+	•	✅ Later contributors are stored in consensus_contributors and aggregation code already supports multiple users (but weights default to 1).
+
+⸻
+
+7) Guardrails (your intent)
+	•	This is not for pumping personal bias; it’s a launch scaffold so the site isn’t empty.
+	•	Show your username clearly on your board pages.
+	•	Consensus remains Dynasty-first canonical; Redraft is season-bound.
+	•	Your personal private lists can be saved as user boards and selectively published into Consensus via a small “Publish to Consensus” button later (not required today).
+
+⸻
+
+One-liner to Tiber
+
+Build the “ECR vs Expert” flow: add user boards (user_profiles, user_ranks) with Architect J seeded; add endpoints to fetch/save slices and to compare a user vs OTC Consensus; render /experts/architect-j and /compare/architect-j with position chips and delta pills. For now, Consensus == seed (your board). Dynasty is canonical; Redraft is season-scoped.

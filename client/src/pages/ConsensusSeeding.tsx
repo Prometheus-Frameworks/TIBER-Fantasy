@@ -131,6 +131,30 @@ export default function ConsensusSeeding() {
                 </button>
               ))}
             </div>
+            
+            {/* Error Examples for Testing */}
+            <div className="mt-4">
+              <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Error Test Examples
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                {[
+                  "OTC consensus 4 : No Position",
+                  "OTC consensus WR110 : Invalid Rank",
+                  "OTC consensus RB3 : Fake Player",
+                  "invalid command format"
+                ].map((example, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCommand(example)}
+                    className="text-left p-1 text-xs font-mono bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-red-700 dark:text-red-300"
+                    disabled={seedMutation.isPending}
+                  >
+                    {example}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -174,7 +198,14 @@ export default function ConsensusSeeding() {
                     
                     {result.logEntry && (
                       <div className="text-xs font-mono text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 p-2 rounded">
-                        {result.logEntry}
+                        <span className="text-gray-500">Log:</span> {result.logEntry}
+                      </div>
+                    )}
+                    
+                    {/* Show error type for debugging */}
+                    {!result.success && (result as any).errorType && (
+                      <div className="text-xs text-red-500">
+                        Error Type: {(result as any).errorType}
                       </div>
                     )}
                     

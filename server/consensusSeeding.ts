@@ -21,20 +21,26 @@ router.post("/seed", async (req, res) => {
     
     console.log(`🌱 Processing consensus command: "${command}"`);
     
-    // Parse shorthand command
-    const parsed = parseConsensusCommand(command);
+    // Parse shorthand command with enhanced error handling
+    const { command: parsed, error } = parseConsensusCommand(command);
+    if (error) {
+      return res.status(400).json(error);
+    }
+    
     if (!parsed) {
       return res.status(400).json({
         success: false,
-        message: "Invalid command format. Use: OTC consensus <POSITION><RANK> : <PLAYER NAME>"
+        message: "❌ Error: Failed to parse command",
+        errorType: "INVALID_FORMAT"
       });
     }
     
     // Execute the consensus update
     const result = await executeConsensusCommand(parsed);
     
-    // Log the command execution
-    const logEntry = `${new Date().toISOString().split('T')[0]} — Architect J moved ${parsed.playerName} to ${parsed.position}${parsed.rank} (${parsed.format || 'Dynasty'} Consensus)`;
+    // Log the command execution with enhanced format
+    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+    const logEntry = `[${timestamp}] Architect J → Moved ${parsed.playerName} to ${parsed.position}${parsed.rank} (${parsed.format === 'dynasty' ? 'Dynasty' : 'Redraft'} Consensus)`;
     console.log(`📝 ${logEntry}`);
     
     res.json({
@@ -80,7 +86,8 @@ async function executeConsensusCommand(command: ConsensusCommand): Promise<Conse
     if (!player) {
       return {
         success: false,
-        message: `Player not found in database: "${playerName}". Please check spelling and try again.`
+        message: `❌ Error: Player '${playerName}' not found in database. Check spelling or add player first.`,
+        errorType: "PLAYER_NOT_FOUND"
       };
     }
     
@@ -184,11 +191,23 @@ async function executeConsensusCommand(command: ConsensusCommand): Promise<Conse
         })
         .where(eq(consensusMeta.id, "singleton"));
       
+      // Generate success message based on whether rank was occupied
+      let successMessage: string;
+      const formatDisplay = format === 'dynasty' ? 'Dynasty' : 'Redraft';
+      
+      if (existingAtRank) {
+        const shiftedPlayerName = previousPlayer?.name || 'existing player';
+        successMessage = `✅ Success: Moved ${player.name} to ${position}${rank}. Shifted ${shiftedPlayerName} down 1 slot in ${formatDisplay} Consensus.`;
+      } else {
+        successMessage = `✅ Success: Added ${player.name} to ${position}${rank} in ${formatDisplay} Consensus.`;
+      }
+      
       return {
         success: true,
-        message: `✅ ${player.name} set to ${position}${rank} in ${format} consensus`,
+        message: successMessage,
         previousPlayer,
-        shifts
+        shifts,
+        format
       };
     });
     
@@ -198,7 +217,8 @@ async function executeConsensusCommand(command: ConsensusCommand): Promise<Conse
     console.error("executeConsensusCommand error:", error);
     return {
       success: false,
-      message: `Database error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      message: `❌ Error: Database operation failed. ${error instanceof Error ? error.message : 'Unknown error'}`,
+      errorType: "DATABASE_ERROR"
     };
   }
 }
