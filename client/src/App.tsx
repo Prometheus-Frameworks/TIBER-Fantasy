@@ -90,8 +90,8 @@ import Navigation from "@/components/Navigation";
 import Analytics from "@/pages/Analytics";
 import Articles from "@/pages/Articles";
 import HealthBadge from "@/components/HealthBadge";
-import Footer from "@/components/Footer";
 import FounderModal from "@/components/FounderModal";
+import Footer from "@/components/Footer";
 import AdaptiveConsensusDemo from "@/pages/AdaptiveConsensusDemo";
 import CurvesDemo from "@/pages/CurvesDemo";
 import InjuryProfilesDemo from "@/pages/InjuryProfilesDemo";
@@ -211,7 +211,6 @@ function App() {
         <main className="mx-auto max-w-6xl px-4 py-6">
           <Router />
         </main>
-
         <Footer />
         <FounderModal />
         <Toaster />

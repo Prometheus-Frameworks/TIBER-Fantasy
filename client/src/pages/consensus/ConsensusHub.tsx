@@ -52,15 +52,15 @@ export default function ConsensusHub() {
     <div className="space-y-8">
       {/* Hero Section */}
       <div className="flex items-center gap-4">
-        <div className="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-xl">
-          <Trophy className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
+        <div className="p-3 bg-yellow-100 rounded-xl">
+          <Trophy className="h-8 w-8 text-yellow-600" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-3xl font-bold text-ink">
             OTC Consensus
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Community-driven dynasty and redraft boards. Transparent and versioned.
+          <p className="text-body mt-1">
+            Community-driven dynasty & redraft boards. Transparent and versioned.
           </p>
         </div>
       </div>
@@ -68,35 +68,43 @@ export default function ConsensusHub() {
       {/* Controls */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         {/* Format Toggle */}
-        <div className="flex gap-2">
-          <Button
-            variant={activeFormat === "dynasty" ? "default" : "outline"}
-            size="sm"
+        <div className="flex gap-1">
+          <button
             onClick={() => setActiveFormat("dynasty")}
+            className={`px-3 py-2 text-sm font-medium transition-colors ${
+              activeFormat === "dynasty"
+                ? "text-ink border-b-2 border-gold"
+                : "text-body hover:text-ink"
+            }`}
           >
             Dynasty
-          </Button>
-          <Button
-            variant={activeFormat === "redraft" ? "default" : "outline"}
-            size="sm"
+          </button>
+          <button
             onClick={() => setActiveFormat("redraft")}
+            className={`px-3 py-2 text-sm font-medium transition-colors ${
+              activeFormat === "redraft"
+                ? "text-ink border-b-2 border-gold"
+                : "text-body hover:text-ink"
+            }`}
           >
             Redraft 2025
-          </Button>
+          </button>
         </div>
 
         {/* Position Filters */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-1 flex-wrap">
           {positions.map((pos) => (
-            <Button
+            <button
               key={pos}
-              variant={positionFilter === pos ? "default" : "outline"}
-              size="sm"
               onClick={() => setPositionFilter(pos)}
-              className="text-xs"
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                positionFilter === pos
+                  ? "text-white bg-plum"
+                  : "text-body bg-haze hover:text-ink"
+              }`}
             >
               {pos}
-            </Button>
+            </button>
           ))}
         </div>
       </div>

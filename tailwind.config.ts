@@ -11,6 +11,17 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       colors: {
+        ink: '#0F1220',
+        body: '#2B2F45',
+        gold: '#F5C84B',
+        plum: '#6E56CF',
+        haze: '#F6F7FB',
+        line: '#E9ECF2',
+      },
+      boxShadow: {
+        card: '0 8px 20px rgba(15,18,32,0.06)',
+      },
+      colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
         card: {
