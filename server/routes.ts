@@ -57,16 +57,30 @@ import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
 import pythonRookieRoutes from './routes/pythonRookieRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
 import { OTC_SIGNATURE } from '../shared/otcSignature';
+import fs from 'fs';
+import path from 'path';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // OTC Signature Protocol - Signal endpoint
   app.get('/api/signal', (req: Request, res: Response) => {
-    res.json({
-      status: "aligned",
-      key: OTC_SIGNATURE.key,
-      motto: OTC_SIGNATURE.motto,
-    });
+    const base = { 
+      status: "aligned", 
+      key: OTC_SIGNATURE.key, 
+      motto: OTC_SIGNATURE.motto 
+    };
+
+    // Reveal credits only if Founder Mode header or query is present
+    const founder = req.get("x-founder") === "1" || req.query.founder === "1";
+    if (!founder) return res.json(base);
+
+    const file = path.join(process.cwd(), "docs/internal/credits.json");
+    let credits = [];
+    try { 
+      credits = JSON.parse(fs.readFileSync(file, "utf8")).entries || []; 
+    } catch {}
+    
+    return res.json({ ...base, credits });
   });
   
   // Version and Health endpoints for new API client
