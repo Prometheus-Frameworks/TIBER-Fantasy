@@ -1,0 +1,371 @@
+{
+  "injury_profiles": [
+    {
+      "injury_type": "ACL tear",
+      "severity_class": "major",
+      "avg_recovery_weeks": 32,
+      "return_to_play_timeline": {
+        "6_months": 0.15,
+        "12_months": 0.85,
+        "24_months": 0.95
+      },
+      "base_impact_multipliers": {
+        "year_of_injury": {
+          "QB": 0.75,
+          "RB": 0.65,
+          "WR": 0.70,
+          "TE": 0.72
+        },
+        "year_after_return": {
+          "QB": 0.92,
+          "RB": 0.85,
+          "WR": 0.90,
+          "TE": 0.88
+        }
+      },
+      "age_penalty_factors": {
+        "threshold_ages": {
+          "QB": 32,
+          "RB": 26,
+          "WR": 28,
+          "TE": 29
+        },
+        "annual_decay_over_threshold": {
+          "QB": 0.96,
+          "RB": 0.92,
+          "WR": 0.94,
+          "TE": 0.95
+        }
+      },
+      "recurrence_risk_12m": 0.12,
+      "position_specific_notes": {
+        "RB": "Severe impact on cutting ability and burst",
+        "WR": "Route running precision affected first 6 months"
+      }
+    },
+    {
+      "injury_type": "Achilles rupture",
+      "severity_class": "catastrophic",
+      "avg_recovery_weeks": 40,
+      "return_to_play_timeline": {
+        "6_months": 0.05,
+        "12_months": 0.70,
+        "24_months": 0.90
+      },
+      "base_impact_multipliers": {
+        "year_of_injury": {
+          "QB": 0.60,
+          "RB": 0.45,
+          "WR": 0.55,
+          "TE": 0.58
+        },
+        "year_after_return": {
+          "QB": 0.88,
+          "RB": 0.75,
+          "WR": 0.82,
+          "TE": 0.80
+        }
+      },
+      "age_penalty_factors": {
+        "threshold_ages": {
+          "QB": 30,
+          "RB": 25,
+          "WR": 27,
+          "TE": 28
+        },
+        "annual_decay_over_threshold": {
+          "QB": 0.94,
+          "RB": 0.88,
+          "WR": 0.91,
+          "TE": 0.92
+        }
+      },
+      "recurrence_risk_12m": 0.08,
+      "position_specific_notes": {
+        "RB": "Career-altering for power backs over 27",
+        "WR": "Explosiveness permanently reduced"
+      }
+    },
+    {
+      "injury_type": "Hamstring Grade II/III",
+      "severity_class": "moderate",
+      "avg_recovery_weeks": 8,
+      "return_to_play_timeline": {
+        "6_months": 0.85,
+        "12_months": 0.95,
+        "24_months": 0.98
+      },
+      "base_impact_multipliers": {
+        "year_of_injury": {
+          "QB": 0.92,
+          "RB": 0.85,
+          "WR": 0.88,
+          "TE": 0.90
+        },
+        "year_after_return": {
+          "QB": 0.98,
+          "RB": 0.94,
+          "WR": 0.96,
+          "TE": 0.97
+        }
+      },
+      "age_penalty_factors": {
+        "threshold_ages": {
+          "QB": 34,
+          "RB": 28,
+          "WR": 30,
+          "TE": 31
+        },
+        "annual_decay_over_threshold": {
+          "QB": 0.98,
+          "RB": 0.95,
+          "WR": 0.97,
+          "TE": 0.97
+        }
+      },
+      "recurrence_risk_12m": 0.25,
+      "position_specific_notes": {
+        "RB": "High recurrence rate affects explosiveness",
+        "WR": "Deep route timing may be affected"
+      }
+    },
+    {
+      "injury_type": "High ankle sprain",
+      "severity_class": "moderate",
+      "avg_recovery_weeks": 12,
+      "return_to_play_timeline": {
+        "6_months": 0.75,
+        "12_months": 0.90,
+        "24_months": 0.95
+      },
+      "base_impact_multipliers": {
+        "year_of_injury": {
+          "QB": 0.88,
+          "RB": 0.78,
+          "WR": 0.82,
+          "TE": 0.85
+        },
+        "year_after_return": {
+          "QB": 0.96,
+          "RB": 0.90,
+          "WR": 0.93,
+          "TE": 0.94
+        }
+      },
+      "age_penalty_factors": {
+        "threshold_ages": {
+          "QB": 33,
+          "RB": 27,
+          "WR": 29,
+          "TE": 30
+        },
+        "annual_decay_over_threshold": {
+          "QB": 0.97,
+          "RB": 0.94,
+          "WR": 0.96,
+          "TE": 0.96
+        }
+      },
+      "recurrence_risk_12m": 0.18,
+      "position_specific_notes": {
+        "RB": "Cutting ability significantly impacted",
+        "WR": "Route precision affected on comeback routes"
+      }
+    },
+    {
+      "injury_type": "Concussion",
+      "severity_class": "minor",
+      "avg_recovery_weeks": 3,
+      "return_to_play_timeline": {
+        "6_months": 0.95,
+        "12_months": 0.98,
+        "24_months": 0.99
+      },
+      "base_impact_multipliers": {
+        "year_of_injury": {
+          "QB": 0.94,
+          "RB": 0.96,
+          "WR": 0.95,
+          "TE": 0.96
+        },
+        "year_after_return": {
+          "QB": 0.97,
+          "RB": 0.99,
+          "WR": 0.98,
+          "TE": 0.98
+        }
+      },
+      "age_penalty_factors": {
+        "threshold_ages": {
+          "QB": 30,
+          "RB": 26,
+          "WR": 28,
+          "TE": 29
+        },
+        "annual_decay_over_threshold": {
+          "QB": 0.96,
+          "RB": 0.98,
+          "WR": 0.97,
+          "TE": 0.97
+        }
+      },
+      "recurrence_risk_12m": 0.15,
+      "position_specific_notes": {
+        "QB": "Decision-making may be cautious initially",
+        "RB": "Contact avoidance in traffic"
+      }
+    },
+    {
+      "injury_type": "Shoulder separation",
+      "severity_class": "moderate",
+      "avg_recovery_weeks": 10,
+      "return_to_play_timeline": {
+        "6_months": 0.80,
+        "12_months": 0.92,
+        "24_months": 0.96
+      },
+      "base_impact_multipliers": {
+        "year_of_injury": {
+          "QB": 0.82,
+          "RB": 0.90,
+          "WR": 0.85,
+          "TE": 0.80
+        },
+        "year_after_return": {
+          "QB": 0.93,
+          "RB": 0.97,
+          "WR": 0.94,
+          "TE": 0.90
+        }
+      },
+      "age_penalty_factors": {
+        "threshold_ages": {
+          "QB": 32,
+          "RB": 28,
+          "WR": 29,
+          "TE": 30
+        },
+        "annual_decay_over_threshold": {
+          "QB": 0.95,
+          "RB": 0.97,
+          "WR": 0.96,
+          "TE": 0.94
+        }
+      },
+      "recurrence_risk_12m": 0.20,
+      "position_specific_notes": {
+        "QB": "Arm strength and accuracy affected",
+        "TE": "Blocking effectiveness significantly reduced"
+      }
+    },
+    {
+      "injury_type": "Meniscus tear",
+      "severity_class": "moderate",
+      "avg_recovery_weeks": 16,
+      "return_to_play_timeline": {
+        "6_months": 0.70,
+        "12_months": 0.88,
+        "24_months": 0.93
+      },
+      "base_impact_multipliers": {
+        "year_of_injury": {
+          "QB": 0.85,
+          "RB": 0.75,
+          "WR": 0.80,
+          "TE": 0.82
+        },
+        "year_after_return": {
+          "QB": 0.94,
+          "RB": 0.88,
+          "WR": 0.91,
+          "TE": 0.92
+        }
+      },
+      "age_penalty_factors": {
+        "threshold_ages": {
+          "QB": 33,
+          "RB": 27,
+          "WR": 29,
+          "TE": 30
+        },
+        "annual_decay_over_threshold": {
+          "QB": 0.96,
+          "RB": 0.93,
+          "WR": 0.95,
+          "TE": 0.95
+        }
+      },
+      "recurrence_risk_12m": 0.14,
+      "position_specific_notes": {
+        "RB": "Lateral movement and cutting impacted",
+        "WR": "Route running sharpness reduced"
+      }
+    },
+    {
+      "injury_type": "Fractured ribs",
+      "severity_class": "minor",
+      "avg_recovery_weeks": 6,
+      "return_to_play_timeline": {
+        "6_months": 0.90,
+        "12_months": 0.96,
+        "24_months": 0.98
+      },
+      "base_impact_multipliers": {
+        "year_of_injury": {
+          "QB": 0.88,
+          "RB": 0.92,
+          "WR": 0.94,
+          "TE": 0.90
+        },
+        "year_after_return": {
+          "QB": 0.96,
+          "RB": 0.98,
+          "WR": 0.99,
+          "TE": 0.97
+        }
+      },
+      "age_penalty_factors": {
+        "threshold_ages": {
+          "QB": 34,
+          "RB": 29,
+          "WR": 31,
+          "TE": 32
+        },
+        "annual_decay_over_threshold": {
+          "QB": 0.98,
+          "RB": 0.97,
+          "WR": 0.98,
+          "TE": 0.97
+        }
+      },
+      "recurrence_risk_12m": 0.10,
+      "position_specific_notes": {
+        "QB": "Throwing motion may be guarded initially",
+        "TE": "Blocking aggression reduced"
+      }
+    }
+  ],
+  "calculation_logic": {
+    "multiplier_formula": "base_impact × age_factor × recurrence_adjustment",
+    "age_factor_calculation": "decay_rate ^ max(0, age - threshold)",
+    "recurrence_adjustment": "1.0 - (recurrence_risk × 0.1)",
+    "partial_season_interpolation": "linear blend from year_of_injury to year_after_return based on weeksRecovered/avg_recovery_weeks"
+  },
+  "severity_classes": {
+    "minor": "1-6 weeks recovery, minimal long-term impact",
+    "moderate": "6-16 weeks recovery, some lasting effects possible",
+    "major": "16-40 weeks recovery, significant career impact",
+    "catastrophic": "40+ weeks recovery, potential career-ending"
+  },
+  "position_vulnerability_matrix": {
+    "RB": "Most vulnerable to lower body injuries, age cliff at 27-28",
+    "WR": "Route precision affected by leg injuries, durability concerns after 29",
+    "TE": "Blocking injuries affect dual-threat value, slower recovery due to size",
+    "QB": "Arm/shoulder injuries most critical, longevity allows later recovery"
+  },
+  "data_sources": {
+    "medical_literature": "Sports medicine journals for recovery timelines",
+    "nfl_injury_database": "Historical player outcomes 2010-2024",
+    "fantasy_performance_analysis": "Pre/post injury production comparisons"
+  }
+}

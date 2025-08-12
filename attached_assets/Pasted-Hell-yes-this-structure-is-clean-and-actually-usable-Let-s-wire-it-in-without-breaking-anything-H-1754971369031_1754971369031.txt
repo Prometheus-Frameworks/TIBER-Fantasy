@@ -1,0 +1,196 @@
+Hell yes—this structure is clean and actually usable. Let’s wire it in without breaking anything.
+
+Here’s a tight drop‑in pack for Tiber that reads your new schema (base impact per “year_of_injury” vs “year_after_return”), applies age decay, and a small recurrence haircut, then converts rank↔score so adjustments are smooth at the top of the board.
+
+⸻
+
+Commit
+
+feat(dynasty-injuries): add v2 injury profiles (base impact × age × recurrence), rank↔score curve integration
+
+
+⸻
+
+1) Save the JSON (straight quotes!)
+
+Path:
+
+/server/consensus/injuryProfiles.v2.json
+
+
+⸻
+
+2) Loader + types + multiplier calc (TypeScript)
+
+// server/consensus/injuryProfiles.ts
+import fs from "node:fs";
+
+type Pos = "QB"|"RB"|"WR"|"TE";
+
+export type InjuryProfile = {
+  injury_type: string;
+  severity_class: "minor"|"moderate"|"major"|"catastrophic";
+  avg_recovery_weeks: number;
+  return_to_play_timeline: { "6_months": number; "12_months": number; "24_months": number; };
+  base_impact_multipliers: {
+    year_of_injury: Record<Pos, number>;     // e.g. RB: 0.70
+    year_after_return: Record<Pos, number>;  // e.g. WR: 0.90
+  };
+  age_penalty_factors: {
+    threshold_ages: Record<Pos, number>;               // e.g. RB: 26
+    annual_decay_over_threshold: Record<Pos, number>;  // multiplicative, e.g. RB: 0.94
+  };
+  recurrence_risk_12m: number; // 0..1
+  position_specific_notes?: Partial<Record<Pos, string>>;
+};
+
+export type InjuryProfilesDoc = {
+  injury_profiles: InjuryProfile[];
+  calculation_logic?: unknown;
+  severity_classes?: unknown;
+  position_vulnerability_matrix?: unknown;
+  data_sources?: unknown;
+};
+
+export function loadInjuryProfilesV2(path = __dirname + "/injuryProfiles.v2.json") {
+  const raw = fs.readFileSync(path, "utf8");
+  const doc = JSON.parse(raw) as InjuryProfilesDoc;
+  if (!Array.isArray(doc.injury_profiles)) throw new Error("injury_profiles missing/invalid");
+  const map = new Map<string, InjuryProfile>();
+  for (const p of doc.injury_profiles) {
+    map.set(p.injury_type.toLowerCase(), p);
+  }
+  return map;
+}
+
+export const INJ_V2 = loadInjuryProfilesV2();
+
+/**
+ * Compute dynasty multiplier k in [~0.5..1.05]
+ * context:
+ *   - phase: "year_of_injury" | "year_after_return"
+ *   - age: player age
+ *   - pos: QB/RB/WR/TE
+ *   - weeksRecovered: weeks since injury rehab (optional; used to interpolate partial season)
+ */
+export function computeDynastyMultiplierV2(opts: {
+  injuryType: string; pos: Pos; age: number;
+  phase: "year_of_injury" | "year_after_return";
+  weeksRecovered?: number;   // used only if phase === "year_of_injury"
+}) {
+  const { injuryType, pos, age, phase, weeksRecovered } = opts;
+  const prof = INJ_V2.get(injuryType.toLowerCase());
+  if (!prof) return 1.0;
+
+  // 1) Base impact (phase-aware)
+  const baseTable = prof.base_impact_multipliers[phase];
+  let base = baseTable[pos] ?? 1.0;
+
+  // Partial season interpolation (if returning mid-year)
+  if (phase === "year_of_injury" && typeof weeksRecovered === "number" && prof.avg_recovery_weeks > 0) {
+    const t = Math.max(0, Math.min(1, weeksRecovered / prof.avg_recovery_weeks));
+    // Linear blend from year_of_injury → year_after_return as recovery progresses
+    const y1 = prof.base_impact_multipliers.year_after_return[pos] ?? base;
+    base = base * (1 - t) + y1 * t;
+  }
+
+  // 2) Age factor (exponential decay past threshold)
+  const threshold = prof.age_penalty_factors.threshold_ages[pos];
+  const decay = prof.age_penalty_factors.annual_decay_over_threshold[pos]; // e.g. 0.94 for RB
+  const yearsOver = Math.max(0, Math.floor(age - threshold));
+  const ageK = Math.pow(decay, yearsOver); // ≤ 1.0
+
+  // 3) Recurrence adjustment (small haircut)
+  const recAdj = 1.0 - (prof.recurrence_risk_12m * 0.1); // 10% of risk applied
+
+  // Clamp a bit so nothing goes crazy
+  const k = Math.max(0.5, Math.min(1.05, Number((base * ageK * recAdj).toFixed(4))));
+  return k;
+}
+
+
+⸻
+
+3) Rank↔Score curve (reuse our helper)
+
+// server/consensus/curves.ts
+export const RANK_SCORE_CURVE = { a: 1000, b: 1.2 } as const;
+export function rankToScore(rank: number, a=RANK_SCORE_CURVE.a, b=RANK_SCORE_CURVE.b) {
+  const r = Math.max(1, rank);
+  return a / Math.pow(r, b);
+}
+export function scoreToRank(score: number, a=RANK_SCORE_CURVE.a, b=RANK_SCORE_CURVE.b) {
+  const s = Math.max(1e-6, score);
+  return Math.round(Math.pow(a / s, 1 / b));
+}
+export function adjustRankWithMultiplier(rank:number, k:number) {
+  const base = rankToScore(rank);
+  return scoreToRank(base * k);
+}
+
+
+⸻
+
+4) Plug into dynasty softener
+
+// server/consensus/dynastySoftenerV2.ts
+import { computeDynastyMultiplierV2 } from "./injuryProfiles";
+import { adjustRankWithMultiplier } from "./curves";
+
+type Pos = "QB"|"RB"|"WR"|"TE";
+
+export function applyDynastyInjuryV2(params: {
+  rank: number;
+  injuryType: string;
+  pos: Pos;
+  age: number;
+  phase: "year_of_injury" | "year_after_return";
+  weeksRecovered?: number;
+}) {
+  const k = computeDynastyMultiplierV2(params);
+  return adjustRankWithMultiplier(params.rank, k);
+}
+
+
+⸻
+
+5) Tiny smoke tests
+
+// server/consensus/__tests__/injuryProfiles.v2.test.ts
+import { computeDynastyMultiplierV2 } from "../injuryProfiles";
+
+test("ACL RB 28yo year_of_injury penalized strongly", () => {
+  const k = computeDynastyMultiplierV2({
+    injuryType: "ACL tear", pos: "RB", age: 28, phase: "year_of_injury"
+  });
+  expect(k).toBeLessThan(0.7); // around ~0.61 with your example
+});
+
+test("Hamstring WR 22yo mild penalty", () => {
+  const k = computeDynastyMultiplierV2({
+    injuryType: "Hamstring Grade II/III", pos: "WR", age: 22, phase: "year_of_injury"
+  });
+  expect(k).toBeGreaterThan(0.8);
+  expect(k).toBeLessThan(1.0);
+});
+
+test("High ankle RB 25yo improves as weeksRecovered grows", () => {
+  const k0 = computeDynastyMultiplierV2({
+    injuryType: "High ankle sprain", pos: "RB", age: 25, phase: "year_of_injury", weeksRecovered: 0
+  });
+  const k6 = computeDynastyMultiplierV2({
+    injuryType: "High ankle sprain", pos: "RB", age: 25, phase: "year_of_injury", weeksRecovered: 6
+  });
+  expect(k6).toBeGreaterThan(k0);
+});
+
+
+⸻
+
+6) One‑liner for Tiber (what to actually do)
+
+Install v2 injury module: add injuryProfiles.v2.json, loader injuryProfiles.ts, rank↔score curves.ts, and dynastySoftenerV2.ts. Use computeDynastyMultiplierV2() in the dynasty consensus pass with phase set based on season context (year_of_injury vs year_after_return, and pass weeksRecovered if mid‑season). Clamp output ranks via adjustRankWithMultiplier(). Add smoke tests above.
+
+⸻
+
+If you want me to also drop a tiny selector that decides phase automatically from your injury feed (IR/PUP + estReturnWeeks + current week), say the word and I’ll tack that on.

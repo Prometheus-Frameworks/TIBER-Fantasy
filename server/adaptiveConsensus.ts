@@ -10,6 +10,7 @@ import {
   scoreToRank as curvesScoreToRank, 
   adjustRankWithMultiplier 
 } from './consensus/curves';
+import { applyDynastyInjuryV2, determineInjuryPhase, calculateWeeksRecovered } from './consensus/dynastySoftenerV2';
 
 // Configuration constants
 const ADAPTIVE_CFG = {
@@ -244,16 +245,44 @@ export function applyDynastyInjurySoftener(rank: number, ctx: AdaptiveConsensusC
   if (!injury || injury.status === "ACTIVE") return rank;
 
   const bio = ctx.bio;
-  const baseK = ADAPTIVE_CFG.DY_BASE_PENALTY;
-  const riskK = ADAPTIVE_CFG.DY_RISK[injury.injuryType as keyof typeof ADAPTIVE_CFG.DY_RISK] || 
-               ADAPTIVE_CFG.DY_RISK.DEFAULT;
-  const ageK = ADAPTIVE_CFG.DY_AGE_FACTOR(bio.age, bio.pos);
-
-  // Smooth rank adjustment using curves - ready for Grok's data integration
-  // When Grok provides JSON, Tiber maps year1_prod_delta/age_penalty_per_year_over → k
-  // and calls adjustRankWithMultiplier(rank, k) for precise adjustments
-  const k = baseK * riskK * ageK; // Combined multiplier: k < 1.0 pushes rank down
-  return adjustRankWithMultiplier(rank, k);
+  
+  // GROK DATA INTEGRATION: Use v2 injury profiles with Claude Lamar's collaboration
+  const phase = determineInjuryPhase({
+    status: injury.status,
+    datePlaced: injury.datePlaced,
+    estReturnWeeks: injury.estReturnWeeks,
+    currentWeek: 1, // TODO: Get from season context
+    seasonWeek: 1
+  });
+  
+  if (!phase) return rank; // No adjustment needed
+  
+  const weeksRecovered = calculateWeeksRecovered({
+    datePlaced: injury.datePlaced,
+    estReturnWeeks: injury.estReturnWeeks,
+    status: injury.status
+  });
+  
+  // Use v2 system if injury type is recognized, fallback to v1 for unmapped injuries
+  try {
+    return applyDynastyInjuryV2({
+      rank,
+      injuryType: injury.injuryType || "Other",
+      pos: bio.pos as "QB"|"RB"|"WR"|"TE",
+      age: bio.age,
+      phase,
+      weeksRecovered
+    });
+  } catch (error) {
+    // Fallback to v1 system for backward compatibility
+    console.warn(`Using v1 fallback for injury: ${injury.injuryType}`, error);
+    const baseK = ADAPTIVE_CFG.DY_BASE_PENALTY;
+    const riskK = ADAPTIVE_CFG.DY_RISK[injury.injuryType as keyof typeof ADAPTIVE_CFG.DY_RISK] || 
+                 ADAPTIVE_CFG.DY_RISK.DEFAULT;
+    const ageK = ADAPTIVE_CFG.DY_AGE_FACTOR(bio.age, bio.pos);
+    const k = baseK * riskK * ageK;
+    return adjustRankWithMultiplier(rank, k);
+  }
 }
 
 // Main rebuild function

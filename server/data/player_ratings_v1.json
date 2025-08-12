@@ -22,7 +22,7 @@
       "superflex": 98
     },
     "age_adjusted_value": 95,
-    "last_updated": "2025-08-12T03:59:49.898Z"
+    "last_updated": "2025-08-12T04:07:15.176Z"
   },
   {
     "player_id": "lamar_jackson",
@@ -47,7 +47,7 @@
       "superflex": 96
     },
     "age_adjusted_value": 93,
-    "last_updated": "2025-08-12T03:59:49.899Z"
+    "last_updated": "2025-08-12T04:07:15.176Z"
   },
   {
     "player_id": "jamarr_chase",
@@ -73,7 +73,7 @@
     },
     "age_adjusted_value": 95,
     "breakout_probability": 15,
-    "last_updated": "2025-08-12T03:59:49.899Z"
+    "last_updated": "2025-08-12T04:07:15.176Z"
   },
   {
     "player_id": "ceedee_lamb",
@@ -98,7 +98,7 @@
       "superflex": 93
     },
     "age_adjusted_value": 94,
-    "last_updated": "2025-08-12T03:59:49.899Z"
+    "last_updated": "2025-08-12T04:07:15.176Z"
   },
   {
     "player_id": "christian_mccaffrey",
@@ -124,6 +124,6 @@
     },
     "age_adjusted_value": 91,
     "decline_risk": 25,
-    "last_updated": "2025-08-12T03:59:49.899Z"
+    "last_updated": "2025-08-12T04:07:15.176Z"
   }
 ]
