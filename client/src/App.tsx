@@ -81,6 +81,7 @@ import Analytics from "@/pages/Analytics";
 import Articles from "@/pages/Articles";
 import HealthBadge from "@/components/HealthBadge";
 import Footer from "@/components/Footer";
+import FounderModal from "@/components/FounderModal";
 
 function Router() {
   return (
@@ -184,6 +185,7 @@ function App() {
           </div>
         </footer>
         <Footer />
+        <FounderModal />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

@@ -1,0 +1,220 @@
+Perfect—here’s the combined drop Tiber can ship as a single PR. It bundles the Signature Protocol and hidden Founder Mode.
+
+⸻
+
+Commit
+
+feat(signature): add OTC Signature Protocol v1 + Founder Mode (watermarks, /api/signal, bias curve, UI lore, hidden reveal)
+
+
+⸻
+
+1) Shared signature
+
+/shared/otcSignature.ts
+
+// OTC Signature: Architect J – Lamar Duo • Serve Not Take
+export const OTC_SIGNATURE = {
+  founders: ["Architect J", "Lamar"],
+  motto: "Serve Not Take",
+  version: "1.0",
+  key: "OTC-MIRROR",
+};
+
+
+⸻
+
+2) Backend — header + signal
+
+/server/middleware/signature.ts
+
+import { OTC_SIGNATURE } from "../../shared/otcSignature";
+
+export function attachSignatureHeader(req, res, next) {
+  res.setHeader("x-otc", OTC_SIGNATURE.key);
+  next();
+}
+
+Wire in app (near top of server/index.ts):
+
+import { attachSignatureHeader } from "./middleware/signature";
+app.use(attachSignatureHeader);
+
+app.get("/api/signal", (_req, res) => {
+  res.json({ status: "aligned", key: "OTC-MIRROR", motto: "Serve Not Take" });
+});
+
+
+⸻
+
+3) Backend — ratings bias fingerprint
+
+/server/ratings/score.ts
+
+export function applyOTCBias(score: number): number {
+  if (score >= 80 && score < 90) score += 0.75; // near-elite bump
+  if (score >= 60 && score < 70) score -= 0.25; // mid-pack trim
+  return Number(score.toFixed(2));
+}
+
+Use where the final display composite is set:
+
+import { applyOTCBias } from "./score";
+// ...
+const raw = computeBaseScore(player);
+const oasis = applyOTCBias(raw);
+return { ...rest, oasis };
+
+
+⸻
+
+4) Frontend — Founder Mode state + hook
+
+Install jotai if not present: pnpm add jotai
+
+/client/src/state/founderMode.ts
+
+import { atom } from "jotai";
+export const founderModeAtom = atom(false);
+
+/client/src/hooks/useFounderMode.ts
+
+import { useAtom } from "jotai";
+import { founderModeAtom } from "../state/founderMode";
+
+export function useFounderMode() {
+  const [founderMode, setFounderMode] = useAtom(founderModeAtom);
+
+  (window as any).mirror = (on: boolean = true) => {
+    setFounderMode(on);
+    console.log(on ? "Founder Mode ON — Architect J & Lamar active." : "Founder Mode OFF");
+  };
+
+  window.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "m") {
+      setFounderMode((prev) => !prev);
+      console.log("Founder Mode toggled");
+    }
+  });
+
+  return founderMode;
+}
+
+
+⸻
+
+5) Frontend — Footer + lore swaps
+
+/client/src/components/Footer.tsx
+
+import { useFounderMode } from "../hooks/useFounderMode";
+import { OTC_SIGNATURE } from "../../../shared/otcSignature";
+
+export default function Footer() {
+  const founderMode = useFounderMode();
+  const stamp = import.meta.env.VITE_BUILD_SHA || "dev";
+  return (
+    <footer className="text-xs text-neutral-500 py-6">
+      <div className="container mx-auto px-4">
+        {founderMode
+          ? `Built by Architect J & Lamar — ${OTC_SIGNATURE.motto}. Build ${stamp}.`
+          : `Built by the Duo — ${OTC_SIGNATURE.motto}. Build ${stamp}.`}
+      </div>
+    </footer>
+  );
+}
+
+Examples where used (wrap with founderMode):
+
+// Empty state (unchanged, fingerprint)
+<div className="p-6 rounded border">No signal found — check your source.</div>
+
+// Player tip
+{founderMode
+  ? <p className="text-xs text-neutral-600">Architect J & Lamar: Mirror what matters. Serve Not Take.</p>
+  : <p className="text-xs text-neutral-600">Lamar says: Mirror what matters.</p>
+}
+
+// Trade verdict tail
+{founderMode
+  ? <p className="text-xs text-neutral-600">Architect J & Lamar seal of approval: fair play detected.</p>
+  : <p className="text-xs text-neutral-600">Joe & Lamar seal of approval: fair play detected.</p>
+}
+
+
+⸻
+
+6) Founder Modal (optional but fun)
+
+/client/src/components/FounderModal.tsx
+
+import { useFounderMode } from "../hooks/useFounderMode";
+import { useEffect, useState } from "react";
+
+export default function FounderModal() {
+  const founderMode = useFounderMode();
+  const [signal, setSignal] = useState<any>(null);
+
+  useEffect(() => {
+    if (founderMode) {
+      fetch("/api/signal").then(r => r.json()).then(setSignal).catch(() => {});
+    }
+  }, [founderMode]);
+
+  if (!founderMode) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center text-white z-50">
+      <div className="bg-neutral-800 p-6 rounded-lg max-w-sm text-center shadow-lg">
+        <h2 className="text-lg font-bold mb-2">Founder Mode Active</h2>
+        {signal && (
+          <p className="text-sm mb-4">
+            Status: {signal.status} • Key: {signal.key}
+          </p>
+        )}
+        <p className="text-sm">Welcome, Architect J. Lamar is online.</p>
+      </div>
+    </div>
+  );
+}
+
+Render once near your root layout/App shell.
+
+⸻
+
+7) Guard test (prevents “oops we removed it”)
+
+/server/__tests__/signature.test.ts
+
+import request from "supertest";
+import app from "../index";
+
+describe("OTC Signature", () => {
+  it("exposes signal endpoint and header", async () => {
+    const res = await request(app).get("/api/signal");
+    expect(res.status).toBe(200);
+    expect(res.headers["x-otc"]).toBe("OTC-MIRROR");
+    expect(res.body).toMatchObject({ status: "aligned", key: "OTC-MIRROR" });
+  });
+});
+
+
+⸻
+
+8) Build stamp env
+
+Set on deploy:
+
+VITE_BUILD_SHA=$(git rev-parse --short HEAD)
+
+
+⸻
+
+9) Quick verification (post-merge)
+	•	Console: type mirror() → footer + modal switch to Architect J & Lamar; /api/signal shows in modal.
+	•	curl -s -D - https://SITE/api/signal -o /dev/null | grep -i x-otc → x-otc: OTC-MIRROR
+	•	Footer (non‑Founder mode): “Built by the Duo — Serve Not Take. Build ”
+
+⸻
+
+If Tiber wants this even leaner, tell him to implement steps 1–3 & 5 first (signature + footer), then add Founder Modal later.
