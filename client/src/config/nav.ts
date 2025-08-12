@@ -10,6 +10,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/dynasty", label: "Dynasty", description: "Long-term strategy" },
   { href: "/compass", label: "Compass", description: "Context-aware player guidance" },
   { href: "/consensus", label: "Consensus", description: "Community-driven rankings" },
+  { href: "/competence", label: "Competence Mode", description: "Truth-first AI guidance" },
   { href: "/articles", label: "Articles", description: "Strategy and insights" },
 ];
 

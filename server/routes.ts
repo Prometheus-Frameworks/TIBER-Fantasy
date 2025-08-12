@@ -2486,6 +2486,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Register competence mode routes
+  const competenceRoutes = await import('./routes/competence');
+  app.use('/api/competence', competenceRoutes.default);
+
   const httpServer = createServer(app);
   return httpServer;
 }

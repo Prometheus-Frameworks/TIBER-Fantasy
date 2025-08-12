@@ -53,6 +53,7 @@ import WRAnalyticsTable from "@/components/WRAnalyticsTable";
 import RBAnalytics from "@/pages/RBAnalytics";
 import QBAnalyticsTable from "@/components/QBAnalyticsTable";
 import TEAnalyticsTable from "@/components/TEAnalyticsTable";
+import CompetenceMode from "@/pages/CompetenceMode";
 import TEEvaluationTest from "@/pages/TEEvaluationTest";
 import BatchEvaluationTest from "@/pages/BatchEvaluationTest";
 import PrometheusStressTest from "@/pages/PrometheusStressTest";
@@ -128,6 +129,7 @@ function Router() {
       <Route path="/consensus/expert/architect-j" component={ExpertView} />
       <Route path="/consensus/seed" component={ConsensusSeeding} />
       <Route path="/consensus-transparency" component={ConsensusTransparency} />
+      <Route path="/competence" component={CompetenceMode} />
       <Route path="/experts/architect-j" component={ArchitectJProfile} />
       <Route path="/adaptive-consensus-demo" component={AdaptiveConsensusDemo} />
       <Route path="/curves-demo" component={CurvesDemo} />
