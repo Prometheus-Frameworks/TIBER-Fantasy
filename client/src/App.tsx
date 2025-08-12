@@ -30,6 +30,7 @@ import CleanADP from "@/pages/CleanADP";
 import Oasis from "@/pages/Oasis";
 import DraftRoom from "@/pages/DraftRoom";
 import PlayerProfile from "@/pages/PlayerProfile";
+import PlayerProfileNew from "@/pages/players/PlayerProfile";
 import Rankings from "@/pages/Rankings";
 import OTCConsensus from "@/pages/rankings/OTCConsensus";
 import ConsensusSeeding from "@/pages/ConsensusSeeding";
@@ -94,6 +95,9 @@ import FounderModal from "@/components/FounderModal";
 import AdaptiveConsensusDemo from "@/pages/AdaptiveConsensusDemo";
 import CurvesDemo from "@/pages/CurvesDemo";
 import InjuryProfilesDemo from "@/pages/InjuryProfilesDemo";
+import CompassHub from "@/pages/compass/CompassHub";
+import ConsensusHub from "@/pages/consensus/ConsensusHub";
+import ExpertView from "@/pages/consensus/ExpertView";
 
 function Router() {
   return (
@@ -108,7 +112,18 @@ function Router() {
       <Route path="/player-analysis" component={PlayerAnalysisPage} />
       <Route path="/trade-history/:id" component={TradeHistoryPage} />
       <Route path="/dynasty-values" component={DynastyValuesPage} />
-      <Route path="/consensus" component={OTCConsensus} />
+      {/* Compass Routes */}
+      <Route path="/compass" component={CompassHub} />
+      <Route path="/compass/wr" component={WRCompass} />
+      <Route path="/compass/rb" component={RBCompass} />
+      <Route path="/compass/qb" component={PlayerCompass} />
+      <Route path="/compass/te" component={TECompass} />
+      
+      {/* Consensus Routes */}
+      <Route path="/consensus" component={ConsensusHub} />
+      <Route path="/consensus/dynasty" component={DynastyRankings} />
+      <Route path="/consensus/redraft" component={RedraftRankings} />
+      <Route path="/consensus/expert/architect-j" component={ExpertView} />
       <Route path="/consensus/seed" component={ConsensusSeeding} />
       <Route path="/consensus-transparency" component={ConsensusTransparency} />
       <Route path="/experts/architect-j" component={ArchitectJProfile} />
@@ -116,19 +131,17 @@ function Router() {
       <Route path="/curves-demo" component={CurvesDemo} />
       <Route path="/injury-profiles-demo" component={InjuryProfilesDemo} />
       <Route path="/compare/:username" component={CompareRankings} />
-      <Route path="/consensus/redraft" component={RedraftRankings} />
-      <Route path="/consensus/dynasty" component={DynastyRankings} />
-      <Route path="/rankings" component={RankingsHub} />
       {/* Backward-compatible redirects */}
       <Route path="/rankings" component={() => { window.location.replace('/consensus'); return null; }} />
       <Route path="/rankings/redraft" component={() => { window.location.replace('/consensus/redraft'); return null; }} />
       <Route path="/rankings/dynasty" component={() => { window.location.replace('/consensus/dynasty'); return null; }} />
       <Route path="/compare-league" component={CompareLeaguePage} />
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
-      <Route path="/player-compass" component={PlayerCompass} />
-      <Route path="/wr-compass" component={WRCompass} />
-      <Route path="/rb-compass" component={RBCompass} />
-      <Route path="/te-compass" component={TECompass} />
+      {/* Legacy compass routes - redirect to new structure */}
+      <Route path="/player-compass" component={() => { window.location.replace('/compass'); return null; }} />
+      <Route path="/wr-compass" component={() => { window.location.replace('/compass/wr'); return null; }} />
+      <Route path="/rb-compass" component={() => { window.location.replace('/compass/rb'); return null; }} />
+      <Route path="/te-compass" component={() => { window.location.replace('/compass/te'); return null; }} />
       <Route path="/rookie-evaluator" component={RookieEvaluator} />
       <Route path="/tiber-data" component={TiberData} />
       <Route path="/trade-analyzer" component={TradeAnalyzer} />
@@ -150,6 +163,7 @@ function Router() {
       <Route path="/oasis" component={Oasis} />
       <Route path="/draft-room" component={DraftRoom} />
       <Route path="/player/:id" component={PlayerProfile} />
+      <Route path="/players/:id" component={PlayerProfileNew} />
       <Route path="/enhanced-player/:id" component={EnhancedPlayerProfile} />
       <Route path="/player-pool" component={FullPlayerPool} />
       <Route path="/about" component={About} />
