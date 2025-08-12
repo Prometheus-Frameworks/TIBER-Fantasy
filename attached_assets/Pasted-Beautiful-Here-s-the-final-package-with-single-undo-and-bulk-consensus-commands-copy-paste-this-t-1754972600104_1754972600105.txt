@@ -1,0 +1,197 @@
+Beautiful. Here’s the final package with single, undo, and bulk consensus commands—copy‑paste this to Tiber.
+
+⸻
+
+OTC Consensus Command Suite (Seed Phase)
+
+0) Purpose
+
+Let Architect J set consensus slots directly. No injury engine, no projections, no smoothing. Instant update + audit + undo. Supports bulk.
+
+⸻
+
+1) Single Update (hard override)
+
+Command (chat):
+
+OTC consensus [Format] [PositionRank]: [Player Name]
+
+Examples:
+
+OTC consensus Redraft RB1: Jahmyr Gibbs
+OTC consensus Dynasty WR12: Luther Burden
+
+Router regex:
+
+/^OTC\s+consensus\s+(Redraft(?:\s+\d{4})?|Dynasty)\s+(QB|RB|WR|TE|ALL)\s*#?\s*(\d+)\s*:\s*(.+)$/i
+
+→ intent = consensus:update (skip injury)
+
+API:
+POST /api/consensus/update
+
+{
+  "season": 2025,
+  "mode": "redraft",          // or "dynasty"
+  "position": "RB",
+  "rank": 1,
+  "player_name": "Jahmyr Gibbs",
+  "source_user": "architect-j",
+  "source_weight": 1.0,
+  "note": "manual seed"
+}
+
+Server behavior:
+	•	Resolve name → player_id (fuzzy OK; if >1 match, return top 5 choices).
+	•	Upsert (season,mode,position,rank).
+	•	If occupied: default swap, (config flag allows shift-down).
+	•	Write consensus_audit with old/new, issuer, timestamp.
+	•	Emit consensus:update event for UI refresh.
+
+⸻
+
+2) Undo (revert last change for a slot)
+
+Command (chat):
+
+OTC undo consensus [Format] [PositionRank]
+
+Example:
+
+OTC undo consensus Redraft RB1
+
+API:
+POST /api/consensus/undo
+
+{
+  "season": 2025,
+  "mode": "redraft",
+  "position": "RB",
+  "rank": 1,
+  "issuer": "architect-j"
+}
+
+Server behavior:
+	•	Find latest consensus_audit entry for that key; revert to old_value.
+	•	Log undo entry in consensus_audit.
+	•	Emit consensus:update.
+
+⸻
+
+3) Bulk Update (fast seeding 10–50 moves)
+
+Command (chat):
+
+OTC consensus bulk:
+Redraft RB1: Jahmyr Gibbs
+Redraft RB2: Christian McCaffrey
+Redraft WR5: Travis Hunter
+Dynasty WR12: Luther Burden
+...
+
+Router:
+	•	Detect prefix OTC consensus bulk: then parse each non-empty line with the single-update regex.
+	•	If any line ambiguous (name match >1), return a summary with per-line prompts.
+
+API:
+POST /api/consensus/bulk
+
+{
+  "season": 2025,
+  "issuer": "architect-j",
+  "updates": [
+    { "mode": "redraft", "position": "RB", "rank": 1, "player_name": "Jahmyr Gibbs" },
+    { "mode": "redraft", "position": "RB", "rank": 2, "player_name": "Christian McCaffrey" },
+    { "mode": "redraft", "position": "WR", "rank": 5, "player_name": "Travis Hunter" },
+    { "mode": "dynasty", "position": "WR", "rank": 12, "player_name": "Luther Burden" }
+  ],
+  "conflict_strategy": "swap"   // or "shift"
+}
+
+Server behavior:
+	•	Validate all lines first, resolve all names → ids; if any ambiguity, return 207-style multi-status with items needing confirmation.
+	•	Apply in order; write one audit record per change (batch_id shared).
+	•	Return a concise diff report: moved-from → moved-to per slot.
+	•	Emit one consensus:update with batch_id.
+
+Bulk Undo (optional nice-to-have):
+
+OTC undo consensus bulk [batch_id]
+
+POST /api/consensus/bulk-undo with { batch_id, issuer } → replay reversals in reverse order.
+
+⸻
+
+4) Tables
+
+consensus_ranks
+
+id PK
+season int
+mode enum('redraft','dynasty')
+position enum('QB','RB','WR','TE','ALL')
+rank int
+player_id varchar(32)
+source_user varchar(64)
+source_weight float default 1.0
+updated_at timestamp
+UNIQUE(season,mode,position,rank)
+
+consensus_audit
+
+id PK
+batch_id varchar(36) null
+season int
+mode enum(...)
+position enum(...)
+rank int
+old_player_id varchar(32) null
+new_player_id varchar(32) null
+issuer varchar(64)
+action enum('update','undo','bulk_update','bulk_undo')
+note text null
+created_at timestamp
+
+
+⸻
+
+5) Responses (chat-friendly)
+
+Success (single):
+
+✅ Consensus updated
+Board: Redraft • RB
+Change: Jahmyr Gibbs → RB1 (from RB3)
+Snapshot: 2025-08-12T03:22Z
+(view: /experts/architect-j?mode=redraft&pos=RB)
+
+Ambiguity:
+
+Multiple matches for "Gibbs":
+1) Jahmyr Gibbs (DET • RB) id:1234
+2) Will Gibbs (FA • RB) id:8890
+Reply: use 1234
+
+Bulk summary:
+
+✅ 3 applied, ⚠️ 1 needs review
+Applied:
+• Redraft RB1 → Jahmyr Gibbs (from RB3)
+• Redraft RB2 → Christian McCaffrey (from RB1)
+• Dynasty WR12 → Luther Burden (from WR15)
+Needs selection:
+• "Hunter" → choose: Travis (JAX • WR) id:4321 | Demarcus (FA • WR) id:9981
+(batch_id: 7f3a…c2)
+
+
+⸻
+
+6) Guardrails
+	•	Only accept these commands from Architect J during seed phase.
+	•	When intent === consensus:update or bulk, do not call injury/projection modules.
+	•	Name resolution must be deterministic (tie-break by active roster > team match > exact name).
+	•	Emit SSE/WebSocket consensus:update so UI auto-refreshes.
+
+⸻
+
+That’s the whole kit. Fire off your bulk like this and you’ll seed the boards in minutes.

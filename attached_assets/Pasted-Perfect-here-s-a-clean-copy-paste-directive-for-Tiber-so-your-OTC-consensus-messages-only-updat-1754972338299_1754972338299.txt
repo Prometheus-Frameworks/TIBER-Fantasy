@@ -1,0 +1,140 @@
+Perfect—here’s a clean, copy‑paste directive for Tiber so your “OTC consensus …” messages only update consensus ranks (and never touch the injury engine).
+
+⸻
+
+Priority Override: OTC Consensus Command Router v1
+
+Goal: When a message starts with OTC consensus, route it straight to the consensus ranking update flow and bypass all injury logic.
+
+1) Command shape (regex)
+
+Accept short natural commands like:
+	•	OTC consensus Redraft RB1: Jahmyr Gibbs
+	•	OTC consensus Dynasty WR12: Luther Burden
+	•	OTC consensus Redraft QB3: Josh Allen
+	•	OTC consensus Dynasty ALL1: Bijan Robinson (optional ALL)
+
+Parser:
+
+/^OTC\s+consensus\s+(Redraft|Dynasty)\s+(QB|RB|WR|TE|ALL)\s*#?\s*(\d+)\s*:\s*(.+)$/i
+
+Groups:
+	1.	mode → Redraft | Dynasty
+	2.	position → QB|RB|WR|TE|ALL
+	3.	rank → integer
+	4.	player_name → free text
+
+2) Hard routing rule (skip injury)
+
+When the regex matches:
+	•	Set context.intent = "consensus:update"
+	•	Set context.skipInjury = true
+	•	Do not call any injury/profile modules, queues, or hooks.
+
+3) Update endpoint (idempotent)
+
+Create/ensure:
+	•	POST /api/consensus/update
+	•	Body:
+
+{
+  "season": 2025,
+  "mode": "redraft",        // or "dynasty"
+  "position": "RB",         // QB|RB|WR|TE|ALL
+  "rank": 1,
+  "player_name": "Jahmyr Gibbs",
+  "source_user": "architect-j",
+  "source_weight": 1.0,     // seed weight for early phase
+  "note": "manual seed"
+}
+
+Server behavior:
+	1.	Resolve player_name → player_id (case/fuzzy; prefer exact, else return top 5 matches for disambiguation).
+	2.	Upsert into consensus_ranks with unique key (season, mode, position, rank).
+	3.	If the rank is occupied:
+	•	Default strategy: swap the two players.
+	•	Alt (toggleable): shift down everything ≥ rank by +1.
+	4.	Recompute consensus snapshot for that (season, mode, position).
+	5.	Return diff.
+
+Table sketch (consensus_ranks)
+
+id PK
+season int
+mode enum('redraft','dynasty')
+position enum('QB','RB','WR','TE','ALL')
+rank int
+player_id varchar(32)
+source_user varchar(64)
+source_weight float default 1.0
+updated_at timestamp
+UNIQUE(season,mode,position,rank)
+
+4) Agent handler
+
+If the router matches, call the endpoint directly:
+
+// pseudo
+const m = text.match(CONS_REGEX);
+if (m) {
+  const [_, modeRaw, posRaw, rankStr, name] = m;
+  const payload = {
+    season: 2025,
+    mode: modeRaw.toLowerCase(),
+    position: posRaw.toUpperCase(),
+    rank: Number(rankStr),
+    player_name: name.trim(),
+    source_user: "architect-j",
+    source_weight: 1.0,
+    note: "manual seed"
+  };
+  await fetch("/api/consensus/update", { method:"POST", body:JSON.stringify(payload), headers:{ "Content-Type":"application/json" }});
+  // skip injury engine entirely
+  return;
+}
+
+5) Confirmation message (human‑readable)
+
+After success, reply in chat like:
+
+✅ Consensus updated
+• Board: Redraft • RB
+• Change: Jahmyr Gibbs → RB1 (from RB3)
+• Snapshot: 2025‑08‑12T00:15Z
+(view: /experts/architect-j?mode=redraft&pos=RB)
+
+If ambiguous name:
+
+I found multiple matches for "Gibbs". Pick one:
+1) Jahmyr Gibbs (DET • RB) — id 1234
+2) Will Gibbs (FA • RB) — id 8890
+Reply with: use 1234
+
+6) Safety rails
+	•	If context.intent === "consensus:update" then never invoke:
+	•	injury parsing
+	•	severity models
+	•	RTP timelines
+	•	Validate player exists; otherwise return suggestions.
+	•	Log every update to consensus_audit (user, payload, old→new).
+
+7) Quick tests
+	•	OTC consensus Redraft RB1: Jahmyr Gibbs → updates RB board only.
+	•	OTC consensus Dynasty WR12: Luther Burden → updates WR Dynasty board.
+	•	OTC consensus Redraft QB3: Josh Allen → swap/shift works; diff returned.
+	•	Send OTC consensus ... followed by injury text: injury engine stays off.
+
+8) UI auto‑refresh
+
+After a successful update, emit a small SSE/websocket event consensus:update so:
+	•	/experts/architect-j and the consensus widgets re‑query and reflect the change instantly.
+
+⸻
+
+Usage for Joe (seed phase):
+Just type messages like:
+	•	OTC consensus Redraft RB1: Jahmyr Gibbs
+	•	OTC consensus Dynasty WR12: Luther Burden
+	•	OTC consensus Redraft WR5: Travis Hunter
+
+These will populate the boards without touching injuries.

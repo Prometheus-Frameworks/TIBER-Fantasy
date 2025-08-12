@@ -608,6 +608,42 @@ export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
 export type InsertUserRank = z.infer<typeof insertUserRankSchema>;
 export type InsertFireEvent = z.infer<typeof insertFireEventSchema>;
 
+// OTC Consensus Command Router v1 types
+export type ConsensusRank = typeof consensusRanks.$inferSelect;
+export type InsertConsensusRank = typeof consensusRanks.$inferInsert;
+export type ConsensusAudit = typeof consensusAudit.$inferSelect;
+export type InsertConsensusAudit = typeof consensusAudit.$inferInsert;
+
+// OTC Consensus Command Router v1 - dedicated consensus ranking system
+export const consensusRanks = pgTable("consensus_ranks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  season: integer("season").notNull().default(2025),
+  mode: varchar("mode", { enum: ["redraft", "dynasty"] }).notNull(),
+  position: varchar("position", { enum: ["QB", "RB", "WR", "TE", "ALL"] }).notNull(),
+  rank: integer("rank").notNull(),
+  playerId: varchar("player_id").notNull(),
+  sourceUser: varchar("source_user").notNull().default("architect-j"),
+  sourceWeight: real("source_weight").notNull().default(1.0),
+  note: varchar("note"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueRanking: uniqueIndex("unique_consensus_rank").on(table.season, table.mode, table.position, table.rank),
+}));
+
+export const consensusAudit = pgTable("consensus_audit", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  season: integer("season").notNull(),
+  mode: varchar("mode").notNull(),
+  position: varchar("position").notNull(),
+  rank: integer("rank").notNull(),
+  playerId: varchar("player_id").notNull(),
+  previousPlayerId: varchar("previous_player_id"),
+  sourceUser: varchar("source_user").notNull(),
+  action: varchar("action", { enum: ["insert", "update", "swap", "shift"] }).notNull(),
+  payload: jsonb("payload"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Note: Consensus board tables defined below with proper enums
 
 export const teamPlayersRelations = relations(teamPlayers, ({ one }) => ({

@@ -1691,6 +1691,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/te-compass', teCompassRoutes);
   
   // OTC Consensus routes
+  // OTC Consensus Command Router v1 - dedicated update endpoint
+  app.post('/api/consensus/update', async (req, res) => {
+    try {
+      const { updateConsensusRank } = await import('./consensus/commandRouter');
+      const result = await updateConsensusRank(req.body);
+      
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      console.error("Consensus update error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Internal server error" 
+      });
+    }
+  });
+
+  // Enhanced consensus seeding endpoint with command router integration
+  app.post('/api/consensus/seed', async (req, res) => {
+    try {
+      const { command } = req.body;
+      
+      if (!command) {
+        return res.status(400).json({ success: false, message: "Command string required" });
+      }
+      
+      console.log(`🌱 Processing consensus command: "${command}"`);
+      
+      // Use OTC Consensus Command Router v1
+      const { parseConsensusCommand, updateConsensusRank } = await import('./consensus/commandRouter');
+      const payload = parseConsensusCommand(command);
+      
+      if (!payload) {
+        return res.status(400).json({
+          success: false,
+          message: "❌ Error: Invalid command format. Use: OTC consensus <Redraft|Dynasty> <POSITION><RANK> : <PLAYER NAME>",
+          errorType: "INVALID_FORMAT",
+          example: "OTC consensus Redraft RB1 : Jahmyr Gibbs"
+        });
+      }
+      
+      const result = await updateConsensusRank(payload);
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          message: result.message,
+          command: {
+            position: payload.position,
+            rank: payload.rank,
+            playerName: payload.player_name,
+            format: payload.mode
+          },
+          diff: result.diff
+        });
+      } else {
+        res.status(400).json(result);
+      }
+      
+    } catch (error) {
+      console.error("Consensus seed error:", error);
+      res.status(500).json({ success: false, message: "Internal server error" });
+    }
+  });
+
   app.use('/api/consensus', consensusRoutes);
   app.use('/api/consensus', consensusSeedingRoutes);
   
