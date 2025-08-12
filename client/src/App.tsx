@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useTopProgress } from "@/hooks/useTopProgress";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import TeamSync from "@/pages/team-sync";
@@ -201,21 +202,29 @@ function Router() {
   );
 }
 
+function AppContent() {
+  useTopProgress(); // Enable automatic loading bar
+  
+  return (
+    <TooltipProvider>
+      <Navigation />
+      <main className="mx-auto max-w-6xl px-4 py-3">
+        <Router />
+      </main>
+      <Footer />
+      <FounderModal />
+      <Toaster />
+    </TooltipProvider>
+  );
+}
+
 function App() {
   // Check for demo mode
   const isDemoMode = window.location.search.includes('demo=1');
   
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Navigation />
-        <main className="mx-auto max-w-6xl px-4 py-3">
-          <Router />
-        </main>
-        <Footer />
-        <FounderModal />
-        <Toaster />
-      </TooltipProvider>
+      <AppContent />
     </QueryClientProvider>
   );
 }
