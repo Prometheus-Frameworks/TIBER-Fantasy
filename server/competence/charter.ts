@@ -138,37 +138,72 @@ export class CompetenceEngine {
   }
 
   private analyzeQuery(query: string) {
-    // Simple keyword-based analysis for demo
     const lowercaseQuery = query.toLowerCase();
     
+    // Trade Analysis - No Hand-Holding
     if (lowercaseQuery.includes('trade')) {
+      if (lowercaseQuery.includes('should i') || lowercaseQuery.includes('what do you think')) {
+        return {
+          recommendation: "Stop asking for validation. Calculate the trade yourself: Future production probability × positional scarcity × injury risk. Name recognition is irrelevant.",
+          reasoning: "You're seeking comfort, not analysis. Most trades fail because managers optimize for feeling good about the deal rather than winning games.",
+          confidence: 95
+        };
+      }
       return {
-        recommendation: "Evaluate trade based on positional scarcity and long-term value, not just name recognition",
-        reasoning: "Trades should be evaluated on future production potential, not past performance",
+        recommendation: "Trade evaluation requires specific players, league format, and your roster construction. Vague questions get vague answers.",
+        reasoning: "Without context, any advice is worthless. Provide specifics or make your own decision.",
+        confidence: 90
+      };
+    }
+    
+    // Draft Analysis - Reality Check
+    if (lowercaseQuery.includes('draft')) {
+      if (lowercaseQuery.includes('sleeper') || lowercaseQuery.includes('breakout')) {
+        return {
+          recommendation: "Chasing breakouts in drafts is how you finish 6th. Draft proven volume, trade for upside later when you have capital.",
+          reasoning: "Breakout picks feel smart but statistically underperform. Volume is predictable, talent evaluation is not.",
+          confidence: 88
+        };
+      }
+      return {
+        recommendation: "Draft for volume and positional scarcity first, talent second. Your gut feelings about players are probably wrong.",
+        reasoning: "Most managers draft based on highlight reels and narratives. Data-driven positional value wins leagues.",
         confidence: 85
       };
     }
     
-    if (lowercaseQuery.includes('draft')) {
+    // Waiver/Pickup Analysis - Cut Through Noise  
+    if (lowercaseQuery.includes('waiver') || lowercaseQuery.includes('pickup') || lowercaseQuery.includes('add')) {
       return {
-        recommendation: "Focus on positional value and avoid reaching for team needs early",
-        reasoning: "Best player available typically provides better long-term value than reaching for position",
-        confidence: 80
+        recommendation: "If you're asking about a waiver pickup, you already know the answer. Clear path to 15+ touches/targets? Add them. Everything else is lottery ticket gambling.",
+        reasoning: "Waiver analysis paralysis costs more games than bad pickups. Volume opportunity is binary - either it exists or it doesn't.",
+        confidence: 92
       };
     }
     
-    if (lowercaseQuery.includes('waiver') || lowercaseQuery.includes('pickup')) {
+    // Start/Sit - Expose the Foolishness
+    if (lowercaseQuery.includes('start') || lowercaseQuery.includes('sit') || lowercaseQuery.includes('lineup')) {
       return {
-        recommendation: "Prioritize players with clear path to targets/touches over ceiling plays",
-        reasoning: "Waiver claims should focus on volume opportunity rather than speculative upside",
-        confidence: 75
+        recommendation: "Start your best players. If you're agonizing over start/sit decisions, your roster construction is the real problem.",
+        reasoning: "Start/sit anxiety indicates insufficient depth. Good teams don't have agonizing lineup decisions every week.",
+        confidence: 93
       };
     }
     
+    // Dynasty/Keeper - Long-term Truth
+    if (lowercaseQuery.includes('dynasty') || lowercaseQuery.includes('keeper')) {
+      return {
+        recommendation: "Dynasty success requires patience most managers don't have. If you're looking for quick fixes, play redraft.",
+        reasoning: "Dynasty rewards those who accept short-term pain for long-term gain. Most quit before seeing results.",
+        confidence: 90
+      };
+    }
+    
+    // Default Response - No Coddling
     return {
-      recommendation: "Provide more specific context for detailed analysis",
-      reasoning: "General fantasy advice requires specific context about league format, roster construction, and timeline",
-      confidence: 60
+      recommendation: "Your question lacks the specificity needed for useful analysis. Fantasy football rewards precision, not vague theorizing.",
+      reasoning: "Successful managers ask specific questions with context. General advice produces general results - which means losing.",
+      confidence: 85
     };
   }
 
