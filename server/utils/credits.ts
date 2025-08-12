@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 
 type Entry = { who: string; role: string; what: string; ref: string; ts: string };
+type CreditType = 'Feature' | 'Fix' | 'Docs';
 
 const FILE = path.join(process.cwd(), "docs/internal/credits.json");
 
@@ -13,6 +14,17 @@ export function addCredit(e: Entry) {
   } catch (err) {
     console.error("[credits] failed to write", err);
   }
+}
+
+export function addStructuredCredit(who: string, role: string, what: string, type: CreditType, ref: string = "PR-AUTO") {
+  const entry: Entry = {
+    who,
+    role,
+    what: `${type}: ${what}`,
+    ref,
+    ts: new Date().toISOString()
+  };
+  addCredit(entry);
 }
 
 export function getCredits() {
