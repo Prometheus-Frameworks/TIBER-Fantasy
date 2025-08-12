@@ -34,7 +34,7 @@ export default function Navigation() {
             <Link href="/consensus" className="text-sm font-medium text-white hover:text-yellow-400 transition-colors">
               OTC Consensus
             </Link>
-            <Link href="/consensus/transparency" className="text-sm font-medium text-white hover:text-yellow-400 transition-colors">
+            <Link href="/consensus-transparency" className="text-sm font-medium text-white hover:text-yellow-400 transition-colors">
               Consensus Transparency
             </Link>
           </nav>
@@ -60,7 +60,7 @@ export default function Navigation() {
           <Link href="/consensus" className="py-2 px-3 rounded-md whitespace-nowrap text-xs font-medium text-white hover:text-yellow-400 transition-colors flex-shrink-0">
             OTC Consensus
           </Link>
-          <Link href="/consensus/transparency" className="py-2 px-3 rounded-md whitespace-nowrap text-xs font-medium text-white hover:text-yellow-400 transition-colors flex-shrink-0">
+          <Link href="/consensus-transparency" className="py-2 px-3 rounded-md whitespace-nowrap text-xs font-medium text-white hover:text-yellow-400 transition-colors flex-shrink-0">
             Transparency
           </Link>
         </div>
@@ -85,7 +85,7 @@ export default function Navigation() {
               OTC Consensus
             </Link>
             <Link
-              href="/consensus/transparency"
+              href="/consensus-transparency"
               className="block py-3 px-3 rounded-lg text-sm font-medium text-white hover:text-yellow-400 transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >

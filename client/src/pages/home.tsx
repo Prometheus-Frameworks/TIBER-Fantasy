@@ -53,7 +53,7 @@ export default function HomePage() {
                 icon="🏃"
                 title="2025 Rookies"
                 desc="Prep and dominate your draft"
-                href="/rookies"
+                href="/rookie-evaluator"
               />
               <QuickActionCard
                 icon="🏆"
