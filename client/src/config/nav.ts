@@ -9,6 +9,8 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/redraft", label: "Redraft", description: "Seasonal league tools" },
   { href: "/dynasty", label: "Dynasty", description: "Long-term strategy" },
   { href: "/consensus", label: "OTC Consensus", description: "Player rankings and tiers" },
+  { href: "/consensus-transparency", label: "Consensus Transparency", description: "How consensus works" },
+  { href: "/experts/architect-j", label: "Architect J", description: "Founder rankings" },
   { href: "/analytics", label: "Analytics", description: "Advanced player analysis" },
   { href: "/articles", label: "Articles & Analysis", description: "Strategy and insights" },
   { href: "/weekly-data", label: "Weekly Data", description: "Game logs and stats" },

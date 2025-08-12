@@ -1,47 +1,57 @@
-export type ConsensusFormat = "redraft" | "dynasty";
+export type Format = "redraft" | "dynasty";
+export type Position = "QB" | "RB" | "WR" | "TE" | "ALL";
+
+export interface UserProfile {
+  id: string;
+  username: string;          // e.g., "Architect J"
+  consentConsensus: boolean; // default false
+  fireScore: number;         // total 🔥 received
+  createdAt: string;
+}
 
 export interface ConsensusRow {
   id: string;           // uuid
-  playerId: string;     // sleeper/nfl id
-  format: ConsensusFormat;
+  playerId: string;
+  format: Format;
   season?: number;      // required for redraft, omitted for dynasty
-  rank: number;         // 1..n within (format, season)
-  tier: string;         // S,A,B,... or T1,T2...
-  score: number;        // display composite (after OTC bias)
-  source: "system" | "editor" | "community";
+  pos: Position;        // position slice (for querying/sorting)
+  rank: number;         // integer rank within slice
+  source: "seed" | "community";
   updatedAt: string;
 }
 
-export interface ConsensusMeta {
-  defaultFormat: ConsensusFormat; // "dynasty" (canonical base)
-  boardVersion: number;           // bump on any write
-}
-
-export interface ConsensusResponse {
-  meta: ConsensusMeta;
-  rows: ConsensusRow[];
-}
-
-export interface ConsensusUpdate {
-  playerId: string;
-  rank?: number;
-  tier?: string;
-  score?: number;
-}
-
-export interface ConsensusPatchRequest {
-  format: ConsensusFormat;
-  season?: number;
-  updates: ConsensusUpdate[];
-}
-
-export interface ConsensusChangelogEntry {
+export interface UserRankRow {
   id: string;
-  timestamp: string;
-  userId?: string;
-  format: ConsensusFormat;
+  userId: string;
+  format: Format;
   season?: number;
+  pos: Position;
   playerId: string;
-  before: Partial<ConsensusRow>;
-  after: Partial<ConsensusRow>;
+  rank: number;
+  updatedAt: string;
+}
+
+export interface FireEvent {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  targetType: "rankingSet" | "profile";
+  targetId: string; // rankingSet id or profile id
+  createdAt: string;
+}
+
+export interface ConsensusMetadata {
+  contributors: number;
+  lastUpdatedISO: string;
+  equalWeight: true;
+  format: Format;
+  season?: number;
+}
+
+export interface CompareRanking {
+  playerId: string;
+  playerName: string;
+  yourRank?: number;
+  consensusRank?: number;
+  delta?: number; // consensusRank - yourRank
 }

@@ -524,6 +524,92 @@ export const gameLogsRelations = relations(gameLogs, ({ one }) => ({
   }),
 }));
 
+// OTC Consensus Engine v1.1 Tables
+export const userProfiles = pgTable("user_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: varchar("username").notNull().unique(),
+  consentConsensus: boolean("consent_consensus").default(false),
+  fireScore: integer("fire_score").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userRanks = pgTable("user_ranks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => userProfiles.id),
+  format: varchar("format", { enum: ["dynasty", "redraft"] }).notNull(),
+  season: integer("season"), // required for redraft, null for dynasty
+  pos: varchar("pos", { enum: ["QB", "RB", "WR", "TE", "ALL"] }).notNull(),
+  playerId: varchar("player_id").notNull(),
+  rank: integer("rank").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const fireEvents = pgTable("fire_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fromUserId: varchar("from_user_id").notNull().references(() => userProfiles.id),
+  toUserId: varchar("to_user_id").notNull().references(() => userProfiles.id),
+  targetType: varchar("target_type", { enum: ["rankingSet", "profile"] }).notNull(),
+  targetId: varchar("target_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations for consensus engine
+export const userProfilesRelations = relations(userProfiles, ({ many }) => ({
+  userRanks: many(userRanks),
+  fireEventsGiven: many(fireEvents, { relationName: "fireEventsGiven" }),
+  fireEventsReceived: many(fireEvents, { relationName: "fireEventsReceived" }),
+}));
+
+export const userRanksRelations = relations(userRanks, ({ one }) => ({
+  user: one(userProfiles, {
+    fields: [userRanks.userId],
+    references: [userProfiles.id],
+  }),
+}));
+
+export const fireEventsRelations = relations(fireEvents, ({ one }) => ({
+  fromUser: one(userProfiles, {
+    fields: [fireEvents.fromUserId],
+    references: [userProfiles.id],
+    relationName: "fireEventsGiven",
+  }),
+  toUser: one(userProfiles, {
+    fields: [fireEvents.toUserId],
+    references: [userProfiles.id],
+    relationName: "fireEventsReceived",
+  }),
+}));
+
+// Insert schemas for consensus engine
+export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserRankSchema = createInsertSchema(userRanks).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertFireEventSchema = createInsertSchema(fireEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for consensus engine
+export type UserProfile = typeof userProfiles.$inferSelect;
+export type UpsertUserProfile = typeof userProfiles.$inferInsert;
+export type UserRank = typeof userRanks.$inferSelect;
+export type UpsertUserRank = typeof userRanks.$inferInsert;
+export type FireEvent = typeof fireEvents.$inferSelect;
+export type UpsertFireEvent = typeof fireEvents.$inferInsert;
+
+export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
+export type InsertUserRank = z.infer<typeof insertUserRankSchema>;
+export type InsertFireEvent = z.infer<typeof insertFireEventSchema>;
+
+// Note: Consensus board tables defined below with proper enums
+
 export const teamPlayersRelations = relations(teamPlayers, ({ one }) => ({
   team: one(teams, {
     fields: [teamPlayers.teamId],
@@ -615,6 +701,7 @@ export const consensusChangelog = pgTable("consensus_changelog", {
   index("consensus_changelog_player_idx").on(table.playerId),
 ]);
 
+// Consensus Engine Types
 export type ConsensusBoard = typeof consensusBoard.$inferSelect;
 export type InsertConsensusBoard = typeof consensusBoard.$inferInsert;
 export type ConsensusMeta = typeof consensusMeta.$inferSelect;

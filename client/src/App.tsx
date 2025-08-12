@@ -33,6 +33,9 @@ import PlayerProfile from "@/pages/PlayerProfile";
 import Rankings from "@/pages/Rankings";
 import OTCConsensus from "@/pages/rankings/OTCConsensus";
 import ConsensusSeeding from "@/pages/ConsensusSeeding";
+import ConsensusTransparency from "@/pages/ConsensusTransparency";
+import ArchitectJProfile from "@/pages/experts/ArchitectJ";
+import CompareRankings from "@/pages/CompareRankings";
 import RankingsHub from "@/pages/rankings/RankingsHub";
 import RedraftRankings from "@/pages/rankings/RedraftRankings";
 import DynastyRankings from "@/pages/rankings/DynastyRankings";
@@ -104,6 +107,9 @@ function Router() {
       <Route path="/dynasty-values" component={DynastyValuesPage} />
       <Route path="/consensus" component={OTCConsensus} />
       <Route path="/consensus/seed" component={ConsensusSeeding} />
+      <Route path="/consensus-transparency" component={ConsensusTransparency} />
+      <Route path="/experts/architect-j" component={ArchitectJProfile} />
+      <Route path="/compare/:username" component={CompareRankings} />
       <Route path="/consensus/redraft" component={RedraftRankings} />
       <Route path="/consensus/dynasty" component={DynastyRankings} />
       <Route path="/rankings" component={RankingsHub} />

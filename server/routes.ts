@@ -58,6 +58,15 @@ import pythonRookieRoutes from './routes/pythonRookieRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
 import consensusRoutes from './consensus';
 import consensusSeedingRoutes from './consensusSeeding';
+import { 
+  getProfile, 
+  updateProfile, 
+  giveFire, 
+  getFireLeaderboard,
+  rebuildConsensus,
+  getConsensusMetadata,
+  compareRankings
+} from './consensusEngine';
 import { OTC_SIGNATURE } from '../shared/otcSignature';
 import fs from 'fs';
 import path from 'path';
@@ -1681,6 +1690,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // OTC Consensus routes
   app.use('/api/consensus', consensusRoutes);
   app.use('/api/consensus', consensusSeedingRoutes);
+  
+  // OTC Consensus Engine v1.1 API Routes
+  app.get('/api/profile/:username', getProfile);
+  app.patch('/api/profile/:username', updateProfile);
+  app.post('/api/fire', giveFire);
+  app.get('/api/leaderboard/fire', getFireLeaderboard);
+  app.post('/api/consensus/rebuild', rebuildConsensus);
+  app.get('/api/consensus/meta', getConsensusMetadata);
+  app.get('/api/compare/:username', compareRankings);
 
   // --- COMPASS BRIDGE: normalize and guarantee data for new endpoint ---
   app.get("/api/compass/WR", async (req, res) => {

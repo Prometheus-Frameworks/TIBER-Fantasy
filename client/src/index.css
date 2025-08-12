@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* OTC Consensus Engine - Fire Badge Styles */
+.username-hot {
+  position: relative;
+  text-shadow: 0 0 8px rgba(255, 111, 0, 0.6);
+}
+
+.username-hot::after {
+  content: " 🔥";
+}
+
 /* Mobile-first performance optimizations for iOS, Android, and desktop */
 * {
   /* Improve scrolling performance on mobile devices */

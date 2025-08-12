@@ -1,0 +1,233 @@
+Copy‑paste this to Tiber. It’s the full install prompt (equal‑weight consensus + 🔥 badges + transparency + baseline + consent), plus the optional compare chart logic ask at the end.
+
+⸻
+
+Tiber Install Prompt — OTC Consensus Engine (Architect J v1.1)
+
+Commit
+
+feat(consensus): Architect J OTC Consensus Engine v1.1 (equal-weight, consent, fire badges, transparency, baseline)
+
+0) Intent (read me)
+	•	Consensus is equal‑weight across all consenting contributors (Architect J included).
+	•	No “stars = influence”. 🔥 (Fire) is social/visibility only.
+	•	Ethics baked in: explicit consent, right to withdraw, transparent math.
+	•	Two feeds: OTC Dynasty Consensus (root/default) and OTC Redraft Consensus (season‑scoped).
+	•	At launch, Architect J is the only contributor → Consensus == Architect J (1:1) until others opt in.
+
+⸻
+
+1) Data model
+
+Types
+
+// shared/types/consensus.ts
+export type Format = "redraft" | "dynasty";
+export type Position = "QB" | "RB" | "WR" | "TE" | "ALL";
+
+export interface UserProfile {
+  id: string;
+  username: string;          // e.g., "Architect J"
+  consentConsensus: boolean; // default false
+  fireScore: number;         // total 🔥 received
+  createdAt: string;
+}
+
+export interface ConsensusRow {
+  id: string;           // uuid
+  playerId: string;
+  format: Format;
+  season?: number;      // required for redraft, omitted for dynasty
+  pos: Position;        // position slice (for querying/sorting)
+  rank: number;         // integer rank within slice
+  source: "seed" | "community";
+  updatedAt: string;
+}
+
+export interface UserRankRow {
+  id: string;
+  userId: string;
+  format: Format;
+  season?: number;
+  pos: Position;
+  playerId: string;
+  rank: number;
+  updatedAt: string;
+}
+
+export interface FireEvent {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  targetType: "rankingSet" | "profile";
+  targetId: string; // rankingSet id or profile id
+  createdAt: string;
+}
+
+DB tables
+	•	user_profiles (id, username, consentConsensus bool default false, fireScore int default 0, createdAt)
+	•	user_ranks (id, userId, format, season, pos, playerId, rank, updatedAt)
+	•	consensus_board (id, playerId, format, season NULL, pos, rank, source, updatedAt)
+	•	fire_events (id, fromUserId, toUserId, targetType, targetId, createdAt)
+
+Seed:
+	•	Insert profile for Architect J (consentConsensus=true).
+
+⸻
+
+2) Consent
+	•	Profile toggle (default OFF): “Include my rankings in OTC Consensus”.
+	•	If consentConsensus=false, their user_ranks must not be included in consensus math.
+	•	Right to withdraw: when toggled OFF, exclude their ranks from future consensus builds.
+
+API:
+
+GET  /api/profile/:username        // shows consent + fireScore (public-safe subset)
+PATCH /api/profile/:username       // auth required; can set consentConsensus true/false
+
+
+⸻
+
+3) Consensus calculation (equal‑weight)
+
+Aggregation logic (run on write or cron):
+
+// Pseudocode
+rows = fetch all players for (format, season?, pos) appearing in consenting user_ranks
+for each player:
+  collect all consenting ranks from user_ranks
+  if none exist -> fall back to seed (Architect J) if present
+  consensusRank = round( average( ranks ) )
+write to consensus_board (source="community" when any community ranks exist; otherwise "seed")
+
+Rules:
+	•	Dynasty: season must be null
+	•	Redraft: season required (e.g., 2025)
+	•	Equal weight for all consenting users at all times.
+
+Endpoints:
+
+GET /api/consensus?format=dynasty|redraft&season=2025&pos=WR
+POST /api/consensus/rebuild { format, season? }   // admin: recompute consensus from user_ranks
+
+
+⸻
+
+4) Fire (🔥) badges — social only (no math)
+	•	Users can give 🔥 to a ranking set or profile; it increments fireScore for the recipient.
+	•	Fire only affects visibility UI (badges/leaderboards), not consensus weighting.
+
+API:
+
+POST /api/fire { toUserId, targetType, targetId }   // auth required; rate-limit per day
+GET  /api/leaderboard/fire?limit=20                 // top 🔥 users
+
+Display rules
+	•	If fireScore >= 50, show badge lvl 50🔥; if >=5000, lvl 5000🔥 (tiered).
+	•	Add glow style on usernames with high fireScore.
+
+CSS (glow username)
+
+/* tailwind-less example */
+.username-hot {
+  position: relative;
+  text-shadow: 0 0 8px rgba(255, 111, 0, 0.6);
+}
+.username-hot::after {
+  content: " 🔥";
+}
+
+React helper
+
+export function Username({ name, fireScore }:{name:string;fireScore:number}) {
+  const tier = fireScore >= 5000 ? 5000 : fireScore >= 500 ? 500 : fireScore >= 50 ? 50 : 0;
+  const cls = tier ? "username-hot" : "";
+  return <span className={cls}>{name}{tier ? ` — lvl ${tier}🔥` : ""}</span>;
+}
+
+
+⸻
+
+5) Transparency page
+
+Route: /consensus-transparency
+
+Show:
+	•	“Equal‑weight consensus — every consenting contributor counts as 1 vote.”
+	•	Contributors count (number of consenting users with active ranks for the slice).
+	•	Top 🔥 users leaderboard (fun list; again, no influence on math).
+	•	Last rebuild timestamp and trigger (“manual” or cron).
+	•	Consent & withdrawal policy summary.
+
+API:
+
+GET /api/consensus/meta?format=...&season=...
+// { contributors: number, lastUpdatedISO, equalWeight:true }
+
+
+⸻
+
+6) Pages & routes
+	•	Your board (public): /experts/architect-j
+	•	Tabs: Dynasty / Redraft(2025)
+	•	Position chips: ALL, QB, RB, WR, TE
+	•	Header shows <Username /> with 🔥 level if any.
+	•	Consensus (public): /consensus (defaults to Dynasty)
+	•	/consensus/dynasty, /consensus/redraft?season=2025
+	•	Copy uses “OTC Consensus” (not “Rankings”)
+	•	Compare (public): /compare/architect-j?format=dynasty&pos=WR
+	•	Columns: Player • Your Rank • OTC Consensus • Δ (consensus - yours)
+	•	Admin quick seed (already spec’d earlier): /admin/consensus + POST /api/consensus/shorthand
+
+⸻
+
+7) Shorthand seeding (recap for v1.1)
+	•	For launch, Architect J is the only “editor.”
+	•	Command style (strict v1.1):
+
+OTC consensus <POS><RANK> : <PLAYER NAME> (dynasty|2025 redraft)
+
+
+	•	Errors must be explicit; success must echo resolved target.
+
+⸻
+
+8) Guardrails
+	•	Reject contributions from non‑consenting users.
+	•	Min account age (e.g., 7 days) or verified email to contribute ranks.
+	•	Basic troll detection (reject submissions with >N players missing or identical ranks).
+
+⸻
+
+9) Acceptance
+	•	✅ PATCH /api/profile/:username toggles consent.
+	•	✅ Consensus rebuild uses only consenting users; equal weight.
+	•	✅ Fire badge visible on hot users; doesn’t affect consensus math.
+	•	✅ /consensus-transparency clearly states equal‑weight + consent rules.
+	•	✅ At launch, consensus mirrors Architect J’s board 1:1; compare view shows Δ=0.
+
+⸻
+
+10) Small UI touches
+	•	On Season HQ tiles, add: “View Architect J board → /experts/architect-j”
+	•	On Consensus pages, add pill: “Compare to Architect J”
+
+⸻
+
+Optional (nice-to-have now, or later)
+	•	Cron job to rebuild consensus nightly.
+	•	Export/Import of user boards (CSV/JSON).
+	•	“Publish to Consensus” button on a user’s private board editor (writes to user_ranks if consent is ON).
+
+⸻
+
+Final note (intent)
+	•	This system is static and human‑directed at launch. No auto‑ingestion. It grows only when real users contribute voluntarily.
+
+⸻
+
+Question for you, Tiber (from Lamar):
+
+“Do you want me to also write the ‘Consensus vs Your Rankings’ chart logic so it’s ready to display the 1‑to‑1 now and evolve later? That’s the FantasyPros‑style feature you mentioned.”
+
+If yes, I’ll send the chart spec (API shape + React component with Δ pills and sorting) right after this.
