@@ -54,6 +54,8 @@ The platform uses a modular Flask backend for core logic and API endpoints, and 
 
 **Navigation Consolidation (COMPLETE - August 12, 2025)**: Centralized navigation system with single source of truth configuration (`client/src/config/nav.ts`). Enhanced Navigation component with responsive design featuring desktop tabs, mobile scroll row, and collapsible dropdown menu. Removed duplicate hero navigation from home page and converted into "Quick Actions" section with structured action cards. All navigation now flows through unified `NAV_LINKS` array with descriptions for better UX.
 
+**Rankings Hub Implementation (COMPLETE - August 12, 2025)**: Transformed `/rankings` into a clean hub interface with two main cards for Redraft and Dynasty formats. Created nested routing structure with `/rankings/redraft` and `/rankings/dynasty` containing the detailed filtering tables. Implemented mode-aware `RankingsTable` component that queries format-specific API endpoints. Added back navigation, last updated timestamps from `/api/health`, and maintained all filtering/search functionality within each format.
+
 ### API Development Completion (August 11, 2025)
 **API Surface Completion**: Comprehensive discovery and implementation of missing critical endpoints. All core frontend integration routes now operational with consistent response formats and error handling. Key additions include VORP rankings, WR compass search, rookie evaluation, and weekly data aggregation endpoints.
 
