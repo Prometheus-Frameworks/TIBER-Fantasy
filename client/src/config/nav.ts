@@ -8,7 +8,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/", label: "Home", description: "Fantasy football tools overview" },
   { href: "/redraft", label: "Redraft", description: "Seasonal league tools" },
   { href: "/dynasty", label: "Dynasty", description: "Long-term strategy" },
-  { href: "/rankings", label: "Rankings", description: "Player rankings and tiers" },
+  { href: "/consensus", label: "OTC Consensus", description: "Player rankings and tiers" },
   { href: "/analytics", label: "Analytics", description: "Advanced player analysis" },
   { href: "/articles", label: "Articles & Analysis", description: "Strategy and insights" },
   { href: "/weekly-data", label: "Weekly Data", description: "Game logs and stats" },

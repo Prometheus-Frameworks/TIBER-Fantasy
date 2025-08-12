@@ -95,10 +95,10 @@ export default function RankingsTable({ mode }: Props) {
           {mode.toUpperCase()} • {pos} • {updatedAt ? `Updated ${new Date(updatedAt).toLocaleString()}` : "Live"}
         </p>
         <Link 
-          href="/rankings"
+          href="/consensus"
           className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
         >
-          ← Back to Rankings Hub
+          ← Back to OTC Consensus Hub
         </Link>
       </div>
 
@@ -190,7 +190,7 @@ export default function RankingsTable({ mode }: Props) {
         ) : (
           <div className="p-6 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
             <div className="text-gray-900 dark:text-white">
-              No signal found — check your source.
+              No consensus data available — check your source.
             </div>
           </div>
         )

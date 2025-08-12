@@ -26,16 +26,16 @@ export default function RankingsHub() {
     <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <header className="py-6">
         <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white">
-          Player Rankings
+          OTC Consensus
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Choose a format to view rankings and tools.
+          Choose a format to view consensus rankings and tools.
         </p>
       </header>
 
       <div className="grid gap-4 sm:gap-6 sm:grid-cols-2">
         <Link 
-          href="/rankings/redraft" 
+          href="/consensus/redraft" 
           className="group rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 hover:shadow-md transition-all hover:-translate-y-0.5 bg-white dark:bg-gray-800"
         >
           <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
@@ -52,7 +52,7 @@ export default function RankingsHub() {
         </Link>
 
         <Link 
-          href="/rankings/dynasty" 
+          href="/consensus/dynasty" 
           className="group rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 hover:shadow-md transition-all hover:-translate-y-0.5 bg-white dark:bg-gray-800"
         >
           <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">

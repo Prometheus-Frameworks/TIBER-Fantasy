@@ -34,6 +34,7 @@ import Rankings from "@/pages/Rankings";
 import RankingsHub from "@/pages/rankings/RankingsHub";
 import RedraftRankings from "@/pages/rankings/RedraftRankings";
 import DynastyRankings from "@/pages/rankings/DynastyRankings";
+import SeasonHQ from "@/pages/redraft/SeasonHQ";
 import DynastyDeclineAnalysis from "@/pages/DynastyDeclineAnalysis";
 import RBTouchdownRegression from "@/pages/RBTouchdownRegression";
 import WRTouchdownRegression from "@/pages/WRTouchdownRegression";
@@ -99,9 +100,13 @@ function Router() {
       <Route path="/player-analysis" component={PlayerAnalysisPage} />
       <Route path="/trade-history/:id" component={TradeHistoryPage} />
       <Route path="/dynasty-values" component={DynastyValuesPage} />
-      <Route path="/rankings" component={RankingsHub} />
-      <Route path="/rankings/redraft" component={RedraftRankings} />
-      <Route path="/rankings/dynasty" component={DynastyRankings} />
+      <Route path="/consensus" component={RankingsHub} />
+      <Route path="/consensus/redraft" component={RedraftRankings} />
+      <Route path="/consensus/dynasty" component={DynastyRankings} />
+      {/* Backward-compatible redirects */}
+      <Route path="/rankings" component={() => { window.location.replace('/consensus'); return null; }} />
+      <Route path="/rankings/redraft" component={() => { window.location.replace('/consensus/redraft'); return null; }} />
+      <Route path="/rankings/dynasty" component={() => { window.location.replace('/consensus/dynasty'); return null; }} />
       <Route path="/compare-league" component={CompareLeaguePage} />
       <Route path="/enhanced-dynasty" component={EnhancedDynasty} />
       <Route path="/player-compass" component={PlayerCompass} />
@@ -114,7 +119,7 @@ function Router() {
       <Route path="/trade-analyzer-new" component={TradeAnalyzerNew} />
       <Route path="/waivers" component={Waivers} />
       <Route path="/weekly-data" component={WeeklyData} />
-      <Route path="/redraft" component={RedraftHub} />
+      <Route path="/redraft" component={SeasonHQ} />
       <Route path="/dynasty" component={Dynasty} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/articles" component={Articles} />

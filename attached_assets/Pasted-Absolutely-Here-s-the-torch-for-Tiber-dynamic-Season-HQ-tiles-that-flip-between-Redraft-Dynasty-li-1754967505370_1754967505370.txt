@@ -1,0 +1,105 @@
+Absolutely. Here’s the torch for Tiber: dynamic Season HQ tiles that flip between Redraft/Dynasty links when the dropdown changes.
+
+⸻
+
+Commit
+
+feat(hq): Season HQ format switch remaps tile links (redraft ↔ dynasty)
+
+Drop-in update
+
+client/src/pages/redraft/SeasonHQ.tsx
+
+import { Link, useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+
+type Format = "redraft" | "dynasty";
+
+function Tile({ to, title, desc, emoji }:{
+  to:string; title:string; desc:string; emoji:string
+}) {
+  return (
+    <Link to={to} className="rounded-xl border shadow-sm p-5 hover:shadow-md transition bg-white">
+      <div className="text-2xl mb-2">{emoji}</div>
+      <h3 className="text-lg font-semibold">{title}</h3>
+      <p className="text-sm text-neutral-600 mt-1">{desc}</p>
+    </Link>
+  );
+}
+
+export default function SeasonHQ() {
+  const navigate = useNavigate();
+  const [format, setFormat] = useState<Format>("redraft"); // controls tile links
+
+  // All links derive from format; swap paths on the fly
+  const L = useMemo(() => {
+    const isR = format === "redraft";
+    return {
+      articles: `/articles?tag=${format}`,
+      usage: isR ? "/usage/weekly" : "/dynasty/usage",          // adjust if different
+      waivers: isR ? "/waivers" : "/dynasty/waivers",
+      buysell: isR ? "/trades/buy-sell" : "/dynasty/buy-sell",
+      consensus: isR ? "/consensus/redraft" : "/consensus/dynasty",
+      projections: isR ? "/projections" : "/dynasty/projections",
+      injuries: "/injuries",
+      tradeAnalyzer: isR ? "/trade-analyzer?mode=redraft" : "/trade-analyzer?mode=dynasty",
+    };
+  }, [format]);
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <header className="py-6">
+        <h1 className="text-3xl font-semibold">Season HQ</h1>
+
+        {/* Format selector under title */}
+        <div className="mt-2">
+          <label className="text-xs text-neutral-600 mr-2">Format</label>
+          <select
+            className="border rounded-md px-2 py-1 text-sm"
+            value={format}
+            onChange={(e) => {
+              const val = e.target.value as Format;
+              setFormat(val); // remap tiles in-place
+              // Optional: also jump to a dedicated Dynasty HQ page:
+              // if (val === "dynasty") navigate("/dynasty");
+            }}
+          >
+            <option value="redraft">Redraft</option>
+            <option value="dynasty">Dynasty</option>
+          </select>
+        </div>
+
+        <p className="text-neutral-600 mt-3">
+          Complete tools & analysis for your 2025 {format} season.
+        </p>
+      </header>
+
+      {/* Tiles driven by selected format */}
+      <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <Tile to={L.articles} title="Articles" emoji="📰"
+          desc="Strategy, matchup notes, start/sit calls." />
+        <Tile to={L.usage} title="Weekly Usage" emoji="📈"
+          desc="Snaps, target share, carry splits, routes." />
+        <Tile to={L.waivers} title="Waivers" emoji="🛒"
+          desc="Priority pickups, FAAB guidance, drops." />
+        <Tile to={L.buysell} title="Buy / Sell" emoji="♻️"
+          desc="Trade targets and sell‑high candidates." />
+        <Tile to={L.consensus} title="OTC Consensus" emoji="🏷️"
+          desc="Our live, community‑tunable board." />
+        <Tile to={L.projections} title="Projections" emoji="🔮"
+          desc="Weekly & ROS projections, tiers." />
+        <Tile to={L.injuries} title="Injury Report" emoji="🩹"
+          desc="Statuses, timelines, next‑man‑up." />
+        <Tile to={L.tradeAnalyzer} title="Trade Analyzer" emoji="⚖️"
+          desc={`${format === "redraft" ? "Redraft" : "Dynasty"}‑specific verdicts using OTC math.`} />
+      </div>
+    </div>
+  );
+}
+
+
+⸻
+
+Torch to Tiber (one‑liner)
+
+Task: Update Season HQ to drive all tile links from a format state (redraft|dynasty). The dropdown under the title should remap tile destinations instantly (no page reload). Keep defaults for redraft; wire dynasty equivalents (/consensus/dynasty, /trade-analyzer?mode=dynasty, etc.). Optional: also navigate to /dynasty when “Dynasty” is chosen. Replace any “Rankings” labels with “OTC Consensus” across UI, keeping redirects from old /rankings/*.
