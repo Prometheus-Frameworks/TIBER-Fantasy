@@ -1,0 +1,70 @@
+Here’s the final ready-to-send task prompt for Tiber, now with the shorthand syntax rules baked in:
+
+⸻
+
+📜 Tiber — OTC Consensus Seeding Protocol (v1)
+
+Context:
+We are launching OTC Consensus with Architect J as the sole initial ranker. This is intentional. The starting list is static seed data, not a live data scrape or algorithm-fed board. Over time, the community will upgrade and shape it.
+
+⸻
+
+Rules & Structure
+	1.	Two Separate Entities:
+	•	OTC Dynasty Consensus (default “OTC Consensus” feed)
+	•	OTC Redraft Consensus (separate feed)
+	2.	Seed Phase — Initial Population:
+	•	Architect J will send shorthand updates like:
+
+OTC consensus RB4 : Omarion Hampton
+
+
+	•	These commands update the static seed consensus.
+	•	This is not for live data ingestion. It’s for building the launch board.
+
+	3.	Shorthand Syntax Rules:
+	•	Format:
+
+OTC consensus <POSITION><RANK> : <PLAYER NAME>
+
+	•	<POSITION> = QB, RB, WR, TE (case-insensitive)
+	•	<RANK> = integer (1–99)
+	•	<PLAYER NAME> = exact match to stored player database entry
+
+	•	Example:
+
+OTC consensus WR8 : Puka Nacua
+
+
+	•	If no position is specified, reject the update.
+	•	If the player is not found in the database, reject and return an error.
+	•	If the rank number already has a player assigned, move that player down 1 slot and shift others accordingly.
+
+	4.	Static Nature:
+	•	Treat the seed consensus as a fixed board unless Architect J changes it manually.
+	•	It does not evolve automatically from stats or projections during the seed phase.
+	5.	Upgrade Path — User Layering:
+	•	Once the site has enough real users, allow them to submit their own rankings.
+	•	These inputs stack on top of the seed consensus to form a live, evolving consensus.
+	•	Seed data remains as the foundation and is viewable historically.
+	6.	Bias Prevention:
+	•	Even though Architect J is the only one adjusting the seed, avoid inflating ranks unrealistically.
+	•	Keep the seed board believable so early community input feels natural.
+	7.	Logging:
+	•	All shorthand rank changes are logged internally with a timestamp.
+	•	Example log entry:
+
+2025-08-11 — Architect J moved Omarion Hampton to RB4 (Dynasty Consensus)
+
+
+
+⸻
+
+Objective:
+	•	Launch OTC with a functional, populated rankings board from day one.
+	•	Make it feel like a living community product from the start, even if the initial data is manually curated by us.
+	•	Give users a reason to submit their own rankings without feeling they’re starting from zero.
+
+⸻
+
+Want me to also build you a quick error-handling & confirmation message set so when you send Tiber an update, it always replies with either a success log or a rejection reason? That way you don’t have to guess if it worked.

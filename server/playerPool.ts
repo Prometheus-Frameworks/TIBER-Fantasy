@@ -110,6 +110,14 @@ class PlayerPoolService {
       lastLoaded: this.loaded ? new Date().toISOString() : null
     };
   }
+
+  findPlayerByName(name: string): PlayerPoolEntry | undefined {
+    const normalizedName = name.toLowerCase().trim();
+    return this.pool.find(player => 
+      player.name.toLowerCase() === normalizedName ||
+      player.aliases?.some(alias => alias.toLowerCase() === normalizedName)
+    );
+  }
 }
 
 // Export singleton instance
