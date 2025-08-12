@@ -48,6 +48,23 @@ a:hover {
   content: " 🔥";
 }
 
+/* Tighter vertical rhythm */
+.section { margin-block: 2.25rem; }
+.section-sm { margin-block: 1.25rem; }
+.stack > * + * { margin-top: 0.75rem; }
+
+/* Headings */
+.h-hero { letter-spacing: -0.02em; }
+.h-section { letter-spacing: -0.01em; margin-bottom: .75rem; }
+
+/* Compact containers */
+.container-tight { max-width: 1080px; margin-inline: auto; padding-inline: 1rem; }
+
+@media (max-width: 640px) {
+  .container-tight { padding-inline: 0.875rem; }
+  .card { border-radius: 12px; }
+}
+
 /* Mobile-first performance optimizations for iOS, Android, and desktop */
 * {
   /* Improve scrolling performance on mobile devices */

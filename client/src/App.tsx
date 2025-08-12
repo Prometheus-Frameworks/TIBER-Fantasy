@@ -92,6 +92,7 @@ import Articles from "@/pages/Articles";
 import HealthBadge from "@/components/HealthBadge";
 import FounderModal from "@/components/FounderModal";
 import Footer from "@/components/Footer";
+import HealthBar from "@/components/HealthBar";
 import AdaptiveConsensusDemo from "@/pages/AdaptiveConsensusDemo";
 import CurvesDemo from "@/pages/CurvesDemo";
 import InjuryProfilesDemo from "@/pages/InjuryProfilesDemo";
@@ -208,10 +209,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Navigation />
-        <main className="mx-auto max-w-6xl px-4 py-6">
+        <main className="mx-auto max-w-6xl px-4 py-3">
           <Router />
         </main>
         <Footer />
+        <HealthBar />
         <FounderModal />
         <Toaster />
       </TooltipProvider>

@@ -18,8 +18,17 @@ export default {
         haze: '#F6F7FB',
         line: '#E9ECF2',
       },
+      spacing: {
+        '3.5': '0.875rem',
+      },
+      maxWidth: {
+        'screen-3xl': '1600px',
+      },
       boxShadow: {
-        card: '0 8px 20px rgba(15,18,32,0.06)',
+        card: '0 1px 3px rgba(0,0,0,0.06)',
+      },
+      borderRadius: {
+        card: '14px',
       },
       colors: {
         background: "var(--background)",

@@ -1,81 +1,83 @@
 import { Link } from "wouter";
-import { QUICK_ACTIONS } from "../config/nav";
-import SystemCard from "../components/SystemCard";
 
-export default function HomePage() {
+export default function Home() {
+  const coreFeatures = [
+    {
+      href: "/compass",
+      title: "Player Compass",
+      description: "Context-aware dynasty guidance",
+      icon: "🧭"
+    },
+    {
+      href: "/consensus", 
+      title: "OTC Consensus",
+      description: "Community boards & tiers",
+      icon: "📊"
+    },
+    {
+      href: "/rookies",
+      title: "2025 Rookies", 
+      description: "Rookie evaluation system",
+      icon: "⭐"
+    }
+  ];
+
+  const additionalTools = [
+    { href:'/dashboard', title:'Dashboard', desc:'Personal league management' },
+    { href:'/analytics', title:'Analytics', desc:'Statistical analysis and trends' }
+  ];
+
   return (
-    <main className="min-h-screen bg-white">
-      {/* HERO */}
-      <section className="bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-16 md:py-20">
-          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-ink">
-            On The Clock
-          </h1>
-          <p className="mt-4 text-lg max-w-2xl text-body">
-            Fantasy football tools. Community-driven. No paywalls, just signal.
-          </p>
+    <div>
+      {/* Hero Section */}
+      <section className="container-tight section">
+        <h1 className="h-hero text-4xl md:text-5xl font-semibold text-ink">
+          On The Clock
+        </h1>
+        <p className="mt-2 text-base md:text-lg text-body">
+          Fantasy football tools. Community-driven. No paywalls, just signal.
+        </p>
+        <div className="mt-4">
+          <Link href="/consensus" className="inline-flex items-center px-4 py-2 rounded-md bg-gold text-white hover:bg-gold/90 transition-colors">
+            View OTC Consensus
+          </Link>
+        </div>
+      </section>
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href="/compass"
-              className="inline-flex items-center rounded-md bg-ink px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 transition"
-            >
-              Explore Player Compass
+      {/* Core Systems */}
+      <section className="container-tight section">
+        <div className="flex items-end justify-between">
+          <h2 className="h-section text-2xl font-semibold text-ink">Core Systems</h2>
+          <Link href="/all-tools" className="text-sm text-body hover:text-plum">See all</Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+          {coreFeatures.map((feature) => (
+            <Link key={feature.href} href={feature.href} className="card p-4 md:p-5 hover:shadow-lg transition-shadow">
+              <h3 className="text-lg font-medium text-ink">{feature.title}</h3>
+              <p className="mt-1 text-sm text-body">{feature.description}</p>
             </Link>
-            <Link
-              href="/consensus"
-              className="inline-flex items-center rounded-md border border-line px-5 py-2.5 text-sm font-medium text-ink hover:border-ink transition"
-            >
-              View OTC Consensus
-            </Link>
-          </div>
+          ))}
         </div>
       </section>
 
-      {/* CORE SYSTEMS */}
-      <section className="py-10 bg-haze border-t border-line">
-        <div className="mx-auto max-w-6xl px-4">
-          <h2 className="text-2xl font-bold text-ink">Core Systems</h2>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <SystemCard 
-              title="Player Compass" 
-              desc="Context-aware guidance for dynasty decisions" 
-              href="/compass" 
-              icon="🧭"
-            />
-            <SystemCard 
-              title="OTC Consensus" 
-              desc="Community-driven boards & tiers" 
-              href="/consensus" 
-              icon="👥"
-            />
-            <SystemCard 
-              title="Draft Command" 
-              desc="Real-time draft aids" 
-              href="/draft-room" 
-              icon="🏆"
-            />
-          </div>
-        </div>
+      {/* Additional Tools */}
+      <section className="container-tight section-sm">
+        <h2 className="h-section text-xl font-semibold text-ink">Additional Tools</h2>
+        <ul className="divide-y divide-line border border-line rounded-card bg-white">
+          {additionalTools.map((tool) => (
+            <li key={tool.href} className="px-4 py-3 md:px-5 md:py-3.5 hover:bg-haze transition-colors">
+              <Link href={tool.href} className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm md:text-base font-medium text-ink">{tool.title}</div>
+                  <div className="text-xs md:text-sm text-body">{tool.desc}</div>
+                </div>
+                <span className="text-body">→</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
-
-      {/* ADDITIONAL TOOLS */}
-      <section className="py-10 bg-white">
-        <div className="mx-auto max-w-6xl px-4">
-          <h2 className="text-xl font-bold mb-6 text-ink">Additional Tools</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {QUICK_ACTIONS.map((action) => (
-              <SystemCard
-                key={action.href}
-                title={action.label}
-                desc={action.description}
-                href={action.href}
-                icon="⚙️"
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-    </main>
+    </div>
   );
 }
