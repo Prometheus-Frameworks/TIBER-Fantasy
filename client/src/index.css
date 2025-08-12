@@ -79,6 +79,16 @@ a:hover {
 }
 .animate-shimmer { animation: shimmer 1.6s linear infinite; }
 
+/* Subtle hover lift for cards and interactive elements */
+.hover-lift {
+  transition: transform .18s ease, box-shadow .18s ease;
+  will-change: transform;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 18, 32, 0.06);
+}
+
 /* Mobile-first performance optimizations for iOS, Android, and desktop */
 * {
   /* Improve scrolling performance on mobile devices */

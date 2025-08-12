@@ -171,7 +171,7 @@ export default function CleanADP() {
               return (
               <div 
                 key={`${player.position}-${player.id}-${index}`} 
-                className="p-2 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-b-0"
+                className="p-2 border-b border-slate-100 last:border-b-0 hover-lift cursor-pointer"
               >
                 <div className="flex items-center gap-1">
                   {/* ADP */}

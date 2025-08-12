@@ -297,7 +297,7 @@ export default function DraftAnalysis() {
               </thead>
               <tbody>
                 {filteredPlayers.map((player: Player, index: number) => (
-                  <tr key={`${player.name}-${player.position}`} className="hover:bg-gray-50">
+                  <tr key={`${player.name}-${player.position}`} className="hover-lift cursor-pointer">
                     <td className="border border-gray-200 px-4 py-2 font-bold text-center">
                       {player.rank}
                     </td>

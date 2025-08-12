@@ -58,7 +58,7 @@ The platform uses a modular Flask backend for core logic and API endpoints, and 
 - **Trade Analyzer v2.0**: React-based frontend with Flask-style backend integration, featuring position selection, 4-directional compass visualization, and detailed reasoning.
 - **Python Rookie Evaluator**: Production-ready module with S/A/B/C/D tier system and position-specific scoring.
 - **OTC Redraft 2025 MVP Data Pipeline**: 4-stage automated pipeline collecting 2024 NFL data from nflfastR and nflverse APIs.
-- **Enhanced UI System**: Interactive GlowCard components, pulsing GlowCTA buttons, comprehensive skeleton loading system with shimmer animations, enhanced Button component with press states, and top loading bar with gold-to-purple gradient that automatically appears during data fetches.
+- **Enhanced UI System**: Interactive GlowCard components, pulsing GlowCTA buttons, comprehensive skeleton loading system with shimmer animations, enhanced Button component with press states, top loading bar with gold-to-purple gradient that automatically appears during data fetches, and subtle hover-lift effects applied across interactive cards and table rows for polished user interactions.
 
 ### UI/UX Decisions
 Clean, responsive design with Jinja2 templating and React components, prioritizing color-coded tier systems, interactive elements, and mobile optimization. Features Next.js-inspired tab-based navigation with clean header separation and active state highlighting. Redraft and Dynasty pages follow user's preferred pattern.

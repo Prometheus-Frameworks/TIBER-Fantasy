@@ -211,7 +211,7 @@ export default function ADP() {
                 {/* Player Rows */}
                 <div className="space-y-1">
                   {filteredPlayers.slice(0, 100).map((player, index) => (
-                    <div key={player.id} className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-muted/50 rounded">
+                    <div key={player.id} className="grid grid-cols-12 gap-4 px-4 py-3 rounded hover-lift cursor-pointer">
                       <div className="col-span-1">
                         <span className={getADPColor(player.adp)}>
                           {formatADP(player.adp)}

@@ -290,10 +290,10 @@ export default function DraftRoom() {
                   {filteredPlayers.slice(0, 50).map((player: Player) => (
                     <div 
                       key={player.name}
-                      className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
+                      className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer hover-lift ${
                         selectedPlayer?.name === player.name 
                           ? 'bg-blue-50 border-blue-300' 
-                          : 'hover:bg-gray-50'
+                          : ''
                       }`}
                       onClick={() => setSelectedPlayer(player)}
                     >

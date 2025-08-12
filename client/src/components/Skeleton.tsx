@@ -17,7 +17,7 @@ export const SkeletonPill = ({ className = "h-8 w-24 rounded-full bg-zinc-200/80
 );
 
 export const SkeletonCard = ({ className = "" }: BaseProps) => (
-  <div className={`relative overflow-hidden rounded-2xl border border-line bg-white/80 p-4 shadow-sm ${className}`}>
+  <div className={`relative overflow-hidden rounded-2xl border border-line bg-white p-5 ${className}`}>
     <div className="space-y-3">
       <SkeletonLine className="h-5 w-1/2" />
       <SkeletonLine className="h-4 w-3/4" />

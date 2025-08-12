@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SkeletonTableRow } from "@/components/Skeleton";
 
 const POSITIONS = ["ALL", "QB", "RB", "WR", "TE"] as const;
 type Position = typeof POSITIONS[number];
@@ -32,10 +33,37 @@ export default function OTCConsensus() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading OTC Consensus...</p>
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-8 bg-zinc-200/80 rounded w-48"></div>
+            <div className="h-4 bg-zinc-200/80 rounded w-80"></div>
+          </div>
+          <div className="h-4 bg-zinc-200/80 rounded w-32"></div>
         </div>
+        
+        {/* Table skeleton */}
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-line">
+                    <th className="p-3 text-left">Rank</th>
+                    <th className="p-3 text-left">Player</th>
+                    <th className="p-3 text-left">Tier</th>
+                    <th className="p-3 text-left">Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <SkeletonTableRow key={i} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -129,7 +157,7 @@ export default function OTCConsensus() {
                       {filteredRows.map((row) => (
                         <tr 
                           key={`${row.format}-${row.season}-${row.playerId}`}
-                          className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900"
+                          className="border-b border-gray-100 dark:border-gray-800 hover-lift cursor-pointer"
                         >
                           <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
                             {row.rank}

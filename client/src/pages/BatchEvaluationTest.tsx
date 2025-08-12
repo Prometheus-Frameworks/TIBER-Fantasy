@@ -97,7 +97,7 @@ export default function BatchEvaluationTest() {
             {players.map((player: any, index: number) => {
               const gradeInfo = getContextGrade(player.contextScore);
               return (
-                <div key={index} className="border rounded-lg p-4">
+                <div key={index} className="border rounded-lg p-4 hover-lift cursor-pointer">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-semibold">{player.playerName}</h4>
                     <Badge className={`${gradeInfo.color} text-white`}>
