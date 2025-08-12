@@ -1,4 +1,5 @@
-import { pgTable, text, serial, integer, real, boolean, timestamp, varchar, jsonb, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, real, boolean, timestamp, varchar, jsonb, unique, pgEnum, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -572,3 +573,51 @@ export const playerValueHistoryRelations = relations(playerValueHistory, ({ one 
     references: [players.id],
   }),
 }));
+
+// Consensus system tables
+export const consensusFormatEnum = pgEnum("consensus_format", ["redraft", "dynasty"]);
+export const consensusSourceEnum = pgEnum("consensus_source", ["system", "editor", "community"]);
+
+export const consensusBoard = pgTable("consensus_board", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull(),
+  format: consensusFormatEnum("format").notNull(),
+  season: integer("season"), // required for redraft, null for dynasty
+  rank: integer("rank").notNull(),
+  tier: varchar("tier").notNull(),
+  score: real("score").notNull(),
+  source: consensusSourceEnum("source").notNull().default("system"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("consensus_unique_player_format_season").on(table.format, table.season, table.playerId),
+  index("consensus_format_season_rank_idx").on(table.format, table.season, table.rank),
+  index("consensus_format_season_updated_idx").on(table.format, table.season, table.updatedAt),
+]);
+
+export const consensusMeta = pgTable("consensus_meta", {
+  id: varchar("id").primaryKey().default("singleton"),
+  defaultFormat: consensusFormatEnum("default_format").notNull().default("dynasty"),
+  boardVersion: integer("board_version").notNull().default(1),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const consensusChangelog = pgTable("consensus_changelog", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  userId: varchar("user_id"),
+  format: consensusFormatEnum("format").notNull(),
+  season: integer("season"),
+  playerId: varchar("player_id").notNull(),
+  before: jsonb("before"),
+  after: jsonb("after"),
+}, (table) => [
+  index("consensus_changelog_timestamp_idx").on(table.timestamp),
+  index("consensus_changelog_player_idx").on(table.playerId),
+]);
+
+export type ConsensusBoard = typeof consensusBoard.$inferSelect;
+export type InsertConsensusBoard = typeof consensusBoard.$inferInsert;
+export type ConsensusMeta = typeof consensusMeta.$inferSelect;
+export type InsertConsensusMeta = typeof consensusMeta.$inferInsert;
+export type ConsensusChangelog = typeof consensusChangelog.$inferSelect;
+export type InsertConsensusChangelog = typeof consensusChangelog.$inferInsert;

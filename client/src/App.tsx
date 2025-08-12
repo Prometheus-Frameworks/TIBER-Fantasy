@@ -31,6 +31,7 @@ import Oasis from "@/pages/Oasis";
 import DraftRoom from "@/pages/DraftRoom";
 import PlayerProfile from "@/pages/PlayerProfile";
 import Rankings from "@/pages/Rankings";
+import OTCConsensus from "@/pages/rankings/OTCConsensus";
 import RankingsHub from "@/pages/rankings/RankingsHub";
 import RedraftRankings from "@/pages/rankings/RedraftRankings";
 import DynastyRankings from "@/pages/rankings/DynastyRankings";
@@ -100,9 +101,10 @@ function Router() {
       <Route path="/player-analysis" component={PlayerAnalysisPage} />
       <Route path="/trade-history/:id" component={TradeHistoryPage} />
       <Route path="/dynasty-values" component={DynastyValuesPage} />
-      <Route path="/consensus" component={RankingsHub} />
+      <Route path="/consensus" component={OTCConsensus} />
       <Route path="/consensus/redraft" component={RedraftRankings} />
       <Route path="/consensus/dynasty" component={DynastyRankings} />
+      <Route path="/rankings" component={RankingsHub} />
       {/* Backward-compatible redirects */}
       <Route path="/rankings" component={() => { window.location.replace('/consensus'); return null; }} />
       <Route path="/rankings/redraft" component={() => { window.location.replace('/consensus/redraft'); return null; }} />

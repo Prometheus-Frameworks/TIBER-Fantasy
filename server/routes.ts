@@ -56,6 +56,7 @@ import rookieRoutes from './routes/rookieRoutes';
 import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
 import pythonRookieRoutes from './routes/pythonRookieRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
+import consensusRoutes from './consensus';
 import { OTC_SIGNATURE } from '../shared/otcSignature';
 import fs from 'fs';
 import path from 'path';
@@ -1675,6 +1676,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/compass', compassRoutes);
   app.use('/api/rb-compass', rbCompassRoutes);
   app.use('/api/te-compass', teCompassRoutes);
+  
+  // OTC Consensus routes
+  app.use('/api/consensus', consensusRoutes);
 
   // --- COMPASS BRIDGE: normalize and guarantee data for new endpoint ---
   app.get("/api/compass/WR", async (req, res) => {

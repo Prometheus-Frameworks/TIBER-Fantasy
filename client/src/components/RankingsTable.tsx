@@ -42,6 +42,11 @@ type Props = {
 export default function RankingsTable({ mode }: Props) {
   const [pos, setPos] = useState<Position>("ALL");
   const [q, setQ] = useState("");
+  
+  // Use the new consensus hook
+  const format = mode as ConsensusFormat;
+  const season = format === 'redraft' ? 2025 : undefined;
+  const { data: consensusData, isLoading: consensusLoading, error: consensusError } = useConsensus(format, season);
 
   const url = useMemo(() => {
     const p = new URLSearchParams();
@@ -71,7 +76,23 @@ export default function RankingsTable({ mode }: Props) {
     retry: 2,
   });
 
-  const { rows, updatedAt } = useMemo(() => normalize(data), [data]);
+  // Prioritize consensus data if available, otherwise use legacy
+  const { rows, updatedAt } = useMemo(() => {
+    if (consensusData?.rows && consensusData.rows.length > 0) {
+      // Transform consensus data to match RatingRow format
+      const consensusRows: RatingRow[] = consensusData.rows.map(row => ({
+        player_id: row.playerId,
+        player_name: `Player ${row.playerId}`, // TODO: Join with player pool for names
+        team: "", // TODO: Join with player pool for teams
+        position: "WR" as const, // TODO: Get from player pool
+        tier: row.tier,
+        overall_rating: row.score,
+        vorp: row.score, // Use consensus score as VORP for now
+      }));
+      return { rows: consensusRows, updatedAt: consensusData.rows[0]?.updatedAt };
+    }
+    return normalize(data);
+  }, [consensusData, data]);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();

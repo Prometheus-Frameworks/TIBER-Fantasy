@@ -1,0 +1,134 @@
+100%. Here’s the torch for Tiber—clear, tight, and ready to paste.
+Goal: split OTC Consensus into two real feeds, with Dynasty as the canonical base.
+
+⸻
+
+Commit
+
+feat(consensus): split into redraft & dynasty feeds; dynasty = canonical base; API, types, seeds, guards
+
+1) Data model (single table/collection, partitioned by format)
+
+Type
+
+// shared/types/consensus.ts
+export type ConsensusFormat = "redraft" | "dynasty";
+
+export interface ConsensusRow {
+  id: string;           // uuid
+  playerId: string;     // sleeper/nfl id
+  format: ConsensusFormat;
+  season?: number;      // required for redraft, omitted for dynasty
+  rank: number;         // 1..n within (format, season)
+  tier: string;         // S,A,B,... or T1,T2...
+  score: number;        // display composite (after OTC bias)
+  source: "system" | "editor" | "community";
+  updatedAt: string;
+}
+
+export interface ConsensusMeta {
+  defaultFormat: ConsensusFormat; // "dynasty" (canonical base)
+  boardVersion: number;           // bump on any write
+}
+
+DB
+	•	Table: consensus_board
+	•	PK: id
+	•	Unique: (format, season NULLS FIRST, playerId)
+	•	Indexes: (format, season, rank), (format, season, updatedAt)
+	•	Table: consensus_meta
+	•	singleton row: { defaultFormat: 'dynasty', boardVersion }
+
+Rule of thumb: redraft always scoped by season; dynasty is rolling (no season).
+
+⸻
+
+2) API
+
+// GET board
+GET /api/consensus?format=redraft|dynasty&season=2025
+// returns { meta, rows: ConsensusRow[] }
+
+// PATCH rows (editor-only)
+PATCH /api/consensus
+body: { format, season?, updates: Array<{playerId, rank?, tier?, score?}> }
+returns { ok: true, boardVersion }
+
+// GET meta (default, versions)
+GET /api/consensus/meta
+// returns { defaultFormat: "dynasty", boardVersion }
+
+Notes
+	•	If format omitted on GET, use defaultFormat (dynasty).
+	•	If format=redraft and season missing, infer current season; still store season explicitly.
+
+⸻
+
+3) Frontend wiring
+	•	Routes already moved to /consensus.
+	•	React Query keys must include format and season (for redraft):
+
+useQuery(['consensus', format, season ?? 'rolling'], ...)
+
+
+	•	Default landing (/consensus) → fetch with format = meta.defaultFormat (dynasty).
+	•	Season HQ tile:
+	•	Redraft → /consensus/redraft?season=2025
+	•	Dynasty → /consensus/dynasty
+
+UI copy: replace “Rankings” → “OTC Consensus” everywhere (done).
+
+⸻
+
+4) Seeds / ingestion
+	•	Dynasty seed: import from Ratings Engine v1 (dynasty flavor) → write format='dynasty'.
+	•	Redraft seed (2025): import seasonal ratings/projections → write format='redraft', season=2025.
+	•	On nightly sync:
+	•	Dynasty: small deltas only (market/value changes).
+	•	Redraft: seasonal board is mutable during season; keep season pinned.
+
+⸻
+
+5) Write rules (so we don’t mix feeds)
+	•	Only role in {founder, editor} can PATCH.
+	•	Enforce:
+	•	If format='redraft', season required.
+	•	If format='dynasty', season must be null/omitted.
+	•	Every write bumps boardVersion and logs a change:
+	•	Table consensus_changelog: { ts, userId, format, season?, playerId, before, after }.
+
+⸻
+
+6) Caching
+	•	Cache key: consensus:${format}:${season || 'rolling'}:v${boardVersion}
+	•	Invalidate by bumping boardVersion after any PATCH.
+
+⸻
+
+7) Safety nets
+
+Backend validation
+
+if (format === 'redraft' && !season) return res.status(400).json({error:'season required for redraft'});
+if (format === 'dynasty' && season)  return res.status(400).json({error:'dynasty must not include season'});
+
+Redirects
+	•	/rankings* → /consensus* (kept).
+	•	If user hits /consensus with no params, serve defaultFormat (dynasty).
+
+⸻
+
+8) Acceptance checklist
+	•	Hitting /api/consensus with no params returns dynasty board + meta.
+	•	/api/consensus?format=redraft&season=2025 returns 2025 redraft board.
+	•	Frontend /consensus shows dynasty by default; switching tabs requests the correct feed.
+	•	PATCH to dynasty cannot include season; PATCH to redraft must include season.
+	•	boardVersion increments on any write and cache invalidates.
+
+⸻
+
+9) One‑liner to Tiber
+
+Task: Split OTC Consensus into two feeds with strict boundaries. Implement consensus_board + consensus_meta schema, endpoints (GET /api/consensus, PATCH /api/consensus, GET /api/consensus/meta), and cache keyed by format + season. Dynasty is the canonical default for /consensus. Redraft always carries season. Update frontend queries to key by ['consensus', format, season||'rolling']. Seed both boards and enforce validation so formats don’t bleed.
+
+That gives us clean separation, fast caching, and a single “OTC Consensus” brand with Dynasty as the base truth.
