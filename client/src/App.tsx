@@ -211,21 +211,7 @@ function App() {
         <main className="mx-auto max-w-6xl px-4 py-6">
           <Router />
         </main>
-        <footer className="border-t" style={{ borderColor: 'var(--line)' }}>
-          <div className="mx-auto max-w-6xl px-4 py-8 text-sm" style={{ color: 'var(--body)' }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <span className="text-xs">
-                  build: v1.0.3-{new Date().toISOString().slice(0, 16)}
-                </span>
-                <HealthBadge isDemoMode={isDemoMode} />
-              </div>
-              <div className="text-xs">
-                Open source fantasy football tools
-              </div>
-            </div>
-          </div>
-        </footer>
+
         <Footer />
         <FounderModal />
         <Toaster />

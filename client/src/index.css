@@ -2,24 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Clean OTC Theme */
+/* OTC Dark Theme - Matching Mock */
 :root {
-  --ink: #0F1220;
-  --body: #2B2F45;
+  --dark-bg: #1a1a1a;
+  --dark-card: #2a2a2a;
   --gold: #F5C84B;
-  --plum: #6E56CF;
-  --haze: #F6F7FB;
-  --line: #E9ECF2;
-  --ring: #F5C84B;
+  --white: #ffffff;
+  --gray: #a0a0a0;
+  --border: #3a3a3a;
 }
 
 html, body {
-  background: #fff;
-  color: var(--body);
+  background: var(--dark-bg);
+  color: var(--white);
 }
 
 a:hover {
-  color: var(--ink);
+  color: var(--gold);
 }
 
 /* Card shadows */
