@@ -79,6 +79,8 @@ import RBCompass from "@/pages/RBCompass";
 import TECompass from "@/pages/TECompass";
 import WRCompass from "@/pages/WRCompass";
 import RookieEvaluator from "@/pages/RookieEvaluator";
+import SignalFlare from "@/pages/SignalFlare";
+import PrometheanVision from "@/pages/PrometheanVision";
 
 import TiberData from "@/pages/TiberData";
 import TradeAnalyzer from "@/pages/TradeAnalyzer";
@@ -198,6 +200,8 @@ function Router() {
       <Route path="/projections-test" component={ProjectionsTest} />
       <Route path="/data-ingestion" component={DataIngestion} />
       <Route path="/reflect" component={Reflect} />
+      <Route path="/signal-flare" component={SignalFlare} />
+      <Route path="/promethean-vision" component={PrometheanVision} />
       {/* FantasyProTest route removed - service deprecated */}
       <Route component={NotFound} />
     </Switch>
