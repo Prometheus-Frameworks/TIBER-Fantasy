@@ -182,6 +182,39 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
               </Button>
             </div>
           </div>
+
+          {/* Tier 4 - Waiver Wire Monitoring */}
+          <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-300">
+            <h4 className="font-semibold text-sm text-gray-700">📊 QB Tier 4 - Waiver Wire Monitoring</h4>
+            <div className="space-y-2 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="font-medium text-gray-600">Health Concerns:</div>
+                  <div className="pl-2 text-gray-500">• Tua (ADP 178, concussion risk)</div>
+                  <div className="pl-2 text-gray-500">• Aaron Rodgers (age, system fit)</div>
+                </div>
+                
+                <div>
+                  <div className="font-medium text-gray-600">Ceiling Limited:</div>
+                  <div className="pl-2 text-gray-500">• Russell Wilson (mobility decline)</div>
+                  <div className="pl-2 text-gray-500">• Kirk Cousins (system unknown)</div>
+                </div>
+              </div>
+              
+              <div className="text-xs text-gray-400 mt-2">
+                Context: Waiver wire pickups with specific upside scenarios but major concerns
+              </div>
+            </div>
+            
+            <Button 
+              size="sm" 
+              className="text-xs bg-gray-500 hover:bg-gray-600 text-white w-full"
+              onClick={() => greenLightTierChange(["tua-tagovailoa", "aaron-rodgers"], 4, "QB Tier 4 - Waiver Wire")}
+              disabled={updateConsensusMutation.isPending}
+            >
+              📊 Waiver Wire Tier
+            </Button>
+          </div>
         </div>
 
         {updateConsensusMutation.isPending && (
