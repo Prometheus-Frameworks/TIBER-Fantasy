@@ -16,8 +16,8 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
   const updateConsensusMutation = useUpdateConsensus();
   const { toast } = useToast();
 
-  // 2025 Redraft QB Elite Tier - top single-season production
-  const eliteQBs = ["josh-allen", "lamar-jackson", "patrick-mahomes"];
+  // 2025 Redraft QB Elite Tier - dual-threat dominance
+  const eliteQBs = ["josh-allen", "lamar-jackson"];
   const eliteRBs = ["christian-mccaffrey", "austin-ekeler", "derrick-henry"];
   const eliteWRs = ["cooper-kupp", "stefon-diggs", "tyreek-hill", "davante-adams", "justin-jefferson"];
   const eliteTEs = ["travis-kelce", "mark-andrews"];
