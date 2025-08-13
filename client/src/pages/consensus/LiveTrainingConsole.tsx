@@ -66,7 +66,7 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
                 ))}
               </div>
               <div className="text-xs text-gray-500">
-                Context: Proven dual-threat dominance - rushing upside + elite passing floors
+                Context: Nuclear ceiling weeks - Allen's 50-point games, Lamar's championship correlation
               </div>
             </div>
             <Button 
