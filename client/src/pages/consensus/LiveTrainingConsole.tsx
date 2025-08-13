@@ -206,14 +206,35 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
               </div>
             </div>
             
-            <Button 
-              size="sm" 
-              className="text-xs bg-gray-500 hover:bg-gray-600 text-white w-full"
-              onClick={() => greenLightTierChange(["tua-tagovailoa", "aaron-rodgers"], 4, "QB Tier 4 - Waiver Wire")}
-              disabled={updateConsensusMutation.isPending}
-            >
-              📊 Waiver Wire Tier
-            </Button>
+            <div className="space-y-2">
+              <div className="font-medium text-gray-700 text-xs">Tier 4 Leaders:</div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="pl-2 text-gray-600">• Kyler Murray (QB10, ADP 92)</div>
+                <div className="pl-2 text-gray-600">• Bo Nix (QB7 rookie, ADP 82.4)</div>
+                <div className="pl-2 text-gray-600">• Justin Fields (QB32, ADP 128.6)</div>
+                <div className="pl-2 text-gray-600">• JJ McCarthy (cheaper Maye, ADP 141.6)</div>
+                <div className="pl-2 text-gray-600">• Bryce Young (Y3 breakout potential)</div>
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                className="text-xs bg-orange-500 hover:bg-orange-600 text-white"
+                onClick={() => greenLightTierChange(["kyler-murray", "bo-nix"], 4, "QB Tier 4A - Proven")}
+                disabled={updateConsensusMutation.isPending}
+              >
+                🎯 Proven (Kyler/Bo)
+              </Button>
+              <Button 
+                size="sm" 
+                className="text-xs bg-gray-500 hover:bg-gray-600 text-white"
+                onClick={() => greenLightTierChange(["justin-fields", "jj-mccarthy", "bryce-young"], 4, "QB Tier 4B - Development")}
+                disabled={updateConsensusMutation.isPending}
+              >
+                📈 Development
+              </Button>
+            </div>
           </div>
         </div>
 
