@@ -1,0 +1,99 @@
+Here’s the exact Tiber-ready drop-in. Just paste this in as a task and he’ll have the build spec, the schema, and the rollout plan all in one shot.
+
+⸻
+
+TIBER TASK — Build Offensive Line Context (OLC) v1.1 Module
+
+Goal: Create a 0–100 OLC score per team/week, position adjusters (QB_env, RB_runways, WRTE_timing), and opponent-aware matchup modifiers (Adj_Pass/Run) with adaptive scaling, cohesion weighting, and position-weighted injury penalties.
+
+⸻
+
+Modules
+
+/server/olc/sources.ts         // adapters: PFF PB, ESPN PBWR/RBWR, PR, ASR, YBC/R, injuries, penalties, depth charts
+/server/olc/normalize.ts       // season z, last-4 z, rolling weights
+/server/olc/cohesion.ts        // position/pair continuity, shared snaps
+/server/olc/score.ts           // OLC_100 scaling + injury/shuffle penalties
+/server/olc/adjusters.ts       // QB_env, RB_runways, WRTE_timing
+/server/olc/opponent.ts        // weekly opponent pass/run context
+/server/olc/schema.ts          // Zod/TypeBox schemas
+/server/olc/index.ts           // buildOlcForWeek(season, week)
+/server/olc/logger.ts          // structured logs of intermediates
+
+
+⸻
+
+Cohesion
+	•	Position weights: LT=0.28, C=0.22, RT=0.18, LG=0.16, RG=0.16.
+	•	Pair continuity: LT-LG, LG-C, C-RG, RG-RT each worth 0.25 (avg into pair_continuity).
+	•	Snap sync: shared snaps / league max.
+	•	Formula:
+cohesion_raw = 0.6*pos_continuity + 0.25*pair_continuity + 0.15*snap_sync
+cohesion_z = zscore(cohesion_raw)
+
+⸻
+
+Scaling
+	•	Pre-Week 8: scale_k=12, Week 8+: scale_k=15.
+	•	sigma = league std dev of OLC_raws, floor 0.85, cached weekly.
+	•	OLC_100 = clamp(50 + scale_k * (OLC_raw / sigma), 0, 100)
+
+⸻
+
+Injury/shuffle penalties
+	•	Position multipliers: LT=1.5, C=1.3, RT=1.2, LG/RG=1.0.
+	•	Starter penalty = −2 × pos_mult sum.
+	•	Shuffle penalty = −2 if ≥2 positions changed.
+	•	Green penalty = −1.5 for any sub <100 career snaps (once).
+	•	Cap total penalty at −12, log separately in meta.injury_penalty.
+
+⸻
+
+Position adjusters
+	•	QB_env: scale OLC_100 → ±4%, +0.5*(−proe_z/10) + 0.5*(−qbP2S_z/10), cap ±6%.
+	•	RB_runways: 0.6RBWR_z→±6% + 0.4YBC_z→±4%, cap ±8%.
+	•	WRTE_timing: 0.7OLC_100→±3% + 0.3PFF_PB_z→±2%, cap ±4%.
+
+⸻
+
+Opponent adjustments
+	•	Pass_Context_w = OLC_T − z(Def_PassRushStrength_D), → ±6%.
+	•	Run_Context_w = RBWR_T − z(Def_RunStuffRate_D), → ±6%.
+
+⸻
+
+API
+	•	GET /api/olc/team/:teamId?week= → OlcTeamWeek
+	•	GET /api/olc/player/:playerId?week= → resolves team + adjusters
+	•	POST /api/olc/rebuild (admin) → rebuild weekly cache
+
+⸻
+
+Caching
+	•	Redis or LRU: olc:{season}:{week}:{teamId} TTL 6h
+	•	Cache sigma per week separately.
+
+⸻
+
+UI sanity page
+	•	/oasis/olc — team selector, OLC_100 gauge, last-4 sparkline, component bars, “Fantasy impact” chips, injury penalty display.
+
+⸻
+
+Feature flag
+	•	USE_OLC_ADJUSTERS for rankings/projections.
+
+⸻
+
+Tests
+	•	Scaling stability, injury penalty cases, opponent layer correctness, cohesion changes visible, logs include sigma, scale_k, and penalties.
+
+⸻
+
+Stub fixture (for dev)
+
+3 teams × 2 weeks with mixed injury/cohesion states to validate penalties, scaling, and adjusters before live data hookup.
+
+⸻
+
+When this is in place, flip the feature flag, run test fixture, and verify outputs are stable + interpretable before feeding into projections.

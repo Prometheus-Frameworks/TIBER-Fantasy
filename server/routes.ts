@@ -2491,6 +2491,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const competenceRoutes = await import('./routes/competence');
   app.use('/api/competence', competenceRoutes.default);
 
+  // OLC (Offensive Line Context) API Routes
+  try {
+    const { buildOlcForWeek, OlcBuilder } = await import('./olc/index.js');
+    
+    // GET /api/olc/team/:teamId?week=X&season=Y
+    app.get('/api/olc/team/:teamId', async (req: Request, res: Response) => {
+      try {
+        const { teamId } = req.params;
+        const week = parseInt(req.query.week as string) || 1;
+        const season = parseInt(req.query.season as string) || 2025;
+        
+        const result = await buildOlcForWeek(teamId, season, week, {
+          includeAdjusters: true,
+          includeOpponentContext: false,
+        });
+        
+        res.json(result);
+      } catch (error) {
+        console.error('[OLC API] Error fetching team OLC:', error);
+        res.status(500).json({ 
+          error: 'Failed to calculate OLC score',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
+    // GET /api/olc/player/:playerId?week=X&season=Y
+    app.get('/api/olc/player/:playerId', async (req: Request, res: Response) => {
+      try {
+        const { playerId } = req.params;
+        const week = parseInt(req.query.week as string) || 1;
+        const season = parseInt(req.query.season as string) || 2025;
+        
+        // In production, resolve player to team
+        // For now, use a mock team resolution
+        const teamId = 'KC'; // Mock - would resolve from player service
+        
+        const result = await buildOlcForWeek(teamId, season, week, {
+          includeAdjusters: true,
+          includeOpponentContext: false,
+        });
+        
+        res.json({
+          player_id: playerId,
+          team_id: teamId,
+          olc_data: result,
+        });
+      } catch (error) {
+        console.error('[OLC API] Error fetching player OLC:', error);
+        res.status(500).json({ 
+          error: 'Failed to calculate player OLC',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
+    // POST /api/olc/rebuild
+    app.post('/api/olc/rebuild', async (req: Request, res: Response) => {
+      try {
+        const { season = 2025, weeks, force = false } = req.body;
+        
+        const builder = OlcBuilder.getInstance();
+        builder.clearCache();
+        
+        if (weeks && Array.isArray(weeks)) {
+          // Rebuild specific weeks
+          const teams = ['KC', 'BUF', 'BAL', 'CIN']; // Sample teams for demo
+          const requests = teams.flatMap(teamId =>
+            weeks.map((week: number) => ({ teamId, season, week, options: { forceRefresh: force } }))
+          );
+          
+          const results = await builder.buildOlcBatch(requests);
+          
+          res.json({
+            message: 'OLC cache rebuilt successfully',
+            rebuilt: results.length,
+            requested: requests.length,
+          });
+        } else {
+          // Clear cache only
+          res.json({
+            message: 'OLC cache cleared successfully',
+          });
+        }
+      } catch (error) {
+        console.error('[OLC API] Error rebuilding OLC:', error);
+        res.status(500).json({ 
+          error: 'Failed to rebuild OLC cache',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
+    // GET /api/olc/health
+    app.get('/api/olc/health', async (req: Request, res: Response) => {
+      try {
+        const builder = OlcBuilder.getInstance();
+        const health = await builder.healthCheck();
+        
+        res.json({
+          ...health,
+          cache_stats: builder.getCacheStats(),
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error('[OLC API] Health check failed:', error);
+        res.status(500).json({ 
+          status: 'unhealthy',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
+    console.log('✅ OLC API routes registered');
+  } catch (error) {
+    console.error('❌ Failed to register OLC routes:', error);
+  }
+
   const httpServer = createServer(app);
   return httpServer;
 }
