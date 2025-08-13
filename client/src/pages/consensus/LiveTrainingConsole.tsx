@@ -96,6 +96,54 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
               🟢 GREEN LIGHT: Push RB Elite Tier Live
             </Button>
           </div>
+
+          {/* RB Tier 2 Analysis */}
+          <div className="space-y-3 p-4 bg-orange-50 rounded-lg border border-orange-200">
+            <h4 className="font-semibold text-sm text-orange-800">🟡 RB Tier 2 - Proven Volume vs Explosive Upside</h4>
+            <div className="space-y-2 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="font-medium text-orange-700">Proven Workhorses:</div>
+                  <div className="pl-2 text-gray-600">• Derrick Henry (age vs volume)</div>
+                  <div className="pl-2 text-gray-600">• Josh Jacobs (proven 300+ touches)</div>
+                  <div className="pl-2 text-gray-600">• Kenneth Walker III (volume questions)</div>
+                </div>
+                
+                <div>
+                  <div className="font-medium text-orange-700">Explosive Ceiling:</div>
+                  <div className="pl-2 text-gray-600">• De'Von Achane (game-breaking speed)</div>
+                  <div className="pl-2 text-gray-600">• Kyren Williams (Rams system fit)</div>
+                  <div className="pl-2 text-gray-600">• Breece Hall (injury bounce-back)</div>
+                </div>
+              </div>
+              
+              <div className="mt-2 p-2 bg-orange-100 rounded border-l-4 border-orange-400">
+                <div className="font-medium text-orange-800 text-xs">Handcuff Strategy Integration:</div>
+                <div className="text-xs text-gray-600 pl-2">• Target Mason (LV), Davis (SEA), Charbonnet (SEA)</div>
+                <div className="text-xs text-gray-600 pl-2">• Volume upside if starters miss time</div>
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                className="text-xs bg-orange-600 hover:bg-orange-700 text-white"
+                onClick={() => greenLightTierChange(["derrick-henry", "josh-jacobs", "kenneth-walker"], 2, "RB Tier 2A - Workhorses")}
+                disabled={updateConsensusMutation.isPending}
+              >
+                💪 Proven Volume
+              </Button>
+              <Button 
+                size="sm" 
+                className="text-xs bg-yellow-600 hover:bg-yellow-700 text-white"
+                onClick={() => greenLightTierChange(["devon-achane", "kyren-williams", "breece-hall"], 2, "RB Tier 2B - Explosive")}
+                disabled={updateConsensusMutation.isPending}
+              >
+                ⚡ Explosive Ceiling
+              </Button>
+            </div>
+          </div>
+
           {/* QB 2025 Redraft Training */}
           <div className="space-y-3 p-4 bg-white rounded-lg border border-green-200">
             <h4 className="font-semibold text-sm text-green-800">🏈 2025 QB Redraft Elite Tier</h4>
