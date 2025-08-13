@@ -63,11 +63,39 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-gray-700">
-          <strong>2025 QB Redraft Training:</strong> 4-tier structure with rushing upside vs passing ceiling trade-offs
-        </p>
+        <div className="flex gap-4 text-sm">
+          <div>
+            <strong className="text-green-800">QB Training Complete:</strong> 4-tier structure ready for deployment
+          </div>
+          <div>
+            <strong className="text-blue-800">Next: RB Training</strong> - Volatility management and handcuff strategy
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 gap-4">
+          {/* RB 2025 Redraft Training */}
+          <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h4 className="font-semibold text-sm text-blue-800">🏃‍♂️ 2025 RB Redraft Elite Tier</h4>
+            <div className="space-y-2">
+              <div className="text-xs text-gray-700 space-y-1">
+                <div className="font-medium">Tier 1 Elite (Bell-cow ceiling):</div>
+                <div className="pl-2">• Christian McCaffrey (when healthy - workload king)</div>
+                <div className="pl-2">• Saquon Barkley (Eagles system + volume)</div>
+                <div className="pl-2">• Jahmyr Gibbs (explosive ceiling + Lions offense)</div>
+              </div>
+              <div className="text-xs text-gray-500">
+                Context: RBs with 300+ touch potential and game-breaking weekly ceiling
+              </div>
+            </div>
+            <Button 
+              size="sm" 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
+              onClick={() => greenLightTierChange(["christian-mccaffrey", "saquon-barkley", "jahmyr-gibbs"], 1, "2025 RB Elite")}
+              disabled={updateConsensusMutation.isPending}
+            >
+              🟢 GREEN LIGHT: Push RB Elite Tier Live
+            </Button>
+          </div>
           {/* QB 2025 Redraft Training */}
           <div className="space-y-3 p-4 bg-white rounded-lg border border-green-200">
             <h4 className="font-semibold text-sm text-green-800">🏈 2025 QB Redraft Elite Tier</h4>
@@ -145,9 +173,10 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
               </div>
               
               <div className="mt-2 p-2 bg-green-100 rounded border-l-4 border-green-400">
-                <div className="font-medium text-green-800 text-xs">Tier 3 Final: Purdy Wins</div>
-                <div className="text-xs text-gray-600 pl-2">• Purdy: QB14 finish, Super Bowl system (ADP 112)</div>
-                <div className="text-xs text-gray-600 pl-2">• Dak: QB31 + injury concerns (ADP 121.5) → Tier 4</div>
+                <div className="font-medium text-green-800 text-xs">Tier 3 Final: 5 QBs</div>
+                <div className="text-xs text-gray-600 pl-2">• Elite Value: Maye (133.9), Mayfield (QB4)</div>
+                <div className="text-xs text-gray-600 pl-2">• Proven: Purdy (QB14), Kyler (QB10 + weapons)</div>
+                <div className="text-xs text-gray-600 pl-2">• Believe: Richardson (elite rushing ceiling)</div>
               </div>
               
               <div className="text-xs text-gray-500 mt-2">
@@ -175,10 +204,10 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
               <Button 
                 size="sm" 
                 className="text-xs bg-purple-600 hover:bg-purple-700 text-white"
-                onClick={() => greenLightTierChange(["brock-purdy", "anthony-richardson", "baker-mayfield"], 3, "QB Tier 3 Final")}
+                onClick={() => greenLightTierChange(["brock-purdy", "anthony-richardson", "baker-mayfield", "kyler-murray"], 3, "QB Tier 3 Final")}
                 disabled={updateConsensusMutation.isPending}
               >
-                ✅ Finalize Tier 3
+                ✅ Finalize Tier 3 + Kyler
               </Button>
             </div>
           </div>
@@ -209,7 +238,7 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
             <div className="space-y-2">
               <div className="font-medium text-gray-700 text-xs">Tier 4 Leaders:</div>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="pl-2 text-gray-600">• Kyler Murray (QB10, ADP 92)</div>
+                <div className="pl-2 text-gray-500">• Kyler Murray → Tier 3 (QB10 + weapons)</div>
                 <div className="pl-2 text-gray-600">• Bo Nix (QB7 rookie, ADP 82.4)</div>
                 <div className="pl-2 text-gray-600">• Justin Fields (QB32, ADP 128.6)</div>
                 <div className="pl-2 text-gray-600">• JJ McCarthy (cheaper Maye, ADP 141.6)</div>
@@ -221,10 +250,10 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
               <Button 
                 size="sm" 
                 className="text-xs bg-orange-500 hover:bg-orange-600 text-white"
-                onClick={() => greenLightTierChange(["kyler-murray", "bo-nix"], 4, "QB Tier 4A - Proven")}
+                onClick={() => greenLightTierChange(["bo-nix"], 4, "QB Tier 4A - Bo Leads")}
                 disabled={updateConsensusMutation.isPending}
               >
-                🎯 Proven (Kyler/Bo)
+                🎯 Bo Leads Tier 4
               </Button>
               <Button 
                 size="sm" 
