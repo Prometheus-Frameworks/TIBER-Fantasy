@@ -185,7 +185,7 @@ class RatingsEngineService {
     const config = await this.readFile<RatingsEngineConfig>(this.CONFIG_FILE) || this.DEFAULT_CONFIG;
     
     const sampleRatings: PlayerRating[] = [
-      // Elite QBs
+      // TIER 1 - ELITE QBs (S TIER)
       {
         player_id: 'josh_allen',
         player_name: 'Josh Allen',
@@ -232,6 +232,362 @@ class RatingsEngineService {
           half_ppr: 92,
           full_ppr: 92,
           superflex: 96
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+      {
+        player_id: 'patrick_mahomes',
+        player_name: 'Patrick Mahomes',
+        position: 'QB',
+        team: 'KC',
+        overall_rating: 0,
+        positional_rank: 3,
+        tier: '',
+        components: {
+          talent: 95,
+          opportunity: 94,
+          consistency: 88,
+          upside: 94,
+          floor: 90
+        },
+        format_ratings: {
+          redraft: 91,
+          dynasty: 95,
+          half_ppr: 91,
+          full_ppr: 91,
+          superflex: 95
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+      {
+        player_id: 'jayden_daniels',
+        player_name: 'Jayden Daniels',
+        position: 'QB',
+        team: 'WAS',
+        overall_rating: 0,
+        positional_rank: 4,
+        tier: '',
+        components: {
+          talent: 90,
+          opportunity: 88,
+          consistency: 75,
+          upside: 95,
+          floor: 80
+        },
+        format_ratings: {
+          redraft: 88,
+          dynasty: 92,
+          half_ppr: 88,
+          full_ppr: 88,
+          superflex: 92
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+
+      // TIER 2 - HIGH-END QB1s (A TIER)
+      {
+        player_id: 'jalen_hurts',
+        player_name: 'Jalen Hurts',
+        position: 'QB',
+        team: 'PHI',
+        overall_rating: 0,
+        positional_rank: 5,
+        tier: '',
+        components: {
+          talent: 85,
+          opportunity: 90,
+          consistency: 80,
+          upside: 88,
+          floor: 82
+        },
+        format_ratings: {
+          redraft: 85,
+          dynasty: 87,
+          half_ppr: 85,
+          full_ppr: 85,
+          superflex: 89
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+      {
+        player_id: 'joe_burrow',
+        player_name: 'Joe Burrow',
+        position: 'QB',
+        team: 'CIN',
+        overall_rating: 0,
+        positional_rank: 6,
+        tier: '',
+        components: {
+          talent: 88,
+          opportunity: 85,
+          consistency: 85,
+          upside: 90,
+          floor: 85
+        },
+        format_ratings: {
+          redraft: 84,
+          dynasty: 88,
+          half_ppr: 84,
+          full_ppr: 84,
+          superflex: 88
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+      {
+        player_id: 'anthony_richardson',
+        player_name: 'Anthony Richardson',
+        position: 'QB',
+        team: 'IND',
+        overall_rating: 0,
+        positional_rank: 7,
+        tier: '',
+        components: {
+          talent: 82,
+          opportunity: 85,
+          consistency: 70,
+          upside: 92,
+          floor: 75
+        },
+        format_ratings: {
+          redraft: 82,
+          dynasty: 86,
+          half_ppr: 82,
+          full_ppr: 82,
+          superflex: 86
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+      {
+        player_id: 'cj_stroud',
+        player_name: 'C.J. Stroud',
+        position: 'QB',
+        team: 'HOU',
+        overall_rating: 0,
+        positional_rank: 8,
+        tier: '',
+        components: {
+          talent: 85,
+          opportunity: 82,
+          consistency: 82,
+          upside: 88,
+          floor: 80
+        },
+        format_ratings: {
+          redraft: 81,
+          dynasty: 85,
+          half_ppr: 81,
+          full_ppr: 81,
+          superflex: 85
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+
+      // TIER 3 - SOLID QB1s (B TIER)
+      {
+        player_id: 'dak_prescott',
+        player_name: 'Dak Prescott',
+        position: 'QB',
+        team: 'DAL',
+        overall_rating: 0,
+        positional_rank: 9,
+        tier: '',
+        components: {
+          talent: 78,
+          opportunity: 85,
+          consistency: 85,
+          upside: 80,
+          floor: 82
+        },
+        format_ratings: {
+          redraft: 78,
+          dynasty: 75,
+          half_ppr: 78,
+          full_ppr: 78,
+          superflex: 82
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+      {
+        player_id: 'tua_tagovailoa',
+        player_name: 'Tua Tagovailoa',
+        position: 'QB',
+        team: 'MIA',
+        overall_rating: 0,
+        positional_rank: 10,
+        tier: '',
+        components: {
+          talent: 80,
+          opportunity: 82,
+          consistency: 75,
+          upside: 85,
+          floor: 70
+        },
+        format_ratings: {
+          redraft: 77,
+          dynasty: 76,
+          half_ppr: 77,
+          full_ppr: 77,
+          superflex: 81
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+      {
+        player_id: 'jordan_love',
+        player_name: 'Jordan Love',
+        position: 'QB',
+        team: 'GB',
+        overall_rating: 0,
+        positional_rank: 11,
+        tier: '',
+        components: {
+          talent: 78,
+          opportunity: 88,
+          consistency: 78,
+          upside: 85,
+          floor: 75
+        },
+        format_ratings: {
+          redraft: 76,
+          dynasty: 78,
+          half_ppr: 76,
+          full_ppr: 76,
+          superflex: 80
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+      {
+        player_id: 'brock_purdy',
+        player_name: 'Brock Purdy',
+        position: 'QB',
+        team: 'SF',
+        overall_rating: 0,
+        positional_rank: 12,
+        tier: '',
+        components: {
+          talent: 75,
+          opportunity: 85,
+          consistency: 85,
+          upside: 78,
+          floor: 80
+        },
+        format_ratings: {
+          redraft: 75,
+          dynasty: 74,
+          half_ppr: 75,
+          full_ppr: 75,
+          superflex: 79
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+
+      // TIER 4 - QB2/STREAMING (C TIER)
+      {
+        player_id: 'kyler_murray',
+        player_name: 'Kyler Murray',
+        position: 'QB',
+        team: 'ARI',
+        overall_rating: 0,
+        positional_rank: 13,
+        tier: '',
+        components: {
+          talent: 75,
+          opportunity: 78,
+          consistency: 70,
+          upside: 82,
+          floor: 68
+        },
+        format_ratings: {
+          redraft: 68,
+          dynasty: 70,
+          half_ppr: 68,
+          full_ppr: 68,
+          superflex: 72
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+      {
+        player_id: 'caleb_williams',
+        player_name: 'Caleb Williams',
+        position: 'QB',
+        team: 'CHI',
+        overall_rating: 0,
+        positional_rank: 14,
+        tier: '',
+        components: {
+          talent: 78,
+          opportunity: 75,
+          consistency: 65,
+          upside: 85,
+          floor: 65
+        },
+        format_ratings: {
+          redraft: 67,
+          dynasty: 75,
+          half_ppr: 67,
+          full_ppr: 67,
+          superflex: 71
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+      {
+        player_id: 'drake_maye',
+        player_name: 'Drake Maye',
+        position: 'QB',
+        team: 'NE',
+        overall_rating: 0,
+        positional_rank: 15,
+        tier: '',
+        components: {
+          talent: 75,
+          opportunity: 72,
+          consistency: 60,
+          upside: 82,
+          floor: 60
+        },
+        format_ratings: {
+          redraft: 66,
+          dynasty: 72,
+          half_ppr: 66,
+          full_ppr: 66,
+          superflex: 70
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+      {
+        player_id: 'bo_nix',
+        player_name: 'Bo Nix',
+        position: 'QB',
+        team: 'DEN',
+        overall_rating: 0,
+        positional_rank: 16,
+        tier: '',
+        components: {
+          talent: 70,
+          opportunity: 75,
+          consistency: 68,
+          upside: 75,
+          floor: 65
+        },
+        format_ratings: {
+          redraft: 65,
+          dynasty: 68,
+          half_ppr: 65,
+          full_ppr: 65,
+          superflex: 69
         },
         age_adjusted_value: 0,
         last_updated: new Date().toISOString()
@@ -343,8 +699,27 @@ class RatingsEngineService {
    */
   private getPlayerAge(playerId: string): number {
     const ages: Record<string, number> = {
+      // TIER 1 QBs
       'josh_allen': 28,
       'lamar_jackson': 27,
+      'patrick_mahomes': 29,
+      'jayden_daniels': 23,
+      // TIER 2 QBs  
+      'jalen_hurts': 25,
+      'joe_burrow': 27,
+      'anthony_richardson': 22,
+      'cj_stroud': 22,
+      // TIER 3 QBs
+      'dak_prescott': 31,
+      'tua_tagovailoa': 26,
+      'jordan_love': 25,
+      'brock_purdy': 24,
+      // TIER 4 QBs
+      'kyler_murray': 27,
+      'caleb_williams': 22,
+      'drake_maye': 22,
+      'bo_nix': 24,
+      // Other positions
       'jamarr_chase': 24,
       'ceedee_lamb': 25,
       'christian_mccaffrey': 28
