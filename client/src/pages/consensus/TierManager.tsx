@@ -82,13 +82,37 @@ export default function TierManager({ format, season }: TierManagerProps) {
       });
       
       toast({
-        title: "Tier Updated",
-        description: `Player moved to Tier ${newTier}`,
+        title: "🟢 LIVE UPDATE",
+        description: `Tier ${newTier} assignment pushed to frontend`,
+        className: "border-green-200 bg-green-50 text-green-800",
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to update tier",
+        title: "🔴 PUSH FAILED",
+        description: "Could not update live rankings",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBatchTierAssignment = async (playerIds: string[], targetTier: number) => {
+    try {
+      const updates = playerIds.map(playerId => ({ playerId, tier: targetTier }));
+      await updateConsensusMutation.mutateAsync({
+        format,
+        season,
+        updates
+      });
+      
+      toast({
+        title: "🟢 BATCH LIVE UPDATE",
+        description: `${playerIds.length} players moved to Tier ${targetTier}`,
+        className: "border-green-200 bg-green-50 text-green-800",
+      });
+    } catch (error) {
+      toast({
+        title: "🔴 BATCH FAILED",
+        description: "Could not push batch update",
         variant: "destructive",
       });
     }
@@ -101,10 +125,16 @@ export default function TierManager({ format, season }: TierManagerProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">
-          Tier Manager - {format.charAt(0).toUpperCase() + format.slice(1)}
-          {season && ` ${season}`}
-        </h1>
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+            Live Tier Training - {format.charAt(0).toUpperCase() + format.slice(1)}
+            {season && ` ${season}`}
+          </h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Real-time consensus management • Changes push directly to frontend
+          </p>
+        </div>
       </div>
 
       {/* Position Selector */}
@@ -165,9 +195,17 @@ export default function TierManager({ format, season }: TierManagerProps) {
                           {[1, 2, 3, 4, 5].map((targetTier) => (
                             <Button
                               key={targetTier}
-                              variant={player.tier === targetTier ? "default" : "outline"}
+                              variant={parseInt(player.tier) === targetTier ? "default" : "outline"}
                               size="sm"
-                              className="w-8 h-8 p-0 text-xs"
+                              className={`w-8 h-8 p-0 text-xs ${
+                                parseInt(player.tier) === targetTier 
+                                  ? "" 
+                                  : targetTier === 1 
+                                  ? "hover:bg-green-100 border-green-200" 
+                                  : targetTier === 2 
+                                  ? "hover:bg-blue-100 border-blue-200"
+                                  : "hover:bg-gray-100"
+                              }`}
                               onClick={() => handleTierChange(player.playerId, targetTier)}
                               disabled={updateConsensusMutation.isPending}
                             >
@@ -187,42 +225,48 @@ export default function TierManager({ format, season }: TierManagerProps) {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Quick Tier Assignment</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            Live Tier Assignment
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-600 mb-4">
-            Quickly assign elite tier (Tier 1) to the best {selectedPosition} players:
+            <strong>Training Mode:</strong> Push tier changes live to frontend. Green light approved tiers:
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={() => {
-                const topPlayers = positionData.slice(0, 3);
-                Promise.all(topPlayers.map(p => handleTierChange(p.playerId, 1)));
+                const topPlayers = positionData.slice(0, 3).map(p => p.playerId);
+                handleBatchTierAssignment(topPlayers, 1);
               }}
               variant="outline"
               size="sm"
+              className="border-green-200 hover:bg-green-50"
             >
-              Top 3 → Tier 1
+              🟢 Push Top 3 → Elite
             </Button>
             <Button
               onClick={() => {
-                const topPlayers = positionData.slice(0, 5);
-                Promise.all(topPlayers.map(p => handleTierChange(p.playerId, 1)));
+                const topPlayers = positionData.slice(0, 5).map(p => p.playerId);
+                handleBatchTierAssignment(topPlayers, 1);
               }}
               variant="outline"
               size="sm"
+              className="border-green-200 hover:bg-green-50"
             >
-              Top 5 → Tier 1
+              🟢 Push Top 5 → Elite
             </Button>
             <Button
               onClick={() => {
-                const tierTwoPlayers = positionData.slice(5, 12);
-                Promise.all(tierTwoPlayers.map(p => handleTierChange(p.playerId, 2)));
+                const tierTwoPlayers = positionData.slice(5, 12).map(p => p.playerId);
+                handleBatchTierAssignment(tierTwoPlayers, 2);
               }}
               variant="outline"
               size="sm"
+              className="border-blue-200 hover:bg-blue-50"
             >
-              Ranks 6-12 → Tier 2
+              🔵 Push 6-12 → Great
             </Button>
           </div>
         </CardContent>
