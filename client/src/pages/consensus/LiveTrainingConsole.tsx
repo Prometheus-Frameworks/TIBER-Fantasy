@@ -16,6 +16,7 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
   const updateConsensusMutation = useUpdateConsensus();
   const { toast } = useToast();
 
+  // 2025 Redraft QB Elite Tier - top single-season production
   const eliteQBs = ["josh-allen", "lamar-jackson", "patrick-mahomes"];
   const eliteRBs = ["christian-mccaffrey", "austin-ekeler", "derrick-henry"];
   const eliteWRs = ["cooper-kupp", "stefon-diggs", "tyreek-hill", "davante-adams", "justin-jefferson"];
@@ -50,81 +51,57 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-gray-700">
-          <strong>Quick Deploy:</strong> One-click green light for consensus tier assignments
+          <strong>2025 Redraft Training:</strong> Green light QB elite tier for single-season production focus
         </p>
 
-        <div className="grid grid-cols-2 gap-4">
-          {/* QB Elite Tier */}
-          <div className="space-y-2">
-            <h4 className="font-medium text-sm">QB Elite Tier</h4>
-            <div className="space-y-1 text-xs text-gray-600">
-              {eliteQBs.map(qb => (
-                <div key={qb}>{qb.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
-              ))}
+        <div className="grid grid-cols-1 gap-4">
+          {/* QB 2025 Redraft Training */}
+          <div className="space-y-3 p-4 bg-white rounded-lg border border-green-200">
+            <h4 className="font-semibold text-sm text-green-800">🏈 2025 QB Redraft Elite Tier</h4>
+            <div className="space-y-2">
+              <div className="text-xs text-gray-700 space-y-1">
+                <div className="font-medium">Tier 1 Elite (Single-season ceiling):</div>
+                {eliteQBs.map(qb => (
+                  <div key={qb} className="pl-2">• {qb.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
+                ))}
+              </div>
+              <div className="text-xs text-gray-500">
+                Context: Top rushing upside + proven passing floor for 2025 season
+              </div>
             </div>
             <Button 
               size="sm" 
-              className="w-full bg-green-600 hover:bg-green-700"
-              onClick={() => greenLightTierChange(eliteQBs, 1, "QB")}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-medium"
+              onClick={() => greenLightTierChange(eliteQBs, 1, "2025 QB Elite")}
               disabled={updateConsensusMutation.isPending}
             >
-              🟢 Green Light QB Elite
+              🟢 GREEN LIGHT: Push QB Elite Tier Live
             </Button>
           </div>
 
-          {/* RB Elite Tier */}
-          <div className="space-y-2">
-            <h4 className="font-medium text-sm">RB Elite Tier</h4>
-            <div className="space-y-1 text-xs text-gray-600">
-              {eliteRBs.map(rb => (
-                <div key={rb}>{rb.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
-              ))}
+          {/* Additional Quick Actions */}
+          <div className="space-y-2 p-3 bg-gray-50 rounded-lg border">
+            <h4 className="font-medium text-sm text-gray-700">Training Session Controls</h4>
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="text-xs border-blue-200 hover:bg-blue-50"
+                onClick={() => greenLightTierChange(["joe-burrow"], 2, "QB Tier 2")}
+                disabled={updateConsensusMutation.isPending}
+              >
+                🔵 Burrow → Tier 2
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="text-xs border-gray-300 hover:bg-gray-50"
+                onClick={() => greenLightTierChange(["patrick-mahomes"], 2, "QB Adjustment")}
+                disabled={updateConsensusMutation.isPending}
+              >
+                Mahomes → Tier 2
+              </Button>
             </div>
-            <Button 
-              size="sm" 
-              className="w-full bg-green-600 hover:bg-green-700"
-              onClick={() => greenLightTierChange(eliteRBs, 1, "RB")}
-              disabled={updateConsensusMutation.isPending}
-            >
-              🟢 Green Light RB Elite
-            </Button>
-          </div>
-
-          {/* WR Elite Tier */}
-          <div className="space-y-2">
-            <h4 className="font-medium text-sm">WR Elite Tier</h4>
-            <div className="space-y-1 text-xs text-gray-600">
-              {eliteWRs.slice(0, 3).map(wr => (
-                <div key={wr}>{wr.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
-              ))}
-              <div className="text-gray-400">+2 more...</div>
-            </div>
-            <Button 
-              size="sm" 
-              className="w-full bg-green-600 hover:bg-green-700"
-              onClick={() => greenLightTierChange(eliteWRs, 1, "WR")}
-              disabled={updateConsensusMutation.isPending}
-            >
-              🟢 Green Light WR Elite
-            </Button>
-          </div>
-
-          {/* TE Elite Tier */}
-          <div className="space-y-2">
-            <h4 className="font-medium text-sm">TE Elite Tier</h4>
-            <div className="space-y-1 text-xs text-gray-600">
-              {eliteTEs.map(te => (
-                <div key={te}>{te.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
-              ))}
-            </div>
-            <Button 
-              size="sm" 
-              className="w-full bg-green-600 hover:bg-green-700"
-              onClick={() => greenLightTierChange(eliteTEs, 1, "TE")}
-              disabled={updateConsensusMutation.isPending}
-            >
-              🟢 Green Light TE Elite
-            </Button>
           </div>
         </div>
 
