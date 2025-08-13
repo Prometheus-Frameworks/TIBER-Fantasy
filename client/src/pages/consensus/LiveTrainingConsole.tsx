@@ -51,7 +51,7 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-gray-700">
-          <strong>2025 Redraft Training:</strong> Green light QB elite tier for single-season production focus
+          <strong>2025 QB Redraft Training:</strong> 4-tier structure with rushing upside vs passing ceiling trade-offs
         </p>
 
         <div className="grid grid-cols-1 gap-4">
@@ -79,17 +79,34 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
             </Button>
           </div>
 
-          {/* Additional Quick Actions */}
-          <div className="space-y-2 p-3 bg-gray-50 rounded-lg border">
-            <h4 className="font-medium text-sm text-gray-700">Training Session Controls</h4>
+          {/* Tier 2 Options */}
+          <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h4 className="font-semibold text-sm text-blue-800">🔵 QB Tier 2 Debate</h4>
+            <div className="space-y-2 text-xs">
+              <div className="font-medium text-gray-700">Option A: Rushing + Ceiling QBs</div>
+              <div className="pl-2 text-gray-600">• Jalen Hurts (tush push, elite weapons)</div>
+              <div className="pl-2 text-gray-600">• Jayden Daniels (QB5 rookie finish)</div>
+              
+              <div className="font-medium text-gray-700 mt-2">Option B: Pure Passing Elite</div>
+              <div className="pl-2 text-gray-600">• Joe Burrow (Chase/Higgins ceiling)</div>
+              <div className="pl-2 text-gray-600">• Patrick Mahomes (historic arm talent)</div>
+            </div>
             <div className="flex gap-2">
               <Button 
                 size="sm" 
-                className="text-xs bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => greenLightTierChange(["joe-burrow", "patrick-mahomes"], 2, "QB Tier 2 Elite")}
+                className="text-xs bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={() => greenLightTierChange(["jalen-hurts", "jayden-daniels"], 2, "QB Tier 2A")}
                 disabled={updateConsensusMutation.isPending}
               >
-                🔵 Push Tier 2: Burrow + Mahomes
+                🟣 Rushing + Ceiling
+              </Button>
+              <Button 
+                size="sm" 
+                className="text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => greenLightTierChange(["joe-burrow", "patrick-mahomes"], 2, "QB Tier 2B")}
+                disabled={updateConsensusMutation.isPending}
+              >
+                🔵 Passing Elite
               </Button>
             </div>
           </div>
