@@ -1714,17 +1714,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced consensus seeding endpoint with command router integration
   app.post('/api/consensus/seed', async (req, res) => {
     try {
-      const { command } = req.body;
+      const { command, text } = req.body;
+      const commandText = command || text;
       
-      if (!command) {
+      if (!commandText) {
         return res.status(400).json({ success: false, message: "Command string required" });
       }
       
-      console.log(`🌱 Processing consensus command: "${command}"`);
+      console.log(`🌱 Processing consensus command: "${commandText}"`);
       
       // Use OTC Consensus Command Router v1
       const { parseConsensusCommand, updateConsensusRank } = await import('./consensus/commandRouter');
-      const payload = parseConsensusCommand(command);
+      const payload = parseConsensusCommand(commandText);
       
       if (!payload) {
         return res.status(400).json({

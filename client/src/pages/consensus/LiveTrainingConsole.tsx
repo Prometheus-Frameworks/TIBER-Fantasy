@@ -24,8 +24,20 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
 
   const greenLightTierChange = async (playerIds: string[], tier: number, positionName: string) => {
     try {
-      const updates = playerIds.map(playerId => ({ playerId, tier }));
-      await updateConsensusMutation.mutateAsync({ format, season, updates });
+      // Use the consensus update endpoint directly
+      const response = await fetch('/api/consensus/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          format: format,
+          season: season || 2025,
+          updates: playerIds.map(playerId => ({ playerId, tier }))
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
       
       toast({
         title: "🟢 GREEN LIGHT EXECUTED",
@@ -33,6 +45,7 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
         className: "border-green-500 bg-green-100 text-green-900",
       });
     } catch (error) {
+      console.error('Green light failed:', error);
       toast({
         title: "🔴 PUSH FAILED",
         description: `Could not execute green light for ${positionName}`,
