@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, startTransition } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { useConsensus } from "@/hooks/useConsensus";
+import type { ConsensusFormat } from "@shared/types/consensus";
 
 const API_BASE = ""; // same-origin fallback
 const POSITIONS = ["ALL", "QB", "RB", "WR", "TE"] as const;
@@ -80,7 +82,7 @@ export default function RankingsTable({ mode }: Props) {
   const { rows, updatedAt } = useMemo(() => {
     if (consensusData?.rows && consensusData.rows.length > 0) {
       // Transform consensus data to match RatingRow format
-      const consensusRows: RatingRow[] = consensusData.rows.map(row => ({
+      const consensusRows: RatingRow[] = consensusData.rows.map((row: any) => ({
         player_id: row.playerId,
         player_name: `Player ${row.playerId}`, // TODO: Join with player pool for names
         team: "", // TODO: Join with player pool for teams

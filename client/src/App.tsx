@@ -103,6 +103,7 @@ import InjuryProfilesDemo from "@/pages/InjuryProfilesDemo";
 import CompassHub from "@/pages/compass/CompassHub";
 import ConsensusHub from "@/pages/consensus/ConsensusHub";
 import ExpertView from "@/pages/consensus/ExpertView";
+import TierManagerWrapper from "@/pages/consensus/TierManagerWrapper";
 
 function Router() {
   return (
@@ -130,6 +131,7 @@ function Router() {
       <Route path="/consensus/redraft" component={RedraftRankings} />
       <Route path="/consensus/expert/architect-j" component={ExpertView} />
       <Route path="/consensus/seed" component={ConsensusSeeding} />
+      <Route path="/consensus/tiers" component={TierManagerWrapper} />
       <Route path="/consensus-transparency" component={ConsensusTransparency} />
       <Route path="/competence" component={CompetenceMode} />
       <Route path="/experts/architect-j" component={ArchitectJProfile} />

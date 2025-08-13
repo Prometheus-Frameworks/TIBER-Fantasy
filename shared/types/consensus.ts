@@ -55,3 +55,35 @@ export interface CompareRanking {
   consensusRank?: number;
   delta?: number; // consensusRank - yourRank
 }
+
+// Additional types for backend/frontend compatibility
+export type ConsensusFormat = Format;
+
+export interface ConsensusResponse {
+  meta: {
+    defaultFormat: ConsensusFormat;
+    boardVersion: number;
+  };
+  rows: Array<{
+    id: string;
+    playerId: string;
+    format: ConsensusFormat;
+    season?: number;
+    rank: number;
+    tier: number;
+    score: number;
+    source: string;
+    updatedAt: string;
+  }>;
+}
+
+export interface ConsensusPatchRequest {
+  format: ConsensusFormat;
+  season?: number;
+  updates: Array<{
+    playerId: string;
+    rank?: number;
+    tier?: number;
+    score?: number;
+  }>;
+}

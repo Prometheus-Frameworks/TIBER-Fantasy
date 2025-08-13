@@ -1,230 +1,113 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Trophy, Users, BarChart3, Settings, ArrowRight, ExternalLink } from "lucide-react";
+import React from "react";
 import { Link } from "wouter";
-import PlayerRow from "@/components/PlayerRow";
-
-interface ConsensusPlayer {
-  id: string;
-  playerId: string;
-  format: string;
-  season?: number;
-  rank: number;
-  tier: number;
-  score: number;
-  source: string;
-  updatedAt: string;
-}
-
-interface ConsensusResponse {
-  meta: {
-    defaultFormat: string;
-    boardVersion: number;
-  };
-  rows: ConsensusPlayer[];
-}
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export default function ConsensusHub() {
-  const [activeFormat, setActiveFormat] = useState<"dynasty" | "redraft">("dynasty");
-  const [positionFilter, setPositionFilter] = useState<"ALL" | "QB" | "RB" | "WR" | "TE">("ALL");
-
-  const { data: consensusData, isLoading } = useQuery<ConsensusResponse>({
-    queryKey: [`/api/consensus`, { format: activeFormat }],
-    queryFn: async () => {
-      const response = await fetch(`/api/consensus?format=${activeFormat}`);
-      if (!response.ok) throw new Error('Failed to fetch consensus data');
-      return response.json();
-    }
-  });
-
-  const filteredPlayers = consensusData?.rows?.filter(player => {
-    if (positionFilter === "ALL") return true;
-    // For now, since we have numeric player IDs, we'll show all until we have proper position filtering
-    return true;
-  }) || [];
-
-  const positions = ["ALL", "QB", "RB", "WR", "TE"] as const;
-
   return (
-    <div className="space-y-8">
-      {/* Hero Section */}
-      <div className="flex items-center gap-4">
-        <div className="p-3 bg-yellow-100 rounded-xl">
-          <Trophy className="h-8 w-8 text-yellow-600" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold text-ink">
-            OTC Consensus
-          </h1>
-          <p className="text-body mt-1">
-            Community-driven dynasty & redraft boards. Transparent and versioned.
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          OTC Consensus Rankings
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+          Community-driven rankings with transparent methodology. Pure signal, no noise.
+        </p>
+      </div>
+
+      {/* Main Navigation Cards */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                Dynasty
+              </Badge>
+              Dynasty Rankings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Long-term value rankings focused on sustained production and career trajectory.
+            </p>
+            <div className="flex gap-2">
+              <Link href="/consensus/dynasty">
+                <Button className="w-full">View Dynasty Rankings</Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                2025
+              </Badge>
+              Redraft Rankings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Single-season rankings optimized for 2025 fantasy football production.
+            </p>
+            <div className="flex gap-2">
+              <Link href="/consensus/redraft">
+                <Button className="w-full">View Redraft Rankings</Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Management Tools */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Management Tools</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Professional tools for consensus management and tier assignment.
           </p>
-        </div>
-      </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/consensus/tiers">
+              <Button variant="outline" size="sm">
+                Tier Manager
+              </Button>
+            </Link>
+            <Link href="/consensus/seed">
+              <Button variant="outline" size="sm">
+                Consensus Seeding
+              </Button>
+            </Link>
+            <Link href="/consensus-transparency">
+              <Button variant="outline" size="sm">
+                Transparency Report
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        {/* Format Toggle */}
-        <div className="flex gap-1">
-          <button
-            onClick={() => setActiveFormat("dynasty")}
-            className={`px-3 py-2 text-sm font-medium transition-colors ${
-              activeFormat === "dynasty"
-                ? "text-ink border-b-2 border-gold"
-                : "text-body hover:text-ink"
-            }`}
-          >
-            Dynasty
-          </button>
-          <button
-            onClick={() => setActiveFormat("redraft")}
-            className={`px-3 py-2 text-sm font-medium transition-colors ${
-              activeFormat === "redraft"
-                ? "text-ink border-b-2 border-gold"
-                : "text-body hover:text-ink"
-            }`}
-          >
-            Redraft 2025
-          </button>
-        </div>
-
-        {/* Position Filters */}
-        <div className="flex gap-1 flex-wrap">
-          {positions.map((pos) => (
-            <button
-              key={pos}
-              onClick={() => setPositionFilter(pos)}
-              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                positionFilter === pos
-                  ? "text-white bg-plum"
-                  : "text-body bg-haze hover:text-ink"
-              }`}
-            >
-              {pos}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Consensus Table */}
-        <div className="lg:col-span-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                {activeFormat === "dynasty" ? "Dynasty" : "Redraft 2025"} Consensus
-                <Badge variant="outline" className="text-xs">
-                  v{consensusData?.meta.boardVersion || 1}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="space-y-2">
-                  {[...Array(10)].map((_, i) => (
-                    <div key={i} className="h-12 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
-                  ))}
-                </div>
-              ) : filteredPlayers.length === 0 ? (
-                <div className="text-center py-12">
-                  <Trophy className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                    No entries yet
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    Seeding live — check again soon.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 pb-2 border-b border-gray-200 dark:border-gray-700">
-                    <div className="col-span-1">Rank</div>
-                    <div className="col-span-5">Player</div>
-                    <div className="col-span-2">Tier</div>
-                    <div className="col-span-2">Score</div>
-                    <div className="col-span-2">Actions</div>
-                  </div>
-                  {filteredPlayers.slice(0, 50).map((player) => (
-                    <PlayerRow
-                      key={player.id}
-                      player={{
-                        id: player.id,
-                        playerId: player.playerId,
-                        rank: player.rank,
-                        tier: typeof player.tier === 'string' ? parseInt(player.tier.replace(/[A-Z]/g, '')) || 1 : player.tier,
-                        score: player.score
-                      }}
-                      showActions={true}
-                      format={activeFormat}
-                    />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Rail */}
-        <div className="space-y-4">
-          {/* Consensus Transparency */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <BarChart3 className="h-5 w-5 text-blue-600" />
-                <h3 className="font-medium">Consensus Transparency</h3>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                View changelog, seeds, and movement tracking
-              </p>
-              <Link href="/consensus-transparency">
-                <Button variant="outline" size="sm" className="w-full">
-                  View Details →
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* Architect J */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <Users className="h-5 w-5 text-purple-600" />
-                <h3 className="font-medium">Architect J</h3>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Personal board and seeding activity
-              </p>
-              <Link href="/consensus/expert/architect-j">
-                <Button variant="outline" size="sm" className="w-full">
-                  View Board →
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* Switch to Compass */}
-          <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <Settings className="h-5 w-5 text-blue-600" />
-                <h3 className="font-medium">Need Context?</h3>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Get scenario-based player guidance instead
-              </p>
-              <Link href="/compass">
-                <Badge variant="outline" className="cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30">
-                  Player Compass →
-                </Badge>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      {/* Expert Perspectives */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Expert Perspectives</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Individual ranking perspectives from verified experts and contributors.
+          </p>
+          <div className="flex gap-2">
+            <Link href="/consensus/expert/architect-j">
+              <Button variant="outline" size="sm">
+                Architect J Profile
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
