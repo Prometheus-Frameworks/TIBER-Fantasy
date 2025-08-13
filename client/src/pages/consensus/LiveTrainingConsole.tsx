@@ -66,7 +66,7 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
                 ))}
               </div>
               <div className="text-xs text-gray-500">
-                Context: Top rushing upside + proven passing floor for 2025 season
+                Context: Proven dual-threat dominance - rushing upside + elite passing floors
               </div>
             </div>
             <Button 
@@ -85,21 +85,11 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
             <div className="flex gap-2">
               <Button 
                 size="sm" 
-                variant="outline"
-                className="text-xs border-blue-200 hover:bg-blue-50"
-                onClick={() => greenLightTierChange(["joe-burrow"], 2, "QB Tier 2")}
+                className="text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => greenLightTierChange(["joe-burrow", "patrick-mahomes"], 2, "QB Tier 2 Elite")}
                 disabled={updateConsensusMutation.isPending}
               >
-                🔵 Burrow → Tier 2
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline"
-                className="text-xs border-gray-300 hover:bg-gray-50"
-                onClick={() => greenLightTierChange(["patrick-mahomes"], 2, "QB Adjustment")}
-                disabled={updateConsensusMutation.isPending}
-              >
-                Mahomes → Tier 2
+                🔵 Push Tier 2: Burrow + Mahomes
               </Button>
             </div>
           </div>
