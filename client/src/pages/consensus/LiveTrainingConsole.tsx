@@ -132,16 +132,22 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <div className="font-medium text-yellow-700">Young Upside:</div>
-                  <div className="pl-2 text-gray-600">• Anthony Richardson (injury bounce-back)</div>
-                  <div className="pl-2 text-gray-600">• Caleb Williams (rookie development)</div>
+                  <div className="font-medium text-yellow-700">Elite Value Plays:</div>
+                  <div className="pl-2 text-gray-600">• Drake Maye (Josh Allen lite @ ADP 133.9)</div>
+                  <div className="pl-2 text-gray-600">• Baker Mayfield (2024 QB4, dual-threat)</div>
                 </div>
                 
                 <div>
-                  <div className="font-medium text-yellow-700">Veteran Ceiling:</div>
-                  <div className="pl-2 text-gray-600">• Dak Prescott (weapons upgrade)</div>
-                  <div className="pl-2 text-gray-600">• Justin Herbert (new system)</div>
+                  <div className="font-medium text-yellow-700">High Ceiling Gambles:</div>
+                  <div className="pl-2 text-gray-600">• Anthony Richardson (Fields v2 rushing)</div>
+                  <div className="pl-2 text-gray-600">• Justin Herbert (breakout potential)</div>
                 </div>
+              </div>
+              
+              <div className="mt-2 p-2 bg-yellow-100 rounded border-l-4 border-yellow-400">
+                <div className="font-medium text-yellow-800 text-xs">Dak vs Purdy Debate:</div>
+                <div className="text-xs text-gray-600 pl-2">• Dak: Weapons upgrade, known ceiling</div>
+                <div className="text-xs text-gray-600 pl-2">• Purdy: Mr Underrated vs Mr Overhated</div>
               </div>
               
               <div className="text-xs text-gray-500 mt-2">
@@ -149,22 +155,30 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
               </div>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button 
                 size="sm" 
-                className="text-xs bg-yellow-600 hover:bg-yellow-700 text-white"
-                onClick={() => greenLightTierChange(["anthony-richardson", "caleb-williams"], 3, "QB Tier 3A - Young")}
+                className="text-xs bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => greenLightTierChange(["drake-maye", "baker-mayfield"], 3, "QB Tier 3A - Elite Value")}
                 disabled={updateConsensusMutation.isPending}
               >
-                🟡 Young Upside
+                💎 Elite Value
               </Button>
               <Button 
                 size="sm" 
-                className="text-xs bg-orange-600 hover:bg-orange-700 text-white"
-                onClick={() => greenLightTierChange(["dak-prescott", "justin-herbert"], 3, "QB Tier 3B - Veteran")}
+                className="text-xs bg-yellow-600 hover:bg-yellow-700 text-white"
+                onClick={() => greenLightTierChange(["anthony-richardson", "justin-herbert"], 3, "QB Tier 3B - High Ceiling")}
                 disabled={updateConsensusMutation.isPending}
               >
-                🟠 Veteran Ceiling
+                🎯 High Ceiling
+              </Button>
+              <Button 
+                size="sm" 
+                className="text-xs bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={() => greenLightTierChange(["dak-prescott", "brock-purdy"], 3, "QB Tier 3C - Dak vs Purdy")}
+                disabled={updateConsensusMutation.isPending}
+              >
+                🤔 Dak vs Purdy
               </Button>
             </div>
           </div>
