@@ -123,6 +123,51 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
               </Button>
             </div>
           </div>
+
+          {/* Tier 3 Development */}
+          <div className="space-y-3 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+            <h4 className="font-semibold text-sm text-yellow-800">🟡 QB Tier 3 - High Upside, High Risk</h4>
+            <div className="space-y-2 text-xs">
+              <div className="font-medium text-gray-700">Candidate QBs for Tier 3:</div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="font-medium text-yellow-700">Young Upside:</div>
+                  <div className="pl-2 text-gray-600">• Anthony Richardson (injury bounce-back)</div>
+                  <div className="pl-2 text-gray-600">• Caleb Williams (rookie development)</div>
+                </div>
+                
+                <div>
+                  <div className="font-medium text-yellow-700">Veteran Ceiling:</div>
+                  <div className="pl-2 text-gray-600">• Dak Prescott (weapons upgrade)</div>
+                  <div className="pl-2 text-gray-600">• Justin Herbert (new system)</div>
+                </div>
+              </div>
+              
+              <div className="text-xs text-gray-500 mt-2">
+                Context: QBs with QB1 weeks potential but consistency/injury/system concerns
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                className="text-xs bg-yellow-600 hover:bg-yellow-700 text-white"
+                onClick={() => greenLightTierChange(["anthony-richardson", "caleb-williams"], 3, "QB Tier 3A - Young")}
+                disabled={updateConsensusMutation.isPending}
+              >
+                🟡 Young Upside
+              </Button>
+              <Button 
+                size="sm" 
+                className="text-xs bg-orange-600 hover:bg-orange-700 text-white"
+                onClick={() => greenLightTierChange(["dak-prescott", "justin-herbert"], 3, "QB Tier 3B - Veteran")}
+                disabled={updateConsensusMutation.isPending}
+              >
+                🟠 Veteran Ceiling
+              </Button>
+            </div>
+          </div>
         </div>
 
         {updateConsensusMutation.isPending && (
