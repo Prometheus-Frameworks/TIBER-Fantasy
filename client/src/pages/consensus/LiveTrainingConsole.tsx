@@ -144,10 +144,10 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
                 </div>
               </div>
               
-              <div className="mt-2 p-2 bg-yellow-100 rounded border-l-4 border-yellow-400">
-                <div className="font-medium text-yellow-800 text-xs">Dak vs Purdy Debate:</div>
-                <div className="text-xs text-gray-600 pl-2">• Dak: Weapons upgrade, known ceiling</div>
-                <div className="text-xs text-gray-600 pl-2">• Purdy: Mr Underrated vs Mr Overhated</div>
+              <div className="mt-2 p-2 bg-green-100 rounded border-l-4 border-green-400">
+                <div className="font-medium text-green-800 text-xs">Tier 3 Final: Purdy Wins</div>
+                <div className="text-xs text-gray-600 pl-2">• Purdy: QB14 finish, Super Bowl system (ADP 112)</div>
+                <div className="text-xs text-gray-600 pl-2">• Dak: QB31 + injury concerns (ADP 121.5) → Tier 4</div>
               </div>
               
               <div className="text-xs text-gray-500 mt-2">
@@ -175,10 +175,10 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
               <Button 
                 size="sm" 
                 className="text-xs bg-purple-600 hover:bg-purple-700 text-white"
-                onClick={() => greenLightTierChange(["dak-prescott", "brock-purdy"], 3, "QB Tier 3C - Dak vs Purdy")}
+                onClick={() => greenLightTierChange(["brock-purdy", "anthony-richardson", "baker-mayfield"], 3, "QB Tier 3 Final")}
                 disabled={updateConsensusMutation.isPending}
               >
-                🤔 Dak vs Purdy
+                ✅ Finalize Tier 3
               </Button>
             </div>
           </div>
@@ -189,15 +189,15 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
             <div className="space-y-2 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <div className="font-medium text-gray-600">Health Concerns:</div>
+                  <div className="font-medium text-gray-600">Injury Concerns:</div>
+                  <div className="pl-2 text-gray-500">• Dak Prescott (hamstring IR, ADP 121.5)</div>
                   <div className="pl-2 text-gray-500">• Tua (ADP 178, concussion risk)</div>
-                  <div className="pl-2 text-gray-500">• Aaron Rodgers (age, system fit)</div>
                 </div>
                 
                 <div>
-                  <div className="font-medium text-gray-600">Ceiling Limited:</div>
+                  <div className="font-medium text-gray-600">Age/System Issues:</div>
+                  <div className="pl-2 text-gray-500">• Aaron Rodgers (age, system fit)</div>
                   <div className="pl-2 text-gray-500">• Russell Wilson (mobility decline)</div>
-                  <div className="pl-2 text-gray-500">• Kirk Cousins (system unknown)</div>
                 </div>
               </div>
               
