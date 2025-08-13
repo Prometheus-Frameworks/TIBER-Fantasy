@@ -1,0 +1,149 @@
+Cool — here’s a dead‑simple way for Tiber to fetch Sleeper ADPs, cache them, and expose them to the rest of OTC. One thing at a time.
+
+TIBER TASK — Sleeper ADP Fetch (QB, 1QB + Superflex)
+
+1) Source endpoints (Sleeper)
+	•	1QB PPR (example):
+https://api.sleeper.app/v1/adp/players/nfl?season=2025&sport=nfl&format=redraft&ppr=1&positions=QB
+	•	Superflex PPR (QB still included):
+https://api.sleeper.app/v1/adp/players/nfl?season=2025&sport=nfl&format=redraft&ppr=1&positions=QB&sf=1
+
+These return an array with player_id, adp, adp_ppr, count, etc.
+
+2) Create module
+
+/server/adp/sleeper.ts
+
+// /server/adp/sleeper.ts
+import { z } from "zod";
+
+const SleeperRow = z.object({
+  player_id: z.string(),
+  adp: z.number().nullable().optional(),
+  adp_ppr: z.number().nullable().optional(),
+  count: z.number().int().nonnegative().optional(),
+  // extra fields ignored
+});
+type SleeperRow = z.infer<typeof SleeperRow>;
+
+export type AdpRecord = {
+  playerId: string;
+  adp: number | null;         // PPR ADP if present, else adp
+  samples: number;            // count
+  fetchedAt: string;          // ISO
+  format: "1qb" | "superflex";
+};
+
+async function fetchJson(url: string): Promise<SleeperRow[]> {
+  const res = await fetch(url, { headers: { "accept": "application/json" } });
+  if (!res.ok) throw new Error(`Sleeper ADP fetch failed ${res.status}`);
+  const data = await res.json();
+  if (!Array.isArray(data)) throw new Error("Sleeper ADP: unexpected payload");
+  return data.map((r) => SleeperRow.parse(r));
+}
+
+export async function fetchSleeperAdpQB(
+  format: "1qb" | "superflex" = "1qb",
+  season = 2025
+): Promise<Map<string, AdpRecord>> {
+  const base = `https://api.sleeper.app/v1/adp/players/nfl?season=${season}&sport=nfl&format=redraft&ppr=1&positions=QB`;
+  const url = format === "superflex" ? `${base}&sf=1` : base;
+
+  const rows = await fetchJson(url);
+  const now = new Date().toISOString();
+  const map = new Map<string, AdpRecord>();
+  for (const r of rows) {
+    const adp = (r.adp_ppr ?? r.adp ?? null);
+    map.set(r.player_id, {
+      playerId: r.player_id,
+      adp,
+      samples: r.count ?? 0,
+      fetchedAt: now,
+      format
+    });
+  }
+  return map;
+}
+
+3) Add cache
+
+/server/adp/cache.ts
+
+// /server/adp/cache.ts
+const TTL_MS = 6 * 60 * 60 * 1000; // 6h
+type Key = `adp:${number}:${"1qb"|"superflex"}`;
+
+const mem = new Map<Key, { exp: number; data: Map<string, any> }>();
+
+export function getAdpCache(season:number, format:"1qb"|"superflex") {
+  const key: Key = `adp:${season}:${format}`;
+  const hit = mem.get(key);
+  if (hit && hit.exp > Date.now()) return hit.data;
+  return null;
+}
+export function setAdpCache(season:number, format:"1qb"|"superflex", data:Map<string, any>) {
+  const key: Key = `adp:${season}:${format}`;
+  mem.set(key, { exp: Date.now() + TTL_MS, data });
+}
+
+4) API route (so the rest of OTC can use it)
+	•	Next.js: app/api/adp/qb/route.ts
+	•	React server: src/server/routes/adp.ts (adapt accordingly)
+
+// Next.js App Router example: app/api/adp/qb/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { fetchSleeperAdpQB } from "@/server/adp/sleeper";
+import { getAdpCache, setAdpCache } from "@/server/adp/cache";
+
+export async function GET(req: NextRequest) {
+  const season = Number(req.nextUrl.searchParams.get("season") ?? "2025");
+  const format = (req.nextUrl.searchParams.get("format") ?? "1qb") as "1qb"|"superflex";
+
+  const cached = getAdpCache(season, format);
+  if (cached) {
+    return NextResponse.json({
+      season, format, cached: true,
+      count: cached.size,
+      data: Object.fromEntries(cached)
+    });
+  }
+  const map = await fetchSleeperAdpQB(format, season);
+  setAdpCache(season, format, map);
+  return NextResponse.json({
+    season, format, cached: false,
+    count: map.size,
+    data: Object.fromEntries(map)
+  });
+}
+
+5) Quick sanity test (from terminal)
+
+# 1QB PPR QBs
+curl -s "http://localhost:3000/api/adp/qb?season=2025&format=1qb" | jq '.count, (.data["TUA"] // empty)'
+
+# Superflex PPR QBs
+curl -s "http://localhost:3000/api/adp/qb?season=2025&format=superflex" | jq '.count'
+
+(Replace "TUA" with your Sleeper player_id mapping — e.g., “tua” if you standardize IDs.)
+
+6) Guardrails for tiering (hook later)
+	•	Consider isStale = (now - fetchedAt) > 14 days || samples < 300.
+	•	If isStale, widen tier prior by +1 (be conservative).
+	•	Log: season, format, count, fetchedAt, isStale.
+
+7) Minimal types you’ll need elsewhere
+
+export type AdpTierContext = {
+  playerId: string;
+  adp: number | null;
+  priorTier: 1|2|3|4;
+  samples: number;
+  isStale: boolean;
+  fetchedAt: string;
+  format: "1qb"|"superflex";
+};
+
+
+⸻
+
+That’s it. Have Tiber drop these files, hit the endpoint, and confirm you see sane count values and reasonable ADPs for obvious names. Once this is green, we can merge it into the tiering debate loop.

@@ -1983,6 +1983,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(out);
   });
 
+  // Sleeper ADP API for QB data
+  app.get('/api/adp/qb', async (req: Request, res: Response) => {
+    try {
+      const season = Number(req.query.season ?? "2025");
+      const format = (req.query.format ?? "1qb") as "1qb"|"superflex";
+
+      const { getAdpCache, setAdpCache } = await import('./adp/cache');
+      
+      const cached = getAdpCache(season, format);
+      if (cached) {
+        console.log(`📊 [ADP-QB] Cache hit: ${cached.size} QBs (${format}, ${season})`);
+        return res.json({
+          season, format, cached: true,
+          count: cached.size,
+          data: Object.fromEntries(cached)
+        });
+      }
+
+      const { fetchSleeperAdpQB } = await import('./adp/sleeper');
+      console.log(`📡 [ADP-QB] Fetching fresh data: ${format} QBs for ${season}`);
+      const map = await fetchSleeperAdpQB(format, season);
+      setAdpCache(season, format, map);
+      
+      console.log(`✅ [ADP-QB] Fresh fetch: ${map.size} QBs loaded`);
+      res.json({
+        season, format, cached: false,
+        count: map.size,
+        data: Object.fromEntries(map)
+      });
+    } catch (error) {
+      console.error('❌ [ADP-QB] Error:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch Sleeper ADP data',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Missing VORP endpoint - Lamar's request
   app.get('/api/analytics/vorp', async (req, res) => {
     try {
