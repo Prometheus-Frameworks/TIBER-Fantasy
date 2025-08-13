@@ -314,50 +314,50 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
             </div>
           </div>
 
-          {/* Tier 5 - Streaming Options */}
+          {/* Tier 5 - Streaming/Starting Options */}
           <div className="space-y-3 p-4 bg-slate-50 rounded-lg border border-slate-300">
-            <h4 className="font-semibold text-sm text-slate-700">📋 QB Tier 5 - Streaming & Deep League Options</h4>
+            <h4 className="font-semibold text-sm text-slate-700">📋 QB Tier 5 - Current NFL Starters & Streaming Options</h4>
             <div className="space-y-2 text-xs">
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <div className="font-medium text-slate-600">Veterans:</div>
-                  <div className="pl-2 text-gray-500">• Kirk Cousins</div>
-                  <div className="pl-2 text-gray-500">• Russell Wilson</div>
-                  <div className="pl-2 text-gray-500">• Daniel Jones</div>
-                  <div className="pl-2 text-gray-500">• Ryan Tannehill</div>
+                  <div className="font-medium text-slate-600">Current Starters:</div>
+                  <div className="pl-2 text-gray-500">• Trevor Lawrence (JAX)</div>
+                  <div className="pl-2 text-gray-500">• Russell Wilson (PIT)</div>
+                  <div className="pl-2 text-gray-500">• Sam Darnold (SEA)</div>
+                  <div className="pl-2 text-gray-500">• Jared Goff (DET)</div>
+                  <div className="pl-2 text-gray-500">• Jordan Love (GB)</div>
                 </div>
                 
                 <div>
-                  <div className="font-medium text-slate-600">Young/Backup:</div>
-                  <div className="pl-2 text-gray-500">• Sam Darnold</div>
-                  <div className="pl-2 text-gray-500">• Gardner Minshew</div>
-                  <div className="pl-2 text-gray-500">• Jacoby Brissett</div>
-                  <div className="pl-2 text-gray-500">• Will Levis</div>
+                  <div className="font-medium text-slate-600">Rookies/Young:</div>
+                  <div className="pl-2 text-gray-500">• Cam Ward (TEN - #1 pick)</div>
+                  <div className="pl-2 text-gray-500">• Michael Penix Jr (ATL)</div>
+                  <div className="pl-2 text-gray-500">• Tyler Shough (NO)</div>
+                  <div className="pl-2 text-gray-500">• Mac Jones (NE)</div>
                 </div>
                 
                 <div>
-                  <div className="font-medium text-slate-600">Situation-Dependent:</div>
-                  <div className="pl-2 text-gray-500">• Aidan O'Connell</div>
-                  <div className="pl-2 text-gray-500">• Mac Jones</div>
-                  <div className="pl-2 text-gray-500">• Tyler Huntley</div>
-                  <div className="pl-2 text-gray-500">• Bailey Zappe</div>
-                  <div className="pl-2 text-gray-500">• Spencer Rattler</div>
-                  <div className="pl-2 text-gray-500">• Michael Penix Jr</div>
+                  <div className="font-medium text-slate-600">Competition/Backup:</div>
+                  <div className="pl-2 text-gray-500">• Aidan O'Connell (LV)</div>
+                  <div className="pl-2 text-gray-500">• Joe Flacco (CLE)</div>
+                  <div className="pl-2 text-gray-500">• Spencer Rattler (NO)</div>
+                  <div className="pl-2 text-gray-500">• Shedeur Sanders (CLE)</div>
+                  <div className="pl-2 text-gray-500">• Matthew Stafford (LAR)</div>
                 </div>
               </div>
               
               <div className="text-xs text-gray-400 mt-2">
-                Context: Streaming options, backup plans, and deep league starters (32 total QBs)
+                Context: Current NFL starters, rookies taking over, and competition winners (32 total QBs)
               </div>
             </div>
             
             <Button 
               size="sm" 
               className="text-xs bg-slate-500 hover:bg-slate-600 text-white w-full"
-              onClick={() => greenLightTierChange(["kirk-cousins", "russell-wilson", "sam-darnold"], 5, "QB Tier 5 - Streaming")}
+              onClick={() => greenLightTierChange(["trevor-lawrence", "russell-wilson", "cam-ward"], 5, "QB Tier 5 - Current Starters")}
               disabled={updateConsensusMutation.isPending}
             >
-              📋 Complete 32 QB Structure
+              📋 Accurate 32 QB Structure
             </Button>
           </div>
         </div>
