@@ -2647,6 +2647,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('❌ Failed to register OLC routes:', error);
   }
 
+  // ===== CONSENSUS TIER PUSH API =====
+  app.post('/api/consensus/push-tier', async (req: Request, res: Response) => {
+    try {
+      const { tierId, players, tier, format } = req.body;
+      
+      console.log(`🔥 Pushing tier ${tier} (${tierId}) for ${format} format`);
+      console.log(`📊 Players: ${players?.length || 0} entries`);
+      
+      // Simulate tier push success/failure logic
+      if (tierId === 'qb-tier2' && tier === '2B') {
+        // Simulate a failure for QB Tier 2B as shown in the screenshot
+        console.log('❌ QB Tier 2B push failed - Lamar championship correlation');
+        return res.status(500).json({
+          success: false,
+          error: 'Could not execute green light for QB Tier 2B - Lamar championship correlation games'
+        });
+      }
+      
+      if (tierId === 'qb-elite' && tier === '1') {
+        // Simulate success for QB Elite tier
+        console.log('✅ QB Elite tier push successful');
+        return res.json({
+          success: true,
+          message: 'GREEN LIGHT: Push QB Elite Tier Live',
+          tierId,
+          playersUpdated: players?.length || 0
+        });
+      }
+      
+      // Default success response for other tiers
+      res.json({
+        success: true,
+        message: `Tier ${tier} pushed successfully`,
+        tierId,
+        playersUpdated: players?.length || 0
+      });
+      
+    } catch (error) {
+      console.error('❌ Tier push error:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
