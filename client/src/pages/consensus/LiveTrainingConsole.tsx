@@ -313,6 +313,53 @@ export default function LiveTrainingConsole({ format, season }: LiveTrainingCons
               </Button>
             </div>
           </div>
+
+          {/* Tier 5 - Streaming Options */}
+          <div className="space-y-3 p-4 bg-slate-50 rounded-lg border border-slate-300">
+            <h4 className="font-semibold text-sm text-slate-700">📋 QB Tier 5 - Streaming & Deep League Options</h4>
+            <div className="space-y-2 text-xs">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <div className="font-medium text-slate-600">Veterans:</div>
+                  <div className="pl-2 text-gray-500">• Kirk Cousins</div>
+                  <div className="pl-2 text-gray-500">• Russell Wilson</div>
+                  <div className="pl-2 text-gray-500">• Daniel Jones</div>
+                  <div className="pl-2 text-gray-500">• Ryan Tannehill</div>
+                </div>
+                
+                <div>
+                  <div className="font-medium text-slate-600">Young/Backup:</div>
+                  <div className="pl-2 text-gray-500">• Sam Darnold</div>
+                  <div className="pl-2 text-gray-500">• Gardner Minshew</div>
+                  <div className="pl-2 text-gray-500">• Jacoby Brissett</div>
+                  <div className="pl-2 text-gray-500">• Will Levis</div>
+                </div>
+                
+                <div>
+                  <div className="font-medium text-slate-600">Situation-Dependent:</div>
+                  <div className="pl-2 text-gray-500">• Aidan O'Connell</div>
+                  <div className="pl-2 text-gray-500">• Mac Jones</div>
+                  <div className="pl-2 text-gray-500">• Tyler Huntley</div>
+                  <div className="pl-2 text-gray-500">• Bailey Zappe</div>
+                  <div className="pl-2 text-gray-500">• Spencer Rattler</div>
+                  <div className="pl-2 text-gray-500">• Michael Penix Jr</div>
+                </div>
+              </div>
+              
+              <div className="text-xs text-gray-400 mt-2">
+                Context: Streaming options, backup plans, and deep league starters (32 total QBs)
+              </div>
+            </div>
+            
+            <Button 
+              size="sm" 
+              className="text-xs bg-slate-500 hover:bg-slate-600 text-white w-full"
+              onClick={() => greenLightTierChange(["kirk-cousins", "russell-wilson", "sam-darnold"], 5, "QB Tier 5 - Streaming")}
+              disabled={updateConsensusMutation.isPending}
+            >
+              📋 Complete 32 QB Structure
+            </Button>
+          </div>
         </div>
 
         {updateConsensusMutation.isPending && (
