@@ -806,7 +806,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Shared function for modular rankings logic (reusable)
-  async function getRankings(mode = 'redraft', position: string | null = null, numTeams = 12, debugRaw = false, format = '1qb', qbRushAdjust = true, positionalBalance = true) {
+  async function getRankings(mode = 'redraft', position: string | null = null, numTeams = 12, debugRaw = false, format = '1qb', qbRushAdjust = true, positionalBalance = true, userIntent = 'fantasy football analysis') {
     try {
       console.log(`🚀 getRankings - Mode: ${mode}, Position: ${position || 'ALL'}, Teams: ${numTeams}`);
 
@@ -876,8 +876,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return { ...player, tier };
       });
 
+      // Apply Noise Shield assessment
+      const { assess } = await import('./guardian/noiseShield');
+      const contentToAssess = `${mode} fantasy football rankings for ${position || 'all positions'}`;
+      const shieldAssessment = assess(contentToAssess, userIntent);
+      
       console.log(`✅ getRankings: Returning ${playersWithTiers.length} players sorted by value (${mode} mode)`);
-      return playersWithTiers;
+      console.log(`🛡️ Noise Shield: ${shieldAssessment.isClean ? 'CLEAN' : 'FLAGS: ' + shieldAssessment.flags.join(', ')}`);
+      
+      return {
+        data: playersWithTiers,
+        shield: shieldAssessment
+      };
     } catch (error) {
       console.error('❌ getRankings error:', error instanceof Error ? error.message : 'Unknown error');
       throw error;
@@ -898,7 +908,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`📊 [API] Fetching redraft rankings: ${pos}, season=${season}, limit=${limit}`);
       
-      const players = await getRankings('redraft', pos, 12, false, format.toLowerCase());
+      const rankingsResult = await getRankings('redraft', pos, 12, false, format.toLowerCase(), true, true, `redraft ${pos} rankings for competitive fantasy football`);
+      const players = Array.isArray(rankingsResult) ? rankingsResult : rankingsResult.data;
       const limitedPlayers = players.slice(0, limit);
       
       // Transform to API spec format
@@ -913,11 +924,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         adp: p.adp || null
       }));
       
-      res.json({
+      // Include shield data if available
+      const responseData: any = {
         ok: true,
         data: apiPlayers,
         meta: { rows: apiPlayers.length, season, ts: Math.floor(Date.now() / 1000) }
-      });
+      };
+      
+      if (!Array.isArray(rankingsResult) && rankingsResult.shield && !rankingsResult.shield.isClean) {
+        responseData.shield = {
+          active: true,
+          message: rankingsResult.shield.shieldMessage,
+          flags: rankingsResult.shield.flags
+        };
+      }
+      
+      res.json(responseData);
     } catch (error) {
       console.error('❌ API redraft rankings error:', error);
       res.status(500).json({ error: 'Failed to fetch redraft rankings' });
@@ -2646,6 +2668,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error('❌ Failed to register OLC routes:', error);
   }
+
+  // ===== GUARDIAN TOGGLE v0 - NOISE SHIELD DEMO =====
+  app.get('/api/guardian/demo', async (req: Request, res: Response) => {
+    try {
+      const { assess, applyShield } = await import('./guardian/noiseShield');
+      const userIntent = req.query.intent as string || 'fantasy football analysis';
+      
+      // Demo content with different manipulation patterns
+      const demoContent = {
+        clean: "Josh Allen ranks #1 in our QB analysis based on projected points and consistency metrics.",
+        coercive: "You MUST draft Josh Allen! Everyone knows he's the guaranteed QB1 this season!",
+        fearBait: "Don't miss out on Josh Allen before it's too late! Last chance to get elite QB production!",
+        engagement: "You won't believe this shocking QB secret that will blow your mind!"
+      };
+      
+      const assessments = {};
+      for (const [type, content] of Object.entries(demoContent)) {
+        assessments[type] = assess(content, userIntent);
+      }
+      
+      res.json({
+        guardian_version: "v0.1",
+        user_intent: userIntent,
+        assessments,
+        demo_note: "Guardian Toggle detects manipulation patterns before content renders"
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Guardian demo failed' });
+    }
+  });
+
+  // QB Rankings with Guardian protection
+  app.get('/api/qb/protected', async (req: Request, res: Response) => {
+    try {
+      const userIntent = req.query.intent as string || 'quarterback evaluation for fantasy football';
+      const format = req.query.format as string || '1qb';
+      
+      const rankingsResult = await getRankings('redraft', 'QB', 12, false, format, true, true, userIntent);
+      const qbData = Array.isArray(rankingsResult) ? rankingsResult : rankingsResult.data;
+      
+      // Apply Guardian assessment to the response description
+      const { assess } = await import('./guardian/noiseShield');
+      const description = `Top ${qbData.length} quarterbacks for 2025 fantasy football redraft leagues`;
+      const shieldAssessment = assess(description, userIntent);
+      
+      const response: any = {
+        ok: true,
+        data: qbData.slice(0, 16), // Top 16 QBs
+        meta: {
+          position: 'QB',
+          format,
+          user_intent: userIntent,
+          total_players: qbData.length,
+          timestamp: new Date().toISOString()
+        }
+      };
+      
+      // Add shield data if content flagged
+      if (!shieldAssessment.isClean) {
+        response.guardian = {
+          shield_active: true,
+          beneficiary: shieldAssessment.beneficiary,
+          flags: shieldAssessment.flags,
+          message: shieldAssessment.shieldMessage
+        };
+      } else {
+        response.guardian = {
+          shield_active: false,
+          status: 'content_verified_clean'
+        };
+      }
+      
+      res.json(response);
+    } catch (error) {
+      console.error('❌ Protected QB endpoint error:', error);
+      res.status(500).json({ error: 'Failed to fetch protected QB rankings' });
+    }
+  });
 
   // ===== CONSENSUS TIER PUSH API =====
   app.post('/api/consensus/push-tier', async (req: Request, res: Response) => {
