@@ -1,0 +1,263 @@
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { RefreshCw, Users, TrendingUp } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface Player {
+  player_id: string;
+  name: string;
+  team: string;
+  pos: string;
+  depth_chart_order?: number;
+  depth_chart_position?: string;
+}
+
+interface RostersByTeam {
+  [team: string]: Player[];
+}
+
+const NFL_TEAMS = [
+  { code: "ARI", name: "Arizona Cardinals", division: "NFC West" },
+  { code: "ATL", name: "Atlanta Falcons", division: "NFC South" },
+  { code: "BAL", name: "Baltimore Ravens", division: "AFC North" },
+  { code: "BUF", name: "Buffalo Bills", division: "AFC East" },
+  { code: "CAR", name: "Carolina Panthers", division: "NFC South" },
+  { code: "CHI", name: "Chicago Bears", division: "NFC North" },
+  { code: "CIN", name: "Cincinnati Bengals", division: "AFC North" },
+  { code: "CLE", name: "Cleveland Browns", division: "AFC North" },
+  { code: "DAL", name: "Dallas Cowboys", division: "NFC East" },
+  { code: "DEN", name: "Denver Broncos", division: "AFC West" },
+  { code: "DET", name: "Detroit Lions", division: "NFC North" },
+  { code: "GB", name: "Green Bay Packers", division: "NFC North" },
+  { code: "HOU", name: "Houston Texans", division: "AFC South" },
+  { code: "IND", name: "Indianapolis Colts", division: "AFC South" },
+  { code: "JAX", name: "Jacksonville Jaguars", division: "AFC South" },
+  { code: "KC", name: "Kansas City Chiefs", division: "AFC West" },
+  { code: "LAC", name: "Los Angeles Chargers", division: "AFC West" },
+  { code: "LAR", name: "Los Angeles Rams", division: "NFC West" },
+  { code: "LV", name: "Las Vegas Raiders", division: "AFC West" },
+  { code: "MIA", name: "Miami Dolphins", division: "AFC East" },
+  { code: "MIN", name: "Minnesota Vikings", division: "NFC North" },
+  { code: "NE", name: "New England Patriots", division: "AFC East" },
+  { code: "NO", name: "New Orleans Saints", division: "NFC South" },
+  { code: "NYG", name: "New York Giants", division: "NFC East" },
+  { code: "NYJ", name: "New York Jets", division: "AFC East" },
+  { code: "PHI", name: "Philadelphia Eagles", division: "NFC East" },
+  { code: "PIT", name: "Pittsburgh Steelers", division: "AFC North" },
+  { code: "SEA", name: "Seattle Seahawks", division: "NFC West" },
+  { code: "SF", name: "San Francisco 49ers", division: "NFC West" },
+  { code: "TB", name: "Tampa Bay Buccaneers", division: "NFC South" },
+  { code: "TEN", name: "Tennessee Titans", division: "AFC South" },
+  { code: "WAS", name: "Washington Commanders", division: "NFC East" },
+];
+
+const POSITION_ORDER = ["QB", "RB", "WR", "TE"];
+const POSITION_COLORS = {
+  QB: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  RB: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200", 
+  WR: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  TE: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+};
+
+function TeamDepthChart({ team, players }: { team: string, players: Player[] }) {
+  const teamInfo = NFL_TEAMS.find(t => t.code === team);
+  const teamName = teamInfo?.name || team;
+  
+  // Group players by position
+  const playersByPosition = POSITION_ORDER.reduce((acc, pos) => {
+    acc[pos] = players.filter(p => p.pos === pos);
+    return acc;
+  }, {} as Record<string, Player[]>);
+
+  return (
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-bold">{teamName}</CardTitle>
+          <Badge variant="outline" className="text-xs">{team}</Badge>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {teamInfo?.division} • {players.length} players
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {POSITION_ORDER.map(position => {
+          const positionPlayers = playersByPosition[position];
+          if (positionPlayers.length === 0) return null;
+
+          return (
+            <div key={position} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Badge className={POSITION_COLORS[position as keyof typeof POSITION_COLORS]}>
+                  {position}
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  {positionPlayers.length} players
+                </span>
+              </div>
+              <div className="space-y-1">
+                {positionPlayers.map((player, index) => (
+                  <div key={player.player_id} className="flex items-center justify-between text-sm py-1 px-2 rounded hover:bg-muted/50">
+                    <span className="font-medium">
+                      {index + 1}. {player.name}
+                    </span>
+                    {player.depth_chart_order && (
+                      <Badge variant="outline" className="text-xs">
+                        #{player.depth_chart_order}
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function ResearchAnalysis() {
+  const { toast } = useToast();
+  const [selectedDivision, setSelectedDivision] = useState<string>("All");
+  
+  const { data: rosters, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ["/api/rosters"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const { mutate: syncRosters, isPending: isSyncing } = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/sync/rosters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ season: 2025 })
+      });
+      if (!response.ok) throw new Error('Failed to sync rosters');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Roster Sync Complete",
+        description: "All team rosters have been updated with latest data"
+      });
+      refetch();
+    },
+    onError: (error) => {
+      toast({
+        title: "Sync Failed", 
+        description: error instanceof Error ? error.message : "Failed to sync rosters",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const divisions = ["All", ...Array.from(new Set(NFL_TEAMS.map(t => t.division)))];
+  
+  const filteredTeams = selectedDivision === "All" 
+    ? NFL_TEAMS
+    : NFL_TEAMS.filter(t => t.division === selectedDivision);
+
+  const totalPlayers = rosters ? Object.values(rosters as RostersByTeam)
+    .reduce((sum, teamPlayers) => sum + teamPlayers.length, 0) : 0;
+
+  const totalTeams = rosters ? Object.keys(rosters as RostersByTeam).length : 0;
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-4">Research & Analysis</h1>
+        <p className="text-muted-foreground mb-6">
+          NFL team depth charts and roster analysis for fantasy football research
+        </p>
+        
+        {/* Stats and Controls */}
+        <div className="flex flex-wrap items-center gap-4 mb-6">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              <span className="text-sm font-medium">{totalTeams} Teams</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />
+              <span className="text-sm font-medium">{totalPlayers} Players</span>
+            </div>
+          </div>
+          
+          <Button
+            onClick={() => syncRosters()}
+            disabled={isSyncing || isRefetching}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${(isSyncing || isRefetching) ? 'animate-spin' : ''}`} />
+            {isSyncing ? 'Syncing...' : 'Sync Rosters'}
+          </Button>
+        </div>
+
+        {/* Division Filter */}
+        <div className="flex flex-wrap gap-2">
+          {divisions.map(division => (
+            <Button
+              key={division}
+              onClick={() => setSelectedDivision(division)}
+              variant={selectedDivision === division ? "default" : "outline"}
+              size="sm"
+            >
+              {division}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Depth Charts Grid */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <Card key={i} className="p-6">
+              <Skeleton className="h-6 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-1/2 mb-4" />
+              <div className="space-y-3">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-6 w-5/6" />
+                <Skeleton className="h-6 w-4/5" />
+                <Skeleton className="h-6 w-3/4" />
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : rosters ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredTeams.map(team => {
+            const teamPlayers = (rosters as RostersByTeam)[team.code] || [];
+            return (
+              <TeamDepthChart
+                key={team.code}
+                team={team.code}
+                players={teamPlayers}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <Card className="p-8 text-center">
+          <div className="space-y-4">
+            <div className="text-muted-foreground">
+              No roster data available. Click "Sync Rosters" to load team depth charts.
+            </div>
+            <Button onClick={() => syncRosters()} disabled={isSyncing} className="gap-2">
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? 'Syncing Rosters...' : 'Load Roster Data'}
+            </Button>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}

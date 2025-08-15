@@ -81,6 +81,7 @@ import WRCompass from "@/pages/WRCompass";
 import RookieEvaluator from "@/pages/RookieEvaluator";
 import SignalFlare from "@/pages/SignalFlare";
 import PrometheanVision from "@/pages/PrometheanVision";
+import ResearchAnalysis from "@/pages/ResearchAnalysis";
 
 import TiberData from "@/pages/TiberData";
 import TradeAnalyzer from "@/pages/TradeAnalyzer";
@@ -135,6 +136,7 @@ function Router() {
       <Route path="/consensus/tiers" component={LiveTierTraining} />
       <Route path="/consensus/tier-manager" component={TierManagerWrapper} />
       <Route path="/consensus-transparency" component={ConsensusTransparency} />
+      <Route path="/research" component={ResearchAnalysis} />
       <Route path="/competence" component={CompetenceMode} />
       <Route path="/experts/architect-j" component={ArchitectJProfile} />
       <Route path="/adaptive-consensus-demo" component={AdaptiveConsensusDemo} />
