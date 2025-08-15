@@ -18,7 +18,7 @@ export default function Home(){
           No paywalls, just signal. Draft smarter with consensus boards and context‑aware guidance.
         </p>
         <div className="mt-6">
-          <GlowCTA>View OTC Consensus</GlowCTA>
+          <GlowCTA href="/consensus">View OTC Consensus</GlowCTA>
         </div>
       </div>
 

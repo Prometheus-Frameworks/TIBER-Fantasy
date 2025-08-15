@@ -62,6 +62,13 @@ import FullPlayerPool from "@/pages/FullPlayerPool";
 import TradeEvaluator from "@/pages/TradeEvaluator";
 import SnapCounts from "@/pages/SnapCounts";
 import ProjectionsTest from "@/pages/ProjectionsTest";
+
+// Mock Landing Pages for Visual Inspection
+import Systems from "@/pages/mock/Systems";
+import Draft from "@/pages/mock/Draft";
+import MockRookies from "@/pages/mock/Rookies";
+import MockConsensusTransparency from "@/pages/mock/ConsensusTransparency";
+import RouteAudit from "@/pages/mock/RouteAudit";
 import DataIngestion from "@/pages/DataIngestion";
 import Reflect from "@/pages/Reflect";
 import NotFound from "@/pages/not-found";
@@ -140,6 +147,13 @@ function Router() {
       <Route path="/research" component={ResearchAnalysis} />
       <Route path="/snap-counts" component={SnapCounts} />
       <Route path="/competence" component={CompetenceMode} />
+      
+      {/* Mock Landing Pages - Easily Identifiable */}
+      <Route path="/systems" component={Systems} />
+      <Route path="/draft" component={Draft} />
+      <Route path="/rookies" component={MockRookies} />
+      <Route path="/consensus/transparency" component={MockConsensusTransparency} />
+      <Route path="/route-audit" component={RouteAudit} />
       <Route path="/experts/architect-j" component={ArchitectJProfile} />
       <Route path="/adaptive-consensus-demo" component={AdaptiveConsensusDemo} />
       <Route path="/curves-demo" component={CurvesDemo} />
