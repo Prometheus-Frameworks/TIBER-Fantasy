@@ -1,0 +1,5 @@
+# This directory will contain synced roster data
+# Files will be created by the roster sync service:
+# - rosters.json (players by team)
+# - depth_charts.json (position depth charts)
+# - players_index.json (player lookup index)

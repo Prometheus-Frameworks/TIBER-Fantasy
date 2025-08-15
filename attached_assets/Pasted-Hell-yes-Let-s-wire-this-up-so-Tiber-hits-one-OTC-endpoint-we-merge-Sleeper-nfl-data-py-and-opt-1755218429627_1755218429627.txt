@@ -1,0 +1,364 @@
+Hell yes. Let’s wire this up so Tiber hits one OTC endpoint, we merge Sleeper + nfl_data_py (and optionally transactions), and we spit out the exact JSON files your site expects. No more hand‑feeding.
+
+Here’s a clean, copy‑pasteable Flask setup you can drop in. It gives you:
+	•	a /api/sync/rosters POST to run the merge + write files
+	•	a /api/rosters GET to serve merged rosters
+	•	a /api/depth-charts GET to serve pecking orders per team
+	•	deterministic IDs (Sleeper ID where possible) + name/position/team normalization
+
+⸻
+
+File layout (drop-in)
+
+your_app/
+  api/
+    __init__.py
+    sync_routes.py
+  services/
+    sleeper.py
+    nfl_data.py
+    transactions.py
+  utils/
+    normalize.py
+    matching.py
+  storage/
+    rosters.json           # merged, by team
+    depth_charts.json      # simplified pecking order per team
+    players_index.json     # player_id -> {name, team, pos}
+  app.py
+  requirements.txt
+
+requirements.txt
+
+Flask
+pandas
+nfl_data_py
+requests
+python-slugify
+rapidfuzz
+
+
+⸻
+
+services/sleeper.py
+
+import requests
+
+SLEEPER_PLAYERS_URL = "https://api.sleeper.app/v1/players/nfl"
+
+def fetch_players():
+    r = requests.get(SLEEPER_PLAYERS_URL, timeout=60)
+    r.raise_for_status()
+    # Sleeper returns a dict keyed by player_id
+    players = r.json()
+    out = []
+    for pid, p in players.items():
+        if not isinstance(p, dict): 
+            continue
+        out.append({
+            "player_id": pid,
+            "full_name": p.get("full_name") or p.get("first_name","") + " " + p.get("last_name",""),
+            "first_name": p.get("first_name"),
+            "last_name": p.get("last_name"),
+            "team": p.get("team"),          # may be stale/None
+            "position": p.get("position"),
+            "status": p.get("status"),
+            "birth_date": p.get("birth_date"),
+            "college": p.get("college"),
+            "years_exp": p.get("years_exp"),
+            "active": p.get("active"),
+            "gsis_id": p.get("gsis_id"),
+            "espn_id": p.get("espn_id"),
+            "yahoo_id": p.get("yahoo_id"),
+        })
+    return out
+
+services/nfl_data.py
+
+import nfl_data_py as nfl
+
+def fetch_current_rosters(season: int):
+    # nfl_data_py standard: returns pandas DataFrame
+    df = nfl.import_current_rosters([season])  # supports list of seasons
+    # Normalize to list[dict]
+    records = df.to_dict(orient="records")
+    out = []
+    for r in records:
+        out.append({
+            "season": r.get("season"),
+            "team": r.get("team"),
+            "position": r.get("position"),
+            "full_name": r.get("player_name"),
+            "gsis_id": r.get("gsis_id"),
+            "nfl_id": r.get("nfl_id"),
+            "pfr_id": r.get("pfr_id"),
+            "height": r.get("height"),
+            "weight": r.get("weight"),
+            "birth_date": r.get("birth_date"),
+            "college": r.get("college_name"),
+            "depth_chart_order": r.get("depth_chart_order"),
+            "depth_chart_position": r.get("depth_chart_position"),
+            "status": r.get("status"),
+        })
+    return out
+
+(If your getCurrentRoster() name differs, this wrapper is the one place to tweak.)
+
+services/transactions.py (optional, can stub now)
+
+def fetch_recent_transactions():
+    # Hook in MySportsFeeds or another source later.
+    # Return list[{"type":"trade|signing|injury","player":"Name","to_team":"XXX","note":"...","date":"YYYY-MM-DD"}]
+    return []
+
+utils/normalize.py
+
+import re
+from slugify import slugify
+
+TEAM_MAP = {
+    "JAC":"JAX", "WSH":"WAS", "LA":"LAR", "ARZ":"ARI",  # common variants
+    # add any others you’ve seen
+}
+
+def norm_team(t):
+    if not t: return None
+    t = t.strip().upper()
+    return TEAM_MAP.get(t, t)
+
+def norm_name(name):
+    if not name: return None
+    # collapse whitespace and accents consistently
+    return re.sub(r"\s+", " ", name.strip())
+
+def make_site_player_id(sleeper_id=None, gsis_id=None, name=None):
+    if sleeper_id: return f"sleeper:{sleeper_id}"
+    if gsis_id: return f"gsis:{gsis_id}"
+    # fall back to a stable slug
+    return f"slug:{slugify(name or 'unknown')}"
+
+utils/matching.py
+
+from rapidfuzz import fuzz, process
+from utils.normalize import norm_name
+
+def build_name_index(records, key="full_name"):
+    # returns {normalized_name: [records]}
+    idx = {}
+    for r in records:
+        n = norm_name(r.get(key))
+        if not n: 
+            continue
+        idx.setdefault(n.lower(), []).append(r)
+    return idx
+
+def fuzzy_join(left_records, right_records, left_key="full_name", right_key="full_name", threshold=92):
+    """
+    Match by exact name first, then fuzzy with ratio>=threshold.
+    Returns dict: i -> matched_record or None
+    """
+    exact_idx = build_name_index(right_records, key=right_key)
+    right_names = list(exact_idx.keys())
+    matched = {}
+
+    for i, L in enumerate(left_records):
+        name = norm_name(L.get(left_key))
+        if not name:
+            matched[i] = None
+            continue
+
+        low = name.lower()
+        # exact
+        if low in exact_idx:
+            matched[i] = exact_idx[low][0]
+            continue
+
+        # fuzzy
+        best = process.extractOne(low, right_names, scorer=fuzz.token_sort_ratio)
+        if best and best[1] >= threshold:
+            matched[i] = exact_idx[best[0]][0]
+        else:
+            matched[i] = None
+    return matched
+
+
+⸻
+
+api/sync_routes.py
+
+import json
+import os
+from flask import Blueprint, jsonify, request
+from services.sleeper import fetch_players as fetch_sleeper_players
+from services.nfl_data import fetch_current_rosters
+from services.transactions import fetch_recent_transactions
+from utils.normalize import norm_team, norm_name, make_site_player_id
+from utils.matching import fuzzy_join
+
+bp = Blueprint("sync", __name__, url_prefix="/api")
+STORAGE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "storage")
+os.makedirs(STORAGE_DIR, exist_ok=True)
+
+ROSTERS_PATH = os.path.join(STORAGE_DIR, "rosters.json")
+DEPTH_PATH   = os.path.join(STORAGE_DIR, "depth_charts.json")
+INDEX_PATH   = os.path.join(STORAGE_DIR, "players_index.json")
+
+DEFAULT_SEASON = 2025  # change as needed
+
+def _write_json(path, data):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+@bp.route("/sync/rosters", methods=["POST"])
+def sync_rosters():
+    season = int(request.json.get("season", DEFAULT_SEASON)) if request.is_json else DEFAULT_SEASON
+
+    sleeper = fetch_sleeper_players()
+    nfl = fetch_current_rosters(season)
+    txns = fetch_recent_transactions()
+
+    # 1) Join Sleeper -> nfl_data by name (exact/fuzzy), prefer nfl team/depth if present
+    matches = fuzzy_join(sleeper, nfl, left_key="full_name", right_key="full_name", threshold=93)
+
+    by_team = {}
+    players_index = {}
+
+    for i, sp in enumerate(sleeper):
+        match = matches.get(i)
+        name = norm_name(sp.get("full_name"))
+        pos  = sp.get("position")
+        sleeper_team = norm_team(sp.get("team"))
+
+        # Use nfl_data team if available, else Sleeper team
+        if match:
+            team = norm_team(match.get("team")) or sleeper_team
+            depth_order = match.get("depth_chart_order")
+            depth_pos   = match.get("depth_chart_position")
+            gsis_id     = match.get("gsis_id")
+        else:
+            team = sleeper_team
+            depth_order, depth_pos, gsis_id = None, None, sp.get("gsis_id")
+
+        if not team: 
+            # skip free agents from merged rosters output; still index them
+            pid = make_site_player_id(sp.get("player_id"), gsis_id, name)
+            players_index[pid] = {
+                "player_id": pid,
+                "name": name,
+                "team": None,
+                "pos": pos,
+                "source_ids": {"sleeper": sp.get("player_id"), "gsis": gsis_id}
+            }
+            continue
+
+        pid = make_site_player_id(sp.get("player_id"), gsis_id, name)
+
+        rec = {
+            "player_id": pid,
+            "name": name,
+            "team": team,
+            "pos": pos,
+            "depth_chart_order": depth_order,
+            "depth_chart_position": depth_pos,
+            "source_ids": {
+                "sleeper": sp.get("player_id"),
+                "gsis": gsis_id,
+                "espn": sp.get("espn_id"),
+                "yahoo": sp.get("yahoo_id")
+            }
+        }
+        by_team.setdefault(team, []).append(rec)
+        players_index[pid] = {
+            "player_id": pid,
+            "name": name,
+            "team": team,
+            "pos": pos,
+            "source_ids": rec["source_ids"]
+        }
+
+    # 2) Build depth charts (simple pecking order per team x position)
+    depth_charts = {}
+    for team, plist in by_team.items():
+        slots = {}
+        for p in plist:
+            pos = p.get("pos")
+            if not pos:
+                continue
+            slots.setdefault(pos, []).append(p)
+        # sort by known depth order, then fall back to name
+        for pos, players in slots.items():
+            players.sort(key=lambda x: (x.get("depth_chart_order") if x.get("depth_chart_order") is not None else 9999, x["name"]))
+        depth_charts[team] = {pos: [p["player_id"] for p in players] for pos, players in slots.items()}
+
+    # 3) Persist
+    _write_json(ROSTERS_PATH, by_team)
+    _write_json(DEPTH_PATH, depth_charts)
+    _write_json(INDEX_PATH, players_index)
+
+    return jsonify({
+        "status": "ok",
+        "season": season,
+        "teams": len(by_team),
+        "players_indexed": len(players_index),
+        "transactions_loaded": len(txns)
+    }), 200
+
+@bp.route("/rosters", methods=["GET"])
+def get_rosters():
+    if not os.path.exists(ROSTERS_PATH):
+        return jsonify({"error":"no rosters synced yet"}), 404
+    with open(ROSTERS_PATH, "r", encoding="utf-8") as f:
+        return jsonify(json.load(f))
+
+@bp.route("/depth-charts", methods=["GET"])
+def get_depth_charts():
+    if not os.path.exists(DEPTH_PATH):
+        return jsonify({"error":"no depth charts yet"}), 404
+    with open(DEPTH_PATH, "r", encoding="utf-8") as f:
+        return jsonify(json.load(f))
+
+app.py
+
+from flask import Flask
+from api.sync_routes import bp as sync_bp
+
+def create_app():
+    app = Flask(__name__)
+    app.register_blueprint(sync_bp)
+    return app
+
+app = create_app()
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5055, debug=True)
+
+
+⸻
+
+How Tiber uses it (simple, predictable)
+	•	Trigger merge: POST /api/sync/rosters with { "season": 2025 }
+	•	Get merged rosters: GET /api/rosters
+	•	Get depth charts: GET /api/depth-charts
+
+Your frontend (and Tiber) can then read:
+	•	players_index.json to resolve player_id → team/pos
+	•	rosters.json when you want per‑team files
+	•	depth_charts.json for pecking order logic
+
+⸻
+
+Why this works (and won’t bite us later)
+	•	Authoritative team/depth: nfl_data_py provides the latest roster + depth hints; Sleeper gives stable IDs + fantasy‑friendly metadata.
+	•	Deterministic IDs: we prefer Sleeper ID; fall back to GSIS; else a slug so nothing gets dropped.
+	•	Fuzzy name matching: handles “Roman Odunze” vs “Rome Odunze” and rookies with odd spacing.
+	•	Side‑effect files: we write to /storage/*.json so your site can import them directly without round‑tripping the merge every page load.
+	•	Transactions hook: the stub is in place so we can later auto‑bump teams/depth on signings/trades without changing the contract.
+
+⸻
+
+Next quick wins (when you want them)
+	•	Add a weekly cron (or Replit Task) that hits POST /api/sync/rosters Sundays 6am ET.
+	•	Enrich depth_charts.json with role tags (slot/x/third‑down back) once we ingest usage.
+	•	Add a /api/player/:id pass‑through that resolves from players_index.json for instant lookups.
+
+If you want, I can also spit out team‑scoped files (e.g., storage/teams/JAX.json) in the same pass — say the word and I’ll include that write step.

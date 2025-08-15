@@ -2793,6 +2793,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== ROSTER SYNC ENDPOINTS =====
+  
+  // Trigger roster merge and sync
+  app.post('/api/sync/rosters', async (req: Request, res: Response) => {
+    try {
+      const { rosterSyncService } = await import('./services/rosterSync');
+      const season = req.body?.season || 2025;
+      
+      console.log(`🔄 Starting roster sync for season ${season}...`);
+      const result = await rosterSyncService.syncRosters(season);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('❌ Roster sync error:', error);
+      res.status(500).json({
+        error: 'Failed to sync rosters',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get merged rosters by team
+  app.get('/api/rosters', async (req: Request, res: Response) => {
+    try {
+      const { rosterSyncService } = await import('./services/rosterSync');
+      const rosters = await rosterSyncService.getRosters();
+      res.json(rosters);
+    } catch (error) {
+      res.status(404).json({
+        error: 'No rosters synced yet',
+        hint: 'Run POST /api/sync/rosters first'
+      });
+    }
+  });
+
+  // Get depth charts by team and position
+  app.get('/api/depth-charts', async (req: Request, res: Response) => {
+    try {
+      const { rosterSyncService } = await import('./services/rosterSync');
+      const depthCharts = await rosterSyncService.getDepthCharts();
+      res.json(depthCharts);
+    } catch (error) {
+      res.status(404).json({
+        error: 'No depth charts synced yet',
+        hint: 'Run POST /api/sync/rosters first'
+      });
+    }
+  });
+
+  // Get players index for lookups
+  app.get('/api/players-index', async (req: Request, res: Response) => {
+    try {
+      const { rosterSyncService } = await import('./services/rosterSync');
+      const playersIndex = await rosterSyncService.getPlayersIndex();
+      res.json(playersIndex);
+    } catch (error) {
+      res.status(404).json({
+        error: 'No players index synced yet', 
+        hint: 'Run POST /api/sync/rosters first'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -1,0 +1,4550 @@
+{
+  "CLE": {
+    "QB": [
+      "sleeper:4017",
+      "sleeper:12486",
+      "sleeper:19",
+      "sleeper:8160",
+      "sleeper:12524",
+      "sleeper:7083"
+    ],
+    "DT": [
+      "sleeper:13104",
+      "sleeper:3236",
+      "sleeper:1124",
+      "sleeper:11692",
+      "sleeper:12452"
+    ],
+    "K": [
+      "sleeper:11261",
+      "sleeper:1348"
+    ],
+    "C": [
+      "sleeper:1529"
+    ],
+    "OG": [
+      "sleeper:1900"
+    ],
+    "DE": [
+      "sleeper:11846",
+      "sleeper:10991",
+      "sleeper:3973",
+      "sleeper:2033"
+    ],
+    "T": [
+      "sleeper:2123",
+      "sleeper:6029",
+      "sleeper:11468",
+      "sleeper:8754"
+    ],
+    "WR": [
+      "sleeper:13212",
+      "sleeper:10444",
+      "sleeper:8118",
+      "sleeper:2750",
+      "sleeper:5937",
+      "sleeper:13101",
+      "sleeper:12503",
+      "sleeper:11633",
+      "sleeper:6783",
+      "sleeper:8755",
+      "sleeper:13166",
+      "sleeper:13227"
+    ],
+    "ILB": [
+      "sleeper:2883"
+    ],
+    "OT": [
+      "sleeper:3175"
+    ],
+    "TE": [
+      "sleeper:11201",
+      "sleeper:12374",
+      "sleeper:4033",
+      "sleeper:12506",
+      "sleeper:8089"
+    ],
+    "OL": [
+      "sleeper:11887",
+      "sleeper:13099",
+      "sleeper:10956",
+      "sleeper:4123",
+      "sleeper:12784",
+      "sleeper:11917",
+      "sleeper:11919",
+      "sleeper:11013",
+      "sleeper:7663",
+      "sleeper:11715"
+    ],
+    "DB": [
+      "sleeper:10988",
+      "sleeper:11916",
+      "sleeper:4188",
+      "sleeper:10990",
+      "sleeper:12785",
+      "sleeper:12783",
+      "sleeper:6799",
+      "sleeper:8390",
+      "sleeper:11836",
+      "sleeper:4180",
+      "sleeper:11352",
+      "sleeper:4181",
+      "sleeper:5424"
+    ],
+    "CB": [
+      "sleeper:11455",
+      "sleeper:11938",
+      "sleeper:8516",
+      "sleeper:4964",
+      "sleeper:7630",
+      "sleeper:11424",
+      "sleeper:13103",
+      "sleeper:6258"
+    ],
+    "LB": [
+      "sleeper:12578",
+      "sleeper:5843",
+      "sleeper:13165",
+      "sleeper:7651",
+      "sleeper:5056",
+      "sleeper:7625",
+      "sleeper:6851",
+      "sleeper:11350",
+      "sleeper:11790",
+      "sleeper:7844",
+      "sleeper:11004",
+      "sleeper:12083"
+    ],
+    "G": [
+      "sleeper:5097"
+    ],
+    "P": [
+      "sleeper:5721"
+    ],
+    "RB": [
+      "sleeper:12797",
+      "sleeper:7048",
+      "sleeper:12469",
+      "sleeper:8143",
+      "sleeper:8116",
+      "sleeper:12512",
+      "sleeper:13240",
+      "sleeper:6144"
+    ],
+    "LS": [
+      "sleeper:13102",
+      "sleeper:7498"
+    ],
+    "DL": [
+      "sleeper:8376",
+      "sleeper:8383",
+      "sleeper:10943",
+      "sleeper:12573"
+    ],
+    "DEF": [
+      "sleeper:CLE"
+    ]
+  },
+  "PIT": {
+    "QB": [
+      "sleeper:96",
+      "sleeper:138",
+      "sleeper:5845",
+      "sleeper:5128",
+      "sleeper:4972",
+      "sleeper:4926",
+      "sleeper:8206",
+      "sleeper:12511"
+    ],
+    "DT": [
+      "sleeper:843",
+      "sleeper:5532",
+      "sleeper:12665"
+    ],
+    "WR": [
+      "sleeper:7757",
+      "sleeper:8756",
+      "sleeper:8125",
+      "sleeper:5846",
+      "sleeper:12971",
+      "sleeper:8745",
+      "sleeper:1352",
+      "sleeper:12972",
+      "sleeper:11630",
+      "sleeper:6290"
+    ],
+    "CB": [
+      "sleeper:11860",
+      "sleeper:7796",
+      "sleeper:11156",
+      "sleeper:11037",
+      "sleeper:11173",
+      "sleeper:1518",
+      "sleeper:12734",
+      "sleeper:3160",
+      "sleeper:7419",
+      "sleeper:13200",
+      "sleeper:12116"
+    ],
+    "K": [
+      "sleeper:13066",
+      "sleeper:1945"
+    ],
+    "TE": [
+      "sleeper:8181",
+      "sleeper:9479",
+      "sleeper:6016",
+      "sleeper:6074",
+      "sleeper:2118",
+      "sleeper:12975",
+      "sleeper:4144",
+      "sleeper:12215",
+      "sleeper:7600"
+    ],
+    "OL": [
+      "sleeper:2318",
+      "sleeper:10884",
+      "sleeper:11927",
+      "sleeper:11733",
+      "sleeper:6150",
+      "sleeper:11028",
+      "sleeper:12216",
+      "sleeper:11664",
+      "sleeper:11690"
+    ],
+    "G": [
+      "sleeper:3248"
+    ],
+    "DB": [
+      "sleeper:4224",
+      "sleeper:12767",
+      "sleeper:5071",
+      "sleeper:10913",
+      "sleeper:6145",
+      "sleeper:8873",
+      "sleeper:3272",
+      "sleeper:11150",
+      "sleeper:12955"
+    ],
+    "DE": [
+      "sleeper:3295",
+      "sleeper:7833",
+      "sleeper:8091"
+    ],
+    "LB": [
+      "sleeper:7113",
+      "sleeper:12733",
+      "sleeper:6220",
+      "sleeper:8498",
+      "sleeper:11336",
+      "sleeper:6867",
+      "sleeper:8525",
+      "sleeper:10940",
+      "sleeper:6807",
+      "sleeper:11727",
+      "sleeper:4070"
+    ],
+    "T": [
+      "sleeper:6457",
+      "sleeper:8865",
+      "sleeper:4167"
+    ],
+    "P": [
+      "sleeper:4654",
+      "sleeper:7215"
+    ],
+    "LS": [
+      "sleeper:4848"
+    ],
+    "NT": [
+      "sleeper:7326",
+      "sleeper:10901"
+    ],
+    "DL": [
+      "sleeper:8319",
+      "sleeper:12561",
+      "sleeper:7390",
+      "sleeper:8342",
+      "sleeper:12593",
+      "sleeper:11858",
+      "sleeper:11894",
+      "sleeper:11811"
+    ],
+    "RB": [
+      "sleeper:9220",
+      "sleeper:8228",
+      "sleeper:12504",
+      "sleeper:7567",
+      "sleeper:9510",
+      "sleeper:7593"
+    ],
+    "C": [
+      "sleeper:8014"
+    ],
+    "OG": [
+      "sleeper:12974"
+    ],
+    "OT": [
+      "sleeper:13188"
+    ],
+    "DEF": [
+      "sleeper:PIT"
+    ]
+  },
+  "ARI": {
+    "DE": [
+      "sleeper:12138",
+      "sleeper:8746",
+      "sleeper:10908",
+      "sleeper:125",
+      "sleeper:1920",
+      "sleeper:4999",
+      "sleeper:5861",
+      "sleeper:6400",
+      "sleeper:11767"
+    ],
+    "OL": [
+      "sleeper:11768",
+      "sleeper:12692",
+      "sleeper:11718",
+      "sleeper:12886",
+      "sleeper:10946",
+      "sleeper:12798",
+      "sleeper:1088",
+      "sleeper:10890",
+      "sleeper:8412",
+      "sleeper:7702",
+      "sleeper:11903",
+      "sleeper:12918"
+    ],
+    "LS": [
+      "sleeper:1122"
+    ],
+    "CB": [
+      "sleeper:2091",
+      "sleeper:7730",
+      "sleeper:12657",
+      "sleeper:11448",
+      "sleeper:8702",
+      "sleeper:3527",
+      "sleeper:6060",
+      "sleeper:11343",
+      "sleeper:11487"
+    ],
+    "QB": [
+      "sleeper:10217",
+      "sleeper:3257",
+      "sleeper:5849"
+    ],
+    "WR": [
+      "sleeper:7233",
+      "sleeper:12799",
+      "sleeper:5970",
+      "sleeper:4451",
+      "sleeper:12755",
+      "sleeper:11628",
+      "sleeper:10232",
+      "sleeper:12893",
+      "sleeper:7812",
+      "sleeper:11802",
+      "sleeper:7009",
+      "sleeper:11921",
+      "sleeper:4080"
+    ],
+    "DB": [
+      "sleeper:4081",
+      "sleeper:11744",
+      "sleeper:11717",
+      "sleeper:10932",
+      "sleeper:6711",
+      "sleeper:10986",
+      "sleeper:8683",
+      "sleeper:11014",
+      "sleeper:12736",
+      "sleeper:11693",
+      "sleeper:12565"
+    ],
+    "DT": [
+      "sleeper:5302",
+      "sleeper:4092",
+      "sleeper:11015",
+      "sleeper:5063"
+    ],
+    "RB": [
+      "sleeper:8122",
+      "sleeper:6931",
+      "sleeper:11199",
+      "sleeper:4137",
+      "sleeper:7607",
+      "sleeper:7103",
+      "sleeper:11589"
+    ],
+    "G": [
+      "sleeper:6084",
+      "sleeper:11464",
+      "sleeper:7448",
+      "sleeper:5018"
+    ],
+    "C": [
+      "sleeper:5610"
+    ],
+    "T": [
+      "sleeper:8081",
+      "sleeper:6122"
+    ],
+    "LB": [
+      "sleeper:6860",
+      "sleeper:7681",
+      "sleeper:12648",
+      "sleeper:7285",
+      "sleeper:12451",
+      "sleeper:8869",
+      "sleeper:6131",
+      "sleeper:7012",
+      "sleeper:10969",
+      "sleeper:8691",
+      "sleeper:7637"
+    ],
+    "TE": [
+      "sleeper:10231",
+      "sleeper:7050",
+      "sleeper:12800",
+      "sleeper:11716",
+      "sleeper:11381",
+      "sleeper:8130"
+    ],
+    "P": [
+      "sleeper:7467"
+    ],
+    "K": [
+      "sleeper:10955"
+    ],
+    "NT": [
+      "sleeper:11436"
+    ],
+    "DL": [
+      "sleeper:11658",
+      "sleeper:12919",
+      "sleeper:12579",
+      "sleeper:12364",
+      "sleeper:13223",
+      "sleeper:12552"
+    ],
+    "DEF": [
+      "sleeper:ARI"
+    ]
+  },
+  "LAR": {
+    "OL": [
+      "sleeper:7872",
+      "sleeper:202",
+      "sleeper:11782",
+      "sleeper:13002",
+      "sleeper:5454",
+      "sleeper:2329",
+      "sleeper:1428",
+      "sleeper:11803",
+      "sleeper:12141",
+      "sleeper:7116",
+      "sleeper:11817",
+      "sleeper:2362",
+      "sleeper:10965",
+      "sleeper:13004",
+      "sleeper:12997"
+    ],
+    "FS": [
+      "sleeper:290"
+    ],
+    "QB": [
+      "sleeper:11169",
+      "sleeper:1837",
+      "sleeper:421",
+      "sleeper:10857"
+    ],
+    "WR": [
+      "sleeper:13011",
+      "sleeper:8414",
+      "sleeper:2133",
+      "sleeper:12133",
+      "sleeper:11623",
+      "sleeper:12718",
+      "sleeper:13001",
+      "sleeper:9493",
+      "sleeper:13003",
+      "sleeper:7562",
+      "sleeper:11168"
+    ],
+    "TE": [
+      "sleeper:13005",
+      "sleeper:6865",
+      "sleeper:10214",
+      "sleeper:13013",
+      "sleeper:12070",
+      "sleeper:12487",
+      "sleeper:3271"
+    ],
+    "CB": [
+      "sleeper:6876",
+      "sleeper:4124",
+      "sleeper:12137",
+      "sleeper:5526",
+      "sleeper:10882",
+      "sleeper:8791"
+    ],
+    "G": [
+      "sleeper:4933"
+    ],
+    "DT": [
+      "sleeper:11021",
+      "sleeper:7880",
+      "sleeper:10916",
+      "sleeper:6887",
+      "sleeper:5226",
+      "sleeper:12676",
+      "sleeper:11799"
+    ],
+    "DE": [
+      "sleeper:11751",
+      "sleeper:5308",
+      "sleeper:13006",
+      "sleeper:12621",
+      "sleeper:8739"
+    ],
+    "LB": [
+      "sleeper:10917",
+      "sleeper:12659",
+      "sleeper:12227",
+      "sleeper:13009",
+      "sleeper:8659",
+      "sleeper:10973",
+      "sleeper:12140",
+      "sleeper:13000",
+      "sleeper:7836",
+      "sleeper:6353"
+    ],
+    "DB": [
+      "sleeper:12230",
+      "sleeper:8381",
+      "sleeper:7348",
+      "sleeper:8271",
+      "sleeper:12142",
+      "sleeper:12132",
+      "sleeper:7136",
+      "sleeper:11726",
+      "sleeper:6682",
+      "sleeper:12999",
+      "sleeper:13007",
+      "sleeper:8330",
+      "sleeper:11151"
+    ],
+    "RB": [
+      "sleeper:11586",
+      "sleeper:11644",
+      "sleeper:11569",
+      "sleeper:13010",
+      "sleeper:8150",
+      "sleeper:8195"
+    ],
+    "OT": [
+      "sleeper:8505",
+      "sleeper:13012"
+    ],
+    "C": [
+      "sleeper:10912"
+    ],
+    "P": [
+      "sleeper:11051"
+    ],
+    "LS": [
+      "sleeper:11167"
+    ],
+    "DL": [
+      "sleeper:13008",
+      "sleeper:11677",
+      "sleeper:12998",
+      "sleeper:13229",
+      "sleeper:11665"
+    ],
+    "K": [
+      "sleeper:11789"
+    ],
+    "DEF": [
+      "sleeper:LAR"
+    ]
+  },
+  "WAS": {
+    "QB": [
+      "sleeper:11566",
+      "sleeper:260",
+      "sleeper:2307",
+      "sleeper:11558"
+    ],
+    "LB": [
+      "sleeper:13176",
+      "sleeper:1233",
+      "sleeper:4099",
+      "sleeper:5580",
+      "sleeper:11778",
+      "sleeper:12684",
+      "sleeper:13177",
+      "sleeper:815",
+      "sleeper:871"
+    ],
+    "TE": [
+      "sleeper:11596",
+      "sleeper:8214",
+      "sleeper:11942",
+      "sleeper:7716",
+      "sleeper:7106",
+      "sleeper:3333",
+      "sleeper:6040",
+      "sleeper:1339"
+    ],
+    "CB": [
+      "sleeper:3838",
+      "sleeper:12845",
+      "sleeper:1472",
+      "sleeper:3246",
+      "sleeper:6925",
+      "sleeper:3374",
+      "sleeper:4059",
+      "sleeper:6817",
+      "sleeper:12847"
+    ],
+    "P": [
+      "sleeper:1506"
+    ],
+    "LS": [
+      "sleeper:1844"
+    ],
+    "T": [
+      "sleeper:2525",
+      "sleeper:2314",
+      "sleeper:7973",
+      "sleeper:5423"
+    ],
+    "DT": [
+      "sleeper:2395",
+      "sleeper:4976",
+      "sleeper:2344",
+      "sleeper:2418",
+      "sleeper:6792",
+      "sleeper:12844",
+      "sleeper:3265"
+    ],
+    "DB": [
+      "sleeper:11933",
+      "sleeper:7259",
+      "sleeper:2643",
+      "sleeper:5792",
+      "sleeper:3415",
+      "sleeper:11676",
+      "sleeper:8394",
+      "sleeper:10903",
+      "sleeper:12595",
+      "sleeper:11934",
+      "sleeper:5920"
+    ],
+    "OL": [
+      "sleeper:11702",
+      "sleeper:8522",
+      "sleeper:12558",
+      "sleeper:3159",
+      "sleeper:6883",
+      "sleeper:5898",
+      "sleeper:7652"
+    ],
+    "WR": [
+      "sleeper:8178",
+      "sleeper:3269",
+      "sleeper:5872",
+      "sleeper:12532",
+      "sleeper:13120",
+      "sleeper:12641",
+      "sleeper:7066",
+      "sleeper:11070",
+      "sleeper:11650",
+      "sleeper:5038",
+      "sleeper:4234",
+      "sleeper:4854",
+      "sleeper:8250",
+      "sleeper:5927"
+    ],
+    "RB": [
+      "sleeper:4663",
+      "sleeper:8154",
+      "sleeper:10219",
+      "sleeper:7609",
+      "sleeper:12533",
+      "sleeper:4219",
+      "sleeper:3309"
+    ],
+    "DE": [
+      "sleeper:11041",
+      "sleeper:5842",
+      "sleeper:4174",
+      "sleeper:5330",
+      "sleeper:5378",
+      "sleeper:5333",
+      "sleeper:12550"
+    ],
+    "G": [
+      "sleeper:4693",
+      "sleeper:7402",
+      "sleeper:6292",
+      "sleeper:7112"
+    ],
+    "OT": [
+      "sleeper:5405"
+    ],
+    "K": [
+      "sleeper:6083"
+    ],
+    "C": [
+      "sleeper:6835"
+    ],
+    "DL": [
+      "sleeper:11816",
+      "sleeper:11699",
+      "sleeper:11936",
+      "sleeper:10942"
+    ],
+    "OG": [
+      "sleeper:12842"
+    ],
+    "DEF": [
+      "sleeper:WAS"
+    ]
+  },
+  "CAR": {
+    "LS": [
+      "sleeper:439"
+    ],
+    "QB": [
+      "sleeper:829",
+      "sleeper:9228",
+      "sleeper:12009"
+    ],
+    "DE": [
+      "sleeper:7646",
+      "sleeper:6868",
+      "sleeper:1494",
+      "sleeper:5320",
+      "sleeper:7674",
+      "sleeper:8492"
+    ],
+    "P": [
+      "sleeper:1516"
+    ],
+    "CB": [
+      "sleeper:1674",
+      "sleeper:12957",
+      "sleeper:13186",
+      "sleeper:7642",
+      "sleeper:12992",
+      "sleeper:6025",
+      "sleeper:12960",
+      "sleeper:12234",
+      "sleeper:8537"
+    ],
+    "WR": [
+      "sleeper:1689",
+      "sleeper:11157",
+      "sleeper:4274",
+      "sleeper:5955",
+      "sleeper:13179",
+      "sleeper:12967",
+      "sleeper:11646",
+      "sleeper:12523",
+      "sleeper:12488",
+      "sleeper:7618",
+      "sleeper:11312",
+      "sleeper:12526",
+      "sleeper:11626"
+    ],
+    "DT": [
+      "sleeper:3218",
+      "sleeper:7722",
+      "sleeper:12682",
+      "sleeper:6784",
+      "sleeper:11795",
+      "sleeper:13094",
+      "sleeper:12010",
+      "sleeper:6627",
+      "sleeper:7301"
+    ],
+    "T": [
+      "sleeper:7697",
+      "sleeper:8451",
+      "sleeper:4104",
+      "sleeper:6008"
+    ],
+    "TE": [
+      "sleeper:12959",
+      "sleeper:7502",
+      "sleeper:11600",
+      "sleeper:8170",
+      "sleeper:12473",
+      "sleeper:7694",
+      "sleeper:7427",
+      "sleeper:4490"
+    ],
+    "OL": [
+      "sleeper:4989",
+      "sleeper:8502",
+      "sleeper:8524",
+      "sleeper:11784",
+      "sleeper:13091",
+      "sleeper:7041",
+      "sleeper:13092"
+    ],
+    "K": [
+      "sleeper:7933",
+      "sleeper:6268",
+      "sleeper:12961"
+    ],
+    "DB": [
+      "sleeper:8389",
+      "sleeper:11771",
+      "sleeper:12011",
+      "sleeper:12958",
+      "sleeper:7621",
+      "sleeper:13098",
+      "sleeper:12611",
+      "sleeper:6301",
+      "sleeper:7659",
+      "sleeper:12962"
+    ],
+    "G": [
+      "sleeper:10953",
+      "sleeper:7003"
+    ],
+    "RB": [
+      "sleeper:7594",
+      "sleeper:11998",
+      "sleeper:11583",
+      "sleeper:12963",
+      "sleeper:8255",
+      "sleeper:7021",
+      "sleeper:12531"
+    ],
+    "OT": [
+      "sleeper:7206",
+      "sleeper:12964"
+    ],
+    "LB": [
+      "sleeper:12956",
+      "sleeper:7346",
+      "sleeper:11305",
+      "sleeper:10938",
+      "sleeper:13239",
+      "sleeper:11861",
+      "sleeper:7957",
+      "sleeper:7268",
+      "sleeper:13090",
+      "sleeper:11441",
+      "sleeper:11724"
+    ],
+    "FB": [
+      "sleeper:7868"
+    ],
+    "DL": [
+      "sleeper:8274",
+      "sleeper:12562",
+      "sleeper:12610"
+    ],
+    "DEF": [
+      "sleeper:CAR"
+    ]
+  },
+  "NO": {
+    "SS": [
+      "sleeper:444"
+    ],
+    "DE": [
+      "sleeper:957",
+      "sleeper:5912",
+      "sleeper:6782",
+      "sleeper:13031",
+      "sleeper:7344",
+      "sleeper:3241"
+    ],
+    "LB": [
+      "sleeper:7721",
+      "sleeper:8367",
+      "sleeper:12650",
+      "sleeper:1052",
+      "sleeper:11893",
+      "sleeper:11747",
+      "sleeper:8328",
+      "sleeper:7647",
+      "sleeper:5343",
+      "sleeper:12995"
+    ],
+    "QB": [
+      "sleeper:1979",
+      "sleeper:13217",
+      "sleeper:10215",
+      "sleeper:11562",
+      "sleeper:12545"
+    ],
+    "WR": [
+      "sleeper:2197",
+      "sleeper:11748",
+      "sleeper:5113",
+      "sleeper:8144",
+      "sleeper:4992",
+      "sleeper:6824",
+      "sleeper:5744",
+      "sleeper:8200",
+      "sleeper:11895",
+      "sleeper:13026",
+      "sleeper:8676",
+      "sleeper:13256",
+      "sleeper:8223"
+    ],
+    "DT": [
+      "sleeper:10874",
+      "sleeper:4207",
+      "sleeper:2237",
+      "sleeper:6177",
+      "sleeper:7310",
+      "sleeper:5043",
+      "sleeper:12996",
+      "sleeper:12618"
+    ],
+    "OT": [
+      "sleeper:11814",
+      "sleeper:3356"
+    ],
+    "LS": [
+      "sleeper:3882"
+    ],
+    "RB": [
+      "sleeper:4035",
+      "sleeper:6938",
+      "sleeper:6820",
+      "sleeper:12476",
+      "sleeper:9757",
+      "sleeper:12546"
+    ],
+    "TE": [
+      "sleeper:5985",
+      "sleeper:7946",
+      "sleeper:7002",
+      "sleeper:12068",
+      "sleeper:8094",
+      "sleeper:12480",
+      "sleeper:8539",
+      "sleeper:4381",
+      "sleeper:12079"
+    ],
+    "DB": [
+      "sleeper:5767",
+      "sleeper:8333",
+      "sleeper:13028",
+      "sleeper:5452",
+      "sleeper:12619",
+      "sleeper:10985",
+      "sleeper:7044",
+      "sleeper:5036",
+      "sleeper:11675",
+      "sleeper:7036",
+      "sleeper:6216"
+    ],
+    "CB": [
+      "sleeper:13027",
+      "sleeper:5048",
+      "sleeper:12196",
+      "sleeper:12638",
+      "sleeper:11330",
+      "sleeper:11899"
+    ],
+    "C": [
+      "sleeper:5316"
+    ],
+    "OL": [
+      "sleeper:11469",
+      "sleeper:6816",
+      "sleeper:7650",
+      "sleeper:13025",
+      "sleeper:5875",
+      "sleeper:12569",
+      "sleeper:11891",
+      "sleeper:10964",
+      "sleeper:7022",
+      "sleeper:11670",
+      "sleeper:13030"
+    ],
+    "T": [
+      "sleeper:13245",
+      "sleeper:7792",
+      "sleeper:8444"
+    ],
+    "DL": [
+      "sleeper:12609",
+      "sleeper:10909",
+      "sleeper:8318",
+      "sleeper:11271",
+      "sleeper:8306",
+      "sleeper:11796"
+    ],
+    "K": [
+      "sleeper:11058",
+      "sleeper:11653"
+    ],
+    "P": [
+      "sleeper:13029",
+      "sleeper:13215"
+    ],
+    "DEF": [
+      "sleeper:NO"
+    ]
+  },
+  "SF": {
+    "P": [
+      "sleeper:445"
+    ],
+    "LS": [
+      "sleeper:548"
+    ],
+    "T": [
+      "sleeper:5858",
+      "sleeper:5956",
+      "sleeper:734"
+    ],
+    "DB": [
+      "sleeper:8264",
+      "sleeper:7819",
+      "sleeper:3643",
+      "sleeper:11025",
+      "sleeper:12345",
+      "sleeper:10936",
+      "sleeper:11731",
+      "sleeper:12668",
+      "sleeper:11697",
+      "sleeper:7662",
+      "sleeper:1039"
+    ],
+    "FB": [
+      "sleeper:1379"
+    ],
+    "RB": [
+      "sleeper:2359",
+      "sleeper:4034",
+      "sleeper:12491",
+      "sleeper:4914",
+      "sleeper:11651",
+      "sleeper:5284",
+      "sleeper:12467",
+      "sleeper:6885",
+      "sleeper:6963"
+    ],
+    "WR": [
+      "sleeper:6803",
+      "sleeper:3286",
+      "sleeper:5323",
+      "sleeper:6920",
+      "sleeper:11616",
+      "sleeper:7049",
+      "sleeper:12634",
+      "sleeper:12743",
+      "sleeper:5781",
+      "sleeper:11638",
+      "sleeper:3423",
+      "sleeper:5110",
+      "sleeper:11925",
+      "sleeper:4218"
+    ],
+    "OL": [
+      "sleeper:7469",
+      "sleeper:7060",
+      "sleeper:6889",
+      "sleeper:12742",
+      "sleeper:11723",
+      "sleeper:11922",
+      "sleeper:12754",
+      "sleeper:3439",
+      "sleeper:6881",
+      "sleeper:8501",
+      "sleeper:8465"
+    ],
+    "DT": [
+      "sleeper:12649",
+      "sleeper:4121",
+      "sleeper:6841",
+      "sleeper:6005",
+      "sleeper:7876"
+    ],
+    "CB": [
+      "sleeper:8833",
+      "sleeper:10978",
+      "sleeper:13216",
+      "sleeper:4126",
+      "sleeper:12763",
+      "sleeper:7816",
+      "sleeper:5968",
+      "sleeper:5098",
+      "sleeper:7707",
+      "sleeper:10995",
+      "sleeper:12631"
+    ],
+    "TE": [
+      "sleeper:10224",
+      "sleeper:4217",
+      "sleeper:8698",
+      "sleeper:7842",
+      "sleeper:5285"
+    ],
+    "LB": [
+      "sleeper:7673",
+      "sleeper:8020",
+      "sleeper:11017",
+      "sleeper:5041",
+      "sleeper:6965",
+      "sleeper:6612",
+      "sleeper:12630",
+      "sleeper:10966",
+      "sleeper:13072",
+      "sleeper:11842",
+      "sleeper:7120"
+    ],
+    "DE": [
+      "sleeper:6827",
+      "sleeper:5613",
+      "sleeper:7391",
+      "sleeper:5218",
+      "sleeper:5816",
+      "sleeper:8540",
+      "sleeper:7802",
+      "sleeper:7764",
+      "sleeper:6812"
+    ],
+    "OT": [
+      "sleeper:7409"
+    ],
+    "QB": [
+      "sleeper:8183",
+      "sleeper:11851",
+      "sleeper:12477",
+      "sleeper:7527"
+    ],
+    "DL": [
+      "sleeper:12590",
+      "sleeper:11923",
+      "sleeper:12078",
+      "sleeper:8375",
+      "sleeper:12602",
+      "sleeper:13073"
+    ],
+    "K": [
+      "sleeper:10937"
+    ],
+    "DEF": [
+      "sleeper:SF"
+    ]
+  },
+  "NYG": {
+    "K": [
+      "sleeper:503",
+      "sleeper:12385"
+    ],
+    "DB": [
+      "sleeper:11036",
+      "sleeper:8310",
+      "sleeper:8395",
+      "sleeper:12050",
+      "sleeper:10878",
+      "sleeper:11700",
+      "sleeper:7748",
+      "sleeper:7666",
+      "sleeper:6947",
+      "sleeper:12894",
+      "sleeper:1035",
+      "sleeper:8578",
+      "sleeper:11674"
+    ],
+    "QB": [
+      "sleeper:6147",
+      "sleeper:2306",
+      "sleeper:12508",
+      "sleeper:1234",
+      "sleeper:11292"
+    ],
+    "TE": [
+      "sleeper:3048",
+      "sleeper:8225",
+      "sleeper:8172",
+      "sleeper:13129",
+      "sleeper:1642",
+      "sleeper:11597",
+      "sleeper:12715",
+      "sleeper:7149"
+    ],
+    "LS": [
+      "sleeper:2063"
+    ],
+    "DT": [
+      "sleeper:11338",
+      "sleeper:5847",
+      "sleeper:12319",
+      "sleeper:8736",
+      "sleeper:2993",
+      "sleeper:3763"
+    ],
+    "DE": [
+      "sleeper:5862",
+      "sleeper:7693",
+      "sleeper:4240",
+      "sleeper:3526"
+    ],
+    "CB": [
+      "sleeper:11440",
+      "sleeper:3557",
+      "sleeper:12716",
+      "sleeper:11029",
+      "sleeper:13159",
+      "sleeper:7669",
+      "sleeper:13201",
+      "sleeper:10993"
+    ],
+    "WR": [
+      "sleeper:3702",
+      "sleeper:12460",
+      "sleeper:12889",
+      "sleeper:9499",
+      "sleeper:12892",
+      "sleeper:12888",
+      "sleeper:6149",
+      "sleeper:6699",
+      "sleeper:7559",
+      "sleeper:9497",
+      "sleeper:12891",
+      "sleeper:5938",
+      "sleeper:11632",
+      "sleeper:8475",
+      "sleeper:8126",
+      "sleeper:4319"
+    ],
+    "OL": [
+      "sleeper:12131",
+      "sleeper:8443",
+      "sleeper:13127",
+      "sleeper:4190",
+      "sleeper:7774",
+      "sleeper:10896",
+      "sleeper:8455",
+      "sleeper:7377",
+      "sleeper:12582"
+    ],
+    "RB": [
+      "sleeper:12481",
+      "sleeper:11654",
+      "sleeper:6130",
+      "sleeper:10223",
+      "sleeper:7087",
+      "sleeper:4349",
+      "sleeper:11655"
+    ],
+    "OG": [
+      "sleeper:4771",
+      "sleeper:12382"
+    ],
+    "G": [
+      "sleeper:5668",
+      "sleeper:5439",
+      "sleeper:6980"
+    ],
+    "LB": [
+      "sleeper:5944",
+      "sleeper:5753",
+      "sleeper:11807",
+      "sleeper:6610",
+      "sleeper:11297",
+      "sleeper:11912",
+      "sleeper:8396",
+      "sleeper:8854",
+      "sleeper:7788"
+    ],
+    "P": [
+      "sleeper:6452"
+    ],
+    "T": [
+      "sleeper:6810",
+      "sleeper:7790"
+    ],
+    "OT": [
+      "sleeper:7728"
+    ],
+    "DL": [
+      "sleeper:12574",
+      "sleeper:8262",
+      "sleeper:12581",
+      "sleeper:11035",
+      "sleeper:8355",
+      "sleeper:13137"
+    ],
+    "DEF": [
+      "sleeper:NYG"
+    ]
+  },
+  "TEN": {
+    "LS": [
+      "sleeper:525"
+    ],
+    "OG": [
+      "sleeper:6566",
+      "sleeper:1074"
+    ],
+    "P": [
+      "sleeper:1202"
+    ],
+    "WR": [
+      "sleeper:11959",
+      "sleeper:5223",
+      "sleeper:4981",
+      "sleeper:12540",
+      "sleeper:12499",
+      "sleeper:6957",
+      "sleeper:11808",
+      "sleeper:7436",
+      "sleeper:10869",
+      "sleeper:13191",
+      "sleeper:8135",
+      "sleeper:2374",
+      "sleeper:6853",
+      "sleeper:12520"
+    ],
+    "DB": [
+      "sleeper:5908",
+      "sleeper:13057",
+      "sleeper:11847",
+      "sleeper:11766",
+      "sleeper:7805",
+      "sleeper:12089",
+      "sleeper:11185",
+      "sleeper:12588",
+      "sleeper:12712",
+      "sleeper:8532",
+      "sleeper:2501",
+      "sleeper:8303",
+      "sleeper:4238"
+    ],
+    "QB": [
+      "sleeper:3357",
+      "sleeper:12522",
+      "sleeper:2549",
+      "sleeper:9999"
+    ],
+    "DE": [
+      "sleeper:11062",
+      "sleeper:5067",
+      "sleeper:4166",
+      "sleeper:13170",
+      "sleeper:5865",
+      "sleeper:11835",
+      "sleeper:3217",
+      "sleeper:7325"
+    ],
+    "CB": [
+      "sleeper:5888",
+      "sleeper:3474",
+      "sleeper:13055",
+      "sleeper:8666",
+      "sleeper:11973",
+      "sleeper:13059",
+      "sleeper:13062",
+      "sleeper:7117"
+    ],
+    "G": [
+      "sleeper:4282",
+      "sleeper:6158"
+    ],
+    "DT": [
+      "sleeper:13058",
+      "sleeper:6858",
+      "sleeper:6125",
+      "sleeper:8037",
+      "sleeper:4939",
+      "sleeper:5073",
+      "sleeper:8654"
+    ],
+    "TE": [
+      "sleeper:8210",
+      "sleeper:12357",
+      "sleeper:5288",
+      "sleeper:13210",
+      "sleeper:12502",
+      "sleeper:10212",
+      "sleeper:8924"
+    ],
+    "RB": [
+      "sleeper:7599",
+      "sleeper:11378",
+      "sleeper:8254",
+      "sleeper:12516",
+      "sleeper:5967",
+      "sleeper:9508"
+    ],
+    "LB": [
+      "sleeper:11003",
+      "sleeper:11108",
+      "sleeper:7364",
+      "sleeper:8283",
+      "sleeper:11742",
+      "sleeper:6065",
+      "sleeper:12164",
+      "sleeper:6937"
+    ],
+    "OL": [
+      "sleeper:7139",
+      "sleeper:7831",
+      "sleeper:6426",
+      "sleeper:12664",
+      "sleeper:11012",
+      "sleeper:11672",
+      "sleeper:10886",
+      "sleeper:6094"
+    ],
+    "K": [
+      "sleeper:6528"
+    ],
+    "C": [
+      "sleeper:6903"
+    ],
+    "OT": [
+      "sleeper:8678",
+      "sleeper:12782",
+      "sleeper:7714",
+      "sleeper:11097"
+    ],
+    "DL": [
+      "sleeper:13060",
+      "sleeper:12583",
+      "sleeper:13169",
+      "sleeper:11691"
+    ],
+    "DEF": [
+      "sleeper:TEN"
+    ]
+  },
+  "LAC": {
+    "T": [
+      "sleeper:596",
+      "sleeper:4176",
+      "sleeper:7639",
+      "sleeper:13234",
+      "sleeper:6213"
+    ],
+    "LS": [
+      "sleeper:1238"
+    ],
+    "WR": [
+      "sleeper:11621",
+      "sleeper:13202",
+      "sleeper:10234",
+      "sleeper:7729",
+      "sleeper:6798",
+      "sleeper:11940",
+      "sleeper:11874",
+      "sleeper:12670",
+      "sleeper:1479",
+      "sleeper:6866",
+      "sleeper:11635",
+      "sleeper:12803",
+      "sleeper:9754",
+      "sleeper:12509"
+    ],
+    "DB": [
+      "sleeper:7069",
+      "sleeper:7671",
+      "sleeper:8519",
+      "sleeper:4971",
+      "sleeper:12087",
+      "sleeper:12840",
+      "sleeper:8481",
+      "sleeper:12813",
+      "sleeper:11022",
+      "sleeper:12827",
+      "sleeper:12838",
+      "sleeper:12694",
+      "sleeper:11779",
+      "sleeper:1686",
+      "sleeper:12717"
+    ],
+    "LB": [
+      "sleeper:2327",
+      "sleeper:10914",
+      "sleeper:6348",
+      "sleeper:2353",
+      "sleeper:12841",
+      "sleeper:11701",
+      "sleeper:8758",
+      "sleeper:2036",
+      "sleeper:12804",
+      "sleeper:12835",
+      "sleeper:6941"
+    ],
+    "DT": [
+      "sleeper:2126",
+      "sleeper:2517",
+      "sleeper:5351",
+      "sleeper:12620",
+      "sleeper:7853",
+      "sleeper:11043",
+      "sleeper:10994",
+      "sleeper:7443"
+    ],
+    "QB": [
+      "sleeper:12773",
+      "sleeper:6797",
+      "sleeper:2711",
+      "sleeper:7610"
+    ],
+    "TE": [
+      "sleeper:12493",
+      "sleeper:12815",
+      "sleeper:12113",
+      "sleeper:8885",
+      "sleeper:5133",
+      "sleeper:5010"
+    ],
+    "CB": [
+      "sleeper:11749",
+      "sleeper:5051",
+      "sleeper:7682",
+      "sleeper:6961",
+      "sleeper:12821",
+      "sleeper:11547"
+    ],
+    "P": [
+      "sleeper:5087"
+    ],
+    "OL": [
+      "sleeper:5298",
+      "sleeper:12703",
+      "sleeper:12839",
+      "sleeper:8480",
+      "sleeper:11673",
+      "sleeper:12814",
+      "sleeper:11849",
+      "sleeper:12833"
+    ],
+    "RB": [
+      "sleeper:8123",
+      "sleeper:7537",
+      "sleeper:11647",
+      "sleeper:7528",
+      "sleeper:5347",
+      "sleeper:12507",
+      "sleeper:12472"
+    ],
+    "C": [
+      "sleeper:6004"
+    ],
+    "OT": [
+      "sleeper:6796"
+    ],
+    "K": [
+      "sleeper:8259"
+    ],
+    "DL": [
+      "sleeper:8288",
+      "sleeper:12802",
+      "sleeper:11743",
+      "sleeper:8331",
+      "sleeper:12801",
+      "sleeper:10898"
+    ],
+    "G": [
+      "sleeper:8445"
+    ],
+    "DE": [
+      "sleeper:11098",
+      "sleeper:12643",
+      "sleeper:11875"
+    ],
+    "OG": [
+      "sleeper:12812"
+    ],
+    "DEF": [
+      "sleeper:LAC"
+    ]
+  },
+  "NYJ": {
+    "K": [
+      "sleeper:12015",
+      "sleeper:650"
+    ],
+    "QB": [
+      "sleeper:11065",
+      "sleeper:12538",
+      "sleeper:7591",
+      "sleeper:827"
+    ],
+    "WR": [
+      "sleeper:5185",
+      "sleeper:12539",
+      "sleeper:7865",
+      "sleeper:13143",
+      "sleeper:8146",
+      "sleeper:8861",
+      "sleeper:12925",
+      "sleeper:4171",
+      "sleeper:11617",
+      "sleeper:3050",
+      "sleeper:11130",
+      "sleeper:12907",
+      "sleeper:6960",
+      "sleeper:11306"
+    ],
+    "DE": [
+      "sleeper:12030",
+      "sleeper:6657",
+      "sleeper:12922",
+      "sleeper:13218",
+      "sleeper:3299",
+      "sleeper:12655",
+      "sleeper:10883"
+    ],
+    "TE": [
+      "sleeper:8145",
+      "sleeper:3668",
+      "sleeper:12498",
+      "sleeper:12135",
+      "sleeper:8583",
+      "sleeper:9483"
+    ],
+    "LS": [
+      "sleeper:4325"
+    ],
+    "OL": [
+      "sleeper:7638",
+      "sleeper:12572",
+      "sleeper:10948",
+      "sleeper:5023",
+      "sleeper:10907",
+      "sleeper:7645",
+      "sleeper:12429",
+      "sleeper:12921",
+      "sleeper:12426",
+      "sleeper:8507",
+      "sleeper:11671",
+      "sleeper:11138",
+      "sleeper:8926"
+    ],
+    "DT": [
+      "sleeper:6006",
+      "sleeper:5035",
+      "sleeper:7731",
+      "sleeper:8776",
+      "sleeper:13181",
+      "sleeper:6118"
+    ],
+    "CB": [
+      "sleeper:12243",
+      "sleeper:5044",
+      "sleeper:12056",
+      "sleeper:11001",
+      "sleeper:6405",
+      "sleeper:5921",
+      "sleeper:7835",
+      "sleeper:11755"
+    ],
+    "LB": [
+      "sleeper:13148",
+      "sleeper:8046",
+      "sleeper:12666",
+      "sleeper:12051",
+      "sleeper:7841",
+      "sleeper:7634",
+      "sleeper:8398",
+      "sleeper:8618",
+      "sleeper:6214",
+      "sleeper:7709",
+      "sleeper:11000"
+    ],
+    "RB": [
+      "sleeper:6323",
+      "sleeper:11576",
+      "sleeper:8155",
+      "sleeper:12515",
+      "sleeper:11571",
+      "sleeper:7720",
+      "sleeper:13242"
+    ],
+    "G": [
+      "sleeper:6875"
+    ],
+    "OT": [
+      "sleeper:7061"
+    ],
+    "DB": [
+      "sleeper:7698",
+      "sleeper:12601",
+      "sleeper:7685",
+      "sleeper:12920",
+      "sleeper:12923",
+      "sleeper:12639",
+      "sleeper:8298",
+      "sleeper:8290",
+      "sleeper:11353",
+      "sleeper:8860"
+    ],
+    "DL": [
+      "sleeper:12238",
+      "sleeper:12924",
+      "sleeper:12031",
+      "sleeper:8316",
+      "sleeper:8273"
+    ],
+    "T": [
+      "sleeper:8468"
+    ],
+    "P": [
+      "sleeper:12076"
+    ],
+    "C": [
+      "sleeper:13147"
+    ],
+    "DEF": [
+      "sleeper:NYJ"
+    ]
+  },
+  "ATL": {
+    "TE": [
+      "sleeper:7075",
+      "sleeper:7531",
+      "sleeper:12883",
+      "sleeper:7553",
+      "sleeper:812",
+      "sleeper:8107",
+      "sleeper:8227"
+    ],
+    "QB": [
+      "sleeper:6185",
+      "sleeper:11961",
+      "sleeper:1166",
+      "sleeper:11559"
+    ],
+    "T": [
+      "sleeper:5065",
+      "sleeper:2172",
+      "sleeper:5874",
+      "sleeper:4598"
+    ],
+    "P": [
+      "sleeper:2468"
+    ],
+    "LB": [
+      "sleeper:7846",
+      "sleeper:7677",
+      "sleeper:5088",
+      "sleeper:5147",
+      "sleeper:11770",
+      "sleeper:5757",
+      "sleeper:6302",
+      "sleeper:3174",
+      "sleeper:12882",
+      "sleeper:8388"
+    ],
+    "DT": [
+      "sleeper:3281",
+      "sleeper:5371",
+      "sleeper:7231",
+      "sleeper:11695",
+      "sleeper:12896",
+      "sleeper:7840"
+    ],
+    "DE": [
+      "sleeper:11721",
+      "sleeper:11740",
+      "sleeper:6864",
+      "sleeper:3743",
+      "sleeper:10934"
+    ],
+    "WR": [
+      "sleeper:11806",
+      "sleeper:7521",
+      "sleeper:7090",
+      "sleeper:6154",
+      "sleeper:4951",
+      "sleeper:8112",
+      "sleeper:11474",
+      "sleeper:4922",
+      "sleeper:4198",
+      "sleeper:11452",
+      "sleeper:5773",
+      "sleeper:12478",
+      "sleeper:12884",
+      "sleeper:5096"
+    ],
+    "OL": [
+      "sleeper:4592",
+      "sleeper:12881",
+      "sleeper:12887",
+      "sleeper:11049",
+      "sleeper:10910",
+      "sleeper:11915",
+      "sleeper:7979",
+      "sleeper:8073"
+    ],
+    "K": [
+      "sleeper:12548",
+      "sleeper:4666"
+    ],
+    "CB": [
+      "sleeper:6836",
+      "sleeper:6791",
+      "sleeper:10954",
+      "sleeper:12885",
+      "sleeper:5150",
+      "sleeper:7824",
+      "sleeper:6994",
+      "sleeper:4982",
+      "sleeper:11481"
+    ],
+    "DB": [
+      "sleeper:12647",
+      "sleeper:12603",
+      "sleeper:8104",
+      "sleeper:11050",
+      "sleeper:7051",
+      "sleeper:7271",
+      "sleeper:5017",
+      "sleeper:6968",
+      "sleeper:8379",
+      "sleeper:12895",
+      "sleeper:5691",
+      "sleeper:5025",
+      "sleeper:12591"
+    ],
+    "G": [
+      "sleeper:5895",
+      "sleeper:7153"
+    ],
+    "C": [
+      "sleeper:7132"
+    ],
+    "LS": [
+      "sleeper:7313"
+    ],
+    "RB": [
+      "sleeper:9509",
+      "sleeper:11186",
+      "sleeper:11114",
+      "sleeper:8194",
+      "sleeper:12897",
+      "sleeper:8132"
+    ],
+    "DL": [
+      "sleeper:8325",
+      "sleeper:8372",
+      "sleeper:12568",
+      "sleeper:12585"
+    ],
+    "OT": [
+      "sleeper:12740"
+    ],
+    "DEF": [
+      "sleeper:ATL"
+    ]
+  },
+  "PHI": {
+    "G": [
+      "sleeper:1098"
+    ],
+    "T": [
+      "sleeper:8472",
+      "sleeper:5362",
+      "sleeper:12252",
+      "sleeper:1340",
+      "sleeper:5363"
+    ],
+    "LS": [
+      "sleeper:2305"
+    ],
+    "OT": [
+      "sleeper:12869",
+      "sleeper:2985",
+      "sleeper:12709"
+    ],
+    "DB": [
+      "sleeper:4078",
+      "sleeper:12102",
+      "sleeper:12604",
+      "sleeper:12877",
+      "sleeper:11678",
+      "sleeper:10963",
+      "sleeper:10962",
+      "sleeper:8268",
+      "sleeper:12876",
+      "sleeper:8406",
+      "sleeper:10919",
+      "sleeper:8321",
+      "sleeper:8542"
+    ],
+    "K": [
+      "sleeper:4195"
+    ],
+    "RB": [
+      "sleeper:6828",
+      "sleeper:7809",
+      "sleeper:11773",
+      "sleeper:12868",
+      "sleeper:4866",
+      "sleeper:13145",
+      "sleeper:11577"
+    ],
+    "DT": [
+      "sleeper:4935",
+      "sleeper:12071",
+      "sleeper:12823",
+      "sleeper:12651"
+    ],
+    "TE": [
+      "sleeper:10210",
+      "sleeper:5022",
+      "sleeper:11304",
+      "sleeper:8177",
+      "sleeper:6850",
+      "sleeper:7602",
+      "sleeper:8523"
+    ],
+    "LB": [
+      "sleeper:7653",
+      "sleeper:11273",
+      "sleeper:11907",
+      "sleeper:11752",
+      "sleeper:12566",
+      "sleeper:6921",
+      "sleeper:12874",
+      "sleeper:8267",
+      "sleeper:10873",
+      "sleeper:5075",
+      "sleeper:7770",
+      "sleeper:12667",
+      "sleeper:6815"
+    ],
+    "CB": [
+      "sleeper:11935",
+      "sleeper:6690",
+      "sleeper:11278",
+      "sleeper:12678",
+      "sleeper:5091",
+      "sleeper:11662"
+    ],
+    "WR": [
+      "sleeper:5859",
+      "sleeper:11615",
+      "sleeper:13150",
+      "sleeper:7525",
+      "sleeper:11139",
+      "sleeper:13153",
+      "sleeper:13228",
+      "sleeper:8119",
+      "sleeper:11636",
+      "sleeper:13139",
+      "sleeper:7565"
+    ],
+    "OL": [
+      "sleeper:6740",
+      "sleeper:8453",
+      "sleeper:12586",
+      "sleeper:8447",
+      "sleeper:7665",
+      "sleeper:11774",
+      "sleeper:10920"
+    ],
+    "QB": [
+      "sleeper:10862",
+      "sleeper:6904",
+      "sleeper:12494",
+      "sleeper:9230"
+    ],
+    "P": [
+      "sleeper:7261",
+      "sleeper:6950"
+    ],
+    "DL": [
+      "sleeper:10925",
+      "sleeper:10888",
+      "sleeper:8269",
+      "sleeper:11839"
+    ],
+    "DE": [
+      "sleeper:12697",
+      "sleeper:11412",
+      "sleeper:11703",
+      "sleeper:11030",
+      "sleeper:10996"
+    ],
+    "C": [
+      "sleeper:12663"
+    ],
+    "DEF": [
+      "sleeper:PHI"
+    ]
+  },
+  "GB": {
+    "LB": [
+      "sleeper:8569",
+      "sleeper:11193",
+      "sleeper:11687",
+      "sleeper:7782",
+      "sleeper:12607",
+      "sleeper:13146",
+      "sleeper:7197",
+      "sleeper:5325",
+      "sleeper:8266",
+      "sleeper:5839",
+      "sleeper:11712",
+      "sleeper:1103"
+    ],
+    "K": [
+      "sleeper:1433",
+      "sleeper:13237"
+    ],
+    "DE": [
+      "sleeper:12644",
+      "sleeper:10952",
+      "sleeper:12669",
+      "sleeper:11308",
+      "sleeper:3186"
+    ],
+    "TE": [
+      "sleeper:11082",
+      "sleeper:3239",
+      "sleeper:5957",
+      "sleeper:8500",
+      "sleeper:11380",
+      "sleeper:9481",
+      "sleeper:12154",
+      "sleeper:9484"
+    ],
+    "DT": [
+      "sleeper:4913",
+      "sleeper:12175",
+      "sleeper:11009"
+    ],
+    "RB": [
+      "sleeper:12928",
+      "sleeper:11370",
+      "sleeper:11435",
+      "sleeper:9227",
+      "sleeper:12953",
+      "sleeper:5850",
+      "sleeper:6175",
+      "sleeper:11581",
+      "sleeper:8211"
+    ],
+    "G": [
+      "sleeper:5877",
+      "sleeper:12951",
+      "sleeper:12930"
+    ],
+    "WR": [
+      "sleeper:8204",
+      "sleeper:8167",
+      "sleeper:11815",
+      "sleeper:6540",
+      "sleeper:9486",
+      "sleeper:13074",
+      "sleeper:10222",
+      "sleeper:12151",
+      "sleeper:7752",
+      "sleeper:11210",
+      "sleeper:12501",
+      "sleeper:5917",
+      "sleeper:8121",
+      "sleeper:13225",
+      "sleeper:12482",
+      "sleeper:12788"
+    ],
+    "CB": [
+      "sleeper:6283",
+      "sleeper:13135",
+      "sleeper:11830",
+      "sleeper:6333",
+      "sleeper:12730",
+      "sleeper:7823",
+      "sleeper:12232",
+      "sleeper:12932"
+    ],
+    "LS": [
+      "sleeper:6461"
+    ],
+    "DB": [
+      "sleeper:11042",
+      "sleeper:11739",
+      "sleeper:8044",
+      "sleeper:6781",
+      "sleeper:11686",
+      "sleeper:12931",
+      "sleeper:11787",
+      "sleeper:11763",
+      "sleeper:6788",
+      "sleeper:8000"
+    ],
+    "QB": [
+      "sleeper:6804",
+      "sleeper:8161",
+      "sleeper:10983",
+      "sleeper:13190"
+    ],
+    "OL": [
+      "sleeper:7654",
+      "sleeper:12153",
+      "sleeper:11776",
+      "sleeper:12729",
+      "sleeper:11660",
+      "sleeper:8497",
+      "sleeper:8511",
+      "sleeper:8460",
+      "sleeper:8463"
+    ],
+    "C": [
+      "sleeper:7803"
+    ],
+    "DL": [
+      "sleeper:8270",
+      "sleeper:12042",
+      "sleeper:8382",
+      "sleeper:10885",
+      "sleeper:12927",
+      "sleeper:12704"
+    ],
+    "P": [
+      "sleeper:8674"
+    ],
+    "T": [
+      "sleeper:11211"
+    ],
+    "OT": [
+      "sleeper:12577",
+      "sleeper:12929",
+      "sleeper:11793"
+    ],
+    "DEF": [
+      "sleeper:GB"
+    ]
+  },
+  "DAL": {
+    "P": [
+      "sleeper:1113",
+      "sleeper:7516"
+    ],
+    "LB": [
+      "sleeper:7704",
+      "sleeper:8309",
+      "sleeper:2308",
+      "sleeper:6551",
+      "sleeper:10933",
+      "sleeper:8363",
+      "sleeper:8494",
+      "sleeper:12853",
+      "sleeper:6811",
+      "sleeper:11720",
+      "sleeper:7640",
+      "sleeper:12614"
+    ],
+    "T": [
+      "sleeper:2591",
+      "sleeper:6862",
+      "sleeper:6899"
+    ],
+    "CB": [
+      "sleeper:12857",
+      "sleeper:2869",
+      "sleeper:11535",
+      "sleeper:6254",
+      "sleeper:4915",
+      "sleeper:6809",
+      "sleeper:6856"
+    ],
+    "DB": [
+      "sleeper:12855",
+      "sleeper:8300",
+      "sleeper:11769",
+      "sleeper:8515",
+      "sleeper:3240",
+      "sleeper:8476",
+      "sleeper:6291",
+      "sleeper:7506",
+      "sleeper:7776",
+      "sleeper:8397",
+      "sleeper:8296",
+      "sleeper:4074",
+      "sleeper:8399",
+      "sleeper:12854",
+      "sleeper:7712",
+      "sleeper:12559",
+      "sleeper:12856"
+    ],
+    "QB": [
+      "sleeper:3294",
+      "sleeper:11557",
+      "sleeper:5903"
+    ],
+    "DT": [
+      "sleeper:12737",
+      "sleeper:7695",
+      "sleeper:4058",
+      "sleeper:12739"
+    ],
+    "RB": [
+      "sleeper:9505",
+      "sleeper:5004",
+      "sleeper:7588",
+      "sleeper:12457",
+      "sleeper:8800",
+      "sleeper:6151",
+      "sleeper:12738"
+    ],
+    "OL": [
+      "sleeper:12698",
+      "sleeper:10968",
+      "sleeper:11719",
+      "sleeper:5027",
+      "sleeper:11838",
+      "sleeper:11044",
+      "sleeper:11516",
+      "sleeper:12599",
+      "sleeper:11657",
+      "sleeper:8449"
+    ],
+    "LS": [
+      "sleeper:5461"
+    ],
+    "WR": [
+      "sleeper:6786",
+      "sleeper:8137",
+      "sleeper:11034",
+      "sleeper:11506",
+      "sleeper:8117",
+      "sleeper:10225",
+      "sleeper:12848",
+      "sleeper:8917",
+      "sleeper:11783",
+      "sleeper:12849"
+    ],
+    "G": [
+      "sleeper:6987",
+      "sleeper:7923"
+    ],
+    "DE": [
+      "sleeper:7817",
+      "sleeper:7629",
+      "sleeper:11512"
+    ],
+    "TE": [
+      "sleeper:11593",
+      "sleeper:8110",
+      "sleeper:11511",
+      "sleeper:10871",
+      "sleeper:11508",
+      "sleeper:12851",
+      "sleeper:12850"
+    ],
+    "DL": [
+      "sleeper:12211",
+      "sleeper:12556",
+      "sleeper:11694",
+      "sleeper:10877",
+      "sleeper:8279",
+      "sleeper:8368"
+    ],
+    "C": [
+      "sleeper:8790"
+    ],
+    "FB": [
+      "sleeper:11510"
+    ],
+    "K": [
+      "sleeper:11533"
+    ],
+    "DEF": [
+      "sleeper:DAL"
+    ]
+  },
+  "CHI": {
+    "LB": [
+      "sleeper:7936",
+      "sleeper:8520",
+      "sleeper:1127",
+      "sleeper:10984",
+      "sleeper:12747",
+      "sleeper:12637",
+      "sleeper:12255",
+      "sleeper:5960",
+      "sleeper:4968",
+      "sleeper:13081"
+    ],
+    "QB": [
+      "sleeper:11931",
+      "sleeper:11560",
+      "sleeper:1737",
+      "sleeper:11256"
+    ],
+    "K": [
+      "sleeper:2020"
+    ],
+    "DT": [
+      "sleeper:3207",
+      "sleeper:7369",
+      "sleeper:7283",
+      "sleeper:2592"
+    ],
+    "DB": [
+      "sleeper:11290",
+      "sleeper:8509",
+      "sleeper:8323",
+      "sleeper:6839",
+      "sleeper:5520",
+      "sleeper:3233",
+      "sleeper:8365",
+      "sleeper:12748",
+      "sleeper:12125",
+      "sleeper:11896",
+      "sleeper:10972",
+      "sleeper:13078"
+    ],
+    "OL": [
+      "sleeper:8479",
+      "sleeper:10887",
+      "sleeper:8504",
+      "sleeper:7725",
+      "sleeper:3247",
+      "sleeper:10977",
+      "sleeper:6303",
+      "sleeper:11707",
+      "sleeper:12606",
+      "sleeper:10915",
+      "sleeper:6000"
+    ],
+    "DE": [
+      "sleeper:7649",
+      "sleeper:6124",
+      "sleeper:12616",
+      "sleeper:4114"
+    ],
+    "TE": [
+      "sleeper:6826",
+      "sleeper:12517",
+      "sleeper:5008",
+      "sleeper:4930",
+      "sleeper:11113",
+      "sleeper:11493",
+      "sleeper:6451",
+      "sleeper:13249"
+    ],
+    "LS": [
+      "sleeper:12749",
+      "sleeper:4959"
+    ],
+    "WR": [
+      "sleeper:6847",
+      "sleeper:4983",
+      "sleeper:5282",
+      "sleeper:13079",
+      "sleeper:12746",
+      "sleeper:12519",
+      "sleeper:8921",
+      "sleeper:5965",
+      "sleeper:6271",
+      "sleeper:11620",
+      "sleeper:8235",
+      "sleeper:5638",
+      "sleeper:6465",
+      "sleeper:9490"
+    ],
+    "CB": [
+      "sleeper:11006",
+      "sleeper:13203",
+      "sleeper:8714",
+      "sleeper:11134",
+      "sleeper:11275",
+      "sleeper:7687",
+      "sleeper:7974",
+      "sleeper:7830",
+      "sleeper:5379",
+      "sleeper:10897",
+      "sleeper:12662"
+    ],
+    "RB": [
+      "sleeper:8423",
+      "sleeper:6790",
+      "sleeper:13080",
+      "sleeper:12036",
+      "sleeper:12534",
+      "sleeper:10235",
+      "sleeper:6012"
+    ],
+    "G": [
+      "sleeper:8729",
+      "sleeper:6952"
+    ],
+    "DL": [
+      "sleeper:11760",
+      "sleeper:12041",
+      "sleeper:8391",
+      "sleeper:10899",
+      "sleeper:12035",
+      "sleeper:8344",
+      "sleeper:10924"
+    ],
+    "FB": [
+      "sleeper:11260"
+    ],
+    "P": [
+      "sleeper:11732"
+    ],
+    "OT": [
+      "sleeper:12208"
+    ],
+    "OG": [
+      "sleeper:12707"
+    ],
+    "DEF": [
+      "sleeper:CHI"
+    ]
+  },
+  "CIN": {
+    "DT": [
+      "sleeper:5020",
+      "sleeper:1334",
+      "sleeper:12752",
+      "sleeper:12751",
+      "sleeper:7111",
+      "sleeper:1174",
+      "sleeper:7818"
+    ],
+    "G": [
+      "sleeper:11238",
+      "sleeper:3888",
+      "sleeper:1958"
+    ],
+    "DB": [
+      "sleeper:13083",
+      "sleeper:8341",
+      "sleeper:11831",
+      "sleeper:8286",
+      "sleeper:10894",
+      "sleeper:6923",
+      "sleeper:11822",
+      "sleeper:10927",
+      "sleeper:12064",
+      "sleeper:6634",
+      "sleeper:12058",
+      "sleeper:2167",
+      "sleeper:13084",
+      "sleeper:8377"
+    ],
+    "CB": [
+      "sleeper:11032",
+      "sleeper:5222",
+      "sleeper:11764",
+      "sleeper:7708",
+      "sleeper:2316"
+    ],
+    "OL": [
+      "sleeper:11666",
+      "sleeper:11854",
+      "sleeper:12214",
+      "sleeper:8514",
+      "sleeper:13089",
+      "sleeper:5856",
+      "sleeper:8784",
+      "sleeper:12627",
+      "sleeper:12674",
+      "sleeper:12575",
+      "sleeper:3376"
+    ],
+    "DE": [
+      "sleeper:7727",
+      "sleeper:11785",
+      "sleeper:7678",
+      "sleeper:7930",
+      "sleeper:4975",
+      "sleeper:4135"
+    ],
+    "RB": [
+      "sleeper:9224",
+      "sleeper:7529",
+      "sleeper:11649",
+      "sleeper:13088",
+      "sleeper:4147",
+      "sleeper:12543"
+    ],
+    "LB": [
+      "sleeper:12646",
+      "sleeper:12192",
+      "sleeper:12617",
+      "sleeper:6105",
+      "sleeper:4228",
+      "sleeper:6880",
+      "sleeper:12057",
+      "sleeper:5031",
+      "sleeper:11251"
+    ],
+    "LS": [
+      "sleeper:8785",
+      "sleeper:4270",
+      "sleeper:13086"
+    ],
+    "T": [
+      "sleeper:8464",
+      "sleeper:4948"
+    ],
+    "TE": [
+      "sleeper:12062",
+      "sleeper:6001",
+      "sleeper:11592",
+      "sleeper:4993",
+      "sleeper:5857",
+      "sleeper:5409",
+      "sleeper:11598"
+    ],
+    "QB": [
+      "sleeper:8159",
+      "sleeper:6111",
+      "sleeper:6770",
+      "sleeper:12762"
+    ],
+    "WR": [
+      "sleeper:10226",
+      "sleeper:10228",
+      "sleeper:12210",
+      "sleeper:11608",
+      "sleeper:7564",
+      "sleeper:12753",
+      "sleeper:11640",
+      "sleeper:12761",
+      "sleeper:8783",
+      "sleeper:11068",
+      "sleeper:12760",
+      "sleeper:6801"
+    ],
+    "K": [
+      "sleeper:7839"
+    ],
+    "DL": [
+      "sleeper:8281",
+      "sleeper:11688",
+      "sleeper:11713",
+      "sleeper:10875",
+      "sleeper:12560"
+    ],
+    "C": [
+      "sleeper:11832"
+    ],
+    "P": [
+      "sleeper:12163"
+    ],
+    "DEF": [
+      "sleeper:CIN"
+    ]
+  },
+  "TB": {
+    "LB": [
+      "sleeper:6003",
+      "sleeper:4203",
+      "sleeper:11986",
+      "sleeper:11679",
+      "sleeper:12645",
+      "sleeper:3222",
+      "sleeper:4063",
+      "sleeper:12790",
+      "sleeper:1192",
+      "sleeper:13187",
+      "sleeper:10980"
+    ],
+    "RB": [
+      "sleeper:11584",
+      "sleeper:11590",
+      "sleeper:12787",
+      "sleeper:1408",
+      "sleeper:11384",
+      "sleeper:8136",
+      "sleeper:9506"
+    ],
+    "CB": [
+      "sleeper:1423",
+      "sleeper:6833",
+      "sleeper:5946",
+      "sleeper:10999",
+      "sleeper:12796",
+      "sleeper:11993"
+    ],
+    "TE": [
+      "sleeper:8111",
+      "sleeper:1592",
+      "sleeper:11820",
+      "sleeper:8484",
+      "sleeper:10227",
+      "sleeper:11415"
+    ],
+    "QB": [
+      "sleeper:4892",
+      "sleeper:12776",
+      "sleeper:12792",
+      "sleeper:7605",
+      "sleeper:11561",
+      "sleeper:2152"
+    ],
+    "WR": [
+      "sleeper:4037",
+      "sleeper:8801",
+      "sleeper:12514",
+      "sleeper:7703",
+      "sleeper:13246",
+      "sleeper:11618",
+      "sleeper:11994",
+      "sleeper:2216",
+      "sleeper:9495",
+      "sleeper:11421",
+      "sleeper:3200",
+      "sleeper:12485",
+      "sleeper:9492"
+    ],
+    "G": [
+      "sleeper:2366",
+      "sleeper:6934",
+      "sleeper:5869",
+      "sleeper:6102"
+    ],
+    "DE": [
+      "sleeper:3232",
+      "sleeper:7341",
+      "sleeper:11432"
+    ],
+    "P": [
+      "sleeper:3383"
+    ],
+    "OL": [
+      "sleeper:4838",
+      "sleeper:12789",
+      "sleeper:12794",
+      "sleeper:11659",
+      "sleeper:12795",
+      "sleeper:11263",
+      "sleeper:8454",
+      "sleeper:11866"
+    ],
+    "DT": [
+      "sleeper:8898",
+      "sleeper:13206",
+      "sleeper:12671",
+      "sleeper:5981",
+      "sleeper:8887",
+      "sleeper:13167",
+      "sleeper:4969"
+    ],
+    "K": [
+      "sleeper:6650"
+    ],
+    "T": [
+      "sleeper:7115",
+      "sleeper:10902",
+      "sleeper:6793"
+    ],
+    "DB": [
+      "sleeper:6888",
+      "sleeper:7959",
+      "sleeper:12576",
+      "sleeper:11427",
+      "sleeper:12605",
+      "sleeper:13253",
+      "sleeper:13132",
+      "sleeper:11429",
+      "sleeper:6928",
+      "sleeper:11966",
+      "sleeper:12745",
+      "sleeper:11705",
+      "sleeper:8384"
+    ],
+    "DL": [
+      "sleeper:10879",
+      "sleeper:12793",
+      "sleeper:10998",
+      "sleeper:8360",
+      "sleeper:13180",
+      "sleeper:10921"
+    ],
+    "OT": [
+      "sleeper:11420",
+      "sleeper:11414"
+    ],
+    "LS": [
+      "sleeper:11426"
+    ],
+    "OG": [
+      "sleeper:11780"
+    ],
+    "DEF": [
+      "sleeper:TB"
+    ]
+  },
+  "MIN": {
+    "DB": [
+      "sleeper:11905",
+      "sleeper:11026",
+      "sleeper:1213",
+      "sleeper:10939",
+      "sleeper:6901",
+      "sleeper:12943",
+      "sleeper:5519",
+      "sleeper:8496"
+    ],
+    "LS": [
+      "sleeper:1721"
+    ],
+    "C": [
+      "sleeper:3187"
+    ],
+    "DT": [
+      "sleeper:5049",
+      "sleeper:3256",
+      "sleeper:4032",
+      "sleeper:6467",
+      "sleeper:11819"
+    ],
+    "TE": [
+      "sleeper:13121",
+      "sleeper:12941",
+      "sleeper:12700",
+      "sleeper:5973",
+      "sleeper:8660",
+      "sleeper:3258",
+      "sleeper:5844"
+    ],
+    "DE": [
+      "sleeper:11929",
+      "sleeper:12879",
+      "sleeper:3637",
+      "sleeper:11328",
+      "sleeper:6900",
+      "sleeper:12683"
+    ],
+    "FB": [
+      "sleeper:3832",
+      "sleeper:7216"
+    ],
+    "RB": [
+      "sleeper:4199",
+      "sleeper:8408",
+      "sleeper:12940",
+      "sleeper:8230",
+      "sleeper:11299"
+    ],
+    "LB": [
+      "sleeper:6183",
+      "sleeper:12948",
+      "sleeper:6217",
+      "sleeper:7451",
+      "sleeper:11667",
+      "sleeper:12944",
+      "sleeper:4413",
+      "sleeper:11086",
+      "sleeper:12701",
+      "sleeper:12193"
+    ],
+    "T": [
+      "sleeper:7129",
+      "sleeper:5047",
+      "sleeper:7631",
+      "sleeper:6633"
+    ],
+    "CB": [
+      "sleeper:7294",
+      "sleeper:7686",
+      "sleeper:7953",
+      "sleeper:5864",
+      "sleeper:7133",
+      "sleeper:6785",
+      "sleeper:11489",
+      "sleeper:12949",
+      "sleeper:10918",
+      "sleeper:12037",
+      "sleeper:12942"
+    ],
+    "QB": [
+      "sleeper:6037",
+      "sleeper:11565",
+      "sleeper:12775",
+      "sleeper:8162"
+    ],
+    "OT": [
+      "sleeper:6221",
+      "sleeper:12878"
+    ],
+    "WR": [
+      "sleeper:12946",
+      "sleeper:8180",
+      "sleeper:11911",
+      "sleeper:9756",
+      "sleeper:6794",
+      "sleeper:11520",
+      "sleeper:13075",
+      "sleeper:12950",
+      "sleeper:7601",
+      "sleeper:12880",
+      "sleeper:12496",
+      "sleeper:11073",
+      "sleeper:8013"
+    ],
+    "G": [
+      "sleeper:11446",
+      "sleeper:7758"
+    ],
+    "P": [
+      "sleeper:12926",
+      "sleeper:8528"
+    ],
+    "DL": [
+      "sleeper:12945",
+      "sleeper:13196",
+      "sleeper:11908",
+      "sleeper:11930",
+      "sleeper:11054",
+      "sleeper:12608"
+    ],
+    "K": [
+      "sleeper:11792"
+    ],
+    "OL": [
+      "sleeper:12555",
+      "sleeper:13219",
+      "sleeper:11818",
+      "sleeper:13230",
+      "sleeper:11812",
+      "sleeper:12947"
+    ],
+    "OG": [
+      "sleeper:12774"
+    ],
+    "DEF": [
+      "sleeper:MIN"
+    ]
+  },
+  "SEA": {
+    "OG": [
+      "sleeper:1243"
+    ],
+    "DT": [
+      "sleeper:13224",
+      "sleeper:11396",
+      "sleeper:3220",
+      "sleeper:1492",
+      "sleeper:7801"
+    ],
+    "DE": [
+      "sleeper:1764",
+      "sleeper:13037",
+      "sleeper:2064",
+      "sleeper:10911",
+      "sleeper:13048",
+      "sleeper:2311",
+      "sleeper:10982"
+    ],
+    "LB": [
+      "sleeper:13252",
+      "sleeper:13198",
+      "sleeper:11470",
+      "sleeper:2531",
+      "sleeper:7672",
+      "sleeper:12436",
+      "sleeper:8285",
+      "sleeper:6190",
+      "sleeper:11230",
+      "sleeper:13141",
+      "sleeper:11734",
+      "sleeper:5061",
+      "sleeper:13192"
+    ],
+    "K": [
+      "sleeper:2747"
+    ],
+    "WR": [
+      "sleeper:7039",
+      "sleeper:4039",
+      "sleeper:8527",
+      "sleeper:10867",
+      "sleeper:9488",
+      "sleeper:5086",
+      "sleeper:12475",
+      "sleeper:6402",
+      "sleeper:12497",
+      "sleeper:13034"
+    ],
+    "CB": [
+      "sleeper:11753",
+      "sleeper:4140",
+      "sleeper:7813"
+    ],
+    "TE": [
+      "sleeper:11603",
+      "sleeper:11280",
+      "sleeper:12521",
+      "sleeper:4189",
+      "sleeper:13032",
+      "sleeper:13151",
+      "sleeper:12656"
+    ],
+    "LS": [
+      "sleeper:11248",
+      "sleeper:4865"
+    ],
+    "QB": [
+      "sleeper:5854",
+      "sleeper:12510",
+      "sleeper:11859",
+      "sleeper:4943",
+      "sleeper:4936"
+    ],
+    "P": [
+      "sleeper:5011"
+    ],
+    "DB": [
+      "sleeper:11121",
+      "sleeper:8293",
+      "sleeper:8795",
+      "sleeper:8361",
+      "sleeper:10891",
+      "sleeper:13131",
+      "sleeper:10997",
+      "sleeper:8275",
+      "sleeper:5876",
+      "sleeper:13220",
+      "sleeper:12059",
+      "sleeper:12597",
+      "sleeper:8374",
+      "sleeper:11233",
+      "sleeper:7188"
+    ],
+    "OL": [
+      "sleeper:8457",
+      "sleeper:10959",
+      "sleeper:8446",
+      "sleeper:11704",
+      "sleeper:13045",
+      "sleeper:6808",
+      "sleeper:12719",
+      "sleeper:11810"
+    ],
+    "RB": [
+      "sleeper:12939",
+      "sleeper:12462",
+      "sleeper:12048",
+      "sleeper:13047",
+      "sleeper:8151",
+      "sleeper:10216",
+      "sleeper:9753"
+    ],
+    "DL": [
+      "sleeper:8343",
+      "sleeper:13044",
+      "sleeper:11668",
+      "sleeper:13142",
+      "sleeper:13046",
+      "sleeper:12680",
+      "sleeper:8336"
+    ],
+    "C": [
+      "sleeper:12082",
+      "sleeper:10979"
+    ],
+    "OT": [
+      "sleeper:13035",
+      "sleeper:12685",
+      "sleeper:12563",
+      "sleeper:11813"
+    ],
+    "T": [
+      "sleeper:13231"
+    ],
+    "DEF": [
+      "sleeper:SEA"
+    ]
+  },
+  "BAL": {
+    "DB": [
+      "sleeper:1298",
+      "sleeper:7970",
+      "sleeper:11951",
+      "sleeper:13021",
+      "sleeper:8276",
+      "sleeper:2369",
+      "sleeper:13156",
+      "sleeper:8339",
+      "sleeper:12567",
+      "sleeper:13040",
+      "sleeper:6714",
+      "sleeper:11825",
+      "sleeper:13157",
+      "sleeper:12695",
+      "sleeper:11841",
+      "sleeper:11730"
+    ],
+    "WR": [
+      "sleeper:5013",
+      "sleeper:11964",
+      "sleeper:1426",
+      "sleeper:11629",
+      "sleeper:13041",
+      "sleeper:5134",
+      "sleeper:12699",
+      "sleeper:10860",
+      "sleeper:7571",
+      "sleeper:7237",
+      "sleeper:7595",
+      "sleeper:13042",
+      "sleeper:9997"
+    ],
+    "DT": [
+      "sleeper:12696",
+      "sleeper:7122",
+      "sleeper:1553",
+      "sleeper:6818"
+    ],
+    "OT": [
+      "sleeper:1805",
+      "sleeper:12681",
+      "sleeper:13023"
+    ],
+    "DE": [
+      "sleeper:8821",
+      "sleeper:11722",
+      "sleeper:1881",
+      "sleeper:10944"
+    ],
+    "LB": [
+      "sleeper:13155",
+      "sleeper:8733",
+      "sleeper:13024",
+      "sleeper:13214",
+      "sleeper:2130",
+      "sleeper:11407",
+      "sleeper:7626",
+      "sleeper:4960",
+      "sleeper:12640",
+      "sleeper:10935",
+      "sleeper:8889"
+    ],
+    "T": [
+      "sleeper:8469",
+      "sleeper:3162"
+    ],
+    "RB": [
+      "sleeper:6694",
+      "sleeper:3198",
+      "sleeper:5995",
+      "sleeper:9511",
+      "sleeper:5980",
+      "sleeper:11570"
+    ],
+    "C": [
+      "sleeper:3590",
+      "sleeper:11840"
+    ],
+    "CB": [
+      "sleeper:12714",
+      "sleeper:4107",
+      "sleeper:4979",
+      "sleeper:13172",
+      "sleeper:4071",
+      "sleeper:11656"
+    ],
+    "FS": [
+      "sleeper:4347"
+    ],
+    "FB": [
+      "sleeper:13213",
+      "sleeper:4353"
+    ],
+    "QB": [
+      "sleeper:4683",
+      "sleeper:4574",
+      "sleeper:11556",
+      "sleeper:4881",
+      "sleeper:4924"
+    ],
+    "TE": [
+      "sleeper:4744",
+      "sleeper:12256",
+      "sleeper:8127",
+      "sleeper:8131",
+      "sleeper:5012",
+      "sleeper:8799"
+    ],
+    "OL": [
+      "sleeper:11045",
+      "sleeper:11954",
+      "sleeper:11952",
+      "sleeper:12629",
+      "sleeper:13038",
+      "sleeper:5014",
+      "sleeper:13039",
+      "sleeper:11696",
+      "sleeper:8450"
+    ],
+    "LS": [
+      "sleeper:6594"
+    ],
+    "G": [
+      "sleeper:7690"
+    ],
+    "DL": [
+      "sleeper:11240",
+      "sleeper:12282",
+      "sleeper:8287",
+      "sleeper:13020",
+      "sleeper:12571",
+      "sleeper:8400"
+    ],
+    "P": [
+      "sleeper:8467"
+    ],
+    "K": [
+      "sleeper:12711"
+    ],
+    "OG": [
+      "sleeper:12741"
+    ],
+    "DEF": [
+      "sleeper:BAL"
+    ]
+  },
+  "LV": {
+    "QB": [
+      "sleeper:10866",
+      "sleeper:12688",
+      "sleeper:1373",
+      "sleeper:12690"
+    ],
+    "WR": [
+      "sleeper:6386",
+      "sleeper:6857",
+      "sleeper:12541",
+      "sleeper:12483",
+      "sleeper:5947",
+      "sleeper:9489",
+      "sleeper:13193",
+      "sleeper:6989",
+      "sleeper:2334",
+      "sleeper:12267",
+      "sleeper:11257",
+      "sleeper:10213"
+    ],
+    "OL": [
+      "sleeper:10987",
+      "sleeper:12624",
+      "sleeper:12589",
+      "sleeper:11708",
+      "sleeper:8458",
+      "sleeper:11683",
+      "sleeper:13018",
+      "sleeper:2371",
+      "sleeper:7873",
+      "sleeper:8518",
+      "sleeper:6417"
+    ],
+    "RB": [
+      "sleeper:12527",
+      "sleeper:11963",
+      "sleeper:11574",
+      "sleeper:3868",
+      "sleeper:2749",
+      "sleeper:8220",
+      "sleeper:8139"
+    ],
+    "LB": [
+      "sleeper:11855",
+      "sleeper:11084",
+      "sleeper:7849",
+      "sleeper:12722",
+      "sleeper:6119",
+      "sleeper:3369",
+      "sleeper:5894",
+      "sleeper:3167",
+      "sleeper:12988",
+      "sleeper:11843",
+      "sleeper:11761",
+      "sleeper:10889"
+    ],
+    "DB": [
+      "sleeper:10967",
+      "sleeper:12584",
+      "sleeper:12989",
+      "sleeper:8838",
+      "sleeper:7016",
+      "sleeper:8313",
+      "sleeper:3367",
+      "sleeper:5883",
+      "sleeper:5084",
+      "sleeper:4974",
+      "sleeper:11872",
+      "sleeper:11826"
+    ],
+    "SS": [
+      "sleeper:4077"
+    ],
+    "DT": [
+      "sleeper:4415",
+      "sleeper:12689",
+      "sleeper:11002",
+      "sleeper:6948",
+      "sleeper:6273",
+      "sleeper:12991",
+      "sleeper:12635"
+    ],
+    "T": [
+      "sleeper:11471",
+      "sleeper:12069",
+      "sleeper:4986"
+    ],
+    "TE": [
+      "sleeper:6843",
+      "sleeper:11604",
+      "sleeper:13122",
+      "sleeper:4995",
+      "sleeper:9482"
+    ],
+    "G": [
+      "sleeper:5053"
+    ],
+    "K": [
+      "sleeper:5095"
+    ],
+    "DE": [
+      "sleeper:12993",
+      "sleeper:13195",
+      "sleeper:7676",
+      "sleeper:5991",
+      "sleeper:12098"
+    ],
+    "P": [
+      "sleeper:6555"
+    ],
+    "CB": [
+      "sleeper:6882",
+      "sleeper:11738",
+      "sleeper:7628",
+      "sleeper:13019",
+      "sleeper:13015",
+      "sleeper:10976",
+      "sleeper:8844"
+    ],
+    "LS": [
+      "sleeper:7077"
+    ],
+    "DL": [
+      "sleeper:11827",
+      "sleeper:13144",
+      "sleeper:8380",
+      "sleeper:13016",
+      "sleeper:8295"
+    ],
+    "C": [
+      "sleeper:11878"
+    ],
+    "OT": [
+      "sleeper:13123"
+    ],
+    "DEF": [
+      "sleeper:LV"
+    ]
+  },
+  "IND": {
+    "DB": [
+      "sleeper:7715",
+      "sleeper:1429",
+      "sleeper:10975",
+      "sleeper:6289",
+      "sleeper:12723",
+      "sleeper:11777",
+      "sleeper:11052",
+      "sleeper:13107",
+      "sleeper:10906",
+      "sleeper:13184",
+      "sleeper:8392",
+      "sleeper:3808",
+      "sleeper:12836"
+    ],
+    "TE": [
+      "sleeper:8489",
+      "sleeper:1706",
+      "sleeper:8219",
+      "sleeper:13162",
+      "sleeper:4054",
+      "sleeper:6964",
+      "sleeper:12518",
+      "sleeper:10220"
+    ],
+    "WR": [
+      "sleeper:11625",
+      "sleeper:12528",
+      "sleeper:4937",
+      "sleeper:8142",
+      "sleeper:11762",
+      "sleeper:6427",
+      "sleeper:12832",
+      "sleeper:12829",
+      "sleeper:6453",
+      "sleeper:9500",
+      "sleeper:12820",
+      "sleeper:3155",
+      "sleeper:6819",
+      "sleeper:12831"
+    ],
+    "DT": [
+      "sleeper:3172",
+      "sleeper:8473",
+      "sleeper:4168",
+      "sleeper:4371",
+      "sleeper:6825",
+      "sleeper:6893"
+    ],
+    "LS": [
+      "sleeper:3598"
+    ],
+    "CB": [
+      "sleeper:12094",
+      "sleeper:12875",
+      "sleeper:3669",
+      "sleeper:5493",
+      "sleeper:5508",
+      "sleeper:12625",
+      "sleeper:4427",
+      "sleeper:8478"
+    ],
+    "DE": [
+      "sleeper:12828",
+      "sleeper:7633",
+      "sleeper:4170",
+      "sleeper:5057"
+    ],
+    "P": [
+      "sleeper:4331"
+    ],
+    "OL": [
+      "sleeper:8459",
+      "sleeper:10961",
+      "sleeper:5060",
+      "sleeper:12184",
+      "sleeper:8713",
+      "sleeper:8485",
+      "sleeper:12101",
+      "sleeper:12822",
+      "sleeper:11709",
+      "sleeper:13207",
+      "sleeper:4970",
+      "sleeper:11735",
+      "sleeper:8830"
+    ],
+    "LB": [
+      "sleeper:11066",
+      "sleeper:7814",
+      "sleeper:11552",
+      "sleeper:11514",
+      "sleeper:7006",
+      "sleeper:7014",
+      "sleeper:11437",
+      "sleeper:8517",
+      "sleeper:8620",
+      "sleeper:12837",
+      "sleeper:5346"
+    ],
+    "QB": [
+      "sleeper:9229",
+      "sleeper:5870",
+      "sleeper:7262",
+      "sleeper:12190",
+      "sleeper:12470"
+    ],
+    "RB": [
+      "sleeper:12471",
+      "sleeper:6813",
+      "sleeper:7608",
+      "sleeper:12859",
+      "sleeper:13250",
+      "sleeper:6918",
+      "sleeper:8207",
+      "sleeper:12826"
+    ],
+    "G": [
+      "sleeper:7118"
+    ],
+    "DL": [
+      "sleeper:10957",
+      "sleeper:12830",
+      "sleeper:12594",
+      "sleeper:11669",
+      "sleeper:12691"
+    ],
+    "K": [
+      "sleeper:12824",
+      "sleeper:12185"
+    ],
+    "T": [
+      "sleeper:12449"
+    ],
+    "OT": [
+      "sleeper:12642"
+    ],
+    "DEF": [
+      "sleeper:IND"
+    ]
+  },
+  "JAX": {
+    "SS": [
+      "sleeper:1443"
+    ],
+    "DB": [
+      "sleeper:6416",
+      "sleeper:10974",
+      "sleeper:1617",
+      "sleeper:12632",
+      "sleeper:12912",
+      "sleeper:11018",
+      "sleeper:7053",
+      "sleeper:6210",
+      "sleeper:12899",
+      "sleeper:3268",
+      "sleeper:11725",
+      "sleeper:8305",
+      "sleeper:12702"
+    ],
+    "OL": [
+      "sleeper:10876",
+      "sleeper:1988",
+      "sleeper:7785",
+      "sleeper:11048",
+      "sleeper:11737",
+      "sleeper:12744",
+      "sleeper:6306",
+      "sleeper:11342",
+      "sleeper:7689",
+      "sleeper:12904",
+      "sleeper:6944",
+      "sleeper:12633"
+    ],
+    "DE": [
+      "sleeper:2322",
+      "sleeper:12910",
+      "sleeper:4113",
+      "sleeper:3197",
+      "sleeper:12902",
+      "sleeper:12708",
+      "sleeper:5840",
+      "sleeper:10941"
+    ],
+    "DT": [
+      "sleeper:3560",
+      "sleeper:6972",
+      "sleeper:12903",
+      "sleeper:11736",
+      "sleeper:11698"
+    ],
+    "CB": [
+      "sleeper:12914",
+      "sleeper:11772",
+      "sleeper:12916",
+      "sleeper:4129",
+      "sleeper:12000",
+      "sleeper:7667",
+      "sleeper:7717"
+    ],
+    "TE": [
+      "sleeper:9480",
+      "sleeper:7535",
+      "sleeper:12905",
+      "sleeper:4314",
+      "sleeper:12901",
+      "sleeper:7536",
+      "sleeper:12217"
+    ],
+    "QB": [
+      "sleeper:5806",
+      "sleeper:4464",
+      "sleeper:12898",
+      "sleeper:7523"
+    ],
+    "LB": [
+      "sleeper:12917",
+      "sleeper:8371",
+      "sleeper:5158",
+      "sleeper:8329",
+      "sleeper:8009",
+      "sleeper:5332",
+      "sleeper:12653",
+      "sleeper:11844",
+      "sleeper:8265",
+      "sleeper:10947",
+      "sleeper:10992"
+    ],
+    "P": [
+      "sleeper:5314"
+    ],
+    "OT": [
+      "sleeper:5969"
+    ],
+    "T": [
+      "sleeper:6024",
+      "sleeper:7657"
+    ],
+    "WR": [
+      "sleeper:7746",
+      "sleeper:11631",
+      "sleeper:12906",
+      "sleeper:12908",
+      "sleeper:13063",
+      "sleeper:13064",
+      "sleeper:7587",
+      "sleeper:12909",
+      "sleeper:12114",
+      "sleeper:9487",
+      "sleeper:12530",
+      "sleeper:6598"
+    ],
+    "G": [
+      "sleeper:6922",
+      "sleeper:8462"
+    ],
+    "LS": [
+      "sleeper:7295"
+    ],
+    "RB": [
+      "sleeper:12490",
+      "sleeper:12479",
+      "sleeper:12544",
+      "sleeper:9225",
+      "sleeper:7543"
+    ],
+    "K": [
+      "sleeper:11786"
+    ],
+    "DL": [
+      "sleeper:12900",
+      "sleeper:12915",
+      "sleeper:12911"
+    ],
+    "DEF": [
+      "sleeper:JAX"
+    ]
+  },
+  "KC": {
+    "TE": [
+      "sleeper:12435",
+      "sleeper:12817",
+      "sleeper:11595",
+      "sleeper:7828",
+      "sleeper:4602",
+      "sleeper:1466",
+      "sleeper:13116"
+    ],
+    "LS": [
+      "sleeper:5737",
+      "sleeper:1785"
+    ],
+    "LB": [
+      "sleeper:2062",
+      "sleeper:12808",
+      "sleeper:11315",
+      "sleeper:7329",
+      "sleeper:13174",
+      "sleeper:6141",
+      "sleeper:8710",
+      "sleeper:12672",
+      "sleeper:7732",
+      "sleeper:8362",
+      "sleeper:7648"
+    ],
+    "DT": [
+      "sleeper:3558",
+      "sleeper:13114",
+      "sleeper:6129",
+      "sleeper:7804",
+      "sleeper:2143",
+      "sleeper:12615"
+    ],
+    "DB": [
+      "sleeper:13247",
+      "sleeper:8294",
+      "sleeper:10949",
+      "sleeper:3284",
+      "sleeper:11020",
+      "sleeper:12805",
+      "sleeper:11728",
+      "sleeper:8373",
+      "sleeper:12819",
+      "sleeper:13171",
+      "sleeper:13118",
+      "sleeper:5959",
+      "sleeper:8506",
+      "sleeper:8364"
+    ],
+    "WR": [
+      "sleeper:12810",
+      "sleeper:12757",
+      "sleeper:5848",
+      "sleeper:12505",
+      "sleeper:11311",
+      "sleeper:13173",
+      "sleeper:6677",
+      "sleeper:4040",
+      "sleeper:13194",
+      "sleeper:12809",
+      "sleeper:11320",
+      "sleeper:10229",
+      "sleeper:8168",
+      "sleeper:8188",
+      "sleeper:11624"
+    ],
+    "QB": [
+      "sleeper:8157",
+      "sleeper:8413",
+      "sleeper:6011",
+      "sleeper:4046"
+    ],
+    "RB": [
+      "sleeper:12455",
+      "sleeper:11582",
+      "sleeper:4263",
+      "sleeper:7561",
+      "sleeper:12818",
+      "sleeper:8205",
+      "sleeper:4098",
+      "sleeper:8221",
+      "sleeper:11943"
+    ],
+    "K": [
+      "sleeper:4227"
+    ],
+    "DE": [
+      "sleeper:12623",
+      "sleeper:10971",
+      "sleeper:5934",
+      "sleeper:10872",
+      "sleeper:7710",
+      "sleeper:8001",
+      "sleeper:6958",
+      "sleeper:13254"
+    ],
+    "OL": [
+      "sleeper:11242",
+      "sleeper:7644",
+      "sleeper:12162",
+      "sleeper:11756",
+      "sleeper:6121",
+      "sleeper:7834",
+      "sleeper:13233",
+      "sleeper:12553",
+      "sleeper:11681",
+      "sleeper:7777",
+      "sleeper:10922"
+    ],
+    "CB": [
+      "sleeper:11460",
+      "sleeper:12183",
+      "sleeper:12806",
+      "sleeper:8470",
+      "sleeper:6829",
+      "sleeper:12622"
+    ],
+    "DL": [
+      "sleeper:12200",
+      "sleeper:8385"
+    ],
+    "P": [
+      "sleeper:8486"
+    ],
+    "G": [
+      "sleeper:8709"
+    ],
+    "OG": [
+      "sleeper:11823"
+    ],
+    "OT": [
+      "sleeper:12816",
+      "sleeper:12811"
+    ],
+    "DEF": [
+      "sleeper:KC"
+    ]
+  },
+  "BUF": {
+    "DT": [
+      "sleeper:1932",
+      "sleeper:12652",
+      "sleeper:11706",
+      "sleeper:5841",
+      "sleeper:4106",
+      "sleeper:7342",
+      "sleeper:1548"
+    ],
+    "LB": [
+      "sleeper:10923",
+      "sleeper:11757",
+      "sleeper:12054",
+      "sleeper:12397",
+      "sleeper:3156",
+      "sleeper:6076",
+      "sleeper:12764",
+      "sleeper:4191",
+      "sleeper:2330",
+      "sleeper:8311"
+    ],
+    "OL": [
+      "sleeper:8774",
+      "sleeper:12686",
+      "sleeper:4122",
+      "sleeper:2407",
+      "sleeper:5904",
+      "sleeper:12381",
+      "sleeper:10895",
+      "sleeper:11376",
+      "sleeper:8822",
+      "sleeper:11758",
+      "sleeper:11791"
+    ],
+    "LS": [
+      "sleeper:3576"
+    ],
+    "QB": [
+      "sleeper:4984",
+      "sleeper:5089",
+      "sleeper:3976",
+      "sleeper:8002"
+    ],
+    "CB": [
+      "sleeper:6314",
+      "sleeper:11781",
+      "sleeper:6969",
+      "sleeper:12687",
+      "sleeper:8901",
+      "sleeper:13097",
+      "sleeper:5341",
+      "sleeper:12380",
+      "sleeper:5479",
+      "sleeper:4072"
+    ],
+    "WR": [
+      "sleeper:4082",
+      "sleeper:5101",
+      "sleeper:7596",
+      "sleeper:8416",
+      "sleeper:7670",
+      "sleeper:12721",
+      "sleeper:11637",
+      "sleeper:8134",
+      "sleeper:6805",
+      "sleeper:7438",
+      "sleeper:6814",
+      "sleeper:12756",
+      "sleeper:11377"
+    ],
+    "OT": [
+      "sleeper:4102",
+      "sleeper:7691",
+      "sleeper:11824"
+    ],
+    "DB": [
+      "sleeper:12269",
+      "sleeper:8487",
+      "sleeper:11682",
+      "sleeper:7787",
+      "sleeper:7827",
+      "sleeper:12661",
+      "sleeper:12596",
+      "sleeper:5882",
+      "sleeper:13095"
+    ],
+    "TE": [
+      "sleeper:10236",
+      "sleeper:5906",
+      "sleeper:12658",
+      "sleeper:12765",
+      "sleeper:7943"
+    ],
+    "G": [
+      "sleeper:5913"
+    ],
+    "RB": [
+      "sleeper:7064",
+      "sleeper:11573",
+      "sleeper:8138",
+      "sleeper:11575",
+      "sleeper:7204",
+      "sleeper:6039"
+    ],
+    "DE": [
+      "sleeper:6802",
+      "sleeper:7627",
+      "sleeper:11759",
+      "sleeper:12025",
+      "sleeper:13096"
+    ],
+    "K": [
+      "sleeper:13149",
+      "sleeper:7042"
+    ],
+    "C": [
+      "sleeper:12759",
+      "sleeper:7692"
+    ],
+    "P": [
+      "sleeper:11010"
+    ],
+    "DL": [
+      "sleeper:12096",
+      "sleeper:12580",
+      "sleeper:11828",
+      "sleeper:12612",
+      "sleeper:11798"
+    ],
+    "DEF": [
+      "sleeper:BUF"
+    ]
+  },
+  "DEN": {
+    "WR": [
+      "sleeper:10863",
+      "sleeper:5045",
+      "sleeper:12772",
+      "sleeper:11834",
+      "sleeper:12778",
+      "sleeper:12777",
+      "sleeper:13208",
+      "sleeper:9494",
+      "sleeper:8076",
+      "sleeper:1604",
+      "sleeper:12492",
+      "sleeper:5154",
+      "sleeper:11627"
+    ],
+    "DB": [
+      "sleeper:6911",
+      "sleeper:8386",
+      "sleeper:8282",
+      "sleeper:8004",
+      "sleeper:2135",
+      "sleeper:12557",
+      "sleeper:11011",
+      "sleeper:11395",
+      "sleeper:11765",
+      "sleeper:6419",
+      "sleeper:12108",
+      "sleeper:10930",
+      "sleeper:7187",
+      "sleeper:7224",
+      "sleeper:7811"
+    ],
+    "FB": [
+      "sleeper:2471"
+    ],
+    "LB": [
+      "sleeper:2617",
+      "sleeper:11122",
+      "sleeper:6056",
+      "sleeper:10929",
+      "sleeper:7821",
+      "sleeper:11399",
+      "sleeper:13209",
+      "sleeper:6977",
+      "sleeper:12781",
+      "sleeper:12111",
+      "sleeper:8280",
+      "sleeper:12636"
+    ],
+    "K": [
+      "sleeper:3678"
+    ],
+    "OT": [
+      "sleeper:12110",
+      "sleeper:4053",
+      "sleeper:13071",
+      "sleeper:12780"
+    ],
+    "TE": [
+      "sleeper:6869",
+      "sleeper:12933",
+      "sleeper:12735",
+      "sleeper:4066",
+      "sleeper:8249",
+      "sleeper:11433"
+    ],
+    "DT": [
+      "sleeper:4278",
+      "sleeper:12427",
+      "sleeper:5466",
+      "sleeper:12103",
+      "sleeper:13069",
+      "sleeper:7018"
+    ],
+    "OLB": [
+      "sleeper:4579"
+    ],
+    "T": [
+      "sleeper:11443",
+      "sleeper:6905",
+      "sleeper:4966",
+      "sleeper:7798"
+    ],
+    "ILB": [
+      "sleeper:5797",
+      "sleeper:6477"
+    ],
+    "DE": [
+      "sleeper:12770",
+      "sleeper:11714",
+      "sleeper:8495",
+      "sleeper:12628",
+      "sleeper:5871"
+    ],
+    "G": [
+      "sleeper:5910",
+      "sleeper:7879"
+    ],
+    "CB": [
+      "sleeper:6034",
+      "sleeper:8503",
+      "sleeper:8752",
+      "sleeper:12771",
+      "sleeper:12768",
+      "sleeper:13067",
+      "sleeper:7641",
+      "sleeper:11325"
+    ],
+    "QB": [
+      "sleeper:11563",
+      "sleeper:6136",
+      "sleeper:7583"
+    ],
+    "OL": [
+      "sleeper:11023",
+      "sleeper:7010",
+      "sleeper:12769",
+      "sleeper:6565",
+      "sleeper:13068",
+      "sleeper:8474",
+      "sleeper:11833",
+      "sleeper:7699"
+    ],
+    "RB": [
+      "sleeper:7093",
+      "sleeper:11579",
+      "sleeper:11568",
+      "sleeper:6806",
+      "sleeper:11439",
+      "sleeper:12489",
+      "sleeper:8208"
+    ],
+    "DL": [
+      "sleeper:8347",
+      "sleeper:7765",
+      "sleeper:8370"
+    ],
+    "LS": [
+      "sleeper:8071"
+    ],
+    "P": [
+      "sleeper:12693"
+    ],
+    "DEF": [
+      "sleeper:DEN"
+    ]
+  },
+  "NE": {
+    "LB": [
+      "sleeper:6848",
+      "sleeper:12970",
+      "sleeper:7921",
+      "sleeper:5030",
+      "sleeper:8680",
+      "sleeper:6179",
+      "sleeper:6800",
+      "sleeper:1666",
+      "sleeper:7683",
+      "sleeper:13244",
+      "sleeper:5726"
+    ],
+    "OL": [
+      "sleeper:11711",
+      "sleeper:8448",
+      "sleeper:12968",
+      "sleeper:12592",
+      "sleeper:11745",
+      "sleeper:12728",
+      "sleeper:13204",
+      "sleeper:7123",
+      "sleeper:2098",
+      "sleeper:10951"
+    ],
+    "WR": [
+      "sleeper:9501",
+      "sleeper:12542",
+      "sleeper:11619",
+      "sleeper:11645",
+      "sleeper:13124",
+      "sleeper:12383",
+      "sleeper:9504",
+      "sleeper:4454",
+      "sleeper:12547",
+      "sleeper:4177",
+      "sleeper:2449"
+    ],
+    "TE": [
+      "sleeper:3202",
+      "sleeper:12984",
+      "sleeper:8840",
+      "sleeper:12981",
+      "sleeper:3214",
+      "sleeper:12045",
+      "sleeper:11605",
+      "sleeper:2944"
+    ],
+    "DB": [
+      "sleeper:11027",
+      "sleeper:8726",
+      "sleeper:10881",
+      "sleeper:12654",
+      "sleeper:12115",
+      "sleeper:4056",
+      "sleeper:12726",
+      "sleeper:6872",
+      "sleeper:11809",
+      "sleeper:6284",
+      "sleeper:8359",
+      "sleeper:10926",
+      "sleeper:3228"
+    ],
+    "DT": [
+      "sleeper:7664",
+      "sleeper:13163",
+      "sleeper:10989",
+      "sleeper:8914",
+      "sleeper:7756",
+      "sleeper:3633",
+      "sleeper:7696"
+    ],
+    "OG": [
+      "sleeper:3692",
+      "sleeper:8787"
+    ],
+    "QB": [
+      "sleeper:13065",
+      "sleeper:11564",
+      "sleeper:4179"
+    ],
+    "CB": [
+      "sleeper:12977",
+      "sleeper:5054",
+      "sleeper:8011",
+      "sleeper:11801",
+      "sleeper:11033",
+      "sleeper:12980",
+      "sleeper:12182",
+      "sleeper:8925"
+    ],
+    "C": [
+      "sleeper:8802",
+      "sleeper:5855"
+    ],
+    "RB": [
+      "sleeper:6945",
+      "sleeper:10870",
+      "sleeper:6996",
+      "sleeper:12969",
+      "sleeper:7611",
+      "sleeper:13255",
+      "sleeper:12412",
+      "sleeper:12529"
+    ],
+    "SS": [
+      "sleeper:7058"
+    ],
+    "G": [
+      "sleeper:8594",
+      "sleeper:7297"
+    ],
+    "OT": [
+      "sleeper:8482",
+      "sleeper:12570"
+    ],
+    "K": [
+      "sleeper:12713",
+      "sleeper:8670"
+    ],
+    "DL": [
+      "sleeper:12229",
+      "sleeper:11972",
+      "sleeper:12587",
+      "sleeper:10904",
+      "sleeper:12982"
+    ],
+    "P": [
+      "sleeper:11007"
+    ],
+    "DE": [
+      "sleeper:12677",
+      "sleeper:12978",
+      "sleeper:13082",
+      "sleeper:11319"
+    ],
+    "T": [
+      "sleeper:11444"
+    ],
+    "LS": [
+      "sleeper:12727"
+    ],
+    "FB": [
+      "sleeper:12983"
+    ],
+    "DEF": [
+      "sleeper:NE"
+    ]
+  },
+  "MIA": {
+    "WR": [
+      "sleeper:12865",
+      "sleeper:1984",
+      "sleeper:12863",
+      "sleeper:7612",
+      "sleeper:8114",
+      "sleeper:7526",
+      "sleeper:11610",
+      "sleeper:7496",
+      "sleeper:11821",
+      "sleeper:8005",
+      "sleeper:12860",
+      "sleeper:3321"
+    ],
+    "LS": [
+      "sleeper:2469"
+    ],
+    "TE": [
+      "sleeper:6529",
+      "sleeper:2505",
+      "sleeper:12389",
+      "sleeper:12866",
+      "sleeper:11371",
+      "sleeper:8088",
+      "sleeper:6894",
+      "sleeper:4443",
+      "sleeper:8849"
+    ],
+    "DB": [
+      "sleeper:3192",
+      "sleeper:6855",
+      "sleeper:10900",
+      "sleeper:3589",
+      "sleeper:5344",
+      "sleeper:12673",
+      "sleeper:5534",
+      "sleeper:12861",
+      "sleeper:12124",
+      "sleeper:8261",
+      "sleeper:12872",
+      "sleeper:12388",
+      "sleeper:6140",
+      "sleeper:4963",
+      "sleeper:11797"
+    ],
+    "OL": [
+      "sleeper:7440",
+      "sleeper:12143",
+      "sleeper:10950",
+      "sleeper:4293",
+      "sleeper:3193",
+      "sleeper:4991",
+      "sleeper:12598",
+      "sleeper:12862",
+      "sleeper:7838",
+      "sleeper:11680",
+      "sleeper:11039",
+      "sleeper:5891"
+    ],
+    "C": [
+      "sleeper:12145",
+      "sleeper:3543"
+    ],
+    "CB": [
+      "sleeper:12864",
+      "sleeper:11391",
+      "sleeper:7680",
+      "sleeper:12417",
+      "sleeper:12675",
+      "sleeper:8857",
+      "sleeper:3546",
+      "sleeper:12147"
+    ],
+    "LB": [
+      "sleeper:4967",
+      "sleeper:8526",
+      "sleeper:8272",
+      "sleeper:11137",
+      "sleeper:12012",
+      "sleeper:12871",
+      "sleeper:7635",
+      "sleeper:6949",
+      "sleeper:7815",
+      "sleeper:6296",
+      "sleeper:6315",
+      "sleeper:7023",
+      "sleeper:3849"
+    ],
+    "K": [
+      "sleeper:5119"
+    ],
+    "RB": [
+      "sleeper:8809",
+      "sleeper:5987",
+      "sleeper:9226",
+      "sleeper:11643",
+      "sleeper:6167",
+      "sleeper:5209",
+      "sleeper:12495"
+    ],
+    "DT": [
+      "sleeper:12873",
+      "sleeper:8850",
+      "sleeper:6999",
+      "sleeper:5297"
+    ],
+    "DE": [
+      "sleeper:11663",
+      "sleeper:5615"
+    ],
+    "P": [
+      "sleeper:6093",
+      "sleeper:8538"
+    ],
+    "FB": [
+      "sleeper:6109"
+    ],
+    "G": [
+      "sleeper:12867",
+      "sleeper:6745",
+      "sleeper:6197",
+      "sleeper:7656"
+    ],
+    "QB": [
+      "sleeper:12500",
+      "sleeper:6768",
+      "sleeper:7538"
+    ],
+    "T": [
+      "sleeper:6821",
+      "sleeper:8927",
+      "sleeper:7742",
+      "sleeper:7660",
+      "sleeper:8818"
+    ],
+    "DL": [
+      "sleeper:12146",
+      "sleeper:12679",
+      "sleeper:12564",
+      "sleeper:8332",
+      "sleeper:11754",
+      "sleeper:12720"
+    ],
+    "DEF": [
+      "sleeper:MIA"
+    ]
+  },
+  "HOU": {
+    "DE": [
+      "sleeper:7030",
+      "sleeper:2393",
+      "sleeper:6910",
+      "sleeper:2027",
+      "sleeper:4065",
+      "sleeper:2340",
+      "sleeper:6838",
+      "sleeper:11829"
+    ],
+    "DB": [
+      "sleeper:13049",
+      "sleeper:5893",
+      "sleeper:11710",
+      "sleeper:6476",
+      "sleeper:8308",
+      "sleeper:8314",
+      "sleeper:12710",
+      "sleeper:2267",
+      "sleeper:11685",
+      "sleeper:5055",
+      "sleeper:6946",
+      "sleeper:8510",
+      "sleeper:3227",
+      "sleeper:5328"
+    ],
+    "OL": [
+      "sleeper:12600",
+      "sleeper:11684",
+      "sleeper:4064",
+      "sleeper:4258",
+      "sleeper:10960",
+      "sleeper:4313",
+      "sleeper:11005",
+      "sleeper:11500",
+      "sleeper:10893",
+      "sleeper:11845",
+      "sleeper:2333",
+      "sleeper:2543",
+      "sleeper:5901",
+      "sleeper:8488"
+    ],
+    "DT": [
+      "sleeper:5090",
+      "sleeper:13054",
+      "sleeper:8547",
+      "sleeper:3188",
+      "sleeper:5366",
+      "sleeper:7711"
+    ],
+    "CB": [
+      "sleeper:4503",
+      "sleeper:6840",
+      "sleeper:3388",
+      "sleeper:12626"
+    ],
+    "K": [
+      "sleeper:3451"
+    ],
+    "RB": [
+      "sleeper:12171",
+      "sleeper:8129",
+      "sleeper:4718",
+      "sleeper:6973",
+      "sleeper:11588",
+      "sleeper:4018",
+      "sleeper:4988",
+      "sleeper:12474"
+    ],
+    "WR": [
+      "sleeper:5121",
+      "sleeper:4950",
+      "sleeper:13053",
+      "sleeper:12484",
+      "sleeper:12536",
+      "sleeper:8147",
+      "sleeper:8185",
+      "sleeper:5374",
+      "sleeper:7569",
+      "sleeper:6895",
+      "sleeper:9502",
+      "sleeper:10218",
+      "sleeper:11969"
+    ],
+    "TE": [
+      "sleeper:7568",
+      "sleeper:11599",
+      "sleeper:7082",
+      "sleeper:5001",
+      "sleeper:6126",
+      "sleeper:12725",
+      "sleeper:7554"
+    ],
+    "FB": [
+      "sleeper:6202"
+    ],
+    "LB": [
+      "sleeper:6485",
+      "sleeper:8278",
+      "sleeper:6656",
+      "sleeper:6218",
+      "sleeper:10970",
+      "sleeper:13130",
+      "sleeper:8349",
+      "sleeper:11805",
+      "sleeper:13051",
+      "sleeper:7807"
+    ],
+    "P": [
+      "sleeper:7307"
+    ],
+    "QB": [
+      "sleeper:9758",
+      "sleeper:7585",
+      "sleeper:12705",
+      "sleeper:11648"
+    ],
+    "T": [
+      "sleeper:8491",
+      "sleeper:8415"
+    ],
+    "G": [
+      "sleeper:8452"
+    ],
+    "DL": [
+      "sleeper:10958",
+      "sleeper:12724",
+      "sleeper:10892"
+    ],
+    "S": [
+      "sleeper:11553"
+    ],
+    "LS": [
+      "sleeper:13050"
+    ],
+    "C": [
+      "sleeper:13052"
+    ],
+    "DEF": [
+      "sleeper:HOU"
+    ]
+  },
+  "DET": {
+    "QB": [
+      "sleeper:9998",
+      "sleeper:3163",
+      "sleeper:5127"
+    ],
+    "T": [
+      "sleeper:4716",
+      "sleeper:5377",
+      "sleeper:7643",
+      "sleeper:3185"
+    ],
+    "G": [
+      "sleeper:3259",
+      "sleeper:6567",
+      "sleeper:8750",
+      "sleeper:6924"
+    ],
+    "DT": [
+      "sleeper:10928",
+      "sleeper:3322",
+      "sleeper:11804",
+      "sleeper:7222",
+      "sleeper:7799"
+    ],
+    "WR": [
+      "sleeper:7547",
+      "sleeper:12732",
+      "sleeper:12535",
+      "sleeper:12938",
+      "sleeper:12935",
+      "sleeper:8148",
+      "sleeper:3634",
+      "sleeper:6239",
+      "sleeper:10221",
+      "sleeper:4351",
+      "sleeper:6588"
+    ],
+    "LB": [
+      "sleeper:4118",
+      "sleeper:6651",
+      "sleeper:12158",
+      "sleeper:7726",
+      "sleeper:5161",
+      "sleeper:7750",
+      "sleeper:10880",
+      "sleeper:8334",
+      "sleeper:11394",
+      "sleeper:11348",
+      "sleeper:4110"
+    ],
+    "DE": [
+      "sleeper:12706",
+      "sleeper:4259",
+      "sleeper:12128",
+      "sleeper:7661",
+      "sleeper:4965",
+      "sleeper:4241"
+    ],
+    "CB": [
+      "sleeper:8788",
+      "sleeper:6896",
+      "sleeper:5361",
+      "sleeper:12257",
+      "sleeper:5372",
+      "sleeper:7200",
+      "sleeper:7293",
+      "sleeper:11160",
+      "sleeper:6128",
+      "sleeper:13235"
+    ],
+    "RB": [
+      "sleeper:6659",
+      "sleeper:5892",
+      "sleeper:7551",
+      "sleeper:11237",
+      "sleeper:9221",
+      "sleeper:12954",
+      "sleeper:6992",
+      "sleeper:11729"
+    ],
+    "P": [
+      "sleeper:6523"
+    ],
+    "DB": [
+      "sleeper:10905",
+      "sleeper:6724",
+      "sleeper:7887",
+      "sleeper:12731",
+      "sleeper:8003",
+      "sleeper:11689",
+      "sleeper:11019",
+      "sleeper:12934",
+      "sleeper:8348",
+      "sleeper:12161",
+      "sleeper:12160",
+      "sleeper:11661"
+    ],
+    "C": [
+      "sleeper:6930"
+    ],
+    "OL": [
+      "sleeper:11788",
+      "sleeper:10981",
+      "sleeper:11746",
+      "sleeper:11970",
+      "sleeper:7126",
+      "sleeper:7947",
+      "sleeper:12384",
+      "sleeper:12936",
+      "sleeper:12613",
+      "sleeper:7265"
+    ],
+    "TE": [
+      "sleeper:7891",
+      "sleeper:13251",
+      "sleeper:7597",
+      "sleeper:10859",
+      "sleeper:8041",
+      "sleeper:11960",
+      "sleeper:13110"
+    ],
+    "NT": [
+      "sleeper:7679"
+    ],
+    "DL": [
+      "sleeper:8289",
+      "sleeper:11345",
+      "sleeper:8358",
+      "sleeper:12937",
+      "sleeper:12155",
+      "sleeper:12554"
+    ],
+    "K": [
+      "sleeper:11539"
+    ],
+    "LS": [
+      "sleeper:12159"
+    ],
+    "OG": [
+      "sleeper:12660"
+    ],
+    "DEF": [
+      "sleeper:DET"
+    ]
+  },
+  "OAK": {
+    "G": [
+      "sleeper:4925"
+    ]
+  }
+}
