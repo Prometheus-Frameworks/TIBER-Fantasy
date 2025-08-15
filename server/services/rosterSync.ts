@@ -364,7 +364,7 @@ class RosterSyncService {
           });
         }
         
-        // Apply position depth limits
+        // Apply position depth limits AFTER all corrections and re-sorting
         const limit = this.POSITION_DEPTH_LIMITS[pos] || 10;
         const limitedPlayers = posPlayers.slice(0, limit);
         teamDepth[pos] = limitedPlayers.map(p => p.player_id);

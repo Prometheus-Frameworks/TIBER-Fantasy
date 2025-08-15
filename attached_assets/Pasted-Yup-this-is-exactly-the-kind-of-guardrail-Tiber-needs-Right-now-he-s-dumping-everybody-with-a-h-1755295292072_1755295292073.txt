@@ -1,0 +1,247 @@
+Yup — this is exactly the kind of guardrail Tiber needs. Right now he’s dumping **everybody with a helmet** onto the UI. Let’s make the depth-chart endpoint **fantasy-aware** so it only returns real, startable humans (plus must-stash rookies), not PS fillers.
+
+Here’s the plan + drop-in code.
+
+---
+
+# What we’re doing (short + blunt)
+
+* Add a **relevance score** and a **filter** so `/api/depth-charts?fantasy=1` only returns players who matter for fantasy.
+* Keep **top roles** by position (QB1, RB1-3, WR1-4, TE1-2).
+* Always include **premium rookies** (e.g., Marvin Harrison Jr.) even if depth\_order data is weird.
+* Exclude practice squad, reserve/futures, long-term IR, etc.
+* Give you **manual overrides** for edge cases.
+
+---
+
+# Heuristics (defaults you can tweak)
+
+* **QB:** top 2
+* **RB:** top 3
+* **WR:** top 4
+* **TE:** top 2
+* **Rookie auto-include:** years\_exp == 0 **and** (draft\_round ≤ 2 or in allowlist)
+* **Exclude:** status in {“Practice Squad”, “Suspended (season)”, “IR-return unknown”} and anyone without team
+
+These are boring but they work. If/when we wire ADP/roster% later, we fold that into the score.
+
+---
+
+# New util: `utils/relevance.py`
+
+```python
+# utils/relevance.py
+from typing import Dict, Any
+
+# Hand overrides for must-show names who sometimes get weird depth tags
+ROOKIE_ALLOWLIST = {
+    # "Name" : ("TEAM","POS")
+    "Marvin Harrison Jr.": ("ARI", "WR"),
+    "Rome Odunze": ("CHI", "WR"),
+    "Malik Nabers": ("NYG", "WR"),
+    "Brock Bowers": ("LV", "TE"),
+    "Brian Thomas Jr.": ("JAX", "WR"),
+    "Xavier Worthy": ("KC", "WR"),
+    "Keon Coleman": ("BUF", "WR"),
+    "Ladd McConkey": ("LAC", "WR"),
+    "Ricky Pearsall": ("SF", "WR"),
+    "Jonathan Brooks": ("CAR", "RB"),
+    "Trey Benson": ("ARI", "RB"),
+}
+
+EXCLUDED_STATUSES = {"Practice Squad", "Reserve/Future", "Suspended", "Out (season)", "Non-Football Injury"}
+
+DEFAULT_LIMITS = {"QB": 2, "RB": 3, "WR": 4, "TE": 2}
+
+def is_excluded_status(status: str) -> bool:
+    if not status:
+        return False
+    status = str(status).strip()
+    for bad in EXCLUDED_STATUSES:
+        if bad.lower() in status.lower():
+            return True
+    return False
+
+def rookie_boost(p: Dict[str, Any]) -> int:
+    # years_exp from Sleeper; draft info may not be present — allowlist covers the studs
+    name = p.get("name") or ""
+    if name in ROOKIE_ALLOWLIST and ROOKIE_ALLOWLIST[name][0] == p.get("team"):
+        return 20
+    years = p.get("years_exp")
+    try:
+        years = int(years) if years is not None else None
+    except:
+        years = None
+    return 10 if years == 0 else 0
+
+def relevance_score(p: Dict[str, Any]) -> float:
+    """
+    Higher = more fantasy-relevant.
+    Signals we have today:
+      - depth_chart_order (lower better)
+      - position role (QB,RB,WR,TE only)
+      - rookie boost for premium prospects
+    Extend later with ADP/roster%/targets per route/etc.
+    """
+    if p.get("pos") not in {"QB", "RB", "WR", "TE"}:
+        return -1
+
+    if is_excluded_status(p.get("status", "")):
+        return -1
+
+    # Base from depth chart: 100 - order (None -> 0)
+    dco = p.get("depth_chart_order")
+    base = 0
+    if isinstance(dco, int):
+        base = max(0, 100 - (dco - 1) * 10)  # 1->100, 2->90, 3->80, etc.
+
+    # Pos weighting (QB +10, WR/RB +0, TE -5 so fringe TEs lose tiebreaks)
+    pos = p.get("pos")
+    pos_w = 10 if pos == "QB" else (0 if pos in {"WR", "RB"} else -5)
+
+    # Rookie hype
+    rook = rookie_boost(p)
+
+    return base + pos_w + rook
+
+def filter_team(players: list, limits: Dict[str, int] = None) -> Dict[str, list]:
+    """
+    Return {pos: [player objects kept]} pruned by relevance + limits.
+    Always keeps allowlisted rookies for that team/pos.
+    """
+    limits = limits or DEFAULT_LIMITS
+    buckets = {"QB": [], "RB": [], "WR": [], "TE": []}
+    for p in players:
+        if p.get("pos") in buckets and p.get("team"):
+            score = relevance_score(p)
+            if score >= 0:
+                p["_relevance"] = score
+                buckets[p["pos"]].append(p)
+
+    # sort by (depth_chart_order, then relevance desc, then name)
+    for pos, lst in buckets.items():
+        lst.sort(key=lambda x: (
+            x.get("depth_chart_order") if x.get("depth_chart_order") is not None else 9999,
+            -x.get("_relevance", 0),
+            x.get("name","")
+        ))
+        # trim to limit, but ensure allowlisted rookies remain
+        keep = limits.get(pos, 0)
+        trimmed = lst[:keep]
+        # Add any allowlisted rookies not already included for this team/pos
+        names_in = {p["name"] for p in trimmed}
+        for p in lst[keep:]:
+            n = p.get("name")
+            if n in ROOKIE_ALLOWLIST and ROOKIE_ALLOWLIST[n] == (p.get("team"), p.get("pos")):
+                if n not in names_in:
+                    trimmed.append(p)
+                    names_in.add(n)
+        buckets[pos] = trimmed
+    return buckets
+```
+
+---
+
+# Update your API to support `fantasy=1`
+
+Modify your existing `/depth-charts` route to add a fantasy filter option.
+
+```python
+# api/sync_routes.py (add imports)
+from flask import request
+from utils.relevance import filter_team, DEFAULT_LIMITS
+
+@bp.route("/depth-charts", methods=["GET"])
+def get_depth_charts():
+    if not os.path.exists(DEPTH_PATH):
+        return jsonify({"error":"no depth charts yet"}), 404
+
+    fantasy = request.args.get("fantasy", "0") == "1"
+    max_wr = int(request.args.get("max_wr", DEFAULT_LIMITS["WR"]))
+    max_rb = int(request.args.get("max_rb", DEFAULT_LIMITS["RB"]))
+    max_te = int(request.args.get("max_te", DEFAULT_LIMITS["TE"]))
+    max_qb = int(request.args.get("max_qb", DEFAULT_LIMITS["QB"]))
+
+    with open(DEPTH_PATH, "r", encoding="utf-8") as f:
+        depth_raw = json.load(f)
+
+    if not fantasy:
+        return jsonify(depth_raw)
+
+    # We need the richer per-player objects from rosters to filter intelligently
+    if not os.path.exists(ROSTERS_PATH):
+        return jsonify({"error":"no rosters synced yet"}), 404
+    with open(ROSTERS_PATH, "r", encoding="utf-8") as f:
+        rosters = json.load(f)
+
+    limits = {"WR": max_wr, "RB": max_rb, "TE": max_te, "QB": max_qb}
+    filtered = {}
+
+    for team, players in rosters.items():
+        pruned = filter_team(players, limits=limits)
+        # return IDs in the same shape as before, but filtered
+        filtered[team] = {pos: [p["player_id"] for p in pruned[pos]] for pos in pruned}
+
+    return jsonify(filtered)
+```
+
+---
+
+# How this fixes your Cardinals example (what you’ll see)
+
+**Call:**
+
+```
+GET /api/depth-charts?fantasy=1&max_wr=4
+```
+
+**Before (bad):** 6 PS guys and Zay Jones, no MHJ.
+**After (good):**
+
+```
+"ARI": {
+  "WR": [
+    "slug:marvin-harrison-jr",   // allowlisted rookie, always included
+    "sleeper:...zayjones...",    // veteran starter
+    "sleeper:...michaelwilson...", 
+    "sleeper:...gregdortch..."   // or the next best WR by depth order
+  ],
+  "RB": [
+    "sleeper:...treybenson...",  // rookie auto-included
+    "sleeper:...jamesconner...", // if still active / otherwise next man up
+    "sleeper:...depth-rb..."
+  ],
+  "TE": ["sleeper:...treymcbride...", "sleeper:...depth-te..."],
+  "QB": ["sleeper:...qb1...", "sleeper:...qb2..."]
+}
+```
+
+(Exact IDs depend on your stored `players_index.json`; names shown for clarity.)
+
+---
+
+# Optional: manual overrides
+
+If a team is still funky (depth provider slow to update), add a tiny JSON override file like `storage/fantasy_overrides.json`:
+
+```json
+{
+  "ARI": {
+    "WR": ["slug:marvin-harrison-jr", "sleeper:zay_jones_id"]
+  }
+}
+```
+
+Then in `get_depth_charts`, after `filtered` is created, merge overrides: for any team/pos, take a union (keeping order by our relevance).
+
+---
+
+# Future polish (when you’ve got time)
+
+* Pull Sleeper **ADP** or **roster %** → add to `relevance_score` (+ up to 20 pts).
+* Add last 3 weeks **routes run / targets** (if you ingest usage) → bonus for WR/TE.
+* Let frontend pass `?pos=WR` to only return the section it needs.
+
+---
+
+If you want, I’ll also add a tiny **unit test** that asserts MHJ shows up for ARI even if he has no depth\_chart\_order yet. But the above will already stop the “six practice squad randos” nonsense and get your UI showing actual fantasy pieces right now.

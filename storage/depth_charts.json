@@ -23,12 +23,7 @@
     "RB": [
       "sleeper:12797",
       "sleeper:7048",
-      "sleeper:12469",
-      "sleeper:8143",
-      "sleeper:8116",
-      "sleeper:12512",
-      "sleeper:13240",
-      "sleeper:6144"
+      "sleeper:12469"
     ]
   },
   "PIT": {
@@ -55,10 +50,7 @@
     "RB": [
       "sleeper:9220",
       "sleeper:8228",
-      "sleeper:12504",
-      "sleeper:7567",
-      "sleeper:9510",
-      "sleeper:7593"
+      "sleeper:12504"
     ]
   },
   "WAS": {
@@ -85,11 +77,7 @@
     "RB": [
       "sleeper:4663",
       "sleeper:8154",
-      "sleeper:10219",
-      "sleeper:7609",
-      "sleeper:12533",
-      "sleeper:4219",
-      "sleeper:3309"
+      "sleeper:10219"
     ]
   },
   "LAR": {
@@ -116,10 +104,7 @@
     "RB": [
       "sleeper:11586",
       "sleeper:11644",
-      "sleeper:11569",
-      "sleeper:13010",
-      "sleeper:8150",
-      "sleeper:8195"
+      "sleeper:11569"
     ]
   },
   "ATL": {
@@ -146,10 +131,7 @@
     "RB": [
       "sleeper:9509",
       "sleeper:11186",
-      "sleeper:11114",
-      "sleeper:8194",
-      "sleeper:12897",
-      "sleeper:8132"
+      "sleeper:11114"
     ]
   },
   "NYJ": {
@@ -176,11 +158,7 @@
     "RB": [
       "sleeper:6323",
       "sleeper:11576",
-      "sleeper:8155",
-      "sleeper:12515",
-      "sleeper:11571",
-      "sleeper:7720",
-      "sleeper:13242"
+      "sleeper:8155"
     ]
   },
   "CAR": {
@@ -206,11 +184,7 @@
     "RB": [
       "sleeper:7594",
       "sleeper:11998",
-      "sleeper:11583",
-      "sleeper:12963",
-      "sleeper:8255",
-      "sleeper:7021",
-      "sleeper:12531"
+      "sleeper:11583"
     ]
   },
   "NYG": {
@@ -237,11 +211,7 @@
     "RB": [
       "sleeper:12481",
       "sleeper:11654",
-      "sleeper:6130",
-      "sleeper:10223",
-      "sleeper:7087",
-      "sleeper:4349",
-      "sleeper:11655"
+      "sleeper:6130"
     ]
   },
   "LV": {
@@ -262,11 +232,7 @@
     "RB": [
       "sleeper:12527",
       "sleeper:11963",
-      "sleeper:11574",
-      "sleeper:3868",
-      "sleeper:2749",
-      "sleeper:8220",
-      "sleeper:8139"
+      "sleeper:11574"
     ],
     "TE": [
       "sleeper:6843",
@@ -279,11 +245,7 @@
     "RB": [
       "sleeper:11584",
       "sleeper:11590",
-      "sleeper:12787",
-      "sleeper:1408",
-      "sleeper:11384",
-      "sleeper:8136",
-      "sleeper:9506"
+      "sleeper:12787"
     ],
     "TE": [
       "sleeper:8111",
@@ -318,10 +280,7 @@
     "RB": [
       "sleeper:6694",
       "sleeper:3198",
-      "sleeper:5995",
-      "sleeper:9511",
-      "sleeper:5980",
-      "sleeper:11570"
+      "sleeper:5995"
     ],
     "QB": [
       "sleeper:4683",
@@ -360,12 +319,7 @@
     "RB": [
       "sleeper:12455",
       "sleeper:11582",
-      "sleeper:4263",
-      "sleeper:7561",
-      "sleeper:12818",
-      "sleeper:8205",
-      "sleeper:4098",
-      "sleeper:8221"
+      "sleeper:4263"
     ]
   },
   "LAC": {
@@ -392,11 +346,7 @@
     "RB": [
       "sleeper:8123",
       "sleeper:7537",
-      "sleeper:11647",
-      "sleeper:7528",
-      "sleeper:5347",
-      "sleeper:12507",
-      "sleeper:12472"
+      "sleeper:11647"
     ]
   },
   "DEN": {
@@ -422,11 +372,7 @@
     "RB": [
       "sleeper:7093",
       "sleeper:11579",
-      "sleeper:11568",
-      "sleeper:6806",
-      "sleeper:11439",
-      "sleeper:12489",
-      "sleeper:8208"
+      "sleeper:11568"
     ]
   },
   "IND": {
@@ -453,12 +399,7 @@
     "RB": [
       "sleeper:12471",
       "sleeper:6813",
-      "sleeper:7608",
-      "sleeper:12859",
-      "sleeper:13250",
-      "sleeper:6918",
-      "sleeper:8207",
-      "sleeper:12826"
+      "sleeper:7608"
     ]
   },
   "CHI": {
@@ -485,11 +426,7 @@
     "RB": [
       "sleeper:8423",
       "sleeper:6790",
-      "sleeper:13080",
-      "sleeper:12036",
-      "sleeper:12534",
-      "sleeper:10235",
-      "sleeper:6012"
+      "sleeper:13080"
     ]
   },
   "NO": {
@@ -510,10 +447,7 @@
     "RB": [
       "sleeper:4035",
       "sleeper:6938",
-      "sleeper:6820",
-      "sleeper:12476",
-      "sleeper:9757",
-      "sleeper:12546"
+      "sleeper:6820"
     ],
     "TE": [
       "sleeper:5985",
@@ -540,11 +474,7 @@
     "RB": [
       "sleeper:8809",
       "sleeper:5987",
-      "sleeper:9226",
-      "sleeper:11643",
-      "sleeper:6167",
-      "sleeper:5209",
-      "sleeper:12495"
+      "sleeper:9226"
     ],
     "QB": [
       "sleeper:12500",
@@ -556,12 +486,7 @@
     "RB": [
       "sleeper:2359",
       "sleeper:4034",
-      "sleeper:12491",
-      "sleeper:4914",
-      "sleeper:11651",
-      "sleeper:5284",
-      "sleeper:12467",
-      "sleeper:6885"
+      "sleeper:12491"
     ],
     "WR": [
       "sleeper:6803",
@@ -608,10 +533,7 @@
     "RB": [
       "sleeper:7599",
       "sleeper:11378",
-      "sleeper:8254",
-      "sleeper:12516",
-      "sleeper:5967",
-      "sleeper:9508"
+      "sleeper:8254"
     ]
   },
   "NE": {
@@ -637,12 +559,7 @@
     "RB": [
       "sleeper:6945",
       "sleeper:10870",
-      "sleeper:6996",
-      "sleeper:12969",
-      "sleeper:7611",
-      "sleeper:13255",
-      "sleeper:12412",
-      "sleeper:12529"
+      "sleeper:6996"
     ]
   },
   "DET": {
@@ -662,12 +579,7 @@
     "RB": [
       "sleeper:6659",
       "sleeper:5892",
-      "sleeper:7551",
-      "sleeper:11237",
-      "sleeper:9221",
-      "sleeper:12954",
-      "sleeper:6992",
-      "sleeper:11729"
+      "sleeper:7551"
     ],
     "TE": [
       "sleeper:7891",
@@ -686,12 +598,7 @@
     "RB": [
       "sleeper:12928",
       "sleeper:11370",
-      "sleeper:11435",
-      "sleeper:9227",
-      "sleeper:12953",
-      "sleeper:5850",
-      "sleeper:6175",
-      "sleeper:11581"
+      "sleeper:11435"
     ],
     "WR": [
       "sleeper:8204",
@@ -725,11 +632,7 @@
     "RB": [
       "sleeper:4137",
       "sleeper:11589",
-      "sleeper:11199",
-      "sleeper:6931",
-      "sleeper:7607",
-      "sleeper:7103",
-      "sleeper:8122"
+      "sleeper:11199"
     ],
     "TE": [
       "sleeper:10231",
@@ -748,9 +651,7 @@
     "RB": [
       "sleeper:4199",
       "sleeper:8408",
-      "sleeper:12940",
-      "sleeper:8230",
-      "sleeper:11299"
+      "sleeper:12940"
     ],
     "QB": [
       "sleeper:6037",
@@ -776,11 +677,7 @@
     "RB": [
       "sleeper:9505",
       "sleeper:5004",
-      "sleeper:7588",
-      "sleeper:12457",
-      "sleeper:8800",
-      "sleeper:6151",
-      "sleeper:12738"
+      "sleeper:7588"
     ],
     "WR": [
       "sleeper:6786",
@@ -821,22 +718,14 @@
     "RB": [
       "sleeper:7064",
       "sleeper:11573",
-      "sleeper:8138",
-      "sleeper:11575",
-      "sleeper:7204",
-      "sleeper:6039"
+      "sleeper:8138"
     ]
   },
   "HOU": {
     "RB": [
       "sleeper:12171",
       "sleeper:8129",
-      "sleeper:4718",
-      "sleeper:6973",
-      "sleeper:11588",
-      "sleeper:4018",
-      "sleeper:4988",
-      "sleeper:12474"
+      "sleeper:4718"
     ],
     "WR": [
       "sleeper:5121",
@@ -883,21 +772,14 @@
     "RB": [
       "sleeper:12939",
       "sleeper:12462",
-      "sleeper:12048",
-      "sleeper:13047",
-      "sleeper:8151",
-      "sleeper:10216",
-      "sleeper:9753"
+      "sleeper:12048"
     ]
   },
   "CIN": {
     "RB": [
       "sleeper:9224",
       "sleeper:7529",
-      "sleeper:11649",
-      "sleeper:13088",
-      "sleeper:4147",
-      "sleeper:12543"
+      "sleeper:11649"
     ],
     "TE": [
       "sleeper:12062",
@@ -944,20 +826,14 @@
     "RB": [
       "sleeper:12490",
       "sleeper:12479",
-      "sleeper:12544",
-      "sleeper:9225",
-      "sleeper:7543"
+      "sleeper:12544"
     ]
   },
   "PHI": {
     "RB": [
       "sleeper:6828",
       "sleeper:7809",
-      "sleeper:11773",
-      "sleeper:12868",
-      "sleeper:4866",
-      "sleeper:13145",
-      "sleeper:11577"
+      "sleeper:11773"
     ],
     "TE": [
       "sleeper:10210",

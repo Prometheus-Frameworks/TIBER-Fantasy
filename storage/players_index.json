@@ -110474,7 +110474,7 @@
   "sleeper:11095": {
     "player_id": "sleeper:11095",
     "name": "Shakel Brown",
-    "team": null,
+    "team": "SF",
     "pos": "DT",
     "source_ids": {
       "sleeper": "11095",

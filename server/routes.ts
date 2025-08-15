@@ -2852,13 +2852,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get depth charts by team and position
+  // Get depth charts by team and position with optional fantasy filtering
   app.get('/api/depth-charts', async (req: Request, res: Response) => {
     try {
       const { rosterSyncService } = await import('./services/rosterSync');
-      const depthCharts = await rosterSyncService.getDepthCharts();
-      res.json(depthCharts);
+      const fantasy = req.query.fantasy === '1';
+      const maxWR = parseInt(req.query.max_wr as string) || 4;
+      const maxRB = parseInt(req.query.max_rb as string) || 3;
+      const maxTE = parseInt(req.query.max_te as string) || 2;
+      const maxQB = parseInt(req.query.max_qb as string) || 2;
+
+      if (!fantasy) {
+        // Return raw depth charts
+        const depthCharts = await rosterSyncService.getDepthCharts();
+        res.json(depthCharts);
+        return;
+      }
+
+      // Fantasy filtering - need full roster data
+      const rosters = await rosterSyncService.getRosters();
+      const { filterTeam } = await import('./utils/relevance');
+      
+      const limits = { WR: maxWR, RB: maxRB, TE: maxTE, QB: maxQB };
+      const filtered: Record<string, Record<string, string[]>> = {};
+
+      for (const [team, players] of Object.entries(rosters)) {
+        const teamFiltered = filterTeam(players as any[], limits);
+        // Return player IDs in same shape as raw depth charts
+        filtered[team] = {};
+        for (const [pos, posPlayers] of Object.entries(teamFiltered)) {
+          if (posPlayers.length > 0) {
+            filtered[team][pos] = posPlayers.map(p => p.player_id);
+          }
+        }
+      }
+
+      console.log(`🎯 Fantasy depth charts: ${Object.keys(filtered).length} teams filtered`);
+      res.json(filtered);
     } catch (error) {
+      console.error('❌ Error fetching depth charts:', error);
       res.status(404).json({
         error: 'No depth charts synced yet',
         hint: 'Run POST /api/sync/rosters first'
