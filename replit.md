@@ -75,8 +75,10 @@ Clean, responsive design with Jinja2 templating and React components, prioritizi
 - **Data Pipeline**: Python with nfl-data-py, pandas
 
 ## External Dependencies
+**PRIORITY: Real-time Data Integration** - Current player pool shows outdated team assignments (e.g., Hunter listed as COL instead of JAX). Need automated roster sync for accurate analysis.
+
 - **MySportsFeeds API**: For injury reports and NFL roster automation.
-- **Sleeper API**: For player projections, game logs, ADP data, and league sync.
+- **Sleeper API**: For player projections, game logs, ADP data, league sync, and current roster data.
 - **NFL-Data-Py**: For 2024 weekly statistics via nflfastR, depth charts via nflverse APIs.
 - **R Server**: External API for OASIS (Offensive Architecture Scoring & Insight System) data.
 - **Axios**: For making HTTP requests.

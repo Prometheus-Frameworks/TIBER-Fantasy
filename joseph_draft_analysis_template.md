@@ -20,7 +20,7 @@
 4. **WR1**: Nico Collins (HOU) - Pick 2.7
 5. **WR2**: Ladd McConkey (LAC) - Pick 3.4 ✅ **CONVICTION HIT**
 6. **TE**: Trey McBride (ARI) - Pick 4.7
-7. **WR3**: Travis Hunter (COL) - Pick 6.7 ✅ **CONVICTION HIT #2**
+7. **WR3**: Travis Hunter (JAX) - Pick 6.7 ✅ **CONVICTION HIT #2**
 8. **BENCH**: [DRAFT CONTINUING]
 
 ## Key Lessons - REAL DRAFT INSIGHTS
@@ -37,17 +37,17 @@
 - **Pick 3.4 McConkey**: CONVICTION target hit - rookie WR with LAC opportunity
 - **Pick 4.7 McBride**: TE value vs. waiting on position
 - **Pick 5.4 Hubbard**: Potential handcuff/value play (CAR backfield)
-- **Pick 6.7 Hunter vs. Pickens**: CONVICTION over safety - two-way player upside at Colorado
+- **Pick 6.7 Hunter vs. Pickens**: CONVICTION over safety - two-way talent now with JAX
 
 ## Hunter vs. Pickens Analysis (6.7 Decision)
 **Why Hunter was RIGHT**:
 - Pre-draft conviction target (film work advantage)
-- Two-way player ceiling in college (unprecedented upside)
-- Colorado offense ascending with Sanders
+- Two-way player talent from college (unprecedented athletic ability)
+- Jacksonville offense with potential for rookie opportunity
 - Round 6-7 is lottery ticket territory - swing for ceiling
 - Pickens has target competition concerns in PIT
 
-**Risk Assessment**: Hunter has position/role uncertainty but 6th round is perfect risk/reward spot for ceiling plays.
+**Risk Assessment**: Hunter has rookie transition questions but 6th round is perfect risk/reward spot for elite athletic ceiling plays.
 
 ## Draft Flow Adaptation
 Real drafts require abandoning mock strategies when value presents itself. Joseph pivoted from turn strategy to take elite RB at 1.4, showing tactical flexibility over rigid adherence to pre-draft plans.
