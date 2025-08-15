@@ -326,6 +326,19 @@ export default function ResearchAnalysis() {
             ))}
           </div>
 
+          {/* Disclaimer */}
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-4">
+            <div className="flex items-start gap-2">
+              <div className="w-4 h-4 rounded-full bg-amber-500 flex-shrink-0 mt-0.5"></div>
+              <div className="text-sm">
+                <p className="font-medium text-amber-800 dark:text-amber-200">Depth Chart Display</p>
+                <p className="text-amber-700 dark:text-amber-300 mt-1">
+                  We display only the top 3 RBs per team for fantasy relevance. Full NFL depth charts often include 6-8 RBs including practice squad players.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Depth Charts Grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

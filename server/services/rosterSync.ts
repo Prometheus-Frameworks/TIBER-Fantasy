@@ -92,7 +92,7 @@ class RosterSyncService {
   private readonly WR_DEPTH_LIMIT = 6;
   private readonly POSITION_DEPTH_LIMITS: { [pos: string]: number } = {
     'WR': 6,
-    'RB': 8,
+    'RB': 3,  // Limited to RB1, RB2, RB3 for fantasy relevance
     'TE': 4,
     'QB': 4
   };
