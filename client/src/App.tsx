@@ -60,6 +60,7 @@ import PrometheusStressTest from "@/pages/PrometheusStressTest";
 import OASISTeamContext from "@/pages/OASISTeamContext";
 import FullPlayerPool from "@/pages/FullPlayerPool";
 import TradeEvaluator from "@/pages/TradeEvaluator";
+import SnapCounts from "@/pages/SnapCounts";
 import ProjectionsTest from "@/pages/ProjectionsTest";
 import DataIngestion from "@/pages/DataIngestion";
 import Reflect from "@/pages/Reflect";
@@ -137,6 +138,7 @@ function Router() {
       <Route path="/consensus/tier-manager" component={TierManagerWrapper} />
       <Route path="/consensus-transparency" component={ConsensusTransparency} />
       <Route path="/research" component={ResearchAnalysis} />
+      <Route path="/snap-counts" component={SnapCounts} />
       <Route path="/competence" component={CompetenceMode} />
       <Route path="/experts/architect-j" component={ArchitectJProfile} />
       <Route path="/adaptive-consensus-demo" component={AdaptiveConsensusDemo} />

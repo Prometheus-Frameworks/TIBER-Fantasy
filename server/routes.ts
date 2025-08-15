@@ -2793,6 +2793,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== SNAP COUNTS KNOWLEDGE SYSTEM =====
+  app.get('/api/snap-counts/claim/:pos/:pp', async (req: Request, res: Response) => {
+    try {
+      const { snapCountsService } = await import('./services/snapCounts');
+      const { pos, pp } = req.params;
+      const snapDeltaPp = parseInt(pp);
+      
+      if (isNaN(snapDeltaPp)) {
+        return res.status(400).json({ error: 'Invalid snap percentage' });
+      }
+      
+      const claim = await snapCountsService.getClaim(pos.toUpperCase(), snapDeltaPp);
+      res.json({ claim, pos: pos.toUpperCase(), snap_delta_pp: snapDeltaPp });
+    } catch (error) {
+      console.error('❌ Snap count claim error:', error);
+      res.status(500).json({ error: 'Failed to fetch snap count claim' });
+    }
+  });
+
+  app.get('/api/snap-counts/examples/:label', async (req: Request, res: Response) => {
+    try {
+      const { snapCountsService } = await import('./services/snapCounts');
+      const { label } = req.params;
+      const showAll = req.query.all === 'true';
+      
+      if (label !== 'HIT' && label !== 'MISS') {
+        return res.status(400).json({ error: 'Label must be HIT or MISS' });
+      }
+      
+      const examples = showAll 
+        ? await snapCountsService.getAllExamples(label as "HIT" | "MISS")
+        : await snapCountsService.getExamples(label as "HIT" | "MISS");
+        
+      res.json({ examples, label, total: examples.length });
+    } catch (error) {
+      console.error('❌ Snap count examples error:', error);
+      res.status(500).json({ error: 'Failed to fetch snap count examples' });
+    }
+  });
+
+  app.get('/api/snap-counts/health', async (req: Request, res: Response) => {
+    try {
+      const { snapCountsService } = await import('./services/snapCounts');
+      const health = await snapCountsService.healthCheck();
+      res.json(health);
+    } catch (error) {
+      console.error('❌ Snap count health check error:', error);
+      res.status(500).json({ 
+        status: 'unhealthy', 
+        message: 'Health check failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // ===== INTELLIGENCE FEED ENDPOINT =====
   app.get('/api/intel', async (req: Request, res: Response) => {
     try {
