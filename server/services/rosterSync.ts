@@ -88,6 +88,15 @@ const TEAM_MAP: { [key: string]: string } = {
 };
 
 class RosterSyncService {
+  private readonly SKILL_POSITIONS = ['QB', 'RB', 'WR', 'TE'];
+  private readonly WR_DEPTH_LIMIT = 6;
+  private readonly POSITION_DEPTH_LIMITS: { [pos: string]: number } = {
+    'WR': 6,
+    'RB': 8,
+    'TE': 4,
+    'QB': 4
+  };
+
   private async ensureStorageDir(): Promise<void> {
     try {
       await fs.access(STORAGE_DIR);
@@ -261,8 +270,8 @@ class RosterSyncService {
         }
       };
 
-      // Only add to team rosters if we have a team
-      if (team && name && pos) {
+      // Only add to team rosters if we have a team and it's a skill position
+      if (team && name && pos && this.SKILL_POSITIONS.includes(pos)) {
         const mergedPlayer: MergedPlayer = {
           player_id: playerId,
           name,
@@ -297,16 +306,23 @@ class RosterSyncService {
         positionGroups[player.pos].push(player);
       });
 
-      // Sort by depth chart order, then by name
+      // Sort by depth chart order, then by name, and apply position limits
       const teamDepth: { [pos: string]: string[] } = {};
       for (const [pos, posPlayers] of Object.entries(positionGroups)) {
+        // Only include skill positions
+        if (!this.SKILL_POSITIONS.includes(pos)) continue;
+        
         posPlayers.sort((a, b) => {
           const aOrder = a.depth_chart_order ?? 9999;
           const bOrder = b.depth_chart_order ?? 9999;
           if (aOrder !== bOrder) return aOrder - bOrder;
           return a.name.localeCompare(b.name);
         });
-        teamDepth[pos] = posPlayers.map(p => p.player_id);
+        
+        // Apply position depth limits
+        const limit = this.POSITION_DEPTH_LIMITS[pos] || 10;
+        const limitedPlayers = posPlayers.slice(0, limit);
+        teamDepth[pos] = limitedPlayers.map(p => p.player_id);
       }
       depthCharts[team] = teamDepth;
     }
@@ -336,7 +352,35 @@ class RosterSyncService {
     const rostersPath = path.join(STORAGE_DIR, 'rosters.json');
     try {
       const data = await fs.readFile(rostersPath, 'utf-8');
-      return JSON.parse(data);
+      const allRosters = JSON.parse(data);
+      
+      // Filter for skill positions only and apply depth limits
+      const filteredRosters: RostersByTeam = {};
+      for (const [team, players] of Object.entries(allRosters)) {
+        const skillPlayers = (players as MergedPlayer[]).filter(p => 
+          this.SKILL_POSITIONS.includes(p.pos)
+        );
+        
+        // Group by position and apply limits
+        const positionGroups: { [pos: string]: MergedPlayer[] } = {};
+        skillPlayers.forEach(player => {
+          if (!positionGroups[player.pos]) {
+            positionGroups[player.pos] = [];
+          }
+          positionGroups[player.pos].push(player);
+        });
+        
+        // Apply position limits
+        const limitedPlayers: MergedPlayer[] = [];
+        for (const [pos, posPlayers] of Object.entries(positionGroups)) {
+          const limit = this.POSITION_DEPTH_LIMITS[pos] || 10;
+          limitedPlayers.push(...posPlayers.slice(0, limit));
+        }
+        
+        filteredRosters[team] = limitedPlayers;
+      }
+      
+      return filteredRosters;
     } catch (error) {
       throw new Error('No rosters synced yet');
     }
