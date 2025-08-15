@@ -2793,6 +2793,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== INTELLIGENCE FEED ENDPOINT =====
+  app.get('/api/intel', async (req: Request, res: Response) => {
+    try {
+      // During regular season, this would pull from live intelligence feeds
+      // For now, return structured empty state
+      res.json({
+        date: new Date().toISOString().split('T')[0],
+        source: "OTC Intelligence System",
+        intel_type: "training_camp_updates",
+        entries: [],
+        summary: {
+          total_intel: 0,
+          high_signal: 0,
+          medium_signal: 0,
+          low_signal: 0,
+          key_takeaways: []
+        }
+      });
+    } catch (error) {
+      console.error('❌ Intel endpoint error:', error);
+      res.status(500).json({ error: 'Failed to fetch intelligence data' });
+    }
+  });
+
   // ===== ROSTER SYNC ENDPOINTS =====
   
   // Trigger roster merge and sync

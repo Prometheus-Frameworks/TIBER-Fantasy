@@ -177,18 +177,30 @@ function TeamDepthChart({ team, players }: { team: string, players: Player[] }) 
                 </span>
               </div>
               <div className="space-y-1">
-                {positionPlayers.map((player, index) => (
-                  <div key={player.player_id} className="flex items-center justify-between text-sm py-1 px-2 rounded hover:bg-muted/50">
-                    <span className="font-medium">
-                      {index + 1}. {player.name}
-                    </span>
-                    {player.depth_chart_order && (
-                      <Badge variant="outline" className="text-xs">
-                        #{player.depth_chart_order}
-                      </Badge>
-                    )}
-                  </div>
-                ))}
+                {positionPlayers
+                  .sort((a, b) => {
+                    const aOrder = a.depth_chart_order || 999;
+                    const bOrder = b.depth_chart_order || 999;
+                    return aOrder - bOrder;
+                  })
+                  .map((player, index) => {
+                    // Use actual depth_chart_order if available, otherwise use sorted index + 1
+                    const depthNumber = player.depth_chart_order || (index + 1);
+                    return (
+                      <div key={player.player_id} className="flex items-center justify-between text-sm py-1 px-2 rounded hover:bg-muted/50">
+                        <span className="font-medium">
+                          {depthNumber}. {player.name}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {player.depth_chart_order && (
+                            <Badge variant="outline" className="text-xs">
+                              #{player.depth_chart_order}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           );

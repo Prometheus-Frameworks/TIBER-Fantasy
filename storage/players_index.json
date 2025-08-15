@@ -74690,7 +74690,7 @@
   "sleeper:6233": {
     "player_id": "sleeper:6233",
     "name": "Matt Sokol",
-    "team": null,
+    "team": "BUF",
     "pos": "TE",
     "source_ids": {
       "sleeper": "6233",
@@ -76862,7 +76862,7 @@
   "sleeper:6426": {
     "player_id": "sleeper:6426",
     "name": "Chandler Brewer",
-    "team": "TEN",
+    "team": null,
     "pos": "OL",
     "source_ids": {
       "sleeper": "6426",
@@ -81638,7 +81638,7 @@
   "sleeper:6838": {
     "player_id": "sleeper:6838",
     "name": "Marlon Davidson",
-    "team": "HOU",
+    "team": null,
     "pos": "DE",
     "source_ids": {
       "sleeper": "6838",
@@ -92258,7 +92258,7 @@
   "sleeper:7729": {
     "player_id": "sleeper:7729",
     "name": "Dez Fitzpatrick",
-    "team": "LAC",
+    "team": null,
     "pos": "WR",
     "source_ids": {
       "sleeper": "7729",
@@ -94022,7 +94022,7 @@
   "sleeper:7876": {
     "player_id": "sleeper:7876",
     "name": "Michael Dwumfour",
-    "team": "SF",
+    "team": null,
     "pos": "DT",
     "source_ids": {
       "sleeper": "7876",
@@ -96386,7 +96386,7 @@
   "sleeper:8073": {
     "player_id": "sleeper:8073",
     "name": "Tyrone Wheatley",
-    "team": "ATL",
+    "team": null,
     "pos": "OL",
     "source_ids": {
       "sleeper": "8073",
@@ -100502,7 +100502,7 @@
   "sleeper:8416": {
     "player_id": "sleeper:8416",
     "name": "Jalen Virgil",
-    "team": "BUF",
+    "team": null,
     "pos": "WR",
     "source_ids": {
       "sleeper": "8416",
@@ -118814,7 +118814,7 @@
   "sleeper:11794": {
     "player_id": "sleeper:11794",
     "name": "Micah Abraham",
-    "team": null,
+    "team": "DEN",
     "pos": "CB",
     "source_ids": {
       "sleeper": "11794",
@@ -121994,7 +121994,7 @@
   "sleeper:12059": {
     "player_id": "sleeper:12059",
     "name": "Michael Dowell",
-    "team": "SEA",
+    "team": null,
     "pos": "DB",
     "source_ids": {
       "sleeper": "12059",
@@ -131138,7 +131138,7 @@
   "sleeper:12821": {
     "player_id": "sleeper:12821",
     "name": "Jordan Oladokun",
-    "team": "LAC",
+    "team": null,
     "pos": "CB",
     "source_ids": {
       "sleeper": "12821",
@@ -135890,7 +135890,7 @@
   "sleeper:13217": {
     "player_id": "sleeper:13217",
     "name": "Hunter Dekkers",
-    "team": "NO",
+    "team": null,
     "pos": "QB",
     "source_ids": {
       "sleeper": "13217",
@@ -135986,7 +135986,7 @@
   "sleeper:13225": {
     "player_id": "sleeper:13225",
     "name": "Sam Brown",
-    "team": "GB",
+    "team": null,
     "pos": "WR",
     "source_ids": {
       "sleeper": "13225",

@@ -97,6 +97,21 @@ class RosterSyncService {
     'QB': 4
   };
 
+  // Manual depth chart corrections for known inaccuracies
+  private readonly DEPTH_CHART_CORRECTIONS: { [team: string]: { [position: string]: { [playerName: string]: number } } } = {
+    'ARI': {
+      'RB': {
+        'James Conner': 1,
+        'Trey Benson': 2,
+        'Emari Demercado': 3,
+        'DeeJay Dallas': 4,
+        'Michael Carter': 5,
+        'Tavien Feaster': 6,
+        'Bam Knight': 7  // Practice squad/depth player
+      }
+    }
+  };
+
   private async ensureStorageDir(): Promise<void> {
     try {
       await fs.access(STORAGE_DIR);
@@ -318,6 +333,36 @@ class RosterSyncService {
           if (aOrder !== bOrder) return aOrder - bOrder;
           return a.name.localeCompare(b.name);
         });
+        
+        // Apply manual depth chart corrections if available
+        const teamCorrections = this.DEPTH_CHART_CORRECTIONS[team];
+        if (teamCorrections && teamCorrections[pos]) {
+          const positionCorrections = teamCorrections[pos];
+          console.log(`🔧 Applying ${Object.keys(positionCorrections).length} depth chart corrections for ${team} ${pos}`);
+          
+          posPlayers.forEach(player => {
+            const correctedDepth = positionCorrections[player.name];
+            if (correctedDepth) {
+              console.log(`  ✅ ${player.name}: ${player.depth_chart_order} → ${correctedDepth}`);
+              player.depth_chart_order = correctedDepth;
+            }
+          });
+          
+          // Re-sort after applying corrections
+          posPlayers.sort((a, b) => {
+            const aOrder = a.depth_chart_order ?? 9999;
+            const bOrder = b.depth_chart_order ?? 9999;
+            if (aOrder !== bOrder) return aOrder - bOrder;
+            return a.name.localeCompare(b.name);
+          });
+        } else {
+          // Assign depth chart numbers for positions without corrections
+          posPlayers.forEach((player, index) => {
+            if (!player.depth_chart_order) {
+              player.depth_chart_order = index + 1;
+            }
+          });
+        }
         
         // Apply position depth limits
         const limit = this.POSITION_DEPTH_LIMITS[pos] || 10;

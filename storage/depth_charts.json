@@ -373,9 +373,9 @@
       "sleeper:11621",
       "sleeper:13202",
       "sleeper:10234",
-      "sleeper:7729",
       "sleeper:6798",
-      "sleeper:11940"
+      "sleeper:11940",
+      "sleeper:11874"
     ],
     "QB": [
       "sleeper:12773",
@@ -495,9 +495,9 @@
   "NO": {
     "QB": [
       "sleeper:1979",
-      "sleeper:13217",
       "sleeper:10215",
-      "sleeper:11562"
+      "sleeper:11562",
+      "sleeper:12545"
     ],
     "WR": [
       "sleeper:2197",
@@ -723,13 +723,13 @@
       "sleeper:11628"
     ],
     "RB": [
-      "sleeper:8122",
-      "sleeper:6931",
-      "sleeper:11199",
       "sleeper:4137",
+      "sleeper:11589",
+      "sleeper:11199",
+      "sleeper:6931",
       "sleeper:7607",
       "sleeper:7103",
-      "sleeper:11589"
+      "sleeper:8122"
     ],
     "TE": [
       "sleeper:10231",
@@ -808,9 +808,9 @@
       "sleeper:4082",
       "sleeper:5101",
       "sleeper:7596",
-      "sleeper:8416",
       "sleeper:7670",
-      "sleeper:12721"
+      "sleeper:12721",
+      "sleeper:11637"
     ],
     "TE": [
       "sleeper:10236",
