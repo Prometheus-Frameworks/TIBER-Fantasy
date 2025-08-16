@@ -70,6 +70,7 @@ import MockRookies from "@/pages/mock/Rookies";
 import MockConsensusTransparency from "@/pages/mock/ConsensusTransparency";
 import RouteAudit from "@/pages/mock/RouteAudit";
 import PlayerShowcase from "@/pages/PlayerShowcase";
+import HotList from "@/pages/HotList";
 import DataIngestion from "@/pages/DataIngestion";
 import Reflect from "@/pages/Reflect";
 import NotFound from "@/pages/not-found";
@@ -156,6 +157,7 @@ function Router() {
       <Route path="/consensus/transparency" component={MockConsensusTransparency} />
       <Route path="/route-audit" component={RouteAudit} />
       <Route path="/showcase" component={PlayerShowcase} />
+      <Route path="/hot-list" component={HotList} />
       <Route path="/experts/architect-j" component={ArchitectJProfile} />
       <Route path="/adaptive-consensus-demo" component={AdaptiveConsensusDemo} />
       <Route path="/curves-demo" component={CurvesDemo} />

@@ -2965,6 +2965,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== HOT LIST ENDPOINTS =====
+  app.get('/api/players/hot-list', async (req: Request, res: Response) => {
+    try {
+      const { hotListService } = await import('./services/hotListService');
+      
+      const bucket = req.query.bucket as string;
+      const position = req.query.pos as string;
+      const limit = parseInt(req.query.limit as string) || 25;
+
+      // Validate bucket parameter
+      if (!bucket || !['risers', 'elite', 'usage_surge', 'value'].includes(bucket)) {
+        return res.status(400).json({ 
+          error: 'Invalid bucket. Use: risers, elite, usage_surge, value' 
+        });
+      }
+
+      // Validate position parameter if provided
+      if (position && !['WR', 'RB', 'TE', 'QB'].includes(position)) {
+        return res.status(400).json({ 
+          error: 'Invalid position. Use: WR, RB, TE, QB' 
+        });
+      }
+
+      // Seed sample data if not already done
+      const metadata = hotListService.getMetadata();
+      if (!metadata.week) {
+        hotListService.seedSampleData();
+      }
+
+      const result = hotListService.generateHotList({
+        bucket: bucket as any,
+        position: position as any,
+        limit
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('❌ Hot list error:', error);
+      res.status(500).json({ error: 'Failed to generate hot list' });
+    }
+  });
+
+  app.get('/api/players/hot-list/health', async (req: Request, res: Response) => {
+    try {
+      const { hotListService } = await import('./services/hotListService');
+      const metadata = hotListService.getMetadata();
+      
+      res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        metadata,
+        availableBuckets: ['risers', 'elite', 'usage_surge', 'value'],
+        supportedPositions: ['WR', 'RB', 'TE', 'QB'],
+        volumeFloors: {
+          WR: { routes: 12, carries: 0 },
+          RB: { routes: 10, carries: 8 },
+          TE: { routes: 12, carries: 0 },
+          QB: { routes: 0, carries: 0 }
+        }
+      });
+    } catch (error) {
+      console.error('❌ Hot list health check error:', error);
+      res.status(500).json({ 
+        status: 'unhealthy', 
+        message: 'Hot list health check failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // ===== INTELLIGENCE FEED ENDPOINT =====
   app.get('/api/intel', async (req: Request, res: Response) => {
     try {

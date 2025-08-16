@@ -37,8 +37,8 @@ export default function Home(){
       <Section title="Quick Links" />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <GlowCard title="Player Showcase" subtitle="Top performers with live OVR" href="/showcase" />
+        <GlowCard title="Hot List" subtitle="OVR risers & usage surges" href="/hot-list" />
         <GlowCard title="2025 Rookies" subtitle="Class preview & comps" href="/rookies" />
-        <GlowCard title="Articles & Analysis" subtitle="Buy/Sell, Waivers, Usage" href="/articles" />
         <GlowCard title="Dashboard" subtitle="Sync Sleeper leagues" href="/dashboard" />
       </div>
     </main>
