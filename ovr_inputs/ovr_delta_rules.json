@@ -1,0 +1,24 @@
+[
+  {"pos": "WR", "metric": "snap_share", "delta_threshold": 0.10, "persistence_weeks": 3, "ovr_change": 4, "direction": "+"},
+  {"pos": "WR", "metric": "snap_share", "delta_threshold": -0.10, "persistence_weeks": 3, "ovr_change": -4, "direction": "-"},
+  {"pos": "WR", "metric": "routes_pct", "delta_threshold": 0.12, "persistence_weeks": 2, "ovr_change": 3, "direction": "+"},
+  {"pos": "WR", "metric": "routes_pct", "delta_threshold": -0.12, "persistence_weeks": 2, "ovr_change": -3, "direction": "-"},
+  {"pos": "WR", "metric": "tprr", "delta_threshold": 0.05, "persistence_weeks": 3, "ovr_change": 2, "direction": "+"},
+  {"pos": "WR", "metric": "tprr", "delta_threshold": -0.05, "persistence_weeks": 3, "ovr_change": -2, "direction": "-"},
+  {"pos": "WR", "metric": "yprr", "delta_threshold": 0.15, "persistence_weeks": 3, "ovr_change": 3, "direction": "+"},
+  {"pos": "WR", "metric": "yprr", "delta_threshold": -0.15, "persistence_weeks": 3, "ovr_change": -3, "direction": "-"},
+  
+  {"pos": "RB", "metric": "carry_share", "delta_threshold": 0.12, "persistence_weeks": 2, "ovr_change": 3, "direction": "+"},
+  {"pos": "RB", "metric": "carry_share", "delta_threshold": -0.15, "persistence_weeks": 2, "ovr_change": -6, "direction": "-"},
+  {"pos": "RB", "metric": "route_share", "delta_threshold": 0.10, "persistence_weeks": 2, "ovr_change": 3, "direction": "+"},
+  {"pos": "RB", "metric": "route_share", "delta_threshold": -0.10, "persistence_weeks": 2, "ovr_change": -3, "direction": "-"},
+  {"pos": "RB", "metric": "ypc", "delta_threshold": 0.30, "persistence_weeks": 3, "ovr_change": 2, "direction": "+"},
+  {"pos": "RB", "metric": "ypc", "delta_threshold": -0.30, "persistence_weeks": 3, "ovr_change": -2, "direction": "-"},
+  
+  {"pos": "TE", "metric": "routes_pct", "delta_threshold": 0.10, "persistence_weeks": 2, "ovr_change": 3, "direction": "+"},
+  {"pos": "TE", "metric": "routes_pct", "delta_threshold": -0.10, "persistence_weeks": 2, "ovr_change": -3, "direction": "-"},
+  {"pos": "TE", "metric": "rz_share", "delta_threshold": 0.05, "persistence_weeks": 3, "ovr_change": 3, "direction": "+"},
+  {"pos": "TE", "metric": "rz_share", "delta_threshold": -0.05, "persistence_weeks": 3, "ovr_change": -3, "direction": "-"},
+  {"pos": "TE", "metric": "snap_share", "delta_threshold": 0.08, "persistence_weeks": 2, "ovr_change": 2, "direction": "+"},
+  {"pos": "TE", "metric": "snap_share", "delta_threshold": -0.08, "persistence_weeks": 2, "ovr_change": -2, "direction": "-"}
+]

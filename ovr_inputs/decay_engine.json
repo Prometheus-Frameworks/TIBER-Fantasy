@@ -1,0 +1,22 @@
+{
+  "Usage": {
+    "snap_share": {"decay_rate_per_week": 0.20},
+    "routes_pct": {"decay_rate_per_week": 0.20},
+    "carry_share": {"decay_rate_per_week": 0.20},
+    "route_share": {"decay_rate_per_week": 0.20}
+  },
+  "Efficiency": {
+    "tprr": {"decay_rate_per_week": 0.40},
+    "yprr": {"decay_rate_per_week": 0.40},
+    "ypc": {"decay_rate_per_week": 0.40}
+  },
+  "RedZone": {
+    "rz_share": {"decay_rate_per_week": 0.30},
+    "rz_target_share": {"decay_rate_per_week": 0.30}
+  },
+  "Environment": {
+    "env_qb_adj_mean": {"decay_rate_per_week": 0.10},
+    "env_oline_adj_mean": {"decay_rate_per_week": 0.10},
+    "team_pass_att_rank": {"decay_rate_per_week": 0.15}
+  }
+}

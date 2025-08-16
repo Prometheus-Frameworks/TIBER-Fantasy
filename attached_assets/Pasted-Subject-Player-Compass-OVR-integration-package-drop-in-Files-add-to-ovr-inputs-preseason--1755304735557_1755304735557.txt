@@ -1,0 +1,73 @@
+Subject: Player Compass → OVR integration package (drop-in)
+
+Files (add to ovr_inputs/):
+
+preseason_benchmarks.csv
+weekly_change_ranges.csv
+persistence_stats.csv
+fantasy_relevance_cutoffs.csv
+qa_examples.csv
+compass_mapping.csv          # NEW
+ovr_delta_rules.json         # NEW
+decay_engine.json            # NEW
+preseason_to_base_ovr.csv    # NEW
+
+
+What to do:
+
+Seed Base OVR (preseason only)
+
+For each player: map pos + role_tier + percentile → base_ovr_range (use midpoint unless you have finer percentiles).
+
+Store base_ovr and set current_ovr = base_ovr.
+
+Weekly ΔOVR loop (run after data ingest each week)
+
+from pathlib import Path
+import json, pandas as pd
+
+root = Path("ovr_inputs")
+rules = json.loads((root/"ovr_delta_rules.json").read_text())
+decay = json.loads((root/"decay_engine.json").read_text())
+
+def apply_decay(active_deltas):
+    for cat in active_deltas:  # e.g., "Usage","Efficiency","RedZone"
+        for metric, val in list(active_deltas[cat].items()):
+            rate = decay[cat][metric]["decay_rate_per_week"]
+            active_deltas[cat][metric] = val * (1 - rate)
+
+# Pseudocode
+for player in weekly_players:
+    apply_decay(player.active_deltas)
+    for r in rules:
+        if r["pos"] == player.pos and threshold_hit(player, r):
+            player.active_deltas.setdefault(cat_for(r["metric"]), {})[r["metric"]] = \
+                player.active_deltas.get(cat_for(r["metric"]), {}).get(r["metric"], 0) + r["ovr_change"]*(1 if r["direction"]=="+" else -1)
+    player.current_ovr = clamp(player.base_ovr + sum_contributions(player.active_deltas), 40, 99)
+
+
+Compass quadrant scoring
+
+Use compass_mapping.csv to weight each metric into N/E/S/W sub-scores.
+
+Display big OVR badge + four quadrant bars. ovr_weight in the csv is the multiplier.
+
+Depth-chart filter
+
+Apply caps: WR 4, RB 3, TE 2 with ≥20% snap share (use your weekly ingest). Hide the rest by default.
+
+Quick smoke tests
+
+Base seed: A WR tagged WR1, p90–p100 should land in 92–96 OVR (midpoint ~94).
+
+Positive rule: WR +10% snap_share sustained 3 weeks → OVR increases by +4 total (subject to decay if it drops).
+
+Negative rule: RB carry_share −15% sustained 2 weeks → −6 OVR.
+
+Decay: If a TPRR bump isn’t reconfirmed, weekly contribution shrinks by 40% per week.
+
+Expected UI behavior
+
+Player card: OVR 1–99 + N/E/S/W bars + 3 bullet reasons (“Routes +12%”, “TPRR +0.06”, “QB stable”).
+
+Roster/depth: practice-squad noise gone; only fantasy-relevant players displayed.

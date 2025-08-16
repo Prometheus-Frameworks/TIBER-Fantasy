@@ -2848,6 +2848,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== OVR ENGINE ENDPOINTS =====
+  app.post('/api/ovr/seed', async (req: Request, res: Response) => {
+    try {
+      const { ovrEngine } = await import('./services/ovrEngine');
+      const { playerId, position, roleTier } = req.body;
+      
+      if (!playerId || !position || !roleTier) {
+        return res.status(400).json({ error: 'Missing required fields: playerId, position, roleTier' });
+      }
+      
+      const baseOVR = ovrEngine.seedBaseOVR(playerId, position, roleTier);
+      res.json({ 
+        success: true, 
+        playerId, 
+        position, 
+        roleTier, 
+        baseOVR,
+        message: 'Player OVR seeded successfully'
+      });
+    } catch (error) {
+      console.error('❌ OVR seed error:', error);
+      res.status(500).json({ error: 'Failed to seed player OVR' });
+    }
+  });
+
+  app.post('/api/ovr/update', async (req: Request, res: Response) => {
+    try {
+      const { ovrEngine } = await import('./services/ovrEngine');
+      const { playerId, position, weeklyData, week } = req.body;
+      
+      if (!playerId || !position || !weeklyData || week === undefined) {
+        return res.status(400).json({ error: 'Missing required fields: playerId, position, weeklyData, week' });
+      }
+      
+      const result = ovrEngine.processWeeklyUpdate(playerId, position, weeklyData, week);
+      
+      if (!result) {
+        return res.status(404).json({ error: 'Player not found. Seed player first.' });
+      }
+      
+      res.json({ 
+        success: true, 
+        playerState: result,
+        message: 'Weekly OVR update processed'
+      });
+    } catch (error) {
+      console.error('❌ OVR update error:', error);
+      res.status(500).json({ error: 'Failed to update player OVR' });
+    }
+  });
+
+  app.get('/api/ovr/player/:playerId', async (req: Request, res: Response) => {
+    try {
+      const { ovrEngine } = await import('./services/ovrEngine');
+      const { playerId } = req.params;
+      
+      const playerState = ovrEngine.getPlayerOVR(playerId);
+      
+      if (!playerState) {
+        return res.status(404).json({ error: 'Player OVR state not found' });
+      }
+      
+      res.json(playerState);
+    } catch (error) {
+      console.error('❌ OVR fetch error:', error);
+      res.status(500).json({ error: 'Failed to fetch player OVR' });
+    }
+  });
+
+  app.post('/api/ovr/compass', async (req: Request, res: Response) => {
+    try {
+      const { ovrEngine } = await import('./services/ovrEngine');
+      const { playerId, position, playerData } = req.body;
+      
+      if (!playerId || !position || !playerData) {
+        return res.status(400).json({ error: 'Missing required fields: playerId, position, playerData' });
+      }
+      
+      const compassScores = ovrEngine.calculateCompassScores(playerId, position, playerData);
+      res.json({ 
+        playerId, 
+        position, 
+        compass: compassScores,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('❌ Compass scoring error:', error);
+      res.status(500).json({ error: 'Failed to calculate compass scores' });
+    }
+  });
+
+  app.get('/api/ovr/health', async (req: Request, res: Response) => {
+    try {
+      const { ovrEngine } = await import('./services/ovrEngine');
+      const allStates = ovrEngine.getAllPlayerStates();
+      
+      res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        stats: {
+          totalPlayers: allStates.length,
+          playersWithDeltas: allStates.filter(p => Object.keys(p.activeDeltas).length > 0).length,
+          averageOVR: allStates.length > 0 
+            ? Math.round(allStates.reduce((sum, p) => sum + p.currentOVR, 0) / allStates.length)
+            : 0
+        }
+      });
+    } catch (error) {
+      console.error('❌ OVR health check error:', error);
+      res.status(500).json({ 
+        status: 'unhealthy', 
+        message: 'OVR engine health check failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // ===== INTELLIGENCE FEED ENDPOINT =====
   app.get('/api/intel', async (req: Request, res: Response) => {
     try {
