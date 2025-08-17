@@ -1,0 +1,18 @@
+{
+  "captureDate": "2025-08-17T19:22:19.708Z",
+  "sources": [
+    "Sleeper",
+    "MySportsFeeds",
+    "SportsDataIO"
+  ],
+  "files": [
+    "sleeper_players.json",
+    "msf_player_mappings.json",
+    "msf_team_mappings.json",
+    "msf_injury_snapshot.json",
+    "sportsdata_teams.json",
+    "sportsdata_players.json"
+  ],
+  "description": "Static NFL reference data for OTC platform",
+  "expirationRisk": "Low - Contains structural data that changes infrequently"
+}

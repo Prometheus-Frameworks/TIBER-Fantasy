@@ -2381,6 +2381,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Data capture and live mode activation endpoints
+  app.post('/api/data/capture', async (req: Request, res: Response) => {
+    console.log('💾 Starting static data capture process...');
+    
+    try {
+      const { DataCaptureService } = await import('./scripts/dataCapture');
+      const captureService = new DataCaptureService();
+      
+      const result = await captureService.executeFullCapture();
+      
+      res.json({
+        success: result.success,
+        message: 'Static data capture completed',
+        sources: result.sources,
+        files: result.files,
+        timestamp: new Date().toISOString(),
+        note: 'Data saved locally for persistence beyond API trial periods'
+      });
+    } catch (error) {
+      console.error('❌ Data capture error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to capture static data',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/data/captures', async (req: Request, res: Response) => {
+    try {
+      const { DataCaptureService } = await import('./scripts/dataCapture');
+      const captureService = new DataCaptureService();
+      
+      const captures = captureService.getAvailableCaptures();
+      
+      res.json({
+        available: captures,
+        total: captures.length,
+        captureDirectory: 'static_captures',
+        description: 'Persistent reference data for OTC platform'
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to list captures',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Live data processing endpoint
+  app.post('/api/players/hot-list/refresh', async (req: Request, res: Response) => {
+    console.log('🔄 Manual Hot List refresh triggered...');
+    
+    try {
+      const { LiveDataProcessor } = await import('./etl/liveDataProcessor');
+      const processor = new LiveDataProcessor();
+      
+      const result = await processor.processLiveStats();
+      const status = processor.getProcessingStatus();
+      
+      res.json({
+        success: result.success,
+        message: 'Hot List data refresh completed',
+        processing: {
+          playersProcessed: result.players,
+          dataSource: result.source,
+          lastUpdate: status.lastUpdate,
+          availableSnapshots: status.availableSnapshots.length,
+          staticFallbacks: status.staticFallbacks.length
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Hot List refresh error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to refresh Hot List data',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   app.get('/api/players/:id', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
