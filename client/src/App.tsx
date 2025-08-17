@@ -73,6 +73,7 @@ import PlayerShowcase from "@/pages/PlayerShowcase";
 import HotList from "@/pages/HotList";
 import DataIngestion from "@/pages/DataIngestion";
 import Reflect from "@/pages/Reflect";
+import PlayerDatabase from "@/pages/PlayerDatabase";
 import NotFound from "@/pages/not-found";
 import SleeperDatabase from "@/pages/sleeper-database";
 import PrometheusBenchmarks from "@/pages/PrometheusBenchmarks";
@@ -198,6 +199,7 @@ function Router() {
       <Route path="/players/:id" component={PlayerProfileNew} />
       <Route path="/enhanced-player/:id" component={EnhancedPlayerProfile} />
       <Route path="/player-pool" component={FullPlayerPool} />
+      <Route path="/player-database" component={PlayerDatabase} />
       <Route path="/about" component={About} />
       <Route path="/how-you-can-contribute" component={HowYouCanContribute} />
       <Route path="/lineup" component={LineupOptimizer} />

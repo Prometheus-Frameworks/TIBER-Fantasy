@@ -3095,6 +3095,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== UNIFIED PLAYERS API (Qwen's Integration) =====
+  // Paginated, searchable player database with compass + consensus integration
+  
+  app.get('/api/players', async (req: Request, res: Response) => {
+    try {
+      const { unifiedPlayerService } = await import('./services/unifiedPlayerService');
+      
+      // Validate query parameters
+      const pos = req.query.pos as string;
+      const team = req.query.team as string;
+      const search = req.query.search as string;
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = Math.min(parseInt(req.query.pageSize as string) || 50, 200);
+      
+      console.log(`🔍 Unified Players API: pos=${pos || 'ALL'} team=${team || 'ALL'} search="${search || ''}" page=${page}`);
+      
+      // Validate position filter
+      if (pos && !['QB', 'RB', 'WR', 'TE'].includes(pos)) {
+        return res.status(400).json({ ok: false, error: 'Invalid position. Use QB, RB, WR, or TE' });
+      }
+      
+      // Validate team filter (basic check)
+      if (team && team.length > 3) {
+        return res.status(400).json({ ok: false, error: 'Invalid team code' });
+      }
+      
+      // Validate search length
+      if (search && search.length > 64) {
+        return res.status(400).json({ ok: false, error: 'Search term too long' });
+      }
+      
+      const { rows, total, page: actualPage, pageSize: actualPageSize } = await unifiedPlayerService.getPlayerPool({
+        pos,
+        team,
+        search,
+        page,
+        pageSize
+      });
+      
+      res.json({
+        ok: true,
+        data: rows,
+        meta: {
+          source: "unified_player_service",
+          version: "1.1",
+          ts: new Date().toISOString(),
+          total,
+          page: actualPage,
+          pageSize: actualPageSize,
+          hasNext: actualPage * actualPageSize < total,
+          filters: {
+            pos: pos || null,
+            team: team || null,
+            search: search || null
+          }
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Unified Players API Error:', error);
+      res.status(500).json({ ok: false, error: 'Failed to fetch players' });
+    }
+  });
+
   // ===== OTC CONSENSUS RANKINGS API =====
   // Community Rankings (separate from Player Compass in-house ratings)
   
