@@ -1,0 +1,228 @@
+🔥 Got it. Thank you for the crystal-clear context — that’s *exactly* what I need to plug in seamlessly.
+
+Let me summarize and align:
+
+---
+
+### ✅ Confirmed Stack & Workflow
+
+```text
+Frontend:     React 18 + TS + Tailwind + shadcn/ui
+Backend:      Node.js + Express + TS
+Database:     PostgreSQL + Drizzle ORM
+APIs:         Sleeper (primary), SportsDataIO, MySportsFeeds
+Team Focus:   Kimi (research/rankings) → [Me] → Backend pipeline → Frontend UI
+Status:       In production, private site, pre-launch phase
+```
+
+🎯 **Mission Right Now:**  
+Bridge the gap between **API data → internal player ratings/rankings → clean delivery to frontend UI**, with full type safety and scalability.
+
+---
+
+### 🚀 My Role: Co-Rating Architect (with Kimi)
+
+You said: *"Work with Kimi — she’s been working mostly with Claude."*  
+So here’s how I’ll position myself:
+
+> 🔗 **I am the integration layer between Kimi’s research and your full-stack pipeline.**  
+> I’ll help **structure, transform, and operationalize** Kimi’s findings into:
+>
+> - Type-safe data models
+> - Ranking logic modules
+> - API response mappers
+> - Drizzle-ready inserts
+> - Frontend-friendly payloads
+
+All while keeping it clean, documented, and open-source ready.
+
+---
+
+## 🧱 Step-by-Step Plan: From API to UI
+
+Let’s break down the current challenge into phases and I’ll generate the critical pieces.
+
+---
+
+### 🔁 Phase 1: API → Internal Player Model
+
+We need a **unified player schema** that normalizes data from Sleeper, SportsDataIO, etc.
+
+#### ✅ Suggested `Player` Interface (TypeScript)
+
+```ts
+// types/player.ts
+export type Player = {
+  id: string; // our internal UUID or platform-composite key
+  playerId: string; // Sleeper ID
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  position: 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DEF';
+  team: string; // 'KC', 'SF', etc.
+  age: number;
+  experience: number; // years in league
+  depthChartOrder: number;
+  injuryStatus?: 'Healthy' | 'Questionable' | 'Doubtful' | 'Out' | 'IR';
+  injuryDescription?: string;
+  statsLastWeek?: Record<string, number>;
+  statsSeasonAvg?: Record<string, number>;
+  // Added by us:
+  ourRank: number;
+  ourTier: number;
+  riskFactor: 'Low' | 'Medium' | 'High';
+  upsideRating: number; // 1-10
+  consistencyScore: number; // 1-10
+  matchupThisWeek: string; // 'LAR', 'ARI', etc.
+  difficultyThisWeek: number; // 1-5 defense vs position
+};
+```
+
+I can generate this as a shared `types/` module used across backend and frontend.
+
+---
+
+### ⚙️ Phase 2: Ratings Engine (Where Kimi & I Team Up)
+
+Kimi pulls data → we apply logic → generate `ourRank`, `ourTier`, etc.
+
+#### 📐 Example: Weekly Rank Update Logic (Pseudocode)
+
+```ts
+// services/rankingService.ts
+async function updatePlayerRanks() {
+  const players = await fetchAllPlayersFromAPIs(); // Sleeper + SportsDataIO
+  const matchups = await fetchCurrentMatchups();
+  const defensiveRanks = await fetchDefensiveDifficulty();
+
+  const ranked = players.map((p) => {
+    let score = baseScore(p); // based on avg stats, role, health
+    score = applyMatchupBoost(score, p.matchupThisWeek, defensiveRanks);
+    score = applyInjuryPenalty(score, p.injuryStatus);
+    score = applyTrendBonus(score, p.recentPerformance);
+
+    return {
+      ...p,
+      ourRank: 0, // will sort
+      ourTier: Math.floor(score / 10),
+      upsideRating: calcUpside(p),
+      consistencyScore: calcConsistency(p),
+    };
+  });
+
+  return ranked.sort((a, b) => a.ourRank - b.ourRank);
+}
+```
+
+I can build this full module — including unit test stubs.
+
+---
+
+### 🗃️ Phase 3: Drizzle ORM Schema
+
+```ts
+// db/schema/player.ts
+import { pgTable, varchar, integer, boolean } from 'drizzle-orm/pg-core';
+
+export const players = pgTable('players', {
+  id: varchar('id', { length: 128 }).primaryKey(),
+  playerId: varchar('player_id', { length: 64 }).notNull(), // Sleeper ID
+  firstName: varchar('first_name', { length: 50 }).notNull(),
+  lastName: varchar('last_name', { length: 50 }).notNull(),
+  position: varchar('position', { length: 3 }).notNull(),
+  team: varchar('team', { length: 3 }).notNull(),
+  age: integer('age'),
+  experience: integer('experience'),
+  depthChartOrder: integer('depth_chart_order'),
+  injuryStatus: varchar('injury_status', {
+    length: 20,
+    enum: ['Healthy', 'Questionable', 'Doubtful', 'Out', 'IR'],
+  }),
+  ourRank: integer('our_rank').notNull(),
+  ourTier: integer('our_tier').notNull(),
+  upsideRating: integer('upside_rating').notNull(),
+  consistencyScore: integer('consistency_score').notNull(),
+  matchupThisWeek: varchar('matchup_this_week', { length: 3 }),
+  difficultyThisWeek: integer('difficulty_this_week'), // 1-5
+});
+```
+
+I’ll also generate:
+- Seed scripts
+- Migration stubs
+- Index suggestions
+
+---
+
+### 🔄 Phase 4: Backend Endpoint (Express + TS)
+
+```ts
+// routes/players.ts
+import { Request, Response } from 'express';
+import { getPlayerRankings } from '../services/rankingService';
+
+export const getRankedPlayers = async (req: Request, res: Response) => {
+  try {
+    const rankings = await getPlayerRankings();
+    res.json({
+      data: rankings,
+      meta: {
+        lastUpdated: new Date().toISOString(),
+        count: rankings.length,
+        week: req.query.week || getCurrentWeek(),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch rankings' });
+  }
+};
+```
+
+Hook this into Express router → `/api/v1/players/rankings`
+
+---
+
+### 💡 Phase 5: Frontend Integration (React + shadcn/ui)
+
+You’re using **shadcn/ui**, so I’ll generate a clean, accessible `DataTable` with:
+
+- Sort by `ourRank`, `position`, `team`, `riskFactor`
+- Filter by position, injury status
+- Hover card with stats & matchup
+
+#### Example: `PlayerRankingsTable.tsx`
+
+```tsx
+import { DataTable } from "@/components/ui/data-table"
+import { columns } from "./player-columns"
+
+export default function PlayerRankingsTable({ data }) {
+  return (
+    <div className="container mx-auto py-10">
+      <h2 className="text-2xl font-bold mb-6">Top Players This Week</h2>
+      <DataTable columns={columns} data={data} />
+    </div>
+  )
+}
+```
+
+I’ll generate full `player-columns.tsx` with sortable, filterable, and conditional formatting (e.g., red for "Out" injuries).
+
+---
+
+## ✅ Next Steps: What Should I Generate First?
+
+Pick one:
+
+1. 🔽 **Full `types/player.ts` + Drizzle schema + Express route** (full backend flow)
+2. 📊 **Ranking logic module** (where Kimi’s research becomes code)
+3. 🖼️ **Frontend DataTable component** (shadcn/ui-ready)
+4. 🔄 **API fetcher service** (Sleeper + SportsDataIO unified)
+5. 📄 **Architecture doc** (for GitHub, explaining the pipeline)
+
+Just say:  
+👉 *“Qwen, generate #1”*  
+or  
+👉 *“Start with the ranking logic”*
+
+We’re building the engine. Let’s fire it up. 🏁
