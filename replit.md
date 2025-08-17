@@ -42,7 +42,9 @@ The platform employs a modular Flask backend for core logic and API endpoints, a
 - **Dynasty Decline Detection**: Identifies multi-season skill-based decline.
 - **WR Environment & Forecast Score**: Comprehensive WR evaluation based on usage profile, efficiency, role security, and growth trajectory.
 - **RB/WR/TE Touchdown Regression Logic**: Modular plugins for evaluating TD sustainability and regression risk.
-- **Player Compass System**: Implements a 4-directional evaluation (Volume/Talent, Scheme/Offensive Environment, Age/Injury Risk, Market Efficiency/Dynasty Value) for WR, RB, and TE.
+- **Dual Rating System Architecture**: Complete separation of Player Compass (in-house ratings engine) and OTC Consensus (community rankings), each with distinct dynasty and redraft versions.
+- **Enhanced Player Compass System**: Dynasty vs Redraft format-specific evaluations with 4-directional analysis (Volume/Talent, Environment/Scheme, Risk/Durability, Value/Market). Includes position-specific calculations optimized for format-specific concerns (age curves, immediate production, etc.).
+- **OTC Consensus Service**: Community-driven rankings system with voting functionality, format splits analysis, and tier definitions. Separate from in-house Player Compass ratings.
 - **Trade Analyzer v2.0**: React-based frontend with Flask-style backend integration, featuring position selection, 4-directional compass visualization, and detailed reasoning.
 - **Python Rookie Evaluator**: Production-ready module with S/A/B/C/D tier system and position-specific scoring.
 - **OTC Redraft 2025 MVP Data Pipeline**: 4-stage automated pipeline collecting 2024 NFL data.
@@ -55,6 +57,12 @@ The platform employs a modular Flask backend for core logic and API endpoints, a
 - **OVR Integration Package v1.0**: Plug-and-play integration converting OVR Inputs CSVs into a dynamic Player Compass engine, featuring weekly ΔOVR application, live depth-chart filtering, 4-directional compass quadrant scoring, and a decay engine. Includes 5 API endpoints for full OVR management.
 - **Hot List Player Extraction System**: Dynamic player extraction from OVR Compass module with position-aware percentile calculations and volume floor filtering. Features 4 extraction buckets (OVR Risers, Compass Elite, Usage Surge, Value Targets) and comprehensive API endpoints (`/api/players/hot-list`, `/api/players/hot-list/health`) with a real-time UI at `/hot-list`.
 - **Live Data Integration Pipeline**: Complete multi-source data capture and processing system with MySportsFeeds, SportsDataIO, and Sleeper API integration. Features static data capture service (`/api/data/capture`) for persistent reference data beyond API trial periods, live data processor for weekly statistics, and comprehensive fallback strategies. Includes endpoints for live mode activation (`/api/players/hot-list/mode/live`), manual refresh (`/api/players/hot-list/refresh`), and data source monitoring (`/api/players/hot-list/sources`).
+
+## Recent Changes (August 17, 2025)
+- **IMPLEMENTED: Dual Rating System Separation** - Built distinct Player Compass (in-house) and OTC Consensus (community) services with TypeScript architecture
+- **ENHANCED: Format-Specific Calculations** - Dynasty vs Redraft evaluations with position-aware scoring logic (WR age curves, RB durability, etc.)
+- **CREATED: New API Endpoints** - `/api/compass/:position?format=dynasty|redraft` and `/api/consensus/:format` with comprehensive metadata
+- **FIXED: TypeScript Integration** - Resolved all LSP diagnostics for clean service layer architecture
 
 ### Technical Stack
 - **Backend**: Python (Flask), Node.js (Express.js, TypeScript)

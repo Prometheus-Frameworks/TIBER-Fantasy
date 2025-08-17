@@ -74,6 +74,35 @@ import { OTC_SIGNATURE } from '../shared/otcSignature';
 import fs from 'fs';
 import path from 'path';
 
+// Helper function for Player Compass sample data
+async function getSamplePlayersForCompass(position: string, limit: number = 20) {
+  const sampleData = {
+    WR: [
+      { id: 'ja-marr-chase', name: "Ja'Marr Chase", team: 'CIN', age: 24, draftCapital: 5, stats: { targets: 135, receptions: 81, yards: 1056, tds: 7 }, tags: ['alpha', 'target_hog'] },
+      { id: 'ceedee-lamb', name: 'CeeDee Lamb', team: 'DAL', age: 25, draftCapital: 17, stats: { targets: 145, receptions: 98, yards: 1359, tds: 12 }, tags: ['alpha', 'redzone'] },
+      { id: 'justin-jefferson', name: 'Justin Jefferson', team: 'MIN', age: 25, draftCapital: 22, stats: { targets: 120, receptions: 68, yards: 1074, tds: 5 }, tags: ['elite', 'wr1'] },
+      { id: 'amon-ra-st-brown', name: 'Amon-Ra St. Brown', team: 'DET', age: 25, draftCapital: 112, stats: { targets: 164, receptions: 119, yards: 1515, tds: 12 }, tags: ['volume', 'consistent'] },
+      { id: 'puka-nacua', name: 'Puka Nacua', team: 'LAR', age: 23, draftCapital: 177, stats: { targets: 153, receptions: 105, yards: 1486, tds: 6 }, tags: ['breakout', 'young'] }
+    ],
+    RB: [
+      { id: 'saquon-barkley', name: 'Saquon Barkley', team: 'PHI', age: 27, draftCapital: 2, stats: { carries: 345, yards: 2005, tds: 13, targets: 33 }, tags: ['bellcow', 'volume'] },
+      { id: 'josh-jacobs', name: 'Josh Jacobs', team: 'GB', age: 26, draftCapital: 24, stats: { carries: 340, yards: 1329, tds: 11, targets: 44 }, tags: ['workhorse', 'rb1'] },
+      { id: 'derrick-henry', name: 'Derrick Henry', team: 'BAL', age: 30, draftCapital: 45, stats: { carries: 325, yards: 1921, tds: 16, targets: 11 }, tags: ['power', 'aging'] },
+      { id: 'bijan-robinson', name: 'Bijan Robinson', team: 'ATL', age: 22, draftCapital: 8, stats: { carries: 237, yards: 1463, tds: 11, targets: 58 }, tags: ['young', 'receiving'] }
+    ],
+    TE: [
+      { id: 'travis-kelce', name: 'Travis Kelce', team: 'KC', age: 35, draftCapital: 63, stats: { targets: 97, receptions: 65, yards: 823, tds: 3 }, tags: ['aging', 'elite'] },
+      { id: 'sam-laporta', name: 'Sam LaPorta', team: 'DET', age: 24, draftCapital: 34, stats: { targets: 120, receptions: 86, yards: 889, tds: 10 }, tags: ['young', 'redzone'] }
+    ],
+    QB: [
+      { id: 'josh-allen', name: 'Josh Allen', team: 'BUF', age: 28, draftCapital: 7, stats: { passYards: 4306, passTds: 28, rushYards: 15, rushTds: 15 }, tags: ['elite', 'rushing'] },
+      { id: 'lamar-jackson', name: 'Lamar Jackson', team: 'BAL', age: 27, draftCapital: 32, stats: { passYards: 3678, passTds: 24, rushYards: 915, rushTds: 3 }, tags: ['rushing', 'dynamic'] }
+    ]
+  };
+  
+  return (sampleData[position] || []).slice(0, limit);
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // OTC Signature Protocol - Signal endpoint
@@ -1460,8 +1489,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // RB Compass API endpoints - Kimi K2's 4-directional system
-  app.get('/api/compass/rb', async (req: Request, res: Response) => {
+  // ===== ENHANCED PLAYER COMPASS SYSTEM =====
+  // Dynasty vs Redraft Player Compass - Tiber's In-House Ratings Engine
+  
+  app.get('/api/compass/:position', async (req: Request, res: Response) => {
+    try {
+      const { playerCompassService } = await import('./services/playerCompassService');
+      const position = req.params.position.toUpperCase();
+      const format = req.query.format as string || 'dynasty'; // Default to dynasty
+      const limit = parseInt(req.query.limit as string) || 50;
+      
+      console.log(`🧭 Player Compass: ${position} - ${format.toUpperCase()} format`);
+      
+      if (!['WR', 'RB', 'TE', 'QB'].includes(position)) {
+        return res.status(400).json({ error: 'Invalid position. Use WR, RB, TE, or QB' });
+      }
+      
+      if (!['dynasty', 'redraft'].includes(format)) {
+        return res.status(400).json({ error: 'Invalid format. Use dynasty or redraft' });
+      }
+
+      // Get sample players for the position (later replace with real data)
+      const samplePlayers = await getSamplePlayersForCompass(position, limit);
+      
+      // Calculate compass scores for each player
+      const compassResults = await Promise.all(
+        samplePlayers.map(async (player) => {
+          const compassData = {
+            playerId: player.id,
+            playerName: player.name,
+            position: position,
+            age: player.age || 25,
+            team: player.team,
+            rawStats: player.stats,
+            contextTags: player.tags || [],
+            draftCapital: player.draftCapital,
+            experience: player.yearsExp
+          };
+          
+          const compass = await playerCompassService.calculateCompass(compassData, format as 'dynasty' | 'redraft');
+          
+          return {
+            ...player,
+            compass,
+            tier: compass.tier,
+            insights: compass.insights
+          };
+        })
+      );
+      
+      // Sort by compass score
+      compassResults.sort((a, b) => b.compass.score - a.compass.score);
+      
+      res.json({
+        success: true,
+        format: format,
+        position: position,
+        count: compassResults.length,
+        data: compassResults,
+        metadata: {
+          engine: 'Player Compass - OTC In-House Ratings',
+          format_description: format === 'dynasty' 
+            ? 'Long-term value with age curve and talent evaluation'
+            : 'Current season production focus with immediate opportunity',
+          compass_methodology: 'North: Volume/Talent | East: Environment/Scheme | South: Risk/Durability | West: Value/Market',
+          timestamp: new Date().toISOString()
+        }
+      });
+      
+    } catch (error) {
+      console.error(`❌ Player Compass ${req.params.position} error:`, error);
+      res.status(500).json({ error: 'Failed to generate Player Compass rankings' });
+    }
+  });
+
+  // RB Compass API endpoints - Kimi K2's 4-directional system (Legacy)
+  app.get('/api/compass/rb/legacy', async (req: Request, res: Response) => {
     try {
       const { calculateRBPopulationStats } = await import('./rbPopulationStats');
       const { calculateRBCompassDetailed } = await import('./rbCompassCalculations');
@@ -2992,7 +3095,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ===== CONSENSUS TIER PUSH API =====
+  // ===== OTC CONSENSUS RANKINGS API =====
+  // Community Rankings (separate from Player Compass in-house ratings)
+  
+  app.get('/api/consensus/:format', async (req: Request, res: Response) => {
+    try {
+      const { otcConsensusService } = await import('./services/otcConsensusService');
+      const format = req.params.format as 'dynasty' | 'redraft';
+      const position = req.query.position as string;
+      const limit = parseInt(req.query.limit as string) || 100;
+      
+      console.log(`📊 OTC Consensus: ${format.toUpperCase()} rankings requested`);
+      
+      if (!['dynasty', 'redraft'].includes(format)) {
+        return res.status(400).json({ error: 'Invalid format. Use dynasty or redraft' });
+      }
+      
+      const { rankings, metadata } = await otcConsensusService.getConsensusRankings(format, position);
+      
+      res.json({
+        success: true,
+        format: format,
+        position: position || 'ALL',
+        count: rankings.slice(0, limit).length,
+        data: rankings.slice(0, limit),
+        metadata: {
+          ...metadata,
+          system: 'OTC Consensus - Community Rankings',
+          format_description: format === 'dynasty' 
+            ? 'Community consensus on long-term dynasty value and outlook'
+            : 'Community consensus on current season fantasy production',
+          tier_definitions: otcConsensusService.getTierDefinitions(format)
+        }
+      });
+      
+    } catch (error) {
+      console.error(`❌ OTC Consensus ${req.params.format} error:`, error);
+      res.status(500).json({ error: 'Failed to fetch OTC Consensus rankings' });
+    }
+  });
+  
+  app.get('/api/consensus/splits/:playerId', async (req: Request, res: Response) => {
+    try {
+      const { otcConsensusService } = await import('./services/otcConsensusService');
+      const playerId = req.params.playerId;
+      
+      const splits = await otcConsensusService.getConsensusSplits(playerId);
+      
+      res.json({
+        success: true,
+        playerId,
+        splits,
+        note: 'Dynasty vs Redraft ranking variance analysis'
+      });
+      
+    } catch (error) {
+      console.error(`❌ Consensus splits error for ${req.params.playerId}:`, error);
+      res.status(500).json({ error: 'Failed to fetch consensus splits' });
+    }
+  });
+  
+  app.post('/api/consensus/vote', async (req: Request, res: Response) => {
+    try {
+      const { otcConsensusService } = await import('./services/otcConsensusService');
+      const { playerId, rank, format, userId } = req.body;
+      
+      if (!playerId || !rank || !format) {
+        return res.status(400).json({ error: 'Missing required fields: playerId, rank, format' });
+      }
+      
+      const result = await otcConsensusService.submitVote(playerId, rank, format, userId);
+      
+      res.json({
+        success: result.success,
+        message: 'Vote submitted successfully',
+        newConsensusRank: result.newConsensusRank
+      });
+      
+    } catch (error) {
+      console.error('❌ Consensus vote error:', error);
+      res.status(500).json({ error: 'Failed to submit vote' });
+    }
+  });
+
+  // ===== CONSENSUS TIER PUSH API (Legacy) =====
   app.post('/api/consensus/push-tier', async (req: Request, res: Response) => {
     try {
       const { tierId, players, tier, format } = req.body;
