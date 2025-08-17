@@ -157,10 +157,11 @@ export class HotListService {
     const thresholds = BIG_CHANGE_THRESHOLDS[player.position as keyof typeof BIG_CHANGE_THRESHOLDS];
     if (!thresholds) return false;
 
-    const routesPctSurge = (player.deltas.deltaRoutesPct || 0) >= (thresholds.delta_routes_pct || 0.1);
-    const snapSurge = (player.deltas.deltaSnapPp || 0) >= (thresholds.delta_snap_pp || 10);
-    const carryShareSurge = (player.deltas.deltaCarryShare || 0) >= (thresholds.delta_carry_share || 0.1);
-    const routeShareSurge = (player.deltas.deltaRouteShare || 0) >= (thresholds.delta_route_share || 0.1);
+    const deltas = player.deltas as any;
+    const routesPctSurge = (deltas.deltaRoutesPct || deltas.delta_routes_pct || 0) >= (thresholds.delta_routes_pct || 0.1);
+    const snapSurge = (deltas.deltaSnapPp || deltas.delta_snap_pp || 0) >= (thresholds.delta_snap_pp || 10);
+    const carryShareSurge = (deltas.deltaCarryShare || deltas.delta_carry_share || 0) >= (thresholds.delta_carry_share || 0.1);
+    const routeShareSurge = (deltas.deltaRouteShare || deltas.delta_route_share || 0) >= (thresholds.delta_route_share || 0.1);
 
     return routesPctSurge || snapSurge || carryShareSurge || routeShareSurge;
   }
@@ -219,8 +220,10 @@ export class HotListService {
       case 'usage_surge':
         filtered = players.filter(player => this.hasUsageSurge(player));
         filtered.sort((a, b) => {
-          const aUsage = (a.deltas.deltaRoutesPct || 0) + (a.deltas.deltaSnapPp || 0) / 100;
-          const bUsage = (b.deltas.deltaRoutesPct || 0) + (b.deltas.deltaSnapPp || 0) / 100;
+          const aDeltas = a.deltas as any;
+          const bDeltas = b.deltas as any;
+          const aUsage = (aDeltas.deltaRoutesPct || aDeltas.delta_routes_pct || 0) + (aDeltas.deltaSnapPp || aDeltas.delta_snap_pp || 0) / 100;
+          const bUsage = (bDeltas.deltaRoutesPct || bDeltas.delta_routes_pct || 0) + (bDeltas.deltaSnapPp || bDeltas.delta_snap_pp || 0) / 100;
           return bUsage - aUsage;
         });
         break;
