@@ -45,7 +45,7 @@ import { sleeperStrictSnapService } from './services/sleeperStrictSnapService';
 import { wrRatingsService } from './services/wrRatingsService';
 import { wrGameLogsService } from './services/wrGameLogsService';
 import { playerPoolService } from './playerPool';
-import compassRoutes from './routes/compassRoutes';
+// Live compass routes imported in registerRoutes function
 import rbCompassRoutes from './routes/rbCompassRoutes';
 import teCompassRoutes from './routes/teCompassRoutes';
 import tiberDataRoutes from './routes/tiberDataRoutes';
@@ -405,8 +405,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // TIBER: Export positional game log samples
   app.get('/api/tiber/export-positional-game-logs', exportPositionalGameLogs);
 
-  // Unified Compass Rankings with Algorithm Selection
-  app.get('/api/compass/:position', async (req, res) => {
+  // Legacy Unified Compass Rankings with Algorithm Selection - DEPRECATED
+  app.get('/api/compass-legacy-algorithm/:position', async (req, res) => {
     try {
       const position = req.params.position.toLowerCase();
       const algorithm = (req.query.algorithm as string) || 'default';
@@ -503,8 +503,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
     } catch (error) {
-      console.error('Unified compass rankings error:', error);
-      res.status(500).json({ error: 'Failed to generate compass rankings' });
+      console.error('Legacy compass deprecated:', error);
+      res.status(410).json({ error: 'Legacy compass route deprecated - use live Sleeper API routes' });
     }
   });
 
@@ -1489,20 +1489,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Production Compass routes (BEFORE legacy routes to prevent conflicts)
-  const { registerWRCompassRoute } = await import('./routes/compassWrRoute');
-  const { registerRBCompassRoute } = await import('./routes/compassRbRoute');
-  const { registerTECompassRoute } = await import('./routes/compassTeRoute');
-  const { registerQBCompassRoute } = await import('./routes/compassQbRoute');
-  registerWRCompassRoute(app);
-  registerRBCompassRoute(app);
-  registerTECompassRoute(app);
-  registerQBCompassRoute(app);
+  // Live Compass routes with Sleeper sync (BEFORE legacy routes to prevent conflicts)
+  const { registerCompassRoutes } = await import('./routes/compassRoutes');
+  registerCompassRoutes(app);
 
   // ===== ENHANCED PLAYER COMPASS SYSTEM =====
   // Dynasty vs Redraft Player Compass - Tiber's In-House Ratings Engine (LEGACY)
+  // REMOVED: Legacy route replaced by live Sleeper-synced route above
   
-  app.get('/api/compass/:position', async (req: Request, res: Response) => {
+  app.get('/api/compass-legacy/:position', async (req: Request, res: Response) => {
     try {
       const { playerCompassService } = await import('./services/playerCompassService');
       const position = req.params.position.toUpperCase();
@@ -1821,7 +1816,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Player Compass routes (legacy - for specific position endpoints)
-  app.use('/api/compass', compassRoutes);
+  // Live compass routes already registered above
   app.use('/api/rb-compass', rbCompassRoutes);
   app.use('/api/te-compass', teCompassRoutes);
   

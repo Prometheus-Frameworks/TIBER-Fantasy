@@ -459,8 +459,8 @@ export class PlayerCompassService {
    */
   private createBaseProfile(playerData: any): Partial<CompassProfile> {
     return {
-      playerId: playerData.id || playerData.player_id || '',
-      name: playerData.name || playerData.player_name || '',
+      playerId: playerData.id || playerData.player_id || playerData.playerId || '',
+      name: playerData.playerName || playerData.name || playerData.player_name || '',
       position: playerData.position as CompassProfile['position'],
       team: playerData.team || ''
     };

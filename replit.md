@@ -59,18 +59,25 @@ The platform employs a modular Flask backend for core logic and API endpoints, a
 - **Live Data Integration Pipeline**: Complete multi-source data capture and processing system with MySportsFeeds, SportsDataIO, and Sleeper API integration. Features static data capture service (`/api/data/capture`) for persistent reference data beyond API trial periods, live data processor for weekly statistics, and comprehensive fallback strategies. Includes endpoints for live mode activation (`/api/players/hot-list/mode/live`), manual refresh (`/api/players/hot-list/refresh`), and data source monitoring (`/api/players/hot-list/sources`).
 
 ## Recent Changes (August 18, 2025)
-- **COMPLETED: Four-Pillar Compass System** - Successfully implemented complete compass system with all major positions:
-  - WR Compass API (`/api/compass/WR`) - Technical analysis with compass scoring and caching
-  - RB Compass API (`/api/compass/RB`) - Running back analysis with usage and durability insights
-  - TE Compass API (`/api/compass/TE`) - Tight end evaluation with target share and red zone metrics
-  - QB Compass API (`/api/compass/QB`) - Quarterback assessment with passing/rushing dual-threat scoring
-- **IMPLEMENTED: Production-Safe Architecture** - All compass endpoints feature Zod validation, LRU caching (10-min TTL), and consistent response formats
-- **CREATED: Position-Specific Components** - React table components for each position with TanStack Query integration and position-specific styling
-- **ENHANCED: Three-Pillar Rating System** - Complete separation with distinct APIs:
-  - Qwen Players API (`/api/qwen/players`) - Performance-based rankings with metadata structure
-  - OTC Consensus API (`/api/consensus/players`) - Community-driven rankings with voting data
-  - Compass APIs - Technical analysis for WR/RB/TE/QB with 4-directional scoring
-- **RESOLVED: Route Ordering** - Fixed route conflicts to ensure production endpoints work correctly before legacy routes
+- **COMPLETED: Live Sleeper API Integration** - Successfully replaced static CSV data with live Sleeper API across all compass endpoints:
+  - All 4 compass positions (WR/RB/TE/QB) now use authentic Sleeper player data (3,755+ players)
+  - Real-time player names, teams, ages, and statistics from Sleeper's NFL database
+  - Proper field mapping from Sleeper API structure (full_name, first_name, last_name, team, position)
+  - Server logs confirm "🔄 Live Compass: {POSITION} with Sleeper-synced data" instead of legacy CSV messages
+- **RESOLVED: Route Conflicts** - Eliminated legacy compass route conflicts that were intercepting live API requests:
+  - Removed conflicting `/api/compass/:position` legacy route (changed to `/api/compass-legacy-algorithm/:position`)
+  - Live Sleeper-synced routes now properly handle all requests via `compassRoutes.ts`
+  - Data source correctly shows "Sleeper sync → Compass v2.0" in API responses
+- **VERIFIED: Complete Functionality** - Comprehensive testing confirms all features operational:
+  - Search functionality: Find players like "Justin Jefferson", "Ja'Marr Chase", "Xavier Worthy"
+  - Team filtering: Filter by team codes (e.g., KC shows 10 WRs including Rashee Rice, Xavier Worthy)
+  - Format support: Both dynasty and redraft formats working with different scoring emphasis
+  - Pagination: Minimum 10 players per page with proper offset/limit handling
+  - 4-directional compass scoring: North (Dynasty Ceiling), East (Contending), South (Redraft Appeal), West (Usage Security)
+- **ENHANCED: Data Quality** - Live data provides authentic player information:
+  - Current active players (Justin Jefferson MIN, Ja'Marr Chase CIN) with proper team assignments
+  - Historical players properly archived (Roddy White, Ray Rice) with legacy team data
+  - Comprehensive coverage across all skill positions with real NFL roster data
 
 ### Technical Stack
 - **Backend**: Python (Flask), Node.js (Express.js, TypeScript)

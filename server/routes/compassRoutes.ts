@@ -1,278 +1,205 @@
-/**
- * Player Compass API Routes
- * RESTful endpoints for the Player Compass evaluation system
- */
+import { Express, Request, Response } from "express";
+import { z } from "zod";
+import { LRUCache } from "lru-cache";
+import { PlayerCompassService } from "../playerCompass";
 
-import { Router } from 'express';
-import { PlayerCompassService, CompassFilters } from '../playerCompass';
-import { compassDataAdapter } from '../compassDataAdapter';
+const Query = z.object({
+  format: z.enum(["dynasty", "redraft"]).default("dynasty"),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(10).max(200).optional(),
+  team: z.string().max(3).optional(),
+  search: z.string().max(64).optional(),
+});
 
-const router = Router();
-const compassService = new PlayerCompassService();
+// cache whole response by key (fast path)
+const respCache = new LRUCache<string, any>({ max: 200, ttl: 5 * 60 * 1000 });
 
-/**
- * GET /api/compass/players
- * Get all player compass profiles with optional filtering
- */
-router.get('/players', async (req, res) => {
-  try {
-    console.log('🧭 Player Compass: Fetching player profiles...');
-    
-    // Get WR players from CSV data adapter
-    const players = compassDataAdapter.getCompassPlayers();
-    
-    if (!players || players.length === 0) {
-      return res.json({
-        success: true,
-        profiles: [],
-        count: 0,
-        message: 'No players found in database'
-      });
-    }
-    
-    // Generate compass profiles for all players
-    const profiles = players.map(player => {
-      try {
-        return compassService.generateCompassProfile(player);
-      } catch (error) {
-        console.warn(`⚠️ Failed to generate compass profile for ${player.name}:`, error);
-        return null;
+export const registerCompassRoutes = (app: Express) => {
+  const compassService = new PlayerCompassService();
+
+  app.get("/api/compass/:position", async (req: Request, res: Response) => {
+    try {
+      // position is a PATH PARAM, not a query param
+      const position = String(req.params.position || "").toUpperCase();
+      if (!["WR", "RB", "TE", "QB"].includes(position)) {
+        return res.status(400).json({ ok: false, error: "Invalid position. Use WR, RB, TE, or QB" });
       }
-    }).filter(profile => profile !== null);
-    
-    // Apply filters if provided
-    const filters: CompassFilters = {};
-    
-    if (req.query.positions) {
-      filters.positions = Array.isArray(req.query.positions) 
-        ? req.query.positions as any
-        : [req.query.positions as any];
-    }
-    
-    if (req.query.tiers) {
-      filters.tiers = Array.isArray(req.query.tiers)
-        ? req.query.tiers as any
-        : [req.query.tiers as any];
-    }
-    
-    if (req.query.tags) {
-      filters.tags = Array.isArray(req.query.tags)
-        ? req.query.tags as any
-        : [req.query.tags as any];
-    }
-    
-    if (req.query.teams) {
-      filters.teams = Array.isArray(req.query.teams)
-        ? req.query.teams as any
-        : [req.query.teams as any];
-    }
-    
-    if (req.query.minAge || req.query.maxAge) {
-      filters.ageRange = {
-        min: parseInt(req.query.minAge as string) || 0,
-        max: parseInt(req.query.maxAge as string) || 50
+
+      console.log(`🔄 Live Compass: ${position} with Sleeper-synced data`);
+
+      const q = Query.parse(req.query);
+      const mode = q.format;
+      // support either page/pageSize OR legacy limit
+      const page = q.page ?? 1;
+      const pageSize = q.pageSize ?? (q.limit ?? 50);
+      const offset = (page - 1) * pageSize;
+
+      // cache key includes filters
+      const cacheKey = `compass:${position}:${mode}:${page}:${pageSize}:${q.team ?? ""}:${q.search ?? ""}`;
+      const cached = respCache.get(cacheKey);
+      if (cached) return res.json(cached);
+
+      // 1) pull from Sleeper service (live data)
+      const { sleeperSyncService } = await import('../services/sleeperSyncService');
+      const allPlayers = await sleeperSyncService.getPlayers();
+
+      // 2) filter by position + optional team/search
+      let pool = allPlayers.filter((p: any) => p.position === position);
+      if (q.team) pool = pool.filter((p: any) => p.team === q.team);
+      if (q.search) {
+        const s = q.search.toLowerCase();
+        pool = pool.filter((p: any) =>
+          String(p.name || "").toLowerCase().includes(s)
+          || String(p.first_name || "").toLowerCase().includes(s)
+          || String(p.last_name || "").toLowerCase().includes(s)
+        );
+      }
+
+      const total = pool.length;
+
+      // 3) paginate slice
+      const slice = pool.slice(offset, offset + pageSize);
+
+      // 4) map -> compass DTO using live stats/tags/draft info
+      const results = await Promise.all(
+        slice.map(async (p: any) => {
+          const compassInput = {
+            playerId: p.player_id,
+            playerName: p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.search_full_name,
+            position: p.position,        // WR/RB/TE/QB
+            team: p.team ?? null,
+            age: p.age ?? null,
+            rawStats: {
+              ...(p.stats ?? {}),
+              adp: p.adp ?? null,
+              projectedPoints: p.projected_points ?? null,
+              ownership: p.ownership_percent ?? null,
+            },
+            contextTags: p.tags ?? [],
+            draftCapital: p.draft_pick ?? p.draftCapital ?? null,
+            experience: p.years_exp ?? null,
+          };
+
+          const comp = compassService.generateCompassProfile(compassInput);
+          
+          // Convert CompassProfile to 4-directional scoring format
+          const compassScore = (
+            comp.scenarios.dynastyCeiling + 
+            comp.scenarios.contendingTeam + 
+            comp.scenarios.redraftAppeal + 
+            comp.opportunityMetrics.usageSecurity
+          ) / 4;
+
+          return {
+            id: p.player_id,
+            player_name: p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.search_full_name || p.name,
+            name: p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.search_full_name || p.name,
+            team: p.team ?? null,
+            age: p.age ?? null,
+            adp: p.adp ?? null,
+            projected_points: p.projected_points ?? null,
+            stats: p.stats ?? null,
+            compass: {
+              north: comp.scenarios.dynastyCeiling,
+              east: comp.scenarios.contendingTeam,
+              south: comp.scenarios.redraftAppeal,
+              west: comp.opportunityMetrics.usageSecurity,
+              score: compassScore,
+            },
+            dynastyScore: compassScore,
+            tier: comp.tier,
+            insights: comp.keyInsights,
+          };
+        })
+      );
+
+      // 5) stable sort: score desc, then ADP asc
+      results.sort(
+        (a: any, b: any) =>
+          (b.dynastyScore ?? -1) - (a.dynastyScore ?? -1) ||
+          (a.adp ?? 9999) - (b.adp ?? 9999)
+      );
+
+      const payload = {
+        ok: true,
+        position,
+        format: mode,
+        data: results,
+        meta: {
+          total,
+          page,
+          pageSize,
+          hasNext: page * pageSize < total,
+          ts: new Date().toISOString(),
+          source: "Sleeper sync → Compass v2.0",
+          filters: { team: q.team ?? null, search: q.search ?? null },
+        },
       };
-    }
-    
-    if (req.query.scenario && req.query.minScenarioValue) {
-      filters.scenarios = {
-        scenario: req.query.scenario as any,
-        minValue: parseFloat(req.query.minScenarioValue as string)
-      };
-    }
-    
-    // Filter profiles
-    const filteredProfiles = Object.keys(filters).length > 0 
-      ? compassService.filterProfiles(profiles, filters)
-      : profiles;
-    
-    // Sort by tier and scenario value
-    const sortedProfiles = filteredProfiles.sort((a, b) => {
-      const tierOrder = { 'Elite': 5, 'High-End': 4, 'Solid': 3, 'Upside': 2, 'Deep': 1 };
-      const aTierValue = tierOrder[a.tier];
-      const bTierValue = tierOrder[b.tier];
-      
-      if (aTierValue !== bTierValue) {
-        return bTierValue - aTierValue; // Higher tier first
-      }
-      
-      // Within same tier, sort by dynasty ceiling
-      return b.scenarios.dynastyCeiling - a.scenarios.dynastyCeiling;
-    });
-    
-    console.log(`✅ Generated ${sortedProfiles.length} compass profiles`);
-    
-    res.json({
-      success: true,
-      profiles: sortedProfiles,
-      count: sortedProfiles.length,
-      filters: filters,
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('❌ Player Compass error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to generate player compass profiles',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
 
-/**
- * GET /api/compass/players/:id
- * Get detailed compass profile for a specific player
- */
-router.get('/players/:id', async (req, res) => {
-  try {
-    const playerId = req.params.id;
-    console.log(`🧭 Player Compass: Fetching profile for player ${playerId}...`);
-    
-    const players = compassDataAdapter.getCompassPlayers();
-    const player = players.find(p => p.id === playerId || p.player_id === playerId);
-    
-    if (!player) {
-      return res.status(404).json({
-        success: false,
-        error: 'Player not found',
-        playerId
-      });
+      respCache.set(cacheKey, payload);
+      return res.json(payload);
+    } catch (err: any) {
+      console.error("❌ /api/compass/:position", err);
+      return res.status(400).json({ ok: false, error: err?.message ?? "Bad request" });
     }
-    
-    const profile = compassService.generateCompassProfile(player);
-    
-    console.log(`✅ Generated compass profile for ${player.name}`);
-    
-    res.json({
-      success: true,
-      profile,
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('❌ Player Compass profile error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to generate player compass profile',
-      playerId: req.params.id,
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
+  });
+};
 
-/**
- * GET /api/compass/tiers
- * Get summary of players by tier
- */
-router.get('/tiers', async (req, res) => {
-  try {
-    console.log('🧭 Player Compass: Fetching tier summary...');
-    
-    const players = compassDataAdapter.getCompassPlayers();
-    
-    if (!players || players.length === 0) {
-      return res.json({
-        success: true,
-        tiers: {},
-        count: 0
-      });
-    }
-    
-    const profiles = players.map(player => compassService.generateCompassProfile(player));
-    
-    // Group by tier
-    const tierSummary = profiles.reduce((acc, profile) => {
-      if (!acc[profile.tier]) {
-        acc[profile.tier] = [];
-      }
-      acc[profile.tier].push({
-        name: profile.name,
-        position: profile.position,
-        team: profile.team,
-        dynastyCeiling: profile.scenarios.dynastyCeiling,
-        contextTags: profile.contextTags.slice(0, 3) // Top 3 tags
-      });
-      return acc;
-    }, {} as Record<string, any[]>);
-    
-    // Sort players within each tier
-    Object.keys(tierSummary).forEach(tier => {
-      tierSummary[tier].sort((a, b) => b.dynastyCeiling - a.dynastyCeiling);
-    });
-    
-    console.log(`✅ Generated tier summary for ${profiles.length} players`);
-    
-    res.json({
-      success: true,
-      tiers: tierSummary,
-      count: profiles.length,
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('❌ Player Compass tier summary error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to generate tier summary',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
+// helpers
+function tierFromScore(score: number | null, format: "dynasty" | "redraft", position: string) {
+  if (score == null) return "Unrated";
+  
+  const prefix = position === "QB" ? "QB" : position === "TE" ? "TE" : position === "RB" ? "RB" : "WR";
+  
+  if (format === "dynasty") {
+    if (score >= 8.5) return `Elite Dynasty ${prefix}`;
+    if (score >= 7.5) return `${prefix}1 Dynasty Asset`;
+    if (score >= 6.5) return `Solid Dynasty Hold`;
+    return `Dynasty Depth`;
+  } else {
+    if (score >= 8.5) return `Must-Start ${prefix}`;
+    if (score >= 7.5) return `Strong ${prefix}1`;
+    if (score >= 6.5) return `Solid ${prefix} Option`;
+    return position === "QB" ? "Streaming Option" : "Streaming/Flex";
   }
-});
+}
 
-/**
- * GET /api/compass/tags
- * Get available context tags and their frequencies
- */
-router.get('/tags', async (req, res) => {
-  try {
-    console.log('🧭 Player Compass: Fetching context tags...');
-    
-    const players = compassDataAdapter.getCompassPlayers();
-    
-    if (!players || players.length === 0) {
-      return res.json({
-        success: true,
-        tags: {},
-        count: 0
-      });
-    }
-    
-    const profiles = players.map(player => compassService.generateCompassProfile(player));
-    
-    // Count tag frequencies
-    const tagCounts = profiles.reduce((acc, profile) => {
-      profile.contextTags.forEach(tag => {
-        acc[tag] = (acc[tag] || 0) + 1;
-      });
-      return acc;
-    }, {} as Record<string, number>);
-    
-    // Sort by frequency
-    const sortedTags = Object.entries(tagCounts)
-      .sort(([, a], [, b]) => b - a)
-      .reduce((acc, [tag, count]) => {
-        acc[tag] = count;
-        return acc;
-      }, {} as Record<string, number>);
-    
-    console.log(`✅ Generated tag summary: ${Object.keys(sortedTags).length} unique tags`);
-    
-    res.json({
-      success: true,
-      tags: sortedTags,
-      count: Object.keys(sortedTags).length,
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('❌ Player Compass tags error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to generate tag summary',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
+function quickInsightsForPosition(
+  position: string,
+  player: { age?: number | null; adp?: number | null; team?: string | null },
+  comp: any
+) {
+  const out: string[] = [];
+  const age = player.age ?? 99;
+  const adp = player.adp ?? 999;
+  
+  // Age insights by position
+  if (position === "QB" && age <= 26) out.push("Prime dynasty age");
+  else if (position !== "QB" && age <= 25) out.push("Prime dynasty age");
+  
+  // ADP insights by position
+  if (position === "QB" && adp <= 24) out.push("Market: top-2 rounds");
+  else if (position === "TE" && adp <= 48) out.push("Market: top-4 rounds");
+  else if (adp <= 36) out.push("Market: early rounds");
+  
+  // Compass-specific insights
+  if (comp?.volume != null && comp.volume >= 8) {
+    if (position === "QB") out.push("Passing volume");
+    else if (position === "TE") out.push("Target volume");
+    else out.push("High volume role");
   }
-});
-
-export default router;
+  
+  if (comp?.talent != null && comp.talent >= 8) {
+    if (position === "QB") out.push("Dual-threat ability");
+    else if (position === "TE") out.push("Red zone threat");
+    else out.push("Elite talent profile");
+  }
+  
+  if (comp?.environment != null && comp.environment < 5) {
+    if (position === "QB") out.push("O-line/system risk");
+    else out.push("Usage concern");
+  }
+  
+  return out;
+}
