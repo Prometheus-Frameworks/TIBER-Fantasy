@@ -52,6 +52,14 @@ export interface UnifiedPlayer {
   compass?: { score?: number | null; tier?: string | null };
 }
 
+export interface PlayerFilters {
+  pos?: string;
+  team?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
 const compassCache = new LRUCache<string, any>(5000, 10 * 60 * 1000);
 
 function compassKey(id: string, mode: "dynasty" | "redraft" = "dynasty") {

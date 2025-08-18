@@ -1810,7 +1810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player Compass routes
+  // Player Compass routes (legacy - for specific position endpoints)
   app.use('/api/compass', compassRoutes);
   app.use('/api/rb-compass', rbCompassRoutes);
   app.use('/api/te-compass', teCompassRoutes);
@@ -2321,6 +2321,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const query = new URLSearchParams(req.query as any).toString();
     res.redirect(`/api/player-pool?${query}`);
   });
+
+  // ===== SEPARATED RATING SYSTEM ENDPOINTS (Must come before existing compass routes) =====
+  
+  // 🧭 Player Compass Service - Technical analysis ratings (NEW SEPARATED API)
+  app.get('/api/player-compass/players', async (req: Request, res: Response) => {
+    try {
+      const { playerCompassPlayerService } = await import("./services/playerCompassPlayerService");
+      
+      const filters = {
+        pos: req.query.pos as string,
+        team: req.query.team as string,
+        search: req.query.search as string,
+        page: req.query.page ? parseInt(req.query.page as string) : 1,
+        pageSize: req.query.pageSize ? parseInt(req.query.pageSize as string) : 10,
+      };
+
+      const result = await playerCompassPlayerService.getPlayers(filters);
+      res.json(result);
+    } catch (error) {
+      console.error('❌ Player Compass API Error:', error);
+      res.status(500).json({
+        error: 'Failed to fetch Player Compass data',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
+  // 🎯 Qwen Player Service - Performance-based rankings
+  app.get('/api/qwen/players', async (req: Request, res: Response) => {
+    try {
+      const { qwenPlayerService } = await import("./services/qwenPlayerService");
+      
+      const filters = {
+        pos: req.query.pos as string,
+        team: req.query.team as string,
+        search: req.query.search as string,
+        page: req.query.page ? parseInt(req.query.page as string) : 1,
+        pageSize: req.query.pageSize ? parseInt(req.query.pageSize as string) : 10,
+      };
+
+      const result = await qwenPlayerService.getPlayers(filters);
+      res.json(result);
+    } catch (error) {
+      console.error('❌ Qwen Players API Error:', error);
+      res.status(500).json({
+        error: 'Failed to fetch Qwen player data',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // 🏆 OTC Consensus Service - Community rankings
+  app.get('/api/consensus/players', async (req: Request, res: Response) => {
+    try {
+      const { otcConsensusPlayerService } = await import("./services/otcConsensusPlayerService");
+      
+      const filters = {
+        pos: req.query.pos as string,
+        team: req.query.team as string,
+        search: req.query.search as string,
+        page: req.query.page ? parseInt(req.query.page as string) : 1,
+        pageSize: req.query.pageSize ? parseInt(req.query.pageSize as string) : 10,
+      };
+
+      const result = await otcConsensusPlayerService.getPlayers(filters);
+      res.json(result);
+    } catch (error) {
+      console.error('❌ OTC Consensus API Error:', error);
+      res.status(500).json({
+        error: 'Failed to fetch OTC Consensus data',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+
 
   // ===== HOT LIST ENDPOINTS (must come before parameterized routes) =====
   app.get('/api/players/hot-list', async (req: Request, res: Response) => {

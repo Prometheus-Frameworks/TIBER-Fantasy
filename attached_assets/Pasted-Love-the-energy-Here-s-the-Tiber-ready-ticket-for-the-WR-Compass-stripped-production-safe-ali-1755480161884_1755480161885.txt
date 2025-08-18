@@ -1,0 +1,291 @@
+Love the energy. Here’s the **Tiber-ready ticket** for the WR Compass—stripped, production-safe, aligned to OTC. Ship this, not the fluffy write-up.
+
+---
+
+## Commit Message
+
+```
+feat(compass-wr): WR Compass API + table (stack-aligned, paginated, cached)
+
+- Add /api/compass/WR with zod-validated params (format, algorithm, limit/page)
+- Use PlayerCompassService; no CSV enrichment in request path
+- LRU cache for per-player compass results (10m)
+- New WRCompassTable (TanStack Query, 5-min stale)
+```
+
+---
+
+## Guardrails (read this, Tiber)
+
+* **Do NOT** invent `wrRatingsService` or `compassCalculations`. Use our existing `PlayerCompassService`.
+* **Do NOT** compute heavy stuff per row without cache.
+* **Do NOT** chain `.where()` repeatedly; compose with `and(...)`.
+* Keep everything nullable-safe.
+
+---
+
+## Files to Add / Update
+
+### 1) `routes/compassWrRoute.ts`
+
+```ts
+import { Express, Request, Response } from "express";
+import { z } from "zod";
+import { db } from "@/db";
+import { players, playerInjuries } from "@/shared/schema";
+import { and, eq, ilike, or, sql } from "drizzle-orm";
+import LRU from "lru-cache";
+import { PlayerCompassService } from "@/services/playerCompassService";
+
+// --- cache ---
+const compassCache = new LRU<string, any>({ max: 5000, ttl: 10 * 60 * 1000 });
+const cKey = (id: string, mode: "dynasty" | "redraft") => `${id}:${mode}`;
+
+const Query = z.object({
+  format: z.enum(["dynasty", "redraft"]).default("dynasty"),
+  algorithm: z.enum(["default", "enhanced", "prometheus"]).default("default"),
+  search: z.string().max(64).optional(),
+  team: z.string().max(3).optional(),
+  limit: z.coerce.number().int().min(10).max(100).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(10).max(100).optional(),
+});
+
+const compassService = new PlayerCompassService();
+
+export function registerWRCompassRoute(app: Express) {
+  app.get("/api/compass/WR", async (req: Request, res: Response) => {
+    try {
+      const q = Query.parse(req.query);
+      const mode = q.format; // 'dynasty' | 'redraft'
+      const page = q.page ?? 1;
+      const pageSize = q.pageSize ?? (q.limit ?? 50);
+      const offset = (page - 1) * pageSize;
+
+      // Build filters: WR only, optional team/search
+      const conds = [eq(players.position, "WR" as const)];
+      if (q.team) conds.push(eq(players.team, q.team));
+      if (q.search) {
+        const s = `%${q.search}%`;
+        conds.push(or(ilike(players.name, s), ilike(players.firstName, s), ilike(players.lastName, s)));
+      }
+      const whereClause = and(...conds);
+
+      // total
+      const [{ count }] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(players)
+        .where(whereClause);
+
+      // base WR slice
+      const base = await db
+        .select({
+          sleeperId: players.sleeperId,
+          name: players.name,
+          team: players.team,
+          age: players.age,
+          adp: players.adp,
+          projectedPoints: players.projectedPoints,
+        })
+        .from(players)
+        .where(whereClause)
+        .orderBy(sql`${players.adp} NULLS LAST`, players.name)
+        .limit(pageSize)
+        .offset(offset);
+
+      // injuries (batch)
+      const ids = base.map(b => b.sleeperId).filter(Boolean) as string[];
+      const injuries = ids.length
+        ? await db
+            .select({ playerId: playerInjuries.playerId, status: playerInjuries.status })
+            .from(playerInjuries)
+            .where(sql`${playerInjuries.playerId} = ANY(${ids})`)
+        : [];
+      const injuryMap = new Map(injuries.map(i => [i.playerId, i.status]));
+
+      // compute compass (cached)
+      const rows = [];
+      for (const p of base) {
+        if (!p.sleeperId) continue;
+        const key = cKey(p.sleeperId, mode);
+        let comp = compassCache.get(key);
+        if (!comp) {
+          try {
+            comp = compassService.calculateCompass(
+              {
+                playerId: p.sleeperId,
+                playerName: p.name ?? "Unknown",
+                position: "WR",
+                team: p.team,
+                age: p.age ?? 0,
+                rawStats: {},       // keep lean; enrichment belongs in cron/materialized view
+                contextTags: [],
+              },
+              mode
+            );
+            compassCache.set(key, comp);
+          } catch (e) {
+            comp = null;
+          }
+        }
+
+        const score = comp?.score ?? null;
+        rows.push({
+          player_name: p.name ?? "Unknown",
+          team: p.team,
+          age: p.age,
+          adp: p.adp,
+          projected_points: p.projectedPoints,
+          compass: comp
+            ? { north: comp.north, east: comp.east, south: comp.south, west: comp.west, score }
+            : { north: null, east: null, south: null, west: null, score: null },
+          tier: tierFromScore(score, mode, p.age ?? null),
+          insights: quickInsights({ age: p.age, adp: p.adp, team: p.team }, comp),
+        });
+      }
+
+      // sort by compass score desc, stable by ADP
+      rows.sort((a, b) => (b.compass.score ?? -1) - (a.compass.score ?? -1) || (a.adp ?? 9999) - (b.adp ?? 9999));
+
+      res.json({
+        ok: true,
+        position: "WR",
+        format: mode,
+        algorithm: q.algorithm,
+        data: rows,
+        meta: {
+          total: Number(count),
+          page,
+          pageSize,
+          hasNext: page * pageSize < Number(count),
+          ts: new Date().toISOString(),
+        },
+      });
+    } catch (err: any) {
+      console.error("❌ /api/compass/WR", err);
+      res.status(400).json({ ok: false, error: err?.message ?? "Bad request" });
+    }
+  });
+}
+
+// --- helpers ---
+function tierFromScore(score: number | null, format: "dynasty" | "redraft", age: number | null) {
+  if (score == null) return "Unrated";
+  if (format === "dynasty") {
+    if (score >= 8.5) return "Elite Dynasty Asset";
+    if (score >= 7.5) return "High-End Dynasty";
+    if (score >= 6.5) return "Solid Dynasty Hold";
+    return "Dynasty Depth";
+  } else {
+    if (score >= 8.5) return "Must-Start";
+    if (score >= 7.5) return "Strong Start";
+    if (score >= 6.5) return "Solid Starter";
+    return "Flex Option";
+  }
+}
+
+function quickInsights(player: { age?: number | null; adp?: number | null; team?: string | null }, comp: any) {
+  const out: string[] = [];
+  if ((player.age ?? 99) <= 24) out.push("Prime dynasty age");
+  if ((player.adp ?? 999) <= 24) out.push("Market: top-2 rounds");
+  if (comp?.east != null && comp.east < 6) out.push("Weak environment");
+  if (comp?.south != null && comp.south < 5) out.push("Durability risk");
+  return out;
+}
+```
+
+**Bootstrap:**
+
+```ts
+// server bootstrap
+import { registerWRCompassRoute } from "@/routes/compassWrRoute";
+registerWRCompassRoute(app);
+```
+
+---
+
+### 2) `components/WRCompassTable.tsx`
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+
+export default function WRCompassTable() {
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["compass","WR","dynasty","enhanced"],
+    queryFn: async () => {
+      const r = await fetch("/api/compass/WR?format=dynasty&algorithm=enhanced&page=1&pageSize=50");
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || "Failed");
+      return j;
+    },
+    staleTime: 5 * 60 * 1000,
+    keepPreviousData: true,
+  });
+
+  if (isLoading) return <div className="p-4">Loading WR Compass…</div>;
+  if (isError) return <div className="p-4 text-red-600">Error: {(error as Error).message}</div>;
+
+  const rows = data.data as any[];
+  const meta = data.meta;
+
+  return (
+    <div className="overflow-x-auto border rounded-lg">
+      <table className="w-full text-sm">
+        <thead className="bg-muted">
+          <tr>
+            <th className="text-left p-3">Player</th>
+            <th className="text-left p-3">Team</th>
+            <th className="text-left p-3">Age</th>
+            <th className="text-left p-3">ADP</th>
+            <th className="text-left p-3">Score</th>
+            <th className="text-left p-3">Tier</th>
+            <th className="text-left p-3">Insights</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={`${r.player_name}-${r.team}`} className="border-t hover:bg-muted/50">
+              <td className="p-3 font-medium">{r.player_name}</td>
+              <td className="p-3">{r.team ?? "-"}</td>
+              <td className="p-3">{r.age ?? "-"}</td>
+              <td className="p-3">{typeof r.adp === "number" ? r.adp.toFixed(1) : "-"}</td>
+              <td className="p-3 font-bold">{typeof r.compass?.score === "number" ? r.compass.score.toFixed(1) : "-"}</td>
+              <td className="p-3">
+                <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                  {r.tier}
+                </span>
+              </td>
+              <td className="p-3 text-xs text-muted-foreground">{(r.insights ?? []).join(", ")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="flex justify-between items-center p-3">
+        <span>Showing {rows.length} of {meta.total}</span>
+        {/* optional: add prev/next buttons wired to page params later */}
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## Acceptance Tests
+
+1. `GET /api/compass/WR?format=dynasty&algorithm=enhanced&page=1&pageSize=50`
+   → `{ ok: true, position:"WR", data:[...], meta:{ total, page, pageSize, hasNext } }`
+2. `?team=LAR` filters to Rams WRs.
+3. `?search=Puka` matches case-insensitive by name/first/last.
+4. Compass cache hits on repeat calls (no noticeable perf degradation with 50–100 rows).
+5. UI renders with null-safe placeholders; no runtime errors.
+
+---
+
+## Notes for Later (don’t block this PR)
+
+* Add **pg\_trgm** index for faster search.
+* Cron/materialized view to precompute compass (remove hot-path compute).
+* Optional: radar chart for N/E/S/W visualization.
+
+Ship this. Then we iterate.
