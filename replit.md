@@ -59,14 +59,18 @@ The platform employs a modular Flask backend for core logic and API endpoints, a
 - **Live Data Integration Pipeline**: Complete multi-source data capture and processing system with MySportsFeeds, SportsDataIO, and Sleeper API integration. Features static data capture service (`/api/data/capture`) for persistent reference data beyond API trial periods, live data processor for weekly statistics, and comprehensive fallback strategies. Includes endpoints for live mode activation (`/api/players/hot-list/mode/live`), manual refresh (`/api/players/hot-list/refresh`), and data source monitoring (`/api/players/hot-list/sources`).
 
 ## Recent Changes (August 18, 2025)
-- **COMPLETED: Three-Pillar Rating System** - Successfully implemented separated rating system endpoints with distinct APIs:
+- **COMPLETED: Four-Pillar Compass System** - Successfully implemented complete compass system with all major positions:
+  - WR Compass API (`/api/compass/WR`) - Technical analysis with compass scoring and caching
+  - RB Compass API (`/api/compass/RB`) - Running back analysis with usage and durability insights
+  - TE Compass API (`/api/compass/TE`) - Tight end evaluation with target share and red zone metrics
+  - QB Compass API (`/api/compass/QB`) - Quarterback assessment with passing/rushing dual-threat scoring
+- **IMPLEMENTED: Production-Safe Architecture** - All compass endpoints feature Zod validation, LRU caching (10-min TTL), and consistent response formats
+- **CREATED: Position-Specific Components** - React table components for each position with TanStack Query integration and position-specific styling
+- **ENHANCED: Three-Pillar Rating System** - Complete separation with distinct APIs:
   - Qwen Players API (`/api/qwen/players`) - Performance-based rankings with metadata structure
   - OTC Consensus API (`/api/consensus/players`) - Community-driven rankings with voting data
-  - WR Compass API (`/api/compass/WR`) - Technical analysis with compass scoring and caching
-- **IMPLEMENTED: Case-Insensitive Filtering** - All three endpoints support case-insensitive position filtering (WR, wr, Wr all work)
-- **ADDED: Search Functionality** - Player name search across all rating systems with proper JSON responses
-- **CREATED: Production WR Compass Route** - Built according to Tiber specifications with LRU caching, Zod validation, and tier calculations
-- **ENHANCED: API Architecture** - Consistent metadata structure with source tracking, pagination, and timestamp across all endpoints
+  - Compass APIs - Technical analysis for WR/RB/TE/QB with 4-directional scoring
+- **RESOLVED: Route Ordering** - Fixed route conflicts to ensure production endpoints work correctly before legacy routes
 
 ### Technical Stack
 - **Backend**: Python (Flask), Node.js (Express.js, TypeScript)

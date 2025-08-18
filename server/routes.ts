@@ -1492,8 +1492,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Production Compass routes (BEFORE legacy routes to prevent conflicts)
   const { registerWRCompassRoute } = await import('./routes/compassWrRoute');
   const { registerRBCompassRoute } = await import('./routes/compassRbRoute');
+  const { registerTECompassRoute } = await import('./routes/compassTeRoute');
+  const { registerQBCompassRoute } = await import('./routes/compassQbRoute');
   registerWRCompassRoute(app);
   registerRBCompassRoute(app);
+  registerTECompassRoute(app);
+  registerQBCompassRoute(app);
 
   // ===== ENHANCED PLAYER COMPASS SYSTEM =====
   // Dynasty vs Redraft Player Compass - Tiber's In-House Ratings Engine (LEGACY)
