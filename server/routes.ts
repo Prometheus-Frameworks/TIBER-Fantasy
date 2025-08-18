@@ -1810,6 +1810,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // WR Compass route (new production endpoint)
+  const { registerWRCompassRoute } = await import('./routes/compassWrRoute');
+  registerWRCompassRoute(app);
+
   // Player Compass routes (legacy - for specific position endpoints)
   app.use('/api/compass', compassRoutes);
   app.use('/api/rb-compass', rbCompassRoutes);

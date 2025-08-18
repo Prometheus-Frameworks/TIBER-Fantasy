@@ -58,12 +58,15 @@ The platform employs a modular Flask backend for core logic and API endpoints, a
 - **Hot List Player Extraction System**: Dynamic player extraction from OVR Compass module with position-aware percentile calculations and volume floor filtering. Features 4 extraction buckets (OVR Risers, Compass Elite, Usage Surge, Value Targets) and comprehensive API endpoints (`/api/players/hot-list`, `/api/players/hot-list/health`) with a real-time UI at `/hot-list`.
 - **Live Data Integration Pipeline**: Complete multi-source data capture and processing system with MySportsFeeds, SportsDataIO, and Sleeper API integration. Features static data capture service (`/api/data/capture`) for persistent reference data beyond API trial periods, live data processor for weekly statistics, and comprehensive fallback strategies. Includes endpoints for live mode activation (`/api/players/hot-list/mode/live`), manual refresh (`/api/players/hot-list/refresh`), and data source monitoring (`/api/players/hot-list/sources`).
 
-## Recent Changes (August 17, 2025)
-- **IMPLEMENTED: Dual Rating System Separation** - Built distinct Player Compass (in-house) and OTC Consensus (community) services with TypeScript architecture
-- **ENHANCED: Format-Specific Calculations** - Dynasty vs Redraft evaluations with position-aware scoring logic (WR age curves, RB durability, etc.)
-- **CREATED: New API Endpoints** - `/api/compass/:position?format=dynasty|redraft` and `/api/consensus/:format` with comprehensive metadata
-- **FIXED: TypeScript Integration** - Resolved all LSP diagnostics for clean service layer architecture
-- **INTEGRATED: Qwen's Unified Player System** - Successfully integrated team member Qwen's paginated player database API (`/api/players`) with search, filtering, and Player Compass integration. Features debounced search, URL state sync, and comprehensive player data including Qwen rankings and Compass scores.
+## Recent Changes (August 18, 2025)
+- **COMPLETED: Three-Pillar Rating System** - Successfully implemented separated rating system endpoints with distinct APIs:
+  - Qwen Players API (`/api/qwen/players`) - Performance-based rankings with metadata structure
+  - OTC Consensus API (`/api/consensus/players`) - Community-driven rankings with voting data
+  - WR Compass API (`/api/compass/WR`) - Technical analysis with compass scoring and caching
+- **IMPLEMENTED: Case-Insensitive Filtering** - All three endpoints support case-insensitive position filtering (WR, wr, Wr all work)
+- **ADDED: Search Functionality** - Player name search across all rating systems with proper JSON responses
+- **CREATED: Production WR Compass Route** - Built according to Tiber specifications with LRU caching, Zod validation, and tier calculations
+- **ENHANCED: API Architecture** - Consistent metadata structure with source tracking, pagination, and timestamp across all endpoints
 
 ### Technical Stack
 - **Backend**: Python (Flask), Node.js (Express.js, TypeScript)
