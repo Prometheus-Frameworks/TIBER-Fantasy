@@ -73,31 +73,27 @@ export const players = pgTable("players", {
   adpLastUpdated: timestamp("adp_last_updated"), // When ADP was last synced
   adpSource: text("adp_source"), // 'sleeper', 'espn', 'fantasypros'
   dynastyValue: integer("dynasty_value"), // Dynasty value score 0-100
-  efficiency: real("efficiency"), // Efficiency rating
-  sustainability: integer("sustainability"), // Sustainability score 0-100
-  marketValue: integer("market_value"), // Market consensus value
-  confidence: integer("confidence"), // Confidence score 0-100
-  experience: integer("experience"), // Years in NFL
-  
-  // Advanced Premium Analytics
-  yardsPerRouteRun: real("yards_per_route_run"), // YPRR - key efficiency metric
-  yardsAfterContact: real("yards_after_contact"), // YACo - YAC efficiency
-  routesRun: integer("routes_run"), // Total routes run
-  airyards: real("air_yards"), // Average air yards per target
-  cushion: real("cushion"), // Average cushion (separation)
-  separationScore: real("separation_score"), // NextGen separation metric
-  receivingGrade: real("receiving_grade"), // PFF receiving grade
-  contested_catches: integer("contested_catches"), // Contested catch attempts
-  contested_catch_rate: real("contested_catch_rate"), // Success rate on contested
-  endzone_targets: integer("endzone_targets"), // Red zone/endzone targets
-  firstdown_rate: real("firstdown_rate"), // First down rate per target
-  
-  // Premium entry metadata
-  premiumDataSource: text("premium_data_source"), // "PFF", "NextGen", "Manual"
-  premiumDataWeek: integer("premium_data_week"), // Week of premium data
-  premiumDataUpdated: timestamp("premium_data_updated"), // Last manual update
-  
+});
 
+// Articles table for content management
+export const articles = pgTable("articles", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  content: text("content").notNull(), // Full article content in markdown
+  excerpt: text("excerpt"), // Short excerpt for previews
+  category: text("category").notNull(),
+  tags: text("tags").array().notNull().default([]), // Array of tags
+  readTime: text("read_time").notNull(), // e.g., "8 min"
+  publishDate: timestamp("publish_date").defaultNow(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  featured: boolean("featured").default(false),
+  published: boolean("published").default(true),
+  author: text("author").notNull(),
+  authorBio: text("author_bio"), // Optional author description
+  metaKeywords: text("meta_keywords").array().default([]), // SEO keywords
+  viewCount: integer("view_count").default(0),
 });
 
 // Game logs table for storing weekly performance data
@@ -501,6 +497,17 @@ export const insertGameLogSchema = createInsertSchema(gameLogs).omit({
 });
 
 export type InsertGameLogType = z.infer<typeof insertGameLogSchema>;
+
+// Article schema and types
+export const insertArticleSchema = createInsertSchema(articles).omit({
+  id: true,
+  publishDate: true,
+  lastUpdated: true,
+  viewCount: true,
+});
+
+export type Article = typeof articles.$inferSelect;
+export type InsertArticle = z.infer<typeof insertArticleSchema>;
 export type InsertFantasyMove = z.infer<typeof insertFantasyMovesSchema>;
 export type InsertDraftPick = z.infer<typeof insertDraftPicksSchema>;
 export type InsertPlayerValueHistory = z.infer<typeof insertPlayerValueHistorySchema>;

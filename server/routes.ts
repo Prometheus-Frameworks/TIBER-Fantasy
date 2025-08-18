@@ -58,6 +58,7 @@ import pythonRookieRoutes from './routes/pythonRookieRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
 import consensusRoutes from './consensus';
 import consensusSeedingRoutes from './consensusSeeding';
+import articleRoutes from './routes/articleRoutes';
 import { 
   getProfile, 
   updateProfile, 
@@ -3667,6 +3668,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Register article routes
+  app.use('/api/articles', articleRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

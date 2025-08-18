@@ -2,80 +2,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BookOpen, TrendingUp, Users, Target, Clock, ArrowUpRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useState } from "react";
+import type { Article } from "@shared/schema";
 
-interface Article {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  readTime: string;
-  publishDate: string;
-  tags: string[];
-  featured?: boolean;
+// API response interface
+interface ArticlesResponse {
+  success: boolean;
+  data: Article[];
+  pagination?: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
 }
-
-// Sample articles - replace with real content
-const featuredArticles: Article[] = [
-  {
-    id: "travis-hunter-breakdown",
-    title: "Travis Hunter: The Two-Way Dynasty Phenomenon", 
-    description: "Deep dive into Hunter's unprecedented skill set and how his dual-threat capability creates unique dynasty value beyond traditional WR metrics.",
-    category: "Player Analysis",
-    readTime: "8 min",
-    publishDate: "2025-08-11",
-    tags: ["rookies", "wr", "colorado", "two-way"],
-    featured: true
-  },
-  {
-    id: "rb-committee-navigation", 
-    title: "Navigating RB Committees in 2025",
-    description: "Strategic framework for evaluating and targeting running backs in committee situations, featuring analysis of Denver, Tennessee, and Cleveland backfields.",
-    category: "Position Strategy",
-    readTime: "12 min", 
-    publishDate: "2025-08-10",
-    tags: ["rb", "strategy", "committees", "adp"],
-    featured: true
-  }
-];
-
-const recentArticles: Article[] = [
-  {
-    id: "preseason-intel-week1",
-    title: "Week 1 Preseason Intel Roundup",
-    description: "Key observations from trusted community sources including depth chart shifts, usage patterns, and dynasty implications.",
-    category: "Intelligence",
-    readTime: "5 min",
-    publishDate: "2025-08-11", 
-    tags: ["preseason", "intel", "depth-charts"]
-  },
-  {
-    id: "target-competition-framework",
-    title: "Target Competition Analysis Framework",
-    description: "Comprehensive methodology for evaluating WR target competition and projecting usage in complex offensive systems.",
-    category: "Methodology",
-    readTime: "15 min",
-    publishDate: "2025-08-09",
-    tags: ["wr", "targets", "methodology", "projection"]
-  },
-  {
-    id: "dynasty-decline-detection",
-    title: "Early Detection of Dynasty Player Decline",
-    description: "Advanced metrics and signals for identifying when aging assets should be moved before value craters.",
-    category: "Dynasty Strategy", 
-    readTime: "10 min",
-    publishDate: "2025-08-08",
-    tags: ["dynasty", "aging", "sell-timing", "analytics"]
-  },
-  {
-    id: "rookie-te-evaluation",
-    title: "2025 Rookie TE Evaluation System",
-    description: "Four-component framework for projecting rookie tight end success including situation, usage, and development timeline.",
-    category: "Rookie Analysis",
-    readTime: "12 min",
-    publishDate: "2025-08-07",
-    tags: ["rookies", "te", "evaluation", "development"]
-  }
-];
 
 const categories = [
   "All Articles",
@@ -88,6 +30,43 @@ const categories = [
 ];
 
 export default function Articles() {
+  const [selectedCategory, setSelectedCategory] = useState("All Articles");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Fetch articles data
+  const { data: articlesData, isLoading, error } = useQuery<ArticlesResponse>({
+    queryKey: ['/api/articles', selectedCategory, searchTerm],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedCategory !== "All Articles") {
+        params.append('category', selectedCategory);
+      }
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+      params.append('limit', '50');
+      
+      const response = await fetch(`/api/articles?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch articles');
+      return response.json();
+    }
+  });
+
+  // Fetch categories
+  const { data: categoriesData } = useQuery<{ success: boolean; data: string[] }>({
+    queryKey: ['/api/articles/categories'],
+    queryFn: async () => {
+      const response = await fetch('/api/articles/categories');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      return response.json();
+    }
+  });
+
+  const articles = articlesData?.data || [];
+  const featuredArticles = articles.filter(article => article.featured);
+  const recentArticles = articles.filter(article => !article.featured);
+  const categories = ["All Articles", ...(categoriesData?.data || [])];
+
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
       "Player Analysis": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
@@ -120,8 +99,9 @@ export default function Articles() {
           {categories.map((category) => (
             <Button
               key={category}
-              variant="outline" 
+              variant={selectedCategory === category ? "default" : "outline"}
               size="sm"
+              onClick={() => setSelectedCategory(category)}
               className="hover:bg-primary hover:text-primary-foreground text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2"
             >
               {category}
@@ -130,94 +110,136 @@ export default function Articles() {
         </div>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="space-y-8">
+          <div>
+            <div className="flex items-center gap-2 mb-6">
+              <Skeleton className="h-5 w-5" />
+              <Skeleton className="h-8 w-48" />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {[1, 2].map((i) => (
+                <Card key={i}>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-24 mb-2" />
+                    <Skeleton className="h-6 w-full mb-2" />
+                    <Skeleton className="h-4 w-full" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-4 w-32" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="text-center py-12">
+          <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">Unable to load articles</h3>
+          <p className="text-muted-foreground mb-4">Please try again later</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      )}
+
       {/* Featured Articles */}
-      <section className="mb-12">
-        <div className="flex items-center gap-2 mb-6">
-          <TrendingUp className="h-5 w-5 text-orange-600" />
-          <h2 className="text-2xl font-bold">Featured Analysis</h2>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {featuredArticles.map((article) => (
-            <Card key={article.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <div className="flex items-start justify-between mb-2">
-                  <Badge className={getCategoryColor(article.category)}>
-                    {article.category}
-                  </Badge>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4 mr-1" />
-                    {article.readTime}
+      {!isLoading && !error && featuredArticles.length > 0 && (
+        <section className="mb-12">
+          <div className="flex items-center gap-2 mb-6">
+            <TrendingUp className="h-5 w-5 text-orange-600" />
+            <h2 className="text-2xl font-bold">Featured Analysis</h2>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {featuredArticles.map((article) => (
+              <Card key={article.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardHeader>
+                  <div className="flex items-start justify-between mb-2">
+                    <Badge className={getCategoryColor(article.category)}>
+                      {article.category}
+                    </Badge>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4 mr-1" />
+                      {article.readTime}
+                    </div>
                   </div>
-                </div>
-                <CardTitle className="text-xl leading-tight hover:text-primary transition-colors">
-                  {article.title}
-                </CardTitle>
-                <CardDescription className="text-sm">
-                  {article.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-wrap gap-1">
-                    {article.tags.slice(0, 3).map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
+                  <CardTitle className="text-xl leading-tight hover:text-primary transition-colors">
+                    {article.title}
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    {article.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap gap-1">
+                      {article.tags.slice(0, 3).map((tag) => (
+                        <Badge key={tag} variant="secondary" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <span>{new Date(article.publishDate).toLocaleDateString()}</span>
+                      <ArrowUpRight className="h-4 w-4 ml-1" />
+                    </div>
                   </div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <span>{article.publishDate}</span>
-                    <ArrowUpRight className="h-4 w-4 ml-1" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Recent Articles */}
-      <section>
-        <div className="flex items-center gap-2 mb-6">
-          <Target className="h-5 w-5 text-green-600" />
-          <h2 className="text-2xl font-bold">Recent Articles</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {recentArticles.map((article) => (
-            <Card key={article.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between mb-2">
-                  <Badge className={getCategoryColor(article.category)} variant="outline">
-                    {article.category}
-                  </Badge>
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3 mr-1" />
-                    {article.readTime}
+      {!isLoading && !error && recentArticles.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-6">
+            <Target className="h-5 w-5 text-green-600" />
+            <h2 className="text-2xl font-bold">Recent Articles</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {recentArticles.map((article) => (
+              <Card key={article.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge className={getCategoryColor(article.category)} variant="outline">
+                      {article.category}
+                    </Badge>
+                    <div className="flex items-center text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {article.readTime}
+                    </div>
                   </div>
-                </div>
-                <CardTitle className="text-lg leading-tight hover:text-primary transition-colors">
-                  {article.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <CardDescription className="text-sm mb-4">
-                  {article.description}
-                </CardDescription>
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-wrap gap-1">
-                    {article.tags.slice(0, 2).map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
+                  <CardTitle className="text-lg leading-tight hover:text-primary transition-colors">
+                    {article.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <CardDescription className="text-sm mb-4">
+                    {article.description}
+                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap gap-1">
+                      {article.tags.slice(0, 2).map((tag) => (
+                        <Badge key={tag} variant="secondary" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(article.publishDate).toLocaleDateString()}
+                    </span>
                   </div>
-                  <span className="text-xs text-muted-foreground">{article.publishDate}</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Coming Soon */}
       <section className="mt-12">
