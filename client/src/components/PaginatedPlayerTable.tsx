@@ -71,14 +71,14 @@ export default function PaginatedPlayerTable() {
         />
         
         <Select 
-          value={filters.pos} 
-          onValueChange={(v) => setFilters(f => ({ ...f, pos: v, page: 1 }))}
+          value={filters.pos || "all"} 
+          onValueChange={(v) => setFilters(f => ({ ...f, pos: v === "all" ? "" : v, page: 1 }))}
         >
           <SelectTrigger className="w-32">
             <SelectValue placeholder="Position" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Positions</SelectItem>
+            <SelectItem value="all">All Positions</SelectItem>
             {["QB","RB","WR","TE"].map(p => (
               <SelectItem key={p} value={p}>{p}</SelectItem>
             ))}
@@ -86,14 +86,14 @@ export default function PaginatedPlayerTable() {
         </Select>
         
         <Select 
-          value={filters.team} 
-          onValueChange={(v) => setFilters(f => ({ ...f, team: v, page: 1 }))}
+          value={filters.team || "all"} 
+          onValueChange={(v) => setFilters(f => ({ ...f, team: v === "all" ? "" : v, page: 1 }))}
         >
           <SelectTrigger className="w-32">
             <SelectValue placeholder="Team" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Teams</SelectItem>
+            <SelectItem value="all">All Teams</SelectItem>
             {TEAMS.map(t => (
               <SelectItem key={t} value={t}>{t}</SelectItem>
             ))}
