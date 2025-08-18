@@ -5,6 +5,7 @@ import { BookOpen, TrendingUp, Users, Target, Clock, ArrowUpRight } from "lucide
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
+import { Link } from "wouter";
 import type { Article } from "@shared/schema";
 
 // API response interface
@@ -155,7 +156,8 @@ export default function Articles() {
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {featuredArticles.map((article) => (
-              <Card key={article.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+              <Link key={article.id} href={`/articles/${article.slug}`}>
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader>
                   <div className="flex items-start justify-between mb-2">
                     <Badge className={getCategoryColor(article.category)}>
@@ -188,7 +190,8 @@ export default function Articles() {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+                </Card>
+              </Link>
             ))}
           </div>
         </section>
@@ -203,7 +206,8 @@ export default function Articles() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {recentArticles.map((article) => (
-              <Card key={article.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+              <Link key={article.id} href={`/articles/${article.slug}`}>
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between mb-2">
                     <Badge className={getCategoryColor(article.category)} variant="outline">
@@ -235,7 +239,8 @@ export default function Articles() {
                     </span>
                   </div>
                 </CardContent>
-              </Card>
+                </Card>
+              </Link>
             ))}
           </div>
         </section>

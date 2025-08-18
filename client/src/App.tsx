@@ -105,6 +105,7 @@ import Dynasty from "@/pages/Dynasty";
 import Navigation from "@/components/Navigation";
 import Analytics from "@/pages/Analytics";
 import Articles from "@/pages/Articles";
+import ArticleDetail from "@/pages/ArticleDetail";
 
 import FounderModal from "@/components/FounderModal";
 import Footer from "@/components/Footer";
@@ -185,6 +186,7 @@ function Router() {
       <Route path="/dynasty" component={Dynasty} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/articles" component={Articles} />
+      <Route path="/articles/:slug" component={ArticleDetail} />
       <Route path="/api-test" component={lazy(() => import("@/pages/ApiTest"))} />
       <Route path="/api-demo" component={lazy(() => import("@/pages/ApiDemo"))} />
       <Route path="/api-comprehensive" component={lazy(() => import("@/pages/ApiComprehensive"))} />
