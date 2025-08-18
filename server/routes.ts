@@ -1489,8 +1489,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Production Compass routes (BEFORE legacy routes to prevent conflicts)
+  const { registerWRCompassRoute } = await import('./routes/compassWrRoute');
+  const { registerRBCompassRoute } = await import('./routes/compassRbRoute');
+  registerWRCompassRoute(app);
+  registerRBCompassRoute(app);
+
   // ===== ENHANCED PLAYER COMPASS SYSTEM =====
-  // Dynasty vs Redraft Player Compass - Tiber's In-House Ratings Engine
+  // Dynasty vs Redraft Player Compass - Tiber's In-House Ratings Engine (LEGACY)
   
   app.get('/api/compass/:position', async (req: Request, res: Response) => {
     try {
@@ -1809,10 +1815,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-
-  // WR Compass route (new production endpoint)
-  const { registerWRCompassRoute } = await import('./routes/compassWrRoute');
-  registerWRCompassRoute(app);
 
   // Player Compass routes (legacy - for specific position endpoints)
   app.use('/api/compass', compassRoutes);

@@ -1,0 +1,290 @@
+Love it. Joe wants RB Compass shipped; Lamar wants it production-safe. Here’s the **Tiber-ready ticket**—clean, stack-aligned, no fluff.
+
+---
+
+## Commit Message
+
+```
+feat(compass-rb): RB Compass API + table (stack-aligned, cached, paginated)
+
+- Add /api/compass/RB using PlayerCompassService (no legacy K2 in request path)
+- zod-validated query (format/team/search/page/pageSize)
+- LRU cache for per-player compass (10m TTL)
+- RBCompassTable with TanStack Query (5m stale, null-safe)
+- Ensure API routes register before SPA catch-all
+```
+
+---
+
+## Files to Add / Update
+
+### 1) `routes/compassRbRoute.ts`
+
+```ts
+import { Express, Request, Response } from "express";
+import { z } from "zod";
+import { db } from "@/db";
+import { players } from "@/shared/schema";
+import { and, eq, ilike, or, sql } from "drizzle-orm";
+import LRU from "lru-cache";
+import { PlayerCompassService } from "@/services/playerCompassService";
+
+const Query = z.object({
+  format: z.enum(["dynasty", "redraft"]).default("dynasty"),
+  team: z.string().max(3).optional(),
+  search: z.string().max(64).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(10).max(200).optional(),
+});
+
+const compassCache = new LRU<string, any>({ max: 5000, ttl: 10 * 60 * 1000 });
+const cacheKey = (id: string, mode: "dynasty" | "redraft") => `${id}:${mode}`;
+
+export function registerRBCompassRoute(app: Express) {
+  const compassService = new PlayerCompassService();
+
+  app.get("/api/compass/RB", async (req: Request, res: Response) => {
+    try {
+      const q = Query.parse(req.query);
+      const mode = q.format;
+      const page = q.page ?? 1;
+      const pageSize = q.pageSize ?? 50;
+      const offset = (page - 1) * pageSize;
+
+      const conds = [eq(players.position, "RB" as const)];
+      if (q.team) conds.push(eq(players.team, q.team));
+      if (q.search) {
+        const s = `%${q.search}%`;
+        conds.push(or(ilike(players.name, s), ilike(players.firstName, s), ilike(players.lastName, s)));
+      }
+      const whereClause = and(...conds);
+
+      // total
+      const [{ count }] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(players)
+        .where(whereClause);
+
+      // base page (lean select; ADP for tiebreak, name for stability)
+      const base = await db
+        .select({
+          sleeperId: players.sleeperId,
+          name: players.name,
+          team: players.team,
+          age: players.age,
+          adp: players.adp,
+          projectedPoints: players.projectedPoints,
+        })
+        .from(players)
+        .where(whereClause)
+        .orderBy(sql`${players.adp} NULLS LAST`, players.name)
+        .limit(pageSize)
+        .offset(offset);
+
+      const rows = [];
+      for (const p of base) {
+        if (!p.sleeperId) continue;
+        const k = cacheKey(p.sleeperId, mode);
+        let comp = compassCache.get(k);
+        if (!comp) {
+          try {
+            comp = compassService.calculateCompass(
+              {
+                playerId: p.sleeperId,
+                playerName: p.name ?? "Unknown",
+                position: "RB",
+                team: p.team,
+                age: p.age ?? 0,
+                rawStats: {},      // heavy enrichment belongs in cron/materialized view
+                contextTags: [],
+              },
+              mode
+            );
+            compassCache.set(k, comp);
+          } catch {
+            comp = null;
+          }
+        }
+
+        const score = comp?.score ?? null;
+        rows.push({
+          player_name: p.name ?? "Unknown",
+          team: p.team,
+          age: p.age,
+          adp: p.adp,
+          projected_points: p.projectedPoints,
+          compass: comp
+            ? { north: comp.north, east: comp.east, south: comp.south, west: comp.west, score }
+            : { north: null, east: null, south: null, west: null, score: null },
+          tier: tierFromScore(score, mode),
+          insights: quickInsightsRB({ age: p.age, adp: p.adp }, comp),
+        });
+      }
+
+      // sort by score desc, ADP as tiebreaker
+      rows.sort(
+        (a, b) =>
+          (b.compass.score ?? -1) - (a.compass.score ?? -1) ||
+          (a.adp ?? 9999) - (b.adp ?? 9999)
+      );
+
+      res.json({
+        ok: true,
+        position: "RB",
+        format: mode,
+        data: rows,
+        meta: {
+          total: Number(count),
+          page,
+          pageSize,
+          hasNext: page * pageSize < Number(count),
+          ts: new Date().toISOString(),
+        },
+      });
+    } catch (err: any) {
+      console.error("❌ /api/compass/RB", err);
+      res.status(400).json({ ok: false, error: err?.message ?? "Bad request" });
+    }
+  });
+}
+
+// helpers
+function tierFromScore(score: number | null, format: "dynasty" | "redraft") {
+  if (score == null) return "Unrated";
+  if (format === "dynasty") {
+    if (score >= 8.5) return "Elite Dynasty Asset";
+    if (score >= 7.5) return "High-End Dynasty";
+    if (score >= 6.5) return "Solid Dynasty Hold";
+    return "Dynasty Depth";
+  } else {
+    if (score >= 8.5) return "Must-Start";
+    if (score >= 7.5) return "Strong Start";
+    if (score >= 6.5) return "Solid Starter";
+    return "Flex Option";
+  }
+}
+
+function quickInsightsRB(
+  player: { age?: number | null; adp?: number | null },
+  comp: any
+) {
+  const out: string[] = [];
+  if ((player.age ?? 99) <= 24) out.push("Prime dynasty age");
+  if ((player.adp ?? 999) <= 24) out.push("Market: top-2 rounds");
+  if (comp?.north != null && comp.north >= 8.5) out.push("Workhorse volume");
+  if (comp?.south != null && comp.south < 5) out.push("Durability/committee risk");
+  return out;
+}
+```
+
+**Bootstrap (order matters):**
+
+```ts
+// server bootstrap
+import { registerRBCompassRoute } from "@/routes/compassRbRoute";
+// ... other imports
+registerRBCompassRoute(app); // BEFORE any app.get('*') SPA catch-all
+```
+
+---
+
+### 2) `components/RBCompassTable.tsx`
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+
+export default function RBCompassTable() {
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["compass","RB","dynasty",1,50],
+    queryFn: async () => {
+      const r = await fetch("/api/compass/RB?format=dynasty&page=1&pageSize=50");
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || "Failed");
+      return j;
+    },
+    staleTime: 5 * 60 * 1000,
+    keepPreviousData: true,
+  });
+
+  if (isLoading) return <div className="p-4">Loading RB Compass…</div>;
+  if (isError) return <div className="p-4 text-red-600">Error: {(error as Error).message}</div>;
+
+  const rows = data.data as any[];
+  const meta = data.meta;
+
+  return (
+    <div className="overflow-x-auto border rounded-lg">
+      <table className="w-full text-sm">
+        <thead className="bg-muted">
+          <tr>
+            <th className="text-left p-3">Player</th>
+            <th className="text-left p-3">Team</th>
+            <th className="text-left p-3">Age</th>
+            <th className="text-left p-3">ADP</th>
+            <th className="text-left p-3">Score</th>
+            <th className="text-left p-3">Tier</th>
+            <th className="text-left p-3">Insights</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={`${r.player_name}-${r.team}`} className="border-t hover:bg-muted/50">
+              <td className="p-3 font-medium">{r.player_name}</td>
+              <td className="p-3">{r.team ?? "-"}</td>
+              <td className="p-3">{r.age ?? "-"}</td>
+              <td className="p-3">{typeof r.adp === "number" ? r.adp.toFixed(1) : "-"}</td>
+              <td className="p-3 font-bold">{typeof r.compass?.score === "number" ? r.compass.score.toFixed(1) : "-"}</td>
+              <td className="p-3">
+                <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">{r.tier}</span>
+              </td>
+              <td className="p-3 text-xs text-muted-foreground">{(r.insights ?? []).join(", ")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="flex justify-between items-center p-3">
+        <span>Showing {rows.length} of {meta.total}</span>
+        {/* Optional: wire prev/next to page params later */}
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## Acceptance Tests
+
+1. **Happy path**
+
+```bash
+curl -i "http://localhost:3001/api/compass/RB?format=dynasty&page=1&pageSize=50"
+```
+
+→ `200`, `application/json`, `{ ok: true, position: "RB", data: [...], meta: { total, page, pageSize, hasNext } }`
+
+2. **Filters**
+
+* `?team=SF` returns only 49ers RBs.
+* `?search=Hall` matches case-insensitive.
+
+3. **Pagination**
+
+* `page=1&pageSize=50` vs `page=2&pageSize=50` → different slices; `hasNext` flips correctly.
+
+4. **Null safety**
+
+* Any missing compass/ADP/etc → UI shows `-` / `Unrated`, no crashes.
+
+5. **Perf sanity**
+
+* Repeat the same query → cache hits (no obvious CPU spike).
+
+---
+
+## Notes (don’t block this PR)
+
+* If the legacy Kimi route exists, keep it under `/api/compass/rb/legacy` and **do not** call it from this new endpoint.
+* Make sure all `/api/**` registrations come **before** any `app.get('*')` SPA handler.
+
+Ship this and Joe’s RB pillar stands tall next to WR. Then we can get cocky and add the **radar chart** or wire Compass into `/api/unified-players`.
