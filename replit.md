@@ -78,6 +78,13 @@ The platform employs a modular Flask backend for core logic and API endpoints, a
   - Current active players (Justin Jefferson MIN, Ja'Marr Chase CIN) with proper team assignments
   - Historical players properly archived (Roddy White, Ray Rice) with legacy team data
   - Comprehensive coverage across all skill positions with real NFL roster data
+- **NEW: Redraft & Dynasty Engines Integration** - Successfully implemented user-provided engine specifications:
+  - `/api/redraft` endpoint: ADP-based rankings with projection fallback, 3,755 skill position players
+  - `/api/dynasty` endpoint: Player Compass-powered dynasty scoring with 4-directional analysis
+  - Complete sleeperSyncService integration with null-safe data handling
+  - Zod validation (pageSize 10-200), search/team/position filtering, dual-layer caching (page + per-player)
+  - Authentication: Search "Jefferson" finds 4 matches, team "KC" shows 10 players, dynasty WRs show 1,661 players
+  - Route registration order prevents conflicts with legacy endpoints
 
 ### Technical Stack
 - **Backend**: Python (Flask), Node.js (Express.js, TypeScript)

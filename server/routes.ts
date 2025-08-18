@@ -1490,8 +1490,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Live Compass routes with Sleeper sync (BEFORE legacy routes to prevent conflicts)
+  // Import and register live Sleeper-powered routes (order matters - before legacy routes!)
   const { registerCompassRoutes } = await import('./routes/compassRoutes');
+  const { registerRedraftRoutes } = await import('./routes/redraftRoutes');
+  const { registerDynastyRoutes } = await import('./routes/dynastyRoutes');
+  
   registerCompassRoutes(app);
+  registerRedraftRoutes(app);
+  registerDynastyRoutes(app);
 
   // ===== ENHANCED PLAYER COMPASS SYSTEM =====
   // Dynasty vs Redraft Player Compass - Tiber's In-House Ratings Engine (LEGACY)
