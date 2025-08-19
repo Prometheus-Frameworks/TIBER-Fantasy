@@ -2,6 +2,7 @@ import GlowCard from "@/components/GlowCard";
 import GlowCTA from "@/components/GlowCTA";
 import { Section } from "@/components/Section";
 import { Trophy, Compass, Users, Sparkles, Link2, Zap } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Home(){
   return (
@@ -19,13 +20,13 @@ export default function Home(){
         </p>
         <div className="mt-6 flex gap-3">
           <GlowCTA href="/consensus">View OTC Consensus</GlowCTA>
-          <a 
+          <Link 
             href="/sleeper-connect" 
             className="inline-flex items-center gap-2 px-6 py-2 border border-purple-300 text-purple-700 rounded-lg font-medium hover:bg-purple-50 transition-colors"
           >
             <Link2 className="h-4 w-4" />
             Connect Sleeper
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -51,13 +52,13 @@ export default function Home(){
                 <span className="text-xs bg-gold-100 text-gold-800 px-2 py-1 rounded-full">Roster Sync</span>
                 <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Trade Insights</span>
               </div>
-              <a 
+              <Link 
                 href="/sleeper-connect" 
                 className="inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors group-hover:scale-105 transform"
               >
                 <Link2 className="h-4 w-4" />
                 Connect Your League
-              </a>
+              </Link>
             </div>
           </div>
         </div>

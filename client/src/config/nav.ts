@@ -10,6 +10,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/dynasty", label: "Dynasty", description: "Long-term strategy" },
   { href: "/compass", label: "Compass", description: "Context-aware player guidance" },
   { href: "/consensus", label: "Consensus", description: "Community-driven rankings" },
+  { href: "/sleeper-connect", label: "Sleeper", description: "Connect your leagues" },
   { href: "/snap-counts", label: "Snap Counts", description: "Evidence-based snap count analysis" },
   { href: "/research", label: "Research & Analysis", description: "Depth charts and team analysis" },
   { href: "/competence", label: "Competence Mode", description: "Truth-first AI guidance" },
