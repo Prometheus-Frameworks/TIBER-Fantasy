@@ -4,7 +4,7 @@ import { api } from "@/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Database, Sync, Users, Calendar } from "lucide-react";
+import { Loader2, Database, RefreshCw, Users, Calendar } from "lucide-react";
 
 export default function ApiComprehensive() {
   const [syncSource, setSyncSource] = useState<"sleeper" | "espn" | "yahoo">("sleeper");
@@ -85,7 +85,7 @@ export default function ApiComprehensive() {
         {/* ADP Sync Status */}
         <Card>
           <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-            <Sync className="h-5 w-5 text-blue-600 mr-2" />
+            <RefreshCw className="h-5 w-5 text-blue-600 mr-2" />
             <CardTitle className="text-lg">ADP Sync</CardTitle>
           </CardHeader>
           <CardContent>
