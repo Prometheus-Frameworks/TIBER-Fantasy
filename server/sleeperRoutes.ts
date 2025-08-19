@@ -243,9 +243,9 @@ router.post('/api/sleeper/clear-cache', async (_req: Request, res: Response) => 
 });
 
 // Health check endpoint for Sleeper integration (Batch #2 refinement)
-router.get('/api/sleeper/health', (_req: Request, res: Response) => {
+router.get('/api/sleeper/health', async (_req: Request, res: Response) => {
   try {
-    const { sleeperSyncService } = require('./services/sleeperSyncService');
+    const { sleeperSyncService } = await import('./services/sleeperSyncService');
     const cacheInfo = sleeperSyncService.getCacheMetadata();
     
     res.json(createResponse({
