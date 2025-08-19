@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link2, User, Users, CheckCircle, AlertCircle, ExternalLink, Trophy } from "lucide-react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,7 @@ export default function SleeperConnect() {
   const [username, setUsername] = useState("");
   const [leagueId, setLeagueId] = useState("");
   const [selectedMethod, setSelectedMethod] = useState<"username" | "league">("username");
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
 
   // Query for user lookup
@@ -58,18 +60,18 @@ export default function SleeperConnect() {
 
   const handleConnectLeague = (league: League) => {
     // Navigate to dashboard with league context
-    window.location.href = `/dashboard?league=${league.league_id}&user=${userData?.data?.user_id}&username=${username}`;
+    setLocation(`/dashboard?league=${league.league_id}&user=${userData?.data?.user_id}&username=${username}`);
   };
 
   const handleDirectLeagueConnect = () => {
     if (leagueData?.data) {
-      window.location.href = `/dashboard?league=${leagueId}`;
+      setLocation(`/dashboard?league=${leagueId}`);
     }
   };
 
   const handleViewAllLeagues = () => {
     if (userData?.data?.user_id) {
-      window.location.href = `/dashboard?user=${userData.data.user_id}&username=${username}`;
+      setLocation(`/leagues?user=${userData.data.user_id}&username=${username}`);
     }
   };
 

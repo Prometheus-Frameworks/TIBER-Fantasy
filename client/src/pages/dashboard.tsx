@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Trophy, Users, Calendar, ExternalLink, ArrowLeft } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface League {
   league_id: string;
@@ -29,6 +30,7 @@ export default function Dashboard() {
   const [leagueId, setLeagueId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
 
   // Extract parameters from URL
@@ -58,7 +60,7 @@ export default function Dashboard() {
   });
 
   const handleBackToConnect = () => {
-    window.location.href = '/sleeper-connect';
+    setLocation('/sleeper-connect');
   };
 
   const getLeagueTypeDisplay = (league: League) => {

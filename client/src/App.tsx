@@ -77,6 +77,7 @@ import PlayerDatabase from "@/pages/PlayerDatabase";
 import NotFound from "@/pages/not-found";
 import SleeperDatabase from "@/pages/sleeper-database";
 import SleeperConnect from "@/pages/sleeper-connect";
+import Leagues from "@/pages/leagues";
 import PrometheusBenchmarks from "@/pages/PrometheusBenchmarks";
 import CommunityPosts from "@/pages/CommunityPosts";
 import AdvancedAnalytics from "@/pages/AdvancedAnalytics";
@@ -214,6 +215,7 @@ function Router() {
       <Route path="/premium" component={PremiumAnalytics} />
       <Route path="/sleeper-database" component={SleeperDatabase} />
       <Route path="/sleeper-connect" component={SleeperConnect} />
+      <Route path="/leagues" component={Leagues} />
       <Route path="/community-posts" component={CommunityPosts} />
       <Route path="/prometheus-benchmarks" component={PrometheusBenchmarks} />
       <Route path="/dynasty-decline-analysis" component={DynastyDeclineAnalysis} />

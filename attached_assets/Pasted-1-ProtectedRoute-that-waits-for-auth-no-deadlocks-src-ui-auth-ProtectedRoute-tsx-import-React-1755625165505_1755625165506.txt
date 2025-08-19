@@ -1,0 +1,184 @@
+1) ProtectedRoute that waits for auth (no deadlocks)
+
+// src/ui/auth/ProtectedRoute.tsx
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+
+type Props = {
+  isAuthed: boolean;
+  loading: boolean;
+  children: React.ReactElement;
+};
+
+export default function ProtectedRoute({ isAuthed, loading, children }: Props) {
+  if (loading) return <div className="p-6 text-gray-600">Checking sign‑in…</div>;
+  if (!isAuthed) return <Navigate to="/login" replace />;
+  return children;
+}
+
+
+⸻
+
+2) Router wiring that actually routes (no catch‑all traps)
+
+// src/ui/App.tsx
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import ProtectedRoute from './auth/ProtectedRoute';
+import Dashboard from './dashboard/dashboard';
+import Leagues from './leagues/Leagues';   // simple landing page list
+import Login from './auth/Login';
+
+import { useAuth } from './auth/AuthProvider'; // must expose {loading,isAuthed}
+
+export default function App() {
+  const { loading, isAuthed } = useAuth();
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* After login, always land here first */}
+        <Route path="/" element={<Navigate to="/leagues" replace />} />
+
+        <Route path="/login" element={<Login />} />
+
+        <Route
+          path="/leagues"
+          element={
+            <ProtectedRoute loading={loading} isAuthed={isAuthed}>
+              <Leagues />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute loading={loading} isAuthed={isAuthed}>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* keep this LAST; don’t shadow real routes */}
+        <Route path="*" element={<Navigate to="/leagues" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+Opinionated call: we route to /leagues first (the “landing” Tiber said he built), then you hop to /dashboard?teamId=…. If you hate that, change / → /dashboard.
+
+⸻
+
+3) Login success that always pushes (no race with state)
+
+// src/ui/auth/Login.tsx
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthProvider';
+
+export default function Login() {
+  const navigate = useNavigate();
+  const { signIn } = useAuth(); // must resolve with user profile
+
+  const onSuccess = async (creds: any) => {
+    // 1) perform sign-in
+    const user = await signIn(creds);
+
+    // 2) hard redirect to leagues (don’t wait for any other state)
+    //    setTimeout avoids StrictMode double-render timing weirdness
+    setTimeout(() => navigate('/leagues', { replace: true }), 0);
+  };
+
+  return <YourLoginButton onSuccess={onSuccess} />;
+}
+
+
+⸻
+
+4) Minimal “Leagues” landing that proves the page exists
+
+// src/ui/leagues/Leagues.tsx
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+export default function Leagues() {
+  const [loading, setLoading] = useState(true);
+  const [leagues, setLeagues] = useState<any[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const year = new Date().getFullYear();
+        // you should have userId in auth/user store already:
+        const userId = window.localStorage.getItem('sleeper_user_id');
+        if (!userId) throw new Error('Missing userId in storage');
+
+        const r = await fetch(`/api/sleeper/leagues/${userId}?season=${year}`);
+        const j = await r.json();
+        if (!r.ok || !j.ok) throw new Error(j.message || 'Failed to load leagues');
+        setLeagues(j.data || []);
+      } catch (e: any) {
+        setErr(e.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  if (loading) return <div className="p-6">Loading leagues…</div>;
+  if (err) return <div className="p-6 text-red-700">Error: {err}</div>;
+  if (!leagues.length) return <div className="p-6">No leagues found.</div>;
+
+  return (
+    <div className="p-6 space-y-3">
+      <h1 className="text-xl font-semibold">Your Sleeper Leagues</h1>
+      <ul className="space-y-2">
+        {leagues.map((l: any) => (
+          <li key={l.league_id}>
+            <button
+              className="px-3 py-2 border rounded hover:bg-gray-50"
+              onClick={() => navigate(`/dashboard?leagueId=${l.league_id}`)}
+            >
+              {l.name} — {l.season}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+if you don’t want a leagues page, you can auto‑pick one and jump straight to /dashboard?leagueId=<first>. But this proves routing works.
+
+⸻
+
+5) Dashboard: accept leagueId or fall back to your existing flow
+
+At the very top of your Dashboard component (the one we patched earlier), add this one-liner so it hydrates the context if only leagueId is present:
+
+// inside Dashboard() early:
+const leagueIdFromUrl = new URLSearchParams(location.search).get('leagueId');
+// if your useLeagueContext supports setting league:
+if (leagueIdFromUrl) selectLeague(leagueIdFromUrl); // no-op if already set
+
+(If your context doesn’t expose selectLeague, store leagueId in localStorage on click in Leagues and have the Dashboard read it as default. Either way, you’re covered.)
+
+⸻
+
+6) Two quick “did we wire it?” tests (tell Tiber to run)
+	•	Manually hit the page:
+	•	/leagues → list should render with your 14 leagues.
+	•	Click one → should push to /dashboard?leagueId=... and render roster.
+	•	Skip auth entirely (for sanity):
+Temporarily comment the ProtectedRoute wrapper for /leagues and /dashboard, then visit the URLs directly. If they render → redirect/guard was your only blocker.
+
+⸻
+
+7) Common tripwires (kill them now)
+	•	Catch‑all route (*) placed before real routes → it will hijack everything. Keep it last.
+	•	Basename issues if deployed under a subpath → set <BrowserRouter basename={import.meta.env.BASE_URL || '/'}>.
+	•	Login callback not firing → add a console.log('login success') right before navigate.
+	•	State guards waiting forever → use the ProtectedRoute pattern above that checks loading first.
+
+Add ProtectedRoute.tsx, wire routes exactly as shown (root → /leagues, /dashboard protected), and in the login success handler call navigate('/leagues', { replace:true }) immediately after storing the user. Add the simple Leagues.tsx list page and navigate to /dashboard?leagueId=... on click. Keep the 404 catch‑all last. This removes the redirect deadlock and proves the landing page exists. Then I (Joe) can pick a league and see my roster.
