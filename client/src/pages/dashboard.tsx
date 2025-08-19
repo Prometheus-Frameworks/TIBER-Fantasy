@@ -1,130 +1,183 @@
-import { useQuery } from "@tanstack/react-query";
-import { Loader2, Volleyball, RotateCcw, Upload, Target, User, Crown } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
-import TeamOverview from "@/components/team-overview";
-import PositionAnalysis from "@/components/position-analysis";
-import PlayerRecommendations from "@/components/player-recommendations";
-import PerformanceChart from "@/components/performance-chart";
-import MobileNav from "@/components/mobile-nav";
-import type { Team } from "@shared/schema";
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useLocation } from 'wouter';
+import { useLeagueContext } from '@/hooks/useLeagueContext';
 
-export default function Dashboard() {
-  const teamId = 1; // Default team ID for demo
+// UI Components for loading, error, and empty states
+interface LoadingSpinnerProps { message?: string; }
+const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ message = 'Loading...' }) => (
+  <div className="flex items-center justify-center p-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" aria-label="loading" />
+    <span className="ml-3 text-gray-600">{message}</span>
+  </div>
+);
 
-  const { data: team, isLoading: teamLoading, refetch } = useQuery<Team>({
-    queryKey: [`/api/teams/${teamId}`],
-  });
+const ErrorMessage: React.FC<{ message: string; onRetry?: () => void }> = ({ message, onRetry }) => (
+  <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+    <div className="text-red-800 mb-4">{message}</div>
+    {onRetry && (
+      <button
+        onClick={onRetry}
+        className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+      >
+        Try Again
+      </button>
+    )}
+  </div>
+);
 
-  const handleRefresh = () => {
-    refetch();
-  };
+const EmptyState: React.FC<{ message: string }> = ({ message }) => (
+  <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+    <div className="text-gray-600">{message}</div>
+  </div>
+);
 
-  if (teamLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin field-green" />
-      </div>
-    );
+function Dashboard() {
+  const [location, setLocation] = useLocation();
+  const { leagueContext, loading, error, refetch } = useLeagueContext();
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+
+  // Get search params from current URL
+  const searchParams = useMemo(() => {
+    const url = new URL(window.location.href);
+    return url.searchParams;
+  }, [location]);
+
+  // Memo to avoid re-computing
+  const teamIds = useMemo(() => (leagueContext?.teams ?? []).map(t => t.teamId), [leagueContext]);
+
+  // Update URL with new search params
+  const updateSearchParams = useCallback((params: URLSearchParams, replace: boolean = true) => {
+    const newUrl = `${location}?${params.toString()}`;
+    if (replace) {
+      window.history.replaceState({}, '', newUrl);
+    } else {
+      setLocation(newUrl);
+    }
+  }, [location, setLocation]);
+
+  // Sync URL -> state with safe defaults
+  useEffect(() => {
+    if (loading || !leagueContext) return;
+
+    const teamIdFromUrl = searchParams.get('teamId');
+    if (!leagueContext.teams.length) {
+      setSelectedTeamId(null);
+      return;
+    }
+
+    const firstTeamId = leagueContext.teams[0].teamId;
+
+    // If no teamId in URL, set it
+    if (!teamIdFromUrl) {
+      setSelectedTeamId(firstTeamId);
+      const next = new URLSearchParams(searchParams);
+      next.set('teamId', firstTeamId);
+      updateSearchParams(next, true);
+      return;
+    }
+
+    // If teamId present but invalid, normalize to first
+    const exists = teamIds.includes(teamIdFromUrl);
+    if (!exists) {
+      setSelectedTeamId(firstTeamId);
+      const next = new URLSearchParams(searchParams);
+      next.set('teamId', firstTeamId);
+      updateSearchParams(next, true);
+      return;
+    }
+
+    // Valid teamId
+    if (selectedTeamId !== teamIdFromUrl) {
+      setSelectedTeamId(teamIdFromUrl);
+    }
+  }, [loading, leagueContext, searchParams, updateSearchParams, teamIds, selectedTeamId]);
+
+  // Loading state
+  if (loading) return <LoadingSpinner message="Loading team data..." />;
+
+  // Error state
+  if (error) {
+    return <ErrorMessage message="Unable to load team data. Please try again." onRetry={refetch} />;
   }
 
-  if (!team) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Team Not Found</h1>
-          <p className="text-gray-600">Unable to load team data</p>
-        </div>
-      </div>
-    );
-  }
+  // No league context / teams
+  if (!leagueContext) return <EmptyState message="No league data available." />;
+  if (!leagueContext.teams.length) return <EmptyState message="No teams found in this league." />;
+  if (!selectedTeamId) return <LoadingSpinner message="Selecting team..." />;
+
+  const selectedTeam = leagueContext.teams.find(t => t.teamId === selectedTeamId);
+  if (!selectedTeam) return <ErrorMessage message="Selected team not found." onRetry={refetch} />;
+
+  const handleTeamSelect = useCallback((teamId: string) => {
+    if (teamId === selectedTeamId) return;
+    setSelectedTeamId(teamId);
+    const next = new URLSearchParams(searchParams);
+    next.set('teamId', teamId);
+    updateSearchParams(next, true);
+  }, [searchParams, updateSearchParams, selectedTeamId]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header - Mobile Optimized */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-3 md:py-4">
-            <div className="flex items-center space-x-2 md:space-x-3">
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-field-green rounded-lg flex items-center justify-center">
-                <Volleyball className="text-white" size={16} />
-              </div>
-              <div>
-                <h1 className="text-lg md:text-xl font-bold text-gray-900">Signal</h1>
-                <p className="text-xs md:text-sm text-gray-500 hidden sm:block">fantasy and data</p>
-              </div>
-            </div>
-            {/* Desktop Action Buttons */}
-            <div className="hidden lg:flex items-center space-x-3">
-              <Link href="/arbitrage">
-                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
-                  <Target className="w-4 h-4 mr-2" />
-                  Value Arbitrage
-                </Button>
-              </Link>
-              <Link href="/dynasty-values">
-                <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                  <Crown className="w-4 h-4 mr-2" />
-                  Dynasty
-                </Button>
-              </Link>
-              <Link href="/sync">
-                <Button 
-                  size="sm"
-                  variant="outline"
-                  className="text-field-green border-field-green hover:bg-field-green hover:text-white"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import
-                </Button>
-              </Link>
-              <Button 
-                size="sm"
-                onClick={handleRefresh}
-                className="bg-field-green hover:bg-dark-green"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </Button>
-            </div>
-            
-            {/* Mobile Refresh Button */}
-            <div className="flex lg:hidden">
-              <Button 
-                size="sm"
-                onClick={handleRefresh}
-                className="bg-field-green hover:bg-dark-green p-2"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
+    <div className="space-y-6 max-w-7xl mx-auto px-4 py-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">{leagueContext.league.name}</h1>
+          <p className="text-sm text-gray-500">
+            Season {leagueContext.league.season} • Scoring: {leagueContext.league.scoring.toUpperCase()}
+          </p>
         </div>
-      </header>
-
-      {/* Main Content - Mobile Optimized */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 pb-20 md:pb-6">
-        {/* Team Overview */}
-        <TeamOverview team={team} />
-
-        {/* Position Analysis and Recommendations - Stacked on Mobile */}
-        <div className="grid grid-cols-1 gap-4 md:gap-6 mb-6 md:mb-8">
-          <PositionAnalysis teamId={teamId} />
-        </div>
-
-        {/* Performance Chart and Current Roster - Stacked on Mobile */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
-          <PerformanceChart teamId={teamId} />
-          <div>
-            {/* Current roster will be part of PositionAnalysis */}
-          </div>
-        </div>
-
-        {/* Player Recommendations */}
-        <PlayerRecommendations teamId={teamId} />
+        <button
+          onClick={refetch}
+          className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+        >
+          Refresh
+        </button>
       </div>
 
-      {/* Mobile Navigation */}
-      <MobileNav />
+      {/* Team selector */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        {leagueContext.teams.map(team => (
+          <button
+            key={team.teamId}
+            onClick={() => handleTeamSelect(team.teamId)}
+            className={[
+              "rounded-lg border p-3 text-left hover:shadow transition",
+              selectedTeamId === team.teamId ? "border-blue-600 ring-1 ring-blue-300" : "border-gray-200"
+            ].join(' ')}
+            aria-pressed={selectedTeamId === team.teamId}
+          >
+            <div className="font-medium truncate">{team.displayName}</div>
+            <div className="text-xs text-gray-500">{team.players.length} players</div>
+          </button>
+        ))}
+      </div>
+
+      {/* Roster view for selected team */}
+      <div className="rounded-xl border border-gray-200 p-4">
+        <h2 className="font-semibold mb-3">Roster</h2>
+        {selectedTeam.players.length === 0 ? (
+          <div className="text-sm text-gray-500">No players on this roster.</div>
+        ) : (
+          <ul className="divide-y">
+            {selectedTeam.players.map(pid => {
+              const p = leagueContext.players[pid];
+              return (
+                <li key={pid} className="py-2 flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{p?.full_name || 'Unknown Player'}</div>
+                    <div className="text-xs text-gray-500">
+                      {p?.position ?? 'UNK'} • {p?.team ?? 'FA'}
+                    </div>
+                  </div>
+                  {/* Placeholder: add actions later */}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
+
+export default Dashboard;
