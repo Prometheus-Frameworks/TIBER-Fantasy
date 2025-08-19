@@ -37,21 +37,21 @@ export default function SleeperConnect() {
 
   // Query for user lookup
   const { data: userData, isLoading: userLoading, error: userError } = useQuery<ApiResponse<UserData>>({
-    queryKey: ["/api/sleeper/user", username],
+    queryKey: [`/api/sleeper/user/${username}`],
     enabled: !!username && username.length > 2 && selectedMethod === "username",
     retry: false
   });
 
   // Query for user's leagues
   const { data: leaguesData, isLoading: leaguesLoading } = useQuery<ApiResponse<League[]>>({
-    queryKey: ["/api/sleeper/leagues", userData?.data?.user_id],
+    queryKey: [`/api/sleeper/leagues/${userData?.data?.user_id}`],
     enabled: !!userData?.data?.user_id,
     retry: false
   });
 
   // Query for direct league lookup
   const { data: leagueData, isLoading: leagueLoading, error: leagueError } = useQuery<ApiResponse<any>>({
-    queryKey: ["/api/sleeper/league", leagueId, "context"],
+    queryKey: [`/api/sleeper/league/${leagueId}/context`],
     enabled: !!leagueId && leagueId.length > 5 && selectedMethod === "league",
     retry: false
   });
