@@ -45,52 +45,60 @@ function Dashboard() {
   // Memo to avoid re-computing
   const teamIds = useMemo(() => (leagueContext?.teams ?? []).map(t => t.teamId), [leagueContext]);
 
-  // Update URL with new search params
-  const updateSearchParams = useCallback((params: URLSearchParams, replace: boolean = true) => {
-    const newUrl = `${location}?${params.toString()}`;
-    if (replace) {
-      window.history.replaceState({}, '', newUrl);
-    } else {
-      setLocation(newUrl);
-    }
-  }, [location, setLocation]);
+  // Update URL with new search params - always creates new URLSearchParams
+  const updateSearchParams = useCallback((newTeamId: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('teamId', newTeamId);
+    const newUrl = `${location.split('?')[0]}?${next.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+    // Trigger location change for wouter
+    setLocation(newUrl);
+  }, [location, searchParams, setLocation]);
 
   // Sync URL -> state with safe defaults
   useEffect(() => {
     if (loading || !leagueContext) return;
 
-    const teamIdFromUrl = searchParams.get('teamId');
+    const urlTeam = searchParams.get('teamId');
     if (!leagueContext.teams.length) {
       setSelectedTeamId(null);
       return;
     }
 
-    const firstTeamId = leagueContext.teams[0].teamId;
+    const first = leagueContext.teams[0].teamId;
 
-    // If no teamId in URL, set it
-    if (!teamIdFromUrl) {
-      setSelectedTeamId(firstTeamId);
+    // No team in URL → set first
+    if (!urlTeam) {
+      setSelectedTeamId(first);
       const next = new URLSearchParams(searchParams);
-      next.set('teamId', firstTeamId);
-      updateSearchParams(next, true);
+      next.set('teamId', first);
+      const newUrl = `${location.split('?')[0]}?${next.toString()}`;
+      window.history.replaceState({}, '', newUrl);
       return;
     }
 
-    // If teamId present but invalid, normalize to first
-    const exists = teamIds.includes(teamIdFromUrl);
-    if (!exists) {
-      setSelectedTeamId(firstTeamId);
+    // Invalid team in URL → normalize to first
+    if (!teamIds.includes(urlTeam)) {
+      setSelectedTeamId(first);
       const next = new URLSearchParams(searchParams);
-      next.set('teamId', firstTeamId);
-      updateSearchParams(next, true);
+      next.set('teamId', first);
+      const newUrl = `${location.split('?')[0]}?${next.toString()}`;
+      window.history.replaceState({}, '', newUrl);
       return;
     }
 
-    // Valid teamId
-    if (selectedTeamId !== teamIdFromUrl) {
-      setSelectedTeamId(teamIdFromUrl);
+    // Valid team - only set state, don't write URL
+    if (selectedTeamId !== urlTeam) {
+      setSelectedTeamId(urlTeam);
     }
-  }, [loading, leagueContext, searchParams, updateSearchParams, teamIds, selectedTeamId]);
+  }, [loading, leagueContext, searchParams, teamIds, selectedTeamId, location]);
+
+  // Stable team change handler
+  const handleTeamChange = useCallback((newTeamId: string) => {
+    if (newTeamId === selectedTeamId) return; // No-op if same team
+    setSelectedTeamId(newTeamId);
+    updateSearchParams(newTeamId);
+  }, [selectedTeamId, updateSearchParams]);
 
   // Loading state
   if (loading) return <LoadingSpinner message="Loading team data..." />;
@@ -108,73 +116,89 @@ function Dashboard() {
   const selectedTeam = leagueContext.teams.find(t => t.teamId === selectedTeamId);
   if (!selectedTeam) return <ErrorMessage message="Selected team not found." onRetry={refetch} />;
 
-  const handleTeamSelect = useCallback((teamId: string) => {
-    if (teamId === selectedTeamId) return;
-    setSelectedTeamId(teamId);
-    const next = new URLSearchParams(searchParams);
-    next.set('teamId', teamId);
-    updateSearchParams(next, true);
-  }, [searchParams, updateSearchParams, selectedTeamId]);
+  // Map players with fallback for unknown players
+  const teamPlayers = selectedTeam.players.map(pid => {
+    const p = leagueContext.players[pid];
+    return p || { 
+      player_id: pid, 
+      full_name: 'Unknown Player', 
+      position: 'UNK', 
+      team: null, 
+      free_agent: true 
+    };
+  });
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-4 py-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">{leagueContext.league.name}</h1>
-          <p className="text-sm text-gray-500">
-            Season {leagueContext.league.season} • Scoring: {leagueContext.league.scoring.toUpperCase()}
-          </p>
-        </div>
-        <button
-          onClick={refetch}
-          className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+    <div className="dashboard-container">
+      {/* League Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200 p-4">
+        <h1 className="text-2xl font-bold text-gray-900">{leagueContext.league.name}</h1>
+        <p className="text-gray-600">
+          {leagueContext.league.season} • {leagueContext.league.scoring.toUpperCase()} Scoring
+        </p>
+      </div>
+
+      {/* Team Selector */}
+      <div className="bg-white border-b border-gray-200 p-4">
+        <label htmlFor="team-select" className="block text-sm font-medium text-gray-700 mb-2">
+          Select Team:
+        </label>
+        <select
+          id="team-select"
+          value={selectedTeamId ?? ''}
+          onChange={(e) => handleTeamChange(e.target.value)}
+          className="block w-full max-w-md px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
         >
-          Refresh
-        </button>
+          {leagueContext.teams.map(team => (
+            <option key={team.teamId} value={team.teamId}>
+              {team.displayName}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Team selector */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-        {leagueContext.teams.map(team => (
-          <button
-            key={team.teamId}
-            onClick={() => handleTeamSelect(team.teamId)}
-            className={[
-              "rounded-lg border p-3 text-left hover:shadow transition",
-              selectedTeamId === team.teamId ? "border-blue-600 ring-1 ring-blue-300" : "border-gray-200"
-            ].join(' ')}
-            aria-pressed={selectedTeamId === team.teamId}
-          >
-            <div className="font-medium truncate">{team.displayName}</div>
-            <div className="text-xs text-gray-500">{team.players.length} players</div>
-          </button>
-        ))}
-      </div>
+      {/* Team Details */}
+      <div className="p-6">
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900">{selectedTeam.displayName}</h2>
+            <p className="text-gray-600">
+              {teamPlayers.length} players • Owner: {selectedTeam.ownerId}
+            </p>
+          </div>
 
-      {/* Roster view for selected team */}
-      <div className="rounded-xl border border-gray-200 p-4">
-        <h2 className="font-semibold mb-3">Roster</h2>
-        {selectedTeam.players.length === 0 ? (
-          <div className="text-sm text-gray-500">No players on this roster.</div>
-        ) : (
-          <ul className="divide-y">
-            {selectedTeam.players.map(pid => {
-              const p = leagueContext.players[pid];
-              return (
-                <li key={pid} className="py-2 flex items-center justify-between">
-                  <div>
-                    <div className="font-medium">{p?.full_name || 'Unknown Player'}</div>
-                    <div className="text-xs text-gray-500">
-                      {p?.position ?? 'UNK'} • {p?.team ?? 'FA'}
+          {/* Players List */}
+          <div className="p-6">
+            {teamPlayers.length === 0 ? (
+              <EmptyState message="No players on this team." />
+            ) : (
+              <div className="space-y-3">
+                {teamPlayers.map((player) => (
+                  <div key={player.player_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-shrink-0">
+                        <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 text-blue-800 text-sm font-medium">
+                          {player.position}
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-900">{player.full_name}</h3>
+                        <p className="text-sm text-gray-500">
+                          {player.team || 'Free Agent'}{(player as any).status ? ` • ${(player as any).status}` : ''}
+                        </p>
+                      </div>
                     </div>
+                    {(player as any).free_agent && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        FA
+                      </span>
+                    )}
                   </div>
-                  {/* Placeholder: add actions later */}
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
