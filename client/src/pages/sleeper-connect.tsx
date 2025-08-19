@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link2, User, Users, CheckCircle, AlertCircle, ExternalLink } from "lucide-react";
+import { Link2, User, Users, CheckCircle, AlertCircle, ExternalLink, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,12 +58,18 @@ export default function SleeperConnect() {
 
   const handleConnectLeague = (league: League) => {
     // Navigate to dashboard with league context
-    window.location.href = `/dashboard?league=${league.league_id}`;
+    window.location.href = `/dashboard?league=${league.league_id}&user=${userData?.data?.user_id}&username=${username}`;
   };
 
   const handleDirectLeagueConnect = () => {
     if (leagueData?.data) {
       window.location.href = `/dashboard?league=${leagueId}`;
+    }
+  };
+
+  const handleViewAllLeagues = () => {
+    if (userData?.data?.user_id) {
+      window.location.href = `/dashboard?user=${userData.data.user_id}&username=${username}`;
     }
   };
 
@@ -172,6 +178,16 @@ export default function SleeperConnect() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
+                  {leaguesData.data.length > 0 && (
+                    <Button 
+                      onClick={handleViewAllLeagues}
+                      className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 mb-4"
+                    >
+                      <Trophy className="mr-2 h-4 w-4" />
+                      View All Leagues ({leaguesData.data.length})
+                    </Button>
+                  )}
+                  
                   {leaguesData.data.map((league: League) => (
                     <div
                       key={league.league_id}
