@@ -1,7 +1,7 @@
 import GlowCard from "@/components/GlowCard";
 import GlowCTA from "@/components/GlowCTA";
 import { Section } from "@/components/Section";
-import { Trophy, Compass, Users, Sparkles } from "lucide-react";
+import { Trophy, Compass, Users, Sparkles, Link2, Zap } from "lucide-react";
 
 export default function Home(){
   return (
@@ -17,8 +17,49 @@ export default function Home(){
         <p className="mt-3 max-w-2xl text-body">
           No paywalls, just signal. Draft smarter with consensus boards and context‑aware guidance.
         </p>
-        <div className="mt-6">
+        <div className="mt-6 flex gap-3">
           <GlowCTA href="/consensus">View OTC Consensus</GlowCTA>
+          <a 
+            href="/sleeper-connect" 
+            className="inline-flex items-center gap-2 px-6 py-2 border border-purple-300 text-purple-700 rounded-lg font-medium hover:bg-purple-50 transition-colors"
+          >
+            <Link2 className="h-4 w-4" />
+            Connect Sleeper
+          </a>
+        </div>
+      </div>
+
+      {/* Featured Integration - Sleeper Sync */}
+      <Section 
+        title="🚀 NEW: Sleeper Integration" 
+        action={<span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Live</span>} 
+      />
+      <div className="mb-8">
+        <div className="relative bg-gradient-to-br from-purple-50 to-gold-50 border border-purple-200 rounded-lg p-6 shadow-lg hover:shadow-xl transition-all duration-300 group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-100/50 to-gold-100/50 rounded-full blur-2xl -z-10"></div>
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+              <Zap className="h-6 w-6 text-purple-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Sync Your Sleeper Leagues</h3>
+              <p className="text-gray-600 mb-4">
+                Connect your Sleeper account to access league rosters, make informed trades, and get personalized insights for your actual teams.
+              </p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">League Analysis</span>
+                <span className="text-xs bg-gold-100 text-gold-800 px-2 py-1 rounded-full">Roster Sync</span>
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Trade Insights</span>
+              </div>
+              <a 
+                href="/sleeper-connect" 
+                className="inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors group-hover:scale-105 transform"
+              >
+                <Link2 className="h-4 w-4" />
+                Connect Your League
+              </a>
+            </div>
+          </div>
         </div>
       </div>
 
