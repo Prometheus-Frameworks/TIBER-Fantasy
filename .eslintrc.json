@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "no-restricted-properties": [
+      "error",
+      { 
+        "object": "window", 
+        "property": "location", 
+        "message": "Use wouter setLocation() — no hard reloads." 
+      }
+    ]
+  }
+}

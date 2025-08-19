@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Trophy, Users, Calendar, ArrowLeft, Crown, Star } from "lucide-react";
-import { useLocation } from "wouter";
+import { useNav } from "@/hooks/useNav";
 
 interface League {
   league_id: string;
@@ -29,7 +29,7 @@ interface ApiResponse<T = any> {
 export default function Leagues() {
   const [userId, setUserId] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
-  const [location, setLocation] = useLocation();
+  const nav = useNav();
   const { toast } = useToast();
 
   // Extract parameters from URL
@@ -50,11 +50,16 @@ export default function Leagues() {
   });
 
   const handleLeagueSelect = (league: League) => {
-    setLocation(`/dashboard?league=${league.league_id}&user=${userId}&username=${username}`);
+    // Store league for persistence
+    localStorage.setItem('leagueId', league.league_id);
+    if (userId) localStorage.setItem('userId', userId);
+    if (username) localStorage.setItem('username', username);
+    
+    nav(`/dashboard?league=${league.league_id}&user=${userId}&username=${username}`);
   };
 
   const handleBackToConnect = () => {
-    setLocation('/sleeper-connect');
+    nav('/sleeper-connect');
   };
 
   const getLeagueTypeDisplay = (league: League) => {
@@ -208,11 +213,12 @@ export default function Leagues() {
                   Click to view league dashboard and roster analysis
                 </div>
                 <Button 
+                  disabled={!league.league_id}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleLeagueSelect(league);
                   }}
-                  className="bg-purple-600 hover:bg-purple-700"
+                  className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
                 >
                   View Dashboard
                 </Button>

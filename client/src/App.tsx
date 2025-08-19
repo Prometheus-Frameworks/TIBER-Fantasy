@@ -1,5 +1,5 @@
-import { Switch, Route } from "wouter";
-import { lazy } from "react";
+import { Switch, Route, useLocation } from "wouter";
+import { lazy, useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -244,6 +244,12 @@ function Router() {
 
 function AppContent() {
   useTopProgress(); // Enable automatic loading bar
+  const [location] = useLocation();
+  
+  // Telemetry: Log route changes to track user flow
+  useEffect(() => {
+    console.log(JSON.stringify({ src:'router', path: location, ts: Date.now() }));
+  }, [location]);
   
   return (
     <TooltipProvider>

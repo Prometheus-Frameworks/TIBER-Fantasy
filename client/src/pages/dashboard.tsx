@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Trophy, Users, Calendar, ExternalLink, ArrowLeft } from "lucide-react";
-import { useLocation } from "wouter";
+import { useNav } from "@/hooks/useNav";
 
 interface League {
   league_id: string;
@@ -30,20 +30,30 @@ export default function Dashboard() {
   const [leagueId, setLeagueId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
-  const [location, setLocation] = useLocation();
+  const nav = useNav();
   const { toast } = useToast();
 
-  // Extract parameters from URL
+  // Extract parameters from URL with localStorage fallback
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const leagueParam = urlParams.get('league');
     const userParam = urlParams.get('user');
     const usernameParam = urlParams.get('username');
     
-    if (leagueParam) setLeagueId(leagueParam);
-    if (userParam) setUserId(userParam);
-    if (usernameParam) setUsername(usernameParam);
-  }, []);
+    // Use URL params first, then fall back to localStorage
+    const finalLeagueId = leagueParam || localStorage.getItem('leagueId');
+    const finalUserId = userParam || localStorage.getItem('userId');
+    const finalUsername = usernameParam || localStorage.getItem('username');
+    
+    if (finalLeagueId) setLeagueId(finalLeagueId);
+    if (finalUserId) setUserId(finalUserId);
+    if (finalUsername) setUsername(finalUsername);
+    
+    // If no league ID found anywhere, redirect to leagues
+    if (!finalLeagueId) {
+      nav('/leagues', true);
+    }
+  }, [nav]);
 
   // Query for user's leagues if we have user info
   const { data: leaguesData, isLoading: leaguesLoading, error: leaguesError } = useQuery<ApiResponse<League[]>>({
@@ -60,7 +70,7 @@ export default function Dashboard() {
   });
 
   const handleBackToConnect = () => {
-    setLocation('/sleeper-connect');
+    nav('/leagues');
   };
 
   const getLeagueTypeDisplay = (league: League) => {
