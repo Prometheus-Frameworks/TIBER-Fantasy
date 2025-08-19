@@ -4,8 +4,15 @@
  */
 
 import axios from 'axios';
-import fs from 'fs/promises';
-import path from 'path';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+
+// Centralized axios instance
+const http = axios.create({ 
+  baseURL: 'https://api.sleeper.app/v1', 
+  timeout: 8000, 
+  validateStatus: (s) => s >= 200 && s < 500 
+});
 
 export interface SleeperPlayer {
   player_id: string;
@@ -49,12 +56,38 @@ export interface SleeperSyncResult {
   error?: string;
 }
 
+// Standard error helper
+function err(code: string, message: string, details?: any, status?: number) {
+  const e: any = new Error(message);
+  e.code = code; 
+  if (details !== undefined) e.details = details;
+  if (status) e.status = status;
+  return e;
+}
+
+// Season validation helper
+function validateSeason(season: string): boolean {
+  if (!/^\d{4}$/.test(season)) return false;
+  const y = Number(season), current = new Date().getFullYear();
+  return y >= 2018 && y <= current + 1;
+}
+
+// JSON-structured log helpers
+function logInfo(msg: string, meta?: Record<string, any>) {
+  console.log(JSON.stringify({ level:'info', src:'SleeperSync', msg, ...(meta||{}) }));
+}
+
+function logError(msg: string, error: any, meta?: Record<string, any>) {
+  console.error(JSON.stringify({ level:'error', src:'SleeperSync', msg, error: error?.message||String(error), stack: error?.stack, ...(meta||{}) }));
+}
+
 class SleeperSyncService {
   private readonly CACHE_DIR = path.join(process.cwd(), 'server', 'data', 'sleeper_cache');
   private readonly PLAYERS_CACHE_FILE = path.join(this.CACHE_DIR, 'players.json');
   private readonly PROJECTIONS_CACHE_FILE = path.join(this.CACHE_DIR, 'projections.json');
   private readonly BASE_URL = 'https://api.sleeper.app/v1';
   private readonly CACHE_EXPIRY_HOURS = 6;
+  private playersCache = { data: null as SleeperPlayer[] | null, updatedAt: null as Date | null };
 
   constructor() {
     this.ensureCacheDirectory();
@@ -64,7 +97,7 @@ class SleeperSyncService {
     try {
       await fs.mkdir(this.CACHE_DIR, { recursive: true });
     } catch (error) {
-      console.error('Failed to create cache directory:', error);
+      logError('Failed to create cache directory', error);
     }
   }
 
@@ -90,8 +123,13 @@ class SleeperSyncService {
   private async writeCache<T>(filePath: string, data: T): Promise<void> {
     try {
       await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+      // Update cache metadata if this is players cache
+      if (filePath === this.PLAYERS_CACHE_FILE && Array.isArray(data)) {
+        this.playersCache.data = data as SleeperPlayer[];
+        this.playersCache.updatedAt = new Date();
+      }
     } catch (error) {
-      console.error(`Failed to write cache file ${filePath}:`, error);
+      logError(`Failed to write cache file ${filePath}`, error);
     }
   }
 
@@ -103,13 +141,16 @@ class SleeperSyncService {
     
     try {
       // Try live API first
-      console.log('📡 Attempting live Sleeper players sync...');
-      const response = await axios.get(`${this.BASE_URL}/players/nfl`, {
-        timeout: 10000,
+      logInfo('Attempting live Sleeper players sync');
+      const response = await http.get('/players/nfl', {
         headers: {
           'User-Agent': 'OnTheClock/1.0'
         }
       });
+
+      if (response.status >= 400) {
+        throw err('UPSTREAM_ERROR', `Sleeper API returned ${response.status}`, { status: response.status }, 502);
+      }
 
       const players: SleeperPlayer[] = Object.values(response.data);
       const filteredPlayers = players.filter(p => 
@@ -118,7 +159,7 @@ class SleeperSyncService {
 
       await this.writeCache(this.PLAYERS_CACHE_FILE, filteredPlayers);
       
-      console.log(`✅ Live sync successful: ${filteredPlayers.length} players`);
+      logInfo('Live sync successful', { players_count: filteredPlayers.length });
       return {
         success: true,
         source: 'live',
@@ -128,14 +169,13 @@ class SleeperSyncService {
       };
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.warn('⚠️ Live sync failed, falling back to cache:', errorMessage);
+      logError('Live sync failed, falling back to cache', error);
       
       // Fallback to cache
       const cachedPlayers = await this.readCache<SleeperPlayer[]>(this.PLAYERS_CACHE_FILE);
       
       if (cachedPlayers) {
-        console.log(`📦 Using cached players: ${cachedPlayers.length} entries`);
+        logInfo('Using cached players', { players_count: cachedPlayers.length });
         return {
           success: true,
           source: 'cache',
@@ -145,14 +185,7 @@ class SleeperSyncService {
         };
       }
 
-      return {
-        success: false,
-        source: 'cache',
-        timestamp: startTime,
-        players_count: 0,
-        projections_count: 0,
-        error: 'No cache available and live sync failed'
-      };
+      throw err('NO_DATA', 'No cache available and live sync failed', { original_error: error instanceof Error ? error.message : String(error) }, 502);
     }
   }
 
@@ -160,7 +193,20 @@ class SleeperSyncService {
    * Get all cached players
    */
   async getPlayers(): Promise<SleeperPlayer[]> {
+    // Use in-memory cache if available
+    if (this.playersCache.data) {
+      return this.playersCache.data;
+    }
+    
     const players = await this.readCache<SleeperPlayer[]>(this.PLAYERS_CACHE_FILE);
+    if (players) {
+      // Update in-memory cache
+      this.playersCache.data = players;
+      try {
+        const stats = await fs.stat(this.PLAYERS_CACHE_FILE);
+        this.playersCache.updatedAt = stats.mtime;
+      } catch {}
+    }
     return players || [];
   }
 
@@ -168,14 +214,28 @@ class SleeperSyncService {
    * Get player by ID
    */
   async getPlayerById(playerId: string): Promise<SleeperPlayer | null> {
+    if (!playerId) {
+      throw err('MISSING_PARAM', 'playerId is required', null, 400);
+    }
+    
     const players = await this.getPlayers();
-    return players.find(p => p.player_id === playerId) || null;
+    const player = players.find(p => p.player_id === playerId);
+    
+    if (!player) {
+      throw err('PLAYER_NOT_FOUND', `Player with ID ${playerId} not found`, { playerId }, 404);
+    }
+    
+    return player;
   }
 
   /**
    * Search players by name
    */
   async searchPlayers(query: string): Promise<SleeperPlayer[]> {
+    if (!query || typeof query !== 'string') {
+      throw err('MISSING_PARAM', 'Search query is required', null, 400);
+    }
+    
     const players = await this.getPlayers();
     const searchTerm = query.toLowerCase();
     
@@ -190,8 +250,19 @@ class SleeperSyncService {
    * Get players by position
    */
   async getPlayersByPosition(position: string): Promise<SleeperPlayer[]> {
+    if (!position || typeof position !== 'string') {
+      throw err('MISSING_PARAM', 'Position is required', null, 400);
+    }
+    
+    const validPositions = ['QB', 'RB', 'WR', 'TE'];
+    const pos = position.toUpperCase();
+    
+    if (!validPositions.includes(pos)) {
+      throw err('INVALID_POSITION', 'Invalid position. Must be QB, RB, WR, or TE', { position, validPositions }, 422);
+    }
+    
     const players = await this.getPlayers();
-    return players.filter(p => p.position === position.toUpperCase());
+    return players.filter(p => p.position === pos);
   }
 
   /**
@@ -237,6 +308,35 @@ class SleeperSyncService {
       players_count: playersCount
     };
   }
+
+  /**
+   * Add materializeLeagueContext method (placeholder implementation)
+   */
+  async materializeLeagueContext(context: any): Promise<any> {
+    const missing: string[] = [];
+    
+    // Check for missing upstream resources
+    if (!context.leagues) missing.push('leagues');
+    if (!context.rosters) missing.push('rosters');
+    if (!context.matchups) missing.push('matchups');
+    
+    if (missing.length > 0) {
+      throw err('PARTIAL_UPSTREAM', 'Some upstream resources failed', { missing, context }, 206);
+    }
+    
+    return context;
+  }
 }
+
+// Export functions for cache metadata
+export function getPlayersCacheMeta(): { updatedAt: string | null; count: number } {
+  const instance = sleeperSyncService as any; // Access private members
+  const cache = instance.playersCache || { data: null, updatedAt: null };
+  const count = cache.data ? cache.data.length : 0;
+  return { updatedAt: cache.updatedAt ? cache.updatedAt.toISOString() : null, count };
+}
+
+// Temporary compatibility export (remove later if unused)
+export const getCacheMetadata = getPlayersCacheMeta;
 
 export const sleeperSyncService = new SleeperSyncService();
