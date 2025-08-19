@@ -354,6 +354,38 @@ export class SleeperAPIService {
       return null;
     }
   }
+
+  /**
+   * Get user information by username
+   */
+  async getUser(username: string): Promise<any> {
+    try {
+      const response = await fetch(`${this.BASE_URL}/user/${username}`);
+      if (!response.ok) {
+        if (response.status === 404) return null;
+        throw new Error(`Failed to fetch user: ${response.status}`);
+      }
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get leagues for a user by user ID
+   */
+  async getUserLeagues(userId: string, season?: string): Promise<any[]> {
+    try {
+      const seasonParam = season || new Date().getFullYear().toString();
+      const response = await fetch(`${this.BASE_URL}/user/${userId}/leagues/nfl/${seasonParam}`);
+      if (!response.ok) throw new Error(`Failed to fetch user leagues: ${response.status}`);
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching user leagues:', error);
+      throw error;
+    }
+  }
 }
 
 export const sleeperAPI = new SleeperAPIService();

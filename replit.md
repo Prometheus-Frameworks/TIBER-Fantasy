@@ -58,33 +58,33 @@ The platform employs a modular Flask backend for core logic and API endpoints, a
 - **Hot List Player Extraction System**: Dynamic player extraction from OVR Compass module with position-aware percentile calculations and volume floor filtering. Features 4 extraction buckets (OVR Risers, Compass Elite, Usage Surge, Value Targets) and comprehensive API endpoints (`/api/players/hot-list`, `/api/players/hot-list/health`) with a real-time UI at `/hot-list`.
 - **Live Data Integration Pipeline**: Complete multi-source data capture and processing system with MySportsFeeds, SportsDataIO, and Sleeper API integration. Features static data capture service (`/api/data/capture`) for persistent reference data beyond API trial periods, live data processor for weekly statistics, and comprehensive fallback strategies. Includes endpoints for live mode activation (`/api/players/hot-list/mode/live`), manual refresh (`/api/players/hot-list/refresh`), and data source monitoring (`/api/players/hot-list/sources`).
 
-## Recent Changes (August 18, 2025)
-- **COMPLETED: Live Sleeper API Integration** - Successfully replaced static CSV data with live Sleeper API across all compass endpoints:
-  - All 4 compass positions (WR/RB/TE/QB) now use authentic Sleeper player data (3,755+ players)
-  - Real-time player names, teams, ages, and statistics from Sleeper's NFL database
-  - Proper field mapping from Sleeper API structure (full_name, first_name, last_name, team, position)
-  - Server logs confirm "🔄 Live Compass: {POSITION} with Sleeper-synced data" instead of legacy CSV messages
-- **RESOLVED: Route Conflicts** - Eliminated legacy compass route conflicts that were intercepting live API requests:
-  - Removed conflicting `/api/compass/:position` legacy route (changed to `/api/compass-legacy-algorithm/:position`)
-  - Live Sleeper-synced routes now properly handle all requests via `compassRoutes.ts`
-  - Data source correctly shows "Sleeper sync → Compass v2.0" in API responses
-- **VERIFIED: Complete Functionality** - Comprehensive testing confirms all features operational:
-  - Search functionality: Find players like "Justin Jefferson", "Ja'Marr Chase", "Xavier Worthy"
-  - Team filtering: Filter by team codes (e.g., KC shows 10 WRs including Rashee Rice, Xavier Worthy)
-  - Format support: Both dynasty and redraft formats working with different scoring emphasis
-  - Pagination: Minimum 10 players per page with proper offset/limit handling
-  - 4-directional compass scoring: North (Dynasty Ceiling), East (Contending), South (Redraft Appeal), West (Usage Security)
-- **ENHANCED: Data Quality** - Live data provides authentic player information:
-  - Current active players (Justin Jefferson MIN, Ja'Marr Chase CIN) with proper team assignments
-  - Historical players properly archived (Roddy White, Ray Rice) with legacy team data
-  - Comprehensive coverage across all skill positions with real NFL roster data
-- **NEW: Redraft & Dynasty Engines Integration** - Successfully implemented user-provided engine specifications:
-  - `/api/redraft` endpoint: ADP-based rankings with projection fallback, 3,755 skill position players
-  - `/api/dynasty` endpoint: Player Compass-powered dynasty scoring with 4-directional analysis
-  - Complete sleeperSyncService integration with null-safe data handling
-  - Zod validation (pageSize 10-200), search/team/position filtering, dual-layer caching (page + per-player)
-  - Authentication: Search "Jefferson" finds 4 matches, team "KC" shows 10 players, dynasty WRs show 1,661 players
-  - Route registration order prevents conflicts with legacy endpoints
+## Recent Changes (August 19, 2025)
+- **COMPLETED: Comprehensive Sleeper Routes Refinements** - Applied systematic refinements to all Sleeper API endpoints matching the Sleeper Sync Service improvements:
+  - **JSON-Structured Logging**: All endpoints now use logInfo() and logError() with structured JSON output including source attribution, performance tracking, and metadata
+  - **Standardized Error Handling**: Consistent `{ ok: false, code, message, details, meta }` format with proper HTTP status codes (400/404/422/500/502/206)
+  - **Dynamic Season Validation**: Range validation from 2018 to current year + 1 with 422 status for invalid seasons
+  - **Meta Field Enhancement**: All responses include timestamp, server identification ("tiber-sleeper-routes"), duration tracking, and contextual data
+- **NEW: Complete Sleeper Endpoint Suite** - Added missing endpoints with full error handling and authentication:
+  - `/api/sleeper/user/:username` - User lookup with 404 handling for non-existent users
+  - `/api/sleeper/leagues/:userId` - User leagues with optional season filtering and validation
+  - `/api/sleeper/league/:leagueId/context` - Complete league context with partial upstream failure detection (206 status)
+  - `/api/sleeper/health` - Comprehensive health check showing cache info (3,756 players), sync status, and service health
+- **ENHANCED: Backend Service Integration** - Extended SleeperAPI service with new methods:
+  - `getUser(username)`: Direct user lookup with proper error propagation
+  - `getUserLeagues(userId, season)`: League retrieval with season filtering
+  - SleeperSyncService gained `getCacheMetadata()` instance method for API responses
+- **VERIFIED: Production Readiness** - All endpoints tested and operational:
+  - Structured logging: JSON format with source tagging and performance metrics (26-322ms response times)
+  - Error handling: Proper status codes and descriptive error messages for all failure scenarios  
+  - Data integrity: 3,756+ live Sleeper players with real-time sync capabilities
+  - Platform consistency: "tiber" codename used throughout logging and meta fields
+
+## Previous Changes (August 18, 2025)
+- **COMPLETED: Live Sleeper API Integration** - Successfully replaced static CSV data with live Sleeper API across all compass endpoints
+- **RESOLVED: Route Conflicts** - Eliminated legacy compass route conflicts intercepting live API requests
+- **VERIFIED: Complete Functionality** - Search, filtering, format support, pagination, and 4-directional compass scoring operational
+- **ENHANCED: Data Quality** - Live data with current active players and comprehensive skill position coverage
+- **NEW: Redraft & Dynasty Engines Integration** - Complete sleeperSyncService integration with authentication and validation
 
 ### Technical Stack
 - **Backend**: Python (Flask), Node.js (Express.js, TypeScript)

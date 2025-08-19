@@ -1,0 +1,281 @@
+Alright Boss Man J — Batch #2 is clean overall, but a few gaps will bite us at the edges. Here’s the punchy review, then a copy-paste ingestion wrapper for Tiber to fix it safely.
+
+---
+
+# Quick Verdict
+
+* Routes are wired correctly and match the endpoints we specced.
+* Partial 206 path exists (good).
+* Two main misses: **error responses lack `meta`** + **season validation is hard-coded (2020–2030)** instead of dynamic.
+* Logging is mixed (console strings) vs structured JSON.
+* Minor ergonomics: duplicated `Object.keys`, scattered error handling.
+
+---
+
+# High-Impact Fixes (do these)
+
+## 1) Add `meta` to **all** error responses
+
+Contract says every response (success **and** error) includes `meta: { source, generatedAt }`. Your `createErrorResponse` currently omits it.
+
+**Patch:**
+
+```ts
+function meta() {
+  return { source: 'sleeper' as const, generatedAt: new Date().toISOString() };
+}
+
+function createResponse<T>(data: T): service.ApiSuccess<T> {
+  return { ok: true, meta: meta(), data };
+}
+
+function createErrorResponse(code: string, message: string, details?: any): service.ApiError & { meta: ReturnType<typeof meta> } {
+  return { ok: false, code, message, details, meta: meta() };
+}
+```
+
+Keep `createPartialResponse` as-is (it already has `meta`).
+
+## 2) Standardize status selection + error extraction
+
+Use one helper so every route behaves identically (uses `error.status` when present, else maps common codes):
+
+```ts
+function httpStatusFromError(e: any, fallback = 500): number {
+  if (typeof e?.status === 'number') return e.status;
+  switch (e?.code) {
+    case 'INVALID_USERNAME':
+    case 'INVALID_USER_ID':
+    case 'INVALID_LEAGUE_ID': return 400;
+    case 'INVALID_SEASON': return 422;
+    case 'USER_NOT_FOUND':
+    case 'LEAGUE_NOT_FOUND': return 404;
+    case 'PARTIAL_UPSTREAM': return 206;
+    case 'API_ERROR': return 502;
+    default: return fallback;
+  }
+}
+
+function errFields(e: any) {
+  return {
+    code: e?.code || 'INTERNAL_ERROR',
+    message: e?.message || 'Unexpected error',
+    details: e?.details
+  };
+}
+```
+
+Then each `catch` becomes tiny + consistent.
+
+## 3) Dynamic season validation (not 2020–2030)
+
+Mirror Batch #1’s logic (>=2018 and <= next year). Either **export** `validateSeason` from the service, or just inline the dynamic rule here.
+
+**Inline version:**
+
+```ts
+function isValidSeason(season: string): boolean {
+  if (!/^\d{4}$/.test(season)) return false;
+  const y = Number(season), current = new Date().getFullYear();
+  return y >= 2018 && y <= current + 1;
+}
+```
+
+Use it in the leagues route; return **422** on failure (matches our map).
+
+## 4) Structured JSON logging
+
+Replace scattered `console.error('[SleeperRoutes] ...', error)` with JSON logs:
+
+```ts
+function logInfo(msg: string, meta?: Record<string, any>) {
+  console.log(JSON.stringify({ level: 'info', src: 'SleeperRoutes', msg, ...(meta||{}) }));
+}
+function logError(msg: string, e: any, meta?: Record<string, any>) {
+  console.error(JSON.stringify({
+    level: 'error', src: 'SleeperRoutes', msg,
+    error: e?.message || String(e), stack: e?.stack, ...(meta||{})
+  }));
+}
+```
+
+Use them in each route (include `durationMs` where helpful).
+
+## 5) Minor ergonomics
+
+* In `/players`, don’t compute `Object.keys(players)` twice; compute once.
+* Health route: return `count` as well — it’s handy.
+* Keep using `getCacheMetadata()` for now since we shimed it in Batch #1; switch to `getPlayersCacheMeta()` later when we pull the shim.
+
+---
+
+# Suggested Route Diff (concise)
+
+```ts
+// top helpers
+function meta() { return { source: 'sleeper' as const, generatedAt: new Date().toISOString() }; }
+function createResponse<T>(data: T) { return { ok: true as const, meta: meta(), data }; }
+function createErrorResponse(code: string, message: string, details?: any) {
+  return { ok: false as const, code, message, details, meta: meta() };
+}
+function httpStatusFromError(e: any, fallback=500): number {
+  if (typeof e?.status === 'number') return e.status;
+  switch (e?.code) {
+    case 'INVALID_USERNAME':
+    case 'INVALID_USER_ID':
+    case 'INVALID_LEAGUE_ID': return 400;
+    case 'INVALID_SEASON': return 422;
+    case 'USER_NOT_FOUND':
+    case 'LEAGUE_NOT_FOUND': return 404;
+    case 'PARTIAL_UPSTREAM': return 206;
+    case 'API_ERROR': return 502;
+    default: return fallback;
+  }
+}
+function errFields(e: any) {
+  return { code: e?.code || 'INTERNAL_ERROR', message: e?.message || 'Unexpected error', details: e?.details };
+}
+function isValidSeason(season: string): boolean {
+  if (!/^\d{4}$/.test(season)) return false;
+  const y = Number(season), current = new Date().getFullYear();
+  return y >= 2018 && y <= current + 1;
+}
+
+// /api/sleeper/players
+router.get('/api/sleeper/players', async (_req, res) => {
+  const t0 = Date.now();
+  try {
+    const players = await service.getPlayers();
+    const keys = Object.keys(players);
+    const cacheInfo = service.getCacheMetadata();
+    res.json(createResponse({
+      updatedAt: cacheInfo.updatedAt || new Date().toISOString(),
+      count: keys.length,
+      ids: keys
+    }));
+    logInfo('players ok', { count: keys.length, durationMs: Date.now()-t0 });
+  } catch (e: any) {
+    logError('players failed', e);
+    const { code, message, details } = errFields(e);
+    res.status(httpStatusFromError(e)).json(createErrorResponse(code, message || 'Failed to retrieve players', details));
+  }
+});
+
+// /api/sleeper/user/:username
+router.get('/api/sleeper/user/:username', async (req, res) => {
+  const { username } = req.params;
+  if (!username?.trim()) {
+    return res.status(400).json(createErrorResponse('INVALID_USERNAME', 'Username parameter is required'));
+  }
+  try {
+    const user_id = await service.resolveUserId(username);
+    res.json(createResponse({ user_id }));
+  } catch (e: any) {
+    const { code, message, details } = errFields(e);
+    res.status(httpStatusFromError(e, code==='USER_NOT_FOUND'?404:500))
+       .json(createErrorResponse(code, message || 'Failed to resolve user', details));
+  }
+});
+
+// /api/sleeper/leagues/:userId
+router.get('/api/sleeper/leagues/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const season = (req.query.season as string) || String(new Date().getFullYear());
+  if (!userId?.trim()) {
+    return res.status(400).json(createErrorResponse('INVALID_USER_ID', 'User ID parameter is required'));
+  }
+  if (!isValidSeason(season)) {
+    return res.status(422).json(createErrorResponse('INVALID_SEASON', 'Season must be YYYY (2018..next year)', { season }));
+  }
+  try {
+    const leagues = await service.getUserLeagues(userId, season);
+    res.json(createResponse(leagues));
+  } catch (e: any) {
+    const { code, message, details } = errFields(e);
+    res.status(httpStatusFromError(e)).json(createErrorResponse(code, message || 'Failed to retrieve leagues', details));
+  }
+});
+
+// /api/sleeper/league/:leagueId/context
+router.get('/api/sleeper/league/:leagueId/context', async (req, res) => {
+  const { leagueId } = req.params;
+  if (!leagueId?.trim()) {
+    return res.status(400).json(createErrorResponse('INVALID_LEAGUE_ID', 'League ID parameter is required'));
+  }
+  try {
+    const context = await service.materializeLeagueContext(leagueId);
+    res.json(createResponse(context));
+  } catch (e: any) {
+    if (httpStatusFromError(e) === 206 && e?.details?.context) {
+      // If service throws using error helper; your current code throws {status, missing, context}
+      const miss = e?.details?.missing || e?.missing || [];
+      const ctx  = e?.details?.context || e?.context;
+      return res.status(206).json({
+        ok: false,
+        missing: miss,
+        meta: meta(),
+        data: ctx
+      });
+    }
+    const { code, message, details } = errFields(e);
+    res.status(httpStatusFromError(e)).json(createErrorResponse(code, message || 'Failed to retrieve league context', details));
+  }
+});
+
+// /api/sleeper/clear-cache
+router.post('/api/sleeper/clear-cache', async (_req, res) => {
+  try {
+    await service.clearPlayersCache();
+    res.json(createResponse({ message: 'Cache cleared successfully' }));
+  } catch (e: any) {
+    logError('clear-cache failed', e);
+    res.status(500).json(createErrorResponse('CACHE_ERROR', 'Failed to clear cache', e?.message));
+  }
+});
+
+// /api/sleeper/health
+router.get('/api/sleeper/health', (_req, res) => {
+  const cacheInfo = service.getCacheMetadata();
+  res.json(createResponse({
+    status: 'healthy',
+    cache: {
+      hasData: cacheInfo.hasData,
+      lastUpdated: cacheInfo.updatedAt
+    },
+    timestamp: new Date().toISOString()
+  }));
+});
+```
+
+---
+
+# ✅ Tiber Ingestion Wrapper (Batch #2)
+
+Paste this to Tiber with the Batch #2 file:
+
+> **Task:** Apply the following refinements to the Sleeper routes. Do not rename endpoints. Keep signatures stable.
+>
+> **Required changes:**
+>
+> 1. Add `meta` to **all** error responses. Implement `meta()` helper and update `createErrorResponse` accordingly.
+> 2. Add `httpStatusFromError(e)` + `errFields(e)` helpers and use them in every `catch` so status codes and payloads are uniform.
+> 3. Replace hard-coded season validation (2020–2030) with dynamic check: YYYY, 2018..(current year + 1). Return 422 on invalid.
+> 4. Replace string logs with **structured JSON logs** (`logInfo`, `logError`), including `durationMs` where helpful.
+> 5. Minor: compute `ids` once in `/players`; keep using `getCacheMetadata()` for now.
+>
+> **Deliverable:** Updated routes file + a short diff summary.
+> **Checks to run:**
+>
+> ```bash
+> curl -s /api/sleeper/user/YOUR_USERNAME
+> curl -s "/api/sleeper/leagues/YOUR_USER_ID?season=2025"
+> curl -s /api/sleeper/league/YOUR_LEAGUE_ID/context
+> curl -s /api/sleeper/players
+> curl -s /api/sleeper/health
+> ```
+>
+> All responses must include `meta`, and errors must have `{ ok:false, code, message, details, meta }`. Partial upstream should return **HTTP 206** with `{ ok:false, missing, meta, data }`.
+
+---
+
+Fire me Batch #3 when ready.

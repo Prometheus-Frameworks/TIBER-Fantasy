@@ -326,6 +326,17 @@ class SleeperSyncService {
     
     return context;
   }
+
+  /**
+   * Get cache metadata for API responses
+   */
+  getCacheMetadata(): { updatedAt: string | null; count: number } {
+    const count = this.playersCache.data ? this.playersCache.data.length : 0;
+    return { 
+      updatedAt: this.playersCache.updatedAt ? this.playersCache.updatedAt.toISOString() : null, 
+      count 
+    };
+  }
 }
 
 // Export functions for cache metadata
