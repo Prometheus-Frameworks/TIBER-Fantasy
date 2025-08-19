@@ -1,0 +1,84 @@
+name: Sleeper Sync CI
+on:
+  pull_request:
+    paths:
+      - 'server/sleeperRoutes.ts'
+      - 'server/services/sleeperSyncService.ts'
+      - 'server/sleeperAPI.ts'
+      - 'client/src/pages/dashboard.tsx'
+      - 'client/src/hooks/useLeagueContext.ts'
+      - 'scripts/test-sleeper-sync.sh'
+      - 'docs/sleeper-sync/**'
+      - '.github/workflows/sleeper-sync.yml'
+
+jobs:
+  sleeper-sync-test:
+    runs-on: ubuntu-latest
+    env:
+      USE_SLEEPER_SYNC: 'true'
+      APP_BASE_URL: 'http://127.0.0.1:5000'
+      SLEEPER_USERNAME: ${{ secrets.SLEEPER_USERNAME }}
+      SLEEPER_USER_ID: ${{ secrets.SLEEPER_USER_ID }}
+      SLEEPER_LEAGUE_ID: ${{ secrets.SLEEPER_LEAGUE_ID }}
+      NODE_ENV: 'test'
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: TypeScript type checking
+        run: npm run check
+        
+      - name: Build application
+        run: npm run build
+        
+      - name: Start server in background
+        run: |
+          nohup tsx server/index.ts > server.log 2>&1 &
+          sleep 3
+          
+      - name: Wait for server to be ready
+        run: |
+          for i in {1..10}; do
+            if curl -f http://localhost:5000/api/health; then
+              echo "Server is ready"
+              break
+            fi
+            echo "Waiting for server... (attempt $i)"
+            sleep 1
+          done
+          
+      - name: Run Sleeper Sync tests
+        run: |
+          chmod +x ./scripts/test-sleeper-sync.sh
+          ./scripts/test-sleeper-sync.sh $APP_BASE_URL $SLEEPER_USERNAME $SLEEPER_USER_ID $SLEEPER_LEAGUE_ID
+          
+      - name: Display server logs on failure
+        if: failure()
+        run: |
+          echo "=== Server Logs ==="
+          cat server.log || echo "No server logs found"
+          
+      - name: Test with service disabled
+        run: |
+          pkill -f "tsx server/index.ts" || true
+          sleep 2
+          USE_SLEEPER_SYNC=false nohup tsx server/index.ts > server-disabled.log 2>&1 &
+          sleep 3
+          
+          # Test that health endpoint returns 503 when disabled
+          response_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/api/sleeper/health)
+          if [ "$response_code" != "503" ]; then
+            echo "Expected 503 response when disabled, got $response_code"
+            exit 1
+          fi
+          echo "✅ Service correctly returns 503 when disabled"

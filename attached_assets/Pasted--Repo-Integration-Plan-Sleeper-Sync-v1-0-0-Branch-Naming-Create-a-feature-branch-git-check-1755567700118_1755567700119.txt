@@ -1,0 +1,192 @@
+🚀 Repo Integration Plan — Sleeper Sync v1.0
+0) Branch + Naming
+
+Create a feature branch:
+
+git checkout -b feat/sleeper-sync-v1
+
+1) File placement (canonical layout)
+
+Adjust paths if your repo differs — but keep these exact names.
+
+/src/services/sleeper/sleeperSyncService.ts
+/src/routes/sleeperRoutes.ts
+/src/ui/dashboard/dashboard.tsx           # patched version from Batch #4
+/src/server/app.ts                        # mounts router behind flag
+/src/server/bootstrap.ts                  # owns app.listen + health probe (Batch #3 fix)
+/scripts/test-sleeper-sync.sh             # hardened test script (Batch #6)
+/docs/sleeper-sync/README.md              # Batch #7 final doc
+
+
+Notes
+
+If app.listen currently lives in app.ts, extract to /src/server/bootstrap.ts and import the app from there so we can add the post-listen health probe cleanly.
+
+2) Env + config
+
+Add to .env.example:
+
+USE_SLEEPER_SYNC=false
+APP_BASE_URL=http://127.0.0.1:3000
+
+
+Ensure .cache/ is ignored:
+
+# Sleeper cache
+.cache/
+
+3) Package scripts
+
+Add (or merge) these to package.json:
+
+{
+  "scripts": {
+    "typecheck": "tsc --noEmit --strict",
+    "dev": "NODE_ENV=development node ./dist/server/bootstrap.js",
+    "sync:tests": "bash ./scripts/test-sleeper-sync.sh http://127.0.0.1:3000 $SLEEPER_USERNAME $SLEEPER_USER_ID $SLEEPER_LEAGUE_ID",
+    "sync:enable": "cross-env USE_SLEEPER_SYNC=true node ./dist/server/bootstrap.js",
+    "sync:disable": "cross-env USE_SLEEPER_SYNC=false node ./dist/server/bootstrap.js"
+  }
+}
+
+
+(Use cross-env if you need cross-platform env compatibility.)
+
+4) Wire the app (flagged mount)
+
+app.ts: mount sleeperRouter when USE_SLEEPER_SYNC==='true' and add the 503 fallback on /api/sleeper/* with meta in error responses (from Batch #3 review).
+
+bootstrap.ts: after app.listen, run the timed health probe to ${APP_BASE_URL}/api/sleeper/health.
+
+5) UI patch (Dashboard)
+
+Replace the Dashboard file with the patched version that:
+
+Defaults to first roster_id when teamId missing/invalid
+
+Uses new URLSearchParams (no in-place mutation)
+
+Roster view renders with FA chip, no “Team Not Found” flicker
+
+6) Test harness
+
+Drop scripts/test-sleeper-sync.sh, chmod +x it:
+
+chmod +x ./scripts/test-sleeper-sync.sh
+
+
+Run locally:
+
+USE_SLEEPER_SYNC=true APP_BASE_URL=http://127.0.0.1:3000 npm run dev
+./scripts/test-sleeper-sync.sh http://127.0.0.1:3000 YOUR_USERNAME YOUR_USER_ID YOUR_LEAGUE_ID
+
+7) CI gate (minimal, but real)
+
+Add a CI job (GitHub Actions example):
+
+name: sleeper-sync
+on:
+  pull_request:
+    paths:
+      - 'src/services/sleeper/**'
+      - 'src/routes/sleeperRoutes.ts'
+      - 'src/ui/dashboard/**'
+      - 'scripts/test-sleeper-sync.sh'
+      - 'docs/sleeper-sync/**'
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    env:
+      USE_SLEEPER_SYNC: 'true'
+      APP_BASE_URL: 'http://127.0.0.1:3000'
+      SLEEPER_USERNAME: ${{ secrets.SLEEPER_USERNAME }}
+      SLEEPER_USER_ID: ${{ secrets.SLEEPER_USER_ID }}
+      SLEEPER_LEAGUE_ID: ${{ secrets.SLEEPER_LEAGUE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: nohup node ./dist/server/bootstrap.js & sleep 2
+      - run: ./scripts/test-sleeper-sync.sh $APP_BASE_URL $SLEEPER_USERNAME $SLEEPER_USER_ID $SLEEPER_LEAGUE_ID
+
+8) Monitoring & alerts (day-1 simple)
+
+Aggregation rule: alert if any 5-min window has
+
+≥ 5% of /api/sleeper/* responses with HTTP ≥500, or
+
+≥ 20% with 206 (partial upstream), or
+
+health returns 503 for >3 consecutive probes (while flag is true).
+
+Log format is structured JSON; route it to whatever you’re using (CloudWatch/Datadog/ELK) with fields: src, route, status, durationMs, code.
+
+9) Rollout plan (feature-flagged)
+
+Deploy with flag off (USE_SLEEPER_SYNC=false) → sanity check 503 + meta on /api/sleeper/*.
+
+Flip flag on in staging → run the test script and smoke the UI.
+
+Prod canary: enable flag for 10–20% of pods or one app instance.
+
+Watch metrics for 15–30 min (errors/206 spikes).
+
+Full enable.
+
+If anything smells off: flip flag off → instant rollback, no redeploy. Clear cache (POST /api/sleeper/clear-cache) once upstream stabilizes, then re-enable.
+
+10) Commit hygiene
+
+Use three commits (clean review trail):
+
+feat(sleeper): add Sleeper Sync service, routes, and UI defaults
+
+chore(ci): add sleeper-sync CI, test harness, env + docs
+
+docs(sleeper): README with contract + error taxonomy
+
+11) PR template (paste into your PR)
+### Sleeper Sync v1.0 — Feature-Flagged Integration
+
+**What:**
+- Adds Sleeper service + routes
+- Dashboard default team selection + loading gates
+- Health + cache endpoints
+- Flagged mount (`USE_SLEEPER_SYNC`)
+
+**Contract:**
+- Success: `{ ok:true, meta, data }`
+- Error: `{ ok:false, code, message, details, meta }`
+- Partial (206): `{ ok:false, missing, meta, data }`
+
+**Validation:**
+- `npm run typecheck` ✅
+- Local script: `./scripts/test-sleeper-sync.sh` ✅
+
+**Rollout:**
+- Deploy with flag OFF
+- Canary enable
+- Monitor 5xx, 206 rate, health
+
+**Rollback:**
+- Set `USE_SLEEPER_SYNC=false` and redeploy (or env-hot-flip if supported)
+
+12) Sanity checklist (last mile)
+
+ .env.example updated, secrets documented
+
+ .cache/ in .gitignore
+
+ getPlayersCacheMeta() exported (and routes use cache meta, not internals)
+
+ All error paths include meta
+
+ Dashboard shows roster on first load — no flicker, no “Team Not Found”
+
+ CI passes on PR
+
+Joe’s take (yes, Joe likes speaking in third person): Joe flips the flag when Joe damn well pleases — and now Joe’s got a big red “off switch” if Sleeper sneezes. Smooth.
