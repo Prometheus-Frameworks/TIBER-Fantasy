@@ -222,209 +222,179 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return year >= 2018 && year <= currentYear + 1;
   }
 
-  // Meta helper for response metadata
-  function meta(additionalMeta?: Record<string, any>) {
-    return {
-      timestamp: new Date().toISOString(),
-      server: 'tiber-sleeper-routes',
-      ...additionalMeta
+  // Meta helper for response metadata (Batch #2 refinement)
+  function meta() {
+    return { 
+      source: 'sleeper' as const, 
+      generatedAt: new Date().toISOString() 
     };
   }
 
-  // Standard error response creator with meta
-  function createErrorResponse(code: string, message: string, details?: any, additionalMeta?: Record<string, any>) {
+  // Success response creator with meta
+  function createResponse<T>(data: T) {
+    return { 
+      ok: true as const, 
+      meta: meta(), 
+      data 
+    };
+  }
+
+  // Standard error response creator with meta (Batch #2 refinement)
+  function createErrorResponse(code: string, message: string, details?: any) {
     return {
-      ok: false,
+      ok: false as const,
       code,
       message,
-      details: details || null,
-      meta: meta(additionalMeta)
+      details,
+      meta: meta()
     };
   }
 
-  // Extract HTTP status and error fields from error objects
-  function httpStatusFromError(e: any): number {
-    if (e?.status) return e.status;
-    if (e?.code === 'VALIDATION_ERROR') return 422;
-    if (e?.code === 'NOT_FOUND') return 404;
-    if (e?.code === 'MISSING_PARAMETER') return 400;
-    if (e?.code === 'PARTIAL_UPSTREAM') return 206;
-    return 500;
+  // Extract HTTP status and error fields from error objects (Batch #2 refinement)
+  function httpStatusFromError(e: any, fallback = 500): number {
+    if (typeof e?.status === 'number') return e.status;
+    switch (e?.code) {
+      case 'INVALID_USERNAME':
+      case 'INVALID_USER_ID':
+      case 'INVALID_LEAGUE_ID': return 400;
+      case 'INVALID_SEASON': return 422;
+      case 'USER_NOT_FOUND':
+      case 'LEAGUE_NOT_FOUND': return 404;
+      case 'PARTIAL_UPSTREAM': return 206;
+      case 'API_ERROR': return 502;
+      default: return fallback;
+    }
   }
 
   function errFields(e: any) {
     return {
       code: e?.code || 'INTERNAL_ERROR',
-      message: e?.message || 'Internal server error',
-      details: e?.details || null
+      message: e?.message || 'Unexpected error',
+      details: e?.details
     };
+  }
+
+  // Dynamic season validation (Batch #2 refinement)
+  function isValidSeason(season: string): boolean {
+    if (!/^\d{4}$/.test(season)) return false;
+    const y = Number(season), current = new Date().getFullYear();
+    return y >= 2018 && y <= current + 1;
   }
 
   // ===== BACKEND SPINE: SLEEPER SYNC ENDPOINTS =====
   
-  // Get user information by username
+  // Get user information by username (Batch #2 refinement)
   app.get('/api/sleeper/user/:username', async (req: Request, res: Response) => {
-    const startTime = Date.now();
+    const { username } = req.params;
+    const t0 = Date.now();
+    
+    if (!username?.trim()) {
+      return res.status(400).json(createErrorResponse('INVALID_USERNAME', 'Username parameter is required'));
+    }
+    
     try {
-      const { username } = req.params;
-      if (!username) {
-        const errorResponse = createErrorResponse('MISSING_PARAMETER', 'Username is required');
-        logError('User lookup failed', { code: 'MISSING_PARAMETER', username }, { durationMs: Date.now() - startTime });
-        return res.status(400).json(errorResponse);
-      }
-
       logInfo('Fetching user by username', { username });
       
       const { sleeperAPI } = await import('./sleeperAPI');
       const user = await sleeperAPI.getUser(username);
       
-      if (!user) {
-        const errorResponse = createErrorResponse('NOT_FOUND', 'User not found', { username });
-        logError('User not found', { code: 'NOT_FOUND', username }, { durationMs: Date.now() - startTime });
-        return res.status(404).json(errorResponse);
-      }
-
-      const response = {
-        ok: true,
-        data: user,
-        meta: meta({ durationMs: Date.now() - startTime, username })
-      };
-
-      logInfo('User lookup successful', { username, userId: user.user_id }, { durationMs: Date.now() - startTime });
-      res.json(response);
-    } catch (error) {
-      const status = httpStatusFromError(error);
-      const fields = errFields(error);
-      const errorResponse = createErrorResponse(fields.code, fields.message, fields.details, { durationMs: Date.now() - startTime });
-      
-      logError('User lookup failed', error, { username: req.params.username, durationMs: Date.now() - startTime });
-      res.status(status).json(errorResponse);
+      res.json(createResponse({ user_id: user.user_id }));
+      logInfo('User lookup successful', { username, durationMs: Date.now() - t0 });
+    } catch (e: any) {
+      logError('User lookup failed', e, { username, durationMs: Date.now() - t0 });
+      const { code, message, details } = errFields(e);
+      res.status(httpStatusFromError(e, code === 'USER_NOT_FOUND' ? 404 : 500))
+         .json(createErrorResponse(code, message || 'Failed to resolve user', details));
     }
   });
 
-  // Get leagues for a user by user ID with optional season filtering
+  // Get leagues for a user by user ID with optional season filtering (Batch #2 refinement)
   app.get('/api/sleeper/leagues/:userId', async (req: Request, res: Response) => {
-    const startTime = Date.now();
+    const { userId } = req.params;
+    const season = (req.query.season as string) || String(new Date().getFullYear());
+    const t0 = Date.now();
+    
+    if (!userId?.trim()) {
+      return res.status(400).json(createErrorResponse('INVALID_USER_ID', 'User ID parameter is required'));
+    }
+    if (!isValidSeason(season)) {
+      return res.status(422).json(createErrorResponse('INVALID_SEASON', 'Season must be YYYY (2018..next year)', { season }));
+    }
+    
     try {
-      const { userId } = req.params;
-      const { season } = req.query;
-
-      if (!userId) {
-        const errorResponse = createErrorResponse('MISSING_PARAMETER', 'User ID is required');
-        logError('Leagues lookup failed', { code: 'MISSING_PARAMETER', userId }, { durationMs: Date.now() - startTime });
-        return res.status(400).json(errorResponse);
-      }
-
-      if (season && !validateSeason(season as string)) {
-        const errorResponse = createErrorResponse('VALIDATION_ERROR', 'Invalid season format. Must be YYYY between 2018 and ' + (new Date().getFullYear() + 1));
-        logError('Invalid season', { code: 'VALIDATION_ERROR', season }, { durationMs: Date.now() - startTime });
-        return res.status(422).json(errorResponse);
-      }
-
-      logInfo('Fetching user leagues', { userId, season: season || 'current' });
+      logInfo('Fetching user leagues', { userId, season });
       
       const { sleeperAPI } = await import('./sleeperAPI');
-      const leagues = await sleeperAPI.getUserLeagues(userId, season as string);
-
-      const response = {
-        ok: true,
-        data: leagues,
-        count: leagues.length,
-        meta: meta({ durationMs: Date.now() - startTime, userId, season: season || 'current' })
-      };
-
-      logInfo('Leagues lookup successful', { userId, season: season || 'current', count: leagues.length }, { durationMs: Date.now() - startTime });
-      res.json(response);
-    } catch (error) {
-      const status = httpStatusFromError(error);
-      const fields = errFields(error);
-      const errorResponse = createErrorResponse(fields.code, fields.message, fields.details, { durationMs: Date.now() - startTime });
+      const leagues = await sleeperAPI.getUserLeagues(userId, season);
       
-      logError('Leagues lookup failed', error, { userId: req.params.userId, season: req.query.season, durationMs: Date.now() - startTime });
-      res.status(status).json(errorResponse);
+      res.json(createResponse(leagues));
+      logInfo('Leagues lookup successful', { userId, season, count: leagues.length, durationMs: Date.now() - t0 });
+    } catch (e: any) {
+      logError('Leagues lookup failed', e, { userId, season, durationMs: Date.now() - t0 });
+      const { code, message, details } = errFields(e);
+      res.status(httpStatusFromError(e)).json(createErrorResponse(code, message || 'Failed to retrieve leagues', details));
     }
   });
 
-  // Get complete league context (league info, rosters, users)
+  // Get complete league context (league info, rosters, users) (Batch #2 refinement)
   app.get('/api/sleeper/league/:leagueId/context', async (req: Request, res: Response) => {
-    const startTime = Date.now();
+    const { leagueId } = req.params;
+    const t0 = Date.now();
+    
+    if (!leagueId?.trim()) {
+      return res.status(400).json(createErrorResponse('INVALID_LEAGUE_ID', 'League ID parameter is required'));
+    }
+    
     try {
-      const { leagueId } = req.params;
-      
-      if (!leagueId) {
-        const errorResponse = createErrorResponse('MISSING_PARAMETER', 'League ID is required');
-        logError('League context failed', { code: 'MISSING_PARAMETER', leagueId }, { durationMs: Date.now() - startTime });
-        return res.status(400).json(errorResponse);
-      }
-
       logInfo('Fetching league context', { leagueId });
       
       const { sleeperSyncService } = await import('./services/sleeperSyncService');
-      const context = await sleeperSyncService.materializeLeagueContext({ leagueId });
-
-      // Check for partial upstream failures
-      const missing = context.missing || [];
-      if (missing.length > 0) {
-        const errorResponse = {
-          ok: false,
-          code: 'PARTIAL_UPSTREAM',
-          message: 'Some upstream resources failed',
-          details: { missing },
-          data: context.data || null,
-          meta: meta({ durationMs: Date.now() - startTime, leagueId, missing })
-        };
-        
-        logError('Partial league context', { code: 'PARTIAL_UPSTREAM', missing }, { leagueId, durationMs: Date.now() - startTime });
-        return res.status(206).json(errorResponse);
-      }
-
-      const response = {
-        ok: true,
-        data: context,
-        meta: meta({ durationMs: Date.now() - startTime, leagueId })
-      };
-
-      logInfo('League context successful', { leagueId }, { durationMs: Date.now() - startTime });
-      res.json(response);
-    } catch (error) {
-      const status = httpStatusFromError(error);
-      const fields = errFields(error);
-      const errorResponse = createErrorResponse(fields.code, fields.message, fields.details, { durationMs: Date.now() - startTime });
+      const context = await sleeperSyncService.materializeLeagueContext(leagueId);
       
-      logError('League context failed', error, { leagueId: req.params.leagueId, durationMs: Date.now() - startTime });
-      res.status(status).json(errorResponse);
+      res.json(createResponse(context));
+      logInfo('League context successful', { leagueId, durationMs: Date.now() - t0 });
+    } catch (e: any) {
+      if (httpStatusFromError(e) === 206 && e?.details?.context) {
+        // Handle partial upstream failure (206 response)
+        const miss = e?.details?.missing || e?.missing || [];
+        const ctx = e?.details?.context || e?.context;
+        logError('Partial league context', e, { leagueId, missing: miss, durationMs: Date.now() - t0 });
+        return res.status(206).json({
+          ok: false,
+          missing: miss,
+          meta: meta(),
+          data: ctx
+        });
+      }
+      logError('League context failed', e, { leagueId, durationMs: Date.now() - t0 });
+      const { code, message, details } = errFields(e);
+      res.status(httpStatusFromError(e)).json(createErrorResponse(code, message || 'Failed to retrieve league context', details));
     }
   });
 
-  // Sync players endpoint
+  // Sync players endpoint (Batch #2 refinement)
   app.get('/api/sleeper/sync', async (req: Request, res: Response) => {
-    const startTime = Date.now();
+    const t0 = Date.now();
     try {
       logInfo('Starting player sync');
       
       const { sleeperSyncService } = await import('./services/sleeperSyncService');
       const result = await sleeperSyncService.syncPlayers();
       
-      const response = {
-        ...result,
-        meta: meta({ durationMs: Date.now() - startTime })
-      };
-
-      logInfo('Player sync completed', { players_count: result.players_count || 0 }, { durationMs: Date.now() - startTime });
-      res.json(response);
-    } catch (error) {
-      const status = httpStatusFromError(error);
-      const fields = errFields(error);
-      const errorResponse = createErrorResponse(fields.code, fields.message, fields.details, { durationMs: Date.now() - startTime });
+      const response = { ...result, meta: meta() };
       
-      logError('Player sync failed', error, { durationMs: Date.now() - startTime });
-      res.status(status).json(errorResponse);
+      logInfo('Player sync completed', { players_count: result.players_count || 0, durationMs: Date.now() - t0 });
+      res.json(response);
+    } catch (e: any) {
+      logError('Player sync failed', e, { durationMs: Date.now() - t0 });
+      const { code, message, details } = errFields(e);
+      res.status(httpStatusFromError(e)).json(createErrorResponse(code, message || 'Failed to sync players', details));
     }
   });
 
-  // Get players with filtering (compute ids once, optimize)
+  // Get players with filtering (compute ids once - Batch #2 refinement)
   app.get('/api/sleeper/players', async (req: Request, res: Response) => {
-    const startTime = Date.now();
+    const t0 = Date.now();
     try {
       const { position, search, limit } = req.query;
       
@@ -433,15 +403,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sleeperSyncService } = await import('./services/sleeperSyncService');
       let players = await sleeperSyncService.getPlayers();
       
-      // Compute players once and apply filters
+      // Apply filters to players array
       if (position) {
         players = await sleeperSyncService.getPlayersByPosition(position as string);
       }
-      
       if (search) {
         players = await sleeperSyncService.searchPlayers(search as string);
       }
-      
       if (limit) {
         const limitNum = parseInt(limit as string);
         if (limitNum > 0) {
@@ -449,91 +417,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const response = {
-        ok: true,
-        data: players,
-        count: players.length,
-        meta: meta({ 
-          durationMs: Date.now() - startTime,
-          filters: { position, search, limit },
-          cache: sleeperSyncService.getCacheMetadata()
-        })
-      };
-
-      logInfo('Players fetch successful', { count: players.length, position, search, limit }, { durationMs: Date.now() - startTime });
-      res.json(response);
-    } catch (error) {
-      const status = httpStatusFromError(error);
-      const fields = errFields(error);
-      const errorResponse = createErrorResponse(fields.code, fields.message, fields.details, { durationMs: Date.now() - startTime });
+      // Compute ids once instead of multiple times
+      const ids = Object.keys(players);
+      const cacheInfo = sleeperSyncService.getCacheMetadata();
       
-      logError('Players fetch failed', error, { position: req.query.position, search: req.query.search, durationMs: Date.now() - startTime });
-      res.status(status).json(errorResponse);
+      res.json(createResponse({
+        updatedAt: cacheInfo.updatedAt || new Date().toISOString(),
+        count: ids.length,
+        ids: ids
+      }));
+      
+      logInfo('Players fetch successful', { count: ids.length, position, search, limit, durationMs: Date.now() - t0 });
+    } catch (e: any) {
+      logError('Players fetch failed', e, { position: req.query.position, search: req.query.search, durationMs: Date.now() - t0 });
+      const { code, message, details } = errFields(e);
+      res.status(httpStatusFromError(e)).json(createErrorResponse(code, message || 'Failed to retrieve players', details));
     }
   });
 
-  // Get sync status endpoint
+  // Get sync status endpoint (Batch #2 refinement)
   app.get('/api/sleeper/status', async (req: Request, res: Response) => {
-    const startTime = Date.now();
+    const t0 = Date.now();
     try {
       logInfo('Checking sync status');
       
       const { sleeperSyncService } = await import('./services/sleeperSyncService');
       const status = await sleeperSyncService.getSyncStatus();
       
-      const response = {
-        ...status,
-        meta: meta({ durationMs: Date.now() - startTime })
-      };
-
-      logInfo('Sync status check successful', { cache_exists: status.cache_exists || false }, { durationMs: Date.now() - startTime });
-      res.json(response);
-    } catch (error) {
-      const status = httpStatusFromError(error);
-      const fields = errFields(error);
-      const errorResponse = createErrorResponse(fields.code, fields.message, fields.details, { durationMs: Date.now() - startTime });
-      
-      logError('Sync status check failed', error, { durationMs: Date.now() - startTime });
-      res.status(status).json(errorResponse);
+      res.json(createResponse(status));
+      logInfo('Sync status check successful', { cache_exists: status.cache_exists || false, durationMs: Date.now() - t0 });
+    } catch (e: any) {
+      logError('Sync status check failed', e, { durationMs: Date.now() - t0 });
+      const { code, message, details } = errFields(e);
+      res.status(httpStatusFromError(e)).json(createErrorResponse(code, message || 'Failed to get sync status', details));
     }
   });
 
-  // Health check endpoint for Sleeper integration
-  app.get('/api/sleeper/health', async (req: Request, res: Response) => {
-    const startTime = Date.now();
+  // Clear cache endpoint (Batch #2 refinement)
+  app.post('/api/sleeper/clear-cache', async (_req: Request, res: Response) => {
+    const t0 = Date.now();
     try {
-      logInfo('Running Sleeper health check');
+      logInfo('Clearing Sleeper cache');
       
       const { sleeperSyncService } = await import('./services/sleeperSyncService');
-      const cache = sleeperSyncService.getCacheMetadata();
-      const status = await sleeperSyncService.getSyncStatus();
+      await sleeperSyncService.clearPlayersCache();
       
-      const healthData = {
-        ok: true,
-        status: 'healthy',
-        service: 'sleeper-integration',
-        cache_info: cache,
-        sync_status: status,
-        meta: meta({ durationMs: Date.now() - startTime })
-      };
+      res.json(createResponse({ message: 'Cache cleared successfully' }));
+      logInfo('Cache cleared successfully', { durationMs: Date.now() - t0 });
+    } catch (e: any) {
+      logError('Cache clear failed', e, { durationMs: Date.now() - t0 });
+      res.status(500).json(createErrorResponse('CACHE_ERROR', 'Failed to clear cache', e?.message));
+    }
+  });
 
-      logInfo('Sleeper health check completed', { 
-        cache_count: cache.count, 
-        last_update: cache.updatedAt,
-        sync_status: status.status 
-      }, { durationMs: Date.now() - startTime });
+  // Health check endpoint for Sleeper integration (Batch #2 refinement)
+  app.get('/api/sleeper/health', (_req: Request, res: Response) => {
+    try {
+      const { sleeperSyncService } = require('./services/sleeperSyncService');
+      const cacheInfo = sleeperSyncService.getCacheMetadata();
       
-      res.json(healthData);
-    } catch (error) {
-      const status = httpStatusFromError(error);
-      const fields = errFields(error);
-      const errorResponse = createErrorResponse(fields.code, fields.message, fields.details, { 
-        service: 'sleeper-integration',
-        durationMs: Date.now() - startTime 
-      });
-      
-      logError('Sleeper health check failed', error, { durationMs: Date.now() - startTime });
-      res.status(status).json(errorResponse);
+      res.json(createResponse({
+        status: 'healthy',
+        cache: {
+          hasData: cacheInfo.hasData,
+          lastUpdated: cacheInfo.updatedAt,
+          count: cacheInfo.count
+        },
+        timestamp: new Date().toISOString()
+      }));
+    } catch (e: any) {
+      logError('Sleeper health check failed', e);
+      res.status(500).json(createErrorResponse('HEALTH_CHECK_ERROR', 'Health check failed', e?.message));
     }
   });
 

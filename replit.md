@@ -19,15 +19,13 @@ Intelligence Feed System:
 - Ready to receive meaningful intel updates during regular season
 
 ## System Architecture
-
-### Core Design
 The platform employs a modular Flask backend for core logic and API endpoints, and a React 18 frontend utilizing TypeScript, Tailwind CSS, TanStack Query, and shadcn/ui for a scalable and responsive user experience. UI/UX prioritizes clean, responsive design with color-coded tier systems, interactive elements, and mobile optimization, including Next.js-inspired tab-based navigation.
 
 ### Technical Implementations
 - **Backend Spine**: Includes Sleeper Sync with cache fallback, Logs & Projections Service, a multi-format Ratings Engine, and an enhanced `/api/health` endpoint.
-- **Duo Identity Protocol**: Implements an OTC Signature Protocol for permanent Lamar-Architect J Duo identity, featuring a signature module, backend watermark middleware, signal endpoint, ratings bias fingerprint, hidden founder mode, and a credits ledger system.
+- **Duo Identity Protocol**: Implements an OTC Signature Protocol for permanent Lamar-Architect J Duo identity.
 - **Navigation**: Centralized system (`client/src/config/nav.ts`) with responsive design and unified `NAV_LINKS` array.
-- **Rankings Hub & OTC Consensus**: A hub interface at `/rankings` with nested routing for Redraft and Dynasty formats, featuring a mode-aware `RankingsTable` component. Renamed "Rankings" to "OTC Consensus" across the platform, with a dynamic Season HQ at `/redraft` that re-maps tool links. Includes comprehensive consensus split infrastructure with separate feeds, database schema, and frontend integration. Features OTC Consensus Seeding Protocol for manual ranking updates.
+- **Rankings Hub & OTC Consensus**: A hub interface at `/rankings` with nested routing, featuring a mode-aware `RankingsTable` component. Renamed "Rankings" to "OTC Consensus" across the platform, with a dynamic Season HQ at `/redraft` that re-maps tool links. Includes comprehensive consensus split infrastructure with separate feeds, database schema, and frontend integration. Features OTC Consensus Seeding Protocol for manual ranking updates.
 - **Adaptive Consensus Engine**: Surge detection system with injury-aware adjustments and "Why?" explanatory functionality. Features smooth rank-score curves for precise dynasty injury multipliers, ready for Grok data integration.
 - **API Surface**: Comprehensive API client with TypeScript interfaces for VORP rankings, WR compass search, rookie evaluation, and weekly data aggregation.
 - **Canonical Player Pool System**: Unifies player data into `player_pool.json` and `player_index.json`, accessible via `/api/player-pool` with advanced filtering and search.
@@ -57,36 +55,6 @@ The platform employs a modular Flask backend for core logic and API endpoints, a
 - **OVR Integration Package v1.0**: Plug-and-play integration converting OVR Inputs CSVs into a dynamic Player Compass engine, featuring weekly ΔOVR application, live depth-chart filtering, 4-directional compass quadrant scoring, and a decay engine. Includes 5 API endpoints for full OVR management.
 - **Hot List Player Extraction System**: Dynamic player extraction from OVR Compass module with position-aware percentile calculations and volume floor filtering. Features 4 extraction buckets (OVR Risers, Compass Elite, Usage Surge, Value Targets) and comprehensive API endpoints (`/api/players/hot-list`, `/api/players/hot-list/health`) with a real-time UI at `/hot-list`.
 - **Live Data Integration Pipeline**: Complete multi-source data capture and processing system with MySportsFeeds, SportsDataIO, and Sleeper API integration. Features static data capture service (`/api/data/capture`) for persistent reference data beyond API trial periods, live data processor for weekly statistics, and comprehensive fallback strategies. Includes endpoints for live mode activation (`/api/players/hot-list/mode/live`), manual refresh (`/api/players/hot-list/refresh`), and data source monitoring (`/api/players/hot-list/sources`).
-
-## Recent Changes (August 19, 2025)
-- **COMPLETED: Sleeper Sync Service Code Review Refinements** - Applied systematic improvements based on detailed code review feedback:
-  - **Cache Meta Export**: Added `getPlayersCacheMeta()` function with proper count and timestamp access via instance methods
-  - **Standardized Error Helper**: Implemented `err(code, message, details?, status?)` with consistent HTTP status mapping (400/404/422/502/206)
-  - **Dynamic Season Validation**: Range validation from 2018 to (current year + 1) with YYYY regex format checking
-  - **JSON-Structured Logging**: `logInfo()` and `logError()` with structured output including source attribution and performance tracking
-  - **Axios Hardening**: Centralized HTTP client with 8000ms timeout and proper status validation
-  - **Partial Upstream Handling**: 206 status support in `materializeLeagueContext()` for missing upstream resources
-- **COMPLETED: Comprehensive Sleeper Routes Refinements** - Applied systematic refinements to all Sleeper API endpoints:
-  - **JSON-Structured Logging**: All endpoints use structured JSON output with source attribution and performance metrics
-  - **Standardized Error Handling**: Consistent `{ ok: false, code, message, details, meta }` format with proper HTTP status codes
-  - **Meta Field Enhancement**: All responses include timestamp, server identification ("tiber-sleeper-routes"), and contextual data
-- **NEW: Complete Sleeper Endpoint Suite** - Added missing endpoints with full error handling:
-  - `/api/sleeper/user/:username` - User lookup with 404 handling for non-existent users
-  - `/api/sleeper/leagues/:userId` - User leagues with optional season filtering and validation
-  - `/api/sleeper/league/:leagueId/context` - Complete league context with partial upstream failure detection
-  - `/api/sleeper/health` - Comprehensive health check showing cache info (3,756 players), sync status, and service health
-- **VERIFIED: Production Readiness** - All service and route layers tested and operational:
-  - TypeScript compliance: Zero compilation errors with strict mode
-  - Performance: Sub-second response times (26-733ms) with duration tracking
-  - Error handling: Structured error propagation from service to route layers
-  - Data integrity: 3,756+ live Sleeper players with reliable cache fallback
-
-## Previous Changes (August 18, 2025)
-- **COMPLETED: Live Sleeper API Integration** - Successfully replaced static CSV data with live Sleeper API across all compass endpoints
-- **RESOLVED: Route Conflicts** - Eliminated legacy compass route conflicts intercepting live API requests
-- **VERIFIED: Complete Functionality** - Search, filtering, format support, pagination, and 4-directional compass scoring operational
-- **ENHANCED: Data Quality** - Live data with current active players and comprehensive skill position coverage
-- **NEW: Redraft & Dynasty Engines Integration** - Complete sleeperSyncService integration with authentication and validation
 
 ### Technical Stack
 - **Backend**: Python (Flask), Node.js (Express.js, TypeScript)

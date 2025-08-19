@@ -1,0 +1,247 @@
+Alright, Boss Man J — Batch #4 is the Dashboard fix. Good bones: proper loading/empty/error gates, defaulting to first `roster_id`, and validating bad `teamId`s. A few sharp edges + the code cuts off mid-handler. Here’s the tight review, then a complete, drop-in patch you can hand to Tiber.
+
+---
+
+# Quick Verdict
+
+* ✅ Correct idea: gate renders, default to first team, validate `teamId`.
+* ⚠️ Don’t mutate `URLSearchParams` in place — construct a new one to avoid subtle router bugs.
+* ⚠️ `useNavigate` is imported but unused; either use it or drop it.
+* ⚠️ Effect deps: including `searchParams` can cause extra runs; safe, but avoid loops by only calling `setSearchParams` when you actually change something.
+* 🛡️ Add defensive guards if `useLeagueContext()` flips between states on refetch.
+
+---
+
+# High-Impact Fixes
+
+1. **Never mutate** the existing `URLSearchParams`. Build a new one:
+
+```ts
+const newParams = new URLSearchParams(searchParams);
+newParams.set('teamId', firstTeamId);
+setSearchParams(newParams, { replace: true });
+```
+
+2. **Avoid unnecessary updates**: only call `setSearchParams` if the value actually changes to prevent double renders.
+
+3. **Complete the component**: finish the click handler and a minimal team list/roster section so this page actually works out of the box.
+
+---
+
+# ✅ Patched Component (drop-in)
+
+```tsx
+// dashboard.tsx
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
+
+// Placeholder UI bits (replace with your real components if you have them)
+interface LoadingSpinnerProps { message?: string; }
+const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ message = 'Loading...' }) => (
+  <div className="flex items-center justify-center p-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" aria-label="loading" />
+    <span className="ml-3 text-gray-600">{message}</span>
+  </div>
+);
+
+const ErrorMessage: React.FC<{ message: string; onRetry?: () => void }> = ({ message, onRetry }) => (
+  <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+    <div className="text-red-800 mb-4">{message}</div>
+    {onRetry && (
+      <button
+        onClick={onRetry}
+        className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+      >
+        Try Again
+      </button>
+    )}
+  </div>
+);
+
+const EmptyState: React.FC<{ message: string }> = ({ message }) => (
+  <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+    <div className="text-gray-600">{message}</div>
+  </div>
+);
+
+// Assumed hook signature
+declare function useLeagueContext(): {
+  leagueContext: {
+    league: { name: string; season: string; scoring: 'half'|'ppr'|'std' };
+    teams: Array<{ teamId: string; ownerId: string; displayName: string; players: string[] }>;
+    players: Record<string, { player_id: string; full_name: string; position: string; team: string | null }>;
+  } | null;
+  loading: boolean;
+  error: unknown;
+  refetch: () => void;
+};
+
+function Dashboard() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { leagueContext, loading, error, refetch } = useLeagueContext();
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+
+  // Memo to avoid re-computing
+  const teamIds = useMemo(() => (leagueContext?.teams ?? []).map(t => t.teamId), [leagueContext]);
+
+  // Sync URL -> state with safe defaults
+  useEffect(() => {
+    if (loading || !leagueContext) return;
+
+    const teamIdFromUrl = searchParams.get('teamId');
+    if (!leagueContext.teams.length) {
+      setSelectedTeamId(null);
+      return;
+    }
+
+    const firstTeamId = leagueContext.teams[0].teamId;
+
+    // If no teamId in URL, set it
+    if (!teamIdFromUrl) {
+      setSelectedTeamId(firstTeamId);
+      const next = new URLSearchParams(searchParams);
+      next.set('teamId', firstTeamId);
+      setSearchParams(next, { replace: true });
+      return;
+    }
+
+    // If teamId present but invalid, normalize to first
+    const exists = teamIds.includes(teamIdFromUrl);
+    if (!exists) {
+      setSelectedTeamId(firstTeamId);
+      const next = new URLSearchParams(searchParams);
+      next.set('teamId', firstTeamId);
+      setSearchParams(next, { replace: true });
+      return;
+    }
+
+    // Valid teamId
+    if (selectedTeamId !== teamIdFromUrl) {
+      setSelectedTeamId(teamIdFromUrl);
+    }
+  }, [loading, leagueContext, searchParams, setSearchParams, teamIds, selectedTeamId]);
+
+  // Loading state
+  if (loading) return <LoadingSpinner message="Loading team data..." />;
+
+  // Error state
+  if (error) {
+    return <ErrorMessage message="Unable to load team data. Please try again." onRetry={refetch} />;
+  }
+
+  // No league context / teams
+  if (!leagueContext) return <EmptyState message="No league data available." />;
+  if (!leagueContext.teams.length) return <EmptyState message="No teams found in this league." />;
+  if (!selectedTeamId) return <LoadingSpinner message="Selecting team..." />;
+
+  const selectedTeam = leagueContext.teams.find(t => t.teamId === selectedTeamId);
+  if (!selectedTeam) return <ErrorMessage message="Selected team not found." onRetry={refetch} />;
+
+  const handleTeamSelect = useCallback((teamId: string) => {
+    if (teamId === selectedTeamId) return;
+    setSelectedTeamId(teamId);
+    const next = new URLSearchParams(searchParams);
+    next.set('teamId', teamId);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, selectedTeamId]);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">{leagueContext.league.name}</h1>
+          <p className="text-sm text-gray-500">
+            Season {leagueContext.league.season} • Scoring: {leagueContext.league.scoring.toUpperCase()}
+          </p>
+        </div>
+        <button
+          onClick={refetch}
+          className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+        >
+          Refresh
+        </button>
+      </div>
+
+      {/* Team selector */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        {leagueContext.teams.map(team => (
+          <button
+            key={team.teamId}
+            onClick={() => handleTeamSelect(team.teamId)}
+            className={[
+              "rounded-lg border p-3 text-left hover:shadow transition",
+              selectedTeamId === team.teamId ? "border-blue-600 ring-1 ring-blue-300" : "border-gray-200"
+            ].join(' ')}
+            aria-pressed={selectedTeamId === team.teamId}
+          >
+            <div className="font-medium truncate">{team.displayName}</div>
+            <div className="text-xs text-gray-500">{team.players.length} players</div>
+          </button>
+        ))}
+      </div>
+
+      {/* Roster view for selected team */}
+      <div className="rounded-xl border border-gray-200 p-4">
+        <h2 className="font-semibold mb-3">Roster</h2>
+        {selectedTeam.players.length === 0 ? (
+          <div className="text-sm text-gray-500">No players on this roster.</div>
+        ) : (
+          <ul className="divide-y">
+            {selectedTeam.players.map(pid => {
+              const p = leagueContext.players[pid];
+              return (
+                <li key={pid} className="py-2 flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{p?.full_name || 'Unknown Player'}</div>
+                    <div className="text-xs text-gray-500">
+                      {p?.position ?? 'UNK'} • {p?.team ?? 'FA'}
+                    </div>
+                  </div>
+                  {/* Placeholder: add actions later */}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default Dashboard;
+```
+
+**Notes:**
+
+* No `useNavigate` needed; removed.
+* Uses new `URLSearchParams` each time (no in-place mutation).
+* Only updates URL when necessary, preventing loops/flicker.
+* Defensive null checks everywhere.
+
+---
+
+# ✅ Tiber Ingestion Wrapper (Batch #4)
+
+Paste this to Tiber with the file:
+
+> **Task:** Finalize the Dashboard team-selection flow and loading states.
+>
+> **Required changes:**
+>
+> 1. Replace any in-place mutation of `URLSearchParams` with creating a **new** `URLSearchParams`, set `teamId`, then `setSearchParams(newParams, { replace: true })`.
+> 2. Default to the first team’s `teamId` when the URL has no `teamId` or when it’s invalid. Only call `setSearchParams` if the value changes.
+> 3. Remove unused `useNavigate` import.
+> 4. Add a minimal roster render (list players for the selected team using `leagueContext.players`).
+> 5. Keep loading/error/empty states exactly as in the patched component.
+>
+> **Deliverable:** Updated `dashboard.tsx` with these behaviors and a short diff summary.
+> **Checks:**
+>
+> * Load `/dashboard` with no `teamId` → URL gets `?teamId=<firstRosterId>` and roster renders.
+> * Change `teamId` to an invalid value → auto-normalizes back to first team.
+> * Refresh → no “Team Not Found” flicker; loading spinner shows until context is ready.
+
+---
+
+Shoot me Batch #5 when you’ve got it.
