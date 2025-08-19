@@ -341,10 +341,7 @@ class SleeperSyncService {
 
 // Export functions for cache metadata
 export function getPlayersCacheMeta(): { updatedAt: string | null; count: number } {
-  const instance = sleeperSyncService as any; // Access private members
-  const cache = instance.playersCache || { data: null, updatedAt: null };
-  const count = cache.data ? cache.data.length : 0;
-  return { updatedAt: cache.updatedAt ? cache.updatedAt.toISOString() : null, count };
+  return sleeperSyncService.getCacheMetadata();
 }
 
 // Temporary compatibility export (remove later if unused)
