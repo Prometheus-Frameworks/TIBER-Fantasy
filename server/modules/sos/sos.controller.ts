@@ -7,6 +7,13 @@ export const getWeekly = async (req: Request, res: Response) => {
     const position = (req.query.position as Position) || 'RB';
     const week = parseInt((req.query.week as string) || '1', 10);
     const season = parseInt((req.query.season as string) || '2024', 10);
+    
+    // Validate week boundaries by season
+    const maxWeek = season === 2024 ? 17 : 18;
+    if (week > maxWeek) {
+      return res.status(400).json({ error: `Invalid week for season ${season}. Week must be <= ${maxWeek}` });
+    }
+    
     const rawMode = req.query.mode as string;
     const mode = (rawMode === 'fpa' || rawMode === 'ctx') ? rawMode as Mode : 'fpa';
     const weights = normalizeWeights(parseWeights(req.query.weights as string | undefined));
@@ -26,6 +33,13 @@ export const getROS = async (req: Request, res: Response) => {
     const startWeek = parseInt((req.query.startWeek as string) || '1', 10);
     const window = parseInt((req.query.window as string) || '5', 10);
     const season = parseInt((req.query.season as string) || '2024', 10);
+    
+    // Validate week boundaries by season
+    const maxWeek = season === 2024 ? 17 : 18;
+    if (startWeek > maxWeek || (startWeek + window - 1) > maxWeek) {
+      return res.status(400).json({ error: `Invalid week range for season ${season}. Weeks must be <= ${maxWeek}` });
+    }
+    
     const rawMode = req.query.mode as string;
     const mode = (rawMode === 'fpa' || rawMode === 'ctx') ? rawMode as Mode : 'fpa';
     const weights = normalizeWeights(parseWeights(req.query.weights as string | undefined));
