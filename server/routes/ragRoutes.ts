@@ -27,9 +27,7 @@ const RAG_MIN_SOURCES = Number(process.env.RAG_MIN_SOURCES || 2);
 // ----- tiny utils
 const norm = (s = "") => s.toLowerCase().replace(/[^a-z]/g, "");
 const sha = (s: string) => cryptoHash(s).slice(0, 32);
-function cryptoHash(s: string) {
-  return createHash("sha256").update(s).digest("hex");
-}
+const cryptoHash = (s: string) => createHash("sha256").update(s).digest("hex");
 function parseIsoOrNow(iso?: string) {
   const d = new Date(iso || Date.now());
   return isNaN(d.getTime()) ? new Date() : d;
@@ -73,15 +71,21 @@ let bm25 = bm25Factory();
 let _docs = new Map(); // id -> {title,text,published_at,source}
 
 function buildIndex() {
-  // Create new BM25 instance (wink-bm25 doesn't have clear method)
+  // Create new BM25 instance with proper config
   bm25 = bm25Factory();
+  bm25.defineConfig({
+    fldWeights: { body: 1 },
+    bm25Params: { k1: 1.2, b: 0.75, k: 1 }
+  });
+  
   _docs.clear();
   
   const rows = db.prepare("SELECT id, title, text, published_at, source FROM articles").all();
-  rows.forEach((r: any) => {
+  rows.forEach((r: any, idx: number) => {
     const text = `${r.title ?? ""} ${r.text ?? ""}`;
-    bm25.addDoc({ id: r.id, body: text });
-    _docs.set(r.id, r);
+    const docId = r.id || `doc_${idx}`;
+    bm25.addDoc({ id: docId, body: text });
+    _docs.set(docId, r);
   });
   bm25.consolidate();
 }
@@ -429,13 +433,30 @@ export function createRagRouter() {
     res.json(payload);
   });
 
+  // admin endpoints for maintenance
+  router.post("/admin/reindex", (req, res) => {
+    try { 
+      buildIndex(); 
+      return res.json({ status: "ok", rebuilt: true }); 
+    } catch (e: any) { 
+      return res.status(500).json({ error: e.message }); 
+    }
+  });
+
+  router.get("/admin/status", (req, res) => {
+    const total = db.prepare("SELECT COUNT(*) as n FROM articles").get() as any;
+    return res.json({ articles: total.n, indexed: _docs.size });
+  });
+
   return router;
 }
 
-// Initialize on startup
-try {
-  buildIndex();
-  console.log("🤖 RAG: Search index initialized");
-} catch (e) {
-  console.warn("🤖 RAG: Index initialization skipped (no data yet)");
+// Initialize RAG on boot
+export async function initRagOnBoot() {
+  try {
+    buildIndex();
+    console.log("🤖 RAG: Search index rebuilt on boot");
+  } catch (e) {
+    console.warn("🤖 RAG: Index initialization skipped (no data yet)");
+  }
 }

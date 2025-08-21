@@ -74,7 +74,7 @@ import {
 import { OTC_SIGNATURE } from '../shared/otcSignature';
 import fs from 'fs';
 import path from 'path';
-import { createRagRouter } from './routes/ragRoutes';
+import { createRagRouter, initRagOnBoot } from './routes/ragRoutes';
 
 // Helper function for Player Compass sample data
 async function getSamplePlayersForCompass(position: string, limit: number = 20) {
@@ -1894,6 +1894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/te-compass', teCompassRoutes);
   
   // Mount RAG (Retrieval-Augmented Generation) router
+  await initRagOnBoot(); // Initialize RAG search index from SQLite
   app.use('/rag', createRagRouter());
   
   // OTC Consensus routes

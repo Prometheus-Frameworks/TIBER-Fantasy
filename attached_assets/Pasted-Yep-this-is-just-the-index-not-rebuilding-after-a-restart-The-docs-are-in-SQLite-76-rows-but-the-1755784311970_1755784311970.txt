@@ -1,0 +1,105 @@
+Yep—this is just the index not rebuilding after a restart. The docs are in SQLite (76 rows), but the in‑memory search structures (BM25 / TF‑IDF) die with the process and weren’t reconstructed on boot.
+
+Here’s the clean fix, no hand‑waving—pick your stack and patch it.
+
+If you’re using the Node inline RAG (rag.router.js)
+
+What’s wrong: I didn’t force a reindex on server start, and the hash helper used a dynamic crypto import in one spot (bad on some setups).
+
+Fix (3 quick patches):
+	1.	Top of rag.router.js — import crypto the normal way and define cryptoHash:
+
+import { createHash } from "crypto";
+const cryptoHash = (s) => createHash("sha256").update(s).digest("hex");
+
+(Delete the older function with await import("crypto").)
+	2.	Add a reindex on boot — export an async initRag() and call it from your main server:
+
+export async function initRagOnBoot() {
+  // Build BM25 from whatever’s already in SQLite
+  buildIndex();
+}
+
+In your server.js / app.js:
+
+import { createRagRouter, initRagOnBoot } from "./rag.router.js";
+await initRagOnBoot();            // <- run this once on startup
+app.use(createRagRouter());
+
+	3.	Add admin endpoints for maintenance (optional but handy):
+
+// inside createRagRouter()
+router.post("/admin/rag/reindex", (req, res) => {
+  try { buildIndex(); return res.json({ status: "ok", rebuilt: true }); }
+  catch (e) { return res.status(500).json({ error: e.message }); }
+});
+
+router.get("/admin/rag/status", (req, res) => {
+  const total = db.prepare("SELECT COUNT(*) as n FROM articles").get().n;
+  return res.json({ articles: total, indexed: _docs.size });
+});
+
+Sanity check:
+
+curl -X POST http://localhost:5000/admin/rag/reindex
+curl    http://localhost:5000/admin/rag/status
+# expect: { "articles": 76, "indexed": 76 }
+
+Optional hardening (nice to have):
+	•	Re‑ingest on a timer:
+
+setInterval(() => ingestAll().catch(()=>{}), 15*60*1000);
+
+	•	Rebuild the index after every successful ingest (already in code, keep it).
+
+⸻
+
+If you’re running the Python sidecar (rag_server.py)
+
+What’s wrong: same story—index is in memory. After a restart, you must call build_index() after the DB is opened. Also add a reindex/admin route.
+
+Patch:
+	1.	Ensure you rebuild on boot (it’s there, but make it bullet‑proof). Near the bottom:
+
+if __name__ == "__main__":
+    try:
+        # Do NOT ingest if you don’t want to hit feeds on every reboot.
+        # Just re-open DB and build index from existing 76 rows.
+        build_index()
+    except Exception as e:
+        log.warning(f"Index build failed: {e}")
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "8000")), debug=True)
+
+	2.	Add admin endpoints:
+
+@app.route("/admin/reindex", methods=["POST"])
+def admin_reindex():
+    build_index()
+    return {"status": "ok"}
+
+@app.route("/admin/status", methods=["GET"])
+def admin_status():
+    conn = db()
+    n = conn.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
+    conn.close()
+    return {"articles": n, "indexed": len(_corpus_ids)}
+
+Sanity check:
+
+curl -X POST http://127.0.0.1:8000/admin/reindex
+curl      http://127.0.0.1:8000/admin/status
+# expect: { "articles": 76, "indexed": 76 }
+
+
+⸻
+
+Why this fixes your exact symptom
+	•	Articles live in SQLite → they survive restarts.
+	•	The search index lives in RAM → it does not.
+	•	Rebuilding BM25/TF‑IDF from the DB on boot (and exposing /admin/... maintenance routes) guarantees queryability after any restart, crash, or deploy.
+
+Quick checklist (do now)
+	•	Node path? Patch the crypto import, add initRagOnBoot(), hit /admin/rag/reindex.
+	•	Python path? Add /admin/reindex & /admin/status, call build_index() on boot, hit the endpoints.
+
+If you tell me which one you’re running this second (Node inline vs Python sidecar), I’ll drop the exact file with the patch merged so Tiber can just paste it and move on.
