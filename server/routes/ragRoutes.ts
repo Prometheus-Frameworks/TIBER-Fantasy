@@ -15,7 +15,7 @@ import * as cheerio from "cheerio";
 import bm25Factory from "wink-bm25-text-search";
 import { createHash } from "crypto";
 // @ts-ignore
-import { loadLexicon, loadSynonyms, enrichText } from "./rag_lexicon_enricher.js";
+import { loadLexicon, loadSynonyms, loadTeamSynonyms, enrichText } from "./rag_lexicon_enricher_team.js";
 
 const ESPN_RSS = process.env.ESPN_RSS || "https://www.espn.com/espn/rss/nfl/news";
 const NFL_RSS = process.env.NFL_RSS || "https://www.nfl.com/rss/rsslanding?searchString=news";
@@ -483,11 +483,12 @@ export function createRagRouter() {
 // Initialize RAG on boot
 export async function initRagOnBoot() {
   try {
-    // Load lexicon and synonyms on boot
+    // Load lexicon, player synonyms, and team synonyms on boot
     if (process.env.FF_LEXICON_ENABLED !== "0") {
       const lexOk = loadLexicon(process.env.FF_LEXICON_PATH || "./fantasy_lexicon.v1.json");
       const synOk = loadSynonyms(process.env.FF_SYNONYMS_PATH || "./fantasy_synonyms.v1.json");
-      console.log(`🤖 RAG: Lexicon ${lexOk ? "loaded" : "not loaded"}, Synonyms ${synOk ? "loaded" : "not loaded"}`);
+      const teamSynOk = loadTeamSynonyms(process.env.FF_TEAM_SYNONYMS_PATH || "./team_synonyms.v1.json");
+      console.log(`🤖 RAG: Lexicon ${lexOk ? "loaded" : "not loaded"}, Player synonyms ${synOk ? "loaded" : "not loaded"}, Team synonyms ${teamSynOk ? "loaded" : "not loaded"}`);
     }
     buildIndex();
     console.log("🤖 RAG: Search index rebuilt on boot");
