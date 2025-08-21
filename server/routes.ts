@@ -74,6 +74,7 @@ import {
 import { OTC_SIGNATURE } from '../shared/otcSignature';
 import fs from 'fs';
 import path from 'path';
+import { createRagRouter } from './routes/ragRoutes';
 
 // Helper function for Player Compass sample data
 async function getSamplePlayersForCompass(position: string, limit: number = 20) {
@@ -1891,6 +1892,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Live compass routes already registered above
   app.use('/api/rb-compass', rbCompassRoutes);
   app.use('/api/te-compass', teCompassRoutes);
+  
+  // Mount RAG (Retrieval-Augmented Generation) router
+  app.use('/rag', createRagRouter());
   
   // OTC Consensus routes
   // OTC Consensus Command Router v1 - dedicated update endpoint
