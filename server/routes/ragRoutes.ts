@@ -384,6 +384,30 @@ export function createRagRouter() {
     res.json({ results: rows });
   });
 
+  // get recent articles for news summary
+  router.get("/api/recent", (req, res) => {
+    try {
+      const days = Number(req.query.days || 7);
+      const limit = Number(req.query.limit || 20);
+      
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      const cutoffISO = cutoffDate.toISOString();
+      
+      const rows = db.prepare(`
+        SELECT title, source, published_at, text, url 
+        FROM articles 
+        WHERE published_at >= ? 
+        ORDER BY published_at DESC 
+        LIMIT ?
+      `).all(cutoffISO, limit);
+      
+      res.json({ articles: rows, count: rows.length, days_back: days });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // generate take
   router.get("/api/take", (req, res) => {
     const playerId = String(req.query.player_id || "").trim();
