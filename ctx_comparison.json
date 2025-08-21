@@ -1,0 +1,23 @@
+[
+  {
+    "team": "CAR",
+    "opponent": "NO",
+    "mode": "CTX",
+    "sos_score": 63,
+    "tier": "yellow"
+  },
+  {
+    "team": "NO",
+    "opponent": "CAR",
+    "mode": "CTX",
+    "sos_score": 64,
+    "tier": "yellow"
+  },
+  {
+    "team": "CHI",
+    "opponent": "GB",
+    "mode": "CTX",
+    "sos_score": 54,
+    "tier": "yellow"
+  }
+]

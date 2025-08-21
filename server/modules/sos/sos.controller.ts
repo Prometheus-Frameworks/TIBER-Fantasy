@@ -7,7 +7,8 @@ export const getWeekly = async (req: Request, res: Response) => {
     const position = (req.query.position as Position) || 'RB';
     const week = parseInt((req.query.week as string) || '1', 10);
     const season = parseInt((req.query.season as string) || '2024', 10);
-    const mode = ((req.query.mode as string) || 'fpa') as Mode;
+    const rawMode = req.query.mode as string;
+    const mode = (rawMode === 'fpa' || rawMode === 'ctx') ? rawMode as Mode : 'fpa';
     const weights = normalizeWeights(parseWeights(req.query.weights as string | undefined));
     const debug = req.query.debug === '1';
     
@@ -25,7 +26,8 @@ export const getROS = async (req: Request, res: Response) => {
     const startWeek = parseInt((req.query.startWeek as string) || '1', 10);
     const window = parseInt((req.query.window as string) || '5', 10);
     const season = parseInt((req.query.season as string) || '2024', 10);
-    const mode = ((req.query.mode as string) || 'fpa') as Mode;
+    const rawMode = req.query.mode as string;
+    const mode = (rawMode === 'fpa' || rawMode === 'ctx') ? rawMode as Mode : 'fpa';
     const weights = normalizeWeights(parseWeights(req.query.weights as string | undefined));
     const debug = req.query.debug === '1';
     

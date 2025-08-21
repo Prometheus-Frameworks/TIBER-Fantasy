@@ -1,0 +1,23 @@
+[
+  {
+    "team": "CAR",
+    "opponent": "NO",
+    "mode": "FPA",
+    "sos_score": 90,
+    "tier": "green"
+  },
+  {
+    "team": "NO",
+    "opponent": "CAR",
+    "mode": "FPA",
+    "sos_score": 80,
+    "tier": "green"
+  },
+  {
+    "team": "CHI",
+    "opponent": "GB",
+    "mode": "FPA",
+    "sos_score": 30,
+    "tier": "red"
+  }
+]

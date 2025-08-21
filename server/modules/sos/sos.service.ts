@@ -371,6 +371,9 @@ export async function computeWeeklySOSv2(
   });
   if (!fpaVals.length) return []; // nothing to score
 
+  // Validate mode and fallback to FPA if invalid
+  if (mode !== 'fpa' && mode !== 'ctx') mode = 'fpa';
+  
   // Context fetch (optional)
   let ctxMap = new Map<string, CtxRow>();
   let epaVals:number[] = [], paceVals:number[] = [], rzVals:number[] = [];
