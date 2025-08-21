@@ -484,7 +484,10 @@ export function createRagRouter() {
 export async function initRagOnBoot() {
   try {
     // Load lexicon on boot
-    loadLexicon(process.env.FF_LEXICON_PATH || "./fantasy_lexicon.v1.json");
+    if (process.env.FF_LEXICON_ENABLED !== "0") {
+      const ok = loadLexicon(process.env.FF_LEXICON_PATH || "./fantasy_lexicon.v1.json");
+      console.log(`🤖 RAG: Lexicon ${ok ? "loaded" : "not loaded"}`);
+    }
     buildIndex();
     console.log("🤖 RAG: Search index rebuilt on boot");
   } catch (e) {
