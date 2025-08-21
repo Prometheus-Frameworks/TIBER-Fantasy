@@ -14,6 +14,8 @@ import * as cheerio from "cheerio";
 // @ts-ignore
 import bm25Factory from "wink-bm25-text-search";
 import { createHash } from "crypto";
+// @ts-ignore
+import { loadLexicon, enrichText } from "./rag_lexicon.js";
 
 const ESPN_RSS = process.env.ESPN_RSS || "https://www.espn.com/espn/rss/nfl/news";
 const NFL_RSS = process.env.NFL_RSS || "https://www.nfl.com/rss/rsslanding?searchString=news";
@@ -351,11 +353,20 @@ function synthTake(player: any, topic: string, rows: any[]) {
 
   const conf = verdict === "HOLD" ? 58 : 65;
 
+  // Generate base body text
+  const body = `• Pulling ${rows.length} recent items (${sources}). Topic='${topic || 'general'}'.\n• Why fade: if the date/source are weak or hype outruns role.\n• Confidence: ${conf}/100`;
+
+  // Enrich with lexicon
+  const enriched = enrichText(body, blob);
+  const confAdj = Math.max(-5, Math.min(5, enriched.delta));
+  const finalConf = Math.max(0, Math.min(100, conf + confAdj));
+  const takeText = enriched.text;
+
   return {
     headline: `${name}: actionable update (${dt})`,
-    take: `• Pulling ${rows.length} recent items (${sources}). Topic='${topic || 'general'}'.\n• Why fade: if the date/source are weak or hype outruns role.\n• Confidence: ${conf}/100`,
+    take: takeText,
     verdict,
-    confidence: conf,
+    confidence: finalConf,
     facts: { team, position: pos, topic, articles_considered: rows.length },
     citations: rows.map(r => ({ title: r.title, url: r.url, published_at: r.published_at, source: r.source }))
   };
@@ -472,6 +483,8 @@ export function createRagRouter() {
 // Initialize RAG on boot
 export async function initRagOnBoot() {
   try {
+    // Load lexicon on boot
+    loadLexicon(process.env.FF_LEXICON_PATH || "./fantasy_lexicon.v1.json");
     buildIndex();
     console.log("🤖 RAG: Search index rebuilt on boot");
   } catch (e) {
