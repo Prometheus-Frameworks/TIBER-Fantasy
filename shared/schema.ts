@@ -853,6 +853,39 @@ export const sosScores = pgTable("sos_scores", {
   uniqueSOS: unique().on(table.season, table.week, table.team, table.position),
 }));
 
+// User Customizable SOS Dashboard Tables
+export const sosDashboards = pgTable("sos_dashboards", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(), // Session-based or auth user ID
+  name: text("name").notNull(), // "My RB Dashboard", "Week 1 Analysis"
+  isDefault: boolean("is_default").default(false),
+  config: jsonb("config").notNull(), // Dashboard configuration JSON
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueUserDashboard: unique().on(table.userId, table.name),
+}));
+
+export const sosWidgets = pgTable("sos_widgets", {
+  id: serial("id").primaryKey(),
+  dashboardId: integer("dashboard_id").references(() => sosDashboards.id, { onDelete: 'cascade' }),
+  widgetType: text("widget_type").notNull(), // 'weekly', 'ros', 'chart', 'filter'
+  position: jsonb("position").notNull(), // {x, y, w, h} for grid layout
+  config: jsonb("config").notNull(), // Widget-specific configuration
+  isVisible: boolean("is_visible").default(true),
+});
+
+export const sosUserPreferences = pgTable("sos_user_preferences", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().unique(),
+  defaultPositions: jsonb("default_positions").default(['RB', 'WR']), // Array of preferred positions
+  defaultWeekRange: jsonb("default_week_range").default({start: 1, end: 5}), // Week range for ROS
+  favoriteTeams: jsonb("favorite_teams").default([]), // Array of team abbreviations
+  tierThresholds: jsonb("tier_thresholds").default({green: 67, yellow: 33}), // Custom tier boundaries
+  viewPreferences: jsonb("view_preferences").default({showCharts: true, showTable: true}),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // SOS Type Exports
 export type DefenseVP = typeof defenseVP.$inferSelect;
 export type InsertDefenseVP = typeof defenseVP.$inferInsert;
@@ -860,3 +893,10 @@ export type Schedule = typeof schedule.$inferSelect;
 export type InsertSchedule = typeof schedule.$inferInsert;
 export type SOSScore = typeof sosScores.$inferSelect;
 export type InsertSOSScore = typeof sosScores.$inferInsert;
+
+export type SOSDashboard = typeof sosDashboards.$inferSelect;
+export type InsertSOSDashboard = typeof sosDashboards.$inferInsert;
+export type SOSWidget = typeof sosWidgets.$inferSelect;
+export type InsertSOSWidget = typeof sosWidgets.$inferInsert;
+export type SOSUserPreferences = typeof sosUserPreferences.$inferSelect;
+export type InsertSOSUserPreferences = typeof sosUserPreferences.$inferInsert;

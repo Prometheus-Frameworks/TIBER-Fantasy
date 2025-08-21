@@ -23,14 +23,20 @@ export default function SOSPage() {
         <p className="text-slate-600 dark:text-slate-400 mb-3">
           Analyze matchup difficulty for each position with color-coded ease scores
         </p>
-        <div className="mb-4">
+        <div className="mb-4 flex gap-4 justify-center">
           <a 
             href="/docs/SOS-how-it-works.md" 
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
           >
-            📖 How SOS Scoring Works - Full Documentation
+            📖 How SOS Scoring Works
+          </a>
+          <a 
+            href="/sos-dashboard" 
+            className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 underline"
+          >
+            🎛️ Customizable Dashboard
           </a>
         </div>
       </div>
