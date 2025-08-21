@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { computeWeeklySOS, computeROSSOS, computeWeeklySOSv2, parseWeights } from './sos.service';
+import { computeWeeklySOS, computeROSSOS, computeWeeklySOSv2, parseWeights, normalizeWeights } from './sos.service';
 import type { Position, Mode, Weights } from './sos.service';
 
 export const getWeekly = async (req: Request, res: Response) => {
@@ -8,7 +8,7 @@ export const getWeekly = async (req: Request, res: Response) => {
     const week = parseInt((req.query.week as string) || '1', 10);
     const season = parseInt((req.query.season as string) || '2024', 10);
     const mode = ((req.query.mode as string) || 'fpa') as Mode;
-    const weights = parseWeights(req.query.weights as string | undefined);
+    const weights = normalizeWeights(parseWeights(req.query.weights as string | undefined));
     const debug = req.query.debug === '1';
     
     const data = await computeWeeklySOSv2(position, week, season, mode, weights, debug);
@@ -26,7 +26,7 @@ export const getROS = async (req: Request, res: Response) => {
     const window = parseInt((req.query.window as string) || '5', 10);
     const season = parseInt((req.query.season as string) || '2024', 10);
     const mode = ((req.query.mode as string) || 'fpa') as Mode;
-    const weights = parseWeights(req.query.weights as string | undefined);
+    const weights = normalizeWeights(parseWeights(req.query.weights as string | undefined));
     const debug = req.query.debug === '1';
     
     // Compute ROS by averaging v2 weekly scores under same mode/weights

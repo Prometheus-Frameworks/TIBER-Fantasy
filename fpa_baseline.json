@@ -1,0 +1,27 @@
+[
+  {
+    "team": "CAR",
+    "sos_score": 90,
+    "tier": "green"
+  },
+  {
+    "team": "NO",
+    "sos_score": 80,
+    "tier": "green"
+  },
+  {
+    "team": "CHI",
+    "sos_score": 30,
+    "tier": "red"
+  },
+  {
+    "team": "GB",
+    "sos_score": 50,
+    "tier": "yellow"
+  },
+  {
+    "team": "NYJ",
+    "sos_score": 40,
+    "tier": "yellow"
+  }
+]

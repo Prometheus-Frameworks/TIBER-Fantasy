@@ -282,6 +282,17 @@ interface CtxRow {
   awayDefAdj: number | null;
 }
 
+export function normalizeWeights(w:{w_fpa:number;w_epa:number;w_pace:number;w_rz:number}) {
+  const sum = w.w_fpa + w.w_epa + w.w_pace + w.w_rz;
+  if (!Number.isFinite(sum) || sum <= 0) return { w_fpa:0.55, w_epa:0.20, w_pace:0.15, w_rz:0.10 };
+  return {
+    w_fpa: w.w_fpa / sum,
+    w_epa: w.w_epa / sum,
+    w_pace: w.w_pace / sum,
+    w_rz:  w.w_rz  / sum,
+  };
+}
+
 export function parseWeights(s?: string): Weights {
   if (!s) return { w_fpa:0.55, w_epa:0.20, w_pace:0.15, w_rz:0.10 };
   const parts = s.split(',').map(Number);
@@ -330,6 +341,8 @@ export async function computeWeeklySOSv2(
   weights: Weights = { w_fpa:0.55, w_epa:0.20, w_pace:0.15, w_rz:0.10 },
   debug = false
 ) {
+  // Normalize weights to ensure they sum to 1.0
+  weights = normalizeWeights(weights);
   const games = await getWeekGames(season, week);
   if (!games.length) return [];
 
@@ -418,12 +431,12 @@ export async function computeWeeklySOSv2(
         sos_score: score, 
         tier: tier(score) 
       };
-      if (debug) row.components = { 
-        FPA: Math.round(fpaScore), 
-        EPA: Math.round(epaScore), 
-        PACE: Math.round(paceScore), 
-        RZ: Math.round(rzScore), 
-        VEN: Number(vAdj||0).toFixed(1) 
+      if (debug) row.components = {
+        FPA: fpaScore,
+        EPA: epaScore,
+        Pace: paceScore,
+        RZ: rzScore,
+        Venue: Number(((Number(vAdj)||0) * 2).toFixed(2))
       };
       out.push(row);
     }
