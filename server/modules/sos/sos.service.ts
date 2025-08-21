@@ -1,5 +1,5 @@
 import { db } from '../../db';
-import { defenseVP, schedule } from '@shared/schema';
+import { defenseVP, schedule, defenseContext } from '@shared/schema';
 import { eq, and, lte, between, gte } from 'drizzle-orm';
 
 export type Position = 'RB'|'WR'|'QB'|'TE';
@@ -267,4 +267,166 @@ export async function computeROSSOS(position: Position, startWeek = 1, window = 
     const avg = Math.round(arr.reduce((a,b)=>a+b.sos_score, 0) / arr.length);
     return { team, position, weeks, avg_score: avg, tier: tier(avg) };
   }).sort((a,b)=>b.avg_score - a.avg_score);
+}
+
+// ==== SOSv2: Contextual mode ====
+export type Mode = 'fpa'|'ctx';
+export type Weights = { w_fpa:number; w_epa:number; w_pace:number; w_rz:number };
+
+interface CtxRow {
+  defTeam: string;
+  epaPerPlayAllowed: number | null;
+  playsAllowedPerGame: number | null;
+  rzTdRateAllowed: number | null;
+  homeDefAdj: number | null;
+  awayDefAdj: number | null;
+}
+
+export function parseWeights(s?: string): Weights {
+  if (!s) return { w_fpa:0.55, w_epa:0.20, w_pace:0.15, w_rz:0.10 };
+  const parts = s.split(',').map(Number);
+  return {
+    w_fpa: Number.isFinite(parts[0]) ? parts[0] : 0.55,
+    w_epa: Number.isFinite(parts[1]) ? parts[1] : 0.20,
+    w_pace: Number.isFinite(parts[2]) ? parts[2] : 0.15,
+    w_rz:  Number.isFinite(parts[3]) ? parts[3] : 0.10,
+  };
+}
+
+async function getContext(season:number, week:number): Promise<Map<string, CtxRow>> {
+  try {
+    const rows = await db
+      .select({
+        defTeam: defenseContext.defTeam,
+        epaPerPlayAllowed: defenseContext.epaPerPlayAllowed,
+        playsAllowedPerGame: defenseContext.playsAllowedPerGame,
+        rzTdRateAllowed: defenseContext.rzTdRateAllowed,
+        homeDefAdj: defenseContext.homeDefAdj,
+        awayDefAdj: defenseContext.awayDefAdj
+      })
+      .from(defenseContext)
+      .where(
+        and(
+          eq(defenseContext.season, season),
+          eq(defenseContext.week, week)
+        )
+      );
+
+    const m = new Map<string, CtxRow>();
+    rows.forEach(r => m.set(r.defTeam, r as CtxRow));
+    return m;
+  } catch (error) {
+    // If defense_context table doesn't exist yet, return empty map
+    console.warn('defense_context table not available, falling back to FPA mode');
+    return new Map();
+  }
+}
+
+export async function computeWeeklySOSv2(
+  position: Position,
+  week: number,
+  season = DEFAULT_SEASON,
+  mode: Mode = 'fpa',
+  weights: Weights = { w_fpa:0.55, w_epa:0.20, w_pace:0.15, w_rz:0.10 },
+  debug = false
+) {
+  const games = await getWeekGames(season, week);
+  if (!games.length) return [];
+
+  // v1 components
+  const seasonAvg = await getSeasonAvg(season, position, week);
+  const last4 = await getLast4(season, position, week);
+
+  // Build defense set for the slate
+  const defenses = new Set<string>(); 
+  games.forEach(g=>{
+    defenses.add(g.home); 
+    defenses.add(g.away);
+  });
+
+  // FPA blended raw + pool for percentile
+  const fpaRawMap = new Map<string, number>();
+  const fpaVals:number[] = [];
+  defenses.forEach(team=>{
+    const s = seasonAvg.get(team);
+    const l4 = last4.get(team);
+    const blended = (l4 ?? 0)*RECENCY_WEIGHT + (s ?? 0)*SEASON_WEIGHT;
+    if (Number.isFinite(blended) && blended > 0) {
+      fpaRawMap.set(team, blended);
+      fpaVals.push(blended);
+    }
+  });
+  if (!fpaVals.length) return []; // nothing to score
+
+  // Context fetch (optional)
+  let ctxMap = new Map<string, CtxRow>();
+  let epaVals:number[] = [], paceVals:number[] = [], rzVals:number[] = [];
+  if (mode === 'ctx') {
+    ctxMap = await getContext(season, week);
+    ctxMap.forEach(v=>{
+      if (v.epaPerPlayAllowed!=null) epaVals.push(Number(v.epaPerPlayAllowed));
+      if (v.playsAllowedPerGame!=null) paceVals.push(Number(v.playsAllowedPerGame));
+      if (v.rzTdRateAllowed!=null) rzVals.push(Number(v.rzTdRateAllowed));
+    });
+    // If context empty, silently fall back to FPA mode
+    if (!epaVals.length && !paceVals.length && !rzVals.length) mode = 'fpa';
+  }
+
+  const out:any[] = [];
+  for (const g of games) {
+    const pairs = [
+      { team: g.home, opp: g.away, venue: 'home' as const },
+      { team: g.away, opp: g.home, venue: 'away' as const },
+    ];
+    for (const p of pairs) {
+      const fpaRaw = fpaRawMap.get(p.opp);
+      if (fpaRaw == null) continue;
+      const fpaScore = percentileScale(fpaVals, fpaRaw);
+
+      if (mode === 'fpa') {
+        const score = fpaScore;
+        out.push({ 
+          team: p.team, 
+          opponent: p.opp, 
+          position, 
+          week, 
+          season,
+          sos_score: score, 
+          tier: tier(score)
+        });
+        continue;
+      }
+
+      // mode === 'ctx'
+      const ctx = ctxMap.get(p.opp);
+      const epaScore  = (ctx?.epaPerPlayAllowed!=null)   ? percentileScale(epaVals,  Number(ctx.epaPerPlayAllowed))   : 50;
+      const paceScore = (ctx?.playsAllowedPerGame!=null) ? percentileScale(paceVals, Number(ctx.playsAllowedPerGame)) : 50;
+      const rzScore   = (ctx?.rzTdRateAllowed!=null)     ? percentileScale(rzVals,   Number(ctx.rzTdRateAllowed))     : 50;
+
+      let score = weights.w_fpa*fpaScore + weights.w_epa*epaScore + weights.w_pace*paceScore + weights.w_rz*rzScore;
+      // Tiny venue nudge (scale small so it never dominates)
+      const vAdj = p.venue === 'home' ? (ctx?.homeDefAdj ?? 0) : (ctx?.awayDefAdj ?? 0);
+      if (Number.isFinite(Number(vAdj))) score += Number(vAdj) * 2;
+      score = Math.round(Math.max(0, Math.min(100, score)));
+
+      const row:any = { 
+        team: p.team, 
+        opponent: p.opp, 
+        position, 
+        week, 
+        season, 
+        sos_score: score, 
+        tier: tier(score) 
+      };
+      if (debug) row.components = { 
+        FPA: Math.round(fpaScore), 
+        EPA: Math.round(epaScore), 
+        PACE: Math.round(paceScore), 
+        RZ: Math.round(rzScore), 
+        VEN: Number(vAdj||0).toFixed(1) 
+      };
+      out.push(row);
+    }
+  }
+  return out;
 }

@@ -853,6 +853,21 @@ export const sosScores = pgTable("sos_scores", {
   uniqueSOS: unique().on(table.season, table.week, table.team, table.position),
 }));
 
+// SOSv2 Contextual Defense Data Table
+export const defenseContext = pgTable("defense_context", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  defTeam: text("def_team").notNull(),
+  epaPerPlayAllowed: real("epa_per_play_allowed"),
+  playsAllowedPerGame: real("plays_allowed_per_game"),
+  rzTdRateAllowed: real("rz_td_rate_allowed"),
+  homeDefAdj: real("home_def_adj"),
+  awayDefAdj: real("away_def_adj"),
+}, (table) => ({
+  uniqueDefenseContext: unique().on(table.season, table.week, table.defTeam),
+}));
+
 // User Customizable SOS Dashboard Tables
 export const sosDashboards = pgTable("sos_dashboards", {
   id: serial("id").primaryKey(),
