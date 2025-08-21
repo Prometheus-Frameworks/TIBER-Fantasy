@@ -1,0 +1,188 @@
+# SOSv2 Test Checklist - Contextual Mode & Debug
+
+## 🚨 Critical Regression Tests
+
+### v1 Compatibility (Zero Tolerance)
+- [ ] **BYTE-FOR-BYTE**: `/api/sos/weekly?position=RB&week=1&mode=fpa` returns identical JSON to v1
+- [ ] **BYTE-FOR-BYTE**: `/api/sos/ros?position=RB&startWeek=1&window=5&mode=fpa` returns identical JSON to v1  
+- [ ] **DEFAULT BEHAVIOR**: Omitting `mode` parameter defaults to FPA (v1 behavior)
+- [ ] **UI REGRESSION**: Existing /sos page functionality unchanged when in FPA mode
+
+## 🆕 New Feature Tests
+
+### Mode Parameter
+- [ ] `mode=fpa` returns v1-style calculations
+- [ ] `mode=ctx` returns contextual calculations with different scores
+- [ ] Invalid mode (e.g., `mode=invalid`) defaults to 'fpa'
+- [ ] Missing mode parameter defaults to 'fpa'
+
+### Weight Parameter Parsing
+- [ ] `weights=0.55,0.2,0.15,0.1` parses correctly
+- [ ] `weights=0.5,0.3,0.1,0.1` changes final scores appropriately
+- [ ] Invalid weights format falls back to defaults
+- [ ] Weights that don't sum to 1.0 are normalized
+- [ ] Missing weights parameter uses defaults
+
+### Debug Parameter
+- [ ] `debug=1` includes component breakdown in response
+- [ ] `debug=0` or missing debug excludes breakdown
+- [ ] Debug components show individual scores for FPA, EPA, Pace, RZ, Venue
+- [ ] Component scores are all 0-100 range
+
+## 🎯 Contextual Mode Validation
+
+### Component Integration
+```javascript
+// Test data setup
+const testDefense = {
+  fpa_recent: 18.5,     // moderate FPA
+  epa_allowed: -0.15,   // good EPA defense  
+  pace: 68.2,           // high pace
+  rz_td_rate: 0.45      // poor red zone defense
+};
+```
+
+- [ ] **High Pace Override**: Defense with moderate FPA but high pace scores higher in contextual
+- [ ] **Red Zone Penalty**: Defense with high FPA but low RZ TD rate scores lower in contextual
+- [ ] **EPA Efficiency**: Defense with high FPA but good EPA scores lower in contextual
+- [ ] **Venue Adjustment**: Home teams get small positive adjustment, away teams small negative
+
+### Score Boundaries & Tiers
+- [ ] All contextual scores remain 0-100 after component blending
+- [ ] Tier assignments (green/yellow/red) match score thresholds
+- [ ] Extreme component values don't break final score calculation
+- [ ] Missing context data gracefully falls back to FPA-only
+
+## 🔧 Weight Tuning Tests
+
+### Preset Weight Scenarios
+```bash
+# Test different weight profiles
+BALANCED="0.55,0.2,0.15,0.1"
+PACE_HEAVY="0.5,0.15,0.25,0.1" 
+RZ_HEAVY="0.5,0.15,0.1,0.25"
+EPA_FOCUS="0.45,0.3,0.15,0.1"
+```
+
+- [ ] **Pace Heavy**: High-pace defenses score significantly higher
+- [ ] **RZ Heavy**: Red zone efficient defenses score significantly lower  
+- [ ] **EPA Focus**: EPA-efficient defenses impact scores more heavily
+- [ ] **Balanced**: Reasonable blend of all factors
+
+### Edge Case Weights
+- [ ] All weight on FPA: `1.0,0,0,0` equals FPA mode results
+- [ ] Equal weights: `0.25,0.25,0.25,0.25` produces reasonable scores
+- [ ] Single non-FPA weight: `0,1,0,0` produces EPA-only rankings
+
+## 📊 Data Quality Tests
+
+### Context Data Requirements
+- [ ] **Missing EPA**: Graceful fallback when EPA data unavailable
+- [ ] **Missing Pace**: Graceful fallback when pace data unavailable  
+- [ ] **Missing RZ**: Graceful fallback when red zone data unavailable
+- [ ] **Missing Venue**: Defaults to neutral venue adjustment (0.0)
+- [ ] **Partial Context**: Works with subset of context metrics available
+
+### Data Validation
+- [ ] EPA values in reasonable range (-0.5 to +0.5)
+- [ ] Pace values in reasonable range (55-75 plays/game)
+- [ ] RZ TD rate in 0.0-1.0 range
+- [ ] Venue adjustments in -0.03 to +0.03 range
+- [ ] No NULL or undefined values crash the calculation
+
+## 🖥️ UI Integration Tests
+
+### Mode Selector
+- [ ] Mode dropdown shows "FPA" and "Contextual" options
+- [ ] Selecting mode triggers new API call with correct parameter
+- [ ] Mode selection persists during position/week changes
+- [ ] URL updates to reflect selected mode
+
+### Debug Toggle
+- [ ] Debug checkbox appears in UI
+- [ ] Enabling debug shows component breakdown under each row
+- [ ] Component breakdown displays: `FPA: 72 | EPA: 66 | Pace: 81 | RZ: 58 | Venue: +1.2`
+- [ ] Disabling debug hides component breakdown
+- [ ] Debug state persists during other UI changes
+
+### Weight Controls (Future)
+- [ ] Weight sliders planned for future release
+- [ ] URL parameter support ready for slider integration
+
+## 🚀 Performance Tests
+
+### Response Times
+- [ ] Contextual mode responds within 300ms with full data
+- [ ] Debug mode adds <100ms overhead  
+- [ ] ROS contextual calculation completes within 1 second
+- [ ] Multiple weight scenarios don't significantly impact performance
+
+### Memory Usage
+- [ ] Context data loading doesn't cause memory leaks
+- [ ] Component calculations efficient with large datasets
+- [ ] Debug breakdown doesn't significantly increase payload size
+
+## 🔍 Boss Man J Live Tuning Flow
+
+### Baseline Verification
+1. [ ] Open `/sos` → Mode = FPA → matches v1 expectations
+2. [ ] Enable Debug → see FPA component matches displayed score
+3. [ ] Flip to Contextual → some scores change, none break
+
+### Weight Experimentation
+1. [ ] URL: `?mode=ctx&weights=0.55,0.2,0.15,0.1&debug=1`
+2. [ ] URL: `?mode=ctx&weights=0.5,0.15,0.25,0.1&debug=1` (pace heavy)
+3. [ ] URL: `?mode=ctx&weights=0.5,0.15,0.1,0.25&debug=1` (RZ heavy)
+4. [ ] Verify component scores show expected emphasis
+
+### Anomaly Detection
+- [ ] Flag any scores that seem "wrong" given component breakdown
+- [ ] Verify extreme scores have justifiable component combinations
+- [ ] Check that high-pace, poor-RZ defenses show expected tension
+
+## 📋 PR Checklist
+
+### Required Screenshots
+- [ ] **Screenshot 1**: /sos in FPA mode with debug (baseline)
+- [ ] **Screenshot 2**: /sos in Contextual mode with debug (differences circled)
+- [ ] Highlight 2-3 rows where contextual mode flipped the tier color
+
+### Code Quality
+- [ ] TypeScript types updated for new response format
+- [ ] Error handling for missing context data
+- [ ] Input validation for weight parameters
+- [ ] Graceful degradation when context table empty
+
+### Documentation
+- [ ] API documentation updated with new parameters
+- [ ] Component weight explanations clear
+- [ ] Debug output format documented
+- [ ] Edge case handling explained
+
+---
+
+## Test Commands
+
+```bash
+# Regression tests (must pass)
+curl "/api/sos/weekly?position=RB&week=1&mode=fpa" | diff - v1_baseline.json
+
+# Feature tests
+curl "/api/sos/weekly?position=RB&week=1&mode=ctx&debug=1" | jq '.items[0]'
+
+# Weight tests  
+curl "/api/sos/weekly?position=RB&week=1&mode=ctx&weights=0.5,0.3,0.1,0.1"
+
+# Edge case tests
+curl "/api/sos/weekly?position=RB&week=1&mode=ctx" # missing context data
+```
+
+## Definition of Done ✅
+
+- [ ] Migration applied, defense_context populated for 2024 Wk1-2
+- [ ] FPA mode byte-for-byte identical to v1
+- [ ] Contextual mode returns component breakdowns with debug=1
+- [ ] UI has Mode + Debug controls and renders both modes
+- [ ] Weight parameter changes final score in visible, sensible ways
+- [ ] All regression tests pass
+- [ ] PR includes before/after screenshots with differences highlighted
