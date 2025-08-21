@@ -108,6 +108,7 @@ import Navigation from "@/components/Navigation";
 import Analytics from "@/pages/Analytics";
 import Articles from "@/pages/Articles";
 import ArticleDetail from "@/pages/ArticleDetail";
+import News from "@/pages/News";
 
 import FounderModal from "@/components/FounderModal";
 import Footer from "@/components/Footer";
@@ -187,6 +188,7 @@ function Router() {
       <Route path="/redraft" component={SeasonHQ} />
       <Route path="/dynasty" component={Dynasty} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/news" component={News} />
       <Route path="/articles" component={Articles} />
       <Route path="/articles/:slug" component={ArticleDetail} />
       <Route path="/api-test" component={lazy(() => import("@/pages/ApiTest"))} />
