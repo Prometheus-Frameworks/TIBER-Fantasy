@@ -290,16 +290,26 @@ function retrieveArticles({ playerId, topic }: { playerId?: string, topic?: stri
   }
 
   if (topic && topic.trim()) {
-    const scored = bm25.search(topic).slice(0, 50);
-    for (const s of scored) {
-      const r = _docs.get(s[0]); // id
-      if (r) candMap.set(r.id, db.prepare("SELECT * FROM articles WHERE id=?").get(r.id));
+    try {
+      const scored = bm25.search(topic);
+      for (const s of scored.slice(0, 50)) {
+        const r = _docs.get(s[0]); // id
+        if (r) candMap.set(r.id, db.prepare("SELECT * FROM articles WHERE id=?").get(r.id));
+      }
+    } catch (e) {
+      console.warn("BM25 search failed:", e);
     }
   }
 
   // score with (bm25 if topic) + recency
   const out = [];
-  const topicVec = topic && topic.trim() ? bm25.search(topic) : [];
+  let topicVec = [];
+  try {
+    topicVec = topic && topic.trim() ? bm25.search(topic) : [];
+  } catch (e) {
+    console.warn("BM25 topic search failed:", e);
+    topicVec = [];
+  }
   const tScore = new Map(topicVec); // id -> score
 
   for (const r of Array.from(candMap.values())) {
