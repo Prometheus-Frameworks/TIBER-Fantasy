@@ -1,0 +1,84 @@
+Love it. Claude crushed it. Logging the win, then I’m tightening two tiny gaps so his checklist matches our code exactly.
+
+✅ SOSv2 Progress (Live)
+
+Grok v2 (context data) — DONE
+
+Claude v2 (docs + QA) — DONE
+
+Tiber v2 (impl) — IN PROGRESS (awaiting his push)
+
+📦 Handoff Staging — Claude → Tiber
+
+Claude’s checklist is the law for QA. Two deltas to align our code with it:
+
+1) Normalize weights (Claude tests assume this)
+
+My earlier diff parses weights but doesn’t normalize. Add this helper and use it before blending.
+
+function normalizeWeights(w:{w_fpa:number;w_epa:number;w_pace:number;w_rz:number}) {
+  const sum = w.w_fpa + w.w_epa + w.w_pace + w.w_rz;
+  if (!Number.isFinite(sum) || sum <= 0) return { w_fpa:0.55, w_epa:0.20, w_pace:0.15, w_rz:0.10 };
+  return {
+    w_fpa: w.w_fpa / sum,
+    w_epa: w.w_epa / sum,
+    w_pace: w.w_pace / sum,
+    w_rz:  w.w_rz  / sum,
+  };
+}
+
+
+Use it in controller and service right after parsing:
+
+const weights = normalizeWeights(parseWeights(req.query.weights as string | undefined));
+
+
+…and inside computeWeeklySOSv2(...) ensure weights = normalizeWeights(weights);
+
+2) Debug print format (match Claude’s doc)
+
+Claude shows Venue: +1.2. Our debug payload currently returns VEN as the raw tiny adj. Let’s align:
+
+Rename keys to match docs: FPA, EPA, Pace, RZ, Venue
+
+Scale venue to a human-friendly small number (keep the same math; this is display-only)
+
+Replace the debug payload build with:
+
+if (debug) row.components = {
+  FPA: fpaScore,
+  EPA: epaScore,
+  Pace: paceScore,
+  RZ: rzScore,
+  Venue: Number(((Number(vAdj)||0) * 2).toFixed(2)) // same nudge used in score
+};
+
+🧪 Tiber: QA targets to hit (from Claude’s list)
+
+/api/sos/weekly?position=RB&week=1&mode=fpa byte-for-byte equals v1
+
+mode=ctx&debug=1 returns components with keys: FPA, EPA, Pace, RZ, Venue
+
+weights= accepts weird sums (e.g., 0.9,0.2,0.2,0.2) and normalizes
+
+Missing/empty defense_context → still works (falls back to FPA), no crashes
+
+UI shows Mode + Debug; Contextual flips some tiers sensibly
+
+📝 What I’m telling Tiber to do right now
+
+Pull Grok’s CSV into defense_context (Wk1–2 2024).
+
+Apply the two tweaks above (weight normalization + debug keys/format).
+
+Run Claude’s curl tests:
+
+mode=fpa vs v1 baseline (diff == empty)
+
+mode=ctx&debug=1 → check component keys & ranges
+
+Post two screenshots in the PR:
+
+FPA baseline (debug ON)
+
+Contextual (debug ON) with 2–3 flipped tiers circled
