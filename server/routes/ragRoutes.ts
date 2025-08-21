@@ -71,23 +71,31 @@ let bm25 = bm25Factory();
 let _docs = new Map(); // id -> {title,text,published_at,source}
 
 function buildIndex() {
-  // Create new BM25 instance with proper config
+  // Create new BM25 instance (wink-bm25 doesn't have clear method)
   bm25 = bm25Factory();
   bm25.defineConfig({
     fldWeights: { body: 1 },
     bm25Params: { k1: 1.2, b: 0.75, k: 1 }
   });
-  
   _docs.clear();
-  
-  const rows = db.prepare("SELECT id, title, text, published_at, source FROM articles").all();
-  rows.forEach((r: any, idx: number) => {
-    const text = `${r.title ?? ""} ${r.text ?? ""}`;
-    const docId = r.id || `doc_${idx}`;
-    bm25.addDoc({ id: docId, body: text });
-    _docs.set(docId, r);
-  });
+
+  // Pull distinct rows in a stable order
+  const rows = db
+    .prepare("SELECT DISTINCT id, title, text, published_at, source FROM articles ORDER BY published_at DESC")
+    .all() as any[];
+
+  for (const r of rows) {
+    const text = `${r.title ?? ""} ${r.text ?? ""}`.trim();
+    if (!text) continue;
+
+    // wink-bm25-text-search wants (docObject, docId) and docId must be unique
+    // We're already using a SHA256 for r.id, so just stringify it.
+    bm25.addDoc({ body: text, id: String(r.id) }, String(r.id));
+    _docs.set(r.id, r);
+  }
+
   bm25.consolidate();
+  console.log(`BM25 index rebuilt: ${_docs.size} docs`);
 }
 
 // ----- Sleeper dictionary sync (from your existing players table/service)
@@ -434,18 +442,18 @@ export function createRagRouter() {
   });
 
   // admin endpoints for maintenance
-  router.post("/admin/reindex", (req, res) => {
+  router.post("/admin/rag/reindex", (req, res) => {
     try { 
       buildIndex(); 
-      return res.json({ status: "ok", rebuilt: true }); 
+      res.json({ status: "ok", indexed: _docs.size }); 
     } catch (e: any) { 
-      return res.status(500).json({ error: e.message }); 
+      res.status(500).json({ error: e.message }); 
     }
   });
 
-  router.get("/admin/status", (req, res) => {
-    const total = db.prepare("SELECT COUNT(*) as n FROM articles").get() as any;
-    return res.json({ articles: total.n, indexed: _docs.size });
+  router.get("/admin/rag/status", (req, res) => {
+    const total = db.prepare("SELECT COUNT(*) AS n FROM articles").get() as any;
+    res.json({ articles: total.n, indexed: _docs.size });
   });
 
   return router;
