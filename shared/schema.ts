@@ -813,3 +813,50 @@ export type PlayerUsageWeekly = typeof playerUsageWeekly.$inferSelect;
 export type InsertPlayerUsageWeekly = typeof playerUsageWeekly.$inferInsert;
 export type ConsensusExplanationRow = typeof consensusExplanations.$inferSelect;
 export type InsertConsensusExplanation = typeof consensusExplanations.$inferInsert;
+
+// Strength of Schedule (SOS) Tables
+export const defenseVP = pgTable("defense_dvp", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  defTeam: text("def_team").notNull(),
+  position: text("position").notNull(), // 'RB','WR','QB','TE'
+  fpAllowed: real("fp_allowed").notNull(), // fantasy points allowed per game
+  ydsPerAtt: real("yds_per_att"), // optional for v2
+  rzTdRate: real("rz_td_rate"), // optional for v2
+  injAdj: real("inj_adj").default(0), // optional
+  last4Avg: real("last4_avg"), // Grok's trailing 4-week average
+}, (table) => ({
+  uniqueDefenseWeek: unique().on(table.season, table.week, table.defTeam, table.position),
+}));
+
+export const schedule = pgTable("schedule", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  home: text("home").notNull(),
+  away: text("away").notNull(),
+}, (table) => ({
+  uniqueGame: unique().on(table.season, table.week, table.home, table.away),
+}));
+
+export const sosScores = pgTable("sos_scores", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  team: text("team").notNull(), // offense team
+  opponent: text("opponent").notNull(), // defense team
+  position: text("position").notNull(),
+  sosScore: real("sos_score").notNull(), // 0-100 (higher = easier)
+  tier: text("tier").notNull(), // 'green','yellow','red'
+}, (table) => ({
+  uniqueSOS: unique().on(table.season, table.week, table.team, table.position),
+}));
+
+// SOS Type Exports
+export type DefenseVP = typeof defenseVP.$inferSelect;
+export type InsertDefenseVP = typeof defenseVP.$inferInsert;
+export type Schedule = typeof schedule.$inferSelect;
+export type InsertSchedule = typeof schedule.$inferInsert;
+export type SOSScore = typeof sosScores.$inferSelect;
+export type InsertSOSScore = typeof sosScores.$inferInsert;
