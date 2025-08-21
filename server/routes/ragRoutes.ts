@@ -15,7 +15,7 @@ import * as cheerio from "cheerio";
 import bm25Factory from "wink-bm25-text-search";
 import { createHash } from "crypto";
 // @ts-ignore
-import { loadLexicon, enrichText } from "./rag_lexicon.js";
+import { loadLexicon, loadSynonyms, enrichText } from "./rag_lexicon_enricher.js";
 
 const ESPN_RSS = process.env.ESPN_RSS || "https://www.espn.com/espn/rss/nfl/news";
 const NFL_RSS = process.env.NFL_RSS || "https://www.nfl.com/rss/rsslanding?searchString=news";
@@ -483,10 +483,11 @@ export function createRagRouter() {
 // Initialize RAG on boot
 export async function initRagOnBoot() {
   try {
-    // Load lexicon on boot
+    // Load lexicon and synonyms on boot
     if (process.env.FF_LEXICON_ENABLED !== "0") {
-      const ok = loadLexicon(process.env.FF_LEXICON_PATH || "./fantasy_lexicon.v1.json");
-      console.log(`🤖 RAG: Lexicon ${ok ? "loaded" : "not loaded"}`);
+      const lexOk = loadLexicon(process.env.FF_LEXICON_PATH || "./fantasy_lexicon.v1.json");
+      const synOk = loadSynonyms(process.env.FF_SYNONYMS_PATH || "./fantasy_synonyms.v1.json");
+      console.log(`🤖 RAG: Lexicon ${lexOk ? "loaded" : "not loaded"}, Synonyms ${synOk ? "loaded" : "not loaded"}`);
     }
     buildIndex();
     console.log("🤖 RAG: Search index rebuilt on boot");
