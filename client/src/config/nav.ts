@@ -13,6 +13,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/consensus", label: "Consensus", description: "Community-driven rankings" },
   { href: "/sleeper-connect", label: "Sleeper", description: "Connect your leagues" },
   { href: "/snap-counts", label: "Snap Counts", description: "Evidence-based snap count analysis" },
+  { href: "/sos", label: "SOS", description: "Strength of Schedule matchup analysis" },
   { href: "/research", label: "Research & Analysis", description: "Depth charts and team analysis" },
   { href: "/competence", label: "Competence Mode", description: "Truth-first AI guidance" },
   { href: "/articles", label: "Articles", description: "Strategy and insights" },
