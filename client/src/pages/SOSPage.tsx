@@ -18,7 +18,22 @@ export default function SOSPage() {
 
   return (
     <div className="mx-auto max-w-5xl p-6">
-      <h1 className="text-2xl font-bold mb-4">Strength of Schedule (Weekly)</h1>
+      <div className="text-center mb-6">
+        <h1 className="text-2xl font-bold mb-2">Strength of Schedule (Weekly)</h1>
+        <p className="text-slate-600 dark:text-slate-400 mb-3">
+          Analyze matchup difficulty for each position with color-coded ease scores
+        </p>
+        <div className="mb-4">
+          <a 
+            href="/docs/SOS-how-it-works.md" 
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
+          >
+            📖 How SOS Scoring Works - Full Documentation
+          </a>
+        </div>
+      </div>
       <div className="flex gap-3 mb-4">
         <select className="border rounded px-2 py-1" value={position} onChange={e => setPosition(e.target.value as any)}>
           <option>RB</option><option>WR</option><option>QB</option><option>TE</option>

@@ -1,0 +1,217 @@
+# Strength of Schedule (SOS) - How It Works
+
+## Overview
+
+The Strength of Schedule (SOS) system evaluates how easy or difficult it is for fantasy football players to score points against upcoming defenses. Higher scores mean easier matchups, lower scores mean tougher matchups.
+
+## Core Methodology
+
+### 1. Data Sources
+
+- **Defense vs Position (DVP)**: Fantasy points allowed per game by each defense against specific positions (RB, WR, QB, TE)
+- **Schedule**: Weekly matchups showing home/away teams
+- **Historical Performance**: Rolling averages with recency weighting
+
+### 2. Scoring Algorithm (v1)
+
+**Step 1: Calculate Recent Performance**
+
+```
+fpa_recent = 0.6 × avg(last 4 weeks) + 0.4 × season_avg
+```
+
+**Step 2: Percentile Normalization**
+
+- Convert fantasy points allowed to a 0-100 ease score
+- Higher FPA = easier defense = higher ease score
+- Uses percentile ranking across all defenses for that position
+
+**Step 3: Tier Assignment**
+
+- 🟢 **Green (≥67)**: Easy matchup
+- 🟡 **Yellow (33-66)**: Neutral matchup
+- 🔴 **Red (<33)**: Tough matchup
+
+### 3. Rest of Season (ROS) Calculation
+
+```
+ROS Score = Average of next N weeks (default: 5)
+```
+
+## Key Features
+
+### Weekly View
+
+Shows each team's matchup difficulty for a specific week:
+
+- Team facing the matchup
+- Opponent defense
+- Ease score (0-100)
+- Color-coded tier
+
+### ROS View
+
+Shows average difficulty over upcoming weeks:
+
+- Ranked by easiest to hardest schedules
+- Helps with trade decisions and waiver pickups
+- Accounts for multiple upcoming matchups
+
+## Edge Cases & Handling
+
+### 1. Missing Week Data
+
+**Problem**: Defense has no data for recent weeks (bye, injury, etc.)
+**Solution**:
+
+- Fall back to season average if last 4 weeks unavailable
+- Use prior season baseline (v2+) if current season insufficient
+- Flag teams with limited data in UI
+
+### 2. Bye Weeks
+
+**Problem**: Team has bye during ROS calculation window
+**Solution**:
+
+- Skip bye weeks in ROS average calculation
+- Extend window to get requested number of games
+- Display actual weeks used in tooltip/detail view
+
+### 3. New Defenses/Rookies
+
+**Problem**: No historical data for new defensive coordinators or rookie-heavy units
+**Solution**:
+
+- Use league average until sufficient sample size (4+ games)
+- Weight heavily toward personnel/scheme similarity
+- Flag as "insufficient data" with warning icon
+
+### 4. Extreme Outliers
+
+**Problem**: Defense allows 50+ points in one game due to garbage time
+**Solution**:
+
+- Cap individual game impact at 2 standard deviations
+- Use median-based calculations for outlier detection
+- Flag unusual performances for manual review
+
+### 5. Position-Specific Injuries
+
+**Problem**: Key defensive player injured mid-season
+**Solution** (v2+):
+
+- Injury adjustment factor based on player impact
+- Depth chart analysis for replacement quality
+- Time-decay for injury impact (heals over time)
+
+### 6. Home/Away Splits
+
+**Problem**: Some defenses perform significantly different at home vs away
+**Solution** (v2+):
+
+- Apply venue adjustment (±2-3 points typical)
+- Track historical home/away performance splits
+- Weather factor integration for outdoor stadiums
+
+## Data Quality Checks
+
+### Automated Validations
+
+1. **Completeness**: Verify all teams have schedule data
+1. **Consistency**: Check for duplicate matchups or impossible schedules
+1. **Freshness**: Alert if data hasn't updated in 24+ hours
+1. **Outliers**: Flag unusual FPA values for review
+
+### Manual Review Triggers
+
+- Any defense allowing >40 or <5 FPA in a game
+- Significant week-over-week changes (>15 point swings)
+- Missing data for popular fantasy defenses
+- User-reported inaccuracies
+
+## API Endpoints
+
+### Weekly SOS
+
+```
+GET /api/sos/weekly?position=RB&week=1
+```
+
+Returns matchup difficulty for specific position/week
+
+### Rest of Season
+
+```
+GET /api/sos/ros?position=RB&startWeek=1&window=5
+```
+
+Returns average difficulty over upcoming weeks
+
+## Version Roadmap
+
+### v1 (Current)
+
+- Basic FPA with light recency weighting
+- Simple percentile-based scoring
+- RB position priority, scaffold others
+
+### v2 (Next)
+
+- Enhanced recency formula with 3-tier weighting
+- EPA, pace, red-zone context metrics
+- Injury adjustments and home/away splits
+- Per-player views with upcoming matchup bars
+
+### v3 (Future)
+
+- Machine learning matchup prediction
+- Weather and referee factor integration
+- Real-time in-game adjustments
+- Custom scoring system support
+
+## Testing Strategy
+
+### Smoke Tests
+
+1. **API Functionality**: Endpoints return expected data structure
+1. **UI Rendering**: Page loads without errors, tables populate
+1. **Interactive Elements**: Position/week selectors work correctly
+
+### Edge Case Tests
+
+1. **Missing Data**: Handle gracefully with fallbacks
+1. **Bye Weeks**: Calculations adjust properly
+1. **Week Boundaries**: Transitions between weeks work smoothly
+1. **Invalid Inputs**: Error handling for bad position/week values
+
+### Data Validation Tests
+
+1. **Score Ranges**: All ease scores between 0-100
+1. **Tier Consistency**: Color coding matches score thresholds
+1. **Schedule Integrity**: No duplicate or impossible matchups
+1. **Performance**: Page loads under 2 seconds with full data
+
+## Usage Tips
+
+### For Weekly Decisions
+
+- Green matchups: Start your studs with confidence
+- Yellow matchups: Standard expectations, check other factors
+- Red matchups: Consider alternatives, lower expectations
+
+### For ROS Planning
+
+- Target players with green ROS schedules for trades
+- Avoid acquiring players with brutal upcoming schedules
+- Use for waiver wire prioritization
+
+### Context Matters
+
+- SOS is one factor among many (injury, weather, game script)
+- Combine with player talent evaluation and opportunity metrics
+- Historical performance still trumps matchup in most cases
+
+-----
+
+*Last Updated: August 21, 2025*  
+*Questions? Contact the fantasy team or file an issue in the repo.*
