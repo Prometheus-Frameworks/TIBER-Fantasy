@@ -1,0 +1,19 @@
+{
+  "season": 2025,
+  "position": "RB",
+  "defense_dvp": [
+    {"week": 1, "def_team": "ARI", "fp_allowed": 24.1},
+    {"week": 1, "def_team": "TB",  "fp_allowed": 15.0},
+    {"week": 1, "def_team": "NYJ", "fp_allowed": 12.3},
+    {"week": 1, "def_team": "CAR", "fp_allowed": 21.0},
+    {"week": 1, "def_team": "CHI", "fp_allowed": 18.2}
+  ],
+  "schedule": [
+    {"week": 1, "home": "SF", "away": "ARI"},
+    {"week": 1, "home": "TB", "away": "ATL"},
+    {"week": 1, "home": "NYJ","away": "BUF"},
+    {"week": 1, "home": "CAR","away": "NO"},
+    {"week": 1, "home": "CHI","away": "GB"},
+    {"week": 2, "home": "SF", "away": "TB"}
+  ]
+}

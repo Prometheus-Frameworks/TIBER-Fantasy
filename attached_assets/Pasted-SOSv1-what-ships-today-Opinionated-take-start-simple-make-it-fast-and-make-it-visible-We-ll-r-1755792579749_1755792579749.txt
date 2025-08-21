@@ -1,0 +1,386 @@
+SOSv1 — what ships today
+
+Opinionated take: start simple, make it fast, and make it visible. We’ll roll v1 off fantasy points allowed (FPA) with a light recency bump. Then v2+ folds in the fun stuff (EPA, pace, red‑zone, injuries).
+
+Scope (v1)
+	•	Positions: RB first (fastest win), scaffold QB/WR/TE.
+	•	Views: Weekly SOS + ROS SOS per team.
+	•	Data: a tiny seed (so the page renders now), then swap in real pipeline.
+
+⸻
+
+File map (no surprises)
+
+Backend (Node/TS)
+	•	server/src/modules/sos/sos.types.ts
+	•	server/src/modules/sos/sos.service.ts
+	•	server/src/modules/sos/sos.controller.ts
+	•	server/src/modules/sos/sos.router.ts
+	•	server/src/modules/sos/sos.seed.json  (tiny test data so UI isn’t blank)
+	•	server/src/db/migrations/20250821_add_sos_tables.sql
+
+Frontend (React/TS)
+	•	web/src/pages/SOSPage.tsx
+	•	web/src/components/sos/SOSTable.tsx
+	•	web/src/components/sos/SOSLegend.tsx
+
+Cron (optional, stub)
+	•	server/src/jobs/sos.refresh.ts
+
+⸻
+
+DB schema (Postgres)
+
+Drop this into the migration file:
+
+-- 20250821_add_sos_tables.sql
+CREATE TABLE IF NOT EXISTS defense_dvp (
+  id SERIAL PRIMARY KEY,
+  season SMALLINT NOT NULL,
+  week SMALLINT NOT NULL,
+  def_team TEXT NOT NULL,          -- defense (opponent)
+  position TEXT NOT NULL,          -- 'RB','WR','QB','TE'
+  fp_allowed NUMERIC NOT NULL,     -- per game
+  yds_per_att NUMERIC,             -- optional for v2
+  rz_td_rate NUMERIC,              -- optional for v2
+  inj_adj NUMERIC DEFAULT 0,       -- optional
+  UNIQUE(season, week, def_team, position)
+);
+
+CREATE TABLE IF NOT EXISTS schedule (
+  id SERIAL PRIMARY KEY,
+  season SMALLINT NOT NULL,
+  week SMALLINT NOT NULL,
+  home TEXT NOT NULL,
+  away TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sos_scores (
+  id SERIAL PRIMARY KEY,
+  season SMALLINT NOT NULL,
+  week SMALLINT NOT NULL,
+  team TEXT NOT NULL,              -- offense team
+  opponent TEXT NOT NULL,          -- defense team
+  position TEXT NOT NULL,
+  sos_score NUMERIC NOT NULL,      -- 0-100 (higher = easier)
+  tier TEXT NOT NULL,              -- 'green','yellow','red'
+  UNIQUE(season, week, team, position)
+);
+
+
+⸻
+
+Scoring (v1 — brutally clear)
+
+We flip “points allowed = easier” into a 0–100 index with recency:
+	•	fpa_recent = 0.6 * avg(last 4 wks) + 0.4 * season_avg
+	•	Normalize per position by percentile:
+ease = 100 * CDF(fpa_recent)  (worst defenses vs RBs ~ 90–100, brutal units ~ 0–10)
+	•	Tiers:
+	•	green: ease >= 67
+	•	yellow: 33 <= ease < 67
+	•	red: ease < 33
+
+ROS for a team = mean of next N weeks (default 5) of ease vs listed opponents.
+
+⸻
+
+Seed data (renders now)
+
+server/src/modules/sos/sos.seed.json
+
+{
+  "season": 2025,
+  "position": "RB",
+  "defense_dvp": [
+    {"week": 1, "def_team": "ARI", "fp_allowed": 24.1},
+    {"week": 1, "def_team": "TB",  "fp_allowed": 15.0},
+    {"week": 1, "def_team": "NYJ", "fp_allowed": 12.3},
+    {"week": 1, "def_team": "CAR", "fp_allowed": 21.0},
+    {"week": 1, "def_team": "CHI", "fp_allowed": 18.2}
+  ],
+  "schedule": [
+    {"week": 1, "home": "SF", "away": "ARI"},
+    {"week": 1, "home": "TB", "away": "ATL"},
+    {"week": 1, "home": "NYJ","away": "BUF"},
+    {"week": 1, "home": "CAR","away": "NO"},
+    {"week": 1, "home": "CHI","away": "GB"},
+    {"week": 2, "home": "SF", "away": "TB"}
+  ]
+}
+
+
+⸻
+
+Backend: types + service + router
+
+server/src/modules/sos/sos.types.ts
+
+export type Position = 'RB'|'WR'|'QB'|'TE';
+
+export interface DVPRow {
+  season: number;
+  week: number;
+  def_team: string;
+  position: Position;
+  fp_allowed: number;
+}
+
+export interface ScheduleRow {
+  season: number;
+  week: number;
+  home: string;
+  away: string;
+}
+
+export interface WeeklySOS {
+  team: string;
+  position: Position;
+  week: number;
+  opponent: string;
+  sos_score: number; // 0-100 higher = easier
+  tier: 'green'|'yellow'|'red';
+}
+
+export interface ROSItem {
+  team: string;
+  position: Position;
+  weeks: number[];
+  avg_score: number;
+  tier: 'green'|'yellow'|'red';
+}
+
+server/src/modules/sos/sos.service.ts
+
+import { DVPRow, ScheduleRow, WeeklySOS, ROSItem, Position } from './sos.types';
+import seed from './sos.seed.json';
+
+type Seed = {
+  season: number;
+  position: Position;
+  defense_dvp: {week:number;def_team:string;fp_allowed:number}[];
+  schedule: {week:number;home:string;away:string}[];
+};
+
+const SEASON = (seed as Seed).season;
+
+// --- helpers
+function percentileScale(values: number[], v: number): number {
+  if (values.length === 0) return 50;
+  const sorted = [...values].sort((a,b)=>a-b);
+  const idx = sorted.findIndex(x => x >= v);
+  const rank = idx === -1 ? sorted.length : idx + 1;
+  return Math.round((rank / sorted.length) * 100);
+}
+
+function tier(score: number): 'green'|'yellow'|'red' {
+  if (score >= 67) return 'green';
+  if (score >= 33) return 'yellow';
+  return 'red';
+}
+
+export function computeWeeklySOS(position: Position, week: number): WeeklySOS[] {
+  // Build DVP map by defense
+  const dvp = (seed as Seed).defense_dvp
+    .map(r => ({season: SEASON, week: r.week, def_team: r.def_team, position, fp_allowed: r.fp_allowed})) as DVPRow[];
+
+  // For v1 seed, just use current week fp_allowed as fpa_recent; later we’ll roll last 4/season blend
+  const fpList = dvp.map(d => d.fp_allowed);
+
+  const games = (seed as Seed).schedule.filter(g => g.week === week);
+  const out: WeeklySOS[] = [];
+
+  for (const g of games) {
+    const defForHomeRB = dvp.find(d => d.def_team === g.away); // home RB faces away defense
+    const defForAwayRB = dvp.find(d => d.def_team === g.home); // away RB faces home defense
+
+    if (defForHomeRB) {
+      const s = percentileScale(fpList, defForHomeRB.fp_allowed);
+      out.push({team: g.home, position, week, opponent: g.away, sos_score: s, tier: tier(s)});
+    }
+    if (defForAwayRB) {
+      const s = percentileScale(fpList, defForAwayRB.fp_allowed);
+      out.push({team: g.away, position, week, opponent: g.home, sos_score: s, tier: tier(s)});
+    }
+  }
+  return out;
+}
+
+export function computeROSSOS(position: Position, startWeek = 1, window = 5): ROSItem[] {
+  // naive: compute each week first, then average upcoming N
+  const weeks = Array.from({length: window}, (_,i) => startWeek + i);
+  const byWeek = weeks.map(w => computeWeeklySOS(position, w)).flat();
+
+  const byTeam = new Map<string, WeeklySOS[]>();
+  for (const row of byWeek) {
+    const key = `${row.team}:${position}`;
+    if (!byTeam.has(key)) byTeam.set(key, []);
+    byTeam.get(key)!.push(row);
+  }
+
+  const out: ROSItem[] = [];
+  for (const [key, rows] of byTeam.entries()) {
+    const [team] = key.split(':');
+    const scores = rows.map(r => r.sos_score);
+    if (scores.length === 0) continue;
+    const avg = Math.round(scores.reduce((a,b)=>a+b,0) / scores.length);
+    out.push({ team, position, weeks, avg_score: avg, tier: tier(avg) });
+  }
+  return out;
+}
+
+server/src/modules/sos/sos.controller.ts
+
+import { Request, Response } from 'express';
+import { computeWeeklySOS, computeROSSOS } from './sos.service';
+import { Position } from './sos.types';
+
+export const getWeekly = (req: Request, res: Response) => {
+  const position = (req.query.position as Position) || 'RB';
+  const week = parseInt((req.query.week as string) || '1', 10);
+  const data = computeWeeklySOS(position, week);
+  res.json({ position, week, items: data });
+};
+
+export const getROS = (req: Request, res: Response) => {
+  const position = (req.query.position as Position) || 'RB';
+  const startWeek = parseInt((req.query.startWeek as string) || '1', 10);
+  const window = parseInt((req.query.window as string) || '5', 10);
+  const data = computeROSSOS(position, startWeek, window);
+  res.json({ position, startWeek, window, items: data.sort((a,b)=>b.avg_score-a.avg_score) });
+};
+
+server/src/modules/sos/sos.router.ts
+
+import { Router } from 'express';
+import { getWeekly, getROS } from './sos.controller';
+
+const router = Router();
+router.get('/weekly', getWeekly); // /api/sos/weekly?position=RB&week=1
+router.get('/ros', getROS);       // /api/sos/ros?position=RB&startWeek=1&window=5
+export default router;
+
+Wire it up in your API index (where you mount other routers):
+
+// server/src/api.ts
+import sosRouter from './modules/sos/sos.router';
+app.use('/api/sos', sosRouter);
+
+
+⸻
+
+Frontend: page + table (Tailwind/shadcn)
+
+web/src/pages/SOSPage.tsx
+
+import { useEffect, useState } from 'react';
+import SOSTable from '../components/sos/SOSTable';
+import SOSLegend from '../components/sos/SOSLegend';
+
+type WeeklyItem = { team:string; position:string; week:number; opponent:string; sos_score:number; tier:'green'|'yellow'|'red' };
+
+export default function SOSPage() {
+  const [position, setPosition] = useState<'RB'|'WR'|'QB'|'TE'>('RB');
+  const [week, setWeek] = useState<number>(1);
+  const [items, setItems] = useState<WeeklyItem[]>([]);
+
+  useEffect(() => {
+    fetch(`/api/sos/weekly?position=${position}&week=${week}`)
+      .then(r => r.json())
+      .then(d => setItems(d.items || []))
+      .catch(() => setItems([]));
+  }, [position, week]);
+
+  return (
+    <div className="mx-auto max-w-5xl p-6">
+      <h1 className="text-2xl font-bold mb-4">Strength of Schedule (Weekly)</h1>
+      <div className="flex gap-3 mb-4">
+        <select className="border rounded px-2 py-1" value={position} onChange={e => setPosition(e.target.value as any)}>
+          <option>RB</option><option>WR</option><option>QB</option><option>TE</option>
+        </select>
+        <input className="border rounded px-2 py-1 w-24" type="number" value={week} min={1} max={18} onChange={e => setWeek(parseInt(e.target.value || '1',10))} />
+      </div>
+      <SOSLegend />
+      <SOSTable items={items} />
+    </div>
+  );
+}
+
+web/src/components/sos/SOSTable.tsx
+
+type Props = { items: {team:string;opponent:string;sos_score:number;tier:'green'|'yellow'|'red'}[] };
+
+export default function SOSTable({items}: Props) {
+  const cls = (t:'green'|'yellow'|'red') =>
+    t==='green' ? 'bg-green-100 text-green-900' :
+    t==='yellow' ? 'bg-yellow-100 text-yellow-900' :
+    'bg-red-100 text-red-900';
+
+  return (
+    <table className="w-full border rounded overflow-hidden">
+      <thead>
+        <tr className="bg-gray-50 text-left">
+          <th className="p-2">Team</th>
+          <th className="p-2">Opponent</th>
+          <th className="p-2">Ease</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((r,i)=>(
+          <tr key={i} className="border-t">
+            <td className="p-2 font-medium">{r.team}</td>
+            <td className="p-2">{r.opponent}</td>
+            <td className={`p-2 font-semibold text-center ${cls(r.tier)}`}>{r.sos_score}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+web/src/components/sos/SOSLegend.tsx
+
+export default function SOSLegend(){
+  return (
+    <div className="mb-3 text-sm text-gray-600">
+      <span className="inline-block px-2 py-1 mr-2 rounded bg-green-100 text-green-900">Green ≥ 67 (easy)</span>
+      <span className="inline-block px-2 py-1 mr-2 rounded bg-yellow-100 text-yellow-900">Yellow 33–66 (neutral)</span>
+      <span className="inline-block px-2 py-1 rounded bg-red-100 text-red-900">Red &lt; 33 (tough)</span>
+    </div>
+  );
+}
+
+Route: add /sos pointing to SOSPage.
+
+⸻
+
+v2+ roadmap (fast follow)
+	•	Recency real: 0.6 * last‑4 FPA + 0.3 * season FPA + 0.1 * prior‑season baseline.
+	•	Context: pace (plays per game), rush/pass rate over expected, red‑zone TD% allowed, explosive play rate.
+	•	Injury toggle: lower weight when major defenders return (simple depth‑chart flag).
+	•	Home/away tweak: ±2–3 points.
+	•	Per‑player view: on a player page, show next 5 opponents with color bars.
+
+⸻
+
+Agent split (so everyone eats)
+	•	Tiber (impl):
+	1.	Create files above verbatim and mount /api/sos.
+	2.	Add /sos route and components.
+	3.	Seed the page with sos.seed.json so it renders immediately.
+	•	Grok (data pipes):
+	•	Build a script to ingest weekly FPA vs position into defense_dvp from your existing sources (nfl-data-py or the logs you already store). Output CSV → DB.
+	•	Compute last‑4 rolling averages per defense/position.
+	•	DeepSeek (R&D):
+	•	Prototype v2 scoring: add pace, EPA/play allowed, RZ TD rate. Return a single ease_0_100 with feature weights it can justify.
+	•	Claude (QA + docs):
+	•	Write a one‑pager “How SOS works” and test edge cases (missing weeks, bye weeks, new defenses).
+
+⸻
+
+Quick smoke test (how you know it works)
+	•	GET /api/sos/weekly?position=RB&week=1 → returns ~10–20 rows from seed.
+	•	/sos shows a table with colored scores and no empty state.
+	•	Change week to 2 → still renders (we seeded SF–TB).
+
+⸻
