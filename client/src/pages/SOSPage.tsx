@@ -15,17 +15,18 @@ type WeeklyItem = {
 export default function SOSPage() {
   const [position, setPosition] = useState<'RB'|'WR'|'QB'|'TE'>('RB');
   const [week, setWeek] = useState<number>(1);
+  const [season, setSeason] = useState<number>(2024);
   const [mode, setMode] = useState<'fpa'|'ctx'>('fpa');
   const [debug, setDebug] = useState<boolean>(false);
   const [items, setItems] = useState<WeeklyItem[]>([]);
 
   useEffect(() => {
-    const url = `/api/sos/weekly?position=${position}&week=${week}&mode=${mode}${debug ? '&debug=1' : ''}`;
+    const url = `/api/sos/weekly?position=${position}&week=${week}&season=${season}&mode=${mode}${debug ? '&debug=1' : ''}`;
     fetch(url)
       .then(r => r.json())
       .then(d => setItems(d.items || []))
       .catch(() => setItems([]));
-  }, [position, week, mode, debug]);
+  }, [position, week, season, mode, debug]);
 
   return (
     <div className="mx-auto max-w-5xl p-6">
@@ -52,10 +53,14 @@ export default function SOSPage() {
         </div>
       </div>
       <div className="flex gap-3 mb-4 items-center">
+        <select className="border rounded px-2 py-1" value={season} onChange={e => setSeason(parseInt(e.target.value))}>
+          <option value={2024}>2024 (full)</option>
+          <option value={2025}>2025 (live)</option>
+        </select>
         <select className="border rounded px-2 py-1" value={position} onChange={e => setPosition(e.target.value as any)}>
           <option>RB</option><option>WR</option><option>QB</option><option>TE</option>
         </select>
-        <input className="border rounded px-2 py-1 w-24" type="number" value={week} min={1} max={18} onChange={e => setWeek(parseInt(e.target.value || '1',10))} />
+        <input className="border rounded px-2 py-1 w-24" type="number" value={week} min={1} max={season === 2024 ? 17 : 18} onChange={e => setWeek(parseInt(e.target.value || '1',10))} />
         <select className="border rounded px-2 py-1" value={mode} onChange={e => setMode(e.target.value as any)}>
           <option value="fpa">FPA (v1)</option>
           <option value="ctx">Contextual (v2)</option>
