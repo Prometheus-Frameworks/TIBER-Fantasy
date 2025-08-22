@@ -3756,6 +3756,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register article routes
   app.use('/api/articles', articleRoutes);
 
+  // 2024 Stats routes
+  const { default: stats2024Routes } = await import('./routes/stats2024Routes');
+  app.use('/api/stats/2024', stats2024Routes);
+
   const httpServer = createServer(app);
   return httpServer;
 }

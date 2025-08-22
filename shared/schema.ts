@@ -909,9 +909,73 @@ export type InsertSchedule = typeof schedule.$inferInsert;
 export type SOSScore = typeof sosScores.$inferSelect;
 export type InsertSOSScore = typeof sosScores.$inferInsert;
 
+// 2024 Player Season Stats - Complete season data for leaderboards
+export const playerSeason2024 = pgTable("player_season_2024", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id"),
+  playerName: text("player_name").notNull(),
+  position: text("position").notNull(),
+  team: text("team"),
+  games: integer("games"),
+  
+  // Receiving stats
+  targets: integer("targets"),
+  receptions: integer("receptions"), 
+  recYards: integer("rec_yards"),
+  recTds: integer("rec_tds"),
+  routes: integer("routes"),
+  yprr: real("yprr"), // Yards per route run
+  adot: real("adot"), // Average depth of target
+  racr: real("racr"), // Receiver air conversion ratio
+  targetShare: real("target_share"),
+  wopr: real("wopr"), // Weighted opportunity rating
+  
+  // Rushing stats
+  rushAtt: integer("rush_att"),
+  rushYards: integer("rush_yards"),
+  rushTds: integer("rush_tds"),
+  rushYpc: real("rush_ypc"), // Yards per carry
+  rushYacPerAtt: real("rush_yac_per_att"),
+  rushMtf: integer("rush_mtf"), // Missed tackles forced
+  rushExpl10p: real("rush_expl_10p"), // Explosive run rate (10+ yards)
+  
+  // QB passing stats
+  cmp: integer("cmp"), // Completions
+  att: integer("att"), // Attempts
+  cmpPct: real("cmp_pct"), // Completion percentage
+  passYards: integer("pass_yards"),
+  passTds: integer("pass_tds"),
+  int: integer("int"), // Interceptions
+  ypa: real("ypa"), // Yards per attempt
+  aypa: real("aypa"), // Air yards per attempt
+  epaPerPlay: real("epa_per_play"), // Expected points added per play
+  
+  // QB rushing stats
+  qbRushYards: integer("qb_rush_yards"),
+  qbRushTds: integer("qb_rush_tds"),
+  
+  // Fantasy points
+  fpts: real("fpts"), // Standard fantasy points
+  fptsPpr: real("fpts_ppr"), // PPR fantasy points
+  
+  // Total TDs (for RB)
+  tdTotal: integer("td_total"),
+  
+  // Metadata
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => ({
+  positionIdx: index("player_season_2024_position_idx").on(table.position),
+  teamIdx: index("player_season_2024_team_idx").on(table.team),
+  uniquePlayer: unique("player_season_2024_unique").on(table.playerName, table.position, table.team),
+}));
+
 export type SOSDashboard = typeof sosDashboards.$inferSelect;
 export type InsertSOSDashboard = typeof sosDashboards.$inferInsert;
 export type SOSWidget = typeof sosWidgets.$inferSelect;
 export type InsertSOSWidget = typeof sosWidgets.$inferInsert;
 export type SOSUserPreferences = typeof sosUserPreferences.$inferSelect;
 export type InsertSOSUserPreferences = typeof sosUserPreferences.$inferInsert;
+
+// 2024 Player Season Types
+export type PlayerSeason2024 = typeof playerSeason2024.$inferSelect;
+export type InsertPlayerSeason2024 = typeof playerSeason2024.$inferInsert;

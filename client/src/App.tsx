@@ -98,6 +98,7 @@ import RookieEvaluator from "@/pages/RookieEvaluator";
 import SignalFlare from "@/pages/SignalFlare";
 import PrometheanVision from "@/pages/PrometheanVision";
 import ResearchAnalysis from "@/pages/ResearchAnalysis";
+import LeadersPage from "@/pages/LeadersPage";
 
 import TiberData from "@/pages/TiberData";
 import TradeAnalyzer from "@/pages/TradeAnalyzer";
@@ -242,6 +243,7 @@ function Router() {
       <Route path="/sos" component={SOSPage} />
       <Route path="/sos-dashboard" component={SOSDashboardPage} />
       <Route path="/sos/docs" component={SOSDocumentationPage} />
+      <Route path="/leaders" component={LeadersPage} />
       <Route path="/signal-flare" component={SignalFlare} />
       <Route path="/promethean-vision" component={PrometheanVision} />
       {/* FantasyProTest route removed - service deprecated */}
