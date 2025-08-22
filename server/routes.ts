@@ -3175,6 +3175,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
 
     console.log('✅ OLC API routes registered');
+    
+    // Start automated player vs defense updates during NFL season
+    if (process.env.NODE_ENV === 'production' || process.env.ENABLE_AUTO_UPDATES === 'true') {
+      try {
+        require('../scripts/schedule_updates.js');
+        console.log('🤖 Automated SOS data updates enabled');
+      } catch (error) {
+        console.warn('⚠️ Could not start automated updates:', (error as Error).message);
+      }
+    }
   } catch (error) {
     console.error('❌ Failed to register OLC routes:', error);
   }
