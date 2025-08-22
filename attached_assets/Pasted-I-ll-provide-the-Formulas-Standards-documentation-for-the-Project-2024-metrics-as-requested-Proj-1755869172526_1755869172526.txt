@@ -1,0 +1,204 @@
+I'll provide the Formulas & Standards documentation for the Project 2024 metrics as requested.
+
+Project 2024 - Metric Formulas & Standards
+
+Overview
+
+This document provides exact formulas, pseudocode, and implementation details for the advanced metrics required for the 2024 season player statistics.
+
+Metric Formulas
+
+AYPA (Adjusted Yards Per Attempt)
+
+Formula: AYPA = (Pass Yards + 20 × Pass TDs - 45 × Interceptions) / Pass Attempts
+
+Pseudocode:
+
+```
+def calculate_aypa(pass_yards, pass_tds, interceptions, pass_attempts):
+    if pass_attempts == 0:
+        return 0
+    return (pass_yards + (20 * pass_tds) - (45 * interceptions)) / pass_attempts
+```
+
+Example:
+
+· Pass Yards: 4200, Pass TDs: 32, INT: 10, Attempts: 550
+· AYPA = (4200 + 20×32 - 45×10) / 550 = (4200 + 640 - 450) / 550 = 4390 / 550 = 7.98
+
+YPRR (Yards Per Route Run)
+
+Formula: YPRR = Receiving Yards / Routes Run
+
+Pseudocode:
+
+```
+def calculate_yprr(receiving_yards, routes_run):
+    if routes_run == 0:
+        return None  # Nullable as routes data may not be available
+    return receiving_yards / routes_run
+```
+
+Example:
+
+· Receiving Yards: 1250, Routes Run: 480
+· YPRR = 1250 / 480 = 2.60
+
+aDOT (Average Depth of Target)
+
+Formula: aDOT = Sum(Depth of Target for each reception) / Receptions
+
+Pseudocode:
+
+```
+def calculate_adot(depth_of_targets_list):
+    if not depth_of_targets_list or len(depth_of_targets_list) == 0:
+        return None
+    return sum(depth_of_targets_list) / len(depth_of_targets_list)
+```
+
+Example:
+
+· Target depths: [12, 8, 15, 5, 20] yards
+· aDOT = (12+8+15+5+20)/5 = 60/5 = 12.0 yards
+
+RACR (Receiver Air Conversion Ratio)
+
+Formula: RACR = Receiving Yards / Total Air Yards
+
+Pseudocode:
+
+```
+def calculate_racr(receiving_yards, total_air_yards):
+    if total_air_yards == 0:
+        return None
+    return receiving_yards / total_air_yards
+```
+
+Example:
+
+· Receiving Yards: 850, Total Air Yards: 1100
+· RACR = 850 / 1100 = 0.77
+
+WOPR (Weighted Opportunity Rating)
+
+Formula: WOPR = 1.5 × Target Share + 0.7 × Air Yards Share
+
+Pseudocode:
+
+```
+def calculate_wopr(target_share, air_yards_share):
+    return (1.5 * target_share) + (0.7 * air_yards_share)
+```
+
+Example:
+
+· Target Share: 0.28 (28%), Air Yards Share: 0.32 (32%)
+· WOPR = (1.5 × 0.28) + (0.7 × 0.32) = 0.42 + 0.224 = 0.644
+
+rush_expl_10p (Rush Explosiveness - 10+ yard runs)
+
+Formula: rush_expl_10p = (Rushes of 10+ yards) / Total Rushing Attempts
+
+Pseudocode:
+
+```
+def calculate_rush_expl_10p(explosive_rushes, total_rushes):
+    if total_rushes == 0:
+        return None
+    return explosive_rushes / total_rushes
+```
+
+Example:
+
+· 10+ yard rushes: 24, Total rushes: 240
+· rush_expl_10p = 24 / 240 = 0.10 (10%)
+
+Target Share
+
+Formula: Target Share = Player Targets / Team Pass Attempts
+
+Pseudocode:
+
+```
+def calculate_target_share(player_targets, team_pass_attempts):
+    if team_pass_attempts == 0:
+        return None
+    return player_targets / team_pass_attempts
+```
+
+Example:
+
+· Player Targets: 120, Team Pass Attempts: 560
+· Target Share = 120 / 560 = 0.214 (21.4%)
+
+Data Dependencies
+
+Weekly Data Required (nfl_data_py weekly)
+
+· Pass Attempts (for Target Share)
+· Team Pass Attempts (for Target Share)
+· Routes Run (for YPRR)
+
+Play-by-Play Data Required
+
+· Depth of Target (for aDOT)
+· Air Yards (for RACR and WOPR)
+· Air Yards Share (for WOPR)
+· EPA (for EPA per play)
+· Rush Yards Beyond Expected (for rush_yac_per_att)
+· Missed Tackles Forced (for rush_mtf)
+· Explosive Runs (10+ yards) (for rush_expl_10p)
+
+Implementation Notes
+
+1. Division by Zero Protection: All formulas should include guards against division by zero, returning NULL/None when denominators are zero.
+2. Data Availability: Some metrics require play-by-play data which may not be available through basic seasonal stats. These should be marked as nullable in the schema.
+3. Position-Specific Calculations:
+   · YPRR, RACR, WOPR: WR/TE only
+   · rush_expl_10p, rush_yac_per_att, rush_mtf: RB only
+   · AYPA, EPA per play: QB only
+4. Data Sources:
+   · Basic stats: nfl_data_py seasonal data
+   · Advanced metrics: nfl_data_py play-by-play data (if available) or specialized sources
+5. Rounding: Consider rounding to 2 decimal places for public display while maintaining full precision for calculations.
+
+Worked Examples
+
+Example 1: WR Performance
+
+· Receiving Yards: 1240
+· Routes Run: 512
+· Targets: 145
+· Team Pass Attempts: 580
+· Total Air Yards: 1680
+· Air Yards Share: 0.31
+
+Calculations:
+
+· YPRR = 1240 / 512 = 2.42
+· Target Share = 145 / 580 = 0.25
+· RACR = 1240 / 1680 = 0.74
+· WOPR = (1.5 × 0.25) + (0.7 × 0.31) = 0.375 + 0.217 = 0.592
+
+Example 2: QB Performance
+
+· Pass Yards: 4450
+· Pass TDs: 34
+· INT: 12
+· Attempts: 580
+
+Calculations:
+
+· AYPA = (4450 + 20×34 - 45×12) / 580 = (4450 + 680 - 540) / 580 = 4590 / 580 = 7.91
+
+Example 3: RB Performance
+
+· Total Rushes: 280
+· 10+ Yard Rushes: 32
+
+Calculations:
+
+· rush_expl_10p = 32 / 280 = 0.114 (11.4%)
+
+This documentation provides the foundation for consistent calculation of advanced metrics across the Project 2024 implementation.

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, real, boolean, timestamp, varchar, jsonb, unique, pgEnum, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, real, boolean, timestamp, varchar, jsonb, unique, pgEnum, uniqueIndex, index, smallint } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -976,6 +976,34 @@ export type InsertSOSWidget = typeof sosWidgets.$inferInsert;
 export type SOSUserPreferences = typeof sosUserPreferences.$inferSelect;
 export type InsertSOSUserPreferences = typeof sosUserPreferences.$inferInsert;
 
+export const playerAdvanced2024 = pgTable("player_advanced_2024", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id"),
+  playerName: text("player_name"),
+  team: text("team"),
+  position: text("position"),
+  games: smallint("games"),
+  
+  // WR/TE advanced metrics
+  adot: real("adot"), // Average depth of target
+  yprr: real("yprr"), // Yards per route run (null in v1.5)
+  racr: real("racr"), // Receiver air conversion ratio
+  targetShare: real("target_share"), // Target share
+  wopr: real("wopr"), // Weighted opportunity rating
+  
+  // RB advanced metrics
+  rushExpl10p: real("rush_expl_10p"), // Explosive rush percentage (10+ yards)
+  
+  // QB advanced metrics  
+  aypa: real("aypa"), // Adjusted yards per attempt
+  epaPerPlay: real("epa_per_play") // EPA per play
+}, (table) => ({
+  playerIdIdx: index("player_advanced_2024_player_id_idx").on(table.playerId),
+  positionIdx: index("player_advanced_2024_position_idx").on(table.position),
+}));
+
 // 2024 Player Season Types
 export type PlayerSeason2024 = typeof playerSeason2024.$inferSelect;
 export type InsertPlayerSeason2024 = typeof playerSeason2024.$inferInsert;
+export type PlayerAdvanced2024 = typeof playerAdvanced2024.$inferSelect;
+export type InsertPlayerAdvanced2024 = typeof playerAdvanced2024.$inferInsert;

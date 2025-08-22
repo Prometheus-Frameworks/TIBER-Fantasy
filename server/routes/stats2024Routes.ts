@@ -1,8 +1,8 @@
 import express from 'express';
 import { db } from '../db';
-import { playerSeason2024 } from '@shared/schema';
+import { playerSeason2024, playerAdvanced2024 } from '@shared/schema';
 import { eq, desc, asc, and, gte, sql } from 'drizzle-orm';
-import type { PlayerSeason2024 } from '@shared/schema';
+import type { PlayerSeason2024, PlayerAdvanced2024 } from '@shared/schema';
 
 const router = express.Router();
 
@@ -40,6 +40,11 @@ const METRIC_TO_COLUMN = {
   'qb_rush_tds': 'qbRushTds',
   'routes': 'routes'
 };
+
+// Advanced metrics that come from the playerAdvanced2024 table
+const ADVANCED_METRICS = new Set([
+  'adot', 'yprr', 'racr', 'target_share', 'wopr', 'rush_expl_10p'
+]);
 
 // v1 Metric Whitelist - Live metrics only (enforced in API)
 const METRICS_V1 = {
@@ -143,6 +148,90 @@ router.get('/leaderboard', async (req, res) => {
   } catch (error) {
     console.error('Leaderboard API Error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/stats/2024/leaderboard-advanced - Support for advanced metrics with joins
+router.get('/leaderboard-advanced', async (req, res) => {
+  try {
+    const {
+      position = 'RB',
+      metric = 'fpts_ppr',
+      limit = 50,
+      dir = 'desc',
+      min_games = DEFAULT_THRESHOLDS.min_games
+    } = req.query;
+
+    // Validate position
+    if (!['RB', 'WR', 'TE', 'QB'].includes(position as string)) {
+      return res.status(400).json({ error: 'Invalid position. Must be RB, WR, TE, or QB' });
+    }
+
+    // Check if this is an advanced metric that requires joining
+    const isAdvancedMetric = ADVANCED_METRICS.has(metric as string);
+    
+    if (isAdvancedMetric) {
+      // Query from advanced table for PBP-derived metrics
+      const results = await db.execute(sql`
+        SELECT 
+          player_id,
+          player_name,
+          team,
+          position,
+          games,
+          adot, yprr, racr, target_share, wopr, rush_expl_10p, aypa, epa_per_play
+        FROM player_advanced_2024
+        WHERE position = ${position}
+          AND games >= ${parseInt(min_games as string)}
+          AND ${sql.identifier(metric)} IS NOT NULL
+        ORDER BY ${sql.identifier(metric)} ${sql.raw(dir === 'asc' ? 'ASC' : 'DESC')}
+        LIMIT ${parseInt(limit as string)}
+      `);
+
+      res.json({
+        success: true,
+        data: results,
+        mode: 'advanced_pbp_derived',
+        source_table: 'player_advanced_2024',
+        filters: {
+          position,
+          metric,
+          limit: parseInt(limit as string),
+          direction: dir,
+          min_games: parseInt(min_games as string)
+        },
+        count: results.length
+      });
+
+    } else {
+      // Regular query for non-advanced metrics (fallback to original endpoint logic)
+      const results = await db.execute(sql`
+        SELECT * FROM player_season_2024 
+        WHERE position = ${position}
+          AND games >= ${parseInt(min_games as string)}
+          AND ${sql.identifier(metric)} IS NOT NULL
+        ORDER BY ${sql.identifier(metric)} ${sql.raw(dir === 'asc' ? 'ASC' : 'DESC')}
+        LIMIT ${parseInt(limit as string)}
+      `);
+
+      res.json({
+        success: true,
+        data: results,
+        mode: 'seasonal_only',
+        filters: {
+          position,
+          metric,
+          limit: parseInt(limit as string),
+          direction: dir,
+          min_games: parseInt(min_games as string)
+        },
+        count: results.length
+      });
+    }
+
+  } catch (error) {
+    console.error('Advanced Leaderboard API Error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
