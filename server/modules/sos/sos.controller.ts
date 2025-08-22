@@ -18,9 +18,10 @@ export const getWeekly = async (req: Request, res: Response) => {
     const mode = (rawMode === 'fpa' || rawMode === 'ctx') ? rawMode as Mode : 'fpa';
     const weights = normalizeWeights(parseWeights(req.query.weights as string | undefined));
     const debug = req.query.debug === '1';
+    const samples = req.query.samples === '1' || req.query.samples === 'true';
     
-    const data = await computeWeeklySOSv2(position, week, season, mode, weights, debug);
-    res.json({ position, week, season, mode, weights, debug, items: data });
+    const data = await computeWeeklySOSv2(position, week, season, mode, weights, debug, samples);
+    res.json({ position, week, season, mode, weights, debug, samples, items: data });
   } catch (error) {
     console.error('❌ SOS Weekly error:', error);
     res.status(500).json({ error: 'Failed to compute weekly SOS' });
@@ -49,7 +50,7 @@ export const getROS = async (req: Request, res: Response) => {
     const weeks = Array.from({length: window}, (_,i)=> startWeek + i);
     const all:any[] = [];
     for (const w of weeks) {
-      const wk = await computeWeeklySOSv2(position, w, season, mode, weights, debug);
+      const wk = await computeWeeklySOSv2(position, w, season, mode, weights, debug, false);
       all.push(...wk);
     }
     const byTeam = new Map<string, any[]>();

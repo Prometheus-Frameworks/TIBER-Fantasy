@@ -25,7 +25,7 @@ export default function SOSPage() {
   const [items, setItems] = useState<WeeklyItem[]>([]);
 
   useEffect(() => {
-    const url = `/api/sos/weekly?position=${position}&week=${week}&season=${season}&mode=${mode}${debug ? '&debug=1' : ''}`;
+    const url = `/api/sos/weekly?position=${position}&week=${week}&season=${season}&mode=${mode}${debug ? '&debug=1' : ''}&samples=1`;
     fetch(url)
       .then(r => r.json())
       .then(d => setItems(d.items || []))
@@ -120,7 +120,7 @@ export default function SOSPage() {
       <SOSLegend />
       
       {view === "table" ? (
-        <SOSTable items={items} debug={debug} />
+        <SOSTable items={items} debug={debug} position={position} />
       ) : (
         <SOSBarChart items={items.map((it: any) => ({
           team: it.team,

@@ -20,6 +20,12 @@ export interface ScheduleRow {
   away: string;
 }
 
+export interface PlayerSample {
+  name: string;
+  team: string;
+  fpts: number;
+}
+
 export interface WeeklySOS {
   team: string;
   position: Position;
@@ -27,6 +33,10 @@ export interface WeeklySOS {
   opponent: string;
   sos_score: number; // 0-100 higher = easier
   tier: 'green'|'yellow'|'red';
+  samples?: {
+    total: number;
+    players: PlayerSample[];
+  };
 }
 
 export interface ROSItem {
@@ -46,6 +56,53 @@ function tier(score: number): 'green'|'yellow'|'red' {
   if (score >= 67) return 'green';
   if (score >= 33) return 'yellow';
   return 'red';
+}
+
+/** Get position-specific sample count */
+function getSampleCount(position: Position): number {
+  switch (position) {
+    case 'RB': return 2;
+    case 'WR': return 3;
+    case 'TE': return 1;
+    case 'QB': return 1;
+    default: return 2;
+  }
+}
+
+/** Fetch player samples from player_vs_defense table */
+async function getPlayerSamples(season: number, week: number, defTeam: string, position: Position): Promise<{total: number; players: PlayerSample[]}> {
+  try {
+    const sampleCount = getSampleCount(position);
+    
+    // Get top players query
+    const playersResult = await db.execute(`
+      SELECT player_name as name, player_team as team, fpts
+      FROM player_vs_defense
+      WHERE season = $1 AND week = $2 AND def_team = $3 AND position = $4
+      ORDER BY fpts DESC
+      LIMIT $5
+    `, [season, week, defTeam, position, sampleCount]);
+
+    // Get total points query  
+    const totalResult = await db.execute(`
+      SELECT COALESCE(SUM(fpts), 0) as total_fpts
+      FROM player_vs_defense
+      WHERE season = $1 AND week = $2 AND def_team = $3 AND position = $4
+    `, [season, week, defTeam, position]);
+
+    const players: PlayerSample[] = playersResult.rows.map((row: any) => ({
+      name: row.name,
+      team: row.team,
+      fpts: Number(row.fpts)
+    }));
+
+    const total = Number((totalResult.rows[0] as any)?.total_fpts || 0);
+
+    return { total, players };
+  } catch (error) {
+    console.error('Error fetching player samples:', error);
+    return { total: 0, players: [] };
+  }
 }
 
 /** Percentile scaling 0..100 */
@@ -339,7 +396,8 @@ export async function computeWeeklySOSv2(
   season = DEFAULT_SEASON,
   mode: Mode = 'fpa',
   weights: Weights = { w_fpa:0.55, w_epa:0.20, w_pace:0.15, w_rz:0.10 },
-  debug = false
+  debug = false,
+  includeSamples = false
 ) {
   // Normalize weights to ensure they sum to 1.0
   weights = normalizeWeights(weights);
@@ -401,15 +459,21 @@ export async function computeWeeklySOSv2(
 
       if (mode === 'fpa') {
         const score = fpaScore;
-        out.push({ 
+        const row: WeeklySOS = { 
           team: p.team, 
           opponent: p.opp, 
           position, 
           week, 
-          season,
           sos_score: score, 
           tier: tier(score)
-        });
+        };
+        
+        // Add samples if requested
+        if (includeSamples) {
+          row.samples = await getPlayerSamples(season, week, p.opp, position);
+        }
+        
+        out.push(row);
         continue;
       }
 
@@ -425,22 +489,30 @@ export async function computeWeeklySOSv2(
       if (Number.isFinite(Number(vAdj))) score += Number(vAdj) * 2;
       score = Math.round(Math.max(0, Math.min(100, score)));
 
-      const row:any = { 
+      const row: WeeklySOS = { 
         team: p.team, 
         opponent: p.opp, 
         position, 
         week, 
-        season, 
         sos_score: score, 
         tier: tier(score) 
       };
-      if (debug) row.components = {
-        FPA: fpaScore,
-        EPA: epaScore,
-        Pace: paceScore,
-        RZ: rzScore,
-        Venue: Number(((Number(vAdj)||0) * 2).toFixed(2))
-      };
+      
+      if (debug) {
+        (row as any).components = {
+          FPA: fpaScore,
+          EPA: epaScore,
+          Pace: paceScore,
+          RZ: rzScore,
+          Venue: Number(((Number(vAdj)||0) * 2).toFixed(2))
+        };
+      }
+      
+      // Add samples if requested
+      if (includeSamples) {
+        row.samples = await getPlayerSamples(season, week, p.opp, position);
+      }
+      
       out.push(row);
     }
   }
