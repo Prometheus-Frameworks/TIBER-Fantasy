@@ -6,7 +6,42 @@ import type { PlayerSeason2024 } from '@shared/schema';
 
 const router = express.Router();
 
-// Position-specific metric whitelists
+// Map API metric names to Drizzle schema property names
+const METRIC_TO_COLUMN = {
+  'rush_att': 'rushAtt',
+  'rush_yards': 'rushYards',
+  'rush_tds': 'rushTds', 
+  'rush_ypc': 'rushYpc',
+  'rush_yac_per_att': 'rushYacPerAtt',
+  'rush_mtf': 'rushMtf',
+  'rush_expl_10p': 'rushExpl10p',
+  'targets': 'targets',
+  'receptions': 'receptions',
+  'rec_yards': 'recYards',
+  'rec_tds': 'recTds',
+  'yprr': 'yprr',
+  'adot': 'adot',
+  'racr': 'racr',
+  'target_share': 'targetShare',
+  'wopr': 'wopr',
+  'td_total': 'tdTotal',
+  'fpts': 'fpts',
+  'fpts_ppr': 'fptsPpr',
+  'cmp': 'cmp',
+  'att': 'att', 
+  'cmp_pct': 'cmpPct',
+  'pass_yards': 'passYards',
+  'pass_tds': 'passTds',
+  'int': 'int',
+  'ypa': 'ypa',
+  'aypa': 'aypa',
+  'epa_per_play': 'epaPerPlay',
+  'qb_rush_yards': 'qbRushYards',
+  'qb_rush_tds': 'qbRushTds',
+  'routes': 'routes'
+};
+
+// Position-specific metric whitelists (using API names)
 const POSITION_METRICS = {
   RB: [
     'rush_att', 'rush_yards', 'rush_tds', 'rush_ypc', 'rush_yac_per_att', 
@@ -60,42 +95,32 @@ router.get('/leaderboard', async (req, res) => {
       });
     }
 
-    // Build query conditions
+    // Build query conditions - start with position filter only
     const conditions = [eq(playerSeason2024.position, position as string)];
-    
-    // Add minimum games filter
-    if (min_games) {
-      conditions.push(gte(playerSeason2024.games, parseInt(min_games as string)));
-    }
-
-    // Add position-specific thresholds
-    if (position === 'RB' && min_att) {
-      conditions.push(gte(playerSeason2024.rushAtt, parseInt(min_att as string)));
-    }
-    
-    if ((position === 'WR' || position === 'TE') && min_routes) {
-      conditions.push(gte(playerSeason2024.routes, parseInt(min_routes as string)));
-    }
-    
-    if (position === 'QB' && min_att_qb) {
-      conditions.push(gte(playerSeason2024.att, parseInt(min_att_qb as string)));
-    }
 
     // Build order clause
     const sortDirection = dir === 'asc' ? asc : desc;
-    const metricColumn = playerSeason2024[metric as keyof typeof playerSeason2024];
     
-    if (!metricColumn) {
+    // Validate metric and get column name
+    const columnName = METRIC_TO_COLUMN[metric as keyof typeof METRIC_TO_COLUMN];
+    if (!columnName) {
       return res.status(400).json({ error: `Invalid metric: ${metric}` });
     }
+    
+    // Get the correct column from the schema  
+    const metricColumn = playerSeason2024[columnName as keyof typeof playerSeason2024];
+    
+    if (!metricColumn) {
+      return res.status(400).json({ error: `Column not found for metric: ${metric}` });
+    }
 
-    // Execute query
-    const results = await db
-      .select()
-      .from(playerSeason2024)
-      .where(and(...conditions))
-      .orderBy(sortDirection(metricColumn))
-      .limit(parseInt(limit as string));
+    // Execute query with SQL template for debugging
+    const results = await db.execute(sql`
+      SELECT * FROM player_season_2024 
+      WHERE position = ${position}
+      ORDER BY ${sql.identifier(metric)} ${sql.raw(dir === 'asc' ? 'ASC' : 'DESC')}
+      LIMIT ${parseInt(limit as string)}
+    `);
 
     res.json({
       success: true,

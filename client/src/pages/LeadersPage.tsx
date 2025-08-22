@@ -94,7 +94,7 @@ export default function LeadersPage() {
     }
   });
 
-  const players = leaderboardData?.data || [];
+  const players = Array.isArray(leaderboardData?.data) ? leaderboardData.data : [];
   
   // Filter by search term
   const filteredPlayers = players.filter((player: PlayerStat) =>
