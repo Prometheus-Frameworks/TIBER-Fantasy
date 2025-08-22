@@ -1,0 +1,128 @@
+# 🏈 Project 2024 – OTC Player Stats Leaderboards
+
+## Overview
+Project 2024 ingests **full 2024 NFL player data (Weeks 1–17)** into On The Clock’s backend and exposes it through a `/leaders` system for fantasy-first analysis.  
+This dataset powers **2025 player rankings** and establishes a stable, extensible baseline for advanced metrics.
+
+**Contributors:**
+- **Grok** – Data ingestion (seasonal + advanced CSVs)
+- **Kimi** – Metrics catalog (fantasy-first, live vs planned)
+- **Claude** – QA & documentation
+- **Deepseek** – Formulas & standards
+- **Tiber** – Integration & deployment
+
+---
+
+## 📦 Data Ingestion
+
+### Seasonal Data
+- Script: `scripts/ingest_player_season_2024.py`
+- Output: `data/player_season_2024.csv`
+- Includes: FPTS, rushing, receiving, passing stats
+- Nullable: advanced fields (YPRR, rush YAC/att, MTF, etc.)
+
+### Advanced Data
+- Script: `scripts/ingest_player_advanced_2024.py`
+- Output: `data/player_advanced_2024.csv`
+- Includes: aDOT, RACR, WOPR, target share, rush_expl_10p, AYPA, EPA/play
+- YPRR = null (routes not available in public PBP)
+
+---
+
+## 📊 Metrics Catalog (Kimi)
+
+### Running Backs
+- **Live:** rush_ypc, targets, rec_yards, td_total
+- **Planned (NGS/PBP):** rush_yac_per_att, rush_mtf, rush_expl_10p, yprr
+
+### Wide Receivers
+- **Live:** targets, receptions, rec_yards, rec_tds
+- **Planned (PBP):** adot, yprr, racr, target_share, wopr
+
+### Tight Ends
+- **Live:** targets, receptions, rec_yards, rec_tds
+- **Planned (PBP):** yprr, target_share
+
+### Quarterbacks
+- **Live:** cmp_pct, pass_yards, pass_tds, int, ypa, aypa, rush_yards, rush_tds
+- **Planned (PBP):** epa_per_play
+
+---
+
+## 📐 Metric Formulas (Deepseek)
+
+- **AYPA:** `(pass_yards + 20*pass_tds - 45*ints) / att`
+- **YPRR:** `rec_yards / routes_run` (nullable)
+- **aDOT:** `sum(target_depths) / targets`
+- **RACR:** `rec_yards / air_yards`
+- **WOPR:** `1.5*target_share + 0.7*air_yards_share`
+- **rush_expl_10p:** `explosive_rushes / rush_att`
+- **Target Share:** `targets / team_pass_att`
+
+**Notes:**
+- Guard against divide-by-zero
+- Nullable where data missing
+- Round to 2 decimals (UI only)
+
+---
+
+## 🧪 QA Checklist (Claude)
+
+- **API Structure**
+  - `/api/stats/2024/leaderboard`
+  - Params: `position`, `metric`, `limit`, `dir`, thresholds (`min_games`, `min_routes`, etc.)
+  - Whitelist metrics per position
+
+- **Tests**
+  - Invalid params → 400 error
+  - Threshold filters respected
+  - Sorting ASC/DESC stable
+  - Response schema matches spec
+  - Nulls handled gracefully
+
+- **UI**
+  - Tabs: RB/WR/TE/QB
+  - Dropdown: metrics per position
+  - Filters appear only when relevant
+  - Player names + team logos
+  - Shareable URL state
+  - Null = `—`
+
+- **SQL Spot Checks**
+  - YPC = rush_yards / rush_att
+  - CMP% = comp / att * 100
+  - YPA = pass_yards / att
+
+---
+
+## 🚀 Integration Tasks (Tiber)
+
+1. Load CSVs into Postgres
+2. Wire up `/api/stats/2024/leaderboard`
+3. Implement filters, sorting, validation
+4. Build `/leaders` frontend page
+5. Add QOL fixes:
+   - Team logos beside players
+   - Graph toggle (future)
+   - Game log highlights (e.g., RB vs Saints DST, Week 6)
+
+---
+
+## ✅ Definition of Done
+
+- `/leaders` functional for all 4 positions
+- 2024 data (Weeks 1–17) live and queryable
+- Advanced metrics null-safe until PBP/NGS added
+- API validated against QA doc
+- UI clean, logos added, null-safe, shareable
+
+---
+
+## 🔮 Next Steps (Project 2025 V1)
+
+- Expand to **2025 season data** once live
+- Add **routes/YPRR**, **rush YAC/att**, **MTF** from NGS/PBP sources
+- Build **visualizations** (graphs, trend lines)
+- Support **multi-season comparisons**
+
+---
