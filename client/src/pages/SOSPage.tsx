@@ -50,23 +50,59 @@ export default function SOSPage() {
           </a>
         </div>
       </div>
-      <div className="flex gap-3 mb-4 items-center">
-        <select className="border rounded px-2 py-1" value={season} onChange={e => setSeason(parseInt(e.target.value))}>
-          <option value={2024}>2024 (full)</option>
-          <option value={2025}>2025 (live)</option>
-        </select>
-        <select className="border rounded px-2 py-1" value={position} onChange={e => setPosition(e.target.value as any)}>
-          <option>RB</option><option>WR</option><option>QB</option><option>TE</option>
-        </select>
-        <input className="border rounded px-2 py-1 w-24" type="number" value={week} min={1} max={season === 2024 ? 17 : 18} onChange={e => setWeek(parseInt(e.target.value || '1',10))} />
-        <select className="border rounded px-2 py-1" value={mode} onChange={e => setMode(e.target.value as any)}>
-          <option value="fpa">FPA (v1)</option>
-          <option value="ctx">Contextual (v2)</option>
-        </select>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={debug} onChange={e => setDebug(e.target.checked)} />
-          Debug
-        </label>
+      <div className="mb-4">
+        {/* Control Labels */}
+        <div className="flex gap-3 mb-2 text-xs text-slate-500 dark:text-slate-400">
+          <div className="w-24 text-center">
+            <div className="font-semibold">Season</div>
+            <div>Data completeness</div>
+          </div>
+          <div className="w-16 text-center">
+            <div className="font-semibold">Position</div>
+            <div>Skill positions</div>
+          </div>
+          <div className="w-24 text-center">
+            <div className="font-semibold">Week</div>
+            <div>NFL schedule</div>
+          </div>
+          <div className="w-32 text-center">
+            <div className="font-semibold">Analysis Mode</div>
+            <div>Scoring method</div>
+          </div>
+          <div className="w-16 text-center">
+            <div className="font-semibold">Debug</div>
+            <div>Show details</div>
+          </div>
+        </div>
+        
+        {/* Control Descriptions */}
+        <div className="flex gap-3 mb-2 text-xs text-slate-400 dark:text-slate-500">
+          <div className="w-24 text-center">2024: Complete season | 2025: Live updates</div>
+          <div className="w-16 text-center">Fantasy relevant</div>
+          <div className="w-24 text-center">Regular season</div>
+          <div className="w-32 text-center">FPA: Fantasy points allowed | CTX: Advanced metrics</div>
+          <div className="w-16 text-center">Component breakdown</div>
+        </div>
+        
+        {/* Controls */}
+        <div className="flex gap-3 items-center">
+          <select className="border rounded px-2 py-1 w-24" value={season} onChange={e => setSeason(parseInt(e.target.value))}>
+            <option value={2024}>2024 (full)</option>
+            <option value={2025}>2025 (live)</option>
+          </select>
+          <select className="border rounded px-2 py-1 w-16" value={position} onChange={e => setPosition(e.target.value as any)}>
+            <option>RB</option><option>WR</option><option>QB</option><option>TE</option>
+          </select>
+          <input className="border rounded px-2 py-1 w-24" type="number" value={week} min={1} max={season === 2024 ? 17 : 18} onChange={e => setWeek(parseInt(e.target.value || '1',10))} />
+          <select className="border rounded px-2 py-1 w-32" value={mode} onChange={e => setMode(e.target.value as any)}>
+            <option value="fpa">FPA (v1)</option>
+            <option value="ctx">Contextual (v2)</option>
+          </select>
+          <label className="flex items-center gap-2 text-sm w-16">
+            <input type="checkbox" checked={debug} onChange={e => setDebug(e.target.checked)} />
+            Debug
+          </label>
+        </div>
       </div>
       <SOSLegend />
       <SOSTable items={items} debug={debug} />
