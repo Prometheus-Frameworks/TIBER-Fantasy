@@ -107,6 +107,8 @@ async function getSamplePlayersForCompass(position: string, limit: number = 20) 
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve docs folder for static markdown files
+  app.use('/docs', express.static('docs'));
   
   // OTC Signature Protocol - Signal endpoint
   app.get('/api/signal', (req: Request, res: Response) => {
