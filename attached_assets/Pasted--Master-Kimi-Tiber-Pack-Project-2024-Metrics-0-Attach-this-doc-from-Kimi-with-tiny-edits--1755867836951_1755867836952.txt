@@ -1,0 +1,118 @@
+📦 Master Kimi → Tiber Pack (Project 2024 Metrics)
+
+0) Attach this doc from Kimi (with tiny edits)
+
+Edits I applied:
+	•	Clarified sources on PBP-derived stats (marked “NFLGSIS (via PBP)” where team totals/air yards aggregation is needed).
+	•	Clarified QB EPA status: “Live if available (nullable), else Planned (PBP)” so backend can expose it but it may be sparse.
+
+📑 Normalized Catalog (final to send)
+
+RB
+
+Metric	Definition	Source	2024 Range	Why It Matters	Status
+rush_ypc	Rushing yards per carry	NFLGSIS / PFR	3.8–5.5	Core efficiency	Live
+rush_yac_per_att	Yards after contact per rush	NGS (PFF/SIS)	1.2–3.1	Contact balance	Planned (NGS)
+rush_mtf	Missed tackles forced / att	NGS (PFF/SIS)	0.08–0.29	Tackle-breaking/ceiling	Planned (NGS)
+rush_expl_10p	% rushes 10+ yards	NFLGSIS (via PBP)	4%–12%	Home-run threat	Planned (PBP)
+targets	Targets	NFLGSIS	20–100	Receiving role (PPR)	Live
+rec_yards	Receiving yards	NFLGSIS	150–800	3-down value	Live
+yprr	Yards per route run	NFLGSIS/NGS (via PBP routes)	0.8–2.5	Receiving efficiency	Planned (PBP)
+td_total	Rush + Rec TDs	NFLGSIS	5–20	Scoring ceiling	Live
+
+WR
+
+Metric	Definition	Source	Range	Why	Status
+targets	Total targets	NFLGSIS	80–180	Opportunity	Live
+receptions	Total receptions	NFLGSIS	60–130	Volume + catch skill	Live
+rec_yards	Receiving yards	NFLGSIS	800–1800	Production floor	Live
+rec_tds	Receiving TDs	NFLGSIS	3–15	TD role	Live
+adot	Avg depth of target	NFLGSIS (via PBP air-yards)	7.5–15.0	Role profile	Planned (PBP)
+yprr	Yards per route run	NFLGSIS/NGS (via PBP routes)	1.2–3.0	Elite efficiency	Planned (PBP)
+racr	Rec yards / air yards	NFLGSIS (via PBP air-yards)	0.6–1.2	Conversion efficiency	Planned (PBP)
+target_share	Player targets / team targets	NFLGSIS (via PBP team totals)	15%–30%	Alpha indicator	Planned (PBP)
+wopr	Weighted opportunity rating	NFLGSIS (via PBP air-yards & targets)	0.20–0.50	Usage blend	Planned (PBP)
+
+TE
+
+Metric	Definition	Source	Range	Why	Status
+targets	Total targets	NFLGSIS	40–120	Usage	Live
+receptions	Total receptions	NFLGSIS	30–90	Catch efficiency	Live
+rec_yards	Receiving yards	NFLGSIS	300–1000	Relevance threshold	Live
+rec_tds	Receiving TDs	NFLGSIS	2–12	Red-zone role	Live
+yprr	Yards per route run	NFLGSIS/NGS (via PBP routes)	0.8–2.2	Top-5 indicator	Planned (PBP)
+target_share	% of team targets	NFLGSIS (via PBP team totals)	10%–25%	TE1 signal	Planned (PBP)
+
+QB
+
+Metric	Definition	Source	Range	Why	Status
+cmp_pct	Completion %	NFLGSIS	60%–72%	Accuracy floor	Live
+pass_yards	Passing yards	NFLGSIS	3,000–5,000	Volume	Live
+pass_tds	Passing TDs	NFLGSIS	20–40	Scoring	Live
+int	Interceptions	NFLGSIS	5–20	Risk profile	Live
+ypa	Yards per attempt	NFLGSIS	6.5–8.5	Efficiency	Live
+aypa	Adjusted YPA	NFLGSIS	6.0–8.0	TD/INT-adjusted	Live
+epa_per_play	EPA per play	NFLGSIS (seasonal EPA if present) / Planned (PBP)	–0.1–0.3	True impact	Live if available (nullable), else Planned (PBP)
+rush_yards	QB rushing yards	NFLGSIS	0–1,000	Rushing floor	Live
+rush_tds	QB rushing TDs	NFLGSIS	0–12	Cheat code	Live
+
+Cuts (stay out of v1): snap %, time to throw, broken-tackle rate, red-zone targets, contested-catch rate, sack rate, raw air yards (RACR/WOPR supersede), YAC (redundant with YPRR).
+
+⸻
+
+1) Backend — v1 Metric Whitelist (enforced)
+
+Use only Live metrics in the dropdown/api for now:
+
+export const METRICS_V1 = {
+  RB: ['rush_yards','rush_att','rush_ypc','targets','rec_yards','td_total','fpts','fpts_ppr'],
+  WR: ['targets','receptions','rec_yards','rec_tds','fpts','fpts_ppr'],
+  TE: ['targets','receptions','rec_yards','rec_tds','fpts','fpts_ppr'],
+  QB: ['cmp_pct','pass_yards','pass_tds','int','ypa','aypa','qb_rush_yards','qb_rush_tds','fpts','fpts_ppr']
+} as const;
+
+// Advanced metrics we plan to unlock (visible as locked in UI, but not queryable)
+export const METRICS_COMING_SOON = {
+  RB: ['rush_yac_per_att','rush_mtf','rush_expl_10p','yprr'],
+  WR: ['adot','yprr','racr','target_share','wopr'],
+  TE: ['yprr','target_share'],
+  QB: ['epa_per_play'] // allowed to return if populated, but keep OFF dropdown for v1
+} as const;
+
+API guard (controller):
+
+const allowed = METRICS_V1[position as keyof typeof METRICS_V1] ?? [];
+if (!allowed.includes(metric)) {
+  return res.status(400).json({
+    error: 'metric_not_allowed_for_position',
+    position,
+    metric,
+    allowed
+  });
+}
+
+Note on QB epa_per_play: we’ll keep it off the dropdown for v1. If a row has it populated, it will still be returned in the record; just not sortable/selectable yet.
+
+⸻
+
+2) UI — /leaders Dropdown Gating
+	•	Dropdown shows Live metrics only.
+	•	Add a divider “Coming Soon (PBP/NGS)” with disabled items (from METRICS_COMING_SOON[position]), each labeled with a small tag:
+	•	PBP (play-by-play)
+	•	NGS (tracking)
+
+Example (RB dropdown):
+	•	Live: rush_yards, rush_att, rush_ypc, targets, rec_yards, td_total, fpts, fpts_ppr
+	•	Divider
+	•	Coming Soon (PBP/NGS): rush_expl_10p (PBP), yprr (PBP), rush_yac_per_att (NGS), rush_mtf (NGS)
+
+Null rendering: show “—” not 0.
+
+⸻
+
+3) QA Notes (Claude sync)
+	•	Update the QA doc to expect 400 when an advanced metric is manually requested.
+	•	Confirm disabled “Coming Soon” items exist in the dropdown and are unclickable.
+	•	Confirm QB epa_per_play may appear null; not selectable until PBP unlock.
+
+⸻
