@@ -1,0 +1,95 @@
+📦 Grok → Tiber Handoff: Project 2024 (Player Season Data)
+
+Deliverables
+	•	Script: scripts/ingest_player_season_2024.py (below)
+	•	Output: data/player_season_2024.csv (generated when the script runs)
+
+This script:
+	•	Pulls 2024 seasonal player data (QB/RB/WR/TE) via nfl_data_py
+	•	Filters to regular season only
+	•	Safely handles missing passing_epa column
+	•	Computes core derived fields (YPC, CMP%, YPA, AYPA, EPA/play, total TDs)
+	•	Normalizes schema for DB loading
+	•	Outputs a clean CSV with nulls for advanced metrics that need PBP
+
+⸻
+
+Script
+
+# scripts/ingest_player_season_2024.py
+import nfl_data_py as nfl
+import pandas as pd
+import numpy as np
+
+year = 2024
+seasonal_df = nfl.import_seasonal_data([year])
+
+# Regular season only
+if 'season_type' in seasonal_df.columns:
+    seasonal_df = seasonal_df[seasonal_df['season_type'] == 'REG']
+
+# Positions
+seasonal_df = seasonal_df[seasonal_df['position'].isin(['QB','RB','WR','TE'])]
+
+# Games fallback
+if 'games' not in seasonal_df.columns and 'games_played' in seasonal_df.columns:
+    seasonal_df['games'] = seasonal_df['games_played']
+
+# Derived stats
+seasonal_df['cmp_pct'] = np.where(seasonal_df['attempts'] > 0, (seasonal_df['completions']/seasonal_df['attempts'])*100, np.nan)
+seasonal_df['ypa'] = np.where(seasonal_df['attempts'] > 0, seasonal_df['passing_yards']/seasonal_df['attempts'], np.nan)
+seasonal_df['aypa'] = np.where(seasonal_df['attempts'] > 0,
+    (seasonal_df['passing_yards'] + 20*seasonal_df['passing_tds'] - 45*seasonal_df['interceptions'])/seasonal_df['attempts'], np.nan)
+
+if 'passing_epa' not in seasonal_df.columns:
+    seasonal_df['passing_epa'] = np.nan
+seasonal_df['epa_per_play'] = np.where(seasonal_df['attempts'] > 0,
+    seasonal_df['passing_epa']/seasonal_df['attempts'], np.nan)
+
+seasonal_df['rush_ypc'] = np.where(seasonal_df['rush_attempts'] > 0, seasonal_df['rush_yards']/seasonal_df['rush_attempts'], np.nan)
+
+# TD total
+seasonal_df['td_total'] = seasonal_df['rush_tds'] + seasonal_df['receiving_tds']
+
+# QB rush kept separately
+seasonal_df['qb_rush_yards'] = np.where(seasonal_df['position']=='QB', seasonal_df['rush_yards'], np.nan)
+seasonal_df['qb_rush_tds'] = np.where(seasonal_df['position']=='QB', seasonal_df['rush_tds'], np.nan)
+
+# Advanced placeholders
+for col in ['rush_yac_per_att','rush_mtf','rush_expl_10p','yprr','adot','routes','racr','target_share','wopr']:
+    seasonal_df[col] = np.nan
+seasonal_df['epa_per_play'] = np.where(seasonal_df['position']!='QB', np.nan, seasonal_df['epa_per_play'])
+
+# Rename to schema
+rename_map = {
+    'player_id':'player_id','player_name':'player_name','position':'position',
+    'recent_team':'team','games':'games','fantasy_points':'fpts','fantasy_points_ppr':'fpts_ppr',
+    'targets':'targets','receptions':'receptions','receiving_yards':'rec_yards','receiving_tds':'rec_tds',
+    'rush_attempts':'rush_att','rush_yards':'rush_yards','rush_tds':'rush_tds',
+    'completions':'cmp','attempts':'att','passing_yards':'pass_yards',
+    'passing_tds':'pass_tds','interceptions':'int'
+}
+seasonal_df = seasonal_df.rename(columns=rename_map)
+
+schema_columns = [
+    'player_id','player_name','position','team','games','fpts','fpts_ppr',
+    'targets','receptions','rec_yards','rec_tds','routes','yprr','adot','racr','target_share','wopr',
+    'rush_att','rush_yards','rush_tds','rush_ypc','rush_yac_per_att','rush_mtf','rush_expl_10p',
+    'cmp','att','cmp_pct','pass_yards','pass_tds','int','ypa','aypa','epa_per_play',
+    'qb_rush_yards','qb_rush_tds','td_total'
+]
+final_df = seasonal_df.reindex(columns=schema_columns, fill_value=np.nan)
+final_df.to_csv('data/player_season_2024.csv', index=False)
+
+print("2024 player season data ingested and saved to data/player_season_2024.csv")
+
+
+⸻
+
+Tiber Checklist
+	•	Run python scripts/ingest_player_season_2024.py
+	•	Verify data/player_season_2024.csv is created (~700–800 players across 32 teams)
+	•	Load into player_season_2024 table using migration provided in Lamar’s Master Pack
+	•	Confirm leaderboard endpoints query this table
+
+⸻
