@@ -74,21 +74,25 @@ async function getPlayerSamples(season: number, week: number, defTeam: string, p
   try {
     const sampleCount = getSampleCount(position);
     
-    // Get top players query
-    const playersResult = await db.execute(`
+    // Get top players query using template literals for now
+    const playersQuery = `
       SELECT player_name as name, player_team as team, fpts
       FROM player_vs_defense
-      WHERE season = $1 AND week = $2 AND def_team = $3 AND position = $4
+      WHERE season = ${season} AND week = ${week} AND def_team = '${defTeam}' AND position = '${position}'
       ORDER BY fpts DESC
-      LIMIT $5
-    `, [season, week, defTeam, position, sampleCount]);
+      LIMIT ${sampleCount}
+    `;
+    
+    const playersResult = await db.execute(playersQuery);
 
     // Get total points query  
-    const totalResult = await db.execute(`
+    const totalQuery = `
       SELECT COALESCE(SUM(fpts), 0) as total_fpts
       FROM player_vs_defense
-      WHERE season = $1 AND week = $2 AND def_team = $3 AND position = $4
-    `, [season, week, defTeam, position]);
+      WHERE season = ${season} AND week = ${week} AND def_team = '${defTeam}' AND position = '${position}'
+    `;
+    
+    const totalResult = await db.execute(totalQuery);
 
     const players: PlayerSample[] = playersResult.rows.map((row: any) => ({
       name: row.name,
