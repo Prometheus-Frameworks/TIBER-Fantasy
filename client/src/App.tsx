@@ -262,7 +262,7 @@ function AppContent() {
   return (
     <TooltipProvider>
       <Navigation />
-      <main className="mx-auto max-w-6xl px-4 py-3">
+      <main className="mx-auto max-w-6xl px-2 sm:px-4 py-2 sm:py-3">
         <Router />
       </main>
       <Footer />
