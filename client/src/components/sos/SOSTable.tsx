@@ -1,3 +1,6 @@
+import { TeamLogo } from "../TeamLogo";
+import { tierColor } from "../../lib/sosColors";
+
 type Row = {
   team:string;
   opponent:string;
@@ -8,10 +11,7 @@ type Row = {
 type Props = { items: Row[]; debug?: boolean };
 
 export default function SOSTable({items, debug}: Props) {
-  const cls = (t:'green'|'yellow'|'red') =>
-    t==='green' ? 'bg-green-100 text-green-900' :
-    t==='yellow' ? 'bg-yellow-100 text-yellow-900' :
-    'bg-red-100 text-red-900';
+  const cls = (score: number) => tierColor(score);
 
   return (
     <table className="w-full border rounded overflow-hidden">
@@ -25,9 +25,19 @@ export default function SOSTable({items, debug}: Props) {
       <tbody>
         {items.map((r,i)=>(
           <tr key={i} className="border-t">
-            <td className="p-2 font-medium">{r.team}</td>
-            <td className="p-2">{r.opponent}</td>
-            <td className={`p-2 font-semibold text-center ${cls(r.tier)}`}>
+            <td className="p-2 font-medium">
+              <div className="flex items-center gap-2">
+                <TeamLogo team={r.team} size={20} />
+                <span>{r.team}</span>
+              </div>
+            </td>
+            <td className="p-2">
+              <div className="flex items-center gap-2">
+                <TeamLogo team={r.opponent} size={18} />
+                <span>{r.opponent}</span>
+              </div>
+            </td>
+            <td className={`p-2 font-semibold text-center ${cls(r.sos_score)}`}>
               {r.sos_score}
               {debug && r.components && (
                 <div className="text-xs text-gray-600 mt-1">

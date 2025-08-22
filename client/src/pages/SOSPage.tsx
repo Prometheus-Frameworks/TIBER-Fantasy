@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import SOSTable from '../components/sos/SOSTable';
 import SOSLegend from '../components/sos/SOSLegend';
+import { SOSBarChart } from '../components/SOSBarChart';
 
 type WeeklyItem = { 
   team:string; 
@@ -12,12 +13,15 @@ type WeeklyItem = {
   components?: { FPA: number; EPA: number; PACE: number; RZ: number; VEN: string };
 };
 
+type ViewMode = "table" | "chart";
+
 export default function SOSPage() {
   const [position, setPosition] = useState<'RB'|'WR'|'QB'|'TE'>('RB');
   const [week, setWeek] = useState<number>(1);
   const [season, setSeason] = useState<number>(2024);
   const [mode, setMode] = useState<'fpa'|'ctx'>('fpa');
   const [debug, setDebug] = useState<boolean>(false);
+  const [view, setView] = useState<ViewMode>("table");
   const [items, setItems] = useState<WeeklyItem[]>([]);
 
   useEffect(() => {
@@ -73,6 +77,10 @@ export default function SOSPage() {
             <div className="font-semibold">Debug</div>
             <div>Show details</div>
           </div>
+          <div className="w-20 text-center">
+            <div className="font-semibold">View</div>
+            <div>Display mode</div>
+          </div>
         </div>
         
         {/* Control Descriptions */}
@@ -82,6 +90,7 @@ export default function SOSPage() {
           <div className="w-24 text-center">Regular season</div>
           <div className="w-32 text-center">FPA: Fantasy points allowed | CTX: Advanced metrics</div>
           <div className="w-16 text-center">Component breakdown</div>
+          <div className="w-20 text-center">Table or chart</div>
         </div>
         
         {/* Controls */}
@@ -102,10 +111,23 @@ export default function SOSPage() {
             <input type="checkbox" checked={debug} onChange={e => setDebug(e.target.checked)} />
             Debug
           </label>
+          <select className="border rounded px-2 py-1 w-20" value={view} onChange={e => setView(e.target.value as ViewMode)}>
+            <option value="table">Table</option>
+            <option value="chart">Chart</option>
+          </select>
         </div>
       </div>
       <SOSLegend />
-      <SOSTable items={items} debug={debug} />
+      
+      {view === "table" ? (
+        <SOSTable items={items} debug={debug} />
+      ) : (
+        <SOSBarChart items={items.map((it: any) => ({
+          team: it.team,
+          opponent: it.opponent,
+          sos_score: it.sos_score,
+        }))} />
+      )}
     </div>
   );
 }

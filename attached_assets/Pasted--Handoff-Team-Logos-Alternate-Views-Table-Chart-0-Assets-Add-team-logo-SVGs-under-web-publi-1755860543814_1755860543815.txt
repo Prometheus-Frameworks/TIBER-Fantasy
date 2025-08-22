@@ -1,0 +1,247 @@
+📦 Handoff: Team Logos + Alternate Views (Table/Chart)
+0) Assets
+
+Add team logo SVGs under web/public/logos/.
+Expected filenames (32): ARI.svg, ATL.svg, BAL.svg, BUF.svg, CAR.svg, CHI.svg, CIN.svg, CLE.svg, DAL.svg, DEN.svg, DET.svg, GB.svg, HOU.svg, IND.svg, JAX.svg, KC.svg, LAC.svg, LAR.svg, LV.svg, MIA.svg, MIN.svg, NE.svg, NO.svg, NYG.svg, NYJ.svg, PHI.svg, PIT.svg, SEA.svg, SF.svg, TB.svg, TEN.svg, WAS.svg.
+
+If you don’t have them yet, the UI will show a text badge fallback until the files land.
+
+1) Component: TeamLogo (with fallback)
+
+File: web/src/components/TeamLogo.tsx
+
+import React from "react";
+
+type Props = { team: string; size?: number; className?: string };
+
+export const TeamLogo: React.FC<Props> = ({ team, size = 24, className }) => {
+  const src = `/logos/${team}.svg`;
+  const [err, setErr] = React.useState(false);
+
+  if (err) {
+    // Fallback badge (no logo file yet)
+    return (
+      <div
+        className={`inline-flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-gray-700 ${className || ""}`}
+        style={{ width: size, height: size, fontSize: Math.max(10, Math.floor(size * 0.45)) }}
+        title={team}
+      >
+        {team}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={`${team} logo`}
+      width={size}
+      height={size}
+      className={`inline-block ${className || ""}`}
+      onError={() => setErr(true)}
+      title={team}
+    />
+  );
+};
+
+2) Table: show logos next to team/opponent
+
+Find: your SOS table row cell where you show team/opponent (e.g., web/src/components/SOSTable.tsx).
+Add imports + tweak the cell:
+
++ import { TeamLogo } from "./TeamLogo";
+
+  // Inside row render:
+- <td className="px-3 py-2 font-medium">{row.team}</td>
++ <td className="px-3 py-2 font-medium">
++   <div className="flex items-center gap-2">
++     <TeamLogo team={row.team} size={20} />
++     <span>{row.team}</span>
++   </div>
++ </td>
+
+- <td className="px-3 py-2">{row.opponent}</td>
++ <td className="px-3 py-2">
++   <div className="flex items-center gap-2">
++     <TeamLogo team={row.opponent} size={18} />
++     <span>{row.opponent}</span>
++   </div>
++ </td>
+
+
+(Assumes your items rows have team and opponent abbreviations like CHI, GB. If your field names differ, swap accordingly.)
+
+3) Utility: tier → color
+
+File: web/src/lib/sosColors.ts
+
+export function tierColor(score: number) {
+  if (score >= 67) return "bg-green-100 text-green-900 border-green-300";
+  if (score >= 33) return "bg-yellow-100 text-yellow-900 border-yellow-300";
+  return "bg-red-100 text-red-900 border-red-300";
+}
+
+
+Use this both in the table and the chart to keep colors consistent.
+
+4) New View: Bar Chart
+
+Install Recharts (if not in already):
+
+npm i recharts
+
+
+File: web/src/components/SOSBarChart.tsx
+
+import React from "react";
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LabelList
+} from "recharts";
+import { tierColor } from "../lib/sosColors";
+import { TeamLogo } from "./TeamLogo";
+
+type Item = {
+  team: string;
+  opponent: string;
+  score: number; // final score 0-100
+};
+
+type Props = { items: Item[]; limit?: number };
+
+export const SOSBarChart: React.FC<Props> = ({ items, limit = 16 }) => {
+  const data = [...items]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((d) => ({
+      ...d,
+      colorClass: tierColor(d.score),
+    }));
+
+  // Inline color mapping via CSS classes is tricky in Recharts, so we’ll use a single series
+  // and style the bars via a function fallback on fill (CSS variables).
+  return (
+    <div className="w-full h-[520px]">
+      <ResponsiveContainer>
+        <BarChart data={data} margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="team" />
+          <YAxis domain={[0, 100]} />
+          <Tooltip
+            formatter={(val: any, _name, entry: any) => [`${val}`, `Score`]}
+            labelFormatter={(team) => {
+              const row = data.find((d) => d.team === team);
+              return row ? `${row.team} vs ${row.opponent}` : `${team}`;
+            }}
+          />
+          <Bar dataKey="score" isAnimationActive>
+            <LabelList dataKey="score" position="top" />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+
+      {/* Legend with logos (top N) */}
+      <div className="grid grid-cols-4 gap-2 mt-3">
+        {data.map((d) => (
+          <div key={d.team} className={`flex items-center gap-2 px-2 py-1 rounded border ${d.colorClass}`}>
+            <TeamLogo team={d.team} size={18} />
+            <div className="text-sm">{d.team} vs {d.opponent}</div>
+            <div className="ml-auto font-semibold">{Math.round(d.score)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+
+Note: Recharts bars are a single color by default. If you want true per-bar color, we can switch to a Cell map later. For now, the tier color is reinforced in the legend chips.
+
+5) Page toggle: Table ↔ Chart (and keep Debug/Mode/Season)
+
+File: web/src/pages/SOSPage.tsx
+
++ type ViewMode = "table" | "chart";
+
+  const [position, setPosition] = useState<'RB'|'WR'|'QB'|'TE'>('RB');
+  const [week, setWeek] = useState<number>(1);
+  const [season, setSeason] = useState<number>(2024);
+  const [mode, setMode] = useState<'fpa'|'ctx'>('fpa');
+  const [debug, setDebug] = useState<boolean>(false);
++ const [view, setView] = useState<ViewMode>("table");
+
+  useEffect(() => {
+    const url = `/api/sos/weekly?position=${position}&week=${week}&season=${season}&mode=${mode}${debug ? '&debug=1' : ''}`;
+    fetch(url)
+      .then(r => r.json())
+      .then(d => setItems(d.items || []))
+      .catch(() => setItems([]));
+- }, [position, week, season, mode, debug]);
++ }, [position, week, season, mode, debug]);
+
+  return (
+    <div className="mx-auto max-w-5xl p-6">
+      <h1 className="text-2xl font-bold mb-4">Strength of Schedule (Weekly)</h1>
+
+      <div className="flex flex-wrap gap-3 mb-4 items-center">
+        <select className="border rounded px-2 py-1" value={season} onChange={e => setSeason(parseInt(e.target.value))}>
+          <option value={2024}>2024 (complete)</option>
+          <option value={2025}>2025 (live)</option>
+        </select>
+
+        <select className="border rounded px-2 py-1" value={position} onChange={e => setPosition(e.target.value as any)}>
+          <option>RB</option><option>WR</option><option>QB</option><option>TE</option>
+        </select>
+
+        {(() => { const maxWeek = season === 2024 ? 17 : 18; return (
+          <input className="border rounded px-2 py-1 w-24" type="number"
+            value={week} min={1} max={maxWeek}
+            onChange={e => setWeek(parseInt(e.target.value || '1',10))} />
+        ); })()}
+
+        <select className="border rounded px-2 py-1" value={mode} onChange={e => setMode(e.target.value as any)}>
+          <option value="fpa">FPA (v1)</option>
+          <option value="ctx">Contextual (v2)</option>
+        </select>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={debug} onChange={e => setDebug(e.target.checked)} />
+          Debug
+        </label>
+
++       <select className="border rounded px-2 py-1" value={view} onChange={e => setView(e.target.value as ViewMode)}>
++         <option value="table">Table</option>
++         <option value="chart">Bar Chart</option>
++       </select>
+      </div>
+
+      <SOSLegend />
+
+-     <SOSTable items={items} debug={debug} />
++     {view === "table" ? (
++       <SOSTable items={items} debug={debug} />
++     ) : (
++       <SOSBarChart items={items.map((it: any) => ({
++         team: it.team,
++         opponent: it.opponent,
++         score: it.score, // whatever your final score field is
++       }))} />
++     )}
+    </div>
+  );
+
+
+If your response uses a different field than score (e.g., final_score), swap it in the items.map().
+
+6) (Optional) Heatmap View stub (future)
+
+When you’re ready, we can add a Heatmap view: rows = teams, columns = weeks (1–17), cells colored by score. That uses the same tier color utility and a simple CSS grid. We’ll do that after you eye-test the bar chart.
+
+7) Definition of Done
+
+Logos render in table for both team and opponent (text badge fallback if file missing).
+
+New View selector on /sos toggles Table ↔ Bar Chart.
+
+Chart shows top N easiest schedules, with a legend that includes logos and tier-colored chips.
+
+All existing controls still work (Season, Week, Position, Mode, Debug).
