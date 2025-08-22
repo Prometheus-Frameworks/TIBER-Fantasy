@@ -41,24 +41,21 @@ const METRIC_TO_COLUMN = {
   'routes': 'routes'
 };
 
-// Position-specific metric whitelists (using API names)
-const POSITION_METRICS = {
-  RB: [
-    'rush_att', 'rush_yards', 'rush_tds', 'rush_ypc', 'rush_yac_per_att', 
-    'rush_mtf', 'rush_expl_10p', 'targets', 'rec_yards', 'yprr', 'td_total', 'fpts', 'fpts_ppr'
-  ],
-  WR: [
-    'targets', 'receptions', 'rec_yards', 'rec_tds', 'adot', 'yprr', 'racr', 
-    'target_share', 'wopr', 'fpts', 'fpts_ppr'
-  ],
-  TE: [
-    'targets', 'receptions', 'rec_yards', 'rec_tds', 'yprr', 'target_share', 'fpts', 'fpts_ppr'
-  ],
-  QB: [
-    'cmp_pct', 'pass_yards', 'pass_tds', 'int', 'ypa', 'aypa', 'epa_per_play', 
-    'qb_rush_yards', 'qb_rush_tds', 'fpts'
-  ]
-};
+// v1 Metric Whitelist - Live metrics only (enforced in API)
+const METRICS_V1 = {
+  RB: ['rush_yards', 'rush_att', 'rush_ypc', 'targets', 'rec_yards', 'td_total', 'fpts', 'fpts_ppr'],
+  WR: ['targets', 'receptions', 'rec_yards', 'rec_tds', 'fpts', 'fpts_ppr'],
+  TE: ['targets', 'receptions', 'rec_yards', 'rec_tds', 'fpts', 'fpts_ppr'],
+  QB: ['cmp_pct', 'pass_yards', 'pass_tds', 'int', 'ypa', 'aypa', 'qb_rush_yards', 'qb_rush_tds', 'fpts']
+} as const;
+
+// Advanced metrics coming soon (visible as locked in UI, not queryable)
+const METRICS_COMING_SOON = {
+  RB: ['rush_yac_per_att', 'rush_mtf', 'rush_expl_10p', 'yprr'],
+  WR: ['adot', 'yprr', 'racr', 'target_share', 'wopr'],
+  TE: ['yprr', 'target_share'],
+  QB: ['epa_per_play'] // nullable if populated, but off dropdown for v1
+} as const;
 
 // Default thresholds for filtering
 const DEFAULT_THRESHOLDS = {
@@ -87,11 +84,14 @@ router.get('/leaderboard', async (req, res) => {
       return res.status(400).json({ error: 'Invalid position. Must be RB, WR, TE, or QB' });
     }
 
-    // Validate metric
-    const validMetrics = POSITION_METRICS[position as keyof typeof POSITION_METRICS];
-    if (!validMetrics.includes(metric as string)) {
+    // Validate metric - only allow Live metrics (v1)
+    const allowedMetrics = METRICS_V1[position as keyof typeof METRICS_V1];
+    if (!allowedMetrics.includes(metric as string)) {
       return res.status(400).json({ 
-        error: `Invalid metric for ${position}. Valid metrics: ${validMetrics.join(', ')}` 
+        error: 'metric_not_allowed_for_position',
+        position,
+        metric,
+        allowed: allowedMetrics
       });
     }
 
@@ -177,7 +177,10 @@ router.get('/player', async (req, res) => {
 router.get('/metrics', (req, res) => {
   res.json({
     success: true,
-    data: POSITION_METRICS
+    data: {
+      live: METRICS_V1,
+      coming_soon: METRICS_COMING_SOON
+    }
   });
 });
 

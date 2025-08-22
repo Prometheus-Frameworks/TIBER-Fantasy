@@ -16,17 +16,17 @@ type PlayerStat = {
   [key: string]: any;
 };
 
-// Position-specific metrics with display names
-const POSITION_METRICS = {
+// Live metrics (v1) - Available for query
+const LIVE_METRICS = {
   RB: [
     { key: 'fpts_ppr', label: 'Fantasy Points (PPR)' },
     { key: 'rush_yards', label: 'Rushing Yards' },
-    { key: 'rush_tds', label: 'Rushing TDs' },
+    { key: 'rush_att', label: 'Rush Attempts' },
     { key: 'rush_ypc', label: 'Yards per Carry' },
     { key: 'targets', label: 'Targets' },
     { key: 'rec_yards', label: 'Receiving Yards' },
     { key: 'td_total', label: 'Total TDs' },
-    { key: 'yprr', label: 'Yards per Route Run' }
+    { key: 'fpts', label: 'Standard Points' }
   ],
   WR: [
     { key: 'fpts_ppr', label: 'Fantasy Points (PPR)' },
@@ -34,9 +34,7 @@ const POSITION_METRICS = {
     { key: 'receptions', label: 'Receptions' },
     { key: 'rec_yards', label: 'Receiving Yards' },
     { key: 'rec_tds', label: 'Receiving TDs' },
-    { key: 'yprr', label: 'Yards per Route Run' },
-    { key: 'target_share', label: 'Target Share %' },
-    { key: 'adot', label: 'Average Depth of Target' }
+    { key: 'fpts', label: 'Standard Points' }
   ],
   TE: [
     { key: 'fpts_ppr', label: 'Fantasy Points (PPR)' },
@@ -44,17 +42,42 @@ const POSITION_METRICS = {
     { key: 'receptions', label: 'Receptions' },
     { key: 'rec_yards', label: 'Receiving Yards' },
     { key: 'rec_tds', label: 'Receiving TDs' },
-    { key: 'yprr', label: 'Yards per Route Run' },
-    { key: 'target_share', label: 'Target Share %' }
+    { key: 'fpts', label: 'Standard Points' }
   ],
   QB: [
     { key: 'fpts', label: 'Fantasy Points' },
     { key: 'pass_yards', label: 'Passing Yards' },
     { key: 'pass_tds', label: 'Passing TDs' },
     { key: 'cmp_pct', label: 'Completion %' },
+    { key: 'int', label: 'Interceptions' },
     { key: 'ypa', label: 'Yards per Attempt' },
+    { key: 'aypa', label: 'Adjusted YPA' },
     { key: 'qb_rush_yards', label: 'Rushing Yards' },
     { key: 'qb_rush_tds', label: 'Rushing TDs' }
+  ]
+};
+
+// Coming Soon metrics - Not queryable yet
+const COMING_SOON_METRICS = {
+  RB: [
+    { key: 'rush_yac_per_att', label: 'YAC/Att', badge: 'NGS' },
+    { key: 'rush_mtf', label: 'MTF Rate', badge: 'NGS' },
+    { key: 'rush_expl_10p', label: 'Explosive %', badge: 'PBP' },
+    { key: 'yprr', label: 'Yards per Route Run', badge: 'PBP' }
+  ],
+  WR: [
+    { key: 'adot', label: 'Average Depth of Target', badge: 'PBP' },
+    { key: 'yprr', label: 'Yards per Route Run', badge: 'PBP' },
+    { key: 'racr', label: 'RACR', badge: 'PBP' },
+    { key: 'target_share', label: 'Target Share %', badge: 'PBP' },
+    { key: 'wopr', label: 'WOPR', badge: 'PBP' }
+  ],
+  TE: [
+    { key: 'yprr', label: 'Yards per Route Run', badge: 'PBP' },
+    { key: 'target_share', label: 'Target Share %', badge: 'PBP' }
+  ],
+  QB: [
+    { key: 'epa_per_play', label: 'EPA/Play', badge: 'PBP' }
   ]
 };
 
@@ -70,7 +93,7 @@ export default function LeadersPage() {
   
   // Update metric when position changes
   useEffect(() => {
-    setMetric(POSITION_METRICS[position][0].key);
+    setMetric(LIVE_METRICS[position][0].key);
   }, [position]);
 
   // Fetch leaderboard data
@@ -103,17 +126,21 @@ export default function LeadersPage() {
   );
 
   // Get current position metrics
-  const currentMetrics = POSITION_METRICS[position];
+  const currentLiveMetrics = LIVE_METRICS[position];
+  const currentComingSoonMetrics = COMING_SOON_METRICS[position];
   
   // Get metric display name
   const getMetricLabel = (key: string) => {
-    const metricObj = currentMetrics.find(m => m.key === key);
-    return metricObj?.label || key;
+    const liveMetric = currentLiveMetrics.find(m => m.key === key);
+    if (liveMetric) return liveMetric.label;
+    
+    const comingSoonMetric = currentComingSoonMetrics.find(m => m.key === key);
+    return comingSoonMetric?.label || key;
   };
 
   // Format stat values
   const formatStat = (value: any, metricKey: string) => {
-    if (value === null || value === undefined) return '-';
+    if (value === null || value === undefined) return '—';
     
     // Percentage metrics
     if (metricKey.includes('pct') || metricKey.includes('share')) {
@@ -184,11 +211,21 @@ export default function LeadersPage() {
               onChange={(e) => setMetric(e.target.value)}
               className="w-full border rounded-md px-3 py-2 text-sm"
             >
-              {currentMetrics.map((m) => (
+              {/* Live Metrics - Available Now */}
+              {currentLiveMetrics.map((m) => (
                 <option key={m.key} value={m.key}>
                   {m.label}
                 </option>
               ))}
+              
+              {/* Coming Soon - Disabled Options */}
+              <optgroup label="🚧 Coming Soon (PBP/NGS)">
+                {currentComingSoonMetrics.map((m) => (
+                  <option key={m.key} value={m.key} disabled>
+                    {m.label} ({m.badge})
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </div>
           
