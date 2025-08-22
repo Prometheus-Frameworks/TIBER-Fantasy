@@ -37,9 +37,7 @@ export default function SOSPage() {
         </p>
         <div className="mb-4 flex gap-4 justify-center">
           <a 
-            href="/docs/SOS-how-it-works.md" 
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/sos/docs"
             className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
           >
             📖 How SOS Scoring Works

@@ -75,6 +75,7 @@ import DataIngestion from "@/pages/DataIngestion";
 import Reflect from "@/pages/Reflect";
 import SOSPage from "@/pages/SOSPage";
 import SOSDashboardPage from "@/pages/SOSDashboardPage";
+import SOSDocumentationPage from "@/pages/SOSDocumentationPage";
 import PlayerDatabase from "@/pages/PlayerDatabase";
 import NotFound from "@/pages/not-found";
 import SleeperDatabase from "@/pages/sleeper-database";
@@ -240,6 +241,7 @@ function Router() {
       <Route path="/reflect" component={Reflect} />
       <Route path="/sos" component={SOSPage} />
       <Route path="/sos-dashboard" component={SOSDashboardPage} />
+      <Route path="/sos/docs" component={SOSDocumentationPage} />
       <Route path="/signal-flare" component={SignalFlare} />
       <Route path="/promethean-vision" component={PrometheanVision} />
       {/* FantasyProTest route removed - service deprecated */}
