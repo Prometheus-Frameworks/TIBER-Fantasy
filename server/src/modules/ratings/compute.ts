@@ -103,13 +103,12 @@ export async function computeRedraftWeek(
   weightsOverride?: string
 ): Promise<number> {
   // 1) Pull inputs for this week + position
-  const rows = await db.execute(
-    `SELECT i.*, p.name
+  const query = `SELECT i.*, p.name
      FROM player_inputs i
      JOIN player_profile p ON p.player_id = i.player_id
-     WHERE i.season = ? AND i.week = ? AND i.position = ?`,
-    [season, week, position]
-  );
+     WHERE i.season = $1 AND i.week = $2 AND i.position = $3`;
+  
+  const rows = await db.execute(query, [season, week, position]);
 
   if (!rows.rows.length) return 0;
 
@@ -251,7 +250,7 @@ export async function computeDynastySeason(
        AVG(i.epa_per_play_qb) as avg_epa_per_play_qb,
        AVG(i.team_epa_play) as avg_team_epa_play,
        AVG(i.team_pace) as avg_team_pace,
-       ac.multiplier as age_multiplier
+       COALESCE(ac.multiplier, 1.0) as age_multiplier
      FROM player_profile p
      LEFT JOIN player_inputs i ON p.player_id = i.player_id AND i.season = ?
      LEFT JOIN age_curves ac ON p.position = ac.position AND CAST(p.age AS INTEGER) = ac.age
