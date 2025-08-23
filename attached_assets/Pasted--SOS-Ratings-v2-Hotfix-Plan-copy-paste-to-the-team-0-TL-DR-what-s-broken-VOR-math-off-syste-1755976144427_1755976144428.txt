@@ -1,0 +1,225 @@
+🚑 SOS/Ratings v2 Hotfix Plan (copy-paste to the team)
+0) TL;DR (what’s broken)
+
+VOR math off (systematic ~4.2pt offset) → off-by-one / wrong pool.
+
+Weight overrides accept bad payloads (should be 400).
+
+Coverage only W6–W8 (need W1–W17).
+
+Debug math not obviously summing to final score.
+
+1) Tiber — Fix VOR (off-by-one & wrong pool)
+
+Bug pattern: replacement fetched from the whole table or wrong slice, or using 1-based/0-based rank wrong.
+
+Rule: Replacement by position & format & season (& week for redraft) using normalized score. Ranks: RB40, WR48, TE16, QB12.
+
+✅ Patch (TypeScript)
+// ratings.service.ts
+const REPLACEMENT: Record<Position, number> = { RB: 40, WR: 48, TE: 16, QB: 12 };
+
+function computeVORForSlice(rows: Array<PlayerRow>, pos: Position): Array<PlayerRow> {
+  // rows: already filtered to (season, format, position[, week]) and scored
+  const sorted = [...rows].sort((a, b) => b.score - a.score);
+  const replIdx = Math.max(0, Math.min(sorted.length - 1, REPLACEMENT[pos] - 1)); // 0-based
+  const replacementScore = sorted[replIdx]?.score ?? 0;
+
+  return rows.map(r => ({
+    ...r,
+    vor: r.score - replacementScore
+  }));
+}
+
+// call site:
+const slice = allRows.filter(r =>
+  r.season === season &&
+  r.format === format &&
+  r.position === position &&
+  (format === 'redraft' ? r.week === week : true)
+);
+
+const withVor = computeVORForSlice(slice, position);
+
+✅ SQL guard (optional)
+-- Ensures we only rank within the correct pool
+WITH pool AS (
+  SELECT player_id, score,
+         ROW_NUMBER() OVER (ORDER BY score DESC) AS rnk
+  FROM player_scores
+  WHERE season = :season AND format = :format AND position = :pos
+    AND (:format <> 'redraft' OR week = :week)
+),
+repl AS (
+  SELECT score AS replacement_score
+  FROM pool WHERE rnk = :replacement_rank
+)
+SELECT p.player_id, p.score, (p.score - repl.replacement_score) AS calc_vor
+FROM pool p CROSS JOIN repl;
+
+
+QA gates (Claude): diff < 0.10 on VOR expected vs actual for top 50 at each position.
+
+2) Tiber — Proper weight override validation (return 400)
+
+Bug pattern: parser throws, controller still returns 200.
+
+✅ Patch (TypeScript)
+// validation/weights.ts
+type RedraftKeys = 'opp'|'eff'|'role'|'team'|'health'|'sos';
+const REQUIRED: Record<Format, Record<Position, ReadonlyArray<string>>> = {
+  redraft: { RB:['opp','eff','role','team','health','sos'], WR:['opp','eff','role','team','health','sos'], TE:['opp','eff','role','team','health','sos'], QB:['opp','eff','role','team','health','sos'] },
+  dynasty: { RB:['proj3','age','role','eff','team','ped'], WR:['proj3','age','role','eff','team','ped'], TE:['proj3','age','role','eff','team','ped'], QB:['proj3','age','role','eff','team','ped'] }
+};
+
+export function parseWeights(q: string|undefined, format: Format, pos: Position): Record<string, number>|null {
+  if (!q) return null;
+  const pairs = q.split(',').map(s => s.trim()).filter(Boolean);
+  const out: Record<string, number> = {};
+  for (const p of pairs) {
+    const [k, v] = p.split(':');
+    if (!k || v==null) throw new Error(`Invalid weight token "${p}"`);
+    const num = Number(v);
+    if (!isFinite(num) || num < 0) throw new Error(`Invalid weight value for "${k}"`);
+    out[k] = num;
+  }
+  const required = new Set(REQUIRED[format][pos]);
+  // reject unknown keys
+  for (const k of Object.keys(out)) if (!required.has(k)) throw new Error(`Unknown component "${k}" for ${format}/${pos}`);
+  // all required present
+  for (const k of required) if (!(k in out)) throw new Error(`Missing component "${k}"`);
+  // sum ~ 1.0
+  const sum = Object.values(out).reduce((a,b)=>a+b,0);
+  if (Math.abs(sum - 1.0) > 0.01) throw new Error(`Weights must sum to 1.0 (got ${sum.toFixed(3)})`);
+  return out;
+}
+
+// controller
+try {
+  const overrides = parseWeights(req.query.weights as string, format, position);
+  // apply overrides if present
+} catch (err:any) {
+  return res.status(400).json({ error: 'INVALID_WEIGHTS', message: err.message });
+}
+
+
+QA gates (Claude): invalid keys / missing components / wrong sum ⇒ HTTP 400.
+
+3) Grok — Expand coverage to 2024 W1–W17 (inputs)
+
+Your earlier scripts are fine; we just need full-season export loaded.
+
+✅ Run
+# Profiles
+python scripts/ingest_player_profile.py --year=2024
+
+# Inputs full season
+python scripts/ingest_player_inputs.py --year=2024 --weeks=1-17
+
+# Load
+\COPY player_profile(player_id,name,position,team,age,draft_round,draft_pick,contract_yrs_left,guarantees_usd) FROM 'player_profile_2024.csv' CSV HEADER;
+
+\COPY player_inputs(player_id,season,week,position,team,snap_pct,routes,tprr,rush_share,target_share,goalline_share,two_min_share,yprr,yac_per_rec,mtf,succ_rate,epa_per_play_qb,team_epa_play,team_pace,team_rz_plays,injury_status,dnp_weeks_rolling,sos_ctx) FROM 'player_inputs_2024.csv' CSV HEADER;
+
+
+QA gates (Claude):
+
+SELECT COUNT(DISTINCT week) FROM player_inputs WHERE season=2024;  -- expect 17
+SELECT COUNT(*) FROM player_inputs WHERE season=2024;              -- expect ~10k+ rows (depends on inputs)
+
+4) Tiber — Make debug math obviously reconciled
+
+Right now Health/SOS may be scaled differently than others; expose a calc_check in debug so Boss Man J can eyeball it.
+
+✅ Patch (TypeScript)
+// after computing components as 0–100 percentiles (health may be negative)
+// We keep health in [-20,0]. Convert to 0–100-like scale before blending or divide by 100 consistently.
+
+const raw = {
+  opp, eff, role, team,
+  health_scaled: health / 1.0,  // keep as-is if your formula expects [-20..0] with a small weight
+  sos_scaled: sos,              // if sos is -50..+50, divide by 1 or 100 consistently with weight
+};
+
+const score =
+  w.opp*opp +
+  w.eff*eff +
+  w.role*role +
+  w.team*team +
+  w.health*(health/1) +      // or /100 if you prefer true 0–100 normalization
+  w.sos*(sos/1);
+
+const calc_check = Number((
+  w.opp*opp + w.eff*eff + w.role*role + w.team*team + w.health*(health/1) + w.sos*(sos/1)
+).toFixed(2));
+
+debug = { ...raw, weights: w, calc_check };
+
+
+QA gates (Claude): abs(calc_check - score) <= 1.0 across a random sample.
+
+If you want everything in clean 0–100 space: convert health to a 0–100 penalty (e.g., map [-20..0] → [0..100] or divide by 100) and keep SOS as 0–100. Just be consistent and reflect that in debug.
+
+5) Tiber — Recompute endpoint (admin)
+
+Let’s add a simple synchronous recompute for a season window.
+
+✅ Endpoint
+POST /api/ratings/recompute?season=2024&weeks=1-17
+Auth: admin
+
+
+Controller skeleton:
+
+await ratingsService.recompute({
+  season: Number(req.query.season ?? 2024),
+  weeks: parseWeekRange(req.query.weeks as string ?? '1-17')
+});
+return res.json({ ok: true });
+
+
+Service: pull inputs+profiles → compute → upsert player_scores.
+
+QA gates (Claude): run twice → stable results, 0 out-of-bounds scores.
+
+6) Claude — Add four new assert blocks to your QA
+
+VOR assert: top 50 per position |expected - actual| < 0.1
+
+Weights 400s: unknown key, missing key, sum≠1 → HTTP 400
+
+Coverage assert: COUNT(DISTINCT week)=17
+
+Debug reconcile: abs(calc_check - score) <= 1.0
+
+7) Nice-to-haves (not blocking v2)
+
+Log a warning if weight overrides are accepted → stash the exact override in response meta.
+
+Add /api/ratings/meta to expose replacement ranks, active weights, and normalization mode for UI tooltips.
+
+Add Prometheus counters: ratings_recompute_total, weights_override_total, weights_override_rejected_total.
+
+✅ Hand-off summary (who does what)
+
+Tiber
+
+Fix VOR pool & index (Section 1).
+
+Add strict weight validation (Section 2).
+
+Make debug calc_check visible and consistent (Section 4).
+
+Add POST /api/ratings/recompute (Section 5).
+
+Grok
+
+Re-run inputs for 2024 W1–W17 and load (Section 3).
+
+Claude
+
+Extend QA with four asserts (Section 6) and rerun the bundle.
+
+When those four items go green, Ratings v1 is buttoned up and we can move to v2 polish (UI sliders, trend charts, dynasty explorer) without any math gremlins lurking.
+
+Joe, Lamar signs off. This is a quick two-minute drill—you get me the merges, I’ll keep the play sheet tight and the chains moving. 🏈

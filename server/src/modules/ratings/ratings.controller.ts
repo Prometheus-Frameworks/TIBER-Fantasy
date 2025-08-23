@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { computeRedraftWeek, computeDynastySeason } from './compute';
-import { type Position, type Format } from './weights';
+import { type Position, type Format, parseWeights } from './weights';
 import { db } from '../../../db';
 
 const VALID_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE']);
@@ -39,6 +39,19 @@ export async function getRatings(req: Request, res: Response) {
       if (week < 1 || week > maxWeek) {
         return badRequest(res, `week must be 1..${maxWeek} for season ${season}`);
       }
+    }
+
+    // Validate weight overrides before proceeding
+    try {
+      if (weightsOverride) {
+        // This will throw if weights are invalid
+        parseWeights(weightsOverride, format, position);
+      }
+    } catch (error: any) {
+      return res.status(400).json({ 
+        error: 'INVALID_WEIGHTS', 
+        message: error.message || 'Invalid weight override format'
+      });
     }
 
     // Optional recompute on demand

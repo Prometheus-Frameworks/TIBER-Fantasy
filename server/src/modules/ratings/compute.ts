@@ -65,6 +65,20 @@ function percentileRank(values: number[], v: number): number {
   return (idx / sorted.length) * 100;
 }
 
+// Fixed VOR calculation function
+function computeVORForSlice(scores: number[], position: Position): number[] {
+  // Sort scores descending to get proper rankings
+  const sortedScores = [...scores].sort((a, b) => b - a);
+  
+  // Get replacement rank (1-based to 0-based index)
+  const replacementRank = REPLACEMENT_LINES[position];
+  const replIdx = Math.max(0, Math.min(sortedScores.length - 1, replacementRank - 1));
+  const replacementScore = sortedScores[replIdx] || 0;
+  
+  // Calculate VOR for each player: score - replacement_score
+  return scores.map(score => score - replacementScore);
+}
+
 // DeepSeek tier clustering: hierarchical, min tier size = 3 (no single-player tiers)
 function computeTiers(scores: number[]): number[] {
   if (scores.length === 0) return [];
@@ -214,11 +228,8 @@ export async function computeRedraftWeek(
     return Math.max(0, Math.min(100, base + healthAdj));
   });
 
-  // 5) VOR (value over replacement) by position
-  const replIdx = Math.min(REPLACEMENT_LINES[position]-1, scores.length-1);
-  const sortedForVor = [...scores].sort((a,b)=>b-a);
-  const replacementScore = sortedForVor[replIdx] || 0;
-  const vors = scores.map(s => s - replacementScore);
+  // 5) VOR (value over replacement) by position - FIXED
+  const vors = computeVORForSlice(scores, position);
 
   // 6) Tiers
   const tiers = computeTiers(scores);
@@ -238,23 +249,41 @@ export async function computeRedraftWeek(
       scores[i], vors[i], tiers[i], 
       JSON.stringify(w),
       JSON.stringify({
-        opp: Math.round(oppPct[i] * (w.opp || 0)),
-        eff: Math.round(effPct[i] * (w.eff || 0)),
-        role: Math.round(rolePct[i] * (w.role || 0)),
-        team: Math.round(teamPct[i] * (w.team || 0)),
-        health: Math.round(healthVals[i] * (w.health || 0.1)),
-        sos: Math.round(sosPct[i] * (w.sos || 0))
+        opp_pct: Math.round(oppPct[i]),
+        eff_pct: Math.round(effPct[i]),
+        role_pct: Math.round(rolePct[i]),
+        team_pct: Math.round(teamPct[i]),
+        sos_pct: Math.round(sosPct[i]),
+        health_adj: Math.round(healthVals[i] * 100) / 100,
+        opp_weighted: Math.round((w.opp * oppPct[i]) * 100) / 100,
+        eff_weighted: Math.round((w.eff * effPct[i]) * 100) / 100,
+        role_weighted: Math.round((w.role * rolePct[i]) * 100) / 100,
+        team_weighted: Math.round((w.team * teamPct[i]) * 100) / 100,
+        sos_weighted: Math.round((w.sos * sosPct[i]) * 100) / 100,
+        health_weighted: Math.round((w.health * healthVals[i]) * 100) / 100,
+        calc_check: Math.round(((w.opp * oppPct[i]) + (w.eff * effPct[i]) + (w.role * rolePct[i]) + (w.team * teamPct[i]) + (w.sos * sosPct[i]) + (w.health * healthVals[i])) * 100) / 100,
+        final_score: Math.round(scores[i] * 100) / 100,
+        weights: w
       }),
       // Conflict resolution values
         scores[i], vors[i], tiers[i], 
         JSON.stringify(w),
         JSON.stringify({
-          opp: Math.round(oppPct[i] * (w.opp || 0)),
-          eff: Math.round(effPct[i] * (w.eff || 0)),
-          role: Math.round(rolePct[i] * (w.role || 0)),
-          team: Math.round(teamPct[i] * (w.team || 0)),
-          health: Math.round(healthVals[i] * (w.health || 0.1)),
-          sos: Math.round(sosPct[i] * (w.sos || 0))
+          opp_pct: Math.round(oppPct[i]),
+          eff_pct: Math.round(effPct[i]),
+          role_pct: Math.round(rolePct[i]),
+          team_pct: Math.round(teamPct[i]),
+          sos_pct: Math.round(sosPct[i]),
+          health_adj: Math.round(healthVals[i] * 100) / 100,
+          opp_weighted: Math.round((w.opp * oppPct[i]) * 100) / 100,
+          eff_weighted: Math.round((w.eff * effPct[i]) * 100) / 100,
+          role_weighted: Math.round((w.role * rolePct[i]) * 100) / 100,
+          team_weighted: Math.round((w.team * teamPct[i]) * 100) / 100,
+          sos_weighted: Math.round((w.sos * sosPct[i]) * 100) / 100,
+          health_weighted: Math.round((w.health * healthVals[i]) * 100) / 100,
+          calc_check: Math.round(((w.opp * oppPct[i]) + (w.eff * effPct[i]) + (w.role * rolePct[i]) + (w.team * teamPct[i]) + (w.sos * sosPct[i]) + (w.health * healthVals[i])) * 100) / 100,
+          final_score: Math.round(scores[i] * 100) / 100,
+          weights: w
         })
       ]
     );
@@ -364,11 +393,8 @@ export async function computeDynastySeason(
     return Math.max(0, Math.min(100, base));
   });
 
-  // VOR and tiers
-  const replIdx = Math.min(REPLACEMENT_LINES[position]-1, scores.length-1);
-  const sortedForVor = [...scores].sort((a,b)=>b-a);
-  const replacementScore = sortedForVor[replIdx] || 0;
-  const vors = scores.map(s => s - replacementScore);
+  // VOR and tiers - FIXED
+  const vors = computeVORForSlice(scores, position);
   const tiers = computeTiers(scores);
 
   // Persist to database
@@ -386,23 +412,41 @@ export async function computeDynastySeason(
       scores[i], vors[i], tiers[i], 
       JSON.stringify(w),
       JSON.stringify({
-        proj3: Math.round(proj3Pct[i] * (w.proj3 || 0)),
-        age: Math.round(agePct[i] * (w.age || 0)),
-        role: Math.round(rolePct[i] * (w.role || 0)),
-        eff: Math.round(effPct[i] * (w.eff || 0)),
-        team: Math.round(teamPct[i] * (w.team || 0)),
-        ped: Math.round(pedPct[i] * (w.ped || 0))
+        proj3_pct: Math.round(proj3Pct[i]),
+        age_pct: Math.round(agePct[i]),
+        role_pct: Math.round(rolePct[i]),
+        eff_pct: Math.round(effPct[i]),
+        team_pct: Math.round(teamPct[i]),
+        ped_pct: Math.round(pedPct[i]),
+        proj3_weighted: Math.round((w.proj3 * proj3Pct[i]) * 100) / 100,
+        age_weighted: Math.round((w.age * agePct[i]) * 100) / 100,
+        role_weighted: Math.round((w.role * rolePct[i]) * 100) / 100,
+        eff_weighted: Math.round((w.eff * effPct[i]) * 100) / 100,
+        team_weighted: Math.round((w.team * teamPct[i]) * 100) / 100,
+        ped_weighted: Math.round((w.ped * pedPct[i]) * 100) / 100,
+        calc_check: Math.round(((w.proj3 * proj3Pct[i]) + (w.age * agePct[i]) + (w.role * rolePct[i]) + (w.eff * effPct[i]) + (w.team * teamPct[i]) + (w.ped * pedPct[i])) * 100) / 100,
+        final_score: Math.round(scores[i] * 100) / 100,
+        weights: w
       }),
       // Conflict resolution values
         scores[i], vors[i], tiers[i], 
         JSON.stringify(w),
         JSON.stringify({
-          proj3: Math.round(proj3Pct[i] * (w.proj3 || 0)),
-          age: Math.round(agePct[i] * (w.age || 0)),
-          role: Math.round(rolePct[i] * (w.role || 0)),
-          eff: Math.round(effPct[i] * (w.eff || 0)),
-          team: Math.round(teamPct[i] * (w.team || 0)),
-          ped: Math.round(pedPct[i] * (w.ped || 0))
+          proj3_pct: Math.round(proj3Pct[i]),
+          age_pct: Math.round(agePct[i]),
+          role_pct: Math.round(rolePct[i]),
+          eff_pct: Math.round(effPct[i]),
+          team_pct: Math.round(teamPct[i]),
+          ped_pct: Math.round(pedPct[i]),
+          proj3_weighted: Math.round((w.proj3 * proj3Pct[i]) * 100) / 100,
+          age_weighted: Math.round((w.age * agePct[i]) * 100) / 100,
+          role_weighted: Math.round((w.role * rolePct[i]) * 100) / 100,
+          eff_weighted: Math.round((w.eff * effPct[i]) * 100) / 100,
+          team_weighted: Math.round((w.team * teamPct[i]) * 100) / 100,
+          ped_weighted: Math.round((w.ped * pedPct[i]) * 100) / 100,
+          calc_check: Math.round(((w.proj3 * proj3Pct[i]) + (w.age * agePct[i]) + (w.role * rolePct[i]) + (w.eff * effPct[i]) + (w.team * teamPct[i]) + (w.ped * pedPct[i])) * 100) / 100,
+          final_score: Math.round(scores[i] * 100) / 100,
+          weights: w
         })
       ]
     );

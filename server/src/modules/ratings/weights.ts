@@ -39,25 +39,31 @@ export function parseWeights(weightsStr?: string, format: Format = 'redraft', po
         if (format === 'redraft') {
           if (['opp', 'eff', 'role', 'team', 'health', 'sos'].includes(key)) {
             weights[key as keyof typeof weights] = numValue;
+            totalWeight += numValue;
+          } else {
+            throw new Error(`Invalid component "${key}" for ${format} format. Valid: opp, eff, role, team, health, sos`);
           }
         } else {
           if (['proj3', 'age', 'role', 'eff', 'team', 'ped'].includes(key)) {
             weights[key as keyof typeof weights] = numValue;
+            totalWeight += numValue;
+          } else {
+            throw new Error(`Invalid component "${key}" for ${format} format. Valid: proj3, age, role, eff, team, ped`);
           }
         }
-        totalWeight += numValue;
+      } else {
+        throw new Error(`Invalid weight token "${pair}". Expected format: key:value`);
       }
     }
     
     // Validate total weight is approximately 1.0 (±0.01 tolerance)  
     if (Math.abs(totalWeight - 1.0) > 0.01) {
-      console.warn(`Weight sum ${totalWeight} outside tolerance ±0.01 from 1.0, using defaults`);
-      throw new Error(`Invalid weights: sum ${totalWeight} must be approximately 1.0 (±0.01)`);
+      throw new Error(`Invalid weights: sum ${totalWeight.toFixed(3)} must be approximately 1.0 (±0.01)`);
     }
     
     return weights;
   } catch (error) {
-    console.warn(`Invalid weights format: ${weightsStr}, using defaults`);
-    return DEFAULT_WEIGHTS[format][position];
+    // Re-throw the error instead of returning defaults - let controller handle 400
+    throw error;
   }
 }
