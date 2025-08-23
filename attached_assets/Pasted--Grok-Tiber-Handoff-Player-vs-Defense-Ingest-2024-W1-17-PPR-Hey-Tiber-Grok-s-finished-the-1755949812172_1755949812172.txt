@@ -1,0 +1,93 @@
+📦 Grok → Tiber Handoff – Player vs Defense Ingest (2024 W1–17, PPR)
+
+Hey Tiber, Grok’s finished the player_vs_defense ingest. This table powers the new Leaders widgets (weekly top players + points allowed by defense).
+
+✅ Deliverables
+
+Script: scripts/ingest_player_vs_defense.py
+
+Input: nflverse weekly data (nfl_data_py)
+
+Output: data/player_vs_defense_2024.csv (~3,740 rows for QB/RB/WR/TE across weeks 1–17)
+
+🗄 SQL Migration (new table)
+-- server/src/db/migrations/20250822_add_player_vs_defense.sql
+CREATE TABLE IF NOT EXISTS player_vs_defense (
+  id SERIAL PRIMARY KEY,
+  season SMALLINT NOT NULL,
+  week SMALLINT NOT NULL,
+  def_team TEXT NOT NULL,
+  position TEXT NOT NULL CHECK (position IN ('QB','RB','WR','TE')),
+  player_name TEXT NOT NULL,
+  player_team TEXT NOT NULL,
+  fpts NUMERIC NOT NULL,
+  player_id TEXT,
+  UNIQUE(season, week, def_team, position, player_name, player_team)
+);
+
+CREATE INDEX IF NOT EXISTS idx_player_vs_defense_main
+  ON player_vs_defense(season, week, def_team, position);
+
+⚙️ Usage
+
+Run the ingest:
+
+python scripts/ingest_player_vs_defense.py --year=2024 --weeks=1-17 --ppr
+
+
+CSV saved at:
+
+data/player_vs_defense_2024.csv
+
+
+Load into Postgres:
+
+\COPY player_vs_defense(season,week,def_team,position,player_name,player_team,fpts,player_id)
+FROM 'data/player_vs_defense_2024.csv' CSV HEADER;
+
+🚨 Notes
+
+Current script filters to positive fpts only:
+
+df = df[df['fpts'] > 0]
+
+
+🔄 Remove this line if you want goose-egg players (0 pts) included.
+
+Covers weeks 1–17 of 2024 (per spec).
+
+If you want week 18 included: rerun with --weeks=1-18.
+
+Expected rowcount: ~3,700 rows. Use this as a quick validation check after load.
+
+🎯 Integration Targets
+
+/api/leaders/weekly → top players by fpts (season/week/position)
+
+/api/leaders/allowed → defense totals allowed (sum of fpts for players faced that week)
+
+✅ Final Checklist
+
+ Run SQL migration to create player_vs_defense table
+
+ Run Grok’s ingest script for 2024 W1–17 (PPR)
+
+ Load player_vs_defense_2024.csv via COPY
+
+ Expose new endpoints:
+
+/api/leaders/weekly
+
+/api/leaders/allowed
+
+ Cross-validate totals:
+
+Sum of individual players = defense’s allowed total (Claude’s doc covers this)
+
+ Wire UI widgets into /leaders page with:
+
+Player logos, team logos
+
+Navigation links to /sos for clicked defenses
+
+ Run QA regression (Claude’s Season + Week parameter tests)
