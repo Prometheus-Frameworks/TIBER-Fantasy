@@ -1,0 +1,112 @@
+✅ Master Checklist – Ratings v1 Implementation
+🔹 Data Ingestion
+
+ player_profile populated (2024, QB/RB/WR/TE only).
+
+ player_inputs populated W1-17 (snaps, touches, targets, efficiency, injuries, SOS ctx).
+
+ player_vs_defense integrated for SOS adjustments (optional but wired).
+
+ Ensure contract_yrs_left and guarantees_usd columns exist (placeholders OK).
+
+ Cross-check row counts: ~250 profiles, ~1k+ weekly inputs, multi-thousand rows total.
+
+🔹 Core Scoring Logic
+
+ Implement DeepSeek’s Redraft formula:
+0.35 opp + 0.25 eff + 0.15 role + 0.10 team + 0.10 health + 0.05 sos
+
+ Implement DeepSeek’s Dynasty formula:
+0.40 proj3 + 0.20 age + 0.15 role + 0.10 eff + 0.10 team + 0.05 ped
+
+ Normalize all components to 0–100 scale by position.
+
+ Apply position-specific defaults (RB/WR/TE/QB weights).
+
+ Support weight overrides via URL params (must sum ≈ 1.0, ±0.01 tolerance).
+
+🔹 Dynasty-Specific
+
+ Apply age curves (per table in spec).
+
+ Implement 3-year projection discounting (Yr1=60%, Yr2=25%, Yr3=15%).
+
+ Add prospect pedigree from draft round/pick (fallback = neutral).
+
+🔹 VOR & Tiers
+
+ Replacement levels: RB40, WR48, TE16, QB12.
+
+ Compute VOR = score – replacement score.
+
+ Tier clustering via hierarchical clustering (Ward), min tier size = 3.
+
+ Validate tiers: no single-player tiers, natural cutoffs respected.
+
+🔹 API Endpoints
+
+ /api/ratings – list ratings (supports format/position/week/weights/debug).
+
+ /api/players/:id/rating – single player score + weekly trend.
+
+ /api/ratings/tiers – return tier boundaries and counts.
+
+ Proper error handling:
+
+Invalid params → 400
+
+Invalid player → 404
+
+Invalid week/season → 400
+
+🔹 Debug & Validation
+
+ debug=1 returns weighted breakdown for each component.
+
+ Confirm component sum ≈ total score (±1 tolerance).
+
+ Validate VOR vs replacement slot math.
+
+ Ensure percentile normalization: scores spread 10–95, median ~50.
+
+ Cross-format check: dynasty ≠ redraft, differences meaningful.
+
+🔹 Edge Case Handling
+
+ Injured players → health penalty capped at –20.
+
+ Players with 0 snaps still return (score very low).
+
+ Multi-pos eligibility → stick to primary position.
+
+ Bye weeks → handled gracefully (no crash, no phantom scores).
+
+ Rookies/small samples → included with low confidence.
+
+🔹 Performance & Ops
+
+ Batch recompute job runs Tuesday 6am ET (post stat corrections).
+
+ Admin recompute endpoint live (/api/ratings/recompute).
+
+ Query benchmarks:
+
+/api/ratings with limit=100 < 500ms
+
+/api/players/:id/rating < 200ms
+
+/api/ratings/tiers < 300ms
+
+ Index player_scores by (season, week, format, position).
+
+✅ Success Criteria
+
+Full 2024 W1-17 coverage across QB/RB/WR/TE.
+
+Redraft + dynasty scores generate without error.
+
+Debug breakdowns match math.
+
+VOR + tiers validated.
+
+API stable, performant, and test suite passes.

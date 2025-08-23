@@ -49,10 +49,10 @@ export function parseWeights(weightsStr?: string, format: Format = 'redraft', po
       }
     }
     
-    // Validate total weight is approximately 1.0 (±0.01 tolerance)
+    // Validate total weight is approximately 1.0 (±0.01 tolerance)  
     if (Math.abs(totalWeight - 1.0) > 0.01) {
       console.warn(`Weight sum ${totalWeight} outside tolerance ±0.01 from 1.0, using defaults`);
-      return DEFAULT_WEIGHTS[format][position];
+      throw new Error(`Invalid weights: sum ${totalWeight} must be approximately 1.0 (±0.01)`);
     }
     
     return weights;
