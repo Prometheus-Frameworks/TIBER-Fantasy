@@ -318,9 +318,9 @@ export async function computeDynastySeason(
        AVG(i.team_pace) as avg_team_pace,
        COALESCE(ac.multiplier, 1.0) as age_multiplier
      FROM player_profile p
-     LEFT JOIN player_inputs i ON p.player_id = i.player_id AND i.season = ?
+     LEFT JOIN player_inputs i ON p.player_id = i.player_id AND i.season = $1
      LEFT JOIN age_curves ac ON p.position = ac.position AND CAST(p.age AS INTEGER) = ac.age
-     WHERE p.position = ?
+     WHERE p.position = $2
      GROUP BY p.player_id, p.name, p.position, p.team, p.age, p.draft_round, p.draft_pick, ac.multiplier
      HAVING COUNT(i.player_id) > 0`,
     [season, position]
