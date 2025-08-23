@@ -103,12 +103,13 @@ export async function computeRedraftWeek(
   weightsOverride?: string
 ): Promise<number> {
   // 1) Pull inputs for this week + position
+  // Try direct template string approach for Neon compatibility
   const query = `SELECT i.*, p.name
      FROM player_inputs i
      JOIN player_profile p ON p.player_id = i.player_id
-     WHERE i.season = $1 AND i.week = $2 AND i.position = $3`;
+     WHERE i.season = ${season} AND i.week = ${week} AND i.position = '${position}'`;
   
-  const rows = await db.execute(query, [season, week, position]);
+  const rows = await db.execute(query);
 
   if (!rows.rows.length) return 0;
 
@@ -192,10 +193,10 @@ export async function computeRedraftWeek(
     await db.execute(
       `INSERT INTO player_scores
          (player_id, season, week, format, position, score, vor, tier, weights_json, debug_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT (player_id, season, week, format)
        DO UPDATE SET 
-         score = ?, vor = ?, tier = ?, weights_json = ?, debug_json = ?`,
+         score = $11, vor = $12, tier = $13, weights_json = $14, debug_json = $15`,
       [
       r.player_id, season, week, 'redraft', position,
       scores[i], vors[i], tiers[i], 
@@ -331,10 +332,10 @@ export async function computeDynastySeason(
     await db.execute(
       `INSERT INTO player_scores
          (player_id, season, week, format, position, score, vor, tier, weights_json, debug_json)
-       VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)
+       VALUES ($1, $2, NULL, $3, $4, $5, $6, $7, $8, $9)
        ON CONFLICT (player_id, season, week, format)
        DO UPDATE SET 
-         score = ?, vor = ?, tier = ?, weights_json = ?, debug_json = ?`,
+         score = $10, vor = $11, tier = $12, weights_json = $13, debug_json = $14`,
       [
       r.player_id, season, 'dynasty', position,
       scores[i], vors[i], tiers[i], 

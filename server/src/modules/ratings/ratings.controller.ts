@@ -59,22 +59,20 @@ export async function getRatings(req: Request, res: Response) {
         SELECT s.*, p.name, p.team
         FROM player_scores s
         JOIN player_profile p ON p.player_id = s.player_id
-        WHERE s.season = ? AND s.position = ? AND s.format = ? AND s.week = ?
-        ORDER BY s.score DESC LIMIT ?
+        WHERE s.season = ${season} AND s.position = '${position}' AND s.format = '${format}' AND s.week = ${week}
+        ORDER BY s.score DESC LIMIT ${limit}
       `;
-      params = [season, position, format, week, limit];
     } else {
       query = `
         SELECT s.*, p.name, p.team
         FROM player_scores s
         JOIN player_profile p ON p.player_id = s.player_id
-        WHERE s.season = ? AND s.position = ? AND s.format = ? AND s.week IS NULL
-        ORDER BY s.score DESC LIMIT ?
+        WHERE s.season = ${season} AND s.position = '${position}' AND s.format = '${format}' AND s.week IS NULL
+        ORDER BY s.score DESC LIMIT ${limit}
       `;
-      params = [season, position, format, limit];
     }
 
-    const result = await db.execute(query, params);
+    const result = await db.execute(query);
 
     const items = result.rows.map((r: any) => ({
       player_id: r.player_id,
@@ -134,7 +132,7 @@ export async function getPlayerRating(req: Request, res: Response) {
         SELECT s.*, p.name, p.team, p.position as player_position, p.age
         FROM player_scores s
         JOIN player_profile p ON p.player_id = s.player_id
-        WHERE s.player_id = ? AND s.season = ? AND s.format = ? AND s.week = ?
+        WHERE s.player_id = $1 AND s.season = $2 AND s.format = $3 AND s.week = $4
       `;
       params = [playerId, season, format, week];
     } else {
@@ -142,12 +140,12 @@ export async function getPlayerRating(req: Request, res: Response) {
         SELECT s.*, p.name, p.team, p.position as player_position, p.age
         FROM player_scores s
         JOIN player_profile p ON p.player_id = s.player_id
-        WHERE s.player_id = ? AND s.season = ? AND s.format = ? AND s.week IS NULL
+        WHERE s.player_id = $1 AND s.season = $2 AND s.format = $3 AND s.week IS NULL
       `;
       params = [playerId, season, format];
     }
 
-    const result = await db.execute(query, params);
+    const result = await db.execute(query);
 
     if (!result.rows.length) {
       return res.status(404).json({ error: 'Player rating not found' });
@@ -161,8 +159,8 @@ export async function getPlayerRating(req: Request, res: Response) {
       const trendResult = await db.execute(
         `SELECT s.week, s.score
          FROM player_scores s
-         WHERE s.player_id = ? AND s.season = ? 
-         AND s.format = 'redraft' AND s.week >= ? AND s.week <= ?
+         WHERE s.player_id = $1 AND s.season = $2 
+         AND s.format = 'redraft' AND s.week >= $3 AND s.week <= $4
          ORDER BY s.week ASC`,
         [playerId, season, Math.max(1, week - 3), week]
       );
@@ -215,21 +213,19 @@ export async function getRatingsTiers(req: Request, res: Response) {
       query = `
         SELECT s.tier, MIN(s.score) as min_score, MAX(s.score) as max_score, COUNT(*) as count
         FROM player_scores s
-        WHERE s.season = ? AND s.position = ? AND s.format = ? AND s.week = ?
+        WHERE s.season = ${season} AND s.position = '${position}' AND s.format = '${format}' AND s.week = ${week}
         GROUP BY s.tier ORDER BY s.tier ASC
       `;
-      params = [season, position, format, week];
     } else {
       query = `
         SELECT s.tier, MIN(s.score) as min_score, MAX(s.score) as max_score, COUNT(*) as count
         FROM player_scores s
-        WHERE s.season = ? AND s.position = ? AND s.format = ? AND s.week IS NULL
+        WHERE s.season = ${season} AND s.position = '${position}' AND s.format = '${format}' AND s.week IS NULL
         GROUP BY s.tier ORDER BY s.tier ASC
       `;
-      params = [season, position, format];
     }
 
-    const result = await db.execute(query, params);
+    const result = await db.execute(query);
 
     const tiers = result.rows.map((r: any) => ({
       tier: r.tier,
