@@ -7,6 +7,7 @@ export interface NavLink {
 export const NAV_LINKS: NavLink[] = [
   { href: "/", label: "Home", description: "Fantasy football tools overview" },
   { href: "/news", label: "News + Updates", description: "Recent NFL news with fantasy impact" },
+  { href: "/leaders", label: "Leaders", description: "2024 NFL player stats and leaderboards" },
   { href: "/redraft", label: "Redraft", description: "Seasonal league tools" },
   { href: "/dynasty", label: "Dynasty", description: "Long-term strategy" },
   { href: "/compass", label: "Compass", description: "Context-aware player guidance" },
