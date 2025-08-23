@@ -1,21 +1,28 @@
 export interface NavLink {
-  href: string;
+  href?: string;
   label: string;
   description?: string;
+  dropdown?: NavLink[];
 }
 
 export const NAV_LINKS: NavLink[] = [
   { href: "/", label: "Home", description: "Fantasy football tools overview" },
   { href: "/news", label: "News + Updates", description: "Recent NFL news with fantasy impact" },
-  { href: "/leaders", label: "Leaders", description: "2024 NFL player stats and leaderboards" },
   { href: "/redraft", label: "Redraft", description: "Seasonal league tools" },
   { href: "/dynasty", label: "Dynasty", description: "Long-term strategy" },
   { href: "/compass", label: "Compass", description: "Context-aware player guidance" },
   { href: "/consensus", label: "Consensus", description: "Community-driven rankings" },
   { href: "/sleeper-connect", label: "Sleeper", description: "Connect your leagues" },
-  { href: "/snap-counts", label: "Snap Counts", description: "Evidence-based snap count analysis" },
-  { href: "/sos", label: "SOS", description: "Strength of Schedule matchup analysis" },
-  { href: "/research", label: "Research & Analysis", description: "Depth charts and team analysis" },
+  { 
+    label: "Research & Analysis", 
+    description: "Advanced analytical tools",
+    dropdown: [
+      { href: "/leaders", label: "Leaders", description: "2024 NFL player stats and leaderboards" },
+      { href: "/snap-counts", label: "Snap Counts", description: "Evidence-based snap count analysis" },
+      { href: "/sos", label: "SOS", description: "Strength of Schedule matchup analysis" }
+    ]
+  },
+  { href: "/research", label: "Research", description: "Depth charts and team analysis" },
   { href: "/competence", label: "Competence Mode", description: "Truth-first AI guidance" },
   { href: "/articles", label: "Articles", description: "Strategy and insights" },
 ];
