@@ -65,35 +65,71 @@ function percentileRank(values: number[], v: number): number {
   return (idx / sorted.length) * 100;
 }
 
-// Tier clustering based on score gaps
+// DeepSeek tier clustering: hierarchical, min tier size = 3 (no single-player tiers)
 function computeTiers(scores: number[]): number[] {
   if (scores.length === 0) return [];
+  if (scores.length < 3) return scores.map(() => 1); // All in tier 1 if < 3 players
   
-  const sorted = [...scores].sort((a,b)=>b-a);
-  const gaps: Array<{gap: number, idx: number}> = [];
+  const indexed = scores.map((score, idx) => ({ score, idx }));
+  indexed.sort((a, b) => b.score - a.score); // Sort by score descending
   
-  for (let i = 1; i < sorted.length; i++) {
-    gaps.push({ gap: sorted[i-1] - sorted[i], idx: i });
+  const tiers: number[] = new Array(scores.length);
+  const gaps: Array<{ gap: number, idx: number }> = [];
+  
+  // Calculate score gaps
+  for (let i = 1; i < indexed.length; i++) {
+    gaps.push({ 
+      gap: indexed[i-1].score - indexed[i].score, 
+      idx: i 
+    });
   }
   
-  // Find largest gaps to determine tier breaks
-  gaps.sort((a,b) => b.gap - a.gap);
+  // Sort gaps by size (largest first) for natural tier breaks
+  gaps.sort((a, b) => b.gap - a.gap);
   
-  const tierBreaks = [0]; // Always start with tier 1
-  for (let i = 0; i < Math.min(2, gaps.length); i++) {
-    tierBreaks.push(gaps[i].idx);
-  }
-  tierBreaks.sort((a,b) => a-b);
+  // Find tier boundaries, ensuring min tier size of 3
+  const tierBoundaries = [0]; // Start of tier 1
+  let currentTier = 1;
   
-  return scores.map(score => {
-    const sortedIdx = sorted.findIndex(s => s === score);
-    for (let t = 0; t < tierBreaks.length; t++) {
-      if (sortedIdx < tierBreaks[t+1] || t === tierBreaks.length - 1) {
-        return t + 1;
+  for (const gapInfo of gaps) {
+    const potentialBoundary = gapInfo.idx;
+    
+    // Check if this boundary would create tiers with at least 3 players
+    let validBoundary = true;
+    const testBoundaries = [...tierBoundaries, potentialBoundary].sort((a, b) => a - b);
+    
+    for (let i = 0; i < testBoundaries.length; i++) {
+      const start = testBoundaries[i];
+      const end = testBoundaries[i + 1] || indexed.length;
+      const tierSize = end - start;
+      
+      if (tierSize < 3 && indexed.length >= 6) { // Only enforce min size if we have enough players
+        validBoundary = false;
+        break;
       }
     }
-    return tierBreaks.length;
-  });
+    
+    if (validBoundary && tierBoundaries.length < 4) { // Max 4 tiers
+      tierBoundaries.push(potentialBoundary);
+    }
+  }
+  
+  tierBoundaries.sort((a, b) => a - b);
+  
+  // Assign tiers based on boundaries
+  for (let i = 0; i < indexed.length; i++) {
+    let tier = 1;
+    for (let j = 1; j < tierBoundaries.length; j++) {
+      if (i >= tierBoundaries[j]) {
+        tier = j + 1;
+      } else {
+        break;
+      }
+    }
+    tiers[indexed[i].idx] = tier;
+  }
+  
+  return tiers;
 }
 
 export async function computeRedraftWeek(
@@ -147,10 +183,10 @@ export async function computeRedraftWeek(
     const dnp = r.dnp_weeks_rolling||0;
     const inj = (r.injury_status||'healthy').toLowerCase();
     let penalty = 0;
-    if (inj === 'questionable') penalty = -0.03;
-    if (inj === 'out') penalty = -0.10;
-    penalty += Math.min(0.10, dnp*0.02);
-    return clamp01(1 + penalty);
+    if (inj === 'questionable') penalty = -5;
+    if (inj === 'out') penalty = -10;
+    penalty += Math.min(-20, penalty - dnp * 3); // Cap health penalty at -20
+    return Math.max(-20, Math.min(5, penalty)); // DeepSeek spec: cap at -20
   });
   
   const sosVals = data.map(r => clamp01((r.sos_ctx||50)/100));
@@ -173,8 +209,8 @@ export async function computeRedraftWeek(
       w.team* teamPct[i] +
       w.sos * sosPct[i];
 
-    // Health as multiplier around ~1.0 mapped to +/- few points
-    const healthAdj = (healthVals[i]-1) * 10;
+    // Health as additive adjustment (DeepSeek spec: direct additive)
+    const healthAdj = healthVals[i]; // Already capped at -20 to +5
     return Math.max(0, Math.min(100, base + healthAdj));
   });
 
@@ -202,23 +238,23 @@ export async function computeRedraftWeek(
       scores[i], vors[i], tiers[i], 
       JSON.stringify(w),
       JSON.stringify({
-        Opp: Math.round(oppPct[i]),
-        Eff: Math.round(effPct[i]),
-        Role: Math.round(rolePct[i]),
-        Team: Math.round(teamPct[i]),
-        Health: Math.round((healthVals[i]-1)*10),
-        SOS: Math.round(sosPct[i])
+        opp: Math.round(oppPct[i] * (w.opp || 0)),
+        eff: Math.round(effPct[i] * (w.eff || 0)),
+        role: Math.round(rolePct[i] * (w.role || 0)),
+        team: Math.round(teamPct[i] * (w.team || 0)),
+        health: Math.round(healthVals[i] * (w.health || 0.1)),
+        sos: Math.round(sosPct[i] * (w.sos || 0))
       }),
       // Conflict resolution values
         scores[i], vors[i], tiers[i], 
         JSON.stringify(w),
         JSON.stringify({
-          Opp: Math.round(oppPct[i]),
-          Eff: Math.round(effPct[i]),
-          Role: Math.round(rolePct[i]),
-          Team: Math.round(teamPct[i]),
-          Health: Math.round((healthVals[i]-1)*10),
-          SOS: Math.round(sosPct[i])
+          opp: Math.round(oppPct[i] * (w.opp || 0)),
+          eff: Math.round(effPct[i] * (w.eff || 0)),
+          role: Math.round(rolePct[i] * (w.role || 0)),
+          team: Math.round(teamPct[i] * (w.team || 0)),
+          health: Math.round(healthVals[i] * (w.health || 0.1)),
+          sos: Math.round(sosPct[i] * (w.sos || 0))
         })
       ]
     );
@@ -265,11 +301,20 @@ export async function computeDynastySeason(
 
   const data = rows.rows.map((row: any) => ({ ...row } as DynastyPlayerRow));
 
-  // Dynasty components
+  // Dynasty components - DeepSeek 3-year projection with proper decay
   const proj3Vals = data.map(r => {
-    // 3-year projection: 60% year1, 25% year2, 15% year3 with decay
-    const baseScore = (r.avg_snap_pct||0)/100 * 0.7 + (r.avg_yprr||0)/3 * 0.3;
-    return clamp01(baseScore * 0.60 + baseScore * 0.85 * 0.25 + baseScore * 0.70 * 0.15);
+    // Base current season projection from opportunity and efficiency
+    const oppScore = (r.avg_snap_pct||0)/100 * 0.6 + (r.avg_target_share||0) * 0.4;
+    const effScore = (r.avg_yprr||0)/3 * 0.6 + (r.avg_succ_rate||0) * 0.4;
+    const currentProj = clamp01((oppScore + effScore) / 2);
+    
+    // 3-year projection: 60% year1, 25% year2, 15% year3
+    // Apply aging decay: year 2 = 95%, year 3 = 85% of current
+    const year1 = currentProj * 0.60;
+    const year2 = currentProj * 0.95 * 0.25;
+    const year3 = currentProj * 0.85 * 0.15;
+    
+    return clamp01(year1 + year2 + year3);
   });
 
   const ageVals = data.map(r => r.age_multiplier || 1.0);
@@ -341,23 +386,23 @@ export async function computeDynastySeason(
       scores[i], vors[i], tiers[i], 
       JSON.stringify(w),
       JSON.stringify({
-        Proj3: Math.round(proj3Pct[i]),
-        Age: Math.round(agePct[i]),
-        Role: Math.round(rolePct[i]),
-        Eff: Math.round(effPct[i]),
-        Team: Math.round(teamPct[i]),
-        Ped: Math.round(pedPct[i])
+        proj3: Math.round(proj3Pct[i] * (w.proj3 || 0)),
+        age: Math.round(agePct[i] * (w.age || 0)),
+        role: Math.round(rolePct[i] * (w.role || 0)),
+        eff: Math.round(effPct[i] * (w.eff || 0)),
+        team: Math.round(teamPct[i] * (w.team || 0)),
+        ped: Math.round(pedPct[i] * (w.ped || 0))
       }),
       // Conflict resolution values
         scores[i], vors[i], tiers[i], 
         JSON.stringify(w),
         JSON.stringify({
-          Proj3: Math.round(proj3Pct[i]),
-          Age: Math.round(agePct[i]),
-          Role: Math.round(rolePct[i]),
-          Eff: Math.round(effPct[i]),
-          Team: Math.round(teamPct[i]),
-          Ped: Math.round(pedPct[i])
+          proj3: Math.round(proj3Pct[i] * (w.proj3 || 0)),
+          age: Math.round(agePct[i] * (w.age || 0)),
+          role: Math.round(rolePct[i] * (w.role || 0)),
+          eff: Math.round(effPct[i] * (w.eff || 0)),
+          team: Math.round(teamPct[i] * (w.team || 0)),
+          ped: Math.round(pedPct[i] * (w.ped || 0))
         })
       ]
     );

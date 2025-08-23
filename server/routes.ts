@@ -377,7 +377,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ===== BACKEND SPINE: RATINGS ENGINE ENDPOINTS =====
+  // ===== DEEPSEEK RATINGS SYSTEM =====
+  // Mount the new DeepSeek ratings router
+  app.use('/api/ratings', ratingsRouter);
+  
+  // ===== LEGACY RATINGS ENGINE (DEPRECATED) =====
+  // Legacy ratings endpoint - disabled in favor of DeepSeek methodology
+  /*
   app.get('/api/ratings', async (req: Request, res: Response) => {
     try {
       const { ratingsEngineService } = await import('./services/ratingsEngineService');
@@ -410,6 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  */
 
   app.get('/api/ratings/player/:playerId', async (req: Request, res: Response) => {
     try {
@@ -2117,8 +2124,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/redraft', redraftWeeklyRoutes);
   app.use('/api/sos', sosRouter);
 
-  // Register Tiber ratings routes
-  app.use('/api/tiber-ratings', ratingsRouter);
+  // DeepSeek ratings router now mounted at /api/ratings (see line 385)
+  // app.use('/api/tiber-ratings', ratingsRouter); // Moved to /api/ratings
 
   // OASIS Proxy Routes - Efficient upstream caching with ETags
   const oasisCache = new Map();

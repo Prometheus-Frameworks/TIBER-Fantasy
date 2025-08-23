@@ -23,25 +23,41 @@ export type Format = 'redraft' | 'dynasty';
 export function parseWeights(weightsStr?: string, format: Format = 'redraft', position: Position = 'RB') {
   if (!weightsStr) return DEFAULT_WEIGHTS[format][position];
   
-  const parts = weightsStr.split(',').map(Number);
+  // Handle DeepSeek format: "opp:0.50,eff:0.20,role:0.15,team:0.10,health:0.03,sos:0.02"
+  const weights = { ...DEFAULT_WEIGHTS[format][position] };
   
-  if (format === 'redraft') {
-    return {
-      opp: Number.isFinite(parts[0]) ? parts[0] : DEFAULT_WEIGHTS.redraft[position].opp,
-      eff: Number.isFinite(parts[1]) ? parts[1] : DEFAULT_WEIGHTS.redraft[position].eff,
-      role: Number.isFinite(parts[2]) ? parts[2] : DEFAULT_WEIGHTS.redraft[position].role,
-      team: Number.isFinite(parts[3]) ? parts[3] : DEFAULT_WEIGHTS.redraft[position].team,
-      health: Number.isFinite(parts[4]) ? parts[4] : DEFAULT_WEIGHTS.redraft[position].health,
-      sos: Number.isFinite(parts[5]) ? parts[5] : DEFAULT_WEIGHTS.redraft[position].sos,
-    };
-  } else {
-    return {
-      proj3: Number.isFinite(parts[0]) ? parts[0] : DEFAULT_WEIGHTS.dynasty[position].proj3,
-      age: Number.isFinite(parts[1]) ? parts[1] : DEFAULT_WEIGHTS.dynasty[position].age,
-      role: Number.isFinite(parts[2]) ? parts[2] : DEFAULT_WEIGHTS.dynasty[position].role,
-      eff: Number.isFinite(parts[3]) ? parts[3] : DEFAULT_WEIGHTS.dynasty[position].eff,
-      team: Number.isFinite(parts[4]) ? parts[4] : DEFAULT_WEIGHTS.dynasty[position].team,
-      ped: Number.isFinite(parts[5]) ? parts[5] : DEFAULT_WEIGHTS.dynasty[position].ped,
-    };
+  try {
+    const pairs = weightsStr.split(',');
+    let totalWeight = 0;
+    
+    for (const pair of pairs) {
+      const [key, value] = pair.trim().split(':');
+      const numValue = parseFloat(value);
+      
+      if (key && !isNaN(numValue)) {
+        // Map component names based on format
+        if (format === 'redraft') {
+          if (['opp', 'eff', 'role', 'team', 'health', 'sos'].includes(key)) {
+            weights[key as keyof typeof weights] = numValue;
+          }
+        } else {
+          if (['proj3', 'age', 'role', 'eff', 'team', 'ped'].includes(key)) {
+            weights[key as keyof typeof weights] = numValue;
+          }
+        }
+        totalWeight += numValue;
+      }
+    }
+    
+    // Validate total weight is approximately 1.0 (±0.01 tolerance)
+    if (Math.abs(totalWeight - 1.0) > 0.01) {
+      console.warn(`Weight sum ${totalWeight} outside tolerance ±0.01 from 1.0, using defaults`);
+      return DEFAULT_WEIGHTS[format][position];
+    }
+    
+    return weights;
+  } catch (error) {
+    console.warn(`Invalid weights format: ${weightsStr}, using defaults`);
+    return DEFAULT_WEIGHTS[format][position];
   }
 }
