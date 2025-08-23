@@ -151,19 +151,22 @@ export default function Leaders() {
   };
 
   // Determine which API endpoint to use
-  const isAdvancedMetric = METRICS_BY_POSITION[position as keyof typeof METRICS_BY_POSITION]
+  const isAdvancedMetric = METRICS_BY_POSITION[position]
     ?.find(m => m.value === metric)?.advanced;
   
   const apiEndpoint = isAdvancedMetric ? '/api/stats/2024/leaderboard-advanced' : '/api/stats/2024/leaderboard';
 
+  // Universal search query - fetch all positions when searching
+  const searchPosition = searchQuery ? 'ALL' : position;
+  
   const { data, isLoading, error } = useQuery<LeadersResponse>({
-    queryKey: [apiEndpoint, position, metric, sortDir, limit, minGames],
+    queryKey: [apiEndpoint, searchPosition, metric, sortDir, limit, minGames, searchQuery],
     queryFn: async () => {
       const params = new URLSearchParams({
-        position,
+        position: searchPosition,
         metric,
         dir: sortDir,
-        limit: String(limit),
+        limit: String(searchQuery ? 500 : limit), // Higher limit when searching
         min_games: String(minGames)
       });
       
@@ -218,11 +221,18 @@ export default function Leaders() {
     return Math.round(numValue).toLocaleString();
   };
 
-  const filteredData = data?.data?.rows?.filter(player =>
-    searchQuery === '' || 
-    player.player_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    player.team.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const filteredData = data?.data?.rows?.filter(player => {
+    // If no search query, filter by current position
+    if (!searchQuery) {
+      return player.position === position;
+    }
+    
+    // If searching, show all positions that match the search
+    return (
+      player.player_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      player.team.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }) || [];
 
   const currentMetrics = METRICS_BY_POSITION[position] || [];
   const liveMetrics = currentMetrics.filter(m => m.live);
@@ -362,11 +372,16 @@ export default function Leaders() {
                       {position} Leaders - {currentMetrics.find(m => m.value === metric)?.label}
                     </CardTitle>
                     <div className="flex items-center gap-2 text-sm text-gray-400">
-                      <span>{filteredData.length} of {data?.data?.rows?.length || 0} players</span>
+                      <span>
+                        {searchQuery 
+                          ? `${filteredData.length} results` 
+                          : `${filteredData.length} of ${data?.data?.rows?.filter(p => p.position === position).length || 0} players`
+                        }
+                      </span>
                       {searchQuery && (
-                        <span className="text-purple-300">• Filtered by "{searchQuery}"</span>
+                        <span className="text-purple-300">• Search: "{searchQuery}"</span>
                       )}
-                      <span>• Min {minGames} games</span>
+                      {!searchQuery && <span>• Min {minGames} games</span>}
                       {data?.mode && (
                         <Badge variant="secondary" className="bg-purple-600/20 text-purple-300">
                           {data.mode === 'advanced_pbp_derived' ? 'PBP Data' : 'Season Stats'}
@@ -414,7 +429,14 @@ export default function Leaders() {
                           {/* Player Info */}
                           <div className="col-span-4">
                             <div className="font-semibold text-white text-lg">{player.player_name}</div>
-                            <div className="text-sm text-gray-400">{player.position}</div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm text-gray-400">{player.position}</div>
+                              {searchQuery && player.position !== position && (
+                                <Badge variant="outline" className="text-xs bg-blue-600/20 text-blue-300 border-blue-600/30">
+                                  Different Position
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                           
                           {/* Team */}
