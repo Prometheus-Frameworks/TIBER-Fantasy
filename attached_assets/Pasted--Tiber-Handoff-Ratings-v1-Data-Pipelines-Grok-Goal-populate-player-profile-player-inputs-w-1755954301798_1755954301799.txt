@@ -1,0 +1,119 @@
+📦 Tiber Handoff — Ratings v1 Data Pipelines (Grok)
+
+Goal: populate player_profile, player_inputs (with sos_ctx), and optional offline player_scores CSV to unblock /api/ratings compute + QA.
+
+0) Pre-reqs
+
+Python 3.10+
+
+pip install nfl_data_py pandas numpy scipy
+
+Postgres running, DB URL wired in your app
+
+1) One-time DB tweak (if not already present)
+
+Add sos_ctx to player_inputs (Ratings v1 migrations expect it; keep nullable):
+
+ALTER TABLE player_inputs
+  ADD COLUMN IF NOT EXISTS sos_ctx NUMERIC;
+
+2) Drop scripts (paths below)
+
+Create these files:
+
+scripts/ingest_player_profile.py (Grok source)
+
+<PASTE THE ingest_player_profile.py FROM GROK>
+
+
+scripts/ingest_player_inputs.py (Grok source)
+
+<PASTE THE ingest_player_inputs.py FROM GROK>
+
+
+Note: ingest_player_inputs.py expects defense_context_2024.csv in the working dir (produced earlier from SOS v2 pipeline).
+
+Optional (offline compute sanity):
+scripts/compute_player_scores.py (Grok source)
+
+<PASTE THE compute_player_scores.py FROM GROK>
+
+3) Generate CSVs (2024 W1–17)
+# player profiles (QB/RB/WR/TE)
+python scripts/ingest_player_profile.py --year=2024
+
+# player inputs (requires defense_context_2024.csv present)
+python scripts/ingest_player_inputs.py --year=2024 --weeks=1-17
+
+
+Outputs:
+
+player_profile_2024.csv
+
+player_inputs_2024.csv
+
+(Optional offline check)
+
+python scripts/compute_player_scores.py --year=2024 --weeks=1-17
+# -> player_scores_2024.csv (not required if TS compute writes to DB)
+
+4) Load into Postgres (COPY)
+
+From psql in project root (adjust path if needed):
+
+\COPY player_profile(player_id,name,position,team,age,draft_round,draft_pick,contract_yrs_left,guarantees_usd)
+  FROM 'player_profile_2024.csv' CSV HEADER;
+
+\COPY player_inputs(
+  player_id,season,week,position,team,
+  snap_pct,routes,tprr,rush_share,target_share,goalline_share,two_min_share,
+  yprr,yac_per_rec,mtf,succ_rate,epa_per_play_qb,
+  team_epa_play,team_pace,team_rz_plays,
+  injury_status,dnp_weeks_rolling,sos_ctx
+) FROM 'player_inputs_2024.csv' CSV HEADER;
+
+
+Sanity queries
+
+SELECT COUNT(*) FROM player_profile;              -- expect hundreds (2024 skill players)
+SELECT COUNT(*) FROM player_inputs WHERE season=2024;  -- ~1k–2k+ rows (varies by availability)
+SELECT MIN(week), MAX(week) FROM player_inputs WHERE season=2024;  -- 1 .. 17
+
+5) Hook into Ratings compute (TS side already staged)
+
+Now that data exists, hit the compute/endpoint:
+
+# Example: compute & fetch redraft RB Week 6 (uses server-side compute)
+curl "/api/ratings?format=redraft&position=RB&season=2024&week=6&recompute=1&debug=1" | jq '.items[0]'
+
+
+If debug shows components (Opp/Eff/Role/Team/Health/SOS) you’re golden.
+
+6) Known gaps / flags (so you’re not surprised)
+
+Routes / YPRR / TPRR / MTF: placeholders if you don’t pipe in premium sources yet (PFF/NGS/etc). The script leaves NaN or rough proxies. That’s fine for v1; metrics are designed to be drop-in when you add a feed.
+
+Contracts: contract_yrs_left / guarantees_usd set to 0 unless you merge a contract CSV. Not used by redraft v1; light impact in dynasty later.
+
+sos_ctx: derived using simplified v2 logic and your defense_context_2024.csv. It’s a small influence, not a hard dependency.
+
+7) Mini QA (fast pass)
+# Data present?
+psql -c "SELECT position, COUNT(*) FROM player_profile GROUP BY 1 ORDER BY 1;"
+psql -c "SELECT position, week, COUNT(*) FROM player_inputs WHERE season=2024 GROUP BY 1,2 ORDER BY 1,2 LIMIT 12;"
+
+# API health
+curl -sf "/api/ratings?format=redraft&position=WR&season=2024&week=6&limit=25" > /dev/null
+curl -sf "/api/ratings/tiers?format=redraft&position=WR&season=2024&week=6" | jq -e '.tiers' > /dev/null
+
+8) Definition of Done (for this handoff)
+
+ sos_ctx column exists.
+
+ player_profile_2024.csv loaded (hundreds of rows).
+
+ player_inputs_2024.csv loaded for weeks 1–17.
+
+ /api/ratings returns non-empty lists for 2024 W1–17 across positions.
+
+ debug=1 shows components; scores in 0–100; VOR and tiers present.

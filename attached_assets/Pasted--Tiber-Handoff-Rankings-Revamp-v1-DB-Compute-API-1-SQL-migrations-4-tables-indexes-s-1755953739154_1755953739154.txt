@@ -1,0 +1,397 @@
+📦 Tiber Handoff — Rankings Revamp v1 (DB + Compute + API)
+1) SQL migrations (4 tables + indexes)
+
+server/src/db/migrations/20250823a_player_profile.sql
+
+CREATE TABLE IF NOT EXISTS player_profile (
+  player_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  position TEXT NOT NULL CHECK (position IN ('QB','RB','WR','TE')),
+  team TEXT,
+  age NUMERIC,                -- years with decimals ok
+  draft_round SMALLINT,
+  draft_pick SMALLINT,
+  contract_yrs_left SMALLINT,
+  guarantees_usd NUMERIC
+);
+
+CREATE INDEX IF NOT EXISTS idx_player_profile_pos ON player_profile(position);
+
+
+server/src/db/migrations/20250823b_player_inputs.sql
+
+CREATE TABLE IF NOT EXISTS player_inputs (
+  player_id TEXT NOT NULL,
+  season SMALLINT NOT NULL,
+  week SMALLINT NOT NULL,
+  position TEXT NOT NULL CHECK (position IN ('QB','RB','WR','TE')),
+  team TEXT NOT NULL,
+
+  -- Opportunity / Usage
+  snap_pct NUMERIC,                    -- 0..100
+  routes NUMERIC,
+  tprr NUMERIC,                        -- targets per route run 0..1
+  rush_share NUMERIC,                  -- 0..1
+  target_share NUMERIC,                -- 0..1
+  goalline_share NUMERIC,              -- 0..1
+  two_min_share NUMERIC,               -- 0..1
+
+  -- Efficiency
+  yprr NUMERIC,
+  yac_per_rec NUMERIC,
+  mtf NUMERIC,                         -- missed tackles forced (per game or per att - pick one consistently)
+  succ_rate NUMERIC,                   -- 0..1
+  epa_per_play_qb NUMERIC,
+
+  -- Team environment
+  team_epa_play NUMERIC,
+  team_pace NUMERIC,
+  team_rz_plays NUMERIC,
+  team_pass_rate NUMERIC,              -- 0..1
+
+  -- Health / flags
+  injury_status TEXT,                  -- 'healthy','questionable','out' ...
+  dnp_weeks_rolling SMALLINT DEFAULT 0,
+
+  -- SOS v2 (contextual, next 3 weeks blended or week-specific)
+  sos_ctx NUMERIC,
+
+  PRIMARY KEY (player_id, season, week)
+);
+
+CREATE INDEX IF NOT EXISTS idx_inputs_lookup
+  ON player_inputs(season, week, position);
+
+CREATE INDEX IF NOT EXISTS idx_inputs_player_time
+  ON player_inputs(player_id, season, week);
+
+
+server/src/db/migrations/20250823c_age_curves.sql
+
+CREATE TABLE IF NOT EXISTS age_curves (
+  position TEXT NOT NULL CHECK (position IN ('QB','RB','WR','TE')),
+  age SMALLINT NOT NULL,
+  multiplier NUMERIC NOT NULL,   -- e.g. 1.05 peak, 0.92 decline
+  PRIMARY KEY (position, age)
+);
+
+
+(Seed defaults — optional quick load)
+
+-- RB rough curve (example — tweak later)
+INSERT INTO age_curves(position, age, multiplier) VALUES
+('RB',21,0.96),('RB',22,1.02),('RB',23,1.05),('RB',24,1.06),('RB',25,1.05),
+('RB',26,1.02),('RB',27,0.98),('RB',28,0.95),('RB',29,0.92),('RB',30,0.88)
+ON CONFLICT DO NOTHING;
+
+-- WR
+INSERT INTO age_curves(position, age, multiplier) VALUES
+('WR',21,0.92),('WR',22,0.96),('WR',23,1.00),('WR',24,1.04),('WR',25,1.06),
+('WR',26,1.06),('WR',27,1.05),('WR',28,1.02),('WR',29,0.98),('WR',30,0.94)
+ON CONFLICT DO NOTHING;
+
+-- TE (later peak)
+INSERT INTO age_curves(position, age, multiplier) VALUES
+('TE',22,0.92),('TE',23,0.95),('TE',24,0.98),('TE',25,1.02),('TE',26,1.05),
+('TE',27,1.06),('TE',28,1.06),('TE',29,1.04),('TE',30,1.00),('TE',31,0.96)
+ON CONFLICT DO NOTHING;
+
+-- QB (long tail)
+INSERT INTO age_curves(position, age, multiplier) VALUES
+('QB',22,0.92),('QB',23,0.95),('QB',24,0.98),('QB',25,1.02),('QB',26,1.04),
+('QB',27,1.05),('QB',28,1.05),('QB',29,1.05),('QB',30,1.04),('QB',31,1.02),
+('QB',32,1.00),('QB',33,0.98),('QB',34,0.96),('QB',35,0.94)
+ON CONFLICT DO NOTHING;
+
+
+server/src/db/migrations/20250823d_player_scores.sql
+
+CREATE TABLE IF NOT EXISTS player_scores (
+  player_id TEXT NOT NULL,
+  season SMALLINT NOT NULL,
+  week SMALLINT,                              -- NULL for dynasty seasonal if needed
+  format TEXT NOT NULL CHECK (format IN ('redraft','dynasty')),
+  position TEXT NOT NULL CHECK (position IN ('QB','RB','WR','TE')),
+  score NUMERIC NOT NULL,                     -- 0..100
+  vor NUMERIC,                                -- Value over replacement (position-normalized)
+  tier SMALLINT,                              -- 1 = elite tier, increasing numbers down
+  weights_json JSONB,                         -- weights actually used
+  debug_json JSONB,                           -- component breakdown
+  PRIMARY KEY (player_id, season, week, format)
+);
+
+CREATE INDEX IF NOT EXISTS idx_scores_listing
+  ON player_scores(season, week, format, position, score DESC);
+
+2) TypeScript — minimal compute service (paste & adjust)
+
+server/src/modules/ratings/weights.ts
+
+export const DEFAULT_WEIGHTS = {
+  redraft: {
+    RB: { opp: 0.45, eff: 0.20, role: 0.15, team: 0.10, health: 0.05, sos: 0.05 },
+    WR: { opp: 0.30, eff: 0.30, role: 0.15, team: 0.15, health: 0.05, sos: 0.05 },
+    TE: { opp: 0.32, eff: 0.23, role: 0.20, team: 0.15, health: 0.05, sos: 0.05 },
+    QB: { opp: 0.25, eff: 0.35, role: 0.15, team: 0.20, health: 0.03, sos: 0.02 },
+  },
+  dynasty: {
+    RB: { proj3: 0.40, age: 0.20, role: 0.15, eff: 0.10, team: 0.10, ped: 0.05 },
+    WR: { proj3: 0.40, age: 0.20, role: 0.15, eff: 0.15, team: 0.07, ped: 0.03 },
+    TE: { proj3: 0.40, age: 0.20, role: 0.15, eff: 0.10, team: 0.10, ped: 0.05 },
+    QB: { proj3: 0.40, age: 0.20, role: 0.15, eff: 0.15, team: 0.10, ped: 0.00 },
+  },
+};
+
+export const REPLACEMENT_LINES = {
+  RB: 40, WR: 48, TE: 16, QB: 12
+};
+
+
+server/src/modules/ratings/compute.ts
+
+import { db } from "@/db"; // your db client
+import { DEFAULT_WEIGHTS, REPLACEMENT_LINES } from "./weights";
+
+// Helpers
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+const pct = (x: number) => Math.round(clamp01(x) * 100);
+
+// simple percentile utility from array of numbers
+function percentileRank(values: number[], v: number): number {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a,b)=>a-b);
+  let idx = 0;
+  while (idx < sorted.length && sorted[idx] <= v) idx++;
+  return (idx / sorted.length) * 100;
+}
+
+type Format = "redraft"|"dynasty";
+
+export async function computeRedraftWeek(season: number, week: number, position: "QB"|"RB"|"WR"|"TE", weightsOverride?: Partial<typeof DEFAULT_WEIGHTS["redraft"]["RB"]>) {
+  // 1) pull inputs for this week + pos
+  const rows = await db.$queryRaw<Array<any>>`
+    SELECT i.*, p.name
+    FROM player_inputs i
+    JOIN player_profile p ON p.player_id = i.player_id
+    WHERE i.season=${season} AND i.week=${week} AND i.position=${position}
+  `;
+
+  if (!rows.length) return [];
+
+  // 2) derive components
+  const oppVals = rows.map(r => {
+    // position-aware opportunity proxy
+    if (position === "RB") return clamp01(0.6*(r.rush_share||0) + 0.4*(r.target_share||0));
+    if (position === "WR" || position === "TE") return clamp01(0.6*(r.routes||0)/40 + 0.4*(r.tprr||0)); // rough norm
+    if (position === "QB") return clamp01((r.team_pass_rate||0) + 0.2); // rough baseline
+    return 0;
+  });
+
+  const effVals = rows.map(r => {
+    if (position === "RB") return clamp01(0.5*(r.succ_rate||0) + 0.5*((r.yac_per_rec||0)/6));
+    if (position === "WR" || position === "TE") return clamp01((r.yprr||0)/3); // yprr ~0-3+
+    if (position === "QB") return clamp01(((r.epa_per_play_qb||0)+0.3)/0.6); // map -0.3..+0.3 to 0..1
+    return 0;
+  });
+
+  const roleVals = rows.map(r => clamp01(0.5*(r.snap_pct||0)/100 + 0.25*(r.goalline_share||0) + 0.25*(r.two_min_share||0)));
+  const teamVals = rows.map(r => clamp01(0.5*((r.team_epa_play||0)+0.25)/0.5 + 0.5*(r.team_pace||0)/70));
+  const healthVals = rows.map(r => {
+    const dnp = r.dnp_weeks_rolling||0;
+    const inj = (r.injury_status||'healthy').toLowerCase();
+    let penalty = 0;
+    if (inj === 'questionable') penalty = -0.03;
+    if (inj === 'out') penalty = -0.10;
+    penalty += Math.min(0.10, dnp*0.02);
+    return clamp01(1 + penalty); // convert to small downscale
+  });
+  const sosVals = rows.map(r => clamp01((r.sos_ctx||50)/100));
+
+  // 3) percentile within position for main comps (except health is multiplier)
+  const oppPct = rows.map((_,i)=>percentileRank(oppVals, oppVals[i]));
+  const effPct = rows.map((_,i)=>percentileRank(effVals, effVals[i]));
+  const rolePct= rows.map((_,i)=>percentileRank(roleVals, roleVals[i]));
+  const teamPct= rows.map((_,i)=>percentileRank(teamVals, teamVals[i]));
+  const sosPct = rows.map((_,i)=>percentileRank(sosVals, sosVals[i]));
+
+  const w = { ...DEFAULT_WEIGHTS.redraft[position], ...(weightsOverride||{}) };
+
+  // 4) composite 0..100
+  const scores = rows.map((r, i) => {
+    const base =
+      w.opp * oppPct[i] +
+      w.eff * effPct[i] +
+      w.role* rolePct[i] +
+      w.team* teamPct[i] +
+      w.sos * sosPct[i];
+
+    // health as multiplier around ~1.0 mapped to +/- few points
+    const healthAdj = (healthVals[i]-1) * 10; // -10..+?
+    return Math.max(0, Math.min(100, base + healthAdj));
+  });
+
+  // 5) VOR (value over replacement) by position
+  const replIdx = Math.min(REPLACEMENT_LINES[position]-1, scores.length-1);
+  const sortedForVor = [...scores].sort((a,b)=>b-a);
+  const replacementScore = sortedForVor[replIdx] || 0;
+  const vors = scores.map(s => s - replacementScore);
+
+  // 6) tiers (simple cut: kmeans-lite via score gaps)
+  const sorted = scores.slice().sort((a,b)=>b-a);
+  let cut = 0;
+  let maxGap = -1, maxGapIdx = 0;
+  for (let i=1;i<sorted.length;i++){
+    const gap = sorted[i-1]-sorted[i];
+    if (gap>maxGap){ maxGap=gap; maxGapIdx=i; }
+  }
+  cut = sorted[maxGapIdx] || 0;
+  const tiers = scores.map(s => s>=cut?1:(s>=cut-8?2:3));
+
+  // 7) persist
+  const payload = rows.map((r,i)=>({
+    player_id: r.player_id,
+    season,
+    week,
+    format: "redraft" as const,
+    position,
+    score: scores[i],
+    vor: vors[i],
+    tier: tiers[i],
+    weights_json: JSON.stringify(w),
+    debug_json: JSON.stringify({
+      Opp: Math.round(oppPct[i]),
+      Eff: Math.round(effPct[i]),
+      Role: Math.round(rolePct[i]),
+      Team: Math.round(teamPct[i]),
+      Health: Math.round((healthVals[i]-1)*10), // +/- points
+      SOS: Math.round(sosPct[i])
+    })
+  }));
+
+  // upsert
+  for (const row of payload) {
+    await db.$executeRawUnsafe(
+      `INSERT INTO player_scores
+        (player_id, season, week, format, position, score, vor, tier, weights_json, debug_json)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb)
+       ON CONFLICT (player_id,season,week,format)
+       DO UPDATE SET score=$6, vor=$7, tier=$8, weights_json=$9::jsonb, debug_json=$10::jsonb`,
+      row.player_id, row.season, row.week, row.format, row.position,
+      row.score, row.vor, row.tier, row.weights_json, row.debug_json
+    );
+  }
+
+  return payload.length;
+}
+
+
+Dynasty compute: same pattern—use last N weeks or season aggregates from player_inputs + player_profile + age_curves to build proj3 (60/25/15), apply age multiplier, then identical normalization→composite→VOR→tiers. (If you want, I’ll drop that file next, but redraft weekly gets us live fastest.)
+
+3) API endpoints (stubs)
+
+server/src/modules/ratings/ratings.controller.ts
+
+import { computeRedraftWeek } from "./compute";
+
+export async function getRatings(req, res) {
+  const format = (req.query.format as "redraft"|"dynasty") ?? "redraft";
+  const position = (req.query.position as "QB"|"RB"|"WR"|"TE") ?? "RB";
+  const season = parseInt((req.query.season as string) ?? "2024", 10);
+  const week = req.query.week ? parseInt(req.query.week as string, 10) : null;
+  const debug = req.query.debug === "1";
+  const limit = parseInt((req.query.limit as string) ?? "200", 10);
+
+  if (format === "redraft") {
+    if (!week) return res.status(400).json({ error: "week required for redraft" });
+    // (Optional) recompute on demand
+    if (req.query.recompute === "1") {
+      await computeRedraftWeek(season, week, position);
+    }
+    const rows = await req.app.locals.db.$queryRaw<any[]>`
+      SELECT s.*, p.name, p.team
+      FROM player_scores s
+      JOIN player_profile p ON p.player_id = s.player_id
+      WHERE s.season=${season} AND s.week=${week} AND s.position=${position} AND s.format='redraft'
+      ORDER BY s.score DESC
+      LIMIT ${limit};
+    `;
+    return res.json({ season, week, position, format, items: rows.map(r => ({
+      player_id: r.player_id, name: r.name, team: r.team,
+      score: Number(r.score), vor: Number(r.vor||0), tier: r.tier,
+      ...(debug ? { debug: r.debug_json } : {})
+    }))});
+  }
+
+  // dynasty: similar query, week can be NULL, compute if needed
+  // TODO: implement computeDynastySeason(...)
+  return res.status(501).json({ error: "dynasty compute not wired yet" });
+}
+
+export async function getPlayerRating(req, res) {
+  const id = req.params.id;
+  const format = (req.query.format as "redraft"|"dynasty") ?? "redraft";
+  const season = parseInt((req.query.season as string) ?? "2024", 10);
+  const week = req.query.week ? parseInt(req.query.week as string, 10) : null;
+
+  const row = await req.app.locals.db.$queryRaw<any>`
+    SELECT s.*, p.name, p.team
+    FROM player_scores s
+    JOIN player_profile p ON p.player_id = s.player_id
+    WHERE s.player_id=${id} AND s.season=${season} AND s.week ${week?`=${week}`:`IS NULL`} AND s.format=${format}
+    LIMIT 1;
+  `;
+  if (!row?.length) return res.status(404).json({ error: "not found" });
+  return res.json(row[0]);
+}
+
+export async function getRatingTiers(req, res) {
+  const format = (req.query.format as "redraft"|"dynasty") ?? "redraft";
+  const position = (req.query.position as "QB"|"RB"|"WR"|"TE") ?? "RB";
+  const season = parseInt((req.query.season as string) ?? "2024", 10);
+  const week = req.query.week ? parseInt(req.query.week as string, 10) : null;
+
+  const rows = await req.app.locals.db.$queryRaw<any[]>`
+    SELECT tier, COUNT(*) as count, AVG(score) as avg_score
+    FROM player_scores
+    WHERE season=${season} AND ${week?`week=${week}`:`week IS NULL`} AND position=${position} AND format=${format}
+    GROUP BY tier
+    ORDER BY tier ASC;
+  `;
+  return res.json({ season, week, position, format, tiers: rows });
+}
+
+
+Route wiring (example):
+
+app.get("/api/ratings", getRatings);
+app.get("/api/players/:id/rating", getPlayerRating);
+app.get("/api/ratings/tiers", getRatingTiers);
+
+4) Cron / job (weekly recompute)
+
+Run Tuesdays 6:00am ET (after stat corrections):
+
+Refresh player_inputs for last week.
+
+computeRedraftWeek(season, week, pos) for each position.
+
+(Dynasty job later; seasonal cadence.)
+
+5) Quick test commands
+# After loading player_inputs + player_profile for 2024 week 1:
+curl "/api/ratings?format=redraft&position=RB&season=2024&week=1&recompute=1&debug=1" | jq '.items[0]'
+curl "/api/ratings/tiers?format=redraft&position=WR&season=2024&week=6"
+
+6) Definition of Done (Tiber)
+
+ Run all four migrations.
+
+ Confirm player_inputs + player_profile seeded (Grok’s scripts).
+
+ computeRedraftWeek writes to player_scores.
+
+ /api/ratings lists redraft with debug & vor & tier.
+
+ /api/ratings/tiers returns grouped tiers.
+
+ (Dynasty compute stub left TODO for next sprint.)

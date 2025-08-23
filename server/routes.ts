@@ -54,6 +54,7 @@ import tradeAnalyzerRoutes from './routes/tradeAnalyzerRoutes';
 import compassCompareRoutes from './routes/compassCompareRoutes';
 import rookieRoutes from './routes/rookieRoutes';
 import sosRouter from './modules/sos/sos.router';
+import { ratingsRouter } from './src/modules/ratings';
 import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
 import pythonRookieRoutes from './routes/pythonRookieRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
@@ -2115,6 +2116,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/python-rookie', pythonRookieRoutes);
   app.use('/api/redraft', redraftWeeklyRoutes);
   app.use('/api/sos', sosRouter);
+
+  // Register Tiber ratings routes
+  app.use('/api/tiber-ratings', ratingsRouter);
 
   // OASIS Proxy Routes - Efficient upstream caching with ETags
   const oasisCache = new Map();
