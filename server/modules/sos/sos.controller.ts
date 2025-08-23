@@ -18,7 +18,10 @@ export const getWeekly = async (req: Request, res: Response) => {
     const mode = (rawMode === 'fpa' || rawMode === 'ctx') ? rawMode as Mode : 'fpa';
     const weights = normalizeWeights(parseWeights(req.query.weights as string | undefined));
     const debug = req.query.debug === '1';
-    const samples = req.query.samples === '1' || req.query.samples === 'true';
+    
+    // Parse and clamp samples parameter (0-5)
+    const samplesRaw = parseInt((req.query.samples as string) ?? '0', 10);
+    const samples = Number.isFinite(samplesRaw) ? Math.max(0, Math.min(samplesRaw, 5)) : 0;
     
     const data = await computeWeeklySOSv2(position, week, season, mode, weights, debug, samples);
     res.json({ position, week, season, mode, weights, debug, samples, items: data });

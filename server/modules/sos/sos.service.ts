@@ -69,43 +69,59 @@ function getSampleCount(position: Position): number {
   }
 }
 
-/** Fetch player samples from player_vs_defense table */
-async function getPlayerSamples(season: number, week: number, defTeam: string, position: Position): Promise<{total: number; players: PlayerSample[]}> {
+/** Batch fetch top N players and totals for all defenses (avoids N+1) */
+async function getPlayerSamplesBatch(season: number, week: number, position: Position, sampleCount: number): Promise<{
+  playersByDef: Map<string, PlayerSample[]>;
+  totalsByDef: Map<string, number>;
+}> {
   try {
-    const sampleCount = getSampleCount(position);
-    
-    // Get top players query using template literals for now
-    const playersQuery = `
-      SELECT player_name as name, player_team as team, fpts
-      FROM player_vs_defense
-      WHERE season = ${season} AND week = ${week} AND def_team = '${defTeam}' AND position = '${position}'
-      ORDER BY fpts DESC
-      LIMIT ${sampleCount}
+    // 1) Fetch all top-N players per defense using window function
+    const topPlayersQuery = `
+      SELECT def_team, player_name, player_team, fpts
+      FROM (
+        SELECT def_team, player_name, player_team, fpts,
+               ROW_NUMBER() OVER (PARTITION BY def_team ORDER BY fpts DESC) AS rn
+        FROM player_vs_defense
+        WHERE season = ${season} AND week = ${week} AND position = '${position}'
+      ) t
+      WHERE rn <= ${sampleCount}
     `;
     
-    const playersResult = await db.execute(playersQuery);
+    const topPlayersResult = await db.execute(topPlayersQuery);
 
-    // Get total points query  
-    const totalQuery = `
-      SELECT COALESCE(SUM(fpts), 0) as total_fpts
+    // 2) Fetch totals per defense  
+    const totalsQuery = `
+      SELECT def_team, SUM(fpts) AS total_fpts
       FROM player_vs_defense
-      WHERE season = ${season} AND week = ${week} AND def_team = '${defTeam}' AND position = '${position}'
+      WHERE season = ${season} AND week = ${week} AND position = '${position}'
+      GROUP BY def_team
     `;
     
-    const totalResult = await db.execute(totalQuery);
+    const totalsResult = await db.execute(totalsQuery);
 
-    const players: PlayerSample[] = playersResult.rows.map((row: any) => ({
-      name: row.name,
-      team: row.team,
-      fpts: Number(row.fpts)
-    }));
+    // 3) Index for quick attachment
+    const playersByDef = new Map<string, PlayerSample[]>();
+    topPlayersResult.rows.forEach((row: any) => {
+      const defTeam = row.def_team;
+      if (!playersByDef.has(defTeam)) {
+        playersByDef.set(defTeam, []);
+      }
+      playersByDef.get(defTeam)!.push({
+        name: row.player_name,
+        team: row.player_team,
+        fpts: Number(row.fpts)
+      });
+    });
 
-    const total = Number((totalResult.rows[0] as any)?.total_fpts || 0);
+    const totalsByDef = new Map<string, number>();
+    totalsResult.rows.forEach((row: any) => {
+      totalsByDef.set(row.def_team, Number(row.total_fpts));
+    });
 
-    return { total, players };
+    return { playersByDef, totalsByDef };
   } catch (error) {
-    console.error('Error fetching player samples:', error);
-    return { total: 0, players: [] };
+    console.error('Error fetching player samples batch:', error);
+    return { playersByDef: new Map(), totalsByDef: new Map() };
   }
 }
 
@@ -401,7 +417,7 @@ export async function computeWeeklySOSv2(
   mode: Mode = 'fpa',
   weights: Weights = { w_fpa:0.55, w_epa:0.20, w_pace:0.15, w_rz:0.10 },
   debug = false,
-  includeSamples = false
+  samples = 0
 ) {
   // Normalize weights to ensure they sum to 1.0
   weights = normalizeWeights(weights);
@@ -450,6 +466,15 @@ export async function computeWeeklySOSv2(
     if (!epaVals.length && !paceVals.length && !rzVals.length) mode = 'fpa';
   }
 
+  // Batch fetch samples data once if requested (avoids N+1)
+  let playersByDef = new Map<string, PlayerSample[]>();
+  let totalsByDef = new Map<string, number>();
+  if (samples > 0) {
+    const batchData = await getPlayerSamplesBatch(season, week, position, samples);
+    playersByDef = batchData.playersByDef;
+    totalsByDef = batchData.totalsByDef;
+  }
+
   const out:any[] = [];
   for (const g of games) {
     const pairs = [
@@ -472,9 +497,16 @@ export async function computeWeeklySOSv2(
           tier: tier(score)
         };
         
-        // Add samples if requested
-        if (includeSamples) {
-          row.samples = await getPlayerSamples(season, week, p.opp, position);
+        // Attach samples if available (opponent = defense)
+        if (samples > 0) {
+          const players = playersByDef.get(p.opp) ?? [];
+          const total = totalsByDef.get(p.opp);
+          if (players.length > 0 || total != null) {
+            row.samples = {
+              total: Number.isFinite(total as number) ? (total as number) : 0,
+              players
+            };
+          }
         }
         
         out.push(row);
@@ -512,9 +544,16 @@ export async function computeWeeklySOSv2(
         };
       }
       
-      // Add samples if requested
-      if (includeSamples) {
-        row.samples = await getPlayerSamples(season, week, p.opp, position);
+      // Attach samples if available (opponent = defense)
+      if (samples > 0) {
+        const players = playersByDef.get(p.opp) ?? [];
+        const total = totalsByDef.get(p.opp);
+        if (players.length > 0 || total != null) {
+          row.samples = {
+            total: Number.isFinite(total as number) ? (total as number) : 0,
+            players
+          };
+        }
       }
       
       out.push(row);
