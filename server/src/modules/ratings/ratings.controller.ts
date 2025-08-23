@@ -3,6 +3,17 @@ import { computeRedraftWeek, computeDynastySeason } from './compute';
 import { type Position, type Format } from './weights';
 import { db } from '../../../db';
 
+const VALID_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE']);
+const VALID_FORMATS = new Set(['redraft', 'dynasty']);
+
+function maxWeekForSeason(season: number): number {
+  return season === 2024 ? 17 : 18; // extend as needed
+}
+
+function badRequest(res: Response, msg: string) {
+  return res.status(400).json({ error: msg });
+}
+
 export async function getRatings(req: Request, res: Response) {
   try {
     const format = (req.query.format as Format) ?? 'redraft';
@@ -13,9 +24,21 @@ export async function getRatings(req: Request, res: Response) {
     const limit = parseInt((req.query.limit as string) ?? '200', 10);
     const weightsOverride = req.query.weights as string;
 
-    // Validation
-    if (format === 'redraft' && !week) {
-      return res.status(400).json({ error: 'week required for redraft format' });
+    // Enhanced validation
+    if (!VALID_FORMATS.has(format)) {
+      return badRequest(res, `invalid format. Must be one of: ${Array.from(VALID_FORMATS).join(', ')}`);
+    }
+    if (!VALID_POSITIONS.has(position)) {
+      return badRequest(res, `invalid position. Must be one of: ${Array.from(VALID_POSITIONS).join(', ')}`);
+    }
+    if (format === 'redraft') {
+      if (!week) {
+        return badRequest(res, 'week required for redraft format');
+      }
+      const maxWeek = maxWeekForSeason(season);
+      if (week < 1 || week > maxWeek) {
+        return badRequest(res, `week must be 1..${maxWeek} for season ${season}`);
+      }
     }
 
     // Optional recompute on demand
@@ -36,8 +59,8 @@ export async function getRatings(req: Request, res: Response) {
         SELECT s.*, p.name, p.team
         FROM player_scores s
         JOIN player_profile p ON p.player_id = s.player_id
-        WHERE s.season = $1 AND s.position = $2 AND s.format = $3 AND s.week = $4
-        ORDER BY s.score DESC LIMIT $5
+        WHERE s.season = ? AND s.position = ? AND s.format = ? AND s.week = ?
+        ORDER BY s.score DESC LIMIT ?
       `;
       params = [season, position, format, week, limit];
     } else {
@@ -45,8 +68,8 @@ export async function getRatings(req: Request, res: Response) {
         SELECT s.*, p.name, p.team
         FROM player_scores s
         JOIN player_profile p ON p.player_id = s.player_id
-        WHERE s.season = $1 AND s.position = $2 AND s.format = $3 AND s.week IS NULL
-        ORDER BY s.score DESC LIMIT $4
+        WHERE s.season = ? AND s.position = ? AND s.format = ? AND s.week IS NULL
+        ORDER BY s.score DESC LIMIT ?
       `;
       params = [season, position, format, limit];
     }
@@ -89,8 +112,18 @@ export async function getPlayerRating(req: Request, res: Response) {
     const season = parseInt((req.query.season as string) ?? '2024', 10);
     const week = req.query.week ? parseInt(req.query.week as string, 10) : null;
 
-    if (format === 'redraft' && !week) {
-      return res.status(400).json({ error: 'week required for redraft format' });
+    // Enhanced validation
+    if (!VALID_FORMATS.has(format)) {
+      return badRequest(res, `invalid format. Must be one of: ${Array.from(VALID_FORMATS).join(', ')}`);
+    }
+    if (format === 'redraft') {
+      if (!week) {
+        return badRequest(res, 'week required for redraft format');
+      }
+      const maxWeek = maxWeekForSeason(season);
+      if (week < 1 || week > maxWeek) {
+        return badRequest(res, `week must be 1..${maxWeek} for season ${season}`);
+      }
     }
 
     let query: string;
@@ -101,7 +134,7 @@ export async function getPlayerRating(req: Request, res: Response) {
         SELECT s.*, p.name, p.team, p.position as player_position, p.age
         FROM player_scores s
         JOIN player_profile p ON p.player_id = s.player_id
-        WHERE s.player_id = $1 AND s.season = $2 AND s.format = $3 AND s.week = $4
+        WHERE s.player_id = ? AND s.season = ? AND s.format = ? AND s.week = ?
       `;
       params = [playerId, season, format, week];
     } else {
@@ -109,7 +142,7 @@ export async function getPlayerRating(req: Request, res: Response) {
         SELECT s.*, p.name, p.team, p.position as player_position, p.age
         FROM player_scores s
         JOIN player_profile p ON p.player_id = s.player_id
-        WHERE s.player_id = $1 AND s.season = $2 AND s.format = $3 AND s.week IS NULL
+        WHERE s.player_id = ? AND s.season = ? AND s.format = ? AND s.week IS NULL
       `;
       params = [playerId, season, format];
     }
@@ -128,8 +161,8 @@ export async function getPlayerRating(req: Request, res: Response) {
       const trendResult = await db.execute(
         `SELECT s.week, s.score
          FROM player_scores s
-         WHERE s.player_id = $1 AND s.season = $2 
-         AND s.format = 'redraft' AND s.week >= $3 AND s.week <= $4
+         WHERE s.player_id = ? AND s.season = ? 
+         AND s.format = 'redraft' AND s.week >= ? AND s.week <= ?
          ORDER BY s.week ASC`,
         [playerId, season, Math.max(1, week - 3), week]
       );
@@ -182,7 +215,7 @@ export async function getRatingsTiers(req: Request, res: Response) {
       query = `
         SELECT s.tier, MIN(s.score) as min_score, MAX(s.score) as max_score, COUNT(*) as count
         FROM player_scores s
-        WHERE s.season = $1 AND s.position = $2 AND s.format = $3 AND s.week = $4
+        WHERE s.season = ? AND s.position = ? AND s.format = ? AND s.week = ?
         GROUP BY s.tier ORDER BY s.tier ASC
       `;
       params = [season, position, format, week];
@@ -190,7 +223,7 @@ export async function getRatingsTiers(req: Request, res: Response) {
       query = `
         SELECT s.tier, MIN(s.score) as min_score, MAX(s.score) as max_score, COUNT(*) as count
         FROM player_scores s
-        WHERE s.season = $1 AND s.position = $2 AND s.format = $3 AND s.week IS NULL
+        WHERE s.season = ? AND s.position = ? AND s.format = ? AND s.week IS NULL
         GROUP BY s.tier ORDER BY s.tier ASC
       `;
       params = [season, position, format];

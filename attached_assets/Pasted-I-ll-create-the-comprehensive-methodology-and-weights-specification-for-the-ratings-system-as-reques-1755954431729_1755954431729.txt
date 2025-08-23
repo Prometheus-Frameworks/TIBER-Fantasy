@@ -1,0 +1,239 @@
+I'll create the comprehensive methodology and weights specification for the ratings system as requested.
+
+# Ratings Methodology v1 Specification
+
+## Overview
+This document defines the methodology for calculating player ratings for both redraft and dynasty fantasy football formats. The system generates position-normalized scores (0-100) with Value Over Replacement (VOR) calculations and automatic tiering.
+
+## Scoring Frameworks
+
+### Redraft Format (Current Season Focus)
+**Composite Formula**:
+```
+RedraftScore = 0.35 * Opportunity + 0.25 * Efficiency + 0.15 * RoleStability
+             + 0.10 * TeamEnvironment + 0.10 * HealthRiskAdj + 0.05 * SOSAdj
+```
+
+### Dynasty Format (Multi-Year Value)
+**Composite Formula**:
+```
+DynastyScore = 0.40 * 3yrProj + 0.20 * AgeCurveAdj + 0.15 * RoleStability
+             + 0.10 * Efficiency + 0.10 * TeamEnvironment + 0.05 * ProspectPedigree
+```
+
+## Position-Specific Default Weights
+
+### Redraft Weights
+```javascript
+{
+  RB: { opp: 0.45, eff: 0.20, role: 0.15, team: 0.10, health: 0.05, sos: 0.05 },
+  WR: { opp: 0.30, eff: 0.30, role: 0.15, team: 0.15, health: 0.05, sos: 0.05 },
+  TE: { opp: 0.32, eff: 0.23, role: 0.20, team: 0.15, health: 0.05, sos: 0.05 },
+  QB: { opp: 0.25, eff: 0.35, role: 0.15, team: 0.20, health: 0.03, sos: 0.02 }
+}
+```
+
+### Dynasty Weights
+```javascript
+{
+  RB: { proj3: 0.40, age: 0.20, role: 0.15, eff: 0.10, team: 0.10, ped: 0.05 },
+  WR: { proj3: 0.40, age: 0.20, role: 0.15, eff: 0.15, team: 0.07, ped: 0.03 },
+  TE: { proj3: 0.40, age: 0.20, role: 0.15, eff: 0.10, team: 0.10, ped: 0.05 },
+  QB: { proj3: 0.40, age: 0.20, role: 0.15, eff: 0.15, team: 0.10, ped: 0.00 }
+}
+```
+
+## Component Definitions
+
+### Opportunity Metrics
+- **RB**: Snap%, rush share, route share, targets per route
+- **WR/TE**: Snap%, routes run, targets per route, target share
+- **QB**: Dropbacks, rush share, team pass rate
+
+### Efficiency Metrics
+- **RB**: Missed tackles forced, YAC per attempt, explosive run rate, success rate
+- **WR/TE**: YPRR, RACR, explosive reception rate
+- **QB**: EPA/play, completion percentage, success rate
+
+### Role Stability Metrics
+- Depth chart position
+- 2-minute drill share
+- Goal-line share
+- Coach usage history trends
+- Contract guarantees
+
+### Team Environment Metrics
+- Team EPA/play
+- Pace of play
+- Red-zone plays percentage
+- Implied team totals
+
+### Health Risk Adjustment
+- Recent DNPs (Did Not Play)
+- In-game exits
+- Current injury status
+- Small penalty applied as negative adjustment
+
+### SOS Adjustment
+- Contextual Strength of Schedule weighted for upcoming 3 weeks
+- Light adjustment factor, not dominant
+
+### Dynasty-Specific Components
+- **3yrProj**: 3-year projection with decay (Year1: 60%, Year2: 25%, Year3: 15%)
+- **AgeCurveAdj**: Position-specific age curves
+- **ProspectPedigree**: Draft capital, breakout age, first-year usage
+
+## Normalization & VOR Calculation
+
+### Percentile Normalization
+All component scores are converted to position-specific percentiles (0-100 scale) before weighting.
+
+### Value Over Replacement (VOR)
+**Replacement Levels**:
+- RB: 40th percentile
+- WR: 48th percentile  
+- TE: 16th percentile
+- QB: 12th percentile
+
+**VOR Calculation**:
+```
+VOR = PlayerScore - ReplacementLevelScore
+```
+
+### Tiering Algorithm
+Tiers are automatically determined using hierarchical clustering on score deltas:
+1. Sort all players by score descending
+2. Calculate differences between consecutive players
+3. Identify natural breakpoints where score differences exceed threshold
+4. Group players into tiers based on these breakpoints
+5. Minimum tier size: 3 players (no single-player tiers)
+
+## Weight Overrides via URL Parameters
+
+### Override Syntax
+```
+/api/ratings?format=redraft&position=RB&weights=opp:0.50,eff:0.20,role:0.15,team:0.10,health:0.03,sos:0.02
+```
+
+### Validation Rules
+- Sum of weights must equal 1.0 (±0.01 tolerance)
+- All required components must be specified
+- Invalid components are rejected
+- Missing components use default values
+
+## Examples
+
+### Sample Player 1: RB Redraft
+```
+Player: James Robinson (RB, NYJ)
+Components: 
+  Opp: 82, Eff: 74, Role: 68, Team: 62, Health: -2, SOS: +3
+Calculation:
+  (82×0.45) + (74×0.20) + (68×0.15) + (62×0.10) + (-2×0.05) + (3×0.05)
+  = 36.9 + 14.8 + 10.2 + 6.2 - 0.1 + 0.15 = 68.15
+VOR: 68.15 - 40 = 28.15
+Tier: 2 (Elite)
+```
+
+### Sample Player 2: WR Dynasty
+```
+Player: Chris Olave (WR, NO)
+Components:
+  Proj3: 85, Age: 92, Role: 78, Eff: 82, Team: 70, Ped: 88
+Calculation:
+  (85×0.40) + (92×0.20) + (78×0.15) + (82×0.15) + (70×0.07) + (88×0.03)
+  = 34 + 18.4 + 11.7 + 12.3 + 4.9 + 2.64 = 83.94
+VOR: 83.94 - 48 = 35.94
+Tier: 1 (Elite)
+```
+
+### Sample Player 3: TE Redraft
+```
+Player: Sam LaPorta (TE, DET)
+Components:
+  Opp: 88, Eff: 85, Role: 90, Team: 84, Health: 0, SOS: +1
+Calculation:
+  (88×0.32) + (85×0.23) + (90×0.20) + (84×0.15) + (0×0.05) + (1×0.05)
+  = 28.16 + 19.55 + 18 + 12.6 + 0 + 0.05 = 78.36
+VOR: 78.36 - 16 = 62.36
+Tier: 1 (Elite)
+```
+
+### Sample Player 4: QB Dynasty
+```
+Player: Anthony Richardson (QB, IND)
+Components:
+  Proj3: 78, Age: 95, Role: 70, Eff: 72, Team: 68, Ped: 85
+Calculation:
+  (78×0.40) + (95×0.20) + (70×0.15) + (72×0.15) + (68×0.10) + (85×0.00)
+  = 31.2 + 19 + 10.5 + 10.8 + 6.8 + 0 = 78.3
+VOR: 78.3 - 12 = 66.3
+Tier: 2 (High-End Starter)
+```
+
+### Sample Player 5: RB Dynasty
+```
+Player: Bijan Robinson (RB, ATL)
+Components:
+  Proj3: 90, Age: 96, Role: 85, Eff: 82, Team: 75, Ped: 92
+Calculation:
+  (90×0.40) + (96×0.20) + (85×0.15) + (82×0.10) + (75×0.10) + (92×0.05)
+  = 36 + 19.2 + 12.75 + 8.2 + 7.5 + 4.6 = 88.25
+VOR: 88.25 - 40 = 48.25
+Tier: 1 (Elite)
+```
+
+## Age Curve Reference Table
+
+| Position | Age | Multiplier |
+|----------|-----|------------|
+| RB       | 21  | 0.95       |
+| RB       | 22  | 1.00       |
+| RB       | 23  | 1.05       |
+| RB       | 24  | 1.03       |
+| RB       | 25  | 1.00       |
+| RB       | 26  | 0.98       |
+| RB       | 27  | 0.95       |
+| RB       | 28  | 0.90       |
+| RB       | 29  | 0.85       |
+| RB       | 30+ | 0.75       |
+| WR       | 21  | 0.90       |
+| WR       | 22  | 0.95       |
+| WR       | 23  | 1.00       |
+| WR       | 24  | 1.03       |
+| WR       | 25  | 1.05       |
+| WR       | 26  | 1.05       |
+| WR       | 27  | 1.03       |
+| WR       | 28  | 1.00       |
+| WR       | 29  | 0.98       |
+| WR       | 30+ | 0.90       |
+| TE       | 21  | 0.85       |
+| TE       | 22  | 0.90       |
+| TE       | 23  | 0.95       |
+| TE       | 24  | 1.00       |
+| TE       | 25  | 1.03       |
+| TE       | 26  | 1.05       |
+| TE       | 27  | 1.05       |
+| TE       | 28  | 1.03       |
+| TE       | 29  | 1.00       |
+| TE       | 30+ | 0.95       |
+| QB       | 21  | 0.90       |
+| QB       | 22  | 0.95       |
+| QB       | 23  | 1.00       |
+| QB       | 24  | 1.03       |
+| QB       | 25  | 1.05       |
+| QB       | 26  | 1.05       |
+| QB       | 27  | 1.05       |
+| QB       | 28  | 1.05       |
+| QB       | 29  | 1.03       |
+| QB       | 30+ | 1.00       |
+
+## Implementation Notes
+
+1. **Data Freshness**: Ratings are recomputed weekly after stat corrections (Tuesday 6am ET)
+2. **Debug Output**: API returns component breakdown when debug=1 parameter is included
+3. **Validation**: All component scores are validated for range (0-100 for positives, appropriate ranges for adjustments)
+4. **Error Handling**: Invalid weight overrides return 400 errors with specific messages
+5. **Performance**: Batch processing for efficiency with appropriate database indexing
+
+This methodology provides a robust foundation for player evaluation across different fantasy formats while maintaining flexibility for custom weighting based on user preferences.

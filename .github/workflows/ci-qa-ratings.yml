@@ -1,0 +1,46 @@
+name: Ratings QA
+on:
+  pull_request:
+    paths:
+      - 'server/src/modules/ratings/**'
+      - 'server/src/db/migrations/**'
+      - 'docs/QA/**'
+      - 'scripts/qa/**'
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: otc
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Install
+        run: npm ci
+      - name: Migrate + seed (minimal)
+        run: |
+          npm run db:push
+          node scripts/seed/minimal_ratings_seed.js
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/otc
+      - name: Start API
+        run: |
+          npm run start &
+          sleep 10
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/otc
+      - name: Run QA
+        env:
+          BASE_URL: http://localhost:5000
+        run: bash scripts/qa/ratings_regression_test.sh
