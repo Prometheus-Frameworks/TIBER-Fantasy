@@ -1,0 +1,97 @@
+📦 DeepSeek → Tiber Handoff – Player vs Defense Data Spec
+
+Hey Tiber, here’s the finalized spec note for the new player_vs_defense system. This aligns with Grok’s ingest script and Claude’s QA docs.
+
+🗄 Table Schema
+CREATE TABLE IF NOT EXISTS player_vs_defense (
+  id SERIAL PRIMARY KEY,
+  season SMALLINT NOT NULL,
+  week SMALLINT NOT NULL,
+  def_team TEXT NOT NULL,          -- Defense team code (e.g., 'NO')
+  position TEXT NOT NULL CHECK (position IN ('QB','RB','WR','TE')),
+  player_id TEXT,                   -- Unique player identifier
+  player_name TEXT NOT NULL,        -- Player name
+  player_team TEXT,                 -- Player's team code
+  fpts NUMERIC NOT NULL,            -- Fantasy points scored (PPR default)
+  UNIQUE(season, week, def_team, position, player_name, player_team)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pvd_q 
+  ON player_vs_defense(season, week, def_team, position);
+CREATE INDEX IF NOT EXISTS idx_pvd_player 
+  ON player_vs_defense(player_id, season);
+CREATE INDEX IF NOT EXISTS idx_pvd_def_team 
+  ON player_vs_defense(def_team, position, season);
+
+⚙️ Ingestion
+
+Script: scripts/ingest_player_vs_defense.py (Grok delivered)
+
+Run for 2024 weeks 1–17 with PPR scoring:
+
+python scripts/ingest_player_vs_defense.py --year=2024 --weeks=1-17 --ppr
+
+
+Load via:
+
+\COPY player_vs_defense(season,week,def_team,position,player_name,player_team,fpts,player_id) 
+FROM 'data/player_vs_defense_2024.csv' CSV HEADER;
+
+🌐 Endpoints
+
+Weekly Top Performers
+
+GET /api/leaders/weekly?season=2024&week=6&position=RB&limit=25
+
+
+→ Returns top single-game fpts by position.
+
+Points Allowed by Defense
+
+GET /api/leaders/allowed?season=2024&week=6&position=RB
+
+
+→ Returns sum of fpts allowed by each defense.
+
+SOS Samples Integration
+
+GET /api/sos/weekly?season=2024&week=6&position=RB&mode=ctx&samples=5
+
+
+→ Includes "samples" array of players who produced those points.
+
+🎯 Feature Hooks
+
+SOS “Samples” Panel → Shows actual player box scores vs defenses (ties back into SOS v2 context).
+
+Leaders Widgets →
+
+Top weekly single-game performances (player-focused)
+
+Points allowed by defense (defense-focused)
+
+All include team logos + navigation links to player/defense pages.
+
+📌 Assumptions
+
+Default = PPR scoring.
+
+Scope = 2024 weeks 1–17 (expandable).
+
+Positions = QB/RB/WR/TE only.
+
+Team codes standardized.
+
+✅ Action Items for Tiber
+
+Ensure the ingest runs and player_vs_defense_2024.csv is fully loaded (~3,700 rows).
+
+Wire /api/leaders/weekly and /api/leaders/allowed endpoints to query this table.
+
+Extend /api/sos/weekly to support the samples param.
+
+Hook into UI:
+
+Add Samples panel under SOS table rows.
+
+Add Leaders widgets with logos + links.
