@@ -1,0 +1,227 @@
+Perfect — here’s a crisp, paste-ready runbook for Tiber to expand **coverage to full 2024 W1–W17** and flip v2 fully green.
+
+# Full-Season Ingest Runbook (2024 W1–W17)
+
+## 0) Goal
+
+Load **W1–W17** player inputs & profiles (≈10k+ rows) → recompute ratings → validate QA “Coverage Assert” and related checks.
+
+---
+
+## 1) Pick a data source (choose ONE)
+
+### Option A — **Real nflverse data (preferred)**
+
+* Weekly stats: `stats_player_week_2024.csv`
+* Rosters: `roster_2024.csv`
+* Play-by-play: `play_by_play_2024.csv` (only if you re-derive EPA/pace; else skip)
+* You can also use `nfl_data_py` locally to fetch the same.
+
+### Option B — **Grok synthetic CSVs (stopgap)**
+
+* `player_profile_2024.csv` (≈600 rows)
+* `player_inputs_2024.csv` (≈10,200 rows)
+* Acceptable to close the coverage gap now; we can re-swap to real later.
+
+> Either way, end product is **two CSVs** that match our ingest headers (below).
+
+---
+
+## 2) File specs (must match exactly)
+
+### `player_profile_2024.csv`
+
+```
+player_id,name,position,team,age,draft_round,draft_pick,contract_yrs_left,guarantees_usd
+```
+
+### `player_inputs_2024.csv`
+
+```
+player_id,season,week,position,team,snap_pct,routes,tprr,rush_share,target_share,
+goalline_share,two_min_share,yprr,yac_per_rec,mtf,succ_rate,
+epa_per_play_qb,team_epa_play,team_pace,team_rz_plays,
+injury_status,dnp_weeks_rolling,sos_ctx
+```
+
+* `season` = **2024**
+* `week` ∈ **1..17**
+* `position` ∈ **QB/RB/WR/TE**
+* `snap_pct`, shares in \[0,1] (or 0–100 if current code expects percent; keep consistent with what’s already in DB)
+* `sos_ctx` in **0–100** (contextual SOS percentile centered \~50)
+
+---
+
+## 3) Load commands (Postgres)
+
+From project root (adjust paths if needed):
+
+```sql
+-- Safety snapshot (optional)
+CREATE TABLE IF NOT EXISTS player_inputs_bak AS TABLE player_inputs WITH NO DATA;
+INSERT INTO player_inputs_bak SELECT * FROM player_inputs WHERE season=2024;
+
+-- Wipe prior partial 2024
+DELETE FROM player_inputs WHERE season=2024;
+DELETE FROM player_profile WHERE player_id IN (
+  SELECT player_id FROM player_profile WHERE player_id IS NOT NULL
+);
+
+-- Load full season CSVs
+\COPY player_profile(player_id,name,position,team,age,draft_round,draft_pick,contract_yrs_left,guarantees_usd)
+FROM 'data/player_profile_2024.csv' CSV HEADER;
+
+\COPY player_inputs(player_id,season,week,position,team,snap_pct,routes,tprr,rush_share,target_share,goalline_share,two_min_share,yprr,yac_per_rec,mtf,succ_rate,epa_per_play_qb,team_epa_play,team_pace,team_rz_plays,injury_status,dnp_weeks_rolling,sos_ctx)
+FROM 'data/player_inputs_2024.csv' CSV HEADER;
+```
+
+---
+
+## 4) Quick data sanity checks
+
+```sql
+-- Coverage
+SELECT COUNT(DISTINCT week) AS weeks, MIN(week) AS min_w, MAX(week) AS max_w
+FROM player_inputs WHERE season=2024;
+-- Expect: weeks=17, min_w=1, max_w=17
+
+-- Volume
+SELECT COUNT(*) AS rows FROM player_inputs WHERE season=2024;
+-- Expect: > 10,000 rows
+
+-- Null hotspots
+SELECT COUNT(*) AS missing_snap FROM player_inputs WHERE season=2024 AND (snap_pct IS NULL);
+-- Expect: near 0 (not a blocker if a few nulls exist)
+
+-- Position spread
+SELECT position, COUNT(*) FROM player_inputs WHERE season=2024 GROUP BY position ORDER BY 1;
+
+-- Week distribution (flags low/weird weeks)
+SELECT week, COUNT(*) AS player_weeks
+FROM player_inputs WHERE season=2024
+GROUP BY week HAVING COUNT(*) < 500 ORDER BY week;
+-- Expect: 0 rows returned
+```
+
+---
+
+## 5) Recompute ratings (server)
+
+Use the new recompute infra (adjust path/headers as implemented):
+
+```bash
+# Admin recompute for 2024 W1–W17
+curl -X POST "http://localhost:PORT/api/ratings/recompute" \
+  -H "Authorization: Bearer <ADMIN_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"season": 2024, "weeks": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]}'
+```
+
+> If recompute supports batch by position: loop QB/RB/WR/TE.
+
+---
+
+## 6) QA assertions to flip green
+
+Run these after recompute:
+
+### Coverage Assert
+
+```sql
+SELECT COUNT(DISTINCT week) AS week_coverage
+FROM player_inputs WHERE season=2024;
+-- Expect: 17
+```
+
+### VOR Assert (spot for RB @ W6)
+
+```sql
+WITH pool AS (
+  SELECT player_id, player_name, position, score,
+         ROW_NUMBER() OVER (ORDER BY score DESC) AS rnk
+  FROM player_scores
+  WHERE season=2024 AND format='redraft' AND week=6 AND position='RB'
+),
+replacement AS (
+  SELECT score AS replacement_score FROM pool WHERE rnk=40
+)
+SELECT COUNT(*) AS offenders
+FROM pool p
+JOIN player_scores ps ON ps.player_id=p.player_id
+  AND ps.season=2024 AND ps.format='redraft' AND ps.week=6
+CROSS JOIN replacement r
+WHERE p.rnk<=50 AND ABS(ps.vor - (p.score - r.replacement_score)) > 0.1;
+-- Expect: 0
+```
+
+### Weight Override 400s
+
+```bash
+# Unknown key → 400
+curl -s -o /dev/null -w "%{http_code}" "/api/ratings?format=redraft&position=RB&season=2024&week=6&weights=invalid:0.5,eff:0.3,role:0.15,team:0.05"
+# Expect: 400
+```
+
+### Debug Reconciliation
+
+```bash
+curl "/api/ratings?format=redraft&position=RB&season=2024&week=6&debug=1&limit=50" | jq -r '
+.items[] | select(.debug.calc_check != null and ( ( .score - .debug.calc_check ) | abs ) > 1.0 )
+' | wc -l
+# Expect: 0
+```
+
+---
+
+## 7) UI smoke (manual)
+
+* **/ratings**
+
+  * Redraft RB week=1, 6, 12, 17 load with populated lists
+  * Dynasty (no week param) returns full lists
+  * Weight override with valid payload reflects in debug
+
+* **/sos**
+
+  * Season=2024 selectable, week 1..17 load
+  * Contextual mode + debug returns components
+
+* **/leaders**
+
+  * Weekly top & allowed widgets show data for multiple weeks across the season
+  * Team logos render; clickthrough to SOS works
+
+---
+
+## 8) Rollback (if needed)
+
+```sql
+-- Restore prior 2024 inputs
+TRUNCATE TABLE player_inputs WHERE season=2024;
+INSERT INTO player_inputs SELECT * FROM player_inputs_bak;
+```
+
+Then rerun recompute.
+
+---
+
+## 9) “Done” message (post back)
+
+* Paste row counts, week coverage, and the four assertion results.
+* Example:
+
+  * `coverage: 17/17`
+  * `vor_assert: PASS`
+  * `weights_400: PASS`
+  * `debug_recon: PASS (0 offenders)`
+  * `/ratings RB W1,6,12,17: OK`
+  * `/leaders weekly & allowed: OK`
+
+---
+
+### Notes
+
+* If using **synthetic CSVs** now, that’s fine to close the gap; later we can swap to **nflverse** real data with the same pipeline.
+* If recompute is heavy, consider running by position in parallel workers.
+
+That’s everything Tiber needs.
