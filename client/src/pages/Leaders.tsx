@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowUpDown, ArrowUp, ArrowDown, Search, Filter } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, Search, Filter, Trophy, Shield } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { TeamLogo } from '@/components/TeamLogo';
 
 interface MetricConfig {
   value: string;
@@ -122,6 +123,10 @@ export default function Leaders() {
   const [limit, setLimit] = useState(50);
   const [minGames, setMinGames] = useState(8);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Weekly widgets state
+  const [weeklyWeek, setWeeklyWeek] = useState(6);
+  const [weeklyPosition, setWeeklyPosition] = useState('RB');
 
   // URL state management
   useEffect(() => {
@@ -237,6 +242,26 @@ export default function Leaders() {
   const currentMetrics = METRICS_BY_POSITION[position] || [];
   const liveMetrics = currentMetrics.filter(m => m.live);
   const plannedMetrics = currentMetrics.filter(m => m.planned);
+
+  // Weekly performance data
+  const { data: weeklyData } = useQuery({
+    queryKey: ['leaders/weekly', 2024, weeklyWeek, weeklyPosition],
+    queryFn: async () => {
+      const response = await fetch(`/api/leaders/weekly?season=2024&week=${weeklyWeek}&position=${weeklyPosition}&limit=10`);
+      if (!response.ok) throw new Error('Failed to fetch weekly leaders');
+      return response.json();
+    },
+  });
+
+  // Points allowed data
+  const { data: allowedData } = useQuery({
+    queryKey: ['leaders/allowed', 2024, weeklyWeek, weeklyPosition],
+    queryFn: async () => {
+      const response = await fetch(`/api/leaders/allowed?season=2024&week=${weeklyWeek}&position=${weeklyPosition}`);
+      if (!response.ok) throw new Error('Failed to fetch points allowed');
+      return response.json();
+    },
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
@@ -499,6 +524,120 @@ export default function Leaders() {
             </TabsContent>
           ))}
         </Tabs>
+
+        {/* Weekly Analysis Widgets */}
+        <div className="grid md:grid-cols-2 gap-6 mt-8">
+          
+          {/* Top Single-Game Performances */}
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Trophy className="h-5 w-5 text-yellow-500" />
+                <div>
+                  <CardTitle className="text-white">Top Single-Game Performances</CardTitle>
+                  <CardDescription className="text-gray-400">Best individual games by week</CardDescription>
+                </div>
+              </div>
+              
+              {/* Controls */}
+              <div className="flex items-center gap-4 mt-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-400">Week</label>
+                  <Select value={String(weeklyWeek)} onValueChange={(v) => setWeeklyWeek(parseInt(v))}>
+                    <SelectTrigger className="w-20 bg-slate-700 border-slate-600">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-700 border-slate-600">
+                      {Array.from({length: 17}, (_, i) => i + 1).map(week => (
+                        <SelectItem key={week} value={String(week)}>W{week}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-400">Position</label>
+                  <Select value={weeklyPosition} onValueChange={setWeeklyPosition}>
+                    <SelectTrigger className="w-20 bg-slate-700 border-slate-600">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-700 border-slate-600">
+                      {['RB', 'WR', 'TE', 'QB'].map(pos => (
+                        <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent>
+              {!weeklyData ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-500"></div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {weeklyData.items?.slice(0, 8).map((item: any, index: number) => (
+                    <div key={item.player + item.team} className="flex items-center gap-3 border border-slate-600/50 rounded-lg px-3 py-3 hover:bg-slate-700/30 transition-colors">
+                      <div className="text-sm font-bold text-yellow-500 w-6">#{index + 1}</div>
+                      <TeamLogo team={item.team} size={20} />
+                      <div className="text-sm">
+                        <div className="font-semibold text-white">{item.player}</div>
+                        <div className="text-xs text-gray-400">{item.team}</div>
+                      </div>
+                      <div className="ml-auto font-bold text-white text-lg">{item.fpts.toFixed(1)}</div>
+                      <div className="flex items-center gap-2 pl-4">
+                        <span className="text-xs text-gray-500">vs</span>
+                        <TeamLogo team={item.opponent_def} size={18} />
+                        <span className="text-xs text-gray-400">{item.opponent_def}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Points Allowed by Defense */}
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Shield className="h-5 w-5 text-red-500" />
+                <div>
+                  <CardTitle className="text-white">Points Allowed by Defense</CardTitle>
+                  <CardDescription className="text-gray-400">Week {weeklyWeek} - {weeklyPosition} fantasy points given up</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent>
+              {!allowedData ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500"></div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {allowedData.items?.slice(0, 10).map((item: any, index: number) => (
+                    <div 
+                      key={item.def_team} 
+                      className="flex items-center gap-3 border border-slate-600/50 rounded-lg px-3 py-3 hover:bg-slate-700/30 transition-colors cursor-pointer"
+                      onClick={() => window.open(`/sos?season=2024&week=${weeklyWeek}&position=${weeklyPosition}&mode=ctx#${item.def_team}`, '_blank')}
+                      title="Click to view SOS context"
+                    >
+                      <div className="text-sm font-bold text-red-400 w-6">#{index + 1}</div>
+                      <TeamLogo team={item.def_team} size={20} />
+                      <div className="font-medium text-white">{item.def_team}</div>
+                      <div className="ml-auto font-bold text-white text-lg">{Math.round(item.total_fpts * 10) / 10}</div>
+                      <div className="text-xs text-gray-400">pts</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+        </div>
 
       </div>
     </div>

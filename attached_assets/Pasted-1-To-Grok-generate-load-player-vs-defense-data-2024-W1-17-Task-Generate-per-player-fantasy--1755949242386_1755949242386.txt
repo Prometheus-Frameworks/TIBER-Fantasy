@@ -1,0 +1,233 @@
+1) To Grok — generate & load player-vs-defense data (2024 W1–17)
+
+Task: Generate per-player fantasy points vs defense for 2024 Weeks 1–17 (PPR), and load into Postgres.
+
+Script (new): scripts/ingest_player_vs_defense.py (uses nfl_data_py.import_weekly_data).
+Output: data/player_vs_defense_2024.csv with columns:
+season,week,def_team,position,player_name,player_team,fpts,player_id
+
+Run:
+
+python scripts/ingest_player_vs_defense.py --year=2024 --weeks=1-17 --ppr
+
+
+Load:
+
+\COPY player_vs_defense(season,week,def_team,position,player_name,player_team,fpts,player_id)
+FROM 'data/player_vs_defense_2024.csv' CSV HEADER;
+
+
+Done when: SELECT COUNT(*) FROM player_vs_defense WHERE season=2024; returns a multi-thousand row set (all positions, 17 weeks).
+(We’ll use this for both SOS “Samples” and the Leaders widgets.)
+
+2) To Tiber — backend endpoints + wire to Leaders
+a) Migration (if not applied yet)
+
+Add table player_vs_defense:
+
+CREATE TABLE IF NOT EXISTS player_vs_defense (
+  id SERIAL PRIMARY KEY,
+  season SMALLINT NOT NULL,
+  week SMALLINT NOT NULL,
+  def_team TEXT NOT NULL,
+  position TEXT NOT NULL,
+  player_id TEXT,
+  player_name TEXT NOT NULL,
+  player_team TEXT,
+  fpts NUMERIC NOT NULL,
+  UNIQUE(season, week, def_team, position, player_name)
+);
+CREATE INDEX IF NOT EXISTS idx_pvd_q ON player_vs_defense(season, week, def_team, position);
+
+b) Extend SOS weekly with samples (already specced)
+
+In weekly service loop, when samples>0, attach:
+
+{ "samples": { "total": <sum>, "players": [{name, team, fpts} ...] } }
+
+
+where def_team = row.opponent and position matches query.
+
+c) New Leaders endpoints
+
+1) Weekly top players (single-game, by week + position)
+
+GET /api/leaders/weekly?season=2024&week=6&position=RB&limit=25
+
+
+Returns (sorted by fpts desc):
+
+{
+  "season": 2024,
+  "week": 6,
+  "position": "RB",
+  "items": [
+    { "player": "Sean Tucker", "team": "TB", "opponent_def": "NO", "fpts": 35.2 },
+    { "player": "Bucky Irving", "team": "TB", "opponent_def": "NO", "fpts": 19.0 },
+    ...
+  ]
+}
+
+
+SQL (Drizzle/Knex pseudocode):
+
+SELECT player_name AS player, player_team AS team, def_team AS opponent_def, fpts
+FROM player_vs_defense
+WHERE season = $season AND week = $week AND position = $position
+ORDER BY fpts DESC
+LIMIT $limit;
+
+
+2) Weekly “points allowed by defense” (sum for that position/week)
+
+GET /api/leaders/allowed?season=2024&week=6&position=RB
+
+
+Returns (sorted by total desc):
+
+{
+  "season": 2024,
+  "week": 6,
+  "position": "RB",
+  "items": [
+    { "def_team": "NO", "total_fpts": 54.2 },
+    { "def_team": "LAC", "total_fpts": 48.9 },
+    ...
+  ]
+}
+
+
+SQL:
+
+SELECT def_team, SUM(fpts) AS total_fpts
+FROM player_vs_defense
+WHERE season = $season AND week = $week AND position = $position
+GROUP BY def_team
+ORDER BY total_fpts DESC;
+
+
+(Optional bonus) If mode=ctx is passed, you can left-join today’s SOS weekly result to include the SOS score next to total_fpts.
+
+3) To Frontend (Tiber) — wire into Leaders page
+
+Page: web/src/pages/LeadersPage.tsx (or wherever you mounted it yesterday)
+
+Add two widgets under the existing Leaders header:
+
+A) “Top Single-Game Performances” (by week/position)
+
+Controls: Season (default 2024), Week (1–17), Position (RB/WR/QB/TE).
+
+Fetch: /api/leaders/weekly?....
+
+Render: list or table with player + team logo, opponent DEF logo, and fpts.
+
+Row example:
+
+[TB logo] Sean Tucker (TB) — 35.2  |  vs [NO logo] NO (RB)
+
+B) “Points Allowed by Defense” (that week, that position)
+
+Fetch: /api/leaders/allowed?....
+
+Render: table sorted by total_fpts desc, with defense logo and total.
+
+Row example:
+
+[NO logo] NO — 54.2 total RB FPTS allowed (Week 6)
+
+
+Snippets
+
+Import logos:
+
+import { TeamLogo } from "@/components/TeamLogo";
+
+
+Leaders list skeleton:
+
+{weekly.items.map((it) => (
+  <div key={it.player + it.team} className="flex items-center gap-3 border rounded-lg px-3 py-2">
+    <TeamLogo team={it.team} size={20} />
+    <div className="text-sm">
+      <div className="font-semibold">{it.player}</div>
+      <div className="text-xs text-gray-600">{it.team}</div>
+    </div>
+    <div className="ml-auto font-bold">{it.fpts.toFixed(1)}</div>
+    <div className="flex items-center gap-2 pl-4">
+      <span className="text-xs text-gray-500">vs</span>
+      <TeamLogo team={it.opponent_def} size={18} />
+      <span className="text-xs">{it.opponent_def}</span>
+    </div>
+  </div>
+))}
+
+
+Allowed table skeleton:
+
+{allowed.items.map((d) => (
+  <div key={d.def_team} className="flex items-center gap-3 border rounded-lg px-3 py-2">
+    <TeamLogo team={d.def_team} size={20} />
+    <div className="font-medium">{d.def_team}</div>
+    <div className="ml-auto font-bold">{Math.round(d.total_fpts*10)/10}</div>
+  </div>
+))}
+
+
+Linking back to SOS row:
+Make each row clickable → push to /sos?season=2024&week=6&position=RB&mode=ctx#NO (or whatever anchor you use for the defense row) so you can jump from Leaders to the SOS context for that defense.
+
+4) To Claude — docs + QA updates for Leaders
+
+Docs:
+
+Add new “Leaders” section covering two widgets:
+
+Top Single-Game Performances — week + position
+
+Points Allowed by Defense — week + position
+
+Document endpoints:
+
+/api/leaders/weekly?season&week&position&limit
+
+/api/leaders/allowed?season&week&position
+
+Note data source: player_vs_defense table (PPR default).
+
+Cross-link to SOS “Samples” behavior.
+
+QA:
+
+Validate row counts for a few random weeks/positions.
+
+Check that totals in “Allowed by Defense” equal the sum of players for that defense/week/position.
+
+Verify Season boundary (17 weeks for 2024) and Week input validation.
+
+Ensure Leaders controls (Season/Week/Position) persist and update URLs.
+
+5) To DeepSeek — spec note (tiny)
+
+Add a short note to the spec that the system now exposes per-player game lines vs defense (PPR) to support both:
+
+SOS weekly “Samples” panel
+
+Leaders widgets (top single-game, and points allowed by defense)
+Include field list and the assumption: PPR by default; standard later via toggle.
+
+Definition of Done (for this Leaders add-on)
+
+ player_vs_defense table created and 2024 W1–17 loaded.
+
+ /api/sos/weekly supports samples=N and returns samples.total + samples.players.
+
+ New endpoints live:
+
+/api/leaders/weekly?season&week&position&limit
+
+/api/leaders/allowed?season&week&position
+
+ Leaders page shows both widgets (logos, numbers, links to SOS).
+
+ Spot-check Week 6 RBs shows your NO example lining up with the SOS row.

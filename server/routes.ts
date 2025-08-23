@@ -3760,6 +3760,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { default: stats2024Routes } = await import('./routes/stats2024Routes');
   app.use('/api/stats/2024', stats2024Routes);
 
+  // Leaders endpoints for weekly performances and defense analysis
+  app.get('/api/leaders/weekly', async (req: Request, res: Response) => {
+    try {
+      const season = parseInt(req.query.season as string) || 2024;
+      const week = parseInt(req.query.week as string) || 1;
+      const position = req.query.position as string || 'RB';
+      const limit = parseInt(req.query.limit as string) || 25;
+
+      const query = sql`
+        SELECT player_name AS player, player_team AS team, def_team AS opponent_def, fpts
+        FROM player_vs_defense
+        WHERE season = ${season} AND week = ${week} AND position = ${position}
+        ORDER BY fpts DESC
+        LIMIT ${limit}
+      `;
+
+      const items = await db.execute(query);
+
+      res.json({
+        season,
+        week,
+        position,
+        items: items.rows.map(row => ({
+          player: row.player,
+          team: row.team,
+          opponent_def: row.opponent_def,
+          fpts: parseFloat(row.fpts as string)
+        }))
+      });
+    } catch (error) {
+      console.error('❌ Leaders weekly error:', error);
+      res.status(500).json({ error: 'Failed to fetch weekly leaders' });
+    }
+  });
+
+  app.get('/api/leaders/allowed', async (req: Request, res: Response) => {
+    try {
+      const season = parseInt(req.query.season as string) || 2024;
+      const week = parseInt(req.query.week as string) || 1;
+      const position = req.query.position as string || 'RB';
+
+      const query = sql`
+        SELECT def_team, SUM(fpts) AS total_fpts
+        FROM player_vs_defense
+        WHERE season = ${season} AND week = ${week} AND position = ${position}
+        GROUP BY def_team
+        ORDER BY total_fpts DESC
+      `;
+
+      const items = await db.execute(query);
+
+      res.json({
+        season,
+        week,
+        position,
+        items: items.rows.map(row => ({
+          def_team: row.def_team,
+          total_fpts: parseFloat(row.total_fpts as string)
+        }))
+      });
+    } catch (error) {
+      console.error('❌ Leaders allowed error:', error);
+      res.status(500).json({ error: 'Failed to fetch points allowed' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
