@@ -251,7 +251,7 @@ router.get('/api/sleeper/health', async (_req: Request, res: Response) => {
     res.json(createResponse({
       status: 'healthy',
       cache: {
-        hasData: cacheInfo.hasData,
+        hasData: cacheInfo.count > 0,
         lastUpdated: cacheInfo.updatedAt,
         count: cacheInfo.count
       },
