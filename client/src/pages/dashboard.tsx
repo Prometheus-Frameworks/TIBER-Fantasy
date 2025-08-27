@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Trophy, Users, Calendar, ExternalLink, ArrowLeft } from "lucide-react";
+import { Trophy, Users, Calendar, ExternalLink, ArrowLeft, Search, TrendingUp, Target, BarChart3, Activity, Zap } from "lucide-react";
 import { useNav } from "@/hooks/useNav";
 
 interface League {
@@ -62,9 +62,9 @@ export default function Dashboard() {
     retry: false
   });
 
-  // Query for specific league context if we have a league ID
+  // Query for direct league info if we have a league ID
   const { data: leagueData, isLoading: leagueLoading, error: leagueError } = useQuery<ApiResponse<any>>({
-    queryKey: [`/api/sleeper/league/${leagueId}/context`],
+    queryKey: [`/api/sleeper/league/${leagueId}`],
     enabled: !!leagueId,
     retry: false
   });
@@ -139,8 +139,11 @@ export default function Dashboard() {
   // If we have league data, show single league view
   if (leagueData?.data && leagueId) {
     const league = leagueData.data;
+    const isDynasty = league.settings?.type === 2;
+    const isSuperflex = league.roster_positions?.includes('SUPER_FLEX');
+    
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="mb-6">
           <Button onClick={handleBackToConnect} variant="outline" className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -159,6 +162,107 @@ export default function Dashboard() {
             <Trophy className="h-8 w-8 text-yellow-500" />
           </div>
         </div>
+
+        {/* Team Analysis Navigation */}
+        <Card className="mb-6 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
+          <CardHeader>
+            <CardTitle className="text-lg text-purple-900">
+              🎯 Team Analysis Hub
+            </CardTitle>
+            <CardDescription className="text-purple-700">
+              Analyze your roster with On The Clock's advanced tools
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              <Button 
+                variant="outline" 
+                className="justify-start h-auto p-4 border-purple-200 hover:border-purple-300"
+                onClick={() => nav('/consensus')}
+              >
+                <div className="flex items-center gap-3">
+                  <Search className="h-5 w-5 text-purple-600" />
+                  <div className="text-left">
+                    <div className="font-medium">Player Rankings</div>
+                    <div className="text-xs text-gray-600">Find where your players rank</div>
+                  </div>
+                </div>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="justify-start h-auto p-4 border-blue-200 hover:border-blue-300"
+                onClick={() => nav('/hot-list')}
+              >
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                  <div className="text-left">
+                    <div className="font-medium">Rising Players</div>
+                    <div className="text-xs text-gray-600">Ascending/descending trends</div>
+                  </div>
+                </div>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="justify-start h-auto p-4 border-green-200 hover:border-green-300"
+                onClick={() => nav('/trade-evaluator')}
+              >
+                <div className="flex items-center gap-3">
+                  <Target className="h-5 w-5 text-green-600" />
+                  <div className="text-left">
+                    <div className="font-medium">Trade Analyzer</div>
+                    <div className="text-xs text-gray-600">Evaluate trade offers</div>
+                  </div>
+                </div>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="justify-start h-auto p-4 border-orange-200 hover:border-orange-300"
+                onClick={() => nav('/snap-counts')}
+              >
+                <div className="flex items-center gap-3">
+                  <BarChart3 className="h-5 w-5 text-orange-600" />
+                  <div className="text-left">
+                    <div className="font-medium">Snap Counts</div>
+                    <div className="text-xs text-gray-600">Usage & opportunity analysis</div>
+                  </div>
+                </div>
+              </Button>
+              
+              {isDynasty && (
+                <Button 
+                  variant="outline" 
+                  className="justify-start h-auto p-4 border-violet-200 hover:border-violet-300"
+                  onClick={() => nav('/dynasty-values')}
+                >
+                  <div className="flex items-center gap-3">
+                    <Activity className="h-5 w-5 text-violet-600" />
+                    <div className="text-left">
+                      <div className="font-medium">Dynasty Values</div>
+                      <div className="text-xs text-gray-600">Long-term asset analysis</div>
+                    </div>
+                  </div>
+                </Button>
+              )}
+              
+              <Button 
+                variant="outline" 
+                className="justify-start h-auto p-4 border-red-200 hover:border-red-300"
+                onClick={() => nav('/competence')}
+              >
+                <div className="flex items-center gap-3">
+                  <Zap className="h-5 w-5 text-red-600" />
+                  <div className="text-left">
+                    <div className="font-medium">Competence Mode</div>
+                    <div className="text-xs text-gray-600">AI-powered insights</div>
+                  </div>
+                </div>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
@@ -187,6 +291,14 @@ export default function Dashboard() {
                   {getLeagueTypeDisplay(league)}
                 </Badge>
               </div>
+              {isSuperflex && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Format:</span>
+                  <Badge className="bg-orange-100 text-orange-800">
+                    Superflex
+                  </Badge>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -195,15 +307,27 @@ export default function Dashboard() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full" variant="outline">
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={() => window.open(`https://sleeper.com/leagues/${leagueId}`, '_blank')}
+              >
                 <ExternalLink className="mr-2 h-4 w-4" />
                 View on Sleeper
               </Button>
-              <Button className="w-full" variant="outline">
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={() => nav('/league-analysis')}
+              >
                 <Trophy className="mr-2 h-4 w-4" />
                 League Analytics
               </Button>
-              <Button className="w-full" variant="outline">
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={() => nav('/team-sync')}
+              >
                 <Users className="mr-2 h-4 w-4" />
                 Team Rosters
               </Button>

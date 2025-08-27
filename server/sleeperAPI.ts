@@ -294,19 +294,6 @@ export class SleeperAPIService {
     };
   }
 
-  /**
-   * Get league information
-   */
-  async getLeague(leagueId: string): Promise<any> {
-    try {
-      const response = await fetch(`${this.BASE_URL}/league/${leagueId}`);
-      if (!response.ok) throw new Error(`Failed to fetch league: ${response.status}`);
-      return response.json();
-    } catch (error) {
-      console.error('Error fetching league:', error);
-      throw error;
-    }
-  }
 
   /**
    * Get league rosters
@@ -368,6 +355,20 @@ export class SleeperAPIService {
       return response.json();
     } catch (error) {
       console.error('Error fetching user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get specific league information by league ID
+   */
+  async getLeague(leagueId: string): Promise<any> {
+    try {
+      const response = await fetch(`${this.BASE_URL}/league/${leagueId}`);
+      if (!response.ok) throw new Error(`Failed to fetch league: ${response.status}`);
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching league:', error);
       throw error;
     }
   }

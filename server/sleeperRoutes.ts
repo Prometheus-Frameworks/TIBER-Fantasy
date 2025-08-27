@@ -113,6 +113,33 @@ router.get('/api/sleeper/leagues/:userId', async (req: Request, res: Response) =
   }
 });
 
+// Get direct league info from Sleeper API
+router.get('/api/sleeper/league/:leagueId', async (req: Request, res: Response) => {
+  const t0 = Date.now();
+  try {
+    const { leagueId } = req.params;
+    if (!leagueId?.trim()) {
+      return res.status(400).json(createErrorResponse('INVALID_LEAGUE_ID', 'League ID parameter is required'));
+    }
+    
+    logInfo('Fetching league info', { leagueId });
+    
+    const { sleeperAPI } = await import('./sleeperAPI');
+    const league = await sleeperAPI.getLeague(leagueId);
+    
+    res.json({
+      ok: true,
+      meta: { source: 'sleeper' as const, generatedAt: new Date().toISOString() },
+      data: league
+    });
+    logInfo('League info fetch successful', { leagueId, durationMs: Date.now() - t0 });
+  } catch (e: any) {
+    logError('League info fetch failed', e, { leagueId: req.params.leagueId, durationMs: Date.now() - t0 });
+    const { code, message, details } = errFields(e);
+    res.status(httpStatusFromError(e)).json(createErrorResponse(code, message || 'Failed to get league info', details));
+  }
+});
+
 // Get league context (Batch #2 refinement)
 router.get('/api/sleeper/league/:leagueId/context', async (req: Request, res: Response) => {
   const t0 = Date.now();
