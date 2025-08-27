@@ -149,8 +149,9 @@ function Router() {
       
       {/* Consensus Routes */}
       <Route path="/consensus" component={ConsensusHub} />
-      <Route path="/consensus/dynasty" component={DynastyRankings} />
-      <Route path="/consensus/redraft" component={RedraftRankings} />
+      <Route path="/consensus/dynasty" component={() => <Rankings />} />
+      <Route path="/consensus/redraft" component={() => <Rankings />} />
+      <Route path="/rankings" component={Rankings} />
       <Route path="/consensus/expert/architect-j" component={ExpertView} />
       <Route path="/consensus/seed" component={ConsensusSeeding} />
       <Route path="/consensus/tiers" component={LiveTierTraining} />

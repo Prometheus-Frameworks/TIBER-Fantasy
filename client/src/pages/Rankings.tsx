@@ -61,6 +61,24 @@ export default function Rankings() {
   const [debugMode, setDebugMode] = useState(false);
   const [q, setQ] = useState("");
 
+  // Read URL parameters on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const formatParam = urlParams.get('format');
+    const posParam = urlParams.get('position');
+    const weekParam = urlParams.get('week');
+    
+    if (formatParam === 'redraft' || formatParam === 'dynasty') {
+      setFormat(formatParam);
+    }
+    if (posParam && POSITIONS.includes(posParam as Position)) {
+      setPos(posParam as Position);
+    }
+    if (weekParam && !isNaN(Number(weekParam))) {
+      setWeek(Number(weekParam));
+    }
+  }, []);
+
   const url = useMemo(() => {
     const p = new URLSearchParams();
     if (pos !== "ALL") p.set("position", pos);
