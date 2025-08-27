@@ -129,11 +129,11 @@ export default function SleeperConnect() {
                   className="flex-1"
                 />
                 <Button 
-                  onClick={() => setUsername(username)}
-                  disabled={!username || username.length < 3}
+                  onClick={handleViewAllLeagues}
+                  disabled={!userData?.data?.user_id || leaguesLoading}
                   className="bg-purple-600 hover:bg-purple-700"
                 >
-                  Find Leagues
+                  {leaguesLoading ? 'Loading...' : 'Find Leagues'}
                 </Button>
               </div>
 
@@ -242,11 +242,11 @@ export default function SleeperConnect() {
                   className="flex-1"
                 />
                 <Button 
-                  onClick={() => setLeagueId(leagueId)}
-                  disabled={!leagueId || leagueId.length < 5}
+                  onClick={handleDirectLeagueConnect}
+                  disabled={!leagueData?.data || leagueLoading}
                   className="bg-purple-600 hover:bg-purple-700"
                 >
-                  Connect League
+                  {leagueLoading ? 'Loading...' : 'Connect League'}
                 </Button>
               </div>
 
