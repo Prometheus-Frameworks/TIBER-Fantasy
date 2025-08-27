@@ -380,7 +380,19 @@ export class SleeperAPIService {
       const seasonParam = season || new Date().getFullYear().toString();
       const response = await fetch(`${this.BASE_URL}/user/${userId}/leagues/nfl/${seasonParam}`);
       if (!response.ok) throw new Error(`Failed to fetch user leagues: ${response.status}`);
-      return response.json();
+      const data = await response.json();
+      
+      // Convert from array to array (Sleeper API returns array directly)
+      if (Array.isArray(data)) {
+        return data;
+      }
+      
+      // If it's an object with numeric keys, convert to array
+      if (typeof data === 'object' && data !== null) {
+        return Object.values(data);
+      }
+      
+      return [];
     } catch (error) {
       console.error('Error fetching user leagues:', error);
       throw error;

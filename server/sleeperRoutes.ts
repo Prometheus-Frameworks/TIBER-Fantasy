@@ -100,7 +100,11 @@ router.get('/api/sleeper/leagues/:userId', async (req: Request, res: Response) =
     const { sleeperAPI } = await import('./sleeperAPI');
     const leagues = await sleeperAPI.getUserLeagues(userId, season);
     
-    res.json(createResponse(leagues));
+    res.json({
+      ok: true,
+      meta: { source: 'sleeper' as const, generatedAt: new Date().toISOString() },
+      data: leagues
+    });
     logInfo('User leagues fetch successful', { userId, season, count: leagues.length, durationMs: Date.now() - t0 });
   } catch (e: any) {
     logError('User leagues fetch failed', e, { userId: req.params.userId, season: req.query.season, durationMs: Date.now() - t0 });
