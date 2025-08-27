@@ -170,7 +170,7 @@ export default function Dashboard() {
               🎯 Team Analysis Hub
             </CardTitle>
             <CardDescription className="text-purple-700">
-              Analyze your roster with On The Clock's advanced tools
+              Analyze your roster with DeepSeek v2 ratings and advanced tools
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -178,13 +178,20 @@ export default function Dashboard() {
               <Button 
                 variant="outline" 
                 className="justify-start h-auto p-4 border-purple-200 hover:border-purple-300"
-                onClick={() => nav('/consensus')}
+                onClick={() => {
+                  // Smart redirection: redraft leagues go directly to redraft rankings
+                  if (!isDynasty) {
+                    nav('/rankings?format=redraft');
+                  } else {
+                    nav('/rankings');
+                  }
+                }}
               >
                 <div className="flex items-center gap-3">
                   <Search className="h-5 w-5 text-purple-600" />
                   <div className="text-left">
                     <div className="font-medium">Player Rankings</div>
-                    <div className="text-xs text-gray-600">Find where your players rank</div>
+                    <div className="text-xs text-gray-600">{isDynasty ? 'Dynasty & redraft rankings' : 'Redraft rankings'}</div>
                   </div>
                 </div>
               </Button>
@@ -235,13 +242,13 @@ export default function Dashboard() {
                 <Button 
                   variant="outline" 
                   className="justify-start h-auto p-4 border-violet-200 hover:border-violet-300"
-                  onClick={() => nav('/dynasty-values')}
+                  onClick={() => nav('/rankings?format=dynasty')}
                 >
                   <div className="flex items-center gap-3">
                     <Activity className="h-5 w-5 text-violet-600" />
                     <div className="text-left">
-                      <div className="font-medium">Dynasty Values</div>
-                      <div className="text-xs text-gray-600">Long-term asset analysis</div>
+                      <div className="font-medium">Dynasty Rankings</div>
+                      <div className="text-xs text-gray-600">Long-term value analysis</div>
                     </div>
                   </div>
                 </Button>
