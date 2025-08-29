@@ -6,15 +6,20 @@ export default function RankingsV3Table({mode, position}: {mode: "dynasty" | "re
   const [wrGameLogs, setWrGameLogs] = useState<any[]>([]);
   const [loadingGameLogs, setLoadingGameLogs] = useState(false);
 
-  // Fetch WR game logs when viewing WR position
+  // Fetch WR season totals when viewing WR position
   useEffect(() => {
     if (position === "WR") {
       setLoadingGameLogs(true);
-      fetch('/api/wr-game-logs/cached')
+      fetch('/api/wr-game-logs/combined')
         .then(r => r.json())
         .then(response => {
-          if (response.success && response.data) {
-            setWrGameLogs(response.data);
+          if (response.success) {
+            // Combine elite WRs with additional WRs into single array
+            const allWRs = [
+              ...(response.elite_wrs || []),
+              ...(response.additional_wrs || [])
+            ];
+            setWrGameLogs(allWRs);
           }
         })
         .catch(console.error)
@@ -24,23 +29,41 @@ export default function RankingsV3Table({mode, position}: {mode: "dynasty" | "re
     }
   }, [position]);
 
-  // Helper to get WR game log data for a player
-  const getWRGameLogs = (playerName: string) => {
-    return wrGameLogs.find(wr => 
-      wr.player_name.toLowerCase() === playerName.toLowerCase()
+  // Helper to get WR season totals for a player
+  const getWRSeasonTotals = (playerName: string) => {
+    const wrData = wrGameLogs.find(wr => 
+      wr.player_name?.toLowerCase() === playerName.toLowerCase()
     );
-  };
-
-  // Helper to calculate season totals from game logs
-  const calculateSeasonTotals = (gameLogs: any[]) => {
-    return gameLogs.reduce((totals, week) => ({
-      fpts: totals.fpts + (week.fantasy_points || 0),
-      targets: totals.targets + (week.receiving?.targets || 0),
-      receptions: totals.receptions + (week.receiving?.receptions || 0),
-      yards: totals.yards + (week.receiving?.yards || 0),
-      touchdowns: totals.touchdowns + (week.receiving?.touchdowns || 0),
-      games: week.fantasy_points > 0 ? totals.games + 1 : totals.games
-    }), { fpts: 0, targets: 0, receptions: 0, yards: 0, touchdowns: 0, games: 0 });
+    
+    if (!wrData) return null;
+    
+    // If it's elite WR data (from CSV), return directly
+    if (wrData.is_elite) {
+      return {
+        fpts: wrData.total_fpts || 0,
+        targets: wrData.targets || 0,
+        receptions: wrData.receptions || 0,
+        yards: wrData.rec_yards || 0,
+        touchdowns: 0, // Not in CSV
+        ypt: wrData.targets > 0 ? (wrData.rec_yards / wrData.targets).toFixed(1) : "0",
+        ypc: wrData.receptions > 0 ? (wrData.rec_yards / wrData.receptions).toFixed(1) : "0"
+      };
+    }
+    
+    // If it's game logs data, calculate totals
+    if (wrData.game_logs) {
+      return wrData.game_logs.reduce((totals, week) => ({
+        fpts: totals.fpts + (week.fantasy_points || 0),
+        targets: totals.targets + (week.receiving?.targets || 0),
+        receptions: totals.receptions + (week.receiving?.receptions || 0),
+        yards: totals.yards + (week.receiving?.yards || 0),
+        touchdowns: totals.touchdowns + (week.receiving?.touchdowns || 0),
+        ypt: totals.targets > 0 ? (totals.yards / totals.targets).toFixed(1) : "0",
+        ypc: totals.receptions > 0 ? (totals.yards / totals.receptions).toFixed(1) : "0"
+      }), { fpts: 0, targets: 0, receptions: 0, yards: 0, touchdowns: 0, ypt: "0", ypc: "0" });
+    }
+    
+    return null;
   };
   
   if (loading) {
@@ -148,31 +171,30 @@ export default function RankingsV3Table({mode, position}: {mode: "dynasty" | "re
                   {r.delta_vs_adp === null && "-"}
                 </td>
                 {position === "WR" && (() => {
-                  const wrData = getWRGameLogs(r.name);
-                  const totals = wrData ? calculateSeasonTotals(wrData.game_logs) : null;
+                  const seasonTotals = getWRSeasonTotals(r.name);
                   
                   return (
                     <>
                       <td className="border border-gray-300 px-2 py-2 text-sm bg-blue-25 font-mono">
-                        {totals ? totals.fpts.toFixed(1) : "-"}
+                        {seasonTotals ? seasonTotals.fpts.toFixed(1) : "-"}
                       </td>
                       <td className="border border-gray-300 px-2 py-2 text-sm bg-blue-25 font-mono">
-                        {totals ? totals.targets : "-"}
+                        {seasonTotals ? seasonTotals.targets : "-"}
                       </td>
                       <td className="border border-gray-300 px-2 py-2 text-sm bg-blue-25 font-mono">
-                        {totals ? totals.receptions : "-"}
+                        {seasonTotals ? seasonTotals.receptions : "-"}
                       </td>
                       <td className="border border-gray-300 px-2 py-2 text-sm bg-blue-25 font-mono">
-                        {totals ? totals.yards : "-"}
+                        {seasonTotals ? seasonTotals.yards : "-"}
                       </td>
                       <td className="border border-gray-300 px-2 py-2 text-sm bg-blue-25 font-mono">
-                        {totals && totals.targets > 0 ? (totals.yards / totals.targets).toFixed(1) : "-"}
+                        {seasonTotals ? seasonTotals.ypt : "-"}
                       </td>
                       <td className="border border-gray-300 px-2 py-2 text-sm bg-blue-25 font-mono">
-                        {totals && totals.receptions > 0 ? (totals.yards / totals.receptions).toFixed(1) : "-"}
+                        {seasonTotals ? seasonTotals.ypc : "-"}
                       </td>
                       <td className="border border-gray-300 px-2 py-2 text-sm bg-blue-25 font-mono">
-                        {totals ? totals.touchdowns : "-"}
+                        {seasonTotals ? seasonTotals.touchdowns : "-"}
                       </td>
                     </>
                   );
