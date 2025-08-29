@@ -376,14 +376,24 @@ class SleeperDataNormalizationService {
   private getDefaultAnalytics(position: string, player: any): Partial<NormalizedPlayer> {
     const isActive = this.isActivePlayer(player, {});
     
-    const defaults: Record<string, Partial<NormalizedPlayer>> = {
+    // Create player-specific variation instead of uniform defaults
+    const playerId = player.player_id || '0';
+    const nameHash = this.hashPlayerName(player.full_name || 'unknown');
+    
+    const baseDefaults: Record<string, Partial<NormalizedPlayer>> = {
       QB: { routeRate: 0.05, tgtShare: 0.02, rushShare: 0.1, talentScore: 40 },
       RB: { routeRate: 0.25, tgtShare: 0.12, rushShare: 0.3, talentScore: 45 },
       WR: { routeRate: 0.7, tgtShare: 0.18, rushShare: 0.02, talentScore: 50 },
       TE: { routeRate: 0.6, tgtShare: 0.15, rushShare: 0.02, talentScore: 42 }
     };
 
-    const base = defaults[position] || defaults.WR;
+    const base = baseDefaults[position] || baseDefaults.WR;
+    
+    // Apply player-specific variation (±20% variation based on player hash)
+    const variation = (nameHash % 40) - 20; // -20 to +20
+    const routeRateVariation = base.routeRate! * (1 + variation / 100);
+    const tgtShareVariation = base.tgtShare! * (1 + variation / 200); // Smaller variation for target share
+    const rzTgtShareVariation = 0.05 * (1 + variation / 300); // Even smaller for red zone
     
     // ACTIVE PLAYER BOOST for defaults
     let talentScore = base.talentScore || 50;
@@ -399,8 +409,10 @@ class SleeperDataNormalizationService {
     
     return {
       ...base,
+      routeRate: Math.max(0.05, Math.min(0.95, routeRateVariation)),
+      tgtShare: Math.max(0.02, Math.min(0.35, tgtShareVariation)),
+      rzTgtShare: Math.max(0.01, Math.min(0.15, rzTgtShareVariation)),
       talentScore,
-      rzTgtShare: 0.05,
       glRushShare: position === 'RB' ? 0.15 : 0.01,
       explosiveness,
       yakPerRec: position === 'RB' ? 3.5 : 8.2,
@@ -410,6 +422,16 @@ class SleeperDataNormalizationService {
       injuryRisk: this.calculateInjuryRisk(player),
       ageRisk: this.calculateAgeRisk(player.age, position)
     };
+  }
+
+  private hashPlayerName(name: string): number {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      const char = name.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash);
   }
 
   /**

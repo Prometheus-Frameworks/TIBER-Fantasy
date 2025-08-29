@@ -93,14 +93,6 @@ function computeXfpScore(playersForPos: BasePlayer[], coeffs: Coeffs): Array<Bas
     };
     
     const xfp = predictXfp(xfpRow, coeffs);
-    if (player.pos === 'WR' && player.name === 'Brandin Cooks') {
-      console.log('[xFP Debug] WR calculation:', {
-        player: player.name,
-        xfpRow,
-        coeffs,
-        xfp
-      });
-    }
     return { ...player, xfp };
   }).filter(p => p.xfp !== null);
 
@@ -143,7 +135,7 @@ export async function buildDeepseekV3_1(mode: Mode): Promise<ScoredPlayer[]> {
   })));
   console.log(`[DeepSeek v3.1] Sample WR data:`, basePlayers.filter(p => p.pos === 'WR').slice(0, 1).map(p => p));
 
-  // Convert all players to BasePlayer format (temporarily disable usage filtering)
+  // Convert all players to BasePlayer format with correct field mapping
   const beforeFilter = basePlayers.map((p: any) => ({
     player_id: p.player_id,
     name: p.name,
@@ -157,14 +149,18 @@ export async function buildDeepseekV3_1(mode: Mode): Promise<ScoredPlayer[]> {
     rzTgtShare: p.rzTgtShare,
     glRushShare: p.glRushShare,
     talentScore: p.talentScore,
+    explosiveness: p.explosiveness,
+    yakPerRec: p.yakPerRec,
     last6wPerf: p.last6wPerf,
+    spikeGravity: p.spikeGravity,
+    draftCapTier: p.draftCapTier,
+    injuryRisk: p.injuryRisk,
+    ageRisk: p.ageRisk,
     contextScore: p.contextScore,
     riskScore: p.riskScore
   }));
 
   console.log(`[DeepSeek v3.1] After mapping: ${beforeFilter.length} players`);
-  console.log(`[DeepSeek v3.1] Sample WR after mapping:`, beforeFilter.filter(p => p.name === 'Brandin Cooks')[0]);
-  console.log(`[DeepSeek v3.1] Sample positions:`, beforeFilter.slice(0, 5).map(p => `${p.name}: ${p.pos}`));
 
   const activePlayers = beforeFilter.filter((p: BasePlayer) => p.pos && ['WR', 'RB', 'TE', 'QB'].includes(p.pos)); // Basic filter for valid positions only
 
