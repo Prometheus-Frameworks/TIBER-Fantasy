@@ -191,21 +191,32 @@ export async function buildDeepseekV3_1(mode: Mode): Promise<ScoredPlayer[]> {
 
   console.log(`[DeepSeek v3.1] Generated xFP scores for ${allWithXfp.length} players`);
 
-  // Apply v3.1 scoring formula
+  // Apply v3.1 scoring formula with dynasty age adjustments
   const modeWeights = config.modes[mode];
   const scoredPlayers: ScoredPlayer[] = allWithXfp.map(player => {
-    const score = 
+    // Calculate dynasty age penalty/bonus
+    const agePenalty = mode === 'dynasty' ? calculateDynastyAgePenalty(player.age, player.pos) : 0;
+    
+    // Fix undefined components with proper calculations
+    const contextScore = player.contextScore || 50;
+    const riskScore = player.riskScore || calculateRiskScore(player.age, player.pos);
+    
+    const baseScore = 
       (player.xfpScore || 0) * modeWeights.xfp +
       (player.talentScore || 50) * modeWeights.talent +
       (player.last6wPerf || 50) * modeWeights.recency +
-      (player.contextScore || 50) * modeWeights.context -
-      (player.riskScore || 50) * modeWeights.risk;
+      contextScore * modeWeights.context -
+      riskScore * modeWeights.risk;
+
+    // Apply dynasty age adjustment  
+    const finalScore = baseScore + agePenalty;
 
     return {
       ...player,
-      score: Math.round(score * 100) / 100,
-      tier: getTier(score),
-      rank: 0 // Will be set after sorting
+      score: Math.round(finalScore * 100) / 100,
+      tier: getTier(finalScore),
+      rank: 0, // Will be set after sorting
+      agePenalty: mode === 'dynasty' ? agePenalty : undefined
     };
   });
 
@@ -218,6 +229,51 @@ export async function buildDeepseekV3_1(mode: Mode): Promise<ScoredPlayer[]> {
   console.log(`[DeepSeek v3.1] Final rankings: ${scoredPlayers.length} players`);
   
   return scoredPlayers;
+}
+
+function calculateDynastyAgePenalty(age: number, position: Position): number {
+  if (!age) return 0;
+  
+  // Dynasty age curves by position (penalties for older players, bonuses for young)
+  const dynastyAgeTargets = {
+    QB: 27,  // QBs peak later
+    RB: 24,  // RBs decline fastest  
+    WR: 25,  // WRs peak in mid-20s
+    TE: 26   // TEs peak slightly later
+  };
+  
+  const targetAge = dynastyAgeTargets[position] || 25;
+  const ageDeviation = age - targetAge;
+  
+  // Aggressive dynasty penalties/bonuses
+  if (ageDeviation <= -2) return +15;  // Very young: big bonus
+  if (ageDeviation <= -1) return +8;   // Young: bonus
+  if (ageDeviation <= 1) return 0;     // Prime: neutral
+  if (ageDeviation <= 3) return -8;    // Aging: penalty
+  if (ageDeviation <= 5) return -15;   // Old: big penalty
+  return -25; // Very old: massive penalty (30+ for RB/WR, 32+ for TE, 34+ for QB)
+}
+
+function calculateRiskScore(age: number, position: Position): number {
+  if (!age) return 25; // Default risk for unknown age
+  
+  // Risk increases with age
+  let riskScore = 15; // Base risk
+  
+  // Position-specific age risk
+  const ageRiskThresholds = {
+    RB: 28,  // RBs age quickly
+    WR: 30,  // WRs age moderately
+    TE: 31,  // TEs age slower  
+    QB: 33   // QBs age slowest
+  };
+  
+  const threshold = ageRiskThresholds[position] || 30;
+  if (age > threshold) {
+    riskScore += (age - threshold) * 5; // +5 risk per year over threshold
+  }
+  
+  return Math.min(riskScore, 50); // Cap at 50
 }
 
 export async function getModelInfo() {
