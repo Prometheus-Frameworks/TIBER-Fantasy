@@ -59,10 +59,10 @@ export default function RankingsV3Page() {
         
         <div className="mt-6 text-sm text-gray-500 text-center">
           <p>
-            <span className="font-medium">DeepSeek v3</span> • Production-grade with W1-W17 coverage
+            <span className="font-medium">🚀 DeepSeek v3 Rankings System</span> • Production-grade with W1-W17 coverage
           </p>
           <p className="mt-1">
-            Debug Mode: ON • 6-component methodology • VOR-based • Tier clustering
+            Debug Mode: ON • 6-component methodology • VOR-based • Tier clustering • DeepSeek v3 Engine
           </p>
         </div>
       </div>

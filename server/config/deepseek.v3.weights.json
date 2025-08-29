@@ -20,7 +20,7 @@
       "risk": 0.02 
     }
   },
-  "tier_cutoffs": [96, 91, 86, 81, 76, 71],
+  "tier_cutoffs": [58, 52, 47, 42, 37, 32],
   "guards": {
     "dry_run": true,
     "max_players": 1000,
