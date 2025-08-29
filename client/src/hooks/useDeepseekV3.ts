@@ -10,7 +10,7 @@ export function useDeepseekV3(mode: "dynasty" | "redraft") {
     setLoading(true);
     setErr(null);
     
-    fetch(`/api/rankings/deepseek/v3?mode=${mode}`)
+    fetch(`/api/rankings/deepseek/v3.1?mode=${mode}`)
       .then(r => r.json())
       .then(j => { 
         setData(j.data ?? []); 

@@ -21,10 +21,10 @@ export default function RankingsV3Page() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            🚀 DeepSeek v3 Rankings
+            🚀 DeepSeek v3.1 Rankings
           </h1>
           <p className="text-gray-600">
-            Advanced 6-component methodology with full season coverage, VOR calculations, and debug transparency
+            xFP anchoring system with Expected Fantasy Points (60% weight) + OLS regression coefficients
           </p>
         </div>
         
@@ -59,10 +59,10 @@ export default function RankingsV3Page() {
         
         <div className="mt-6 text-sm text-gray-500 text-center">
           <p>
-            <span className="font-medium">🚀 DeepSeek v3 Rankings System</span> • Production-grade with W1-W17 coverage
+            <span className="font-medium">🚀 DeepSeek v3.1 Rankings System</span> • xFP Anchoring with OLS Regression
           </p>
           <p className="mt-1">
-            Debug Mode: ON • 6-component methodology • VOR-based • Tier clustering • DeepSeek v3 Engine
+            Expected Fantasy Points (60% weight) • Player-specific analytics • Live Sleeper data • DeepSeek v3.1 Engine
           </p>
         </div>
       </div>

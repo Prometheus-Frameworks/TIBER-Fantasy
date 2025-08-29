@@ -25,7 +25,7 @@ export default function RankingsV3Table({mode}: {mode: "dynasty" | "redraft"}) {
   return (
     <>
       <div className="flex items-center gap-3 mb-4">
-        <h2 className="text-xl font-semibold">DeepSeek v3 — {mode.toUpperCase()}</h2>
+        <h2 className="text-xl font-semibold">DeepSeek v3.1 — {mode.toUpperCase()}</h2>
         {meta.ts && (
           <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
             Updated {new Date(meta.ts).toLocaleString()}
