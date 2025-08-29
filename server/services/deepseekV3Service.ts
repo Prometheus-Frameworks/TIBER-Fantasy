@@ -301,15 +301,13 @@ export async function buildDeepseekV3(mode: Mode) {
 
   const rows: Row[] = [];
   for (const p of limited) {
-    const [contextScore, roleScore, durabilityScore, recencyScore, talentScoreOut, spikeScore, riskScore] = await Promise.all([
-      weights.guards.allow_enrichment ? computeContext(p.team) : Promise.resolve(50),
-      Promise.resolve(computeRole(p)),
-      Promise.resolve(computeDurability(p)),
-      Promise.resolve(computeRecency(p)),
-      Promise.resolve(computeTalent(p)),
-      Promise.resolve(computeSpike(p)),
-      Promise.resolve(computeRisk(p))
-    ]);
+    const contextScore = weights.guards.allow_enrichment ? await computeContext(p.team) : 50;
+    const roleScore = computeRole(p);
+    const durabilityScore = computeDurability(p);
+    const recencyScore = computeRecency(p);
+    const talentScoreOut = computeTalent(p);
+    const spikeScore = computeSpike(p);
+    const riskScore = computeRisk(p);
 
     let score =
       talentScoreOut * cfg.talent +
