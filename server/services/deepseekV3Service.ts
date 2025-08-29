@@ -1,6 +1,7 @@
 import weights from "../config/deepseek.v3.weights.json";
 import { sleeperAPI } from "../sleeperAPI";
 import { oasisApiService } from "./oasisApiService";
+import { sleeperDataNormalizationService, type NormalizedPlayer } from "./sleeperDataNormalizationService";
 
 export type Mode = "dynasty"|"redraft";
 
@@ -47,63 +48,160 @@ const bucket = (score:number, cuts:number[]) => {
   return tier === 0 ? cuts.length+1 : tier;
 };
 
+// Fallback analytics for when real data is unavailable
+function getFallbackAnalytic(metric: string, position: string): number {
+  const fallbacks: Record<string, Record<string, number>> = {
+    routeRate: { QB: 0.05, RB: 0.25, WR: 0.7, TE: 0.6 },
+    tgtShare: { QB: 0.02, RB: 0.12, WR: 0.18, TE: 0.15 },
+    rushShare: { QB: 0.1, RB: 0.3, WR: 0.02, TE: 0.02 },
+    rzTgtShare: { QB: 0.01, RB: 0.08, WR: 0.12, TE: 0.15 },
+    glRushShare: { QB: 0.02, RB: 0.15, WR: 0.01, TE: 0.01 },
+    talentScore: { QB: 40, RB: 45, WR: 50, TE: 42 },
+    explosiveness: { QB: 35, RB: 40, WR: 45, TE: 38 },
+    yakPerRec: { QB: 2, RB: 3.5, WR: 8.2, TE: 6.8 },
+    last6wPerf: { QB: 25, RB: 28, WR: 30, TE: 26 },
+    spikeGravity: { QB: 35, RB: 40, WR: 50, TE: 38 },
+    draftCapTier: { QB: 35, RB: 40, WR: 45, TE: 35 },
+    injuryRisk: { QB: 15, RB: 25, WR: 18, TE: 20 }
+  };
+  
+  return fallbacks[metric]?.[position] || 25;
+}
+
 // Helper functions for sleeper sync interface
 export async function getAllPlayers(): Promise<Base[]> {
-  const sleeperPlayers = await sleeperAPI.getAllPlayers();
-  const players: Base[] = [];
-  
-  for (const [playerId, player] of Array.from(sleeperPlayers.entries())) {
-    if (!player.position || !['QB', 'RB', 'WR', 'TE'].includes(player.position)) continue;
+  try {
+    // Fetch normalized players with real analytics
+    const normalizedPlayers = await sleeperDataNormalizationService.getNormalizedPlayers();
     
-    // Convert sleeper player to our format with sample analytics data
-    // Note: In production, these would come from actual analytics services
-    const basePlayer: Base = {
-      player_id: playerId,
-      name: player.full_name || `${player.first_name} ${player.last_name}`,
-      pos: player.position as "QB"|"RB"|"WR"|"TE",
-      team: player.team || 'FA',
+    // Convert to Base format
+    const players: Base[] = normalizedPlayers.map(player => ({
+      player_id: player.player_id,
+      name: player.name,
+      pos: player.pos,
+      team: player.team,
       age: player.age,
-      // Sample analytics (would be real data in production)
-      routeRate: Math.random() * 0.8 + 0.1, // 0.1-0.9
-      tgtShare: Math.random() * 0.3 + 0.05, // 0.05-0.35
-      rushShare: Math.random() * 0.4 + 0.05, // 0.05-0.45
-      rzTgtShare: Math.random() * 0.2 + 0.02, // 0.02-0.22
-      glRushShare: Math.random() * 0.3 + 0.05, // 0.05-0.35
-      talentScore: Math.random() * 100, // 0-100
-      explosiveness: Math.random() * 100, // 0-100
-      yakPerRec: Math.random() * 15 + 2, // 2-17
-      last6wPerf: Math.random() * 100, // 0-100
-      spikeGravity: Math.random() * 100, // 0-100
-      draftCapTier: Math.random() * 100, // 0-100
-      injuryRisk: Math.random() * 50, // 0-50
-      ageRisk: player.age ? Math.max(0, (player.age - 25) * 10) : 0 // Age penalty
-    };
+      // Real analytics from Sleeper data
+      routeRate: player.routeRate,
+      tgtShare: player.tgtShare,
+      rushShare: player.rushShare,
+      rzTgtShare: player.rzTgtShare,
+      glRushShare: player.glRushShare,
+      talentScore: player.talentScore,
+      explosiveness: player.explosiveness,
+      yakPerRec: player.yakPerRec,
+      last6wPerf: player.last6wPerf,
+      spikeGravity: player.spikeGravity,
+      draftCapTier: player.draftCapTier,
+      injuryRisk: player.injuryRisk,
+      ageRisk: player.ageRisk
+    }));
     
-    players.push(basePlayer);
+    console.log(`[DeepSeekV3] Loaded ${players.length} players with real Sleeper data`);
+    return players;
+    
+  } catch (error) {
+    console.error('[DeepSeekV3] Error fetching real data, falling back to legacy method:', error);
+    
+    // Fallback to basic Sleeper API if normalization fails
+    const sleeperPlayers = await sleeperAPI.getAllPlayers();
+    const players: Base[] = [];
+    
+    for (const [playerId, player] of Array.from(sleeperPlayers.entries())) {
+      if (!player.position || !['QB', 'RB', 'WR', 'TE'].includes(player.position)) continue;
+      
+      const basePlayer: Base = {
+        player_id: playerId,
+        name: player.full_name || `${player.first_name} ${player.last_name}`,
+        pos: player.position as "QB"|"RB"|"WR"|"TE",
+        team: player.team || 'FA',
+        age: player.age,
+        // Fallback to conservative defaults
+        routeRate: getFallbackAnalytic('routeRate', player.position),
+        tgtShare: getFallbackAnalytic('tgtShare', player.position),
+        rushShare: getFallbackAnalytic('rushShare', player.position),
+        rzTgtShare: getFallbackAnalytic('rzTgtShare', player.position),
+        glRushShare: getFallbackAnalytic('glRushShare', player.position),
+        talentScore: getFallbackAnalytic('talentScore', player.position),
+        explosiveness: getFallbackAnalytic('explosiveness', player.position),
+        yakPerRec: getFallbackAnalytic('yakPerRec', player.position),
+        last6wPerf: getFallbackAnalytic('last6wPerf', player.position),
+        spikeGravity: getFallbackAnalytic('spikeGravity', player.position),
+        draftCapTier: getFallbackAnalytic('draftCapTier', player.position),
+        injuryRisk: getFallbackAnalytic('injuryRisk', player.position),
+        ageRisk: player.age ? Math.max(0, (player.age - 25) * 3) : 10
+      };
+      
+      players.push(basePlayer);
+    }
+    
+    console.log(`[DeepSeekV3] Using fallback data for ${players.length} players`);
+    return players;
   }
-  
-  return players;
 }
 
 export async function getAdpMap(): Promise<Record<string, number>> {
-  // Generate sample ADP data for testing
-  // In production, this would integrate with actual ADP sources
-  const sampleAdp: Record<string, number> = {};
-  
-  // Add ADP data for top 100 players to ensure sufficient test data
-  for (let i = 1; i <= 100; i++) {
-    const playerId = i.toString();
-    sampleAdp[playerId] = i + Math.floor(Math.random() * 20) - 10; // Realistic ADP spread
+  try {
+    // Get real ADP data from Sleeper
+    const adpMap = await sleeperDataNormalizationService.getAdpMap();
+    
+    console.log(`[DeepSeekV3] Loaded ADP data for ${Object.keys(adpMap).length} players`);
+    return adpMap;
+    
+  } catch (error) {
+    console.error('[DeepSeekV3] Error fetching real ADP data, using fallback:', error);
+    
+    // Fallback: Generate estimated ADP from trending data
+    try {
+      const [trendingAdds, allPlayers] = await Promise.all([
+        sleeperAPI.getTrendingPlayers('add', 24, 200),
+        sleeperAPI.getAllPlayers()
+      ]);
+      
+      const fallbackAdp: Record<string, number> = {};
+      
+      // Use trending data for ADP estimates
+      trendingAdds.forEach((trending, index) => {
+        fallbackAdp[trending.player_id] = index + 1;
+      });
+      
+      // Fill remaining active players
+      let currentAdp = 201;
+      for (const [playerId, player] of Array.from(allPlayers.entries())) {
+        if (!fallbackAdp[playerId] && player.team && player.team !== 'FA') {
+          fallbackAdp[playerId] = currentAdp++;
+        }
+      }
+      
+      console.log(`[DeepSeekV3] Generated fallback ADP for ${Object.keys(fallbackAdp).length} players`);
+      return fallbackAdp;
+      
+    } catch (fallbackError) {
+      console.error('[DeepSeekV3] Fallback ADP generation failed:', fallbackError);
+      return {};
+    }
   }
-  
-  return sampleAdp;
 }
 
 export async function getSyncHealth(): Promise<boolean> {
   try {
-    const players = await sleeperAPI.getAllPlayers();
-    return players.size > 0;
-  } catch {
+    // Check both the raw Sleeper API and our normalization service
+    const [sleeperHealthy, normalizationHealth] = await Promise.all([
+      sleeperAPI.getAllPlayers().then(players => players.size > 0).catch(() => false),
+      sleeperDataNormalizationService.getHealthStatus()
+    ]);
+    
+    const isHealthy = sleeperHealthy && normalizationHealth.healthy;
+    
+    if (isHealthy) {
+      console.log(`[DeepSeekV3] Health check passed: ${normalizationHealth.playerCount} players, ${normalizationHealth.adpCount} ADP entries`);
+    } else {
+      console.warn(`[DeepSeekV3] Health check failed: Sleeper=${sleeperHealthy}, Normalization=${normalizationHealth.healthy}`);
+    }
+    
+    return isHealthy;
+  } catch (error) {
+    console.error('[DeepSeekV3] Health check error:', error);
     return false;
   }
 }
