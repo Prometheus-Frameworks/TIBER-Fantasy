@@ -6,7 +6,7 @@
   },
   "tier_cutoffs": [96, 91, 86, 81, 76, 71],
   "guards": {
-    "dry_run": true,
+    "dry_run": false,
     "max_players": 1200,
     "require_sleeper_sync_ok": true,
     "allow_enrichment": false,

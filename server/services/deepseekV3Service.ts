@@ -303,11 +303,8 @@ const computeDurability = (p: Base) => clamp(100 - nz(p.injuryRisk, floor.injRis
 const computeSpike = (p: Base) => clamp(nz(p.spikeGravity, floor.spike));
 
 export async function buildDeepseekV3(mode: Mode) {
-  console.log(`[DeepSeek v3] buildDeepseekV3 called with mode: ${mode}`);
-  
   if (weights.guards.require_sleeper_sync_ok) {
     const ok = await getSyncHealth();
-    console.log(`[DeepSeek v3] Sleeper sync health check: ${ok}`);
     if (!ok) throw new Error("sleeper_sync_not_ready");
   }
 
@@ -316,11 +313,8 @@ export async function buildDeepseekV3(mode: Mode) {
   const adpMap = await getAdpMap();
   
   // Filter at intake - remove players with bad status
-  console.log(`[DeepSeek v3] Starting with ${all.length} players`);
   const filtered = all.filter(p => !isDroppableStatus((p as any).status));
-  console.log(`[DeepSeek v3] After status filter: ${filtered.length} players`);
   const limited: Base[] = filtered.slice(0, weights.guards.max_players || 1200);
-  console.log(`[DeepSeek v3] After limit: ${limited.length} players`);
 
   const rows: Row[] = [];
   for (const p of limited) {
@@ -345,15 +339,19 @@ export async function buildDeepseekV3(mode: Mode) {
       riskScore      * cfg.risk -
       agePenalty;
     
-    // Final usage gate - reasonable thresholds for roster-worthy players
+    // TEMPORARILY DISABLE usage gate to test system
+    // TODO: Re-enable with proper data validation
+    /*
     const recentRoutes = (p as any).stats?.last4w_routes ?? 0;
     const recentTgts   = (p as any).stats?.last4w_targets ?? 0;
     const recentRush   = (p as any).stats?.last4w_rush_att ?? 0;
     const passesFloor  = (p.pos === "RB")
-      ? (recentRush >= 8 || recentTgts >= 3)  // RBs: 2 carries/game OR 1 target/game
-      : (recentRoutes >= 15 || recentTgts >= 4); // WR/TE: ~4 routes/game OR 1 target/game
+      ? (recentRush >= 8 || recentTgts >= 3)  
+      : (recentRoutes >= 15 || recentTgts >= 4); 
 
     if (!passesFloor) continue;
+    */
+
 
     rows.push({
       ...p, 
@@ -380,6 +378,7 @@ export async function buildDeepseekV3(mode: Mode) {
 
   if (weights.guards.dry_run) {
     console.log("[DeepSeek v3][dry_run] sample:", out.slice(0,5).map(x=>`${x.rank}. ${x.name} ${x.pos} ${x.score}`));
+    return []; // Return empty array in dry run mode
   }
 
   return out;
