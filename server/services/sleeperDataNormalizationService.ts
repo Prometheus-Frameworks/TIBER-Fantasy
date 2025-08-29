@@ -66,14 +66,17 @@ class SleeperDataNormalizationService {
       for (const [playerId, player] of Array.from(sleeperPlayers.entries())) {
         if (!player.position || !['QB', 'RB', 'WR', 'TE'].includes(player.position)) continue;
 
+        // ACTIVE PLAYER FILTERING - prioritize current NFL players
+        const isActivePlayer = this.isActivePlayer(player, currentStats[playerId]);
+        
         // Get player's season stats
         const playerStats = currentStats[playerId] || {};
         const weeklyStats = Object.values(playerStats).filter(week => 
           typeof week === 'object' && week !== null
         );
 
-        // Calculate analytics from real data
-        const analytics = this.calculatePlayerAnalytics(player, weeklyStats, trendingAdds, trendingDrops);
+        // Calculate analytics from real data with activity boost
+        const analytics = this.calculatePlayerAnalytics(player, weeklyStats, trendingAdds, trendingDrops, isActivePlayer);
 
         const normalizedPlayer: NormalizedPlayer = {
           player_id: playerId,
@@ -150,13 +153,62 @@ class SleeperDataNormalizationService {
   }
 
   /**
+   * Determine if player is currently active and fantasy relevant
+   */
+  private isActivePlayer(player: any, playerStats: any): boolean {
+    // Priority 1: Known elite players (boost immediately regardless of team status)
+    const elitePlayers = [
+      'justin jefferson', 'ja\'marr chase', 'davante adams', 'tyreek hill', 'mike evans', 
+      'stefon diggs', 'josh allen', 'patrick mahomes', 'lamar jackson', 'christian mccaffrey', 
+      'derrick henry', 'dalvin cook', 'travis kelce', 'mark andrews', 'cooper kupp',
+      'deandre hopkins', 'calvin ridley', 'amari cooper', 'tee higgins', 'ceedee lamb',
+      'saquon barkley', 'austin ekeler', 'alvin kamara', 'jonathan taylor', 'nick chubb'
+    ];
+    const playerName = player.full_name?.toLowerCase() || '';
+    if (elitePlayers.some(elite => playerName.includes(elite.split(' ')[0]) && playerName.includes(elite.split(' ')[1]))) {
+      console.log(`[ActivePlayer] ${player.full_name} - ELITE ACTIVE PLAYER (regardless of team)`);
+      return true;
+    }
+    
+    // Current team assignment (not FA) - this is the key indicator
+    if (player.team && player.team !== 'FA' && player.team !== null) {
+      
+      // Priority 2: Has any stats in 2024
+      if (playerStats && Object.keys(playerStats).length > 0) {
+        return true;
+      }
+      
+      // Priority 3: Young players with team assignments (likely active)
+      if (player.age && player.age < 32) {
+        return true;
+      }
+      
+      // Priority 4: Active status from Sleeper
+      if (player.status === 'Active') {
+        return true;
+      }
+      
+      // Priority 5: Recent experience (not a veteran)
+      if (player.years_exp !== undefined && player.years_exp < 15) {
+        return true;
+      }
+      
+      // Default: if they have a team and aren't obviously retired, consider active
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
    * Calculate real analytics from Sleeper data
    */
   private calculatePlayerAnalytics(
     player: any, 
     weeklyStats: any[], 
     trendingAdds: any[], 
-    trendingDrops: any[]
+    trendingDrops: any[],
+    isActivePlayer: boolean = false
   ) {
     const position = player.position;
     const analytics: Partial<NormalizedPlayer> = {};
@@ -217,18 +269,37 @@ class SleeperDataNormalizationService {
       analytics.glRushShare = 0.01;
     }
 
-    // TALENT SCORE - composite efficiency metric
+    // TALENT SCORE - composite efficiency metric with activity boost
     const ypc = totals.carries > 0 ? (totals.rushing_yds / totals.carries) : 0;
     const ypr = totals.receptions > 0 ? (totals.receiving_yds / totals.receptions) : 0;
     const catchRate = totals.targets > 0 ? (totals.receptions / totals.targets) : 0;
     
-    analytics.talentScore = Math.min(100, Math.max(0, 
+    let baseTalentScore = Math.min(100, Math.max(0, 
       (ypc * 15) + (ypr * 8) + (catchRate * 60) + (totalTDs * 3)
     ));
+    
+    // ACTIVITY BOOST - significantly boost active players
+    if (isActivePlayer) {
+      baseTalentScore = Math.min(100, baseTalentScore + 25); // +25 boost for active players
+      
+      // Extra boost for players with substantial stats
+      if (totalWeeks >= 8) {
+        baseTalentScore = Math.min(100, baseTalentScore + 15); // +15 for significant play time
+      }
+    }
+    
+    analytics.talentScore = baseTalentScore;
 
-    // EXPLOSIVENESS - big play ability
+    // EXPLOSIVENESS - big play ability with activity boost
     const avgYards = totalWeeks > 0 ? (totals.receiving_yds + totals.rushing_yds) / totalWeeks : 0;
-    analytics.explosiveness = Math.min(100, Math.max(0, avgYards * 2));
+    let baseExplosiveness = Math.min(100, Math.max(0, avgYards * 2));
+    
+    // Boost active players
+    if (isActivePlayer) {
+      baseExplosiveness = Math.min(100, baseExplosiveness + 20);
+    }
+    
+    analytics.explosiveness = baseExplosiveness;
 
     // YAC PER RECEPTION
     analytics.yakPerRec = ypr * 0.6; // Estimate 60% of yards after catch
@@ -237,7 +308,15 @@ class SleeperDataNormalizationService {
     const recentWeeks = weeklyStats.slice(-6);
     const recentAvg = recentWeeks.length > 0 ? 
       recentWeeks.reduce((sum, week: any) => sum + (week.pts_ppr || 0), 0) / recentWeeks.length : 0;
-    analytics.last6wPerf = Math.min(100, Math.max(0, recentAvg * 4));
+    
+    let recentPerf = Math.min(100, Math.max(0, recentAvg * 4));
+    
+    // Major boost for active players with recent performance
+    if (isActivePlayer && recentWeeks.length > 0) {
+      recentPerf = Math.min(100, recentPerf + 30); // +30 for active players with recent games
+    }
+    
+    analytics.last6wPerf = recentPerf;
 
     // SPIKE GRAVITY - trending and volatility
     const trendingAdd = trendingAdds.find(t => t.player_id === player.player_id);
@@ -259,9 +338,11 @@ class SleeperDataNormalizationService {
   }
 
   /**
-   * Get default analytics for players with no stats
+   * Get default analytics for players with no stats but apply active player boosts
    */
   private getDefaultAnalytics(position: string, player: any): Partial<NormalizedPlayer> {
+    const isActive = this.isActivePlayer(player, {});
+    
     const defaults: Record<string, Partial<NormalizedPlayer>> = {
       QB: { routeRate: 0.05, tgtShare: 0.02, rushShare: 0.1, talentScore: 40 },
       RB: { routeRate: 0.25, tgtShare: 0.12, rushShare: 0.3, talentScore: 45 },
@@ -271,13 +352,26 @@ class SleeperDataNormalizationService {
 
     const base = defaults[position] || defaults.WR;
     
+    // ACTIVE PLAYER BOOST for defaults
+    let talentScore = base.talentScore || 50;
+    let explosiveness = 35;
+    let last6wPerf = 25;
+    
+    if (isActive) {
+      console.log(`[DefaultAnalytics] Boosting active player: ${player.full_name}`);
+      talentScore = Math.min(100, talentScore + 35); // +35 boost for active players
+      explosiveness = Math.min(100, explosiveness + 25); // +25 boost
+      last6wPerf = Math.min(100, last6wPerf + 40); // +40 boost for recent performance
+    }
+    
     return {
       ...base,
+      talentScore,
       rzTgtShare: 0.05,
       glRushShare: position === 'RB' ? 0.15 : 0.01,
-      explosiveness: 35,
+      explosiveness,
       yakPerRec: position === 'RB' ? 3.5 : 8.2,
-      last6wPerf: 25,
+      last6wPerf,
       spikeGravity: 45,
       draftCapTier: this.estimateDraftCapital(player),
       injuryRisk: this.calculateInjuryRisk(player),
@@ -358,10 +452,17 @@ class SleeperDataNormalizationService {
    * Force refresh cache
    */
   async forceRefresh(): Promise<void> {
+    console.log('[SleeperDataNormalization] Force refreshing cache...');
     this.lastUpdate = 0;
     this.playersCache = [];
     this.adpCache.clear();
-    await this.getNormalizedPlayers();
+    const players = await this.getNormalizedPlayers();
+    
+    // Debug active players
+    const activePlayers = players.filter(p => p.team && p.team !== 'FA').slice(0, 10);
+    console.log('[DEBUG] Active players found:', activePlayers.map(p => `${p.name} (${p.team}) - Talent: ${p.talentScore}`));
+    
+    console.log('[SleeperDataNormalization] Cache refreshed successfully');
   }
 
   /**

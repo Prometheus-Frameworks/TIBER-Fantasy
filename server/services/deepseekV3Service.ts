@@ -71,6 +71,12 @@ function getFallbackAnalytic(metric: string, position: string): number {
 // Helper functions for sleeper sync interface
 export async function getAllPlayers(): Promise<Base[]> {
   try {
+    // Force refresh if requested via query param
+    if (process.env.FORCE_REFRESH === 'true') {
+      await sleeperDataNormalizationService.forceRefresh();
+      process.env.FORCE_REFRESH = 'false';
+    }
+    
     // Fetch normalized players with real analytics
     const normalizedPlayers = await sleeperDataNormalizationService.getNormalizedPlayers();
     

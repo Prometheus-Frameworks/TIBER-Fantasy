@@ -6,6 +6,13 @@ const router = Router();
 router.get("/rankings/deepseek/v3", async (req, res) => {
   try {
     const mode = (req.query.mode as "dynasty"|"redraft") ?? "dynasty";
+    
+    // Force refresh if requested
+    if (req.query.force === '1') {
+      const { sleeperDataNormalizationService } = await import("../services/sleeperDataNormalizationService");
+      await sleeperDataNormalizationService.forceRefresh();
+    }
+    
     const data = await buildDeepseekV3(mode);
     res.json({ mode, count: data.length, ts: Date.now(), data });
   } catch (e: any) {
