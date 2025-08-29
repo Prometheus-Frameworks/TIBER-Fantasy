@@ -100,4 +100,41 @@ router.get("/rankings/deepseek/v3.1", async (req, res) => {
   }
 });
 
+// Audit endpoint to track player coverage and missing data issues  
+router.get("/rankings/deepseek/v3.1/audit", async (req, res) => {
+  try {
+    const { sleeperDataNormalizationService } = await import("../services/sleeperDataNormalizationService");
+    const allPlayers = await sleeperDataNormalizationService.getNormalizedPlayers();
+    
+    const byPos = (pos: string) => allPlayers.filter(p => p.pos === pos);
+    const metrics = (pos: string) => {
+      const players = byPos(pos);
+      return {
+        total: players.length,
+        withTalent: players.filter(p => (p.talentScore ?? 0) > 0).length,
+        withTeam: players.filter(p => p.team && p.team !== 'FA').length,
+        withAge: players.filter(p => p.age && p.age > 0).length,
+        avgTalent: players.length > 0 ? 
+          Math.round(players.reduce((sum, p) => sum + (p.talentScore ?? 0), 0) / players.length * 10) / 10 : 0,
+        topTalent: players
+          .filter(p => (p.talentScore ?? 0) > 70)
+          .sort((a, b) => (b.talentScore ?? 0) - (a.talentScore ?? 0))
+          .slice(0, 5)
+          .map(p => `${p.name} (${p.talentScore})`)
+      };
+    };
+    
+    res.json({ 
+      WR: metrics("WR"), 
+      RB: metrics("RB"), 
+      TE: metrics("TE"), 
+      QB: metrics("QB"),
+      timestamp: Date.now()
+    });
+  } catch (e: any) {
+    console.error('Audit endpoint error:', e);
+    res.status(503).json({ error: e?.message ?? "audit_failed" });
+  }
+});
+
 export default router;

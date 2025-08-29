@@ -74,8 +74,21 @@ function passesMinUsage(player: BasePlayer): boolean {
   }
 }
 
-function computeXfpScore(playersForPos: BasePlayer[], coeffs: Coeffs): Array<BasePlayer & { xfp: number | null; xfpScore: number }> {
-  // 1) Compute xFP per player
+// Enhanced percentile calculation with robust fallbacks
+function percentileWithinPos(players: BasePlayer[], pos: string, getter: (p: BasePlayer) => number): (v: number) => number {
+  const vals = players.filter(p => p.pos === pos).map(getter).filter(v => Number.isFinite(v));
+  const sorted = vals.sort((a, b) => a - b);
+  
+  return (v: number) => {
+    if (!sorted.length || !Number.isFinite(v)) return 50;
+    let i = 0; 
+    while (i < sorted.length && v >= sorted[i]) i++;
+    return Math.max(0, Math.min(100, (i / sorted.length) * 100));
+  };
+}
+
+function computeXfpScore(playersForPos: BasePlayer[], coeffs: Coeffs, allPlayers: BasePlayer[] = []): Array<BasePlayer & { xfp: number | null; xfpScore: number }> {
+  // 1) Compute xFP per player with fallbacks
   const withXfp = playersForPos.map(player => {
     const xfpRow: XfpRow = {
       player_id: player.player_id,
@@ -92,15 +105,37 @@ function computeXfpScore(playersForPos: BasePlayer[], coeffs: Coeffs): Array<Bas
       last6wPerf: player.last6wPerf ?? null
     };
     
-    const xfp = predictXfp(xfpRow, coeffs);
+    let xfp = predictXfp(xfpRow, coeffs);
+    
+    // Fallback: if xFP failed, estimate from talent score
+    if (xfp === null && player.talentScore) {
+      xfp = player.talentScore * 0.3; // Rough conversion
+    }
+    
+    // Final fallback: position baseline
+    if (xfp === null) {
+      const baselines = { WR: 12, RB: 14, TE: 8, QB: 18 };
+      xfp = baselines[player.pos] || 10;
+    }
+    
     return { ...player, xfp };
-  }).filter(p => p.xfp !== null);
+  });
 
   if (withXfp.length === 0) {
     return playersForPos.map(p => ({ ...p, xfp: null, xfpScore: 0 }));
   }
 
-  // 2) Normalize within position to 0-100 scale
+  // 2) Use position percentiles for more robust normalization
+  if (allPlayers.length > 0) {
+    const xfpPercentile = percentileWithinPos(allPlayers, withXfp[0]?.pos || 'WR', p => p.xfp as number || 0);
+    
+    return withXfp.map(p => ({
+      ...p,
+      xfpScore: xfpPercentile(p.xfp!)
+    }));
+  }
+
+  // 3) Fallback to min-max normalization
   const xfpValues = withXfp.map(p => p.xfp!);
   const min = Math.min(...xfpValues);
   const max = Math.max(...xfpValues);
@@ -172,9 +207,30 @@ export async function buildDeepseekV3_1(mode: Mode, debug: boolean = false): Pro
 
   console.log(`[DeepSeek v3.1] After mapping: ${beforeFilter.length} players`);
 
-  const activePlayers = beforeFilter.filter((p: BasePlayer) => p.pos && ['WR', 'RB', 'TE', 'QB'].includes(p.pos)); // Basic filter for valid positions only
+  // Strict active player filtering - fix "half-empty vectors" problem
+  const ACTIVE_OK = new Set(["Active", "ACT", "PRACTICE_SQUAD", "Probable", "Questionable", ""]);
+  const EXCLUDE_STATUS = new Set(["FA", "RET", "SUS", "PUP", "IR", "NFI", "DNR", "HOLDOUT", "Injured Reserve", "Free Agent"]);
+  
+  const isActivePlayer = (p: BasePlayer): boolean => {
+    // Must be fantasy skill position
+    if (!p.pos || !['QB', 'RB', 'WR', 'TE'].includes(p.pos)) return false;
+    
+    // Team assignment check (allow current NFL teams)
+    if (!p.team || p.team === 'FA') return false;
+    
+    // Must have valid production (xFP or talent score)  
+    const hasProduction = (p.talentScore && p.talentScore > 0);
+    if (!hasProduction) return false;
+    
+    // Age check: exclude extremely old players unless elite
+    if (p.age && p.age > 35 && (!p.talentScore || p.talentScore < 80)) return false;
+    
+    return true;
+  };
 
-  console.log(`[DeepSeek v3.1] After position filter: ${activePlayers.length} players`);
+  const activePlayers = beforeFilter.filter(isActivePlayer);
+
+  console.log(`[DeepSeek v3.1] After active player filter: ${activePlayers.length} players`);
 
   // Group by position for xFP calculation
   const positionGroups: Record<Position, BasePlayer[]> = {
@@ -190,31 +246,65 @@ export async function buildDeepseekV3_1(mode: Mode, debug: boolean = false): Pro
     }
   });
 
-  // Compute xFP scores for each position
-  const wrWithXfp = computeXfpScore(positionGroups.WR, coeffs.WR);
-  const rbWithXfp = computeXfpScore(positionGroups.RB, coeffs.RB);
-  const teWithXfp = computeXfpScore(positionGroups.TE, coeffs.TE);
-  const qbWithXfp = computeXfpScore(positionGroups.QB, coeffs.QB);
+  // Compute xFP scores for each position with cross-position context
+  const wrWithXfp = computeXfpScore(positionGroups.WR, coeffs.WR, activePlayers);
+  const rbWithXfp = computeXfpScore(positionGroups.RB, coeffs.RB, activePlayers);
+  const teWithXfp = computeXfpScore(positionGroups.TE, coeffs.TE, activePlayers);
+  const qbWithXfp = computeXfpScore(positionGroups.QB, coeffs.QB, activePlayers);
 
   // Combine all positions
   const allWithXfp = [...wrWithXfp, ...rbWithXfp, ...teWithXfp, ...qbWithXfp];
 
   console.log(`[DeepSeek v3.1] Generated xFP scores for ${allWithXfp.length} players`);
 
-  // Apply v3.1 scoring formula with dynasty age adjustments
+  // Apply v3.1 scoring formula with enhanced percentile-based components
   const modeWeights = config.modes[mode];
+  
+  // Calculate position percentiles for all components
+  const talentPercentile = percentileWithinPos(allWithXfp, 'WR', p => p.talentScore || 0);
+  const recencyPercentile = percentileWithinPos(allWithXfp, 'WR', p => p.last6wPerf || 0);
+  const explosivePercentile = percentileWithinPos(allWithXfp, 'WR', p => p.explosiveness || 0);
+  
   const scoredPlayers: ScoredPlayer[] = allWithXfp.map(player => {
     // Calculate dynasty age penalty/bonus
     const agePenalty = mode === 'dynasty' ? calculateDynastyAgePenalty(player.age, player.pos) : 0;
     
-    // Fix undefined components with proper calculations
+    // Position-specific percentile calculations with robust fallbacks
+    const posPercentiles = {
+      WR: percentileWithinPos(allWithXfp, 'WR', p => p.talentScore || 0),
+      RB: percentileWithinPos(allWithXfp, 'RB', p => p.talentScore || 0), 
+      TE: percentileWithinPos(allWithXfp, 'TE', p => p.talentScore || 0),
+      QB: percentileWithinPos(allWithXfp, 'QB', p => p.talentScore || 0)
+    };
+    
+    const recencyPercentiles = {
+      WR: percentileWithinPos(allWithXfp, 'WR', p => p.last6wPerf || 0),
+      RB: percentileWithinPos(allWithXfp, 'RB', p => p.last6wPerf || 0),
+      TE: percentileWithinPos(allWithXfp, 'TE', p => p.last6wPerf || 0),
+      QB: percentileWithinPos(allWithXfp, 'QB', p => p.last6wPerf || 0)
+    };
+    
+    // Enhanced component calculations using position percentiles
+    const talentP = Math.max(
+      player.xfpScore || 0,
+      posPercentiles[player.pos](player.talentScore || 0)
+    );
+    
+    const recencyP = Math.max(
+      recencyPercentiles[player.pos](player.last6wPerf || 0),
+      posPercentiles[player.pos](player.talentScore || 0) // Fallback to talent
+    );
+    
+    // Context score with defaults
     const contextScore = player.contextScore || 50;
+    
+    // Enhanced risk calculation
     const riskScore = player.riskScore || calculateRiskScore(player.age, player.pos);
     
     // Component calculations for debug
     const xfpComponent = (player.xfpScore || 0) * modeWeights.xfp;
-    const talentComponent = (player.talentScore || 50) * modeWeights.talent;
-    const recencyComponent = (player.last6wPerf || 50) * modeWeights.recency;
+    const talentComponent = talentP * modeWeights.talent;
+    const recencyComponent = recencyP * modeWeights.recency;
     const contextComponent = contextScore * modeWeights.context;
     const riskComponent = riskScore * modeWeights.risk;
     
