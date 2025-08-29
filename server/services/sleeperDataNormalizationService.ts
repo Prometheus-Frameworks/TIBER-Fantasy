@@ -311,13 +311,13 @@ class SleeperDataNormalizationService {
       (ypc * 15) + (ypr * 8) + (catchRate * 60) + (totalTDs * 3)
     ));
     
-    // ACTIVITY BOOST - significantly boost active players
+    // MODERATE ACTIVITY BOOST - avoid ceiling compression
     if (isActivePlayer) {
-      baseTalentScore = Math.min(100, baseTalentScore + 25); // +25 boost for active players
+      baseTalentScore = Math.min(100, baseTalentScore + 8); // Reduced from +25 to +8
       
-      // Extra boost for players with substantial stats
+      // Smaller boost for players with substantial stats
       if (totalWeeks >= 8) {
-        baseTalentScore = Math.min(100, baseTalentScore + 15); // +15 for significant play time
+        baseTalentScore = Math.min(100, baseTalentScore + 5); // Reduced from +15 to +5
       }
     }
     
@@ -327,9 +327,9 @@ class SleeperDataNormalizationService {
     const avgYards = totalWeeks > 0 ? (totals.receiving_yds + totals.rushing_yds) / totalWeeks : 0;
     let baseExplosiveness = Math.min(100, Math.max(0, avgYards * 2));
     
-    // Boost active players
+    // Moderate boost for active players
     if (isActivePlayer) {
-      baseExplosiveness = Math.min(100, baseExplosiveness + 20);
+      baseExplosiveness = Math.min(100, baseExplosiveness + 8); // Reduced from +20 to +8
     }
     
     analytics.explosiveness = baseExplosiveness;
@@ -344,9 +344,9 @@ class SleeperDataNormalizationService {
     
     let recentPerf = Math.min(100, Math.max(0, recentAvg * 4));
     
-    // Major boost for active players with recent performance
+    // Moderate boost for active players with recent performance
     if (isActivePlayer && recentWeeks.length > 0) {
-      recentPerf = Math.min(100, recentPerf + 30); // +30 for active players with recent games
+      recentPerf = Math.min(100, recentPerf + 10); // Reduced from +30 to +10
     }
     
     analytics.last6wPerf = recentPerf;
@@ -401,10 +401,10 @@ class SleeperDataNormalizationService {
     let last6wPerf = 25;
     
     if (isActive) {
-      console.log(`[DefaultAnalytics] Boosting active player: ${player.full_name}`);
-      talentScore = Math.min(100, talentScore + 35); // +35 boost for active players
-      explosiveness = Math.min(100, explosiveness + 25); // +25 boost
-      last6wPerf = Math.min(100, last6wPerf + 40); // +40 boost for recent performance
+      console.log(`[DefaultAnalytics] Moderate boost for active player: ${player.full_name}`);
+      talentScore = Math.min(100, talentScore + 10); // Reduced from +35 to +10
+      explosiveness = Math.min(100, explosiveness + 8); // Reduced from +25 to +8
+      last6wPerf = Math.min(100, last6wPerf + 12); // Reduced from +40 to +12
     }
     
     return {

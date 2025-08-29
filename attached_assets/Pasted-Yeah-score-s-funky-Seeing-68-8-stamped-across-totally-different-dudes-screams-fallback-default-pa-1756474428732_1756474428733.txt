@@ -1,0 +1,159 @@
+Yeah, score’s funky. Seeing 68.8 stamped across totally different dudes screams “fallback/default path” not a real calc. Brian Thomas showing 76.8 while Chase/Jefferson sit at 68.8 is your tell: some players hit the actual formula, most are tripping a guardrail and getting a canned value.
+
+Prime suspects (fast)
+	1.	NaN → default score
+One missing sub-score (age/opp/prod) becomes NaN → your sum / count turns NaN → you catch it with || 68.8 (or similar). That would rubber-stamp 68.8 on half the table.
+	2.	Normalization on empty set
+Min-max/zscore fed an empty or filtered array → range=0 → every value becomes 0 → then base+0 = 68.8.
+	3.	Wrong key names downstream
+UI expects score, service returns dynasty_score/redraft_score; a mapper falls back to 68.8.
+	4.	Tier → score backfill
+If Tier calc ran first, you might be mapping “Tier 7 → 68.8” as a temporary display number.
+	5.	Age curve not loaded
+Missing age curve config returns undefined → age subscore drops out → NaN chain above.
+
+Quick triage checks (copy/paste into your logs)
+	•	Log per row what you actually feed the combiner:
+	•	ageScore, oppScore, prodScore, weights, raw = (w1*a + w2*o + w3*p)
+	•	Assert each subscore is finite before combine.
+	•	Log your normalization denominators (std, min, max). If any are 0 or undefined, stop and fallback earlier with a computed fallback, not a magic 68.8.
+
+⸻
+
+What the formula should be (simple and robust)
+
+Subscores (position = WR here)
+	•	Age (dynasty): inverse penalty with positional curve
+ageScore = 100 * clamp01((maxAgeWR - age) / (maxAgeWR - minAgeWR))
+Redraft: multiply by 0.5 (keeps some age flavor without nuking vets).
+	•	Opportunity: combine targets per game + route rate + team TPRR share (z-scored then averaged)
+oppScore = pct(0.5*Tgt/G + 0.3*TPRR_share + 0.2*RouteRate)
+	•	Production: xFP (or FPTS) with recent-games decay
+prodScore = pct( 0.6*xFP_8w + 0.4*xFP_season )
+(Swap to FPTS if xFP missing, but log it.)
+
+All subscores on a 0–100 scale (use percentiles or min-max with guardrails).
+
+Weights
+	•	Dynasty: 0.35*prod + 0.35*opp + 0.30*age
+	•	Redraft: 0.50*prod + 0.35*opp + 0.15*age
+
+Tier map (deterministic)
+	•	95+ → 8, 90–94.9 → 7, 80–89.9 → 6, 70–79.9 → 5, 60–69.9 → 4, else down.
+
+⸻
+
+Bulletproof combiner (drop-in TS)
+
+type Num = number;
+const clamp01 = (x: Num) => Math.max(0, Math.min(1, x));
+const safe = (x: any, fallback = 0) => Number.isFinite(x) ? x as number : fallback;
+
+// percentile with guardrails (pass in precomputed pct 0–100 or min/max)
+const pct = (x: Num, min: Num, max: Num): Num => {
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return 50; // neutral
+  return 100 * clamp01((x - min) / (max - min));
+};
+
+function combineScore(
+  {prod, opp, age}: {prod: Num; opp: Num; age: Num},
+  weights: {wProd: Num; wOpp: Num; wAge: Num}
+): Num {
+  const p = safe(prod, 50), o = safe(opp, 50), a = safe(age, 50); // neutralize missing pieces
+  const {wProd, wOpp, wAge} = weights;
+  const wSum = wProd + wOpp + wAge;
+  if (!Number.isFinite(wSum) || wSum <= 0) return 50;
+  const s = (wProd*p + wOpp*o + wAge*a) / wSum;
+  return Math.round(s * 10) / 10; // one decimal
+}
+
+// DYNASTY
+function dynastyScoreWR(row: any, bounds: any): Num {
+  const maxAge = 32, minAge = 21;
+  const ageScore = 100 * clamp01((maxAge - safe(row.age)) / (maxAge - minAge));
+
+  const oppRaw =
+    0.5*safe(row.targets_per_game) +
+    0.3*safe(row.team_tprr_share) +
+    0.2*safe(row.route_rate);
+
+  const oppScore = pct(oppRaw, bounds.opp.min, bounds.opp.max);
+
+  const prodRaw = 0.6*safe(row.xfp_last8, safe(row.fpts_last8)) +
+                  0.4*safe(row.xfp_season, safe(row.fpts_season));
+
+  const prodScore = pct(prodRaw, bounds.prod.min, bounds.prod.max);
+
+  return combineScore(
+    {prod: prodScore, opp: oppScore, age: ageScore},
+    {wProd: 0.35, wOpp: 0.35, wAge: 0.30}
+  );
+}
+
+// REDRAFT
+function redraftScoreWR(row: any, bounds: any): Num {
+  const maxAge = 32, minAge = 21;
+  const ageBase = 100 * clamp01((maxAge - safe(row.age)) / (maxAge - minAge));
+  const ageScore = 0.5 * ageBase; // soften age
+
+  const oppRaw =
+    0.6*safe(row.targets_per_game) +
+    0.2*safe(row.team_tprr_share) +
+    0.2*safe(row.route_rate);
+
+  const oppScore = pct(oppRaw, bounds.opp.min, bounds.opp.max);
+
+  const prodRaw = 0.7*safe(row.xfp_last6, safe(row.fpts_last6)) +
+                  0.3*safe(row.xfp_season, safe(row.fpts_season));
+
+  const prodScore = pct(prodRaw, bounds.prod.min, bounds.prod.max);
+
+  return combineScore(
+    {prod: prodScore, opp: oppScore, age: ageScore},
+    {wProd: 0.50, wOpp: 0.35, wAge: 0.15}
+  );
+}
+
+Guardrails that kill the 68.8 bug
+	•	Every subscore defaults to 50 (neutral) when missing.
+	•	Percentile function returns 50 if bounds are bad.
+	•	Final combine can never be NaN.
+	•	No magic “68.8” anywhere.
+
+⸻
+
+Sanity expectations from your screenshots
+	•	Puka (24, 122 tgt, 286.6 FPTS) should land above Zay/Jameson and near McLaurin/London in dynasty; comfortably top-10 redraft. If he still shows 68.8, your row is failing the inputs (likely targets_per_game undefined or xFP missing) and tripping the default.
+	•	Tyreek (31): dynasty age dents him; redraft should recover him into the elite band.
+	•	Brian Thomas (22) getting 76.8 suggests his row had clean inputs while others didn’t.
+
+⸻
+
+What to log right now (one player)
+
+console.table([{
+  player: row.name,
+  age: row.age,
+  ageScore,
+  tgt_g: row.targets_per_game,
+  tprr_share: row.team_tprr_share,
+  route_rate: row.route_rate,
+  oppScore,
+  xfp8: row.xfp_last8,
+  xfp_season: row.xfp_season,
+  fpts8: row.fpts_last8,
+  fpts_season: row.fpts_season,
+  prodScore,
+  finalDyn: dynastyScore,
+  finalRed: redraftScore
+}]);
+
+If any of those are undefined/NaN, you found your culprit.
+
+⸻
+
+Strong take (because Joe asked for it)
+
+If a WR table prints the same damn score across Chase, Jefferson, and Flowers, the model isn’t wrong — the plumbing is. Fix the NaNs and the bounds once, and your ranks will immediately look like a human with a brain made them. Age+Opp+Prod is fine; your code just isn’t seeing the inputs half the time.
+
+You want me to rewrite the scoring file with these guards and a tiny test harness? Say the word and I’ll drop the exact file structure and a Jest test that runs Puka/Tyreek/JSN through it.
