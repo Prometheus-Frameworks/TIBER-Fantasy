@@ -1861,6 +1861,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get combined WR data (elite + additional players)
+  app.get('/api/wr-game-logs/combined', async (req: Request, res: Response) => {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const { fileURLToPath } = await import('url');
+      
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      
+      // Load elite WRs from CSV
+      const csvPath = path.join(__dirname, '../services/../data/WR_2024_Ratings_With_Tags.csv');
+      const eliteWRs: any[] = [];
+      
+      if (fs.existsSync(csvPath)) {
+        const csvContent = fs.readFileSync(csvPath, 'utf-8');
+        const lines = csvContent.trim().split('\n');
+        
+        // Parse CSV (skip header)
+        lines.slice(1).forEach(line => {
+          const parts = line.split(',');
+          if (parts.length >= 12) {
+            eliteWRs.push({
+              player_name: parts[0].replace(/"/g, ''),
+              team: parts[1],
+              games_played: parseInt(parts[2]) || 0,
+              total_fpts: parseFloat(parts[3]) || 0,
+              fpg: parseFloat(parts[4]) || 0,
+              rating: parseInt(parts[6]) || 0,
+              targets: parseInt(parts[11]) || 0,
+              receptions: parseInt(parts[12]) || 0,
+              rec_yards: parseInt(parts[13]) || 0,
+              is_elite: true
+            });
+          }
+        });
+      }
+      
+      // Load additional WRs from game logs  
+      const gameLogsPath = path.join(__dirname, '../services/../data/wr_2024_additional_game_logs.json');
+      let additionalWRs: any[] = [];
+      
+      if (fs.existsSync(gameLogsPath)) {
+        const gameLogsContent = fs.readFileSync(gameLogsPath, 'utf-8');
+        const gameLogsData = JSON.parse(gameLogsContent);
+        additionalWRs = gameLogsData || [];
+      }
+      
+      // Combine and return
+      res.json({
+        success: true,
+        message: 'Combined WR data (elite + additional)',
+        elite_count: eliteWRs.length,
+        additional_count: additionalWRs.length,
+        total_count: eliteWRs.length + additionalWRs.length,
+        elite_wrs: eliteWRs,
+        additional_wrs: additionalWRs,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Error retrieving combined WR data:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to load combined WR data',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Get cached WR game logs
   app.get('/api/wr-game-logs/cached', async (req: Request, res: Response) => {
     try {

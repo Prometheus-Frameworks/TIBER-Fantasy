@@ -131,10 +131,8 @@ export class WRGameLogsService {
                 playerName = playerInfo.full_name;
                 playerTeam = playerInfo.team || 'FA';
                 
-                // Skip if player is in excluded list
-                if (this.isPlayerExcluded(playerName)) {
-                  continue;
-                }
+                // Include ALL WRs for comprehensive stats display
+                // Note: We want elite WRs to show their game log stats too!
                 
                 // Find or create player entry
                 let playerEntry = wrPlayers.find(p => p.player_name === playerName);
