@@ -105,6 +105,16 @@ function computeXfpScore(playersForPos: BasePlayer[], coeffs: Coeffs): Array<Bas
   const min = Math.min(...xfpValues);
   const max = Math.max(...xfpValues);
   
+  // Debug logging for xFP investigation
+  if (withXfp.some(p => p.name?.includes("Corley") || p.name?.includes("Nabers"))) {
+    console.log(`[xFP Debug] Position: ${withXfp[0]?.pos}`);
+    console.log(`[xFP Debug] Min raw xFP: ${min}, Max raw xFP: ${max}`);
+    console.log(`[xFP Debug] Corley/Nabers raw xFP:`, 
+      withXfp.filter(p => p.name?.includes("Corley") || p.name?.includes("Nabers"))
+        .map(p => ({ name: p.name, raw_xfp: p.xfp }))
+    );
+  }
+  
   return withXfp.map(p => ({
     ...p,
     xfpScore: pctScale01to100(normalize01(p.xfp!, min, max))
@@ -237,7 +247,9 @@ export async function buildDeepseekV3_1(mode: Mode, debug: boolean = false): Pro
         base_score: Math.round(baseScore * 100) / 100,
         age_penalty: agePenalty,
         final_score: Math.round(finalScore * 100) / 100,
-        weights: modeWeights
+        weights: modeWeights,
+        // Sanity check flags
+        sanity_flags: getSanityFlags(player, finalScore, agePenalty)
       };
     }
 
@@ -269,13 +281,13 @@ function calculateDynastyAgePenalty(age: number, position: Position): number {
   const targetAge = dynastyAgeTargets[position] || 25;
   const ageDeviation = age - targetAge;
   
-  // Aggressive dynasty penalties/bonuses
-  if (ageDeviation <= -2) return +15;  // Very young: big bonus
-  if (ageDeviation <= -1) return +8;   // Young: bonus
+  // Moderate dynasty penalties/bonuses (reduced from ±25 to ±12)
+  if (ageDeviation <= -2) return +8;   // Very young: moderate bonus
+  if (ageDeviation <= -1) return +4;   // Young: small bonus
   if (ageDeviation <= 1) return 0;     // Prime: neutral
-  if (ageDeviation <= 3) return -8;    // Aging: penalty
-  if (ageDeviation <= 5) return -15;   // Old: big penalty
-  return -25; // Very old: massive penalty (30+ for RB/WR, 32+ for TE, 34+ for QB)
+  if (ageDeviation <= 3) return -4;    // Aging: small penalty
+  if (ageDeviation <= 5) return -8;    // Old: moderate penalty
+  return -12; // Very old: large penalty (30+ for RB/WR, 32+ for TE, 34+ for QB)
 }
 
 function calculateRiskScore(age: number, position: Position): number {
@@ -298,6 +310,36 @@ function calculateRiskScore(age: number, position: Position): number {
   }
   
   return Math.min(riskScore, 50); // Cap at 50
+}
+
+function getSanityFlags(player: any, finalScore: number, agePenalty: number): string[] {
+  const flags: string[] = [];
+  
+  // Flag 1: Unknown players with very high scores
+  const unknownPlayerHighScore = (player.draftCapTier || 50) < 50 && finalScore > 85;
+  if (unknownPlayerHighScore) {
+    flags.push("unknown_player_elite_score");
+  }
+  
+  // Flag 2: Age bonus overwhelming talent differences
+  const ageBonusOverwhelming = agePenalty > 0 && agePenalty > (player.talentScore || 50) * 0.15;
+  if (ageBonusOverwhelming) {
+    flags.push("age_bonus_overwhelming");
+  }
+  
+  // Flag 3: Low talent score but high final score
+  const lowTalentHighScore = (player.talentScore || 50) < 70 && finalScore > 80;
+  if (lowTalentHighScore) {
+    flags.push("low_talent_high_score");
+  }
+  
+  // Flag 4: xFP inflation check  
+  const xfpInflated = (player.xfpScore || 0) > 95 && (player.talentScore || 50) < 80;
+  if (xfpInflated) {
+    flags.push("xfp_potentially_inflated");
+  }
+  
+  return flags;
 }
 
 export async function getModelInfo() {
