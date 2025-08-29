@@ -119,7 +119,7 @@ function getTier(score: number): number {
   return cutoffs.length + 1;
 }
 
-export async function buildDeepseekV3_1(mode: Mode): Promise<ScoredPlayer[]> {
+export async function buildDeepseekV3_1(mode: Mode, debug: boolean = false): Promise<ScoredPlayer[]> {
   // Note: Health check removed for now - can be added back when getSyncHealth is properly exported
 
   // Load normalized players and coefficients
@@ -201,23 +201,47 @@ export async function buildDeepseekV3_1(mode: Mode): Promise<ScoredPlayer[]> {
     const contextScore = player.contextScore || 50;
     const riskScore = player.riskScore || calculateRiskScore(player.age, player.pos);
     
-    const baseScore = 
-      (player.xfpScore || 0) * modeWeights.xfp +
-      (player.talentScore || 50) * modeWeights.talent +
-      (player.last6wPerf || 50) * modeWeights.recency +
-      contextScore * modeWeights.context -
-      riskScore * modeWeights.risk;
-
-    // Apply dynasty age adjustment  
+    // Component calculations for debug
+    const xfpComponent = (player.xfpScore || 0) * modeWeights.xfp;
+    const talentComponent = (player.talentScore || 50) * modeWeights.talent;
+    const recencyComponent = (player.last6wPerf || 50) * modeWeights.recency;
+    const contextComponent = contextScore * modeWeights.context;
+    const riskComponent = riskScore * modeWeights.risk;
+    
+    const baseScore = xfpComponent + talentComponent + recencyComponent + contextComponent - riskComponent;
     const finalScore = baseScore + agePenalty;
 
-    return {
+    const result: any = {
       ...player,
       score: Math.round(finalScore * 100) / 100,
       tier: getTier(finalScore),
       rank: 0, // Will be set after sorting
       agePenalty: mode === 'dynasty' ? agePenalty : undefined
     };
+
+    // Add debug breakdown if requested
+    if (debug) {
+      result.debug = {
+        xfp: Math.round((player.xfpScore || 0) * 100) / 100,
+        talent: Math.round((player.talentScore || 50) * 100) / 100,
+        recency: Math.round((player.last6wPerf || 50) * 100) / 100,
+        context: Math.round(contextScore * 100) / 100,
+        risk: Math.round(riskScore * 100) / 100,
+        components: {
+          xfp_weighted: Math.round(xfpComponent * 100) / 100,
+          talent_weighted: Math.round(talentComponent * 100) / 100,
+          recency_weighted: Math.round(recencyComponent * 100) / 100,
+          context_weighted: Math.round(contextComponent * 100) / 100,
+          risk_weighted: Math.round(riskComponent * 100) / 100
+        },
+        base_score: Math.round(baseScore * 100) / 100,
+        age_penalty: agePenalty,
+        final_score: Math.round(finalScore * 100) / 100,
+        weights: modeWeights
+      };
+    }
+
+    return result;
   });
 
   // Sort by score and assign ranks

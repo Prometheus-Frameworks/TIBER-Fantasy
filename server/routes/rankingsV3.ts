@@ -33,7 +33,8 @@ router.get("/rankings/deepseek/v3.1", async (req, res) => {
       await sleeperDataNormalizationService.forceRefresh();
     }
     
-    const data = await buildDeepseekV3_1(mode);
+    const debug = req.query.debug === '1';
+    const data = await buildDeepseekV3_1(mode, debug);
     const modelInfo = await getModelInfo();
     
     res.json({ 
