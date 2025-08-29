@@ -26,6 +26,7 @@ router.get("/rankings/deepseek/v3", async (req, res) => {
 router.get("/rankings/deepseek/v3.1", async (req, res) => {
   try {
     const mode = (req.query.mode as "dynasty"|"redraft") ?? "dynasty";
+    const position = req.query.position as string; // QB, RB, WR, TE, or undefined for all
     
     // Force refresh if requested
     if (req.query.force === '1') {
@@ -34,11 +35,22 @@ router.get("/rankings/deepseek/v3.1", async (req, res) => {
     }
     
     const debug = req.query.debug === '1';
-    const data = await buildDeepseekV3_1(mode, debug);
+    let data = await buildDeepseekV3_1(mode, debug);
+    
+    // Filter by position if specified
+    if (position && ["QB", "RB", "WR", "TE"].includes(position)) {
+      data = data.filter(player => player.pos === position);
+      // Re-rank within position
+      data.forEach((player, index) => {
+        player.rank = index + 1;
+      });
+    }
+    
     const modelInfo = await getModelInfo();
     
     res.json({ 
       mode, 
+      position: position || "ALL",
       count: data.length, 
       ts: Date.now(), 
       model_info: modelInfo,

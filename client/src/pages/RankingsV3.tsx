@@ -5,15 +5,31 @@ import RankingsV3Table from "../components/RankingsV3Table";
 export default function RankingsV3Page() {
   const [location, setLocation] = useLocation();
   
-  // Extract mode from URL params or default to dynasty
+  // Extract mode and position from URL params
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const initialMode = (urlParams.get('mode') as "dynasty" | "redraft") || "dynasty";
+  const initialPosition = urlParams.get('position') || "ALL";
   
   const [mode, setMode] = useState<"dynasty" | "redraft">(initialMode);
+  const [position, setPosition] = useState<string>(initialPosition);
   
   const handleModeChange = (newMode: "dynasty" | "redraft") => {
     setMode(newMode);
-    setLocation(`/rankings/v3?mode=${newMode}`);
+    updateURL(newMode, position);
+  };
+  
+  const handlePositionChange = (newPosition: string) => {
+    setPosition(newPosition);
+    updateURL(mode, newPosition);
+  };
+  
+  const updateURL = (currentMode: string, currentPosition: string) => {
+    const params = new URLSearchParams();
+    params.set('mode', currentMode);
+    if (currentPosition !== "ALL") {
+      params.set('position', currentPosition);
+    }
+    setLocation(`/rankings/v3?${params.toString()}`);
   };
   
   return (
@@ -28,7 +44,8 @@ export default function RankingsV3Page() {
           </p>
         </div>
         
-        <div className="mb-6 flex gap-2">
+        {/* Mode Toggle */}
+        <div className="mb-4 flex gap-2">
           <button 
             className={`px-4 py-2 rounded-md font-medium transition-colors ${
               mode === "dynasty" 
@@ -51,9 +68,36 @@ export default function RankingsV3Page() {
           </button>
         </div>
         
+        {/* Position Toggle */}
+        <div className="mb-6 flex gap-2 flex-wrap">
+          <button 
+            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+              position === "ALL" 
+                ? "bg-purple-600 text-white" 
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+            onClick={() => handlePositionChange("ALL")}
+          >
+            All Positions
+          </button>
+          {["QB", "RB", "WR", "TE"].map((pos) => (
+            <button 
+              key={pos}
+              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                position === pos 
+                  ? "bg-purple-600 text-white" 
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+              onClick={() => handlePositionChange(pos)}
+            >
+              {pos}
+            </button>
+          ))}
+        </div>
+        
         <div className="bg-white rounded-lg shadow-sm border">
           <div className="p-6">
-            <RankingsV3Table mode={mode} />
+            <RankingsV3Table mode={mode} position={position === "ALL" ? undefined : position} />
           </div>
         </div>
         

@@ -1,8 +1,8 @@
 import React from "react";
 import { useDeepseekV3 } from "../hooks/useDeepseekV3";
 
-export default function RankingsV3Table({mode}: {mode: "dynasty" | "redraft"}) {
-  const { data, meta, loading, err } = useDeepseekV3(mode);
+export default function RankingsV3Table({mode, position}: {mode: "dynasty" | "redraft"; position?: string}) {
+  const { data, meta, loading, err } = useDeepseekV3(mode, position);
   
   if (loading) {
     return (
@@ -25,7 +25,7 @@ export default function RankingsV3Table({mode}: {mode: "dynasty" | "redraft"}) {
   return (
     <>
       <div className="flex items-center gap-3 mb-4">
-        <h2 className="text-xl font-semibold">DeepSeek v3.1 — {mode.toUpperCase()}</h2>
+        <h2 className="text-xl font-semibold">DeepSeek v3.1 — {mode.toUpperCase()}{position ? ` • ${position}` : ""}</h2>
         {meta.ts && (
           <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
             Updated {new Date(meta.ts).toLocaleString()}
