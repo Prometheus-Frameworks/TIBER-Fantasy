@@ -48,6 +48,36 @@ const bucket = (score:number, cuts:number[]) => {
   return tier === 0 ? cuts.length+1 : tier;
 };
 
+// Enhanced null handling with floor values
+const nz = (n: number | undefined | null, floor = weights.guards.null_default_floor || 20): number => 
+  (n == null ? floor : n);
+
+// Age curve penalty implementation
+function agePenalty(pos: string, age?: number): number {
+  if (!age) return 0;
+  const curve = (weights.age_curves as any)[pos] || [];
+  // Pick the largest age <= current
+  let pen = 0;
+  for (const [a, p] of curve) {
+    if (age >= a) pen = p;
+  }
+  return pen; // negative numbers like -14
+}
+
+// Status filtering
+function isDroppableStatus(status?: string): boolean {
+  if (!status) return false;
+  const bad = new Set(weights.guards.drop_if_status || []);
+  return bad.has(status.toUpperCase());
+}
+
+// Recent usage validation
+function recentUsageOK(p: Base): boolean {
+  const routes = nz(p.routeRate ?? 0) * 100; // if routeRate is 0..1
+  const tgts = nz(p.tgtShare ?? 0) * 100;
+  return (routes >= (weights.guards.min_recent_routes || 40)) || (tgts >= (weights.guards.min_recent_targets || 10));
+}
+
 // Fallback analytics for when real data is unavailable
 function getFallbackAnalytic(metric: string, position: string): number {
   const fallbacks: Record<string, Record<string, number>> = {
@@ -235,18 +265,25 @@ async function computeContext(team: string) {
 }
 
 function computeRole(p: Base) {
-  const r = (p.routeRate??0)*0.4 + (p.tgtShare??0)*0.4 + (p.rzTgtShare??0)*0.2;
-  const rb = (p.rushShare??0)*0.6 + (p.glRushShare??0)*0.4;
-  if (p.pos==="RB") return clamp(rb*100);
-  if (p.pos==="TE") return clamp(r*95);
-  return clamp(r*100);
+  if (!recentUsageOK(p)) return 20; // clamp low if no recent role
+  const r = (nz(p.routeRate)*100)*0.4 + (nz(p.tgtShare)*100)*0.4 + (nz(p.rzTgtShare)*100)*0.2;
+  const rb = (nz(p.rushShare)*100)*0.6 + (nz(p.glRushShare)*100)*0.4;
+  if (p.pos==="RB") return clamp(rb);
+  if (p.pos==="TE") return clamp(r*0.95);
+  return clamp(r);
 }
 
-const computeDurability = (p: Base) => clamp(100 - (p.injuryRisk??20)*1.2 - (p.ageRisk??0)*0.8);
-const computeRecency = (p: Base) => clamp(p.last6wPerf??0);
-const computeRisk = (p: Base) => clamp(0.6*(100-(p.draftCapTier??50)) + 0.4*(p.injuryRisk??20)); // higher=worse
-const computeTalent = (p: Base) => clamp((p.talentScore??0)*0.7 + (p.explosiveness??0)*0.2 + (p.yakPerRec??0)*0.1);
-const computeSpike = (p: Base) => clamp(p.spikeGravity??0);
+const computeDurability = (p: Base) => clamp(100 - nz(p.injuryRisk, 20)*1.2 + agePenalty(p.pos, p.age));
+const computeRecency = (p: Base) => clamp(nz(p.last6wPerf, 25)); // prefer last-6w perf; if missing, don't let it buoy the player
+const computeRisk = (p: Base) => {
+  const cap = 100 - nz(p.draftCapTier, 50);
+  return clamp(0.6*cap + 0.4*nz(p.injuryRisk, 20)); // higher=more risk
+};
+const computeTalent = (p: Base) => {
+  const t = nz(p.talentScore)*0.7 + nz(p.explosiveness)*0.2 + nz(p.yakPerRec)*0.1;
+  return clamp(t);
+};
+const computeSpike = (p: Base) => clamp(nz(p.spikeGravity));
 
 export async function buildDeepseekV3(mode: Mode) {
   if (weights.guards.require_sleeper_sync_ok) {
@@ -257,7 +294,10 @@ export async function buildDeepseekV3(mode: Mode) {
   const cfg = weights.mode_defaults[mode];
   const all = await getAllPlayers();
   const adpMap = await getAdpMap();
-  const limited: Base[] = all.slice(0, weights.guards.max_players);
+  
+  // Filter at intake - remove players with bad status
+  const filtered = all.filter(p => !isDroppableStatus((p as any).status));
+  const limited: Base[] = filtered.slice(0, weights.guards.max_players || 1200);
 
   const rows: Row[] = [];
   for (const p of limited) {
@@ -271,7 +311,7 @@ export async function buildDeepseekV3(mode: Mode) {
       Promise.resolve(computeRisk(p))
     ]);
 
-    const score =
+    let score =
       talentScoreOut * cfg.talent +
       roleScore      * cfg.role +
       contextScore   * cfg.context +
@@ -279,6 +319,9 @@ export async function buildDeepseekV3(mode: Mode) {
       recencyScore   * cfg.recency +
       spikeScore     * cfg.spike -
       riskScore      * cfg.risk;
+    
+    // Light global clamp to avoid outliers from sparse data
+    if (!recentUsageOK(p)) score = Math.min(score, 55);
 
     rows.push({
       ...p, 
