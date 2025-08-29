@@ -74,6 +74,7 @@ import HotList from "@/pages/HotList";
 import DataIngestion from "@/pages/DataIngestion";
 import Reflect from "@/pages/Reflect";
 import Leaders from "@/pages/Leaders";
+import RankingsV3 from "@/pages/RankingsV3";
 import SOSPage from "@/pages/SOSPage";
 import SOSDashboardPage from "@/pages/SOSDashboardPage";
 import SOSDocumentationPage from "@/pages/SOSDocumentationPage";
@@ -174,6 +175,7 @@ function Router() {
       <Route path="/curves-demo" component={CurvesDemo} />
       <Route path="/injury-profiles-demo" component={InjuryProfilesDemo} />
       <Route path="/compare/:username" component={CompareRankings} />
+      <Route path="/rankings/v3" component={RankingsV3} />
       {/* Backward-compatible redirects */}
       <Route path="/rankings" component={() => { window.location.replace('/consensus'); return null; }} />
       <Route path="/rankings/redraft" component={() => { window.location.replace('/consensus/redraft'); return null; }} />

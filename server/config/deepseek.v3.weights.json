@@ -1,0 +1,30 @@
+{
+  "version": "3.0.0",
+  "mode_defaults": {
+    "dynasty": { 
+      "talent": 0.32, 
+      "role": 0.16, 
+      "context": 0.14, 
+      "durability": 0.10, 
+      "recency": 0.08, 
+      "spike": 0.10, 
+      "risk": 0.10 
+    },
+    "redraft": { 
+      "talent": 0.24, 
+      "role": 0.26, 
+      "context": 0.16, 
+      "durability": 0.08, 
+      "recency": 0.16, 
+      "spike": 0.08, 
+      "risk": 0.02 
+    }
+  },
+  "tier_cutoffs": [96, 91, 86, 81, 76, 71],
+  "guards": {
+    "dry_run": true,
+    "max_players": 1000,
+    "require_sleeper_sync_ok": true,
+    "allow_enrichment": false
+  }
+}

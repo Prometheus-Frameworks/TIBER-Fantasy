@@ -55,6 +55,7 @@ import compassCompareRoutes from './routes/compassCompareRoutes';
 import rookieRoutes from './routes/rookieRoutes';
 import sosRouter from './modules/sos/sos.router';
 import { ratingsRouter } from './src/modules/ratings';
+import rankingsV3Router from './routes/rankingsV3';
 import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
 import pythonRookieRoutes from './routes/pythonRookieRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
@@ -380,6 +381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== DEEPSEEK RATINGS SYSTEM =====
   // Mount the new DeepSeek ratings router
   app.use('/api/ratings', ratingsRouter);
+  app.use('/api', rankingsV3Router);
   
   // ===== LEGACY RATINGS ENGINE (DEPRECATED) =====
   // Legacy ratings endpoint - disabled in favor of DeepSeek methodology
