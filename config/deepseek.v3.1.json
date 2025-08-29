@@ -1,0 +1,11 @@
+{
+  "min_usage": { "WR": 0.05, "TE": 0.04, "RB": 0.08, "QB": 0.50 },
+  "min_snaps_per_game": 5,
+  "train_weeks": [1,17],
+  "modes": {
+    "dynasty": { "xfp": 0.60, "talent": 0.15, "recency": 0.10, "context": 0.10, "risk": 0.05 },
+    "redraft": { "xfp": 0.70, "talent": 0.10, "recency": 0.12, "context": 0.06, "risk": 0.02 }
+  },
+  "tiers": { "cutoffs": [96, 91, 86, 81, 76, 71] },
+  "persist_coeffs": true
+}

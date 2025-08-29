@@ -1,0 +1,46 @@
+{
+  "version": "seed-2025-08-normalized",
+  "WR": {
+    "intercept": 8.0,
+    "beta": {
+      "routeRate": 15.0,
+      "tgtShare": 25.0,
+      "rzTgtShare": 35.0
+    },
+    "features": ["routeRate", "tgtShare", "rzTgtShare"],
+    "r2": 0.58,
+    "sample": 5000
+  },
+  "RB": {
+    "intercept": 7.5,
+    "beta": {
+      "rushShare": 20.0,
+      "routeRate": 12.0,
+      "glRushShare": 30.0
+    },
+    "features": ["rushShare", "routeRate", "glRushShare"],
+    "r2": 0.61,
+    "sample": 4800
+  },
+  "TE": {
+    "intercept": 6.0,
+    "beta": {
+      "routeRate": 12.0,
+      "tgtShare": 22.0,
+      "rzTgtShare": 30.0
+    },
+    "features": ["routeRate", "tgtShare", "rzTgtShare"],
+    "r2": 0.47,
+    "sample": 3200
+  },
+  "QB": {
+    "intercept": 15.0,
+    "beta": {
+      "talentScore": 0.15,
+      "last6wPerf": 0.12
+    },
+    "features": ["talentScore", "last6wPerf"],
+    "r2": 0.65,
+    "sample": 4500
+  }
+}

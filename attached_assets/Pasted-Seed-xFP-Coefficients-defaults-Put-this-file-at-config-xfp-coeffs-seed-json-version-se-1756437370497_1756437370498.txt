@@ -1,0 +1,103 @@
+Seed xFP Coefficients (defaults)
+
+Put this file at: /config/xfp.coeffs.seed.json
+
+{
+  "version": "seed-2025-08",
+  "WR": {
+    "intercept": 0.8,
+    "beta": {
+      "targets": 1.55,
+      "redZoneTargets": 0.85,
+      "endZoneTargets": 1.20,
+      "routes": 0.02,
+      "airYards": 0.004
+    },
+    "features": ["targets", "redZoneTargets", "endZoneTargets", "routes", "airYards"],
+    "r2": 0.58,
+    "sample": 5000
+  },
+  "RB": {
+    "intercept": 0.6,
+    "beta": {
+      "carries": 0.62,
+      "targets": 1.25,
+      "goalLineRushes": 1.40,
+      "redZoneTouches": 0.55,
+      "routes": 0.03
+    },
+    "features": ["carries", "targets", "goalLineRushes", "redZoneTouches", "routes"],
+    "r2": 0.61,
+    "sample": 4800
+  },
+  "TE": {
+    "intercept": 0.4,
+    "beta": {
+      "targets": 1.35,
+      "redZoneTargets": 0.90,
+      "routes": 0.03
+    },
+    "features": ["targets", "redZoneTargets", "routes"],
+    "r2": 0.47,
+    "sample": 3200
+  },
+  "QB": {
+    "intercept": 3.0,
+    "beta": {
+      "dropbacks": 0.22,
+      "designedRushes": 0.55,
+      "rushYds": 0.06
+    },
+    "features": ["dropbacks", "designedRushes", "rushYds"],
+    "r2": 0.65,
+    "sample": 4500
+  }
+}
+
+
+These are conservative, production-safe seeds (derived from typical yearlong relationships). They’ll immediately anchor scores to expected fantasy points (xFP) and prevent depth WRs from clustering at the top.
+
+How Tiber should wire the seeds
+
+Load seeds if no trained coeffs exist
+
+Add to xfpRepo.loadAll():
+
+If DB table xfp_coeffs is empty, load /config/xfp.coeffs.seed.json.
+
+Expose model_info in the response (r2, sample, pos, source: "seed"| "trained").
+
+Expose model info in v3 API (optional)
+
+In /api/rankings/deepseek/v3 response, include:
+
+{
+  "mode": "dynasty",
+  "count": 1200,
+  "model_info": {
+    "WR": {"r2": 0.58, "sample": 5000, "source": "seed"},
+    "RB": {"r2": 0.61, "sample": 4800, "source": "seed"},
+    "TE": {"r2": 0.47, "sample": 3200, "source": "seed"},
+    "QB": {"r2": 0.65, "sample": 4500, "source": "seed"}
+  },
+  "data": [ ... ]
+}
+
+
+Swap to trained coeffs automatically
+
+After POST /api/admin/xfp/train?weeks=1-17 writes DB rows, xfpRepo.loadAll() should prefer DB over seeds.
+
+One-line repo ticket addendum (paste under v3.1 task)
+
+Add seed xFP coefficients: Load /config/xfp.coeffs.seed.json when xfp_coeffs table is empty. Include model_info in /api/rankings/deepseek/v3. After training, auto-switch to DB coeffs. This ensures elite players surface immediately and depth vets don’t crowd the top pre-training.
+
+Quick acceptance checks (5 minutes)
+
+Top 20 Dynasty WR shows Chase/Jefferson/ARSB/Puka/Lamb/Waddle/Olave (not depth vets).
+
+No player with routeRate < 8% or snaps/game < 8 in Top 100.
+
+Scores vary (no identical blocks), tiers look sensible.
+
+Optional: Debug toggle shows model_info.source = "seed" until training runs.

@@ -1,0 +1,278 @@
+DeepSeek v3.1 Hotfix — Tie Rankings to Fantasy Points (xFP)
+Goal
+
+Replace the current “usage-only blob” with Expected Fantasy Points (xFP) anchored to actual fantasy scoring. Train simple per-position regressions from usage/opp → fantasy points, normalize to 0–100, filter fringe players, and re-tier.
+
+0) Config (drop-in)
+
+/config/deepseek.v3.1.json
+
+{
+  "min_usage": { "WR": 0.08, "TE": 0.07, "RB": 0.12, "QB": 0.90 },
+  "min_snaps_per_game": 8,
+  "train_weeks": [1,17],
+  "modes": {
+    "dynasty": { "xfp": 0.60, "talent": 0.15, "recency": 0.10, "context": 0.10, "risk": 0.05 },
+    "redraft": { "xfp": 0.70, "talent": 0.10, "recency": 0.12, "context": 0.06, "risk": 0.02 }
+  },
+  "tiers": { "cutoffs": [96, 91, 86, 81, 76, 71] },
+  "persist_coeffs": true
+}
+
+1) Data you need from Sleeper normalization
+
+Ensure the normalization step emits these per player-week (or season-agg with recent-window agg):
+
+WR/TE: routes, targets, routeRate, targetShare, aDOT/airYards (if available), redZoneTargets, endZoneTargets, yardsPerRouteRun, PPR points (label).
+
+RB: carries, targets, rushShare, targetShare, goalLineRushes (or GL share), redZoneTouches, routes, PPR points (label).
+
+QB: dropbacks (attempts + sacks + scrambles), carries (designed), rushYds, passYds, passTD, rushTD, INT, PPR points (label).
+
+If a metric is missing, use null (do not zero-fill).
+
+2) Training xFP (per position) — lightweight regression
+
+File: server/services/xfpTrainer.ts
+
+type Row = Record<string, number|null> & {
+  player_id:string; week:number; pos:"WR"|"RB"|"TE"|"QB"; ppr:number|null;
+};
+type Coeffs = { intercept:number; beta:Record<string, number>; features:string[]; r2:number; sample:number };
+
+const POS_FEATURES: Record<string,string[]> = {
+  WR: ["targets","redZoneTargets","endZoneTargets","routes","airYards"],
+  TE: ["targets","redZoneTargets","routes"],
+  RB: ["carries","targets","goalLineRushes","redZoneTouches","routes"],
+  QB: ["dropbacks","designedRushes","rushYds"] // label already includes pass stats
+};
+
+function zSafe(x:number[]){ const m=x.reduce((a,b)=>a+b,0)/x.length; const v=Math.max(1e-9, x.reduce((a,b)=>a+(b-m)*(b-m),0)/x.length); return {m,s:Math.sqrt(v)}; }
+
+export function fitOLS(rows: Row[], pos:"WR"|"RB"|"TE"|"QB"): Coeffs {
+  const feats = POS_FEATURES[pos];
+  const train = rows.filter(r => r.pos===pos && r.ppr!=null && feats.every(f=>r[f]!=null));
+  const X = train.map(r => feats.map(f => Number(r[f])));
+  const y = train.map(r => Number(r.ppr));
+
+  // standardize columns
+  const stats = feats.map((_,j)=>zSafe(X.map(row=>row[j])));
+  const Xz = X.map(row => row.map((x,j)=>(x - stats[j].m)/stats[j].s));
+
+  // closed-form OLS: beta=(X'X)^-1 X'y ; tiny helper using simple math
+  const XT = Xz[0]? Xz[0].map((_,j)=>Xz.map(r=>r[j])) : [];
+  function matMul(A:number[][],B:number[][]){ return A.map(r=>B[0].map((_,j)=>r.reduce((s,_,k)=>s + r[k]*B[k][j],0))); }
+  function matInv2(M:number[][]){ // small ridge for stability
+    const n=M.length; const I=Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>i===j?1:0));
+    const A=M.map((r,i)=>r.map((v,j)=>v + (i===j?1e-6:0)));
+    // naive Gauss-Jordan (n<=6 here)
+    for(let i=0;i<n;i++){
+      let p=A[i][i]; if (Math.abs(p)<1e-9) continue;
+      for(let j=0;j<n;j++){ A[i][j]/=p; I[i][j]/=p; }
+      for(let k=0;k<n;k++) if(k!==i){
+        const f=A[k][i];
+        for(let j=0;j<n;j++){ A[k][j]-=f*A[i][j]; I[k][j]-=f*I[i][j]; }
+      }
+    }
+    return I;
+  }
+  const Xt = XT;                           // (d x n)
+  const XtX = matMul(Xt, Xz);              // (d x d)
+  const XtXInv = matInv2(XtX);             // (d x d)
+  const Xty = Xt.map(r => [r.reduce((s,v,i)=>s + v*y[i],0)]); // (d x 1)
+  const betaZ = matMul(XtXInv, Xty).map(r=>r[0]); // standardized betas
+
+  // un-standardize to original scale: y = a + Σ b_j * x_j
+  const yStats = zSafe(y);
+  const betaOrig:number[] = betaZ.map((bz,j)=> bz * (yStats.s / stats[j].s) );
+  const intercept = yStats.m - betaOrig.reduce((s,bj,j)=> s + bj * stats[j].m, 0);
+
+  // r^2 quick calc
+  const yhat = X.map(row => intercept + betaOrig.reduce((s,bj,j)=> s + bj*row[j], 0));
+  const ssTot = y.reduce((s,yi)=>s+(yi-yStats.m)*(yi-yStats.m),0);
+  const ssRes = y.reduce((s,yi,i)=>s+(yi-yhat[i])*(yi-yhat[i]),0);
+  const r2 = ssTot>0 ? 1 - ssRes/ssTot : 0;
+
+  return { intercept, beta:Object.fromEntries(feats.map((f,i)=>[f,betaOrig[i]])), features:feats, r2, sample:train.length };
+}
+
+export function predictXfp(r:Row, C:Coeffs):number|null {
+  if (!C.features.every(f=>r[f]!=null)) return null;
+  return C.intercept + C.features.reduce((s,f)=> s + C.beta[f]*Number(r[f]), 0);
+}
+
+
+Persist coefficients (optional):
+
+Table: xfp_coeffs(position TEXT PK, intercept NUMERIC, beta JSONB, r2 NUMERIC, sample INT, trained_at TIMESTAMP)
+
+API admin: POST /api/admin/xfp/train?weeks=1-17 saves WR/RB/TE/QB coeffs.
+
+3) Use xFP in v3 scores
+
+File: server/services/deepseekV3Service.ts (augment current)
+
+import cfg from "../config/deepseek.v3.1.json";
+import { predictXfp } from "./xfpTrainer"; // load persisted coeffs in production
+
+function normalize01(x:number,min:number,max:number){ if (max<=min) return 0.5; return (x-min)/(max-min); }
+function pctScale01to100(p:number){ return Math.round(Math.max(0, Math.min(1, p)) * 100); }
+
+function computeXfpScore(rowsForPos:any[], coeffs:any){
+  // 1) compute xFP per player (use season agg or last 6-8 weeks weighted)
+  const withX = rowsForPos.map(r=>{
+    const xfp = predictXfp(r, coeffs);
+    return { ...r, xfp };
+  }).filter(r => r.xfp!=null);
+
+  // 2) normalize within position
+  const xs = withX.map(r=>Number(r.xfp));
+  const min = Math.min(...xs), max = Math.max(...xs);
+  return withX.map(r => ({ ...r, xfpScore: pctScale01to100(normalize01(Number(r.xfp),min,max)) }));
+}
+
+// usage filters
+function passesMinUsage(r:any){
+  const mu = cfg.min_usage[r.pos] ?? 0.1;
+  if (r.pos==="WR"||r.pos==="TE") return (r.routeRate ?? 0) >= mu && (r.snapsPerGame ?? 0) >= cfg.min_snaps_per_game;
+  if (r.pos==="RB")               return (r.rushShare  ?? 0) >= mu || (r.routeRate ?? 0) >= mu;
+  if (r.pos==="QB")               return (r.dropbacks  ?? 0) >= cfg.min_usage.QB * (r.games ?? 1);
+  return false;
+}
+
+export async function buildDeepseekV3(mode:"dynasty"|"redraft"){
+  const base = await sleeperSyncService.getNormalizedPlayersWithRecentWindow(); // ensure recent ppr label
+  const filtered = base.filter(p => p.active===true && passesMinUsage(p));
+
+  // split by pos and apply xFP normalization
+  const posGroups = { WR:[], RB:[], TE:[], QB:[] } as Record<string, any[]>;
+  filtered.forEach(p => posGroups[p.pos]?.push(p));
+
+  const coeffs = await xfpRepo.loadAll(); // { WR:Coeffs, RB:..., ... }
+  const wr = computeXfpScore(posGroups.WR, coeffs.WR);
+  const rb = computeXfpScore(posGroups.RB, coeffs.RB);
+  const te = computeXfpScore(posGroups.TE, coeffs.TE);
+  const qb = computeXfpScore(posGroups.QB, coeffs.QB);
+
+  const all = [...wr, ...rb, ...te, ...qb].map(p=>{
+    const w = cfg.modes[mode];
+    const score =
+      (p.xfpScore ?? 0) * w.xfp +
+      (p.talentScore ?? 50) * w.talent +
+      (p.last6wPerf ?? 50) * w.recency +
+      (p.contextScore ?? 50) * w.context -
+      (p.riskScore ?? 50) * w.risk;
+
+    return { ...p, score: Math.round(score*100)/100 };
+  });
+
+  // rank + tier
+  all.sort((a,b)=>b.score - a.score);
+  const cut = cfg.tiers.cutoffs;
+  const tier = (s:number)=>{ for(let i=0;i<cut.length;i++) if (s>=cut[i]) return i+1; return cut.length+1; };
+  return all.map((r,i)=>({ rank:i+1, tier:tier(r.score), ...r }));
+}
+
+4) Quick DB / QA checks
+
+A. Top 50 sanity (should include elite WRs & RBs, not depth-only vets)
+
+SELECT rank, name, pos, team, score, tier
+FROM deepseek_v3_view
+WHERE mode='dynasty'
+ORDER BY rank
+LIMIT 50;
+
+
+B. Position coverage balance
+
+SELECT pos, COUNT(*) FROM deepseek_v3_view
+WHERE mode='dynasty' AND rank <= 200
+GROUP BY pos;
+
+
+C. xFP correlation (should be strong, esp. WR/RB)
+
+-- If you store season PPR per player in `player_season_agg`
+SELECT pos,
+       CORR(v3.xfp, psa.ppr) AS r_ppr
+FROM deepseek_v3_raw v3
+JOIN player_season_agg psa USING (player_id, season)
+GROUP BY pos;
+
+
+D. Filter effectiveness (no fringe crowding)
+
+SELECT COUNT(*) FROM deepseek_v3_raw
+WHERE (route_rate < 0.05 OR snaps_per_game < 5) AND rank <= 200;
+-- Expect 0
+
+5) Endpoint stays the same
+
+GET /api/rankings/deepseek/v3?mode=dynasty|redraft — unchanged.
+
+Response gains fields: xfp, xfpScore, model_info: {pos, r2, sample} (optional, for debug UI).
+
+6) Frontend tiny tweak (optional)
+
+In the table, add optional columns behind a “Debug” toggle:
+
+xFP and xFP score
+
+A badge if model_info.r2 < 0.4 (warns of weak fit for that position in current sample).
+
+7) Guardrails
+
+Drop players failing usage + snaps thresholds.
+
+If a position lacks enough training rows (<150), fall back to hand weights:
+
+WR: 0.8*targets + 0.15*redZoneTargets + 0.05*airYards
+
+RB: 0.7*carries + 0.2*targets + 0.1*goalLineRushes
+
+TE: 0.85*targets + 0.15*redZoneTargets
+
+QB: 0.85*dropbacks + 0.15*designedRushes
+
+Then normalize 0–100.
+
+8) Eye-test: what should change
+
+Elite WRs (Chase/Jefferson/ARSB/Puka) → Tier 1–2, clear gap over depth vets.
+
+RBs with strong GL + tgt share (Bijan, CMC-type profiles) appear in Top 10–20.
+
+QB show in Top 50 overall if you’re running a cross-pos unified table; if per-pos, their lists look sane.
+
+Aging depth (David Moore / Allen Hurns) drop out due to usage filters.
+
+9) One-command recompute
+
+Script: scripts/recompute_xfp_and_rank.ts
+
+import { trainAllPositions } from "../services/xfpRepo"; // wrap fitOLS + persist
+import { buildDeepseekV3 } from "../services/deepseekV3Service";
+
+(async ()=>{
+  await trainAllPositions({ weeks:[1,17] }); // persists coeffs
+  const rows = await buildDeepseekV3("dynasty");
+  console.log("Top 10:", rows.slice(0,10).map(r=>`${r.rank}. ${r.name} (${r.pos}) ${r.score}`));
+})();
+
+10) Acceptance checklist (green = ship)
+
+ Top 25 dynasty WR contains Chase, Jefferson, ARSB, Lamb, Waddle, Olave, Puka in Tier 1–3.
+
+ No fringe vets with sub-5% usage appear in Top 100.
+
+ Per-position xFP ~ correlates ≥0.55 with PPR season totals (WR/RB).
+
+ Response time still <300ms (cache coeffs, memoize normalization).
+
+ Debug toggle shows model_info.r2 and xfpScore.
+
+TL;DR (commit title)
+
+v3.1: Rankings now anchored to xFP (expected fantasy points)
+Per-position regressions from usage → PPR, normalized to 0–100, fringe filters, and retiering. Fixes WR depth clumping and restores elite separation.
