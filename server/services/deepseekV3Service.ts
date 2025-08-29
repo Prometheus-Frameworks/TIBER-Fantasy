@@ -48,9 +48,12 @@ const bucket = (score:number, cuts:number[]) => {
   return tier === 0 ? cuts.length+1 : tier;
 };
 
-// Enhanced null handling with floor values
-const nz = (n: number | undefined | null, floor = weights.guards.null_default_floor || 20): number => 
-  (n == null ? floor : n);
+// Safe null floors below average (so missing data never helps)
+const floor = {
+  routeRate: 0.10, tgtShare: 0.08, rushShare: 0.10, rzTgtShare: 0.03, glRushShare: 0.05,
+  talent: 20, explosiveness: 20, yakPerRec: 20, last6wPerf: 20, spike: 15, draftCapTier: 40, injRisk: 20
+};
+const nz = (n: number | undefined | null, f: number): number => (n == null ? f : n);
 
 // Age curve penalty implementation
 function agePenalty(pos: string, age?: number): number {
@@ -73,8 +76,8 @@ function isDroppableStatus(status?: string): boolean {
 
 // Recent usage validation
 function recentUsageOK(p: Base): boolean {
-  const routes = nz(p.routeRate ?? 0) * 100; // if routeRate is 0..1
-  const tgts = nz(p.tgtShare ?? 0) * 100;
+  const routes = nz(p.routeRate ?? 0, 0.1) * 100; // if routeRate is 0..1
+  const tgts = nz(p.tgtShare ?? 0, 0.08) * 100;
   return (routes >= (weights.guards.min_recent_routes || 40)) || (tgts >= (weights.guards.min_recent_targets || 10));
 }
 
@@ -264,30 +267,47 @@ async function computeContext(team: string) {
   }
 }
 
-function computeRole(p: Base) {
-  if (!recentUsageOK(p)) return 20; // clamp low if no recent role
-  const r = (nz(p.routeRate)*100)*0.4 + (nz(p.tgtShare)*100)*0.4 + (nz(p.rzTgtShare)*100)*0.2;
-  const rb = (nz(p.rushShare)*100)*0.6 + (nz(p.glRushShare)*100)*0.4;
-  if (p.pos==="RB") return clamp(rb);
-  if (p.pos==="TE") return clamp(r*0.95);
-  return clamp(r);
+function computeRole(p: Base): number {
+  if (p.pos === "RB") {
+    const rb = nz(p.rushShare, floor.rushShare) * 0.6 + nz(p.glRushShare, floor.glRushShare) * 0.4;
+    return clamp(rb * 100);
+  }
+  const r = nz(p.routeRate, floor.routeRate) * 0.4 + nz(p.tgtShare, floor.tgtShare) * 0.4 + nz(p.rzTgtShare, floor.rzTgtShare) * 0.2;
+  return clamp(r * 100);
 }
 
-const computeDurability = (p: Base) => clamp(100 - nz(p.injuryRisk, 20)*1.2 + agePenalty(p.pos, p.age));
-const computeRecency = (p: Base) => clamp(nz(p.last6wPerf, 25)); // prefer last-6w perf; if missing, don't let it buoy the player
-const computeRisk = (p: Base) => {
-  const cap = 100 - nz(p.draftCapTier, 50);
-  return clamp(0.6*cap + 0.4*nz(p.injuryRisk, 20)); // higher=more risk
-};
-const computeTalent = (p: Base) => {
-  const t = nz(p.talentScore)*0.7 + nz(p.explosiveness)*0.2 + nz(p.yakPerRec)*0.1;
+function computeTalent(p: Base): number {
+  const t = nz(p.talentScore, floor.talent) * 0.7 + nz(p.explosiveness, floor.explosiveness) * 0.2 + nz(p.yakPerRec, floor.yakPerRec) * 0.1;
   return clamp(t);
-};
-const computeSpike = (p: Base) => clamp(nz(p.spikeGravity));
+}
+
+function computeRecency(p: Base): number {
+  return clamp(nz(p.last6wPerf, floor.last6wPerf));
+}
+
+function computeRisk(p: Base): number {
+  const cap = 100 - nz(p.draftCapTier, floor.draftCapTier); // lower capital → higher risk
+  return clamp(0.6 * cap + 0.4 * nz(p.injuryRisk, floor.injRisk));
+}
+
+// Dynasty age-curve kicker (pushes out 31+ WR / 28+ RB unless usage is strong)
+function ageCliffPenalty(pos: string, age: number): number {
+  if (pos === "RB" && age >= 28) return 12 + (age - 28) * 2;  // 12–25 pts
+  if (pos === "WR" && age >= 31) return 10 + (age - 31) * 2;  // 10–20 pts
+  if (pos === "TE" && age >= 33) return 6;                    // light
+  if (pos === "QB" && age >= 36) return 4;                    // minimal
+  return 0;
+}
+
+const computeDurability = (p: Base) => clamp(100 - nz(p.injuryRisk, floor.injRisk) * 1.2 + agePenalty(p.pos, p.age));
+const computeSpike = (p: Base) => clamp(nz(p.spikeGravity, floor.spike));
 
 export async function buildDeepseekV3(mode: Mode) {
+  console.log(`[DeepSeek v3] buildDeepseekV3 called with mode: ${mode}`);
+  
   if (weights.guards.require_sleeper_sync_ok) {
     const ok = await getSyncHealth();
+    console.log(`[DeepSeek v3] Sleeper sync health check: ${ok}`);
     if (!ok) throw new Error("sleeper_sync_not_ready");
   }
 
@@ -296,8 +316,11 @@ export async function buildDeepseekV3(mode: Mode) {
   const adpMap = await getAdpMap();
   
   // Filter at intake - remove players with bad status
+  console.log(`[DeepSeek v3] Starting with ${all.length} players`);
   const filtered = all.filter(p => !isDroppableStatus((p as any).status));
+  console.log(`[DeepSeek v3] After status filter: ${filtered.length} players`);
   const limited: Base[] = filtered.slice(0, weights.guards.max_players || 1200);
+  console.log(`[DeepSeek v3] After limit: ${limited.length} players`);
 
   const rows: Row[] = [];
   for (const p of limited) {
@@ -309,6 +332,9 @@ export async function buildDeepseekV3(mode: Mode) {
     const spikeScore = computeSpike(p);
     const riskScore = computeRisk(p);
 
+    // Apply dynasty age cliff penalty
+    const agePenalty = (mode === "dynasty") ? ageCliffPenalty(p.pos, p.age ?? 0) : 0;
+    
     let score =
       talentScoreOut * cfg.talent +
       roleScore      * cfg.role +
@@ -316,10 +342,18 @@ export async function buildDeepseekV3(mode: Mode) {
       durabilityScore* cfg.durability +
       recencyScore   * cfg.recency +
       spikeScore     * cfg.spike -
-      riskScore      * cfg.risk;
+      riskScore      * cfg.risk -
+      agePenalty;
     
-    // Light global clamp to avoid outliers from sparse data
-    if (!recentUsageOK(p)) score = Math.min(score, 55);
+    // Final usage gate - reasonable thresholds for roster-worthy players
+    const recentRoutes = (p as any).stats?.last4w_routes ?? 0;
+    const recentTgts   = (p as any).stats?.last4w_targets ?? 0;
+    const recentRush   = (p as any).stats?.last4w_rush_att ?? 0;
+    const passesFloor  = (p.pos === "RB")
+      ? (recentRush >= 8 || recentTgts >= 3)  // RBs: 2 carries/game OR 1 target/game
+      : (recentRoutes >= 15 || recentTgts >= 4); // WR/TE: ~4 routes/game OR 1 target/game
+
+    if (!passesFloor) continue;
 
     rows.push({
       ...p, 
@@ -337,10 +371,10 @@ export async function buildDeepseekV3(mode: Mode) {
 
   rows.sort((a,b)=>b.score - a.score);
 
-  // Attach ADP + delta
+  // Attach ADP + delta (never fabricate ADP data)
   const out = rows.map((r,i)=>{
-    const adp = adpMap[r.player_id] ?? null;
-    const delta_vs_adp = adp ? Math.round((adp - (i+1))*10)/10 : null;
+    const adp = adpMap[r.player_id] ?? null; // leave null if missing
+    const delta_vs_adp = (adp && (i+1)) ? Number((adp - (i+1)).toFixed(1)) : null;
     return { rank: i+1, ...r, adp, delta_vs_adp };
   });
 

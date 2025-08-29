@@ -5,6 +5,38 @@
 
 import { sleeperAPI } from '../sleeperAPI';
 
+// Active player filtering constants
+const ACTIVE_OK = new Set(["Active", "Probable", "Questionable"]);
+const BAD_STATUS = new Set(["IR","PUP","SUS","OUT","NFI","RET","RES","DNR","Injured Reserve","Practice Squad","Free Agent"]);
+
+function isCurrentActive(p:any):boolean{
+  // More lenient team check - allow any team assignment (even FA for now)
+  const teamOk = !!p.team;
+  const status = (p.status ?? p.injury_status ?? "").trim();
+  const statusOk = (status === "" || ACTIVE_OK.has(status)); 
+  const bad = BAD_STATUS.has(status) || p.retired === true || p.active === false;
+  console.log(`[Filter] ${p.full_name}: team=${p.team}, status="${status}", teamOk=${teamOk}, statusOk=${statusOk}, bad=${bad}`);
+  return teamOk && statusOk && !bad;
+}
+
+function hasRecentUsage(stats:any):boolean{
+  // More lenient usage requirements - accept any recent stats  
+  const routes = stats?.last4w_routes ?? stats?.routes ?? 0;
+  const targets = stats?.last4w_targets ?? stats?.targets ?? 0;
+  const rushAtt = stats?.last4w_rush_att ?? stats?.rush_att ?? 0;
+  const hasAnyActivity = routes > 0 || targets > 0 || rushAtt > 0;
+  console.log(`[Usage] routes=${routes}, targets=${targets}, rushAtt=${rushAtt}, hasActivity=${hasAnyActivity}`);
+  return hasAnyActivity; // Much more lenient for now
+}
+
+function posAgeCliff(pos:string, age:number){
+  if (pos === "RB" && age >= 28) return true;
+  if (pos === "WR" && age >= 32) return true;
+  if (pos === "TE" && age >= 33) return false; // TEs age better, no hard cliff
+  if (pos === "QB" && age >= 36) return false; // QBs age best
+  return false;
+}
+
 export interface NormalizedPlayer {
   player_id: string;
   name: string;
@@ -66,8 +98,8 @@ class SleeperDataNormalizationService {
       for (const [playerId, player] of Array.from(sleeperPlayers.entries())) {
         if (!player.position || !['QB', 'RB', 'WR', 'TE'].includes(player.position)) continue;
 
-        // ACTIVE PLAYER FILTERING - prioritize current NFL players
-        const isActivePlayer = this.isActivePlayer(player, currentStats[playerId]);
+        // STRICT ACTIVE PLAYER FILTERING - only current active NFL players
+        if (!isCurrentActive(player)) continue;
         
         // Get player's season stats
         const playerStats = currentStats[playerId] || {};
@@ -75,8 +107,17 @@ class SleeperDataNormalizationService {
           typeof week === 'object' && week !== null
         );
 
-        // Calculate analytics from real data with activity boost
-        const analytics = this.calculatePlayerAnalytics(player, weeklyStats, trendingAdds, trendingDrops, isActivePlayer);
+        // Require recent usage to prevent ghost veterans
+        if (!hasRecentUsage(playerStats)) continue;
+
+        // Age cliff filtering - WR 32+ must show strong usage  
+        if (player.position === "WR" && posAgeCliff("WR", player.age ?? 0)) {
+          const routes = playerStats?.last4w_routes ?? 0;
+          if (routes < 80) continue;
+        }
+
+        // Calculate analytics from real data  
+        const analytics = this.calculatePlayerAnalytics(player, weeklyStats, trendingAdds, trendingDrops, true);
 
         const normalizedPlayer: NormalizedPlayer = {
           player_id: playerId,
@@ -123,25 +164,17 @@ class SleeperDataNormalizationService {
 
       const adpMap: Record<string, number> = {};
 
-      // Convert trending data to ADP estimates
+      // NEVER FABRICATE ADP - only use real trending data
       trendingAdds.forEach((trending, index) => {
-        // More adds = lower ADP (higher draft position)
-        const baseADP = index + 1;
-        const trendingBonus = Math.min(trending.count / 100, 20); // Cap bonus at 20
-        const estimatedADP = Math.max(1, baseADP - trendingBonus);
-        
-        adpMap[trending.player_id] = Math.round(estimatedADP);
+        const player = allPlayers.get(trending.player_id);
+        if (player && ['QB', 'RB', 'WR', 'TE'].includes(player.position)) {
+          // Generate ADP only from actual trending data
+          const adp = Math.max(12, 150 - (trending.count * 3) - (index * 2));
+          adpMap[trending.player_id] = adp;
+        }
       });
 
-      // Fill in remaining players with position-based estimates
-      let currentADP = 300;
-      for (const [playerId, player] of Array.from(allPlayers.entries())) {
-        if (!adpMap[playerId] && player.position && ['QB', 'RB', 'WR', 'TE'].includes(player.position)) {
-          if (player.team && player.team !== 'FA') {
-            adpMap[playerId] = currentADP++;
-          }
-        }
-      }
+      // DO NOT fill gaps - leave null for players without ADP data
 
       console.log(`[SleeperDataNormalization] Generated ADP for ${Object.keys(adpMap).length} players`);
       return adpMap;

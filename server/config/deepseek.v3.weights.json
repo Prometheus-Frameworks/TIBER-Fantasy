@@ -1,8 +1,8 @@
 {
   "version": "3.0.1",
   "mode_defaults": {
-    "dynasty": { "talent": 0.30, "role": 0.16, "context": 0.14, "durability": 0.10, "recency": 0.08, "spike": 0.08, "risk": 0.14 },
-    "redraft": { "talent": 0.22, "role": 0.28, "context": 0.16, "durability": 0.08, "recency": 0.18, "spike": 0.06, "risk": 0.02 }
+    "dynasty": { "talent": 0.30, "role": 0.16, "context": 0.12, "durability": 0.10, "recency": 0.08, "spike": 0.06, "risk": 0.18 },
+    "redraft": { "talent": 0.22, "role": 0.28, "context": 0.16, "durability": 0.08, "recency": 0.20, "spike": 0.06, "risk": 0.00 }
   },
   "tier_cutoffs": [96, 91, 86, 81, 76, 71],
   "guards": {
