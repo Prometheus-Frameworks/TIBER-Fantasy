@@ -1,8 +1,47 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useDeepseekV3 } from "../hooks/useDeepseekV3";
 
 export default function RankingsV3Table({mode, position}: {mode: "dynasty" | "redraft"; position?: string}) {
   const { data, meta, loading, err } = useDeepseekV3(mode, position);
+  const [wrGameLogs, setWrGameLogs] = useState<any[]>([]);
+  const [loadingGameLogs, setLoadingGameLogs] = useState(false);
+
+  // Fetch WR game logs when viewing WR position
+  useEffect(() => {
+    if (position === "WR") {
+      setLoadingGameLogs(true);
+      fetch('/api/wr-game-logs/cached')
+        .then(r => r.json())
+        .then(response => {
+          if (response.success && response.data) {
+            setWrGameLogs(response.data);
+          }
+        })
+        .catch(console.error)
+        .finally(() => setLoadingGameLogs(false));
+    } else {
+      setWrGameLogs([]);
+    }
+  }, [position]);
+
+  // Helper to get WR game log data for a player
+  const getWRGameLogs = (playerName: string) => {
+    return wrGameLogs.find(wr => 
+      wr.player_name.toLowerCase() === playerName.toLowerCase()
+    );
+  };
+
+  // Helper to calculate season totals from game logs
+  const calculateSeasonTotals = (gameLogs: any[]) => {
+    return gameLogs.reduce((totals, week) => ({
+      fpts: totals.fpts + (week.fantasy_points || 0),
+      targets: totals.targets + (week.receiving?.targets || 0),
+      receptions: totals.receptions + (week.receiving?.receptions || 0),
+      yards: totals.yards + (week.receiving?.yards || 0),
+      touchdowns: totals.touchdowns + (week.receiving?.touchdowns || 0),
+      games: week.fantasy_points > 0 ? totals.games + 1 : totals.games
+    }), { fpts: 0, targets: 0, receptions: 0, yards: 0, touchdowns: 0, games: 0 });
+  };
   
   if (loading) {
     return (
@@ -51,6 +90,17 @@ export default function RankingsV3Table({mode, position}: {mode: "dynasty" | "re
               <th className="border border-gray-300 px-3 py-2 text-left">Score</th>
               <th className="border border-gray-300 px-3 py-2 text-left">ADP</th>
               <th className="border border-gray-300 px-3 py-2 text-left">Δ vs ADP</th>
+              {position === "WR" && (
+                <>
+                  <th className="border border-gray-300 px-2 py-2 text-left bg-blue-50">FPTS</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left bg-blue-50">TAR</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left bg-blue-50">REC</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left bg-blue-50">YD</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left bg-blue-50">YPT</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left bg-blue-50">YPC</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left bg-blue-50">TD</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -97,6 +147,36 @@ export default function RankingsV3Table({mode, position}: {mode: "dynasty" | "re
                   )}
                   {r.delta_vs_adp === null && "-"}
                 </td>
+                {position === "WR" && (() => {
+                  const wrData = getWRGameLogs(r.name);
+                  const totals = wrData ? calculateSeasonTotals(wrData.game_logs) : null;
+                  
+                  return (
+                    <>
+                      <td className="border border-gray-300 px-2 py-2 text-sm bg-blue-25 font-mono">
+                        {totals ? totals.fpts.toFixed(1) : "-"}
+                      </td>
+                      <td className="border border-gray-300 px-2 py-2 text-sm bg-blue-25 font-mono">
+                        {totals ? totals.targets : "-"}
+                      </td>
+                      <td className="border border-gray-300 px-2 py-2 text-sm bg-blue-25 font-mono">
+                        {totals ? totals.receptions : "-"}
+                      </td>
+                      <td className="border border-gray-300 px-2 py-2 text-sm bg-blue-25 font-mono">
+                        {totals ? totals.yards : "-"}
+                      </td>
+                      <td className="border border-gray-300 px-2 py-2 text-sm bg-blue-25 font-mono">
+                        {totals && totals.targets > 0 ? (totals.yards / totals.targets).toFixed(1) : "-"}
+                      </td>
+                      <td className="border border-gray-300 px-2 py-2 text-sm bg-blue-25 font-mono">
+                        {totals && totals.receptions > 0 ? (totals.yards / totals.receptions).toFixed(1) : "-"}
+                      </td>
+                      <td className="border border-gray-300 px-2 py-2 text-sm bg-blue-25 font-mono">
+                        {totals ? totals.touchdowns : "-"}
+                      </td>
+                    </>
+                  );
+                })()}
               </tr>
             ))}
           </tbody>
