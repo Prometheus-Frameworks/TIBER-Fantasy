@@ -10,9 +10,8 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/news", label: "News + Updates", description: "Recent NFL news with fantasy impact" },
   { href: "/redraft", label: "Redraft", description: "Seasonal league tools" },
   { href: "/dynasty", label: "Dynasty", description: "Long-term strategy" },
-  { href: "/compass", label: "Compass", description: "Context-aware player guidance" },
+  { href: "/player-evaluation", label: "Player Evaluation", description: "Fusion rankings with 4-directional compass insights" },
   { href: "/consensus", label: "Consensus", description: "Community-driven rankings" },
-  { href: "/rankings/v3", label: "DeepSeek v3", description: "Advanced 6-component rankings with real Sleeper data" },
   { href: "/sleeper-connect", label: "Sleeper", description: "Connect your leagues" },
   { 
     label: "Research & Analysis", 

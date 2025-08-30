@@ -123,6 +123,7 @@ import AdaptiveConsensusDemo from "@/pages/AdaptiveConsensusDemo";
 import CurvesDemo from "@/pages/CurvesDemo";
 import InjuryProfilesDemo from "@/pages/InjuryProfilesDemo";
 import CompassHub from "@/pages/compass/CompassHub";
+import PlayerEvaluation from "@/pages/PlayerEvaluation";
 import ConsensusHub from "@/pages/consensus/ConsensusHub";
 import ExpertView from "@/pages/consensus/ExpertView";
 import TierManagerWrapper from "@/pages/consensus/TierManagerWrapper";
@@ -141,7 +142,10 @@ function Router() {
       <Route path="/player-analysis" component={PlayerAnalysisPage} />
       <Route path="/trade-history/:id" component={TradeHistoryPage} />
       <Route path="/dynasty-values" component={DynastyValuesPage} />
-      {/* Compass Routes */}
+      {/* Unified Player Evaluation */}
+      <Route path="/player-evaluation" component={PlayerEvaluation} />
+      
+      {/* Legacy Compass Routes - Still Available */}
       <Route path="/compass" component={CompassHub} />
       <Route path="/compass/wr" component={WRCompass} />
       <Route path="/compass/rb" component={RBCompass} />
@@ -175,7 +179,8 @@ function Router() {
       <Route path="/curves-demo" component={CurvesDemo} />
       <Route path="/injury-profiles-demo" component={InjuryProfilesDemo} />
       <Route path="/compare/:username" component={CompareRankings} />
-      <Route path="/rankings/v3" component={RankingsV3} />
+      {/* Legacy DeepSeek route - redirects to unified evaluation */}
+      <Route path="/rankings/v3" component={() => { window.location.replace('/player-evaluation'); return null; }} />
       {/* Backward-compatible redirects */}
       <Route path="/rankings" component={() => { window.location.replace('/consensus'); return null; }} />
       <Route path="/rankings/redraft" component={() => { window.location.replace('/consensus/redraft'); return null; }} />

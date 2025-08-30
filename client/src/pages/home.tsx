@@ -70,7 +70,7 @@ export default function Home(){
         action={<a href="/systems" className="text-sm text-body hover:text-plum transition-colors">See all</a>} 
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <GlowCard title="Player Compass" subtitle="Context‑aware dynasty guidance" icon={<Compass/>} href="/compass" />
+        <GlowCard title="Player Evaluation" subtitle="Fusion rankings with 4‑directional insights" icon={<Compass/>} href="/player-evaluation" />
         <GlowCard title="OTC Consensus" subtitle="Community boards & tiers" icon={<Users/>} href="/consensus" />
         <GlowCard title="Draft Command" subtitle="Real‑time draft aids" icon={<Sparkles/>} href="/draft" />
       </div>
