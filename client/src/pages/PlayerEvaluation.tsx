@@ -111,58 +111,53 @@ export default function PlayerEvaluation() {
   const players: FusionPlayer[] = fusionData?.data || [];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-4">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl text-white">
-              <Compass className="h-8 w-8" />
+        {/* Compact Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg text-white">
+              <Compass className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                🚀 Player Evaluation Hub
+              <h1 className="text-2xl font-bold text-gray-900">
+                🚀 Player Evaluation
               </h1>
-              <p className="text-gray-600 mt-1">
-                DeepSeek v3.2 + Compass Fusion • 4-directional analysis with predictive rankings
+              <p className="text-sm text-gray-600">
+                v3.2 Fusion • 4-directional analysis with xFP rankings
               </p>
             </div>
           </div>
           
-          {/* Fusion System Info */}
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Star className="h-5 w-5 text-yellow-500" />
-              <span className="font-semibold text-gray-900">New: Unified Fusion System</span>
-            </div>
-            <p className="text-sm text-gray-600 mb-3">
-              Combines xFP predictive power with 4-directional compass insights. Rankings ranked by true fusion score—no FPTS overrides.
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          {/* Compact Quadrant Legend */}
+          <div className="bg-gray-50 border rounded-lg p-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
               {Object.entries(quadrantInfo).map(([key, info]) => (
                 <div key={key} className="flex items-center gap-2">
                   <div className={info.color}>{info.icon}</div>
-                  <span className="capitalize font-medium">{key}:</span>
-                  <span className="text-gray-600">{info.description}</span>
+                  <span className="capitalize font-medium">{key[0].toUpperCase()}:</span>
+                  <span className="text-gray-600 text-xs">{info.description}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="mb-6 space-y-4">
+        {/* Compact Controls */}
+        <div className="mb-4 flex flex-wrap items-center gap-3">
           {/* Mode Toggle */}
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             <Button 
               variant={mode === "dynasty" ? "default" : "outline"}
+              size="sm"
               onClick={() => handleModeChange("dynasty")}
             >
               Dynasty
             </Button>
             <Button 
               variant={mode === "redraft" ? "default" : "outline"}
+              size="sm"
               onClick={() => handleModeChange("redraft")}
             >
               Redraft
@@ -170,13 +165,13 @@ export default function PlayerEvaluation() {
           </div>
           
           {/* Position Filter */}
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-1">
             <Button 
               variant={!position ? "default" : "outline"}
               size="sm"
               onClick={() => handlePositionChange(undefined)}
             >
-              All Positions
+              All
             </Button>
             {(["QB", "RB", "WR", "TE"] as const).map((pos) => (
               <Button 
@@ -205,101 +200,93 @@ export default function PlayerEvaluation() {
             </Button>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Summary Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-2xl font-bold text-blue-600">{players.length}</div>
-                  <div className="text-sm text-gray-600">Players Ranked</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-2xl font-bold text-green-600">
-                    {fusionData?.version || "v3.2"}
+          <div className="space-y-4">
+            {/* Compact Summary */}
+            <div className="bg-white border rounded-lg p-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div>
+                  <div className="text-lg font-bold text-blue-600">{players.length}</div>
+                  <div className="text-xs text-gray-600">Players</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-green-600">v3.2</div>
+                  <div className="text-xs text-gray-600">Version</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-purple-600">
+                    {mode === "dynasty" ? "Dynasty" : "Redraft"}
                   </div>
-                  <div className="text-sm text-gray-600">Fusion Version</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {mode === "dynasty" ? "Long-term" : "2025"}
-                  </div>
-                  <div className="text-sm text-gray-600">Focus</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-2xl font-bold text-orange-600">
+                  <div className="text-xs text-gray-600">Mode</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-orange-600">
                     {position || "ALL"}
                   </div>
-                  <div className="text-sm text-gray-600">Position</div>
-                </CardContent>
-              </Card>
+                  <div className="text-xs text-gray-600">Position</div>
+                </div>
+              </div>
             </div>
 
-            {/* Player Rankings Table */}
+            {/* Player Rankings - Condensed */}
             <Card>
-              <CardHeader>
-                <CardTitle>Fusion Rankings</CardTitle>
-                <CardDescription>
-                  Players ranked by 4-quadrant fusion score with compass breakdown
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Fusion Rankings</CardTitle>
+                <CardDescription className="text-sm">
+                  4-quadrant fusion scores • Dynasty/Redraft optimized
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {players.slice(0, 20).map((player) => (
-                    <div key={player.player_id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-4">
-                          <div className="text-lg font-bold text-gray-500 w-8">
-                            #{player.rank}
+              <CardContent className="p-0">
+                <div className="space-y-1">
+                  {players.slice(0, 30).map((player) => (
+                    <div key={player.player_id} className="border-b border-gray-100 p-3 hover:bg-gray-50 transition-colors">
+                      {/* Main Row */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3 flex-1">
+                          <div className="text-sm font-bold text-gray-500 w-6">
+                            {player.rank}
                           </div>
-                          <div>
-                            <div className="font-semibold text-lg">{player.name}</div>
-                            <div className="text-sm text-gray-600">
-                              {player.pos} • {player.team} • Age {player.age}
+                          <div className="flex-1">
+                            <div className="font-semibold">{player.name}</div>
+                            <div className="text-xs text-gray-500">
+                              {player.pos} • {player.team} • {player.age}y
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-xl font-bold text-blue-600">
-                            {player.score}
-                          </div>
-                          <Badge variant="outline" className="mt-1">
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline" className="text-xs">
                             {player.tier}
                           </Badge>
+                          <div className="text-lg font-bold text-blue-600">
+                            {player.score}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Compass Quadrants */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                      {/* Compact Compass Row */}
+                      <div className="flex items-center gap-4 mb-2">
                         {Object.entries(quadrantInfo).map(([key, info]) => (
-                          <div key={key} className="space-y-2">
-                            <div className="flex items-center gap-2 text-sm">
-                              <div className={info.color}>{info.icon}</div>
-                              <span className="font-medium capitalize">{key}</span>
+                          <div key={key} className="flex items-center gap-1.5 flex-1">
+                            <div className={`${info.color} flex-shrink-0`}>{info.icon}</div>
+                            <div className="flex-1 min-w-0">
+                              <Progress 
+                                value={player[key as keyof Pick<FusionPlayer, 'north' | 'east' | 'south' | 'west'>]} 
+                                className="h-1.5" 
+                              />
                             </div>
-                            <Progress 
-                              value={player[key as keyof Pick<FusionPlayer, 'north' | 'east' | 'south' | 'west'>]} 
-                              className="h-2" 
-                            />
-                            <div className="text-xs text-gray-600 text-center">
+                            <span className="text-xs font-medium w-6 text-right">
                               {Math.round(player[key as keyof Pick<FusionPlayer, 'north' | 'east' | 'south' | 'west'>])}
-                            </div>
+                            </span>
                           </div>
                         ))}
                       </div>
 
-                      {/* Badges */}
+                      {/* Compact Badges */}
                       {player.badges.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1">
                           {player.badges.map((badge, idx) => (
                             <Badge 
                               key={idx}
-                              className={getBadgeColor(badge)}
+                              className={`${getBadgeColor(badge)} text-xs px-1.5 py-0.5`}
                               variant="secondary"
                             >
                               {badge}
