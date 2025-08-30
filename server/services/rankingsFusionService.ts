@@ -430,8 +430,8 @@ export class RankingsFusionService {
       // Prepare player data
       const players = await this.preparePlayerData();
       
-      // Filter by position if requested
-      const filteredPlayers = position ? 
+      // Filter by position if requested (handle "ALL" case properly)
+      const filteredPlayers = (position && position !== "ALL") ? 
         players.filter(p => p.pos === position) : players;
       
       if (filteredPlayers.length === 0) {

@@ -105,7 +105,8 @@ router.get("/rankings/deepseek/v3.1/audit", async (req, res) => {
 router.get("/rankings/deepseek/v3.2", async (req, res) => {
   try {
     const mode = (req.query.mode as "dynasty"|"redraft") ?? "dynasty";
-    const position = req.query.position as "QB"|"RB"|"WR"|"TE"|undefined;
+    const rawPosition = req.query.position as string;
+    const position = (rawPosition && rawPosition !== "ALL") ? rawPosition as "QB"|"RB"|"WR"|"TE" : undefined;
     const debug = req.query.debug === '1';
     
     // Force refresh if requested
