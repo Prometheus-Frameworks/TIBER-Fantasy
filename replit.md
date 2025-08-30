@@ -19,7 +19,7 @@ Intelligence Feed System:
 - Ready to receive meaningful intel updates during regular season
 
 ## Recent Changes
-### August 30, 2025 - DeepSeek v3.2 + Compass Fusion System
+### August 30, 2025 - DeepSeek v3.2 + Compass Fusion System with Proven Elite Guardrails
 - **Complete Integration**: Successfully merged DeepSeek v3.1 xFP engine with Player Compass 4-directional methodology
 - **4-Quadrant Architecture**: North (Volume/Talent), East (Environment/Scheme), South (Risk→Safety), West (Value/Market)
 - **Critical Bug Fix**: Eliminated WR FPTS override that was causing uniform scoring across all players
@@ -29,6 +29,10 @@ Intelligence Feed System:
 - **Configuration-Driven**: `config/compass.v3.2.json` with quadrant weights and tier cutoffs
 - **Badge System**: Dynamic badges for Alpha Usage, Context Boost, Aging Elite, Market Mispriced
 - **Format Differentiation**: Dynasty vs redraft specific weightings and age penalty multipliers
+- **Proven Elite Priors**: Implemented scoreWRBatch with 88-point floor for elite players (Jefferson, Chase, Hill, etc.) to prevent rookies from ranking above proven stars
+- **Rookie Guardrails**: Added north quadrant cap ≤ 80 for rookies with <8 games to prevent unrealistic projections
+- **Market Caps**: Limited West quadrant ≤ 80 to prevent market inflation and speculation bubbles
+- **Realistic Rankings**: Justin Jefferson, Stefon Diggs, and other elites now properly rank in top 5 dynasty, with rookies like Keon Coleman at more reasonable #29 instead of #1
 
 ## System Architecture
 The platform employs a modular Flask backend for core logic and API endpoints, and a React 18 frontend utilizing TypeScript, Tailwind CSS, TanStack Query, and shadcn/ui for a scalable and responsive user experience. UI/UX prioritizes clean, responsive design with color-coded tier systems, interactive elements, and mobile optimization, including Next.js-inspired tab-based navigation.

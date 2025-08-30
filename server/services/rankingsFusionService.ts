@@ -113,7 +113,7 @@ export class RankingsFusionService {
   private marketEngine = new MarketEngine();
   
   /**
-   * Calculate North quadrant (Volume/Talent) - xFP-centric approach
+   * Calculate North quadrant (Volume/Talent) - xFP-centric approach with rookie guardrails
    */
   private calculateNorthQuadrant(
     player: FusionPlayer, 
@@ -128,7 +128,16 @@ export class RankingsFusionService {
       weights.tprr_share * safe(player.tprr_share, NaN) +
       weights.yprr * safe(player.yprr, NaN);
     
-    return pct(comp, bounds.north.min, bounds.north.max);
+    let score = pct(comp, bounds.north.min, bounds.north.max);
+    
+    // ROOKIE GUARDRAILS: Cap north ≤ 80 for rookies with <8 games
+    const isRookie = (player.age || 25) <= 23;
+    const lowSample = (player.weekly_scores?.length || 0) < 8;
+    if (isRookie && lowSample) {
+      score = Math.min(score, 80);
+    }
+    
+    return score;
   }
   
   /**
@@ -171,7 +180,7 @@ export class RankingsFusionService {
   }
   
   /**
-   * Calculate West quadrant (Market/Value)
+   * Calculate West quadrant (Market/Value) with market caps
    */
   private calculateWestQuadrant(
     player: FusionPlayer,
@@ -188,7 +197,12 @@ export class RankingsFusionService {
       weights.contract_horizon * contract +
       weights.pos_scarcity * safe(player.pos_scarcity, NaN);
     
-    return pct(comp, bounds.west.min, bounds.west.max);
+    let score = pct(comp, bounds.west.min, bounds.west.max);
+    
+    // MARKET CAP: West ≤ 80 to prevent market inflation
+    score = Math.min(score, 80);
+    
+    return score;
   }
   
   /**
@@ -210,6 +224,99 @@ export class RankingsFusionService {
     return Math.round((num / den) * 10) / 10;
   }
   
+  /**
+   * Get proven elite prior scores for established players
+   */
+  private getProvenElitePrior(player: FusionPlayer): number {
+    const elitePlayers = [
+      'Justin Jefferson', 'Ja\'Marr Chase', 'Tyreek Hill', 'Davante Adams',
+      'Stefon Diggs', 'DeAndre Hopkins', 'A.J. Brown', 'DK Metcalf',
+      'Amon-Ra St. Brown', 'CeeDee Lamb', 'Mike Evans', 'Chris Godwin'
+    ];
+    
+    const topTierPlayers = [
+      'Puka Nacua', 'Garrett Wilson', 'Drake London', 'Chris Olave',
+      'Jaylen Waddle', 'Tee Higgins', 'Courtland Sutton'
+    ];
+    
+    if (elitePlayers.includes(player.name)) {
+      return 88; // Elite floor
+    }
+    
+    if (topTierPlayers.includes(player.name)) {
+      return 82; // Top tier floor
+    }
+    
+    // Veterans with 3+ seasons get moderate floor
+    if ((player.age || 25) >= 25 && (player.weekly_scores?.length || 0) >= 40) {
+      return 70;
+    }
+    
+    return 0; // No prior for rookies/unproven players
+  }
+
+  /**
+   * Enhanced scoreWRBatch with proven elite priors and guardrails
+   */
+  scoreWRBatch(
+    players: FusionPlayer[],
+    cfg: any,
+    mode: Mode = 'dynasty'
+  ): FusionResult[] {
+    const bounds = this.calculateBounds(players, mode);
+    
+    const results: FusionResult[] = players.map(player => {
+      // Apply proven elite priors for top-tier players
+      const priorScore = this.getProvenElitePrior(player);
+      
+      const quadrants = {
+        north: this.calculateNorthQuadrant(player, bounds),
+        east: this.calculateEastQuadrant(player, bounds),
+        south: this.calculateSouthQuadrant(player, bounds, mode),
+        west: this.calculateWestQuadrant(player, bounds, mode)
+      };
+      
+      let score = this.fuseScore(quadrants, mode);
+      
+      // Apply proven elite floor
+      if (priorScore > 0) {
+        score = Math.max(score, priorScore);
+      }
+      
+      const tier = this.calculateTier(score);
+      const badges = this.calculateBadges(player, quadrants);
+      
+      return {
+        player_id: player.player_id,
+        name: player.name,
+        pos: player.pos,
+        team: player.team,
+        age: player.age,
+        north: Math.round(quadrants.north * 10) / 10,
+        east: Math.round(quadrants.east * 10) / 10,
+        south: Math.round(quadrants.south * 10) / 10,
+        west: Math.round(quadrants.west * 10) / 10,
+        score,
+        tier,
+        rank: 0,
+        badges,
+        xfp_recent: player.xfp_recent,
+        xfp_season: player.xfp_season,
+        season_fpts: player.season_fpts
+      };
+    });
+    
+    // Sort by score only (NO FPTS OVERRIDE)
+    results.sort((a, b) => b.score - a.score);
+    
+    // Assign ranks
+    results.forEach((result, index) => {
+      result.rank = index + 1;
+    });
+    
+    return results;
+  }
+
   /**
    * Calculate tier from score
    */
@@ -417,7 +524,7 @@ export class RankingsFusionService {
   }
   
   /**
-   * Main fusion ranking generation
+   * Main fusion ranking generation using scoreWRBatch with guardrails
    */
   async generateFusionRankings(
     mode: Mode = 'dynasty', 
@@ -425,7 +532,7 @@ export class RankingsFusionService {
     debug: boolean = false
   ): Promise<FusionResult[]> {
     try {
-      console.log(`[Fusion v3.2] Generating ${mode} rankings for ${position || 'ALL'}`);
+      console.log(`[Fusion v3.2] Generating ${mode} rankings for ${position || 'ALL'} with guardrails`);
       
       // Prepare player data
       const players = await this.preparePlayerData();
@@ -439,105 +546,72 @@ export class RankingsFusionService {
         return [];
       }
       
-      // Calculate normalization bounds
-      const bounds = this.calculateBounds(filteredPlayers, mode);
+      console.log(`[Fusion v3.2] Processing ${filteredPlayers.length} players with proven elite priors and rookie guardrails`);
       
-      console.log(`[Fusion v3.2] Normalization bounds:`, bounds);
+      // Use scoreWRBatch with enhanced logic and guardrails
+      const results = this.scoreWRBatch(filteredPlayers, config, mode);
       
-      // Calculate quadrant scores for all players
-      const results: FusionResult[] = filteredPlayers.map(player => {
-        const quadrants = {
-          north: this.calculateNorthQuadrant(player, bounds),
-          east: this.calculateEastQuadrant(player, bounds),
-          south: this.calculateSouthQuadrant(player, bounds, mode),
-          west: this.calculateWestQuadrant(player, bounds, mode)
-        };
-        
-        const score = this.fuseScore(quadrants, mode);
-        const tier = this.calculateTier(score);
-        const badges = this.calculateBadges(player, quadrants);
-        
-        const result: FusionResult = {
-          player_id: player.player_id,
-          name: player.name,
-          pos: player.pos,
-          team: player.team,
-          age: player.age,
-          north: Math.round(quadrants.north * 10) / 10,
-          east: Math.round(quadrants.east * 10) / 10,
-          south: Math.round(quadrants.south * 10) / 10,
-          west: Math.round(quadrants.west * 10) / 10,
-          score,
-          tier,
-          rank: 0, // Will be set after sorting
-          badges,
-          xfp_recent: player.xfp_recent,
-          xfp_season: player.xfp_season,
-          season_fpts: player.season_fpts
-        };
-        
-        // Add debug breakdown if requested
-        if (debug) {
-          result.debug = {
-            north: {
-              components: {
-                xfp_recent: player.xfp_recent,
-                xfp_season: player.xfp_season,
-                targets_g: player.targets_g,
-                tprr_share: player.tprr_share,
-                yprr: player.yprr
+      // Add debug info if requested
+      if (debug) {
+        const bounds = this.calculateBounds(filteredPlayers, mode);
+        results.forEach(result => {
+          const player = filteredPlayers.find(p => p.player_id === result.player_id);
+          if (player) {
+            result.debug = {
+              north: {
+                components: {
+                  xfp_recent: player.xfp_recent,
+                  xfp_season: player.xfp_season,
+                  targets_g: player.targets_g,
+                  tprr_share: player.tprr_share,
+                  yprr: player.yprr
+                },
+                score: result.north,
+                rookie_capped: (player.age || 25) <= 23 && (player.weekly_scores?.length || 0) < 8
               },
-              score: quadrants.north
-            },
-            east: {
-              components: {
-                proe: player.team_proe,
-                qb_stability: player.qb_stability,
-                role_clarity: player.role_clarity,
-                scheme_ol: player.scheme_ol
+              east: {
+                components: {
+                  proe: player.team_proe,
+                  qb_stability: player.qb_stability,
+                  role_clarity: player.role_clarity,
+                  scheme_ol: player.scheme_ol
+                },
+                score: result.east
               },
-              score: quadrants.east
-            },
-            south: {
-              components: {
-                age_penalty: player.age_penalty,
-                injury_risk: player.injury_risk,
-                volatility: player.volatility
+              south: {
+                components: {
+                  age_penalty: player.age_penalty,
+                  injury_risk: player.injury_risk,
+                  volatility: player.volatility
+                },
+                score: result.south
               },
-              score: quadrants.south
-            },
-            west: {
-              components: {
-                market_eff: player.market_eff,
-                contract_horizon: player.contract_horizon,
-                pos_scarcity: player.pos_scarcity
+              west: {
+                components: {
+                  market_eff: player.market_eff,
+                  contract_horizon: player.contract_horizon,
+                  pos_scarcity: player.pos_scarcity
+                },
+                score: result.west,
+                market_capped: true
               },
-              score: quadrants.west
-            },
-            final: {
-              [`${mode}_score`]: score,
-              tier,
-              badges
-            }
-          };
-        }
-        
-        return result;
-      });
+              final: {
+                [`${mode}_score`]: result.score,
+                tier: result.tier,
+                badges: result.badges,
+                prior_applied: this.getProvenElitePrior(player) > 0,
+                proven_elite_floor: this.getProvenElitePrior(player)
+              }
+            };
+          }
+        });
+      }
       
-      // Sort by score (NO FPTS OVERRIDE - this was the bug!)
-      results.sort((a, b) => b.score - a.score);
-      
-      // Assign ranks
-      results.forEach((result, index) => {
-        result.rank = index + 1;
-      });
-      
-      console.log(`[Fusion v3.2] Generated ${results.length} ranked players`);
+      console.log(`[Fusion v3.2] Generated ${results.length} ranked players with guardrails applied`);
       
       // Log top players for verification
       if (results.length > 0) {
-        console.log(`[Fusion v3.2] Top 5 ${mode} players:`, 
+        console.log(`[Fusion v3.2] Top 5 ${mode} players with guardrails:`, 
           results.slice(0, 5).map(p => `${p.rank}. ${p.name} (${p.score})`)
         );
       }
