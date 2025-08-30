@@ -18,6 +18,18 @@ Intelligence Feed System:
 - `/api/intel` endpoint serves scouting reports with filtering by player, position, and signal strength
 - Ready to receive meaningful intel updates during regular season
 
+## Recent Changes
+### August 30, 2025 - DeepSeek v3.2 + Compass Fusion System
+- **Complete Integration**: Successfully merged DeepSeek v3.1 xFP engine with Player Compass 4-directional methodology
+- **4-Quadrant Architecture**: North (Volume/Talent), East (Environment/Scheme), South (Risk→Safety), West (Value/Market)
+- **Critical Bug Fix**: Eliminated WR FPTS override that was causing uniform scoring across all players
+- **Enhanced Data Pipeline**: Added 6 new analytical derivations to sleeperDataNormalizationService
+- **New API Endpoints**: `/api/rankings/deepseek/v3.2` with debug support and health monitoring
+- **Modular Engine Design**: Separate RiskEngine and MarketEngine classes for component score calculation
+- **Configuration-Driven**: `config/compass.v3.2.json` with quadrant weights and tier cutoffs
+- **Badge System**: Dynamic badges for Alpha Usage, Context Boost, Aging Elite, Market Mispriced
+- **Format Differentiation**: Dynasty vs redraft specific weightings and age penalty multipliers
+
 ## System Architecture
 The platform employs a modular Flask backend for core logic and API endpoints, and a React 18 frontend utilizing TypeScript, Tailwind CSS, TanStack Query, and shadcn/ui for a scalable and responsive user experience. UI/UX prioritizes clean, responsive design with color-coded tier systems, interactive elements, and mobile optimization, including Next.js-inspired tab-based navigation.
 
@@ -57,6 +69,7 @@ The platform employs a modular Flask backend for core logic and API endpoints, a
 - **Live Data Integration Pipeline**: Complete multi-source data capture and processing system with MySportsFeeds, SportsDataIO, and Sleeper API integration. Features static data capture service (`/api/data/capture`) for persistent reference data beyond API trial periods, live data processor for weekly statistics, and comprehensive fallback strategies. Includes endpoints for live mode activation (`/api/players/hot-list/mode/live`), manual refresh (`/api/players/hot-list/refresh`), and data source monitoring (`/api/players/hot-list/sources`).
 - **Modular Sleeper Router Architecture**: Complete 3-batch implementation featuring extracted Sleeper routes in dedicated `server/sleeperRoutes.ts` module with feature flag control via `USE_SLEEPER_SYNC` environment variable. Includes comprehensive JSON logging, HTTP status mapping, TypeScript compliance, and contract-correct fallback responses. All 8 Sleeper endpoints (user lookup, league context, player sync, etc.) properly modularized with sub-second response times and enhanced monitoring.
 - **Sleeper Dashboard Integration**: Complete user flow from Sleeper Connect (`/sleeper-connect`) to Dashboard (`/dashboard`) with smart routing for both user leagues (`?user=ID`) and individual league views (`?league=ID`). Features league cards with Dynasty/Redraft indicators, scoring formats, team counts, and seamless navigation flow. Integrated into main navigation and home page with proper wouter Link components.
+- **DeepSeek v3.2 + Compass Fusion System**: Comprehensive integration combining DeepSeek xFP predictive power with 4-directional Player Compass explainability. Features North (Volume/Talent), East (Environment/Scheme), South (Risk→Safety), and West (Value/Market) quadrants with weighted fusion scoring. Eliminates FPTS override scoring bug, magic constants, and dual normalizers. Includes 6 new derivations: QB stability, role clarity, position scarcity, contract horizon, team PROE, and scheme/OL analysis. API endpoints: `/api/rankings/deepseek/v3.2`, health check, and individual player debug. Dynasty vs redraft format-specific weightings with comprehensive badge system (Alpha Usage, Context Boost, Aging Elite, Market Mispriced, FPTS Monster).
 
 ### Technical Stack
 - **Backend**: Python (Flask), Node.js (Express.js, TypeScript)

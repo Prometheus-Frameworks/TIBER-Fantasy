@@ -57,6 +57,13 @@ export interface NormalizedPlayer {
   draftCapTier?: number;
   injuryRisk?: number;
   ageRisk?: number;
+  // Fusion system additions
+  qbStability?: number;
+  roleClarity?: number;
+  posScarcity?: number;
+  contractHorizon?: number;
+  teamProe?: number;
+  schemeOl?: number;
 }
 
 export interface AdpData {
@@ -367,6 +374,14 @@ class SleeperDataNormalizationService {
     // AGE RISK (age-based decline probability)
     analytics.ageRisk = this.calculateAgeRisk(player.age, position);
 
+    // FUSION SYSTEM ADDITIONS
+    analytics.qbStability = this.calculateQBStability(player);
+    analytics.roleClarity = this.calculateRoleClarity(player, analytics, position);
+    analytics.posScarcity = this.calculatePositionScarcity(player, analytics, position);
+    analytics.contractHorizon = this.calculateContractHorizon(player);
+    analytics.teamProe = this.calculateTeamPROE(player.team);
+    analytics.schemeOl = this.calculateSchemeOL(player.team, position);
+
     return analytics;
   }
 
@@ -420,7 +435,14 @@ class SleeperDataNormalizationService {
       spikeGravity: 45,
       draftCapTier: this.estimateDraftCapital(player),
       injuryRisk: this.calculateInjuryRisk(player),
-      ageRisk: this.calculateAgeRisk(player.age, position)
+      ageRisk: this.calculateAgeRisk(player.age, position),
+      // Fusion system defaults
+      qbStability: this.calculateQBStability(player),
+      roleClarity: this.calculateRoleClarity(player, {}, position),
+      posScarcity: this.calculatePositionScarcity(player, {}, position),
+      contractHorizon: this.calculateContractHorizon(player),
+      teamProe: this.calculateTeamPROE(player.team),
+      schemeOl: this.calculateSchemeOL(player.team, position)
     };
   }
 
@@ -501,6 +523,217 @@ class SleeperDataNormalizationService {
     if (age < cliffAge - 3) return 0; // Young player
     if (age < cliffAge) return (age - (cliffAge - 3)) * 5; // Approaching cliff
     return Math.min(50, (age - cliffAge + 1) * 15); // Past cliff
+  }
+
+  /**
+   * Calculate QB stability for offensive environment assessment
+   */
+  private calculateQBStability(player: any): number {
+    const team = player.team;
+    
+    // Team-specific QB stability ratings (0-100 scale)
+    const qbStabilityMap: Record<string, number> = {
+      // Elite QB situations
+      'KC': 95, 'BUF': 95, 'BAL': 90, 'LAC': 85, 'CIN': 85, 'DAL': 85,
+      'SF': 80, 'MIA': 80, 'PHI': 80, 'DET': 75, 'MIN': 75, 'TB': 75,
+      // Moderate QB situations  
+      'SEA': 70, 'GB': 70, 'NYG': 65, 'ATL': 65, 'LAR': 65, 'JAX': 60,
+      'IND': 60, 'LV': 60, 'HOU': 60, 'ARI': 55, 'TEN': 55, 'CHI': 55,
+      // Unstable QB situations
+      'CAR': 50, 'WAS': 50, 'CLE': 45, 'PIT': 45, 'NYJ': 40, 'NE': 40, 'DEN': 35
+    };
+    
+    return qbStabilityMap[team] || 50; // Default neutral
+  }
+
+  /**
+   * Calculate role clarity (inverse of depth chart threat)
+   */
+  private calculateRoleClarity(player: any, analytics: any, position: string): number {
+    let clarityScore = 50; // Neutral baseline
+    
+    // Target/usage share indicates role security
+    const tgtShare = analytics.tgtShare || 0;
+    const rushShare = analytics.rushShare || 0;
+    
+    if (position === 'WR' || position === 'TE') {
+      // Target share role clarity
+      if (tgtShare >= 0.25) clarityScore = 90; // Alpha role
+      else if (tgtShare >= 0.18) clarityScore = 75; // Clear #1/#2
+      else if (tgtShare >= 0.12) clarityScore = 60; // Rotation role
+      else if (tgtShare >= 0.08) clarityScore = 45; // Limited role
+      else clarityScore = 30; // Unclear/committee
+    } else if (position === 'RB') {
+      // Rush share role clarity
+      if (rushShare >= 0.6) clarityScore = 95; // Workhorse
+      else if (rushShare >= 0.4) clarityScore = 80; // Lead back
+      else if (rushShare >= 0.25) clarityScore = 65; // Timeshare
+      else if (rushShare >= 0.15) clarityScore = 50; // Backup
+      else clarityScore = 30; // Committee/unclear
+    } else if (position === 'QB') {
+      // QB typically has high role clarity if starting
+      clarityScore = player.depth_chart_order === 1 ? 90 : 20;
+    }
+    
+    // Age penalty for role security (younger = more secure)
+    const age = player.age || 25;
+    if (age >= 30) clarityScore *= 0.9; // 10% penalty for age
+    else if (age <= 24) clarityScore *= 1.1; // 10% bonus for youth
+    
+    // Draft capital bonus (higher picks = more secure)
+    const draftCapital = analytics.draftCapTier || 30;
+    if (draftCapital >= 70) clarityScore *= 1.05; // 5% bonus for high draft capital
+    
+    return Math.min(100, Math.max(0, clarityScore));
+  }
+
+  /**
+   * Calculate position scarcity value
+   */
+  private calculatePositionScarcity(player: any, analytics: any, position: string): number {
+    let scarcityScore = 50; // Neutral baseline
+    
+    // Position-specific scarcity premiums
+    switch (position) {
+      case 'QB':
+        scarcityScore = 75; // High scarcity, especially in Superflex
+        break;
+      case 'RB':
+        scarcityScore = 65; // High scarcity due to injury risk and age
+        if ((analytics.rushShare || 0) >= 0.5) scarcityScore += 15; // Workhorse premium
+        break;
+      case 'WR':
+        scarcityScore = 55; // Moderate scarcity
+        if ((analytics.tgtShare || 0) >= 0.22) scarcityScore += 10; // Alpha premium
+        break;
+      case 'TE':
+        scarcityScore = 80; // Highest scarcity after elite tier
+        if ((analytics.tgtShare || 0) >= 0.15) scarcityScore += 10; // Involved TE premium
+        break;
+    }
+    
+    // Age factor - younger = scarcer
+    const age = player.age || 25;
+    if (age <= 23) scarcityScore += 15;
+    else if (age <= 25) scarcityScore += 10;
+    else if (age <= 27) scarcityScore += 5;
+    else if (age >= 30) scarcityScore -= 10;
+    
+    // Draft capital factor
+    const draftCapital = analytics.draftCapTier || 30;
+    if (draftCapital >= 75) scarcityScore += 10; // High draft picks scarcer
+    else if (draftCapital >= 60) scarcityScore += 5;
+    
+    // Usage security factor
+    const usageSecure = (analytics.tgtShare || 0) >= 0.18 || (analytics.rushShare || 0) >= 0.4;
+    if (usageSecure) scarcityScore += 5;
+    
+    return Math.min(100, Math.max(0, scarcityScore));
+  }
+
+  /**
+   * Calculate contract horizon value
+   */
+  private calculateContractHorizon(player: any): number {
+    // Estimate contract security from years experience and age
+    const yearsExp = player.years_exp || 0;
+    const age = player.age || 25;
+    
+    let horizonScore = 50; // Neutral baseline
+    
+    // Rookie contract premium (first 4 years)
+    if (yearsExp <= 3) {
+      horizonScore = 80; // Strong rookie contract value
+      const remainingYears = 4 - yearsExp;
+      horizonScore += remainingYears * 5; // More years = more value
+    } 
+    // Veteran contracts - estimate based on age and performance
+    else if (age <= 28) {
+      horizonScore = 70; // Prime age, likely multi-year deal
+    } else if (age <= 31) {
+      horizonScore = 55; // Shorter term likely
+    } else {
+      horizonScore = 35; // Likely year-to-year
+    }
+    
+    // Performance bonus - better players get better contracts
+    const talentScore = this.estimatePlayerTalent(player);
+    if (talentScore >= 80) horizonScore += 15; // Elite players = secure contracts
+    else if (talentScore >= 65) horizonScore += 10; // Good players = decent security
+    else if (talentScore <= 40) horizonScore -= 15; // Poor players = tenuous
+    
+    return Math.min(100, Math.max(0, horizonScore));
+  }
+
+  /**
+   * Calculate team PROE (Pass Rate Over Expected)
+   */
+  private calculateTeamPROE(team: string): number {
+    // Team pass rate tendencies (0-100 scale)
+    const proeMap: Record<string, number> = {
+      // High pass rate teams
+      'KC': 85, 'BUF': 80, 'LAC': 80, 'MIA': 75, 'DAL': 75, 'CIN': 75,
+      'MIN': 70, 'PHI': 70, 'TB': 70, 'ATL': 70, 'LAR': 70, 'SEA': 70,
+      // Moderate pass rate teams
+      'SF': 65, 'DET': 65, 'GB': 65, 'NYG': 60, 'HOU': 60, 'JAX': 60,
+      'IND': 60, 'LV': 60, 'ARI': 55, 'WAS': 55, 'NE': 55, 'DEN': 55,
+      // Run-heavy teams  
+      'BAL': 50, 'TEN': 50, 'CHI': 45, 'CAR': 45, 'CLE': 45, 'PIT': 40, 'NYJ': 40
+    };
+    
+    return proeMap[team] || 60; // Default moderate pass rate
+  }
+
+  /**
+   * Calculate scheme/OL factor (position-specific)
+   */
+  private calculateSchemeOL(team: string, position: string): number {
+    // Offensive line grades by team (0-100 scale)
+    const olGrades: Record<string, { pass: number; run: number }> = {
+      'PHI': { pass: 90, run: 85 }, 'SF': { pass: 85, run: 90 }, 'KC': { pass: 80, run: 75 },
+      'DAL': { pass: 85, run: 80 }, 'BUF': { pass: 75, run: 70 }, 'DET': { pass: 75, run: 80 },
+      'BAL': { pass: 70, run: 85 }, 'MIA': { pass: 70, run: 65 }, 'MIN': { pass: 75, run: 70 },
+      'CIN': { pass: 65, run: 60 }, 'LAC': { pass: 65, run: 65 }, 'TB': { pass: 70, run: 65 },
+      'SEA': { pass: 60, run: 70 }, 'GB': { pass: 65, run: 60 }, 'ATL': { pass: 60, run: 65 },
+      'LAR': { pass: 65, run: 60 }, 'HOU': { pass: 55, run: 60 }, 'IND': { pass: 60, run: 65 },
+      'JAX': { pass: 55, run: 55 }, 'NYG': { pass: 50, run: 55 }, 'WAS': { pass: 55, run: 50 },
+      'LV': { pass: 50, run: 55 }, 'ARI': { pass: 45, run: 50 }, 'TEN': { pass: 50, run: 60 },
+      'DEN': { pass: 45, run: 45 }, 'CHI': { pass: 40, run: 50 }, 'CAR': { pass: 45, run: 45 },
+      'CLE': { pass: 50, run: 65 }, 'PIT': { pass: 55, run: 70 }, 'NYJ': { pass: 40, run: 40 },
+      'NE': { pass: 45, run: 50 }
+    };
+    
+    const grades = olGrades[team] || { pass: 55, run: 55 }; // Default average
+    
+    // Return appropriate grade based on position
+    if (position === 'RB') {
+      return grades.run; // RBs care about run blocking
+    } else {
+      return grades.pass; // WR/TE/QB care about pass protection
+    }
+  }
+
+  /**
+   * Estimate player talent for contract calculations
+   */
+  private estimatePlayerTalent(player: any): number {
+    // Simple estimation based on years experience and age
+    const yearsExp = player.years_exp || 0;
+    const age = player.age || 25;
+    
+    let talent = 50; // Neutral baseline
+    
+    // Experience factor
+    if (yearsExp >= 6) talent += 15; // Proven veteran
+    else if (yearsExp >= 3) talent += 10; // Established player
+    else if (yearsExp >= 1) talent += 5; // Some experience
+    
+    // Age factor (prime years)
+    if (age >= 24 && age <= 28) talent += 10; // Prime age window
+    else if (age <= 23) talent += 5; // Young upside
+    else if (age >= 32) talent -= 10; // Aging concerns
+    
+    return Math.min(100, Math.max(0, talent));
   }
 
   /**

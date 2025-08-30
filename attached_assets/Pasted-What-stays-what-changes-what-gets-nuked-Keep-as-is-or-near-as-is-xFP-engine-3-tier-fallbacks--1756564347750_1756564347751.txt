@@ -1,0 +1,215 @@
+What stays, what changes, what gets nuked
+Keep (as-is or near-as-is)
+
+xFP engine + 3-tier fallbacks (v3.1.1): good foundation, keep OLS + talent→baseline chain.
+
+Percentile/min-max normalization with guardrails: keep one unified path (0–100).
+
+Active player filter (nerfed boosts): keep the reduced boosts only.
+
+Dynasty age curves: keep, but they move under the South/Risk quadrant (not tacked on at the very end).
+
+Modify (map to Compass)
+
+DeepSeek components → Compass quadrants
+
+North (Volume/Talent) = Production/Usage: xFP_recent/season, targets/g, TPRR share, route rate, YPRR.
+
+East (Environment/Scheme) = Context: PROE, QB stability, depth chart threat, OC tendencies, O-line (pos-specific).
+
+South (Risk/Durability) = Age & risk: position age curve + injury/volatility → expressed as safety, not a penalty bolted on later.
+
+West (Market/Value) = Market efficiency: ADP vs model rank, contract horizon, trade stickiness (your FPTS can be a signal here, not the dictator).
+
+Weights:
+
+Compass was 25/25/25/25. DeepSeek is xFP-centric.
+
+Fuse them (see “Final weights” below) instead of double-counting.
+
+Drop (hard no)
+
+WR FPTS override sort. That’s why ranks looked “stuck.” Keep FPTS as a badge/signal/tiebreaker, not a hard sort.
+
+Any magic constants (e.g., default “68.8” style). Neutrals = 50 at subscore level only.
+
+Dual normalizers per page/endpoint. One scaler for the whole pipeline.
+
+Fused model (DeepSeek v3.2 + Compass)
+1) Build the four quadrants (0–100 each)
+
+North (Volume/Talent)
+North = pct( 0.45*xFP_recent + 0.25*xFP_season + 0.15*targets_g + 0.10*TPRR_share + 0.05*YPRR )
+
+East (Environment/Scheme)
+East = pct( 0.35*team_PROE + 0.25*QB_stability + 0.20*role_clarity(depth_threat_inv) + 0.20*OL_or_Scheme )
+
+OL_or_Scheme = OL pass block (WR/TE use OC pass rate), OL run block (RB), OC tendencies.
+
+South (Risk/Durability → invert to safety)
+
+Start with age curve (position targets you already defined), injury history, volatility.
+
+Convert to Safety = 100 – Risk so higher is better.
+South = clamp( 100 - pct( 0.55*age_penalty + 0.30*injury_risk + 0.15*volatility ))
+
+Dynasty multiplies age influence ×1.3, Redraft ×0.6.
+
+West (Market/Value)
+West = pct( 0.5*market_efficiency + 0.3*contract_horizon + 0.2*pos_scarcity )
+
+market_efficiency = 1 – |model_rank – ADP_rank| / K (cap K ~ 36).
+
+For dynasty, bump contract_horizon; for redraft, bump efficiency.
+
+All pct() calls use your v3.1.1 guardrails (min-max with zero-range fallback → 50).
+
+2) Final weights (no double counting)
+
+Dynasty (WR example):
+Score = 0.38*North + 0.20*East + 0.27*South + 0.15*West
+
+Redraft:
+Score = 0.48*North + 0.22*East + 0.18*South + 0.12*West
+
+Why: DeepSeek’s “xFP/production first” lives inside North. Age penalty lives in South. Context and market stay meaningful but secondary.
+
+Round once at the end, not in components.
+
+3) Tiers (global)
+
+95–100 T8, 90–94.9 T7, 80–89.9 T6, 70–79.9 T5, 60–69.9 T4, else down.
+
+Same for all positions; scarcity gets expressed inside West, not via different tier maps.
+
+4) Badges (UI, not math)
+
+Alpha Usage (North ≥ 85), Context Boost (East ≥ 80), Aging but Elite (South ≤ 55 & North ≥ 90), Market Mispriced (West ≥ 80).
+
+FPTS Monster: top-decile season FPTS — badge only.
+
+Implementation patch list
+Config (new) — config/compass.v3.2.json
+{
+  "weights": {
+    "dynasty": { "north": 0.38, "east": 0.20, "south": 0.27, "west": 0.15 },
+    "redraft": { "north": 0.48, "east": 0.22, "south": 0.18, "west": 0.12 }
+  },
+  "quadrants": {
+    "north": { "xfp_recent": 0.45, "xfp_season": 0.25, "targets_g": 0.15, "tprr_share": 0.10, "yprr": 0.05 },
+    "east":  { "proe": 0.35, "qb_stability": 0.25, "role_clarity": 0.20, "scheme_ol": 0.20 },
+    "south": { "age_penalty": 0.55, "injury_risk": 0.30, "volatility": 0.15 },
+    "west":  { "market_eff": 0.50, "contract_horizon": 0.30, "pos_scarcity": 0.20 }
+  },
+  "tiers": { "cutoffs": [96, 91, 86, 81, 76, 71] }
+}
+
+Service changes
+
+deepseekV3.1Service.ts → rankingsFusionService.ts
+
+Keep OLS, fallbacks, guardrailed normalization.
+
+Compute quadrant subscores using one normalizer util.
+
+Delete WR FPTS override sort. Emit FPTS only for badges & debug.
+
+sleeperDataNormalizationService.ts
+
+Add: qb_stability, role_clarity, pos_scarcity, contract_horizon derivations.
+
+Ensure per-pos OL/OC inputs exist (RB uses run; WR/TE uses pass).
+
+riskEngine.ts (new)
+
+Implements age penalty (uses your curves), injury risk (games missed, soft-tissue flags), volatility (stdev of weekly xFP).
+
+marketEngine.ts (new)
+
+ADP vs model rank, contract years, scarcity Z.
+
+API
+
+GET /api/rankings/v3.2?mode=dynasty|redraft&pos=WR|RB|QB|TE&debug=1
+
+Response includes: { north, east, south, west, score, tier, badges, fpts, xfp_recent, xfp_season }
+
+Backward-compat alias for /deepseek/v3.1 with deprecation header.
+
+Debug (so we never chase ghosts again)
+
+For each player in debug=1, return:
+
+north: {comp: {xfp_recent, xfp_season, targets_g, tprr_share, yprr}, score}
+east:  {comp: {proe, qb_stability, role_clarity, scheme_ol}, score}
+south: {comp: {age_penalty, injury_risk, volatility}, score}
+west:  {comp: {market_eff, contract_horizon, pos_scarcity}, score}
+final: {dynasty|redraft score, tier, badges: [...]}
+
+TypeScript fusion skeleton (drop-in)
+type Num = number;
+const clamp01 = (x: Num) => Math.max(0, Math.min(1, x));
+const safe = (x: any, d=50) => Number.isFinite(x) ? x as number : d;
+
+const pct = (x: Num, min: Num, max: Num): Num => {
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return 50;
+  return 100 * clamp01((x - min) / (max - min));
+};
+
+export function quadrantNorthWR(p: any, b: any) {
+  const comp =
+    0.45*safe(p.xfp_recent, NaN) +
+    0.25*safe(p.xfp_season, NaN) +
+    0.15*safe(p.targets_g, NaN) +
+    0.10*safe(p.tprr_share, NaN) +
+    0.05*safe(p.yprr, NaN);
+  return pct(comp, b.north.min, b.north.max);
+}
+
+export function quadrantEastWR(p: any, b: any) {
+  const comp =
+    0.35*safe(p.team_proe, NaN) +
+    0.25*safe(p.qb_stability, NaN) +
+    0.20*safe(p.role_clarity, NaN) +
+    0.20*safe(p.scheme_ol, NaN);
+  return pct(comp, b.east.min, b.east.max);
+}
+
+export function quadrantSouthWR(p: any, b: any, mode: 'dynasty'|'redraft') {
+  const age = safe(p.age_penalty, NaN) * (mode === 'dynasty' ? 1.3 : 0.6);
+  const comp = 0.55*age + 0.30*safe(p.injury_risk, NaN) + 0.15*safe(p.volatility, NaN);
+  const risk = pct(comp, b.south.min, b.south.max);
+  return Math.max(0, 100 - risk); // safety
+}
+
+export function quadrantWestWR(p: any, b: any, mode: 'dynasty'|'redraft') {
+  const eff = safe(p.market_eff, NaN) * (mode === 'redraft' ? 1.1 : 1.0);
+  const contract = safe(p.contract_horizon, NaN) * (mode === 'dynasty' ? 1.1 : 0.9);
+  const comp = 0.5*eff + 0.3*contract + 0.2*safe(p.pos_scarcity, NaN);
+  return pct(comp, b.west.min, b.west.max);
+}
+
+export function fuseScore(
+  q: {north: Num; east: Num; south: Num; west: Num},
+  w: {north: Num; east: Num; south: Num; west: Num}
+) {
+  const num = w.north*safe(q.north) + w.east*safe(q.east) + w.south*safe(q.south) + w.west*safe(q.west);
+  const den = w.north + w.east + w.south + w.west;
+  return Math.round((num/den) * 10) / 10;
+}
+
+Quick sanity expectations (WR)
+
+Tyreek (31): Dynasty drops via South; Redraft rises via North (production) + East (context).
+
+Puka (24): High North + solid South → top-10 in both.
+
+JSN vs McLaurin: JSN gains in South/trajectory; McLaurin holds in North/East for redraft.
+
+Why this wins
+
+You keep DeepSeek’s predictive spine (xFP) without letting it bulldoze context and risk.
+
+Compass gives you explainability (the quadrant readout) and scenario tags without wrecking the math.
+
+One scaler. One fusion. Zero magic constants. No more “boy-band 68.8.”
