@@ -16,6 +16,10 @@ interface PowerRankingPlayer {
   delta_w: number;
   confidence: number;
   flags: string[];
+  // FPG-CENTRIC FIELDS
+  fpg?: number;
+  upsideIndex?: number;
+  explanation?: string;
 }
 
 interface PowerRankingsResponse {
@@ -75,11 +79,33 @@ const PlayerRow = ({ player, index }: { player: PowerRankingPlayer; index: numbe
       <div className="flex items-center gap-3">
         <div>
           <div className="font-medium text-gray-900 dark:text-gray-100">{player.name}</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">{player.team}</div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500 dark:text-gray-400">{player.team}</span>
+            {player.fpg && (
+              <span className="text-xs font-mono bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 px-1.5 py-0.5 rounded">
+                {player.fpg} FPG
+              </span>
+            )}
+          </div>
+          {player.explanation && (
+            <div className="text-xs mt-1 text-gray-600 dark:text-gray-400 italic">
+              {player.explanation}
+            </div>
+          )}
         </div>
-        <Badge className={POSITION_COLORS[player.position]}>
-          {player.position}
-        </Badge>
+        <div className="flex flex-col items-end gap-1">
+          <Badge className={POSITION_COLORS[player.position]}>
+            {player.position}
+          </Badge>
+          {player.upsideIndex && (
+            <div className="flex items-center gap-1">
+              <Zap className="h-3 w-3 text-yellow-500" />
+              <span className="text-xs font-bold text-yellow-600 dark:text-yellow-400">
+                {player.upsideIndex}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </td>
     <td className="px-4 py-3 font-mono text-lg font-bold text-gray-900 dark:text-gray-100">

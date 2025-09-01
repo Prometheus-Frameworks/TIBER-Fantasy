@@ -1,0 +1,171 @@
+0) Quick win: turn the real engine on
+
+Start the microservice (8084) next to the app:
+
+npm run dev   # from otc-power
+npm run recalc:nightly
+npm run recalc:events
+
+
+If your app is still reading mock rankings, switch it to live mode (use the real /api/power/* endpoints).
+
+1) Make FPG “king”
+
+Add three FPG-centric signals and let them drive the score:
+
+Definitions
+
+FPG (points per game): actual fantasy PPR per game (truth).
+
+xFPG (expected FPG): modelled from usage (xFP), routes/1st-read, RZ touches, designed runs, etc.
+
+projFPG: external market projections (your RB projections now; add QB/WR/TE as available).
+
+Derived signals (0–100 scaled)
+
+Form_FPG: EWMA(3w) of FPG, opponent-adjusted.
+
+BeatProj: (FPG − projFPG), clipped & scaled. Rewards guys consistently beating market.
+
+xEff: (FPG − xFPG). Positive means real efficiency > expected; negative = empty volume.
+
+xFPG_now: EWMA(3w) of xFPG (forward-looking role).
+
+We’ll let xFPG_now and BeatProj carry a big chunk of the score, with Form_FPG as the “truth” anchor.
+
+2) The twist: Upside bias (rushing QBs + explosive profiles)
+
+Create an UpsideIndex that can boost players with bankable ceiling traits:
+
+QB UpsideIndex (0–100)
+0.5*Designed Run Rate + 0.2*Scramble Yards/G + 0.2*RZ Rush Share + 0.1*aDOT/Explosive Rate
+(normalize each to 0–100; rookies get a prospect prior from college rushing + draft capital.)
+
+WR/RB/TE UpsideIndex
+Use explosive plays per route/touch, deep-target share, yards after contact/tgt, two-minute usage.
+
+3) Fold into PowerScore (with guardrails)
+
+Replace “UsageNow” with xFPG_now and Form_FPG, add BeatProj, and inject UpsideIndex as a controlled boost.
+
+QB weights (sum=1.0)
+
+0.28 * xFPG_now (forward role)
+
+0.20 * Form_FPG (recent truth)
+
+0.20 * Environment (OASIS pace/PROE/OL/QB stability)
+
+0.17 * Talent (DeepSeek/Fusion prior)
+
+0.05 * Availability (status/pitch counts)
+
+0.05 * Market_anchor (keep tiny)
+
++ UpsideBoost (capped) see below
+
+RB/WR/TE keep your current blends but swap in xFPG_now & Form_FPG for “usage_now” and feed BeatProj into the mix (small weight) so silent outperformers rise.
+
+UpsideBoost (applied after base score, before clamp)
+
+// Example numbers; tune after validation
+const u = UpsideIndex / 100;                 // 0..1
+const lead = Math.max(0, BeatProj_norm);     // 0..1 only when beating proj
+const rook = isRookie ? 1.0 : 0.6;           // allow more for rookies (we want to be early)
+const cap = 8;                                // max +8 points boost
+
+UpsideBoost = cap * u * (0.4 + 0.6*lead) * rook;
+
+
+If a QB runs a lot and is beating projections, he can get a meaningful bump.
+
+If he’s not beating projections yet, he still gets a smaller speculative bump (we’re willing to be early, just not reckless).
+
+Confidence gating still applies (rookies start ~0.65 until 3 games ≥50% snaps), but UpsideBoost ignores part of that cap (e.g., multiply the final score by 0.85 + 0.15*confidence so rookies aren’t hard-throttled).
+
+4) Concrete code drops (minimal changes)
+
+A) Add new fields to facts table
+
+-- add columns (if not already)
+alter table player_week_facts
+  add column fpg numeric default 0,
+  add column xfpg numeric default 0,
+  add column proj_fpg numeric default 0,
+  add column beat_proj numeric default 0,
+  add column upside_index numeric default 0;
+
+
+B) Loaders (src/data/loaders.ts)
+
+loadFpg(player_id, season, week) → historical PPR per game (EWMA 3w to Form_FPG)
+
+loadXfpg(player_id, season, week) → your xFP-based expected points (EWMA 3w)
+
+loadProjFpg(player_id, season, week) → projections feed
+
+loadUpsideIndexQB(player_id) → compute from designed runs, scramble, RZ share (+ rookie prior)
+
+Normalize each to 0–100.
+
+C) Scoring (src/core/scoring.ts)
+
+export function computePowerScoreQB(f, oppMult=1) {
+  const base =
+    0.28 * f.xfpg_now +
+    0.20 * f.form_fpg +
+    0.20 * f.environment +
+    0.17 * f.talent +
+    0.05 * f.availability +
+    0.05 * f.market_anchor +
+    0.05 * f.beat_proj;    // small but important
+
+  const withUpside = base + calcUpsideBoost(f.upside_index, f.beat_proj, f.is_rookie);
+  return adjustForOpponent(Math.min(100, withUpside), oppMult);
+}
+
+5) Guardrails (so it stays foolproof)
+
+Caps: UpsideBoost ≤ +8; BeatProj weight ≤ 5%.
+
+Event override > smoothing: injury/QB-change still bypasses clamp.
+
+Small-sample clamps: Don’t let EWMA(3w) fully trust until ≥2 games; keep confidence gating.
+
+Rookie prior scope: Let rookies break in faster at QB only (your edge thesis), but keep WR/RB rookie boost smaller.
+
+6) “Ahead of curve” examples (how Maye/JJM crack top 12)
+
+Assume early-season:
+
+Maye/JJM: modest Form_FPG (rookies), strong xFPG_now from designed runs, high UpsideIndex (college rushing + early designed runs), beating low projections in weeks 1–2 → BeatProj positive.
+
+With the UpsideBoost and QB env at 30%, they can land QB10–QB12 even if consensus has them QB16–QB20. If the rushing is real, they climb; if it fades, BeatProj drops and they gently slide—no whiplash.
+
+7) Data plumbing you’ll need (quick)
+
+FPG & projFPG: you already have RB projections; add QB/WR/TE or use a simple baseline first.
+
+xFPG: your xFP pipeline is in place—expose per-week expected points.
+
+Upside traits: designed runs, scramble yards, RZ rush share (QB); explosive/air yards (WR); inside-10 + breakaway rate (RB). Start with what you already track; expand later.
+
+8) UI spice (makes the twist obvious)
+
+Show FPG, xFPG, Δ vs Proj, and an Upside meter per player.
+
+Add tags like “Rushing QB” / “Beating Projections” so users understand why a rookie is higher than ECR.
+
+Tooltips: “PowerScore boosted by rushing upside (+6.2).”
+
+TL;DR
+
+Turn the real engine on (8084).
+
+Make FPG/xFPG/BeatProj the core signals.
+
+Add an UpsideBoost that favors rushing QBs, capped so it doesn’t go feral.
+
+Keep guardrails (confidence, caps, event overrides) so it’s sharp but not reckless.
+
+Result: you’re intentionally higher on Maye/JJM now, with math that explains it

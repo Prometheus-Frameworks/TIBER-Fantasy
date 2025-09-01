@@ -73,6 +73,17 @@ export const players = pgTable("players", {
   adpLastUpdated: timestamp("adp_last_updated"), // When ADP was last synced
   adpSource: text("adp_source"), // 'sleeper', 'espn', 'fantasypros'
   dynastyValue: integer("dynasty_value"), // Dynasty value score 0-100
+  
+  // FPG-CENTRIC SCORING SYSTEM
+  fpg: real("fpg"), // Current season fantasy points per game
+  xFpg: real("x_fpg"), // Expected FPG based on advanced metrics
+  projFpg: real("proj_fpg"), // Projected FPG for rest of season
+  upsideIndex: real("upside_index"), // 0-100 upside potential (rushing QBs, explosive profiles)
+  upsideBoost: real("upside_boost"), // Calculated boost from upside factors
+  fpgTrend: text("fpg_trend"), // "rising", "declining", "stable"
+  fpgVariance: real("fpg_variance"), // Week-to-week FPG variance for floor/ceiling
+  explosivePlays: integer("explosive_plays"), // 20+ yard plays this season
+  redZoneOpportunity: real("red_zone_opportunity"), // RZ touches/targets per game
 });
 
 // Articles table for content management

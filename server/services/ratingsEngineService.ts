@@ -22,6 +22,15 @@ export interface PlayerRating {
     upside: number; // 0-100
     floor: number; // 0-100
   };
+  fpgMetrics: {
+    fpg: number; // Current season fantasy points per game
+    xFpg: number; // Expected FPG based on advanced metrics
+    projFpg: number; // Projected FPG for rest of season
+    upsideIndex: number; // 0-100 upside potential
+    upsideBoost: number; // Calculated boost from upside factors
+    fpgTrend: string; // "rising", "declining", "stable"
+    explosivePlays: number; // 20+ yard plays this season
+  };
   format_ratings: {
     redraft: number;
     dynasty: number;
@@ -51,6 +60,12 @@ export interface RatingsEngineConfig {
     upside: number;
     floor: number;
   };
+  fpgWeights: {
+    qb: { fpgBase: number; xFpg: number; projFpg: number; upsideIndex: number; };
+    rb: { fpgBase: number; xFpg: number; projFpg: number; upsideIndex: number; };
+    wr: { fpgBase: number; xFpg: number; projFpg: number; upsideIndex: number; };
+    te: { fpgBase: number; xFpg: number; projFpg: number; upsideIndex: number; };
+  };
   age_penalty: {
     qb_peak: number;
     rb_peak: number;
@@ -77,6 +92,13 @@ class RatingsEngineService {
       consistency: 0.20,  // Game-to-game reliability
       upside: 0.15,      // Ceiling potential
       floor: 0.05        // Safety/injury risk
+    },
+    // FPG-CENTRIC WEIGHTS FOR POSITION-SPECIFIC SCORING
+    fpgWeights: {
+      qb: { fpgBase: 0.45, xFpg: 0.30, projFpg: 0.15, upsideIndex: 0.10 },
+      rb: { fpgBase: 0.50, xFpg: 0.25, projFpg: 0.15, upsideIndex: 0.10 },
+      wr: { fpgBase: 0.40, xFpg: 0.35, projFpg: 0.15, upsideIndex: 0.10 },
+      te: { fpgBase: 0.45, xFpg: 0.30, projFpg: 0.15, upsideIndex: 0.10 }
     },
     age_penalty: {
       qb_peak: 32,
@@ -146,6 +168,36 @@ class RatingsEngineService {
   }
 
   /**
+   * Calculate FPG-centric rating using position-specific weights
+   */
+  private calculateFPGRating(fpgMetrics: PlayerRating['fpgMetrics'], position: string, config: RatingsEngineConfig): number {
+    const posKey = position.toLowerCase() as keyof typeof config.fpgWeights;
+    const weights = config.fpgWeights[posKey];
+    
+    if (!weights) {
+      // Fallback to base FPG if position weights not found
+      return Math.round(fpgMetrics.fpg * 4); // Scale FPG to 0-100 range
+    }
+    
+    // Normalize FPG values to 0-100 scale for calculation
+    const normalizedFpg = Math.min(100, (fpgMetrics.fpg / 30) * 100); // Assume max FPG ~30
+    const normalizedXFpg = Math.min(100, (fpgMetrics.xFpg / 30) * 100);
+    const normalizedProjFpg = Math.min(100, (fpgMetrics.projFpg / 30) * 100);
+    
+    const fpgScore = (
+      normalizedFpg * weights.fpgBase +
+      normalizedXFpg * weights.xFpg +
+      normalizedProjFpg * weights.projFpg +
+      fpgMetrics.upsideIndex * weights.upsideIndex
+    );
+    
+    // Apply upside boost
+    const finalScore = fpgScore + fpgMetrics.upsideBoost;
+    
+    return Math.round(Math.min(100, Math.max(0, finalScore)));
+  }
+
+  /**
    * Determine tier based on overall rating
    */
   private calculateTier(rating: number, config: RatingsEngineConfig): string {
@@ -177,6 +229,100 @@ class RatingsEngineService {
   }
 
   /**
+   * Calculate Upside Index with special boost for rushing QBs
+   */
+  private calculateUpsideIndex(player: any, position: string): number {
+    let baseUpside = 50; // Start at neutral
+
+    if (position === 'QB') {
+      // RUSHING QB UPSIDE BOOST SYSTEM
+      const rushYards = player.rush_yards || 0;
+      const rushAttempts = player.rush_attempts || 0;
+      const rushTD = player.rush_td || 0;
+      
+      // Upside boost for rushing production
+      if (rushYards > 500) baseUpside += 25; // Elite rushers like Lamar, Josh Allen
+      else if (rushYards > 300) baseUpside += 15; // Good rushers like Drake Maye
+      else if (rushYards > 150) baseUpside += 8; // Decent rushers
+      
+      // Additional boost for rushing TDs
+      if (rushTD >= 5) baseUpside += 10;
+      else if (rushTD >= 3) baseUpside += 5;
+      
+      // Mobility/scrambling potential for young QBs
+      const age = player.age || 25;
+      if (age <= 25 && rushAttempts > 40) baseUpside += 12; // Young mobile QBs
+      
+    } else if (position === 'WR' || position === 'TE') {
+      // Explosive play upside
+      const explosivePlays = player.explosive_plays || 0;
+      const ypr = player.yards_per_reception || 0;
+      
+      if (explosivePlays >= 8) baseUpside += 20; // Deep threat capability
+      else if (explosivePlays >= 5) baseUpside += 12;
+      
+      if (ypr >= 15) baseUpside += 10; // Big play ability
+      
+    } else if (position === 'RB') {
+      // TD upside and breakaway ability
+      const rushTD = player.rush_td || 0;
+      const recTD = player.rec_td || 0;
+      const breakaways = player.explosive_plays || 0;
+      
+      if ((rushTD + recTD) >= 10) baseUpside += 15; // Goal line back
+      if (breakaways >= 6) baseUpside += 12; // Breakaway speed
+    }
+
+    return Math.min(100, Math.max(0, baseUpside));
+  }
+
+  /**
+   * Calculate expected FPG based on advanced metrics
+   */
+  private calculateXFpg(player: any, position: string): number {
+    const baseFpg = player.fpg || player.avg_points || 0;
+    
+    // Regression toward mean based on sample size and variance
+    const gamesPlayed = player.games_played || 16;
+    const variance = player.fpg_variance || 0;
+    
+    let xFpg = baseFpg;
+    
+    // Adjust for small sample sizes
+    if (gamesPlayed < 8) {
+      xFpg *= 0.85; // Regress down for small samples
+    }
+    
+    // Adjust for high variance (inconsistent production)
+    if (variance > 6) {
+      xFpg *= 0.92; // Slight regression for inconsistent players
+    }
+    
+    return Math.round(xFpg * 100) / 100;
+  }
+
+  /**
+   * Calculate upside boost with caps and position-specific logic
+   */
+  private calculateUpsideBoost(upsideIndex: number, position: string, age: number): number {
+    let boost = upsideIndex * 0.1; // Base conversion
+    
+    // Position-specific caps and multipliers
+    if (position === 'QB') {
+      // Higher upside potential for QBs
+      boost *= 1.2;
+      if (age <= 25) boost *= 1.15; // Young QB multiplier
+    } else if (position === 'RB') {
+      // RBs have lower upside due to positional constraints
+      boost *= 0.8;
+      if (age >= 28) boost *= 0.7; // Age penalty for RBs
+    }
+    
+    // Apply caps: Max 8 point boost, min 0
+    return Math.min(8, Math.max(0, boost));
+  }
+
+  /**
    * Generate sample ratings for development
    */
   async generateSampleRatings(): Promise<void> {
@@ -200,6 +346,15 @@ class RatingsEngineService {
           consistency: 85,
           upside: 98,
           floor: 88
+        },
+        fpgMetrics: {
+          fpg: 24.8, // Elite rushing QB FPG
+          xFpg: 24.2, // Expected FPG slightly lower
+          projFpg: 25.1, // Strong projection
+          upsideIndex: 85, // High due to rushing ability
+          upsideBoost: 6.2, // Significant boost from mobility
+          fpgTrend: "stable",
+          explosivePlays: 12 // Including rushing TDs/big plays
         },
         format_ratings: {
           redraft: 94,
@@ -226,6 +381,15 @@ class RatingsEngineService {
           upside: 96,
           floor: 85
         },
+        fpgMetrics: {
+          fpg: 26.1, // Historically elite rushing QB FPG
+          xFpg: 25.8, // Expected high due to rushing floor
+          projFpg: 26.4, // Strong rushing projection
+          upsideIndex: 92, // Maximum rushing QB upside
+          upsideBoost: 7.8, // Highest boost from rushing ability
+          fpgTrend: "stable",
+          explosivePlays: 15 // High explosive rushing + passing plays
+        },
         format_ratings: {
           redraft: 92,
           dynasty: 94,
@@ -250,6 +414,15 @@ class RatingsEngineService {
           consistency: 88,
           upside: 94,
           floor: 90
+        },
+        fpgMetrics: {
+          fpg: 23.4, // Elite pocket passer FPG
+          xFpg: 23.8, // Strong expected due to system
+          projFpg: 24.1, // High projection from consistency
+          upsideIndex: 72, // Lower rushing upside but ceiling potential
+          upsideBoost: 4.8, // Moderate boost from arm talent
+          fpgTrend: "stable",
+          explosivePlays: 8 // Fewer than rushing QBs but high-quality
         },
         format_ratings: {
           redraft: 91,
@@ -276,12 +449,91 @@ class RatingsEngineService {
           upside: 95,
           floor: 80
         },
+        fpgMetrics: {
+          fpg: 21.7, // Strong rookie rushing QB FPG
+          xFpg: 20.9, // Expected slightly lower (rookie adjustment)
+          projFpg: 22.8, // High projection due to rushing floor
+          upsideIndex: 88, // Very high due to age + rushing ability
+          upsideBoost: 7.2, // Strong boost from young mobile profile
+          fpgTrend: "rising",
+          explosivePlays: 11 // Good explosive play ability
+        },
         format_ratings: {
           redraft: 88,
           dynasty: 92,
           half_ppr: 88,
           full_ppr: 88,
           superflex: 92
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+      
+      // YOUNG RUSHING QBs - HIGH UPSIDE EXAMPLES
+      {
+        player_id: 'drake_maye',
+        player_name: 'Drake Maye',
+        position: 'QB',
+        team: 'NE',
+        overall_rating: 0,
+        positional_rank: 8,
+        tier: '',
+        components: {
+          talent: 85,
+          opportunity: 75,
+          consistency: 65,
+          upside: 92,
+          floor: 70
+        },
+        fpgMetrics: {
+          fpg: 18.4, // Developing rushing QB FPG
+          xFpg: 19.8, // Higher expected due to rushing upside
+          projFpg: 21.2, // Strong upside projection
+          upsideIndex: 89, // Very high upside due to age + athleticism
+          upsideBoost: 7.5, // Strong boost from young rushing profile
+          fpgTrend: "rising",
+          explosivePlays: 9 // Good rushing + arm talent combo
+        },
+        format_ratings: {
+          redraft: 72,
+          dynasty: 85,
+          half_ppr: 72,
+          full_ppr: 72,
+          superflex: 76
+        },
+        age_adjusted_value: 0,
+        last_updated: new Date().toISOString()
+      },
+      {
+        player_id: 'jj_mccarthy',
+        player_name: 'J.J. McCarthy',
+        position: 'QB',
+        team: 'MIN',
+        overall_rating: 0,
+        positional_rank: 12,
+        tier: '',
+        components: {
+          talent: 78,
+          opportunity: 70,
+          consistency: 60,
+          upside: 90,
+          floor: 65
+        },
+        fpgMetrics: {
+          fpg: 16.2, // Limited NFL sample but strong rushing floor
+          xFpg: 18.5, // Higher expected from rushing ability
+          projFpg: 20.1, // Strong upside projection
+          upsideIndex: 86, // Very high upside due to young mobile profile
+          upsideBoost: 7.8, // High boost from rushing QB profile
+          fpgTrend: "rising",
+          explosivePlays: 7 // Good athletic upside
+        },
+        format_ratings: {
+          redraft: 65,
+          dynasty: 82,
+          half_ppr: 65,
+          full_ppr: 65,
+          superflex: 68
         },
         age_adjusted_value: 0,
         last_updated: new Date().toISOString()
@@ -302,6 +554,15 @@ class RatingsEngineService {
           consistency: 80,
           upside: 88,
           floor: 82
+        },
+        fpgMetrics: {
+          fpg: 20.8, // Good rushing QB FPG
+          xFpg: 20.2, // Expected solid due to rushing floor
+          projFpg: 21.5, // Strong projection with rushing upside
+          upsideIndex: 83, // High upside from rushing ability
+          upsideBoost: 6.8, // Good boost from rushing profile
+          fpgTrend: "stable",
+          explosivePlays: 10 // Good rushing + passing explosiveness
         },
         format_ratings: {
           redraft: 85,

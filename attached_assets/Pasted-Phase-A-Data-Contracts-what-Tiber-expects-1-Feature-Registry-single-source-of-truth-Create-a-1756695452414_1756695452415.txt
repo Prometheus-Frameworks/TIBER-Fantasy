@@ -1,0 +1,259 @@
+Phase A — Data Contracts (what Tiber expects)
+1) Feature Registry (single source of truth)
+
+Create a registry so every feature has: id, owner, unit, scale, freshness, and how to compute.
+
+// src/data/featureRegistry.ts
+export type Scale = 'raw'|'pct'|'z'|'0_100';
+export type Freshness = 'live'|'daily'|'weekly';
+
+export interface FeatureSpec {
+  id: string;                 // "qb.designed_run_rate"
+  entity: 'player'|'team';
+  position?: 'QB'|'RB'|'WR'|'TE'|'ANY';
+  unit: string;               // "%", "points", "per route", etc.
+  scale: Scale;               // how it's delivered to scoring
+  freshness: Freshness;       // expected cadence
+  source: string;             // "Sleeper", "nflfastR", "DeepSeek", "OASIS", "FP ECR"
+  description: string;
+}
+
+export const Features: FeatureSpec[] = [
+  { id: 'core.fpg', entity: 'player', position:'ANY', unit:'points', scale:'raw', freshness:'weekly', source:'Sleeper', description:'Fantasy points per game (OTC PPR)' },
+  { id: 'core.xfpg', entity:'player', position:'ANY', unit:'points', scale:'raw', freshness:'weekly', source:'DeepSeek', description:'Expected fantasy points from usage'},
+  { id: 'core.proj_fpg', entity:'player', position:'ANY', unit:'points', scale:'raw', freshness:'weekly', source:'Projections', description:'External projection'},
+  { id: 'qb.designed_run_rate', entity:'player', position:'QB', unit:'% dropbacks', scale:'pct', freshness:'weekly', source:'nflfastR', description:'Designed QB runs share' },
+  { id: 'qb.scramble_yds_g', entity:'player', position:'QB', unit:'yd/g', scale:'raw', freshness:'weekly', source:'nflfastR', description:'Scramble yards per game' },
+  { id: 'rb.inside10_share', entity:'player', position:'RB', unit:'% team inside-10 opps', scale:'pct', freshness:'weekly', source:'nflfastR', description:'Goal-line access' },
+  { id: 'wr.targets_per_route', entity:'player', position:'WR', unit:'%', scale:'pct', freshness:'weekly', source:'nflfastR', description:'Earning targets' },
+  { id: 'env.oasis', entity:'team', position:'ANY', unit:'index', scale:'0_100', freshness:'weekly', source:'OASIS', description:'Pace/PROE/OL/QB stability' },
+  { id: 'mkt.ecr_rank', entity:'player', position:'ANY', unit:'rank', scale:'raw', freshness:'weekly', source:'FantasyPros', description:'Consensus rank' },
+];
+
+2) Facts schema (extend once, reuse everywhere)
+-- sql/003_player_facts_extend.sql
+alter table player_week_facts
+  add column fpg numeric default 0,
+  add column xfpg numeric default 0,
+  add column proj_fpg numeric default 0,
+  add column beat_proj numeric default 0,          -- scaled 0..100 later
+  add column upside_index numeric default 0,       -- 0..100
+  add column features jsonb default '{}'::jsonb;   -- raw feature key/values, for audit
+
+Phase B — Ingestion Layers (how Tiber learns)
+3) Source fetchers (pull raw → normalize → store)
+
+Keep them small and composable.
+
+// src/data/sources/sleeper.ts
+export async function fetchWeekPoints(season:number, week:number): Promise<Record<string, number>> { /* existing importer */ }
+
+// src/data/sources/nflfastR.ts
+export async function fetchQbRunTraits(season:number, week:number): Promise<Array<{player_id:string; designedRunRate:number; scrambleYdsG:number; rzRushShare:number}>> { /* compute from PBP */ }
+
+// src/data/sources/projections.ts
+export async function fetchProjections(season:number, week:number, pos:'QB'|'RB'|'WR'|'TE'): Promise<Record<string, number>> { /* your RB done; extend to QB/WR/TE */ }
+
+// src/data/sources/oasis.ts
+export async function fetchTeamEnvIndex(season:number, week:number): Promise<Record<string, number>> { /* 0..100 */ }
+
+// src/data/sources/deepseek.ts
+export async function fetchXFP(season:number, week:number): Promise<Record<string, number>> { /* expected fantasy points */ }
+
+4) Feature builders (turn raw → analytics)
+
+EWMA smoothing, scaling, and guardrails live here. These return 0–100 scaled where needed.
+
+// src/data/features.ts
+import { ewma01, clamp01, minMaxScale } from './math.js';
+
+export function formFPG(fpgSeries: number[]): number {
+  // EWMA 3w, then min-max scale across league for the week
+  const v = ewma01(fpgSeries, 0.5); // half-life ~1.5w
+  return v;
+}
+
+export function expectedFPG(xfpgSeries: number[]): number {
+  return ewma01(xfpgSeries, 0.5);
+}
+
+export function beatProjection(fpg:number, proj:number, leagueMin=-10, leagueMax=+15): number {
+  const diff = fpg - proj;
+  return clamp01(minMaxScale(diff, leagueMin, leagueMax)) * 100;
+}
+
+export function qbUpsideIndex(params:{designedRunRate:number; scrambleYdsG:number; rzRushShare:number; explosiveRate?:number}, leagueRanges:{[k:string]:[number,number]}): number {
+  const n = (v:number,[lo,hi]:[number,number]) => clamp01(minMaxScale(v, lo, hi));
+  const s = 0.5*n(params.designedRunRate, leagueRanges.designedRunRate) +
+            0.25*n(params.scrambleYdsG,   leagueRanges.scrambleYdsG) +
+            0.20*n(params.rzRushShare,    leagueRanges.rzRushShare) +
+            0.05*n(params.explosiveRate ?? 0, leagueRanges.explosiveRate || [0,0]);
+  return Math.round(100*s);
+}
+
+// src/data/math.ts
+export function ewma01(series:number[], alpha:number){ let acc=series[0]??0; for(const x of series) acc = alpha*x + (1-alpha)*acc; return acc; }
+export function minMaxScale(x:number, min:number, max:number){ if (max<=min) return 0.5; return (x-min)/(max-min); }
+export function clamp01(x:number){ return Math.max(0, Math.min(1, x)); }
+
+Phase C — Loader Orchestration (plug analytics into facts)
+5) Unified loader (one call builds all advanced fields)
+// src/data/loadersAdvanced.ts
+import { fetchWeekPoints } from './sources/sleeper.js';
+import { fetchQbRunTraits } from './sources/nflfastR.js';
+import { fetchProjections } from './sources/projections.js';
+import { fetchTeamEnvIndex } from './sources/oasis.js';
+import { fetchXFP } from './sources/deepseek.js';
+import { formFPG, expectedFPG, beatProjection, qbUpsideIndex } from './features.js';
+import { q } from '../infra/db.js';
+
+export async function buildFactsForWeek(season:number, week:number) {
+  // 1) Pull raw
+  const [pts, xfp, env, projQB, qbRuns] = await Promise.all([
+    fetchWeekPoints(season, week),
+    fetchXFP(season, week),
+    fetchTeamEnvIndex(season, week),
+    fetchProjections(season, week, 'QB'),
+    fetchQbRunTraits(season, week)
+  ]);
+
+  // 2) Get rolling windows (last 3 weeks) for FPG & xFPG per player
+  // Assume you have a helper to fetch last N weeks from bt_week_points & your xfp store
+  const hist = await hydrateHistory(season, week, Object.keys(pts));
+
+  // 3) Compute features per player
+  for (const player_id of Object.keys(hist)) {
+    const h = hist[player_id]; // { fpgSeries:number[], xfpgSeries:number[], team:string, pos:'QB'|'RB'|'WR'|'TE' }
+    const fpg_now = formFPG(h.fpgSeries);        // raw points; scale later
+    const xfpg_now = expectedFPG(h.xfpgSeries);  // raw points; scale later
+    const proj_now = (h.pos==='QB' ? projQB[player_id] : null) ?? 0;
+
+    const beat_proj_0_100 = beatProjection(fpg_now, proj_now);
+
+    let upside_index = 0;
+    if (h.pos === 'QB') {
+      const run = qbRuns.find(r => r.player_id === player_id);
+      if (run) upside_index = qbUpsideIndex({
+        designedRunRate: run.designedRunRate,
+        scrambleYdsG: run.scrambleYdsG,
+        rzRushShare: run.rzRushShare
+      }, {
+        designedRunRate:[0,0.25], scrambleYdsG:[0,40], rzRushShare:[0,0.35], explosiveRate:[0,0.15]
+      });
+    }
+
+    // 4) Persist partials on player_week_facts (fpg/xfpg/proj/beat_proj/upside_index + features json)
+    await q(
+      `update player_week_facts
+       set fpg=$1, xfpg=$2, proj_fpg=$3, beat_proj=$4, upside_index=$5,
+           features = coalesce(features,'{}'::jsonb) || $6::jsonb,
+           last_update=now()
+       where player_id=$7 and season=$8 and week=$9`,
+       [fpg_now, xfpg_now, proj_now, beat_proj_0_100, upside_index,
+        JSON.stringify({ 'core.fpg':fpg_now, 'core.xfpg':xfpg_now, 'core.proj_fpg':proj_now, 'qb.upside':upside_index }),
+        player_id, season, week]
+    );
+  }
+}
+
+
+This runs before scoring. It writes advanced fields + a features JSON blob for auditing.
+
+Phase D — Scoring Integration (teach Tiber to use it)
+6) Add calcUpsideBoost + revised compute for QB
+// src/core/upsides.ts
+export function calcUpsideBoost(upsideIndex:number, beatProj0_100:number, isRookie:boolean) {
+  const u = Math.max(0, Math.min(1, upsideIndex/100));
+  const lead = Math.max(0, Math.min(1, beatProj0_100/100));
+  const rook = isRookie ? 1.0 : 0.6;
+  const cap = 8; // max +8
+  return cap * u * (0.4 + 0.6*lead) * rook;
+}
+
+// src/core/scoringQB.ts
+import { adjustForOpponent } from './guards.js';
+import { calcUpsideBoost } from './upsides.js';
+
+export function computePowerScoreQB(f:any, oppMultiplier=1.0): number {
+  const base =
+    0.28 * f.xfpg_now_scaled +
+    0.20 * f.form_fpg_scaled +
+    0.20 * f.environment +       // already 0..100
+    0.17 * f.talent +
+    0.05 * f.availability +
+    0.05 * f.market_anchor +
+    0.05 * f.beat_proj;          // 0..100
+
+  const boosted = base + calcUpsideBoost(f.upside_index, f.beat_proj, f.is_rookie);
+  return adjustForOpponent(Math.min(100, boosted), oppMultiplier);
+}
+
+
+For RB/WR/TE: mirror the pattern, but keep UpsideBoost smaller or zero initially. The existing computePowerScore can branch by position.
+
+7) Nightly job wires analytics → scoring (one place)
+
+In src/jobs/nightlyRecalc.ts:
+
+Before the player loop: call buildFactsForWeek(season, week) to fill the analytics columns.
+
+For each player f: compute these scaled numbers for scoring:
+
+form_fpg_scaled = scaleLeagueWeek(fpg_now, 'fpg') → 0..100
+
+xfpg_now_scaled = scaleLeagueWeek(xfpg_now, 'xfpg') → 0..100
+
+beat_proj is already 0..100
+
+upside_index is 0..100
+
+Pass into position-specific compute function (QB uses the new scorer).
+
+Phase E — Live Updates (events know what to rebuild)
+
+INJURY / DEPTH_CHART / QB_CHANGE → recompute:
+
+availability, proj_fpg, xFPG_now (role), UpsideIndex for QBs (if QB change)
+
+Recompute PowerScore for affected players/teams with bypass (no clamp)
+
+Event job remains the same; it just calls the unified advanced builder for the impacted scope.
+
+Phase F — Safety Nets (foolproof)
+
+Missing data? Backfill with last known; if none, use league medians + confidence haircut. Never zero a live player unless OUT.
+
+Normalization windows: re-scale weekly (league-wide min/max) so 0–100 stays meaningful.
+
+Caps: keep UpsideBoost ≤ 8; keep BeatProj weight ≤ 5%.
+
+Confidence gating: multiply final by 0.85 + 0.15*confidence so rookies aren’t fully throttled.
+
+Phase G — UI Pull-Through (show the twist)
+
+Add columns to API output per item:
+
+"metrics": { "fpg": 17.9, "xfpg": 16.4, "proj": 14.8, "beat_proj": 72, "upside": 88 }
+
+
+Badges: Rushing QB, Beating Projections, RZ Spike.
+
+Tooltip: “Upside boost +6.1 from rushing profile & beating projections.”
+
+Do-this-now checklist (so Tiber moves)
+
+Apply 003_player_facts_extend.sql.
+
+Add sources & features modules above; wire buildFactsForWeek into nightlyRecalc before scoring.
+
+Add calcUpsideBoost + computePowerScoreQB.
+
+Scale fpg/xfpg to 0..100 per week before scoring.
+
+Extend API to return metrics block (fpg/xfpg/proj/beat_proj/upside).
+
+Run npm run recalc:nightly → sanity check QB list: rushing rookies should jump (Maye/JJM cracking ~QB10-12 if projections low and rushing traits high).
+
+Re-run npm run validate (watch QB ρ & drift buckets).
+
+Strong take: this keeps FPG king, makes xFPG the forward view, and gives a controlled rocket boost to legit rushing-upside QBs so we can be early—but not reckless.
