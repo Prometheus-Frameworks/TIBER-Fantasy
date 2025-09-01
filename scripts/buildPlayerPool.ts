@@ -214,9 +214,8 @@ async function buildPlayerPool(): Promise<void> {
     positionCounts[player.pos] = (positionCounts[player.pos] || 0) + 1;
   }
   
-  // Write files (go up one level from scripts directory)
-  const rootDir = join(process.cwd(), '..');
-  const dataDir = join(rootDir, 'data');
+  // Write files to workspace data directory  
+  const dataDir = join(process.cwd(), 'data');
   const poolPath = join(dataDir, 'player_pool.json');
   const indexPath = join(dataDir, 'player_index.json');
   
