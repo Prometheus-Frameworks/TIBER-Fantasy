@@ -62,9 +62,9 @@ class UnifiedPlayerService {
         )
         .slice(0, 250); // Increased limit for better coverage
 
-      // 2. Create base player entries from Sleeper (minimal set - just structure)
+      // 2. Create base player entries from Sleeper (expanded set - more comprehensive)
       let globalRank = 1;
-      for (const [playerId, sleeperPlayer] of relevantPlayers.slice(0, 50)) {
+      for (const [playerId, sleeperPlayer] of relevantPlayers.slice(0, 150)) {
         const player: UnifiedPlayer = {
           id: `${sleeperPlayer.position.toLowerCase()}-${sleeperPlayer.player_id || playerId}`,
           name: `${sleeperPlayer.first_name || ''} ${sleeperPlayer.last_name || ''}`.trim(),
@@ -87,7 +87,7 @@ class UnifiedPlayerService {
       ];
       
       topQBNames.forEach((qbName, index) => {
-        if (index >= 12) return; // Only top 12
+        if (index >= 24) return; // Expanded to top 24
         
         const existingQB = Array.from(players.values()).find(p => 
           p.pos === 'QB' && (
@@ -121,7 +121,7 @@ class UnifiedPlayerService {
 
       // 4. Enhance with WR data from CSV ratings
       const wrPlayers = wrRatingsService.getAllWRPlayers();
-      for (const wrPlayer of wrPlayers.slice(0, 50)) {
+      for (const wrPlayer of wrPlayers.slice(0, 80)) {
         const playerId = `wr-${wrPlayer.player_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`;
         
         const existingPlayer = Array.from(players.values())
@@ -156,7 +156,7 @@ class UnifiedPlayerService {
       const rbProjections = getAllRBProjections();
       const rbPopulationStats = await calculateRBPopulationStats();
       
-      for (const rbPlayer of rbProjections.slice(0, 30)) {
+      for (const rbPlayer of rbProjections.slice(0, 60)) {
         const playerId = `rb-${rbPlayer.player.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`;
         
         const existingPlayer = Array.from(players.values())
@@ -202,11 +202,15 @@ class UnifiedPlayerService {
         'Sam LaPorta', 'Trey McBride', 'George Kittle', 'Travis Kelce',
         'Evan Engram', 'Kyle Pitts', 'Mark Andrews', 'Jake Ferguson',
         'David Njoku', 'Dalton Kincaid', 'T.J. Hockenson', 'Brock Bowers',
-        'Isaiah Likely', 'Tucker Kraft', 'Cade Otton'
+        'Isaiah Likely', 'Tucker Kraft', 'Cade Otton', 'Pat Freiermuth',
+        'Cole Kmet', 'Dawson Knox', 'Tyler Higbee', 'Dallas Goedert',
+        'Hunter Henry', 'Jonnu Smith', 'Noah Fant', 'Gerald Everett',
+        'Taysom Hill', 'Mike Gesicki', 'Logan Thomas', 'Will Dissly',
+        'Tyler Conklin', 'Chigoziem Okonkwo'
       ];
       
       topTENames.forEach((teName, index) => {
-        if (index >= 15) return; // Only top 15
+        if (index >= 30) return; // Expanded to top 30
         
         const existingTE = Array.from(players.values()).find(p => 
           p.pos === 'TE' && (
