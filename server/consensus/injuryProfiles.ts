@@ -32,8 +32,37 @@ export type InjuryProfilesDoc = {
   data_sources?: unknown;
 };
 
-export function loadInjuryProfilesV2(path = join(__dirname, "injuryProfiles.v2.json")) {
-  const raw = fs.readFileSync(path, "utf8");
+export function loadInjuryProfilesV2(path?: string) {
+  // Try multiple path options to support both development and production/bundled environments
+  const possiblePaths = [
+    path, // Use provided path if given
+    join(__dirname, "injuryProfiles.v2.json"), // Same directory as current file (bundled)
+    join(__dirname, "consensus", "injuryProfiles.v2.json"), // Preserve directory structure
+    join(process.cwd(), "server", "consensus", "injuryProfiles.v2.json"), // Development environment
+    join(process.cwd(), "dist", "injuryProfiles.v2.json"), // Production environment
+    join(process.cwd(), "injuryProfiles.v2.json") // Fallback to root
+  ].filter(Boolean); // Remove undefined values
+
+  let raw: string;
+  let usedPath: string | undefined;
+  
+  for (const tryPath of possiblePaths) {
+    try {
+      if (fs.existsSync(tryPath as string)) {
+        raw = fs.readFileSync(tryPath as string, "utf8");
+        usedPath = tryPath;
+        break;
+      }
+    } catch (error) {
+      // Continue to next path
+      continue;
+    }
+  }
+  
+  if (!raw! || !usedPath) {
+    throw new Error(`injuryProfiles.v2.json not found in any of the expected locations: ${possiblePaths.join(', ')}`);
+  }
+  
   const doc = JSON.parse(raw) as InjuryProfilesDoc;
   if (!Array.isArray(doc.injury_profiles)) throw new Error("injury_profiles missing/invalid");
   const map = new Map<string, InjuryProfile>();
