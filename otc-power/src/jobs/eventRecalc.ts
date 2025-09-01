@@ -1,183 +1,148 @@
-import { db } from '../infra/db.js';
-import { cache } from '../infra/cache.js';
+// /src/jobs/eventRecalc.ts
+import { initDb, q } from '../infra/db.js';
 import { logger } from '../infra/logger.js';
-import { nextUnprocessedEvent, markProcessed } from '../core/events.js';
 import { computePowerScore } from '../core/scoring.js';
-import { loadUsageBundle, loadTalent, loadEnvironment, loadAvailability, loadMarketAnchor } from '../data/loaders.js';
-import { upsertFacts } from '../data/facts.js';
-import { PlayerFacts, Pos } from '../core/types.js';
+import type { PlayerFacts } from '../core/types.js';
+import { loadAvailability, loadEnvironment, loadMarketAnchor, loadTalent, loadUsageBundle } from '../data/loaders.js';
 
-const CURRENT_SEASON = 2025;
-const CURRENT_WEEK = 1; // TODO: Calculate from current date
-
-async function processEvents() {
-  logger.info('Processing events queue');
-  
-  let processedCount = 0;
-  let event;
-  
-  while ((event = await nextUnprocessedEvent())) {
-    try {
-      await processEvent(event);
-      await markProcessed(event.id);
-      processedCount++;
-      
-      logger.info('Event processed', { 
-        event_id: event.id, 
-        event_type: event.event_type, 
-        scope: event.scope 
-      });
-      
-    } catch (err) {
-      logger.error('Event processing failed', { 
-        event_id: event.id, 
-        event_type: event.event_type, 
-        error: err 
-      });
-      
-      // Mark as processed to avoid infinite retry (could implement retry logic here)
-      await markProcessed(event.id);
-    }
-  }
-  
-  if (processedCount > 0) {
-    logger.info(`Processed ${processedCount} events`);
-    
-    // Refresh rankings if any events were processed
-    await refreshRankings();
-    
-    // Bust relevant caches
-    await cache.del('power:*');
-  }
-}
-
-async function processEvent(event: any) {
-  const { event_type, scope } = event;
-  
-  // Determine affected players
-  let affectedPlayers: string[] = [];
-  
-  if (scope.player_id) {
-    affectedPlayers = [scope.player_id];
-  } else if (scope.team) {
-    // Team-wide event (e.g., QB change affects all WRs/TEs)
-    const teamPlayersResult = await db.query(
-      `select player_id from players where team = $1`,
+async function impactPlayers(scope: any) {
+  // Expand impact by scope
+  if (scope.player_id) return [scope.player_id];
+  if (scope.team) {
+    const { rows } = await q<{ player_id: string }>(
+      `select player_id from players where team=$1 and position in ('RB','WR','TE')`,
       [scope.team]
     );
-    affectedPlayers = teamPlayersResult.rows.map(r => r.player_id);
+    return rows.map(r => r.player_id);
   }
-  
-  // Recompute affected players with event bypass flags
-  for (const player_id of affectedPlayers) {
-    await recomputePlayerWithBypass(player_id, event_type);
+  return [];
+}
+
+async function lastFacts(player_id: string, season: number, week: number) {
+  const { rows } = await q<any>(
+    `select power_score from player_week_facts where player_id=$1 and season=$2 and week=$3`,
+    [player_id, season, week]
+  );
+  return rows[0];
+}
+
+async function upsertFacts(f: PlayerFacts) {
+  await q(
+    `insert into player_week_facts
+     (player_id, season, week, usage_now, talent, environment, availability, market_anchor,
+      power_score, confidence, flags, last_update)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, now())
+     on conflict (player_id, season, week)
+     do update set usage_now=$4, talent=$5, environment=$6, availability=$7, market_anchor=$8,
+       power_score=$9, confidence=$10, flags=$11, last_update=now()`,
+    [
+      f.player_id, f.season, f.week,
+      f.usage_now, f.talent, f.environment, f.availability, f.market_anchor,
+      f.power_score, f.confidence, f.flags
+    ]
+  );
+}
+
+async function materializeSliceFor(season: number, week: number, player_ids: string[]) {
+  // Quick-and-dirty: rebuild ranks for affected positions + overall
+  // (Optimization later: local reinsert.)
+  const { rows: positions } = await q<{ position: string }>(
+    `select distinct position from players where player_id = any($1)`, [player_ids]
+  );
+  const posList = positions.map(p => p.position);
+  const slices = ['OVERALL', ...posList];
+
+  for (const key of slices) {
+    const where = key === 'OVERALL' ? `position in ('QB','RB','WR','TE')` : `position='${key}'`;
+    const { rows } = await q<{ player_id: string; power_score: number }>(
+      `select f.player_id, f.power_score
+       from player_week_facts f
+       join players p on p.player_id=f.player_id
+       where f.season=$1 and f.week=$2 and ${where}
+       order by f.power_score desc nulls last
+       limit 500`,
+      [season, week]
+    );
+    await q(`delete from power_ranks where season=$1 and week=$2 and ranking_type=$3`, [season, week, key]);
+    let rank = 1;
+    for (const r of rows) {
+      const prev = await q<{ rank: number }>(
+        `select rank from power_ranks where season=$1 and week=$2 and ranking_type=$3 and player_id=$4`,
+        [season, week - 1, key, r.player_id]
+      );
+      const prevRank = prev.rows[0]?.rank;
+      const delta_w = typeof prevRank === 'number' ? prevRank - rank : 0;
+      await q(
+        `insert into power_ranks (season, week, ranking_type, rank, player_id, power_score, delta_w, generated_at)
+         values ($1,$2,$3,$4,$5,$6,$7, now())`,
+        [season, week, key, rank, r.player_id, r.power_score, delta_w]
+      );
+      rank++;
+    }
   }
 }
 
-async function recomputePlayerWithBypass(player_id: string, event_type: string) {
-  try {
-    // Get player info
-    const playerResult = await db.query(
-      `select name, team, position from players where player_id = $1`,
-      [player_id]
-    );
-    
-    if (playerResult.rows.length === 0) {
-      logger.warn('Player not found for recompute', { player_id });
-      return;
-    }
-    
-    const player = playerResult.rows[0];
-    
-    // Load fresh component scores
+function getSeasonWeek(d: Date = new Date()) {
+  const season = d.getUTCFullYear();
+  const week = 1; // Replace with your calendar if needed
+  return { season, week };
+}
+
+async function processOnce() {
+  const evt = await q<any>(`select * from events_queue where processed=false order by created_at asc limit 1`);
+  const event = evt.rows[0];
+  if (!event) return false;
+
+  const { season, week } = getSeasonWeek();
+  logger.info('event.start', { id: event.id, type: event.event_type });
+
+  const affected = await impactPlayers(event.scope);
+  for (const player_id of affected) {
+    // bypass clamp for events
     const [usage_now, talent, environment, availability, market_anchor] = await Promise.all([
-      loadUsageBundle(player_id, CURRENT_SEASON, CURRENT_WEEK),
+      loadUsageBundle(player_id, season, week),
       loadTalent(player_id),
-      loadEnvironment(player.team),
+      loadEnvironment(event.scope.team || ''), // safe default
       loadAvailability(player_id),
-      loadMarketAnchor(player_id)
+      loadMarketAnchor(player_id),
     ]);
-    
-    // Build facts with bypass flag
-    const facts: PlayerFacts = {
-      player_id,
-      season: CURRENT_SEASON,
-      week: CURRENT_WEEK,
-      position: player.position as Pos,
-      usage_now,
-      talent,
-      environment,
-      availability,
-      market_anchor,
-      flags: [`${event_type}_CHANGE`], // This will bypass smoothing
-      confidence: 0.75
-    };
-    
-    // Compute power score (no smoothing due to bypass flag)
-    facts.power_score = computePowerScore(facts);
-    
-    // Store updated facts
-    await upsertFacts(facts);
-    
-  } catch (err) {
-    logger.error('Failed to recompute player', { player_id, event_type, error: err });
+
+    const positionRow = await q<{ position: 'QB'|'RB'|'WR'|'TE' }>(`select position from players where player_id=$1`, [player_id]);
+    const position = positionRow.rows[0]?.position || 'WR';
+
+    const power_score = computePowerScore({
+      player_id, season, week, position,
+      usage_now, talent, environment, availability, market_anchor,
+      flags: [event.event_type], confidence: 0.7
+    } as PlayerFacts);
+
+    await upsertFacts({
+      player_id, season, week, position,
+      usage_now, talent, environment, availability, market_anchor,
+      power_score, confidence: 0.7, flags: [event.event_type]
+    } as PlayerFacts);
+  }
+
+  await q(`update events_queue set processed=true where id=$1`, [event.id]);
+  await materializeSliceFor(season, week, affected);
+  logger.info('event.done', { id: event.id, type: event.event_type, affected: affected.length });
+  return true;
+}
+
+async function main() {
+  await initDb();
+  logger.info('eventRecalc: worker online');
+  // poll loop
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const worked = await processOnce();
+    await new Promise(r => setTimeout(r, worked ? 200 : 1000 * 60)); // faster if we had work
   }
 }
 
-async function refreshRankings() {
-  logger.info('Refreshing rankings after events');
-  
-  const rankingTypes = ['OVERALL', 'QB', 'RB', 'WR', 'TE'];
-  
-  for (const rankingType of rankingTypes) {
-    // Clear existing rankings for current week
-    await db.query(
-      `delete from power_ranks 
-       where season = $1 and week = $2 and ranking_type = $3`,
-      [CURRENT_SEASON, CURRENT_WEEK, rankingType]
-    );
-    
-    // Rebuild rankings from current facts
-    const positionFilter = rankingType === 'OVERALL' ? '' : `and p.position = '${rankingType}'`;
-    
-    const rankedPlayers = await db.query(`
-      select p.player_id, pwf.power_score
-      from players p
-      join player_week_facts pwf on pwf.player_id = p.player_id
-      where pwf.season = $1 and pwf.week = $2 ${positionFilter}
-        and p.team is not null and p.team != 'FA'
-      order by pwf.power_score desc
-    `, [CURRENT_SEASON, CURRENT_WEEK]);
-    
-    // Insert refreshed rankings
-    for (let i = 0; i < rankedPlayers.rows.length; i++) {
-      const player = rankedPlayers.rows[i];
-      const rank = i + 1;
-      
-      await db.query(`
-        insert into power_ranks (season, week, ranking_type, rank, player_id, power_score, delta_w)
-        values ($1, $2, $3, $4, $5, $6, 0)
-      `, [CURRENT_SEASON, CURRENT_WEEK, rankingType, rank, player.player_id, player.power_score]);
-    }
-  }
-}
-
-// Event loop - polls every 60 seconds
-async function startEventLoop() {
-  logger.info('Starting event processing loop');
-  
-  setInterval(async () => {
-    try {
-      await processEvents();
-    } catch (err) {
-      logger.error('Event loop iteration failed', { error: err });
-    }
-  }, 60_000); // 60 seconds
-}
-
-// Run if called directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  startEventLoop();
+  main().catch(e => {
+    logger.error('eventRecalc: fatal', { err: e?.message });
+    process.exit(1);
+  });
 }
-
-export { processEvents, startEventLoop };

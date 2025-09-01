@@ -1,45 +1,24 @@
-type LogLevel = 'info' | 'warn' | 'error' | 'debug';
+// /src/infra/logger.ts
+type Lvl = 'debug' | 'info' | 'warn' | 'error';
 
-interface LogEntry {
-  level: LogLevel;
-  message: string;
-  timestamp: string;
-  component?: string;
-  data?: any;
+const LEVEL_ORDER: Record<Lvl, number> = { debug: 10, info: 20, warn: 30, error: 40 };
+const CURRENT = (process.env.LOG_LEVEL as Lvl) || 'info';
+
+function log(lvl: Lvl, msg: string, meta?: Record<string, any>) {
+  if (LEVEL_ORDER[lvl] < LEVEL_ORDER[CURRENT]) return;
+  const line = {
+    t: new Date().toISOString(),
+    lvl,
+    msg,
+    ...meta,
+  };
+  // eslint-disable-next-line no-console
+  console[lvl === 'error' ? 'error' : lvl === 'warn' ? 'warn' : 'log'](JSON.stringify(line));
 }
 
-export class Logger {
-  constructor(private component: string = 'otc-power') {}
-
-  private log(level: LogLevel, message: string, data?: any) {
-    const entry: LogEntry = {
-      level,
-      message,
-      timestamp: new Date().toISOString(),
-      component: this.component,
-      ...(data && { data })
-    };
-    
-    console.log(JSON.stringify(entry));
-  }
-
-  info(message: string, data?: any) {
-    this.log('info', message, data);
-  }
-
-  warn(message: string, data?: any) {
-    this.log('warn', message, data);
-  }
-
-  error(message: string, data?: any) {
-    this.log('error', message, data);
-  }
-
-  debug(message: string, data?: any) {
-    if (process.env.NODE_ENV === 'development') {
-      this.log('debug', message, data);
-    }
-  }
-}
-
-export const logger = new Logger();
+export const logger = {
+  debug: (m: string, meta?: any) => log('debug', m, meta),
+  info:  (m: string, meta?: any) => log('info', m, meta),
+  warn:  (m: string, meta?: any) => log('warn', m, meta),
+  error: (m: string, meta?: any) => log('error', m, meta),
+};

@@ -1,23 +1,21 @@
+// /src/infra/db.ts
 import { Pool } from 'pg';
 
-let pool: Pool;
+export let db: Pool;
 
 export async function initDb() {
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
-  });
-  
-  console.log('🗄️ Database pool initialized');
+  if (db) return db;
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error('DATABASE_URL not set');
+  db = new Pool({ connectionString: url, max: 10 });
+  // basic health check
+  await db.query('select 1');
+  return db;
 }
 
-export const db = {
-  query: (text: string, params?: any[]) => pool.query(text, params),
-  getClient: () => pool.connect()
-};
-
-export function closeDb() {
-  return pool?.end();
+// Helper: typed query
+export async function q<T = any>(text: string, params?: any[]): Promise<{ rows: T[] }> {
+  if (!db) await initDb();
+  // @ts-ignore
+  return db.query(text, params);
 }
