@@ -1,0 +1,180 @@
+TL;DR call
+
+Do now: Stand up a separate service otc-power (you already have the scaffold).
+
+Team split:
+
+Tiber builds the service + schema + jobs + endpoints.
+
+Grok pressure-tests scoring math + backtest scripts.
+
+Lamar (me) owns the spec, review, and integration contract—keeps the rails tight.
+
+DeepSeek v3 ≠ Power: DeepSeek = dynasty priors / talent, Power = weekly role + context + availability. We wire DeepSeek in as the Talent component only.
+
+What happens next (order of ops)
+Phase 0 — Decision lock (today)
+
+Repo split is official: otc-power service; no shared DB tables with DeepSeek. We consume DeepSeek via HTTP/DB read for Talent only.
+
+API contract is final (below). Frontend can start UI using stubbed responses.
+
+Phase 1 — Skeleton & DB (Tiber)
+
+Create otc-power repo using the scaffold I gave you.
+
+Apply SQL schema exactly as defined (players, player_week_facts, power_ranks, events_queue).
+
+Add server.ts, powerRoutes.ts, db.ts, logger.ts. (If you want, I’ll drop the db.ts/logger.ts stubs next turn.)
+
+Phase 2 — Loaders wiring (Tiber + Lamar)
+
+Wire the five inputs (0–100 scaled):
+
+usage_now → DeepSeek xFP 3-week EWMA + role shares (routes/trgt-per-route/RZ/inside-10; designed runs for QBs).
+
+talent → DeepSeek/Fusion North/OTC rating stabilized (multi-season).
+
+environment → OASIS team env + QB stability.
+
+availability → practice trend + expected snaps (actives/inactives).
+
+market_anchor → tiny ECR/ADP drift anchor (5% cap), or zero until ready.
+
+Strict rule: if a loader is missing data, fallback to last known + confidence haircut; never hard-zero a guy unless OUT.
+
+Phase 3 — Scoring & smoothing (Tiber)
+
+Implement weights (position overrides) and hysteresis (±8/week) with bypass on real events (INJURY, DEPTH_CHART, QB_CHANGE).
+
+Add opponent/SOS multiplier hook (stub ok).
+
+Persist player_week_facts then materialize power_ranks (OVERALL + QB/RB/WR/TE) nightly.
+
+Phase 4 — Event loop (Tiber)
+
+Poll events_queue each 60s; recompute impacted players/teams without clamp; refresh power_ranks.
+
+Seed events from: Sleeper actives/inactives, depth chart updates, QB swaps; manual POST allowed.
+
+Phase 5 — Validation & guardrails (Grok)
+
+Build validation.ts: weekly Spearman vs next-week points + Top-12→Top-18 hit rate.
+
+Add drift vs market report to quantify edge (prove we’re not just echoing consensus).
+
+Phase 6 — Frontend (Team)
+
+UI reads GET /api/power/:type?season=2025&week=1.
+
+Show sparklines, Δ badges, confidence ring, and reason tags from flags.
+
+Add “LIVE” pill only when event mode bumps a score intraweek.
+
+Final API contract (copy/paste to team)
+
+GET /api/power/OVERALL?season=2025&week=1
+
+GET /api/power/QB|RB|WR|TE?season=2025&week=1
+
+GET /api/power/player/{player_id}?season=2025 (returns weekly facts history)
+
+POST /api/power/events { event_type, scope } (optional manual inject)
+
+Response shape (stable):
+
+{
+  "season": 2025,
+  "week": 1,
+  "ranking_type": "WR",
+  "generated_at": "2025-08-31T14:22:00Z",
+  "items": [{
+    "player_id": "wr_1234",
+    "name": "Puka Nacua",
+    "team": "LA",
+    "position": "WR",
+    "power_score": 92.6,
+    "rank": 1,
+    "delta_w": 3
+  }]
+}
+
+Roles & assignments (drop this in Slack)
+
+Lamar (spec/PM)
+
+Owns weights, flags, and event rules.
+
+Reviews PRs for scoring correctness and smoothing logic.
+
+Signs off API contract & docs.
+
+Tiber (build)
+
+Spin up otc-power service, DB schema, routes, jobs.
+
+Wire loaders to DeepSeek/OASIS/availability/market.
+
+Implement nightly + event recompute + cache bust.
+
+Grok (QA/data science)
+
+Write validation.ts + backtests.
+
+Tune weightings by position; propose caps for small samples.
+
+Report weekly metrics to the team.
+
+Practical milestones
+
+Day 1
+
+Repo up, schema applied, endpoints returning mock ranks.
+
+Nightly job scaffold + event queue running (no real loaders yet).
+
+Day 2
+
+Loaders wired for usage_now, talent, environment.
+
+Scoring + smoothing implemented; ranks persisted; frontend consuming real data.
+
+Day 3
+
+Availability + market anchor live; event recompute demonstrably moves ranks.
+
+First validation report posted; tweak weights ±5% where needed.
+
+Guardrails (non-negotiables)
+
+Separate cadence: DeepSeek (slow/priors) vs Power (fast/events). No cross-polluting state.
+
+Don’t overfit to market: market anchor stays ≤5%.
+
+Never hard zero unless OUT; use confidence scaling.
+
+Event > smoothing: real football changes bypass the clamp.
+
+Observability: log component scores per recompute; keep diffs auditable.
+
+Quick script block for Tiber (copy/paste)
+
+Tasks
+
+Create repo otc-power from Lamar scaffold.
+
+Apply 001_schema.sql, 002_indexes.sql.
+
+Implement /infra/db.ts, /infra/logger.ts.
+
+Expose routes in powerRoutes.ts + server.ts.
+
+Build nightlyRecalc.ts (compute facts → ranks).
+
+Build eventRecalc.ts (process queue, bypass clamp).
+
+Wire loaders: usage_now, talent, environment first; availability, market_anchor after.
+
+Add Redis cache (5–15 min TTL) + bust hooks.
+
+Add validation.ts stub; Grok to fill metrics.

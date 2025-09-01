@@ -1,16 +1,14 @@
 # ON THE CLOCK
 
 ## Overview
-On The Clock is an open-source fantasy football platform designed to democratize advanced analytics for dynasty leagues. Its core purpose is to provide community-driven tools and accessible, high-end insights without paywalls, fostering a movement that breaks down traditional barriers in fantasy football analysis. A key feature is "Competence Mode," a truth-first, context-aware AI assistant providing evidence-based fantasy football advice. The project aims to empower users with accurate guidance and a deeper understanding of dynasty league strategy.
+On The Clock is an open-source fantasy football platform focused on democratizing advanced analytics for dynasty leagues. It aims to provide community-driven tools and accessible, high-end insights without paywalls, fostering a movement that breaks down traditional barriers in fantasy football analysis. A key feature is "Competence Mode," a truth-first, context-aware AI assistant providing evidence-based fantasy football advice. The project empowers users with accurate guidance and a deeper understanding of dynasty league strategy, aspiring to be a leading, independent resource in the fantasy football community.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 League focus: Dynasty leagues (skill positions only - QB, RB, WR, TE). No kickers or defense.
-Future consideration: May add redraft emphasis later.
 Mission commitment: Strictly avoid all paywall partnerships or data sources. Maintain complete independence and free access to all platform features.
-Community Discussion Philosophy: Transform statistical insights into meaningful conversations that help real people make better fantasy decisions (example: RB age cliff data → nuanced CMC contending window analysis).
+Community Discussion Philosophy: Transform statistical insights into meaningful conversations that help real people make better fantasy decisions.
 Player Evaluation System: "Player Compass" - Dynamic, context-aware player profiles with tiers, scenario scores, and decision-making guidance instead of rigid rankings. Emphasizes flexibility and serves multiple team strategies.
-Mock Draft Analysis Partnership: Joseph will share completed mock drafts during redraft season for collaborative analysis. This provides real-world insight into his draft strategy, player preferences, reaches/fades, and community interaction patterns. Track ADP changes over time and understand practical draft decision-making beyond technical development work.
 Intelligence Feed System:
 - Simple API endpoints ready for real-time updates when season starts
 - Preseason observations archived but not weighted in analysis
@@ -18,24 +16,8 @@ Intelligence Feed System:
 - `/api/intel` endpoint serves scouting reports with filtering by player, position, and signal strength
 - Ready to receive meaningful intel updates during regular season
 
-## Recent Changes
-### August 30, 2025 - DeepSeek v3.2 + Compass Fusion System with Proven Elite Guardrails
-- **Complete Integration**: Successfully merged DeepSeek v3.1 xFP engine with Player Compass 4-directional methodology
-- **4-Quadrant Architecture**: North (Volume/Talent), East (Environment/Scheme), South (Risk→Safety), West (Value/Market)
-- **Critical Bug Fix**: Eliminated WR FPTS override that was causing uniform scoring across all players
-- **Enhanced Data Pipeline**: Added 6 new analytical derivations to sleeperDataNormalizationService
-- **New API Endpoints**: `/api/rankings/deepseek/v3.2` with debug support and health monitoring
-- **Modular Engine Design**: Separate RiskEngine and MarketEngine classes for component score calculation
-- **Configuration-Driven**: `config/compass.v3.2.json` with quadrant weights and tier cutoffs
-- **Badge System**: Dynamic badges for Alpha Usage, Context Boost, Aging Elite, Market Mispriced
-- **Format Differentiation**: Dynasty vs redraft specific weightings and age penalty multipliers
-- **Proven Elite Priors**: Implemented scoreWRBatch with 88-point floor for elite players (Jefferson, Chase, Hill, etc.) to prevent rookies from ranking above proven stars
-- **Rookie Guardrails**: Added north quadrant cap ≤ 80 for rookies with <8 games to prevent unrealistic projections
-- **Market Caps**: Limited West quadrant ≤ 80 to prevent market inflation and speculation bubbles
-- **Realistic Rankings**: Justin Jefferson, Stefon Diggs, and other elites now properly rank in top 5 dynasty, with rookies like Keon Coleman at more reasonable #29 instead of #1
-
 ## System Architecture
-The platform employs a modular Flask backend for core logic and API endpoints, and a React 18 frontend utilizing TypeScript, Tailwind CSS, TanStack Query, and shadcn/ui for a scalable and responsive user experience. UI/UX prioritizes clean, responsive design with color-coded tier systems, interactive elements, and mobile optimization, including Next.js-inspired tab-based navigation.
+The platform features a modular Flask backend for core logic and API endpoints, and a React 18 frontend utilizing TypeScript, Tailwind CSS, TanStack Query, and shadcn/ui for a scalable and responsive user experience. UI/UX prioritizes clean, responsive design with color-coded tier systems, interactive elements, and mobile optimization, including Next.js-inspired tab-based navigation.
 
 ### Technical Implementations
 - **Backend Spine**: Includes Sleeper Sync with cache fallback, Logs & Projections Service, a multi-format Ratings Engine, and an enhanced `/api/health` endpoint.
@@ -73,7 +55,8 @@ The platform employs a modular Flask backend for core logic and API endpoints, a
 - **Live Data Integration Pipeline**: Complete multi-source data capture and processing system with MySportsFeeds, SportsDataIO, and Sleeper API integration. Features static data capture service (`/api/data/capture`) for persistent reference data beyond API trial periods, live data processor for weekly statistics, and comprehensive fallback strategies. Includes endpoints for live mode activation (`/api/players/hot-list/mode/live`), manual refresh (`/api/players/hot-list/refresh`), and data source monitoring (`/api/players/hot-list/sources`).
 - **Modular Sleeper Router Architecture**: Complete 3-batch implementation featuring extracted Sleeper routes in dedicated `server/sleeperRoutes.ts` module with feature flag control via `USE_SLEEPER_SYNC` environment variable. Includes comprehensive JSON logging, HTTP status mapping, TypeScript compliance, and contract-correct fallback responses. All 8 Sleeper endpoints (user lookup, league context, player sync, etc.) properly modularized with sub-second response times and enhanced monitoring.
 - **Sleeper Dashboard Integration**: Complete user flow from Sleeper Connect (`/sleeper-connect`) to Dashboard (`/dashboard`) with smart routing for both user leagues (`?user=ID`) and individual league views (`?league=ID`). Features league cards with Dynasty/Redraft indicators, scoring formats, team counts, and seamless navigation flow. Integrated into main navigation and home page with proper wouter Link components.
-- **DeepSeek v3.2 + Compass Fusion System**: Comprehensive integration combining DeepSeek xFP predictive power with 4-directional Player Compass explainability. Features North (Volume/Talent), East (Environment/Scheme), South (Risk→Safety), and West (Value/Market) quadrants with weighted fusion scoring. Eliminates FPTS override scoring bug, magic constants, and dual normalizers. Includes 6 new derivations: QB stability, role clarity, position scarcity, contract horizon, team PROE, and scheme/OL analysis. API endpoints: `/api/rankings/deepseek/v3.2`, health check, and individual player debug. Dynasty vs redraft format-specific weightings with comprehensive badge system (Alpha Usage, Context Boost, Aging Elite, Market Mispriced, FPTS Monster).
+- **DeepSeek v3.2 + Compass Fusion System**: Comprehensive integration combining DeepSeek xFP predictive power with 4-directional Player Compass explainability. Features North (Volume/Talent), East (Environment/Scheme), South (Risk→Safety), and West (Value/Market) quadrants with weighted fusion scoring. Includes 6 new derivations: QB stability, role clarity, position scarcity, contract horizon, team PROE, and scheme/OL analysis. API endpoints: `/api/rankings/deepseek/v3.2`, health check, and individual player debug. Dynasty vs redraft format-specific weightings with comprehensive badge system (Alpha Usage, Context Boost, Aging Elite, Market Mispriced, FPTS Monster).
+- **OTC Power Rankings Service v1.0**: Independent microservice for weekly Overall + Position Power Rankings with real-time event updates. Built on Fastify + TypeScript with PostgreSQL persistence and Redis caching. Features 5-component scoring system (usage_now, talent, environment, availability, market_anchor), event-driven recalculation for injuries/depth changes, and comprehensive job infrastructure. Includes complete API surface (`/api/power/*`), database schema with proper indexing, nightly recalculation jobs, and 60-second event processing loop.
 
 ### Technical Stack
 - **Backend**: Python (Flask), Node.js (Express.js, TypeScript)
