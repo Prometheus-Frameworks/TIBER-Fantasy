@@ -123,6 +123,7 @@ import AdaptiveConsensusDemo from "@/pages/AdaptiveConsensusDemo";
 import CurvesDemo from "@/pages/CurvesDemo";
 import InjuryProfilesDemo from "@/pages/InjuryProfilesDemo";
 import CompassHub from "@/pages/compass/CompassHub";
+import PowerRankings from "@/pages/PowerRankings";
 import PlayerEvaluation from "@/pages/PlayerEvaluation";
 import ConsensusHub from "@/pages/consensus/ConsensusHub";
 import ExpertView from "@/pages/consensus/ExpertView";
@@ -144,6 +145,9 @@ function Router() {
       <Route path="/dynasty-values" component={DynastyValuesPage} />
       {/* Unified Player Evaluation */}
       <Route path="/player-evaluation" component={PlayerEvaluation} />
+      
+      {/* Power Rankings */}
+      <Route path="/power-rankings" component={PowerRankings} />
       
       {/* Legacy Compass Routes - Still Available */}
       <Route path="/compass" component={CompassHub} />

@@ -11,6 +11,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/redraft", label: "Redraft", description: "Seasonal league tools" },
   { href: "/dynasty", label: "Dynasty", description: "Long-term strategy" },
   { href: "/player-evaluation", label: "Player Evaluation", description: "Fusion rankings with 4-directional compass insights" },
+  { href: "/power-rankings", label: "Power Rankings", description: "Tiber's comprehensive weekly rankings" },
   { href: "/consensus", label: "Consensus", description: "Community-driven rankings" },
   { href: "/sleeper-connect", label: "Sleeper", description: "Connect your leagues" },
   { 

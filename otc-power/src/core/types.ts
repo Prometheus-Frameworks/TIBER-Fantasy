@@ -14,6 +14,7 @@ export interface PlayerFacts extends ComponentBundle {
   season: number;
   week: number;
   position: Pos;
+  power_score: number;
   flags: string[];
   confidence: number;     // 0-1
 }

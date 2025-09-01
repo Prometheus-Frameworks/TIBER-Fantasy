@@ -73,6 +73,45 @@ export interface RookieRow {
   name?: string;
   team: string;
   pos: Pos;
+}
+
+// Power Rankings interfaces
+export interface PowerRankingPlayer {
+  player_id: string;
+  name: string;
+  team: string;
+  position: Pos;
+  power_score: number;
+  rank: number;
+  delta_w: number;
+  confidence: number;
+  flags: string[];
+}
+
+export interface PowerRankingsResponse {
+  season: number;
+  week: number;
+  ranking_type: string;
+  generated_at: string;
+  items: PowerRankingPlayer[];
+}
+
+export interface PowerPlayerHistoryResponse {
+  player_id: string;
+  season: number;
+  history: Array<{
+    week: number;
+    power_score: number;
+    confidence: number;
+    flags: string[];
+  }>;
+}
+
+export interface PowerHealthResponse {
+  status: string;
+  timestamp: string;
+  service: string;
+  error?: string;
   depth?: number;
   targets?: number;
   receptions?: number;
@@ -334,6 +373,24 @@ export class API {
   // ---------- Rookies TE subset ----------
   rookiesTELegacy(classYear = 2025) {
     return this.get<RowsEnvelope<RookieRow>>(`/api/rookies/te?class=${classYear}`);
+  }
+
+  // ---------- Power Rankings ----------
+  powerRankings(type: string = 'OVERALL', season: number = 2025, week: number = 1) {
+    const params = new URLSearchParams();
+    params.set('season', String(season));
+    params.set('week', String(week));
+    return this.get<PowerRankingsResponse>(`/api/power/${type}?${params.toString()}`);
+  }
+
+  powerPlayerHistory(playerId: string, season: number = 2025) {
+    const params = new URLSearchParams();
+    params.set('season', String(season));
+    return this.get<PowerPlayerHistoryResponse>(`/api/power/player/${playerId}?${params.toString()}`);
+  }
+
+  powerHealthCheck() {
+    return this.get<PowerHealthResponse>('/api/power/health');
   }
 }
 
