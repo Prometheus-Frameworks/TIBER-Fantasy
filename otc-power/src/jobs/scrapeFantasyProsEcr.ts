@@ -67,6 +67,16 @@ async function fetchEcr(slice: Slice, week: number) {
 
 /** Map a FantasyPros name to our players.player_id using normalized name */
 async function mapToPlayerIds(candidates: Array<{ rank: number; name: string; team?: string; pos?: string }>) {
+  // build alias index
+  const { rows: aliases } = await q<{ alias: string; player_id: string }>(
+    `create table if not exists players_aliases (
+       alias text primary key,
+       player_id text not null references players(player_id)
+     );
+     select alias, player_id from players_aliases`
+  );
+  const aliasIndex = new Map<string, string>(aliases.map(a => [a.alias, a.player_id]));
+
   // Build name → player_id index from our players table
   const { rows: players } = await q<{ player_id: string; name: string; team: string; position: string }>(
     `select player_id, name, team, position from players`
@@ -81,6 +91,8 @@ async function mapToPlayerIds(candidates: Array<{ rank: number; name: string; te
 
   for (const c of candidates) {
     const key = normalizeName(c.name);
+    const aliasHit = aliasIndex.get(key);
+    if (aliasHit) { matched.push({ player_id: aliasHit, rank: c.rank }); continue; }
     const hit = index.get(key);
     if (hit) {
       // Optional: enforce team/pos sanity if present

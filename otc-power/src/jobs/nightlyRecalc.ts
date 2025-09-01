@@ -18,6 +18,14 @@ function getSeasonWeek(d: Date = new Date()) {
   return { season, week };
 }
 
+// add near top (helper)
+function roleConfidence(recentGamesAt50pctSnaps: number) {
+  // ~0.65 at 0–1 games → ~0.8 at 2 → ~1.0 at 3+
+  const x = Math.max(0, recentGamesAt50pctSnaps - 1.5); // center
+  const sig = 1 / (1 + Math.exp(-1.2 * x));             // slope
+  return Math.max(0.65, Math.min(1.0, sig));
+}
+
 async function getPlayers() {
   const { rows } = await q<{ player_id: string; name: string; team: string; position: 'QB'|'RB'|'WR'|'TE' }>(
     `select player_id, name, team, position from players where position in ('QB','RB','WR','TE')`
@@ -116,19 +124,24 @@ async function main() {
 
       // Compute score
       const flags: string[] = []; // set flags here if needed
-      const confidence = 0.7;     // seed; can compute from sample size later
+      const recentGames =  /* TODO: wire real snap-based count */ 0;
+      const confidence = roleConfidence(recentGames);
 
+      const oppMultiplier = 1.0; // TODO: plug real DEF-vs-POS or SOS feed
       const nextRaw = computePowerScore({
         player_id: p.player_id,
         season, week,
         position: p.position,
         usage_now, talent, environment, availability, market_anchor,
         flags, confidence
-      } as PlayerFacts);
+      } as PlayerFacts, oppMultiplier);
 
-      // clamp (hysteresis) vs last week
+      // after you compute nextRaw (PowerScore from components):
+      const gated = nextRaw * confidence;
+
+      // clamp vs last week, then persist
       const last = await getLastWeekScore(p.player_id, season, week);
-      const power_score = clampDelta(last, nextRaw, flags);
+      const power_score = clampDelta(last, gated, flags);
 
       await upsertFacts({
         player_id: p.player_id,
