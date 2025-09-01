@@ -64,6 +64,14 @@ export async function handlePowerRankingsRequest(
         beat_projection: score.fpg_metrics.beat_projection,
         upside_index: score.fpg_metrics.upside_index,
         
+        // RAG SCORING FIELDS (per specification)
+        expected_points: score.rag_metrics?.expected_points || score.fpg_metrics.expected_fpg,
+        floor_points: score.rag_metrics?.floor_points || (score.fpg_metrics.expected_fpg * 0.75),
+        ceiling_points: score.rag_metrics?.ceiling_points || (score.fpg_metrics.expected_fpg * 1.25),
+        rag_score: score.rag_metrics?.rag_score || score.overall_score,
+        rag_color: score.rag_metrics?.rag_color || 'AMBER',
+        reasons: score.rag_metrics?.reasons || [],
+        
         // Component breakdown
         components: score.components,
         
@@ -141,6 +149,14 @@ export async function handlePlayerAnalysisRequest(
       // Power score breakdown
       overall_score: playerScore.overall_score,
       confidence: Math.round(playerScore.confidence * 100),
+      
+      // RAG SCORING FIELDS (enhanced API response)
+      expected_points: playerScore.rag_metrics.expected_points,
+      floor_points: playerScore.rag_metrics.floor_points,
+      ceiling_points: playerScore.rag_metrics.ceiling_points,
+      rag_score: playerScore.rag_metrics.rag_score,
+      rag_color: playerScore.rag_metrics.rag_color,
+      reasons: playerScore.rag_metrics.reasons,
       
       // Detailed FPG analysis (key feature)
       fpg_analysis: {

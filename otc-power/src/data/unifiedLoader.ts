@@ -7,6 +7,8 @@
 
 import { formFPG, expectedFPG, beatProjection, qbUpsideIndex, rbUpsideIndex, wrUpsideIndex, teUpsideIndex, LEAGUE_RANGES } from './features';
 import { scaleLeagueWeek, confidenceGating, ewma01 } from './math';
+import { computeRAG, generateRAGReasons } from '../core/rag';
+import { getAllPositionStats } from '../core/positionStats';
 
 // Data source imports
 import { fetchWeekPoints, fetchHistoricalFPG } from './sources/sleeper';
@@ -17,12 +19,21 @@ import { fetchFPProjections, fetchECR, calculateMarketAnchor } from './sources/f
 
 export interface PlayerFactsUpdate {
   player_id: string;
+  position: 'QB' | 'RB' | 'WR' | 'TE'; // Player position
   fpg: number;               // Raw fantasy points per game
   xfpg: number;              // Expected FPG from DeepSeek
   proj_fpg: number;          // External consensus projections
   beat_proj: number;         // 0-100: How much player beats projections
   upside_index: number;      // 0-100: Position-specific upside potential
   features: Record<string, any>; // Raw features for audit trail
+  
+  // RAG SCORING FIELDS
+  expected_points: number;   // Weekly expected points (mu)
+  floor_points: number;      // Weekly floor (mu - sigma)
+  ceiling_points: number;    // Weekly ceiling (mu + sigma)
+  rag_score: number;         // 0-100 RAG score with upside bias
+  rag_color: 'GREEN' | 'AMBER' | 'RED'; // Color coding
+  rag_reasons: string[];     // Reasoning array for UI
 }
 
 /**
@@ -101,7 +112,76 @@ export async function loadUnifiedPlayerFacts(
     }
     
     console.log(`✅ Processed ${playerFacts.length} player facts updates`);
-    return playerFacts;
+    
+    // Phase 3: Apply RAG scoring after all feature building
+    console.log('🎯 Computing RAG scores with position-relative calibration...');
+    
+    // Calculate position statistics for league-relative scoring
+    const positionStats = await getAllPositionStats(season, week, playerFacts);
+    
+    // Apply RAG computation to each player
+    const ragEnhancedFacts = playerFacts.map(facts => {
+      const posStats = positionStats[facts.position] || positionStats['QB']; // Fallback
+      
+      // Get volatility factors (from features or defaults)
+      const roleVolatility = facts.features.role_volatility || 0.3;
+      const teamVolatility = facts.features.team_volatility || 0.2;
+      const injuryRisk = facts.features.injury_risk || 0.1;
+      const qbStabilityPenalty = facts.features.qb_stability_penalty || 0.0;
+      
+      // Get matchup and availability factors (using fallbacks for now)
+      const oppMultiplier = 1.0; // TODO: Wire up SOS hook
+      const availability = 0.95;  // TODO: Wire up practice trend
+      
+      const ragResult = computeRAG({
+        pos: facts.position,
+        xfpg_pts: facts.xfpg,
+        proj_pts: facts.proj_fpg,
+        form_pts: facts.fpg,
+        oppMultiplier,
+        availability,
+        roleVolatility,
+        teamVolatility,
+        injuryRisk,
+        qbStabilityPenalty,
+        upsideIndex: facts.upside_index,
+        beatProj0_100: facts.beat_proj,
+        posMedianPts: posStats.median,
+        posStdPts: posStats.std,
+        posP40: posStats.p40
+      });
+      
+      const ragReasons = generateRAGReasons({
+        pos: facts.position,
+        xfpg_pts: facts.xfpg,
+        proj_pts: facts.proj_fpg,
+        form_pts: facts.fpg,
+        oppMultiplier,
+        availability,
+        roleVolatility,
+        teamVolatility,
+        injuryRisk,
+        qbStabilityPenalty,
+        upsideIndex: facts.upside_index,
+        beatProj0_100: facts.beat_proj,
+        posMedianPts: posStats.median,
+        posStdPts: posStats.std,
+        posP40: posStats.p40
+      }, ragResult);
+      
+      return {
+        ...facts,
+        expected_points: ragResult.mu,
+        floor_points: ragResult.floor,
+        ceiling_points: ragResult.ceiling,
+        rag_score: ragResult.score,
+        rag_color: ragResult.color,
+        rag_reasons: ragReasons
+      };
+    });
+    
+    console.log(`✅ Applied RAG scoring to ${ragEnhancedFacts.length} players`);
+    return ragEnhancedFacts;
     
   } catch (error) {
     console.error('❌ Unified loader failed:', error);
@@ -190,12 +270,20 @@ async function processPositionFacts(
       
       const playerUpdate: PlayerFactsUpdate = {
         player_id: playerId,
+        position: position,
         fpg: smoothedFPG,
         xfpg: xfpg,
         proj_fpg: projFPG,
         beat_proj: beatProj,
         upside_index: upsideIndex,
-        features: features
+        features: features,
+        // RAG fields - initialized with defaults, will be computed later
+        expected_points: 0,
+        floor_points: 0,
+        ceiling_points: 0,
+        rag_score: 50,
+        rag_color: 'AMBER',
+        rag_reasons: []
       };
       
       positionFacts.push(playerUpdate);

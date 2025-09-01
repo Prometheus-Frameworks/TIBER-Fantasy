@@ -26,6 +26,14 @@ export interface PowerScore {
     beat_projection: number;
     upside_index: number;
   };
+  rag_metrics: {
+    expected_points: number;  // Weekly expected points (mu)
+    floor_points: number;     // Weekly floor (mu - sigma)
+    ceiling_points: number;   // Weekly ceiling (mu + sigma)
+    rag_score: number;        // 0-100 RAG score with upside bias
+    rag_color: 'GREEN' | 'AMBER' | 'RED'; // Color coding
+    reasons: string[];        // Reasoning array for UI
+  };
   confidence: number;         // 0-1 confidence in the score
   badges: string[];           // UI badges for key insights
 }
@@ -110,7 +118,7 @@ async function calculateIndividualPowerScore(
   
   return {
     player_id: facts.player_id,
-    position: facts.features.position,
+    position: facts.position,
     overall_score: Math.round(overallScore),
     components,
     fpg_metrics: {
@@ -119,6 +127,14 @@ async function calculateIndividualPowerScore(
       projected_fpg: facts.proj_fpg,
       beat_projection: facts.beat_proj,
       upside_index: facts.upside_index
+    },
+    rag_metrics: {
+      expected_points: facts.expected_points,
+      floor_points: facts.floor_points,
+      ceiling_points: facts.ceiling_points,
+      rag_score: facts.rag_score,
+      rag_color: facts.rag_color,
+      reasons: facts.rag_reasons
     },
     confidence,
     badges

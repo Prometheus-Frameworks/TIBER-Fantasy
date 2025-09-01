@@ -84,6 +84,17 @@ export const players = pgTable("players", {
   fpgVariance: real("fpg_variance"), // Week-to-week FPG variance for floor/ceiling
   explosivePlays: integer("explosive_plays"), // 20+ yard plays this season
   redZoneOpportunity: real("red_zone_opportunity"), // RZ touches/targets per game
+  
+  // RAG SCORING SYSTEM - Production weekly analysis
+  expectedPoints: real("expected_points"), // Weekly expected points (mu)
+  floorPoints: real("floor_points"), // Weekly floor (mu - sigma)
+  ceilingPoints: real("ceiling_points"), // Weekly ceiling (mu + sigma) 
+  ragScore: real("rag_score"), // 0-100 RAG score with upside bias
+  ragColor: text("rag_color"), // "GREEN", "AMBER", "RED"
+  
+  // Advanced weekly analytics from earlier phases
+  beatProj: real("beat_proj"), // Beat projection rate 0-100
+  features: jsonb("features"), // Advanced feature calculations
 });
 
 // Articles table for content management
