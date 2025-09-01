@@ -22,7 +22,7 @@
       "superflex": 98
     },
     "age_adjusted_value": 95,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "lamar_jackson",
@@ -47,7 +47,7 @@
       "superflex": 96
     },
     "age_adjusted_value": 93,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "patrick_mahomes",
@@ -72,7 +72,7 @@
       "superflex": 95
     },
     "age_adjusted_value": 95,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "jayden_daniels",
@@ -97,7 +97,7 @@
       "superflex": 92
     },
     "age_adjusted_value": 89.75,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "jalen_hurts",
@@ -122,7 +122,7 @@
       "superflex": 89
     },
     "age_adjusted_value": 88.75,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "joe_burrow",
@@ -147,7 +147,7 @@
       "superflex": 88
     },
     "age_adjusted_value": 89.75,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "anthony_richardson",
@@ -172,7 +172,7 @@
       "superflex": 86
     },
     "age_adjusted_value": 84.75,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "cj_stroud",
@@ -197,7 +197,7 @@
       "superflex": 85
     },
     "age_adjusted_value": 86.75,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "dak_prescott",
@@ -222,7 +222,7 @@
       "superflex": 82
     },
     "age_adjusted_value": 82.75,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "tua_tagovailoa",
@@ -247,7 +247,7 @@
       "superflex": 81
     },
     "age_adjusted_value": 82.75,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "jordan_love",
@@ -272,7 +272,7 @@
       "superflex": 80
     },
     "age_adjusted_value": 83.75,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "brock_purdy",
@@ -297,7 +297,7 @@
       "superflex": 79
     },
     "age_adjusted_value": 82.75,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "kyler_murray",
@@ -322,7 +322,7 @@
       "superflex": 72
     },
     "age_adjusted_value": 77,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "caleb_williams",
@@ -347,7 +347,7 @@
       "superflex": 71
     },
     "age_adjusted_value": 77,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "drake_maye",
@@ -372,7 +372,7 @@
       "superflex": 70
     },
     "age_adjusted_value": 74,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "bo_nix",
@@ -397,7 +397,7 @@
       "superflex": 69
     },
     "age_adjusted_value": 73,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "jamarr_chase",
@@ -423,7 +423,7 @@
     },
     "age_adjusted_value": 95,
     "breakout_probability": 15,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "ceedee_lamb",
@@ -448,7 +448,7 @@
       "superflex": 93
     },
     "age_adjusted_value": 94,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   },
   {
     "player_id": "christian_mccaffrey",
@@ -474,6 +474,6 @@
     },
     "age_adjusted_value": 91,
     "decline_risk": 25,
-    "last_updated": "2025-09-01T01:42:15.288Z"
+    "last_updated": "2025-09-01T01:49:29.255Z"
   }
 ]
