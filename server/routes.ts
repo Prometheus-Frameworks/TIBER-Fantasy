@@ -3883,6 +3883,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== FPG-CENTRIC POWER RANKINGS =====
+  // Phase E: Production FPG-centric scoring with real rushing upside
+  
+  // Import FPG power rankings handlers
+  const { handlePowerRankingsRequest, handlePlayerAnalysisRequest, handleHealthCheck } = 
+    await import('../otc-power/src/api/powerRankings');
+  
+  // FPG Power Rankings - New production system with real rushing metrics
+  app.get('/api/power/fpg/rankings', handlePowerRankingsRequest);
+  
+  // Individual Player FPG Analysis
+  app.get('/api/power/fpg/player/:player_id', handlePlayerAnalysisRequest);
+  
+  // FPG System Health Check
+  app.get('/api/power/fpg/health', handleHealthCheck);
+
   // 2024 Stats routes
   const { default: stats2024Routes } = await import('./routes/stats2024Routes');
   app.use('/api/stats/2024', stats2024Routes);
