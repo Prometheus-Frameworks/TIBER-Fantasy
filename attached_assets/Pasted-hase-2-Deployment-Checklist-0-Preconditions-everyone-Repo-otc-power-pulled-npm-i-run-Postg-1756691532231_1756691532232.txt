@@ -1,0 +1,247 @@
+hase 2 — Deployment Checklist
+0) Preconditions (everyone)
+
+Repo: otc-power pulled & npm i run
+
+Postgres reachable via DATABASE_URL
+
+(Optional) Redis ready if you’re caching
+
+ENV set:
+
+export DATABASE_URL=postgres://user:pass@host:5432/otc
+export SEASON=2024
+export WEEK=1
+
+
+Schema applied (you already have these):
+
+psql "$DATABASE_URL" -f sql/001_schema.sql
+psql "$DATABASE_URL" -f sql/002_indexes.sql
+
+1) Tiber — Stand up the service
+
+Commands
+
+npm run dev         # starts Fastify on PORT (default 8084)
+# In another shell:
+curl "http://localhost:8084/api/power/WR?season=2025&week=1"
+
+
+Expected
+
+200 with an empty or mock items array (until backfill completes)
+
+Server logs: server.listening, no DB errors
+
+Troubleshooting
+
+If Fastify can’t bind: set PORT=8085 and retry
+
+If DB fails: verify DATABASE_URL and that players isn’t empty
+
+2) Tiber — Seed market + points data
+
+2.1 Backfill points (Sleeper → bt_week_points)
+(You can do all weeks in one shot or loop — sample below loops 1–18.)
+
+for w in $(seq 1 18); do WEEK=$w node --loader tsx src/jobs/importSleeperPoints.ts; done
+
+
+Expected
+
+Logs like: importSleeperPoints.week {"week":7,"inserted":~500}
+
+Table bt_week_points grows to ~9k rows (18 weeks × ~500 unique scorers)
+
+2.2 Snapshot FantasyPros ECR
+
+for s in QB RB WR TE; do SLICE=$s SEASON=2024 WEEK=1 npm run bt:scrape:ecr; done
+
+
+Expected
+
+Logs per slice: fp-ecr.slice { "slice":"WR","matched":X,"unmatched":Y }
+
+bt_market_rank populated; any stragglers in bt_market_rank_unmatched
+
+If many unmatched (Tank/Nathaniel, etc.):
+Create aliases (optional but recommended):
+
+create table if not exists players_aliases(
+  alias text primary key,
+  player_id text not null references players(player_id)
+);
+-- examples
+insert into players_aliases(alias, player_id)
+values ('nathaniel dell','<tank_dell_id>')
+on conflict (alias) do nothing;
+
+
+(If you want I’ll wire a quick resolver that joins normalizeName(name) against players_aliases.alias.)
+
+3) Tiber — Run first materialization pass
+
+Nightly compute (manual kick)
+
+npm run recalc:nightly
+
+
+Expected
+
+Logs: players.count { n: #### } then nightlyRecalc: done
+
+player_week_facts filled for (season, week)
+
+power_ranks has rows for OVERALL + QB/RB/WR/TE with ranks/power_score
+
+Smoke test API
+
+curl "http://localhost:8084/api/power/OVERALL?season=2025&week=1" | jq '.items[0:5]'
+
+
+You should see top-5 entries with power_score and delta_w.
+
+4) Grok — Validation pass (edge hunting)
+
+Run
+
+npm run validate
+
+
+Expected
+
+Weekly logs per slice:
+
+{"msg":"validation.week","season":2024,"week":7,"slice":"WR","rho":0.43,"hit":0.63,"drift":{...}}
+
+
+No null rho for weeks with enough overlap
+
+Acceptance targets (v1)
+
+WR/RB Spearman ρ ≥ 0.40 on most weeks (0.35+ acceptable early)
+
+QB ρ ≥ 0.45 (and likely higher once env weight tuned)
+
+Hit rate ≥ 60% (Top-12 → Top-18; QB/TE Top-8 → Top-12)
+
+Drift payoff: Buckets with positive drift (we’re earlier) show higher avg next-week points than neutral/negative buckets
+
+If below target
+
+First lever: availability +3–5% at RB/WR
+
+QB lever: environment up to 28–30%
+
+Do not bump market_anchor > 5%—that’s how you turn sharp edges into consensus mush
+
+5) Tiber — Event worker + cache
+
+Run the event worker
+
+npm run recalc:events
+
+
+Post a fake event to verify bypass & rank movement:
+
+curl -X POST "http://localhost:8084/api/power/events" \
+  -H "content-type: application/json" \
+  -d '{"event_type":"QB_CHANGE","scope":{"team":"NYG"}}'
+
+
+Expected
+
+Worker logs event.start then event.done with affected count
+
+Team WR/TE ranks shift immediately (no hysteresis)
+
+(Optional) Cache
+
+Add Redis TTL 300–900s; bust on nightly + after event
+
+6) Frontend — Hook it up (read-only first)
+
+Consume
+
+GET /api/power/OVERALL?season=2025&week=1
+GET /api/power/QB?season=2025&week=1
+...
+
+
+UI must show
+
+Rank, name, team, position, power_score
+
+Δ (delta_w) badge
+
+5-week sparkline (pull /api/power/player/:id?season=2025 and plot power_score history)
+
+“LIVE” pill only if event worker has touched current week since nightly job
+
+7) Cron it (lightweight automation)
+
+Example (Linux cron)
+
+# Wed 8:30pm ET – scrape ECR
+30 20 * * 3  cd /path/otc-power && SEASON=2025 WEEK=$(node -e 'console.log(new Date().getWeekNumber())') npm run bt:scrape:ecr >> logs/ecr.log 2>&1
+# Tue 3:00am ET – import points (previous week complete)
+0 3 * * 2    cd /path/otc-power && SEASON=2025 npm run bt:import:sleeper >> logs/points.log 2>&1
+# Nightly recompute 3:30am
+30 3 * * *   cd /path/otc-power && npm run recalc:nightly >> logs/recalc.log 2>&1
+
+
+(Replace the week calc with your season calendar when ready.)
+
+8) Go/No-Go — release gate
+
+Go when ALL true:
+
+API returns ≥ 250 items for OVERALL and sensible per-pos lists
+
+Validation shows ρ and hit rate at or above targets across ≥ 4 sample weeks
+
+Drift buckets show monotonic-ish payoff with higher positive drift
+
+No red “unmatched” spikes (or you’ve added aliases for top 30)
+
+No-Go if:
+
+Market anchor accidentally dominates movement, or smoothing is disabled globally (yo-yo ranks)
+
+Negative drift buckets outperform positives (you’re accidentally chasing consensus lag)
+
+9) Backlog (don’t block v1)
+
+players_aliases + resolver join in scraper
+
+Opponent/SOS multiplier hook in scoring (def splits)
+
+Confidence model (rookies/new roles start at 0.65 cap)
+
+Redis cache & precise bust keys
+
+UI “reason tags” (QB_CHANGE, RZ Spike, Snap Cut, etc.)
+
+One-liners to paste in Slack
+
+Tiber, run this sequence:
+
+# bring service up
+npm i && npm run dev &
+# seed data
+SEASON=2024 for w in $(seq 1 18); do WEEK=$w node --loader tsx src/jobs/importSleeperPoints.ts; done
+SEASON=2024 WEEK=1 for s in QB RB WR TE; do SLICE=$s npm run bt:scrape:ecr; done
+# compute ranks
+npm run recalc:nightly
+# sanity check
+curl "http://localhost:8084/api/power/OVERALL?season=2025&week=1" | jq '.items[0:10]'
+
+
+Grok, kick validation:
+
+npm run validate  # expect per-week rho/hit/drift logs
+
+Strong take
+
+If validation says QB env wants 30%, give it the 30%—don’t be precious. Keep market_anchor at 5% max, or you’ll neuter the edge you’re trying to prove. Everything else is tuning, not religion.
