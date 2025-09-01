@@ -3843,9 +3843,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const POWER_SERVICE_URL = 'http://localhost:8084';
   
   app.get('/api/power/:type', async (req: Request, res: Response) => {
+    const { type } = req.params;
+    const { season = 2025, week = 1 } = req.query;
+    
     try {
-      const { type } = req.params;
-      const { season = 2025, week = 1 } = req.query;
       const response = await axios.get(`${POWER_SERVICE_URL}/api/power/${type}?season=${season}&week=${week}`);
       res.json(response.data);
     } catch (error) {
@@ -3857,9 +3858,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get('/api/power/player/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { season = 2025 } = req.query;
+    
     try {
-      const { id } = req.params;
-      const { season = 2025 } = req.query;
       const response = await axios.get(`${POWER_SERVICE_URL}/api/power/player/${id}?season=${season}`);
       res.json(response.data);
     } catch (error) {
