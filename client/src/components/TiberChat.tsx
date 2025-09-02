@@ -79,7 +79,17 @@ export default function TiberChat({ compact = false }: TiberChatProps) {
                   {response.confidence}% conf
                 </Badge>
               </div>
-              <p className="text-sm text-gray-700">{response.verdict}</p>
+              <p className="text-sm font-medium text-gray-800">{response.verdict}</p>
+              
+              {/* Show detailed reasoning in compact mode too */}
+              {response.reasons && response.reasons.length > 0 && (
+                <div className="space-y-1">
+                  {response.reasons.map((reason, index) => (
+                    <p key={index} className="text-xs text-gray-600">• {reason}</p>
+                  ))}
+                </div>
+              )}
+              
               {response.contingencies && response.contingencies.length > 0 && (
                 <div className="pt-2 border-t border-purple-100">
                   <div className="flex items-start gap-2">
