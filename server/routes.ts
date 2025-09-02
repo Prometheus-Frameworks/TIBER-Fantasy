@@ -3899,10 +3899,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { season = 2025, week = 1 } = req.query;
     
     try {
-      let rankings;
+      let rawResults;
       
       if (type.toUpperCase() === 'OVERALL') {
-        rankings = await db.execute(sql`
+        rawResults = await db.execute(sql`
           SELECT 
             pr.rank,
             pr.player_id,
@@ -3928,7 +3928,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ORDER BY pr.rank
         `);
       } else if (['QB', 'RB', 'WR', 'TE'].includes(type.toUpperCase())) {
-        rankings = await db.execute(sql`
+        rawResults = await db.execute(sql`
           SELECT 
             pr.rank,
             pr.player_id,
@@ -3957,6 +3957,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid ranking type. Must be OVERALL, QB, RB, WR, or TE' });
       }
       
+      // Format the results properly for frontend consumption
+      const rankings = rawResults.map((row: any) => ({
+        player_id: row.player_id,
+        name: row.name,
+        team: row.team,
+        position: row.position,
+        rank: Number(row.rank),
+        power_score: Number(row.power_score),
+        delta_w: Number(row.delta_w) || 0,
+        usage_now: Number(row.usage_now) || 0,
+        talent: Number(row.talent) || 0,
+        environment: Number(row.environment) || 0,
+        availability: Number(row.availability) || 0,
+        confidence: Number(row.confidence) || 0.75,
+        expected_points: row.expected_points ? Number(row.expected_points) : null,
+        floor_points: row.floor_points ? Number(row.floor_points) : null,
+        ceiling_points: row.ceiling_points ? Number(row.ceiling_points) : null,
+        rag_score: row.rag_score ? Number(row.rag_score) : null,
+        rag_color: row.rag_color || null,
+        flags: []
+      }));
+      
       res.json({
         season: Number(season),
         week: Number(week),
@@ -3977,7 +3999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { season = 2025 } = req.query;
     
     try {
-      const history = await db.execute(sql`
+      const rawHistory = await db.execute(sql`
         SELECT 
           pwf.week,
           pwf.power_score,
@@ -3995,11 +4017,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ORDER BY pwf.week
       `);
       
-      if (history.length === 0) {
+      if (rawHistory.length === 0) {
         return res.status(404).json({ error: 'Player not found or no data available' });
       }
       
-      const player = history[0];
+      const player = rawHistory[0];
       
       res.json({
         player_id: id,
@@ -4007,14 +4029,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         team: player.team,
         position: player.position,
         season: Number(season),
-        weeks: history.map(h => ({
-          week: h.week,
-          power_score: h.power_score,
-          usage_now: h.usage_now,
-          talent: h.talent,
-          environment: h.environment,
-          availability: h.availability,
-          confidence: h.confidence
+        weeks: rawHistory.map((h: any) => ({
+          week: Number(h.week),
+          power_score: Number(h.power_score),
+          usage_now: Number(h.usage_now),
+          talent: Number(h.talent),
+          environment: Number(h.environment),
+          availability: Number(h.availability),
+          confidence: Number(h.confidence)
         }))
       });
       

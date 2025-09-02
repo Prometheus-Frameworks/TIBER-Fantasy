@@ -214,6 +214,12 @@ export default function PowerRankings() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Debug info */}
+              {!isLoading && (
+                <div className="mb-4 p-2 bg-gray-100 dark:bg-gray-800 text-xs rounded">
+                  Debug: {rankings ? `Has data, items: ${rankings.items?.length || 'undefined'}, total: ${rankings.total}` : 'No data'}
+                </div>
+              )}
               {isLoading ? (
                 <div className="space-y-3">
                   {Array.from({ length: 10 }).map((_, i) => (
