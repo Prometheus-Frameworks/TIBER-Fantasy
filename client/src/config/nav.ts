@@ -23,7 +23,7 @@ export const NAV_LINKS: NavLink[] = [
       { href: "/sos", label: "SOS", description: "Strength of Schedule matchup analysis" }
     ]
   },
-  { href: "/competence", label: "Competence Mode", description: "Truth-first AI guidance" },
+  { href: "/about", label: "About", description: "Learn about On The Clock and Tiber" },
   { href: "/articles", label: "Articles", description: "Strategy and insights" },
 ];
 

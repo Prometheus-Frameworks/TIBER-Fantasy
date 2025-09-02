@@ -160,6 +160,65 @@ export default function About() {
           </Card>
         )}
 
+        {/* Meet Tiber */}
+        <Card className="mb-12 border-0 bg-gradient-to-r from-purple-50 to-plum-50 backdrop-blur-sm shadow-xl">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Brain className="h-6 w-6 text-plum" />
+              <CardTitle className="text-2xl">Meet Tiber: Your Fantasy Reality Check</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-white/80 p-6 rounded-lg border border-purple-200 space-y-4">
+              <p className="text-lg text-gray-700 leading-relaxed mb-4">
+                Tiber is our truth-first fantasy football advisor. Unlike other systems that tell you 
+                what you want to hear, Tiber provides blunt, evidence-based advice that prioritizes 
+                accuracy over agreement and your growth as a fantasy manager.
+              </p>
+              
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm">Tiber's Philosophy:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <div className="font-medium text-sm">Truth Over Agreement</div>
+                    <div className="text-xs text-gray-600">Evidence-based advice, even if unpopular</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-medium text-sm">Context Awareness</div>
+                    <div className="text-xs text-gray-600">Tailored to your league and history</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-medium text-sm">Proactive Guidance</div>
+                    <div className="text-xs text-gray-600">Anticipates trends and opportunities</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-medium text-sm">Transparent Reasoning</div>
+                    <div className="text-xs text-gray-600">Shows data and logic behind advice</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-medium text-sm">Risk Awareness</div>
+                    <div className="text-xs text-gray-600">Clear confidence and alternatives</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-medium text-sm">User Growth Focus</div>
+                    <div className="text-xs text-gray-600">Makes you a sharper player</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="text-center mt-6">
+                <a 
+                  href="/" 
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-plum text-white font-semibold rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <Brain className="h-5 w-5" />
+                  Chat with Tiber
+                </a>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
       </div>
 
       <DataAttributionFooter />

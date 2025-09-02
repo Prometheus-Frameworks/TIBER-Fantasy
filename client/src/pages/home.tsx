@@ -1,5 +1,6 @@
 import GlowCard from "@/components/GlowCard";
 import GlowCTA from "@/components/GlowCTA";
+import TiberChat from "@/components/TiberChat";
 import { Section } from "@/components/Section";
 import { Trophy, Compass, Users, Sparkles, Link2, Zap } from "lucide-react";
 import { Link } from "wouter";
@@ -73,6 +74,18 @@ export default function Home(){
         <GlowCard title="Player Evaluation" subtitle="Fusion rankings with 4‑directional insights" icon={<Compass/>} href="/player-evaluation" />
         <GlowCard title="OTC Consensus" subtitle="Community boards & tiers" icon={<Users/>} href="/consensus" />
         <GlowCard title="Draft Command" subtitle="Real‑time draft aids" icon={<Sparkles/>} href="/draft" />
+      </div>
+
+      {/* Tiber Chat */}
+      <Section title="🤖 Chat with Tiber" />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <TiberChat compact />
+        </div>
+        <div className="space-y-3">
+          <GlowCard title="About Tiber" subtitle="Learn about our truth-first advisor" href="/about" />
+          <GlowCard title="Full Chat" subtitle="Extended conversation mode" href="/tiber" />
+        </div>
       </div>
 
       {/* Quick Links */}

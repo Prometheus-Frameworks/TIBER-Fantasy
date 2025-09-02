@@ -53,7 +53,7 @@ import WRAnalyticsTable from "@/components/WRAnalyticsTable";
 import RBAnalytics from "@/pages/RBAnalytics";
 import QBAnalyticsTable from "@/components/QBAnalyticsTable";
 import TEAnalyticsTable from "@/components/TEAnalyticsTable";
-import CompetenceMode from "@/pages/CompetenceMode";
+import Tiber from "@/pages/Tiber";
 import TEEvaluationTest from "@/pages/TEEvaluationTest";
 import BatchEvaluationTest from "@/pages/BatchEvaluationTest";
 import PrometheusStressTest from "@/pages/PrometheusStressTest";
@@ -168,7 +168,8 @@ function Router() {
       <Route path="/consensus-transparency" component={ConsensusTransparency} />
       <Route path="/research" component={ResearchAnalysis} />
       <Route path="/snap-counts" component={SnapCounts} />
-      <Route path="/competence" component={CompetenceMode} />
+      <Route path="/tiber" component={Tiber} />
+      <Route path="/competence" component={() => { window.location.replace('/tiber'); return null; }} />
       
       {/* Mock Landing Pages - Easily Identifiable */}
       <Route path="/systems" component={Systems} />
