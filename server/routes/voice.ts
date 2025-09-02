@@ -6,6 +6,7 @@
 import { Router } from "express";
 import { tiberAnswer } from "../voice/answer";
 import { parseQuery } from "../voice/intentParser";
+import { tiberCompare } from "../voice/compare";
 import type { TiberAsk, TiberAnswer } from "../voice/types";
 
 const router = Router();
@@ -90,6 +91,47 @@ router.post('/structured', async (req, res) => {
 });
 
 /**
+ * POST /api/voice/compare
+ * Head-to-head player comparison with contextual analysis
+ */
+router.post('/compare', async (req, res) => {
+  try {
+    const { players, season = 2025, week = 1, scoring = 'PPR' } = req.body;
+    
+    // Validate input
+    if (!players || !Array.isArray(players) || players.length !== 2) {
+      return res.status(400).json({
+        error: 'Must provide exactly 2 players in array format',
+        example: { 
+          players: ['Jerry Jeudy', 'DeVonta Smith'], 
+          season: 2025, 
+          week: 1, 
+          scoring: 'PPR' 
+        }
+      });
+    }
+    
+    const result = await tiberCompare(players, season, week, scoring);
+    
+    res.json({
+      ...result,
+      meta: {
+        source: 'tiber_compare',
+        generatedAt: new Date().toISOString(),
+        version: '1.0'
+      }
+    });
+    
+  } catch (error) {
+    console.error('Tiber compare error:', error);
+    res.status(500).json({
+      error: 'Failed to process comparison',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * GET /api/voice/health
  * Health check for voice system
  */
@@ -103,12 +145,16 @@ router.get('/health', (req, res) => {
       'TRADE', 
       'WAIVER',
       'RANKING_EXPLAIN',
-      'PLAYER_OUTLOOK'
+      'PLAYER_OUTLOOK',
+      'HEAD_TO_HEAD_COMPARE'
     ],
     data_sources: [
       'otc_power_rankings',
       'fpg_system',
-      'rag_scoring'
+      'rag_scoring',
+      'vegas_odds',
+      'weather_data',
+      'defense_splits'
     ],
     timestamp: new Date().toISOString()
   });
