@@ -81,9 +81,59 @@ export default function TiberChat({ compact = false }: TiberChatProps) {
               </div>
               <p className="text-sm font-medium text-gray-800">{response.verdict}</p>
               
-              {/* Show detailed reasoning in compact mode too */}
+              {/* Show rich player context and metrics */}
+              {response.metrics && (
+                <div className="space-y-2">
+                  {response.metrics.name && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="font-medium text-gray-700">{response.metrics.name}</span>
+                      <span className="text-gray-500">({response.metrics.team} {response.metrics.pos})</span>
+                      {response.metrics.rag_color && (
+                        <Badge variant="outline" className={`text-xs px-1 py-0 ${
+                          response.metrics.rag_color === 'GREEN' ? 'border-green-500 text-green-700' :
+                          response.metrics.rag_color === 'YELLOW' ? 'border-yellow-500 text-yellow-700' :
+                          'border-red-500 text-red-700'
+                        }`}>
+                          {response.metrics.rag_color}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {response.metrics.expected_points && (
+                      <div>
+                        <span className="text-gray-500">Expected:</span>
+                        <span className="font-medium ml-1">{response.metrics.expected_points} pts</span>
+                      </div>
+                    )}
+                    {response.metrics.ceiling_points && (
+                      <div>
+                        <span className="text-gray-500">Ceiling:</span>
+                        <span className="font-medium ml-1">{response.metrics.ceiling_points} pts</span>
+                      </div>
+                    )}
+                    {response.metrics.delta_vs_ecr && (
+                      <div>
+                        <span className="text-gray-500">vs ECR:</span>
+                        <span className={`font-medium ml-1 ${response.metrics.delta_vs_ecr > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {response.metrics.delta_vs_ecr > 0 ? '+' : ''}{response.metrics.delta_vs_ecr}
+                        </span>
+                      </div>
+                    )}
+                    {response.metrics.upside_index && (
+                      <div>
+                        <span className="text-gray-500">Upside:</span>
+                        <span className="font-medium ml-1">{response.metrics.upside_index}/100</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Show detailed reasoning */}
               {response.reasons && response.reasons.length > 0 && (
-                <div className="space-y-1">
+                <div className="space-y-1 pt-1 border-t border-purple-100">
                   {response.reasons.map((reason, index) => (
                     <p key={index} className="text-xs text-gray-600">• {reason}</p>
                   ))}
