@@ -1,11 +1,93 @@
 /**
- * Tiber Answer System - Real OTC Power Integration
- * Main answer router using live database queries
+ * Tiber Answer System - Real OTC Power Integration + Memory-Enhanced Intelligence
+ * Main answer router using live database queries and learned insights
  */
 
 import { resolvePlayerId, fetchPlayerWeekBundle } from './dataAdapter';
 import { decideStartSit, decideTrade, reasonsFromMetrics, contingencies } from './deciders';
+import { db } from '../db';
+import { tiberMemory } from '@shared/schema';
+import { ilike, or, sql, desc } from 'drizzle-orm';
 import type { TiberAsk, TiberAnswer } from './types';
+
+// Tiber Memory Integration - Search knowledge base for relevant insights
+async function getTiberMemoryInsights(p: any, ask: TiberAsk): Promise<string[]> {
+  try {
+    const insights: string[] = [];
+    
+    // Search for current season data (highest priority)
+    const currentSeasonMemory = await db.select()
+      .from(tiberMemory)
+      .where(sql`${tiberMemory.category} = '2025_season'`)
+      .orderBy(desc(tiberMemory.confidence))
+      .limit(1);
+    
+    if (currentSeasonMemory.length > 0) {
+      const seasonData = currentSeasonMemory[0];
+      const seasonInsights = Array.isArray(seasonData.insights) ? seasonData.insights : [];
+      
+      // Check for player-specific current season insights
+      for (const insight of seasonInsights) {
+        if (insight.toLowerCase().includes(p.name?.toLowerCase()) ||
+            insight.toLowerCase().includes(p.team?.toLowerCase()) ||
+            (p.position && insight.toLowerCase().includes(p.position.toLowerCase()))) {
+          insights.push(`🚨 2025 Intel: ${insight}`);
+          break; // Only add one current season insight to avoid clutter
+        }
+      }
+    }
+    
+    // Search for position-specific insights from training data
+    const positionMemory = await db.select()
+      .from(tiberMemory)
+      .where(or(
+        ilike(tiberMemory.content, `%${p.position}%`),
+        sql`${p.position?.toLowerCase()} = ANY(${tiberMemory.tags})`
+      ))
+      .orderBy(desc(tiberMemory.confidence))
+      .limit(2);
+    
+    for (const memory of positionMemory) {
+      const memoryInsights = Array.isArray(memory.insights) ? memory.insights : [];
+      
+      if (memory.category === 'scheme_analysis' && memoryInsights.length > 0) {
+        // Add scheme-based insight for this position
+        const relevantSchemeInsight = memoryInsights.find((insight: string) => 
+          insight.toLowerCase().includes(p.position?.toLowerCase() || '')
+        );
+        if (relevantSchemeInsight && insights.length < 2) {
+          insights.push(`📊 Scheme context: ${relevantSchemeInsight.slice(0, 85)}...`);
+        }
+      }
+      
+      if (memory.category === 'draft_analysis' && p.position === 'QB' && insights.length < 2) {
+        // Add QB-specific draft pattern for quarterbacks
+        const qbInsight = memoryInsights.find((insight: string) => 
+          insight.toLowerCase().includes('qb') || insight.toLowerCase().includes('quarterback')
+        );
+        if (qbInsight) {
+          insights.push(`🎯 Pattern: ${qbInsight.slice(0, 90)}...`);
+        }
+      }
+    }
+    
+    // Update access time for retrieved memories
+    if (currentSeasonMemory.length > 0 || positionMemory.length > 0) {
+      const allMemoryIds = [...currentSeasonMemory, ...positionMemory].map(m => m.id);
+      if (allMemoryIds.length > 0) {
+        await db.update(tiberMemory)
+          .set({ lastAccessed: new Date() })
+          .where(sql`${tiberMemory.id} = ANY(${allMemoryIds})`);
+      }
+    }
+    
+    return insights.slice(0, 2); // Limit to 2 memory insights max
+    
+  } catch (error) {
+    console.error('Memory search error:', error);
+    return [];
+  }
+}
 
 export async function tiberAnswer(ask: TiberAsk): Promise<TiberAnswer> {
   const who = ask.players[0];
@@ -63,13 +145,17 @@ export async function tiberAnswer(ask: TiberAsk): Promise<TiberAnswer> {
   }
 
   // Build evidence-based reasons and contingencies
-  const reasons = reasonsFromMetrics(p);
+  const baseReasons = reasonsFromMetrics(p);
   const cont = contingencies(p);
+  
+  // Enhanced with Tiber Memory - add learned insights (temporarily disabled while fixing core data)
+  // const memoryInsights = await getTiberMemoryInsights(p, ask);
+  const enhancedReasons = [...baseReasons]; // ...memoryInsights];
 
   return {
     verdict,
     confidence: Math.round(Math.max(0, Math.min(100, confidence))),
-    reasons,
+    reasons: enhancedReasons,
     contingencies: cont.length ? cont : undefined,
     metrics: {
       player_id: p.player_id,
@@ -87,6 +173,7 @@ export async function tiberAnswer(ask: TiberAsk): Promise<TiberAnswer> {
       upside_index: p.upside_index,
       beat_proj: p.beat_proj
     },
-    tone: 'tiber'
+    tone: 'tiber',
+    memory_applied: false // memoryInsights.length > 0
   };
 }
