@@ -95,6 +95,11 @@ export const players = pgTable("players", {
   // Advanced weekly analytics from earlier phases
   beatProj: real("beat_proj"), // Beat projection rate 0-100
   features: jsonb("features"), // Advanced feature calculations
+  
+  // ROOKIE RISERS SYSTEM - Draft data for rookie identification
+  draftYear: integer("draft_year"), // Draft year to identify rookies
+  draftRound: integer("draft_round"), // Draft round (1-7, or NULL for UDFA)
+  draftPick: integer("draft_pick"), // Overall draft pick
 });
 
 // Articles table for content management
@@ -1048,3 +1053,80 @@ export const tiberMemory = pgTable("tiber_memory", {
 export const insertTiberMemorySchema = createInsertSchema(tiberMemory).omit({ id: true, createdAt: true, updatedAt: true });
 export type TiberMemory = typeof tiberMemory.$inferSelect;
 export type InsertTiberMemory = z.infer<typeof insertTiberMemorySchema>;
+
+// ========================================
+// ROOKIE RISERS SYSTEM TABLES
+// ========================================
+
+// Rookie Weekly Usage Table - Raw usage signals for waiver heat calculation
+export const rookieWeeklyUsage = pgTable("rookie_weekly_usage", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  snapPct: real("snap_pct"), // Offensive snap percentage
+  routes: integer("routes"), // Routes run (WR/TE)
+  targets: integer("targets"), // Targets (WR/TE)
+  carries: integer("carries"), // Carries (RB)
+  touches: integer("touches"), // Total touches (carries + targets)
+  rzTargets: integer("rz_targets"), // Red zone targets
+  rzCarries: integer("rz_carries"), // Red zone carries
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Grok's performance indices
+  seasonWeekIdx: index("rookie_usage_season_week_idx").on(table.season, table.week),
+  playerSeasonIdx: index("rookie_usage_player_season_idx").on(table.playerId, table.season),
+  uniquePlayerWeek: unique("rookie_usage_unique").on(table.playerId, table.season, table.week),
+}));
+
+// Rookie Context Signals Table - Market and situational context
+export const rookieContextSignals = pgTable("rookie_context_signals", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  injuryOpening: boolean("injury_opening").default(false), // Team injury opens opportunity
+  depthChartRank: integer("depth_chart_rank"), // Position on depth chart (1=starter)
+  newsWeight: real("news_weight"), // 0-1 coach quotes/beat reports strength
+  marketRostership: real("market_rostership"), // 0-1 rostership percentage
+  marketStartPct: real("market_start_pct"), // 0-1 start percentage  
+  adpDelta: real("adp_delta"), // ADP movement (negative = market lag)
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  seasonWeekIdx: index("context_season_week_idx").on(table.season, table.week),
+  playerSeasonIdx: index("context_player_season_idx").on(table.playerId, table.season),
+  uniquePlayerWeek: unique("context_unique").on(table.playerId, table.season, table.week),
+}));
+
+// Rookie Risers Snapshots - Weekly official Waiver Heat records (Hybrid Model backbone)
+export const rookieRiserSnapshots = pgTable("rookie_riser_snapshots", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  usageGrowth: real("usage_growth"), // 0-1 normalized usage growth score
+  opportunityDelta: real("opportunity_delta"), // 0-1 opportunity from injuries/depth
+  marketLag: real("market_lag"), // 0-1 market inefficiency score
+  newsWeight: real("news_weight"), // 0-1 beat reports/coach quotes
+  waiverHeat: integer("waiver_heat"), // 0-100 final Waiver Heat Index
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Grok's recommended indices for performance
+  createdAtIdx: index("snapshots_created_at_idx").on(table.createdAt),
+  seasonWeekIdx: index("snapshots_season_week_idx").on(table.season, table.week),
+  heatIdx: index("snapshots_heat_idx").on(table.waiverHeat),
+  uniquePlayerWeek: unique("snapshots_unique").on(table.playerId, table.season, table.week),
+}));
+
+// Rookie Risers Types
+export type RookieWeeklyUsage = typeof rookieWeeklyUsage.$inferSelect;
+export type InsertRookieWeeklyUsage = typeof rookieWeeklyUsage.$inferInsert;
+export type RookieContextSignals = typeof rookieContextSignals.$inferSelect;
+export type InsertRookieContextSignals = typeof rookieContextSignals.$inferInsert;
+export type RookieRiserSnapshots = typeof rookieRiserSnapshots.$inferSelect;
+export type InsertRookieRiserSnapshots = typeof rookieRiserSnapshots.$inferInsert;
+
+// Rookie Risers Insert Schemas
+export const insertRookieWeeklyUsageSchema = createInsertSchema(rookieWeeklyUsage).omit({ id: true, createdAt: true });
+export const insertRookieContextSignalsSchema = createInsertSchema(rookieContextSignals).omit({ id: true, createdAt: true });
+export const insertRookieRiserSnapshotsSchema = createInsertSchema(rookieRiserSnapshots).omit({ id: true, createdAt: true });

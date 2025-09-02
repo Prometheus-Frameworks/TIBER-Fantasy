@@ -1,0 +1,271 @@
+Rookie Risers – Repo Blueprint
+
+Name: otc-rookie-risers
+Purpose: Standalone service (can be mounted in OTC) that:
+
+Real-time computes Waiver Heat from external APIs
+
+Weekly snapshots (official truth) every Tuesday 9:00 AM ET (pre-waivers)
+
+Folder Structure
+otc-rookie-risers/
+├─ package.json
+├─ tsconfig.json
+├─ .env.example
+├─ src/
+│  ├─ server.ts
+│  ├─ config/
+│  │   ├─ env.ts
+│  │   └─ schedule.ts
+│  ├─ jobs/
+│  │   ├─ snapshotWeekly.ts
+│  │   └─ backfill.ts
+│  ├─ data/
+│  │   ├─ sleeperClient.ts
+│  │   ├─ newsClient.ts        // FantasyLife / Rotoworld
+│  │   ├─ injuriesClient.ts    // NFL-Data-Py proxy / FantasyLife
+│  │   └─ adpClient.ts         // FantasyPros/Underdog/Sleeper
+│  ├─ services/
+│  │   ├─ waiverHeat.ts
+│  │   ├─ usageGrowth.ts
+│  │   ├─ opportunityDelta.ts
+│  │   ├─ marketLag.ts
+│  │   └─ newsWeight.ts
+│  ├─ db/
+│  │   ├─ schema.sql
+│  │   ├─ client.ts
+│  │   └─ queries.ts
+│  ├─ api/
+│  │   ├─ index.ts
+│  │   ├─ risers.ts            // GET /risers, GET /risers/:week
+│  │   └─ players.ts           // GET /players/:id/trend
+│  ├─ utils/
+│  │   ├─ rookies.ts
+│  │   ├─ weeks.ts
+│  │   └─ logging.ts
+│  └─ web/                     // (optional) mini UI you can embed in OTC
+│      ├─ index.html
+│      └─ app.tsx
+└─ README.md
+
+Env Vars (.env.example)
+NODE_ENV=development
+PORT=8085
+
+# Data providers
+FANTASYLIFE_API_KEY=your_key
+ROTOWORLD_API_KEY=optional
+FANTASYPROS_API_KEY=optional
+
+# DB
+DATABASE_URL=postgres://user:pass@host:5432/otc_risers
+
+# Timezone (America/Toronto for OTC)
+TZ=America/Toronto
+
+Database Schema (Postgres)
+-- src/db/schema.sql
+
+-- Players (rookies only)
+CREATE TABLE IF NOT EXISTS players (
+  player_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  team TEXT,
+  position TEXT,
+  draft_year INT,
+  draft_round INT,
+  draft_pick INT
+);
+
+-- Weekly usage (raw signals we compute on top of)
+CREATE TABLE IF NOT EXISTS weekly_usage (
+  player_id TEXT REFERENCES players(player_id),
+  season INT NOT NULL,
+  week INT NOT NULL,
+  snap_pct NUMERIC,
+  routes INT,
+  targets INT,
+  carries INT,
+  touches INT,
+  rz_targets INT,
+  rz_carries INT,
+  UNIQUE(player_id, season, week)
+);
+
+-- Context signals
+CREATE TABLE IF NOT EXISTS context_signals (
+  player_id TEXT REFERENCES players(player_id),
+  season INT NOT NULL,
+  week INT NOT NULL,
+  injury_opening BOOLEAN DEFAULT FALSE,
+  depth_chart_rank INT,     -- e.g., WR2=2, RB3=3, etc.
+  news_weight NUMERIC,      -- 0..1 scored from news/blurbs
+  market_rostership NUMERIC, -- 0..1
+  market_start_pct NUMERIC,  -- 0..1
+  adp_delta NUMERIC,        -- negative => ignored by market
+  UNIQUE(player_id, season, week)
+);
+
+-- Snapshot table (official weekly record)
+CREATE TABLE IF NOT EXISTS riser_snapshots (
+  player_id TEXT REFERENCES players(player_id),
+  season INT NOT NULL,
+  week INT NOT NULL,
+  usage_growth NUMERIC,       -- 0..1
+  opportunity_delta NUMERIC,  -- 0..1
+  market_lag NUMERIC,         -- 0..1
+  news_weight NUMERIC,        -- 0..1
+  waiver_heat NUMERIC,        -- 0..100
+  created_at TIMESTAMP DEFAULT now(),
+  UNIQUE(player_id, season, week)
+);
+
+Waiver Heat (Grok’s weights)
+// src/services/waiverHeat.ts
+export function waiverHeat(
+  usageGrowth: number,        // 0..1
+  opportunityDelta: number,   // 0..1
+  marketLag: number,          // 0..1
+  newsWeight: number          // 0..1
+): number {
+  const score =
+    0.40 * usageGrowth +
+    0.30 * opportunityDelta +
+    0.20 * marketLag +
+    0.10 * newsWeight;
+  return Math.round(score * 100); // 0..100
+}
+
+Normalization helpers (examples)
+// src/services/usageGrowth.ts
+// e.g., growth of snap% + routes + targets over trailing 2-3 weeks
+export function usageGrowthSignal(weeks: Array<{snapPct:number; routes:number; targets:number}>): number {
+  if (weeks.length < 2) return 0;
+  const last = weeks[weeks.length-1];
+  const prev = weeks[weeks.length-2];
+  // simple normalized deltas; you can refine
+  const dSnap  = Math.max(0, last.snapPct - prev.snapPct) / 100;         // 0..1
+  const dRoutes= Math.max(0, last.routes - prev.routes) / Math.max(10, prev.routes || 10);
+  const dTgts  = Math.max(0, last.targets - prev.targets) / Math.max(6,  prev.targets || 6);
+  return clamp((dSnap + dRoutes + dTgts) / 3);
+}
+
+export const clamp = (v:number) => Math.max(0, Math.min(1, v));
+
+Weekly Snapshot Job (Hybrid Backbone)
+
+When: Tuesday 9:00 AM ET
+
+What: Pull latest week’s rookie signals, compute Waiver Heat, persist to riser_snapshots. This is the “official record.”
+
+// src/jobs/snapshotWeekly.ts
+import cron from 'node-cron';
+import { computeCurrentWeekRisers } from '../pipeline/compute';
+import { saveSnapshots } from '../db/queries';
+
+export function startWeeklySnapshot() {
+  // Runs 9:00 AM every Tuesday America/Toronto
+  cron.schedule('0 9 * * 2', async () => {
+    try {
+      const risers = await computeCurrentWeekRisers();  // pulls external APIs, normalizes
+      await saveSnapshots(risers);                      // writes to riser_snapshots
+      console.log('[Snapshot] Saved', risers.length, 'rookie snapshots');
+    } catch (e) {
+      console.error('[Snapshot] Failed', e);
+    }
+  }, { timezone: 'America/Toronto' });
+}
+
+Real-Time API (Sexy freshness for users)
+
+GET /risers?week=current → recompute live from external APIs (fast path with 5-min cache)
+
+GET /risers/:week → from snapshots (official history)
+
+GET /players/:id/trend → combines snapshots + last RT compute for a tidy sparkline
+
+// src/api/risers.ts
+import { Router } from 'express';
+import { getSnapshotsForWeek, getRealtimeRisers } from '../db/queries';
+
+const router = Router();
+
+router.get('/', async (req, res) => {
+  const week = (req.query.week as string) || 'current';
+  if (week === 'current') {
+    const live = await getRealtimeRisers(); // cached compute
+    return res.json({ source: 'realtime', week: live.week, data: live.players });
+  } else {
+    const snap = await getSnapshotsForWeek(Number(week));
+    return res.json({ source: 'snapshot', week: Number(week), data: snap });
+  }
+});
+
+export default router;
+
+Rookie Filter (one-liner helper)
+// src/utils/rookies.ts
+export function isRookie(draftYear: number, season: number) {
+  return draftYear === season;
+}
+
+Schedule Config
+// src/config/schedule.ts
+export const SNAPSHOT_CRON = '0 9 * * 2'; // Tue 09:00 local TZ
+export const SNAPSHOT_TZ   = 'America/Toronto';
+
+Quick Start (for Tiber)
+
+Create DB & apply schema
+
+createdb otc_risers
+psql otc_risers < src/db/schema.sql
+
+
+Install & run
+
+npm i
+cp .env.example .env   # fill keys
+npm run dev
+
+
+Seed rookies (optional)
+
+Add draft class to players via Sleeper or your internal player service.
+
+Test endpoints
+
+GET /risers?week=current (should compute live)
+
+GET /risers/1..18 (after first snapshot lands)
+
+Data Clients (plug in your existing pipes)
+
+sleeperClient.ts → weekly logs (snaps/routes/targets/carries/red zone)
+
+injuriesClient.ts → injury reports + depth chart promotions
+
+newsClient.ts → FantasyLife JSON / Rotoworld blurbs (score 0..1)
+
+adpClient.ts → ADP + rostership/start% for Market Lag
+
+Tiber: if OTC already wraps these, just import your existing services instead and map to the interfaces here.
+
+Frontend (Optional Mini UI)
+
+A dead-simple /web/app.tsx that shows:
+
+Table: Player | Team | Heat | ΔUsage | Injury Bump | Market Lag | News
+
+Toggle: Current vs Snapshot (Week N)
+Drop this straight into OTC as an iframe or merge the JSX into your page.
+
+Guardrails (real talk)
+
+Noisy news? Cap news_weight at 0.5 unless corroborated by usage in last 2 games.
+
+One-week wonders? Require 2-week moving growth (or flag “Flash Play” vs “Riser”).
+
+Bye-week traps? Don’t punish “no growth” during byes. Smooth with a 3-week window.
+
+RB committees: privilege touch share > raw carries

@@ -6,6 +6,14 @@
 import express from 'express';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
+import { 
+  calculateWaiverHeat, 
+  calculateUsageGrowth,
+  calculateOpportunityDelta,
+  calculateMarketLag, 
+  calculateNewsWeight,
+  isRookie
+} from '../services/waiverHeat';
 
 const router = express.Router();
 
@@ -27,20 +35,7 @@ interface RookieUsageWeekly {
   redZoneOpportunities: number;
 }
 
-/**
- * Calculate Waiver Heat Index (1-100)
- * Formula from Grok: 40% Usage + 30% Opportunity + 20% Market + 10% News
- */
-function calculateWaiverHeat(input: WaiverHeatInput): number {
-  const score = (
-    input.usageGrowth * 0.40 +      // Usage Growth (0-40)
-    input.opportunityDelta * 0.30 + // Opportunity Delta (0-30)
-    input.marketLag * 0.20 +        // Market Lag (0-20)
-    input.newsWeight * 0.10         // News Weight (0-10)
-  );
-  
-  return Math.round(Math.max(1, Math.min(100, score)));
-}
+// Removed - now using server/services/waiverHeat.ts implementation
 
 /**
  * Calculate usage growth from week-to-week data
@@ -111,15 +106,15 @@ router.get('/waiver-heat', async (req, res) => {
     // TODO: Get rostership data from ESPN/Yahoo APIs
     // TODO: Get news weight from RAG system
     
-    const mockInput: WaiverHeatInput = {
-      playerId: playerId as string,
-      usageGrowth: 25,      // Example: 25/40 usage growth
-      opportunityDelta: 18, // Example: 18/30 opportunity from injury
-      marketLag: 12,        // Example: 12/20 market lag
-      newsWeight: 8         // Example: 8/10 news strength
+    // Using new Waiver Heat service with proper normalization (0-1 inputs)
+    const mockNormalizedInput = {
+      usageGrowth: 0.65,      // Normalized: 65% usage growth 
+      opportunityDelta: 0.6,  // Normalized: 60% opportunity from injury
+      marketLag: 0.55,        // Normalized: 55% market lag
+      newsWeight: 0.8         // Normalized: 80% news strength
     };
     
-    const heatIndex = calculateWaiverHeat(mockInput);
+    const heatIndex = calculateWaiverHeat(mockNormalizedInput);
     
     res.json({
       success: true,
@@ -127,11 +122,17 @@ router.get('/waiver-heat', async (req, res) => {
       week,
       waiver_heat: heatIndex,
       components: {
-        usage_growth: mockInput.usageGrowth,
-        opportunity_delta: mockInput.opportunityDelta,
-        market_lag: mockInput.marketLag,
-        news_weight: mockInput.newsWeight
+        usage_growth: mockNormalizedInput.usageGrowth,
+        opportunity_delta: mockNormalizedInput.opportunityDelta,
+        market_lag: mockNormalizedInput.marketLag,
+        news_weight: mockNormalizedInput.newsWeight
       },
+      note_grok_fixes: [
+        'NaN protection implemented',
+        'Position-specific usage calculations',
+        'News weight corroboration guardrails',
+        'UDFA edge case handling'
+      ],
       formula: 'Grok formula: 40% Usage + 30% Opportunity + 20% Market + 10% News',
       todo: [
         'Integrate Sleeper API for usage data',
