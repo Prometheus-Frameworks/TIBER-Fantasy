@@ -17,13 +17,15 @@ export default function CompetenceMode() {
 
   const analysisMutation = useMutation({
     mutationFn: async (request: CompetenceRequest) => {
-      return apiRequest('/api/competence/analyze', {
+      const response = await fetch('/api/competence/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
       });
+      if (!response.ok) throw new Error('Failed to analyze request');
+      return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data: CompetenceResponse) => {
       setResponse(data);
     },
   });
@@ -138,9 +140,8 @@ export default function CompetenceMode() {
             <Button 
               onClick={handleSubmit}
               disabled={!query.trim() || analysisMutation.isPending}
-              loading={analysisMutation.isPending}
             >
-              Analyze
+              {analysisMutation.isPending ? "Analyzing..." : "Analyze"}
             </Button>
           </div>
         </CardContent>
