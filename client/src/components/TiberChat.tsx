@@ -75,8 +75,8 @@ export default function TiberChat({ compact = false }: TiberChatProps) {
             <div className="bg-white/80 border border-purple-200 rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-sm">Tiber says:</span>
-                <Badge className={getRiskColor(response.riskLevel)}>
-                  {response.riskLevel} risk
+                <Badge className={getConfidenceColor(response.confidence)}>
+                  {response.confidence}% conf
                 </Badge>
               </div>
               <p className="text-sm text-gray-700">{response.verdict}</p>
