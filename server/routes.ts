@@ -3851,21 +3851,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register article routes
   app.use('/api/articles', articleRoutes);
 
-  // Power Rankings proxy to OTC Power service
-  const POWER_SERVICE_URL = 'http://localhost:8084';
+  // Power Rankings - Direct database integration
+  
+  app.get('/api/power/health', async (req: Request, res: Response) => {
+    try {
+      const stats = await db.execute(sql`
+        SELECT 
+          COUNT(*) as total_players,
+          COUNT(DISTINCT season) as seasons,
+          MAX(last_update) as last_update
+        FROM player_week_facts
+      `);
+      
+      const rankStats = await db.execute(sql`
+        SELECT 
+          COUNT(*) as total_ranks,
+          COUNT(DISTINCT ranking_type) as ranking_types
+        FROM power_ranks
+      `);
+      
+      res.json({
+        status: 'healthy',
+        service: 'otc_power_database',
+        data_source: 'live_database',
+        stats: {
+          total_players: stats[0]?.total_players || 0,
+          total_ranks: rankStats[0]?.total_ranks || 0,
+          seasons: stats[0]?.seasons || 0,
+          ranking_types: rankStats[0]?.ranking_types || 0,
+          last_update: stats[0]?.last_update
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('Power rankings health error:', error);
+      res.status(500).json({ 
+        status: 'unhealthy', 
+        error: 'Database connection failed',
+        timestamp: new Date().toISOString() 
+      });
+    }
+  });
   
   app.get('/api/power/:type', async (req: Request, res: Response) => {
     const { type } = req.params;
     const { season = 2025, week = 1 } = req.query;
     
     try {
-      const response = await axios.get(`${POWER_SERVICE_URL}/api/power/${type}?season=${season}&week=${week}`);
-      res.json(response.data);
+      let rankings;
+      
+      if (type.toUpperCase() === 'OVERALL') {
+        rankings = await db.execute(sql`
+          SELECT 
+            pr.rank,
+            pr.player_id,
+            p.name,
+            p.team,
+            p.position,
+            pr.power_score,
+            pr.delta_w,
+            pwf.usage_now,
+            pwf.talent,
+            pwf.environment,
+            pwf.availability,
+            pwf.confidence,
+            p.expected_points,
+            p.floor_points,
+            p.ceiling_points,
+            p.rag_score,
+            p.rag_color
+          FROM power_ranks pr
+          JOIN players p ON (p.sleeper_id = pr.player_id OR p.id::text = pr.player_id)
+          LEFT JOIN player_week_facts pwf ON (pwf.player_id = pr.player_id AND pwf.season = pr.season AND pwf.week = pr.week)
+          WHERE pr.season = ${season} AND pr.week = ${week} AND pr.ranking_type = 'OVERALL'
+          ORDER BY pr.rank
+        `);
+      } else if (['QB', 'RB', 'WR', 'TE'].includes(type.toUpperCase())) {
+        rankings = await db.execute(sql`
+          SELECT 
+            pr.rank,
+            pr.player_id,
+            p.name,
+            p.team,
+            p.position,
+            pr.power_score,
+            pr.delta_w,
+            pwf.usage_now,
+            pwf.talent,
+            pwf.environment,
+            pwf.availability,
+            pwf.confidence,
+            p.expected_points,
+            p.floor_points,
+            p.ceiling_points,
+            p.rag_score,
+            p.rag_color
+          FROM power_ranks pr
+          JOIN players p ON (p.sleeper_id = pr.player_id OR p.id::text = pr.player_id)
+          LEFT JOIN player_week_facts pwf ON (pwf.player_id = pr.player_id AND pwf.season = pr.season AND pwf.week = pr.week)
+          WHERE pr.season = ${season} AND pr.week = ${week} AND pr.ranking_type = ${type.toUpperCase()}
+          ORDER BY pr.rank
+        `);
+      } else {
+        return res.status(400).json({ error: 'Invalid ranking type. Must be OVERALL, QB, RB, WR, or TE' });
+      }
+      
+      res.json({
+        season: Number(season),
+        week: Number(week),
+        ranking_type: type.toUpperCase(),
+        generated_at: new Date().toISOString(),
+        total: rankings.length,
+        items: rankings
+      });
+      
     } catch (error) {
-      console.warn('Power service unavailable, returning mock data');
-      // Return mock data for immediate frontend consumption
-      const mockData = generateMockPowerRankings(type as string, Number(season), Number(week));
-      res.json(mockData);
+      console.error('Power rankings error:', error);
+      res.status(500).json({ error: 'Failed to fetch rankings' });
     }
   });
 
@@ -3874,23 +3977,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { season = 2025 } = req.query;
     
     try {
-      const response = await axios.get(`${POWER_SERVICE_URL}/api/power/player/${id}?season=${season}`);
-      res.json(response.data);
+      const history = await db.execute(sql`
+        SELECT 
+          pwf.week,
+          pwf.power_score,
+          pwf.usage_now,
+          pwf.talent,
+          pwf.environment,
+          pwf.availability,
+          pwf.confidence,
+          p.name,
+          p.team,
+          p.position
+        FROM player_week_facts pwf
+        JOIN players p ON (p.sleeper_id = pwf.player_id OR p.id::text = pwf.player_id)
+        WHERE pwf.player_id = ${id} AND pwf.season = ${season}
+        ORDER BY pwf.week
+      `);
+      
+      if (history.length === 0) {
+        return res.status(404).json({ error: 'Player not found or no data available' });
+      }
+      
+      const player = history[0];
+      
+      res.json({
+        player_id: id,
+        name: player.name,
+        team: player.team,
+        position: player.position,
+        season: Number(season),
+        weeks: history.map(h => ({
+          week: h.week,
+          power_score: h.power_score,
+          usage_now: h.usage_now,
+          talent: h.talent,
+          environment: h.environment,
+          availability: h.availability,
+          confidence: h.confidence
+        }))
+      });
+      
     } catch (error) {
-      res.json({ player_id: id, season: Number(season), history: [] });
+      console.error('Power rankings player error:', error);
+      res.status(500).json({ error: 'Failed to fetch player data' });
     }
   });
 
   app.get('/api/power/health', async (req: Request, res: Response) => {
     try {
-      const response = await axios.get(`${POWER_SERVICE_URL}/api/power/health`);
-      res.json(response.data);
+      const stats = await db.execute(sql`
+        SELECT 
+          COUNT(*) as total_players,
+          COUNT(DISTINCT season) as seasons,
+          MAX(last_update) as last_update
+        FROM player_week_facts
+      `);
+      
+      const rankStats = await db.execute(sql`
+        SELECT 
+          COUNT(*) as total_ranks,
+          COUNT(DISTINCT ranking_type) as ranking_types
+        FROM power_ranks
+      `);
+      
+      res.json({
+        status: 'healthy',
+        service: 'otc_power_database',
+        data_source: 'live_database',
+        stats: {
+          total_players: stats[0]?.total_players || 0,
+          total_ranks: rankStats[0]?.total_ranks || 0,
+          seasons: stats[0]?.seasons || 0,
+          ranking_types: rankStats[0]?.ranking_types || 0,
+          last_update: stats[0]?.last_update
+        },
+        timestamp: new Date().toISOString()
+      });
+      
     } catch (error) {
-      res.json({ 
-        status: 'service_unavailable', 
-        timestamp: new Date().toISOString(),
-        service: 'otc-power-proxy',
-        error: 'Power service not accessible'
+      console.error('Power rankings health error:', error);
+      res.status(500).json({ 
+        status: 'unhealthy', 
+        error: 'Database connection failed',
+        timestamp: new Date().toISOString() 
       });
     }
   });

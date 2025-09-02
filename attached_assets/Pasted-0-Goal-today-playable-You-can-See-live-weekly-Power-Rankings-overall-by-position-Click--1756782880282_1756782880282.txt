@@ -1,0 +1,134 @@
+0) Goal (today → playable)
+
+You can:
+
+See live weekly Power Rankings (overall + by position)
+
+Click a player → see expected/floor/ceiling + RAG color
+
+Run A vs B compare that explains the call
+
+Get ranks that update when injuries/QB changes hit
+
+1) Bring the engine up (kills mock data)
+
+On the otc-power box:
+
+# start service
+npm i
+npm run dev &               # 8084
+npm run recalc:nightly
+npm run recalc:events &
+
+
+Smoke tests
+
+curl "http://localhost:8084/api/power/OVERALL?season=2025&week=1" | jq '.items[0:10]'
+curl -X POST http://localhost:8084/api/voice \
+ -H "content-type: application/json" \
+ -d '{"intent":"PLAYER_OUTLOOK","players":["Drake Maye"],"season":2025,"week":1}' | jq
+
+
+If either call fails or returns empty, we’re still on mock—fix before touching frontend.
+
+2) Flip the site to live endpoints
+
+Kill any “sample/live” toggles.
+
+Point pages to:
+
+GET /api/power/OVERALL|QB|RB|WR|TE?season=2025&week=1
+
+GET /api/power/player/:id?season=2025
+
+POST /api/voice (Start/Sit, Trade, Waiver, Outlook)
+
+POST /api/voice/compare (A vs B)
+
+3) Minimal UI that’s actually useful
+
+A) Rankings page (per position + overall)
+
+Columns: Rank | Player | Team | Power | ΔW | Exp | Floor | Ceil | RAG
+
+Row click → Player drawer
+
+B) Player drawer
+
+Top: Name, team/pos, RAG badge (GREEN/AMBER/RED)
+
+Numbers: Expected / Floor / Ceiling, PowerScore, Market delta (+/- ranks)
+
+Tags: “Rushing QB”, “Beating projections”, “Favorable matchup”
+
+Mini sparkline (last 5 PowerScores)
+
+C) Compare modal
+
+Inputs: Player A, Player B
+
+On submit → call /api/voice/compare
+
+Show verdict, confidence, bullets (script/coverage/weather), and the two cards with exp/floor/ceil
+
+4) Data freshness must be visible
+
+Add “Last updated” timestamp on rankings page (from response)
+
+If data is older than 24h, show a yellow “stale” chip (don’t hide it)
+
+5) Production reliability (bare minimum)
+
+Run otc-power with pm2/systemd (so 8084 doesn’t die)
+
+Cron the data pulls + nightly recompute (already documented)
+
+Simple health pinger: homepage calls /api/power/OVERALL on load; if fail → show maintenance banner, not empty lists
+
+6) Your golden path test (do this yourself)
+
+Open site → OVERALL list shows >250 players, not 30.
+
+Filter to QB → confirm rushing QBs (Maye/JJM) show top-12ish if profiles warrant.
+
+Click a player → see Exp/Floor/Ceil + RAG.
+
+Compare two players you actually care about this week → get a verdict with reasons that make sense.
+
+Trigger a fake event (QB change) → refresh list → affected WR/TE move immediately.
+
+7) Acceptance criteria (Ship if all true)
+
+Pages use live data only; no mock leftovers.
+
+Every item shows Exp/Floor/Ceil & RAG.
+
+/api/voice returns structured, respectful answers (no sass-bot lines anywhere).
+
+Compare returns a verdict with numeric edge (Δ expected points).
+
+Engine survives a restart (pm2) and cron runs without manual nudges.
+
+8) Likely blockers & quick fixes
+
+Service up but empty ranks → run npm run bt:import:sleeper + npm run bt:scrape:ecr for Week 1, then npm run recalc:nightly.
+
+Name mismatches → add alias rows (e.g., Nathaniel → Tank) and re-run scraper.
+
+Missing projections for non-RB → temporarily set proj=league median so RAG still computes (clearly mark as “baseline proj”).
+
+Compare stubs (odds/weather/coverage) → keep weights tiny; still useful with Power+RAG alone.
+
+9) Concrete task list (assignable)
+
+Backend: ensure 8084 up (pm2), run backfill/import/scrape, nightly & events running.
+
+Backend: verify /api/voice and /api/voice/compare return sane payloads.
+
+Frontend: hook rankings table to live endpoints; add RAG/Exp/Floor/Ceil columns.
+
+Frontend: build Player drawer + Compare modal.
+
+Ops: install cron & add simple uptime ping + stale badge.
+
+Strong take: once those five UI pieces are live and the service is stable, you will actually use OTC to set your lineup.
