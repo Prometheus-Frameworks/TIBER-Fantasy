@@ -3140,9 +3140,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Register competence mode routes
-  const competenceRoutes = await import('./routes/competence');
-  app.use('/api/competence', competenceRoutes.default);
+  // Mount Tiber Voice routes (new data-driven system)
+  const voiceRoutes = await import('./routes/voice');
+  app.use('/api/voice', voiceRoutes.default);
+  
+  // Legacy competence routes (disabled - redirect to voice)
+  app.use('/api/competence', (req, res) => {
+    res.status(410).json({
+      message: 'Competence API deprecated. Use /api/voice for data-driven advice.',
+      migration: {
+        old: '/api/competence/analyze',
+        new: '/api/voice',
+        note: 'New system uses live Power/RAG data instead of hardcoded responses'
+      }
+    });
+  });
 
   // OLC (Offensive Line Context) API Routes
   try {

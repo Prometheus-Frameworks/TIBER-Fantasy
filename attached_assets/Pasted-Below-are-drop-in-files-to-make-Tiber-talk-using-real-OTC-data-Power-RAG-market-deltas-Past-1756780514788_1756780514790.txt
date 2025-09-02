@@ -1,0 +1,298 @@
+Below are drop-in files to make Tiber “talk” using real OTC data (Power + RAG + market deltas). Paste these into otc-power, then register the route.
+
+/src/voice/types.ts
+export type TiberIntent = 'START_SIT' | 'TRADE' | 'WAIVER' | 'RANKING_EXPLAIN' | 'PLAYER_OUTLOOK';
+
+export interface TiberAsk {
+  intent: TiberIntent;
+  players: string[];              // ids or names; we'll resolve
+  season: number;
+  week: number;
+  leagueType?: 'redraft'|'dynasty';
+  scoring?: 'PPR'|'Half'|'Standard';
+}
+
+export interface TiberAnswer {
+  verdict: string;
+  confidence: number;             // 0..100
+  reasons: string[];              // concise, factual
+  contingencies?: string[];
+  metrics: Record<string, any>;   // power_score, rag, exp/floor/ceil, vsECR, etc.
+  tone: 'tiber';
+}
+
+/src/voice/dataAdapter.ts
+import { q } from '../infra/db.js';
+
+export async function resolvePlayerId(nameOrId: string): Promise<{ player_id: string }|null> {
+  // try id exact, then by name ilike
+  const byId = await q<{ player_id: string }>(
+    `select player_id from players where player_id=$1 limit 1`, [nameOrId]
+  );
+  if (byId.rows[0]) return byId.rows[0];
+
+  const byName = await q<{ player_id: string }>(
+    `select player_id from players where lower(name) = lower($1) limit 1`, [nameOrId]
+  );
+  if (byName.rows[0]) return byName.rows[0];
+
+  const loose = await q<{ player_id: string }>(
+    `select player_id from players where name ilike $1 order by name asc limit 1`, [`%${nameOrId}%`]
+  );
+  return loose.rows[0] || null;
+}
+
+export interface PlayerWeekBundle {
+  player_id: string;
+  name: string;
+  team: string;
+  position: 'QB'|'RB'|'WR'|'TE';
+  rank?: number;
+  power_score?: number;
+  prev_power_score?: number;
+  rag_color?: 'GREEN'|'AMBER'|'RED';
+  rag_score?: number;
+  expected_points?: number;
+  floor_points?: number;
+  ceiling_points?: number;
+  availability?: number;          // 0..100
+  opp_multiplier?: number;        // 0.85..1.15
+  delta_vs_ecr?: number;          // market_rank - our_rank
+  beat_proj?: number;             // 0..100
+  upside_index?: number;          // 0..100
+  injury_flag?: string|null;      // 'OUT','Q','D','-' ...
+  confidence?: number;            // existing confidence if stored
+}
+
+export async function fetchPlayerWeekBundle(player_id: string, season: number, week: number): Promise<PlayerWeekBundle|null> {
+  // power + rag + facts
+  const { rows } = await q<PlayerWeekBundle & { market_rank?: number }>(`
+    with ours as (
+      select pr.rank, pr.player_id, pr.ranking_type, pr.power_score
+      from power_ranks pr
+      where pr.season=$1 and pr.week=$2 and pr.player_id=$3 and pr.ranking_type in ('OVERALL','QB','RB','WR','TE')
+      order by case pr.ranking_type when 'OVERALL' then 0 else 1 end, pr.rank
+      limit 1
+    ),
+    facts as (
+      select f.player_id, f.season, f.week, f.rag_color, f.rag_score, f.expected_points, f.floor_points, f.ceiling_points,
+             f.availability, (f.flags ->> 'injury') as injury_flag, f.market_anchor, f.features,
+             f.upside_index, f.beat_proj
+      from player_week_facts f
+      where f.player_id=$3 and f.season=$1 and f.week=$2
+    ),
+    prev as (
+      select power_score as prev_power_score
+      from player_week_facts
+      where player_id=$3 and season=$1 and week=$2-1
+      limit 1
+    ),
+    market as (
+      select market_rank
+      from bt_market_rank
+      where season=$1 and week=$2 and player_id=$3 and ranking_type in ('QB','RB','WR','TE')
+      order by 1 asc limit 1
+    )
+    select p.player_id, p.name, p.team, p.position,
+           o.rank, o.power_score,
+           pv.prev_power_score,
+           f.rag_color, f.rag_score, f.expected_points, f.floor_points, f.ceiling_points,
+           coalesce((f.features->>'opp_multiplier')::float, 1.0) as opp_multiplier,
+           coalesce(f.availability, 100) as availability,
+           coalesce(f.upside_index,0) as upside_index,
+           coalesce(f.beat_proj,0) as beat_proj,
+           coalesce(f.injury_flag, null) as injury_flag,
+           (select confidence from player_week_facts where player_id=$3 and season=$1 and week=$2) as confidence,
+           m.market_rank
+    from players p
+    left join ours o on o.player_id=p.player_id
+    left join facts f on f.player_id=p.player_id
+    left join prev pv on true
+    left join market m on true
+    where p.player_id=$3
+  `, [season, week, player_id]);
+
+  if (!rows[0]) return null;
+  const r = rows[0];
+  const delta_vs_ecr = (r as any).market_rank ? ((r as any).market_rank as number) - (r.rank ?? 999) : 0;
+  return { ...r, delta_vs_ecr };
+}
+
+/src/voice/deciders.ts
+import type { PlayerWeekBundle } from './dataAdapter.js';
+
+const POS_BENCHLINES: Record<string, number> = { QB: 15, RB: 12, WR: 12, TE: 9 };
+
+function confFromSpread(p: PlayerWeekBundle) {
+  const spread = Math.max(0, (p.ceiling_points ?? 0) - (p.floor_points ?? 0)); // pts
+  // tighter range → higher confidence
+  return Math.max(40, Math.min(90, 85 - spread*4 + (p.rag_score ?? 50)/10));
+}
+
+function volatilityPenalty(p: PlayerWeekBundle) {
+  const spread = Math.max(0, (p.ceiling_points ?? 0) - (p.floor_points ?? 0));
+  return Math.min(25, spread * 2.5);
+}
+
+export function decideStartSit(p: PlayerWeekBundle) {
+  const benchline = POS_BENCHLINES[p.position] ?? 10;
+  if (p.injury_flag === 'OUT') return { verdict: 'Bench', conf: 95 };
+
+  if (p.rag_color === 'GREEN' && (p.expected_points ?? 0) >= benchline) {
+    return { verdict: 'Start', conf: confFromSpread(p) };
+  }
+  if (p.rag_color === 'RED') {
+    return { verdict: 'Bench', conf: Math.max(70, confFromSpread(p)) };
+  }
+  return { verdict: 'Start (thin margin)', conf: confFromSpread(p) - 8 };
+}
+
+export function decideTrade(p: PlayerWeekBundle) {
+  const edge = p.delta_vs_ecr ?? 0; // + means we're earlier
+  const rising = (p.power_score ?? 0) - (p.prev_power_score ?? (p.power_score ?? 0)) >= 3;
+  const healthy = (p.availability ?? 100) >= 70 && p.injury_flag !== 'OUT';
+
+  if (edge >= 10 && healthy) return { verdict: 'Lean Trade For', conf: 70 + Math.min(20, edge) };
+  if (edge <= -10) return { verdict: 'Lean Trade Away', conf: 65 + Math.min(20, -edge) };
+  return { verdict: rising ? 'Slight Lean For' : 'Neutral / Price Sensitive', conf: 55 + (rising ? 8 : 0) };
+}
+
+export function reasonsFromMetrics(p: PlayerWeekBundle) {
+  const R: string[] = [];
+  if (p.rag_color) R.push(`RAG: ${p.rag_color} (${p.rag_score ?? 0}) — exp ${ (p.expected_points ?? 0).toFixed(1)} (floor ${(p.floor_points ?? 0).toFixed(1)})`);
+  if ((p.upside_index ?? 0) >= 70 && p.position === 'QB') R.push(`Rushing upside (${p.upside_index}/100)`);
+  if ((p.beat_proj ?? 0) >= 60) R.push(`Beating projections (${p.beat_proj} scale)`);
+  if ((p.opp_multiplier ?? 1) > 1.05) R.push(`Favorable matchup (boost +${((p.opp_multiplier-1)*100).toFixed(0)}%)`);
+  if ((p.opp_multiplier ?? 1) < 0.95) R.push(`Tough matchup (−${((1-p.opp_multiplier)*100).toFixed(0)}%)`);
+  if ((p.delta_vs_ecr ?? 0) >= 10) R.push(`Earlier than consensus by +${p.delta_vs_ecr} ranks`);
+  return R.slice(0, 4);
+}
+
+export function contingencies(p: PlayerWeekBundle) {
+  const C: string[] = [];
+  if (p.position !== 'QB' && (p.opp_multiplier ?? 1) < 0.95) C.push('If game script flips positive → upgrade');
+  if (p.position === 'QB' && (p.upside_index ?? 0) >= 70) C.push('If designed runs <5% → downgrade');
+  if (p.injury_flag === 'Q') C.push('If limited Friday → bench in shallow leagues');
+  return C.slice(0, 3);
+}
+
+/src/voice/answer.ts
+import { resolvePlayerId, fetchPlayerWeekBundle } from './dataAdapter.js';
+import { decideStartSit, decideTrade, reasonsFromMetrics, contingencies } from './deciders.js';
+import type { TiberAsk, TiberAnswer } from './types.js';
+
+export async function tiberAnswer(ask: TiberAsk): Promise<TiberAnswer> {
+  const who = ask.players[0];
+  const r = await resolvePlayerId(who);
+  if (!r) {
+    return {
+      verdict: 'Unknown Player',
+      confidence: 0,
+      reasons: [`Could not resolve "${who}" to a player_id`],
+      metrics: {},
+      tone: 'tiber'
+    };
+  }
+  const p = await fetchPlayerWeekBundle(r.player_id, ask.season, ask.week);
+  if (!p) {
+    return {
+      verdict: 'No Data',
+      confidence: 0,
+      reasons: ['No facts for this player/week yet'],
+      metrics: { player_id: r.player_id },
+      tone: 'tiber'
+    };
+  }
+
+  let verdict = 'Neutral'; let confidence = 55;
+  if (ask.intent === 'START_SIT' || ask.intent === 'PLAYER_OUTLOOK') {
+    const d = decideStartSit(p); verdict = d.verdict; confidence = d.conf;
+  } else if (ask.intent === 'TRADE') {
+    const d = decideTrade(p); verdict = d.verdict; confidence = d.conf;
+  } else if (ask.intent === 'WAIVER') {
+    if ((p.rag_score ?? 0) >= 66) { verdict = 'Claim: High'; confidence = 70 - (Math.max(0,(p.ceiling_points??0)-(p.floor_points??0))*2); }
+    else if ((p.rag_score ?? 0) >= 50) { verdict = 'Claim: Medium'; confidence = 60; }
+    else { verdict = 'Pass'; confidence = 65; }
+  } else if (ask.intent === 'RANKING_EXPLAIN') {
+    verdict = `Rank ${p.rank ?? '—'} (Power ${p.power_score?.toFixed(1) ?? '—'})`;
+    confidence = 60 + Math.min(20, (p.power_score ?? 50)/8);
+  }
+
+  const reasons = reasonsFromMetrics(p);
+  const cont = contingencies(p);
+
+  return {
+    verdict,
+    confidence: Math.round(Math.max(0, Math.min(100, confidence))),
+    reasons,
+    contingencies: cont.length ? cont : undefined,
+    metrics: {
+      player_id: p.player_id, name: p.name, team: p.team, pos: p.position,
+      rank: p.rank, power_score: p.power_score, rag_color: p.rag_color, rag_score: p.rag_score,
+      expected_points: p.expected_points, floor_points: p.floor_points, ceiling_points: p.ceiling_points,
+      delta_vs_ecr: p.delta_vs_ecr, upside_index: p.upside_index, beat_proj: p.beat_proj
+    },
+    tone: 'tiber'
+  };
+}
+
+/src/api/voiceRoutes.ts
+import { FastifyInstance } from 'fastify';
+import { tiberAnswer } from '../voice/answer.js';
+import type { TiberAsk } from '../voice/types.js';
+
+export default async function voiceRoutes(app: FastifyInstance) {
+  app.post<{ Body: TiberAsk }>('/api/voice', async (req, reply) => {
+    try {
+      const ans = await tiberAnswer(req.body);
+      return reply.code(200).send(ans);
+    } catch (e:any) {
+      req.log.error({ err: e?.message }, 'voice.error');
+      return reply.code(500).send({ verdict: 'Error', confidence: 0, reasons: ['Internal error'], tone: 'tiber', metrics: {} });
+    }
+  });
+}
+
+Register the route (/src/server.ts)
+// add after other route registrations
+import voiceRoutes from './api/voiceRoutes.js';
+...
+await app.register(voiceRoutes);
+
+Quick test (replace “Omarion Hampton” with any known name)
+curl -s -X POST http://localhost:8084/api/voice \
+  -H "content-type: application/json" \
+  -d '{"intent":"TRADE","players":["Omarion Hampton"],"season":2025,"week":1}' | jq
+
+
+Expected (shape, not exact numbers):
+
+{
+  "verdict": "Lean Trade For",
+  "confidence": 72,
+  "reasons": [
+    "RAG: GREEN (68) — exp 15.2 (floor 11.0)",
+    "Beating projections (72 scale)",
+    "Earlier than consensus by +9 ranks"
+  ],
+  "contingencies": ["If RB1 returns to full snaps → downgrade"],
+  "metrics": {
+    "name": "Omarion Hampton",
+    "rank": 17,
+    "power_score": 83.4,
+    "rag_color": "GREEN",
+    "expected_points": 15.2,
+    "delta_vs_ecr": 9,
+    "upside_index": 61,
+    "beat_proj": 72
+  },
+  "tone": "tiber"
+}
+
+What this does
+
+Kills the jerk bot. No more “stop asking for validation.”
+
+Speaks with receipts. Every line ties to live OTC metrics (Power, RAG, vs ECR, upside, matchup).
+
+Contingencies, not cockiness. Clear “what would change the call.”

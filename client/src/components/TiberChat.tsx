@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Brain, AlertTriangle } from "lucide-react";
-import type { CompetenceRequest, CompetenceResponse } from "@shared/types/competence";
+import type { TiberResponse, TiberCompatResponse } from "@shared/types/tiber";
 
 interface TiberChatProps {
   compact?: boolean;
@@ -13,41 +13,33 @@ interface TiberChatProps {
 
 export default function TiberChat({ compact = false }: TiberChatProps) {
   const [query, setQuery] = useState("");
-  const [response, setResponse] = useState<CompetenceResponse | null>(null);
+  const [response, setResponse] = useState<TiberResponse | null>(null);
 
   const analysisMutation = useMutation({
-    mutationFn: async (request: CompetenceRequest) => {
-      const response = await fetch('/api/competence/analyze', {
+    mutationFn: async (query: string) => {
+      const response = await fetch('/api/voice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request),
+        body: JSON.stringify({ query }),
       });
       if (!response.ok) throw new Error('Failed to analyze request');
       return response.json();
     },
-    onSuccess: (data: CompetenceResponse) => {
-      setResponse(data);
+    onSuccess: (data: any) => {
+      setResponse(data.answer);
     },
   });
 
   const handleSubmit = () => {
     if (!query.trim()) return;
-    
-    const request: CompetenceRequest = {
-      query: query.trim(),
-      riskTolerance: "balanced",
-    };
-
-    analysisMutation.mutate(request);
+    analysisMutation.mutate(query.trim());
   };
 
-  const getRiskColor = (risk: string) => {
-    switch (risk) {
-      case 'low': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800'; 
-      case 'high': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 80) return 'bg-green-100 text-green-800';
+    if (confidence >= 60) return 'bg-yellow-100 text-yellow-800'; 
+    if (confidence >= 40) return 'bg-orange-100 text-orange-800';
+    return 'bg-red-100 text-red-800';
   };
 
   if (compact) {
@@ -87,14 +79,14 @@ export default function TiberChat({ compact = false }: TiberChatProps) {
                   {response.riskLevel} risk
                 </Badge>
               </div>
-              <p className="text-sm text-gray-700">{response.recommendation}</p>
-              {response.challengesToUserThinking && response.challengesToUserThinking.length > 0 && (
+              <p className="text-sm text-gray-700">{response.verdict}</p>
+              {response.contingencies && response.contingencies.length > 0 && (
                 <div className="pt-2 border-t border-purple-100">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
                     <div>
-                      <div className="text-xs font-medium text-amber-700">Reality Check:</div>
-                      <p className="text-xs text-amber-600">{response.challengesToUserThinking[0]}</p>
+                      <div className="text-xs font-medium text-amber-700">Note:</div>
+                      <p className="text-xs text-amber-600">{response.contingencies[0]}</p>
                     </div>
                   </div>
                 </div>
@@ -143,35 +135,39 @@ export default function TiberChat({ compact = false }: TiberChatProps) {
             <CardTitle className="flex items-center justify-between">
               <span>Tiber's Analysis</span>
               <div className="flex items-center gap-2">
-                <Badge className={getRiskColor(response.riskLevel)}>
-                  {response.riskLevel} risk
+                <Badge className={getConfidenceColor(response.confidence)}>
+                  {response.confidence}% conf
                 </Badge>
                 <Badge variant="outline">
-                  {response.confidence}% confidence
+                  {response.tone}
                 </Badge>
               </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <h4 className="font-semibold mb-2">Recommendation</h4>
-              <p className="text-body">{response.recommendation}</p>
+              <h4 className="font-semibold mb-2">Verdict</h4>
+              <p className="text-body">{response.verdict}</p>
             </div>
             
             <div>
-              <h4 className="font-semibold mb-2">Reasoning</h4>
-              <p className="text-body">{response.reasoning}</p>
+              <h4 className="font-semibold mb-2">Reasons</h4>
+              <ul className="space-y-1">
+                {response.reasons.map((reason, index) => (
+                  <li key={index} className="text-body text-sm">• {reason}</li>
+                ))}
+              </ul>
             </div>
 
-            {response.challengesToUserThinking && response.challengesToUserThinking.length > 0 && (
+            {response.contingencies && response.contingencies.length > 0 && (
               <div>
                 <h4 className="font-semibold mb-2 flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  Reality Checks
+                  Contingencies
                 </h4>
                 <ul className="space-y-1">
-                  {response.challengesToUserThinking.map((challenge, index) => (
-                    <li key={index} className="text-body text-sm">• {challenge}</li>
+                  {response.contingencies.map((contingency, index) => (
+                    <li key={index} className="text-body text-sm">• {contingency}</li>
                   ))}
                 </ul>
               </div>
