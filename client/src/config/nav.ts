@@ -12,18 +12,17 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/dynasty", label: "Dynasty", description: "Long-term strategy" },
   { href: "/player-evaluation", label: "Player Evaluation", description: "Fusion rankings with 4-directional compass insights" },
   { href: "/power-rankings", label: "Power Rankings", description: "Tiber's comprehensive weekly rankings" },
-  { href: "/consensus", label: "Consensus", description: "Community-driven rankings" },
-  { href: "/sleeper-connect", label: "Sleeper", description: "Connect your leagues" },
+  { href: "/sleeper-connect", label: "Sync", description: "Connect your leagues" },
   { 
     label: "Research & Analysis", 
     description: "Advanced analytical tools",
     dropdown: [
+      { href: "/research", label: "Depth Charts & Intel", description: "Roster analysis and intelligence feeds" },
       { href: "/leaders", label: "Leaders", description: "2024 NFL player stats and leaderboards" },
       { href: "/snap-counts", label: "Snap Counts", description: "Evidence-based snap count analysis" },
       { href: "/sos", label: "SOS", description: "Strength of Schedule matchup analysis" }
     ]
   },
-  { href: "/research", label: "Research", description: "Depth charts and team analysis" },
   { href: "/competence", label: "Competence Mode", description: "Truth-first AI guidance" },
   { href: "/articles", label: "Articles", description: "Strategy and insights" },
 ];
