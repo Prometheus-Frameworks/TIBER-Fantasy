@@ -1029,3 +1029,22 @@ export type PlayerSeason2024 = typeof playerSeason2024.$inferSelect;
 export type InsertPlayerSeason2024 = typeof playerSeason2024.$inferInsert;
 export type PlayerAdvanced2024 = typeof playerAdvanced2024.$inferSelect;
 export type InsertPlayerAdvanced2024 = typeof playerAdvanced2024.$inferInsert;
+
+// Tiber Memory System - Knowledge base for storing learned insights
+export const tiberMemory = pgTable("tiber_memory", {
+  id: serial("id").primaryKey(),
+  category: text("category").notNull(), // e.g., "draft_analysis", "player_eval", "market_trends"
+  title: text("title").notNull(),
+  content: text("content").notNull(), // Main knowledge content
+  insights: jsonb("insights").default('[]'), // Key insights as JSON array
+  tags: text("tags").array().default([]), // Searchable tags
+  source: text("source"), // Where this knowledge came from
+  confidence: real("confidence").default(0.8), // How confident Tiber is in this knowledge
+  lastAccessed: timestamp("last_accessed"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const insertTiberMemorySchema = createInsertSchema(tiberMemory).omit({ id: true, createdAt: true, updatedAt: true });
+export type TiberMemory = typeof tiberMemory.$inferSelect;
+export type InsertTiberMemory = z.infer<typeof insertTiberMemorySchema>;

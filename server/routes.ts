@@ -78,6 +78,7 @@ import { OTC_SIGNATURE } from '../shared/otcSignature';
 import fs from 'fs';
 import path from 'path';
 import { createRagRouter, initRagOnBoot } from './routes/ragRoutes';
+import tiberMemoryRoutes from './routes/tiberMemoryRoutes';
 
 // Helper function for Player Compass sample data
 async function getSamplePlayersForCompass(position: string, limit: number = 20) {
@@ -2052,6 +2053,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.use('/api/consensus', consensusRoutes);
   app.use('/api/consensus', consensusSeedingRoutes);
+  app.use('/api/tiber', tiberMemoryRoutes);
+  console.log('🧠 Tiber Memory System routes mounted');
   
   // OTC Consensus Engine v1.1 API Routes
   app.get('/api/profile/:username', getProfile);
@@ -3902,7 +3905,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let rawResults;
       
       if (type.toUpperCase() === 'OVERALL') {
-        rawResults = await db.execute(sql`
+        const queryResult = await db.execute(sql`
           SELECT 
             pr.rank,
             pr.player_id,
@@ -3927,8 +3930,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           WHERE pr.season = ${season} AND pr.week = ${week} AND pr.ranking_type = 'OVERALL'
           ORDER BY pr.rank
         `);
+        rawResults = Array.isArray(queryResult) ? queryResult : queryResult.rows || [];
       } else if (['QB', 'RB', 'WR', 'TE'].includes(type.toUpperCase())) {
-        rawResults = await db.execute(sql`
+        const queryResult = await db.execute(sql`
           SELECT 
             pr.rank,
             pr.player_id,
@@ -3953,6 +3957,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           WHERE pr.season = ${season} AND pr.week = ${week} AND pr.ranking_type = ${type.toUpperCase()}
           ORDER BY pr.rank
         `);
+        rawResults = Array.isArray(queryResult) ? queryResult : queryResult.rows || [];
       } else {
         return res.status(400).json({ error: 'Invalid ranking type. Must be OVERALL, QB, RB, WR, or TE' });
       }
@@ -4029,7 +4034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         team: player.team,
         position: player.position,
         season: Number(season),
-        weeks: rawHistory.map((h: any) => ({
+        weeks: (rawHistory.rows || rawHistory).map((h: any) => ({
           week: Number(h.week),
           power_score: Number(h.power_score),
           usage_now: Number(h.usage_now),

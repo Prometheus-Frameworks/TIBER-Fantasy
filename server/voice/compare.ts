@@ -4,6 +4,9 @@ import { fetchGameOdds } from '../data/sources/vegas.js';
 import { fetchGameWeather } from '../data/sources/weather.js';
 import { fetchDefenseSplits } from '../data/sources/defenseSplits.js';
 import { fetchRouteAlign } from '../data/sources/alignments.js';
+import { db } from '../db';
+import { tiberMemory } from '@shared/schema';
+import { ilike, or, sql, desc } from 'drizzle-orm';
 
 type Verdict = 'Start A'|'Start B'|'Start A (thin)'|'Start B (thin)'|'Coin flip';
 
@@ -67,13 +70,24 @@ export async function tiberCompare(players: string[], season: number, week: numb
 
   const conf = confidenceFromRanges(aFloor, aCeil, bFloor, bCeil);
   const reasons = buildReasons(A, B, aAdj, bAdj, aMu, bMu);
+  
+  // Enhanced with Tiber Memory - add relevant insights
+  const memoryInsights = await getTiberMemoryInsights(A, B);
+  const enhancedReasons = [...reasons, ...memoryInsights];
   const headToHead = {
     A: view(A, aMu, aFloor, aCeil),
     B: view(B, bMu, bFloor, bCeil),
     delta_mu: Number((aMu - bMu).toFixed(1))
   };
 
-  return { verdict, confidence: conf, reasons, headToHead, tone: 'tiber' };
+  return { 
+    verdict, 
+    confidence: conf, 
+    reasons: enhancedReasons, 
+    headToHead, 
+    tone: 'tiber',
+    memory_applied: memoryInsights.length > 0
+  };
 }
 
 // Enrich player data with contextual adjustments
@@ -202,4 +216,61 @@ function fmt(x: number) {
 function oppOf(team: string, odds: any[]) { 
   const row = odds.find(x => x.team === team); 
   return row?.opp; 
+}
+
+// Tiber Memory Integration - Search knowledge base for relevant insights
+async function getTiberMemoryInsights(A: any, B: any): Promise<string[]> {
+  try {
+    const insights: string[] = [];
+    
+    // Search memory for position-specific insights  
+    const positionSearch = `${A.position || 'player'} evaluation`;
+    const memoryQuery = await db.select()
+      .from(tiberMemory)
+      .where(or(
+        ilike(tiberMemory.content, `%${A.position}%`),
+        ilike(tiberMemory.content, `%${positionSearch}%`),
+        sql`${tiberMemory.tags} && ARRAY[${A.position?.toLowerCase()}]`
+      ))
+      .orderBy(desc(tiberMemory.confidence))
+      .limit(3);
+    
+    // Apply relevant memory insights
+    for (const memory of memoryQuery) {
+      const memoryInsights = Array.isArray(memory.insights) ? memory.insights : [];
+      
+      // Add relevant insights based on player context
+      if (A.position === 'QB' && memory.category === 'draft_analysis') {
+        const relevantInsight = memoryInsights.find((insight: string) => 
+          insight.toLowerCase().includes('quarterback') || 
+          insight.toLowerCase().includes('qb')
+        );
+        if (relevantInsight) {
+          insights.push(`📚 Memory: ${relevantInsight}`);
+        }
+      }
+      
+      if (memory.category === 'draft_analysis' && memoryInsights.length > 0) {
+        // Add general draft evaluation insight
+        const generalInsight = memoryInsights[0];
+        if (generalInsight && insights.length === 0) {
+          insights.push(`📚 Historical pattern: ${generalInsight.slice(0, 80)}...`);
+        }
+      }
+    }
+    
+    // Update access time for retrieved memories
+    if (memoryQuery.length > 0) {
+      const memoryIds = memoryQuery.map(m => m.id);
+      await db.update(tiberMemory)
+        .set({ lastAccessed: new Date() })
+        .where(sql`${tiberMemory.id} = ANY(${memoryIds})`);
+    }
+    
+    return insights;
+    
+  } catch (error) {
+    console.error('Memory search error:', error);
+    return [];
+  }
 }
