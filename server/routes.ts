@@ -1989,6 +1989,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const rookieRisersAPI = await import('./routes/rookieRisersAPI');
   app.use('/api/rookie-risers', rookieRisersAPI.default);
   
+  // Mount Rookie Risers Test Routes (Grok's Verification)
+  const rookieRisersTest = await import('./routes/rookieRisersTest');
+  app.use('/api/rookie-risers', rookieRisersTest.default);
+  
   // OTC Consensus routes
   // OTC Consensus Command Router v1 - dedicated update endpoint
   app.post('/api/consensus/update', async (req, res) => {
