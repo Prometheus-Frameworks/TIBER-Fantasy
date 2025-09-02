@@ -74,9 +74,9 @@ export default function TiberChat({ compact = false }: TiberChatProps) {
           <Button 
             onClick={handleSubmit}
             disabled={!query.trim() || analysisMutation.isPending}
-            className="w-full bg-plum hover:bg-purple-700"
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium"
           >
-            {analysisMutation.isPending ? "Thinking..." : "Get Reality Check"}
+            {analysisMutation.isPending ? "Thinking..." : "Ask Tiber"}
           </Button>
 
           {response && (
@@ -116,7 +116,7 @@ export default function TiberChat({ compact = false }: TiberChatProps) {
           </CardTitle>
           <p className="text-body">
             Ask about trades, draft strategy, roster moves, or any fantasy football decision. 
-            Tiber provides blunt, evidence-based advice.
+            Tiber provides blunt, evidence-based advice from a curated knowledge base.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -130,9 +130,9 @@ export default function TiberChat({ compact = false }: TiberChatProps) {
           <Button 
             onClick={handleSubmit}
             disabled={!query.trim() || analysisMutation.isPending}
-            className="bg-plum hover:bg-purple-700"
+            className="bg-purple-600 hover:bg-purple-700 text-white font-medium"
           >
-            {analysisMutation.isPending ? "Analyzing..." : "Get Reality Check"}
+            {analysisMutation.isPending ? "Analyzing..." : "Ask Tiber"}
           </Button>
         </CardContent>
       </Card>
