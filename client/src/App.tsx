@@ -73,6 +73,7 @@ import PlayerShowcase from "@/pages/PlayerShowcase";
 import HotList from "@/pages/HotList";
 import DataIngestion from "@/pages/DataIngestion";
 import Reflect from "@/pages/Reflect";
+import RookieRisers from "@/pages/RookieRisers";
 import Leaders from "@/pages/Leaders";
 import RankingsV3 from "@/pages/RankingsV3";
 import SOSPage from "@/pages/SOSPage";
@@ -254,6 +255,7 @@ function Router() {
       <Route path="/projections-test" component={ProjectionsTest} />
       <Route path="/data-ingestion" component={DataIngestion} />
       <Route path="/reflect" component={Reflect} />
+      <Route path="/rookie-risers" component={RookieRisers} />
       <Route path="/sos" component={SOSPage} />
       <Route path="/sos-dashboard" component={SOSDashboardPage} />
       <Route path="/sos/docs" component={SOSDocumentationPage} />
