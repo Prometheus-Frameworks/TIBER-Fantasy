@@ -55,30 +55,51 @@ export function parseQuery(query: string, season = 2025, week = 1): TiberAsk {
 function extractPlayerNames(query: string): string[] {
   const players: string[] = [];
   
-  // Simple approach - look for capitalized words that might be names
-  const words = query.split(/\s+/);
-  let currentName = '';
+  // Known NFL player patterns - more targeted approach
+  const knownPlayers = [
+    'Jerry Jeudy', 'DeVonta Smith', 'Josh Allen', 'Lamar Jackson', 'Justin Jefferson',
+    'Ja\'Marr Chase', 'Cooper Kupp', 'Davante Adams', 'Stefon Diggs', 'DK Metcalf',
+    'Mike Evans', 'Chris Godwin', 'Keenan Allen', 'Amari Cooper', 'Tyler Lockett',
+    'CeeDee Lamb', 'Tee Higgins', 'A.J. Brown', 'Jaylen Waddle', 'Amon-Ra St. Brown',
+    'Christian McCaffrey', 'Derrick Henry', 'Nick Chubb', 'Austin Ekeler', 'Josh Jacobs',
+    'Saquon Barkley', 'Jonathan Taylor', 'Alvin Kamara', 'Dalvin Cook', 'Aaron Jones',
+    'Travis Kelce', 'Mark Andrews', 'George Kittle', 'Darren Waller', 'Kyle Pitts',
+    'Patrick Mahomes', 'Josh Allen', 'Justin Herbert', 'Joe Burrow', 'Dak Prescott'
+  ];
   
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i];
+  // First try exact matches for known players
+  for (const playerName of knownPlayers) {
+    if (query.toLowerCase().includes(playerName.toLowerCase())) {
+      players.push(playerName);
+    }
+  }
+  
+  // If no exact matches, fall back to pattern matching
+  if (players.length === 0) {
+    const words = query.split(/\s+/);
+    let currentName = '';
     
-    // Check if word starts with capital letter
-    const firstChar = word.charAt(0);
-    if (firstChar >= 'A' && firstChar <= 'Z') {
-      if (currentName) {
-        currentName += ' ' + word;
-      } else {
-        currentName = word;
-      }
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i];
       
-      // If next word doesn't start with capital, we have a complete name
-      const nextWord = words[i + 1] || '';
-      const nextFirstChar = nextWord.charAt(0);
-      if (i === words.length - 1 || !(nextFirstChar >= 'A' && nextFirstChar <= 'Z')) {
-        if (currentName && isLikelyPlayerName(currentName)) {
-          players.push(currentName);
+      // Check if word starts with capital letter and is likely a name
+      const firstChar = word.charAt(0);
+      if (firstChar >= 'A' && firstChar <= 'Z' && isLikelyPlayerName(word)) {
+        if (currentName) {
+          currentName += ' ' + word;
+        } else {
+          currentName = word;
         }
-        currentName = '';
+        
+        // If next word doesn't start with capital, we have a complete name
+        const nextWord = words[i + 1] || '';
+        const nextFirstChar = nextWord.charAt(0);
+        if (i === words.length - 1 || !(nextFirstChar >= 'A' && nextFirstChar <= 'Z') || !isLikelyPlayerName(nextWord)) {
+          if (currentName && currentName.split(' ').length >= 2) {
+            players.push(currentName);
+          }
+          currentName = '';
+        }
       }
     }
   }
@@ -86,12 +107,13 @@ function extractPlayerNames(query: string): string[] {
   return players.slice(0, 2); // Max 2 players for trade comparisons
 }
 
-function isLikelyPlayerName(name: string): boolean {
+function isLikelyPlayerName(word: string): boolean {
   // Filter out common non-player words
   const excludeWords = [
     'Should', 'Would', 'Could', 'Will', 'Can', 'Start', 'Sit', 'Trade',
-    'Week', 'Season', 'Game', 'Points', 'Dynasty', 'Redraft', 'PPR'
+    'Week', 'Season', 'Game', 'Points', 'Dynasty', 'Redraft', 'PPR', 'The',
+    'Against', 'Versus', 'Week', 'This', 'Next', 'Last', 'Over', 'Under'
   ];
   
-  return !excludeWords.includes(name) && name.length >= 3;
+  return !excludeWords.includes(word) && word.length >= 3;
 }
