@@ -79,6 +79,7 @@ import fs from 'fs';
 import path from 'path';
 import { createRagRouter, initRagOnBoot } from './routes/ragRoutes';
 import tiberMemoryRoutes from './routes/tiberMemoryRoutes';
+import rookieRisersRoutes from './routes/rookieRisersRoutes';
 
 // Helper function for Player Compass sample data
 async function getSamplePlayersForCompass(position: string, limit: number = 20) {
@@ -1980,6 +1981,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount RAG (Retrieval-Augmented Generation) router
   await initRagOnBoot(); // Initialize RAG search index from SQLite
   app.use('/rag', createRagRouter());
+  
+  // Mount Rookie Risers routes
+  app.use('/api/rookie-risers', rookieRisersRoutes);
   
   // OTC Consensus routes
   // OTC Consensus Command Router v1 - dedicated update endpoint
