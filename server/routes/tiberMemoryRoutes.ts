@@ -23,7 +23,7 @@ router.get('/memory', async (req, res) => {
       query = query.where(or(
         ilike(tiberMemory.title, searchTerm),
         ilike(tiberMemory.content, searchTerm),
-        sql`${tiberMemory.tags} && ARRAY[${search}]`
+        sql`${search} = ANY(${tiberMemory.tags})`
       ));
     }
     
@@ -119,7 +119,7 @@ router.get('/memory/search/:query', async (req, res) => {
       .where(or(
         ilike(tiberMemory.title, `%${query}%`),
         ilike(tiberMemory.content, `%${query}%`),
-        sql`${tiberMemory.tags} && ARRAY[${query}]`,
+        sql`${query} = ANY(${tiberMemory.tags})`,
         sql`${tiberMemory.insights}::text ILIKE ${'%' + query + '%'}`
       ))
       .orderBy(desc(tiberMemory.confidence), desc(tiberMemory.lastAccessed))
