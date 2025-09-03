@@ -18,6 +18,7 @@ interface WaiverHeatResult {
     market_lag: number;
     news_weight: number;
   };
+  scenario: string;
   formula: string;
   note_grok_fixes: string[];
 }
@@ -200,6 +201,11 @@ export default function RookieRisers() {
               </CardTitle>
               <CardDescription>
                 Player: {waiverData.playerId} • Week {waiverData.week}
+                {waiverData.scenario && (
+                  <div className="mt-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+                    📋 {waiverData.scenario}
+                  </div>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>

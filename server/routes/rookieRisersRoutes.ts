@@ -106,12 +106,67 @@ router.get('/waiver-heat', async (req, res) => {
     // TODO: Get rostership data from ESPN/Yahoo APIs
     // TODO: Get news weight from RAG system
     
-    // Using new Waiver Heat service with proper normalization (0-1 inputs)
+    // Player-specific realistic mock data until APIs integrated
+    const getPlayerMockData = (id: string) => {
+      const playerId = id.toLowerCase();
+      
+      // Real rookie scenarios based on typical situations
+      if (playerId.includes('ayomanor')) {
+        return {
+          usageGrowth: 0.37,      // Grok's exact calculation: growing usage
+          opportunityDelta: 0.70, // Injury opportunity (Jefferson ankle)
+          marketLag: 0.27,        // Market slow to react
+          newsWeight: 0.70,       // Strong coach quotes
+          context: 'Injury opportunity with strong coach endorsement'
+        };
+      }
+      
+      if (playerId.includes('byashul') || playerId.includes('tuten')) {
+        return {
+          usageGrowth: 0.25,      // Limited usage increase
+          opportunityDelta: 0.15, // No major opportunity
+          marketLag: 0.35,        // Some market lag
+          newsWeight: 0.40,       // Moderate news coverage
+          context: 'Steady development without major catalyst'
+        };
+      }
+      
+      if (playerId.includes('test_rookie')) {
+        return {
+          usageGrowth: 0.45,      // Good usage growth
+          opportunityDelta: 0.50, // Some opportunity
+          marketLag: 0.60,        // Market sleeping 
+          newsWeight: 0.30,       // Limited news
+          context: 'Sleeper pick with market inefficiency'
+        };
+      }
+      
+      if (playerId.includes('high_heat')) {
+        return {
+          usageGrowth: 0.80,      // Elite usage surge
+          opportunityDelta: 0.85, // Major injury opportunity
+          marketLag: 0.75,        // Huge market lag
+          newsWeight: 0.90,       // Massive news coverage
+          context: 'Must-add player with perfect storm of factors'
+        };
+      }
+      
+      // Default for unknown players
+      return {
+        usageGrowth: 0.30 + Math.random() * 0.3,
+        opportunityDelta: 0.20 + Math.random() * 0.4,
+        marketLag: 0.25 + Math.random() * 0.35,
+        newsWeight: 0.25 + Math.random() * 0.35,
+        context: 'Standard rookie development pattern'
+      };
+    };
+    
+    const playerData = getPlayerMockData(playerId as string);
     const mockNormalizedInput = {
-      usageGrowth: 0.65,      // Normalized: 65% usage growth 
-      opportunityDelta: 0.6,  // Normalized: 60% opportunity from injury
-      marketLag: 0.55,        // Normalized: 55% market lag
-      newsWeight: 0.8         // Normalized: 80% news strength
+      usageGrowth: playerData.usageGrowth,
+      opportunityDelta: playerData.opportunityDelta,
+      marketLag: playerData.marketLag,
+      newsWeight: playerData.newsWeight
     };
     
     const heatIndex = calculateWaiverHeat(mockNormalizedInput);
@@ -127,9 +182,10 @@ router.get('/waiver-heat', async (req, res) => {
         market_lag: mockNormalizedInput.marketLag,
         news_weight: mockNormalizedInput.newsWeight
       },
+      scenario: playerData.context,
       note_grok_fixes: [
         'NaN protection implemented',
-        'Position-specific usage calculations',
+        'Position-specific usage calculations', 
         'News weight corroboration guardrails',
         'UDFA edge case handling'
       ],
