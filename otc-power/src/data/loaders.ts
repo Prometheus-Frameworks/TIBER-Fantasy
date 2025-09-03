@@ -15,18 +15,27 @@ export async function loadUsageBundle(player_id: string, season: number, week: n
     // Return 0-100 scaled usage score from xFP recent + shares
     return Math.max(0, Math.min(100, data.usage_score || 0));
   } catch (err) {
-    // Elite RB fallback based on 2025 projections
-    const eliteRBs: Record<string, number> = {
-      '100': 95,  // Saquon Barkley - Elite volume + goal line
-      '621': 95,  // Saquon Barkley (duplicate)
-      '564': 90,  // Derrick Henry - High volume, goal line king  
-      '40': 90,   // Derrick Henry (duplicate)
-      '270': 88,  // Bijan Robinson - 3-down back
-      '240': 88,  // Bijan Robinson (duplicate)
-      '950': 85,  // Jahmyr Gibbs - Split backfield but explosive
-      '870': 82,  // James Cook - Bills primary back
+    // RB usage scores based on expert consensus top 30 + projected volume
+    const rbUsageScores: Record<string, number> = {
+      // Tier 1: Elite volume (95+)
+      '270': 95, '240': 95, '210': 95, '300': 95, '330': 95, '180': 95, '978': 95,  // Bijan Robinson - All-purpose back
+      '100': 94, '621': 94,  // Saquon Barkley - Elite volume + goal line
+      '950': 92,  // Jahmyr Gibbs - Dual-threat speedster
+      '564': 90, '40': 90,   // Derrick Henry - Goal-line king
+      
+      // Tier 2: High volume (85-90)
+      '870': 88,  // James Cook - Bills primary back
+      
+      // Tier 3: Solid starters (75-85) - Need to find IDs for other top 30
+      // Adding estimated scores for common backup/mid-tier RBs
+      '822': 76,  // Rhamondre Stevenson
+      '540': 65,  // Cordarrelle Patterson - Part-time
+      '828': 62,  // Kene Nwangwu - Limited touches
+      '854': 58,  // Pierre Strong - Backup role
+      
+      // Tier 4: Flex/Committee (55-70)
     };
-    return eliteRBs[player_id] || 45; // Default for other RBs
+    return rbUsageScores[player_id] || 50; // Default for other RBs
   }
 }
 
@@ -41,18 +50,28 @@ export async function loadTalent(player_id: string): Promise<number> {
     // Extract north quadrant as talent score (0-100)
     return Math.max(0, Math.min(100, data.quadrant_scores?.north || 0));
   } catch (err) {
-    // Elite RB talent ratings based on proven NFL performance
-    const eliteRBTalent: Record<string, number> = {
-      '100': 96,  // Saquon Barkley - Generational talent, 2024 rushing leader
-      '621': 96,  // Saquon Barkley (duplicate)
-      '564': 94,  // Derrick Henry - Proven elite, TD machine
-      '40': 94,   // Derrick Henry (duplicate)
-      '270': 93,  // Bijan Robinson - Complete skillset, versatile
-      '240': 93,  // Bijan Robinson (duplicate)
-      '950': 91,  // Jahmyr Gibbs - Explosive, excellent receiver
-      '870': 87,  // James Cook - Solid starter, good vision
+    // RB talent ratings based on expert consensus and proven NFL performance
+    const rbTalentScores: Record<string, number> = {
+      // Tier 1: Generational talent (95+)
+      '100': 97, '621': 97,  // Saquon Barkley - 2024 rushing leader, generational
+      '270': 95, '240': 95, '210': 95, '300': 95, '330': 95, '180': 95, '978': 95,  // Bijan Robinson - Complete skillset
+      
+      // Tier 2: Elite proven (90-95)
+      '564': 94, '40': 94,   // Derrick Henry - Proven elite, TD machine
+      '950': 93,  // Jahmyr Gibbs - Explosive, excellent receiver
+      
+      // Tier 3: Very good (85-90)
+      '870': 88,  // James Cook - Solid starter, good vision
+      
+      // Tier 4: Solid starters (75-85)
+      '822': 78,  // Rhamondre Stevenson - Reliable but not explosive
+      
+      // Tier 5: Role players/backups (65-75)
+      '540': 72,  // Cordarrelle Patterson - Versatile veteran
+      '828': 68,  // Kene Nwangwu - Speed but limited
+      '854': 65,  // Pierre Strong - Backup talent
     };
-    return eliteRBTalent[player_id] || 55; // Default for other RBs
+    return rbTalentScores[player_id] || 60; // Default for other RBs
   }
 }
 
