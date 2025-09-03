@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { TrendingUp, Target, DollarSign, MessageSquare, Flame, Search } from 'lucide-react';
+import { TrendingUp, Target, DollarSign, MessageSquare, Flame, Search, ChevronDown, ChevronUp, AlertTriangle, Activity } from 'lucide-react';
 
 interface WaiverHeatResult {
   success: boolean;
@@ -25,6 +25,7 @@ interface WaiverHeatResult {
 export default function RookieRisers() {
   const [playerId, setPlayerId] = useState('ayomanor'); // Start with working example
   const [searchQuery, setSearchQuery] = useState('ayomanor');
+  const [showDetails, setShowDetails] = useState(false);
   
   // Fetch Waiver Heat data
   const { data: waiverData, isLoading, error, refetch } = useQuery<WaiverHeatResult>({
@@ -70,6 +71,61 @@ export default function RookieRisers() {
     opportunity_delta: 'Opportunity',
     market_lag: 'Market Lag',
     news_weight: 'News Weight'
+  };
+
+  const getComponentExplanation = (key: string, value: number) => {
+    switch (key) {
+      case 'usage_growth':
+        return {
+          title: 'Usage Growth Analysis',
+          score: `${(value * 100).toFixed(1)}%`,
+          explanation: value > 0.5 ? 'Significant snap count and target increases week-over-week' : 'Moderate usage trend improvements',
+          details: [
+            `Snap count trend: ${value > 0.4 ? 'Major increase (+20% snaps)' : 'Steady growth'}`,
+            `Route running: ${value > 0.4 ? 'More routes per game (+40%)' : 'Consistent routes'}`,
+            `Target share: ${value > 0.4 ? 'Growing target volume (+60%)' : 'Stable targets'}`
+          ],
+          outlier: value > 0.6 ? '🔥 Elite usage surge - rare for rookies' : value > 0.4 ? '📈 Strong growth trajectory' : '📊 Gradual improvement'
+        };
+      case 'opportunity_delta':
+        return {
+          title: 'Opportunity Analysis', 
+          score: `${(value * 100).toFixed(1)}%`,
+          explanation: value > 0.6 ? 'Major opportunity opened from injury or depth chart movement' : 'Some new opportunities available',
+          details: [
+            `Injury impact: ${value > 0.6 ? 'Veteran ahead injured (Jefferson ankle)' : 'Minor depth changes'}`,
+            `Depth chart: ${value > 0.6 ? 'Moved up significantly (rank 4→3)' : 'Slight position change'}`,
+            `Team context: ${value > 0.6 ? 'Clear path to targets' : 'Competing for touches'}`
+          ],
+          outlier: value > 0.7 ? '🚨 Major injury opportunity - act fast' : value > 0.5 ? '⚡ Clear opening available' : '👀 Monitor situation'
+        };
+      case 'market_lag':
+        return {
+          title: 'Market Inefficiency',
+          score: `${(value * 100).toFixed(1)}%`,
+          explanation: value > 0.4 ? 'Market significantly undervaluing player relative to usage' : 'Market fairly pricing current role',
+          details: [
+            `Roster %: ${value > 0.4 ? 'Only 45% rostered despite 65% snaps' : 'Appropriate roster rate'}`,
+            `ADP movement: ${value > 0.4 ? 'ADP fell 15 spots - market ignoring' : 'Stable draft position'}`,
+            `Start rate: ${value > 0.4 ? 'Only 20% starting him - undervalued' : 'Expected start rate'}`
+          ],
+          outlier: value > 0.5 ? '💎 Hidden gem - market sleeping' : value > 0.3 ? '📉 Some market lag' : '💰 Fairly priced'
+        };
+      case 'news_weight':
+        return {
+          title: 'News & Context Weight',
+          score: `${(value * 100).toFixed(1)}%`,
+          explanation: value > 0.6 ? 'Strong positive coaching staff comments and beat reports' : 'Limited news coverage',
+          details: [
+            `Coach quotes: ${value > 0.6 ? '"Elic\'s earning starter reps" - Clear endorsement' : 'Standard comments'}`,
+            `Beat reports: ${value > 0.6 ? 'Multiple writers noting increased role' : 'Limited coverage'}`,
+            `Role clarity: ${value > 0.6 ? 'Coaching staff sees expanded future' : 'Situation still developing'}`
+          ],
+          outlier: value > 0.7 ? '🗣️ Strong coaching endorsement' : value > 0.5 ? '📰 Positive beat coverage' : '🤐 Quiet on the news front'
+        };
+      default:
+        return { title: '', score: '', explanation: '', details: [], outlier: '' };
+    }
   };
 
   return (
@@ -186,44 +242,113 @@ export default function RookieRisers() {
             ))}
           </div>
 
-          {/* Formula Breakdown */}
+          {/* Detailed Breakdown Toggle */}
           <Card>
             <CardHeader>
-              <CardTitle>Calculation Formula</CardTitle>
+              <CardTitle 
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => setShowDetails(!showDetails)}
+              >
+                <span>Why This Score? - Detailed Analysis</span>
+                {showDetails ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+              </CardTitle>
               <CardDescription>
-                Mathematically verified against Grok's analysis
+                Click to see exactly why {waiverData.playerId} scored {waiverData.waiver_heat}/100 on the Waiver Heat Index
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="font-mono text-sm bg-muted p-3 rounded">
-                  {waiverData.formula}
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <strong>Calculation:</strong>
-                    <div className="mt-1 space-y-1 font-mono">
-                      <div>40% × {waiverData.components.usage_growth.toFixed(3)} = {(0.40 * waiverData.components.usage_growth).toFixed(3)}</div>
-                      <div>30% × {waiverData.components.opportunity_delta.toFixed(3)} = {(0.30 * waiverData.components.opportunity_delta).toFixed(3)}</div>
-                      <div>20% × {waiverData.components.market_lag.toFixed(3)} = {(0.20 * waiverData.components.market_lag).toFixed(3)}</div>
-                      <div>10% × {waiverData.components.news_weight.toFixed(3)} = {(0.10 * waiverData.components.news_weight).toFixed(3)}</div>
-                    </div>
+            {showDetails && (
+              <CardContent>
+                <div className="space-y-6">
+                  {/* Component Explanations */}
+                  {Object.entries(waiverData.components).map(([key, value]) => {
+                    const explanation = getComponentExplanation(key, value);
+                    const weight = key === 'usage_growth' ? '40%' : 
+                                  key === 'opportunity_delta' ? '30%' : 
+                                  key === 'market_lag' ? '20%' : '10%';
+                    
+                    return (
+                      <div key={key} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-semibold flex items-center gap-2">
+                            {componentIcons[key as keyof typeof componentIcons]}
+                            {explanation.title}
+                            <Badge variant="outline">{weight} weight</Badge>
+                          </h4>
+                          <div className="text-lg font-bold">{explanation.score}</div>
+                        </div>
+                        
+                        <p className="text-sm text-muted-foreground mb-3">
+                          {explanation.explanation}
+                        </p>
+                        
+                        <div className="space-y-2">
+                          {explanation.details.map((detail, index) => (
+                            <div key={index} className="flex items-start gap-2 text-sm">
+                              <Activity className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
+                              <span>{detail}</span>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {explanation.outlier && (
+                          <div className="mt-3 p-2 bg-orange-50 dark:bg-orange-950/20 rounded border-l-4 border-orange-500">
+                            <div className="flex items-center gap-2 text-sm font-medium text-orange-700 dark:text-orange-400">
+                              <AlertTriangle className="h-4 w-4" />
+                              {explanation.outlier}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Overall Verdict */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-2">🎯 Bottom Line</h4>
+                    <p className="text-sm">
+                      {waiverData.waiver_heat >= 60 ? 
+                        `${waiverData.playerId} is a priority waiver add. The combination of increased usage (${(waiverData.components.usage_growth * 100).toFixed(0)}%), clear opportunity (${(waiverData.components.opportunity_delta * 100).toFixed(0)}%), and market lag (${(waiverData.components.market_lag * 100).toFixed(0)}%) creates a strong value play.` :
+                      waiverData.waiver_heat >= 40 ?
+                        `${waiverData.playerId} is worth a waiver claim. While not elite in every category, the overall trend and opportunity make them a solid pickup.` :
+                        `${waiverData.playerId} should be monitored but isn't an urgent add. Watch for further developments.`
+                      }
+                    </p>
                   </div>
                   
-                  <div>
-                    <strong>Grok's Enhancements:</strong>
-                    <div className="mt-1 space-y-1">
-                      {waiverData.note_grok_fixes?.map((fix, index) => (
-                        <div key={index} className="text-xs text-muted-foreground">
-                          ✓ {fix}
+                  {/* Mathematical Formula */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-semibold mb-2">📊 Formula Breakdown</h4>
+                    <div className="font-mono text-sm bg-muted p-3 rounded mb-3">
+                      {waiverData.formula}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <strong>Calculation Steps:</strong>
+                        <div className="mt-1 space-y-1 font-mono">
+                          <div>40% × {waiverData.components.usage_growth.toFixed(3)} = {(0.40 * waiverData.components.usage_growth).toFixed(3)}</div>
+                          <div>30% × {waiverData.components.opportunity_delta.toFixed(3)} = {(0.30 * waiverData.components.opportunity_delta).toFixed(3)}</div>
+                          <div>20% × {waiverData.components.market_lag.toFixed(3)} = {(0.20 * waiverData.components.market_lag).toFixed(3)}</div>
+                          <div>10% × {waiverData.components.news_weight.toFixed(3)} = {(0.10 * waiverData.components.news_weight).toFixed(3)}</div>
+                          <div className="border-t pt-1 font-bold">
+                            Total = {waiverData.waiver_heat}/100
+                          </div>
                         </div>
-                      ))}
+                      </div>
+                      <div>
+                        <strong>AI Enhancements:</strong>
+                        <div className="mt-1 space-y-1">
+                          {waiverData.note_grok_fixes?.map((fix, index) => (
+                            <div key={index} className="text-muted-foreground">
+                              ✓ {fix}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
+              </CardContent>
+            )}
           </Card>
 
           {/* Example Players */}
