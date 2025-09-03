@@ -28,7 +28,7 @@ function roleConfidence(recentGamesAt50pctSnaps: number) {
 
 async function getPlayers() {
   const { rows } = await q<{ player_id: string; name: string; team: string; position: 'QB'|'RB'|'WR'|'TE' }>(
-    `select player_id, name, team, position from players where position in ('QB','RB','WR','TE')`
+    `select id::text as player_id, name, team, position from players where position in ('QB','RB','WR','TE')`
   );
   return rows;
 }
