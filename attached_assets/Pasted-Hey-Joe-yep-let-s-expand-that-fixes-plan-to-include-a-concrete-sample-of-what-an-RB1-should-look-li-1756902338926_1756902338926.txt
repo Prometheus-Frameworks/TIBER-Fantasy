@@ -1,0 +1,65 @@
+Hey Joe—yep, let’s expand that fixes plan to include a concrete sample of what an RB1 should look like post-fixes. I’ll slot it right into the plan as a new step (e.g., after validation) for Tiber to use as a target during testing. For the example, I’m using Saquon Barkley (PHI) as our benchmark elite—based on his monster 2024 (NFL-leading 2,005 rush yards, 345 attempts, 22.2 PPG in PPR) and 2025 projections (consensus RB1-4, ~1,683 rush yards, 11 TDs, 43 rec/331 yards/2 TDs, total ~278 fantasy points). 0 2 3 8 He’s the perfect “locked-in star” with high usage (workhorse role in Philly’s elite O-line), top talent (DeepSeek prior should peg him 95+), stable environment (Jalen Hurts QB, no drama), full availability (healthy entering 2025), and market_anchor aligning with ECR RB2-4. 5 8 In our 0-100 system, elites like him should return 90-98+ power_scores—anything lower flags a loader issue.
+I’ve mocked up what the API/UI should return for him as RB1 (high 90s score, full components for transparency, positive delta if trending up). This gives Tiber a “gold standard” to aim for—once fixes land, his output should match or exceed this in realism.
+Updated Fixes: Step-by-Step Plan
+Building on the original—I’ve added Step 5 for the RB1 sample/testing, with Barkley as the focus. This ensures we validate against elites before redeploy.
+	1	Update Player Rosters and Filter Out Inactives (Quick Win for Strong/Missing Stars):
+	◦	Run a manual refresh on the players table: Pull current 2025 rosters from Sleeper or NFL APIs (e.g., via importSleeperPoints.ts scaffold, but adapt for rosters). Flag waived/free agents in availability loader (set to 0 if OUT/WAIVED).
+	◦	Wire in a “current_team” check in scoring—exclude or haircut players not on active rosters.
+	◦	For missing elites: Ensure DeepSeek (talent) and OASIS (environment) loaders ingest 2025 projections. Add a seed script for top RBs like Henry (BAL), Robinson (ATL), Barkley (PHI).
+	◦	Tiber: PR this to nightlyRecalc.ts—bump affected RBs on recompute.
+	2	Increase Player Limit and Normalize Scores:
+	◦	Bump the API limit in powerRoutes.ts (e.g., from TOP 12 to TOP 100 or all WHERE position=‘RB’ AND power_score > 0).
+	◦	Normalize power_scores to 0-100 properly—add a post-materialization step in power_ranks to scale based on max/min.
+	◦	Smoke test: After fix, API should return ~50-60 RBs with scores 70+ for elites.
+	3	Refresh Loaders for 2025 Context:
+	◦	Update bt_week_points and bt_market_rank to 2025 (rerun importers with SEASON=2025). Since season hasn’t started, use preseason stats or projections for usage_now/EWMA.
+	◦	Pull fresh FantasyPros ECR for market_anchor. This’ll inject Henry/Robinson/Barkley as anchors.
+	◦	Event queue: Seed a “ROSTER_UPDATE” event to force recompute on all RBs.
+	4	Validation and Redeploy:
+	◦	I’ll re-run validation.ts on simulated 2025 Week 1—target rho >0.40, hits >60% vs. consensus rankings.
+	◦	Go/No-Go: API returns full list with Henry/Robinson/Barkley in top 5, no waived players.
+	◦	If needed, tweak RB weights (+2% usage_now for volume guys like Henry).
+	5	Test Against Elite RB1 Sample (New: Barkley Benchmark):
+	◦	Once loaders are refreshed, manually test with Saquon Barkley (player_id: e.g., “saquon_barkley” or Sleeper ID 4034) to ensure elites pop correctly.
+	◦	Seed his data if needed: High usage_now (3-week EWMA ~80-90 from preseason/projections), talent ~95 (DeepSeek multi-season elite), environment ~90 (Eagles’ top O-line/QB), availability 100 (full health), market_anchor +5% bump from ECR RB2.
+	◦	Expected Output: As RB1 or top 3, power_score 92-98 (high due to volume/upside). Here’s a mocked-up sample of what the API response and UI should look like—use this as your “pass/fail” target. If it returns lower (e.g., <85), debug the usage/talent loaders for underweighting projections. Mocked API Response Snippet (from GET /api/power/RB?season=2025&week=1): {
+	◦	  "season": 2025,
+	◦	  "week": 1,
+	◦	  "ranking_type": "RB",
+	◦	  "generated_at": "2025-09-03T12:00:00Z",
+	◦	  "items": [
+	◦	    {
+	◦	      "player_id": "4034",  // Sleeper ID example
+	◦	      "name": "Saquon Barkley",
+	◦	      "team": "PHI",
+	◦	      "position": "RB",
+	◦	      "power_score": 96.5,  // Elite: High volume + talent + environment
+	◦	      "rank": 1,
+	◦	      "delta_w": 2,  // Up 2 spots from preseason (e.g., positive injury news)
+	◦	      "components": {  // Breakdown for popover (new field to add)
+	◦	        "usage_now": 92.0,  // High EWMA routes/targets/RZ shares
+	◦	        "talent": 95.0,  // DeepSeek stabilized rating
+	◦	        "environment": 94.0,  // Eagles O-line/QB stability
+	◦	        "availability": 100.0,  // Full snaps expected, no injury
+	◦	        "market_anchor": 5.0  // Slight ECR boost
+	◦	      },
+	◦	      "tags": ["Workhorse ↑", "Elite O-Line"],  // Reason chips
+	◦	      "sos_rating": "Green",  // Easy Week 1 matchup
+	◦	      "confidence": 95,  // High, no gating for vets
+	◦	      "market_delta": "+3"  // We're higher than ECR (contrarian edge)
+	◦	    },
+	◦	    // Followed by Bijan Robinson (ATL, ~95.0), Jahmyr Gibbs (DET, ~94.0), etc.
+	◦	  ]
+	◦	}
+	◦	 Mocked UI Render (what the site should show, building on your screenshot):
+	▪	Rank: 👑 #1
+	▪	Player: Saquon Barkley (PHI)
+	▪	Power Score: 96.5 (with green upward triangle for +2 delta)
+	▪	Confidence: 95% (ring icon, green)
+	▪	Additional Elements (from earlier suggestions):
+	▪	Tags: “Workhorse ↑” (pill), “Elite O-Line” (pill)
+	▪	SOS: 🟢 (easy matchup tooltip)
+	▪	Hover on Score: Pie chart showing 45% usage, 25% talent, etc.
+	▪	Sparkline: Upward trend over 5 weeks (preseason ramp-up)
+	◦	Tiber: After seeding/recompute, curl the API for Barkley and compare to this. If off, log component scores to debug (e.g., if usage_now <80, check EWMA calc). Run validation.ts with him in the mix—aim for positive drift payoff (our early hype on him pays off).
+This updated plan keeps us tight—roster fix first, then elite testing to confirm. Once Barkley hits 95+, the whole list (Henry at ~94, Robinson at ~95) will feel legit. If you need a full mocked list or a PR for the seed script, lemme know.
