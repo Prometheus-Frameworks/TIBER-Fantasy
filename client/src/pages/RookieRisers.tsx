@@ -23,19 +23,24 @@ interface WaiverHeatResult {
 }
 
 export default function RookieRisers() {
-  const [playerId, setPlayerId] = useState('test_rookie');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [playerId, setPlayerId] = useState('ayomanor'); // Start with working example
+  const [searchQuery, setSearchQuery] = useState('ayomanor');
   
   // Fetch Waiver Heat data
-  const { data: waiverData, isLoading, refetch } = useQuery<WaiverHeatResult>({
+  const { data: waiverData, isLoading, error, refetch } = useQuery<WaiverHeatResult>({
     queryKey: ['/api/rookie-risers/waiver-heat', playerId],
+    queryFn: () => fetch(`/api/rookie-risers/waiver-heat?playerId=${playerId}`).then(res => {
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return res.json();
+    }),
     enabled: !!playerId
   });
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      setPlayerId(searchQuery.trim());
-      refetch();
+      setPlayerId(searchQuery.trim().toLowerCase());
     }
   };
 
@@ -94,7 +99,7 @@ export default function RookieRisers() {
         <CardContent>
           <div className="flex gap-2">
             <Input
-              placeholder="Enter player ID (e.g., test_rookie, ayomanor)"
+              placeholder="Try: ayomanor, test_rookie, high_heat"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -112,6 +117,16 @@ export default function RookieRisers() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">Calculating Waiver Heat...</div>
+          </CardContent>
+        </Card>
+      )}
+
+      {error && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center text-red-500">
+              Error loading data. Try: 'ayomanor', 'test_rookie', or 'high_heat'
+            </div>
           </CardContent>
         </Card>
       )}
