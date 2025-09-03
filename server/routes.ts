@@ -80,6 +80,7 @@ import path from 'path';
 import { createRagRouter, initRagOnBoot } from './routes/ragRoutes';
 import tiberMemoryRoutes from './routes/tiberMemoryRoutes';
 import rookieRisersRoutes from './routes/rookieRisersRoutes';
+import { registerPowerProcessingRoutes } from './routes/powerProcessing';
 
 // Helper function for Player Compass sample data
 async function getSamplePlayersForCompass(position: string, limit: number = 20) {
@@ -1982,6 +1983,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await initRagOnBoot(); // Initialize RAG search index from SQLite
   app.use('/rag', createRagRouter());
   
+  // Mount Power Processing routes (Grok's Enhancement) 
+  registerPowerProcessingRoutes(app);
+
   // Mount Rookie Risers routes
   app.use('/api/rookie-risers', rookieRisersRoutes);
   

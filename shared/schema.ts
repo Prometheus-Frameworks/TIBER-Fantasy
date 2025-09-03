@@ -1130,3 +1130,62 @@ export type InsertRookieRiserSnapshots = typeof rookieRiserSnapshots.$inferInser
 export const insertRookieWeeklyUsageSchema = createInsertSchema(rookieWeeklyUsage).omit({ id: true, createdAt: true });
 export const insertRookieContextSignalsSchema = createInsertSchema(rookieContextSignals).omit({ id: true, createdAt: true });
 export const insertRookieRiserSnapshotsSchema = createInsertSchema(rookieRiserSnapshots).omit({ id: true, createdAt: true });
+
+// ========================================
+// ADVANCED SIGNALS TABLE (GROK'S ENHANCEMENT)
+// ========================================
+
+// Advanced Signals table - Captures derived metrics like efficiency, trends for better signal detection
+// Enables multi-faceted reasoning for rankings, like chaining efficiency to projected TDs
+export const advancedSignals = pgTable("advanced_signals", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id").notNull(), // FK to players.id (using text to match existing pattern)
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  
+  // Efficiency metrics (Grok's recommendations)
+  ypc: real("ypc"), // Yards per carry
+  snapShare: real("snap_share"), // Float 0-1 (percentage of team snaps)
+  epaRush: real("epa_rush"), // Expected points added per rush
+  brokenTackles: integer("broken_tackles"), // Broken tackles count
+  redzoneTouches: integer("redzone_touches"), // Red zone touches
+  
+  // Trend analysis (3-week rolling context)
+  trendMultiplier: real("trend_multiplier"), // Weighted 3-week avg performance (e.g., 1.2 = 20% above baseline)
+  rollingAvg3wk: jsonb("rolling_avg_3wk"), // JSONB for flexible rolling averages (yards, TDs, etc.)
+  opponentAdjustedScore: real("opponent_adjusted_score"), // Matchup-adjusted performance factoring run defense
+  
+  // Advanced metrics for WR/TE/QB
+  targetShare: real("target_share"), // WR/TE target share within team
+  airyards: real("air_yards"), // Average depth of target (aDOT)
+  separationScore: real("separation_score"), // Receiver separation (if available from NextGen)
+  pressureRate: real("pressure_rate"), // QB pressure faced percentage
+  
+  // Market/Usage context
+  usageSpike: boolean("usage_spike").default(false), // Weekly usage anomaly flag
+  injuryOpportunity: boolean("injury_opportunity").default(false), // Benefiting from teammate injury
+  
+  // Metadata
+  dataSource: text("data_source").default('computed'), // 'nfl-data-py', 'sleeper', 'computed', 'nextgen'
+  confidence: real("confidence").default(0.8), // Data quality confidence 0-1
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => ({
+  // Composite unique constraint to prevent duplicates
+  unique: unique("advanced_signals_unique").on(table.playerId, table.season, table.week),
+  // Indexes for efficient queries (Grok's performance optimization)
+  playerSeasonIdx: index("advanced_signals_player_season_idx").on(table.playerId, table.season),
+  weekIdx: index("advanced_signals_week_idx").on(table.week),
+  trendIdx: index("advanced_signals_trend_idx").on(table.trendMultiplier),
+}));
+
+export const advancedSignalsRelations = relations(advancedSignals, ({ one }) => ({
+  player: one(players, {
+    fields: [advancedSignals.playerId],
+    references: [players.id]
+  })
+}));
+
+// Advanced Signals Types
+export type AdvancedSignals = typeof advancedSignals.$inferSelect;
+export type InsertAdvancedSignals = typeof advancedSignals.$inferInsert;
+export const insertAdvancedSignalsSchema = createInsertSchema(advancedSignals).omit({ id: true, lastUpdated: true });
