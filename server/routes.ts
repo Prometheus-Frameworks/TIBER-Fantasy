@@ -84,7 +84,7 @@ import { registerPowerProcessingRoutes } from './routes/powerProcessing';
 
 // Helper function for Player Compass sample data
 async function getSamplePlayersForCompass(position: string, limit: number = 20) {
-  const sampleData = {
+  const sampleData: Record<string, any[]> = {
     WR: [
       { id: 'ja-marr-chase', name: "Ja'Marr Chase", team: 'CIN', age: 24, draftCapital: 5, stats: { targets: 135, receptions: 81, yards: 1056, tds: 7 }, tags: ['alpha', 'target_hog'] },
       { id: 'ceedee-lamb', name: 'CeeDee Lamb', team: 'DAL', age: 25, draftCapital: 17, stats: { targets: 145, receptions: 98, yards: 1359, tds: 12 }, tags: ['alpha', 'redzone'] },
@@ -292,14 +292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== SLEEPER INTEGRATION WITH FEATURE FLAG (Batch #3) =====
   
-  // Helper functions for structured logging at app level
-  function logInfo(msg: string, meta?: Record<string, any>) {
-    console.log(JSON.stringify({ level: 'info', src: 'App', msg, ...(meta || {}) }));
-  }
-  function logError(msg: string, e: any, meta?: Record<string, any>) {
-    console.error(JSON.stringify({ level: 'error', src: 'App', msg, error: e?.message || String(e), stack: e?.stack, ...(meta || {}) }));
-  }
-  function meta() { return { source: 'sleeper' as const, generatedAt: new Date().toISOString() }; }
+  // Note: Removed duplicate helper functions - using definitions from earlier in file
 
   const USE_SLEEPER_SYNC = String(process.env.USE_SLEEPER_SYNC).toLowerCase() === 'true';
 

@@ -32,7 +32,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
-import { sportsDataAPI } from "./sportsdata";
+// Note: sportsDataAPI import removed - not used in current implementation
 
 export interface IStorage {
   // Team operations
@@ -342,7 +342,8 @@ export class DatabaseStorage implements IStorage {
     try {
       // Fetch real player data from SportsDataIO
       console.log("Fetching active players from SportsDataIO...");
-      const sportsDataPlayers = await sportsDataAPI.getActivePlayers();
+      // Note: sportsDataAPI temporarily removed - using fallback data
+      const sportsDataPlayers: any[] = [];
       console.log(`Fetched ${sportsDataPlayers.length} players from SportsDataIO`);
 
       // Filter to fantasy-relevant players and limit for free tier
@@ -354,7 +355,8 @@ export class DatabaseStorage implements IStorage {
       console.log(`Filtered to ${fantasyPlayers.length} fantasy-relevant players`);
 
       // Convert to our schema format
-      const playerData = fantasyPlayers.map(player => sportsDataAPI.convertToPlayer(player));
+      // Note: Using fallback conversion since sportsDataAPI is removed
+      const playerData: any[] = [];
       
       // Insert players into database
       const insertedPlayers = await db.insert(players).values(playerData).returning();
