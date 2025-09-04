@@ -1,0 +1,36 @@
+Alright, cool—progress is progress. Let's build on Tiber's existing lexicon and RAG pipeline (sounds like a solid base for querying FF-specific terms and docs) to layer in more signals. I'll keep this practical: focus on teaching signals via integration, then making rankings adaptable to formats. I pulled fresh data on key RB signals/metrics and format diffs using tools to ground this—drawing from consensus sources like ESPN tiers, PFF efficiency breakdowns, and format-specific guides. This ensures we're truth-seeking with real 2025 vibes (e.g., rookies like Jeanty rising on college metrics).
+
+### 1. Teaching Tiber Fantasy Football Signals
+Tiber's lexicon/RAG is already FF-tuned, so we embed signals as queryable vectors or prompts in the pipeline. "Signals" here mean actionable metrics that predict fantasy value—beyond raw stats, like efficiency red flags or opportunity shares. From the data, top RB signals for 2025 include:
+
+- **Usage/Opportunity**: Snap share (>60% for RB1s), touches per game (>15), redzone carries (goal-line work boosts TDs). E.g., Henry's volume in BAL's scheme is a +signal.
+- **Efficiency/Talent**: Yards per carry (YPC >4.5), yards after contact, broken tackles, EPA per rush (advanced from PFF). Rookies like Jeanty pop here from college translates.
+- **Receiving/Pass Game**: Routes run, targets, yards after catch—critical for PPR (e.g., Gibbs' edge over pure rushers).
+- **Environment/Context**: O-line grade (PFF), team run rate, QB quality (affects stacks), schedule strength.
+- **Availability/Risk**: Injury history, age (>28 dings vets like CMC), depth chart position.
+- **Trending/Market**: 3-week rolling avgs, ECR drift (for contrarian plays), ADP value.
+
+**Integration Steps**:
+- **Embed in RAG/Lexicon**: Add these as key terms in your vector DB (e.g., Pinecone or whatever you're using). For each player query, RAG pulls docs matching signals (e.g., "Bijan redzone usage 2025") from your synced sources (Sleeper, NFL-data-py). In Python, use pandas to compute signals on ingest—e.g., df['ypc'] = df['rush_yards'] / df['attempts']—then store in advanced_signals table.
+- **Process Flow Update**: In Fastify calcs, after scraping ECR, RAG-query for signals per player. E.g., if usage_now is low, flag as -signal in explanations. Nightly job: Pull data, compute signals, vectorize for RAG (e.g., via HuggingFace embeddings).
+- **Teaching via ML/Fine-Tune**: If RAG is LLM-based, fine-tune on FF datasets (Kaggle has some) to recognize signals in text—e.g., "high YPC = +talent". Start simple: Rule-based thresholds in TS (if snap_share > 0.6, boost usage_now by 10%).
+- **Test Case**: For CMC, signals might show +receiving but -availability; Tiber explains + vs ECR if overweighting talent.
+
+This plugs right into your pipeline—minimal lift, max relevance.
+
+### 2. Making Power Rankings Fantasy Self-Aware
+"Self-aware" means rankings adapt to league formats without hardcoding everything. Dynasty boosts youth; redraft focuses on 2025 only; superflex elevates QBs (RBs drop in value); PPR/half-PPR amps receivers (0.5 vs 1 pt per reception).
+
+**Implementation**:
+- **API Params for Awareness**: Add query params like ?format=ppr&league_type=dynasty&flex=superflex. In Express/Fastify, parse and adjust BASE_WEIGHTS dynamically—e.g.:
+  - PPR: Boost receiving signals (add 0.1 to talent for routes/targets).
+  - Half-PPR: Balance (0.05 boost).
+  - Dynasty: Add age/youth factor (0.15 weight; rookies +10%, vets >28 -5%).
+  - Redraft: Zero youth; full focus on 2025 projections.
+  - Superflex: Demote RBs overall (scale power_score down 15% relative to QBs; pull QB ECR too).
+- **Format-Specific ECR Scraping**: In the /process endpoint, use tools (undici to FantasyPros APIs) for targeted ECR—e.g., fetch "dynasty superflex rankings 2025" via a new param in your scrape function. Then compare Tiber's adjusted ranks.
+- **RAG Tie-In**: Query lexicon for format diffs—e.g., "PPR boosts pass-catching RBs like Gibbs". Store format rules as docs.
+- **Output Enhancements**: In JSON, add "format_adjusted": true, with explanations like "In PPR, +5 on Gibbs due to targets signal".
+- **Edge Cases**: For superflex, integrate QB data (expand players table). Test with mocks—e.g., in dynasty, Jeanty jumps to top-3 on youth/talent.
+
+This makes Tiber flexible—users pick format, it recalcs weights/signals via RAG, scrapes matching ECR, and explains. If you share a code snippet for the RAG part, I can mock a prototype. What's the next tweak?

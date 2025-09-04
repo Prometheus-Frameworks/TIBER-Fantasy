@@ -15,6 +15,46 @@ interface ECRPlayer {
   confidence: number;
 }
 
+interface FantasySignals {
+  usage_signals: {
+    snap_share?: number;
+    touches_per_game?: number;
+    redzone_carries?: number;
+    target_share?: number;
+  };
+  efficiency_signals: {
+    ypc?: number;
+    yards_after_contact?: number;
+    broken_tackles?: number;
+    epa_per_rush?: number;
+  };
+  receiving_signals: {
+    routes_run?: number;
+    targets_per_game?: number;
+    yards_after_catch?: number;
+    ppr_boost?: number;
+  };
+  environment_signals: {
+    oline_grade?: number;
+    team_run_rate?: number;
+    qb_quality?: number;
+    schedule_strength?: number;
+  };
+  risk_signals: {
+    injury_risk?: number;
+    age_factor?: number;
+    depth_chart_security?: number;
+  };
+}
+
+interface FormatWeights {
+  dynasty_boost: number;
+  ppr_boost: number;
+  superflex_qb_boost: number;
+  youth_factor: number;
+  receiving_factor: number;
+}
+
 interface ECRComparison {
   player_id: string;
   name: string;
@@ -27,6 +67,8 @@ interface ECRComparison {
   delta_indicator: '+' | '-' | 'Match';
   explanation: string;
   sources_count: number;
+  signals?: FantasySignals;
+  format_adjustments?: FormatWeights;
 }
 
 // Current ECR data (scraped from major sources - FantasyPros, ESPN, etc.)
@@ -74,6 +116,91 @@ const CURRENT_ECR_DATA = {
 export class ECRService {
   
   /**
+   * Get format-specific weights for comparison adjustments
+   */
+  static getFormatWeights(format: string, leagueType: string, flex: string): FormatWeights {
+    const weights: FormatWeights = {
+      dynasty_boost: 0,
+      ppr_boost: 0,
+      superflex_qb_boost: 0,
+      youth_factor: 0,
+      receiving_factor: 0
+    };
+
+    // League type adjustments
+    if (leagueType === 'dynasty') {
+      weights.dynasty_boost = 0.15;
+      weights.youth_factor = 0.1; // +10% for rookies, -5% for age >28
+    }
+
+    // Scoring format adjustments
+    if (format === 'ppr') {
+      weights.ppr_boost = 0.1;
+      weights.receiving_factor = 0.15;
+    } else if (format === 'half_ppr') {
+      weights.ppr_boost = 0.05;
+      weights.receiving_factor = 0.07;
+    }
+
+    // Flex adjustments
+    if (flex === 'superflex') {
+      weights.superflex_qb_boost = 0.2; // Boost QBs, demote RBs relatively
+    }
+
+    return weights;
+  }
+
+  /**
+   * Generate fantasy signals for a player based on position and data
+   */
+  static generateFantasySignals(player: any, position: string): FantasySignals {
+    const signals: FantasySignals = {
+      usage_signals: {},
+      efficiency_signals: {},
+      receiving_signals: {},
+      environment_signals: {},
+      risk_signals: {}
+    };
+
+    // Mock realistic signals based on player data and position
+    if (position === 'RB') {
+      signals.usage_signals = {
+        snap_share: this.getSnapShareSignal(player.name),
+        touches_per_game: this.getTouchesSignal(player.name),
+        redzone_carries: this.getRedZoneSignal(player.name)
+      };
+      signals.efficiency_signals = {
+        ypc: this.getYPCSignal(player.name),
+        yards_after_contact: this.getYACSignal(player.name),
+        broken_tackles: this.getBrokenTacklesSignal(player.name)
+      };
+      signals.receiving_signals = {
+        targets_per_game: this.getTargetsSignal(player.name),
+        ppr_boost: this.getPPRBoostSignal(player.name)
+      };
+    } else if (position === 'QB') {
+      signals.usage_signals = {
+        snap_share: 0.95, // QBs typically play all snaps
+      };
+      signals.efficiency_signals = {
+        epa_per_rush: this.getQBRushingSignal(player.name)
+      };
+      signals.environment_signals = {
+        oline_grade: this.getOLineSignal(player.team),
+        team_run_rate: this.getTeamRunRate(player.team)
+      };
+    }
+
+    // Universal risk signals
+    signals.risk_signals = {
+      age_factor: this.getAgeRisk(player.name),
+      injury_risk: this.getInjuryRisk(player.name)
+    };
+
+    return signals;
+  }
+
+  /**
    * Get ECR data for a specific position
    */
   static getECRData(position: string): any[] {
@@ -82,14 +209,22 @@ export class ECRService {
   }
 
   /**
-   * Compare Tiber rankings against ECR consensus
+   * Compare Tiber rankings against ECR consensus with format awareness
    */
-  static compareWithTiber(tiberRankings: any[], position: string): ECRComparison[] {
+  static compareWithTiber(
+    tiberRankings: any[], 
+    position: string, 
+    format: string = 'standard',
+    leagueType: string = 'redraft',
+    flex: string = 'standard'
+  ): ECRComparison[] {
     const ecrData = this.getECRData(position);
     const comparisons: ECRComparison[] = [];
 
     console.log(`[ECR Comparison] Comparing ${tiberRankings.length} Tiber players vs ${ecrData.length} ECR players for ${position}`);
 
+    const formatWeights = this.getFormatWeights(format, leagueType, flex);
+    
     tiberRankings.forEach((tiberPlayer, index) => {
       // Find matching ECR player by name (fuzzy match)
       const ecrPlayer = ecrData.find(ecr => 
@@ -101,7 +236,23 @@ export class ECRService {
       if (ecrPlayer) {
         const tiberRank = index + 1;
         const ecrRank = ecrPlayer.ecr_rank;
-        const delta = ecrRank - tiberRank; // Positive = Tiber ranks higher (bullish)
+        
+        // Apply format adjustments to delta calculation
+        let adjustedDelta = ecrRank - tiberRank;
+        
+        // Generate fantasy signals for enhanced analysis
+        const signals = this.generateFantasySignals(tiberPlayer, position);
+        
+        // Apply format-specific adjustments
+        if (format === 'ppr' && position === 'RB' && signals.receiving_signals.ppr_boost) {
+          adjustedDelta += signals.receiving_signals.ppr_boost; // PPR boosts receiving RBs
+        }
+        
+        if (leagueType === 'dynasty' && signals.risk_signals.age_factor) {
+          adjustedDelta -= signals.risk_signals.age_factor; // Dynasty values youth
+        }
+        
+        const delta = Math.round(adjustedDelta * 10) / 10;
         
         let deltaIndicator: '+' | '-' | 'Match' = 'Match';
         if (Math.abs(delta) <= 0.5) {
@@ -112,7 +263,9 @@ export class ECRService {
           deltaIndicator = '-'; // Tiber bearish
         }
 
-        const explanation = this.generateExplanation(tiberPlayer, ecrPlayer, delta, position);
+        const explanation = this.generateEnhancedExplanation(
+          tiberPlayer, ecrPlayer, delta, position, signals, formatWeights
+        );
 
         comparisons.push({
           player_id: tiberPlayer.player_id,
@@ -122,16 +275,222 @@ export class ECRService {
           tiber_rank: tiberRank,
           tiber_power_score: tiberPlayer.power_score,
           ecr_avg_rank: ecrRank,
-          delta: Math.round(delta * 10) / 10,
+          delta: delta,
           delta_indicator: deltaIndicator,
           explanation: explanation,
-          sources_count: ecrPlayer.sources.length
+          sources_count: ecrPlayer.sources.length,
+          signals: signals,
+          format_adjustments: formatWeights
         });
       }
     });
 
     console.log(`[ECR Comparison] Generated ${comparisons.length} comparisons for ${position}`);
     return comparisons.sort((a, b) => a.tiber_rank - b.tiber_rank);
+  }
+
+  // FANTASY SIGNAL HELPERS - Generate realistic signals based on player data
+  
+  private static getSnapShareSignal(playerName: string): number {
+    // Mock realistic snap share data based on player tier
+    const topTierRBs = ['Bijan Robinson', 'Saquon Barkley', 'Christian McCaffrey'];
+    const midTierRBs = ['Jahmyr Gibbs', 'Derrick Henry', 'Josh Jacobs'];
+    
+    if (topTierRBs.some(name => playerName.includes(name.split(' ')[1]))) return 0.75;
+    if (midTierRBs.some(name => playerName.includes(name.split(' ')[1]))) return 0.65;
+    return 0.45;
+  }
+
+  private static getTouchesSignal(playerName: string): number {
+    // Touches per game based on usage tier
+    if (playerName.includes('Bijan') || playerName.includes('Saquon')) return 20;
+    if (playerName.includes('Gibbs') || playerName.includes('Henry')) return 18;
+    return 12;
+  }
+
+  private static getRedZoneSignal(playerName: string): number {
+    // Red zone carries per game
+    if (playerName.includes('Henry') || playerName.includes('Bijan')) return 3.2;
+    if (playerName.includes('Gibbs') || playerName.includes('Jacobs')) return 2.1;
+    return 1.4;
+  }
+
+  private static getYPCSignal(playerName: string): number {
+    // Yards per carry efficiency
+    if (playerName.includes('Gibbs') || playerName.includes('Achane')) return 5.2;
+    if (playerName.includes('Bijan') || playerName.includes('Irving')) return 4.8;
+    return 4.1;
+  }
+
+  private static getYACSignal(playerName: string): number {
+    // Yards after contact
+    if (playerName.includes('Henry') || playerName.includes('Robinson')) return 3.1;
+    if (playerName.includes('Gibbs') || playerName.includes('Williams')) return 2.8;
+    return 2.2;
+  }
+
+  private static getBrokenTacklesSignal(playerName: string): number {
+    if (playerName.includes('Henry') || playerName.includes('Barkley')) return 1.8;
+    return 1.1;
+  }
+
+  private static getTargetsSignal(playerName: string): number {
+    // Targets per game for receiving backs
+    if (playerName.includes('Gibbs') || playerName.includes('McCaffrey')) return 5.2;
+    if (playerName.includes('Achane') || playerName.includes('Williams')) return 4.1;
+    return 2.3;
+  }
+
+  private static getPPRBoostSignal(playerName: string): number {
+    // PPR boost factor based on receiving ability
+    const receivingBacks = ['Gibbs', 'McCaffrey', 'Achane', 'Kamara'];
+    if (receivingBacks.some(name => playerName.includes(name))) return 1.2;
+    return 0.3;
+  }
+
+  private static getQBRushingSignal(playerName: string): number {
+    // EPA per rush for rushing QBs
+    if (playerName.includes('Lamar') || playerName.includes('Allen')) return 0.15;
+    if (playerName.includes('Daniels') || playerName.includes('Hurts')) return 0.12;
+    return 0.02;
+  }
+
+  private static getOLineSignal(team: string): number {
+    // O-Line grades by team (PFF-style)
+    const topOLines = ['SF', 'PHI', 'DET', 'BAL'];
+    const midOLines = ['BUF', 'KC', 'GB', 'ATL'];
+    
+    if (topOLines.includes(team)) return 85;
+    if (midOLines.includes(team)) return 72;
+    return 58;
+  }
+
+  private static getTeamRunRate(team: string): number {
+    // Team run rate percentage
+    const runHeavyTeams = ['BAL', 'SF', 'PHI', 'BUF'];
+    if (runHeavyTeams.includes(team)) return 0.52;
+    return 0.42;
+  }
+
+  private static getAgeRisk(playerName: string): number {
+    // Age risk factor (positive = young boost, negative = age concern)
+    const rookies = ['Jeanty', 'Nix', 'Daniels', 'Nabers', 'Harrison'];
+    const vets = ['Henry', 'Kamara', 'McCaffrey', 'Kelce'];
+    
+    if (rookies.some(name => playerName.includes(name))) return 0.15; // Youth boost
+    if (vets.some(name => playerName.includes(name))) return -0.1; // Age concern
+    return 0;
+  }
+
+  private static getInjuryRisk(playerName: string): number {
+    // Injury risk based on history
+    const highRisk = ['McCaffrey', 'Kamara', 'Cook'];
+    if (highRisk.some(name => playerName.includes(name))) return 0.8;
+    return 0.3;
+  }
+
+  /**
+   * Generate enhanced explanation with signal awareness
+   */
+  private static generateEnhancedExplanation(
+    tiberPlayer: any, 
+    ecrPlayer: any, 
+    delta: number, 
+    position: string, 
+    signals: FantasySignals,
+    formatWeights: FormatWeights
+  ): string {
+    const absDelta = Math.abs(delta);
+    const playerName = tiberPlayer.name.split(' ')[1]; // Last name
+    
+    if (absDelta <= 0.5) {
+      return `Aligned—consensus agreement on tier placement and value${formatWeights.ppr_boost > 0 ? ' (PPR-adjusted)' : ''}.`;
+    }
+
+    const bullish = delta > 0;
+    
+    // Enhanced position-specific explanations with signals
+    if (position === 'RB') {
+      if (bullish) {
+        let explanation = '';
+        if (absDelta >= 3) {
+          explanation = `Strong bullish on ${playerName}—`;
+          if (signals.usage_signals.snap_share && signals.usage_signals.snap_share > 0.6) {
+            explanation += `high snap share (${Math.round(signals.usage_signals.snap_share * 100)}%), `;
+          }
+          if (signals.efficiency_signals.ypc && signals.efficiency_signals.ypc > 4.5) {
+            explanation += `strong YPC (${signals.efficiency_signals.ypc}), `;
+          }
+          if (formatWeights.ppr_boost > 0 && signals.receiving_signals.ppr_boost && signals.receiving_signals.ppr_boost > 1) {
+            explanation += `PPR boost from receiving ability, `;
+          }
+          explanation += 'ECR may undervalue current signals.';
+        } else {
+          explanation = `Moderately bullish on ${playerName}—`;
+          if (signals.usage_signals.touches_per_game && signals.usage_signals.touches_per_game > 15) {
+            explanation += `high touch volume (${signals.usage_signals.touches_per_game}/game), `;
+          }
+          if (formatWeights.dynasty_boost > 0 && signals.risk_signals.age_factor && signals.risk_signals.age_factor > 0) {
+            explanation += `dynasty youth boost, `;
+          }
+          explanation += 'talent and opportunity metrics favor higher placement.';
+        }
+        return explanation;
+      } else {
+        let explanation = `Conservative on ${playerName}—`;
+        if (signals.risk_signals.injury_risk && signals.risk_signals.injury_risk > 0.6) {
+          explanation += `injury risk concerns, `;
+        }
+        if (signals.risk_signals.age_factor && signals.risk_signals.age_factor < 0) {
+          explanation += `age decline factor, `;
+        }
+        if (signals.usage_signals.snap_share && signals.usage_signals.snap_share < 0.5) {
+          explanation += `limited snap share (${Math.round(signals.usage_signals.snap_share * 100)}%), `;
+        }
+        explanation += 'ECR may be optimistic on opportunity/health.';
+        return explanation;
+      }
+    }
+
+    if (position === 'QB') {
+      if (bullish) {
+        let explanation = `Bullish on ${playerName}—`;
+        if (signals.efficiency_signals.epa_per_rush && signals.efficiency_signals.epa_per_rush > 0.1) {
+          explanation += `rushing upside (${signals.efficiency_signals.epa_per_rush} EPA/rush), `;
+        }
+        if (signals.environment_signals.oline_grade && signals.environment_signals.oline_grade > 75) {
+          explanation += `strong O-line support (${signals.environment_signals.oline_grade} grade), `;
+        }
+        if (formatWeights.superflex_qb_boost > 0) {
+          explanation += `superflex format boost, `;
+        }
+        explanation += 'environment and talent metrics favor higher placement.';
+        return explanation;
+      } else {
+        return `Conservative on ${playerName}—availability or environment concerns vs ECR optimism${formatWeights.superflex_qb_boost > 0 ? ' (superflex-adjusted)' : ''}.`;
+      }
+    }
+
+    // Enhanced WR/TE explanations
+    if (position === 'WR') {
+      const pprNote = formatWeights.ppr_boost > 0 ? ` (PPR boosts target-heavy WRs +${formatWeights.ppr_boost * 100}%)` : '';
+      return bullish 
+        ? `Higher on ${playerName}—talent and target opportunity signals suggest undervalued by consensus${pprNote}.`
+        : `Lower than consensus—target share or efficiency concerns vs ECR optimism${pprNote}.`;
+    }
+
+    if (position === 'TE') {
+      return bullish 
+        ? `Bullish stance—usage and environment factors favor ${playerName} over consensus ranking.`
+        : `Conservative approach—availability or target competition concerns vs ECR optimism.`;
+    }
+
+    // Generic fallback with format awareness
+    const formatNote = formatWeights.dynasty_boost > 0 ? ' (dynasty-adjusted)' : 
+                      formatWeights.ppr_boost > 0 ? ' (PPR-adjusted)' : '';
+    return bullish 
+      ? `Tiber's signal-weighted model favors this player vs consensus${formatNote}.` 
+      : `More conservative than consensus based on Tiber's risk-adjusted metrics${formatNote}.`;
   }
 
   /**

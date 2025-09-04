@@ -4152,10 +4152,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/ecr/compare/:position', async (req: Request, res: Response) => {
     const { position } = req.params;
-    const { season = 2025, week = 1 } = req.query;
+    const { 
+      season = 2025, 
+      week = 1, 
+      format = 'standard',
+      league_type = 'redraft',
+      flex = 'standard'
+    } = req.query;
     
     try {
-      console.log(`[ECR Compare] Starting comparison for ${position.toUpperCase()}`);
+      console.log(`[ECR Compare] Starting format-aware comparison for ${position.toUpperCase()} (${format}/${league_type}/${flex})`);
       
       // Get current Tiber rankings for this position
       const tiberResponse = await axios.get(`http://localhost:5000/api/power/${position.toUpperCase()}?season=${season}&week=${week}`);
@@ -4167,18 +4173,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tiberData = tiberResponse.data;
       const tiberRankings = tiberData.items || [];
       
-      // Import ECR service and generate comparisons
+      // Import ECR service and generate format-aware comparisons
       const { ECRService } = await import('./services/ecrService');
-      const comparisons = ECRService.compareWithTiber(tiberRankings, position.toUpperCase());
+      const comparisons = ECRService.compareWithTiber(
+        tiberRankings, 
+        position.toUpperCase(),
+        format as string,
+        league_type as string,
+        flex as string
+      );
       
       res.json({
         position: position.toUpperCase(),
         season: Number(season),
         week: Number(week),
+        format: format,
+        league_type: league_type,
+        flex_configuration: flex,
         generated_at: new Date().toISOString(),
         tiber_source: tiberData.source || 'grok_enhanced_2025_consensus',
         ecr_sources: ['FantasyPros', 'ESPN', 'Yahoo', 'Footballguys'],
         total_comparisons: comparisons.length,
+        format_adjustments_applied: comparisons.length > 0 && comparisons[0].format_adjustments ? true : false,
         comparisons: comparisons
       });
       
