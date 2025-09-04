@@ -4148,6 +4148,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ECR COMPARISON ENDPOINTS - Tiber vs Expert Consensus Rankings
+  
+  app.get('/api/ecr/compare/:position', async (req: Request, res: Response) => {
+    const { position } = req.params;
+    const { season = 2025, week = 1 } = req.query;
+    
+    try {
+      console.log(`[ECR Compare] Starting comparison for ${position.toUpperCase()}`);
+      
+      // Get current Tiber rankings for this position
+      const tiberResponse = await axios.get(`http://localhost:5000/api/power/${position.toUpperCase()}?season=${season}&week=${week}`);
+      
+      if (tiberResponse.status !== 200) {
+        return res.status(500).json({ error: 'Failed to fetch Tiber rankings' });
+      }
+      
+      const tiberData = tiberResponse.data;
+      const tiberRankings = tiberData.items || [];
+      
+      // Import ECR service and generate comparisons
+      const { ECRService } = await import('./services/ecrService');
+      const comparisons = ECRService.compareWithTiber(tiberRankings, position.toUpperCase());
+      
+      res.json({
+        position: position.toUpperCase(),
+        season: Number(season),
+        week: Number(week),
+        generated_at: new Date().toISOString(),
+        tiber_source: tiberData.source || 'grok_enhanced_2025_consensus',
+        ecr_sources: ['FantasyPros', 'ESPN', 'Yahoo', 'Footballguys'],
+        total_comparisons: comparisons.length,
+        comparisons: comparisons
+      });
+      
+    } catch (error) {
+      console.error('ECR comparison error:', error);
+      res.status(500).json({ error: 'Failed to generate ECR comparison' });
+    }
+  });
+
+  app.get('/api/ecr/status', async (req: Request, res: Response) => {
+    try {
+      // Import ECR service and get status
+      const { ECRService } = await import('./services/ecrService');
+      const status = ECRService.getUpdateStatus();
+      
+      res.json({
+        status: 'active',
+        service: 'tiber_ecr_comparison',
+        ...status
+      });
+      
+    } catch (error) {
+      console.error('ECR status error:', error);
+      res.status(500).json({ error: 'Failed to get ECR status' });
+    }
+  });
+
+  app.post('/api/ecr/refresh/:position', async (req: Request, res: Response) => {
+    const { position } = req.params;
+    
+    try {
+      console.log(`[ECR Refresh] Refreshing ECR data for ${position.toUpperCase()}`);
+      
+      // Import ECR service and simulate refresh
+      const { ECRService } = await import('./services/ecrService');
+      const freshData = await ECRService.scrapeFantasyPros(position.toUpperCase());
+      
+      res.json({
+        position: position.toUpperCase(),
+        refreshed_at: new Date().toISOString(),
+        sources_updated: ['FantasyPros'],
+        players_count: freshData.length,
+        next_refresh: 'Post-Week 1 games (Tuesday)',
+        status: 'success'
+      });
+      
+    } catch (error) {
+      console.error('ECR refresh error:', error);
+      res.status(500).json({ error: 'Failed to refresh ECR data' });
+    }
+  });
+
   app.get('/api/power/health', async (req: Request, res: Response) => {
     try {
       const stats = await db.execute(sql`
