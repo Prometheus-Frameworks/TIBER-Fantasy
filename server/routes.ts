@@ -3982,53 +3982,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Week 1 2025 NFL Season - Updated with actual game results (Sept 4-8, 2025)
         const CONSENSUS_2025_RANKINGS = [
-          // RBs - Updated after Week 1 performances
+          // RBs - CORRECTED after detailed Week 1 analysis
           { rank: 1, name: "Bijan Robinson", team: "ATL", position: "RB", powerScore: 98, expertRank: 1.5, week1Notes: "50-yard screen TD vs Bucs" },
-          { rank: 2, name: "Jahmyr Gibbs", team: "DET", position: "RB", powerScore: 93, expertRank: 2.5, week1Notes: "Solid Lions win vs Packers" },
-          { rank: 3, name: "Ashton Jeanty", team: "LV", position: "RB", powerScore: 92, expertRank: 3.0, week1Notes: "Strong Raiders debut vs Patriots" },
-          { rank: 4, name: "Saquon Barkley", team: "PHI", position: "RB", powerScore: 89, expertRank: 3.2, week1Notes: "Eagles beat Cowboys" },
-          { rank: 5, name: "Derrick Henry", team: "BAL", position: "RB", powerScore: 88, expertRank: 3.5, week1Notes: "Fumble in loss to Bills, but productive" },
-          { rank: 6, name: "Jonathan Taylor", team: "IND", position: "RB", powerScore: 85, expertRank: 4.0, week1Notes: "Colts dominated Dolphins 33-8" },
-          { rank: 7, name: "Travis Etienne", team: "JAX", position: "RB", powerScore: 83, expertRank: 4.5, week1Notes: "Powered Jags win vs Panthers" },
-          { rank: 8, name: "Christian McCaffrey", team: "SF", position: "RB", powerScore: 82, expertRank: 5.0, week1Notes: "49ers beat Seahawks" },
-          { rank: 9, name: "Jordan Mason", team: "MIN", position: "RB", powerScore: 80, expertRank: 5.5, week1Notes: "68 yards in Vikings comeback" },
-          { rank: 10, name: "De'Von Achane", team: "MIA", position: "RB", powerScore: 75, expertRank: 6.0, week1Notes: "Dolphins struggled vs Colts" },
+          { rank: 2, name: "Travis Etienne", team: "JAX", position: "RB", powerScore: 95, expertRank: 2.0, week1Notes: "RISER: 143 yards, 8.9 YPC, bell-cow status" },
+          { rank: 3, name: "Jacory Croskey-Merritt", team: "WAS", position: "RB", powerScore: 93, expertRank: 2.5, week1Notes: "RISER: 82 yards, 8.2 YPC, 50% carries" },
+          { rank: 4, name: "Jahmyr Gibbs", team: "DET", position: "RB", powerScore: 91, expertRank: 3.0, week1Notes: "Solid Lions win vs Packers" },
+          { rank: 5, name: "Saquon Barkley", team: "PHI", position: "RB", powerScore: 89, expertRank: 3.2, week1Notes: "Eagles beat Cowboys" },
+          { rank: 6, name: "Derrick Henry", team: "BAL", position: "RB", powerScore: 88, expertRank: 3.5, week1Notes: "Fumble in loss to Bills, but productive" },
+          { rank: 7, name: "Jonathan Taylor", team: "IND", position: "RB", powerScore: 85, expertRank: 4.0, week1Notes: "Colts dominated Dolphins 33-8" },
+          { rank: 8, name: "Dylan Sampson", team: "CLE", position: "RB", powerScore: 82, expertRank: 5.0, week1Notes: "RISER: 29 rush yards + 8 catches, 64 yards" },
+          { rank: 9, name: "Jordan Mason", team: "MIN", position: "RB", powerScore: 80, expertRank: 5.5, week1Notes: "RISER: 68 yards in Vikings comeback" },
+          { rank: 10, name: "Christian McCaffrey", team: "SF", position: "RB", powerScore: 78, expertRank: 6.0, week1Notes: "49ers beat Seahawks" },
           { rank: 11, name: "Josh Jacobs", team: "GB", position: "RB", powerScore: 73, expertRank: 6.5, week1Notes: "Packers lost to Lions" },
           { rank: 12, name: "Breece Hall", team: "NYJ", position: "RB", powerScore: 71, expertRank: 7.0, week1Notes: "Jets lost thriller to Steelers" },
           { rank: 13, name: "James Cook", team: "BUF", position: "RB", powerScore: 69, expertRank: 7.5, week1Notes: "Bills epic comeback vs Ravens" },
-          { rank: 14, name: "Bucky Irving", team: "TB", position: "RB", powerScore: 68, expertRank: 8.0, week1Notes: "Bucs lost to Falcons" },
-          { rank: 15, name: "Kenneth Walker III", team: "SEA", position: "RB", powerScore: 65, expertRank: 8.5, week1Notes: "Seahawks lost to 49ers" },
+          { rank: 14, name: "Ashton Jeanty", team: "LV", position: "RB", powerScore: 65, expertRank: 8.0, week1Notes: "FALLER: 2.0 YPC on 21 touches, inefficient debut" },
+          { rank: 15, name: "De'Von Achane", team: "MIA", position: "RB", powerScore: 62, expertRank: 8.5, week1Notes: "FALLER: Limited in blowout loss, committee concerns" },
           
-          // QBs - Updated after Week 1 debuts and performances
+          // QBs - CORRECTED with risers/fallers data
           { rank: 16, name: "Josh Allen", team: "BUF", position: "QB", powerScore: 99, expertRank: 1.0, week1Notes: "394 yards, 4 total TDs in epic comeback" },
-          { rank: 17, name: "J.J. McCarthy", team: "MIN", position: "QB", powerScore: 95, expertRank: 1.5, week1Notes: "3 TDs in 4th quarter comeback debut" },
-          { rank: 18, name: "Jayden Daniels", team: "WAS", position: "QB", powerScore: 93, expertRank: 2.0, week1Notes: "233 yards, 1 TD in debut vs Giants" },
-          { rank: 19, name: "Aaron Rodgers", team: "PIT", position: "QB", powerScore: 92, expertRank: 2.3, week1Notes: "4 TDs in Steelers debut vs Jets" },
-          { rank: 20, name: "Justin Herbert", team: "LAC", position: "QB", powerScore: 91, expertRank: 2.5, week1Notes: "Strong 2nd half, beat Chiefs in Brazil" },
+          { rank: 17, name: "J.J. McCarthy", team: "MIN", position: "QB", powerScore: 95, expertRank: 1.5, week1Notes: "RISER: 3 TDs in 4th quarter comeback debut" },
+          { rank: 18, name: "Justin Fields", team: "NYJ", position: "QB", powerScore: 94, expertRank: 1.8, week1Notes: "RISER: 218 yards + 48 rush, 3 total TDs" },
+          { rank: 19, name: "Daniel Jones", team: "IND", position: "QB", powerScore: 93, expertRank: 2.0, week1Notes: "RISER: 272 yards, 3 total TDs in Colts debut" },
+          { rank: 20, name: "Jayden Daniels", team: "WAS", position: "QB", powerScore: 92, expertRank: 2.3, week1Notes: "233 yards, 1 TD in debut vs Giants" },
           { rank: 21, name: "Lamar Jackson", team: "BAL", position: "QB", powerScore: 89, expertRank: 2.8, week1Notes: "Blew big lead vs Bills" },
           { rank: 22, name: "Jalen Hurts", team: "PHI", position: "QB", powerScore: 87, expertRank: 3.2, week1Notes: "2 rushing TDs vs Cowboys" },
           { rank: 23, name: "Bo Nix", team: "DEN", position: "QB", powerScore: 85, expertRank: 3.5, week1Notes: "Rookie win vs Titans despite 3 turnovers" },
           { rank: 24, name: "Joe Burrow", team: "CIN", position: "QB", powerScore: 83, expertRank: 4.0, week1Notes: "Clutch win vs Browns" },
           { rank: 25, name: "Trevor Lawrence", team: "JAX", position: "QB", powerScore: 81, expertRank: 4.5, week1Notes: "Poised in Jags win" },
           
-          // WRs - Updated with Week 1 breakouts and performances  
-          { rank: 26, name: "Emeka Egbuka", team: "TB", position: "WR", powerScore: 94, expertRank: 1.5, week1Notes: "2 TDs including game-winner vs Falcons" },
-          { rank: 27, name: "Quentin Johnston", team: "LAC", position: "WR", powerScore: 92, expertRank: 2.0, week1Notes: "5 catches, 79 yards, 2 TDs vs Chiefs" },
-          { rank: 28, name: "DeAndre Hopkins", team: "BAL", position: "WR", powerScore: 90, expertRank: 2.5, week1Notes: "One-handed 29-yard TD vs Bills" },
-          { rank: 29, name: "Marvin Harrison Jr.", team: "ARI", position: "WR", powerScore: 89, expertRank: 2.8, week1Notes: "Led Cardinals win vs Saints" },
-          { rank: 30, name: "Deebo Samuel", team: "WAS", position: "WR", powerScore: 88, expertRank: 3.0, week1Notes: "TD in Commanders debut" },
+          // WRs - CORRECTED with confirmed risers  
+          { rank: 26, name: "Emeka Egbuka", team: "TB", position: "WR", powerScore: 94, expertRank: 1.5, week1Notes: "RISER: 4/64, 2 TDs, game-winner vs Falcons" },
+          { rank: 27, name: "Keon Coleman", team: "BUF", position: "WR", powerScore: 92, expertRank: 2.0, week1Notes: "RISER: 8/112, 1 TD on 11 targets vs Ravens" },
+          { rank: 28, name: "Isaac TeSlaa", team: "DET", position: "WR", powerScore: 90, expertRank: 2.3, week1Notes: "RISER: 93.6 PFF grade, 4th quarter TD" },
+          { rank: 29, name: "Cedric Tillman", team: "CLE", position: "WR", powerScore: 89, expertRank: 2.5, week1Notes: "RISER: 4/52 in pass-heavy Browns script" },
+          { rank: 30, name: "DeAndre Hopkins", team: "BAL", position: "WR", powerScore: 88, expertRank: 2.8, week1Notes: "One-handed 29-yard TD vs Bills" },
           { rank: 31, name: "Amon-Ra St. Brown", team: "DET", position: "WR", powerScore: 87, expertRank: 3.2, week1Notes: "Lions beat Packers" },
           { rank: 32, name: "CeeDee Lamb", team: "DAL", position: "WR", powerScore: 85, expertRank: 3.5, week1Notes: "Drops hurt Cowboys vs Eagles" },
           { rank: 33, name: "A.J. Brown", team: "PHI", position: "WR", powerScore: 84, expertRank: 4.0, week1Notes: "Eagles beat Cowboys" },
           { rank: 34, name: "Courtland Sutton", team: "DEN", position: "WR", powerScore: 82, expertRank: 4.5, week1Notes: "TD from Nix vs Titans" },
           { rank: 35, name: "Ja'Marr Chase", team: "CIN", position: "WR", powerScore: 80, expertRank: 5.0, week1Notes: "Bengals clutch win" },
           
-          // TEs - Week 1 updates
-          { rank: 36, name: "Travis Kelce", team: "KC", position: "TE", powerScore: 90, expertRank: 1.5, week1Notes: "Chiefs lost to Chargers in Brazil" },
-          { rank: 37, name: "Sam LaPorta", team: "DET", position: "TE", powerScore: 88, expertRank: 2.0, week1Notes: "Lions beat Packers" },
-          { rank: 38, name: "Mark Andrews", team: "BAL", position: "TE", powerScore: 85, expertRank: 2.5, week1Notes: "Ravens blew lead vs Bills" },
-          { rank: 39, name: "Trey McBride", team: "ARI", position: "TE", powerScore: 83, expertRank: 3.0, week1Notes: "Cardinals beat Saints" },
-          { rank: 40, name: "George Kittle", team: "SF", position: "TE", powerScore: 80, expertRank: 3.5, week1Notes: "49ers beat Seahawks" }
+          // TEs - CORRECTED with breakout rookies
+          { rank: 36, name: "Tyler Warren", team: "IND", position: "TE", powerScore: 92, expertRank: 1.5, week1Notes: "RISER: 7/9, 76 yards, 90.4 PFF grade" },
+          { rank: 37, name: "Harold Fannin Jr.", team: "CLE", position: "TE", powerScore: 90, expertRank: 1.8, week1Notes: "RISER: 72% snaps, 7/63 on 9 targets" },
+          { rank: 38, name: "Travis Kelce", team: "KC", position: "TE", powerScore: 88, expertRank: 2.0, week1Notes: "Chiefs lost to Chargers in Brazil" },
+          { rank: 39, name: "Sam LaPorta", team: "DET", position: "TE", powerScore: 85, expertRank: 2.5, week1Notes: "Lions beat Packers" },
+          { rank: 40, name: "Juwan Johnson", team: "NO", position: "TE", powerScore: 82, expertRank: 3.0, week1Notes: "RISER: 5/58, reliable targets vs Cardinals" }
         ];
         
         // Filter by position if not OVERALL
