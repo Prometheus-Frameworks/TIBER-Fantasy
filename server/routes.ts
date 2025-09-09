@@ -3978,7 +3978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // TEMPORARY: Always use Grok enhanced system since database has outdated sample data
       // TODO: Remove this when database is properly populated with current data
       if (rawResults.length === 0 || true) { // Force Grok system for now
-        console.log(`[Power Rankings] Database has outdated data, using Grok enhanced 2025 consensus rankings`);
+        console.log(`[Power Rankings] Using Week 1 updated 2025 rankings with actual game results`);
         
         // Week 1 2025 NFL Season - Updated with actual game results (Sept 4-8, 2025)
         const CONSENSUS_2025_RANKINGS = [
@@ -4064,7 +4064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           generated_at: new Date().toISOString(),
           total: grokRankings.length,
           items: grokRankings,
-          source: 'grok_enhanced_2025_consensus'
+          source: 'week1_2025_actual_results'
         });
       }
       
@@ -4201,7 +4201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         league_type: league_type,
         flex_configuration: flex,
         generated_at: new Date().toISOString(),
-        tiber_source: tiberData.source || 'grok_enhanced_2025_consensus',
+        tiber_source: tiberData.source || 'week1_2025_actual_results',
         ecr_sources: ['FantasyPros', 'ESPN', 'Yahoo', 'Footballguys'],
         total_comparisons: comparisons.length,
         format_adjustments_applied: comparisons.length > 0 && comparisons[0].format_adjustments ? true : false,
