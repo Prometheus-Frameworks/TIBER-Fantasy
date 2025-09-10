@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, Activity, Star, AlertCircle, Target } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Star, AlertCircle, Target, Search, SortAsc, SortDesc } from 'lucide-react';
 
 interface Player {
   rank: number;
@@ -23,6 +25,9 @@ interface PowerRankingsResponse {
 
 export default function RisersAndFallers() {
   const [selectedPosition, setSelectedPosition] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'rank' | 'power_score' | 'name'>('rank');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Fetch power rankings data
   const { data: overallData, isLoading: overallLoading } = useQuery<PowerRankingsResponse>({
@@ -50,15 +55,49 @@ export default function RisersAndFallers() {
     queryFn: () => fetch('/api/power/TE').then(res => res.json()),
   });
 
-  const getPositionData = () => {
+  const filteredAndSortedPlayers = useMemo(() => {
+    let players = [];
     switch (selectedPosition) {
-      case 'QB': return qbData?.items || [];
-      case 'RB': return rbData?.items || [];
-      case 'WR': return wrData?.items || [];
-      case 'TE': return teData?.items || [];
-      default: return overallData?.items || [];
+      case 'QB': players = qbData?.items || []; break;
+      case 'RB': players = rbData?.items || []; break;
+      case 'WR': players = wrData?.items || []; break;
+      case 'TE': players = teData?.items || []; break;
+      default: players = overallData?.items || [];
     }
-  };
+
+    // Filter by search query
+    if (searchQuery) {
+      players = players.filter(player => 
+        player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        player.team.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Sort players
+    const sortedPlayers = [...players].sort((a, b) => {
+      let valueA, valueB;
+      switch (sortBy) {
+        case 'name':
+          valueA = a.name.toLowerCase();
+          valueB = b.name.toLowerCase();
+          break;
+        case 'power_score':
+          valueA = a.power_score;
+          valueB = b.power_score;
+          break;
+        default: // rank
+          valueA = a.rank;
+          valueB = b.rank;
+      }
+
+      if (sortDirection === 'desc') {
+        return valueA < valueB ? 1 : -1;
+      }
+      return valueA > valueB ? 1 : -1;
+    });
+
+    return sortedPlayers;
+  }, [selectedPosition, searchQuery, sortBy, sortDirection, overallData, qbData, rbData, wrData, teData]);
 
   const categorizePlayer = (player: Player) => {
     const notes = player.week1Notes?.toLowerCase() || '';
@@ -91,7 +130,16 @@ export default function RisersAndFallers() {
     return notes || 'No specific notes';
   };
 
-  const players = getPositionData();
+  const getWeek1Impact = (notes: string) => {
+    if (!notes) return null;
+    // Extract specific performance metrics for better display
+    if (notes.includes('yards') || notes.includes('YPC') || notes.includes('TDs')) {
+      return notes;
+    }
+    return null;
+  };
+
+  const players = filteredAndSortedPlayers;
   const risers = players.filter(p => categorizePlayer(p) === 'riser');
   const fallers = players.filter(p => categorizePlayer(p) === 'faller');
   const stable = players.filter(p => categorizePlayer(p) === 'stable');
@@ -99,30 +147,46 @@ export default function RisersAndFallers() {
   const renderPlayerCard = (player: Player) => {
     const category = categorizePlayer(player);
     const reason = extractReasonFromNotes(player.week1Notes || '');
+    const week1Impact = getWeek1Impact(player.week1Notes || '');
     
     return (
-      <Card key={`${player.position}-${player.name}`} className={`border-l-4 ${getMovementColor(category)}`}>
+      <Card key={`${player.position}-${player.name}`} className={`border-l-4 ${getMovementColor(category)} hover:shadow-md transition-shadow`}>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-lg">
               {getMovementIcon(category)}
-              {player.name}
+              <span className="font-bold">{player.name}</span>
               <Badge variant="outline" className="text-xs">
                 {player.team} {player.position}
               </Badge>
+              {category === 'riser' && (
+                <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  ↗ Rising
+                </Badge>
+              )}
+              {category === 'faller' && (
+                <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                  ↘ Falling
+                </Badge>
+              )}
             </CardTitle>
             <div className="text-right">
-              <div className="text-sm text-muted-foreground">#{player.rank} Overall</div>
+              <div className="text-sm text-muted-foreground">#{player.rank} {selectedPosition === 'ALL' ? 'Overall' : player.position}</div>
               <div className="font-bold text-lg">{player.power_score}</div>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="text-sm text-muted-foreground mb-2">
-            <strong>Week 1 Impact:</strong>
-          </div>
-          <div className="text-sm">
-            {reason}
+          <div className="space-y-2">
+            <div className="text-sm">
+              <span className="font-medium text-muted-foreground">Week 1 Impact:</span>
+              <div className="mt-1">{reason}</div>
+            </div>
+            {week1Impact && (
+              <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                📊 {week1Impact}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -150,8 +214,9 @@ export default function RisersAndFallers() {
         </p>
       </div>
 
-      {/* Position Filter */}
-      <div className="mb-6">
+      {/* Filters and Search */}
+      <div className="mb-6 space-y-4">
+        {/* Position Filter */}
         <Tabs value={selectedPosition} onValueChange={(value) => setSelectedPosition(value as typeof selectedPosition)}>
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="ALL">All Positions</TabsTrigger>
@@ -161,6 +226,47 @@ export default function RisersAndFallers() {
             <TabsTrigger value="TE">TE</TabsTrigger>
           </TabsList>
         </Tabs>
+
+        {/* Search and Sort Controls */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search players or teams (e.g., 'Travis Etienne', 'JAX')"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <div className="flex gap-2">
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="rank">Rank</SelectItem>
+                <SelectItem value="power_score">Power Score</SelectItem>
+                <SelectItem value="name">Name</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+            >
+              {sortDirection === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Search Results Info */}
+        {searchQuery && (
+          <div className="text-sm text-muted-foreground">
+            Found {players.length} player{players.length !== 1 ? 's' : ''} matching "{searchQuery}"
+          </div>
+        )}
       </div>
 
       {/* Summary Stats */}
