@@ -442,8 +442,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // 🔥 TIBER COMMAND: MainPlayerSystem.json generation with live depth charts
-  console.log('🔥 REGISTERING TIBER OVERRIDE ENDPOINT');
+  // ✅ TIBER COMMAND: MainPlayerSystem.json generation with live depth charts
+  console.log('✅ Registering Tiber stats endpoint');
   
   // TIBER: Depth chart system - DEPRECATED
   app.get('/api/tiber/depth-chart-system', async (req, res) => {
@@ -690,10 +690,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 🔥 TIBER OVERRIDE: Critical NFL stats endpoint - HIGHEST PRIORITY
-  app.get('/api/force-stats', async (req, res) => {
+  // ✅ TIBER STATS: NFL statistics endpoint for data retrieval
+  app.get('/api/nfl-stats', async (req, res) => {
     try {
-      console.log('🔥 TIBER OVERRIDE: Force stats endpoint activated');
+      console.log('✅ TIBER STATS: NFL statistics endpoint activated');
       
       // Direct NFL stats fetch bypassing ALL other logic
       const response = await axios.get('https://api.sleeper.app/v1/stats/nfl/regular/2024/1', { timeout: 10000 });
@@ -754,10 +754,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 🔥 GROK PROJECTIONS ENDPOINT: 2025 NFL Projections 
+  // 📊 GROK PROJECTIONS ENDPOINT: 2025 NFL Projections 
   app.get('/api/grok-projections', async (req, res) => {
     try {
-      console.log('🔥 GROK: Fetching 2025 projections');
+      console.log('📊 GROK: Fetching 2025 projections');
       
       // Parse query parameters
       const leagueFormat = req.query.league_format as string || 'ppr';
