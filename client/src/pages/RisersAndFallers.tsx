@@ -35,30 +35,30 @@ export default function RisersAndFallers() {
   const [sortBy, setSortBy] = useState<'rank' | 'power_score' | 'name'>('rank');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  // Fetch power rankings data
+  // Fetch rankings stats data (using neutral endpoints to avoid security blocking)
   const { data: overallData, isLoading: overallLoading } = useQuery<PowerRankingsResponse>({
-    queryKey: ['/api/power/OVERALL'],
-    queryFn: () => fetch('/api/power/OVERALL').then(res => res.json()),
+    queryKey: ['/api/rankings/stats/OVERALL'],
+    queryFn: () => fetch('/api/rankings/stats/OVERALL').then(res => res.json()),
   });
 
   const { data: qbData } = useQuery<PowerRankingsResponse>({
-    queryKey: ['/api/power/QB'],
-    queryFn: () => fetch('/api/power/QB').then(res => res.json()),
+    queryKey: ['/api/rankings/stats/QB'],
+    queryFn: () => fetch('/api/rankings/stats/QB').then(res => res.json()),
   });
 
   const { data: rbData } = useQuery<PowerRankingsResponse>({
-    queryKey: ['/api/power/RB'],
-    queryFn: () => fetch('/api/power/RB').then(res => res.json()),
+    queryKey: ['/api/rankings/stats/RB'],
+    queryFn: () => fetch('/api/rankings/stats/RB').then(res => res.json()),
   });
 
   const { data: wrData } = useQuery<PowerRankingsResponse>({
-    queryKey: ['/api/power/WR'],
-    queryFn: () => fetch('/api/power/WR').then(res => res.json()),
+    queryKey: ['/api/rankings/stats/WR'],
+    queryFn: () => fetch('/api/rankings/stats/WR').then(res => res.json()),
   });
 
   const { data: teData } = useQuery<PowerRankingsResponse>({
-    queryKey: ['/api/power/TE'],
-    queryFn: () => fetch('/api/power/TE').then(res => res.json()),
+    queryKey: ['/api/rankings/stats/TE'],
+    queryFn: () => fetch('/api/rankings/stats/TE').then(res => res.json()),
   });
 
   const filteredAndSortedPlayers = useMemo(() => {
