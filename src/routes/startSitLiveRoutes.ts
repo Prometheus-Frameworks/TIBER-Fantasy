@@ -1,6 +1,6 @@
 // src/routes/startSitLiveRoutes.ts
 import { Router, Request, Response } from "express";
-import { buildStartSitInputs } from "../data/aggregator/startSitAggregator";
+import { buildStartSitInputs, buildStudMetaFromContext } from "../data/aggregator/startSitAggregator";
 import { startSit, defaultConfig, StartSitConfig } from "../../server/modules/startSitEngine";
 
 const router = Router();
@@ -83,10 +83,26 @@ router.post('/live', async (req: Request, res: Response) => {
       week
     });
 
+    // Build minimal stud metadata from available context
+    const aMeta = buildStudMetaFromContext({
+      ourPosRank: a.projPoints ? Math.max(1, Math.min(50, Math.ceil((40 - a.projPoints) / 0.8))) : undefined,
+      seasonTgtShare: a.targetShare,
+      seasonRoutePct: a.routeParticipation,
+      boomRate: a.stdevLast5 ? Math.max(0, Math.min(100, 100 - (a.stdevLast5 * 8))) : undefined
+    });
+
+    const bMeta = buildStudMetaFromContext({
+      ourPosRank: b.projPoints ? Math.max(1, Math.min(50, Math.ceil((40 - b.projPoints) / 0.8))) : undefined,
+      seasonTgtShare: b.targetShare,
+      seasonRoutePct: b.routeParticipation,
+      boomRate: b.stdevLast5 ? Math.max(0, Math.min(100, 100 - (b.stdevLast5 * 8))) : undefined
+    });
+
     // Merge any config overrides
     const mergedConfig = {
       ...defaultConfig,
       ...(config || {}),
+      studEnabled: config?.studEnabled ?? true,
       weights: { ...defaultConfig.weights, ...(config?.weights || {}) },
       usageSub: { ...defaultConfig.usageSub, ...(config?.usageSub || {}) },
       matchupSub: { ...defaultConfig.matchupSub, ...(config?.matchupSub || {}) },
@@ -94,8 +110,8 @@ router.post('/live', async (req: Request, res: Response) => {
       newsSub: { ...defaultConfig.newsSub, ...(config?.newsSub || {}) },
     };
 
-    // Run the engine with live data
-    const result = startSit(a, b, mergedConfig);
+    // Run the engine with live data and stud metadata
+    const result = startSit(a, b, mergedConfig, { aStudMeta: aMeta, bStudMeta: bMeta });
 
     console.log(`[start-sit-live] Result: ${result.verdict} (${result.margin.toFixed(1)} margin)`);
 

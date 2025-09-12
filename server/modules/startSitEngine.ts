@@ -343,8 +343,7 @@ export function startSit(
   a: PlayerInput,
   b: PlayerInput,
   cfg: StartSitConfig = defaultConfig,
-  aMeta?: StudMeta,
-  bMeta?: StudMeta
+  opts?: { aStudMeta?: StudMeta; bStudMeta?: StudMeta }
 ): StartSitResult {
   const sa = scorePlayer(a, cfg);
   const sb = scorePlayer(b, cfg);
@@ -353,12 +352,10 @@ export function startSit(
   let bTotal = sb.total;
   const extraNotes: string[] = [];
 
-  // Apply stud bias if enabled
   if (cfg.studEnabled) {
-    const studResult = applyStudBias(a, aMeta, b, bMeta, aTotal, bTotal);
-    aTotal = studResult.aTotal;
-    bTotal = studResult.bTotal;
-    extraNotes.push(...studResult.notes);
+    const bias = applyStudBias(a, opts?.aStudMeta, b, opts?.bStudMeta, aTotal, bTotal);
+    aTotal = bias.aTotal; bTotal = bias.bTotal;
+    if (bias.notes.length) extraNotes.push(...bias.notes);
   }
 
   const diff = Number((aTotal - bTotal).toFixed(2));
@@ -383,9 +380,11 @@ export function startSit(
     sb.reasons.push(...extraNotes.filter(n => n.includes(b.name)));
   }
 
-  // Update totals in breakdown for display
-  const saFinal = { ...sa, total: aTotal };
-  const sbFinal = { ...sb, total: bTotal };
-
-  return { a: saFinal, b: sbFinal, verdict, margin, summary };
+  return {
+    a: { ...sa, total: Number(aTotal.toFixed(2)) },
+    b: { ...sb, total: Number(bTotal.toFixed(2)) },
+    verdict,
+    margin,
+    summary,
+  };
 }
