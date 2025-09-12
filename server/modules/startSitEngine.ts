@@ -1,6 +1,8 @@
 // server/modules/startSitEngine.ts
 // v1.0 — Start/Sit scoring engine with explainability
 
+import { detectStud, benchGates, policyForPos, StudMeta } from "../../src/modules/studs";
+
 export type Position = "QB" | "RB" | "WR" | "TE" | "DST" | "K";
 
 export interface PlayerInput {
@@ -87,6 +89,7 @@ export interface StartSitConfig {
   // verdict thresholds (difference between players' total score)
   clearMargin: number;   // >= -> CLEAR START
   leanMargin: number;    // >= -> LEAN START; else toss-up
+  studEnabled?: boolean;
 }
 
 export interface FactorBreakdown {
@@ -125,6 +128,7 @@ export const defaultConfig: StartSitConfig = {
   newsSub: { heat: 0.70, ecrDelta: 0.30 },
   clearMargin: 8,   // clear start if >= 8 pts apart
   leanMargin: 3,    // lean start if >= 3 pts apart
+  studEnabled: true,
 };
 
 // ---------- helpers ----------
@@ -283,15 +287,81 @@ export function scorePlayer(p: PlayerInput, cfg: StartSitConfig = defaultConfig)
   };
 }
 
+function applyStudBias(
+  aInput: PlayerInput, aMeta: StudMeta | undefined,
+  bInput: PlayerInput, bMeta: StudMeta | undefined,
+  aScore: number, bScore: number
+) {
+  // Returns possibly adjusted totals and SYS notes
+  const notes: string[] = [];
+
+  const aDet = aMeta ? detectStud(aInput.position, aMeta) : null;
+  const bDet = bMeta ? detectStud(bInput.position, bMeta) : null;
+
+  // early exit if neither is stud/bubble
+  if (!aDet?.isStud && !bDet?.isStud && !aDet?.isBubble && !bDet?.isBubble) {
+    return { aTotal: aScore, bTotal: bScore, notes };
+  }
+
+  const aGates = aDet ? benchGates(aInput, aInput.impliedTeamTotal) : { gate:false, reasons:[] };
+  const bGates = bDet ? benchGates(bInput, bInput.impliedTeamTotal) : { gate:false, reasons:[] };
+
+  const aPol = policyForPos(aInput.position);
+  const bPol = policyForPos(bInput.position);
+
+  let A = aScore, B = bScore;
+
+  // Hard lock: if stud and not gated, prefer stud unless projection gap is massive
+  const bigGap = Math.abs(aScore - bScore) >= Math.max(aPol.marginFloor, bPol.marginFloor) + 6;
+
+  if (aDet?.isStud && !aGates.gate) {
+    A += aPol.leanBump;
+    notes.push(`${aInput.name}: Start Your Studs bias (+${aPol.leanBump.toFixed(1)})`);
+    if (aPol.clearLock && !bigGap) {
+      // lift A slightly to cross margin floor if close
+      const need = Math.max(0, aPol.marginFloor - (A - B));
+      if (need > 0) { A += need + 0.1; notes.push(`${aInput.name}: SYS lock (margin floor ${aPol.marginFloor})`); }
+    }
+  }
+  if (bDet?.isStud && !bGates.gate) {
+    B += bPol.leanBump;
+    notes.push(`${bInput.name}: Start Your Studs bias (+${bPol.leanBump.toFixed(1)})`);
+    if (bPol.clearLock && !bigGap) {
+      const need = Math.max(0, bPol.marginFloor - (B - A));
+      if (need > 0) { B += need + 0.1; notes.push(`${bInput.name}: SYS lock (margin floor ${bPol.marginFloor})`); }
+    }
+  }
+
+  // If a stud is gated, record it
+  if (aDet?.isStud && aGates.gate) notes.push(`${aInput.name}: stud gated — ${aGates.reasons.join("; ")}`);
+  if (bDet?.isStud && bGates.gate) notes.push(`${bInput.name}: stud gated — ${bGates.reasons.join("; ")}`);
+
+  return { aTotal: Number(A.toFixed(2)), bTotal: Number(B.toFixed(2)), notes };
+}
+
 export function startSit(
   a: PlayerInput,
   b: PlayerInput,
-  cfg: StartSitConfig = defaultConfig
+  cfg: StartSitConfig = defaultConfig,
+  aMeta?: StudMeta,
+  bMeta?: StudMeta
 ): StartSitResult {
   const sa = scorePlayer(a, cfg);
   const sb = scorePlayer(b, cfg);
 
-  const diff = Number((sa.total - sb.total).toFixed(2));
+  let aTotal = sa.total;
+  let bTotal = sb.total;
+  const extraNotes: string[] = [];
+
+  // Apply stud bias if enabled
+  if (cfg.studEnabled) {
+    const studResult = applyStudBias(a, aMeta, b, bMeta, aTotal, bTotal);
+    aTotal = studResult.aTotal;
+    bTotal = studResult.bTotal;
+    extraNotes.push(...studResult.notes);
+  }
+
+  const diff = Number((aTotal - bTotal).toFixed(2));
   const margin = Math.abs(diff);
 
   let verdict: StartSitResult["verdict"] = "TOSS_UP";
@@ -307,5 +377,15 @@ export function startSit(
       ? `Toss-up: ${a.name} vs ${b.name}. Check matchup notes & roster needs (ceiling vs floor).`
       : `${leader.name} leads by ${margin.toFixed(1)} pts — verdict: ${verdict.replace("_", " ")}`;
 
-  return { a: sa, b: sb, verdict, margin, summary };
+  // append notes to reasons so users see SYS logic
+  if (extraNotes.length) {
+    sa.reasons.push(...extraNotes.filter(n => n.includes(a.name)));
+    sb.reasons.push(...extraNotes.filter(n => n.includes(b.name)));
+  }
+
+  // Update totals in breakdown for display
+  const saFinal = { ...sa, total: aTotal };
+  const sbFinal = { ...sb, total: bTotal };
+
+  return { a: saFinal, b: sbFinal, verdict, margin, summary };
 }
