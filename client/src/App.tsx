@@ -131,6 +131,7 @@ import ConsensusHub from "@/pages/consensus/ConsensusHub";
 import ExpertView from "@/pages/consensus/ExpertView";
 import TierManagerWrapper from "@/pages/consensus/TierManagerWrapper";
 import LiveTierTraining from "@/pages/consensus/LiveTierTraining";
+import StartSit from "@/pages/StartSit";
 
 function Router() {
   return (
@@ -150,6 +151,9 @@ function Router() {
       
       {/* Power Rankings */}
       <Route path="/power-rankings" component={PowerRankings} />
+      
+      {/* Start/Sit Calculator */}
+      <Route path="/start-sit" component={StartSit} />
       
       {/* Legacy Compass Routes - Still Available */}
       <Route path="/compass" component={CompassHub} />

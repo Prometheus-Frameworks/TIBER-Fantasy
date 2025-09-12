@@ -4078,6 +4078,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ⚡ START/SIT CALCULATOR API
+  app.post('/api/start-sit', async (req: Request, res: Response) => {
+    try {
+      const { startSit, defaultConfig, PlayerInput, StartSitConfig } = await import('./modules/startSitEngine');
+      
+      const { playerA, playerB, config } = req.body as {
+        playerA: typeof PlayerInput;
+        playerB: typeof PlayerInput;
+        config?: Partial<typeof StartSitConfig>;
+      };
+
+      if (!playerA || !playerB) {
+        return res.status(400).json({ error: "playerA and playerB are required" });
+      }
+
+      // Shallow merge for quick overrides
+      const mergedConfig = {
+        ...defaultConfig,
+        ...(config as any),
+        weights: { ...defaultConfig.weights, ...(config?.weights || {}) },
+        usageSub: { ...defaultConfig.usageSub, ...(config?.usageSub || {}) },
+        matchupSub: { ...defaultConfig.matchupSub, ...(config?.matchupSub || {}) },
+        volatilitySub: { ...defaultConfig.volatilitySub, ...(config?.volatilitySub || {}) },
+        newsSub: { ...defaultConfig.newsSub, ...(config?.newsSub || {}) },
+      };
+
+      const result = startSit(playerA, playerB, mergedConfig);
+
+      return res.json({
+        verdict: result.verdict,
+        margin: result.margin,
+        summary: result.summary,
+        playerA: {
+          name: playerA.name,
+          position: playerA.position,
+          breakdown: result.a,
+        },
+        playerB: {
+          name: playerB.name,
+          position: playerB.position,
+          breakdown: result.b,
+        },
+      });
+    } catch (err: any) {
+      console.error("[start-sit] error", err);
+      return res.status(500).json({ error: "Internal server error calculating start/sit" });
+    }
+  });
+
   app.get('/api/power/:type', async (req: Request, res: Response) => {
     const { type } = req.params;
     const { season = 2025, week = 1 } = req.query;

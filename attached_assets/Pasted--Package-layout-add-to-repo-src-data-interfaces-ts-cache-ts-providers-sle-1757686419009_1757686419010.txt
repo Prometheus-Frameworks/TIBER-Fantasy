@@ -1,0 +1,522 @@
+📦 Package layout (add to repo)
+src/
+  data/
+    interfaces.ts
+    cache.ts
+    providers/
+      sleeper.ts
+      vegas.ts
+      oasis.ts
+      news.ts
+    normalizers/
+      usage.ts
+      matchup.ts
+      volatility.ts
+      news.ts
+    aggregator/
+      startSitAggregator.ts
+  routes/
+    startSitLiveRoutes.ts
+
+1) src/data/interfaces.ts
+// src/data/interfaces.ts
+import { Position, PlayerInput } from "../modules/startSitEngine";
+
+export type NFLTeam =
+  | "ARI" | "ATL" | "BAL" | "BUF" | "CAR" | "CHI" | "CIN" | "CLE" | "DAL" | "DEN"
+  | "DET" | "GB" | "HOU" | "IND" | "JAX" | "KC"  | "LV"  | "LAC" | "LAR" | "MIA"
+  | "MIN" | "NE"  | "NO"  | "NYG" | "NYJ" | "PHI" | "PIT" | "SEA" | "SF"  | "TB"
+  | "TEN" | "WAS";
+
+export interface SleeperUsage {
+  snapPct?: number;
+  routeParticipation?: number;
+  targetShare?: number;
+  carries?: number;
+  targets?: number;
+  rzTouches?: number;        // last 3 games rolling
+  insideTenTouches?: number; // last 3 games rolling
+}
+
+export interface OasisMatchup {
+  defRankVsPos?: number;     // 1..32 (1 hardest)
+  oasisMatchupScore?: number; // 0..100 (your R/OASIS output)
+  olHealthIndex?: number;    // 0..100
+}
+
+export interface VegasTeamLine {
+  team: NFLTeam;
+  opponent: NFLTeam;
+  impliedTeamTotal?: number; // 10..40
+  weatherImpact?: number;    // -1..+1
+}
+
+export interface VolatilityMeta {
+  stdevLast5?: number; // FP stdev
+  injuryTag?: "OUT" | "D" | "Q" | "P" | null;
+  committeeRisk?: number;     // 0..100
+  depthChartThreats?: number; // 0..100
+}
+
+export interface NewsSignal {
+  newsHeat?: number; // 0..100
+  ecrDelta?: number; // -15..+15
+}
+
+export interface LivePlayerContext {
+  id: string;
+  name: string;
+  position: Position;
+  team?: NFLTeam;
+  projPoints?: number;
+  projFloor?: number | null;
+  projCeiling?: number | null;
+
+  usage: SleeperUsage;
+  matchup: OasisMatchup & Partial<VegasTeamLine>;
+  volatility: VolatilityMeta;
+  news: NewsSignal;
+}
+
+export type PlayerInputLike = PlayerInput;
+
+export interface StartSitLiveQuery {
+  playerA: { id: string; position: Position; team?: NFLTeam; name?: string };
+  playerB: { id: string; position: Position; team?: NFLTeam; name?: string };
+  week?: number; // default: current
+}
+
+2) src/data/cache.ts
+// src/data/cache.ts
+// Tiny in-memory TTL cache to avoid hammering APIs
+
+type CacheVal<T> = { value: T; expiresAt: number };
+const store = new Map<string, CacheVal<any>>();
+
+export function setCache<T>(key: string, value: T, ttlMs = 60_000) {
+  store.set(key, { value, expiresAt: Date.now() + ttlMs });
+}
+
+export function getCache<T>(key: string): T | null {
+  const hit = store.get(key);
+  if (!hit) return null;
+  if (Date.now() > hit.expiresAt) {
+    store.delete(key);
+    return null;
+  }
+  return hit.value as T;
+}
+
+export function cacheKey(parts: (string | number | undefined)[]) {
+  return parts.filter(Boolean).join("|");
+}
+
+3) Providers
+3a) src/data/providers/sleeper.ts
+// src/data/providers/sleeper.ts
+// NOTE: replace stubs with your existing Sleeper client calls.
+// This returns compact usage/projection blobs for a given player/week.
+
+import { cacheKey, getCache, setCache } from "../cache";
+import { SleeperUsage } from "../interfaces";
+
+export async function fetchSleeperUsage(playerId: string, week?: number): Promise<SleeperUsage> {
+  const key = cacheKey(["sleeperUsage", playerId, week ?? "curr"]);
+  const cached = getCache<SleeperUsage>(key);
+  if (cached) return cached;
+
+  // ---- STUB EXAMPLE (wire to your real Sleeper data) ----
+  // You likely have: snaps, routes run, targets, carries, red zone touches.
+  const fake: SleeperUsage = {
+    snapPct: 86,
+    routeParticipation: 90,
+    targetShare: 26,
+    carries: 2,
+    targets: 10,
+    rzTouches: 3,
+    insideTenTouches: 1,
+  };
+  // -------------------------------------------------------
+
+  setCache(key, fake, 60_000);
+  return fake;
+}
+
+export async function fetchSleeperProjection(playerId: string, week?: number): Promise<{ projPoints?: number; floor?: number; ceiling?: number }> {
+  const key = cacheKey(["sleeperProj", playerId, week ?? "curr"]);
+  const cached = getCache<typeof result>(key);
+  if (cached) return cached;
+
+  // ---- STUB EXAMPLE; replace with your DeepSeek/OASIS or Sleeper projections ----
+  const result = { projPoints: 15.6, floor: 9.0, ceiling: 23.5 };
+  // -------------------------------------------------------------------------------
+
+  setCache(key, result, 60_000);
+  return result;
+}
+
+3b) src/data/providers/oasis.ts
+// src/data/providers/oasis.ts
+// Pull team/pos matchup from your OASIS service (R or Node). Scale to 0..100 as needed.
+
+import { cacheKey, getCache, setCache } from "../cache";
+import { NFLTeam, OasisMatchup } from "../interfaces";
+
+export async function fetchOasisMatchup(team: NFLTeam, position: string): Promise<OasisMatchup> {
+  const key = cacheKey(["oasis", team, position]);
+  const cached = getCache<OasisMatchup>(key);
+  if (cached) return cached;
+
+  // ---- STUB: Replace with real HTTP call to your /api/oasis/teams or position endpoint ----
+  const fake: OasisMatchup = {
+    defRankVsPos: 22,          // 1 hard, 32 easy
+    oasisMatchupScore: 68,     // 0..100, 50 neutral
+    olHealthIndex: 74,         // 0..100
+  };
+  // -----------------------------------------------------------------------------------------
+
+  setCache(key, fake, 5 * 60_000);
+  return fake;
+}
+
+3c) src/data/providers/vegas.ts
+// src/data/providers/vegas.ts
+// Get implied team totals + weather signal (-1..+1). Source: your lines service or a free odds API + your weather model.
+
+import { cacheKey, getCache, setCache } from "../cache";
+import { NFLTeam, VegasTeamLine } from "../interfaces";
+
+export async function fetchVegasLine(team: NFLTeam): Promise<VegasTeamLine> {
+  const key = cacheKey(["vegas", team]);
+  const cached = getCache<VegasTeamLine>(key);
+  if (cached) return cached;
+
+  // ---- STUB: Replace with your odds feed ----
+  const fake: VegasTeamLine = {
+    team,
+    opponent: "JAX",
+    impliedTeamTotal: 24.8,
+    weatherImpact: 0.1, // dome/neutral slight positive
+  };
+  // -------------------------------------------
+
+  setCache(key, fake, 10 * 60_000);
+  return fake;
+}
+
+3d) src/data/providers/news.ts
+// src/data/providers/news.ts
+// Light tiebreaker signal. Map beat reports / your waiver heat → 0..100 and ecrDelta -15..+15.
+
+import { cacheKey, getCache, setCache } from "../cache";
+import { NewsSignal } from "../interfaces";
+
+export async function fetchNewsSignal(playerId: string): Promise<NewsSignal> {
+  const key = cacheKey(["news", playerId]);
+  const cached = getCache<NewsSignal>(key);
+  if (cached) return cached;
+
+  // ---- STUB: Replace with your embeddings/waiver heat service ----
+  const fake: NewsSignal = { newsHeat: 58, ecrDelta: 2 };
+  // ----------------------------------------------------------------
+
+  setCache(key, fake, 5 * 60_000);
+  return fake;
+}
+
+4) Normalizers → map live blobs into engine-friendly fields
+4a) src/data/normalizers/usage.ts
+// src/data/normalizers/usage.ts
+import { SleeperUsage } from "../interfaces";
+
+/** RB weighted touches: targets are ~1.5x carries for fantasy utility */
+export function calcWeightedTouches(u: SleeperUsage): number {
+  const carries = u.carries ?? 0;
+  const targets = u.targets ?? 0;
+  return targets * 1.5 + carries;
+}
+
+4b) src/data/normalizers/matchup.ts
+// src/data/normalizers/matchup.ts
+import { OasisMatchup, VegasTeamLine } from "../interfaces";
+
+export function mergeMatchup(oasis: OasisMatchup, vegas: Partial<VegasTeamLine>) {
+  return {
+    defRankVsPos: oasis.defRankVsPos,
+    oasisMatchupScore: oasis.oasisMatchupScore,
+    olHealthIndex: oasis.olHealthIndex,
+    impliedTeamTotal: vegas.impliedTeamTotal,
+    weatherImpact: vegas.weatherImpact,
+  };
+}
+
+4c) src/data/normalizers/volatility.ts
+// src/data/normalizers/volatility.ts
+import { VolatilityMeta } from "../interfaces";
+
+/** Simple safety join; you can get fancier with rolling windows or injury weights by position */
+export function normalizeVolatility(v: VolatilityMeta): VolatilityMeta {
+  return {
+    stdevLast5: v.stdevLast5 ?? 8.5,
+    injuryTag: v.injuryTag ?? null,
+    committeeRisk: v.committeeRisk ?? 20,
+    depthChartThreats: v.depthChartThreats ?? 35,
+  };
+}
+
+4d) src/data/normalizers/news.ts
+// src/data/normalizers/news.ts
+import { NewsSignal } from "../interfaces";
+
+export function normalizeNews(n: NewsSignal): NewsSignal {
+  return {
+    newsHeat: Math.max(0, Math.min(100, n.newsHeat ?? 50)),
+    ecrDelta: Math.max(-15, Math.min(15, n.ecrDelta ?? 0)),
+  };
+}
+
+5) Aggregator → one place to build PlayerInput for the engine
+
+src/data/aggregator/startSitAggregator.ts
+
+// src/data/aggregator/startSitAggregator.ts
+import { PlayerInput } from "../../modules/startSitEngine";
+import {
+  LivePlayerContext, StartSitLiveQuery, NFLTeam, VolatilityMeta
+} from "../interfaces";
+import { fetchSleeperUsage, fetchSleeperProjection } from "../providers/sleeper";
+import { fetchOasisMatchup } from "../providers/oasis";
+import { fetchVegasLine } from "../providers/vegas";
+import { fetchNewsSignal } from "../providers/news";
+import { calcWeightedTouches } from "../normalizers/usage";
+import { mergeMatchup } from "../normalizers/matchup";
+import { normalizeVolatility } from "../normalizers/volatility";
+import { normalizeNews } from "../normalizers/news";
+
+async function buildLiveContext(player: { id: string; position: PlayerInput["position"]; team?: NFLTeam; name?: string }, week?: number): Promise<LivePlayerContext> {
+  const [usage, proj, oasis, vegas, news] = await Promise.all([
+    fetchSleeperUsage(player.id, week),
+    fetchSleeperProjection(player.id, week),
+    fetchOasisMatchup(player.team as NFLTeam, player.position),
+    player.team ? fetchVegasLine(player.team) : Promise.resolve({ team: undefined as any }),
+    fetchNewsSignal(player.id),
+  ]);
+
+  const matchup = mergeMatchup(oasis, vegas);
+  const volMeta: VolatilityMeta = normalizeVolatility({
+    // You’ll likely compute stdev from last 5 games via your stats service
+    stdevLast5: undefined,
+    injuryTag: null,         // wire to your injury feed
+    committeeRisk: undefined, // wire from depth/usage heuristics
+    depthChartThreats: undefined, // wire from target competition calc
+  });
+
+  const newsNorm = normalizeNews(news);
+  const wt = calcWeightedTouches(usage);
+
+  return {
+    id: player.id,
+    name: player.name ?? player.id,
+    position: player.position,
+    team: player.team,
+    projPoints: proj.projPoints,
+    projFloor: proj.floor ?? null,
+    projCeiling: proj.ceiling ?? null,
+    usage: {
+      ...usage,
+      rzTouches: usage.rzTouches ?? 0,
+      insideTenTouches: usage.insideTenTouches ?? 0,
+    },
+    matchup,
+    volatility: volMeta,
+    news: newsNorm,
+  };
+}
+
+export async function toEngineInput(player: { id: string; position: PlayerInput["position"]; team?: NFLTeam; name?: string }, week?: number): Promise<PlayerInput> {
+  const ctx = await buildLiveContext(player, week);
+
+  return {
+    id: ctx.id,
+    name: ctx.name,
+    team: ctx.team,
+    position: ctx.position,
+
+    projPoints: ctx.projPoints,
+    projFloor: ctx.projFloor ?? undefined,
+    projCeiling: ctx.projCeiling ?? undefined,
+
+    // Usage
+    snapPct: ctx.usage.snapPct,
+    routeParticipation: ctx.usage.routeParticipation,
+    targetShare: ctx.usage.targetShare,
+    weightedTouches: calcWeightedTouches(ctx.usage),
+    rzTouches: ctx.usage.rzTouches,
+    insideTenTouches: ctx.usage.insideTenTouches,
+
+    // Matchup
+    defRankVsPos: ctx.matchup.defRankVsPos,
+    oasisMatchupScore: ctx.matchup.oasisMatchupScore,
+    impliedTeamTotal: ctx.matchup.impliedTeamTotal,
+    olHealthIndex: ctx.matchup.olHealthIndex,
+    weatherImpact: ctx.matchup.weatherImpact,
+
+    // Volatility / Trust
+    stdevLast5: ctx.volatility.stdevLast5,
+    injuryTag: ctx.volatility.injuryTag,
+    committeeRisk: ctx.volatility.committeeRisk,
+    depthChartThreats: ctx.volatility.depthChartThreats,
+
+    // News
+    newsHeat: ctx.news.newsHeat,
+    ecrDelta: ctx.news.ecrDelta,
+  };
+}
+
+export async function buildStartSitInputs(q: StartSitLiveQuery) {
+  const [a, b] = await Promise.all([
+    toEngineInput(q.playerA, q.week),
+    toEngineInput(q.playerB, q.week),
+  ]);
+  return { a, b };
+}
+
+6) Live route calling the engine with real data
+
+src/routes/startSitLiveRoutes.ts
+
+// src/routes/startSitLiveRoutes.ts
+import { Router, Request, Response } from "express";
+import { buildStartSitInputs } from "../data/aggregator/startSitAggregator";
+import { startSit, defaultConfig, StartSitConfig } from "../modules/startSitEngine";
+
+const router = Router();
+
+/**
+ * POST /api/start-sit/live
+ * body: {
+ *   playerA: { id, position, team, name? },
+ *   playerB: { id, position, team, name? },
+ *   week?: number,
+ *   config?: Partial<StartSitConfig>
+ * }
+ */
+router.post("/start-sit/live", async (req: Request, res: Response) => {
+  try {
+    const { playerA, playerB, week, config } = req.body ?? {};
+    if (!playerA || !playerB) {
+      return res.status(400).json({ error: "Missing playerA/playerB" });
+    }
+
+    const { a, b } = await buildStartSitInputs({ playerA, playerB, week });
+
+    const mergedConfig: StartSitConfig = {
+      ...defaultConfig,
+      ...(config as any),
+      weights: { ...defaultConfig.weights, ...(config?.weights || {}) },
+      usageSub: { ...defaultConfig.usageSub, ...(config?.usageSub || {}) },
+      matchupSub: { ...defaultConfig.matchupSub, ...(config?.matchupSub || {}) },
+      volatilitySub: { ...defaultConfig.volatilitySub, ...(config?.volatilitySub || {}) },
+      newsSub: { ...defaultConfig.newsSub, ...(config?.newsSub || {}) },
+    };
+
+    const result = startSit(a, b, mergedConfig);
+    return res.json({
+      verdict: result.verdict,
+      margin: result.margin,
+      summary: result.summary,
+      playerA: { name: a.name, position: a.position, breakdown: result.a },
+      playerB: { name: b.name, position: b.position, breakdown: result.b },
+    });
+  } catch (e: any) {
+    console.error("[/start-sit/live] error:", e);
+    return res.status(500).json({ error: "internal_error", detail: String(e?.message || e) });
+  }
+});
+
+export default router;
+
+
+Wire it in your server:
+
+// src/server.ts
+import startSitLiveRoutes from "./routes/startSitLiveRoutes";
+// ...
+app.use("/api", startSitLiveRoutes);
+
+7) Quick test
+curl -X POST http://localhost:3000/api/start-sit/live \
+  -H "Content-Type: application/json" \
+  -d '{
+    "playerA": {"id":"puka-nacua","position":"WR","team":"LAR","name":"Puka Nacua"},
+    "playerB": {"id":"romedo","position":"WR","team":"GB","name":"Romeo Doubs"},
+    "week": 2
+  }'
+
+
+You’ll get a verdict + margins + full explainability, using the provider stubs (swap to real calls when ready).
+
+8) What you still need to wire to make it “live-live”
+
+No fluff — just the punch list:
+
+Sleeper usage/projections
+
+Replace stubs with your real Sleeper (or your DeepSeek/OASIS) calls:
+
+last-3 rolling RZ/inside-10 touches
+
+routes run, snap %, targets/carries
+
+projPoints/floor/ceiling from your model
+
+OASIS/R Service
+
+Implement fetchOasisMatchup(team, position) to hit your R endpoint (or Node OASIS service) and return:
+
+defRankVsPos (1 hard → 32 easy)
+
+oasisMatchupScore (0..100, 50 = neutral)
+
+olHealthIndex (0..100)
+
+Vegas + Weather
+
+Back fetchVegasLine(team) with your odds feed and a simple weather model:
+
+Dome/neutral → ~+0.1
+
+Moderate wind/rain → −0.2
+
+Hellstorm → −0.6 to −0.8
+(Engine expects -1..+1)
+
+Volatility
+
+Compute stdevLast5 from your game logs service.
+
+Map injuries (Q/D/P/OUT) from your injury feed.
+
+committeeRisk + depthChartThreats heuristics:
+
+RB committee risk: 20 + 40×(RB2 touches share last 3)
+
+Threats: 20 + 20×(No. of teammates ≥ 18% TgtShare)
+
+News
+
+If you’ve got your Waiver Heat or embeddings score: pipe into newsHeat (0..100).
+
+ECR delta: your rank − consensus rank (cap −15..+15).
+
+9) Philosophy switches (future knobs, already supported by engine)
+
+Lean Ceiling vs Lean Floor: push volatility weight down (ceiling) or up (floor).
+
+RB-heavy leagues: bump usage for RB position in defaultWeightsByPos.
+
+DST/K: engine already weights projections/matchup heavier and ignores usage.
+
+10) Why this works (and why it won’t lie to you)
+
+You’re explicitly mapping every external signal into a bounded, explainable scalar that Tiber can show. No black-box sorcery. If a start call is wrong, you’ll see which factor lied — and you can fix that provider or weight. That’s how adults build trustable tools.

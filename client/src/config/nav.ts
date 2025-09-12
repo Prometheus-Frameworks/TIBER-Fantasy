@@ -13,6 +13,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/player-evaluation", label: "Player Evaluation", description: "Fusion rankings with 4-directional compass insights" },
   { href: "/power-rankings", label: "Power Rankings", description: "Tiber's comprehensive weekly rankings" },
   { href: "/risers-and-fallers", label: "Risers & Fallers", description: "Week 1 fantasy stock movers and performance analysis" },
+  { href: "/start-sit", label: "Start/Sit Calculator", description: "AI-powered lineup decisions with detailed reasoning" },
   { href: "/sleeper-connect", label: "Sync", description: "Connect your leagues" },
   { 
     label: "Research & Analysis", 
