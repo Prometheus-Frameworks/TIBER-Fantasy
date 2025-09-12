@@ -4078,7 +4078,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ⚡ START/SIT CALCULATOR API
+  // ⚡ START/SIT CALCULATOR API (Manual Input)
   app.post('/api/start-sit', async (req: Request, res: Response) => {
     try {
       const { startSit, defaultConfig, PlayerInput, StartSitConfig } = await import('./modules/startSitEngine');
@@ -4126,6 +4126,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ error: "Internal server error calculating start/sit" });
     }
   });
+
+  // ⚡ START/SIT LIVE DATA ROUTES
+  try {
+    const startSitLiveRoutes = await import('../src/routes/startSitLiveRoutes');
+    app.use('/api/start-sit-live', startSitLiveRoutes.default);
+    console.log('✅ Start/Sit live routes registered at /api/start-sit-live');
+  } catch (error) {
+    console.error('[start-sit-live] Failed to load live routes:', error);
+  }
 
   app.get('/api/power/:type', async (req: Request, res: Response) => {
     const { type } = req.params;
