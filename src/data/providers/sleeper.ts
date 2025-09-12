@@ -11,7 +11,7 @@ export async function fetchSleeperUsage(playerId: string, week?: number): Promis
 
   try {
     // Use existing Sleeper API integration from your platform
-    const response = await fetch(`/api/sleeper/stats/${playerId}?week=${week ?? 'current'}`);
+    const response = await fetch(`http://localhost:5000/api/sleeper/stats/${playerId}?week=${week ?? 'current'}`);
     
     if (!response.ok) {
       // Fallback to reasonable defaults if API fails
@@ -69,7 +69,7 @@ export async function fetchSleeperProjection(playerId: string, week?: number): P
 
   try {
     // Integrate with your existing projection system (DeepSeek, OASIS, etc.)
-    const response = await fetch(`/api/rankings/deepseek/v3.2?player=${playerId}&week=${week ?? 'current'}`);
+    const response = await fetch(`http://localhost:5000/api/rankings/deepseek/v3.2?player=${playerId}&week=${week ?? 'current'}`);
     
     if (!response.ok) {
       const result = { projPoints: 12.5, floor: 7.0, ceiling: 19.0 };

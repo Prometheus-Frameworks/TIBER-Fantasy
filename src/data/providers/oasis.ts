@@ -11,7 +11,7 @@ export async function fetchOasisMatchup(team: NFLTeam, position: string): Promis
 
   try {
     // Use existing OASIS integration
-    const response = await fetch(`/api/oasis/matchup?team=${team}&position=${position}`);
+    const response = await fetch(`http://localhost:5000/api/oasis/matchup?team=${team}&position=${position}`);
     
     if (!response.ok) {
       // Fallback to neutral matchup

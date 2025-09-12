@@ -1,0 +1,266 @@
+
+The UX (zero manual stats)
+	1.	Connect Sleeper → pick your league (we auto-grab format, scoring, rosters).
+	2.	Pick two players from searchable dropdowns (prepopulated from that league’s rosters + free agents).
+	3.	Press “Get Verdict.”
+Tiber does the rest (Sleeper usage → OASIS matchup → Vegas/Weather → volatility/news) and returns a verdict + reasons.
+
+Below is a drop-in “Quick Start/Sit” package that wraps the engine + real-data handoff you already have. Users only provide names (and optional league). Tiber resolves everything.
+
+⸻
+
+🔩 Files to add
+
+1) src/data/resolvers/playerResolver.ts
+
+// src/data/resolvers/playerResolver.ts
+// Resolve "Puka Nacua" → {id, name, team, position} using your player index or Sleeper map.
+
+export interface BasicPlayer {
+  id: string;
+  name: string;
+  team?: string;
+  position: "QB" | "RB" | "WR" | "TE" | "DST" | "K";
+}
+
+// Plug this into your real player store.
+// Option A: call your existing /api/players
+// Option B: keep a memory map loaded at boot from Sleeper's players.json
+let _playersByName: Record<string, BasicPlayer> = {};
+
+export function loadPlayersIndex(players: BasicPlayer[]) {
+  _playersByName = {};
+  for (const p of players) {
+    _playersByName[p.name.toLowerCase()] = p;
+  }
+}
+
+/** naive fuzzy-ish resolution (simple lowercase, tries exact then startsWith) */
+export function resolvePlayer(name: string): BasicPlayer | null {
+  const q = name.trim().toLowerCase();
+  if (_playersByName[q]) return _playersByName[q];
+
+  // fallback: startsWith
+  const hit = Object.keys(_playersByName).find(k => k.startsWith(q));
+  return hit ? _playersByName[hit] : null;
+}
+
+Hook loadPlayersIndex at server boot with your Sleeper player dump (or your own /api/players response). Once that’s in memory, name→id lookup is instant.
+
+⸻
+
+2) src/data/providers/sleeperLeagues.ts
+
+// src/data/providers/sleeperLeagues.ts
+// Minimal endpoints to list leagues and league players for UX dropdowns
+
+import { cacheKey, getCache, setCache } from "../cache";
+
+export async function fetchSleeperLeagues(username: string) {
+  const key = cacheKey(["slpLeagues", username]);
+  const cached = getCache<any[]>(key);
+  if (cached) return cached;
+
+  // TODO: replace with real Sleeper call
+  const fake = [
+    { leagueId: "123", name: "Morts FF", season: 2025, scoring: { ppr: 0.5, sf: true } }
+  ];
+
+  setCache(key, fake, 5 * 60_000);
+  return fake;
+}
+
+export async function fetchLeaguePlayers(leagueId: string) {
+  const key = cacheKey(["slpLeaguePlayers", leagueId]);
+  const cached = getCache<any[]>(key);
+  if (cached) return cached;
+
+  // TODO: replace with real Sleeper roster/players call
+  const fake = [
+    { id: "puka-nacua", name: "Puka Nacua", team: "LAR", position: "WR" },
+    { id: "romeo-doubs", name: "Romeo Doubs", team: "GB", position: "WR" },
+    // ...
+  ];
+
+  setCache(key, fake, 5 * 60_000);
+  return fake;
+}
+
+
+⸻
+
+3) src/routes/leagueAssistRoutes.ts
+
+// src/routes/leagueAssistRoutes.ts
+import { Router, Request, Response } from "express";
+import { fetchSleeperLeagues, fetchLeaguePlayers } from "../data/providers/sleeperLeagues";
+import { loadPlayersIndex } from "../data/resolvers/playerResolver";
+
+const router = Router();
+
+/** GET /api/sleeper/leagues?username=H4MMER */
+router.get("/sleeper/leagues", async (req: Request, res: Response) => {
+  try {
+    const username = String(req.query.username || "").trim();
+    if (!username) return res.status(400).json({ error: "username required" });
+    const leagues = await fetchSleeperLeagues(username);
+    return res.json({ leagues });
+  } catch (e:any) {
+    console.error("[sleeper/leagues]", e);
+    return res.status(500).json({ error: "internal_error", detail: String(e?.message || e) });
+  }
+});
+
+/** GET /api/sleeper/league/:id/players */
+router.get("/sleeper/league/:id/players", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const players = await fetchLeaguePlayers(id);
+    // also seed the name→id resolver index for quick /start-sit/quick
+    loadPlayersIndex(players);
+    return res.json({ players });
+  } catch (e:any) {
+    console.error("[sleeper/league/players]", e);
+    return res.status(500).json({ error: "internal_error", detail: String(e?.message || e) });
+  }
+});
+
+export default router;
+
+
+⸻
+
+4) src/routes/startSitQuickRoutes.ts
+
+// src/routes/startSitQuickRoutes.ts
+// One-endpoint UX: give names (and optional league context). We resolve & run live.
+import { Router, Request, Response } from "express";
+import { resolvePlayer } from "../data/resolvers/playerResolver";
+import { buildStartSitInputs } from "../data/aggregator/startSitAggregator";
+import { defaultConfig, startSit, StartSitConfig } from "../modules/startSitEngine";
+
+const router = Router();
+
+/**
+ * POST /api/start-sit/quick
+ * body: {
+ *   a: string,                // "Puka Nacua"
+ *   b: string,                // "Romeo Doubs"
+ *   week?: number,
+ *   leagueId?: string,        // optional (lets you bias position/team defaults from league pool)
+ *   config?: Partial<StartSitConfig>
+ * }
+ */
+router.post("/start-sit/quick", async (req: Request, res: Response) => {
+  try {
+    const { a, b, week, leagueId, config } = req.body ?? {};
+    if (!a || !b) return res.status(400).json({ error: "Provide a and b player names" });
+
+    const A = resolvePlayer(String(a));
+    const B = resolvePlayer(String(b));
+    if (!A || !B) {
+      return res.status(404).json({
+        error: "player_not_found",
+        detail: `Could not resolve: ${!A ? a : ""} ${!B ? b : ""}. Did you load league players yet?`
+      });
+    }
+
+    // Build engine inputs from live data (Sleeper/OASIS/vegas/news providers)
+    const { a: Ainput, b: Binput } = await buildStartSitInputs({
+      playerA: { id: A.id, position: A.position, team: A.team as any, name: A.name },
+      playerB: { id: B.id, position: B.position, team: B.team as any, name: B.name },
+      week,
+    });
+
+    const merged: StartSitConfig = {
+      ...defaultConfig,
+      ...(config as any),
+      weights: { ...defaultConfig.weights, ...(config?.weights || {}) },
+      usageSub: { ...defaultConfig.usageSub, ...(config?.usageSub || {}) },
+      matchupSub: { ...defaultConfig.matchupSub, ...(config?.matchupSub || {}) },
+      volatilitySub: { ...defaultConfig.volatilitySub, ...(config?.volatilitySub || {}) },
+      newsSub: { ...defaultConfig.newsSub, ...(config?.newsSub || {}) },
+    };
+
+    const result = startSit(Ainput, Binput, merged);
+
+    return res.json({
+      query: { a: A.name, b: B.name, week: week ?? "current", leagueId: leagueId ?? null },
+      verdict: result.verdict,
+      margin: result.margin,
+      summary: result.summary,
+      playerA: { name: A.name, team: A.team, position: A.position, breakdown: result.a },
+      playerB: { name: B.name, team: B.team, position: B.position, breakdown: result.b },
+    });
+  } catch (e:any) {
+    console.error("[/start-sit/quick] error:", e);
+    return res.status(500).json({ error: "internal_error", detail: String(e?.message || e) });
+  }
+});
+
+export default router;
+
+Wire routes in server:
+
+// src/server.ts
+import leagueAssistRoutes from "./routes/leagueAssistRoutes";
+import startSitQuickRoutes from "./routes/startSitQuickRoutes";
+
+app.use("/api", leagueAssistRoutes);
+app.use("/api", startSitQuickRoutes);
+
+
+⸻
+
+🧑‍💻 Frontend: make it stupid-easy
+
+Replace the wall of inputs with:
+	•	Connect Sleeper (username) → load leagues (GET /api/sleeper/leagues?username=H4MMER)
+	•	Select League (optional) → load league players (GET /api/sleeper/league/:id/players)
+	•	Two autocomplete selects (player A, player B) sourced from that /players response
+	•	A single “Get Verdict” button → POST /api/start-sit/quick with {a, b, week?, leagueId?}
+
+Sample fetch:
+
+const res = await fetch("/api/start-sit/quick", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ a: playerAName, b: playerBName, week, leagueId }),
+});
+const data = await res.json();
+// Render data.summary, data.verdict, and the factor breakdowns
+
+
+⸻
+
+📈 What powers the decision (under the hood)
+	•	Sleeper usage/projections → from your earlier providers (fetchSleeperUsage, fetchSleeperProjection)
+	•	OASIS matchup → fetchOasisMatchup(team, position) (0–100)
+	•	Vegas/Weather → fetchVegasLine(team) (implied total + weather)
+	•	Volatility → last-5 stdev, injury tags, committee risk, threats
+	•	News → your waiver heat / embeddings score (small tiebreaker)
+
+You already have stubs; swapping to live calls makes it production.
+
+⸻
+
+🧠 Optional league-aware tuning (easy dubs)
+	•	Read league settings and set a scoring profile:
+	•	TE-premium → bump TE usage weight by +0.05
+	•	Standard (no PPR) → reduce WR/RB usage subweights for targets
+	•	Superflex → add small QB bonus in projections for QBs vs fringe flexes
+
+(You can pass a config override in the POST body and nudge defaultWeightsByPos on the fly.)
+
+⸻
+
+🪓 Kill the form fields you don’t need
+
+Keep:
+	•	Player A (search)
+	•	Player B (search)
+	•	Week (optional; default current)
+	•	League selector (optional; improves resolution)
+
+Everything else comes from the backend. Users feel like wizards. No spreadsheets.
+

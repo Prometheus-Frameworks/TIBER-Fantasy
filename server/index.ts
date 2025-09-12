@@ -57,6 +57,15 @@ app.use((req, res, next) => {
     await sleeperSyncService.syncPlayers();
     
     console.log('✅ Backend spine services initialized');
+    
+    // Initialize player resolver for zero-manual-stats UX
+    try {
+      const { initializeDefaultPlayers } = await import('../src/data/resolvers/playerResolver');
+      await initializeDefaultPlayers();
+      console.log('✅ Player resolver initialized');
+    } catch (error) {
+      console.error('⚠️ Failed to initialize player resolver:', error);
+    }
   } catch (error) {
     console.warn('⚠️ Backend spine initialization warning:', error);
   }

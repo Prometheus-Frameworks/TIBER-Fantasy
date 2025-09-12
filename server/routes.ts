@@ -4136,6 +4136,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('[start-sit-live] Failed to load live routes:', error);
   }
 
+  // ⚡ LEAGUE ASSIST ROUTES (Sleeper integration)
+  try {
+    const leagueAssistRoutes = await import('../src/routes/leagueAssistRoutes');
+    app.use('/api', leagueAssistRoutes.default);
+    console.log('✅ League assist routes registered');
+  } catch (error) {
+    console.error('[league-assist] Failed to load league routes:', error);
+  }
+
+  // ⚡ QUICK START/SIT ROUTES (Zero-manual-stats UX)
+  try {
+    const startSitQuickRoutes = await import('../src/routes/startSitQuickRoutes');
+    app.use('/api', startSitQuickRoutes.default);
+    console.log('✅ Quick Start/Sit routes registered');
+  } catch (error) {
+    console.error('[start-sit-quick] Failed to load quick routes:', error);
+  }
+
   app.get('/api/power/:type', async (req: Request, res: Response) => {
     const { type } = req.params;
     const { season = 2025, week = 1 } = req.query;

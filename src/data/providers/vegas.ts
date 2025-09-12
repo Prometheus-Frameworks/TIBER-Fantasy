@@ -11,7 +11,7 @@ export async function fetchVegasLine(team: NFLTeam): Promise<VegasTeamLine> {
 
   try {
     // Check if you have existing betting lines integration
-    const response = await fetch(`/api/vegas/lines?team=${team}`);
+    const response = await fetch(`http://localhost:5000/api/vegas/lines?team=${team}`);
     
     if (!response.ok) {
       // Fallback to reasonable team total

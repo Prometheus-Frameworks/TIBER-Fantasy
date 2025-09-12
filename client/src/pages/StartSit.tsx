@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest } from "@/lib/queryClient";
-import { Calculator, TrendingUp, TrendingDown, Users } from "lucide-react";
+import { Calculator, TrendingUp, TrendingDown, Users, Zap, Settings } from "lucide-react";
+import { StartSitQuick } from "@/components/StartSitQuick";
 
 type Position = "QB" | "RB" | "WR" | "TE" | "DST" | "K";
 
@@ -493,35 +495,55 @@ export default function StartSit() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <PlayerFormCard
-          player={playerA}
-          setPlayer={setPlayerA}
-          title="Player A"
-          playerKey="A"
-        />
-        <PlayerFormCard
-          player={playerB}
-          setPlayer={setPlayerB}
-          title="Player B"
-          playerKey="B"
-        />
-      </div>
+      <Tabs defaultValue="quick" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="quick" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            Zero-Manual-Stats
+          </TabsTrigger>
+          <TabsTrigger value="manual" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Manual Input
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="text-center mb-8">
-        <Button 
-          onClick={handleCalculate} 
-          disabled={isPending || !playerA.name || !playerB.name}
-          size="lg"
-          data-testid="button-calculate-startsit"
-          className="px-8 py-3 text-lg"
-        >
-          <Calculator className="h-5 w-5 mr-2" />
-          {isPending ? "Calculating..." : "Calculate Start/Sit"}
-        </Button>
-      </div>
+        <TabsContent value="quick">
+          <StartSitQuick />
+        </TabsContent>
 
-      {result && <ResultsCard result={result} />}
+        <TabsContent value="manual" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <PlayerFormCard
+              player={playerA}
+              setPlayer={setPlayerA}
+              title="Player A"
+              playerKey="A"
+            />
+            <PlayerFormCard
+              player={playerB}
+              setPlayer={setPlayerB}
+              title="Player B"
+              playerKey="B"
+            />
+          </div>
+
+          <div className="text-center mb-8">
+            <Button 
+              onClick={handleCalculate} 
+              disabled={isPending || !playerA.name || !playerB.name}
+              size="lg"
+              data-testid="button-calculate-startsit"
+              className="px-8 py-3 text-lg"
+            >
+              <Calculator className="h-5 w-5 mr-2" />
+              {isPending ? "Calculating..." : "Calculate Start/Sit"}
+            </Button>
+          </div>
+
+          {result && <ResultsCard result={result} />}
+
+        </TabsContent>
+      </Tabs>
 
       {/* Help Section */}
       <Card className="mt-8">
