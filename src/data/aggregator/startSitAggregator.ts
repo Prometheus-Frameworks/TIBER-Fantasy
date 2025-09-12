@@ -11,6 +11,7 @@ import { calcWeightedTouches } from "../normalizers/usage";
 import { mergeMatchup } from "../normalizers/matchup";
 import { normalizeVolatility } from "../normalizers/volatility";
 import { normalizeNews } from "../normalizers/news";
+import { StudMeta } from "../../modules/studs";
 
 async function buildLiveContext(player: { id: string; position: PlayerInput["position"]; team?: NFLTeam; name?: string }, week?: number): Promise<LivePlayerContext> {
   const [usage, proj, oasis, vegas, news] = await Promise.all([
@@ -97,4 +98,22 @@ export async function buildStartSitInputs(q: StartSitLiveQuery) {
     toEngineInput(q.playerB, q.week),
   ]);
   return { a, b };
+}
+
+// Build a minimal StudMeta from data you likely already have
+export function buildStudMetaFromContext(ctx: any): StudMeta {
+  return {
+    ourPosRank: ctx.ourPosRank,        // from your rankings service if available
+    ecrPosRank: ctx.ecrPosRank,        // optional market
+    seasonTgtShare: ctx.seasonTgtShare, // can compute from your stats blob
+    seasonRoutePct: ctx.seasonRoutePct,
+    yprr: ctx.yprr,
+    rushShare: ctx.rushShare,
+    wopr: ctx.wopr,
+    boomRate: ctx.boomRate,            // compute % of 20+ (or QB 25+) last season + YTD
+    top12Rate: ctx.top12Rate,
+    draftCapitalScore: ctx.draftCapitalScore, // simple map: R1=90, R2=75, R3=65, Day3=45, UDFA=25
+    contractAlpha: ctx.contractAlpha,  // map AAV + guarantees to 0..100
+    last4RoleStability: ctx.last4RoleStability // e.g., avg(snap%, routes%, tgtShare%) trend
+  };
 }
