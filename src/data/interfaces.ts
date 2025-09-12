@@ -1,6 +1,9 @@
 // src/data/interfaces.ts
 import { Position, PlayerInput } from "../../server/modules/startSitEngine";
 
+// Re-export for use by other modules
+export { Position, PlayerInput };
+
 export type NFLTeam =
   | "ARI" | "ATL" | "BAL" | "BUF" | "CAR" | "CHI" | "CIN" | "CLE" | "DAL" | "DEN"
   | "DET" | "GB" | "HOU" | "IND" | "JAX" | "KC"  | "LV"  | "LAC" | "LAR" | "MIA"

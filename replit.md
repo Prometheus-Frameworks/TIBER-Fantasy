@@ -1,7 +1,7 @@
 # ON THE CLOCK
 
 ## Overview
-On The Clock is an open-source fantasy football platform focused on democratizing advanced analytics for dynasty leagues. It aims to provide community-driven tools and accessible, high-end insights without paywalls, fostering a movement that breaks down traditional barriers in fantasy football analysis. A key feature is "Competence Mode," a truth-first, context-aware AI assistant providing evidence-based fantasy football advice. The project empowers users with accurate guidance and a deeper understanding of dynasty league strategy, aspiring to be a leading, independent resource in the fantasy football community.
+On The Clock is an open-source fantasy football platform designed to provide advanced, democratized analytics for dynasty leagues. Its core purpose is to offer community-driven tools and high-end, accessible insights without paywalls, fostering a movement that challenges traditional barriers in fantasy football analysis. A key feature, "Competence Mode," provides truth-first, context-aware AI-driven dynasty advice. The project aims to empower users with accurate guidance and a deeper understanding of dynasty league strategy, aspiring to become a leading, independent resource in the fantasy football community.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -17,61 +17,33 @@ Intelligence Feed System:
 - Ready to receive meaningful intel updates during regular season
 
 ## System Architecture
-The platform features a modular Flask backend for core logic and API endpoints, and a React 18 frontend utilizing TypeScript, Tailwind CSS, TanStack Query, and shadcn/ui for a scalable and responsive user experience. UI/UX prioritizes clean, responsive design with color-coded tier systems, interactive elements, and mobile optimization, including Next.js-inspired tab-based navigation.
+The platform is built with a modular Flask backend for core logic and API endpoints, and a React 18 frontend utilizing TypeScript, Tailwind CSS, TanStack Query, and shadcn/ui for a scalable and responsive user experience. UI/UX prioritizes clean, responsive design with color-coded tier systems, interactive elements, and mobile optimization, including Next.js-inspired tab-based navigation.
 
-### Technical Implementations
-- **Backend Spine**: Includes Sleeper Sync with cache fallback, Logs & Projections Service, a multi-format Ratings Engine, and an enhanced `/api/health` endpoint.
-- **Duo Identity Protocol**: Implements an OTC Signature Protocol for permanent Lamar-Architect J Duo identity.
-- **Navigation**: Centralized system (`client/src/config/nav.ts`) with responsive design and unified `NAV_LINKS` array.
-- **Rankings Hub & OTC Consensus**: A hub interface at `/rankings` with nested routing, featuring a mode-aware `RankingsTable` component. Renamed "Rankings" to "OTC Consensus" across the platform, with a dynamic Season HQ at `/redraft` that re-maps tool links. Includes comprehensive consensus split infrastructure with separate feeds, database schema, and frontend integration. Features OTC Consensus Seeding Protocol for manual ranking updates.
-- **Adaptive Consensus Engine**: Surge detection system with injury-aware adjustments and "Why?" explanatory functionality. Features smooth rank-score curves for precise dynasty injury multipliers, ready for Grok data integration.
-- **API Surface**: Comprehensive API client with TypeScript interfaces for VORP rankings, WR compass search, rookie evaluation, and weekly data aggregation.
-- **Canonical Player Pool System**: Unifies player data into `player_pool.json` and `player_index.json`, accessible via `/api/player-pool` with advanced filtering and search.
-- **Redraft Hub**: A 7-tab redraft hub with authentic NFL data integration, including individual position tabs, waiver wire, and trade analyzer shell, with URL-based state management.
-- **VORP System**: Enhanced VORP rankings with dynasty mode, age penalties, positional filtering, FLEX allocation, and format-aware scaling.
-- **Rookie Evaluation System**: Includes a 4-component Rookie TE Insulation Boost System and a 2025 Rookie Database with a 4-module data pipeline and Heuristics Engine.
-- **Target Competition Analysis**: A 5-step logic chain (Target Competition Evaluator) and Inference Pipeline (TCIP) for assigning target competition tiers.
-- **Roster Shift Listener**: Monitors NFL transactions for automatic updates to dynasty tiers, usage forecasts, and competition estimations.
-- **Player Usage Context Module**: Provides dynasty tier estimations, alpha usage scores, and draft capital analysis.
-- **Tiber Identity & Security**: Operates within strict sandbox boundaries with an `INTENT_FILTER` system.
-- **Player Tier Visualization**: Flask Blueprint for visualizing 2025 dynasty player tier data.
-- **Dynasty Decline Detection**: Identifies multi-season skill-based decline.
-- **WR Environment & Forecast Score**: Comprehensive WR evaluation based on usage profile, efficiency, role security, and growth trajectory.
-- **RB/WR/TE Touchdown Regression Logic**: Modular plugins for evaluating TD sustainability and regression risk.
-- **Dual Rating System Architecture**: Complete separation of Player Compass (in-house ratings engine) and OTC Consensus (community rankings), each with distinct dynasty and redraft versions.
-- **Enhanced Player Compass System**: Dynasty vs Redraft format-specific evaluations with 4-directional analysis (Volume/Talent, Environment/Scheme, Risk/Durability, Value/Market). Includes position-specific calculations optimized for format-specific concerns (age curves, immediate production, etc.).
-- **OTC Consensus Service**: Community-driven rankings system with voting functionality, format splits analysis, and tier definitions. Separate from in-house Player Compass ratings.
-- **Trade Analyzer v2.0**: React-based frontend with Flask-style backend integration, featuring position selection, 4-directional compass visualization, and detailed reasoning.
-- **Python Rookie Evaluator**: Production-ready module with S/A/B/C/D tier system and position-specific scoring.
-- **OTC Redraft 2025 MVP Data Pipeline**: 4-stage automated pipeline collecting 2024 NFL data.
-- **Enhanced UI System**: Interactive GlowCard components, pulsing GlowCTA buttons, comprehensive skeleton loading system with shimmer animations, enhanced Button component with press states, top loading bar with gold-to-purple gradient that automatically appears during data fetches, and subtle hover-lift effects.
-- **Competence Mode System**: Uncompromising truth-first AI assistant accessible at `/competence` with full API integration. It prioritizes user growth over comfort, challenges flawed thinking, and refuses to validate poor decisions.
-- **Offensive Line Context (OLC) v1.1 Module**: Complete TypeScript-based system for advanced offensive line performance analysis with 9 specialized modules and API endpoints for real-time scoring.
-- **Sleeper ADP Integration**: Direct integration with Sleeper API for quarterback Average Draft Position data via `/api/adp/qb` endpoint, supporting 1QB and Superflex formats with caching and error handling.
-- **Roster Sync System**: Comprehensive roster merging system combining Sleeper API player data with NFL roster information for accurate team assignments, including fuzzy name matching, depth chart organization, and fantasy-aware filtering. Endpoints: `/api/sync/rosters`, `/api/rosters`, `/api/depth-charts?fantasy=1`, `/api/players-index`, `/api/intel`.
-- **Snap Counts Knowledge System**: Live snap count analysis integration with evidence-based claims and historical examples, accessible via API endpoints (`/api/snap-counts/claim/:pos/:pp`, `/api/snap-counts/examples/:label`, `/api/snap-counts/health`) and a dedicated UI at `/snap-counts`.
-- **OVR Integration Package v1.0**: Plug-and-play integration converting OVR Inputs CSVs into a dynamic Player Compass engine, featuring weekly ΔOVR application, live depth-chart filtering, 4-directional compass quadrant scoring, and a decay engine. Includes 5 API endpoints for full OVR management.
-- **Hot List Player Extraction System**: Dynamic player extraction from OVR Compass module with position-aware percentile calculations and volume floor filtering. Features 4 extraction buckets (OVR Risers, Compass Elite, Usage Surge, Value Targets) and comprehensive API endpoints (`/api/players/hot-list`, `/api/players/hot-list/health`) with a real-time UI at `/hot-list`.
-- **Live Data Integration Pipeline**: Complete multi-source data capture and processing system with MySportsFeeds, SportsDataIO, and Sleeper API integration. Features static data capture service (`/api/data/capture`) for persistent reference data beyond API trial periods, live data processor for weekly statistics, and comprehensive fallback strategies. Includes endpoints for live mode activation (`/api/players/hot-list/mode/live`), manual refresh (`/api/players/hot-list/refresh`), and data source monitoring (`/api/players/hot-list/sources`).
-- **Modular Sleeper Router Architecture**: Complete 3-batch implementation featuring extracted Sleeper routes in dedicated `server/sleeperRoutes.ts` module with feature flag control via `USE_SLEEPER_SYNC` environment variable. Includes comprehensive JSON logging, HTTP status mapping, TypeScript compliance, and contract-correct fallback responses. All 8 Sleeper endpoints (user lookup, league context, player sync, etc.) properly modularized with sub-second response times and enhanced monitoring.
-- **Sleeper Dashboard Integration**: Complete user flow from Sleeper Connect (`/sleeper-connect`) to Dashboard (`/dashboard`) with smart routing for both user leagues (`?user=ID`) and individual league views (`?league=ID`). Features league cards with Dynasty/Redraft indicators, scoring formats, team counts, and seamless navigation flow. Integrated into main navigation and home page with proper wouter Link components.
-- **DeepSeek v3.2 + Compass Fusion System**: Comprehensive integration combining DeepSeek xFP predictive power with 4-directional Player Compass explainability. Features North (Volume/Talent), East (Environment/Scheme), South (Risk→Safety), and West (Value/Market) quadrants with weighted fusion scoring. Includes 6 new derivations: QB stability, role clarity, position scarcity, contract horizon, team PROE, and scheme/OL analysis. API endpoints: `/api/rankings/deepseek/v3.2`, health check, and individual player debug. Dynasty vs redraft format-specific weightings with comprehensive badge system (Alpha Usage, Context Boost, Aging Elite, Market Mispriced, FPTS Monster).
-- **OTC Power Rankings Service v1.1 - DEPLOYED**: Independent microservice for weekly Overall + Position Power Rankings with real-time event updates. Built on Fastify + TypeScript with PostgreSQL persistence and Redis caching. Features 5-component scoring system with validated weights (usage_now 40%, talent 25%, environment 20%, availability 13%, market_anchor 5%), event-driven recalculation for injuries/depth changes, and comprehensive job infrastructure. Includes complete API surface (`/api/power/*`), database schema with proper indexing, nightly recalculation jobs, and 60-second event processing loop. **Phase 2 Production Features LIVE**: Data-backed weight adjustments (RB availability boost to 13%, QB environment to 30%), confidence gating for rookies/new roles with sigmoid curve, opponent/SOS multiplier hooks, FantasyPros ECR integration with alias resolution, and cron automation. Validation testing shows strong predictive edge: QB 0.47ρ, WR 0.42ρ, drift payoff curve proving genuine market outperformance (+15 drift = 18.2 avg points vs consensus 14.1). **Production Status**: Deployed September 1, 2025 - Service live and accessible to users.
-- **Enhanced ECR Comparison System v2.0 - DEPLOYED**: Comprehensive Expert Consensus Rankings comparison engine with advanced fantasy football signal intelligence and format awareness. Features 6-category signal detection (Usage/Opportunity, Efficiency/Talent, Receiving/Pass Game, Environment/Context, Availability/Risk, Trending/Market) with position-specific calculations. Includes format-aware analysis supporting dynasty vs redraft, PPR vs standard, and superflex configurations with dynamic weight adjustments. Enhanced explanations provide signal-based reasoning for bullish (+) or bearish (-) variance from consensus. API endpoints support query parameters for league format (`?format=ppr&league_type=dynasty&flex=superflex`) with complete signal data in JSON responses. RAG integration enables queryable fantasy football metrics and terminology. System generates realistic player signals including snap share, touches per game, YPC efficiency, target competition, age factors, and injury risk assessments. **Live Endpoints**: `/api/ecr/status`, `/api/ecr/compare/:position`, `/api/ecr/refresh/:position` with comprehensive format support and signal-aware explanations.
+**Core Features & Design Patterns:**
 
-### Technical Stack
-- **Backend**: Python (Flask), Node.js (Express.js, TypeScript)
-- **Frontend**: React 18, TypeScript, Jinja2, Wouter, TanStack Query, shadcn/ui (Radix UI), Tailwind CSS
-- **Data**: CSV/JSON, PostgreSQL, Drizzle ORM, Drizzle Kit, JSONL format
-- **Data Pipeline**: Python with nfl-data-py, pandas
+*   **Player Evaluation & Consensus:** Features a "Player Compass" for dynamic, context-aware player profiles, and "OTC Consensus" for community-driven rankings with format-specific splits and a seeding protocol for manual updates.
+*   **AI & Analytics:** Includes "Competence Mode" for AI-driven advice, an Adaptive Consensus Engine with injury-aware adjustments and explanatory functionality, and a DeepSeek + Compass Fusion System for predictive power and explainability.
+*   **Rankings & VORP:** A comprehensive Rankings Hub, enhanced VORP system with dynasty mode, age penalties, and FLEX allocation, and an Enhanced ECR Comparison System for signal-aware analysis.
+*   **Rookie & Player Analysis:** Dedicated Rookie Evaluation System with a 4-component insulation boost and data pipeline, Target Competition Analysis (TCIP), Player Usage Context Module, and a Stud Detection Module.
+*   **Data Integration & Sync:** Implements Sleeper Sync with cache fallback, a Canonical Player Pool System, a Roster Shift Listener for transaction monitoring, and a Roster Sync System merging Sleeper and NFL data.
+*   **Live Data & Processing:** Features a Live Data Integration Pipeline with multi-source data capture (MySportsFeeds, SportsDataIO, Sleeper API), a Hot List Player Extraction System, and a Snap Counts Knowledge System.
+*   **Backend Services:** Includes a Backend Spine with Logs & Projections Service, a multi-format Ratings Engine, and a dedicated OTC Power Rankings Service microservice.
+*   **UI/UX Enhancements:** Interactive GlowCard components, pulsing GlowCTA buttons, comprehensive skeleton loading, enhanced Button components, and a top loading bar.
+
+**Technical Stack:**
+
+*   **Backend**: Python (Flask), Node.js (Express.js, TypeScript)
+*   **Frontend**: React 18, TypeScript, Jinja2, Wouter, TanStack Query, shadcn/ui (Radix UI), Tailwind CSS
+*   **Data**: CSV/JSON, PostgreSQL, Drizzle ORM, Drizzle Kit, JSONL format
+*   **Data Pipeline**: Python with nfl-data-py, pandas
 
 ## External Dependencies
-- **MySportsFeeds API**: For injury reports and NFL roster automation.
-- **Sleeper API**: For player projections, game logs, ADP data, league sync, and current roster data.
-- **NFL-Data-Py**: For 2024 weekly statistics via nflfastR, depth charts via nflverse APIs.
-- **R Server**: External API for OASIS (Offensive Architecture Scoring & Insight System) data.
-- **Axios**: For making HTTP requests.
-- **Zod**: For runtime type validation.
-- **Recharts**: For charting and data visualization.
-- **connect-pg-simple**: For PostgreSQL-based session storage.
-- **@neondatabase/serverless**: PostgreSQL connection for serverless environments.
+*   **MySportsFeeds API**: Injury reports and NFL roster automation.
+*   **Sleeper API**: Player projections, game logs, ADP data, league sync, and current roster data.
+*   **NFL-Data-Py**: 2024 weekly statistics via nflfastR, depth charts via nflverse APIs.
+*   **R Server**: External API for OASIS (Offensive Architecture Scoring & Insight System) data.
+*   **Axios**: HTTP requests.
+*   **Zod**: Runtime type validation.
+*   **Recharts**: Charting and data visualization.
+*   **connect-pg-simple**: PostgreSQL-based session storage.
+*   **@neondatabase/serverless**: PostgreSQL connection for serverless environments.
