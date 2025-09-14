@@ -76,6 +76,14 @@ interface SleeperLeague {
   status: string;
 }
 
+interface SleeperLeaguesResponse {
+  leagues: SleeperLeague[];
+}
+
+interface QuickTestResponse {
+  status: string;
+}
+
 export function StartSitQuick() {
   const [playerA, setPlayerA] = useState("");
   const [playerB, setPlayerB] = useState("");
@@ -85,23 +93,20 @@ export function StartSitQuick() {
   const { toast } = useToast();
 
   // Fetch Sleeper leagues when username is provided
-  const { data: leagues, isLoading: leaguesLoading } = useQuery({
-    queryKey: ['/api/sleeper/leagues', sleeperUsername],
+  const { data: leagues, isLoading: leaguesLoading } = useQuery<SleeperLeaguesResponse>({
+    queryKey: [`/api/sleeper/leagues?username=${sleeperUsername}`],
     enabled: !!sleeperUsername,
-    queryFn: () => apiRequest(`/api/sleeper/leagues?username=${sleeperUsername}`),
   });
 
   // Test player resolution system
-  const { data: resolutionTest } = useQuery({
+  const { data: resolutionTest } = useQuery<QuickTestResponse>({
     queryKey: ['/api/start-sit/quick/test'],
   });
 
   const startSitMutation = useMutation({
     mutationFn: async (data: { a: string; b: string; leagueId?: string }) => {
-      return apiRequest('/api/start-sit/quick', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest('POST', '/api/start-sit/quick', data);
+      return await response.json();
     },
     onSuccess: (data) => {
       setResult(data);
