@@ -1,6 +1,6 @@
 // src/routes/startSitLiveRoutes.ts
 import { Router, Request, Response } from "express";
-import { buildStartSitInputs, buildStudMetaFromContext } from "../data/aggregator/startSitAggregator";
+import { buildStartSitInputs, buildStartSitInputsWithProvenance, buildStudMetaFromContext } from "../data/aggregator/startSitAggregator";
 import { startSit, defaultConfig, StartSitConfig } from "../../server/modules/startSitEngine";
 
 const router = Router();
@@ -59,7 +59,7 @@ router.get('/test', async (req: Request, res: Response) => {
  */
 router.post('/live', async (req: Request, res: Response) => {
   try {
-    const { playerA, playerB, week, config } = req.body;
+    const { playerA, playerB, week, config, debug } = req.body;
 
     if (!playerA || !playerB) {
       return res.status(400).json({ 
@@ -76,12 +76,26 @@ router.post('/live', async (req: Request, res: Response) => {
 
     console.log(`[start-sit-live] Building live data for ${playerA.name || playerA.id} vs ${playerB.name || playerB.id}`);
 
-    // Fetch real data from all sources and normalize
-    const { a, b } = await buildStartSitInputs({
-      playerA,
-      playerB,
-      week
-    });
+    // Fetch real data from all sources and normalize (with optional debug provenance)
+    let a, b, provenance;
+    if (debug === 1) {
+      const withProvenance = await buildStartSitInputsWithProvenance({
+        playerA,
+        playerB,
+        week
+      });
+      a = withProvenance.a;
+      b = withProvenance.b;
+      provenance = withProvenance.provenance;
+    } else {
+      const inputs = await buildStartSitInputs({
+        playerA,
+        playerB,
+        week
+      });
+      a = inputs.a;
+      b = inputs.b;
+    }
 
     // Build minimal stud metadata from available context
     const aMeta = buildStudMetaFromContext({
@@ -115,7 +129,7 @@ router.post('/live', async (req: Request, res: Response) => {
 
     console.log(`[start-sit-live] Result: ${result.verdict} (${result.margin.toFixed(1)} margin)`);
 
-    return res.json({
+    const baseResponse = {
       verdict: result.verdict,
       margin: result.margin,
       summary: result.summary,
@@ -147,7 +161,52 @@ router.post('/live', async (req: Request, res: Response) => {
       },
       week: week || "current",
       dataSource: "live"
-    });
+    };
+
+    // Add debug information if debug=1
+    if (debug === 1 && provenance) {
+      return res.json({
+        ...baseResponse,
+        debug: {
+          enabled: true,
+          provenance,
+          sourceMap: {
+            playerA: {
+              projPoints: provenance.playerA.projections.__source,
+              snapPct: provenance.playerA.usage.__source,
+              impliedTeamTotal: provenance.playerA.vegas.__source,
+              newsHeat: provenance.playerA.news.__source,
+              defenseMatchup: provenance.playerA.oasis.__source
+            },
+            playerB: {
+              projPoints: provenance.playerB.projections.__source,
+              snapPct: provenance.playerB.usage.__source,
+              impliedTeamTotal: provenance.playerB.vegas.__source,
+              newsHeat: provenance.playerB.news.__source,
+              defenseMatchup: provenance.playerB.oasis.__source
+            }
+          },
+          mockFlags: {
+            playerA: {
+              projectionsMocked: provenance.playerA.projections.__mock,
+              usageMocked: provenance.playerA.usage.__mock,
+              vegasMocked: provenance.playerA.vegas.__mock,
+              newsMocked: provenance.playerA.news.__mock,
+              oasisMocked: provenance.playerA.oasis.__mock
+            },
+            playerB: {
+              projectionsMocked: provenance.playerB.projections.__mock,
+              usageMocked: provenance.playerB.usage.__mock,
+              vegasMocked: provenance.playerB.vegas.__mock,
+              newsMocked: provenance.playerB.news.__mock,
+              oasisMocked: provenance.playerB.oasis.__mock
+            }
+          }
+        }
+      });
+    }
+
+    return res.json(baseResponse);
 
   } catch (err: any) {
     console.error("[start-sit-live] error", err);

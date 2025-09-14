@@ -4,9 +4,14 @@
 import { cacheKey, getCache, setCache } from "../cache";
 import { NFLTeam, VegasTeamLine } from "../interfaces";
 
-export async function fetchVegasLine(team: NFLTeam): Promise<VegasTeamLine> {
+export interface VegasTeamLineWithProvenance extends VegasTeamLine {
+  __source: string;
+  __mock: boolean;
+}
+
+export async function fetchVegasLine(team: NFLTeam): Promise<VegasTeamLineWithProvenance> {
   const key = cacheKey(["vegas", team]);
-  const cached = getCache<VegasTeamLine>(key);
+  const cached = getCache<VegasTeamLineWithProvenance>(key);
   if (cached) return cached;
 
   try {
@@ -15,11 +20,13 @@ export async function fetchVegasLine(team: NFLTeam): Promise<VegasTeamLine> {
     
     if (!response.ok) {
       // Fallback to reasonable team total
-      const fallback: VegasTeamLine = {
+      const fallback: VegasTeamLineWithProvenance = {
         team,
         opponent: "JAX", // placeholder
         impliedTeamTotal: 22.5,
         weatherImpact: 0.0, // neutral
+        __source: "vegas_api_fallback",
+        __mock: true,
       };
       setCache(key, fallback, 5 * 60_000);
       return fallback;
@@ -27,11 +34,13 @@ export async function fetchVegasLine(team: NFLTeam): Promise<VegasTeamLine> {
 
     const data = await response.json();
     
-    const line: VegasTeamLine = {
+    const line: VegasTeamLineWithProvenance = {
       team,
       opponent: data.opponent || "JAX",
       impliedTeamTotal: data.implied_total || data.impliedTeamTotal || 22.5,
       weatherImpact: data.weather_impact || data.weatherImpact || 0.0,
+      __source: "vegas_api_live",
+      __mock: false,
     };
 
     setCache(key, line, 15 * 60_000); // 15 minute cache for betting lines
@@ -50,11 +59,13 @@ export async function fetchVegasLine(team: NFLTeam): Promise<VegasTeamLine> {
       "CLE": 18.5, "NYJ": 18.0
     };
     
-    const fallback: VegasTeamLine = {
+    const fallback: VegasTeamLineWithProvenance = {
       team,
       opponent: "JAX",
       impliedTeamTotal: teamTotalMap[team] || 21.5,
       weatherImpact: 0.0,
+      __source: "vegas_fallback_map",
+      __mock: true,
     };
     
     setCache(key, fallback, 5 * 60_000);

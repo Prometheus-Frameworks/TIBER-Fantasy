@@ -4,9 +4,14 @@
 import { cacheKey, getCache, setCache } from "../cache";
 import { NewsSignal } from "../interfaces";
 
-export async function fetchNewsSignal(playerId: string): Promise<NewsSignal> {
+export interface NewsSignalWithProvenance extends NewsSignal {
+  __source: string;
+  __mock: boolean;
+}
+
+export async function fetchNewsSignal(playerId: string): Promise<NewsSignalWithProvenance> {
   const key = cacheKey(["news", playerId]);
-  const cached = getCache<NewsSignal>(key);
+  const cached = getCache<NewsSignalWithProvenance>(key);
   if (cached) return cached;
 
   try {
@@ -45,7 +50,12 @@ export async function fetchNewsSignal(playerId: string): Promise<NewsSignal> {
       }
     }
 
-    const signal: NewsSignal = { newsHeat, ecrDelta };
+    const signal: NewsSignalWithProvenance = { 
+      newsHeat, 
+      ecrDelta,
+      __source: "intel_ecr_apis",
+      __mock: false,
+    };
     setCache(key, signal, 10 * 60_000); // 10 minute cache for news
     return signal;
 
@@ -53,7 +63,12 @@ export async function fetchNewsSignal(playerId: string): Promise<NewsSignal> {
     console.error('[news-signal]', error);
     
     // Neutral fallback
-    const fallback: NewsSignal = { newsHeat: 50, ecrDelta: 0 };
+    const fallback: NewsSignalWithProvenance = { 
+      newsHeat: 50, 
+      ecrDelta: 0,
+      __source: "news_api_error",
+      __mock: true,
+    };
     setCache(key, fallback, 5 * 60_000);
     return fallback;
   }

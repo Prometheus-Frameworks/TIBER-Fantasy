@@ -4,9 +4,14 @@
 import { cacheKey, getCache, setCache } from "../cache";
 import { NFLTeam, OasisMatchup } from "../interfaces";
 
-export async function fetchOasisMatchup(team: NFLTeam, position: string): Promise<OasisMatchup> {
+export interface OasisMatchupWithProvenance extends OasisMatchup {
+  __source: string;
+  __mock: boolean;
+}
+
+export async function fetchOasisMatchup(team: NFLTeam, position: string): Promise<OasisMatchupWithProvenance> {
   const key = cacheKey(["oasis", team, position]);
-  const cached = getCache<OasisMatchup>(key);
+  const cached = getCache<OasisMatchupWithProvenance>(key);
   if (cached) return cached;
 
   try {
@@ -15,10 +20,12 @@ export async function fetchOasisMatchup(team: NFLTeam, position: string): Promis
     
     if (!response.ok) {
       // Fallback to neutral matchup
-      const fallback: OasisMatchup = {
+      const fallback: OasisMatchupWithProvenance = {
         defRankVsPos: 16,          // middle of pack
         oasisMatchupScore: 50,     // neutral
         olHealthIndex: 75,         // decent
+        __source: "oasis_api_fallback",
+        __mock: true,
       };
       setCache(key, fallback, 2 * 60_000);
       return fallback;
@@ -26,10 +33,12 @@ export async function fetchOasisMatchup(team: NFLTeam, position: string): Promis
 
     const data = await response.json();
     
-    const matchup: OasisMatchup = {
+    const matchup: OasisMatchupWithProvenance = {
       defRankVsPos: data.defense_rank_vs_position || data.defRankVsPos || 16,
       oasisMatchupScore: data.matchup_score || data.oasisMatchupScore || 50,
       olHealthIndex: data.ol_health_index || data.olHealthIndex || 75,
+      __source: "oasis_api_live",
+      __mock: false,
     };
 
     setCache(key, matchup, 30 * 60_000); // 30 minute cache for matchup data
@@ -38,10 +47,12 @@ export async function fetchOasisMatchup(team: NFLTeam, position: string): Promis
     console.error('[oasis-matchup]', error);
     
     // Safe neutral defaults
-    const fallback: OasisMatchup = {
+    const fallback: OasisMatchupWithProvenance = {
       defRankVsPos: 16,
       oasisMatchupScore: 50,
       olHealthIndex: 75,
+      __source: "oasis_api_error",
+      __mock: true,
     };
     
     setCache(key, fallback, 2 * 60_000);

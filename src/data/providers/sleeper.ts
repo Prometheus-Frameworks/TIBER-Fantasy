@@ -4,9 +4,22 @@
 import { cacheKey, getCache, setCache } from "../cache";
 import { SleeperUsage } from "../interfaces";
 
-export async function fetchSleeperUsage(playerId: string, week?: number): Promise<SleeperUsage> {
+export interface SleeperUsageWithProvenance extends SleeperUsage {
+  __source: string;
+  __mock: boolean;
+}
+
+export interface SleeperProjectionWithProvenance {
+  projPoints?: number;
+  floor?: number;
+  ceiling?: number;
+  __source: string;
+  __mock: boolean;
+}
+
+export async function fetchSleeperUsage(playerId: string, week?: number): Promise<SleeperUsageWithProvenance> {
   const key = cacheKey(["sleeperUsage", playerId, week ?? "curr"]);
-  const cached = getCache<SleeperUsage>(key);
+  const cached = getCache<SleeperUsageWithProvenance>(key);
   if (cached) return cached;
 
   try {
@@ -15,7 +28,7 @@ export async function fetchSleeperUsage(playerId: string, week?: number): Promis
     
     if (!response.ok) {
       // Fallback to reasonable defaults if API fails
-      const fallback: SleeperUsage = {
+      const fallback: SleeperUsageWithProvenance = {
         snapPct: 75,
         routeParticipation: 80,
         targetShare: 15,
@@ -23,6 +36,8 @@ export async function fetchSleeperUsage(playerId: string, week?: number): Promis
         targets: 6,
         rzTouches: 2,
         insideTenTouches: 1,
+        __source: "sleeper_api_fallback",
+        __mock: true,
       };
       setCache(key, fallback, 30_000); // shorter cache for fallbacks
       return fallback;
@@ -31,7 +46,7 @@ export async function fetchSleeperUsage(playerId: string, week?: number): Promis
     const data = await response.json();
     
     // Transform Sleeper data to our usage format
-    const usage: SleeperUsage = {
+    const usage: SleeperUsageWithProvenance = {
       snapPct: data.snap_pct || data.snapPct,
       routeParticipation: data.route_participation || data.routeParticipation,
       targetShare: data.target_share || data.targetShare,
@@ -39,6 +54,8 @@ export async function fetchSleeperUsage(playerId: string, week?: number): Promis
       targets: data.targets || 0,
       rzTouches: data.rz_touches || data.rzTouches || 0,
       insideTenTouches: data.inside_ten_touches || data.insideTenTouches || 0,
+      __source: "sleeper_api_live",
+      __mock: false,
     };
 
     setCache(key, usage, 5 * 60_000); // 5 minute cache
@@ -47,7 +64,7 @@ export async function fetchSleeperUsage(playerId: string, week?: number): Promis
     console.error('[sleeper-usage]', error);
     
     // Return safe defaults on error
-    const fallback: SleeperUsage = {
+    const fallback: SleeperUsageWithProvenance = {
       snapPct: 70,
       routeParticipation: 75,
       targetShare: 12,
@@ -55,6 +72,8 @@ export async function fetchSleeperUsage(playerId: string, week?: number): Promis
       targets: 5,
       rzTouches: 1,
       insideTenTouches: 0,
+      __source: "sleeper_api_error",
+      __mock: true,
     };
     
     setCache(key, fallback, 30_000);
@@ -62,9 +81,9 @@ export async function fetchSleeperUsage(playerId: string, week?: number): Promis
   }
 }
 
-export async function fetchSleeperProjection(playerId: string, week?: number): Promise<{ projPoints?: number; floor?: number; ceiling?: number }> {
+export async function fetchSleeperProjection(playerId: string, week?: number): Promise<SleeperProjectionWithProvenance> {
   const key = cacheKey(["sleeperProj", playerId, week ?? "curr"]);
-  const cached = getCache<{ projPoints?: number; floor?: number; ceiling?: number }>(key);
+  const cached = getCache<SleeperProjectionWithProvenance>(key);
   if (cached) return cached;
 
   try {
@@ -72,17 +91,25 @@ export async function fetchSleeperProjection(playerId: string, week?: number): P
     const response = await fetch(`http://localhost:5000/api/rankings/deepseek/v3.2?player=${playerId}&week=${week ?? 'current'}`);
     
     if (!response.ok) {
-      const result = { projPoints: 12.5, floor: 7.0, ceiling: 19.0 };
+      const result: SleeperProjectionWithProvenance = { 
+        projPoints: 12.5, 
+        floor: 7.0, 
+        ceiling: 19.0,
+        __source: "deepseek_api_fallback",
+        __mock: true,
+      };
       setCache(key, result, 30_000);
       return result;
     }
 
     const data = await response.json();
     
-    const result = { 
+    const result: SleeperProjectionWithProvenance = { 
       projPoints: data.projectedPoints || data.proj_points || 12.5,
       floor: data.floor || data.proj_floor,
-      ceiling: data.ceiling || data.proj_ceiling 
+      ceiling: data.ceiling || data.proj_ceiling,
+      __source: "deepseek_v3.2_live",
+      __mock: false,
     };
 
     setCache(key, result, 10 * 60_000); // 10 minute cache for projections
@@ -90,7 +117,13 @@ export async function fetchSleeperProjection(playerId: string, week?: number): P
   } catch (error) {
     console.error('[sleeper-projection]', error);
     
-    const result = { projPoints: 12.5, floor: 7.0, ceiling: 19.0 };
+    const result: SleeperProjectionWithProvenance = { 
+      projPoints: 12.5, 
+      floor: 7.0, 
+      ceiling: 19.0,
+      __source: "deepseek_api_error",
+      __mock: true,
+    };
     setCache(key, result, 30_000);
     return result;
   }

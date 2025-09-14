@@ -2,7 +2,7 @@
 // One-endpoint UX: give names (and optional league context). We resolve & run live.
 import { Router, Request, Response } from "express";
 import { resolvePlayer } from "../data/resolvers/playerResolver";
-import { buildStartSitInputs } from "../data/aggregator/startSitAggregator";
+import { buildStartSitInputs, buildStartSitInputsWithProvenance } from "../data/aggregator/startSitAggregator";
 import { startSit, defaultConfig, StartSitConfig } from "../../server/modules/startSitEngine";
 
 const router = Router();
@@ -19,7 +19,7 @@ const router = Router();
  */
 router.post("/start-sit/quick", async (req: Request, res: Response) => {
   try {
-    const { a, b, week, leagueId, config } = req.body ?? {};
+    const { a, b, week, leagueId, config, debug } = req.body ?? {};
     
     if (!a || !b) {
       return res.status(400).json({ 
@@ -63,8 +63,8 @@ router.post("/start-sit/quick", async (req: Request, res: Response) => {
 
     console.log(`[start-sit/quick] Resolved: ${playerA.name} (${playerA.team}) vs ${playerB.name} (${playerB.team})`);
 
-    // Build engine inputs from live data sources
-    const { a: playerAInput, b: playerBInput } = await buildStartSitInputs({
+    // Build engine inputs from live data sources (with optional debug provenance)
+    const query = {
       playerA: { 
         id: playerA.id, 
         position: playerA.position as any, 
@@ -78,7 +78,19 @@ router.post("/start-sit/quick", async (req: Request, res: Response) => {
         name: playerB.name 
       },
       week,
-    });
+    };
+
+    let playerAInput, playerBInput, provenance;
+    if (debug === 1) {
+      const withProvenance = await buildStartSitInputsWithProvenance(query);
+      playerAInput = withProvenance.a;
+      playerBInput = withProvenance.b;
+      provenance = withProvenance.provenance;
+    } else {
+      const inputs = await buildStartSitInputs(query);
+      playerAInput = inputs.a;
+      playerBInput = inputs.b;
+    }
 
     // Apply league-specific scoring adjustments if available
     let adjustedConfig: StartSitConfig = { ...defaultConfig };
@@ -131,7 +143,7 @@ router.post("/start-sit/quick", async (req: Request, res: Response) => {
 
     console.log(`[start-sit/quick] Result: ${result.verdict} (${result.margin.toFixed(2)} margin)`);
 
-    return res.json({
+    const baseResponse = {
       query: { 
         a: playerA.name, 
         b: playerB.name, 
@@ -166,7 +178,52 @@ router.post("/start-sit/quick", async (req: Request, res: Response) => {
         }
       },
       dataSource: "live_with_league_context"
-    });
+    };
+
+    // Add debug information if debug=1
+    if (debug === 1 && provenance) {
+      return res.json({
+        ...baseResponse,
+        debug: {
+          enabled: true,
+          provenance,
+          sourceMap: {
+            playerA: {
+              projPoints: provenance.playerA.projections.__source,
+              snapPct: provenance.playerA.usage.__source,
+              impliedTeamTotal: provenance.playerA.vegas.__source,
+              newsHeat: provenance.playerA.news.__source,
+              defenseMatchup: provenance.playerA.oasis.__source
+            },
+            playerB: {
+              projPoints: provenance.playerB.projections.__source,
+              snapPct: provenance.playerB.usage.__source,
+              impliedTeamTotal: provenance.playerB.vegas.__source,
+              newsHeat: provenance.playerB.news.__source,
+              defenseMatchup: provenance.playerB.oasis.__source
+            }
+          },
+          mockFlags: {
+            playerA: {
+              projectionsMocked: provenance.playerA.projections.__mock,
+              usageMocked: provenance.playerA.usage.__mock,
+              vegasMocked: provenance.playerA.vegas.__mock,
+              newsMocked: provenance.playerA.news.__mock,
+              oasisMocked: provenance.playerA.oasis.__mock
+            },
+            playerB: {
+              projectionsMocked: provenance.playerB.projections.__mock,
+              usageMocked: provenance.playerB.usage.__mock,
+              vegasMocked: provenance.playerB.vegas.__mock,
+              newsMocked: provenance.playerB.news.__mock,
+              oasisMocked: provenance.playerB.oasis.__mock
+            }
+          }
+        }
+      });
+    }
+
+    return res.json(baseResponse);
   } catch (err: any) {
     console.error("[start-sit] error", err);
     return res.status(400).json({

@@ -1,12 +1,18 @@
 // src/data/aggregator/startSitAggregator.ts
 import { PlayerInput } from "../../../server/modules/startSitEngine";
 import {
-  LivePlayerContext, StartSitLiveQuery, NFLTeam, VolatilityMeta
+  LivePlayerContext, StartSitLiveQuery, NFLTeam, VolatilityMeta,
+  StartSitInputsWithProvenance, StartSitProvenanceData, ProviderPayloads
 } from "../interfaces";
-import { fetchSleeperUsage, fetchSleeperProjection } from "../providers/sleeper";
-import { fetchOasisMatchup } from "../providers/oasis";
-import { fetchVegasLine } from "../providers/vegas";
-import { fetchNewsSignal } from "../providers/news";
+import { 
+  fetchSleeperUsage, 
+  fetchSleeperProjection,
+  SleeperUsageWithProvenance,
+  SleeperProjectionWithProvenance
+} from "../providers/sleeper";
+import { fetchOasisMatchup, OasisMatchupWithProvenance } from "../providers/oasis";
+import { fetchVegasLine, VegasTeamLineWithProvenance } from "../providers/vegas";
+import { fetchNewsSignal, NewsSignalWithProvenance } from "../providers/news";
 import { calcWeightedTouches } from "../normalizers/usage";
 import { mergeMatchup } from "../normalizers/matchup";
 import { normalizeVolatility } from "../normalizers/volatility";
@@ -99,6 +105,106 @@ export async function buildStartSitInputs(q: StartSitLiveQuery) {
     toEngineInput(q.playerB, q.week),
   ]);
   return { a, b };
+}
+
+// Build inputs with provenance tracking for debug mode
+async function buildInputsWithProvenance(
+  player: { id: string; position: PlayerInput["position"]; team?: NFLTeam; name?: string }, 
+  week?: number
+): Promise<{ input: PlayerInput; provenance: ProviderPayloads }> {
+  // Fetch all provider data with provenance
+  const [usage, projections, oasis, vegas, news] = await Promise.all([
+    fetchSleeperUsage(player.id, week),
+    fetchSleeperProjection(player.id, week),
+    fetchOasisMatchup(player.team as NFLTeam, player.position),
+    player.team ? fetchVegasLine(player.team) : Promise.resolve({
+      team: player.team as NFLTeam,
+      opponent: "JAX" as NFLTeam,
+      impliedTeamTotal: 22.5,
+      weatherImpact: 0.0,
+      __source: "no_team_fallback",
+      __mock: true,
+    } as VegasTeamLineWithProvenance),
+    fetchNewsSignal(player.id),
+  ]);
+
+  // Build the regular engine input
+  const matchup = mergeMatchup(oasis, vegas);
+  const volMeta: VolatilityMeta = normalizeVolatility({
+    stdevLast5: undefined,
+    injuryTag: null,
+    committeeRisk: undefined,
+    depthChartThreats: undefined,
+  });
+  const newsNorm = normalizeNews(news);
+
+  const input: PlayerInput = {
+    id: player.id,
+    name: player.name ?? player.id,
+    team: player.team,
+    position: player.position,
+    opponent: (matchup as any)?.opponent,
+
+    projPoints: projections.projPoints,
+    projFloor: projections.floor ?? undefined,
+    projCeiling: projections.ceiling ?? undefined,
+
+    // Usage
+    snapPct: usage.snapPct,
+    routeParticipation: usage.routeParticipation,
+    targetShare: usage.targetShare,
+    weightedTouches: calcWeightedTouches(usage),
+    rzTouches: usage.rzTouches,
+    insideTenTouches: usage.insideTenTouches,
+
+    // Matchup
+    defRankVsPos: matchup.defRankVsPos,
+    oasisMatchupScore: matchup.oasisMatchupScore,
+    impliedTeamTotal: matchup.impliedTeamTotal,
+    olHealthIndex: matchup.olHealthIndex,
+    weatherImpact: matchup.weatherImpact,
+
+    // Volatility / Trust
+    stdevLast5: volMeta.stdevLast5,
+    injuryTag: volMeta.injuryTag,
+    committeeRisk: volMeta.committeeRisk,
+    depthChartThreats: volMeta.depthChartThreats,
+
+    // News
+    newsHeat: newsNorm.newsHeat,
+    ecrDelta: newsNorm.ecrDelta,
+  };
+
+  // Capture provenance with type conversion
+  const provenance: ProviderPayloads = {
+    usage: usage as SleeperUsageWithProvenance,
+    projections: projections as SleeperProjectionWithProvenance,
+    oasis: oasis as OasisMatchupWithProvenance,
+    vegas: vegas as VegasTeamLineWithProvenance,
+    news: news as NewsSignalWithProvenance,
+  };
+
+  return { input, provenance };
+}
+
+export async function buildStartSitInputsWithProvenance(q: StartSitLiveQuery): Promise<StartSitInputsWithProvenance> {
+  const [playerAData, playerBData] = await Promise.all([
+    buildInputsWithProvenance(q.playerA, q.week),
+    buildInputsWithProvenance(q.playerB, q.week),
+  ]);
+
+  const provenance: StartSitProvenanceData = {
+    playerA: playerAData.provenance,
+    playerB: playerBData.provenance,
+    timestamp: new Date().toISOString(),
+    week: q.week,
+  };
+
+  return {
+    a: playerAData.input,
+    b: playerBData.input,
+    provenance,
+  };
 }
 
 // Build a minimal StudMeta from data you likely already have

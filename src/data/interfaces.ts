@@ -67,3 +67,40 @@ export interface StartSitLiveQuery {
   playerB: { id: string; position: Position; team?: NFLTeam; name?: string };
   week?: number; // default: current
 }
+
+// Provenance tracking interfaces
+export interface ProviderSource {
+  __source: string;
+  __mock: boolean;
+}
+
+export interface SleeperUsageProvenance extends SleeperUsage, ProviderSource {}
+export interface SleeperProjectionProvenance extends ProviderSource {
+  projPoints?: number;
+  floor?: number;
+  ceiling?: number;
+}
+export interface OasisMatchupProvenance extends OasisMatchup, ProviderSource {}
+export interface VegasTeamLineProvenance extends VegasTeamLine, ProviderSource {}
+export interface NewsSignalProvenance extends NewsSignal, ProviderSource {}
+
+export interface ProviderPayloads {
+  usage: SleeperUsageProvenance;
+  projections: SleeperProjectionProvenance;
+  oasis: OasisMatchupProvenance;
+  vegas: VegasTeamLineProvenance;
+  news: NewsSignalProvenance;
+}
+
+export interface StartSitProvenanceData {
+  playerA: ProviderPayloads;
+  playerB: ProviderPayloads;
+  timestamp: string;
+  week?: number;
+}
+
+export interface StartSitInputsWithProvenance {
+  a: PlayerInput;
+  b: PlayerInput;
+  provenance?: StartSitProvenanceData;
+}
