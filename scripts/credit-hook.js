@@ -14,6 +14,11 @@ const CREDITS_FILE = path.join(process.cwd(), 'docs/internal/credits.json');
 
 function parseCommitMessage(commitSha = 'HEAD') {
   try {
+    // Validate commit SHA to prevent command injection
+    if (!/^[a-zA-Z0-9_\-\/]{1,50}$|^HEAD$|^HEAD~\d+$/.test(commitSha)) {
+      throw new Error(`Invalid commit reference: ${commitSha}`);
+    }
+    
     const commitMessage = execSync(`git log -1 --pretty=format:"%B" ${commitSha}`, { encoding: 'utf8' });
     
     // Look for Credit: lines in commit message
