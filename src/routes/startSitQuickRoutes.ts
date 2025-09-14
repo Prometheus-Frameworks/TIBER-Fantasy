@@ -214,4 +214,61 @@ router.get("/start-sit/quick/test", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/start-sit/debug/player/:name
+ * Debug player resolution for a specific name
+ */
+router.get("/start-sit/debug/player/:name", async (req: Request, res: Response) => {
+  try {
+    const name = req.params.name;
+    console.log(`[debug] Testing resolution for: "${name}"`);
+    
+    // Test different approaches
+    const results = await Promise.all([
+      resolvePlayer(name), // No filters
+      resolvePlayer(name, undefined, "WR"), // Position filter
+      resolvePlayer(name, undefined, "K"), // Kicker specifically
+    ]);
+
+    const [noFilter, wrFilter, kFilter] = results;
+    
+    return res.json({
+      query: name,
+      results: {
+        noFilter: noFilter ? {
+          id: noFilter.player_id,
+          name: noFilter.full_name || `${noFilter.first_name} ${noFilter.last_name}`.trim(),
+          team: noFilter.team,
+          position: noFilter.position,
+          active: noFilter.active,
+          status: noFilter.status
+        } : null,
+        wrFilter: wrFilter ? {
+          id: wrFilter.player_id, 
+          name: wrFilter.full_name || `${wrFilter.first_name} ${wrFilter.last_name}`.trim(),
+          team: wrFilter.team,
+          position: wrFilter.position,
+          active: wrFilter.active,
+          status: wrFilter.status
+        } : null,
+        kFilter: kFilter ? {
+          id: kFilter.player_id,
+          name: kFilter.full_name || `${kFilter.first_name} ${kFilter.last_name}`.trim(),
+          team: kFilter.team,
+          position: kFilter.position,
+          active: kFilter.active,
+          status: kFilter.status
+        } : null
+      },
+      issue: noFilter?.position === 'K' ? "Resolved to kicker instead of skill position player" : "Resolution looks correct"
+    });
+  } catch (err: any) {
+    console.error("[start-sit] debug error", err);
+    return res.status(400).json({
+      error: "debug_error",
+      detail: String(err?.message || err)
+    });
+  }
+});
+
 export default router;

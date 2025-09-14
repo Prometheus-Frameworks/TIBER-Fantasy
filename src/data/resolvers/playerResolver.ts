@@ -14,12 +14,11 @@ type SleeperPlayer = {
 };
 
 const ALIASES: Record<string, string> = {
-  "hollywood brown": "marquise brown",
-  "marquise hollywood brown": "marquise brown", 
-  "hollywood": "marquise brown",
-  "marquise brown": "marquise brown", // exact match
+  "marquise brown": "hollywood brown", // Marquise "Hollywood" Brown
+  "marquise hollywood brown": "hollywood brown", 
+  "hollywood": "hollywood brown",
+  "hollywood brown": "hollywood brown", // exact match
   "jaylen warren": "jaylen warren", // exact match
-  "josh brown": "marquise brown", // only if position=WR or team=KC (belt-and-suspenders)
   "juju": "juju smith-schuster",
   "puka": "puka nacua",
   "puka nacua": "puka nacua",
@@ -35,7 +34,11 @@ function norm(s?: string) {
 }
 
 function isActive(p: SleeperPlayer) {
-  return (p.active === true) || (p.status?.toLowerCase() === "active");
+  // Must be explicitly active or have Active status
+  const activeStatus = p.active === true || p.status?.toLowerCase() === "active";
+  // Exclude explicitly inactive players
+  const notInactive = p.status?.toLowerCase() !== "inactive";
+  return activeStatus && notInactive;
 }
 
 function scoreMatch(needle: string, p: SleeperPlayer) {
@@ -47,6 +50,7 @@ function scoreMatch(needle: string, p: SleeperPlayer) {
     norm(p.first_name),
     norm(p.last_name),
   ];
+  
   let score = 0;
   for (const cand of names) {
     if (!cand) continue;
@@ -65,12 +69,28 @@ function scoreMatch(needle: string, p: SleeperPlayer) {
     }
   }
   
-  // Boost score for non-kickers when looking for skill position players
-  if (p.position && p.position !== 'K' && (n.includes('brown') || n.includes('hollywood'))) {
-    score *= 1.2;
+  // Position-based scoring boosts
+  if (p.position && score > 0) {
+    // Boost skill position players over kickers/linemen
+    if (['QB', 'RB', 'WR', 'TE'].includes(p.position)) {
+      score *= 1.3;
+    } else if (p.position === 'K' || p.position === 'DEF') {
+      // Slight penalty for kickers and defenses in common name searches
+      score *= 0.8;
+    }
+    
+    // Extra boost for specific name patterns
+    if (p.position !== 'K' && (n.includes('brown') || n.includes('hollywood'))) {
+      score *= 1.2;
+    }
   }
   
-  return Math.min(score, 1.0); // Cap at 1.0
+  // Team context boost - active players on teams are more likely to be searched
+  if (p.team && p.team.trim() !== '' && score > 0) {
+    score *= 1.1;
+  }
+  
+  return Math.min(score, 1.5); // Allow scores above 1.0 for better differentiation
 }
 
 async function loadSleeperMap(): Promise<Record<string, SleeperPlayer>> {
@@ -107,7 +127,7 @@ export async function resolvePlayer(
   const aliasNorm = ALIASES[raw] ? norm(ALIASES[raw]) : raw;
 
   // Gather candidates and score
-  let best: { p: SleeperPlayer; score: number } | null = null;
+  let candidates: { p: SleeperPlayer; score: number }[] = [];
   for (const pid in db) {
     const p = db[pid];
     if (!p) continue;
@@ -116,14 +136,24 @@ export async function resolvePlayer(
     if (position && p.position && p.position.toUpperCase() !== position.toUpperCase()) continue;
     if (team && p.team && p.team.toUpperCase() !== team.toUpperCase()) continue;
 
-    // Prefer active/current players
-    if (!isActive(p)) continue;
-
+    // Score the match first
     const s = scoreMatch(aliasNorm, p);
-    if (s > 0 && (!best || s > best.score)) best = { p, score: s };
-    if (best?.score && best.score >= 1.0) break; // exact match
+    if (s <= 0) continue; // Skip if no match
+
+    // Prefer active/current players but don't exclude inactive ones entirely
+    let adjustedScore = s;
+    if (isActive(p)) {
+      adjustedScore *= 1.5; // Boost active players significantly
+    } else {
+      adjustedScore *= 0.3; // Heavy penalty for inactive players
+    }
+
+    candidates.push({ p, score: adjustedScore });
   }
-  return best?.p ?? null;
+
+  // Sort by score descending and return the best match
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0]?.p ?? null;
 }
 
 // Legacy interface for backward compatibility
