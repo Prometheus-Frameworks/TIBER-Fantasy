@@ -19,7 +19,11 @@ const router = Router();
  */
 router.post("/start-sit/quick", async (req: Request, res: Response) => {
   try {
-    const { a, b, week, leagueId, config, debug } = req.body ?? {};
+    const { a, b, week, leagueId, config } = req.body ?? {};
+    
+    // Handle debug flag from both body and query parameters, normalize to boolean
+    const debugRaw = req.body?.debug ?? req.query?.debug;
+    const isDebug = debugRaw === 1 || debugRaw === "1" || debugRaw === true || debugRaw === "true";
     
     if (!a || !b) {
       return res.status(400).json({ 
@@ -81,7 +85,7 @@ router.post("/start-sit/quick", async (req: Request, res: Response) => {
     };
 
     let playerAInput, playerBInput, provenance;
-    if (debug === 1) {
+    if (isDebug) {
       const withProvenance = await buildStartSitInputsWithProvenance(query);
       playerAInput = withProvenance.a;
       playerBInput = withProvenance.b;
@@ -180,8 +184,8 @@ router.post("/start-sit/quick", async (req: Request, res: Response) => {
       dataSource: "live_with_league_context"
     };
 
-    // Add debug information if debug=1
-    if (debug === 1 && provenance) {
+    // Add debug information if debug mode is enabled
+    if (isDebug && provenance) {
       return res.json({
         ...baseResponse,
         debug: {

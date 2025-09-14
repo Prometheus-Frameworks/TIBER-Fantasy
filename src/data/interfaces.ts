@@ -74,22 +74,22 @@ export interface ProviderSource {
   __mock: boolean;
 }
 
-export interface SleeperUsageProvenance extends SleeperUsage, ProviderSource {}
-export interface SleeperProjectionProvenance extends ProviderSource {
+export interface SleeperUsageWithProvenance extends SleeperUsage, ProviderSource {}
+export interface SleeperProjectionWithProvenance extends ProviderSource {
   projPoints?: number;
   floor?: number;
   ceiling?: number;
 }
-export interface OasisMatchupProvenance extends OasisMatchup, ProviderSource {}
-export interface VegasTeamLineProvenance extends VegasTeamLine, ProviderSource {}
-export interface NewsSignalProvenance extends NewsSignal, ProviderSource {}
+export interface OasisMatchupWithProvenance extends OasisMatchup, ProviderSource {}
+export interface VegasTeamLineWithProvenance extends VegasTeamLine, ProviderSource {}
+export interface NewsSignalWithProvenance extends NewsSignal, ProviderSource {}
 
 export interface ProviderPayloads {
-  usage: SleeperUsageProvenance;
-  projections: SleeperProjectionProvenance;
-  oasis: OasisMatchupProvenance;
-  vegas: VegasTeamLineProvenance;
-  news: NewsSignalProvenance;
+  usage: SleeperUsageWithProvenance;
+  projections: SleeperProjectionWithProvenance;
+  oasis: OasisMatchupWithProvenance;
+  vegas: VegasTeamLineWithProvenance;
+  news: NewsSignalWithProvenance;
 }
 
 export interface StartSitProvenanceData {

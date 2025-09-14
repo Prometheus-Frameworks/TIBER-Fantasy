@@ -118,7 +118,7 @@ async function buildInputsWithProvenance(
     fetchSleeperProjection(player.id, week),
     fetchOasisMatchup(player.team as NFLTeam, player.position),
     player.team ? fetchVegasLine(player.team) : Promise.resolve({
-      team: player.team as NFLTeam,
+      team: (player.team || "JAX") as NFLTeam,
       opponent: "JAX" as NFLTeam,
       impliedTeamTotal: 22.5,
       weatherImpact: 0.0,
@@ -175,13 +175,13 @@ async function buildInputsWithProvenance(
     ecrDelta: newsNorm.ecrDelta,
   };
 
-  // Capture provenance with type conversion
+  // Capture provenance - no type conversion needed since providers return correct types
   const provenance: ProviderPayloads = {
-    usage: usage as SleeperUsageWithProvenance,
-    projections: projections as SleeperProjectionWithProvenance,
-    oasis: oasis as OasisMatchupWithProvenance,
-    vegas: vegas as VegasTeamLineWithProvenance,
-    news: news as NewsSignalWithProvenance,
+    usage,
+    projections,
+    oasis,
+    vegas,
+    news,
   };
 
   return { input, provenance };

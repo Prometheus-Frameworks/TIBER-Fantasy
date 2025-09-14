@@ -59,7 +59,11 @@ router.get('/test', async (req: Request, res: Response) => {
  */
 router.post('/live', async (req: Request, res: Response) => {
   try {
-    const { playerA, playerB, week, config, debug } = req.body;
+    const { playerA, playerB, week, config } = req.body;
+    
+    // Handle debug flag from both body and query parameters, normalize to boolean
+    const debugRaw = req.body?.debug ?? req.query?.debug;
+    const isDebug = debugRaw === 1 || debugRaw === "1" || debugRaw === true || debugRaw === "true";
 
     if (!playerA || !playerB) {
       return res.status(400).json({ 
@@ -78,7 +82,7 @@ router.post('/live', async (req: Request, res: Response) => {
 
     // Fetch real data from all sources and normalize (with optional debug provenance)
     let a, b, provenance;
-    if (debug === 1) {
+    if (isDebug) {
       const withProvenance = await buildStartSitInputsWithProvenance({
         playerA,
         playerB,
@@ -163,8 +167,8 @@ router.post('/live', async (req: Request, res: Response) => {
       dataSource: "live"
     };
 
-    // Add debug information if debug=1
-    if (debug === 1 && provenance) {
+    // Add debug information if debug mode is enabled
+    if (isDebug && provenance) {
       return res.json({
         ...baseResponse,
         debug: {
