@@ -1,7 +1,7 @@
 import nfl_data_py as nfl
 import pandas as pd
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from datetime import datetime, timedelta
 import logging
 
@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
 def get_latest_week_in_db(engine, season):
     """Get the latest week we have data for in the database"""
     try:
-        query = f"SELECT MAX(week) FROM player_vs_defense WHERE season = {season}"
-        result = engine.execute(query).fetchone()
+        query = text("SELECT MAX(week) FROM player_vs_defense WHERE season = :season")
+        result = engine.execute(query, season=season).fetchone()
         return result[0] if result[0] is not None else 0
     except:
         return 0
