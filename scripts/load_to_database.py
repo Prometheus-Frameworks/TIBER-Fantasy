@@ -46,7 +46,7 @@ def load_csvs_to_database(year=2024):
             weeks = inputs['week'].unique()
             with engine.connect() as conn:
                 for week in weeks:
-                    conn.execute(text(f"DELETE FROM player_inputs WHERE season = {year} AND week = {week}"))
+                    conn.execute(text("DELETE FROM player_inputs WHERE season = :year AND week = :week"), {"year": year, "week": week})
                 conn.commit()
             
             # Load new data  
