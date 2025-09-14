@@ -74,7 +74,7 @@ export function getAllPlayers(): BasicPlayer[] {
 export async function initializeDefaultPlayers() {
   try {
     // Try to get players from existing player pool
-    const response = await fetch('/api/player-pool');
+    const response = await fetch('http://localhost:5000/api/player-pool');
     if (response.ok) {
       const data = await response.json();
       const players: BasicPlayer[] = data.players?.map((p: any) => ({
