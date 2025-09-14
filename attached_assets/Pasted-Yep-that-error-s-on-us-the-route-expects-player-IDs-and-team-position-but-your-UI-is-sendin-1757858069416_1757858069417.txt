@@ -1,0 +1,216 @@
+Yep — that error’s on us: the route expects **player IDs (and team/position)** but your UI is sending **plain names** (`"marquise brown"`, `"jaylen warren"`). The aggregator can’t resolve names → IDs, so it throws `player_not_found`.
+
+Two clean fixes. Pick one:
+
+## Option A (fastest): force ID selection in the UI
+
+* Make your input a **Sleeper-powered autocomplete** and store `{id, team, position, name}` in state.
+* Only enable the “Analyze” button when both players have **IDs**.
+* You’re done. Zero backend changes.
+
+## Option B (drop-in backend resolver): accept names and look up IDs
+
+Paste this resolver and wire it before you call the engine. It:
+
+* Loads the Sleeper players map once (cache it)
+* Fuzzy-matches names + common aliases (“hollywood brown” → Marquise)
+* Falls back to team/position if provided
+
+### 1) `src/data/resolvers/playerResolver.ts`
+
+```ts
+// src/data/resolvers/playerResolver.ts
+import fetch from "node-fetch";
+import { cacheKey, getCache, setCache } from "../cache";
+
+type SleeperPlayer = {
+  player_id: string;
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  team?: string;
+  position?: string;
+  active?: boolean;
+};
+
+const ALIASES: Record<string, string> = {
+  "hollywood brown": "marquise brown",
+  "marquise hollywood brown": "marquise brown",
+  "jaylen warren": "jaylen warren",
+  "juju": "juju smith-schuster",
+  "puka": "puka nacua",
+  // add more common nicknames as needed
+};
+
+function norm(s?: string) {
+  return (s || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function scoreMatch(needle: string, p: SleeperPlayer) {
+  const n = needle;
+  const names = [
+    norm(p.full_name),
+    norm(p.first_name + " " + p.last_name),
+    norm(p.last_name + " " + p.first_name),
+    norm(p.first_name),
+    norm(p.last_name),
+  ];
+  let score = 0;
+  for (const cand of names) {
+    if (!cand) continue;
+    if (cand === n) score = Math.max(score, 1.0);
+    else if (cand.includes(n)) score = Math.max(score, 0.9);
+    else if (n.includes(cand)) score = Math.max(score, 0.85);
+  }
+  return score;
+}
+
+async function loadSleeperMap(): Promise<Record<string, SleeperPlayer>> {
+  const key = cacheKey(["sleeper", "players", "map"]);
+  const cached = getCache<Record<string, SleeperPlayer>>(key);
+  if (cached) return cached;
+
+  // Sleeper public players JSON
+  const url = "https://api.sleeper.app/v1/players/nfl";
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`sleeper_players_fetch_failed ${res.status}`);
+  const data = (await res.json()) as Record<string, SleeperPlayer>;
+  setCache(key, data, 60 * 60 * 1000); // 1h
+  return data;
+}
+
+/** Resolve a human name (with optional team/pos) to a Sleeper player object */
+export async function resolvePlayer(
+  nameOrId: string,
+  team?: string,
+  position?: string
+): Promise<SleeperPlayer | null> {
+  const db = await loadSleeperMap();
+
+  // If they passed a player_id directly, short-circuit
+  if (db[nameOrId]) return db[nameOrId];
+
+  const raw = norm(nameOrId);
+  const aliasNorm = ALIASES[raw] ? norm(ALIASES[raw]) : raw;
+
+  // Gather candidates and score
+  let best: { p: SleeperPlayer; score: number } | null = null;
+  for (const pid in db) {
+    const p = db[pid];
+    if (!p) continue;
+    if (position && p.position && p.position.toUpperCase() !== position.toUpperCase()) continue;
+    if (team && p.team && p.team.toUpperCase() !== team.toUpperCase()) continue;
+
+    const s = scoreMatch(aliasNorm, p);
+    if (s > 0) {
+      if (!best || s > best.score) best = { p, score: s };
+      // early exit if perfect
+      if (s >= 1.0) break;
+    }
+  }
+  return best?.p ?? null;
+}
+```
+
+### 2) Patch the **live route** to use the resolver
+
+`src/routes/startSitLiveRoutes.ts`:
+
+```ts
+import { resolvePlayer } from "../data/resolvers/playerResolver";
+
+router.post("/start-sit/live", async (req, res) => {
+  try {
+    const { playerA, playerB, week, config } = req.body ?? {};
+    if (!playerA || !playerB) {
+      return res.status(400).json({ error: "missing_players", detail: "playerA and playerB are required" });
+    }
+
+    // If id missing, try to resolve by name (+ team/position if provided)
+    async function ensureId(p: any) {
+      if (p.id) return p;
+      const resolved = await resolvePlayer(p.name || p.query || "", p.team, p.position);
+      if (!resolved) return null;
+      return {
+        ...p,
+        id: resolved.player_id,
+        name: resolved.full_name || `${resolved.first_name} ${resolved.last_name}`.trim(),
+        team: p.team ?? resolved.team,
+        position: p.position ?? resolved.position,
+      };
+    }
+
+    const A = await ensureId(playerA);
+    const B = await ensureId(playerB);
+    if (!A || !B) {
+      return res.status(404).json({
+        error: "player_not_found",
+        message: "Could not resolve one or both players",
+        detail: "Try connecting to a Sleeper league first to cache players, or check spelling.",
+        missing: { playerA: A ? undefined : playerA?.name || playerA, playerB: B ? undefined : playerB?.name || playerB }
+      });
+    }
+
+    req.body.playerA = A;
+    req.body.playerB = B;
+
+    // now proceed as before
+    const { a, b } = await buildStartSitInputs({ playerA: A, playerB: B, week });
+    const merged = {
+      ...defaultConfig,
+      ...(config || {}),
+      weights: { ...defaultConfig.weights, ...(config?.weights || {}) },
+      usageSub: { ...defaultConfig.usageSub, ...(config?.usageSub || {}) },
+      matchupSub: { ...defaultConfig.matchupSub, ...(config?.matchupSub || {}) },
+      volatilitySub: { ...defaultConfig.volatilitySub, ...(config?.volatilitySub || {}) },
+      newsSub: { ...defaultConfig.newsSub, ...(config?.newsSub || {}) },
+    };
+    const result = startSit(a, b, merged);
+    return res.json({
+      verdict: result.verdict,
+      margin: result.margin,
+      summary: result.summary,
+      playerA: { name: a.name, position: a.position, breakdown: result.a },
+      playerB: { name: b.name, position: b.position, breakdown: result.b },
+    });
+  } catch (e: any) {
+    console.error("[/start-sit/live]", e);
+    return res.status(500).json({ error: "internal_error", detail: String(e?.message || e) });
+  }
+});
+```
+
+### 3) Frontend: you can keep sending names
+
+Example payloads that now work:
+
+```json
+{
+  "playerA": { "name": "Hollywood Brown", "position": "WR", "team": "KC" },
+  "playerB": { "name": "Jaylen Warren",   "position": "RB", "team": "PIT" },
+  "week": 2
+}
+```
+
+or
+
+```json
+{
+  "playerA": { "id": "puka", "position": "WR", "team": "LAR" },
+  "playerB": { "name": "marquise brown", "position": "WR" }
+}
+```
+
+---
+
+### Pro tips (so this doesn’t bite you again)
+
+* **Lock the picker** to autocomplete → always send `{id, team, position}`. That’s the most stable UX.
+* **Cache Sleeper map on boot** so the first call isn’t cold.
+* Keep a tiny **alias table** for common nicknames and misspellings (you already saw “Hollywood Brown”).
+
+Ship either Option A or B and this 404 goes away. Want me to add a little `/api/resolve-player` endpoint for your UI autocomplete too?

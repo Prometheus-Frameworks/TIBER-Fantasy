@@ -30,20 +30,36 @@ router.post("/start-sit/quick", async (req: Request, res: Response) => {
 
     console.log(`[start-sit/quick] Resolving players: "${a}" vs "${b}"`);
 
-    const playerA = resolvePlayer(String(a));
-    const playerB = resolvePlayer(String(b));
+    const [playerAResolved, playerBResolved] = await Promise.all([
+      resolvePlayer(String(a)),
+      resolvePlayer(String(b))
+    ]);
     
-    if (!playerA || !playerB) {
+    if (!playerAResolved || !playerBResolved) {
       return res.status(404).json({
         error: "player_not_found",
-        message: `Could not resolve: ${!playerA ? a : ""} ${!playerB ? b : ""}`,
+        message: `Could not resolve: ${!playerAResolved ? a : ""} ${!playerBResolved ? b : ""}`,
         detail: "Try connecting to a Sleeper league first to load player data, or check spelling",
         missing: {
-          playerA: !playerA ? a : null,
-          playerB: !playerB ? b : null
+          playerA: !playerAResolved ? a : null,
+          playerB: !playerBResolved ? b : null
         }
       });
     }
+
+    const playerA = {
+      id: playerAResolved.player_id,
+      name: playerAResolved.full_name || `${playerAResolved.first_name} ${playerAResolved.last_name}`.trim(),
+      team: playerAResolved.team,
+      position: playerAResolved.position
+    };
+
+    const playerB = {
+      id: playerBResolved.player_id,
+      name: playerBResolved.full_name || `${playerBResolved.first_name} ${playerBResolved.last_name}`.trim(),
+      team: playerBResolved.team,
+      position: playerBResolved.position
+    };
 
     console.log(`[start-sit/quick] Resolved: ${playerA.name} (${playerA.team}) vs ${playerB.name} (${playerB.team})`);
 
@@ -167,14 +183,24 @@ router.post("/start-sit/quick", async (req: Request, res: Response) => {
  */
 router.get("/start-sit/quick/test", async (req: Request, res: Response) => {
   try {
-    const testA = resolvePlayer("Josh Allen");
-    const testB = resolvePlayer("Lamar Jackson");
+    const [testA, testB] = await Promise.all([
+      resolvePlayer("Josh Allen"),
+      resolvePlayer("Lamar Jackson")
+    ]);
     
     return res.json({
       status: "quick_resolution_working",
       test: {
-        playerA: testA ? { name: testA.name, team: testA.team, position: testA.position } : null,
-        playerB: testB ? { name: testB.name, team: testB.team, position: testB.position } : null
+        playerA: testA ? { 
+          name: testA.full_name || `${testA.first_name} ${testA.last_name}`.trim(), 
+          team: testA.team, 
+          position: testA.position 
+        } : null,
+        playerB: testB ? { 
+          name: testB.full_name || `${testB.first_name} ${testB.last_name}`.trim(), 
+          team: testB.team, 
+          position: testB.position 
+        } : null
       },
       message: testA && testB ? "Player resolution working" : "Load league players first"
     });
