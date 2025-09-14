@@ -60,6 +60,7 @@ export async function toEngineInput(player: { id: string; position: PlayerInput[
     name: ctx.name,
     team: ctx.team,
     position: ctx.position,
+    opponent: (ctx.matchup as any)?.opponent, // <-- surfaces in reasons
 
     projPoints: ctx.projPoints,
     projFloor: ctx.projFloor ?? undefined,

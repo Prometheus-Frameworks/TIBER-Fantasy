@@ -10,6 +10,7 @@ export interface PlayerInput {
   name: string;
   team?: string;
   position: Position;
+  opponent?: string; // e.g., "JAX"
 
   // --- Core Inputs ---
   // Projections (baseline expected outcome)
@@ -222,7 +223,7 @@ function scoreMatchup(p: PlayerInput, cfg: StartSitConfig, reasons: string[]) {
   );
 
   reasons.push(
-    `Matchup: defRankAdj ${def.toFixed(0)} | OASIS ${oasis.toFixed(0)} | implied ${implied.toFixed(0)} | OL ${ol.toFixed(0)} | weather ${weatherAdj.toFixed(0)}`
+    `Matchup vs ${(p as any).opponent ?? "?"}: defRankAdj ${def.toFixed(0)} | OASIS ${oasis.toFixed(0)} | implied ${implied.toFixed(0)} | OL ${ol.toFixed(0)} | weather ${weatherAdj.toFixed(0)}`
   );
   return clamp(score, 0, 100);
 }
