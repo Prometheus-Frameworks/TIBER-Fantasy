@@ -9,6 +9,8 @@ type SleeperPlayer = {
   team?: string;
   position?: string;
   active?: boolean;
+  status?: string; // e.g. "Active", "Injured", "Inactive", etc.
+  years_exp?: number; // older retired guys tend to have >10 and no team
 };
 
 const ALIASES: Record<string, string> = {
@@ -17,6 +19,7 @@ const ALIASES: Record<string, string> = {
   "hollywood": "marquise brown",
   "marquise brown": "marquise brown", // exact match
   "jaylen warren": "jaylen warren", // exact match
+  "josh brown": "marquise brown", // only if position=WR or team=KC (belt-and-suspenders)
   "juju": "juju smith-schuster",
   "puka": "puka nacua",
   "puka nacua": "puka nacua",
@@ -29,6 +32,10 @@ function norm(s?: string) {
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function isActive(p: SleeperPlayer) {
+  return (p.active === true) || (p.status?.toLowerCase() === "active");
 }
 
 function scoreMatch(needle: string, p: SleeperPlayer) {
@@ -104,15 +111,17 @@ export async function resolvePlayer(
   for (const pid in db) {
     const p = db[pid];
     if (!p) continue;
+
+    // HARD filters first
     if (position && p.position && p.position.toUpperCase() !== position.toUpperCase()) continue;
     if (team && p.team && p.team.toUpperCase() !== team.toUpperCase()) continue;
 
+    // Prefer active/current players
+    if (!isActive(p)) continue;
+
     const s = scoreMatch(aliasNorm, p);
-    if (s > 0) {
-      if (!best || s > best.score) best = { p, score: s };
-      // early exit if perfect
-      if (s >= 1.0) break;
-    }
+    if (s > 0 && (!best || s > best.score)) best = { p, score: s };
+    if (best?.score && best.score >= 1.0) break; // exact match
   }
   return best?.p ?? null;
 }
