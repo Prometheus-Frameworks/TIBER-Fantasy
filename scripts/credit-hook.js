@@ -8,18 +8,22 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 
 const CREDITS_FILE = path.join(process.cwd(), 'docs/internal/credits.json');
 
 function parseCommitMessage(commitSha = 'HEAD') {
   try {
     // Validate commit SHA to prevent command injection
-    if (!/^[a-zA-Z0-9_\-\/]{1,50}$|^HEAD$|^HEAD~\d+$/.test(commitSha)) {
+    if (!/^[a-zA-Z0-9]{1,40}$|^HEAD$|^HEAD~\d+$/.test(commitSha)) {
       throw new Error(`Invalid commit reference: ${commitSha}`);
     }
     
-    const commitMessage = execSync(`git log -1 --pretty=format:"%B" ${commitSha}`, { encoding: 'utf8' });
+    const result = spawnSync('git', ['log', '-1', '--pretty=format:%B', commitSha], { encoding: 'utf8' });
+    if (result.error) {
+      throw new Error(`Git command failed: ${result.error.message}`);
+    }
+    const commitMessage = result.stdout;
     
     // Look for Credit: lines in commit message
     const creditRegex = /Credit:\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*(.+)/gi;
