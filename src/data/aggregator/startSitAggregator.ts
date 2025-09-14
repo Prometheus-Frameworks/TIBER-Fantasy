@@ -18,7 +18,7 @@ async function buildLiveContext(player: { id: string; position: PlayerInput["pos
     fetchSleeperUsage(player.id, week),
     fetchSleeperProjection(player.id, week),
     fetchOasisMatchup(player.team as NFLTeam, player.position),
-    player.team ? fetchVegasLine(player.team) : Promise.resolve({ team: undefined as any, opponent: undefined as any }),
+    player.team ? fetchVegasLine(player.team) : Promise.resolve({} as any),
     fetchNewsSignal(player.id),
   ]);
 

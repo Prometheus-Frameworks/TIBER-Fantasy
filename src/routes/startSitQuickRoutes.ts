@@ -151,11 +151,12 @@ router.post("/start-sit/quick", async (req: Request, res: Response) => {
       },
       dataSource: "live_with_league_context"
     });
-  } catch (e: any) {
-    console.error("[start-sit/quick] Error:", e);
-    return res.status(500).json({ 
-      error: "internal_error", 
-      detail: String(e?.message || e) 
+  } catch (err: any) {
+    console.error("[start-sit] error", err);
+    return res.status(400).json({
+      error: "bad_input_or_internal",
+      detail: String(err?.message || err),
+      hint: "Check that playerA/playerB include position and team (for OASIS/vegas), and that numbers are valid."
     });
   }
 });
@@ -177,11 +178,12 @@ router.get("/start-sit/quick/test", async (req: Request, res: Response) => {
       },
       message: testA && testB ? "Player resolution working" : "Load league players first"
     });
-  } catch (e: any) {
-    console.error("[start-sit/quick/test] Error:", e);
-    return res.status(500).json({ 
-      error: "test_failed", 
-      detail: String(e?.message || e) 
+  } catch (err: any) {
+    console.error("[start-sit] error", err);
+    return res.status(400).json({
+      error: "bad_input_or_internal",
+      detail: String(err?.message || err),
+      hint: "Check that playerA/playerB include position and team (for OASIS/vegas), and that numbers are valid."
     });
   }
 });

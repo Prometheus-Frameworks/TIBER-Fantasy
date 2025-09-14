@@ -149,11 +149,12 @@ router.post('/live', async (req: Request, res: Response) => {
       dataSource: "live"
     });
 
-  } catch (error: any) {
-    console.error("[start-sit-live] Error:", error);
-    return res.status(500).json({ 
-      error: "Failed to fetch live data for start/sit analysis",
-      details: error.message 
+  } catch (err: any) {
+    console.error("[start-sit-live] error", err);
+    return res.status(400).json({
+      error: "bad_input_or_internal",
+      detail: String(err?.message || err),
+      hint: "Check that playerA/playerB include position and team (for OASIS/vegas), and that numbers are valid."
     });
   }
 });

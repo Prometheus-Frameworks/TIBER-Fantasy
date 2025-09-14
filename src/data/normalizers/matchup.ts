@@ -3,10 +3,10 @@ import { OasisMatchup, VegasTeamLine } from "../interfaces";
 
 export function mergeMatchup(oasis: OasisMatchup, vegas: Partial<VegasTeamLine>) {
   return {
-    defRankVsPos: oasis.defRankVsPos,
-    oasisMatchupScore: oasis.oasisMatchupScore,
-    olHealthIndex: oasis.olHealthIndex,
-    impliedTeamTotal: vegas.impliedTeamTotal,
-    weatherImpact: vegas.weatherImpact,
+    defRankVsPos: oasis?.defRankVsPos ?? 16,
+    oasisMatchupScore: oasis?.oasisMatchupScore ?? 50,
+    olHealthIndex: oasis?.olHealthIndex ?? 60,
+    impliedTeamTotal: vegas?.impliedTeamTotal ?? 22.5,
+    weatherImpact: typeof vegas?.weatherImpact === "number" ? vegas!.weatherImpact : 0,
   };
 }

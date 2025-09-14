@@ -132,15 +132,23 @@ export const defaultConfig: StartSitConfig = {
 };
 
 // ---------- helpers ----------
-const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
-const nz = (v: number | undefined | null, fallback = 0) => (v == null ? fallback : v);
+const toNum = (v: any, fallback = 0) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+};
+const clamp = (v: any, min: number, max: number) => {
+  const n = toNum(v, min);
+  return Math.max(min, Math.min(max, n));
+};
+const nz = (v: any, fallback = 0) => (v == null ? fallback : toNum(v, fallback));
 
-// Min-max scalers (rough NFL ranges baked in; tune later with your live distros)
-const scaleProj = (p?: number) => clamp(((nz(p) - 0) / 35) * 100, 0, 100);              // 0-35 pts
-const scaleImplied = (v?: number) => clamp(((nz(v) - 12) / 28) * 100, 0, 100);          // 12-40 pts team total
-const scaleDefRank = (rank?: number) => clamp(((nz(rank, 32) - 1) / 31) * 100, 0, 100); // 1 hard -> 0, 32 easy ->100
-const scaleVolStdev = (s?: number) => 100 - clamp((nz(s) / 12) * 100, 0, 100);          // less stdev better
-const penaltyFromInjury = (t: PlayerInput["injuryTag"]) => {
+// Scalers with extra guards
+const scaleProj = (p?: number) => clamp(((nz(p) - 0) / 35) * 100, 0, 100);
+const scaleImplied = (v?: number) => clamp(((nz(v) - 12) / 28) * 100, 0, 100);
+const scaleDefRank = (rank?: number) => clamp(((nz(rank, 16) - 1) / 31) * 100, 0, 100);
+const scaleVolStdev = (s?: number) => 100 - clamp((nz(s) / 12) * 100, 0, 100);
+
+const penaltyFromInjury = (t: any) => {
   if (t === "OUT") return 0;
   if (t === "D") return 25;
   if (t === "Q") return 60;
