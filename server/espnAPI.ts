@@ -207,7 +207,7 @@ interface ESPNNewsArticle {
 }
 
 export class ESPNAPIService {
-  private baseUrl = 'http://site.api.espn.com/apis/site/v2/sports/football/nfl';
+  private baseUrl = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
   
   /**
    * Get current week NFL scoreboard
