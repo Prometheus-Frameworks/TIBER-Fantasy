@@ -35,7 +35,7 @@ def load_scores_to_database(year=2024):
             
             # Clear existing scores for this year
             with engine.connect() as conn:
-                conn.execute(text(f"DELETE FROM player_scores WHERE season = {year}"))
+                conn.execute(text("DELETE FROM player_scores WHERE season = :year"), {"year": year})
                 conn.commit()
             
             # Select only columns that exist in database
