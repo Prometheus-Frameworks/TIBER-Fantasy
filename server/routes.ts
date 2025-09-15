@@ -2669,8 +2669,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = parseInt(req.query.limit as string) || 200;
       
       console.log(`🔍 [PLAYER POOL] pos=${pos || 'ALL'} team=${team || 'ALL'} search="${search}" limit=${limit}`);
+      console.log(`🔍 [PLAYER POOL] Service loaded: ${playerPoolService.isLoaded()}, Stats:`, playerPoolService.getStats());
       
       let players = playerPoolService.getAllPlayers();
+      console.log(`🔍 [PLAYER POOL] Raw players count: ${players.length}`);
       
       // Apply position filter
       if (pos) {
@@ -2705,6 +2707,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('❌ Player Pool Error:', error);
       res.status(500).json({ error: 'Failed to fetch player pool' });
+    }
+  });
+
+  // Player Index API endpoint (for quick lookups)
+  app.get('/api/player-index', async (req: Request, res: Response) => {
+    try {
+      console.log('🔍 [PLAYER INDEX] Fetching player index...');
+      
+      // Get all players and transform to index format
+      const players = playerPoolService.getAllPlayers();
+      const index: Record<string, any> = {};
+      
+      players.forEach(player => {
+        index[player.id] = {
+          name: player.name,
+          team: player.team,
+          pos: player.pos,
+          aliases: player.aliases
+        };
+      });
+      
+      console.log(`✅ [PLAYER INDEX] Returning index with ${Object.keys(index).length} players`);
+      
+      res.json({
+        ok: true,
+        data: index,
+        meta: {
+          total_players: Object.keys(index).length,
+          ts: Date.now(),
+          source: 'canonical_player_index'
+        }
+      });
+    } catch (error) {
+      console.error('❌ Player Index Error:', error);
+      res.status(500).json({ 
+        ok: false, 
+        error: 'Failed to fetch player index',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

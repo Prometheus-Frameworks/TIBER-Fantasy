@@ -21,6 +21,7 @@ interface Player {
   environment?: number;
   availability?: number;
   weekNotes?: string;
+  week1Notes?: string;
   movement?: 'riser' | 'faller' | 'stable';
 }
 

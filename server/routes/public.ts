@@ -1,7 +1,9 @@
 import { Router } from 'express';
 const r = Router();
 
-// Always return valid shapes; empty is fine, crash is not.
+// CONDITIONAL STUB ROUTES - Only return stubs for endpoints that don't have real implementations
+// This prevents masking real routes while still providing fallbacks for missing endpoints
+
 r.get('/usage-leaders', async (_req, res) => {
   return res.json({ players: [] as Array<{player_id:string; full_name:string; target_pct:number; snap_pct:number}> });
 });
@@ -29,8 +31,7 @@ r.get('/analytics/vorp', async (req, res) => {
   });
 });
 
-r.get('/player-pool', async (_req, res) => {
-  return res.json([] as Array<{player_id:string; first_name:string; last_name:string; full_name:string; team:string}>);
-});
+// REMOVED: /player-pool stub route to avoid masking real implementation
+// Real route exists in routes.ts at line 2664
 
 export default r;
