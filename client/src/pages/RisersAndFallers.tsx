@@ -143,9 +143,13 @@ export default function RisersAndFallers() {
     
     // Use delta_w (week-over-week change) to determine movement
     if (player.delta_w !== undefined) {
-      if (player.delta_w > 0.15) return 'riser'; // Significant positive change
-      if (player.delta_w < -0.15) return 'faller'; // Significant negative change
+      if (player.delta_w > 0.05) return 'riser'; // Lowered threshold for better detection
+      if (player.delta_w < -0.05) return 'faller'; // Lowered threshold for better detection
     }
+    
+    // Alternative: Use power_score and rank-based heuristics for early season
+    if (player.power_score > 90 && player.rank <= 5) return 'riser';
+    if (player.power_score < 70 && player.rank > 15) return 'faller';
     
     // If no clear movement indicator, categorize as stable
     return 'stable';
