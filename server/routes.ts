@@ -47,6 +47,7 @@ import { wrGameLogsService } from './services/wrGameLogsService';
 import { playerPoolService } from './playerPool';
 // Live compass routes imported in registerRoutes function
 import rbCompassRoutes from './routes/rbCompassRoutes';
+import publicRoutes from './routes/public';
 import teCompassRoutes from './routes/teCompassRoutes';
 import tiberDataRoutes from './routes/tiberDataRoutes';
 import populationStatsRoutes from './routes/populationStatsRoutes';
@@ -1387,6 +1388,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Register stub API endpoints (prevent 404s)
+  app.use('/api', publicRoutes);
+
   // Register other routes
   registerADPRoutes(app);
   

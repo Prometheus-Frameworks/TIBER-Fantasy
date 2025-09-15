@@ -1,8 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Star, Calendar } from "lucide-react";
-import { nameOf } from "@/hooks/usePlayerPool";
+import { resolvePlayer } from '../lib/nameResolver';
 
 interface RookieClass2025Props {
   season: number;
@@ -10,39 +10,36 @@ interface RookieClass2025Props {
   limit?: number;
 }
 
-interface WarehouseRecord {
-  player_id: string;
-  player_name: string;
-  team: string;
-  position: string;
-  targets?: number | null;
-  receptions?: number | null;
-  fantasy_ppr?: number | null;
-  depth_rank?: string | null;
-  college?: string;
-  adp?: number;
-  tier?: string;
-  dynasty_score?: number;
-}
+type Rookie = {
+  full?: string; first?: string; last?: string; team?: string;
+  ppr?: number; targets?: number; rec?: number; college?: string; depth_chart?: string;
+  player_id?: string; position?: string;
+};
 
 export default function RookieClass2025({ season, week, limit = 8 }: RookieClass2025Props) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['/api/rookies'],
-    queryFn: () => fetch('/api/rookies').then(r => r.json()),
-  });
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+  const [rookies, setRookies] = useState<Rookie[]>([]);
+  const [pool, setPool] = useState<any[]>([]);
 
-  // Use actual rookie data from API
-  const rookieData = data?.rookies?.slice(0, limit) || [];
-  
-  // Build player index for name lookup
-  const playerIndex: Record<string, any> = {};
-  rookieData.forEach((player: any) => {
-    if (player.player_id) {
-      playerIndex[player.player_id] = player;
-    }
-  });
-  
-  const nameOf = (id: string, idx: Record<string, any>) => idx[id]?.player_name ?? idx[id]?.name ?? id;
+  useEffect(() => {
+    (async () => {
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          fetch('/api/rookies').then(r => r.ok ? r.json() : []),
+          fetch('/api/player-pool').then(r => r.ok ? r.json() : []),
+        ]);
+        const ok1 = r1.status === 'fulfilled' ? (r1.value ?? []) : [];
+        const ok2 = r2.status === 'fulfilled' ? (r2.value ?? []) : [];
+        setRookies(Array.isArray(ok1) ? ok1.slice(0, limit) : []);
+        setPool(Array.isArray(ok2) ? ok2 : []);
+        setLoading(false);
+      } catch (e:any) {
+        setErr(e?.message ?? 'Unknown error');
+        setLoading(false);
+      }
+    })();
+  }, [limit]);
 
   const getPositionColor = (position: string) => {
     switch (position) {
@@ -61,18 +58,7 @@ export default function RookieClass2025({ season, week, limit = 8 }: RookieClass
     return 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200';
   };
 
-  const getTierColor = (tier: string) => {
-    switch (tier?.toLowerCase()) {
-      case 's': case 'elite': return 'bg-purple-500 text-white';
-      case 'a': case 'tier-1': return 'bg-blue-500 text-white';
-      case 'b': case 'tier-2': return 'bg-green-500 text-white';
-      case 'c': case 'tier-3': return 'bg-yellow-500 text-white';
-      case 'd': case 'tier-4': return 'bg-red-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
       <Card className="w-full">
         <CardHeader>
@@ -92,6 +78,25 @@ export default function RookieClass2025({ season, week, limit = 8 }: RookieClass
     );
   }
 
+  if (err) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Star className="h-5 w-5" />
+            Rookie Class 2025
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-6 text-red-600">
+            <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p>Rookie load error: {err}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -105,7 +110,7 @@ export default function RookieClass2025({ season, week, limit = 8 }: RookieClass
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {rookieData.length === 0 ? (
+        {rookies.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p>No rookie performance data found for Week {week}</p>
@@ -113,74 +118,75 @@ export default function RookieClass2025({ season, week, limit = 8 }: RookieClass
           </div>
         ) : (
           <div className="space-y-3">
-            {rookieData.map((record: any, index: number) => (
-              <div
-                key={`${record.player_id}-${index}`}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${getRankBadge(index)}`}>
-                    {index + 1}
-                  </div>
-                  
-                  <div>
-                    <div className="font-semibold text-sm">
-                      {nameOf(record.player_id)}
-                    </div>
-                    <div className="flex items-center gap-1 mt-1 text-xs">
-                      <Badge className={getPositionColor(record.position)}>
-                        {record.position}
-                      </Badge>
-                      <span>•</span>
-                      <span>{record.team}</span>
-                      {record.college && (
-                        <>
-                          <span>•</span>
-                          <span>{record.college}</span>
-                        </>
-                      )}
-                      {record.depth_rank && (
-                        <>
-                          <span>•</span>
-                          <span>#{record.depth_rank} depth</span>
-                        </>
-                      )}
-                      {record.targets && (
-                        <>
-                          <span>•</span>
-                          <span>{record.targets} targets</span>
-                        </>
-                      )}
-                      {record.receptions && (
-                        <>
-                          <span>•</span>
-                          <span>{record.receptions} rec</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
+            {rookies.map((rk: Rookie, idx: number) => {
+              const resolved = resolvePlayer(
+                { full: rk.full, first: rk.first, last: rk.last, team: rk.team },
+                pool
+              );
 
-                <div className="text-right">
-                  <div className="font-bold text-lg">
-                    {record.fantasy_ppr?.toFixed(1) || "0.0"}
-                  </div>
-                  <div className="text-xs text-muted-foreground">PPR pts</div>
-                  
-                  {(record.position === 'WR' || record.position === 'TE') && record.targets && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {record.targets} tgt • {record.receptions || 0} rec
+              const displayName = resolved?.full_name ?? rk.full ?? `${rk.first ?? ''} ${rk.last ?? ''}`.trim();
+              const displayTeam = resolved?.team ?? rk.team ?? '–';
+
+              return (
+                <div
+                  key={resolved?.player_id ?? idx}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${getRankBadge(idx)}`}>
+                      {idx + 1}
                     </div>
-                  )}
+                    
+                    <div>
+                      <div className="font-semibold text-sm">
+                        {displayName}
+                        {!resolved && <span className="text-xs text-orange-600 ml-1">(unresolved)</span>}
+                      </div>
+                      <div className="flex items-center gap-1 mt-1 text-xs">
+                        {rk.position && (
+                          <Badge className={getPositionColor(rk.position)}>
+                            {rk.position}
+                          </Badge>
+                        )}
+                        <span>•</span>
+                        <span>{displayTeam}</span>
+                        {rk.college && (
+                          <>
+                            <span>•</span>
+                            <span>{rk.college}</span>
+                          </>
+                        )}
+                        {rk.depth_chart && (
+                          <>
+                            <span>•</span>
+                            <span>{rk.depth_chart}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="font-bold text-lg">
+                      {rk.ppr?.toFixed(1) ?? "0.0"}
+                    </div>
+                    <div className="text-xs text-muted-foreground">PPR pts</div>
+                    
+                    {(rk.position === 'WR' || rk.position === 'TE') && rk.targets && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {rk.targets} tgt • {rk.rec || 0} rec
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         <div className="mt-4 pt-3 border-t text-center">
           <p className="text-xs text-muted-foreground">
-            Showing top {Math.min(limit, rookieData.length)} performers • {season} Season Week {week}
+            Showing top {Math.min(limit, rookies.length)} performers • {season} Season Week {week}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             Data from OTC Weekly Pipeline

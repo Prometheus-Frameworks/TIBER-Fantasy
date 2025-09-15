@@ -4,7 +4,7 @@ import RedraftList from "./RedraftList";
 import { useState } from 'react';
 
 // Feature flag for production readiness
-const READY = process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_REDRAFT_READY === "1";
+const READY = import.meta.env.DEV || import.meta.env.VITE_REDRAFT_READY === 'true';
 
 export default function RedraftPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'wr-rankings'>('overview');

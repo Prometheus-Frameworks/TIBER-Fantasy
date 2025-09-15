@@ -1,0 +1,507 @@
+{
+  "c-ward": {
+    "name": "C. Ward",
+    "team": "TEN",
+    "pos": "QB"
+  },
+  "j-dart": {
+    "name": "J. Dart",
+    "team": "NYG",
+    "pos": "QB"
+  },
+  "j-milroe": {
+    "name": "J. Milroe",
+    "team": "SEA",
+    "pos": "QB"
+  },
+  "s-sanders": {
+    "name": "S. Sanders",
+    "team": "CLE",
+    "pos": "QB"
+  },
+  "t-shough": {
+    "name": "T. Shough",
+    "team": "NO",
+    "pos": "QB"
+  },
+  "a-jeanty": {
+    "name": "A. Jeanty",
+    "team": "LV",
+    "pos": "RB"
+  },
+  "b-smith": {
+    "name": "B. Smith",
+    "team": "KC",
+    "pos": "RB"
+  },
+  "b-tuten": {
+    "name": "B. Tuten",
+    "team": "JAX",
+    "pos": "RB"
+  },
+  "c-skattebo": {
+    "name": "C. Skattebo",
+    "team": "NYG",
+    "pos": "RB"
+  },
+  "d-giddens": {
+    "name": "D. Giddens",
+    "team": "IND",
+    "pos": "RB"
+  },
+  "d-martinez": {
+    "name": "D. Martinez",
+    "team": "SEA",
+    "pos": "RB"
+  },
+  "d-neal": {
+    "name": "D. Neal",
+    "team": "NO",
+    "pos": "RB"
+  },
+  "d-sampson": {
+    "name": "D. Sampson",
+    "team": "CLE",
+    "pos": "RB"
+  },
+  "j-blue": {
+    "name": "J. Blue",
+    "team": "DAL",
+    "pos": "RB"
+  },
+  "j-croskeymerritt": {
+    "name": "J. Croskey-Merritt",
+    "team": "WAS",
+    "pos": "RB"
+  },
+  "j-hunter": {
+    "name": "J. Hunter",
+    "team": "LAR",
+    "pos": "RB"
+  },
+  "j-james": {
+    "name": "J. James",
+    "team": "SF",
+    "pos": "RB"
+  },
+  "k-johnson": {
+    "name": "K. Johnson",
+    "team": "PIT",
+    "pos": "RB"
+  },
+  "k-monangai": {
+    "name": "K. Monangai",
+    "team": "CHI",
+    "pos": "RB"
+  },
+  "o-gordon": {
+    "name": "O. Gordon",
+    "team": "MIA",
+    "pos": "RB"
+  },
+  "o-hampton": {
+    "name": "O. Hampton",
+    "team": "LAC",
+    "pos": "RB"
+  },
+  "q-judkins": {
+    "name": "Q. Judkins",
+    "team": "CLE",
+    "pos": "RB"
+  },
+  "r-harvey": {
+    "name": "R. Harvey",
+    "team": "DEN",
+    "pos": "RB"
+  },
+  "t-brooks": {
+    "name": "T. Brooks",
+    "team": "CIN",
+    "pos": "RB"
+  },
+  "t-etienne": {
+    "name": "T. Etienne",
+    "team": "CAR",
+    "pos": "RB"
+  },
+  "t-henderson": {
+    "name": "T. Henderson",
+    "team": "NE",
+    "pos": "RB"
+  },
+  "w-marks": {
+    "name": "W. Marks",
+    "team": "HOU",
+    "pos": "RB"
+  },
+  "c-loveland": {
+    "name": "C. Loveland",
+    "team": "CHI",
+    "pos": "TE"
+  },
+  "e-arroyo": {
+    "name": "E. Arroyo",
+    "team": "SEA",
+    "pos": "TE"
+  },
+  "h-fannin": {
+    "name": "H. Fannin",
+    "team": "CLE",
+    "pos": "TE"
+  },
+  "m-taylor": {
+    "name": "M. Taylor",
+    "team": "NYJ",
+    "pos": "TE"
+  },
+  "o-gadsden": {
+    "name": "O. Gadsden",
+    "team": "LAC",
+    "pos": "TE"
+  },
+  "t-ferguson": {
+    "name": "T. Ferguson",
+    "team": "LAR",
+    "pos": "TE"
+  },
+  "t-warren": {
+    "name": "T. Warren",
+    "team": "IND",
+    "pos": "TE"
+  },
+  "aj-brown": {
+    "name": "A.J. Brown",
+    "team": "PHI",
+    "pos": "WR"
+  },
+  "alec-pierce": {
+    "name": "Alec Pierce",
+    "team": "IND",
+    "pos": "WR"
+  },
+  "amonra-st-brown": {
+    "name": "Amon-Ra St. Brown",
+    "team": "DET",
+    "pos": "WR"
+  },
+  "brian-thomas": {
+    "name": "Brian Thomas",
+    "team": "JAX",
+    "pos": "WR"
+  },
+  "calvin-ridley": {
+    "name": "Calvin Ridley",
+    "team": "TEN",
+    "pos": "WR"
+  },
+  "ceedee-lamb": {
+    "name": "CeeDee Lamb",
+    "team": "DAL",
+    "pos": "WR"
+  },
+  "cooper-kupp": {
+    "name": "Cooper Kupp",
+    "team": "LA",
+    "pos": "WR"
+  },
+  "courtland-sutton": {
+    "name": "Courtland Sutton",
+    "team": "DEN",
+    "pos": "WR"
+  },
+  "d-thornton": {
+    "name": "D. Thornton",
+    "team": "LV",
+    "pos": "WR"
+  },
+  "dj-moore": {
+    "name": "D.J. Moore",
+    "team": "CHI",
+    "pos": "WR"
+  },
+  "darnell-mooney": {
+    "name": "Darnell Mooney",
+    "team": "ATL",
+    "pos": "WR"
+  },
+  "davante-adams": {
+    "name": "Davante Adams",
+    "team": "LV",
+    "pos": "WR"
+  },
+  "deandre-hopkins": {
+    "name": "DeAndre Hopkins",
+    "team": "TEN",
+    "pos": "WR"
+  },
+  "deebo-samuel": {
+    "name": "Deebo Samuel",
+    "team": "SF",
+    "pos": "WR"
+  },
+  "demario-douglas": {
+    "name": "Demario Douglas",
+    "team": "NE",
+    "pos": "WR"
+  },
+  "devonta-smith": {
+    "name": "DeVonta Smith",
+    "team": "PHI",
+    "pos": "WR"
+  },
+  "dk-metcalf": {
+    "name": "DK Metcalf",
+    "team": "SEA",
+    "pos": "WR"
+  },
+  "drake-london": {
+    "name": "Drake London",
+    "team": "ATL",
+    "pos": "WR"
+  },
+  "e-ayomanor": {
+    "name": "E. Ayomanor",
+    "team": "TEN",
+    "pos": "WR"
+  },
+  "e-egbuka": {
+    "name": "E. Egbuka",
+    "team": "TB",
+    "pos": "WR"
+  },
+  "garrett-wilson": {
+    "name": "Garrett Wilson",
+    "team": "NYJ",
+    "pos": "WR"
+  },
+  "george-pickens": {
+    "name": "George Pickens",
+    "team": "PIT",
+    "pos": "WR"
+  },
+  "i-teslaa": {
+    "name": "I. TeSlaa",
+    "team": "DET",
+    "pos": "WR"
+  },
+  "j-bech": {
+    "name": "J. Bech",
+    "team": "LV",
+    "pos": "WR"
+  },
+  "j-higgins": {
+    "name": "J. Higgins",
+    "team": "HOU",
+    "pos": "WR"
+  },
+  "j-noel": {
+    "name": "J. Noel",
+    "team": "HOU",
+    "pos": "WR"
+  },
+  "j-royals": {
+    "name": "J. Royals",
+    "team": "KC",
+    "pos": "WR"
+  },
+  "jamarr-chase": {
+    "name": "Ja'Marr Chase",
+    "team": "CIN",
+    "pos": "WR"
+  },
+  "jakobi-meyers": {
+    "name": "Jakobi Meyers",
+    "team": "LV",
+    "pos": "WR"
+  },
+  "jalen-tolbert": {
+    "name": "Jalen Tolbert",
+    "team": "DAL",
+    "pos": "WR"
+  },
+  "jameson-williams": {
+    "name": "Jameson Williams",
+    "team": "DET",
+    "pos": "WR"
+  },
+  "jauan-jennings": {
+    "name": "Jauan Jennings",
+    "team": "SF",
+    "pos": "WR"
+  },
+  "jaxon-smithnjigba": {
+    "name": "Jaxon Smith-Njigba",
+    "team": "SEA",
+    "pos": "WR"
+  },
+  "jayden-reed": {
+    "name": "Jayden Reed",
+    "team": "GB",
+    "pos": "WR"
+  },
+  "jaylen-waddle": {
+    "name": "Jaylen Waddle",
+    "team": "MIA",
+    "pos": "WR"
+  },
+  "jerry-jeudy": {
+    "name": "Jerry Jeudy",
+    "team": "CLE",
+    "pos": "WR"
+  },
+  "jordan-addison": {
+    "name": "Jordan Addison",
+    "team": "MIN",
+    "pos": "WR"
+  },
+  "josh-downs": {
+    "name": "Josh Downs",
+    "team": "IND",
+    "pos": "WR"
+  },
+  "justin-jefferson": {
+    "name": "Justin Jefferson",
+    "team": "MIN",
+    "pos": "WR"
+  },
+  "k-williams": {
+    "name": "K. Williams",
+    "team": "NE",
+    "pos": "WR"
+  },
+  "keenan-allen": {
+    "name": "Keenan Allen",
+    "team": "CHI",
+    "pos": "WR"
+  },
+  "khalil-shakir": {
+    "name": "Khalil Shakir",
+    "team": "BUF",
+    "pos": "WR"
+  },
+  "l-burden": {
+    "name": "L. Burden",
+    "team": "CHI",
+    "pos": "WR"
+  },
+  "ladd-mcconkey": {
+    "name": "Ladd McConkey",
+    "team": "LAC",
+    "pos": "WR"
+  },
+  "m-golden": {
+    "name": "M. Golden",
+    "team": "GB",
+    "pos": "WR"
+  },
+  "malik-nabers": {
+    "name": "Malik Nabers",
+    "team": "NYG",
+    "pos": "WR"
+  },
+  "marvin-harrison": {
+    "name": "Marvin Harrison",
+    "team": "ARI",
+    "pos": "WR"
+  },
+  "marvin-harrison-jr": {
+    "name": "Marvin Harrison Jr.",
+    "team": "ARI",
+    "pos": "WR"
+  },
+  "michael-pittman": {
+    "name": "Michael Pittman",
+    "team": "IND",
+    "pos": "WR"
+  },
+  "mike-evans": {
+    "name": "Mike Evans",
+    "team": "TB",
+    "pos": "WR"
+  },
+  "nico-collins": {
+    "name": "Nico Collins",
+    "team": "HOU",
+    "pos": "WR"
+  },
+  "p-bryant": {
+    "name": "P. Bryant",
+    "team": "DEN",
+    "pos": "WR"
+  },
+  "puka-nacua": {
+    "name": "Puka Nacua",
+    "team": "LAR",
+    "pos": "WR"
+  },
+  "quentin-johnston": {
+    "name": "Quentin Johnston",
+    "team": "LAC",
+    "pos": "WR"
+  },
+  "rashod-bateman": {
+    "name": "Rashod Bateman",
+    "team": "BAL",
+    "pos": "WR"
+  },
+  "rayray-mccloud": {
+    "name": "Ray-Ray McCloud",
+    "team": "ATL",
+    "pos": "WR"
+  },
+  "rome-odunze": {
+    "name": "Rome Odunze",
+    "team": "CHI",
+    "pos": "WR"
+  },
+  "t-harris": {
+    "name": "T. Harris",
+    "team": "LAC",
+    "pos": "WR"
+  },
+  "t-horton": {
+    "name": "T. Horton",
+    "team": "SEA",
+    "pos": "WR"
+  },
+  "t-mcmillan": {
+    "name": "T. McMillan",
+    "team": "CAR",
+    "pos": "WR"
+  },
+  "tee-higgins": {
+    "name": "Tee Higgins",
+    "team": "CIN",
+    "pos": "WR"
+  },
+  "terry-mclaurin": {
+    "name": "Terry McLaurin",
+    "team": "WAS",
+    "pos": "WR"
+  },
+  "tyreek-hill": {
+    "name": "Tyreek Hill",
+    "team": "MIA",
+    "pos": "WR"
+  },
+  "wandale-robinson": {
+    "name": "Wan'Dale Robinson",
+    "team": "NYG",
+    "pos": "WR"
+  },
+  "x-restrepo": {
+    "name": "X. Restrepo",
+    "team": "TEN",
+    "pos": "WR"
+  },
+  "xavier-worthy": {
+    "name": "Xavier Worthy",
+    "team": "KC",
+    "pos": "WR"
+  },
+  "zay-flowers": {
+    "name": "Zay Flowers",
+    "team": "BAL",
+    "pos": "WR"
+  }
+}
