@@ -1389,18 +1389,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register other routes
   registerADPRoutes(app);
-  registerSleeperTestRoutes(app);
-  registerProjectionsAnalysisRoutes(app);
-  registerWeeklyProjectionsTestRoutes(app);
-  registerSleeperPipelineTestRoutes(app);
-  registerAdpConversionTestRoutes(app);
-  registerSleeperDataDebugRoutes(app);
-  registerWeeklyProjectionsCheckRoutes(app);
-  registerRealDataValidationRoutes(app);
-  registerTest2024ProjectionsRoutes(app);
-
-  // Test endpoint for snap percentages
-  app.get('/api/test/snap-percentages', testSnapPercentages);
+  
+  // Test/debug routes - only available in development
+  if (process.env.NODE_ENV !== 'production') {
+    registerSleeperTestRoutes(app);
+    registerProjectionsAnalysisRoutes(app);
+    registerWeeklyProjectionsTestRoutes(app);
+    registerSleeperPipelineTestRoutes(app);
+    registerAdpConversionTestRoutes(app);
+    registerSleeperDataDebugRoutes(app);
+    registerWeeklyProjectionsCheckRoutes(app);
+    registerRealDataValidationRoutes(app);
+    registerTest2024ProjectionsRoutes(app);
+    
+    // Test endpoint for snap percentages
+    app.get('/api/test/snap-percentages', testSnapPercentages);
+  }
   
   // Generate WR snap percentage data
   app.post('/api/generate/wr-snap-data', generateWRSnapData);
