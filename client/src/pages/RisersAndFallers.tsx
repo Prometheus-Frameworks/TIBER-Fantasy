@@ -195,6 +195,18 @@ export default function RisersAndFallers() {
     return null;
   };
 
+  const getWeek1Impact = (notes: string) => {
+    if (!notes) return null;
+    // Extract specific Week 1 performance metrics and context
+    if (notes.includes('debut') || notes.includes('first') || notes.includes('inaugural')) {
+      return `Debut performance: ${notes}`;
+    }
+    if (notes.includes('yards') || notes.includes('TDs') || notes.includes('targets') || notes.includes('carries')) {
+      return `Week 1 stats: ${notes}`;
+    }
+    return notes.length > 0 ? notes : null;
+  };
+
   const players = filteredAndSortedPlayers;
   const risers = players.filter(p => categorizePlayer(p) === 'riser');
   const fallers = players.filter(p => categorizePlayer(p) === 'faller');
