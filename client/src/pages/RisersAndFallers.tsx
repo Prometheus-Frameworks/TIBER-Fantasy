@@ -20,7 +20,8 @@ interface Player {
   talent?: number;
   environment?: number;
   availability?: number;
-  week1Notes?: string;
+  weekNotes?: string;
+  movement?: 'riser' | 'faller' | 'stable';
 }
 
 interface PowerRankingsResponse {
@@ -29,11 +30,34 @@ interface PowerRankingsResponse {
   total: number;
 }
 
+interface WeekInfo {
+  currentWeek: number;
+  season: number;
+  weekStatus: 'not_started' | 'in_progress' | 'completed';
+  mondayNightCompleted: boolean;
+  risers_fallers: {
+    best_week: number;
+    data_available: boolean;
+    note: string;
+  };
+  timestamp: string;
+}
+
 export default function RisersAndFallers() {
   const [selectedPosition, setSelectedPosition] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'rank' | 'power_score' | 'name'>('rank');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Fetch current week information
+  const { data: weekInfo, isLoading: weekLoading } = useQuery<WeekInfo>({
+    queryKey: ['/api/current-week'],
+    queryFn: () => fetch('/api/current-week').then(res => res.json()),
+  });
+
+  // Determine which week to show for risers/fallers
+  const targetWeek = weekInfo?.risers_fallers.best_week || 1;
+  const isDataAvailable = weekInfo?.risers_fallers.data_available || false;
 
   // Fetch rankings stats data (using neutral endpoints to avoid security blocking)
   const { data: overallData, isLoading: overallLoading } = useQuery<PowerRankingsResponse>({
@@ -106,29 +130,23 @@ export default function RisersAndFallers() {
   }, [selectedPosition, searchQuery, sortBy, sortDirection, overallData, qbData, rbData, wrData, teData]);
 
   const categorizePlayer = (player: Player) => {
+    // Check if player has explicit movement data from API
+    if (player.movement) {
+      return player.movement;
+    }
+    
     // First check if we have explicit notes
-    const notes = player.week1Notes?.toLowerCase() || '';
+    const notes = player.weekNotes?.toLowerCase() || '';
     if (notes.includes('riser')) return 'riser';
     if (notes.includes('faller')) return 'faller';
     
-    // If no notes, categorize based on player name and known Week 1 performers
-    const name = player.name.toLowerCase();
+    // Use delta_w (week-over-week change) to determine movement
+    if (player.delta_w !== undefined) {
+      if (player.delta_w > 0.15) return 'riser'; // Significant positive change
+      if (player.delta_w < -0.15) return 'faller'; // Significant negative change
+    }
     
-    // Known Week 1 risers based on actual performance
-    const knownRisers = [
-      'travis etienne', 'jacory croskey-merritt', 'keon coleman', 'isaac teslaa',
-      'tyler warren', 'harold fannin jr.', 'justin fields', 'daniel jones',
-      'cedric tillman', 'j.j. mccarthy', 'dylan sampson'
-    ];
-    
-    // Known Week 1 fallers based on actual performance  
-    const knownFallers = [
-      'ashton jeanty', 'devon achane', 'travis kelce'
-    ];
-    
-    if (knownRisers.some(riser => name.includes(riser))) return 'riser';
-    if (knownFallers.some(faller => name.includes(faller))) return 'faller';
-    
+    // If no clear movement indicator, categorize as stable
     return 'stable';
   };
 
@@ -149,36 +167,29 @@ export default function RisersAndFallers() {
   };
 
   const extractReasonFromNotes = (player: Player) => {
-    const notes = player.week1Notes || '';
+    const notes = player.weekNotes || '';
     // Extract the reason after the colon in notes like "RISER: 143 yards, 8.9 YPC, bell-cow status"
     if (notes?.includes(':')) {
       return notes.split(':')[1].trim();
     }
     
-    // If no notes, provide Week 1 performance context based on known players
-    const name = player.name.toLowerCase();
+    // If no specific notes, provide context based on movement and power score
+    const category = categorizePlayer(player);
+    const deltaText = player.delta_w ? `(Δ: ${player.delta_w > 0 ? '+' : ''}${player.delta_w.toFixed(2)})` : '';
     
-    if (name.includes('travis etienne')) return '143 yards, 8.9 YPC, reclaimed bell-cow status after dominant Week 1';
-    if (name.includes('jacory croskey-merritt')) return '82 yards, 8.2 YPC, 50% of carries post-Brian Robinson trade';
-    if (name.includes('keon coleman')) return '8 catches, 112 yards, 1 TD on 11 targets vs Ravens defense';
-    if (name.includes('isaac teslaa')) return '93.6 PFF grade, crucial fourth-quarter touchdown';
-    if (name.includes('tyler warren')) return '7/9 catches, 76 yards, 90.4 PFF grade in rookie debut';
-    if (name.includes('harold fannin')) return '72% snap share, 7/63 receiving on 9 targets';
-    if (name.includes('j.j. mccarthy')) return 'Historic debut: 3 TDs in 4th quarter, first QB in NFL history';
-    if (name.includes('justin fields')) return '218 passing yards + 48 rushing, 3 total TDs';
-    if (name.includes('daniel jones')) return '272 yards, 3 total TDs in Colts debut';
-    if (name.includes('ashton jeanty')) return 'Disappointing debut: 2.0 YPC on 21 touches, inefficient performance';
-    if (name.includes('devon achane')) return 'Limited role in blowout loss, committee concerns emerging';
-    if (name.includes('travis kelce')) return 'Overshadowed by rookie TE breakouts, aging concerns';
-    if (name.includes('josh allen')) return 'Dominant Week 1 performance maintains elite status';
-    
-    return `Strong Week 1 performance (Power Score: ${player.power_score})`;
+    if (category === 'riser') {
+      return `Strong recent performance driving upward movement ${deltaText}`;
+    } else if (category === 'faller') {
+      return `Recent performance concerns causing downward movement ${deltaText}`;
+    } else {
+      return `Stable performance maintaining current ranking (Power Score: ${player.power_score}) ${deltaText}`;
+    }
   };
 
-  const getWeek1Impact = (notes: string) => {
+  const getWeeklyImpact = (notes: string) => {
     if (!notes) return null;
     // Extract specific performance metrics for better display
-    if (notes.includes('yards') || notes.includes('YPC') || notes.includes('TDs')) {
+    if (notes.includes('yards') || notes.includes('YPC') || notes.includes('TDs') || notes.includes('targets') || notes.includes('snaps')) {
       return notes;
     }
     return null;

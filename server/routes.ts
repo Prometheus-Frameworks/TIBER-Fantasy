@@ -77,6 +77,7 @@ import {
 import { OTC_SIGNATURE } from '../shared/otcSignature';
 import fs from 'fs';
 import path from 'path';
+import { getCurrentWeek, getWeekInfo, isRisersFallersDataAvailable, getBestRisersFallersWeek, debugWeekDetection } from '../shared/weekDetection';
 import { createRagRouter, initRagOnBoot } from './routes/ragRoutes';
 import tiberMemoryRoutes from './routes/tiberMemoryRoutes';
 import rookieRisersRoutes from './routes/rookieRisersRoutes';
@@ -143,6 +144,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       commit: 'main',
       pid: process.pid
     });
+  });
+
+  // Dynamic Week Detection endpoint
+  app.get('/api/current-week', (req: Request, res: Response) => {
+    try {
+      const { debug, test_date } = req.query;
+      
+      // Support debug mode with custom date
+      if (debug === 'true' && test_date) {
+        const debugResult = debugWeekDetection(test_date as string);
+        return res.json({
+          ...debugResult,
+          debug: true,
+          test_date: test_date,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      // Get current week info
+      const currentWeekInfo = getCurrentWeek();
+      const bestRisersFallersWeek = getBestRisersFallersWeek();
+      const risersFallersAvailable = isRisersFallersDataAvailable(bestRisersFallersWeek);
+      
+      const response = {
+        ...currentWeekInfo,
+        risers_fallers: {
+          best_week: bestRisersFallersWeek,
+          data_available: risersFallersAvailable,
+          note: risersFallersAvailable 
+            ? `Week ${bestRisersFallersWeek} risers/fallers data ready`
+            : 'Waiting for more games to complete'
+        },
+        api_usage: {
+          recommended_week_param: currentWeekInfo.currentWeek,
+          recommended_season_param: currentWeekInfo.season
+        },
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log(`[Week API] Current week: ${currentWeekInfo.currentWeek}, Status: ${currentWeekInfo.weekStatus}, MNF: ${currentWeekInfo.mondayNightCompleted}, Best R/F Week: ${bestRisersFallersWeek}`);
+      
+      res.json(response);
+      
+    } catch (error) {
+      console.error('[Week API] Error:', error);
+      res.status(500).json({
+        error: 'Failed to determine current week',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
   });
 
   app.get('/api/health', async (req: Request, res: Response) => {
@@ -1137,7 +1189,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Directly use the same logic as the power endpoint to avoid circular requests
     const { type } = req.params;
-    const { season = 2025, week = 1 } = req.query;
+    
+    // Use dynamic week detection instead of hardcoded week=1
+    let defaultWeek = 1;
+    try {
+      const currentWeekInfo = getCurrentWeek();
+      defaultWeek = currentWeekInfo.currentWeek;
+      console.log(`🕒 [RANKINGS STATS] Dynamic week detection: Currently Week ${defaultWeek}, Status: ${currentWeekInfo.weekStatus}`);
+    } catch (error) {
+      console.warn('⚠️ [RANKINGS STATS] Dynamic week detection failed, falling back to Week 1:', error);
+    }
+    
+    const { season = 2025, week = defaultWeek } = req.query;
     
     try {
       let rawResults;

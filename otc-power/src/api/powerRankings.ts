@@ -6,6 +6,7 @@
  */
 
 import { calculatePowerScores, PowerScore, getDisplayMetrics } from '../data/scoringEngine';
+import { getCurrentWeek } from '../../../shared/weekDetection';
 
 /**
  * Main power rankings endpoint
@@ -18,7 +19,18 @@ export async function handlePowerRankingsRequest(
   
   try {
     const season = parseInt(req.query.season || '2025');
-    const week = parseInt(req.query.week || '1');
+    
+    // Use dynamic week detection instead of hardcoded week=1
+    let defaultWeek = 1;
+    try {
+      const currentWeekInfo = getCurrentWeek();
+      defaultWeek = currentWeekInfo.currentWeek;
+      console.log(`🕒 Dynamic week detection: Currently Week ${defaultWeek}, Status: ${currentWeekInfo.weekStatus}`);
+    } catch (error) {
+      console.warn('⚠️ Dynamic week detection failed, falling back to Week 1:', error);
+    }
+    
+    const week = parseInt(req.query.week || defaultWeek.toString());
     const position = req.query.pos || 'ALL';
     const limit = parseInt(req.query.limit || '50');
     
@@ -111,7 +123,17 @@ export async function handlePlayerAnalysisRequest(
   try {
     const player_id = req.params.player_id;
     const season = parseInt(req.query.season || '2025');
-    const week = parseInt(req.query.week || '1');
+    
+    // Use dynamic week detection instead of hardcoded week=1
+    let defaultWeek = 1;
+    try {
+      const currentWeekInfo = getCurrentWeek();
+      defaultWeek = currentWeekInfo.currentWeek;
+    } catch (error) {
+      console.warn('⚠️ Player analysis week detection failed, falling back to Week 1:', error);
+    }
+    
+    const week = parseInt(req.query.week || defaultWeek.toString());
     
     console.log(`🔍 Player analysis request: ${player_id} ${season} Week ${week}`);
     
