@@ -18,3 +18,8 @@ vite.config.ts.*
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Phase 1 cleanup directories
+.trash/
+.ops/
+archive/

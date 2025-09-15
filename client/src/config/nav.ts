@@ -33,9 +33,7 @@ export const NAV_LINKS: NavLink[] = [
 export const EXTENDED_NAV_LINKS: NavLink[] = [
   { href: "/consensus-transparency", label: "Consensus Transparency", description: "How consensus works" },
   { href: "/experts/architect-j", label: "Architect J", description: "Founder rankings" },
-  { href: "/adaptive-consensus-demo", label: "Adaptive Consensus", description: "Test surge detection & injury system" },
-  { href: "/curves-demo", label: "Dynasty Curves", description: "Smooth injury adjustment system" },
-  { href: "/injury-profiles-demo", label: "Injury Profiles v2", description: "Grok's injury data integration" },
+  // Demo routes hidden in production via SHOW_INTERNAL_DEMOS flag
   { href: "/analytics", label: "Analytics", description: "Advanced player analysis" },
   { href: "/weekly-data", label: "Weekly Data", description: "Game logs and stats" },
   { href: "/trade-analyzer-new", label: "Trade Analyzer", description: "Evaluate trades" },

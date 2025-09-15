@@ -186,9 +186,8 @@ function Router() {
       <Route path="/showcase" component={PlayerShowcase} />
       <Route path="/hot-list" component={HotList} />
       <Route path="/experts/architect-j" component={ArchitectJProfile} />
-      <Route path="/adaptive-consensus-demo" component={AdaptiveConsensusDemo} />
-      <Route path="/curves-demo" component={CurvesDemo} />
-      <Route path="/injury-profiles-demo" component={InjuryProfilesDemo} />
+      
+      {/* Internal Demo/Test Routes - Removed for security */}
       <Route path="/compare/:username" component={CompareRankings} />
       {/* Legacy DeepSeek route - redirects to unified evaluation */}
       <Route path="/rankings/v3" component={() => { window.location.replace('/player-evaluation'); return null; }} />
@@ -215,9 +214,9 @@ function Router() {
       <Route path="/news" component={News} />
       <Route path="/articles" component={Articles} />
       <Route path="/articles/:slug" component={ArticleDetail} />
-      <Route path="/api-test" component={lazy(() => import("@/pages/ApiTest"))} />
-      <Route path="/api-demo" component={lazy(() => import("@/pages/ApiDemo"))} />
-      <Route path="/api-comprehensive" component={lazy(() => import("@/pages/ApiComprehensive"))} />
+      
+      {/* API Test Routes - Removed for security */}
+      
       <Route path="/data-sources" component={DataSourcesPage} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
@@ -252,12 +251,11 @@ function Router() {
       <Route path="/qb-evaluation-logic" component={QBEvaluationLogic} />
       <Route path="/qb-environment-context" component={QBEnvironmentContext} />
       <Route path="/wr-forecast-evaluation" component={WRForecastEvaluation} />
-      <Route path="/te-evaluation-test" component={TEEvaluationTest} />
-      <Route path="/batch-evaluation-test" component={BatchEvaluationTest} />
-      <Route path="/prometheus-stress-test" component={PrometheusStressTest} />
+      
+      {/* Evaluation Test Routes - Removed for security */}
+      
       <Route path="/oasis-team-context" component={OASISTeamContext} />
       <Route path="/trade-evaluator" component={TradeEvaluator} />
-      <Route path="/projections-test" component={ProjectionsTest} />
       <Route path="/data-ingestion" component={DataIngestion} />
       <Route path="/reflect" component={Reflect} />
       <Route path="/rookie-risers" component={RookieRisers} />
