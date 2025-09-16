@@ -40,9 +40,9 @@ router.get('/recommendations', async (req, res) => {
       eq(buysSells.format, filters.format),
       eq(buysSells.ppr, filters.ppr),
       eq(buysSells.week, defaultWeek),
-      normalizedPosition && normalizedPosition.length > 0 && eq(buysSells.position, normalizedPosition),
-      filters.verdict && eq(buysSells.verdict, filters.verdict)
-    ].filter(Boolean);
+      ...(normalizedPosition && normalizedPosition.length > 0 ? [eq(buysSells.position, normalizedPosition)] : []),
+      ...(filters.verdict ? [eq(buysSells.verdict, filters.verdict)] : [])
+    ];
 
     let query = db
       .select()

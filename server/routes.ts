@@ -2460,6 +2460,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/redraft', redraftWeeklyRoutes);
   app.use('/api/sos', sosRouter);
   app.use('/api/buys-sells', buysSellsRoutes);
+
+  // Player resolution endpoint for converting Sleeper IDs to names
+  app.get('/api/players/resolve/:playerId', async (req, res) => {
+    try {
+      const { resolvePlayer } = await import('../src/data/resolvers/playerResolver');
+      const { playerId } = req.params;
+      
+      const player = await resolvePlayer(playerId);
+      
+      if (!player) {
+        return res.status(404).json({
+          ok: false,
+          error: 'Player not found'
+        });
+      }
+      
+      res.json({
+        ok: true,
+        data: {
+          id: player.player_id,
+          name: player.full_name || `${player.first_name} ${player.last_name}`.trim(),
+          team: player.team,
+          position: player.position
+        }
+      });
+    } catch (error) {
+      console.error('Error resolving player:', error);
+      res.status(500).json({
+        ok: false,
+        error: 'Failed to resolve player'
+      });
+    }
+  });
+
+  // Bulk player resolution endpoint
+  app.post('/api/players/resolve', async (req, res) => {
+    try {
+      const { resolvePlayer } = await import('../src/data/resolvers/playerResolver');
+      const { playerIds } = req.body;
+      
+      if (!Array.isArray(playerIds)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'playerIds must be an array'
+        });
+      }
+      
+      const resolvedPlayers = await Promise.all(
+        playerIds.map(async (playerId: string) => {
+          try {
+            const player = await resolvePlayer(playerId);
+            return {
+              id: playerId,
+              name: player ? (player.full_name || `${player.first_name} ${player.last_name}`.trim()) : playerId,
+              team: player?.team,
+              position: player?.position,
+              found: !!player
+            };
+          } catch {
+            return {
+              id: playerId,
+              name: playerId,
+              found: false
+            };
+          }
+        })
+      );
+      
+      res.json({
+        ok: true,
+        data: resolvedPlayers
+      });
+    } catch (error) {
+      console.error('Error resolving players:', error);
+      res.status(500).json({
+        ok: false,
+        error: 'Failed to resolve players'
+      });
+    }
+  });
   app.use('/api/nightly', nightlyProcessingRoutes);
   app.use('/api/etl', etlRoutes);
 

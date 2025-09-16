@@ -7,22 +7,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronUp, Copy, TrendingUp, TrendingDown, Target, Activity, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { usePlayerNames } from "@/hooks/usePlayerNames";
 
-// Types based on handoff specification
+// Types based on actual API response
 interface BuysSellsPlayer {
-  player_id: string;
-  player_name: string;
-  team: string;
+  playerId: string;
+  team?: string; // May not be available from API
   position: string;
   season: number;
   week: number;
   verdict: 'BUY_HARD' | 'BUY' | 'WATCH_BUY' | 'HOLD' | 'WATCH_SELL' | 'SELL' | 'SELL_HARD';
-  verdict_score: number;
+  verdictScore: number;
   confidence: number;
-  gap_z: number;
+  gapZ: number;
   signal: number;
-  market_momentum: number;
-  risk_penalty: number;
+  marketMomentum: number;
+  riskPenalty: number;
   format: 'redraft' | 'dynasty';
   ppr: 'ppr' | 'half' | 'standard';
   proof: {
@@ -49,7 +49,7 @@ interface BuysSellsPlayer {
   };
   explanation: string;
   hit_rate?: number;
-  created_at: string;
+  createdAt: string;
 }
 
 // Updated interface to match actual API response structure
@@ -65,12 +65,12 @@ interface BuysSellsResponse {
 }
 
 // Utility function to format trade pitch
-function formatTradePitch(player: BuysSellsPlayer): string {
+function formatTradePitch(player: BuysSellsPlayer, playerName: string, playerTeam?: string): string {
   const verdict = player.verdict.replace('_', ' ');
   const confidence = player.confidence >= 0.7 ? 'High' : player.confidence >= 0.5 ? 'Medium' : 'Low';
   const proof = player.proof;
   
-  let pitch = `${verdict}: ${player.player_name} (${player.position}, ${player.team})\n`;
+  let pitch = `${verdict}: ${playerName} (${player.position}, ${playerTeam || 'Unknown'})\n`;
   pitch += `Confidence: ${confidence} (${(player.confidence * 100).toFixed(0)}%)\n\n`;
   pitch += `Key Metrics:\n`;
   
@@ -93,7 +93,7 @@ export default function AdvicePage() {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
-  // API query
+  // API query for recommendations
   const { data, isLoading, error, refetch } = useQuery<BuysSellsResponse>({
     queryKey: ['/api/buys-sells/recommendations', position, format, ppr],
     queryFn: async () => {
@@ -112,6 +112,15 @@ export default function AdvicePage() {
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
   });
+
+  // Get unique player IDs for name resolution
+  const playerIds = useMemo(() => {
+    if (!data?.data) return [];
+    return Array.from(new Set(data.data.map(p => p.playerId)));
+  }, [data?.data]);
+
+  // Resolve player names
+  const { data: playerNamesData, isLoading: isLoadingNames } = usePlayerNames(playerIds);
 
   // Filter and sort recommendations
   const filteredRecommendations = useMemo(() => {
@@ -187,14 +196,28 @@ export default function AdvicePage() {
     setExpandedRows(newExpanded);
   };
 
+  // Get player name from resolved data
+  const getPlayerName = (playerId: string): string => {
+    const resolved = playerNamesData?.data.find(p => p.id === playerId);
+    return resolved?.name || playerId;
+  };
+
+  // Get player team from resolved data
+  const getPlayerTeam = (playerId: string): string | undefined => {
+    const resolved = playerNamesData?.data.find(p => p.id === playerId);
+    return resolved?.team;
+  };
+
   // Copy trade pitch to clipboard
   const copyTradePitch = async (player: BuysSellsPlayer) => {
     try {
-      const pitch = formatTradePitch(player);
+      const playerName = getPlayerName(player.playerId);
+      const playerTeam = getPlayerTeam(player.playerId);
+      const pitch = formatTradePitch(player, playerName, playerTeam);
       await navigator.clipboard.writeText(pitch);
       toast({
         title: "Trade Pitch Copied",
-        description: `${player.verdict.replace('_', ' ')} recommendation for ${player.player_name} copied to clipboard`,
+        description: `${player.verdict.replace('_', ' ')} recommendation for ${playerName} copied to clipboard`,
       });
     } catch (error) {
       toast({
@@ -300,7 +323,7 @@ export default function AdvicePage() {
         </CardHeader>
         <CardContent>
           {/* Loading state */}
-          {isLoading && (
+          {(isLoading || isLoadingNames) && (
             <div className="space-y-3" data-testid="loading-state">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="animate-pulse flex items-center space-x-4 p-4 border rounded">
@@ -342,26 +365,28 @@ export default function AdvicePage() {
                 filteredRecommendations.map((player) => {
                   const verdictBadge = getVerdictBadge(player.verdict);
                   const confidenceBadge = getConfidenceBadge(player.confidence);
-                  const isExpanded = expandedRows.has(player.player_id);
+                  const isExpanded = expandedRows.has(player.playerId);
+                  const playerName = getPlayerName(player.playerId);
+                  const playerTeam = getPlayerTeam(player.playerId);
 
                   return (
-                    <Collapsible key={player.player_id} open={isExpanded} onOpenChange={() => toggleRowExpansion(player.player_id)}>
+                    <Collapsible key={player.playerId} open={isExpanded} onOpenChange={() => toggleRowExpansion(player.playerId)}>
                       <div className="border rounded-lg overflow-hidden">
                         <CollapsibleTrigger asChild>
-                          <div className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer transition-colors" data-testid={`row-player-${player.player_id}`}>
+                          <div className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer transition-colors" data-testid={`row-player-${player.playerId}`}>
                             <div className="flex items-center space-x-4">
                               <div className="flex-shrink-0">
-                                <div className="font-medium text-gray-900">{player.player_name}</div>
-                                <div className="text-sm text-gray-500">{player.position} • {player.team}</div>
+                                <div className="font-medium text-gray-900">{playerName}</div>
+                                <div className="text-sm text-gray-500">{player.position} • {playerTeam || 'Unknown'}</div>
                               </div>
                             </div>
 
                             <div className="flex items-center space-x-3">
-                              <Badge className={verdictBadge.className} data-testid={`badge-verdict-${player.player_id}`}>
+                              <Badge className={verdictBadge.className} data-testid={`badge-verdict-${player.playerId}`}>
                                 {player.verdict.replace('_', ' ')}
                               </Badge>
 
-                              <Badge className={`text-xs px-2 py-1 ${confidenceBadge.className}`} data-testid={`badge-confidence-${player.player_id}`}>
+                              <Badge className={`text-xs px-2 py-1 ${confidenceBadge.className}`} data-testid={`badge-confidence-${player.playerId}`}>
                                 {confidenceBadge.label}
                               </Badge>
 
@@ -377,7 +402,7 @@ export default function AdvicePage() {
                                     e.stopPropagation();
                                     copyTradePitch(player);
                                   }}
-                                  data-testid={`button-copy-${player.player_id}`}
+                                  data-testid={`button-copy-${player.playerId}`}
                                 >
                                   <Copy className="h-4 w-4" />
                                 </Button>
@@ -392,7 +417,7 @@ export default function AdvicePage() {
                         </CollapsibleTrigger>
 
                         <CollapsibleContent>
-                          <div className="border-t bg-gray-50 p-4 space-y-4" data-testid={`expanded-details-${player.player_id}`}>
+                          <div className="border-t bg-gray-50 p-4 space-y-4" data-testid={`expanded-details-${player.playerId}`}>
                             {/* Explanation */}
                             <div>
                               <h4 className="font-medium text-gray-900 mb-2">Analysis</h4>
