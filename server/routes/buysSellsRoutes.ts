@@ -8,6 +8,8 @@ import {
   computeBuysSellsForAllPositions,
   SCORE_CONFIG
 } from '../compute';
+import { requireAdminAuth } from '../middleware/adminAuth';
+import { getCurrentNFLWeek } from '../cron/weeklyUpdate';
 
 const router = Router();
 
@@ -26,13 +28,19 @@ router.get('/recommendations', async (req, res) => {
 
     const filters = querySchema.parse(req.query);
 
+    // Default to current NFL week if not specified
+    const defaultWeek = filters.week || parseInt(getCurrentNFLWeek());
+    
+    // Normalize position to uppercase for database query
+    const normalizedPosition = filters.position?.toUpperCase();
+
     // Build conditions array, filtering out undefined values
     const conditions = [
       eq(buysSells.season, filters.season),
       eq(buysSells.format, filters.format),
       eq(buysSells.ppr, filters.ppr),
-      filters.week && eq(buysSells.week, filters.week),
-      filters.position && eq(buysSells.position, filters.position),
+      eq(buysSells.week, defaultWeek),
+      normalizedPosition && normalizedPosition.length > 0 && eq(buysSells.position, normalizedPosition),
       filters.verdict && eq(buysSells.verdict, filters.verdict)
     ].filter(Boolean);
 
@@ -50,7 +58,11 @@ router.get('/recommendations', async (req, res) => {
       data: recommendations,
       meta: {
         count: recommendations.length,
-        filters
+        filters: {
+          ...filters,
+          week: defaultWeek,
+          position: normalizedPosition
+        }
       }
     });
   } catch (error) {
@@ -74,6 +86,9 @@ router.get('/player/:playerId', async (req, res) => {
 
     const filters = querySchema.parse(req.query);
     const { playerId } = req.params;
+    
+    // Default to current NFL week if not specified
+    const defaultWeek = filters.week || parseInt(getCurrentNFLWeek());
 
     // Build conditions array, filtering out undefined values
     const conditions = [
@@ -81,7 +96,7 @@ router.get('/player/:playerId', async (req, res) => {
       eq(buysSells.season, filters.season),
       eq(buysSells.format, filters.format),
       eq(buysSells.ppr, filters.ppr),
-      filters.week && eq(buysSells.week, filters.week)
+      eq(buysSells.week, defaultWeek)
     ].filter(Boolean);
 
     const playerAdvice = await db
@@ -117,10 +132,10 @@ router.get('/player/:playerId', async (req, res) => {
 });
 
 // Compute buys/sells for a specific week/position (admin/debug endpoint)
-router.post('/compute', async (req, res) => {
+router.post('/compute', requireAdminAuth, async (req, res) => {
   try {
     const bodySchema = z.object({
-      week: z.number().min(1).max(18),
+      week: z.number().min(1).max(18).optional(),
       position: z.string().optional(),
       format: z.enum(['redraft', 'dynasty']).default('redraft'),
       ppr: z.enum(['ppr', 'half', 'standard']).default('half'),
@@ -128,17 +143,23 @@ router.post('/compute', async (req, res) => {
     });
 
     const { week, position, format, ppr, season } = bodySchema.parse(req.body);
+    
+    // Default to current NFL week if not specified
+    const targetWeek = week || parseInt(getCurrentNFLWeek());
+    
+    // Normalize position to uppercase for consistency
+    const normalizedPosition = position?.toUpperCase();
 
-    if (position) {
+    if (normalizedPosition && normalizedPosition.length > 0) {
       // Compute for specific position
-      const results = await computeBuysSellsForWeek(week, position, format, ppr, season);
+      const results = await computeBuysSellsForWeek(targetWeek, normalizedPosition, format, ppr, season);
       res.json({
         ok: true,
-        message: `Computed buys/sells for ${position} Week ${week}`,
+        message: `Computed buys/sells for ${normalizedPosition} Week ${targetWeek}`,
         data: results,
         meta: {
-          week,
-          position,
+          week: targetWeek,
+          position: normalizedPosition,
           format,
           ppr,
           season,
@@ -147,12 +168,12 @@ router.post('/compute', async (req, res) => {
       });
     } else {
       // Compute for all positions
-      await computeBuysSellsForAllPositions(week, season);
+      await computeBuysSellsForAllPositions(targetWeek, season);
       res.json({
         ok: true,
-        message: `Computed buys/sells for all positions Week ${week}`,
+        message: `Computed buys/sells for all positions Week ${targetWeek}`,
         meta: {
-          week,
+          week: targetWeek,
           season,
           allPositions: true
         }
@@ -179,13 +200,16 @@ router.get('/top-picks', async (req, res) => {
     });
 
     const filters = querySchema.parse(req.query);
+    
+    // Default to current NFL week if not specified
+    const defaultWeek = filters.week || parseInt(getCurrentNFLWeek());
 
     // Build conditions array, filtering out undefined values
     const conditions = [
       eq(buysSells.season, filters.season),
       eq(buysSells.format, filters.format),
       eq(buysSells.ppr, filters.ppr),
-      filters.week && eq(buysSells.week, filters.week)
+      eq(buysSells.week, defaultWeek)
     ].filter(Boolean);
 
     const [topBuys, topSells] = await Promise.all([
@@ -211,7 +235,10 @@ router.get('/top-picks', async (req, res) => {
         topSells: topSells.filter(rec => rec.verdict.includes('SELL')),
       },
       meta: {
-        filters,
+        filters: {
+          ...filters,
+          week: defaultWeek
+        },
         buyCount: topBuys.length,
         sellCount: topSells.length
       }
