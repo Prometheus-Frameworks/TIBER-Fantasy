@@ -12,6 +12,7 @@ interface SleeperPlayerInfo {
   team: string;
   age: number;
   years_exp: number;
+  status?: string;
 }
 
 interface ADPPlayerResult {
@@ -182,7 +183,7 @@ export class CleanADPService {
 
       // Use a broader search approach - look for recent dynasty leagues
       // This is a more realistic approach since we can't access private league data
-      const currentWeek = new Date().getWeek() || 1;
+      const currentWeek = 1; // Default to week 1 for dynasty ADP calculation
       const currentSeason = new Date().getFullYear();
       
       // Sample some known public dynasty leagues that allow data access
@@ -224,12 +225,12 @@ export class CleanADPService {
             });
           }
         } catch (error) {
-          console.log(`Error processing league ${leagueId}:`, error.message);
+          console.log(`Error processing league ${leagueId}:`, error instanceof Error ? error.message : 'Unknown error');
           continue;
         }
       }
     } catch (error) {
-      console.log('Error in real-time ADP calculation:', error.message);
+      console.log('Error in real-time ADP calculation:', error instanceof Error ? error.message : 'Unknown error');
     }
 
     return adpData;

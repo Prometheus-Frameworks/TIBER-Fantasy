@@ -54,6 +54,7 @@ import populationStatsRoutes from './routes/populationStatsRoutes';
 import tradeAnalyzerRoutes from './routes/tradeAnalyzerRoutes';
 import compassCompareRoutes from './routes/compassCompareRoutes';
 import { nightlyProcessingRoutes } from './routes/nightlyProcessingRoutes';
+import etlRoutes from './routes/etlRoutes';
 import rookieRoutes from './routes/rookieRoutes';
 import sosRouter from './modules/sos/sos.router';
 import { ratingsRouter } from './src/modules/ratings';
@@ -594,7 +595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (position === 'rb') {
         // RB compass integration using existing system
         const { computeComponents } = await import('./compassCalculations');
-        const rbSampleData = []; // Will integrate with actual RB data source
+        const rbSampleData: any[] = []; // Will integrate with actual RB data source
         rankings = rbSampleData.map((player: any) => {
           const compass = computeComponents(player, 'rb');
           return { ...player, compass, dynastyScore: compass.score };
@@ -822,10 +823,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const leagueId = req.query.league_id as string;
       const week = parseInt(req.query.week as string);
       
+      // Convert format strings to match expected LeagueSettings type
+      const formatMap = (format: string) => {
+        if (format === 'half_ppr') return 'half-ppr' as const;
+        return format as 'ppr' | 'standard' | 'half-ppr';
+      };
+      
       const settings = {
         mode: mode as 'dynasty' | 'redraft',
-        league_format: leagueFormat as 'ppr' | 'half_ppr' | 'standard',
-        format: 'superflex',
+        league_format: formatMap(leagueFormat),
+        format: formatMap(leagueFormat),
         num_teams: 12,
         is_superflex: true,
         position_filter: position
@@ -2454,6 +2461,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/sos', sosRouter);
   app.use('/api/buys-sells', buysSellsRoutes);
   app.use('/api/nightly', nightlyProcessingRoutes);
+  app.use('/api/etl', etlRoutes);
 
   // DeepSeek ratings router now mounted at /api/ratings (see line 385)
   // app.use('/api/tiber-ratings', ratingsRouter); // Moved to /api/ratings
@@ -2464,7 +2472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/oasis/*', async (req, res) => {
     const base = process.env.OASIS_R_BASE;
-    const pathParam = req.params && typeof req.params === 'object' ? req.params['0'] : '';
+    const pathParam = req.params && typeof req.params === 'object' ? (req.params as any)['0'] || '' : '';
     const queryString = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
     const upstream = base ? `${base}/${pathParam}${queryString}` : null;
     const now = Date.now();
@@ -3598,7 +3606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         engagement: "You won't believe this shocking QB secret that will blow your mind!"
       };
       
-      const assessments = {};
+      const assessments: Record<string, any> = {};
       for (const [type, content] of Object.entries(demoContent)) {
         assessments[type] = assess(content, userIntent);
       }
@@ -4109,7 +4117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rosters = await rosterSyncService.getRosters();
       const { filterTeam } = await import('./utils/relevance');
       
-      const limits = { WR: maxWR, RB: maxRB, TE: maxTE, QB: maxQB };
+      const limits = { WR: maxWR, RB: maxRB, TE: maxTE, QB: maxQB } as any;
       const filtered: Record<string, Record<string, string[]>> = {};
 
       for (const [team, players] of Object.entries(rosters)) {
@@ -4175,11 +4183,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         service: 'otc_power_database',
         data_source: 'live_database',
         stats: {
-          total_players: stats[0]?.total_players || 0,
-          total_ranks: rankStats[0]?.total_ranks || 0,
-          seasons: stats[0]?.seasons || 0,
-          ranking_types: rankStats[0]?.ranking_types || 0,
-          last_update: stats[0]?.last_update
+          total_players: (stats as any)[0]?.total_players || 0,
+          total_ranks: (rankStats as any)[0]?.total_ranks || 0,
+          seasons: (stats as any)[0]?.seasons || 0,
+          ranking_types: (rankStats as any)[0]?.ranking_types || 0,
+          last_update: (stats as any)[0]?.last_update
         },
         timestamp: new Date().toISOString()
       });
@@ -4197,12 +4205,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ⚡ START/SIT CALCULATOR API (Manual Input)
   app.post('/api/start-sit', async (req: Request, res: Response) => {
     try {
-      const { startSit, defaultConfig, PlayerInput, StartSitConfig } = await import('./modules/startSitEngine');
+      const { startSit, defaultConfig } = await import('./modules/startSitEngine');
       
       const { playerA, playerB, config } = req.body as {
-        playerA: typeof PlayerInput;
-        playerB: typeof PlayerInput;
-        config?: Partial<typeof StartSitConfig>;
+        playerA: any;
+        playerB: any;
+        config?: any;
       };
 
       if (!playerA || !playerB) {
@@ -4489,11 +4497,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ORDER BY pwf.week
       `);
       
-      if (rawHistory.length === 0) {
+      if ((rawHistory as any).length === 0) {
         return res.status(404).json({ error: 'Player not found or no data available' });
       }
       
-      const player = rawHistory[0];
+      const player = (rawHistory as any)[0];
       
       res.json({
         player_id: id,
@@ -4639,11 +4647,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         service: 'otc_power_database',
         data_source: 'live_database',
         stats: {
-          total_players: stats[0]?.total_players || 0,
-          total_ranks: rankStats[0]?.total_ranks || 0,
-          seasons: stats[0]?.seasons || 0,
-          ranking_types: rankStats[0]?.ranking_types || 0,
-          last_update: stats[0]?.last_update
+          total_players: (stats as any)[0]?.total_players || 0,
+          total_ranks: (rankStats as any)[0]?.total_ranks || 0,
+          seasons: (stats as any)[0]?.seasons || 0,
+          ranking_types: (rankStats as any)[0]?.ranking_types || 0,
+          last_update: (stats as any)[0]?.last_update
         },
         timestamp: new Date().toISOString()
       });

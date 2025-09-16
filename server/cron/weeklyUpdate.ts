@@ -22,7 +22,6 @@ export function setupWeeklyHotListCron() {
       console.error(`❌ Weekly Hot List cron failed:`, error);
     }
   }, {
-    scheduled: true,
     timezone: "America/New_York"
   });
 
@@ -56,7 +55,6 @@ export function setupNightlyBuysSellsCron() {
       console.error(`❌ Nightly Buys/Sells cron failed:`, error);
     }
   }, {
-    scheduled: true,
     timezone: "America/New_York"
   });
 
@@ -96,7 +94,6 @@ export function setupWeeklyDataProcessing() {
       console.error(`❌ Weekly data processing failed:`, error);
     }
   }, {
-    scheduled: true,
     timezone: "America/New_York"
   });
 
