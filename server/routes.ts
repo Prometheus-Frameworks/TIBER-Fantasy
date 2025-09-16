@@ -53,6 +53,7 @@ import tiberDataRoutes from './routes/tiberDataRoutes';
 import populationStatsRoutes from './routes/populationStatsRoutes';
 import tradeAnalyzerRoutes from './routes/tradeAnalyzerRoutes';
 import compassCompareRoutes from './routes/compassCompareRoutes';
+import { nightlyProcessingRoutes } from './routes/nightlyProcessingRoutes';
 import rookieRoutes from './routes/rookieRoutes';
 import sosRouter from './modules/sos/sos.router';
 import { ratingsRouter } from './src/modules/ratings';
@@ -2452,6 +2453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/redraft', redraftWeeklyRoutes);
   app.use('/api/sos', sosRouter);
   app.use('/api/buys-sells', buysSellsRoutes);
+  app.use('/api/nightly', nightlyProcessingRoutes);
 
   // DeepSeek ratings router now mounted at /api/ratings (see line 385)
   // app.use('/api/tiber-ratings', ratingsRouter); // Moved to /api/ratings

@@ -1224,15 +1224,25 @@ export const insertAdvancedSignalsSchema = createInsertSchema(advancedSignals).o
 
 // Player Week Facts - Weekly player statistics and advanced metrics for trade advice calculations
 export const playerWeekFacts = pgTable("player_week_facts", {
-  id: serial("id").primaryKey(),
   playerId: text("player_id").notNull(),
   season: integer("season").notNull(),
   week: integer("week").notNull(),
   position: text("position").notNull(),
   
-  // Existing core stats (may already exist in the table)
-  tiberRank: integer("tiber_rank"),
-  ecrRank: integer("ecr_rank"),
+  // Core power ranking columns that exist in the database
+  usageNow: real("usage_now").notNull().default(0),
+  talent: real("talent").notNull().default(0),
+  environment: real("environment").notNull().default(0),
+  availability: real("availability").notNull().default(0),
+  marketAnchor: real("market_anchor").notNull().default(0),
+  powerScore: real("power_score").notNull().default(0),
+  confidence: real("confidence").notNull().default(0.5),
+  flags: text("flags").array().notNull().default([]),
+  lastUpdate: timestamp("last_update").notNull().defaultNow(),
+  
+  // Core ranking stats (TODO: Add these columns to database if needed)
+  // tiberRank: integer("tiber_rank"),
+  // ecrRank: integer("ecr_rank"),
   
   // New columns for trade advice model
   adpRank: integer("adp_rank"),
@@ -1255,14 +1265,12 @@ export const playerWeekFacts = pgTable("player_week_facts", {
   byeWeek: boolean("bye_week").default(false), // For redraft downgrade
   rostered7dDelta: real("rostered_7d_delta").default(0), // % change
   started7dDelta: real("started_7d_delta").default(0), // % change
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
+  // Primary key constraint using composite key
+  primaryKey: primaryKey({ columns: [table.playerId, table.season, table.week] }),
   // Indexes for performance
   seasonWeekPosIdx: index("pwf_season_week_pos_idx").on(table.season, table.week, table.position),
   playerSeasonIdx: index("pwf_player_season_idx").on(table.playerId, table.season),
-  uniquePlayerWeek: unique("pwf_unique").on(table.playerId, table.season, table.week),
 }));
 
 // Buys/Sells Trade Advice - Weekly trade recommendations with supporting data
@@ -1309,7 +1317,7 @@ export const buysSellsRelations = relations(buysSells, ({ one }) => ({
 
 // Insert Schemas
 export const insertPlayerWeekFactsSchema = createInsertSchema(playerWeekFacts).omit({
-  id: true,
+  lastUpdate: true,
 });
 
 export const insertBuysSellsSchema = createInsertSchema(buysSells).omit({

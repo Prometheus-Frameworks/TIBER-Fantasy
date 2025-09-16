@@ -61,6 +61,18 @@ app.use((req, res, next) => {
     console.warn('⚠️ Backend spine initialization warning:', error);
   }
 
+  // Initialize nightly processing and cron jobs
+  try {
+    console.log('🕒 Initializing nightly processing and cron jobs...');
+    
+    const { setupAllCronJobs } = await import('./cron/weeklyUpdate');
+    setupAllCronJobs();
+    
+    console.log('✅ Nightly processing and cron jobs initialized');
+  } catch (error) {
+    console.warn('⚠️ Cron job initialization warning:', error);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

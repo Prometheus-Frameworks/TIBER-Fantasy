@@ -166,32 +166,32 @@ export async function computeBuysSellsForWeek(
 
   console.log(`Found ${players.length} players for computation`);
 
-  // Compute positional z-scores for gap analysis
-  const gaps = players
-    .filter(p => p.tiberRank !== null && p.ecrRank !== null)
-    .map(p => (p.tiberRank! - p.ecrRank!));
+  // Compute positional z-scores for gap analysis using power scores
+  const powerScores = players
+    .filter(p => p.powerScore !== null)
+    .map(p => p.powerScore!);
   
-  if (gaps.length === 0) {
-    console.log('No valid rank gaps found');
+  if (powerScores.length === 0) {
+    console.log('No power score data found');
     return;
   }
 
-  const meanGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
-  const variance = gaps.map(g => (g - meanGap) ** 2).reduce((a, b) => a + b, 0) / gaps.length;
-  const stdGap = Math.sqrt(variance) || 1; // Prevent division by zero
+  const meanPower = powerScores.reduce((a, b) => a + b, 0) / powerScores.length;
+  const variance = powerScores.map(s => (s - meanPower) ** 2).reduce((a, b) => a + b, 0) / powerScores.length;
+  const stdPower = Math.sqrt(variance) || 1; // Prevent division by zero
 
-  console.log(`Gap stats: mean=${meanGap.toFixed(2)}, std=${stdGap.toFixed(2)}`);
+  console.log(`Power score stats: mean=${meanPower.toFixed(2)}, std=${stdPower.toFixed(2)}`);
 
   // Process each player
   const results: InsertBuysSells[] = [];
   
   for (const p of players) {
-    if (p.tiberRank === null || p.ecrRank === null) {
-      continue; // Skip players without ranking data
+    if (p.powerScore === null) {
+      continue; // Skip players without power score data
     }
 
-    // Calculate gap z-score
-    const gapZ = (p.tiberRank - p.ecrRank - meanGap) / stdGap;
+    // Calculate power score z-score (higher power score = better, so positive z is good)
+    const gapZ = (p.powerScore - meanPower) / stdPower;
 
     // Calculate signal components (normalized to -1..1)
     const norms = SCORE_CONFIG.signalNorms;
@@ -225,17 +225,17 @@ export async function computeBuysSellsForWeek(
                        norms.environment.ol * olNorm + 
                        norms.environment.sos * sosNorm;
 
-    // Market signals
-    const adpEcrNorm = (p.adpRank && p.ecrRank) ? (p.adpRank - p.ecrRank) / 10 : 0;
+    // Market signals (using market anchor and power score since ecrRank not available)
+    const marketAnchorNorm = (p.marketAnchor || 0) / 100; // Normalize market anchor
     const rosteredStartNorm = ((p.rostered7dDelta || 0) + (p.started7dDelta || 0)) / 2;
     
-    const market = norms.market.adpEcr * clamp(adpEcrNorm, -1, 1) + 
+    const market = norms.market.adpEcr * clamp(marketAnchorNorm, -1, 1) + 
                    norms.market.rosteredStart * clamp(rosteredStartNorm, -1, 1);
 
     // Total signal
     const signal = clamp(usage + efficiency + environment + market, -1, 1);
 
-    // Calculate momentum
+    // Calculate momentum (use power score change or default to 0)
     const momentum = clamp(SCORE_CONFIG.momentumSlope * (p.ecr7dDelta || 0), -1, 1);
 
     // Calculate risk

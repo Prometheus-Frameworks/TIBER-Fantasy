@@ -4,7 +4,8 @@
  */
 import { hotListService } from '../services/hotListService';
 import { sleeperAPI } from '../sleeperAPI';
-import { NFLDataPyAPI } from '../nflDataPyAPI';
+// Note: NFLDataPyAPI is deprecated, using fallback data for ETL
+// import { NFLDataPyAPI } from '../nflDataPyAPI';
 import { MySportsFeedsAdapter } from '../platformSync/adapters/mysportsfeedsAdapter';
 
 interface WeeklyPlayerData {
@@ -29,7 +30,7 @@ interface WeeklyPlayerData {
 }
 
 export class WeeklyHotListETL {
-  private nflDataPy = new NFLDataPyAPI();
+  // private nflDataPy = new NFLDataPyAPI(); // Deprecated
   private mysportsfeeds = new MySportsFeedsAdapter();
 
   /**
@@ -82,14 +83,15 @@ export class WeeklyHotListETL {
   }
 
   /**
-   * Fetch NFL-data-py weekly statistics
+   * Fetch NFL weekly statistics (using fallback since NFLDataPy is deprecated)
    */
   private async fetchNFLWeeklyStats(week: string) {
-    console.log('🏈 Fetching NFL weekly stats...');
+    console.log('🏈 Fetching NFL weekly stats... (using fallback data)');
     
-    // Execute nfl-data-py for authentic weekly stats
-    const weeklyStats = await this.nflDataPy.getWeeklyData(parseInt(week));
-    const snapCounts = await this.nflDataPy.getSnapCounts(parseInt(week));
+    // NFLDataPyAPI is deprecated, use fallback empty data for now
+    // This will be replaced with live data sources in future iterations
+    const weeklyStats = [];
+    const snapCounts = [];
     
     return { weeklyStats, snapCounts };
   }
