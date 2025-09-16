@@ -464,7 +464,7 @@ export default function AdvicePage() {
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                                 <div>
                                   <div className="text-gray-500">Verdict Score</div>
-                                  <div className="font-medium">{player.verdict_score.toFixed(2)}</div>
+                                  <div className="font-medium">{player.verdictScore.toFixed(2)}</div>
                                 </div>
                                 <div>
                                   <div className="text-gray-500">Confidence</div>
@@ -476,7 +476,7 @@ export default function AdvicePage() {
                                 </div>
                                 <div>
                                   <div className="text-gray-500">Risk Penalty</div>
-                                  <div className="font-medium">{player.risk_penalty.toFixed(2)}</div>
+                                  <div className="font-medium">{player.riskPenalty.toFixed(2)}</div>
                                 </div>
                               </div>
                             </div>
