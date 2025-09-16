@@ -132,6 +132,7 @@ import ExpertView from "@/pages/consensus/ExpertView";
 import TierManagerWrapper from "@/pages/consensus/TierManagerWrapper";
 import LiveTierTraining from "@/pages/consensus/LiveTierTraining";
 import StartSit from "@/pages/StartSit";
+import Advice from "@/pages/Advice";
 
 function Router() {
   return (
@@ -154,6 +155,9 @@ function Router() {
       
       {/* Start/Sit Calculator */}
       <Route path="/start-sit" component={StartSit} />
+      
+      {/* Trade Advice */}
+      <Route path="/advice" component={Advice} />
       
       {/* Legacy Compass Routes - Still Available */}
       <Route path="/compass" component={CompassHub} />
