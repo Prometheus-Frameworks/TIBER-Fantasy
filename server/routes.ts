@@ -60,6 +60,7 @@ import rankingsV3Router from './routes/rankingsV3';
 import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
 import pythonRookieRoutes from './routes/pythonRookieRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
+import buysSellsRoutes from './routes/buysSellsRoutes';
 import consensusRoutes from './consensus';
 import consensusSeedingRoutes from './consensusSeeding';
 import articleRoutes from './routes/articleRoutes';
@@ -2450,6 +2451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/python-rookie', pythonRookieRoutes);
   app.use('/api/redraft', redraftWeeklyRoutes);
   app.use('/api/sos', sosRouter);
+  app.use('/api/buys-sells', buysSellsRoutes);
 
   // DeepSeek ratings router now mounted at /api/ratings (see line 385)
   // app.use('/api/tiber-ratings', ratingsRouter); // Moved to /api/ratings
