@@ -1,0 +1,407 @@
+Handoff: Implementing Buys/Sells Trade Advice Model
+Goal: Add a buys/sells advisor to Tiber's power rankings. It computes verdicts (BUY_HARD to SELL_HARD) based on ECR gaps, signals, momentum, and risks—backed by proofs for trade pitches. Outputs via API for React UI. Runs nightly post-Week data ingest.
+Prerequisites:
+
+Node.js/TS with Express/Fastify, Drizzle ORM for PG.
+Python (nfl-data-py/pandas) for optional EMA/signal calcs (if extending deltas).
+Existing tables: players, player_week_facts, power_ranks.
+Data feeds: Sleeper for ADP/ECR, NFL-data-py for stats/snaps/EPA/injuries.
+No new deps: Use undici/axios for any pulls, zod for validation.
+
+Step 1: Run Migrations
+Paste into a Drizzle migration or run raw in psql. Extends player_week_facts for signals; creates buys_sells for outputs.
+sql-- Extend player_week_facts (IF NOT EXISTS)
+ALTER TABLE player_week_facts
+ADD COLUMN IF NOT EXISTS adp_rank INT,
+ADD COLUMN IF NOT EXISTS snap_share NUMERIC,
+ADD COLUMN IF NOT EXISTS routes_per_game NUMERIC,
+ADD COLUMN IF NOT EXISTS targets_per_game NUMERIC,
+ADD COLUMN IF NOT EXISTS rz_touches NUMERIC,
+ADD COLUMN IF NOT EXISTS epa_per_play NUMERIC,
+ADD COLUMN IF NOT EXISTS yprr NUMERIC,
+ADD COLUMN IF NOT EXISTS yac_per_att NUMERIC,
+ADD COLUMN IF NOT EXISTS mtf_per_touch NUMERIC,
+ADD COLUMN IF NOT EXISTS team_proe NUMERIC,
+ADD COLUMN IF NOT EXISTS pace_rank_percentile NUMERIC,  -- 0..100
+ADD COLUMN IF NOT EXISTS ol_tier INT,
+ADD COLUMN IF NOT EXISTS sos_next2 NUMERIC,
+ADD COLUMN IF NOT EXISTS injury_practice_score NUMERIC,  -- 0..1
+ADD COLUMN IF NOT EXISTS committee_index NUMERIC,        -- 0..1
+ADD COLUMN IF NOT EXISTS coach_volatility NUMERIC,       -- 0..1
+ADD COLUMN IF NOT EXISTS ecr_7d_delta INT,
+ADD COLUMN IF NOT EXISTS bye_week BOOL DEFAULT FALSE,    -- For redraft downgrade
+ADD COLUMN IF NOT EXISTS rostered_7d_delta NUMERIC DEFAULT 0,  -- % change
+ADD COLUMN IF NOT EXISTS started_7d_delta NUMERIC DEFAULT 0;   -- % change
+
+-- Create buys_sells
+CREATE TABLE IF NOT EXISTS buys_sells (
+  player_id TEXT,
+  season INT,
+  week INT,
+  position TEXT,
+  verdict TEXT,          -- BUY_HARD | BUY | WATCH_BUY | HOLD | WATCH_SELL | SELL | SELL_HARD
+  verdict_score NUMERIC,
+  confidence NUMERIC,    -- 0..1
+  gap_z NUMERIC,
+  signal NUMERIC,
+  market_momentum NUMERIC,
+  risk_penalty NUMERIC,
+  format TEXT,           -- redraft | dynasty
+  ppr TEXT,              -- ppr | half | standard
+  proof JSONB,           -- Metrics cited
+  explanation TEXT,
+  created_at TIMESTAMP DEFAULT now(),
+  hit_rate NUMERIC DEFAULT NULL,  -- Backtest metric
+  PRIMARY KEY (player_id, season, week, format, ppr)
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_pwf_season_week_pos ON player_week_facts (season, week, position);
+CREATE INDEX IF NOT EXISTS idx_bs_week_filters ON buys_sells (season, week, position, format, ppr);
+Step 2: Add Compute Logic (src/compute.ts)
+Core brain—integrate into nightlyRecalc.ts. Uses z-scores, normalized signals. Patched per QA: Risk 0.50/0.30/0.20, no VS cap, momentum -0.05*delta, percentiles 0..100, raw proofs (no deltas yet—TODO if needed via self-join).
+typescriptimport { z } from 'zod';
+import { drizzle } from 'drizzle-orm';  // Your ORM
+import { player_week_facts, buys_sells } from './schema';  // Drizzle schema
+
+// Config: Weights/thresholds (changelog: v1.1: No changes)
+const SCORE_CONFIG = {
+  gapWeight: 0.55,  // Early: 0.40
+  signalWeight: 0.30,
+  momentumWeight: 0.20,
+  riskWeight: 0.35,
+  riskBlend: { injury: 0.50, committee: 0.30, coach: 0.20 },
+  confWeights: { vs: 0.40, trend: 0.25, freshness: 0.20, agreement: 0.15 },
+  confCaps: { injury: 0.45, committee: 0.55 },
+  verdictThresholds: { buyHard: 1.25, buy: 0.60, watchBuy: 0.25, holdLow: -0.25, watchSell: -0.60, sell: -1.25 },
+  momentumSlope: -0.05,
+  byeDegrade: 0.15,  // Redraft only
+  earlyWeeks: 2,
+  signalNorms: {
+    usage: { snap: 0.12, routes: 0.10, targets: 0.10, rz: 0.08 },
+    efficiency: { epa: 0.08, yprrYac: 0.07, mtf: 0.05 },
+    environment: { pace: 0.07, ol: 0.06, sos: 0.07 },
+    market: { adpEcr: 0.08, rosteredStart: 0.07 },
+  },
+};
+
+// Inputs schema
+const InputsSchema = z.object({
+  gapZ: z.number(),
+  signal: z.number(),
+  momentum: z.number(),
+  risk: z.number().min(0).max(1),
+  format: z.enum(['redraft', 'dynasty']).default('redraft'),
+  ppr: z.enum(['ppr', 'half', 'standard']).default('half'),
+  week: z.number().min(1).max(18),
+});
+
+// Clamp
+export function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+// Norm percentile (0..100)
+function normPercentile(p: number): number {
+  return clamp((p / 100) * 2 - 1, -1, 1);
+}
+
+// Verdict Score (VS)
+export function verdictScore(inputs: z.infer<typeof InputsSchema>): number {
+  const { gapZ, signal, momentum, risk, format, ppr, week } = InputsSchema.parse(inputs);
+  let adjGapWeight = SCORE_CONFIG.gapWeight;
+  if (week <= SCORE_CONFIG.earlyWeeks) adjGapWeight = 0.40;
+
+  // Format/PPR adjustments (e.g., PPR boosts signal)
+  let adjSignal = signal;
+  if (ppr === 'ppr') adjSignal *= 1.1;
+  if (ppr === 'half') adjSignal *= 1.05;
+
+  return adjGapWeight * gapZ + SCORE_CONFIG.signalWeight * adjSignal + SCORE_CONFIG.momentumWeight * momentum - SCORE_CONFIG.riskWeight * risk;
+}
+
+// To Verdict
+export function toVerdict(vs: number): string {
+  const t = SCORE_CONFIG.verdictThresholds;
+  if (vs >= t.buyHard) return 'BUY_HARD';
+  if (vs >= t.buy) return 'BUY';
+  if (vs >= t.watchBuy) return 'WATCH_BUY';
+  if (vs > t.holdLow) return 'HOLD';
+  if (vs > t.watchSell) return 'WATCH_SELL';
+  if (vs > t.sell) return 'SELL';
+  return 'SELL_HARD';
+}
+
+// Confidence
+export function calculateConfidence(vs: number, trendStability: number, dataFreshness: number, sourceAgreement: number): number {
+  const absVsScaled = clamp(Math.abs(vs) / 2, 0, 1);
+  return clamp(
+    SCORE_CONFIG.confWeights.vs * absVsScaled +
+    SCORE_CONFIG.confWeights.trend * trendStability +
+    SCORE_CONFIG.confWeights.freshness * dataFreshness +
+    SCORE_CONFIG.confWeights.agreement * sourceAgreement,
+    0,
+    1
+  );
+}
+
+// Guardrails (conf caps + forbid BUY_HARD; bye degrade on VS for redraft)
+export function applyGuardrails(vs: number, injuryScore: number, committeeIndex: number, byeUpcoming: boolean, format: string, conf: number): { adjVs: number, adjConf: number, adjVerdict: string } {
+  let adjVs = vs;
+  if (byeUpcoming && format === 'redraft') adjVs -= SCORE_CONFIG.byeDegrade;
+
+  const injuryCap = injuryScore >= 0.5;
+  const committeeCap = committeeIndex >= 0.6;
+
+  let adjConf = conf;
+  if (committeeCap) adjConf = Math.min(adjConf, SCORE_CONFIG.confCaps.committee);
+  if (injuryCap) adjConf = Math.min(adjConf, SCORE_CONFIG.confCaps.injury);
+
+  let adjVerdict = toVerdict(adjVs);
+  if (injuryCap && adjVerdict === 'BUY_HARD') adjVerdict = 'BUY';
+
+  return { adjVs, adjConf, adjVerdict };
+}
+
+// Compute for Week (integrate into nightlyRecalc.ts)
+export async function computeBuysSellsForWeek(week: number, position: string, format = 'redraft', ppr = 'half', season = 2025) {
+  const players = await drizzle.select().from(player_week_facts).where({ season, week, position });
+
+  if (!players.length) return;  // No data, skip
+
+  // Compute positionals (e.g., gap_z)
+  const gaps = players.map(p => p.tiber_rank - p.ecr_rank);
+  const meanGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+  const stdGap = Math.sqrt(gaps.map(g => (g - meanGap) ** 2).reduce((a, b) => a + b, 0) / gaps.length) || 1;
+
+  for (const p of players) {
+    const gapZ = (p.tiber_rank - p.ecr_rank - meanGap) / stdGap;
+
+    // Signals (norm -1..1)
+    const norms = SCORE_CONFIG.signalNorms;
+    const usage = norms.usage.snap * normPercentile(p.snap_share * 100) + norms.usage.routes * (p.routes_per_game / 15) + norms.usage.targets * (p.targets_per_game / 7) + norms.usage.rz * (p.rz_touches / 5);
+    const efficiency = norms.efficiency.epa * p.epa_per_play * 10 + norms.efficiency.yprrYac * (p.yprr || p.yac_per_att) + norms.efficiency.mtf * p.mtf_per_touch * 4;
+    const environment = norms.environment.pace * normPercentile(p.pace_rank_percentile) + norms.environment.ol * (5 - p.ol_tier) / 4 + norms.environment.sos * p.sos_next2;
+    const market = norms.market.adpEcr * (p.adp_rank - p.ecr_rank) / 10 + norms.market.rosteredStart * (p.rostered_7d_delta + p.started_7d_delta) / 2;
+    const signal = clamp(usage + efficiency + environment + market, -1, 1);
+
+    const momentum = clamp(SCORE_CONFIG.momentumSlope * p.ecr_7d_delta, -1, 1);
+
+    const risk = clamp(
+      SCORE_CONFIG.riskBlend.injury * p.injury_practice_score +
+      SCORE_CONFIG.riskBlend.committee * p.committee_index +
+      SCORE_CONFIG.riskBlend.coach * p.coach_volatility,
+      0,
+      1
+    );
+
+    const vs = verdictScore({ gapZ, signal, momentum, risk, format, ppr, week });
+
+    const confRaw = calculateConfidence(vs, 0.8, 0.9, 0.8);  // Assumes defaults; pull real if avail
+
+    const { adjVs, adjConf, adjVerdict } = applyGuardrails(vs, p.injury_practice_score, p.committee_index, p.bye_week, format, confRaw);
+
+    const proof = {
+      snap_share: p.snap_share,
+      routes_per_game: p.routes_per_game,
+      targets_per_game: p.targets_per_game,
+      rz_touches: p.rz_touches,
+      ecr_7d_delta: p.ecr_7d_delta,
+      ol_tier: p.ol_tier,
+      sos_next2: p.sos_next2,
+      injury_practice_score: p.injury_practice_score,
+      committee_index: p.committee_index,
+      coach_volatility: p.coach_volatility,
+      gap_z,
+      signal,
+      market_momentum: momentum,
+      risk_penalty: risk,
+      rostered_7d_delta: p.rostered_7d_delta,
+      started_7d_delta: p.started_7d_delta
+    };
+
+    const explanation = [
+      adjVerdict.replace("_", " "),
+      `snap ${Math.round(p.snap_share * 100)}%`,
+      `routes ${Math.round(p.routes_per_game)}/g`,
+      `targets ${Math.round(p.targets_per_game)}/g`,
+      `RZ ${Math.round(p.rz_touches)}`,
+      `ECR ${p.ecr_7d_delta >= 0 ? '+' : ''}${p.ecr_7d_delta} last 7d`,
+      `OL tier ${p.ol_tier}`,
+      `SOS(next2) ${Math.round(p.sos_next2 * 100)}`
+    ].join(" · ");
+
+    // Upsert
+    await drizzle
+      .insert(buys_sells)
+      .values({
+        player_id: p.player_id,
+        season,
+        week,
+        position,
+        verdict: adjVerdict,
+        verdict_score: adjVs,
+        confidence: adjConf,
+        gap_z,
+        signal,
+        market_momentum: momentum,
+        risk_penalty: risk,
+        format,
+        ppr,
+        proof: proof as any,  // JSONB
+        explanation,
+      })
+      .onConflictDoUpdate({
+        target: [buys_sells.player_id, buys_sells.season, buys_sells.week, buys_sells.format, buys_sells.ppr],
+        set: { verdict: adjVerdict, verdict_score: adjVs, confidence: adjConf, /* etc. all fields */ }
+      });
+  }
+
+  // Backtest: For prior week, check ECR move toward Tiber (hit_rate update)
+  const priorWeek = week - 1;
+  const prior = await drizzle.select().from(buys_sells).where({ season, week: priorWeek, position });
+  for (const pr of prior) {
+    const currentPlayer = players.find(p => p.player_id === pr.player_id);
+    if (currentPlayer) {
+      const ecrMove = currentPlayer.ecr_rank - pr.ecr_rank;  // Toward Tiber if BUY and ECR improved
+      const hit = (pr.verdict.includes('BUY') && ecrMove < 0) || (pr.verdict.includes('SELL') && ecrMove > 0) ? 1 : 0;
+      await drizzle.update(buys_sells).set({ hit_rate: hit }).where({ player_id: pr.player_id, season, week: priorWeek });
+    }
+  }
+}
+Step 3: Add API Route (src/router.ts)
+typescriptimport { FastifyInstance } from 'fastify';
+import { drizzle } from 'drizzle-orm';
+import { buys_sells } from './schema';
+
+export default async function (fastify: FastifyInstance) {
+  fastify.get('/api/advice', { config: { cache: { ttl: 900 } } }, async (request, reply) => {  // 15m cache
+    const { pos = 'RB', format = 'redraft', ppr = 'half', season = 2025, week = 4, limit = 50 } = request.query as any;
+
+    const results = await drizzle
+      .select()
+      .from(buys_sells)
+      .where({ position: pos, format, ppr, season, week })
+      .limit(limit)
+      .orderBy(buys_sells.verdict_score.desc());
+
+    return results.map(r => ({
+      player_id: r.player_id,
+      position: r.position,
+      season: r.season,
+      week: r.week,
+      verdict: r.verdict,
+      verdict_score: r.verdict_score,
+      confidence: r.confidence,
+      gap_z: r.gap_z,
+      signal: r.signal,
+      market_momentum: r.market_momentum,
+      risk_penalty: r.risk_penalty,
+      explanation: r.explanation,
+      proof: r.proof,
+    }));
+  });
+}
+Step 4: UI Flip (React Components)
+Add Advice tab in main nav. List: TanStack Table with expand for proof table. Copy button per row.
+tsximport { useQuery } from '@tanstack/react-query';
+import { Badge, Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from 'shadcn/ui';  // Your shadcn
+import { formatTradePitch } from './utils';  // From below
+
+function AdviceList({ pos, format, ppr, season, week }) {
+  const { data } = useQuery({
+    queryKey: ['advice', pos, format, ppr, season, week],
+    queryFn: () => fetch(`/api/advice?pos=${pos}&format=${format}&ppr=${ppr}&season=${season}&week=${week}&limit=50`).then(res => res.json()),
+  });
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Player</TableHead>
+          <TableHead>Verdict</TableHead>
+          <TableHead>Confidence</TableHead>
+          <TableHead>Explanation</TableHead>
+          <TableHead>Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data?.map(row => (
+          <TableRow key={row.player_id} expandable>
+            <TableCell>{row.player_id.replace('rb_', '').replace('_', ' ')}</TableCell>
+            <TableCell>
+              <Badge variant={row.verdict.includes('BUY') ? 'success' : row.verdict.includes('SELL') ? 'destructive' : 'secondary'}>
+                {row.verdict.replace('_', ' ')}
+              </Badge>
+            </TableCell>
+            <TableCell>
+              <Badge variant={row.confidence >= 0.75 ? 'success' : row.confidence >= 0.5 ? 'warning' : 'destructive'} title="Capped by injury/committee where applicable.">
+                {row.confidence >= 0.75 ? 'High' : row.confidence >= 0.5 ? 'Medium' : 'Low'}
+              </Badge>
+            </TableCell>
+            <TableCell>{row.explanation}</TableCell>
+            <TableCell>
+              <Button onClick={() => navigator.clipboard.writeText(formatTradePitch(row))}>Copy Pitch</Button>
+            </TableCell>
+            {/* Expand: Proof table */}
+            <TableRow expandContent>
+              <Table>
+                <TableBody>
+                  {Object.entries(row.proof).map(([key, val]) => (
+                    <TableRow key={key}>
+                      <TableCell>{key.replace('_', ' ')}</TableCell>
+                      <TableCell>{val}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableRow>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+// utils.ts
+export function formatTradePitch(row) {
+  const c = row.confidence >= 0.75 ? "High" : row.confidence >= 0.5 ? "Medium" : "Low";
+  return `${row.verdict.replace("_", " ")} (${c}): `
+    + `snap ${Math.round(row.proof.snap_share * 100)}%, `
+    + `routes ${Math.round(row.proof.routes_per_game)}/g, `
+    + `targets ${Math.round(row.proof.targets_per_game)}/g, `
+    + `RZ ${Math.round(row.proof.rz_touches)}. `
+    + `ECR ${row.proof.ecr_7d_delta >= 0 ? "+" : ""}${row.proof.ecr_7d_delta} (7d).`;
+}
+Step 5: Nightly Wiring & Monitoring
+
+Cron: Post-ingest, run SEASON=2025 WEEK=4 FORMAT=redraft PPR=half npm run compute:advice (calls computeBuysSellsForWeek).
+Monitoring: Add to cron/alerts—DB queries (alert >0), API smoke (rows<5 alert), drift check (invalid verdict alert).
+
+Step 6: Tests (Unit + Smoke)
+
+Add to tests/compute.test.ts (Jest):
+
+typescripttest('risk weights', () => {
+  const r = 0.50*0.6 + 0.30*0.2 + 0.20*0.1;
+  expect(r).toBeCloseTo(0.38, 2);
+});
+
+test('injury cap forbids BUY_HARD but keeps VS', () => {
+  const vs = 1.35;
+  const injuryCap = true;
+  let verdict = toVerdict(vs);
+  let conf = calculateConfidence(vs, 0.8, 0.9, 0.8);
+  if (injuryCap) conf = Math.min(conf, 0.45);
+  if (injuryCap && verdict === 'BUY_HARD') verdict = 'BUY';
+  expect(verdict).toBe('BUY');
+  expect(conf).toBeLessThanOrEqual(0.45);
+});
+
+test('percentile scaling (0..100)', () => {
+  expect(normPercentile(50)).toBeCloseTo(0, 2);
+});
+
+Smoke: Self-tests green (Week 3 top verdicts array, injury sim BUY@0.45).
+
+Acceptance: All green per checklist. Week 4 data ready (e.g., Gibbs BUY on Week 3 usage spike). Hit me if Tiber needs tweaks—truth first.3.6s
