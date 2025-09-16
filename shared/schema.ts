@@ -1,8 +1,36 @@
-import { pgTable, text, serial, integer, real, boolean, timestamp, varchar, jsonb, unique, pgEnum, uniqueIndex, index, smallint } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, real, boolean, timestamp, varchar, jsonb, unique, pgEnum, uniqueIndex, index, smallint, primaryKey } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// ========================================
+// ENUMS FOR BUYS/SELLS TRADE ADVICE MODEL
+// ========================================
+
+// Verdict enum for buy/sell recommendations
+export const verdictEnum = pgEnum("verdict", [
+  "BUY_HARD",
+  "BUY", 
+  "WATCH_BUY",
+  "HOLD",
+  "WATCH_SELL", 
+  "SELL",
+  "SELL_HARD"
+]);
+
+// Format enum for league types
+export const formatEnum = pgEnum("format", [
+  "redraft",
+  "dynasty"
+]);
+
+// PPR scoring enum
+export const pprEnum = pgEnum("ppr", [
+  "ppr",
+  "half", 
+  "standard"
+]);
 
 export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
@@ -1189,3 +1217,107 @@ export const advancedSignalsRelations = relations(advancedSignals, ({ one }) => 
 export type AdvancedSignals = typeof advancedSignals.$inferSelect;
 export type InsertAdvancedSignals = typeof advancedSignals.$inferInsert;
 export const insertAdvancedSignalsSchema = createInsertSchema(advancedSignals).omit({ id: true, lastUpdated: true });
+
+// ========================================
+// BUYS/SELLS TRADE ADVICE MODEL TABLES
+// ========================================
+
+// Player Week Facts - Weekly player statistics and advanced metrics for trade advice calculations
+export const playerWeekFacts = pgTable("player_week_facts", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  position: text("position").notNull(),
+  
+  // Existing core stats (may already exist in the table)
+  tiberRank: integer("tiber_rank"),
+  ecrRank: integer("ecr_rank"),
+  
+  // New columns for trade advice model
+  adpRank: integer("adp_rank"),
+  snapShare: real("snap_share"),
+  routesPerGame: real("routes_per_game"),
+  targetsPerGame: real("targets_per_game"),
+  rzTouches: real("rz_touches"),
+  epaPerPlay: real("epa_per_play"),
+  yprr: real("yprr"),
+  yacPerAtt: real("yac_per_att"),
+  mtfPerTouch: real("mtf_per_touch"),
+  teamProe: real("team_proe"),
+  paceRankPercentile: real("pace_rank_percentile"), // 0..100
+  olTier: integer("ol_tier"),
+  sosNext2: real("sos_next2"),
+  injuryPracticeScore: real("injury_practice_score"), // 0..1
+  committeeIndex: real("committee_index"), // 0..1
+  coachVolatility: real("coach_volatility"), // 0..1
+  ecr7dDelta: integer("ecr_7d_delta"),
+  byeWeek: boolean("bye_week").default(false), // For redraft downgrade
+  rostered7dDelta: real("rostered_7d_delta").default(0), // % change
+  started7dDelta: real("started_7d_delta").default(0), // % change
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Indexes for performance
+  seasonWeekPosIdx: index("pwf_season_week_pos_idx").on(table.season, table.week, table.position),
+  playerSeasonIdx: index("pwf_player_season_idx").on(table.playerId, table.season),
+  uniquePlayerWeek: unique("pwf_unique").on(table.playerId, table.season, table.week),
+}));
+
+// Buys/Sells Trade Advice - Weekly trade recommendations with supporting data
+export const buysSells = pgTable("buys_sells", {
+  playerId: text("player_id").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  position: text("position").notNull(),
+  verdict: verdictEnum("verdict").notNull(), // BUY_HARD | BUY | WATCH_BUY | HOLD | WATCH_SELL | SELL | SELL_HARD
+  verdictScore: real("verdict_score").notNull(),
+  confidence: real("confidence").notNull(), // 0..1
+  gapZ: real("gap_z").notNull(),
+  signal: real("signal").notNull(),
+  marketMomentum: real("market_momentum").notNull(),
+  riskPenalty: real("risk_penalty").notNull(),
+  format: formatEnum("format").notNull(), // redraft | dynasty
+  ppr: pprEnum("ppr").notNull(), // ppr | half | standard
+  proof: jsonb("proof").notNull(), // Metrics cited
+  explanation: text("explanation").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  hitRate: real("hit_rate"), // Backtest metric
+}, (table) => ({
+  // Primary key constraint
+  primaryKey: primaryKey({ columns: [table.playerId, table.season, table.week, table.format, table.ppr] }),
+  // Index for filtering
+  weekFiltersIdx: index("bs_week_filters_idx").on(table.season, table.week, table.position, table.format, table.ppr),
+}));
+
+// Player Week Facts Relations
+export const playerWeekFactsRelations = relations(playerWeekFacts, ({ one }) => ({
+  player: one(players, {
+    fields: [playerWeekFacts.playerId],
+    references: [players.sleeperId]
+  })
+}));
+
+// Buys/Sells Relations
+export const buysSellsRelations = relations(buysSells, ({ one }) => ({
+  player: one(players, {
+    fields: [buysSells.playerId],
+    references: [players.sleeperId]
+  })
+}));
+
+// Insert Schemas
+export const insertPlayerWeekFactsSchema = createInsertSchema(playerWeekFacts).omit({
+  id: true,
+});
+
+export const insertBuysSellsSchema = createInsertSchema(buysSells).omit({
+  createdAt: true,
+});
+
+// Types
+export type PlayerWeekFacts = typeof playerWeekFacts.$inferSelect;
+export type InsertPlayerWeekFacts = z.infer<typeof insertPlayerWeekFactsSchema>;
+export type BuysSells = typeof buysSells.$inferSelect;
+export type InsertBuysSells = z.infer<typeof insertBuysSellsSchema>;
