@@ -90,16 +90,18 @@ export default function AdvicePage() {
   const [position, setPosition] = useState<string>('ALL');
   const [format, setFormat] = useState<'redraft' | 'dynasty'>('redraft');
   const [ppr, setPpr] = useState<'ppr' | 'half' | 'standard'>('half');
+  const [minConfidence, setMinConfidence] = useState<number>(0.3);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   // API query for recommendations
   const { data, isLoading, error, refetch } = useQuery<BuysSellsResponse>({
-    queryKey: ['/api/buys-sells/recommendations', position, format, ppr],
+    queryKey: ['/api/buys-sells/recommendations', position, format, ppr, minConfidence],
     queryFn: async () => {
       const params = new URLSearchParams({
         format,
         ppr,
+        min_conf: minConfidence.toString(),
         ...(position !== 'ALL' && { position: position.toLowerCase() })
       });
       
@@ -255,7 +257,7 @@ export default function AdvicePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Position</label>
               <Select value={position} onValueChange={setPosition} data-testid="select-position">
@@ -298,6 +300,25 @@ export default function AdvicePage() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Min Confidence</label>
+              <Select value={minConfidence.toString()} onValueChange={(value) => setMinConfidence(parseFloat(value))} data-testid="select-confidence">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0.1">Low (10%+)</SelectItem>
+                  <SelectItem value="0.3">Medium (30%+)</SelectItem>
+                  <SelectItem value="0.5">High (50%+)</SelectItem>
+                  <SelectItem value="0.7">Very High (70%+)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+            <p>Quality Filtering Active: Showing only rostered players (≥50%) with minimum confidence of {(minConfidence * 100).toFixed(0)}%</p>
           </div>
         </CardContent>
       </Card>

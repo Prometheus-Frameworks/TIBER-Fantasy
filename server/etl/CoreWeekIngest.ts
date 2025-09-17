@@ -123,13 +123,17 @@ export class CoreWeekIngestETL {
       console.log('🔗 Step 2: Cross-referencing and merging data...');
       const mergedPlayerFacts = await this.mergeDataSources(nflStats, ecrData, adpData, targetWeek, season);
       
+      // Step 2.5: Apply quality filters to only process relevant players
+      console.log('🔍 Step 2.5: Applying quality filters...');
+      const filteredPlayerFacts = await this.applyQualityFilters(mergedPlayerFacts, result);
+      
       // Step 3: Validate data quality and coverage
       console.log('✅ Step 3: Validating data quality...');
-      await this.validateDataQuality(mergedPlayerFacts, result);
+      await this.validateDataQuality(filteredPlayerFacts, result);
 
       // Step 4: Compute advanced metrics 
       console.log('🧮 Step 4: Computing advanced metrics...');
-      const enrichedPlayerFacts = await this.computeAdvancedMetrics(mergedPlayerFacts, targetWeek, season);
+      const enrichedPlayerFacts = await this.computeAdvancedMetrics(filteredPlayerFacts, targetWeek, season);
 
       // Step 5: Upsert to database
       console.log('💾 Step 5: Upserting to player_week_facts table...');
@@ -324,6 +328,111 @@ export class CoreWeekIngestETL {
     console.log(`   ✅ Merged data for ${mergedFacts.length} players`);
     
     return mergedFacts;
+  }
+
+  /**
+   * Apply quality filters to only process relevant, active players
+   * Filters out:
+   * - Players with active=false 
+   * - Players with rostered_pct < 50%
+   * - Players with team='Unknown' or null
+   * - Players with insufficient data quality
+   */
+  private async applyQualityFilters(
+    playerFacts: Partial<InsertPlayerWeekFacts>[],
+    result: IngestResult
+  ): Promise<Partial<InsertPlayerWeekFacts>[]> {
+    console.log(`   🔍 Applying quality filters to ${playerFacts.length} players...`);
+    
+    // Get active players from database for filtering
+    const activePlayers = await db
+      .select()
+      .from(players)
+      .where(
+        and(
+          eq(players.active, true),
+          sql`${players.rosteredPct} >= 50.0`,
+          sql`${players.team} IS NOT NULL AND ${players.team} != 'Unknown'`
+        )
+      );
+    
+    const activePlayerIds = new Set(activePlayers.map(p => p.sleeperId).filter(Boolean));
+    console.log(`   📊 Found ${activePlayerIds.size} active players meeting quality criteria`);
+    
+    // Filter player facts to only include quality players
+    const filteredFacts = playerFacts.filter(fact => {
+      // Must have valid player ID
+      if (!fact.playerId) {
+        result.warnings.push(`Filtered out player with missing ID`);
+        return false;
+      }
+      
+      // Must be in active players list
+      if (!activePlayerIds.has(fact.playerId)) {
+        // Check if it's a legitimate player not in our database
+        const isLegitimatePlayer = this.isLegitimatePlayer(fact);
+        if (!isLegitimatePlayer) {
+          result.warnings.push(`Filtered out inactive/low-quality player: ${fact.playerId}`);
+          return false;
+        }
+      }
+      
+      // Quality thresholds for data completeness
+      const hasMinimumData = this.hasMinimumDataQuality(fact);
+      if (!hasMinimumData) {
+        result.warnings.push(`Filtered out player with insufficient data: ${fact.playerId}`);
+        return false;
+      }
+      
+      return true;
+    });
+    
+    const filteredCount = filteredFacts.length;
+    const removedCount = playerFacts.length - filteredCount;
+    
+    console.log(`   ✅ Quality filtering: kept ${filteredCount} players, removed ${removedCount} low-quality players`);
+    
+    // Update position coverage with filtered numbers
+    for (const fact of filteredFacts) {
+      if (fact.position && fact.position in result.positionCoverage) {
+        result.positionCoverage[fact.position]++;
+      }
+    }
+    
+    return filteredFacts;
+  }
+
+  /**
+   * Check if a player passes basic legitimacy tests even if not in our database
+   */
+  private isLegitimatePlayer(fact: Partial<InsertPlayerWeekFacts>): boolean {
+    // Must have meaningful snap share or usage
+    const hasUsage = (fact.snapShare && fact.snapShare >= 0.3) || 
+                    (fact.targetsPerGame && fact.targetsPerGame >= 2) ||
+                    (fact.routesPerGame && fact.routesPerGame >= 10);
+    
+    // Must have legitimate-looking player ID (not generic test data)
+    const hasValidId = fact.playerId && 
+                      !fact.playerId.includes('test') && 
+                      !fact.playerId.includes('mock') &&
+                      fact.playerId.length > 3;
+    
+    return hasUsage && hasValidId;
+  }
+
+  /**
+   * Check if player has minimum data quality for meaningful analysis
+   */
+  private hasMinimumDataQuality(fact: Partial<InsertPlayerWeekFacts>): boolean {
+    // Must have either usage data or market data
+    const hasUsageData = fact.snapShare !== undefined || 
+                        fact.targetsPerGame !== undefined || 
+                        fact.routesPerGame !== undefined;
+    
+    const hasMarketData = fact.adpRank !== undefined;
+    
+    // Must have at least one type of meaningful data
+    return hasUsageData || hasMarketData;
   }
 
   /**

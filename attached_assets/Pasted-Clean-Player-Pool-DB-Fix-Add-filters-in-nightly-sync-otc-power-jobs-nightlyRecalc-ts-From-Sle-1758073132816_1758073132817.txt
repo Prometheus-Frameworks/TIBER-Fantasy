@@ -1,0 +1,57 @@
+Clean Player Pool (DB Fix):
+
+Add filters in nightly sync (otc-power/jobs/nightlyRecalc.ts): From Sleeper API, only sync players with rostered% >50% (fetch from Sleeper stats endpoint), active status=true, team not null. Purge old (e.g., DELETE FROM players WHERE last_season <2025).
+Migration: Add rostered_pct NUMERIC, active BOOL to players table.
+
+sqlALTER TABLE players ADD COLUMN IF NOT EXISTS rostered_pct NUMERIC DEFAULT 0;
+ALTER TABLE players ADD COLUMN IF NOT EXISTS active BOOL DEFAULT TRUE;
+-- Purge fillers
+UPDATE players SET active = FALSE WHERE name IN ('Trey Burton', 'Matt Schaub', 'Ameer Abdullah', 'Justin Hardy', 'Andy Dalton', 'Kenneth Dixon', 'Logan Thomas', 'Allen Robinson', 'Trent Steelman', 'Seth Roberts', 'Taylor Gabriel', 'Richard Rodgers') OR team = 'Unknown' OR player_id LIKE 'rb_%' AND player_id NOT LIKE 'rb_%_%';
+DELETE FROM player_week_facts WHERE player_id IN (SELECT player_id FROM players WHERE active = FALSE);
+
+Enhance Compute (Filter Irrelevants):
+
+In computeBuysSellsForWeek: Add gates—skip if rostered_pct <0.5, snap_share <0.3, or team='Unknown'. Min conf 0.3 for output. Join players for filters.
+Patch: In loop, if (!p.active || p.rostered_pct < 0.5 || p.snap_share < 0.3 || p.team === 'Unknown') continue;
+Refresh ECR: In nightly, axios.get('https://www.fantasypros.com/nfl/rankings/ppr-rb-cheatsheets.php') or similar—parse for ECR (use cheerio if needed). Update ecr_rank/ecr_7d_delta.
+
+
+API/UI Tweaks (Show Only Relevant):
+
+API: Add &min_conf=0.5 param; filter in query WHERE confidence >= min_conf.
+UI: In AdviceList, sort by verdict_score desc, filter client-side rostered_pct >0.5. Update chips/tooltips as spec. Copy pitch works.
+
+
+Run & Test:
+
+Sync fresh: npm run sync:sleeper (update with 2025 data).
+Compute Week 4: SEASON=2025 WEEK=4 FORMAT=redraft PPR=half npm run compute:advice
+Test curl: curl "http://localhost:3000/api/advice?pos=RB&format=redraft&ppr=half&season=2025&week=4&limit=10" | jq .
+UI: Load Advice tab—expect no fillers, top like Bijan BUY (high volume), Achane BUY LOW (efficiency).
+Monitoring: Run DB queries—no missing proofs, caps as expected.
+
+
+
+Fresh Example Data for Seed (Week 4 2025)
+Use this SQL to seed 10 relevant RBs (from fetches [web:13-24]). Rostered >90%, active=true. Recompute after.
+sqlINSERT INTO player_week_facts (player_id, season, week, position, tiber_rank, tiber_score, ecr_rank, ecr_score, adp_rank, snap_share, routes_per_game, targets_per_game, rz_touches, epa_per_play, yprr, yac_per_att, mtf_per_touch, team_proe, pace_rank_percentile, ol_tier, sos_next2, injury_practice_score, committee_index, coach_volatility, ecr_7d_delta, bye_week, rostered_7d_delta, started_7d_delta)
+VALUES
+  ('rb_bijan_robinson', 2025, 4, 'RB', 1, 96.5, 1, 96.0, 1, 0.85, 12, 5, 4, 0.15, 0, 4.2, 0.25, 0.65, 75, 1, 0.8, 0.1, 0.2, 0.1, -1, FALSE, 1.2, 2.5),
+  ('rb_saquon_barkley', 2025, 4, 'RB', 2, 94.2, 2, 94.0, 2, 0.82, 10, 4, 3, 0.12, 0, 3.8, 0.22, 0.62, 70, 2, 0.7, 0.2, 0.3, 0.2, +2, FALSE, 0.8, 1.0),
+  ('rb_derrick_henry', 2025, 4, 'RB', 3, 91.0, 3, 91.0, 3, 0.78, 8, 3, 5, 0.10, 0, 3.5, 0.20, 0.60, 65, 1, 0.6, 0.05, 0.1, 0.05, -2, FALSE, -0.5, -1.2),
+  ('rb_jahmyr_gibbs', 2025, 4, 'RB', 4, 89.5, 4, 89.0, 4, 0.75, 15, 6, 2, 0.18, 0, 4.5, 0.28, 0.68, 80, 2, 0.9, 0.15, 0.25, 0.15, +1, FALSE, 2.0, 3.5),
+  ('rb_ashton_jeanty', 2025, 4, 'RB', 5, 87.0, 5, 87.0, 7, 0.70, 11, 4, 3, 0.14, 0, 4.0, 0.24, 0.55, 60, 3, 0.5, 0.0, 0.0, 0.0, -3, FALSE, 1.5, 2.0),
+  ('rb_christian_mccaffrey', 2025, 4, 'RB', 6, 84.5, 6, 84.0, 5, 0.80, 14, 7, 4, 0.16, 0, 4.3, 0.26, 0.70, 85, 1, 0.75, 0.3, 0.4, 0.3, +3, FALSE, -1.0, -0.5),
+  ('rb_jonathan_taylor', 2025, 4, 'RB', 7, 82.0, 7, 82.0, 6, 0.72, 9, 3, 2, 0.11, 0, 3.6, 0.21, 0.58, 62, 2, 0.55, 0.1, 0.15, 0.1, -1, FALSE, 0.5, 1.0),
+  ('rb_devon_achane', 2025, 4, 'RB', 8, 79.5, 8, 79.0, 8, 0.68, 13, 5, 1, 0.13, 0, 4.1, 0.23, 0.52, 55, 3, 0.45, 0.25, 0.35, 0.25, +2, FALSE, 1.8, 2.2),
+  ('rb_kyren_williams', 2025, 4, 'RB', 9, 77.0, 9, 77.0, 9, 0.74, 10, 4, 3, 0.09, 0, 3.4, 0.19, 0.50, 50, 2, 0.4, 0.05, 0.05, 0.05, -4, FALSE, -0.3, -0.8),
+  ('rb_josh_jacobs', 2025, 4, 'RB', 10, 74.5, 10, 74.0, 10, 0.65, 8, 3, 2, 0.08, 0, 3.2, 0.18, 0.48, 45, 3, 0.3, 0.4, 0.5, 0.4, +4, FALSE, 0.7, 1.3);
+
+-- Run compute after seed
+Expected Post-Fix UI (Week 4 Example)
+Recommendations now relevant:
+
+Bijan Robinson (ATL) - HOLD (High): Stable volume, ECR lag.
+Jahmyr Gibbs (DET) - BUY (Medium): Rising snaps, buy low.
+Derrick Henry (BAL) - SELL (High): TD regression, sell high.
+No fillers—confidence gates them out.

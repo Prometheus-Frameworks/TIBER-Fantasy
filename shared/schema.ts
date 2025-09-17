@@ -128,6 +128,10 @@ export const players = pgTable("players", {
   draftYear: integer("draft_year"), // Draft year to identify rookies
   draftRound: integer("draft_round"), // Draft round (1-7, or NULL for UDFA)
   draftPick: integer("draft_pick"), // Overall draft pick
+  
+  // PLAYER POOL QUALITY SYSTEM - For filtering relevant players
+  rosteredPct: real("rostered_pct").default(0), // Fantasy rostered percentage (0-100)
+  active: boolean("active").default(true), // Whether player is active/relevant for fantasy
 });
 
 // Articles table for content management

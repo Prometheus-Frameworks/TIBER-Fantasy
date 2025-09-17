@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, gte } from 'drizzle-orm';
 import { db } from '../db';
 import { buysSells, playerWeekFacts } from '@shared/schema';
 import { 
@@ -23,6 +23,7 @@ router.get('/recommendations', async (req, res) => {
       format: z.enum(['redraft', 'dynasty']).default('redraft'),
       ppr: z.enum(['ppr', 'half', 'standard']).default('half'),
       verdict: z.enum(['BUY_HARD', 'BUY', 'WATCH_BUY', 'HOLD', 'WATCH_SELL', 'SELL', 'SELL_HARD']).optional(),
+      min_conf: z.coerce.number().min(0).max(1).default(0.3), // Minimum confidence threshold
       limit: z.coerce.number().min(1).max(200).default(50),
     });
 
@@ -40,6 +41,7 @@ router.get('/recommendations', async (req, res) => {
       eq(buysSells.format, filters.format),
       eq(buysSells.ppr, filters.ppr),
       eq(buysSells.week, defaultWeek),
+      gte(buysSells.confidence, filters.min_conf), // Quality gate: minimum confidence
       ...(normalizedPosition && normalizedPosition.length > 0 ? [eq(buysSells.position, normalizedPosition)] : []),
       ...(filters.verdict ? [eq(buysSells.verdict, filters.verdict)] : [])
     ];
@@ -61,7 +63,13 @@ router.get('/recommendations', async (req, res) => {
         filters: {
           ...filters,
           week: defaultWeek,
-          position: normalizedPosition
+          position: normalizedPosition,
+          min_conf: filters.min_conf
+        },
+        qualityFiltering: {
+          enabled: true,
+          minConfidence: filters.min_conf,
+          description: `Showing only recommendations with confidence >= ${filters.min_conf}`
         }
       }
     });

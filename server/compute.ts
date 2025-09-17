@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, gte } from 'drizzle-orm';
 import { db } from './db';
-import { playerWeekFacts, buysSells, verdictEnum, formatEnum, pprEnum, type InsertBuysSells } from '@shared/schema';
+import { playerWeekFacts, buysSells, players, verdictEnum, formatEnum, pprEnum, type InsertBuysSells } from '@shared/schema';
 
 // Config: Weights/thresholds (changelog: v1.1: No changes)
 const SCORE_CONFIG = {
@@ -147,27 +147,73 @@ export async function computeBuysSellsForWeek(
 ) {
   console.log(`Computing buys/sells for Week ${week}, ${position}, ${format}, ${ppr}`);
   
-  // Fetch players for this week/position
-  const players = await db
-    .select()
+  // Fetch players for this week/position - only process active, high-quality players
+  const playersQuery = await db
+    .select({
+      // Player week facts
+      playerId: playerWeekFacts.playerId,
+      season: playerWeekFacts.season,
+      week: playerWeekFacts.week,
+      position: playerWeekFacts.position,
+      usageNow: playerWeekFacts.usageNow,
+      talent: playerWeekFacts.talent,
+      environment: playerWeekFacts.environment,
+      availability: playerWeekFacts.availability,
+      marketAnchor: playerWeekFacts.marketAnchor,
+      powerScore: playerWeekFacts.powerScore,
+      confidence: playerWeekFacts.confidence,
+      flags: playerWeekFacts.flags,
+      adpRank: playerWeekFacts.adpRank,
+      snapShare: playerWeekFacts.snapShare,
+      routesPerGame: playerWeekFacts.routesPerGame,
+      targetsPerGame: playerWeekFacts.targetsPerGame,
+      rzTouches: playerWeekFacts.rzTouches,
+      epaPerPlay: playerWeekFacts.epaPerPlay,
+      yprr: playerWeekFacts.yprr,
+      yacPerAtt: playerWeekFacts.yacPerAtt,
+      mtfPerTouch: playerWeekFacts.mtfPerTouch,
+      teamProe: playerWeekFacts.teamProe,
+      paceRankPercentile: playerWeekFacts.paceRankPercentile,
+      olTier: playerWeekFacts.olTier,
+      sosNext2: playerWeekFacts.sosNext2,
+      injuryPracticeScore: playerWeekFacts.injuryPracticeScore,
+      committeeIndex: playerWeekFacts.committeeIndex,
+      coachVolatility: playerWeekFacts.coachVolatility,
+      ecr7dDelta: playerWeekFacts.ecr7dDelta,
+      byeWeek: playerWeekFacts.byeWeek,
+      rostered7dDelta: playerWeekFacts.rostered7dDelta,
+      started7dDelta: playerWeekFacts.started7dDelta,
+      tiberRank: playerWeekFacts.tiberRank,
+      ecrRank: playerWeekFacts.ecrRank,
+      // Player metadata for quality filtering
+      playerActive: players.active,
+      playerRosteredPct: players.rosteredPct,
+      playerTeam: players.team,
+      playerName: players.name
+    })
     .from(playerWeekFacts)
+    .innerJoin(players, eq(playerWeekFacts.playerId, players.sleeperId))
     .where(
       and(
         eq(playerWeekFacts.season, season),
         eq(playerWeekFacts.week, week),
-        eq(playerWeekFacts.position, position)
+        eq(playerWeekFacts.position, position),
+        // Quality gates: only active players with adequate roster percentages
+        eq(players.active, true),
+        gte(players.rosteredPct, 50),
+        sql`${players.team} IS NOT NULL AND ${players.team} != 'Unknown'`
       )
     );
 
-  if (!players.length) {
+  if (!playersQuery.length) {
     console.log(`No data found for Week ${week}, ${position}`);
     return;
   }
 
-  console.log(`Found ${players.length} players for computation`);
+  console.log(`Found ${playersQuery.length} players for computation (after quality filtering)`);
 
   // Compute positional z-scores for gap analysis using power scores
-  const powerScores = players
+  const powerScores = playersQuery
     .filter(p => p.powerScore !== null)
     .map(p => p.powerScore!);
   
@@ -182,12 +228,29 @@ export async function computeBuysSellsForWeek(
 
   console.log(`Power score stats: mean=${meanPower.toFixed(2)}, std=${stdPower.toFixed(2)}`);
 
-  // Process each player
+  // Process each player with additional quality checks
   const results: InsertBuysSells[] = [];
+  let qualityFiltered = 0;
   
-  for (const p of players) {
+  for (const p of playersQuery) {
     if (p.powerScore === null) {
       continue; // Skip players without power score data
+    }
+
+    // Additional quality gates within processing loop
+    if (p.playerRosteredPct !== null && p.playerRosteredPct < 50) {
+      qualityFiltered++;
+      continue; // Skip players with low roster percentage
+    }
+
+    if (p.snapShare !== null && p.snapShare < 0.3 && p.position !== 'QB') {
+      qualityFiltered++;
+      continue; // Skip players with very low snap share (except QBs)
+    }
+
+    if (p.playerTeam === 'Unknown' || p.playerTeam === null) {
+      qualityFiltered++;
+      continue; // Skip players with unknown teams
     }
 
     // Calculate power score z-score (higher power score = better, so positive z is good)
@@ -289,24 +352,33 @@ export async function computeBuysSellsForWeek(
     // Generate explanation
     const explanation = generateExplanation(adjVerdict, gapZ, signal, momentum, risk, proof);
 
-    results.push({
-      playerId: p.playerId,
-      season,
-      week,
-      position,
-      verdict: adjVerdict,
-      verdictScore: Number(adjVs.toFixed(3)),
-      confidence: Number(adjConf.toFixed(3)),
-      gapZ: Number(gapZ.toFixed(3)),
-      signal: Number(signal.toFixed(3)),
-      marketMomentum: Number(momentum.toFixed(3)),
-      riskPenalty: Number(risk.toFixed(3)),
-      format,
-      ppr,
-      proof,
-      explanation,
-    });
+    // Quality gate: Only include recommendations with confidence >= 0.3
+    if (adjConf >= 0.3) {
+      results.push({
+        playerId: p.playerId,
+        season,
+        week,
+        position,
+        verdict: adjVerdict,
+        verdictScore: Number(adjVs.toFixed(3)),
+        confidence: Number(adjConf.toFixed(3)),
+        gapZ: Number(gapZ.toFixed(3)),
+        signal: Number(signal.toFixed(3)),
+        marketMomentum: Number(momentum.toFixed(3)),
+        riskPenalty: Number(risk.toFixed(3)),
+        format,
+        ppr,
+        proof,
+        explanation,
+      });
+    } else {
+      qualityFiltered++;
+      console.log(`   ⚠️ Filtered out ${p.playerName || p.playerId} due to low confidence: ${adjConf.toFixed(3)}`);
+    }
   }
+
+  // Log quality filtering results
+  console.log(`   📊 Quality filtering summary: ${qualityFiltered} players filtered out, ${results.length} high-quality recommendations remaining`);
 
   // Batch insert/upsert results
   if (results.length > 0) {
