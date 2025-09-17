@@ -73,6 +73,18 @@ app.use((req, res, next) => {
     console.warn('⚠️ Cron job initialization warning:', error);
   }
 
+  // Initialize UPH Nightly Scheduler
+  try {
+    console.log('📅 Initializing UPH Nightly Scheduler...');
+    
+    const { uphScheduler } = await import('./services/UPHScheduler');
+    await uphScheduler.initialize();
+    
+    console.log('✅ UPH Nightly Scheduler initialized successfully');
+  } catch (error) {
+    console.warn('⚠️ UPH Scheduler initialization warning:', error);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
