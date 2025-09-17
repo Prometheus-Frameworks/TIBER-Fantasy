@@ -58,6 +58,7 @@ import etlRoutes from './routes/etlRoutes';
 import silverLayerRoutes from './routes/silverLayerRoutes';
 import rookieRoutes from './routes/rookieRoutes';
 import playerIdentityRoutes from './routes/playerIdentityRoutes';
+import uphAdminRoutes from './routes/uphAdminRoutes';
 import sosRouter from './modules/sos/sos.router';
 import { ratingsRouter } from './src/modules/ratings';
 import rankingsV3Router from './routes/rankingsV3';
@@ -2546,6 +2547,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/etl', etlRoutes);
   app.use('/api/silver', silverLayerRoutes);
   app.use('/api/player-identity', playerIdentityRoutes);
+  
+  // UPH Admin API - Comprehensive orchestration management
+  app.use('/api/admin/uph', uphAdminRoutes);
 
   // DeepSeek ratings router now mounted at /api/ratings (see line 385)
   // app.use('/api/tiber-ratings', ratingsRouter); // Moved to /api/ratings
