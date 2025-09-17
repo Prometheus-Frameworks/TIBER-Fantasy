@@ -25,6 +25,7 @@ import {
   type InsertQualityGateResults
 } from '@shared/schema';
 import { eq, and, sql, gte, lte, isNull, isNotNull, count, avg, stddev } from 'drizzle-orm';
+import { qualityConfig, type QualityThresholds } from './QualityConfig';
 
 export interface QualityRule {
   name: string;
@@ -50,6 +51,8 @@ export interface QualityValidationRequest {
     season?: number;
     week?: number;
     position?: string;
+    jobType?: 'WEEKLY' | 'SEASON' | 'BACKFILL' | 'INCREMENTAL';
+    layer?: 'BRONZE_TO_SILVER' | 'SILVER_TO_GOLD';
     [key: string]: any;
   };
 }
@@ -77,21 +80,8 @@ export interface QualityValidationResult {
 export class QualityGateValidator {
   private static instance: QualityGateValidator;
   
-  // Quality thresholds (configurable)
-  private readonly QUALITY_THRESHOLDS = {
-    COMPLETENESS_CRITICAL: 0.95, // 95% of required fields must be present
-    COMPLETENESS_WARNING: 0.85,
-    CONSISTENCY_CRITICAL: 0.98, // 98% of records must pass consistency checks
-    CONSISTENCY_WARNING: 0.90,
-    ACCURACY_CRITICAL: 0.95, // 95% of values must pass accuracy checks
-    ACCURACY_WARNING: 0.85,
-    FRESHNESS_CRITICAL: 24, // Data must be fresher than 24 hours for critical
-    FRESHNESS_WARNING: 72, // 72 hours for warning
-    OUTLIER_CRITICAL: 3.0, // 3 standard deviations for critical outliers
-    OUTLIER_WARNING: 2.5, // 2.5 standard deviations for warning
-  };
-
   private rules: Map<string, QualityRule> = new Map();
+  private qualityConfig = qualityConfig;
 
   public static getInstance(): QualityGateValidator {
     if (!QualityGateValidator.instance) {
@@ -112,8 +102,18 @@ export class QualityGateValidator {
     const startTime = Date.now();
     
     console.log(`🛡️ [QualityGates] Validating ${request.tableName}:${request.recordIdentifier}`);
+    console.log(`🔧 [QualityGates] Context: jobType=${request.context?.jobType}, position=${request.context?.position}, layer=${request.context?.layer}`);
 
     try {
+      // Get context-specific quality thresholds
+      const thresholds = this.qualityConfig.getThresholds({
+        jobType: request.context?.jobType,
+        position: request.context?.position,
+        layer: request.context?.layer
+      });
+
+      console.log(`📏 [QualityGates] Using thresholds - Completeness: ${thresholds.completeness.critical}, Consistency: ${thresholds.consistency.critical}`);
+
       const ruleResults = new Map<string, QualityRuleResult>();
       const failedRules: string[] = [];
       const warningRules: string[] = [];
@@ -127,7 +127,7 @@ export class QualityGateValidator {
       // Execute rules in parallel for performance
       const rulePromises = rulesToRun.map(async (rule) => {
         try {
-          const result = await rule.validator(request.recordData, request.context);
+          const result = await rule.validator(request.recordData, { ...request.context, thresholds });
           ruleResults.set(rule.name, result);
 
           if (!result.passed) {
@@ -165,9 +165,15 @@ export class QualityGateValidator {
         outlier: this.aggregateRulesByCategory(ruleResults, 'outlier')
       };
 
-      // Calculate overall score and pass/fail
+      // Calculate overall score and pass/fail using centralized validation
       const overallScore = this.calculateOverallScore(gateResults);
-      const overallPassed = criticalIssues.length === 0 && overallScore >= 0.8;
+      const qualityResult = this.qualityConfig.validateQualityResult(overallScore, {
+        jobType: request.context?.jobType,
+        position: request.context?.position,
+        layer: request.context?.layer
+      });
+      
+      const overallPassed = qualityResult.level === 'PASS';
 
       const validationResult: QualityValidationResult = {
         overallPassed,
@@ -345,7 +351,7 @@ export class QualityGateValidator {
       name: 'field_coverage',
       description: 'Validates minimum field coverage percentage',
       severity: 'WARNING',
-      threshold: this.QUALITY_THRESHOLDS.COMPLETENESS_WARNING,
+      threshold: 0.85, // Will be overridden by context-specific thresholds
       validator: this.validateFieldCoverage.bind(this)
     });
 
@@ -384,7 +390,7 @@ export class QualityGateValidator {
       name: 'data_freshness',
       description: 'Validates data is sufficiently fresh',
       severity: 'WARNING',
-      threshold: this.QUALITY_THRESHOLDS.FRESHNESS_WARNING,
+      threshold: 72, // Will be overridden by context-specific thresholds
       validator: this.validateDataFreshness.bind(this)
     });
 
@@ -393,7 +399,7 @@ export class QualityGateValidator {
       name: 'statistical_outliers',
       description: 'Detects statistical outliers in numeric fields',
       severity: 'INFO',
-      threshold: this.QUALITY_THRESHOLDS.OUTLIER_WARNING,
+      threshold: 2.5, // Will be overridden by context-specific thresholds
       validator: this.validateStatisticalOutliers.bind(this)
     });
 
@@ -436,7 +442,9 @@ export class QualityGateValidator {
     );
 
     const coverage = populatedFields.length / allFields.length;
-    const threshold = this.QUALITY_THRESHOLDS.COMPLETENESS_WARNING;
+    
+    // Get threshold from context or fall back to default
+    const threshold = context?.thresholds?.completeness?.warning || 0.85;
 
     return {
       passed: coverage >= threshold,
@@ -554,8 +562,10 @@ export class QualityGateValidator {
     }
 
     const ageHours = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
-    const warningThreshold = this.QUALITY_THRESHOLDS.FRESHNESS_WARNING;
-    const criticalThreshold = this.QUALITY_THRESHOLDS.FRESHNESS_CRITICAL;
+    
+    // Get thresholds from context or fall back to defaults
+    const warningThreshold = context?.thresholds?.freshness?.warning || 72;
+    const criticalThreshold = context?.thresholds?.freshness?.critical || 24;
 
     let score = 1;
     if (ageHours > criticalThreshold) {
