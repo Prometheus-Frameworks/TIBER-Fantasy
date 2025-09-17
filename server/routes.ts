@@ -56,6 +56,7 @@ import compassCompareRoutes from './routes/compassCompareRoutes';
 import { nightlyProcessingRoutes } from './routes/nightlyProcessingRoutes';
 import etlRoutes from './routes/etlRoutes';
 import rookieRoutes from './routes/rookieRoutes';
+import playerIdentityRoutes from './routes/playerIdentityRoutes';
 import sosRouter from './modules/sos/sos.router';
 import { ratingsRouter } from './src/modules/ratings';
 import rankingsV3Router from './routes/rankingsV3';
@@ -2542,6 +2543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   app.use('/api/nightly', nightlyProcessingRoutes);
   app.use('/api/etl', etlRoutes);
+  app.use('/api/player-identity', playerIdentityRoutes);
 
   // DeepSeek ratings router now mounted at /api/ratings (see line 385)
   // app.use('/api/tiber-ratings', ratingsRouter); // Moved to /api/ratings

@@ -8,6 +8,8 @@ import { requireAdminAuth } from '../middleware/adminAuth';
 import { coreWeekIngestETL } from '../etl/CoreWeekIngest';
 import { nightlyBuysSellsETL } from '../etl/nightlyBuysSellsUpdate';
 import { getCurrentNFLWeek } from '../cron/weeklyUpdate';
+import { playerIdentityService } from '../services/PlayerIdentityService';
+import { playerIdentityMigration } from '../services/PlayerIdentityMigration';
 
 const router = Router();
 
@@ -197,6 +199,97 @@ router.post('/buys-sells', async (req: Request, res: Response) => {
       message: 'Buys/Sells computation failed',
       error: errorMessage,
       duration: duration
+    });
+  }
+});
+
+/**
+ * POST /api/etl/populate-identity-map
+ * Populate Player Identity Map with existing Sleeper players
+ * Should be run once to migrate existing data
+ */
+router.post('/populate-identity-map', async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  
+  try {
+    console.log(`🔄 [ETL] Player Identity Map population triggered by admin from ${req.ip}`);
+    
+    const { force = false, dryRun = false } = req.body;
+    
+    // Check if migration is needed
+    if (!force && !dryRun) {
+      const status = await playerIdentityMigration.getMigrationStatus();
+      if (status.isComplete) {
+        return res.status(409).json({
+          success: false,
+          message: 'Player Identity Map already populated',
+          data: {
+            playerCount: status.playerCount,
+            sleeperCount: status.sleeperCount,
+            lastMigration: status.lastMigration
+          }
+        });
+      }
+    }
+    
+    console.log(`📊 Starting Player Identity Map population (force: ${force}, dryRun: ${dryRun})`);
+    
+    const result = await playerIdentityMigration.runMigration({ force, dryRun });
+    
+    const duration = Date.now() - startTime;
+    
+    console.log(`✅ [ETL] Player Identity Map population completed successfully in ${duration}ms`);
+    console.log(`   📊 Processed ${result.totalProcessed} players`);
+    console.log(`   ✅ Imported ${result.imported}, ⏭️ Skipped ${result.skipped}, ❌ Errors ${result.errors}`);
+    
+    res.status(200).json({
+      success: true,
+      message: dryRun ? 'Dry run completed successfully' : 'Player Identity Map populated successfully',
+      data: {
+        ...result,
+        duration: duration
+      }
+    });
+    
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    console.error(`❌ [ETL] Player Identity Map population failed:`, error);
+    
+    res.status(500).json({
+      success: false,
+      message: 'Player Identity Map population failed',
+      error: errorMessage,
+      duration: duration
+    });
+  }
+});
+
+/**
+ * GET /api/etl/identity-map-status
+ * Check Player Identity Map population status
+ */
+router.get('/identity-map-status', async (req: Request, res: Response) => {
+  try {
+    const [migrationStatus, systemStats] = await Promise.all([
+      playerIdentityMigration.getMigrationStatus(),
+      playerIdentityService.getSystemStats()
+    ]);
+    
+    res.json({
+      success: true,
+      data: {
+        migration: migrationStatus,
+        system: systemStats
+      }
+    });
+  } catch (error) {
+    console.error('[ETL] Error getting identity map status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get identity map status',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });

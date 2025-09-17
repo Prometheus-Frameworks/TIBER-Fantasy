@@ -1,5 +1,7 @@
 // src/data/resolvers/playerResolver.ts
 import { cacheKey, getCache, setCache } from "../cache";
+// Note: Import path will be resolved at runtime since server services are available
+// This is a cross-boundary import that works in the full-stack setup
 
 type SleeperPlayer = {
   player_id: string;
@@ -114,6 +116,73 @@ async function loadSleeperMap(): Promise<Record<string, SleeperPlayer>> {
 
 /** Resolve a human name (with optional team/pos) to a Sleeper player object */
 export async function resolvePlayer(
+  nameOrId: string,
+  team?: string,
+  position?: string
+): Promise<SleeperPlayer | null> {
+  try {
+    // Try Identity Service first for enhanced resolution
+    const identityResult = await resolvePlayerViaIdentityService(nameOrId, team, position);
+    if (identityResult) {
+      return identityResult;
+    }
+  } catch (error) {
+    console.warn('[playerResolver] Identity service fallback to legacy resolver:', error);
+  }
+
+  // Fall back to legacy resolution method
+  return await resolvePlayerLegacy(nameOrId, team, position);
+}
+
+/** New enhanced resolution via PlayerIdentityService */
+async function resolvePlayerViaIdentityService(
+  nameOrId: string,
+  team?: string,
+  position?: string
+): Promise<SleeperPlayer | null> {
+  try {
+    // Dynamically import the service at runtime to avoid build-time dependency issues
+    const { playerIdentityService } = await import("../../../server/services/PlayerIdentityService");
+    
+    // 1. Try direct ID lookup first
+    const identityPlayer = await playerIdentityService.getByAnyId(nameOrId);
+    if (identityPlayer && identityPlayer.externalIds.sleeper) {
+      const db = await loadSleeperMap();
+      return db[identityPlayer.externalIds.sleeper] || null;
+    }
+
+    // 2. Try name-based search with position filter
+    const nameMatches = await playerIdentityService.searchByName(nameOrId, position);
+    if (nameMatches.length > 0) {
+      // Filter by team if provided
+      let bestMatch = nameMatches[0];
+      if (team) {
+        const teamMatches = nameMatches.filter((m: any) => 
+          m.nflTeam?.toLowerCase() === team.toLowerCase()
+        );
+        if (teamMatches.length > 0) {
+          bestMatch = teamMatches[0];
+        }
+      }
+
+      // Get Sleeper player from canonical ID
+      const canonicalPlayer = await playerIdentityService.getByCanonicalId(bestMatch.canonicalId);
+      if (canonicalPlayer && canonicalPlayer.externalIds.sleeper) {
+        const db = await loadSleeperMap();
+        return db[canonicalPlayer.externalIds.sleeper] || null;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    // If identity service is not available, return null to fall back to legacy method
+    console.warn('[playerResolver] Identity service not available:', error);
+    return null;
+  }
+}
+
+/** Legacy resolution method - unchanged for backward compatibility */
+async function resolvePlayerLegacy(
   nameOrId: string,
   team?: string,
   position?: string

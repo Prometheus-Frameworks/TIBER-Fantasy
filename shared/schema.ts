@@ -102,11 +102,26 @@ export const playerIdentityMap = pgTable("player_identity_map", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
+  // Platform ID unique indexes for fast lookups
   sleeperIdIdx: uniqueIndex("pim_sleeper_id_idx").on(table.sleeperId).where(sql`${table.sleeperId} IS NOT NULL`),
   espnIdIdx: uniqueIndex("pim_espn_id_idx").on(table.espnId).where(sql`${table.espnId} IS NOT NULL`),
   yahooIdIdx: uniqueIndex("pim_yahoo_id_idx").on(table.yahooId).where(sql`${table.yahooId} IS NOT NULL`),
+  rotowireIdIdx: uniqueIndex("pim_rotowire_id_idx").on(table.rotowireId).where(sql`${table.rotowireId} IS NOT NULL`),
+  fantasyDataIdIdx: uniqueIndex("pim_fantasy_data_id_idx").on(table.fantasyDataId).where(sql`${table.fantasyDataId} IS NOT NULL`),
+  fantasyprosIdIdx: uniqueIndex("pim_fantasypros_id_idx").on(table.fantasyprosId).where(sql`${table.fantasyprosId} IS NOT NULL`),
+  mysportsfeedsIdIdx: uniqueIndex("pim_mysportsfeeds_id_idx").on(table.mysportsfeedsId).where(sql`${table.mysportsfeedsId} IS NOT NULL`),
+  nflDataPyIdIdx: uniqueIndex("pim_nfl_data_py_id_idx").on(table.nflDataPyId).where(sql`${table.nflDataPyId} IS NOT NULL`),
+  
+  // Search performance indexes
   positionTeamIdx: index("pim_position_team_idx").on(table.position, table.nflTeam),
   nameIdx: index("pim_name_idx").on(table.fullName),
+  firstNameIdx: index("pim_first_name_idx").on(table.firstName),
+  lastNameIdx: index("pim_last_name_idx").on(table.lastName),
+  activeStatusIdx: index("pim_active_status_idx").on(table.isActive),
+  
+  // Composite search indexes for common queries
+  activePositionIdx: index("pim_active_position_idx").on(table.isActive, table.position),
+  positionNameIdx: index("pim_position_name_idx").on(table.position, table.fullName),
 }));
 
 // NFL Teams Dimension Table
@@ -396,6 +411,11 @@ export const players = pgTable("players", {
   // PLAYER POOL QUALITY SYSTEM - For filtering relevant players
   rosteredPct: real("rostered_pct").default(0), // Fantasy rostered percentage (0-100)
   active: boolean("active").default(true), // Whether player is active/relevant for fantasy
+  
+  // RANKING SYSTEM - Overall and dynasty-specific rankings
+  rank: integer("rank"), // Overall fantasy ranking
+  dynastyRank: integer("dynasty_rank"), // Dynasty-specific ranking
+  startupDraftable: boolean("startup_draftable").default(false), // Whether player is startup draftable
 });
 
 // Articles table for content management

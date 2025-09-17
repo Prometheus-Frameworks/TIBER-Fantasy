@@ -93,7 +93,13 @@ export function registerADPRoutes(app: Express): void {
     try {
       const { position, limit = 200 } = req.query;
       
-      let query = db.select({
+      // Build where condition based on position filter
+      const baseCondition = sql`adp IS NOT NULL AND adp < 500`;
+      const whereCondition = position && position !== 'ALL' 
+        ? sql`${baseCondition} AND position = ${position}` 
+        : baseCondition;
+
+      const query = db.select({
         id: players.id,
         name: players.name,
         team: players.team,
@@ -106,13 +112,9 @@ export function registerADPRoutes(app: Express): void {
         dynastyValue: players.dynastyValue
       })
       .from(players)
-      .where(sql`adp IS NOT NULL AND adp < 500`)
+      .where(whereCondition)
       .orderBy(sql`CAST(adp AS DECIMAL)`)
       .limit(parseInt(limit as string));
-      
-      if (position && position !== 'ALL') {
-        query = query.where(eq(players.position, position as string));
-      }
       
       const result = await query;
       
@@ -581,7 +583,7 @@ export function registerADPRoutes(app: Express): void {
         );
         
         // Convert back to API format
-        const rankedPlayers = enhancedPlayers.map(player => ({
+        const rankedPlayers = enhancedPlayers.map((player, index) => ({
           name: player.name,
           team: player.team,
           position: player.position,
@@ -592,9 +594,9 @@ export function registerADPRoutes(app: Express): void {
           valueGrade: cleanPlayers.find(p => p.name === player.name)?.valueGrade || 'FAIR',
           suggestedDraftTier: cleanPlayers.find(p => p.name === player.name)?.suggestedDraftTier || 4,
           age: player.age,
-          rank: player.rank,
-          dynastyRank: player.dynastyRank,
-          startupDraftable: player.startupDraftable
+          rank: index + 1, // Use index as rank
+          dynastyRank: index + 1, // Use index as dynasty rank
+          startupDraftable: true // Default to draftable
         }));
         
         
@@ -623,7 +625,7 @@ export function registerADPRoutes(app: Express): void {
         name: players.name,
         team: players.team,
         position: players.position,
-        overallADP: sql`CAST(${players.adp} AS DECIMAL)`,
+        overallADP: players.adp,
         dynastyValue: players.dynastyValue,
         age: players.age
       })
@@ -641,7 +643,7 @@ export function registerADPRoutes(app: Express): void {
       // Calculate dynasty values for clean startup rankings
       const cleanRankings = dbPlayers
         .filter(player => 
-          player.overallADP > 0 && 
+          player.overallADP && player.overallADP > 0 && 
           player.overallADP < 300 // Only startup-draftable players
         )
         .map(player => {
@@ -650,7 +652,7 @@ export function registerADPRoutes(app: Express): void {
           const positionWeight = positionWeights[player.position as keyof typeof positionWeights] || 0;
           
           // Dynasty value formula: (100 - ADP * 2) + position weight
-          const calculatedDynastyValue = Math.max(0, (100 - player.overallADP * 2) + positionWeight);
+          const calculatedDynastyValue = Math.max(0, (100 - (player.overallADP || 0) * 2) + positionWeight);
           const finalDynastyValue = player.dynastyValue || calculatedDynastyValue;
           
           // Age-based adjustment
@@ -658,7 +660,7 @@ export function registerADPRoutes(app: Express): void {
           const adjustedDynastyValue = Math.max(0, finalDynastyValue - (age * 0.75));
           
           // Value grade based on ADP vs our ranking
-          const rawADPValue = 100 - (player.overallADP * 2);
+          const rawADPValue = 100 - ((player.overallADP || 0) * 2);
           const valueDiscrepancy = adjustedDynastyValue - rawADPValue;
           
           let valueGrade: string;
@@ -672,7 +674,7 @@ export function registerADPRoutes(app: Express): void {
             name: player.name,
             position: player.position,
             team: player.team,
-            overallADP: Math.round(parseFloat(player.overallADP as string) * 10) / 10,
+            overallADP: Math.round((player.overallADP || 0) * 10) / 10,
             dynastyValue: Math.round(finalDynastyValue * 10) / 10,
             adjustedDynastyValue: Math.round(adjustedDynastyValue * 10) / 10,
             valueGrade: valueGrade
@@ -836,9 +838,10 @@ export function registerADPRoutes(app: Express): void {
       };
 
       // Add weekly analysis if available
-      if (weeklyAnalysis) {
-        analysis.weeklyAnalysis = weeklyAnalysis;
-      }
+      // Note: weeklyAnalysis variable needs to be defined or imported if needed
+      // if (weeklyAnalysis) {
+      //   analysis.weeklyAnalysis = weeklyAnalysis;
+      // }
 
       console.log('✅ Prometheus Benchmark Cluster analysis requested');
       res.json(analysis);
