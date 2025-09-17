@@ -5,6 +5,270 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // ========================================
+// UNIFIED PLAYER HUB - 3-LAYER ELT ARCHITECTURE
+// ========================================
+
+// Data quality enums
+export const dataQualityEnum = pgEnum("data_quality", [
+  "HIGH",
+  "MEDIUM", 
+  "LOW",
+  "MISSING"
+]);
+
+// Data source enums
+export const dataSourceEnum = pgEnum("data_source", [
+  "sleeper",
+  "nfl_data_py",
+  "fantasypros",
+  "mysportsfeeds",
+  "espn",
+  "yahoo",
+  "manual",
+  "computed"
+]);
+
+// Ingest status enum
+export const ingestStatusEnum = pgEnum("ingest_status", [
+  "PENDING",
+  "PROCESSING",
+  "SUCCESS",
+  "FAILED",
+  "PARTIAL"
+]);
+
+// ========================================
+// BRONZE LAYER - RAW DATA STORAGE
+// ========================================
+
+// Raw payload storage for all data sources
+export const ingestPayloads = pgTable("ingest_payloads", {
+  id: serial("id").primaryKey(),
+  source: dataSourceEnum("source").notNull(),
+  endpoint: text("endpoint").notNull(), // API endpoint or data source identifier
+  payload: jsonb("payload").notNull(), // Raw JSON data
+  version: text("version").notNull(), // API version or data version
+  jobId: text("job_id").notNull(), // ETL job identifier
+  season: integer("season").notNull(),
+  week: integer("week"), // NULL for season-level data
+  status: ingestStatusEnum("status").notNull().default("PENDING"),
+  recordCount: integer("record_count"), // Number of records in payload
+  errorMessage: text("error_message"), // Error details if failed
+  checksumHash: text("checksum_hash"), // For deduplication
+  ingestedAt: timestamp("ingested_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+}, (table) => ({
+  sourceEndpointIdx: index("ingest_source_endpoint_idx").on(table.source, table.endpoint),
+  seasonWeekIdx: index("ingest_season_week_idx").on(table.season, table.week),
+  statusIdx: index("ingest_status_idx").on(table.status),
+  jobIdIdx: index("ingest_job_id_idx").on(table.jobId),
+  uniqueIngestion: unique("ingest_unique").on(table.source, table.endpoint, table.checksumHash),
+}));
+
+// ========================================
+// SILVER LAYER - NORMALIZED CANONICAL TABLES
+// ========================================
+
+// Player Identity Map - Central cross-platform ID resolution
+export const playerIdentityMap = pgTable("player_identity_map", {
+  canonicalId: text("canonical_id").primaryKey(), // Our canonical player ID
+  fullName: text("full_name").notNull(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  position: text("position").notNull(),
+  nflTeam: text("nfl_team"), // Current NFL team
+  
+  // External platform IDs
+  sleeperId: text("sleeper_id"),
+  espnId: text("espn_id"),
+  yahooId: text("yahoo_id"),
+  rotowireId: text("rotowire_id"),
+  fantasyDataId: text("fantasy_data_id"),
+  fantasyprosId: text("fantasypros_id"),
+  mysportsfeedsId: text("mysportsfeeds_id"),
+  nflDataPyId: text("nfl_data_py_id"),
+  
+  // Player attributes for identity resolution
+  jerseyNumber: integer("jersey_number"),
+  birthDate: timestamp("birth_date"),
+  college: text("college"),
+  height: text("height"),
+  weight: integer("weight"),
+  
+  // Metadata
+  isActive: boolean("is_active").default(true),
+  confidence: real("confidence").default(1.0), // ID matching confidence
+  lastVerified: timestamp("last_verified").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  sleeperIdIdx: uniqueIndex("pim_sleeper_id_idx").on(table.sleeperId).where(sql`${table.sleeperId} IS NOT NULL`),
+  espnIdIdx: uniqueIndex("pim_espn_id_idx").on(table.espnId).where(sql`${table.espnId} IS NOT NULL`),
+  yahooIdIdx: uniqueIndex("pim_yahoo_id_idx").on(table.yahooId).where(sql`${table.yahooId} IS NOT NULL`),
+  positionTeamIdx: index("pim_position_team_idx").on(table.position, table.nflTeam),
+  nameIdx: index("pim_name_idx").on(table.fullName),
+}));
+
+// NFL Teams Dimension Table
+export const nflTeamsDim = pgTable("nfl_teams_dim", {
+  teamCode: text("team_code").primaryKey(), // "KC", "SF", etc.
+  teamName: text("team_name").notNull(), // "Kansas City Chiefs"
+  teamCity: text("team_city").notNull(), // "Kansas City"
+  teamNickname: text("team_nickname").notNull(), // "Chiefs"
+  conference: text("conference").notNull(), // "AFC" or "NFC"
+  division: text("division").notNull(), // "North", "South", "East", "West"
+  primaryColor: text("primary_color"), // Hex color code
+  secondaryColor: text("secondary_color"), // Hex color code
+  logoUrl: text("logo_url"),
+  stadiumName: text("stadium_name"),
+  stadiumCity: text("stadium_city"),
+  timezone: text("timezone"), // "America/New_York"
+  isActive: boolean("is_active").default(true),
+  
+  // Alternative team codes for data source mapping
+  sleeperId: text("sleeper_id"),
+  espnId: text("espn_id"),
+  yahooId: text("yahoo_id"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  conferenceIdx: index("teams_conference_idx").on(table.conference),
+  divisionIdx: index("teams_division_idx").on(table.division),
+}));
+
+// Market Signals - ADP, ECR rankings, market movements
+export const marketSignals = pgTable("market_signals", {
+  id: serial("id").primaryKey(),
+  canonicalPlayerId: text("canonical_player_id").notNull().references(() => playerIdentityMap.canonicalId),
+  source: dataSourceEnum("source").notNull(),
+  signalType: text("signal_type").notNull(), // "adp", "ecr", "ownership", "start_pct"
+  
+  // Market data
+  overallRank: integer("overall_rank"),
+  positionalRank: integer("positional_rank"),
+  value: real("value"), // ADP value, percentage, etc.
+  
+  // Context
+  season: integer("season").notNull(),
+  week: integer("week"), // NULL for season-long rankings
+  leagueFormat: text("league_format"), // "redraft", "dynasty", "bestball"
+  scoringFormat: text("scoring_format"), // "ppr", "half", "standard"
+  
+  // Data quality
+  sampleSize: integer("sample_size"),
+  confidence: real("confidence").default(0.8),
+  dataQuality: dataQualityEnum("data_quality").notNull().default("MEDIUM"),
+  
+  // Metadata
+  extractedAt: timestamp("extracted_at").notNull(),
+  validFrom: timestamp("valid_from").notNull(),
+  validTo: timestamp("valid_to"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  playerSignalIdx: index("market_player_signal_idx").on(table.canonicalPlayerId, table.signalType),
+  seasonWeekIdx: index("market_season_week_idx").on(table.season, table.week),
+  sourceTypeIdx: index("market_source_type_idx").on(table.source, table.signalType),
+  validityIdx: index("market_validity_idx").on(table.validFrom, table.validTo),
+  uniqueSignal: unique("market_unique_signal").on(
+    table.canonicalPlayerId, 
+    table.source, 
+    table.signalType, 
+    table.season, 
+    table.week,
+    table.leagueFormat,
+    table.scoringFormat
+  ),
+}));
+
+// Injuries - Injury reports and practice status
+export const injuries = pgTable("injuries", {
+  id: serial("id").primaryKey(),
+  canonicalPlayerId: text("canonical_player_id").notNull().references(() => playerIdentityMap.canonicalId),
+  
+  // Injury details
+  injuryType: text("injury_type"), // "knee", "ankle", "concussion", etc.
+  bodyPart: text("body_part"), // "knee", "shoulder", "head", etc.
+  severity: text("severity"), // "minor", "moderate", "major", "season_ending"
+  status: text("status").notNull(), // "healthy", "questionable", "doubtful", "out", "ir"
+  
+  // Practice status
+  practiceStatus: text("practice_status"), // "full", "limited", "did_not_participate"
+  
+  // Timeline
+  injuryDate: timestamp("injury_date"),
+  expectedReturn: timestamp("expected_return"),
+  actualReturn: timestamp("actual_return"),
+  
+  // Context
+  season: integer("season").notNull(),
+  week: integer("week"),
+  gameDate: timestamp("game_date"),
+  
+  // Source and quality
+  source: dataSourceEnum("source").notNull(),
+  reportedBy: text("reported_by"), // Reporter or source name
+  confidence: real("confidence").default(0.8),
+  
+  // Additional context
+  description: text("description"),
+  impactAssessment: text("impact_assessment"), // Expected fantasy impact
+  
+  // Metadata
+  reportedAt: timestamp("reported_at").notNull(),
+  isResolved: boolean("is_resolved").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  playerSeasonIdx: index("injuries_player_season_idx").on(table.canonicalPlayerId, table.season),
+  statusIdx: index("injuries_status_idx").on(table.status),
+  weekIdx: index("injuries_week_idx").on(table.week),
+  activeInjuriesIdx: index("injuries_active_idx").on(table.isResolved).where(sql`${table.isResolved} = false`),
+}));
+
+// Depth Charts - Team depth chart positions
+export const depthCharts = pgTable("depth_charts", {
+  id: serial("id").primaryKey(),
+  canonicalPlayerId: text("canonical_player_id").notNull().references(() => playerIdentityMap.canonicalId),
+  teamCode: text("team_code").notNull().references(() => nflTeamsDim.teamCode),
+  
+  // Depth chart position
+  position: text("position").notNull(), // "QB", "RB", "WR", "TE", etc.
+  positionGroup: text("position_group"), // "QB", "RB", "WR", "TE", "K", "DST"
+  depthOrder: integer("depth_order").notNull(), // 1 = starter, 2 = backup, etc.
+  
+  // Context
+  season: integer("season").notNull(),
+  week: integer("week"), // NULL for season-long depth chart
+  
+  // Additional context
+  role: text("role"), // "starter", "backup", "special_packages", "injured_reserve"
+  packages: text("packages").array().default([]), // ["base", "nickel", "red_zone"]
+  
+  // Source and quality
+  source: dataSourceEnum("source").notNull(),
+  confidence: real("confidence").default(0.8),
+  
+  // Metadata
+  effectiveDate: timestamp("effective_date").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  playerTeamIdx: index("depth_player_team_idx").on(table.canonicalPlayerId, table.teamCode),
+  teamPositionIdx: index("depth_team_position_idx").on(table.teamCode, table.position),
+  seasonWeekIdx: index("depth_season_week_idx").on(table.season, table.week),
+  activeDepthIdx: index("depth_active_idx").on(table.isActive).where(sql`${table.isActive} = true`),
+  uniqueDepthPosition: unique("depth_unique_position").on(
+    table.canonicalPlayerId,
+    table.teamCode,
+    table.position,
+    table.season,
+    table.week
+  ),
+}));
+
+// ========================================
 // ENUMS FOR BUYS/SELLS TRADE ADVICE MODEL
 // ========================================
 
@@ -1327,6 +1591,370 @@ export const insertPlayerWeekFactsSchema = createInsertSchema(playerWeekFacts).o
 export const insertBuysSellsSchema = createInsertSchema(buysSells).omit({
   createdAt: true,
 });
+
+// ========================================
+// GOLD LAYER - ANALYTICS-READY FACTS
+// ========================================
+
+// Enhanced Player Season Facts - Season-level aggregated analytics
+export const playerSeasonFacts = pgTable("player_season_facts", {
+  canonicalPlayerId: text("canonical_player_id").notNull().references(() => playerIdentityMap.canonicalId),
+  season: integer("season").notNull(),
+  position: text("position").notNull(),
+  nflTeam: text("nfl_team").notNull().references(() => nflTeamsDim.teamCode),
+  
+  // Core stats
+  gamesPlayed: integer("games_played").notNull().default(0),
+  gamesStarted: integer("games_started").notNull().default(0),
+  snapCount: integer("snap_count").notNull().default(0),
+  snapShare: real("snap_share").notNull().default(0),
+  
+  // Fantasy production
+  fantasyPoints: real("fantasy_points").notNull().default(0),
+  fantasyPointsPpr: real("fantasy_points_ppr").notNull().default(0),
+  fantasyPointsHalfPpr: real("fantasy_points_half_ppr").notNull().default(0),
+  
+  // Position-specific stats
+  passingYards: integer("passing_yards").default(0),
+  passingTds: integer("passing_tds").default(0),
+  interceptions: integer("interceptions").default(0),
+  rushingYards: integer("rushing_yards").default(0),
+  rushingTds: integer("rushing_tds").default(0),
+  receivingYards: integer("receiving_yards").default(0),
+  receivingTds: integer("receiving_tds").default(0),
+  receptions: integer("receptions").default(0),
+  targets: integer("targets").default(0),
+  
+  // Advanced metrics
+  targetShare: real("target_share").default(0),
+  airYards: real("air_yards").default(0),
+  yac: real("yac").default(0),
+  redZoneTargets: integer("red_zone_targets").default(0),
+  redZoneCarries: integer("red_zone_carries").default(0),
+  
+  // Market data
+  avgAdp: real("avg_adp"),
+  ecrRank: integer("ecr_rank"),
+  avgOwnership: real("avg_ownership"),
+  avgStartPct: real("avg_start_pct"),
+  
+  // Data lineage and quality
+  sourceMask: integer("source_mask").notNull().default(0), // Bitmask of data sources
+  freshnessScore: real("freshness_score").notNull().default(0), // 0-1 score
+  qualityGatesPassed: boolean("quality_gates_passed").notNull().default(false),
+  completenessScore: real("completeness_score").notNull().default(0), // 0-1 score
+  lastRefreshed: timestamp("last_refreshed").notNull().defaultNow(),
+  
+  // Metadata
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Primary key
+  primaryKey: primaryKey({ columns: [table.canonicalPlayerId, table.season] }),
+  // Indexes
+  seasonPositionIdx: index("psf_season_position_idx").on(table.season, table.position),
+  teamSeasonIdx: index("psf_team_season_idx").on(table.nflTeam, table.season),
+  qualityIdx: index("psf_quality_idx").on(table.qualityGatesPassed),
+  freshnessIdx: index("psf_freshness_idx").on(table.freshnessScore),
+}));
+
+// Market Rollups - Aggregated market trend analysis
+export const marketRollups = pgTable("market_rollups", {
+  id: serial("id").primaryKey(),
+  canonicalPlayerId: text("canonical_player_id").notNull().references(() => playerIdentityMap.canonicalId),
+  
+  // Time period
+  season: integer("season").notNull(),
+  week: integer("week"), // NULL for season rollups
+  rollupType: text("rollup_type").notNull(), // "weekly", "monthly", "season"
+  
+  // Market metrics
+  adpTrend: real("adp_trend"), // Week over week change
+  ecrTrend: real("ecr_trend"), // Week over week change
+  ownershipTrend: real("ownership_trend"), // Week over week change
+  startPctTrend: real("start_pct_trend"), // Week over week change
+  
+  // Consensus metrics
+  adpConsensus: real("adp_consensus"), // Average across sources
+  adpStdDev: real("adp_std_dev"), // Standard deviation
+  ecrConsensus: real("ecr_consensus"), // Average ECR rank
+  ecrStdDev: real("ecr_std_dev"), // Standard deviation
+  
+  // Volume and reliability
+  sourceCount: integer("source_count").notNull().default(0), // Number of contributing sources
+  sampleSize: integer("sample_size"), // Total sample size across sources
+  confidenceInterval: real("confidence_interval"), // 95% CI width
+  
+  // Market momentum indicators
+  momentumScore: real("momentum_score"), // -1 to 1 momentum indicator
+  volatilityScore: real("volatility_score"), // 0-1 volatility measure
+  trendStrength: real("trend_strength"), // 0-1 trend strength
+  
+  // Data lineage
+  sourceMask: integer("source_mask").notNull().default(0),
+  freshnessScore: real("freshness_score").notNull().default(0),
+  qualityGatesPassed: boolean("quality_gates_passed").notNull().default(false),
+  
+  // Metadata
+  calculatedAt: timestamp("calculated_at").notNull().defaultNow(),
+  validFrom: timestamp("valid_from").notNull(),
+  validTo: timestamp("valid_to"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  playerRollupIdx: index("mr_player_rollup_idx").on(table.canonicalPlayerId, table.rollupType),
+  seasonWeekIdx: index("mr_season_week_idx").on(table.season, table.week),
+  validityIdx: index("mr_validity_idx").on(table.validFrom, table.validTo),
+  qualityIdx: index("mr_quality_idx").on(table.qualityGatesPassed),
+  uniqueRollup: unique("mr_unique_rollup").on(
+    table.canonicalPlayerId,
+    table.season,
+    table.week,
+    table.rollupType
+  ),
+}));
+
+// Data Lineage Tracking - Track data flow and transformations
+export const dataLineage = pgTable("data_lineage", {
+  id: serial("id").primaryKey(),
+  jobId: text("job_id").notNull(), // ETL job identifier
+  tableName: text("table_name").notNull(), // Target table name
+  operation: text("operation").notNull(), // "INSERT", "UPDATE", "DELETE", "UPSERT"
+  
+  // Source tracking
+  sourceTable: text("source_table"), // Source table if transformation
+  sourceJobId: text("source_job_id"), // Source job if derived
+  ingestPayloadId: integer("ingest_payload_id").references(() => ingestPayloads.id),
+  
+  // Record tracking
+  recordsProcessed: integer("records_processed").notNull().default(0),
+  recordsSuccess: integer("records_success").notNull().default(0),
+  recordsFailed: integer("records_failed").notNull().default(0),
+  recordsSkipped: integer("records_skipped").notNull().default(0),
+  
+  // Data quality metrics
+  qualityScore: real("quality_score"), // 0-1 overall quality score
+  completenessScore: real("completeness_score"), // 0-1 completeness score
+  freshnessScore: real("freshness_score"), // 0-1 freshness score
+  
+  // Execution details
+  startedAt: timestamp("started_at").notNull(),
+  completedAt: timestamp("completed_at"),
+  errorMessage: text("error_message"),
+  executionContext: jsonb("execution_context"), // Additional context
+  
+  // Metadata
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  jobIdIdx: index("lineage_job_id_idx").on(table.jobId),
+  tableIdx: index("lineage_table_idx").on(table.tableName),
+  sourceJobIdx: index("lineage_source_job_idx").on(table.sourceJobId),
+  executionIdx: index("lineage_execution_idx").on(table.startedAt, table.completedAt),
+}));
+
+// Enhanced Player Week Facts Metadata (companion to existing playerWeekFacts)
+export const playerWeekFactsMetadata = pgTable("player_week_facts_metadata", {
+  canonicalPlayerId: text("canonical_player_id").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  
+  // Data lineage and quality
+  sourceMask: integer("source_mask").notNull().default(0), // Bitmask of contributing sources
+  freshnessScore: real("freshness_score").notNull().default(0), // 0-1 freshness score
+  qualityGatesPassed: boolean("quality_gates_passed").notNull().default(false),
+  completenessScore: real("completeness_score").notNull().default(0), // 0-1 completeness
+  
+  // Source timestamps
+  sleeperLastUpdate: timestamp("sleeper_last_update"),
+  nflDataLastUpdate: timestamp("nfl_data_last_update"),
+  fantasyProsLastUpdate: timestamp("fantasy_pros_last_update"),
+  
+  // Quality flags
+  hasGameLog: boolean("has_game_log").default(false),
+  hasMarketData: boolean("has_market_data").default(false),
+  hasAdvancedStats: boolean("has_advanced_stats").default(false),
+  hasInjuryData: boolean("has_injury_data").default(false),
+  
+  // Derived data freshness
+  factTableLastRefresh: timestamp("fact_table_last_refresh").notNull().defaultNow(),
+  
+  // Metadata
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Primary key
+  primaryKey: primaryKey({ columns: [table.canonicalPlayerId, table.season, table.week] }),
+  // Indexes
+  qualityIdx: index("pwfm_quality_idx").on(table.qualityGatesPassed),
+  freshnessIdx: index("pwfm_freshness_idx").on(table.freshnessScore),
+  seasonWeekIdx: index("pwfm_season_week_idx").on(table.season, table.week),
+}));
+
+// ========================================
+// INSERT SCHEMAS AND TYPES
+// ========================================
+
+// Bronze Layer Insert Schemas
+export const insertIngestPayloadsSchema = createInsertSchema(ingestPayloads).omit({
+  id: true,
+  ingestedAt: true,
+});
+
+// Silver Layer Insert Schemas
+export const insertPlayerIdentityMapSchema = createInsertSchema(playerIdentityMap).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertNflTeamsDimSchema = createInsertSchema(nflTeamsDim).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMarketSignalsSchema = createInsertSchema(marketSignals).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertInjuriesSchema = createInsertSchema(injuries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDepthChartsSchema = createInsertSchema(depthCharts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Gold Layer Insert Schemas
+export const insertPlayerSeasonFactsSchema = createInsertSchema(playerSeasonFacts).omit({
+  createdAt: true,
+  updatedAt: true,
+  lastRefreshed: true,
+});
+
+export const insertMarketRollupsSchema = createInsertSchema(marketRollups).omit({
+  id: true,
+  calculatedAt: true,
+  createdAt: true,
+});
+
+export const insertDataLineageSchema = createInsertSchema(dataLineage).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPlayerWeekFactsMetadataSchema = createInsertSchema(playerWeekFactsMetadata).omit({
+  createdAt: true,
+  updatedAt: true,
+  factTableLastRefresh: true,
+});
+
+// ========================================
+// TYPE DEFINITIONS
+// ========================================
+
+// Bronze Layer Types
+export type IngestPayload = typeof ingestPayloads.$inferSelect;
+export type InsertIngestPayload = z.infer<typeof insertIngestPayloadsSchema>;
+
+// Silver Layer Types
+export type PlayerIdentityMap = typeof playerIdentityMap.$inferSelect;
+export type InsertPlayerIdentityMap = z.infer<typeof insertPlayerIdentityMapSchema>;
+export type NflTeamsDim = typeof nflTeamsDim.$inferSelect;
+export type InsertNflTeamsDim = z.infer<typeof insertNflTeamsDimSchema>;
+export type MarketSignals = typeof marketSignals.$inferSelect;
+export type InsertMarketSignals = z.infer<typeof insertMarketSignalsSchema>;
+export type Injuries = typeof injuries.$inferSelect;
+export type InsertInjuries = z.infer<typeof insertInjuriesSchema>;
+export type DepthCharts = typeof depthCharts.$inferSelect;
+export type InsertDepthCharts = z.infer<typeof insertDepthChartsSchema>;
+
+// Gold Layer Types
+export type PlayerSeasonFacts = typeof playerSeasonFacts.$inferSelect;
+export type InsertPlayerSeasonFacts = z.infer<typeof insertPlayerSeasonFactsSchema>;
+export type MarketRollups = typeof marketRollups.$inferSelect;
+export type InsertMarketRollups = z.infer<typeof insertMarketRollupsSchema>;
+export type DataLineage = typeof dataLineage.$inferSelect;
+export type InsertDataLineage = z.infer<typeof insertDataLineageSchema>;
+export type PlayerWeekFactsMetadata = typeof playerWeekFactsMetadata.$inferSelect;
+export type InsertPlayerWeekFactsMetadata = z.infer<typeof insertPlayerWeekFactsMetadataSchema>;
+
+// ========================================
+// TABLE RELATIONS
+// ========================================
+
+// Player Identity Map Relations
+export const playerIdentityMapRelations = relations(playerIdentityMap, ({ many }) => ({
+  marketSignals: many(marketSignals),
+  injuries: many(injuries),
+  depthCharts: many(depthCharts),
+  playerSeasonFacts: many(playerSeasonFacts),
+  marketRollups: many(marketRollups),
+}));
+
+// NFL Teams Relations
+export const nflTeamsDimRelations = relations(nflTeamsDim, ({ many }) => ({
+  depthCharts: many(depthCharts),
+  playerSeasonFacts: many(playerSeasonFacts),
+}));
+
+// Market Signals Relations
+export const marketSignalsRelations = relations(marketSignals, ({ one }) => ({
+  player: one(playerIdentityMap, {
+    fields: [marketSignals.canonicalPlayerId],
+    references: [playerIdentityMap.canonicalId],
+  }),
+}));
+
+// Injuries Relations
+export const injuriesRelations = relations(injuries, ({ one }) => ({
+  player: one(playerIdentityMap, {
+    fields: [injuries.canonicalPlayerId],
+    references: [playerIdentityMap.canonicalId],
+  }),
+}));
+
+// Depth Charts Relations
+export const depthChartsRelations = relations(depthCharts, ({ one }) => ({
+  player: one(playerIdentityMap, {
+    fields: [depthCharts.canonicalPlayerId],
+    references: [playerIdentityMap.canonicalId],
+  }),
+  team: one(nflTeamsDim, {
+    fields: [depthCharts.teamCode],
+    references: [nflTeamsDim.teamCode],
+  }),
+}));
+
+// Player Season Facts Relations
+export const playerSeasonFactsRelations = relations(playerSeasonFacts, ({ one }) => ({
+  player: one(playerIdentityMap, {
+    fields: [playerSeasonFacts.canonicalPlayerId],
+    references: [playerIdentityMap.canonicalId],
+  }),
+  team: one(nflTeamsDim, {
+    fields: [playerSeasonFacts.nflTeam],
+    references: [nflTeamsDim.teamCode],
+  }),
+}));
+
+// Market Rollups Relations
+export const marketRollupsRelations = relations(marketRollups, ({ one }) => ({
+  player: one(playerIdentityMap, {
+    fields: [marketRollups.canonicalPlayerId],
+    references: [playerIdentityMap.canonicalId],
+  }),
+}));
+
+// Data Lineage Relations
+export const dataLineageRelations = relations(dataLineage, ({ one }) => ({
+  ingestPayload: one(ingestPayloads, {
+    fields: [dataLineage.ingestPayloadId],
+    references: [ingestPayloads.id],
+  }),
+}));
 
 // Types
 export type PlayerWeekFacts = typeof playerWeekFacts.$inferSelect;

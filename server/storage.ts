@@ -9,6 +9,11 @@ import {
   tradeAnalysis,
   waiverRecommendations,
   injuryTracker,
+  playerIdentityMap,
+  ingestPayloads,
+  marketSignals,
+  injuries,
+  depthCharts,
   type Team, 
   type Player, 
   type TeamPlayer, 
@@ -33,6 +38,13 @@ import {
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 // Note: sportsDataAPI import removed - not used in current implementation
+
+// UPH Types (inferred from new schema tables)
+type PlayerIdentityMap = typeof playerIdentityMap.$inferSelect;
+type IngestPayload = typeof ingestPayloads.$inferSelect;
+type MarketSignal = typeof marketSignals.$inferSelect;
+type Injury = typeof injuries.$inferSelect;
+type DepthChart = typeof depthCharts.$inferSelect;
 
 export interface IStorage {
   // Team operations
@@ -91,6 +103,25 @@ export interface IStorage {
   
   // Premium Analytics
   updatePlayerPremiumAnalytics(playerId: number, premiumData: any): Promise<void>;
+  
+  // UPH - Player Identity Map operations
+  getPlayerIdentityByCanonicalId(canonicalId: string): Promise<PlayerIdentityMap | undefined>;
+  getPlayerIdentityBySleeperId(sleeperId: string): Promise<PlayerIdentityMap | undefined>;
+  getPlayerIdentityByExternalId(platform: string, externalId: string): Promise<PlayerIdentityMap | undefined>;
+  
+  // UPH - Bronze Layer operations
+  createIngestPayload(payload: Partial<IngestPayload>): Promise<IngestPayload>;
+  getIngestPayload(id: number): Promise<IngestPayload | undefined>;
+  
+  // UPH - Silver Layer operations
+  createMarketSignal(signal: Partial<MarketSignal>): Promise<MarketSignal>;
+  getMarketSignals(canonicalPlayerId: string, signalType?: string): Promise<MarketSignal[]>;
+  
+  createInjury(injury: Partial<Injury>): Promise<Injury>;
+  getInjuries(canonicalPlayerId: string): Promise<Injury[]>;
+  
+  createDepthChart(depthChart: Partial<DepthChart>): Promise<DepthChart>;
+  getDepthChart(canonicalPlayerId: string): Promise<DepthChart[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -120,49 +151,65 @@ export class MemStorage implements IStorage {
       record: "6-2",
       leagueRank: 3,
       totalPoints: 1247,
-      healthScore: 78
+      healthScore: 78,
+      syncPlatform: null as string | null,
+      syncLeagueId: null as string | null,
+      syncTeamId: null as string | null,
+      lastSyncDate: null as Date | null,
+      syncEnabled: null as boolean | null
     };
     this.teams.set(1, team);
     this.currentTeamId = 2;
 
-    // Create comprehensive NFL player database
+    // Create comprehensive NFL player database (schema-compatible)
     const samplePlayers: Player[] = [
-      // Elite QBs
-      { id: 1, name: "Josh Allen", team: "BUF", position: "QB", avgPoints: 23.4, projectedPoints: 24.1, ownershipPercentage: 98, isAvailable: false, upside: 89, targetShare: null, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 87, adp: 2.3, dynastyValue: 95, efficiency: 8.2, sustainability: 92, marketValue: 94, confidence: 95, age: 28, experience: 7, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 2, name: "Lamar Jackson", team: "BAL", position: "QB", avgPoints: 22.8, projectedPoints: 23.2, ownershipPercentage: 97, isAvailable: false, upside: 92, targetShare: null, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 84, adp: 3.1, dynastyValue: 89, efficiency: 7.9, sustainability: 88, marketValue: 90, confidence: 93, age: 27, experience: 7, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 3, name: "Jalen Hurts", team: "PHI", position: "QB", avgPoints: 21.9, projectedPoints: 22.6, ownershipPercentage: 96, isAvailable: false, upside: 88, targetShare: null, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 81, adp: 4.2, dynastyValue: 86, efficiency: 7.6, sustainability: 85, marketValue: 87, confidence: 91, age: 25, experience: 4, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 4, name: "Dak Prescott", team: "DAL", position: "QB", avgPoints: 20.3, projectedPoints: 20.8, ownershipPercentage: 89, isAvailable: false, upside: 79, targetShare: null, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 78, adp: 8.7, dynastyValue: 72, efficiency: 7.1, sustainability: 76, marketValue: 74, confidence: 82, age: 31, experience: 9, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 5, name: "Caleb Williams", team: "CHI", position: "QB", avgPoints: 18.4, projectedPoints: 21.2, ownershipPercentage: 85, isAvailable: false, upside: 94, targetShare: null, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 72, adp: 6.8, dynastyValue: 91, efficiency: 6.8, sustainability: 89, marketValue: 88, confidence: 78, age: 22, experience: 1, lastUpdated: new Date(), premiumDataUpdated: null },
-
-      // Elite RBs
-      { id: 50, name: "Christian McCaffrey", team: "SF", position: "RB", avgPoints: 19.8, projectedPoints: 18.9, ownershipPercentage: 99, isAvailable: false, upside: 87, targetShare: 12.5, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 91, adp: 1.2, dynastyValue: 84, efficiency: 8.9, sustainability: 79, marketValue: 86, confidence: 94, age: 28, experience: 7, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 51, name: "Saquon Barkley", team: "PHI", position: "RB", avgPoints: 18.2, projectedPoints: 17.8, ownershipPercentage: 98, isAvailable: false, upside: 89, targetShare: 8.7, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 86, adp: 2.8, dynastyValue: 82, efficiency: 8.6, sustainability: 81, marketValue: 84, confidence: 92, age: 27, experience: 6, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 52, name: "Bijan Robinson", team: "ATL", position: "RB", avgPoints: 16.4, projectedPoints: 18.2, ownershipPercentage: 95, isAvailable: false, upside: 92, targetShare: 9.1, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 83, adp: 4.6, dynastyValue: 94, efficiency: 8.1, sustainability: 91, marketValue: 89, confidence: 87, age: 22, experience: 2, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 53, name: "Jahmyr Gibbs", team: "DET", position: "RB", avgPoints: 15.9, projectedPoints: 17.3, ownershipPercentage: 92, isAvailable: false, upside: 88, targetShare: 11.2, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 79, adp: 5.8, dynastyValue: 91, efficiency: 8.4, sustainability: 86, marketValue: 85, confidence: 84, age: 22, experience: 2, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 54, name: "Chuba Hubbard", team: "CAR", position: "RB", avgPoints: 14.2, projectedPoints: 15.8, ownershipPercentage: 78, isAvailable: true, upside: 84, targetShare: 7.3, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 76, adp: 45.2, dynastyValue: 73, efficiency: 7.6, sustainability: 78, marketValue: 69, confidence: 81, age: 25, experience: 4, lastUpdated: new Date(), premiumDataUpdated: null },
-
-      // Elite WRs  
-      { id: 100, name: "CeeDee Lamb", team: "DAL", position: "WR", avgPoints: 19.4, projectedPoints: 19.8, ownershipPercentage: 99, isAvailable: false, upside: 94, targetShare: 29.1, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 89, adp: 3.4, dynastyValue: 96, efficiency: 8.7, sustainability: 93, marketValue: 95, confidence: 96, age: 25, experience: 5, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 101, name: "Tyreek Hill", team: "MIA", position: "WR", avgPoints: 18.7, projectedPoints: 18.2, ownershipPercentage: 98, isAvailable: false, upside: 91, targetShare: 27.8, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 87, adp: 4.1, dynastyValue: 88, efficiency: 8.9, sustainability: 84, marketValue: 89, confidence: 94, age: 30, experience: 8, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 102, name: "Ja'Marr Chase", team: "CIN", position: "WR", avgPoints: 18.1, projectedPoints: 19.1, ownershipPercentage: 97, isAvailable: false, upside: 96, targetShare: 26.4, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 91, adp: 5.2, dynastyValue: 98, efficiency: 8.8, sustainability: 95, marketValue: 96, confidence: 95, age: 24, experience: 4, lastUpdated: new Date(), premiumDataUpdated: null },
-
-      { id: 104, name: "Darnell Mooney", team: "ATL", position: "WR", avgPoints: 12.8, projectedPoints: 13.9, ownershipPercentage: 67, isAvailable: true, upside: 79, targetShare: 18.3, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 74, adp: 78.6, dynastyValue: 68, efficiency: 7.1, sustainability: 72, marketValue: 65, confidence: 77, age: 27, experience: 5, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 105, name: "Rome Odunze", team: "CHI", position: "WR", avgPoints: 9.7, projectedPoints: 14.2, ownershipPercentage: 72, isAvailable: true, upside: 88, targetShare: 16.8, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 68, adp: 67.3, dynastyValue: 83, efficiency: 6.9, sustainability: 81, marketValue: 76, confidence: 74, age: 22, experience: 1, lastUpdated: new Date(), premiumDataUpdated: null },
-
-      // Elite TEs
-      { id: 150, name: "Travis Kelce", team: "KC", position: "TE", avgPoints: 14.8, projectedPoints: 14.2, ownershipPercentage: 96, isAvailable: false, upside: 83, targetShare: 22.1, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 88, adp: 15.7, dynastyValue: 76, efficiency: 8.3, sustainability: 71, marketValue: 78, confidence: 91, age: 35, experience: 12, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 151, name: "Sam LaPorta", team: "DET", position: "TE", avgPoints: 13.6, projectedPoints: 14.8, ownershipPercentage: 89, isAvailable: false, upside: 87, targetShare: 19.4, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 84, adp: 28.3, dynastyValue: 92, efficiency: 7.9, sustainability: 88, marketValue: 86, confidence: 88, age: 23, experience: 2, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 152, name: "Brock Bowers", team: "LV", position: "TE", avgPoints: 12.4, projectedPoints: 15.2, ownershipPercentage: 85, isAvailable: false, upside: 91, targetShare: 21.7, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 81, adp: 32.6, dynastyValue: 95, efficiency: 7.6, sustainability: 90, marketValue: 89, confidence: 84, age: 22, experience: 1, lastUpdated: new Date(), premiumDataUpdated: null },
-
-      // Rising/Trending Players
-      { id: 200, name: "Ladd McConkey", team: "LAC", position: "WR", avgPoints: 11.2, projectedPoints: 13.8, ownershipPercentage: 68, isAvailable: true, upside: 86, targetShare: 17.9, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 76, adp: 89.4, dynastyValue: 78, efficiency: 7.4, sustainability: 82, marketValue: 74, confidence: 79, age: 23, experience: 1, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 201, name: "Brian Thomas Jr.", team: "JAX", position: "WR", avgPoints: 10.8, projectedPoints: 14.1, ownershipPercentage: 71, isAvailable: true, upside: 89, targetShare: 19.2, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 73, adp: 82.7, dynastyValue: 84, efficiency: 7.2, sustainability: 85, marketValue: 78, confidence: 76, age: 22, experience: 1, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 202, name: "Jayden Reed", team: "GB", position: "WR", avgPoints: 12.6, projectedPoints: 14.3, ownershipPercentage: 78, isAvailable: true, upside: 84, targetShare: 18.6, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 79, adp: 76.2, dynastyValue: 81, efficiency: 7.8, sustainability: 83, marketValue: 77, confidence: 82, age: 24, experience: 2, lastUpdated: new Date(), premiumDataUpdated: null },
-
-      // Available/Bench Players  
-      { id: 300, name: "Tyler Allgeier", team: "ATL", position: "RB", avgPoints: 9.4, projectedPoints: 10.8, ownershipPercentage: 52, isAvailable: true, upside: 71, targetShare: 4.2, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 68, adp: 156.8, dynastyValue: 58, efficiency: 6.8, sustainability: 64, marketValue: 54, confidence: 72, age: 24, experience: 3, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 301, name: "Gus Edwards", team: "LAC", position: "RB", avgPoints: 8.7, projectedPoints: 9.2, ownershipPercentage: 47, isAvailable: true, upside: 68, targetShare: 3.1, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 71, adp: 187.4, dynastyValue: 52, efficiency: 6.4, sustainability: 59, marketValue: 48, confidence: 69, age: 29, experience: 6, lastUpdated: new Date(), premiumDataUpdated: null },
-      { id: 302, name: "Cole Kmet", team: "CHI", position: "TE", avgPoints: 9.4, projectedPoints: 10.1, ownershipPercentage: 34, isAvailable: true, upside: 72, targetShare: 14.8, injuryStatus: null, availability: "Active", imageUrl: null, consistency: 67, adp: 142.3, dynastyValue: 61, efficiency: 6.9, sustainability: 66, marketValue: 58, confidence: 71, age: 25, experience: 4, lastUpdated: new Date(), premiumDataUpdated: null },
+      // Elite QBs - fully schema-compatible
+      { 
+        id: 1, name: "Josh Allen", team: "BUF", position: "QB", avgPoints: 23.4, projectedPoints: 24.1, 
+        ownershipPercentage: 98, isAvailable: false, upside: 89, injuryStatus: "Healthy", availability: "Available", 
+        imageUrl: null, consistency: 87, matchupRating: null, trend: null, ownership: null, targetShare: null, 
+        redZoneTargets: null, carries: null, snapCount: null, externalId: null,
+        // Required schema fields
+        status: "Active", fullName: "Josh Allen", firstName: "Josh", lastName: "Allen", sleeperId: "josh_allen_buf", 
+        jerseyNumber: 17, age: 28, yearsExp: 7, height: "6'5\"", weight: 237, college: "Wyoming", birthCountry: "US",
+        depthChartPosition: "QB", depthChartOrder: 1, espnId: null, yahooId: null, rotowireId: null, fantasyDataId: null,
+        adp: 2.3, positionalADP: "QB1", adpMissing: false, adpLastUpdated: new Date(), adpSource: "sleeper", dynastyValue: 95,
+        // FPG-centric scoring
+        fpg: 23.4, xFpg: 24.1, projFpg: 24.0, upsideIndex: 89, upsideBoost: 5.2, fpgTrend: "stable", fpgVariance: 6.8,
+        explosivePlays: 12, redZoneOpportunity: 2.1, expectedPoints: 23.4, floorPoints: 16.6, ceilingPoints: 30.2, 
+        ragScore: 95, ragColor: "GREEN", beatProj: 68, features: null, draftYear: 2018, draftRound: 1, draftPick: 7, 
+        rosteredPct: 98, active: true
+      },
+      // Simplified other players with minimal required fields
+      { 
+        id: 2, name: "Lamar Jackson", team: "BAL", position: "QB", avgPoints: 22.8, projectedPoints: 23.2, 
+        ownershipPercentage: 97, isAvailable: false, upside: 92, injuryStatus: "Healthy", availability: "Available", 
+        imageUrl: null, consistency: 84, matchupRating: null, trend: null, ownership: null, targetShare: null, 
+        redZoneTargets: null, carries: null, snapCount: null, externalId: null,
+        status: "Active", fullName: "Lamar Jackson", firstName: "Lamar", lastName: "Jackson", sleeperId: "lamar_jackson", 
+        jerseyNumber: 8, age: 27, yearsExp: 7, height: "6'2\"", weight: 212, college: "Louisville", birthCountry: "US",
+        depthChartPosition: "QB", depthChartOrder: 1, espnId: null, yahooId: null, rotowireId: null, fantasyDataId: null,
+        adp: 3.1, positionalADP: "QB2", adpMissing: false, adpLastUpdated: new Date(), adpSource: "sleeper", dynastyValue: 89,
+        fpg: 22.8, xFpg: 23.2, projFpg: 23.0, upsideIndex: 92, upsideBoost: 4.8, fpgTrend: "stable", fpgVariance: 7.2,
+        explosivePlays: 15, redZoneOpportunity: 1.8, expectedPoints: 22.8, floorPoints: 15.6, ceilingPoints: 30.0, 
+        ragScore: 93, ragColor: "GREEN", beatProj: 65, features: null, draftYear: 2018, draftRound: 1, draftPick: 32, 
+        rosteredPct: 97, active: true
+      },
+      // Sample minimal players for other positions
+      { 
+        id: 50, name: "Christian McCaffrey", team: "SF", position: "RB", avgPoints: 19.8, projectedPoints: 18.9, 
+        ownershipPercentage: 99, isAvailable: false, upside: 87, injuryStatus: "Healthy", availability: "Available", 
+        imageUrl: null, consistency: 91, matchupRating: null, trend: null, ownership: null, targetShare: 12.5, 
+        redZoneTargets: null, carries: 285, snapCount: null, externalId: null,
+        status: "Active", fullName: "Christian McCaffrey", firstName: "Christian", lastName: "McCaffrey", sleeperId: "c_mccaffrey", 
+        jerseyNumber: 23, age: 28, yearsExp: 7, height: "5'11\"", weight: 205, college: "Stanford", birthCountry: "US",
+        depthChartPosition: "RB", depthChartOrder: 1, espnId: null, yahooId: null, rotowireId: null, fantasyDataId: null,
+        adp: 1.2, positionalADP: "RB1", adpMissing: false, adpLastUpdated: new Date(), adpSource: "sleeper", dynastyValue: 84,
+        fpg: 19.8, xFpg: 18.9, projFpg: 19.5, upsideIndex: 87, upsideBoost: 3.2, fpgTrend: "stable", fpgVariance: 5.8,
+        explosivePlays: 8, redZoneOpportunity: 1.5, expectedPoints: 19.8, floorPoints: 14.0, ceilingPoints: 25.6, 
+        ragScore: 91, ragColor: "GREEN", beatProj: 72, features: null, draftYear: 2017, draftRound: 1, draftPick: 8, 
+        rosteredPct: 99, active: true
+      }
     ];
 
     samplePlayers.forEach(player => {
@@ -328,6 +375,227 @@ export class MemStorage implements IStorage {
     return availablePlayers
       .sort((a, b) => (b.upside + b.avgPoints) - (a.upside + a.avgPoints))
       .slice(0, 10); // Return top 10 recommendations
+  }
+
+  // Missing IStorage interface methods - stubbed implementations
+  async getPlayerByExternalId(externalId: string): Promise<Player | undefined> {
+    return Array.from(this.players.values()).find(player => player.externalId === externalId);
+  }
+
+  async getPlayerBySleeperIdFromMemory(sleeperId: string): Promise<Player | undefined> {
+    return Array.from(this.players.values()).find(player => player.sleeperId === sleeperId);
+  }
+
+  async getAllPlayers(): Promise<Player[]> {
+    return Array.from(this.players.values());
+  }
+
+  async searchPlayers(query: string, limit: number = 10): Promise<Player[]> {
+    return Array.from(this.players.values())
+      .filter(player => player.name.toLowerCase().includes(query.toLowerCase()))
+      .slice(0, limit);
+  }
+
+  async updatePlayer(id: number, updates: Partial<InsertPlayer>): Promise<Player> {
+    const player = this.players.get(id);
+    if (!player) throw new Error(`Player with id ${id} not found`);
+    
+    const updatedPlayer = { ...player, ...updates };
+    this.players.set(id, updatedPlayer);
+    return updatedPlayer;
+  }
+
+  // Advanced Analytics - stubbed implementations
+  async createMatchupAnalysis(analysis: InsertMatchupAnalysis): Promise<MatchupAnalysis> {
+    const id = Date.now(); // Simple ID generation
+    const newAnalysis: MatchupAnalysis = { ...analysis, id, createdAt: new Date() };
+    return newAnalysis;
+  }
+
+  async getMatchupAnalysis(playerId: number, week: number): Promise<MatchupAnalysis | undefined> {
+    // Stub implementation - return undefined for now
+    return undefined;
+  }
+
+  async createLineupOptimization(optimization: InsertLineupOptimization): Promise<LineupOptimization> {
+    const id = Date.now();
+    const newOptimization: LineupOptimization = { ...optimization, id, createdAt: new Date() };
+    return newOptimization;
+  }
+
+  async getLineupOptimization(teamId: number, week: number): Promise<LineupOptimization | undefined> {
+    return undefined;
+  }
+
+  async createTradeAnalysis(analysis: InsertTradeAnalysis): Promise<TradeAnalysis> {
+    const id = Date.now();
+    const newAnalysis: TradeAnalysis = { ...analysis, id, createdAt: new Date() };
+    return newAnalysis;
+  }
+
+  async getTradeAnalysis(teamId: number): Promise<TradeAnalysis[]> {
+    return [];
+  }
+
+  async createWaiverRecommendations(recommendation: InsertWaiverRecommendations): Promise<WaiverRecommendations> {
+    const id = Date.now();
+    const newRecommendation: WaiverRecommendations = { ...recommendation, id, createdAt: new Date() };
+    return newRecommendation;
+  }
+
+  async getWaiverRecommendations(teamId: number): Promise<WaiverRecommendations[]> {
+    return [];
+  }
+
+  async createInjuryTracker(injury: InsertInjuryTracker): Promise<InjuryTracker> {
+    const id = Date.now();
+    const newInjury: InjuryTracker = { ...injury, id, createdAt: new Date(), updatedAt: new Date() };
+    return newInjury;
+  }
+
+  async getInjuryTracker(playerId: number): Promise<InjuryTracker | undefined> {
+    return undefined;
+  }
+
+  async updateInjuryTracker(playerId: number, updates: Partial<InsertInjuryTracker>): Promise<void> {
+    // Stub implementation - no-op for now
+  }
+
+  async updatePlayerPremiumAnalytics(playerId: number, premiumData: any): Promise<void> {
+    const player = this.players.get(playerId);
+    if (player) {
+      Object.assign(player, premiumData);
+      this.players.set(playerId, player);
+    }
+  }
+
+  // UPH - Player Identity Map operations (stubbed)
+  async getPlayerIdentityByCanonicalId(canonicalId: string): Promise<PlayerIdentityMap | undefined> {
+    return undefined;
+  }
+
+  async getPlayerIdentityBySleeperId(sleeperId: string): Promise<PlayerIdentityMap | undefined> {
+    return undefined;
+  }
+
+  async getPlayerIdentityByExternalId(platform: string, externalId: string): Promise<PlayerIdentityMap | undefined> {
+    return undefined;
+  }
+
+  // UPH - Bronze Layer operations (stubbed)
+  async createIngestPayload(payload: Partial<IngestPayload>): Promise<IngestPayload> {
+    const id = Date.now();
+    const newPayload: IngestPayload = {
+      id,
+      source: payload.source || "manual",
+      endpoint: payload.endpoint || "",
+      payload: payload.payload || {},
+      version: payload.version || "1.0",
+      jobId: payload.jobId || "stub",
+      season: payload.season || 2024,
+      week: payload.week || null,
+      status: payload.status || "SUCCESS",
+      recordCount: payload.recordCount || null,
+      errorMessage: payload.errorMessage || null,
+      checksumHash: payload.checksumHash || null,
+      ingestedAt: payload.ingestedAt || new Date(),
+      processedAt: payload.processedAt || null
+    };
+    return newPayload;
+  }
+
+  async getIngestPayload(id: number): Promise<IngestPayload | undefined> {
+    return undefined;
+  }
+
+  // UPH - Silver Layer operations (stubbed)
+  async createMarketSignal(signal: Partial<MarketSignal>): Promise<MarketSignal> {
+    const id = Date.now();
+    const newSignal: MarketSignal = {
+      id,
+      canonicalPlayerId: signal.canonicalPlayerId || "",
+      source: signal.source || "manual",
+      signalType: signal.signalType || "adp",
+      overallRank: signal.overallRank || null,
+      positionalRank: signal.positionalRank || null,
+      value: signal.value || null,
+      season: signal.season || 2024,
+      week: signal.week || null,
+      leagueFormat: signal.leagueFormat || null,
+      scoringFormat: signal.scoringFormat || null,
+      sampleSize: signal.sampleSize || null,
+      confidence: signal.confidence || 0.8,
+      dataQuality: signal.dataQuality || "MEDIUM",
+      extractedAt: signal.extractedAt || new Date(),
+      validFrom: signal.validFrom || new Date(),
+      validTo: signal.validTo || null,
+      createdAt: signal.createdAt || new Date()
+    };
+    return newSignal;
+  }
+
+  async getMarketSignals(canonicalPlayerId: string, signalType?: string): Promise<MarketSignal[]> {
+    return [];
+  }
+
+  async createInjury(injury: Partial<Injury>): Promise<Injury> {
+    const id = Date.now();
+    const newInjury: Injury = {
+      id,
+      canonicalPlayerId: injury.canonicalPlayerId || "",
+      injuryType: injury.injuryType || null,
+      bodyPart: injury.bodyPart || null,
+      severity: injury.severity || null,
+      status: injury.status || "healthy",
+      practiceStatus: injury.practiceStatus || null,
+      injuryDate: injury.injuryDate || null,
+      expectedReturn: injury.expectedReturn || null,
+      actualReturn: injury.actualReturn || null,
+      season: injury.season || 2024,
+      week: injury.week || null,
+      gameDate: injury.gameDate || null,
+      source: injury.source || "manual",
+      reportedBy: injury.reportedBy || null,
+      confidence: injury.confidence || 0.8,
+      description: injury.description || null,
+      impactAssessment: injury.impactAssessment || null,
+      reportedAt: injury.reportedAt || new Date(),
+      isResolved: injury.isResolved || false,
+      createdAt: injury.createdAt || new Date(),
+      updatedAt: injury.updatedAt || new Date()
+    };
+    return newInjury;
+  }
+
+  async getInjuries(canonicalPlayerId: string): Promise<Injury[]> {
+    return [];
+  }
+
+  async createDepthChart(depthChart: Partial<DepthChart>): Promise<DepthChart> {
+    const id = Date.now();
+    const newDepthChart: DepthChart = {
+      id,
+      canonicalPlayerId: depthChart.canonicalPlayerId || "",
+      teamCode: depthChart.teamCode || "",
+      position: depthChart.position || "",
+      positionGroup: depthChart.positionGroup || null,
+      depthOrder: depthChart.depthOrder || 1,
+      season: depthChart.season || 2024,
+      week: depthChart.week || null,
+      role: depthChart.role || null,
+      packages: depthChart.packages || [],
+      source: depthChart.source || "manual",
+      confidence: depthChart.confidence || 0.8,
+      effectiveDate: depthChart.effectiveDate || new Date(),
+      isActive: depthChart.isActive || true,
+      createdAt: depthChart.createdAt || new Date(),
+      updatedAt: depthChart.updatedAt || new Date()
+    };
+    return newDepthChart;
+  }
+
+  async getDepthChart(canonicalPlayerId: string): Promise<DepthChart[]> {
+    return [];
   }
 }
 
@@ -706,6 +974,298 @@ export class DatabaseStorage implements IStorage {
       .update(players)
       .set(premiumData)
       .where(eq(players.id, playerId));
+  }
+
+  // Missing IStorage interface methods - database implementations
+  async updatePlayer(id: number, updates: Partial<InsertPlayer>): Promise<Player> {
+    const [updatedPlayer] = await db
+      .update(players)
+      .set(updates)
+      .where(eq(players.id, id))
+      .returning();
+    return updatedPlayer;
+  }
+
+  // Advanced Analytics - database implementations
+  async createMatchupAnalysis(analysis: InsertMatchupAnalysis): Promise<MatchupAnalysis> {
+    const safeAnalysis = { ...analysis, createdAt: new Date() };
+    const [newAnalysis] = await db
+      .insert(matchupAnalysis)
+      .values(safeAnalysis)
+      .returning();
+    return newAnalysis;
+  }
+
+  async getMatchupAnalysis(playerId: number, week: number): Promise<MatchupAnalysis | undefined> {
+    const [analysis] = await db
+      .select()
+      .from(matchupAnalysis)
+      .where(and(eq(matchupAnalysis.playerId, playerId), eq(matchupAnalysis.week, week)));
+    return analysis || undefined;
+  }
+
+  async createLineupOptimization(optimization: InsertLineupOptimization): Promise<LineupOptimization> {
+    const safeOptimization = { ...optimization, createdAt: new Date() };
+    const [newOptimization] = await db
+      .insert(lineupOptimization)
+      .values(safeOptimization)
+      .returning();
+    return newOptimization;
+  }
+
+  async getLineupOptimization(teamId: number, week: number): Promise<LineupOptimization | undefined> {
+    const [optimization] = await db
+      .select()
+      .from(lineupOptimization)
+      .where(and(eq(lineupOptimization.teamId, teamId), eq(lineupOptimization.week, week)));
+    return optimization || undefined;
+  }
+
+  async createTradeAnalysis(analysis: InsertTradeAnalysis): Promise<TradeAnalysis> {
+    const safeAnalysis = { ...analysis, createdAt: new Date() };
+    const [newAnalysis] = await db
+      .insert(tradeAnalysis)
+      .values(safeAnalysis)
+      .returning();
+    return newAnalysis;
+  }
+
+  async getTradeAnalysis(teamId: number): Promise<TradeAnalysis[]> {
+    return await db
+      .select()
+      .from(tradeAnalysis)
+      .where(eq(tradeAnalysis.teamId, teamId));
+  }
+
+  async createWaiverRecommendations(recommendation: InsertWaiverRecommendations): Promise<WaiverRecommendations> {
+    const safeRecommendation = { ...recommendation, createdAt: new Date() };
+    const [newRecommendation] = await db
+      .insert(waiverRecommendations)
+      .values(safeRecommendation)
+      .returning();
+    return newRecommendation;
+  }
+
+  async getWaiverRecommendations(teamId: number): Promise<WaiverRecommendations[]> {
+    return await db
+      .select()
+      .from(waiverRecommendations)
+      .where(eq(waiverRecommendations.teamId, teamId));
+  }
+
+  async createInjuryTracker(injury: InsertInjuryTracker): Promise<InjuryTracker> {
+    const safeInjury = { ...injury, createdAt: new Date(), updatedAt: new Date() };
+    const [newInjury] = await db
+      .insert(injuryTracker)
+      .values(safeInjury)
+      .returning();
+    return newInjury;
+  }
+
+  async getInjuryTracker(playerId: number): Promise<InjuryTracker | undefined> {
+    const [injury] = await db
+      .select()
+      .from(injuryTracker)
+      .where(eq(injuryTracker.playerId, playerId));
+    return injury || undefined;
+  }
+
+  async updateInjuryTracker(playerId: number, updates: Partial<InsertInjuryTracker>): Promise<void> {
+    const safeUpdates = { ...updates, updatedAt: new Date() };
+    await db
+      .update(injuryTracker)
+      .set(safeUpdates)
+      .where(eq(injuryTracker.playerId, playerId));
+  }
+
+  // UPH - Player Identity Map operations (database implementations)
+  async getPlayerIdentityByCanonicalId(canonicalId: string): Promise<PlayerIdentityMap | undefined> {
+    const [identity] = await db
+      .select()
+      .from(playerIdentityMap)
+      .where(eq(playerIdentityMap.canonicalId, canonicalId));
+    return identity || undefined;
+  }
+
+  async getPlayerIdentityBySleeperId(sleeperId: string): Promise<PlayerIdentityMap | undefined> {
+    const [identity] = await db
+      .select()
+      .from(playerIdentityMap)
+      .where(eq(playerIdentityMap.sleeperId, sleeperId));
+    return identity || undefined;
+  }
+
+  async getPlayerIdentityByExternalId(platform: string, externalId: string): Promise<PlayerIdentityMap | undefined> {
+    // Map platform to the correct field
+    const fieldMap: Record<string, any> = {
+      sleeper: playerIdentityMap.sleeperId,
+      espn: playerIdentityMap.espnId,
+      yahoo: playerIdentityMap.yahooId,
+      rotowire: playerIdentityMap.rotowireId,
+      fantasy_data: playerIdentityMap.fantasyDataId,
+      fantasypros: playerIdentityMap.fantasyprosId,
+      mysportsfeeds: playerIdentityMap.mysportsfeedsId,
+      nfl_data_py: playerIdentityMap.nflDataPyId
+    };
+    
+    const field = fieldMap[platform];
+    if (!field) return undefined;
+    
+    const [identity] = await db
+      .select()
+      .from(playerIdentityMap)
+      .where(eq(field, externalId));
+    return identity || undefined;
+  }
+
+  // UPH - Bronze Layer operations (database implementations)  
+  async createIngestPayload(payload: Partial<IngestPayload>): Promise<IngestPayload> {
+    const safePayload = {
+      source: payload.source || "manual",
+      endpoint: payload.endpoint || "",
+      payload: payload.payload || {},
+      version: payload.version || "1.0",
+      jobId: payload.jobId || "stub",
+      season: payload.season || 2024,
+      week: payload.week || null,
+      status: payload.status || "SUCCESS",
+      recordCount: payload.recordCount || null,
+      errorMessage: payload.errorMessage || null,
+      checksumHash: payload.checksumHash || null,
+      ingestedAt: payload.ingestedAt || new Date(),
+      processedAt: payload.processedAt || null
+    };
+    
+    const [newPayload] = await db
+      .insert(ingestPayloads)
+      .values(safePayload)
+      .returning();
+    return newPayload;
+  }
+
+  async getIngestPayload(id: number): Promise<IngestPayload | undefined> {
+    const [payload] = await db
+      .select()
+      .from(ingestPayloads)
+      .where(eq(ingestPayloads.id, id));
+    return payload || undefined;
+  }
+
+  // UPH - Silver Layer operations (database implementations)
+  async createMarketSignal(signal: Partial<MarketSignal>): Promise<MarketSignal> {
+    const safeSignal = {
+      canonicalPlayerId: signal.canonicalPlayerId || "",
+      source: signal.source || "manual",
+      signalType: signal.signalType || "adp",
+      overallRank: signal.overallRank || null,
+      positionalRank: signal.positionalRank || null,
+      value: signal.value || null,
+      season: signal.season || 2024,
+      week: signal.week || null,
+      leagueFormat: signal.leagueFormat || null,
+      scoringFormat: signal.scoringFormat || null,
+      sampleSize: signal.sampleSize || null,
+      confidence: signal.confidence || 0.8,
+      dataQuality: signal.dataQuality || "MEDIUM",
+      extractedAt: signal.extractedAt || new Date(),
+      validFrom: signal.validFrom || new Date(),
+      validTo: signal.validTo || null,
+      createdAt: signal.createdAt || new Date()
+    };
+
+    const [newSignal] = await db
+      .insert(marketSignals)
+      .values(safeSignal)
+      .returning();
+    return newSignal;
+  }
+
+  async getMarketSignals(canonicalPlayerId: string, signalType?: string): Promise<MarketSignal[]> {
+    const query = db
+      .select()
+      .from(marketSignals)
+      .where(eq(marketSignals.canonicalPlayerId, canonicalPlayerId));
+    
+    if (signalType) {
+      return await query.where(and(
+        eq(marketSignals.canonicalPlayerId, canonicalPlayerId),
+        eq(marketSignals.signalType, signalType)
+      ));
+    }
+    
+    return await query;
+  }
+
+  async createInjury(injury: Partial<Injury>): Promise<Injury> {
+    const safeInjury = {
+      canonicalPlayerId: injury.canonicalPlayerId || "",
+      injuryType: injury.injuryType || null,
+      bodyPart: injury.bodyPart || null,
+      severity: injury.severity || null,
+      status: injury.status || "healthy",
+      practiceStatus: injury.practiceStatus || null,
+      injuryDate: injury.injuryDate || null,
+      expectedReturn: injury.expectedReturn || null,
+      actualReturn: injury.actualReturn || null,
+      season: injury.season || 2024,
+      week: injury.week || null,
+      gameDate: injury.gameDate || null,
+      source: injury.source || "manual",
+      reportedBy: injury.reportedBy || null,
+      confidence: injury.confidence || 0.8,
+      description: injury.description || null,
+      impactAssessment: injury.impactAssessment || null,
+      reportedAt: injury.reportedAt || new Date(),
+      isResolved: injury.isResolved || false,
+      createdAt: injury.createdAt || new Date(),
+      updatedAt: injury.updatedAt || new Date()
+    };
+
+    const [newInjury] = await db
+      .insert(injuries)
+      .values(safeInjury)
+      .returning();
+    return newInjury;
+  }
+
+  async getInjuries(canonicalPlayerId: string): Promise<Injury[]> {
+    return await db
+      .select()
+      .from(injuries)
+      .where(eq(injuries.canonicalPlayerId, canonicalPlayerId));
+  }
+
+  async createDepthChart(depthChart: Partial<DepthChart>): Promise<DepthChart> {
+    const safeDepthChart = {
+      canonicalPlayerId: depthChart.canonicalPlayerId || "",
+      teamCode: depthChart.teamCode || "",
+      position: depthChart.position || "",
+      positionGroup: depthChart.positionGroup || null,
+      depthOrder: depthChart.depthOrder || 1,
+      season: depthChart.season || 2024,
+      week: depthChart.week || null,
+      role: depthChart.role || null,
+      packages: depthChart.packages || [],
+      source: depthChart.source || "manual",
+      confidence: depthChart.confidence || 0.8,
+      effectiveDate: depthChart.effectiveDate || new Date(),
+      isActive: depthChart.isActive || true,
+      createdAt: depthChart.createdAt || new Date(),
+      updatedAt: depthChart.updatedAt || new Date()
+    };
+
+    const [newDepthChart] = await db
+      .insert(depthCharts)
+      .values(safeDepthChart)
+      .returning();
+    return newDepthChart;
+  }
+
+  async getDepthChart(canonicalPlayerId: string): Promise<DepthChart[]> {
+    return await db
+      .select()
+      .from(depthCharts)
+      .where(eq(depthCharts.canonicalPlayerId, canonicalPlayerId));
   }
 }
 
