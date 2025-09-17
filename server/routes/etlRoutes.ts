@@ -14,6 +14,8 @@ import { playerIdentityMigration } from '../services/PlayerIdentityMigration';
 import { bronzeLayerService } from '../services/BronzeLayerService';
 import { sleeperAdapter } from '../adapters/SleeperAdapter';
 import { ecrAdapter } from '../adapters/ECRAdapter';
+// Silver Layer integration
+import { silverLayerService } from '../services/SilverLayerService';
 
 const router = Router();
 

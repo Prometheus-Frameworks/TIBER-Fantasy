@@ -55,6 +55,7 @@ import tradeAnalyzerRoutes from './routes/tradeAnalyzerRoutes';
 import compassCompareRoutes from './routes/compassCompareRoutes';
 import { nightlyProcessingRoutes } from './routes/nightlyProcessingRoutes';
 import etlRoutes from './routes/etlRoutes';
+import silverLayerRoutes from './routes/silverLayerRoutes';
 import rookieRoutes from './routes/rookieRoutes';
 import playerIdentityRoutes from './routes/playerIdentityRoutes';
 import sosRouter from './modules/sos/sos.router';
@@ -2543,6 +2544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   app.use('/api/nightly', nightlyProcessingRoutes);
   app.use('/api/etl', etlRoutes);
+  app.use('/api/silver', silverLayerRoutes);
   app.use('/api/player-identity', playerIdentityRoutes);
 
   // DeepSeek ratings router now mounted at /api/ratings (see line 385)
