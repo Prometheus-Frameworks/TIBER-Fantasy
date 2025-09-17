@@ -1771,6 +1771,173 @@ export const dataLineage = pgTable("data_lineage", {
   executionIdx: index("lineage_execution_idx").on(table.startedAt, table.completedAt),
 }));
 
+// Player Market Facts - Dedicated market analytics and trends
+export const playerMarketFacts = pgTable("player_market_facts", {
+  id: serial("id").primaryKey(),
+  canonicalPlayerId: text("canonical_player_id").notNull().references(() => playerIdentityMap.canonicalId),
+  
+  // Time period
+  season: integer("season").notNull(),
+  week: integer("week"), // NULL for season-level market facts
+  
+  // ADP Analytics
+  avgAdp: real("avg_adp"),
+  adpTrend7d: real("adp_trend_7d"), // 7-day change
+  adpTrend30d: real("adp_trend_30d"), // 30-day change
+  adpVolatility: real("adp_volatility"), // Standard deviation
+  
+  // ECR Analytics
+  avgEcr: real("avg_ecr"),
+  ecrTrend7d: real("ecr_trend_7d"),
+  ecrTrend30d: real("ecr_trend_30d"),
+  ecrConsensus: real("ecr_consensus"), // Consensus strength
+  
+  // Ownership Analytics
+  averageOwnership: real("average_ownership"),
+  ownershipTrend7d: real("ownership_trend_7d"),
+  ownershipMomentum: real("ownership_momentum"), // Accelerating/decelerating
+  
+  // Market Sentiment
+  expertBuyRating: real("expert_buy_rating"), // -1 to 1
+  communityBuzzScore: real("community_buzz_score"), // 0-100
+  momentumScore: real("momentum_score"), // Overall momentum
+  volatilityIndex: real("volatility_index"), // Market volatility
+  
+  // Advanced Market Metrics
+  valueOverReplacement: real("value_over_replacement"),
+  positionMarketShare: real("position_market_share"),
+  tierBreakoutScore: real("tier_breakout_score"), // Likelihood of tier jump
+  contraryIndicator: real("contrary_indicator"), // Contrarian signal strength
+  
+  // Data Quality
+  sourceMask: integer("source_mask").notNull().default(0),
+  sampleSize: integer("sample_size").default(0),
+  freshnessScore: real("freshness_score").notNull().default(0),
+  qualityGatesPassed: boolean("quality_gates_passed").notNull().default(false),
+  confidenceScore: real("confidence_score").notNull().default(0.5),
+  
+  // Metadata
+  calculatedAt: timestamp("calculated_at").notNull().defaultNow(),
+  validFrom: timestamp("valid_from").notNull(),
+  validTo: timestamp("valid_to"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  playerSeasonIdx: index("pmf_player_season_idx").on(table.canonicalPlayerId, table.season),
+  seasonWeekIdx: index("pmf_season_week_idx").on(table.season, table.week),
+  qualityIdx: index("pmf_quality_idx").on(table.qualityGatesPassed),
+  momentumIdx: index("pmf_momentum_idx").on(table.momentumScore),
+  validityIdx: index("pmf_validity_idx").on(table.validFrom, table.validTo),
+  uniqueMarketFact: unique("pmf_unique").on(
+    table.canonicalPlayerId,
+    table.season,
+    table.week
+  ),
+}));
+
+// Player Composite Facts - Cross-format unified player profiles
+export const playerCompositeFacts = pgTable("player_composite_facts", {
+  canonicalPlayerId: text("canonical_player_id").notNull().references(() => playerIdentityMap.canonicalId),
+  season: integer("season").notNull(),
+  
+  // Multi-format Rankings
+  dynastyRank: integer("dynasty_rank"),
+  redraftRank: integer("redraft_rank"),
+  bestballRank: integer("bestball_rank"),
+  tradeValueRank: integer("trade_value_rank"),
+  
+  // Multi-format Scores
+  dynastyScore: real("dynasty_score"),
+  redraftScore: real("redraft_score"),
+  bestballScore: real("bestball_score"),
+  tradeValueScore: real("trade_value_score"),
+  
+  // Unified Analytics
+  overallTalentGrade: real("overall_talent_grade"), // 0-100
+  opportunityGrade: real("opportunity_grade"), // 0-100
+  consistencyGrade: real("consistency_grade"), // 0-100
+  ceilingGrade: real("ceiling_grade"), // 0-100
+  floorGrade: real("floor_grade"), // 0-100
+  
+  // Risk Metrics
+  injuryRisk: real("injury_risk"), // 0-1
+  ageRisk: real("age_risk"), // 0-1
+  situationRisk: real("situation_risk"), // 0-1
+  overallRiskGrade: real("overall_risk_grade"), // 0-1
+  
+  // Trend Analysis
+  momentumScore: real("momentum_score"), // -1 to 1
+  trajectoryScore: real("trajectory_score"), // Long-term trend
+  breakoutProbability: real("breakout_probability"), // 0-1
+  bustProbability: real("bust_probability"), // 0-1
+  
+  // Advanced Metrics
+  positionValueScore: real("position_value_score"), // Positional scarcity value
+  strengthOfScheduleImpact: real("sos_impact"), // SOS impact on value
+  teamContextScore: real("team_context_score"), // Team situation value
+  
+  // Data Lineage & Quality
+  contributingFactTables: text("contributing_fact_tables").array().default([]),
+  sourceMask: integer("source_mask").notNull().default(0),
+  freshnessScore: real("freshness_score").notNull().default(0),
+  qualityGatesPassed: boolean("quality_gates_passed").notNull().default(false),
+  completenessScore: real("completeness_score").notNull().default(0),
+  confidenceScore: real("confidence_score").notNull().default(0.5),
+  
+  // Metadata
+  lastRefreshed: timestamp("last_refreshed").notNull().defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Primary key
+  primaryKey: primaryKey({ columns: [table.canonicalPlayerId, table.season] }),
+  // Indexes
+  dynastyRankIdx: index("pcf_dynasty_rank_idx").on(table.dynastyRank),
+  redraftRankIdx: index("pcf_redraft_rank_idx").on(table.redraftRank),
+  momentumIdx: index("pcf_momentum_idx").on(table.momentumScore),
+  qualityIdx: index("pcf_quality_idx").on(table.qualityGatesPassed),
+  talentGradeIdx: index("pcf_talent_grade_idx").on(table.overallTalentGrade),
+}));
+
+// Quality Gate Results - Track quality validation results
+export const qualityGateResults = pgTable("quality_gate_results", {
+  id: serial("id").primaryKey(),
+  jobId: text("job_id").notNull(),
+  tableName: text("table_name").notNull(),
+  recordIdentifier: text("record_identifier").notNull(), // e.g., "player_123_2025_1"
+  
+  // Gate Results
+  overallPassed: boolean("overall_passed").notNull(),
+  completenessCheck: boolean("completeness_check"),
+  consistencyCheck: boolean("consistency_check"),
+  accuracyCheck: boolean("accuracy_check"),
+  freshnessCheck: boolean("freshness_check"),
+  outlierCheck: boolean("outlier_check"),
+  
+  // Detailed Scores
+  completenessScore: real("completeness_score"),
+  consistencyScore: real("consistency_score"),
+  accuracyScore: real("accuracy_score"),
+  freshnessScore: real("freshness_score"),
+  outlierScore: real("outlier_score"),
+  overallQualityScore: real("overall_quality_score"),
+  
+  // Validation Details
+  failedRules: text("failed_rules").array().default([]),
+  warningRules: text("warning_rules").array().default([]),
+  validationMessages: jsonb("validation_messages"), // Detailed error/warning messages
+  
+  // Metadata
+  validatedAt: timestamp("validated_at").notNull().defaultNow(),
+  validatedBy: text("validated_by"), // System or user
+  validationVersion: text("validation_version"), // Rule version
+}, (table) => ({
+  jobTableIdx: index("qgr_job_table_idx").on(table.jobId, table.tableName),
+  recordIdx: index("qgr_record_idx").on(table.recordIdentifier),
+  overallPassedIdx: index("qgr_overall_passed_idx").on(table.overallPassed),
+  qualityScoreIdx: index("qgr_quality_score_idx").on(table.overallQualityScore),
+}));
+
 // Enhanced Player Week Facts Metadata (companion to existing playerWeekFacts)
 export const playerWeekFactsMetadata = pgTable("player_week_facts_metadata", {
   canonicalPlayerId: text("canonical_player_id").notNull(),
@@ -1871,6 +2038,24 @@ export const insertPlayerWeekFactsMetadataSchema = createInsertSchema(playerWeek
   factTableLastRefresh: true,
 });
 
+export const insertPlayerMarketFactsSchema = createInsertSchema(playerMarketFacts).omit({
+  id: true,
+  calculatedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPlayerCompositeFactsSchema = createInsertSchema(playerCompositeFacts).omit({
+  createdAt: true,
+  updatedAt: true,
+  lastRefreshed: true,
+});
+
+export const insertQualityGateResultsSchema = createInsertSchema(qualityGateResults).omit({
+  id: true,
+  validatedAt: true,
+});
+
 // ========================================
 // TYPE DEFINITIONS
 // ========================================
@@ -1900,6 +2085,12 @@ export type DataLineage = typeof dataLineage.$inferSelect;
 export type InsertDataLineage = z.infer<typeof insertDataLineageSchema>;
 export type PlayerWeekFactsMetadata = typeof playerWeekFactsMetadata.$inferSelect;
 export type InsertPlayerWeekFactsMetadata = z.infer<typeof insertPlayerWeekFactsMetadataSchema>;
+export type PlayerMarketFacts = typeof playerMarketFacts.$inferSelect;
+export type InsertPlayerMarketFacts = z.infer<typeof insertPlayerMarketFactsSchema>;
+export type PlayerCompositeFacts = typeof playerCompositeFacts.$inferSelect;
+export type InsertPlayerCompositeFacts = z.infer<typeof insertPlayerCompositeFactsSchema>;
+export type QualityGateResults = typeof qualityGateResults.$inferSelect;
+export type InsertQualityGateResults = z.infer<typeof insertQualityGateResultsSchema>;
 
 // ========================================
 // TABLE RELATIONS
@@ -1912,6 +2103,8 @@ export const playerIdentityMapRelations = relations(playerIdentityMap, ({ many }
   depthCharts: many(depthCharts),
   playerSeasonFacts: many(playerSeasonFacts),
   marketRollups: many(marketRollups),
+  playerMarketFacts: many(playerMarketFacts),
+  playerCompositeFacts: many(playerCompositeFacts),
 }));
 
 // NFL Teams Relations
@@ -1964,6 +2157,22 @@ export const playerSeasonFactsRelations = relations(playerSeasonFacts, ({ one })
 export const marketRollupsRelations = relations(marketRollups, ({ one }) => ({
   player: one(playerIdentityMap, {
     fields: [marketRollups.canonicalPlayerId],
+    references: [playerIdentityMap.canonicalId],
+  }),
+}));
+
+// Player Market Facts Relations
+export const playerMarketFactsRelations = relations(playerMarketFacts, ({ one }) => ({
+  player: one(playerIdentityMap, {
+    fields: [playerMarketFacts.canonicalPlayerId],
+    references: [playerIdentityMap.canonicalId],
+  }),
+}));
+
+// Player Composite Facts Relations
+export const playerCompositeFactsRelations = relations(playerCompositeFacts, ({ one }) => ({
+  player: one(playerIdentityMap, {
+    fields: [playerCompositeFacts.canonicalPlayerId],
     references: [playerIdentityMap.canonicalId],
   }),
 }));
