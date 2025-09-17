@@ -204,7 +204,9 @@ export class MemStorage implements IStorage {
         fpg: 23.4, xFpg: 24.1, projFpg: 24.0, upsideIndex: 89, upsideBoost: 5.2, fpgTrend: "stable", fpgVariance: 6.8,
         explosivePlays: 12, redZoneOpportunity: 2.1, expectedPoints: 23.4, floorPoints: 16.6, ceilingPoints: 30.2, 
         ragScore: 95, ragColor: "GREEN", beatProj: 68, features: null, draftYear: 2018, draftRound: 1, draftPick: 7, 
-        rosteredPct: 98, active: true
+        rosteredPct: 98, active: true,
+        // Missing required properties
+        rank: 1, dynastyRank: 2, startupDraftable: true
       },
       // Simplified other players with minimal required fields
       { 
@@ -219,7 +221,9 @@ export class MemStorage implements IStorage {
         fpg: 22.8, xFpg: 23.2, projFpg: 23.0, upsideIndex: 92, upsideBoost: 4.8, fpgTrend: "stable", fpgVariance: 7.2,
         explosivePlays: 15, redZoneOpportunity: 1.8, expectedPoints: 22.8, floorPoints: 15.6, ceilingPoints: 30.0, 
         ragScore: 93, ragColor: "GREEN", beatProj: 65, features: null, draftYear: 2018, draftRound: 1, draftPick: 32, 
-        rosteredPct: 97, active: true
+        rosteredPct: 97, active: true,
+        // Missing required properties
+        rank: 3, dynastyRank: 4, startupDraftable: true
       },
       // Sample minimal players for other positions
       { 
@@ -234,7 +238,9 @@ export class MemStorage implements IStorage {
         fpg: 19.8, xFpg: 18.9, projFpg: 19.5, upsideIndex: 87, upsideBoost: 3.2, fpgTrend: "stable", fpgVariance: 5.8,
         explosivePlays: 8, redZoneOpportunity: 1.5, expectedPoints: 19.8, floorPoints: 14.0, ceilingPoints: 25.6, 
         ragScore: 91, ragColor: "GREEN", beatProj: 72, features: null, draftYear: 2017, draftRound: 1, draftPick: 8, 
-        rosteredPct: 99, active: true
+        rosteredPct: 99, active: true,
+        // Missing required properties
+        rank: 2, dynastyRank: 15, startupDraftable: true
       }
     ];
 
@@ -295,7 +301,15 @@ export class MemStorage implements IStorage {
 
   async createTeam(team: InsertTeam): Promise<Team> {
     const id = this.currentTeamId++;
-    const newTeam: Team = { ...team, id };
+    const newTeam: Team = { 
+      ...team, 
+      id,
+      syncPlatform: team.syncPlatform ?? null,
+      syncLeagueId: team.syncLeagueId ?? null,
+      syncTeamId: team.syncTeamId ?? null,
+      lastSyncDate: team.lastSyncDate ?? null,
+      syncEnabled: team.syncEnabled ?? null
+    };
     this.teams.set(id, newTeam);
     return newTeam;
   }
@@ -328,8 +342,26 @@ export class MemStorage implements IStorage {
   }
 
   async getAvailablePlayers(position?: string): Promise<Player[]> {
-    return Array.from(this.players.values())
+    // Return full Player objects that match the interface requirements
+    const availablePlayers = Array.from(this.players.values())
       .filter(player => player.isAvailable && (!position || player.position === position));
+    
+    // Ensure all required properties are present
+    return availablePlayers.map(player => ({
+      ...player,
+      status: player.status ?? null,
+      fullName: player.fullName ?? null,
+      firstName: player.firstName ?? null,
+      lastName: player.lastName ?? null,
+      sleeperId: player.sleeperId ?? null,
+      espnId: player.espnId ?? null,
+      yahooId: player.yahooId ?? null,
+      rotowireId: player.rotowireId ?? null,
+      fantasyDataId: player.fantasyDataId ?? null,
+      rank: player.rank ?? null,
+      dynastyRank: player.dynastyRank ?? null,
+      startupDraftable: player.startupDraftable ?? null
+    }));
   }
 
   async createPlayer(player: InsertPlayer): Promise<Player> {
@@ -337,7 +369,40 @@ export class MemStorage implements IStorage {
     const newPlayer: Player = { 
       ...player, 
       id,
-      isAvailable: player.isAvailable ?? true 
+      isAvailable: player.isAvailable ?? true,
+      status: player.status ?? null,
+      fullName: player.fullName ?? null,
+      firstName: player.firstName ?? null,
+      lastName: player.lastName ?? null,
+      sleeperId: player.sleeperId ?? null,
+      espnId: player.espnId ?? null,
+      yahooId: player.yahooId ?? null,
+      rotowireId: player.rotowireId ?? null,
+      fantasyDataId: player.fantasyDataId ?? null,
+      rank: player.rank ?? null,
+      dynastyRank: player.dynastyRank ?? null,
+      startupDraftable: player.startupDraftable ?? null,
+      jerseyNumber: player.jerseyNumber ?? null,
+      age: player.age ?? null,
+      yearsExp: player.yearsExp ?? null,
+      height: player.height ?? null,
+      weight: player.weight ?? null,
+      college: player.college ?? null,
+      birthCountry: player.birthCountry ?? null,
+      injuryStatus: player.injuryStatus ?? null,
+      availability: player.availability ?? null,
+      depthChartPosition: player.depthChartPosition ?? null,
+      depthChartOrder: player.depthChartOrder ?? null,
+      imageUrl: player.imageUrl ?? null,
+      consistency: player.consistency ?? null,
+      matchupRating: player.matchupRating ?? null,
+      trend: player.trend ?? null,
+      ownership: player.ownership ?? null,
+      targetShare: player.targetShare ?? null,
+      redZoneTargets: player.redZoneTargets ?? null,
+      carries: player.carries ?? null,
+      snapCount: player.snapCount ?? null,
+      externalId: player.externalId ?? null
     };
     this.players.set(id, newPlayer);
     return newPlayer;
@@ -434,7 +499,15 @@ export class MemStorage implements IStorage {
   // Advanced Analytics - stubbed implementations
   async createMatchupAnalysis(analysis: InsertMatchupAnalysis): Promise<MatchupAnalysis> {
     const id = Date.now(); // Simple ID generation
-    const newAnalysis: MatchupAnalysis = { ...analysis, id, createdAt: new Date() };
+    const newAnalysis: MatchupAnalysis = { 
+      ...analysis, 
+      id, 
+      createdAt: new Date(),
+      projectedPoints: analysis.projectedPoints ?? null,
+      defenseRank: analysis.defenseRank ?? null,
+      weatherImpact: analysis.weatherImpact ?? null,
+      isHome: analysis.isHome ?? null
+    };
     return newAnalysis;
   }
 
@@ -445,7 +518,13 @@ export class MemStorage implements IStorage {
 
   async createLineupOptimization(optimization: InsertLineupOptimization): Promise<LineupOptimization> {
     const id = Date.now();
-    const newOptimization: LineupOptimization = { ...optimization, id, createdAt: new Date() };
+    const newOptimization: LineupOptimization = { 
+      ...optimization, 
+      id, 
+      createdAt: new Date(),
+      confidence: optimization.confidence ?? null,
+      factors: optimization.factors ?? null
+    };
     return newOptimization;
   }
 
@@ -455,7 +534,14 @@ export class MemStorage implements IStorage {
 
   async createTradeAnalysis(analysis: InsertTradeAnalysis): Promise<TradeAnalysis> {
     const id = Date.now();
-    const newAnalysis: TradeAnalysis = { ...analysis, id, createdAt: new Date() };
+    const newAnalysis: TradeAnalysis = { 
+      ...analysis, 
+      id, 
+      createdAt: new Date(),
+      tradeValue: analysis.tradeValue ?? null,
+      recommendation: analysis.recommendation ?? null,
+      reasoning: analysis.reasoning ?? null
+    };
     return newAnalysis;
   }
 
@@ -465,7 +551,13 @@ export class MemStorage implements IStorage {
 
   async createWaiverRecommendations(recommendation: InsertWaiverRecommendations): Promise<WaiverRecommendations> {
     const id = Date.now();
-    const newRecommendation: WaiverRecommendations = { ...recommendation, id, createdAt: new Date() };
+    const newRecommendation: WaiverRecommendations = { 
+      ...recommendation, 
+      id, 
+      createdAt: new Date(),
+      projectedImpact: recommendation.projectedImpact ?? null,
+      usageTrend: recommendation.usageTrend ?? null
+    };
     return newRecommendation;
   }
 
@@ -475,7 +567,17 @@ export class MemStorage implements IStorage {
 
   async createInjuryTracker(injury: InsertInjuryTracker): Promise<InjuryTracker> {
     const id = Date.now();
-    const newInjury: InjuryTracker = { ...injury, id, createdAt: new Date(), updatedAt: new Date() };
+    const newInjury: InjuryTracker = { 
+      ...injury, 
+      id, 
+      createdAt: new Date(), 
+      updatedAt: new Date(),
+      injuryType: injury.injuryType ?? null,
+      severity: injury.severity ?? null,
+      expectedReturn: injury.expectedReturn ?? null,
+      impactDescription: injury.impactDescription ?? null,
+      replacementSuggestions: injury.replacementSuggestions ?? null
+    };
     return newInjury;
   }
 
@@ -531,6 +633,51 @@ export class MemStorage implements IStorage {
   }
 
   async getIngestPayload(id: number): Promise<IngestPayload | undefined> {
+    return undefined;
+  }
+
+  // Missing UPH Bronze Layer interface methods (stubbed)
+  async getRawPayloads(filters?: {
+    source?: string;
+    status?: string;
+    season?: number;
+    week?: number;
+    jobId?: string;
+    endpoint?: string;
+    fromDate?: Date;
+    toDate?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<IngestPayload[]> {
+    return [];
+  }
+
+  async updatePayloadStatus(payloadId: number, status: string, errorMessage?: string): Promise<void> {
+    // Stub implementation - no-op for memory storage
+  }
+
+  async updateBatchPayloadStatus(payloadIds: number[], status: string): Promise<void> {
+    // Stub implementation - no-op for memory storage
+  }
+
+  async getDataSourceStats(source?: string): Promise<Array<{
+    source: string;
+    totalPayloads: number;
+    successfulPayloads: number;
+    failedPayloads: number;
+    pendingPayloads: number;
+    processingPayloads: number;
+    lastIngestDate: Date | null;
+    avgPayloadSize: number;
+  }>> {
+    return [];
+  }
+
+  async purgeOldPayloads(source: string, cutoffDate: Date): Promise<{ deletedCount: number }> {
+    return { deletedCount: 0 };
+  }
+
+  async checkPayloadDuplicate(source: string, checksum: string): Promise<IngestPayload | undefined> {
     return undefined;
   }
 
@@ -1177,6 +1324,111 @@ export class DatabaseStorage implements IStorage {
     return payload || undefined;
   }
 
+  // Missing UPH Bronze Layer interface methods (database implementations)
+  async getRawPayloads(filters?: {
+    source?: string;
+    status?: string;
+    season?: number;
+    week?: number;
+    jobId?: string;
+    endpoint?: string;
+    fromDate?: Date;
+    toDate?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<IngestPayload[]> {
+    let query = db.select().from(ingestPayloads);
+    
+    // Apply filters if provided
+    const conditions: any[] = [];
+    if (filters?.source) conditions.push(eq(ingestPayloads.source, filters.source as any));
+    if (filters?.status) conditions.push(eq(ingestPayloads.status, filters.status as any));
+    if (filters?.season) conditions.push(eq(ingestPayloads.season, filters.season));
+    if (filters?.week) conditions.push(eq(ingestPayloads.week, filters.week));
+    if (filters?.jobId) conditions.push(eq(ingestPayloads.jobId, filters.jobId));
+    if (filters?.endpoint) conditions.push(eq(ingestPayloads.endpoint, filters.endpoint));
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    let finalQuery = query;
+    if (filters?.limit) {
+      finalQuery = finalQuery.limit(filters.limit);
+    }
+    
+    if (filters?.offset) {
+      finalQuery = finalQuery.offset(filters.offset);
+    }
+    
+    return await finalQuery;
+  }
+
+  async updatePayloadStatus(payloadId: number, status: string, errorMessage?: string): Promise<void> {
+    const updates: any = { status };
+    if (errorMessage) updates.errorMessage = errorMessage;
+    
+    await db
+      .update(ingestPayloads)
+      .set(updates)
+      .where(eq(ingestPayloads.id, payloadId));
+  }
+
+  async updateBatchPayloadStatus(payloadIds: number[], status: string): Promise<void> {
+    // For batch updates, we'll update each payload individually for now
+    // In a real implementation, you might use a more efficient batch update
+    for (const payloadId of payloadIds) {
+      await this.updatePayloadStatus(payloadId, status);
+    }
+  }
+
+  async getDataSourceStats(source?: string): Promise<Array<{
+    source: string;
+    totalPayloads: number;
+    successfulPayloads: number;
+    failedPayloads: number;
+    pendingPayloads: number;
+    processingPayloads: number;
+    lastIngestDate: Date | null;
+    avgPayloadSize: number;
+  }>> {
+    // Basic stub implementation - in practice, you'd use SQL aggregations
+    const allPayloads = await this.getRawPayloads(source ? { source } : {});
+    
+    if (allPayloads.length === 0) return [];
+    
+    const stats = {
+      source: source || "all",
+      totalPayloads: allPayloads.length,
+      successfulPayloads: allPayloads.filter(p => p.status === "SUCCESS").length,
+      failedPayloads: allPayloads.filter(p => p.status === "FAILED").length,
+      pendingPayloads: allPayloads.filter(p => p.status === "PENDING").length,
+      processingPayloads: allPayloads.filter(p => p.status === "PROCESSING").length,
+      lastIngestDate: allPayloads.reduce((latest, p) => 
+        !latest || (p.ingestedAt && p.ingestedAt > latest) ? p.ingestedAt : latest, null as Date | null),
+      avgPayloadSize: allPayloads.reduce((sum, p) => sum + (p.recordCount || 0), 0) / allPayloads.length
+    };
+    
+    return [stats];
+  }
+
+  async purgeOldPayloads(source: string, cutoffDate: Date): Promise<{ deletedCount: number }> {
+    // This would delete payloads older than cutoffDate for the given source
+    // For now, return 0 as stub
+    return { deletedCount: 0 };
+  }
+
+  async checkPayloadDuplicate(source: string, checksum: string): Promise<IngestPayload | undefined> {
+    const [payload] = await db
+      .select()
+      .from(ingestPayloads)
+      .where(and(
+        eq(ingestPayloads.source, source as any),
+        eq(ingestPayloads.checksumHash, checksum)
+      ));
+    return payload || undefined;
+  }
+
   // UPH - Silver Layer operations (database implementations)
   async createMarketSignal(signal: Partial<MarketSignal>): Promise<MarketSignal> {
     const safeSignal = {
@@ -1207,19 +1459,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMarketSignals(canonicalPlayerId: string, signalType?: string): Promise<MarketSignal[]> {
-    const query = db
+    if (signalType) {
+      return await db
+        .select()
+        .from(marketSignals)
+        .where(and(
+          eq(marketSignals.canonicalPlayerId, canonicalPlayerId),
+          eq(marketSignals.signalType, signalType as any)
+        ));
+    }
+    
+    return await db
       .select()
       .from(marketSignals)
       .where(eq(marketSignals.canonicalPlayerId, canonicalPlayerId));
-    
-    if (signalType) {
-      return await query.where(and(
-        eq(marketSignals.canonicalPlayerId, canonicalPlayerId),
-        eq(marketSignals.signalType, signalType)
-      ));
-    }
-    
-    return await query;
   }
 
   async createInjury(injury: Partial<Injury>): Promise<Injury> {

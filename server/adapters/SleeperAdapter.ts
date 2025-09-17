@@ -99,11 +99,11 @@ export class SleeperAdapter {
    */
   private filterSafeHeaders(headers: Headers): Record<string, string> {
     const safeHeaders: Record<string, string> = {};
-    for (const [key, value] of headers.entries()) {
+    headers.forEach((value, key) => {
       if (this.SAFE_RESPONSE_HEADERS.includes(key.toLowerCase())) {
         safeHeaders[key] = value;
       }
-    }
+    });
     return safeHeaders;
   }
 
