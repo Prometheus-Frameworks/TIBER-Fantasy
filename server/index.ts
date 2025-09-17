@@ -40,6 +40,43 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // SCHEMA DRIFT DETECTION - CRITICAL DEPLOYMENT SAFETY CHECK
+  try {
+    console.log('🔒 Starting schema drift detection...');
+    
+    const { schemaDriftService } = await import('./services/SchemaDriftService');
+    
+    // Validate environment configuration first
+    const configValidation = schemaDriftService.validateConfig();
+    if (!configValidation.valid) {
+      console.error('❌ Schema service configuration issues:', configValidation.issues);
+      if (configValidation.issues.some(issue => issue.includes('DATABASE_URL'))) {
+        throw new Error('Critical configuration error: ' + configValidation.issues.join(', '));
+      } else {
+        // Log warnings but continue
+        configValidation.issues.forEach(issue => console.warn('⚠️', issue));
+      }
+    }
+    
+    // Run boot-time drift check and auto-migration
+    await schemaDriftService.checkAndMigrateOnBoot();
+    
+    console.log('✅ Schema drift detection completed - deployment safety confirmed');
+  } catch (error) {
+    console.error('💥 CRITICAL: Schema drift detection failed');
+    console.error('Error details:', error);
+    
+    // In production, we want to fail fast to prevent data corruption
+    if (process.env.NODE_ENV === 'production') {
+      console.error('🚨 BLOCKING PRODUCTION DEPLOYMENT due to schema safety concerns');
+      process.exit(1);
+    } else {
+      // In development, log error but continue (for development flexibility)
+      console.warn('⚠️ Schema drift check failed in development mode - continuing with caution');
+      console.warn('Consider setting OTC_AUTO_MIGRATE=true for automatic schema updates');
+    }
+  }
+
   // Initialize backend spine services with sample data
   try {
     console.log('🚀 Initializing backend spine services...');

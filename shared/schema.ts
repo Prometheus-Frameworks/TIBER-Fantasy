@@ -166,6 +166,36 @@ export const taskRuns = pgTable("task_runs", {
 }));
 
 // ========================================
+// SCHEMA REGISTRY - DRIFT DETECTION & SAFETY
+// ========================================
+
+// Schema Registry for drift detection and deployment safety
+export const schemaRegistry = pgTable("schema_registry", {
+  id: serial("id").primaryKey(),
+  appVersion: text("app_version").notNull(), // Application version
+  gitCommit: text("git_commit").notNull(), // Git commit hash for audit trail
+  drizzleTag: text("drizzle_tag").notNull(), // Drizzle schema version tag
+  appliedAt: timestamp("applied_at").defaultNow().notNull(), // When migration was applied
+  checksumSql: text("checksum_sql").notNull(), // Hash of generated SQL schema
+  
+  // Migration metadata
+  migrationSource: text("migration_source").default("auto"), // "auto" | "manual" | "rollback"
+  environment: text("environment"), // Environment where applied
+  notes: text("notes"), // Additional notes about the migration
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint on git commit to prevent duplicate entries
+  uniqueGitCommitIdx: uniqueIndex("uq_schema_registry_commit").on(table.gitCommit),
+  // Fast access to latest schema
+  appliedAtIdx: index("schema_registry_applied_at_idx").on(table.appliedAt),
+  // Environment and version tracking
+  envVersionIdx: index("schema_registry_env_version_idx").on(table.environment, table.appVersion),
+  // Migration source tracking
+  migrationSourceIdx: index("schema_registry_migration_source_idx").on(table.migrationSource),
+}));
+
+// ========================================
 // SILVER LAYER - NORMALIZED CANONICAL TABLES
 // ========================================
 
