@@ -98,6 +98,36 @@ export const ingestPayloads = pgTable("ingest_payloads", {
 // UPH JOB/TASK TRACKING - ORCHESTRATION STATE MANAGEMENT
 // ========================================
 
+// Dataset Versions - Track data versioning and commits for monitoring
+export const datasetVersions = pgTable("dataset_versions", {
+  id: serial("id").primaryKey(),
+  dataset: text("dataset").notNull(), // 'bronze_players','silver_players','gold_player_week', etc.
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  rowCount: integer("row_count").notNull(),
+  committedAt: timestamp("committed_at").defaultNow().notNull(),
+  source: text("source").notNull(), // 'sleeper','merge','recompute'
+}, (table) => ({
+  datasetSeasonWeekIdx: index("dataset_versions_dataset_season_week_idx").on(table.dataset, table.season, table.week),
+  committedAtIdx: index("dataset_versions_committed_at_idx").on(table.committedAt),
+  datasetSourceIdx: index("dataset_versions_dataset_source_idx").on(table.dataset, table.source),
+}));
+
+// Simple Job Runs for monitoring (simplified version alongside UPH jobRuns)
+export const monitoringJobRuns = pgTable("monitoring_job_runs", {
+  id: serial("id").primaryKey(),
+  jobName: text("job_name").notNull(),
+  status: text("status").notNull(), // 'success' | 'error'
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  finishedAt: timestamp("finished_at"),
+  durationMs: integer("duration_ms"),
+  details: jsonb("details"),
+}, (table) => ({
+  jobNameIdx: index("monitoring_job_runs_job_name_idx").on(table.jobName),
+  statusIdx: index("monitoring_job_runs_status_idx").on(table.status),
+  startedAtIdx: index("monitoring_job_runs_started_at_idx").on(table.startedAt),
+}));
+
 // Job Runs - Master job tracking for orchestration
 export const jobRuns = pgTable("job_runs", {
   jobId: text("job_id").primaryKey(), // Unique job identifier

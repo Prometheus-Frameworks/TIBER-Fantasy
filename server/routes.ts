@@ -89,6 +89,7 @@ import { createRagRouter, initRagOnBoot } from './routes/ragRoutes';
 import tiberMemoryRoutes from './routes/tiberMemoryRoutes';
 import rookieRisersRoutes from './routes/rookieRisersRoutes';
 import { registerPowerProcessingRoutes } from './routes/powerProcessing';
+import { monitoringService } from './services/MonitoringService';
 
 // Helper function for Player Compass sample data
 async function getSamplePlayersForCompass(position: string, limit: number = 20) {
@@ -151,6 +152,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       commit: 'main',
       pid: process.pid
     });
+  });
+
+  // ========================================
+  // MONITORING ENDPOINTS - HEALTH & METRICS
+  // ========================================
+
+  // Health endpoint - Basic system health
+  app.get('/healthz', async (req: Request, res: Response) => {
+    try {
+      const health = await monitoringService.getHealthStatus();
+      res.status(health.ok ? 200 : 503).json(health);
+    } catch (error) {
+      console.error('❌ [Health] Health check failed:', error);
+      res.status(503).json({
+        ok: false,
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Readiness endpoint - Comprehensive operational readiness
+  app.get('/readyz', async (req: Request, res: Response) => {
+    try {
+      const readiness = await monitoringService.getReadinessStatus();
+      res.status(readiness.ready ? 200 : 503).json(readiness);
+    } catch (error) {
+      console.error('❌ [Readiness] Readiness check failed:', error);
+      res.status(503).json({
+        ready: false,
+        status: 'not_ready',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Metrics endpoint - Prometheus format metrics
+  app.get('/metrics', async (req: Request, res: Response) => {
+    try {
+      const metrics = await monitoringService.getMetrics();
+      res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+      res.send(metrics);
+    } catch (error) {
+      console.error('❌ [Metrics] Metrics collection failed:', error);
+      res.status(500).json({
+        error: 'Metrics collection failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Metrics snapshot endpoint for debugging (JSON format)
+  app.get('/api/metrics-snapshot', async (req: Request, res: Response) => {
+    try {
+      const snapshot = await monitoringService.getMetricsSnapshot();
+      res.json(snapshot);
+    } catch (error) {
+      console.error('❌ [Metrics] Metrics snapshot failed:', error);
+      res.status(500).json({
+        error: 'Metrics snapshot failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
   });
 
   // Dynamic Week Detection endpoint
