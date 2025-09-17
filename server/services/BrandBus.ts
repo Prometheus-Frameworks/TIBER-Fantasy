@@ -23,6 +23,19 @@ import type {
   SignalMeta 
 } from '../../domain/events';
 
+// Forward declaration to avoid circular dependency
+declare class IntelligentScheduler {
+  onDatasetChange(dataset: string, season: number, week: number): Promise<void>;
+  triggerBrandRecompute(triggers: Array<{
+    dataset: string;
+    season: number;
+    week: number;
+    affectedBrands: string[];
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    reason: string;
+  }>): Promise<void>;
+}
+
 /**
  * BrandBus - Central event distribution and plugin management
  */
@@ -30,6 +43,9 @@ export class BrandBus {
   private plugins: Map<string, BrandPlugin> = new Map();
   private monitoring = MonitoringService.getInstance();
   private seasonService = new SeasonService();
+  
+  // Intelligent scheduling integration (lazy loaded to avoid circular dependency)
+  private intelligentScheduler: IntelligentScheduler | null = null;
   
   // Configuration
   private readonly MAX_CONCURRENT_PLUGINS = parseInt(process.env.BRAND_MAX_CONCURRENT || '5', 10);
@@ -363,6 +379,236 @@ export class BrandBus {
 
   private setupDefaultLogger(): void {
     console.log('🧠 [BrandBus] Initializing Brand Intelligence Hub...');
+  }
+
+  /**
+   * INTELLIGENT SCHEDULING INTEGRATION
+   * Methods for connecting with the IntelligentScheduler service
+   */
+
+  /**
+   * Initialize intelligent scheduling integration
+   * This should be called after both BrandBus and IntelligentScheduler are initialized
+   */
+  async initializeIntelligentScheduling(): Promise<void> {
+    try {
+      // Lazy load the IntelligentScheduler to avoid circular dependency
+      if (!this.intelligentScheduler) {
+        const { intelligentScheduler } = await import('./IntelligentScheduler');
+        this.intelligentScheduler = intelligentScheduler;
+        console.log('🧠 [BrandBus] Intelligent scheduling integration initialized');
+      }
+    } catch (error) {
+      console.warn('⚠️ [BrandBus] Failed to initialize intelligent scheduling:', error);
+      // Continue without intelligent scheduling if it fails
+    }
+  }
+
+  /**
+   * Enhanced event emission with intelligent scheduling hooks
+   * Called by intelligent scheduler to trigger brand recomputation
+   */
+  async emitWithIntelligentTrigger(
+    event: BusEvent,
+    trigger: {
+      reason: string;
+      priority: 'low' | 'medium' | 'high' | 'critical';
+      affectedBrands?: string[];
+    }
+  ): Promise<void> {
+    try {
+      console.log(`🧠 [BrandBus] Intelligent trigger for event ${event.type}: ${trigger.reason}`);
+      console.log(`   ⚡ Priority: ${trigger.priority}`);
+      
+      if (trigger.affectedBrands && trigger.affectedBrands.length > 0) {
+        console.log(`   🎯 Affected brands: ${trigger.affectedBrands.join(', ')}`);
+      }
+
+      // Emit the event normally
+      await this.emit(event);
+
+      // Notify intelligent scheduler that processing completed
+      await this.notifyIntelligentScheduler('brand_processing_completed', {
+        eventType: event.type,
+        season: event.season,
+        week: event.week,
+        trigger,
+        timestamp: new Date()
+      });
+
+      console.log(`✅ [BrandBus] Intelligent trigger completed for ${event.type}`);
+
+    } catch (error) {
+      console.error(`❌ [BrandBus] Intelligent trigger failed for ${event.type}:`, error);
+      
+      // Notify intelligent scheduler of failure
+      await this.notifyIntelligentScheduler('brand_processing_failed', {
+        eventType: event.type,
+        season: event.season,
+        week: event.week,
+        trigger,
+        error: (error as Error).message,
+        timestamp: new Date()
+      });
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Trigger brand recomputation for specific datasets intelligently
+   * Called by IntelligentScheduler when upstream data changes
+   */
+  async triggerIntelligentBrandRecompute(triggers: Array<{
+    dataset: string;
+    season: number;
+    week: number;
+    affectedBrands: string[];
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    reason: string;
+  }>): Promise<void> {
+    console.log(`🎯 [BrandBus] Triggering intelligent brand recompute for ${triggers.length} triggers`);
+
+    try {
+      // Initialize intelligent scheduling if not already done
+      await this.initializeIntelligentScheduling();
+
+      // Process each trigger
+      for (const trigger of triggers) {
+        console.log(`🎯 [BrandBus] Processing brand recompute trigger: ${trigger.dataset}`);
+        console.log(`   🏷️ Affected brands: ${trigger.affectedBrands.join(', ')}`);
+        console.log(`   ⚡ Priority: ${trigger.priority}`);
+        console.log(`   📋 Reason: ${trigger.reason}`);
+
+        // Create event for brand recomputation
+        const recomputeEvent: BusEvent = {
+          type: 'DATASET.COMMITTED',
+          source: 'intelligent_scheduler',
+          dataset: trigger.dataset,
+          season: trigger.season,
+          week: trigger.week,
+          rowCount: 0, // Will be filled by the actual processing
+          timestamp: new Date()
+        };
+
+        // Emit with intelligent trigger context
+        await this.emitWithIntelligentTrigger(recomputeEvent, {
+          reason: trigger.reason,
+          priority: trigger.priority,
+          affectedBrands: trigger.affectedBrands
+        });
+
+        console.log(`✅ [BrandBus] Brand recompute trigger completed: ${trigger.dataset}`);
+      }
+
+      console.log(`🎯 [BrandBus] All intelligent brand recompute triggers completed successfully`);
+
+    } catch (error) {
+      console.error(`❌ [BrandBus] Intelligent brand recompute failed:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Notify intelligent scheduler of brand processing events
+   */
+  async notifyIntelligentScheduler(
+    eventType: 'brand_processing_completed' | 'brand_processing_failed',
+    data: any
+  ): Promise<void> {
+    try {
+      // Initialize intelligent scheduling if not already done
+      await this.initializeIntelligentScheduling();
+      
+      if (this.intelligentScheduler) {
+        console.log(`📡 [BrandBus] Notifying intelligent scheduler: ${eventType}`);
+        
+        // For now, we don't have a direct notification method in IntelligentScheduler
+        // This would be implemented as part of a more complete integration
+        // await this.intelligentScheduler.onBrandProcessingEvent(eventType, data);
+      }
+    } catch (error) {
+      console.warn('⚠️ [BrandBus] Failed to notify intelligent scheduler:', error);
+      // Don't throw - notifications should not fail main processing
+    }
+  }
+
+  /**
+   * Get intelligent scheduling status for monitoring
+   */
+  async getIntelligentSchedulingStatus(): Promise<{
+    enabled: boolean;
+    lastBrandTrigger?: Date;
+    schedulerHealth?: any;
+  }> {
+    try {
+      await this.initializeIntelligentScheduling();
+
+      if (this.intelligentScheduler) {
+        const schedulerStatus = await this.intelligentScheduler.getSchedulerStatus();
+        
+        return {
+          enabled: true,
+          schedulerHealth: schedulerStatus
+        };
+      } else {
+        return { enabled: false };
+      }
+    } catch (error) {
+      console.warn('⚠️ [BrandBus] Failed to get intelligent scheduling status:', error);
+      return { enabled: false };
+    }
+  }
+
+  /**
+   * Determine which brands are affected by a dataset change
+   * This provides intelligent mapping of datasets to brand signals
+   */
+  getBrandsAffectedByDataset(dataset: string): string[] {
+    // Mapping of datasets to the brands they affect
+    const datasetBrandMap: Record<string, string[]> = {
+      'gold_player_week': ['rookie_risers', 'dynasty', 'redraft', 'trade_analyzer'],
+      'injuries': ['rookie_risers', 'waiver_wire', 'lineup_optimizer'],
+      'market_signals': ['trade_analyzer', 'market_trends'],
+      'consensus_rankings': ['redraft', 'dynasty', 'lineup_optimizer'],
+      'silver_players': ['rookie_risers', 'dynasty'],
+      'silver_game_logs': ['lineup_optimizer', 'performance_tracker'],
+      'bronze_players': ['all'], // Bronze data affects all brands potentially
+      'bronze_game_logs': ['performance_tracker', 'lineup_optimizer']
+    };
+
+    const affectedBrands = datasetBrandMap[dataset] || [];
+    
+    // Handle 'all' case by returning all registered plugin keys
+    if (affectedBrands.includes('all')) {
+      return Array.from(this.plugins.keys());
+    }
+    
+    // Filter to only include brands that are actually registered
+    return affectedBrands.filter(brand => this.plugins.has(brand));
+  }
+
+  /**
+   * Get processing priority for a dataset change
+   */
+  getProcessingPriority(dataset: string, staleness: 'fresh' | 'stale' | 'critical'): 'low' | 'medium' | 'high' | 'critical' {
+    // High-impact datasets get higher priority
+    const highImpactDatasets = ['gold_player_week', 'injuries', 'consensus_rankings'];
+    const mediumImpactDatasets = ['silver_players', 'market_signals'];
+    
+    if (staleness === 'critical') {
+      return 'critical';
+    }
+    
+    if (staleness === 'stale' && highImpactDatasets.includes(dataset)) {
+      return 'high';
+    }
+    
+    if (staleness === 'stale' && mediumImpactDatasets.includes(dataset)) {
+      return 'medium';
+    }
+    
+    return 'low';
   }
 }
 

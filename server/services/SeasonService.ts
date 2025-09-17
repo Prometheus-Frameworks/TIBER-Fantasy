@@ -100,7 +100,7 @@ export class SeasonService {
     const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
     try {
-      const response = await fetch(`${this.BASE_URL}/state`, {
+      const response = await fetch(`${this.BASE_URL}/state/nfl`, {
         signal: controller.signal,
         headers: {
           'User-Agent': 'OnTheClock/1.0'

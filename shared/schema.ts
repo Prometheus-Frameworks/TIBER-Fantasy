@@ -210,6 +210,101 @@ export const taskRuns = pgTable("task_runs", {
 }));
 
 // ========================================
+// INTELLIGENT SCHEDULING - STATE-AWARE PROCESSING
+// ========================================
+
+// Trigger type enum for intelligent scheduling
+export const scheduleTriggerTypeEnum = pgEnum("schedule_trigger_type", [
+  "data_freshness",
+  "upstream_change", 
+  "sla_adjustment",
+  "brand_recompute",
+  "manual_trigger"
+]);
+
+// Schedule action enum for intelligent scheduling
+export const scheduleActionEnum = pgEnum("schedule_action", [
+  "triggered_processing",
+  "adjusted_frequency", 
+  "skipped_stale",
+  "backoff_applied",
+  "brand_recompute"
+]);
+
+// Intelligent Schedule State - Track dynamic scheduling state and frequency
+export const intelligentScheduleState = pgTable("intelligent_schedule_state", {
+  id: serial("id").primaryKey(),
+  scheduleKey: text("schedule_key").notNull().unique(), // 'incremental', 'weekly', 'brand_recompute', etc.
+  
+  // Scheduling timing
+  lastRun: timestamp("last_run"),
+  nextRun: timestamp("next_run"),
+  frequencyMs: integer("frequency_ms").notNull(), // Dynamic frequency in milliseconds
+  
+  // Performance and load tracking
+  systemLoad: jsonb("system_load"), // Current system load metrics
+  slaMetrics: jsonb("sla_metrics"), // SLA performance data
+  
+  // Trigger context
+  triggerSource: scheduleTriggerTypeEnum("trigger_source").notNull(), // What caused last schedule change
+  isActive: boolean("is_active").notNull().default(true),
+  
+  // Stats tracking
+  totalRuns: integer("total_runs").notNull().default(0),
+  successfulRuns: integer("successful_runs").notNull().default(0),
+  averageExecutionMs: integer("average_execution_ms").notNull().default(0),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  scheduleKeyIdx: index("intelligent_schedule_state_key_idx").on(table.scheduleKey),
+  lastRunIdx: index("intelligent_schedule_state_last_run_idx").on(table.lastRun),
+  nextRunIdx: index("intelligent_schedule_state_next_run_idx").on(table.nextRun),
+  triggerSourceIdx: index("intelligent_schedule_state_trigger_source_idx").on(table.triggerSource),
+  activeIdx: index("intelligent_schedule_state_active_idx").on(table.isActive),
+  updatedAtIdx: index("intelligent_schedule_state_updated_at_idx").on(table.updatedAt),
+}));
+
+// Schedule Triggers - Track all processing triggers and outcomes
+export const scheduleTriggers = pgTable("schedule_triggers", {
+  id: serial("id").primaryKey(),
+  
+  // Trigger identification
+  triggerType: scheduleTriggerTypeEnum("trigger_type").notNull(), // Type of trigger
+  triggerSource: text("trigger_source").notNull(), // Specific dataset, event, or metric that triggered
+  scheduleKey: text("schedule_key").notNull(), // Which schedule was affected
+  
+  // Action and outcome
+  actionTaken: scheduleActionEnum("action_taken").notNull(), // What action was performed
+  executionTimeMs: integer("execution_time_ms"), // How long execution took
+  success: boolean("success").notNull(),
+  errorDetails: text("error_details"), // Error information if failed
+  
+  // Context data
+  triggerData: jsonb("trigger_data"), // Additional context about the trigger
+  scheduleStateBefore: jsonb("schedule_state_before"), // State before trigger
+  scheduleStateAfter: jsonb("schedule_state_after"), // State after trigger
+  
+  // References
+  jobId: text("job_id"), // Reference to job_runs if processing was triggered
+  season: integer("season"), // Season context if applicable
+  week: integer("week"), // Week context if applicable
+  
+  // Timestamps
+  triggeredAt: timestamp("triggered_at").notNull().defaultNow(),
+}, (table) => ({
+  triggerTypeIdx: index("schedule_triggers_trigger_type_idx").on(table.triggerType),
+  triggerSourceIdx: index("schedule_triggers_trigger_source_idx").on(table.triggerSource),
+  scheduleKeyIdx: index("schedule_triggers_schedule_key_idx").on(table.scheduleKey),
+  actionTakenIdx: index("schedule_triggers_action_taken_idx").on(table.actionTaken),
+  successIdx: index("schedule_triggers_success_idx").on(table.success),
+  triggeredAtIdx: index("schedule_triggers_triggered_at_idx").on(table.triggeredAt),
+  jobIdIdx: index("schedule_triggers_job_id_idx").on(table.jobId),
+  seasonWeekIdx: index("schedule_triggers_season_week_idx").on(table.season, table.week),
+}));
+
+// ========================================
 // SCHEMA REGISTRY - DRIFT DETECTION & SAFETY
 // ========================================
 

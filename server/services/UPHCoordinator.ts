@@ -39,6 +39,11 @@ import { PlayerIdentityService } from './PlayerIdentityService';
 import { QualityGateValidator, qualityGateValidator, type QualityValidationResult } from './quality/QualityGateValidator';
 import { DataLineageTracker, dataLineageTracker } from './quality/DataLineageTracker';
 
+// Forward declaration to avoid circular dependency
+declare class IntelligentScheduler {
+  onDatasetChange(dataset: string, season: number, week: number): Promise<void>;
+}
+
 // Temporary interface definition since LineageTrackingRequest type isn't available
 interface LineageTrackingRequest {
   jobId: string;
@@ -200,6 +205,9 @@ export class UPHCoordinator {
   private identityService: PlayerIdentityService;
   private qualityValidator: QualityGateValidator;
   private lineageTracker: DataLineageTracker;
+  
+  // Intelligent scheduling integration (lazy loaded to avoid circular dependency)
+  private intelligentScheduler: IntelligentScheduler | null = null;
   
   // Processing configuration
   private readonly DEFAULT_BATCH_SIZE = 50;
@@ -1791,6 +1799,126 @@ export class UPHCoordinator {
         warningRules: [],
         criticalIssues: [`Quality gate execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`]
       };
+    }
+  }
+
+  /**
+   * INTELLIGENT SCHEDULING INTEGRATION
+   * Methods for connecting with the IntelligentScheduler service
+   */
+
+  /**
+   * Initialize intelligent scheduling integration
+   * This should be called after both UPHCoordinator and IntelligentScheduler are initialized
+   */
+  async initializeIntelligentScheduling(): Promise<void> {
+    try {
+      // Lazy load the IntelligentScheduler to avoid circular dependency
+      if (!this.intelligentScheduler) {
+        const { intelligentScheduler } = await import('./IntelligentScheduler');
+        this.intelligentScheduler = intelligentScheduler;
+        console.log('🧠 [UPHCoordinator] Intelligent scheduling integration initialized');
+      }
+    } catch (error) {
+      console.warn('⚠️ [UPHCoordinator] Failed to initialize intelligent scheduling:', error);
+      // Continue without intelligent scheduling if it fails
+    }
+  }
+
+  /**
+   * Notify intelligent scheduler of dataset changes
+   * Called automatically after successful data processing
+   */
+  async notifyDatasetChange(dataset: string, season: number, week: number): Promise<void> {
+    try {
+      // Initialize intelligent scheduling if not already done
+      await this.initializeIntelligentScheduling();
+      
+      if (this.intelligentScheduler) {
+        console.log(`📡 [UPHCoordinator] Notifying intelligent scheduler of dataset change: ${dataset}`);
+        await this.intelligentScheduler.onDatasetChange(dataset, season, week);
+      }
+    } catch (error) {
+      console.warn('⚠️ [UPHCoordinator] Failed to notify intelligent scheduler:', error);
+      // Don't throw - dataset change notifications should not fail processing
+    }
+  }
+
+  /**
+   * Enhanced job completion with intelligent scheduling hooks
+   * Called after successful job completion to trigger intelligent scheduling
+   */
+  async completeJobWithIntelligentHooks(
+    jobId: string,
+    result: JobResult,
+    affectedDatasets: Array<{ dataset: string; season: number; week: number }>
+  ): Promise<void> {
+    try {
+      console.log(`🔄 [UPHCoordinator] Completing job with intelligent hooks: ${jobId}`);
+
+      // Mark job as completed
+      await this.markJobCompleted(jobId, result);
+
+      // Notify intelligent scheduler of all affected datasets
+      for (const { dataset, season, week } of affectedDatasets) {
+        await this.notifyDatasetChange(dataset, season, week);
+      }
+
+      console.log(`✅ [UPHCoordinator] Job completed with intelligent hooks: ${jobId}`);
+
+    } catch (error) {
+      console.error(`❌ [UPHCoordinator] Failed to complete job with intelligent hooks:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get intelligent scheduling status for monitoring
+   */
+  async getIntelligentSchedulingStatus(): Promise<{
+    enabled: boolean;
+    lastDatasetNotification?: Date;
+    schedulerHealth?: any;
+  }> {
+    try {
+      await this.initializeIntelligentScheduling();
+
+      if (this.intelligentScheduler) {
+        const schedulerStatus = await this.intelligentScheduler.getSchedulerStatus();
+        
+        return {
+          enabled: true,
+          schedulerHealth: schedulerStatus
+        };
+      } else {
+        return { enabled: false };
+      }
+    } catch (error) {
+      console.warn('⚠️ [UPHCoordinator] Failed to get intelligent scheduling status:', error);
+      return { enabled: false };
+    }
+  }
+
+  /**
+   * Helper method to mark a job as completed
+   */
+  private async markJobCompleted(jobId: string, result: JobResult): Promise<void> {
+    try {
+      await db
+        .update(jobRuns)
+        .set({
+          status: result.status as any,
+          endedAt: new Date(),
+          stats: result.stats as any,
+          errorMessage: result.errorDetails?.join('; ') || null,
+          updatedAt: new Date()
+        })
+        .where(eq(jobRuns.jobId, jobId));
+
+      console.log(`✅ [UPHCoordinator] Job marked as completed: ${jobId}`);
+    } catch (error) {
+      console.error(`❌ [UPHCoordinator] Failed to mark job as completed:`, error);
+      throw error;
     }
   }
 }
