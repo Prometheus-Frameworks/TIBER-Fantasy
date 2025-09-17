@@ -38,6 +38,35 @@ export const ingestStatusEnum = pgEnum("ingest_status", [
 ]);
 
 // ========================================
+// UPH JOB/TASK TRACKING ENUMS
+// ========================================
+
+// UPH Job status enum for orchestration tracking
+export const uphJobStatusEnum = pgEnum("uph_job_status", [
+  "PENDING",
+  "RUNNING", 
+  "SUCCESS",
+  "FAILED",
+  "SKIPPED"
+]);
+
+// UPH Task type enum for processing pipeline tasks
+export const uphTaskTypeEnum = pgEnum("uph_task_type", [
+  "BRONZE_INGEST",
+  "SILVER_TRANSFORM", 
+  "GOLD_FACTS",
+  "QUALITY_GATE"
+]);
+
+// UPH Job type enum for different job categories
+export const uphJobTypeEnum = pgEnum("uph_job_type", [
+  "WEEKLY",
+  "SEASON",
+  "BACKFILL",
+  "INCREMENTAL"
+]);
+
+// ========================================
 // BRONZE LAYER - RAW DATA STORAGE
 // ========================================
 
@@ -63,6 +92,77 @@ export const ingestPayloads = pgTable("ingest_payloads", {
   statusIdx: index("ingest_status_idx").on(table.status),
   jobIdIdx: index("ingest_job_id_idx").on(table.jobId),
   uniqueIngestion: unique("ingest_unique").on(table.source, table.endpoint, table.checksumHash),
+}));
+
+// ========================================
+// UPH JOB/TASK TRACKING - ORCHESTRATION STATE MANAGEMENT
+// ========================================
+
+// Job Runs - Master job tracking for orchestration
+export const jobRuns = pgTable("job_runs", {
+  jobId: text("job_id").primaryKey(), // Unique job identifier
+  type: uphJobTypeEnum("type").notNull(), // Job type (WEEKLY, SEASON, BACKFILL, INCREMENTAL)
+  status: uphJobStatusEnum("status").notNull().default("PENDING"), // Current job status
+  
+  // Processing scope
+  season: integer("season"), // Season being processed (null for cross-season jobs)
+  week: integer("week"), // Week being processed (null for season-level jobs)
+  sources: text("sources").array().default([]), // Data sources involved ["sleeper", "nfl_data_py"]
+  
+  // Execution tracking
+  startedAt: timestamp("started_at"),
+  endedAt: timestamp("ended_at"),
+  attempt: integer("attempt").notNull().default(1), // Retry attempt number
+  
+  // Job statistics and metadata
+  stats: jsonb("stats"), // Job-level statistics {recordsProcessed, errors, warnings, etc}
+  errorMessage: text("error_message"), // Error details if failed
+  metadata: jsonb("metadata"), // Additional job context and configuration
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  statusIdx: index("job_runs_status_idx").on(table.status),
+  typeIdx: index("job_runs_type_idx").on(table.type),
+  seasonWeekIdx: index("job_runs_season_week_idx").on(table.season, table.week),
+  startedAtIdx: index("job_runs_started_at_idx").on(table.startedAt),
+  createdAtIdx: index("job_runs_created_at_idx").on(table.createdAt),
+  statusStartedIdx: index("job_runs_status_started_idx").on(table.status, table.startedAt),
+}));
+
+// Task Runs - Individual task tracking within jobs
+export const taskRuns = pgTable("task_runs", {
+  id: serial("id").primaryKey(),
+  jobId: text("job_id").notNull().references(() => jobRuns.jobId, { 
+    onDelete: "cascade", 
+    onUpdate: "cascade" 
+  }), // Parent job reference
+  taskType: uphTaskTypeEnum("task_type").notNull(), // Task type (BRONZE_INGEST, SILVER_TRANSFORM, etc)
+  status: uphJobStatusEnum("status").notNull().default("PENDING"), // Task status
+  
+  // Task scope and context
+  scope: jsonb("scope"), // Task-specific scope information {source, tables, filters}
+  
+  // Execution tracking
+  startedAt: timestamp("started_at"),
+  endedAt: timestamp("ended_at"),
+  attempt: integer("attempt").notNull().default(1), // Retry attempt number
+  
+  // Task statistics and error tracking
+  stats: jsonb("stats"), // Task-level statistics {recordsProcessed, transformations, quality_checks}
+  errorMessage: text("error_message"), // Detailed error information if failed
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  jobIdIdx: index("task_runs_job_id_idx").on(table.jobId),
+  statusIdx: index("task_runs_status_idx").on(table.status),
+  taskTypeIdx: index("task_runs_task_type_idx").on(table.taskType),
+  jobTaskIdx: index("task_runs_job_task_idx").on(table.jobId, table.taskType),
+  startedAtIdx: index("task_runs_started_at_idx").on(table.startedAt),
+  statusStartedIdx: index("task_runs_status_started_idx").on(table.status, table.startedAt),
 }));
 
 // ========================================
@@ -640,6 +740,18 @@ export const insertInjuryTrackerSchema = createInsertSchema(injuryTracker).omit(
   updatedAt: true,
 });
 
+// UPH Job/Task Tracking Insert Schemas
+export const insertJobRunsSchema = createInsertSchema(jobRuns).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTaskRunsSchema = createInsertSchema(taskRuns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Fantasy Moves Tracking Tables
 export const fantasyMoves = pgTable("fantasy_moves", {
   id: serial("id").primaryKey(),
@@ -815,6 +927,10 @@ export type FantasyMove = typeof fantasyMoves.$inferSelect;
 export type DraftPick = typeof draftPicks.$inferSelect;
 export type PlayerValueHistory = typeof playerValueHistory.$inferSelect;
 
+// UPH Job/Task Tracking Types
+export type JobRuns = typeof jobRuns.$inferSelect;
+export type TaskRuns = typeof taskRuns.$inferSelect;
+
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
 export type InsertTeamPlayer = z.infer<typeof insertTeamPlayerSchema>;
@@ -828,6 +944,10 @@ export type InsertInjuryTracker = z.infer<typeof insertInjuryTrackerSchema>;
 export type InsertMarketData = z.infer<typeof insertMarketDataSchema>;
 export type InsertValueArbitrage = z.infer<typeof insertValueArbitrageSchema>;
 export type InsertMetricCorrelations = z.infer<typeof insertMetricCorrelationsSchema>;
+
+// UPH Job/Task Tracking Insert Types
+export type InsertJobRuns = z.infer<typeof insertJobRunsSchema>;
+export type InsertTaskRuns = z.infer<typeof insertTaskRunsSchema>;
 
 // Game Logs types
 export type GameLog = typeof gameLogs.$inferSelect;

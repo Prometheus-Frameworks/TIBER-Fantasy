@@ -17,7 +17,14 @@ Intelligence Feed System:
 - Ready to receive meaningful intel updates during regular season
 
 ## System Architecture
-The platform is built with a modular Flask backend for core logic and API endpoints, and a React 18 frontend utilizing TypeScript, Tailwind CSS, TanStack Query, and shadcn/ui for a scalable and responsive user experience. UI/UX prioritizes clean, responsive design with color-coded tier systems, interactive elements, and mobile optimization, including Next.js-inspired tab-based navigation.
+**UNIFIED PLAYER HUB (UPH)** - The platform is now built on a comprehensive 3-tier ELT architecture providing enterprise-grade data processing and analytics for fantasy football. The system transforms raw data from multiple sources into clean, enriched analytics facts through Bronze (raw data storage) → Silver (normalized canonical tables) → Gold (advanced analytics facts) layers.
+
+**Core Infrastructure:**
+- **Node.js/TypeScript Backend**: Express.js server with complete ELT pipeline
+- **React 18 Frontend**: TypeScript, Tailwind CSS, TanStack Query, shadcn/ui
+- **PostgreSQL Database**: Production-ready with Drizzle ORM and comprehensive indexing
+- **Cross-Platform Player Identity**: Unified 11,400+ player resolution across Sleeper, ESPN, Yahoo
+- **Enterprise Quality System**: Multi-dimensional validation, data lineage tracking, confidence scoring
 
 **Core Features & Design Patterns:**
 
