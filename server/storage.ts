@@ -112,6 +112,32 @@ export interface IStorage {
   // UPH - Bronze Layer operations
   createIngestPayload(payload: Partial<IngestPayload>): Promise<IngestPayload>;
   getIngestPayload(id: number): Promise<IngestPayload | undefined>;
+  getRawPayloads(filters?: {
+    source?: string;
+    status?: string;
+    season?: number;
+    week?: number;
+    jobId?: string;
+    endpoint?: string;
+    fromDate?: Date;
+    toDate?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<IngestPayload[]>;
+  updatePayloadStatus(payloadId: number, status: string, errorMessage?: string): Promise<void>;
+  updateBatchPayloadStatus(payloadIds: number[], status: string): Promise<void>;
+  getDataSourceStats(source?: string): Promise<Array<{
+    source: string;
+    totalPayloads: number;
+    successfulPayloads: number;
+    failedPayloads: number;
+    pendingPayloads: number;
+    processingPayloads: number;
+    lastIngestDate: Date | null;
+    avgPayloadSize: number;
+  }>>;
+  purgeOldPayloads(source: string, cutoffDate: Date): Promise<{ deletedCount: number }>;
+  checkPayloadDuplicate(source: string, checksum: string): Promise<IngestPayload | undefined>;
   
   // UPH - Silver Layer operations
   createMarketSignal(signal: Partial<MarketSignal>): Promise<MarketSignal>;

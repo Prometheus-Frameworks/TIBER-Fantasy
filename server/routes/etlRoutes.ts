@@ -10,6 +10,10 @@ import { nightlyBuysSellsETL } from '../etl/nightlyBuysSellsUpdate';
 import { getCurrentNFLWeek } from '../cron/weeklyUpdate';
 import { playerIdentityService } from '../services/PlayerIdentityService';
 import { playerIdentityMigration } from '../services/PlayerIdentityMigration';
+// Bronze Layer integrations
+import { bronzeLayerService } from '../services/BronzeLayerService';
+import { sleeperAdapter } from '../adapters/SleeperAdapter';
+import { ecrAdapter } from '../adapters/ECRAdapter';
 
 const router = Router();
 
@@ -518,6 +522,507 @@ router.delete('/clear-week', async (req: Request, res: Response) => {
       success: false,
       message: 'Clear week data failed',
       error: errorMessage
+    });
+  }
+});
+
+// ========================================
+// BRONZE LAYER ETL INTEGRATION ENDPOINTS
+// ========================================
+
+/**
+ * POST /api/etl/bronze-ingest
+ * Trigger Bronze Layer raw data ingestion as part of ETL pipeline
+ * Integrates raw data collection with downstream processing
+ */
+router.post('/bronze-ingest', async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  
+  try {
+    console.log(`🔄 [ETL-Bronze] Raw data ingestion triggered by admin from ${req.ip}`);
+    
+    const { 
+      sources = ['sleeper'], // Default to safe source
+      season, 
+      week,
+      mockData = false,
+      jobId
+    } = req.body;
+
+    const targetSeason = season || new Date().getFullYear();
+    const targetWeek = week || parseInt(getCurrentNFLWeek());
+    const etlJobId = jobId || `etl_bronze_${targetSeason}_w${targetWeek}_${Date.now()}`;
+
+    console.log(`📊 Processing Bronze Layer ingestion: Sources [${sources.join(', ')}], Season ${targetSeason}, Week ${targetWeek}`);
+
+    const results: Record<string, any> = {};
+    const errors: Record<string, string> = {};
+
+    // Ingest from Sleeper if requested
+    if (sources.includes('sleeper')) {
+      try {
+        console.log(`🔄 Ingesting Sleeper data...`);
+        const sleeperResult = await sleeperAdapter.ingestFullCycle({
+          season: targetSeason,
+          week: targetWeek,
+          jobId: `${etlJobId}_sleeper`,
+          includeTrending: true,
+          includeStats: true
+        });
+        results.sleeper = sleeperResult;
+        
+        // Mark payloads as processing in ETL context
+        await bronzeLayerService.updatePayloadStatus(sleeperResult.playerPayloadId, 'PROCESSING');
+        if (sleeperResult.trendingPayloadId) {
+          await bronzeLayerService.updatePayloadStatus(sleeperResult.trendingPayloadId, 'PROCESSING');
+        }
+        
+        console.log(`✅ Sleeper ingestion completed: Player payload ${sleeperResult.playerPayloadId}`);
+      } catch (error) {
+        errors.sleeper = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`❌ Sleeper ingestion failed:`, error);
+      }
+    }
+
+    // Ingest from ECR if requested
+    if (sources.includes('ecr')) {
+      try {
+        console.log(`🔄 Ingesting ECR data...`);
+        const ecrResult = await ecrAdapter.ingestFullCycle({
+          season: targetSeason,
+          week: targetWeek,
+          jobId: `${etlJobId}_ecr`,
+          mockData,
+          positions: ['QB', 'RB', 'WR', 'TE'],
+          includeADP: true
+        });
+        results.ecr = ecrResult;
+        
+        // Mark ECR payloads as processing
+        for (const payloadId of ecrResult.rankingsPayloadIds) {
+          await bronzeLayerService.updatePayloadStatus(payloadId, 'PROCESSING');
+        }
+        
+        console.log(`✅ ECR ingestion completed: ${ecrResult.rankingsPayloadIds.length} ranking payloads`);
+      } catch (error) {
+        errors.ecr = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`❌ ECR ingestion failed:`, error);
+      }
+    }
+
+    const duration = Date.now() - startTime;
+    const successCount = Object.keys(results).length;
+    const errorCount = Object.keys(errors).length;
+
+    console.log(`✅ [ETL-Bronze] Raw data ingestion completed in ${duration}ms`);
+    console.log(`   📊 Successful sources: ${successCount} | Failed sources: ${errorCount}`);
+
+    res.status(200).json({
+      success: successCount > 0,
+      message: `Bronze Layer ingestion completed: ${successCount} successful, ${errorCount} failed`,
+      data: {
+        results,
+        errors,
+        etlJobId,
+        season: targetSeason,
+        week: targetWeek,
+        duration,
+        summary: {
+          sourcesRequested: sources.length,
+          sourcesSuccessful: successCount,
+          sourcesFailed: errorCount
+        }
+      }
+    });
+
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    console.error(`❌ [ETL-Bronze] Raw data ingestion failed:`, error);
+
+    res.status(500).json({
+      success: false,
+      message: 'Bronze Layer ingestion failed',
+      error: errorMessage,
+      duration
+    });
+  }
+});
+
+/**
+ * POST /api/etl/bronze-to-silver
+ * Process Bronze Layer raw payloads into Silver Layer normalized data
+ * Connects raw data storage to canonical data processing
+ */
+router.post('/bronze-to-silver', async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  
+  try {
+    console.log(`🔄 [ETL-Bronze] Bronze to Silver processing triggered by admin from ${req.ip}`);
+    
+    const { 
+      source,
+      status = 'PROCESSING',
+      season,
+      week,
+      limit = 100,
+      processAll = false
+    } = req.body;
+
+    const targetSeason = season || new Date().getFullYear();
+    const targetWeek = week;
+
+    console.log(`📊 Processing Bronze to Silver: Source [${source || 'all'}], Status [${status}], Season ${targetSeason}${targetWeek ? `, Week ${targetWeek}` : ''}`);
+
+    // Get raw payloads ready for processing
+    const payloads = await bronzeLayerService.getRawPayloads({
+      source,
+      status: status as any,
+      season: targetSeason,
+      week: targetWeek,
+      limit: processAll ? undefined : limit
+    });
+
+    console.log(`📊 Found ${payloads.length} payloads to process`);
+
+    if (payloads.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No payloads found for processing',
+        data: {
+          processed: 0,
+          source: source || 'all',
+          status,
+          season: targetSeason,
+          week: targetWeek
+        }
+      });
+    }
+
+    let processed = 0;
+    let errors = 0;
+    const processingResults: Array<{ payloadId: number; source: string; status: string; error?: string }> = [];
+
+    // Process each payload
+    for (const payload of payloads) {
+      try {
+        console.log(`🔄 Processing payload ${payload.id} from ${payload.source}...`);
+        
+        // Mark as processing
+        await bronzeLayerService.updatePayloadStatus(payload.id, 'PROCESSING');
+        
+        // Process based on source type
+        if (payload.source === 'sleeper') {
+          // Process Sleeper data - placeholder for Silver Layer processing
+          console.log(`📊 Processing Sleeper payload ${payload.id} with ${payload.recordCount} records`);
+          // TODO: Implement Silver Layer processing for Sleeper data
+          
+        } else if (payload.source === 'fantasypros') {
+          // Process ECR data - placeholder for Silver Layer processing
+          console.log(`📊 Processing FantasyPros payload ${payload.id} with ${payload.recordCount} records`);
+          // TODO: Implement Silver Layer processing for ECR data
+        }
+        
+        // Mark as successful for now (placeholder)
+        await bronzeLayerService.updatePayloadStatus(payload.id, 'SUCCESS');
+        
+        processingResults.push({
+          payloadId: payload.id,
+          source: payload.source,
+          status: 'SUCCESS'
+        });
+        
+        processed++;
+        
+      } catch (error) {
+        console.error(`❌ Error processing payload ${payload.id}:`, error);
+        
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        await bronzeLayerService.updatePayloadStatus(payload.id, 'FAILED', errorMessage);
+        
+        processingResults.push({
+          payloadId: payload.id,
+          source: payload.source,
+          status: 'FAILED',
+          error: errorMessage
+        });
+        
+        errors++;
+      }
+    }
+
+    const duration = Date.now() - startTime;
+
+    console.log(`✅ [ETL-Bronze] Bronze to Silver processing completed in ${duration}ms`);
+    console.log(`   📊 Processed: ${processed} | Errors: ${errors} | Total: ${payloads.length}`);
+
+    res.status(200).json({
+      success: true,
+      message: `Bronze to Silver processing completed: ${processed} successful, ${errors} failed`,
+      data: {
+        processed,
+        errors,
+        totalPayloads: payloads.length,
+        processingResults,
+        source: source || 'all',
+        season: targetSeason,
+        week: targetWeek,
+        duration
+      }
+    });
+
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    console.error(`❌ [ETL-Bronze] Bronze to Silver processing failed:`, error);
+
+    res.status(500).json({
+      success: false,
+      message: 'Bronze to Silver processing failed',
+      error: errorMessage,
+      duration
+    });
+  }
+});
+
+/**
+ * GET /api/etl/bronze-status
+ * Get Bronze Layer status integrated with ETL monitoring
+ * Provides comprehensive view of raw data pipeline health
+ */
+router.get('/bronze-status', async (req: Request, res: Response) => {
+  try {
+    console.log(`📊 [ETL-Bronze] Bronze Layer status requested by admin from ${req.ip}`);
+
+    // Get Bronze Layer statistics
+    const bronzeStats = await bronzeLayerService.getDataSourceStats();
+    
+    // Calculate overall Bronze Layer health
+    const totalPayloads = bronzeStats.reduce((sum, stat) => sum + stat.totalPayloads, 0);
+    const totalSuccessful = bronzeStats.reduce((sum, stat) => sum + stat.successfulPayloads, 0);
+    const totalFailed = bronzeStats.reduce((sum, stat) => sum + stat.failedPayloads, 0);
+    const totalPending = bronzeStats.reduce((sum, stat) => sum + stat.pendingPayloads, 0);
+    
+    const successRate = totalPayloads > 0 ? Math.round((totalSuccessful / totalPayloads) * 100) : 0;
+    
+    let healthStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+    if (successRate < 50) {
+      healthStatus = 'unhealthy';
+    } else if (successRate < 80 || totalPending > 10) {
+      healthStatus = 'degraded';
+    }
+
+    // Get recent activity
+    const currentWeek = parseInt(getCurrentNFLWeek());
+    const currentSeason = new Date().getFullYear();
+    
+    const recentPayloads = await bronzeLayerService.getRawPayloads({
+      season: currentSeason,
+      fromDate: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
+      limit: 50
+    });
+
+    const statusData = {
+      status: healthStatus,
+      summary: {
+        totalPayloads,
+        totalSuccessful,
+        totalFailed,
+        totalPending,
+        successRate: `${successRate}%`,
+        activeSources: bronzeStats.filter(s => s.totalPayloads > 0).length
+      },
+      sourceStats: bronzeStats.map(stat => ({
+        source: stat.source,
+        status: stat.failedPayloads > stat.successfulPayloads ? 'degraded' : 'healthy',
+        payloads: stat.totalPayloads,
+        successRate: stat.totalPayloads > 0 
+          ? Math.round((stat.successfulPayloads / stat.totalPayloads) * 100) 
+          : 0,
+        lastIngest: stat.lastIngestDate
+      })),
+      recentActivity: {
+        last24Hours: recentPayloads.length,
+        currentWeek,
+        currentSeason
+      },
+      lastUpdated: new Date().toISOString()
+    };
+
+    console.log(`📊 Bronze Layer status: ${healthStatus} (${successRate}% success rate)`);
+
+    res.status(200).json({
+      success: true,
+      data: statusData
+    });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    console.error(`❌ [ETL-Bronze] Bronze status check failed:`, error);
+
+    res.status(500).json({
+      success: false,
+      message: 'Bronze Layer status check failed',
+      error: errorMessage
+    });
+  }
+});
+
+/**
+ * POST /api/etl/full-pipeline-with-bronze
+ * Enhanced full pipeline that includes Bronze Layer raw data ingestion
+ * Complete end-to-end ETL: Bronze -> Silver -> Gold
+ */
+router.post('/full-pipeline-with-bronze', async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  
+  try {
+    console.log(`🚀 [ETL-Bronze] Full pipeline with Bronze Layer triggered by admin from ${req.ip}`);
+    
+    const { 
+      week, 
+      season, 
+      force = false,
+      bronzeSources = ['sleeper'],
+      includeBronzeProcessing = true,
+      mockData = false
+    } = req.body;
+    
+    const targetWeek = week || parseInt(getCurrentNFLWeek());
+    const targetSeason = season || new Date().getFullYear();
+    const pipelineJobId = `full_bronze_pipeline_${targetSeason}_w${targetWeek}_${Date.now()}`;
+
+    console.log(`🔄 Running full pipeline with Bronze Layer for Week ${targetWeek}, Season ${targetSeason}`);
+
+    const pipelineResults: Record<string, any> = {};
+    let currentStep = 1;
+
+    // Step 1: Bronze Layer Raw Data Ingestion
+    console.log(`📊 Step ${currentStep++}: Bronze Layer Raw Data Ingestion...`);
+    try {
+      const bronzeIngestionResult = {
+        results: {} as Record<string, any>,
+        errors: {} as Record<string, any>
+      };
+
+      // Ingest from requested sources
+      if (bronzeSources.includes('sleeper')) {
+        try {
+          const sleeperResult = await sleeperAdapter.ingestFullCycle({
+            season: targetSeason,
+            week: targetWeek,
+            jobId: `${pipelineJobId}_sleeper`
+          });
+          bronzeIngestionResult.results.sleeper = sleeperResult;
+        } catch (error) {
+          bronzeIngestionResult.errors.sleeper = error instanceof Error ? error.message : 'Unknown error';
+        }
+      }
+
+      if (bronzeSources.includes('ecr')) {
+        try {
+          const ecrResult = await ecrAdapter.ingestFullCycle({
+            season: targetSeason,
+            week: targetWeek,
+            mockData,
+            jobId: `${pipelineJobId}_ecr`
+          });
+          bronzeIngestionResult.results.ecr = ecrResult;
+        } catch (error) {
+          bronzeIngestionResult.errors.ecr = error instanceof Error ? error.message : 'Unknown error';
+        }
+      }
+
+      pipelineResults.bronzeIngestion = bronzeIngestionResult;
+      console.log(`✅ Bronze Layer ingestion completed: ${Object.keys(bronzeIngestionResult.results).length} sources successful`);
+
+    } catch (error) {
+      pipelineResults.bronzeIngestion = { error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error(`❌ Bronze Layer ingestion failed:`, error);
+    }
+
+    // Step 2: Bronze to Silver Processing (if enabled)
+    if (includeBronzeProcessing) {
+      console.log(`📊 Step ${currentStep++}: Bronze to Silver Processing...`);
+      try {
+        // Process recent Bronze payloads
+        const silverProcessingResult = {
+          message: 'Bronze to Silver processing placeholder - Silver Layer implementation pending',
+          processed: 0,
+          note: 'This step will be fully implemented when Silver Layer is ready'
+        };
+        
+        pipelineResults.silverProcessing = silverProcessingResult;
+        console.log(`⚠️ Silver processing placeholder completed`);
+        
+      } catch (error) {
+        pipelineResults.silverProcessing = { error: error instanceof Error ? error.message : 'Unknown error' };
+        console.error(`❌ Silver processing failed:`, error);
+      }
+    }
+
+    // Step 3: Existing Core Week Ingest (Silver/Gold Layer)
+    console.log(`📊 Step ${currentStep++}: Core Week Ingest (Silver/Gold Layer)...`);
+    try {
+      const ingestResult = await coreWeekIngestETL.ingestWeeklyData(targetWeek, targetSeason);
+      pipelineResults.coreIngest = ingestResult;
+      console.log(`✅ Core Week Ingest completed: ${ingestResult.playersProcessed} players processed`);
+    } catch (error) {
+      pipelineResults.coreIngest = { error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error(`❌ Core Week Ingest failed:`, error);
+    }
+
+    // Step 4: Buys/Sells Computation (Gold Layer)
+    console.log(`📊 Step ${currentStep++}: Buys/Sells Computation (Gold Layer)...`);
+    try {
+      const buysSellsResult = await nightlyBuysSellsETL.processSpecificWeek(targetWeek, targetSeason);
+      pipelineResults.buysSells = buysSellsResult;
+      console.log(`✅ Buys/Sells computation completed: ${buysSellsResult.totalRecords} recommendations generated`);
+    } catch (error) {
+      pipelineResults.buysSells = { error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error(`❌ Buys/Sells computation failed:`, error);
+    }
+
+    const totalDuration = Date.now() - startTime;
+    const successfulSteps = Object.values(pipelineResults).filter(result => !result.error).length;
+    const totalSteps = Object.keys(pipelineResults).length;
+
+    console.log(`🏁 [ETL-Bronze] Full pipeline with Bronze Layer completed in ${totalDuration}ms`);
+    console.log(`   📊 Successful steps: ${successfulSteps}/${totalSteps}`);
+
+    res.status(200).json({
+      success: successfulSteps > 0,
+      message: `Full pipeline with Bronze Layer completed: ${successfulSteps}/${totalSteps} steps successful`,
+      data: {
+        pipelineJobId,
+        week: targetWeek,
+        season: targetSeason,
+        results: pipelineResults,
+        summary: {
+          totalSteps,
+          successfulSteps,
+          failedSteps: totalSteps - successfulSteps,
+          totalDuration,
+          bronzeSources,
+          includedBronzeProcessing: includeBronzeProcessing
+        }
+      }
+    });
+
+  } catch (error) {
+    const totalDuration = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    console.error(`❌ [ETL-Bronze] Full pipeline with Bronze Layer failed:`, error);
+
+    res.status(500).json({
+      success: false,
+      message: 'Full pipeline with Bronze Layer failed',
+      error: errorMessage,
+      duration: totalDuration
     });
   }
 });
