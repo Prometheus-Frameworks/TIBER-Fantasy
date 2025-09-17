@@ -1326,6 +1326,22 @@ export class UPHCoordinator {
 
         console.log(`✅ [UPHCoordinator] Gold facts generation completed: ${result.success}/${result.processed} facts generated`);
 
+        // Trigger brand signals processing for completed gold dataset
+        try {
+          const { triggerDatasetCommitted } = await import('./BrandSignalsBootstrap');
+          await triggerDatasetCommitted(
+            'gold_player_week',
+            scope.season || 0,
+            scope.week || 0,
+            result.success || 0,
+            'uph_coordinator',
+            jobId
+          );
+        } catch (error) {
+          console.warn('⚠️ [UPHCoordinator] Brand signals trigger failed:', error);
+          // Don't throw - brand signal failures shouldn't break UPH processing
+        }
+
         return result;
 
       } catch (error) {

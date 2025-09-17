@@ -8,6 +8,13 @@
       "when": 1758138210768,
       "tag": "0000_flippant_moon_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1758139101516,
+      "tag": "0001_gray_titanium_man",
+      "breakpoints": true
     }
   ]
 }
