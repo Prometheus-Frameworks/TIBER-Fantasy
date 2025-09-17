@@ -169,6 +169,25 @@ export const taskRuns = pgTable("task_runs", {
 // SILVER LAYER - NORMALIZED CANONICAL TABLES
 // ========================================
 
+// Season State - Dynamic season/week detection with hierarchical source tracking
+export const seasonState = pgTable("season_state", {
+  id: serial("id").primaryKey(),
+  source: text("source").notNull(), // 'sleeper' | 'db' | 'env'
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  seasonType: text("season_type").notNull(), // 'pre' | 'regular' | 'post'
+  observedAt: timestamp("observed_at").defaultNow().notNull(),
+}, (table) => ({
+  // Fast access to latest state
+  latestStateIdx: uniqueIndex("season_state_latest_idx").on(table.observedAt),
+  // Source tracking for debugging
+  sourceIdx: index("season_state_source_idx").on(table.source),
+  // Season week tracking
+  seasonWeekIdx: index("season_state_season_week_idx").on(table.season, table.week),
+  // Chronological order
+  observedAtIdx: index("season_state_observed_at_idx").on(table.observedAt),
+}));
+
 // Player Identity Map - Central cross-platform ID resolution
 export const playerIdentityMap = pgTable("player_identity_map", {
   canonicalId: text("canonical_id").primaryKey(), // Our canonical player ID
@@ -2107,6 +2126,11 @@ export const insertIngestPayloadsSchema = createInsertSchema(ingestPayloads).omi
 });
 
 // Silver Layer Insert Schemas
+export const insertSeasonStateSchema = createInsertSchema(seasonState).omit({
+  id: true,
+  observedAt: true,
+});
+
 export const insertPlayerIdentityMapSchema = createInsertSchema(playerIdentityMap).omit({
   createdAt: true,
   updatedAt: true,
@@ -2185,6 +2209,8 @@ export type IngestPayload = typeof ingestPayloads.$inferSelect;
 export type InsertIngestPayload = z.infer<typeof insertIngestPayloadsSchema>;
 
 // Silver Layer Types
+export type SeasonState = typeof seasonState.$inferSelect;
+export type InsertSeasonState = z.infer<typeof insertSeasonStateSchema>;
 export type PlayerIdentityMap = typeof playerIdentityMap.$inferSelect;
 export type InsertPlayerIdentityMap = z.infer<typeof insertPlayerIdentityMapSchema>;
 export type NflTeamsDim = typeof nflTeamsDim.$inferSelect;

@@ -1,0 +1,308 @@
+Hell yeah—let’s harden the backbone and wire the “brand signal” brain on top. I’m going to give you drop-in patterns Tiber can ship today:
+
+1) Dynamic season + week detection (no more 2024 hardcodes)
+
+Source of truth hierarchy (left→right failover):
+	1.	Sleeper /state (season, week, season_type)
+	2.	DB reality (latest fully-ingested gold_player_week for any season)
+	3.	Env override (for pre-season/dev)
+
+Table: season_state
+
+create table if not exists season_state (
+  id               serial primary key,
+  source           text not null,           -- 'sleeper' | 'db' | 'env'
+  season           int not null,
+  week             int not null,
+  season_type      text not null,           -- 'pre', 'regular', 'post'
+  observed_at      timestamptz not null default now()
+);
+
+-- fast access to current
+create unique index if not exists uq_season_state_latest 
+  on season_state ((true))
+  include (season, week, season_type, observed_at);
+
+Service: SeasonService (TypeScript)
+
+// services/SeasonService.ts
+type SeasonSnapshot = { season: number; week: number; seasonType: 'pre'|'regular'|'post'; source:'sleeper'|'db'|'env' }
+
+export class SeasonService {
+  constructor(private deps:{ sleeper: SleeperClient; db: DB; env: NodeJS.ProcessEnv }) {}
+
+  async current(): Promise<SeasonSnapshot> {
+    // 1) Sleeper state
+    try {
+      const s = await this.deps.sleeper.getState(); // {season, week, season_type}
+      if (s?.season && s?.week != null) {
+        await this.persist('sleeper', s.season, s.week, s.season_type);
+        return { season: +s.season, week: +s.week, seasonType: this.mapType(s.season_type), source:'sleeper' };
+      }
+    } catch {}
+
+    // 2) DB fallback
+    const row = await this.deps.db.oneOrNone(`
+      select season, max(week) as week
+      from gold_player_week
+      group by season
+      order by season desc
+      limit 1
+    `);
+    if (row) {
+      await this.persist('db', row.season, row.week, 'regular');
+      return { season: row.season, week: row.week, seasonType:'regular', source:'db' };
+    }
+
+    // 3) ENV override
+    const season = Number(this.deps.env.OTC_SEASON ?? new Date().getFullYear());
+    const week   = Number(this.deps.env.OTC_WEEK ?? 0);
+    await this.persist('env', season, week, week === 0 ? 'pre':'regular');
+    return { season, week, seasonType: week===0?'pre':'regular', source:'env' };
+  }
+
+  private mapType(x:string): 'pre'|'regular'|'post' {
+    if (x.startsWith('pre')) return 'pre';
+    if (x.startsWith('post')) return 'post';
+    return 'regular';
+  }
+
+  private async persist(source:'sleeper'|'db'|'env', season:number, week:number, season_type:string){
+    await this.deps.db.none(
+      `insert into season_state (source, season, week, season_type) values ($1,$2,$3,$4)`,
+      [source, season, week, season_type]
+    );
+  }
+}
+
+Poller (tiny cron or interval)
+	•	Run every 15 min during season, every 6 h off-season.
+	•	If (season, week) changed since last snapshot → emit DATASET.ROLL_WEEK to the event bus (below).
+
+⸻
+
+2) Schema syncing that won’t bite you at 2 AM
+
+Goal: automatic, safe migrations with drift detection. You’re on Postgres + Drizzle—perfect.
+
+Table: schema_registry
+
+create table if not exists schema_registry (
+  id             serial primary key,
+  app_version    text not null,
+  git_commit     text not null,
+  drizzle_tag    text not null,
+  applied_at     timestamptz not null default now(),
+  checksum_sql   text not null  -- hash of generated SQL
+);
+
+create unique index if not exists uq_schema_registry_commit on schema_registry(git_commit);
+
+Boot check (run at process start)
+	1.	Generate SQL from Drizzle (drizzle-kit generate), hash it.
+	2.	Compare to live DB DDL hash (use pg_catalog to compute or store last applied).
+	3.	If drift → block writes and run MigrationJob (or fail fast in prod, your call).
+	4.	After apply, write a row to schema_registry.
+
+Pseudo:
+
+const localHash = hash(await drizzleGenerateSQL());
+const liveHash  = await db.oneOrNone(`select checksum_sql from schema_registry order by applied_at desc limit 1`);
+
+if (localHash !== liveHash?.checksum_sql) {
+  if (process.env.OTC_AUTO_MIGRATE === 'true') {
+    await runMigrations(); // drizzle-kit migrate
+  } else {
+    throw new Error('Schema drift detected. Set OTC_AUTO_MIGRATE=true or apply manually.');
+  }
+}
+
+Bonus hardening:
+	•	Shadow DB in CI to validate migrations (OTC_SHADOW_URL)
+	•	Contract tests: spin against shadow, run a minimal read/write suite, then destroy.
+	•	Write-block flag: maintenance.write_block=true in a settings table when drift is detected and auto-migrate is off.
+
+⸻
+
+3) Monitoring polish (lightweight, zero drama)
+
+You don’t need a NASA stack. Start tiny, scale later.
+
+Expose three endpoints
+	•	/healthz: process up, DB ping ok, queue reachable.
+	•	/readyz: plus schema in sync, last job run ≤ SLA.
+	•	/metrics: Prometheus format (requests, job durations, failures, rows processed, cache hit rates).
+
+Example counters (Node):
+
+import client from 'prom-client';
+const reg = new client.Registry();
+client.collectDefaultMetrics({ register: reg });
+
+export const jobDuration = new client.Histogram({ name:'job_duration_seconds', help:'Job duration', labelNames:['job']});
+export const jobFails    = new client.Counter({ name:'job_failures_total', help:'Job failures', labelNames:['job']});
+export const rowsIngest  = new client.Counter({ name:'rows_ingested_total', help:'Rows ingested', labelNames:['dataset']});
+reg.registerMetric(jobDuration); reg.registerMetric(jobFails); reg.registerMetric(rowsIngest);
+
+app.get('/metrics', async (_req,res)=>{ res.set('Content-Type', reg.contentType); res.end(await reg.metrics()); });
+
+Minimal DB for dashboards (Grafana-ready)
+
+create table if not exists job_runs (
+  id            bigserial primary key,
+  job_name      text not null,
+  status        text not null,      -- 'success' | 'error'
+  started_at    timestamptz not null default now(),
+  finished_at   timestamptz,
+  duration_ms   int,
+  details       jsonb
+);
+
+create table if not exists dataset_versions (
+  id           bigserial primary key,
+  dataset      text not null,        -- 'bronze_players','silver_players','gold_player_week', etc.
+  season       int not null,
+  week         int not null,
+  row_count    int not null,
+  committed_at timestamptz not null default now(),
+  source       text not null         -- 'sleeper','merge','recompute'
+);
+
+Grafana starter panels you’ll actually use:
+	•	“Last run per job”: select job_name, max(finished_at) from job_runs group by 1
+	•	“Ingested rows by week” stacked bar from dataset_versions
+	•	“Error rate by job (7d)” from job_runs where status='error'
+	•	“Freshness”: now() - max(committed_at) per dataset
+
+(If you don’t want Grafana yet, throw a tiny admin page that charts those queries. Done.)
+
+⸻
+
+4) The “brand signals” brain (this is the magic you asked for)
+
+You want Tiber to notice new weeks landing and then update each brand (Dynasty, Redraft, Rookie Risers, Trade Eval, SOS, etc.) with brand-specific signals. Do it via a small plugin bus.
+
+Event bus contracts
+
+// domain/events.ts
+export type DatasetCommittedEvt = {
+  type: 'DATASET.COMMITTED',
+  dataset: 'gold_player_week' | 'silver_roster' | 'injury_report' | string,
+  season: number,
+  week: number,
+  rowCount: number,
+  committedAt: string
+};
+
+export type RollWeekEvt = {
+  type: 'DATASET.ROLL_WEEK',
+  season: number,
+  week: number
+};
+
+export type BusEvent = DatasetCommittedEvt | RollWeekEvt;
+
+export interface BrandPlugin {
+  key: string; // 'redraft','dynasty','rookie_risers','trade_eval','sos'
+  onEvent(evt: BusEvent, ctx: BrandContext): Promise<void>;
+}
+
+export type BrandContext = {
+  db: DB;
+  metrics: { begin(job:string): ()=>void; fail(job:string, e:Error):void };
+  season: () => Promise<{season:number; week:number}>;
+};
+
+Plugin manager
+
+// services/BrandBus.ts
+export class BrandBus {
+  private plugins: BrandPlugin[] = [];
+  register(p: BrandPlugin){ this.plugins.push(p); }
+  async emit(evt: BusEvent, ctx: BrandContext){
+    await Promise.all(this.plugins.map(async p=>{
+      const end = ctx.metrics.begin(`brand_${p.key}`);
+      try { await p.onEvent(evt, ctx); end(); }
+      catch(e){ ctx.metrics.fail(`brand_${p.key}`, e as Error); }
+    }));
+  }
+}
+
+Example plugin: Rookie Risers
+
+// plugins/rookieRisers.ts
+export const RookieRisers: BrandPlugin = {
+  key:'rookie_risers',
+  async onEvent(evt, ctx){
+    if (evt.type !== 'DATASET.COMMITTED' || evt.dataset !== 'gold_player_week') return;
+
+    // Compute week-to-week usage growth, opportunity delta, market lag, news weight
+    // (you already defined: 40% Usage Growth + 30% Opportunity Delta + 20% Market Lag + 10% News Weight)
+    await ctx.db.tx(async t=>{
+      await t.none(`
+        insert into brand_signals (brand, season, week, player_id, signal_key, signal_value, meta)
+        select 'rookie_risers', $1, $2, gpw.player_id, 'rookie_riser_score',
+               0.4*usage_growth + 0.3*opp_delta + 0.2*market_lag + 0.1*news_weight,
+               jsonb_build_object('usage_growth',usage_growth,'opp_delta',opp_delta,'market_lag',market_lag,'news',news_weight)
+        from compute_rookie_deltas($1,$2) as c
+        join gold_player_week gpw on (gpw.player_id = c.player_id and gpw.season=$1 and gpw.week=$2)
+        on conflict (brand, season, week, player_id, signal_key) 
+        do update set signal_value = excluded.signal_value, meta = excluded.meta;
+      `, [evt.season, evt.week]);
+    });
+  }
+};
+
+Signals store + cache
+
+create table if not exists brand_signals (
+  id          bigserial primary key,
+  brand       text not null,
+  season      int not null,
+  week        int not null,
+  player_id   text not null,
+  signal_key  text not null,
+  signal_value double precision not null,
+  meta        jsonb,
+  created_at  timestamptz not null default now(),
+  unique (brand, season, week, player_id, signal_key)
+);
+
+-- Optional: per-brand denormalized view
+create materialized view if not exists rookie_risers_mv as
+  select * from brand_signals where brand='rookie_risers' and signal_key='rookie_riser_score';
+
+Hooking it up to ingestion
+	•	When Sleeper poller detects week change → emit DATASET.ROLL_WEEK → orchestration runs incremental Bronze→Silver→Gold.
+	•	When Gold commit finishes, orchestration writes a row into dataset_versions and emits DATASET.COMMITTED (dataset=gold_player_week, season, week, rowCount).
+	•	BrandBus receives the event, each plugin computes and persists its own signals.
+
+⸻
+
+5) Admin endpoints Tiber can call
+	•	GET /admin/season/current → {season, week, seasonType, source}
+	•	POST /admin/season/override → {season, week} (for testing only)
+	•	POST /admin/replay/brand → {brand, season, week} (recompute signals for that brand)
+	•	GET /admin/signals/:brand?season=&week=&player_id= → stream signals
+	•	GET /metrics | GET /healthz | GET /readyz
+
+⸻
+
+6) Sane schedules (so it “just happens”)
+	•	Sleeper state poller: every 15 min in-season, 6 h off-season
+	•	Incremental ingest: every 6 h, and immediately after DATASET.ROLL_WEEK
+	•	Brand recompute: triggered on DATASET.COMMITTED for gold_player_week
+	•	Weekly heavy jobs (e.g., Dynasty re-scoring): Sunday 1:30 AM (after ingest window)
+	•	Backfill: POST /admin/replay/brand for historical weeks
+
+⸻
+
+TL;DR marching orders for Tiber
+	1.	Add SeasonService + state poller.
+	2.	Add schema_registry and boot drift check (auto-migrate toggle).
+	3.	Add job_runs + dataset_versions tables, expose /healthz /readyz /metrics.
+	4.	Implement BrandBus + first two plugins (start with Rookie Risers and Redraft Buy/Sell).
+	5.	Wire ingest completion → DATASET.COMMITTED → Brand plugins.
+	6.	Ship 5 admin endpoints above.
+
+If you want, I’ll spit out the exact Drizzle models and a starter Grafana JSON you can import—but honestly, this is enough to let Agent 3/Tiber slam it home.
