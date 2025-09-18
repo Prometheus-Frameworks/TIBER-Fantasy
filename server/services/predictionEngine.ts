@@ -969,7 +969,32 @@ export function createCompassRouter(): Router {
     }
   });
 
-  console.log(`🔮 [Prediction Engine] Router created with 5 endpoints: /predictions/generate-weekly (admin), /predictions/:run_id/summary, /predictions/:run_id/players, /latest/summary (public), /latest/players (public)`);
+  // ECR Pipeline Sanity Check Endpoint (public)
+  r.get("/ecr-sanity-check", async (req: Request, res: Response) => {
+    try {
+      console.log(`🔮 [ECR Pipeline] Running sanity check...`);
+      
+      // Import here to avoid circular dependencies
+      const { runEcrPipelineSanityCheck } = await import("./ecrPipelineService");
+      
+      const result = await runEcrPipelineSanityCheck();
+      
+      res.json({
+        success: true,
+        message: "ECR Pipeline sanity check completed successfully",
+        data: result
+      });
+    } catch (error) {
+      console.error("🔮 [ECR Pipeline] Sanity check failed:", error);
+      res.status(500).json({
+        success: false,
+        message: "ECR Pipeline sanity check failed",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  console.log(`🔮 [Prediction Engine] Router created with 6 endpoints: /predictions/generate-weekly (admin), /predictions/:run_id/summary, /predictions/:run_id/players, /latest/summary (public), /latest/players (public), /ecr-sanity-check (public)`);
   return r;
 }
 
