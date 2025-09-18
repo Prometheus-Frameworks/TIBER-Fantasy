@@ -256,6 +256,75 @@ export class RankingsFusionService {
   }
 
   /**
+   * Position-specific scoring method that adapts scoring logic based on position
+   * FIXED: Implements position-specific scoring for QB/RB/TE that was missing
+   */
+  async scorePositionBatch(
+    players: FusionPlayer[],
+    position: Position,
+    cfg: any,
+    mode: Mode = 'dynasty'
+  ): Promise<FusionResult[]> {
+    console.log(`🎯 [Position Scoring] Scoring ${players.length} ${position} players with position-specific logic`);
+    
+    // Position-specific adjustments to the scoring logic
+    const positionWeights = this.getPositionWeights(position);
+    const bounds = this.calculateBounds(players, mode);
+    
+    const results: FusionResult[] = players.map(player => {
+      // Apply proven elite priors (position-aware)
+      const priorScore = this.getPositionElitePrior(player, position);
+      
+      const quadrants = {
+        north: this.calculateNorthQuadrantForPosition(player, bounds, position),
+        east: this.calculateEastQuadrantForPosition(player, bounds, position),
+        south: this.calculateSouthQuadrant(player, bounds, mode), // Same for all positions
+        west: this.calculateWestQuadrant(player, bounds, mode)   // Same for all positions
+      };
+      
+      let score = this.fuseScoreWithPositionWeights(quadrants, mode, positionWeights);
+      
+      // Apply proven elite floor
+      if (priorScore > 0) {
+        score = Math.max(score, priorScore);
+      }
+      
+      const tier = this.calculateTier(score);
+      const badges = this.calculateBadgesForPosition(player, quadrants, position);
+      
+      return {
+        player_id: player.player_id,
+        name: player.name,
+        pos: player.pos,
+        team: player.team,
+        age: player.age,
+        north: Math.round(quadrants.north * 10) / 10,
+        east: Math.round(quadrants.east * 10) / 10,
+        south: Math.round(quadrants.south * 10) / 10,
+        west: Math.round(quadrants.west * 10) / 10,
+        score,
+        tier,
+        rank: 0,
+        badges,
+        xfp_recent: player.xfp_recent,
+        xfp_season: player.xfp_season,
+        season_fpts: player.season_fpts
+      };
+    });
+    
+    // Sort by score only (NO FPTS OVERRIDE)
+    results.sort((a, b) => b.score - a.score);
+    
+    // Assign ranks
+    results.forEach((result, index) => {
+      result.rank = index + 1;
+    });
+    
+    console.log(`✅ [Position Scoring] Scored ${results.length} ${position} players successfully`);
+    return results;
+  }
+
+  /**
    * Enhanced scoreWRBatch with proven elite priors and guardrails
    */
   scoreWRBatch(
@@ -366,6 +435,267 @@ export class RankingsFusionService {
     // FPTS Monster badge (season performance)
     if (player.season_fpts && player.season_fpts >= 200) {
       badges.push('FPTS Monster');
+    }
+    
+    return badges;
+  }
+
+  /**
+   * Position-specific weight adjustments for different player positions
+   * QB: Emphasize East (environment) and South (durability)
+   * RB: Emphasize North (volume) and South (durability/age)  
+   * WR: Balanced across quadrants
+   * TE: Similar to WR but more emphasis on East (scheme fit)
+   */
+  private getPositionWeights(position: Position) {
+    const baseWeights = config.weights.redraft; // Use redraft as base
+    
+    switch (position) {
+      case 'QB':
+        return {
+          north: baseWeights.north * 0.8, // Less emphasis on volume
+          east: baseWeights.east * 1.3,   // More emphasis on environment
+          south: baseWeights.south * 1.2, // More emphasis on durability
+          west: baseWeights.west * 0.9    // Less emphasis on market
+        };
+      case 'RB': 
+        return {
+          north: baseWeights.north * 1.2, // More emphasis on volume
+          east: baseWeights.east * 0.9,   // Less emphasis on environment
+          south: baseWeights.south * 1.4, // Much more emphasis on age/injury risk
+          west: baseWeights.west * 1.0    // Standard market weight
+        };
+      case 'TE':
+        return {
+          north: baseWeights.north * 0.9, // Less emphasis on volume
+          east: baseWeights.east * 1.1,   // More emphasis on scheme fit
+          south: baseWeights.south * 1.1, // Slightly more durability focus
+          west: baseWeights.west * 0.9    // Less market efficiency
+        };
+      case 'WR':
+      default:
+        return baseWeights; // Use base weights for WR
+    }
+  }
+
+  /**
+   * Position-specific North quadrant calculation
+   */
+  private calculateNorthQuadrantForPosition(
+    player: FusionPlayer, 
+    bounds: { north: { min: number; max: number } },
+    position: Position
+  ): number {
+    const weights = config.quadrants.north;
+    
+    let comp = 0;
+    
+    switch (position) {
+      case 'QB':
+        // For QBs, focus on passing volume and talent
+        comp = 
+          weights.xfp_recent * safe(player.xfp_recent, NaN) * 1.2 + // Higher weight on xFP for QB
+          weights.xfp_season * safe(player.xfp_season, NaN) * 1.2 +
+          weights.targets_g * safe(player.targets_g || 0, NaN) * 0.1; // QBs don't have targets
+        break;
+        
+      case 'RB':
+        // For RBs, focus on rushing volume and receiving
+        comp = 
+          weights.xfp_recent * safe(player.xfp_recent, NaN) +
+          weights.xfp_season * safe(player.xfp_season, NaN) +
+          weights.targets_g * safe(player.targets_g, NaN) * 0.7 + // Some receiving upside
+          weights.tprr_share * safe(player.tprr_share, NaN) * 0.5 + // Limited route running
+          (player.rushShare || 0) * 50; // Add rush share component
+        break;
+        
+      case 'TE':
+        // For TEs, similar to WR but different target expectations
+        comp = 
+          weights.xfp_recent * safe(player.xfp_recent, NaN) * 0.9 +
+          weights.xfp_season * safe(player.xfp_season, NaN) * 0.9 +
+          weights.targets_g * safe(player.targets_g, NaN) * 1.1 + // TE target share more valuable
+          weights.tprr_share * safe(player.tprr_share, NaN) * 0.8 + // Less route running than WR
+          weights.yprr * safe(player.yprr, NaN) * 0.8; // Different yardage expectations
+        break;
+        
+      case 'WR':
+      default:
+        // Standard WR calculation
+        comp = 
+          weights.xfp_recent * safe(player.xfp_recent, NaN) +
+          weights.xfp_season * safe(player.xfp_season, NaN) +
+          weights.targets_g * safe(player.targets_g, NaN) +
+          weights.tprr_share * safe(player.tprr_share, NaN) +
+          weights.yprr * safe(player.yprr, NaN);
+    }
+    
+    let score = pct(comp, bounds.north.min, bounds.north.max);
+    
+    // ROOKIE GUARDRAILS: Cap north ≤ 80 for rookies with <8 games
+    const isRookie = (player.age || 25) <= 23;
+    const lowSample = (player.weekly_scores?.length || 0) < 8;
+    if (isRookie && lowSample) {
+      score = Math.min(score, 80);
+    }
+    
+    return score;
+  }
+
+  /**
+   * Position-specific East quadrant calculation
+   */
+  private calculateEastQuadrantForPosition(
+    player: FusionPlayer,
+    bounds: { east: { min: number; max: number } },
+    position: Position
+  ): number {
+    const weights = config.quadrants.east;
+    
+    let comp = 0;
+    
+    switch (position) {
+      case 'QB':
+        // QBs heavily influenced by scheme, OL, and pace
+        comp =
+          weights.proe * safe(player.team_proe, NaN) * 1.3 + // QB very scheme dependent
+          weights.qb_stability * safe(player.qb_stability, NaN) * 0.5 + // QB stability less relevant for QB
+          weights.role_clarity * safe(player.role_clarity, NaN) * 1.2 + // Role clarity important
+          weights.scheme_ol * safe(player.scheme_ol, NaN) * 1.4; // OL very important for QB
+        break;
+        
+      case 'RB':
+        // RBs influenced by scheme but less by QB stability  
+        comp =
+          weights.proe * safe(player.team_proe, NaN) * 0.8 + // Less pass-heavy impact
+          weights.qb_stability * safe(player.qb_stability, NaN) * 0.7 + // Some QB impact on touches
+          weights.role_clarity * safe(player.role_clarity, NaN) * 1.3 + // Role clarity very important
+          weights.scheme_ol * safe(player.scheme_ol, NaN) * 1.1; // OL important for running
+        break;
+        
+      case 'TE':
+        // TEs heavily influenced by scheme and QB relationship
+        comp =
+          weights.proe * safe(player.team_proe, NaN) * 1.1 + // Pass rate important
+          weights.qb_stability * safe(player.qb_stability, NaN) * 1.2 + // QB chemistry important
+          weights.role_clarity * safe(player.role_clarity, NaN) * 1.1 + // Role clarity matters
+          weights.scheme_ol * safe(player.scheme_ol, NaN) * 0.9; // OL less critical than QB
+        break;
+        
+      case 'WR':
+      default:
+        // Standard WR calculation
+        comp =
+          weights.proe * safe(player.team_proe, NaN) +
+          weights.qb_stability * safe(player.qb_stability, NaN) +
+          weights.role_clarity * safe(player.role_clarity, NaN) +
+          weights.scheme_ol * safe(player.scheme_ol, NaN);
+    }
+    
+    return pct(comp, bounds.east.min, bounds.east.max);
+  }
+
+  /**
+   * Position-specific fusion score calculation
+   */
+  private fuseScoreWithPositionWeights(
+    quadrants: { north: number; east: number; south: number; west: number },
+    mode: Mode,
+    positionWeights: any
+  ): number {
+    const num = 
+      positionWeights.north * safe(quadrants.north) +
+      positionWeights.east * safe(quadrants.east) +
+      positionWeights.south * safe(quadrants.south) +
+      positionWeights.west * safe(quadrants.west);
+    
+    const den = positionWeights.north + positionWeights.east + positionWeights.south + positionWeights.west;
+    return Math.round((num / den) * 10) / 10;
+  }
+
+  /**
+   * Position-specific elite player priors
+   */
+  private getPositionElitePrior(player: FusionPlayer, position: Position): number {
+    const elitePlayersByPosition = {
+      QB: ['Josh Allen', 'Lamar Jackson', 'Jalen Hurts', 'Joe Burrow', 'Patrick Mahomes'],
+      RB: ['Christian McCaffrey', 'Austin Ekeler', 'Derrick Henry', 'Nick Chubb', 'Alvin Kamara'],
+      WR: ['Justin Jefferson', 'Ja\'Marr Chase', 'Tyreek Hill', 'Davante Adams', 'Stefon Diggs'],
+      TE: ['Travis Kelce', 'Mark Andrews', 'George Kittle', 'Darren Waller']
+    };
+    
+    const topTierPlayersByPosition = {
+      QB: ['Dak Prescott', 'Tua Tagovailoa', 'Trevor Lawrence', 'Justin Herbert'],
+      RB: ['Josh Jacobs', 'Kenneth Walker', 'Breece Hall', 'Jonathan Taylor'],
+      WR: ['Puka Nacua', 'Garrett Wilson', 'Drake London', 'Chris Olave', 'Jaylen Waddle'],
+      TE: ['T.J. Hockenson', 'Kyle Pitts', 'Dallas Goedert']
+    };
+    
+    const elitePlayers = elitePlayersByPosition[position] || [];
+    const topTierPlayers = topTierPlayersByPosition[position] || [];
+    
+    if (elitePlayers.includes(player.name)) {
+      return position === 'QB' ? 85 : position === 'RB' ? 82 : 88; // Position-adjusted elite floors
+    }
+    
+    if (topTierPlayers.includes(player.name)) {
+      return position === 'QB' ? 78 : position === 'RB' ? 75 : 82; // Position-adjusted top tier floors
+    }
+    
+    // Veterans with 3+ seasons get moderate floor (position-adjusted)
+    if ((player.age || 25) >= 25 && (player.weekly_scores?.length || 0) >= 40) {
+      return position === 'QB' ? 72 : position === 'RB' ? 65 : 70;
+    }
+    
+    return 0; // No prior for rookies/unproven players
+  }
+
+  /**
+   * Position-specific badge calculation
+   */
+  private calculateBadgesForPosition(
+    player: FusionPlayer,
+    quadrants: { north: number; east: number; south: number; west: number },
+    position: Position
+  ): string[] {
+    const badges: string[] = [];
+    const badgeConfig = config.badges;
+    
+    // Position-specific badge thresholds
+    const positionThresholds = {
+      QB: { alpha_usage: 75, context_boost: 80, aging_elite: { south_max: 40, north_min: 80 } },
+      RB: { alpha_usage: 80, context_boost: 70, aging_elite: { south_max: 35, north_min: 75 } }, 
+      WR: { alpha_usage: 78, context_boost: 75, aging_elite: { south_max: 45, north_min: 85 } },
+      TE: { alpha_usage: 70, context_boost: 78, aging_elite: { south_max: 50, north_min: 70 } }
+    };
+    
+    const thresholds = positionThresholds[position];
+    
+    // Alpha Usage badge (position-specific)
+    if (quadrants.north >= thresholds.alpha_usage) {
+      badges.push(`${position} Alpha Usage`);
+    }
+    
+    // Context Boost badge (position-specific)
+    if (quadrants.east >= thresholds.context_boost) {
+      badges.push(`${position} Context Boost`);
+    }
+    
+    // Aging but Elite badge (position-specific)
+    if (quadrants.south <= thresholds.aging_elite.south_max && 
+        quadrants.north >= thresholds.aging_elite.north_min) {
+      badges.push(`Aging ${position} Elite`);
+    }
+    
+    // Market Mispriced badge (same for all positions)
+    if (quadrants.west >= (badgeConfig.market_mispriced?.west_min || 75)) {
+      badges.push('Market Mispriced');
+    }
+    
+    // Position-specific FPTS thresholds
+    const fptsThresholds = { QB: 300, RB: 200, WR: 200, TE: 150 };
+    if (player.season_fpts && player.season_fpts >= fptsThresholds[position]) {
+      badges.push(`${position} FPTS Monster`);
     }
     
     return badges;

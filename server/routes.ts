@@ -92,6 +92,7 @@ import { registerPowerProcessingRoutes } from './routes/powerProcessing';
 import { monitoringService } from './services/MonitoringService';
 import { adminService } from './services/AdminService';
 import { requireAdminAuth } from './middleware/adminAuth';
+import { createCompassRouter } from './services/predictionEngine';
 import {
   validateSetSeason,
   validateBrandReplay,
@@ -2533,6 +2534,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/population-stats', populationStatsRoutes);
   app.use('/api/trade-analyzer', tradeAnalyzerRoutes);
   app.use('/api/compass-compare', compassCompareRoutes);
+
+  // ECR-Beating Prediction Engine
+  app.use('/api/predictions', createCompassRouter());
+  console.log('🔮 Prediction Engine routes mounted at /api/predictions/*');
   
   // Rookie system routes
   app.use('/api/rookies', rookieRoutes);

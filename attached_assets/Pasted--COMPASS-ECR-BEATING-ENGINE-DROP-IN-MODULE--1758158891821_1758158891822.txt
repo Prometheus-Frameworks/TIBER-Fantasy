@@ -1,0 +1,520 @@
+/*
+  COMPASS ECR-BEATING ENGINE — DROP-IN MODULE
+  -------------------------------------------------
+  What you get (single file, easy paste):
+  - Pure TypeScript scoring engine turning NORTH/EAST/SOUTH/WEST into weekly point projections
+  - WEST used as selection filter (not baked into points) to avoid double-counting
+  - Dynamic seasonal weighting, per-position thresholds, and CI-based decision policy
+  - Express router with three endpoints:
+      POST /api/predictions/generate-weekly  -> returns run_id
+      GET  /api/predictions/:run_id/summary  -> metrics + list of Beat ECR picks
+      GET  /api/predictions/:run_id/players  -> all predictions (filters: pos, beat_only)
+  - In-memory store for quick spin-up + optional Postgres hooks (DDL included below)
+  - Walk-forward optimizer + accuracy tracker stubs (safe to ship now, expand later)
+
+  Cost-aware notes:
+  - Runs CPU-only, no ML libs. Scoring math is cheap — suitable for Agent 3 @ ~$10/hr.
+  - Gate heavy calls (e.g., large feature builds) behind cutoffs; run once per week.
+*/
+
+import express, { Request, Response, Router } from "express";
+import crypto from "crypto";
+
+/*************************
+ * Types & Interfaces
+ *************************/
+export type Position = "QB" | "RB" | "WR" | "TE";
+
+export interface PlayerFeatureVector {
+  player_id: string;
+  name: string;
+  team: string;
+  pos: Position;
+  week: number;
+
+  // NORTH — volume/talent
+  routes_rate?: number;              // WR/TE: routes run / team dropbacks
+  targets_per_route?: number;        // WR/TE: TPRR
+  yprr?: number;                     // WR/TE
+  rush_share?: number;               // RB: team rush attempt share
+  target_share?: number;             // RB/WR/TE
+  red_zone_opps?: number;            // all positions
+  designed_rush_rate_qb?: number;    // QB
+  usage_slope_2w?: number;           // recent usage acceleration (positive = rising)
+  talent_insulation?: number;        // 0-1 based on draft cap, contract, efficiency history
+
+  // EAST — environment/scheme
+  team_proe?: number;                // pass rate over expected
+  pace_overall?: number;             // sec/play inverse; normalized 0-1
+  ol_pbwr?: number;                  // pass-block win rate (QB/WR relevant)
+  opp_pressure_rate?: number;        // opponent pressure rate allowed
+  opp_coverage_man_rate?: number;    // opponent man coverage rate (for WR archetype splits)
+  oc_tendency_delta?: number;        // OC change impact 0-1 (league priors blended)
+  matchup_rb_target_rate?: number;   // defense RB target rate (RB receiving boost)
+  regime_shift_z?: number;           // 2-3 week z-score of role change (routes%, snaps%, etc.)
+
+  // SOUTH — risk/durability
+  prac_wed?: "DNP" | "LP" | "FP" | null;
+  prac_thu?: "DNP" | "LP" | "FP" | null;
+  prac_fri?: "DNP" | "LP" | "FP" | null;
+  games_missed_last_16?: number;     // availability signal
+  usage_volatility_4w?: number;      // std dev of usage
+  age?: number;
+  archetype?: string;                // for age-curve selection (e.g., "RB_bruiser", "WR_technician")
+  weather_risk?: number;             // 0-1; rain/wind/surface
+
+  // WEST — market/value (selection layer only)
+  ecr_rank?: number;                 // consensus rank for the week
+  ecr_points?: number;               // if available; otherwise map from rank via baseline table
+  adp_movement_7d?: number;          // + up, - down
+  start_pct_delta?: number;          // platform-reported start% movement
+  contract_cliff_flag?: boolean;
+}
+
+export interface WeeklyPrediction {
+  run_id: string;
+  player_id: string;
+  name: string;
+  team: string;
+  pos: Position;
+  week: number;
+  mean_pts: number;
+  ci_low: number;
+  ci_high: number;
+  compass_breakdown: { N: number; E: number; S: number; W: number };
+  reasons: string[];                 // human-readable bullets with quadrant voices
+  our_rank: number;                  // rank by mean_pts within position
+  ecr_rank?: number;
+  ecr_points?: number;
+  edge_vs_ecr?: number;              // mean_pts - ecr_points (if provided)
+  beat_flag?: boolean;               // surfaced per policy
+}
+
+export interface AccuracyRow {
+  run_id: string;
+  player_id: string;
+  pos: Position;
+  week: number;
+  actual_pts: number;
+  beat: boolean;           // outscored comparable ECR peer
+  delta_pts: number;       // actual - ECR peer actual
+}
+
+/*************************
+ * Config & Constants
+ *************************/
+const EDGE_MIN: Record<Position, number> = {
+  QB: 1.8,
+  RB: 1.5,
+  WR: 1.3,
+  TE: 0.8,
+};
+const CI_MAX: Record<Position, number> = {
+  QB: 6.0,
+  RB: 5.5,
+  WR: 6.0,
+  TE: 5.0,
+};
+
+// Seasonal weighting by phase; elastic ±0.05 nudges may be applied by optimizer
+function seasonalWeights(week: number) {
+  if (week <= 4) return { N: 0.25, E: 0.40, S: 0.20, W: 0.15 };
+  if (week <= 12) return { N: 0.35, E: 0.30, S: 0.20, W: 0.15 };
+  return { N: 0.30, E: 0.20, S: 0.35, W: 0.15 };
+}
+
+// Simple age curve penalties by archetype (extend as needed)
+function southAgePenalty(pos: Position, age?: number, archetype?: string): number {
+  if (!age) return 0;
+  if (pos === "RB") {
+    // Sample: start soft penalty at 25, accelerate after 27
+    if (age <= 24) return 0;
+    if (age <= 27) return 0.03 * (age - 24);      // up to ~0.09
+    return 0.12 + 0.07 * (age - 27);              // grows quickly post-27
+  }
+  if (pos === "WR" || pos === "TE") {
+    if (age <= 26) return 0;
+    if (age <= 30) return 0.02 * (age - 26);
+    return 0.08 + 0.05 * (age - 30);
+  }
+  if (pos === "QB") {
+    if (age <= 30) return 0;
+    if (age <= 35) return 0.01 * (age - 30);
+    return 0.05 + 0.02 * (age - 35);
+  }
+  return 0;
+}
+
+/*************************
+ * Utility helpers
+ *************************/
+function zSafe(x: number | undefined, mean = 0, std = 1, w = 1): number {
+  if (x == null || isNaN(x)) return 0;
+  const z = std > 0 ? (x - mean) / std : x - mean;
+  return w * z;
+}
+
+function clamp01(x: number): number { return Math.max(0, Math.min(1, x)); }
+
+function ciFromUncertainty(pos: Position, uncertaintyScore: number): { low: number; high: number } {
+  // Map a 0-1 uncertainty score to a CI half-width in points by position
+  const base = { QB: 4.5, RB: 4.0, WR: 4.5, TE: 3.5 }[pos];
+  const spread = { QB: 4.5, RB: 3.5, WR: 4.5, TE: 3.0 }[pos];
+  const halfWidth = base + spread * clamp01(uncertaintyScore);
+  return { low: -halfWidth, high: halfWidth };
+}
+
+function genRunId(): string { return crypto.randomBytes(8).toString("hex"); }
+
+/*************************
+ * Core Scoring
+ *************************/
+function scoreNorth(f: PlayerFeatureVector): { score: number; notes: string[] } {
+  let s = 0; const notes: string[] = [];
+  s += zSafe(f.routes_rate, 0.6, 0.15, 0.9);           // heavy for WR/TE
+  s += zSafe(f.targets_per_route, 0.22, 0.07, 1.1);
+  s += zSafe(f.yprr, 1.8, 0.6, 0.8);
+  s += zSafe(f.rush_share, 0.45, 0.2, 1.2);            // RB
+  s += zSafe(f.target_share, 0.18, 0.08, 0.8);         // all
+  s += zSafe(f.red_zone_opps, 3, 2, 0.6);
+  s += zSafe(f.designed_rush_rate_qb, 0.08, 0.06, 0.8);// QB
+  s += zSafe(f.usage_slope_2w, 0, 1, 0.7);             // rising role
+  s += zSafe(f.talent_insulation, 0.5, 0.25, 0.8);
+  if (f.usage_slope_2w && f.usage_slope_2w > 0) notes.push("NORTH: usage rising");
+  if ((f.red_zone_opps ?? 0) > 4) notes.push("NORTH: red-zone role");
+  return { score: s, notes };
+}
+
+function scoreEast(f: PlayerFeatureVector): { score: number; notes: string[] } {
+  let s = 0; const notes: string[] = [];
+  s += zSafe(f.team_proe, 0, 0.07, 1.0);
+  s += zSafe(f.pace_overall, 0.5, 0.15, 0.7);
+  s += zSafe(f.ol_pbwr, 0.6, 0.1, 0.9);
+  s -= zSafe(f.opp_pressure_rate, 0.3, 0.08, 1.0);     // higher pressure is bad
+  s += zSafe(f.matchup_rb_target_rate, 0.18, 0.08, 0.7);
+  s += zSafe(f.oc_tendency_delta, 0.0, 0.3, 0.6);
+  s += zSafe(f.regime_shift_z, 0.0, 1.0, 0.8);         // role-change pop
+  if ((f.regime_shift_z ?? 0) > 1) notes.push("EAST: role change incoming");
+  if ((f.team_proe ?? 0) > 0.05) notes.push("EAST: pass-leaning script");
+  return { score: s, notes };
+}
+
+function scoreSouth(f: PlayerFeatureVector, pos: Position): { penalty: number; unc: number; notes: string[] } {
+  let p = 0; let unc = 0; const notes: string[] = [];
+  // practice risk
+  const pracMap = (v: "DNP" | "LP" | "FP" | null | undefined) => v === "DNP" ? 1 : v === "LP" ? 0.5 : 0;
+  p += 0.5 * pracMap(f.prac_wed) + 0.7 * pracMap(f.prac_thu) + 0.9 * pracMap(f.prac_fri);
+  if (p > 0) notes.push("SOUTH: practice flags");
+
+  // availability + volatility
+  p += 0.02 * (f.games_missed_last_16 ?? 0);
+  unc += 0.1 * clamp01((f.usage_volatility_4w ?? 0) / 0.25);
+
+  // age curve
+  const agePen = southAgePenalty(pos, f.age, f.archetype);
+  p += agePen;
+  if (agePen > 0.12) notes.push("SOUTH: age curve risk");
+
+  // weather
+  p += 0.5 * (f.weather_risk ?? 0);
+  if ((f.weather_risk ?? 0) > 0.5) notes.push("SOUTH: weather risk");
+
+  // cap
+  p = Math.min(p, 1.5);
+  unc = Math.min(1, unc + 0.2 * (p / 1.5));
+  return { penalty: p, unc, notes };
+}
+
+function scoreWest(f: PlayerFeatureVector): { misprice: boolean; notes: string[] } {
+  const notes: string[] = [];
+  const ecr = f.ecr_rank ?? 999;
+  // naïve misprice: ADP or start% moving up while ECR lags, or contract cliff not priced in
+  const adpUp = (f.adp_movement_7d ?? 0) > 0.8;
+  const startUp = (f.start_pct_delta ?? 0) > 0.05;
+  const cliff = !!f.contract_cliff_flag;
+  const misprice = (adpUp || startUp) || cliff;
+  if (adpUp) notes.push("WEST: ADP rising — ECR lagging");
+  if (startUp) notes.push("WEST: Start% surge — market waking up");
+  if (cliff) notes.push("WEST: Contract cliff — fade risk");
+  return { misprice, notes };
+}
+
+function combineToPoints(pos: Position, week: number, N: number, E: number, S_pen: number): number {
+  const w = seasonalWeights(week);
+  // WEST intentionally *not* in points. It’s a surfacing/selection layer.
+  // Linear ensemble (cheap & stable). Tune constants via walk-forward optimizer later.
+  const base = 10; // coarse intercept; swap for per-pos baselines if you have them.
+  const pts = base + (w.N * N) + (w.E * E) - (w.S * S_pen);
+  return pts;
+}
+
+/*************************
+ * Selection Policy
+ *************************/
+function shouldPublishBeat(
+  pred: WeeklyPrediction,
+  pos: Position,
+  westMisprice: boolean
+): boolean {
+  const edgeMin = EDGE_MIN[pos];
+  const ciMax = CI_MAX[pos];
+  const ciWidth = pred.ci_high - pred.ci_low;
+  const southHardFlag = pred.reasons.some(r => r.includes("SOUTH: practice flags")) && ciWidth > ciMax; // late injury + wide CI
+  const hasEdge = (pred.edge_vs_ecr ?? 0) >= edgeMin;
+  return hasEdge && ciWidth <= ciMax && westMisprice && !southHardFlag;
+}
+
+/*************************
+ * In-Memory Store (swap to DB later)
+ *************************/
+const memory = {
+  predictions: new Map<string, WeeklyPrediction[]>(),
+  accuracy: new Map<string, AccuracyRow[]>(),
+};
+
+/*************************
+ * Public API
+ *************************/
+export interface GenerateWeeklyArgs {
+  week: number;
+  cutoff_ts: string; // ISO timestamp for auditability
+  features: PlayerFeatureVector[]; // already-normalized feature rows from your ETL
+}
+
+export function generateWeekly(args: GenerateWeeklyArgs): { run_id: string; count: number } {
+  const run_id = genRunId();
+  const week = args.week;
+
+  // Score players
+  const raw: WeeklyPrediction[] = args.features.map(f => {
+    const N = scoreNorth(f);
+    const E = scoreEast(f);
+    const S = scoreSouth(f, f.pos);
+    const W = scoreWest(f);
+
+    const mean_pts = combineToPoints(f.pos, week, N.score, E.score, S.penalty);
+    const ci = ciFromUncertainty(f.pos, S.unc);
+
+    const edge_vs_ecr = (f.ecr_points != null) ? mean_pts - (f.ecr_points ?? 0) : undefined;
+
+    const pred: WeeklyPrediction = {
+      run_id,
+      player_id: f.player_id,
+      name: f.name,
+      team: f.team,
+      pos: f.pos,
+      week,
+      mean_pts,
+      ci_low: mean_pts + ci.low,
+      ci_high: mean_pts + ci.high,
+      compass_breakdown: { N: N.score, E: E.score, S: -S.penalty, W: W.misprice ? 1 : 0 },
+      reasons: [...N.notes, ...E.notes, ...S.notes, ...W.notes],
+      our_rank: 0, // fill after ranking
+      ecr_rank: f.ecr_rank,
+      ecr_points: f.ecr_points,
+      edge_vs_ecr,
+      beat_flag: false,
+    };
+
+    // WEST gating handled after ranking
+    (pred as any)._west_misprice = W.misprice;
+    return pred;
+  });
+
+  // Rank by position
+  const byPos: Record<Position, WeeklyPrediction[]> = { QB: [], RB: [], WR: [], TE: [] };
+  raw.forEach(p => byPos[p.pos].push(p));
+  (Object.keys(byPos) as Position[]).forEach(pos => {
+    byPos[pos].sort((a, b) => b.mean_pts - a.mean_pts);
+    byPos[pos].forEach((p, i) => (p.our_rank = i + 1));
+  });
+
+  // Selection policy
+  const preds = raw.map(p => {
+    const beat = shouldPublishBeat(p, p.pos, (p as any)._west_misprice === true);
+    p.beat_flag = beat;
+    delete (p as any)._west_misprice;
+    return p;
+  });
+
+  memory.predictions.set(run_id, preds);
+  return { run_id, count: preds.length };
+}
+
+export function getSummary(run_id: string) {
+  const preds = memory.predictions.get(run_id) || [];
+  const byPos = preds.reduce<Record<Position, WeeklyPrediction[]>>((acc, p) => {
+    (acc[p.pos] ||= []).push(p); return acc;
+  }, { QB: [], RB: [], WR: [], TE: [] });
+
+  const beat = preds.filter(p => p.beat_flag);
+  return {
+    run_id,
+    total: preds.length,
+    beat_count: beat.length,
+    by_position: (Object.keys(byPos) as Position[]).map(pos => ({
+      pos,
+      total: byPos[pos].length,
+      beat: byPos[pos].filter(p => p.beat_flag).length,
+    })),
+    sample_highlights: beat.slice(0, 10).map(p => ({
+      name: p.name, pos: p.pos, team: p.team,
+      our_rank: p.our_rank, ecr_rank: p.ecr_rank,
+      edge: p.edge_vs_ecr,
+      reasons: p.reasons.slice(0, 3),
+    })),
+  };
+}
+
+export function getPlayers(run_id: string, opts?: { pos?: Position; beat_only?: boolean }) {
+  let preds = memory.predictions.get(run_id) || [];
+  if (opts?.pos) preds = preds.filter(p => p.pos === opts.pos);
+  if (opts?.beat_only) preds = preds.filter(p => p.beat_flag);
+  return preds;
+}
+
+/*************************
+ * Express Router (plug-and-play)
+ *************************/
+export function createCompassRouter(): Router {
+  const r = express.Router();
+
+  r.post("/predictions/generate-weekly", (req: Request, res: Response) => {
+    try {
+      const { week, cutoff_ts, features } = req.body as GenerateWeeklyArgs;
+      if (!week || !cutoff_ts || !Array.isArray(features)) return res.status(400).json({ error: "week, cutoff_ts, features required" });
+      const out = generateWeekly({ week, cutoff_ts, features });
+      res.json(out);
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || "internal" });
+    }
+  });
+
+  r.get("/predictions/:run_id/summary", (req: Request, res: Response) => {
+    const { run_id } = req.params;
+    res.json(getSummary(run_id));
+  });
+
+  r.get("/predictions/:run_id/players", (req: Request, res: Response) => {
+    const { run_id } = req.params;
+    const { pos, beat_only } = req.query as { pos?: Position; beat_only?: string };
+    const out = getPlayers(run_id, { pos, beat_only: beat_only === "true" });
+    res.json(out);
+  });
+
+  return r;
+}
+
+/*************************
+ * Optional: Accuracy ingestion & optimizer stubs
+ *************************/
+export function ingestAccuracy(rows: AccuracyRow[]) {
+  if (!rows.length) return;
+  const run_id = rows[0].run_id;
+  memory.accuracy.set(run_id, rows);
+  // TODO: compute MAE, precision@K, calibrate reliability curves; persist
+}
+
+export function optimizeWeightsWalkForward(/* historical: HistoricalData */) {
+  // TODO: walk-forward nudge per quadrant if last 3 weeks show predictive lift
+  // return { QB: { N:+0.05, E:-0.05, ... }, ... }
+}
+
+/*************************
+ * Postgres DDL (paste into migration)
+ *************************/
+/*
+CREATE TABLE compass_predictions (
+  run_id TEXT NOT NULL,
+  player_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  team TEXT NOT NULL,
+  pos TEXT NOT NULL,
+  week INT NOT NULL,
+  mean_pts REAL NOT NULL,
+  ci_low REAL NOT NULL,
+  ci_high REAL NOT NULL,
+  n_score REAL NOT NULL,
+  e_score REAL NOT NULL,
+  s_penalty REAL NOT NULL,
+  reasons JSONB NOT NULL,
+  our_rank INT NOT NULL,
+  ecr_rank INT,
+  ecr_points REAL,
+  edge_vs_ecr REAL,
+  beat_flag BOOLEAN NOT NULL DEFAULT FALSE,
+  cutoff_ts TIMESTAMP NOT NULL,
+  PRIMARY KEY (run_id, player_id)
+);
+
+CREATE TABLE compass_accuracy (
+  run_id TEXT NOT NULL,
+  player_id TEXT NOT NULL,
+  pos TEXT NOT NULL,
+  week INT NOT NULL,
+  actual_pts REAL NOT NULL,
+  beat BOOLEAN NOT NULL,
+  delta_pts REAL NOT NULL,
+  PRIMARY KEY (run_id, player_id)
+);
+*/
+
+/*************************
+ * HOW TO WIRE (quick):
+ *************************/
+/*
+// server.ts
+import express from "express";
+import bodyParser from "body-parser";
+import { createCompassRouter } from "./compass-ecr-engine";
+
+const app = express();
+app.use(bodyParser.json({ limit: "10mb" }));
+app.use("/api", createCompassRouter());
+
+app.listen(3000, () => console.log("Compass engine live on :3000"));
+
+// Example minimal call (after you build a weekly feature array):
+POST /api/predictions/generate-weekly
+{
+  "week": 3,
+  "cutoff_ts": "2025-09-17T23:59:00-04:00",
+  "features": [
+    {
+      "player_id": "GB-WR-87",
+      "name": "Romeo Doubs",
+      "team": "GB",
+      "pos": "WR",
+      "week": 3,
+      "routes_rate": 0.91,
+      "targets_per_route": 0.21,
+      "yprr": 2.1,
+      "target_share": 0.22,
+      "red_zone_opps": 5,
+      "usage_slope_2w": 0.6,
+      "talent_insulation": 0.6,
+      "team_proe": 0.06,
+      "pace_overall": 0.58,
+      "ol_pbwr": 0.64,
+      "opp_pressure_rate": 0.27,
+      "oc_tendency_delta": 0.2,
+      "regime_shift_z": 1.2,
+      "prac_wed": "FP",
+      "prac_thu": "FP",
+      "prac_fri": "FP",
+      "games_missed_last_16": 1,
+      "usage_volatility_4w": 0.18,
+      "age": 24,
+      "weather_risk": 0.1,
+      "ecr_rank": 36,
+      "ecr_points": 10.8,
+      "adp_movement_7d": 1.1,
+      "start_pct_delta": 0.06,
+      "contract_cliff_flag": false
+    }
+  ]
+}
+
+GET /api/predictions/<run_id>/summary
+GET /api/predictions/<run_id>/players?pos=WR&beat_only=true
+*/

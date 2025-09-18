@@ -1,0 +1,270 @@
+/*
+  ECR PIPELINE ADAPTERS + SANITY CHECK (DROP-IN)
+  ----------------------------------------------
+  Purpose: Provide minimal, ToS-safe adapters for ECR (CSV) + Sleeper market
+  signals, a tiny feature builder, and a runnable sanity check that proves the
+  Compass engine is wired correctly in your repo.
+
+  Usage (after placing alongside compass-ecr-engine.ts):
+  -----------------------------------------------------
+  1) yarn add express body-parser (if not already)
+  2) ts-node ecr-pipeline-adapters-and-sanity-check.ts   // or npm run ts-node ...
+  3) Inspect console output for run_id, sample edges, and counts.
+
+  Notes:
+  - This file embeds mock CSV + mock market payloads so you can run it offline.
+  - Swap the provider implementations to real CSV URLs / API calls later.
+*/
+
+import fs from "fs";
+import path from "path";
+
+// IMPORTANT: adjust the import path to where you saved the engine file
+import {
+  generateWeekly,
+  getSummary,
+  getPlayers,
+  type Position,
+  type PlayerFeatureVector,
+} from "./compass-ecr-engine";
+
+/*************************
+ * ECR Provider (CSV-based)
+ *************************/
+export interface EcrRow {
+  player: string;      // "Romeo Doubs"
+  team: string;        // "GB"
+  pos: Position;       // "WR"
+  ecr_rank: number;    // 36
+  ecr_points?: number; // 10.8 (optional for redraft weekly)
+}
+
+export interface EcrProvider {
+  loadWeeklyEcr(opts: { week: number; scoring: "PPR" | "HALF" | "STD"; pos: Position }): Promise<EcrRow[]>;
+  loadDynastyEcr(opts: { snapshot: string; pos: Position }): Promise<EcrRow[]>; // optional for dynasty
+}
+
+/**
+ * FantasyProsCsvProvider (mock-friendly):
+ * - Accepts either a CSV URL (later) or raw CSV content (now) and parses it.
+ * - CSV columns expected: Player, Team, POS, ECR, FPTS (optional)
+ */
+export class FantasyProsCsvProvider implements EcrProvider {
+  constructor(private csvLoader: (kind: "weekly" | "dynasty", pos: Position) => Promise<string>) {}
+
+  async loadWeeklyEcr(opts: { week: number; scoring: "PPR" | "HALF" | "STD"; pos: Position }): Promise<EcrRow[]> {
+    const raw = await this.csvLoader("weekly", opts.pos);
+    return parseEcrCsv(raw, true, opts.pos);
+  }
+
+  async loadDynastyEcr(opts: { snapshot: string; pos: Position }): Promise<EcrRow[]> {
+    const raw = await this.csvLoader("dynasty", opts.pos);
+    return parseEcrCsv(raw, false, opts.pos);
+  }
+}
+
+function parseEcrCsv(csv: string, isWeekly: boolean, pos: Position): EcrRow[] {
+  const lines = csv.trim().split(/\r?\n/);
+  const header = lines.shift() || "";
+  const cols = header.split(",").map(s => s.trim().toLowerCase());
+  const idx = {
+    player: cols.findIndex(c => c.startsWith("player")),
+    team: cols.findIndex(c => c.startsWith("team")),
+    pos: cols.findIndex(c => c.startsWith("pos")),
+    ecr: cols.findIndex(c => c.includes("ecr")),
+    fpts: cols.findIndex(c => c.includes("fpt")),
+  };
+  const out: EcrRow[] = [];
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const parts = line.split(",").map(s => s.trim());
+    const rowPos = (parts[idx.pos] || pos) as Position;
+    out.push({
+      player: parts[idx.player],
+      team: (parts[idx.team] || "").toUpperCase(),
+      pos: rowPos,
+      ecr_rank: Number(parts[idx.ecr]),
+      ecr_points: isWeekly && idx.fpts >= 0 ? Number(parts[idx.fpts]) : undefined,
+    });
+  }
+  return out;
+}
+
+/*************************
+ * Market Provider (Sleeper-like)
+ *************************/
+export interface MarketRow {
+  player: string;   // name
+  team?: string;    // team (optional)
+  adp?: number;     // current ADP
+  adp_7d_delta?: number; // 7-day change
+  start_pct_delta?: number; // change in start%
+}
+
+export interface MarketProvider {
+  loadMarketSignals(opts: { week: number }): Promise<MarketRow[]>;
+}
+
+export class SleeperMarketProvider implements MarketProvider {
+  constructor(private loader: (week: number) => Promise<MarketRow[]>) {}
+  async loadMarketSignals(opts: { week: number }): Promise<MarketRow[]> {
+    return this.loader(opts.week);
+  }
+}
+
+/*************************
+ * Minimal ID mapping
+ *************************/
+function canonicalize(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, "").trim();
+}
+
+function linkByNameTeam<T extends { player: string; team?: string }>(rows: T[]): Map<string, T> {
+  const map = new Map<string, T>();
+  for (const r of rows) {
+    const key = canonicalize(`${r.player}${r.team || ""}`);
+    map.set(key, r);
+  }
+  return map;
+}
+
+/*************************
+ * Feature builder (toy)
+ *************************/
+export function buildFeatures(
+  week: number,
+  ecr: EcrRow[],
+  market: MarketRow[],
+): PlayerFeatureVector[] {
+  const mktMap = linkByNameTeam(market.map(m => ({ ...m, team: m.team || "" })));
+
+  return ecr.map(e => {
+    const m = mktMap.get(canonicalize(`${e.player}${e.team}`));
+
+    // Toy features: just enough to run the engine. Replace with real ETL later.
+    const f: PlayerFeatureVector = {
+      player_id: `${e.team}-${e.pos}-${canonicalize(e.player)}`,
+      name: e.player,
+      team: e.team,
+      pos: e.pos,
+      week,
+      // NORTH (toy):
+      routes_rate: e.pos === "WR" || e.pos === "TE" ? 0.78 : undefined,
+      targets_per_route: e.pos === "WR" || e.pos === "TE" ? 0.20 : undefined,
+      yprr: e.pos === "WR" ? 1.9 : undefined,
+      rush_share: e.pos === "RB" ? 0.52 : undefined,
+      target_share: 0.18,
+      red_zone_opps: 3,
+      usage_slope_2w: 0.4,
+      talent_insulation: 0.6,
+      // EAST (toy):
+      team_proe: 0.05,
+      pace_overall: 0.55,
+      ol_pbwr: 0.62,
+      opp_pressure_rate: 0.28,
+      oc_tendency_delta: 0.1,
+      regime_shift_z: 0.9,
+      // SOUTH (toy):
+      prac_wed: "FP",
+      prac_thu: "FP",
+      prac_fri: "FP",
+      games_missed_last_16: 1,
+      usage_volatility_4w: 0.18,
+      age: 25,
+      weather_risk: 0.1,
+      // WEST (real-ish from market mock):
+      ecr_rank: e.ecr_rank,
+      ecr_points: e.ecr_points,
+      adp_movement_7d: m?.adp_7d_delta ?? 0,
+      start_pct_delta: m?.start_pct_delta ?? 0,
+      contract_cliff_flag: false,
+    };
+    return f;
+  });
+}
+
+/*************************
+ * SANITY CHECK (runnable)
+ *************************/
+async function runSanity() {
+  const week = 3;
+
+  // 1) Build providers with MOCK data (embedded)
+  const ecrProvider = new FantasyProsCsvProvider(async (kind, pos) => {
+    return kind === "weekly" ? MOCK_WEEKLY_ECR_CSV[pos] : MOCK_DYNASTY_ECR_CSV[pos];
+  });
+  const marketProvider = new SleeperMarketProvider(async (_week) => MOCK_MARKET_ROWS);
+
+  // 2) Load mock ECR
+  const ecrWr = await ecrProvider.loadWeeklyEcr({ week, scoring: "PPR", pos: "WR" });
+  const ecrRb = await ecrProvider.loadWeeklyEcr({ week, scoring: "PPR", pos: "RB" });
+
+  // 3) Load mock market
+  const market = await marketProvider.loadMarketSignals({ week });
+
+  // 4) Build features (toy)
+  const feats = [
+    ...buildFeatures(week, ecrWr.slice(0, 5), market),
+    ...buildFeatures(week, ecrRb.slice(0, 5), market),
+  ];
+
+  // 5) Generate predictions via engine
+  const { run_id, count } = generateWeekly({ week, cutoff_ts: new Date().toISOString(), features: feats });
+
+  // 6) Read summary and show sample edges
+  const summary = getSummary(run_id);
+  const edgesWR = getPlayers(run_id, { pos: "WR", beat_only: true }).slice(0, 3);
+  const edgesRB = getPlayers(run_id, { pos: "RB", beat_only: true }).slice(0, 3);
+
+  // 7) Print to console (repo sanity)
+  console.log("\n=== COMPASS ECR ENGINE — SANITY CHECK ===");
+  console.log({ run_id, total_scored: count });
+  console.log("Summary:", JSON.stringify(summary, null, 2));
+  console.log("\nSample WR edges:");
+  for (const p of edgesWR) console.log(edgeLine(p));
+  console.log("\nSample RB edges:");
+  for (const p of edgesRB) console.log(edgeLine(p));
+  console.log("\nOK — engine wired. Replace mocks with real providers when ready.\n");
+}
+
+function edgeLine(p: ReturnType<typeof getPlayers>[number]) {
+  return `${p.name} (${p.team} ${p.pos}) — our_rank ${p.our_rank}, ECR ${p.ecr_rank} — edge ${p.edge_vs_ecr?.toFixed(2)} pts | reasons: ${p.reasons.slice(0,2).join("; ")}`;
+}
+
+/*************************
+ * MOCK DATA (edit freely)
+ *************************/
+const MOCK_WEEKLY_ECR_CSV: Record<Position, string> = {
+  WR: `Player,Team,POS,ECR,FPTS\nRomeo Doubs,GB,WR,36,10.8\nJayden Reed,GB,WR,34,11.2\nZay Flowers,BAL,WR,18,14.5\nNico Collins,HOU,WR,12,16.1\nJakobi Meyers,LV,WR,39,10.3`,
+  RB: `Player,Team,POS,ECR,FPTS\nAaron Jones,GB,RB,16,13.1\nJaylen Warren,PIT,RB,20,12.4\nJames Cook,BUF,RB,18,12.9\nIsiah Pacheco,KC,RB,12,14.8\nJoe Mixon,HOU,RB,10,15.2`,
+  QB: `Player,Team,POS,ECR,FPTS\nJordan Love,GB,QB,10,18.4\nCJ Stroud,HOU,QB,6,21.0\nLamar Jackson,BAL,QB,2,24.2\nJustin Herbert,LAC,QB,8,19.6\nDak Prescott,DAL,QB,7,20.4`,
+  TE: `Player,Team,POS,ECR,FPTS\nLuke Musgrave,GB,TE,16,8.1\nSam LaPorta,DET,TE,2,13.8\nMark Andrews,BAL,TE,3,13.1\nDalton Kincaid,BUF,TE,6,10.7\nJake Ferguson,DAL,TE,8,9.6`,
+};
+
+const MOCK_DYNASTY_ECR_CSV: Record<Position, string> = {
+  WR: `Player,Team,POS,ECR\nJa'Marr Chase,CIN,WR,1\nCeeDee Lamb,DAL,WR,2`,
+  RB: `Player,Team,POS,ECR\nBreece Hall,NYJ,RB,1\nBijan Robinson,ATL,RB,2`,
+  QB: `Player,Team,POS,ECR\nPatrick Mahomes,KC,QB,1\nJosh Allen,BUF,QB,2`,
+  TE: `Player,Team,POS,ECR\nSam LaPorta,DET,TE,1\nBrock Bowers,LV,TE,2`,
+};
+
+const MOCK_MARKET_ROWS: MarketRow[] = [
+  { player: "Romeo Doubs", team: "GB", adp: 80, adp_7d_delta: 1.2, start_pct_delta: 0.06 },
+  { player: "Jayden Reed", team: "GB", adp: 75, adp_7d_delta: 0.4, start_pct_delta: 0.03 },
+  { player: "Zay Flowers", team: "BAL", adp: 40, adp_7d_delta: 0.3, start_pct_delta: 0.01 },
+  { player: "Nico Collins", team: "HOU", adp: 25, adp_7d_delta: 0.2, start_pct_delta: 0.01 },
+  { player: "Jakobi Meyers", team: "LV", adp: 95, adp_7d_delta: 1.1, start_pct_delta: 0.05 },
+  { player: "Aaron Jones", team: "GB", adp: 40, adp_7d_delta: 0.5, start_pct_delta: 0.02 },
+  { player: "Jaylen Warren", team: "PIT", adp: 48, adp_7d_delta: 0.9, start_pct_delta: 0.04 },
+  { player: "James Cook", team: "BUF", adp: 44, adp_7d_delta: 0.7, start_pct_delta: 0.03 },
+  { player: "Isiah Pacheco", team: "KC", adp: 36, adp_7d_delta: 0.2, start_pct_delta: 0.01 },
+  { player: "Joe Mixon", team: "HOU", adp: 30, adp_7d_delta: -0.1, start_pct_delta: -0.01 },
+];
+
+// Run when executed directly
+if (require.main === module) {
+  runSanity().catch(err => {
+    console.error("Sanity check failed:", err);
+    process.exit(1);
+  });
+}
