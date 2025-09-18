@@ -10,7 +10,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/news", label: "News + Updates", description: "Recent NFL news with fantasy impact" },
   { href: "/redraft", label: "Redraft", description: "Seasonal league tools" },
   { href: "/dynasty", label: "Dynasty", description: "Long-term strategy" },
-  { href: "/player-rankings", label: "Player Rankings", description: "Our rankings vs ECR with comparison chart and +/- differences" },
+  { href: "/player-rankings", label: "Player Rankings", description: "Our rankings vs market consensus with comparison differences" },
   { href: "/power-rankings", label: "Power Rankings", description: "Tiber's comprehensive weekly rankings" },
   { href: "/risers-and-fallers", label: "Risers & Fallers", description: "Week 1 fantasy stock movers and performance analysis" },
   { href: "/start-sit", label: "Start/Sit Calculator", description: "AI-powered lineup decisions with detailed reasoning" },

@@ -87,7 +87,7 @@ export default function PlayerRankings() {
   // Transform compass data to ranking format
   const transformCompassToRankings = (compassPlayers: CompassPlayer[]): RankingPlayer[] => {
     return compassPlayers.map(player => {
-      // Mock ECR data based on our rank with some variance for demonstration
+      // Mock consensus data based on our rank with some variance for demonstration
       const baseEcrRank = player.rank;
       const variance = Math.floor(Math.random() * 10) - 5; // +/- 5 positions
       const mockEcrRank = Math.max(1, baseEcrRank + variance);
@@ -123,7 +123,7 @@ export default function PlayerRankings() {
     window.location.reload();
   };
 
-  // Calculate difference between our rank and ECR rank
+  // Calculate difference between our rank and market consensus rank
   const calculateDifference = (ourRank: number, ecrRank?: number): { diff: number, isPositive: boolean } => {
     if (!ecrRank) return { diff: 0, isPositive: false };
     // Positive difference means we rank the player higher (lower number = better rank)
@@ -231,7 +231,7 @@ export default function PlayerRankings() {
               </h1>
               <div className="flex items-center gap-4 mb-4">
                 <p className="text-gray-600" data-testid="text-page-description">
-                  Our player rankings compared to Expert Consensus Rankings (ECR) with difference indicators
+                  Our rankings compared to market consensus with difference indicators
                 </p>
                 {isUsingFallback && (
                   <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300" data-testid="badge-fallback-data">
@@ -297,7 +297,7 @@ export default function PlayerRankings() {
             <CardDescription>
               {isUsingFallback ? (
                 <div className="space-y-1">
-                  <div>Showing compass-based rankings with simulated ECR comparison</div>
+                  <div>Showing compass-based rankings with market consensus comparison</div>
                   <div className="text-xs text-amber-600 flex items-center gap-1">
                     <Compass className="h-3 w-3" />
                     Using fallback data - prediction data not available
@@ -324,7 +324,7 @@ export default function PlayerRankings() {
                     <TableHead className="w-16">Our Rank</TableHead>
                     <TableHead>Player</TableHead>
                     <TableHead className="w-20">Position</TableHead>
-                    <TableHead className="w-16">ECR</TableHead>
+                    <TableHead className="w-16">Market</TableHead>
                     <TableHead className="w-24">Difference</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -397,15 +397,15 @@ export default function PlayerRankings() {
             <div className="flex items-center justify-center gap-8 text-sm">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-green-600" />
-                <span>We rank higher than ECR</span>
+                <span>We rank higher than market</span>
               </div>
               <div className="flex items-center gap-2">
                 <TrendingDown className="h-4 w-4 text-red-600" />
-                <span>We rank lower than ECR</span>
+                <span>We rank lower than market</span>
               </div>
               <div className="flex items-center gap-2">
                 <Minus className="h-4 w-4 text-gray-400" />
-                <span>No ECR data available</span>
+                <span>No market data available</span>
               </div>
             </div>
           </CardContent>

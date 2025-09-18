@@ -48,7 +48,7 @@ export interface Provider {
 // 1) FantasyPros via your existing admin upload/mirror
 export class FantasyProsProvider implements Provider {
   kind: Kind;
-  name = "FantasyPros:CSV";
+  name = "Consensus:Primary";
   constructor(kind: Kind, private baseUrl: string) { this.kind = kind; }
   async load(opts: { pos: Pos; week?: number; scoring?: "PPR"|"HALF"|"STD"; snapshot?: string }): Promise<ConsensusRow[]> {
     try {
@@ -90,7 +90,7 @@ export class FantasyProsProvider implements Provider {
 // 2) Sleeper ADP as a consensus proxy for weekly if no FP data
 export class SleeperAdpProvider implements Provider {
   kind: Kind = "weekly";
-  name = "Sleeper:ADP";
+  name = "Market:ADP";
   constructor(private season: number, private type: "redraft"|"dynasty" = "redraft") {}
   async load(opts: { pos: Pos }): Promise<ConsensusRow[]> {
     try {
@@ -127,7 +127,7 @@ export class SleeperAdpProvider implements Provider {
 // 3) Enhanced ECR Provider Integration
 export class EnhancedEcrProvider implements Provider {
   kind: Kind;
-  name = "EnhancedECR";
+  name = "Consensus:Enhanced";
   
   constructor(kind: Kind, private enhancedEcrService: any) { 
     this.kind = kind;
@@ -166,7 +166,7 @@ export class EnhancedEcrProvider implements Provider {
 // 4) KeepTradeCut (dynasty proxy) — optional stub with lightweight HTML parsing later
 export class KtcDynastyStubProvider implements Provider {
   kind: Kind = "dynasty";
-  name = "KTC:Stub";
+  name = "Dynasty:Market";
   async load(opts: { pos: Pos }): Promise<ConsensusRow[]> {
     // Placeholder: return empty -> acts as a low-priority fallback
     return [];
@@ -260,11 +260,11 @@ export function createConsensusRouter(opts: {
     );
   }
 
-  // Provider priority by kind - Enhanced ECR gets priority since it has rich feature data
+  // Provider priority by kind - Enhanced consensus gets priority since it has rich feature data
   const policyByKind: Record<Kind, ConsensusPolicy> = {
-    weekly:  { order: ["EnhancedECR", "FantasyPros:CSV", "Sleeper:ADP"], min_rows: 5 }, // Lower min for testing
-    ros:     { order: ["EnhancedECR", "FantasyPros:CSV"], min_rows: 5 },
-    dynasty: { order: ["EnhancedECR", "FantasyPros:CSV", "KTC:Stub"], min_rows: 5 },
+    weekly:  { order: ["Consensus:Enhanced", "Consensus:Primary", "Market:ADP"], min_rows: 5 }, // Lower min for testing
+    ros:     { order: ["Consensus:Enhanced", "Consensus:Primary"], min_rows: 5 },
+    dynasty: { order: ["Consensus:Enhanced", "Consensus:Primary", "Dynasty:Market"], min_rows: 5 },
   };
 
   r.get("/consensus/:kind", async (req: Request, res: Response) => {
