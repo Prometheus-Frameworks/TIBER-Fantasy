@@ -148,8 +148,12 @@ function Router() {
       <Route path="/player-analysis" component={PlayerAnalysisPage} />
       <Route path="/trade-history/:id" component={TradeHistoryPage} />
       <Route path="/dynasty-values" component={DynastyValuesPage} />
-      {/* Unified Player Evaluation */}
-      <Route path="/player-evaluation" component={PlayerEvaluation} />
+      {/* Player Rankings - Primary Route */}
+      <Route path="/player-rankings" component={PlayerRankings} />
+      
+      {/* DEPRECATED: Player Evaluation - Redirects to Player Rankings for backward compatibility */}
+      {/* TODO: Remove in future version after transition period */}
+      <Route path="/player-evaluation" component={() => { window.location.replace('/player-rankings'); return null; }} />
       
       {/* Power Rankings */}
       <Route path="/power-rankings" component={PowerRankings} />
@@ -159,9 +163,6 @@ function Router() {
       
       {/* Trade Advice */}
       <Route path="/advice" component={Advice} />
-      
-      {/* Player Rankings */}
-      <Route path="/player-rankings" component={PlayerRankings} />
       
       {/* Legacy Compass Routes - Still Available */}
       <Route path="/compass" component={CompassHub} />
@@ -197,8 +198,8 @@ function Router() {
       
       {/* Internal Demo/Test Routes - Removed for security */}
       <Route path="/compare/:username" component={CompareRankings} />
-      {/* Legacy DeepSeek route - redirects to unified evaluation */}
-      <Route path="/rankings/v3" component={() => { window.location.replace('/player-evaluation'); return null; }} />
+      {/* Legacy DeepSeek route - redirects to player rankings */}
+      <Route path="/rankings/v3" component={() => { window.location.replace('/player-rankings'); return null; }} />
       {/* Backward-compatible redirects */}
       <Route path="/rankings" component={() => { window.location.replace('/consensus'); return null; }} />
       <Route path="/rankings/redraft" component={() => { window.location.replace('/consensus/redraft'); return null; }} />
