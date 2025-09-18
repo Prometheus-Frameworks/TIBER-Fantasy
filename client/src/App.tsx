@@ -30,7 +30,6 @@ import DataSourcesPage from "@/pages/data-sources";
 import CleanADP from "@/pages/CleanADP";
 import Oasis from "@/pages/Oasis";
 import DraftRoom from "@/pages/DraftRoom";
-import PlayerProfile from "@/pages/PlayerProfile";
 import PlayerProfileNew from "@/pages/players/PlayerProfile";
 import Rankings from "@/pages/Rankings";
 import OTCConsensus from "@/pages/rankings/OTCConsensus";
@@ -233,8 +232,9 @@ function Router() {
       <Route path="/adp" component={CleanADP} />
       <Route path="/oasis" component={Oasis} />
       <Route path="/draft-room" component={DraftRoom} />
-      <Route path="/player/:id" component={PlayerProfile} />
       <Route path="/players/:id" component={PlayerProfileNew} />
+      {/* Legacy redirect: /player/:id -> /players/:id for backward compatibility */}
+      <Route path="/player/:id" component={({params}) => { window.location.replace(`/players/${params.id}`); return null; }} />
       <Route path="/enhanced-player/:id" component={EnhancedPlayerProfile} />
       <Route path="/player-pool" component={FullPlayerPool} />
       <Route path="/player-database" component={PlayerDatabase} />

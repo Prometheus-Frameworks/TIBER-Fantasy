@@ -112,6 +112,53 @@ export const api = {
     }
   },
 
+  async resolvePlayer(id: string): Promise<PlayerPoolEntry | null> {
+    // First try exact match
+    let player = await this.getPlayer(id);
+    if (player) return player;
+
+    // If not found, try to find by name matching
+    try {
+      // Convert ranking-style IDs to search terms
+      // e.g. "ja-marr-chase" -> ["ja", "marr", "chase"]
+      const searchTerms = id.toLowerCase()
+        .replace(/['-]/g, ' ')
+        .split(/\s+/)
+        .filter(term => term.length > 1);
+      
+      if (searchTerms.length > 0) {
+        // Search for players that match the name pattern
+        const searchQuery = searchTerms.join(' ');
+        const allPlayers = await this.playerPool({ search: searchQuery, limit: 50 });
+        
+        // Try to find exact name match first
+        for (const candidate of allPlayers) {
+          const candidateName = candidate.name.toLowerCase().replace(/[^\w\s]/g, '');
+          const searchName = searchTerms.join(' ').replace(/[^\w\s]/g, '');
+          
+          if (candidateName.includes(searchName) || searchName.includes(candidateName)) {
+            console.log(`✅ Resolved player ID "${id}" -> "${candidate.id}" (${candidate.name})`);
+            return candidate;
+          }
+          
+          // Also check aliases
+          for (const alias of candidate.aliases) {
+            if (alias.toLowerCase().includes(searchName) || searchName.includes(alias.toLowerCase())) {
+              console.log(`✅ Resolved player ID "${id}" via alias -> "${candidate.id}" (${candidate.name})`);
+              return candidate;
+            }
+          }
+        }
+      }
+      
+      console.warn(`❌ Could not resolve player ID: ${id}`);
+      return null;
+    } catch (error) {
+      console.error(`Failed to resolve player ${id}:`, error);
+      return null;
+    }
+  },
+
   async rebuildPool(): Promise<boolean> {
     try {
       const response = await fetch('/api/player-pool/rebuild', {

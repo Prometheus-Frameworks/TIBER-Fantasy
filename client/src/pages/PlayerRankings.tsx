@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Clock, AlertCircle, Trophy, Target, Filter, CheckCircle } from "lucide-react";
+import { Clock, AlertCircle, Trophy, Target, Filter, CheckCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Link } from "wouter";
 
 type Position = "QB" | "RB" | "WR" | "TE" | "All";
 
@@ -248,7 +249,12 @@ export default function PlayerRankings() {
                       </TableCell>
                       
                       <TableCell data-testid={`text-player-name-${player.player_id}`}>
-                        <div className="font-semibold">{player.name}</div>
+                        <Link href={`/players/${player.player_id}`}>
+                          <div className="font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors duration-200 flex items-center gap-1 group">
+                            {player.name}
+                            <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                          </div>
+                        </Link>
                       </TableCell>
                       
                       <TableCell data-testid={`text-position-${player.player_id}`}>
