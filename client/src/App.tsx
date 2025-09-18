@@ -133,6 +133,7 @@ import TierManagerWrapper from "@/pages/consensus/TierManagerWrapper";
 import LiveTierTraining from "@/pages/consensus/LiveTierTraining";
 import StartSit from "@/pages/StartSit";
 import Advice from "@/pages/Advice";
+import PlayerRankings from "@/pages/PlayerRankings";
 
 function Router() {
   return (
@@ -158,6 +159,9 @@ function Router() {
       
       {/* Trade Advice */}
       <Route path="/advice" component={Advice} />
+      
+      {/* Player Rankings */}
+      <Route path="/player-rankings" component={PlayerRankings} />
       
       {/* Legacy Compass Routes - Still Available */}
       <Route path="/compass" component={CompassHub} />
