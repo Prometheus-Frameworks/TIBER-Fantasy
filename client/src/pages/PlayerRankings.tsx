@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingUp, TrendingDown, Minus, Clock, AlertCircle, Trophy, Target, Filter } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Clock, AlertCircle, Trophy, Target, Filter, Compass, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,27 +26,102 @@ interface RankingResponse {
   data: RankingPlayer[];
 }
 
+// Compass/fusion player data structure from the fallback endpoint
+interface CompassPlayer {
+  player_id: string;
+  name: string;
+  pos: string;
+  team: string;
+  rank: number;
+  score: number;
+  north: number;
+  east: number;
+  south: number;
+  west: number;
+  badges?: string[];
+  age?: number;
+  tier?: string;
+}
+
+interface CompassResponse {
+  mode: string;
+  position: string;
+  data: CompassPlayer[];
+}
+
 export default function PlayerRankings() {
   const [position, setPosition] = useState<Position>("All");
 
-  const { data: rankingsData, isLoading, error, refetch } = useQuery({
-    queryKey: ["player-rankings", position],
+  // Primary data source - predictions
+  const { data: predictionsData, isLoading: predictionsLoading, error: predictionsError } = useQuery({
+    queryKey: ["player-predictions", position],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (position !== "All") {
         params.set('pos', position);
       }
-      params.set('beat_only', 'false'); // Get all players, not just ECR-beating ones
+      params.set('beat_only', 'false');
       
       const response = await fetch(`/api/predictions/latest/players?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to load rankings data');
+      if (!response.ok) throw new Error('Failed to load predictions data');
       const result = await response.json();
       return result as RankingResponse;
     },
     retry: 1
   });
 
-  const players = rankingsData?.data || [];
+  // Fallback data source - compass rankings
+  const { data: compassData, isLoading: compassLoading, error: compassError } = useQuery({
+    queryKey: ["compass-rankings", position],
+    queryFn: async () => {
+      const posParam = position === "All" ? "" : `&position=${position}`;
+      const response = await fetch(`/api/rankings/deepseek/v3.2?mode=dynasty${posParam}`);
+      if (!response.ok) throw new Error('Failed to load compass data');
+      const result = await response.json();
+      return result as CompassResponse;
+    },
+    retry: 1,
+    enabled: !predictionsData?.data?.length // Only run if predictions are empty
+  });
+
+  // Transform compass data to ranking format
+  const transformCompassToRankings = (compassPlayers: CompassPlayer[]): RankingPlayer[] => {
+    return compassPlayers.map(player => {
+      // Mock ECR data based on our rank with some variance for demonstration
+      const baseEcrRank = player.rank;
+      const variance = Math.floor(Math.random() * 10) - 5; // +/- 5 positions
+      const mockEcrRank = Math.max(1, baseEcrRank + variance);
+      const mockEcrPoints = Math.max(0, 20 - (mockEcrRank * 0.5) + Math.random() * 5);
+      
+      return {
+        player_id: player.player_id,
+        name: player.name,
+        team: player.team,
+        pos: player.pos,
+        our_rank: player.rank,
+        ecr_rank: mockEcrRank,
+        edge_vs_ecr: mockEcrPoints - (20 - (player.rank * 0.5)),
+        beat_flag: player.rank < mockEcrRank
+      };
+    });
+  };
+
+  // Determine data source and combine data
+  const isUsingFallback = !predictionsData?.data?.length && compassData?.data?.length;
+  const isLoading = predictionsLoading || (compassLoading && !predictionsData?.data?.length);
+  const error = predictionsError && compassError;
+  
+  let players: RankingPlayer[] = [];
+  if (predictionsData?.data?.length) {
+    players = predictionsData.data;
+  } else if (compassData?.data?.length) {
+    players = transformCompassToRankings(compassData.data);
+  }
+
+  const refetch = () => {
+    // This would invalidate both queries, but for now we'll keep it simple
+    window.location.reload();
+  };
 
   // Calculate difference between our rank and ECR rank
   const calculateDifference = (ourRank: number, ecrRank?: number): { diff: number, isPositive: boolean } => {
@@ -154,9 +229,23 @@ export default function PlayerRankings() {
               <h1 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-page-title">
                 Player Rankings Comparison
               </h1>
-              <p className="text-gray-600 mb-6" data-testid="text-page-description">
-                Our player rankings compared to Expert Consensus Rankings (ECR) with difference indicators
-              </p>
+              <div className="flex items-center gap-4 mb-4">
+                <p className="text-gray-600" data-testid="text-page-description">
+                  Our player rankings compared to Expert Consensus Rankings (ECR) with difference indicators
+                </p>
+                {isUsingFallback && (
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300" data-testid="badge-fallback-data">
+                    <Compass className="h-3 w-3 mr-1" />
+                    Compass Data
+                  </Badge>
+                )}
+                {!isUsingFallback && players.length > 0 && (
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300" data-testid="badge-predictions-data">
+                    <Database className="h-3 w-3 mr-1" />
+                    Predictions
+                  </Badge>
+                )}
+              </div>
               
               {/* Controls */}
               <div className="flex items-center gap-4">
@@ -206,7 +295,17 @@ export default function PlayerRankings() {
               Player Rankings Comparison
             </CardTitle>
             <CardDescription>
-              Rankings comparison showing where we differ from expert consensus
+              {isUsingFallback ? (
+                <div className="space-y-1">
+                  <div>Showing compass-based rankings with simulated ECR comparison</div>
+                  <div className="text-xs text-amber-600 flex items-center gap-1">
+                    <Compass className="h-3 w-3" />
+                    Using fallback data - prediction data not available
+                  </div>
+                </div>
+              ) : (
+                "Rankings comparison showing where we differ from expert consensus"
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
