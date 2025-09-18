@@ -69,6 +69,7 @@ import buysSellsRoutes from './routes/buysSellsRoutes';
 import consensusRoutes from './consensus';
 import consensusSeedingRoutes from './consensusSeeding';
 import articleRoutes from './routes/articleRoutes';
+import { createEcrLoaderRouter } from './services/ecrLoader';
 import { 
   getProfile, 
   updateProfile, 
@@ -2538,6 +2539,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ECR-Beating Prediction Engine
   app.use('/api/predictions', createCompassRouter());
   console.log('🔮 Prediction Engine routes mounted at /api/predictions/*');
+  
+  // ECR Data Loader for FantasyPros CSV uploads
+  app.use('/api', createEcrLoaderRouter());
+  console.log('📊 ECR Loader routes mounted at /api/admin/ecr/* and /api/ecr/*');
   
   // Rookie system routes
   app.use('/api/rookies', rookieRoutes);
