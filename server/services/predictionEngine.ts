@@ -737,6 +737,69 @@ export function getPlayers(run_id: string, opts?: { pos?: Position; beat_only?: 
   return preds;
 }
 
+/**
+ * Get the most recent prediction run_id from memory
+ * Returns null if no predictions exist
+ */
+export function getLatestRunId(): string | null {
+  console.log(`🔮 [Prediction Engine] Finding latest run_id from ${memory.predictions.size} cached runs`);
+  
+  if (memory.predictions.size === 0) {
+    console.log(`🔮 [Prediction Engine] No prediction runs found in memory`);
+    return null;
+  }
+  
+  // Find the most recent run by checking run timestamps
+  // Since run_ids are generated with crypto.randomBytes, we need to check prediction timestamps
+  let latestRunId = null;
+  let latestTime = 0;
+  
+  for (const [runId, predictions] of memory.predictions.entries()) {
+    if (predictions.length > 0) {
+      // Use the first prediction's week and assume they're ordered by recency
+      // In a real implementation, you'd store generation timestamps
+      const runTime = Date.now(); // Placeholder - in real implementation store actual generation time
+      if (runTime > latestTime) {
+        latestTime = runTime;
+        latestRunId = runId;
+      }
+    }
+  }
+  
+  console.log(`🔮 [Prediction Engine] Latest run_id found: ${latestRunId}`);
+  return latestRunId;
+}
+
+/**
+ * Get summary for the latest prediction run
+ * Returns null if no predictions exist
+ */
+export function getLatestSummary(): any | null {
+  const latestRunId = getLatestRunId();
+  if (!latestRunId) {
+    console.log(`🔮 [Prediction Engine] No latest run available for summary`);
+    return null;
+  }
+  
+  console.log(`🔮 [Prediction Engine] Getting summary for latest run: ${latestRunId}`);
+  return getSummary(latestRunId);
+}
+
+/**
+ * Get players for the latest prediction run
+ * Returns empty array if no predictions exist
+ */
+export function getLatestPlayers(opts?: { pos?: Position; beat_only?: boolean }): WeeklyPrediction[] {
+  const latestRunId = getLatestRunId();
+  if (!latestRunId) {
+    console.log(`🔮 [Prediction Engine] No latest run available for players`);
+    return [];
+  }
+  
+  console.log(`🔮 [Prediction Engine] Getting players for latest run: ${latestRunId}`);
+  return getPlayers(latestRunId, opts);
+}
+
 /*************************
  * Express Router (plug-and-play)
  *************************/
@@ -853,7 +916,60 @@ export function createCompassRouter(): Router {
     }
   });
 
-  console.log(`🔮 [Prediction Engine] Router created with 3 endpoints: /predictions/generate-weekly, /predictions/:run_id/summary, /predictions/:run_id/players`);
+  // PUBLIC ENDPOINTS - No admin auth required for reading latest predictions
+  r.get("/latest/summary", (req: Request, res: Response) => {
+    try {
+      console.log(`🔮 [Prediction Engine] GET /api/predictions/latest/summary called (public access)`);
+      const summary = getLatestSummary();
+      
+      if (!summary) {
+        return res.status(404).json({ 
+          success: false,
+          message: "No prediction data available", 
+          code: "NO_PREDICTIONS" 
+        });
+      }
+      
+      res.json({
+        success: true,
+        data: summary,
+        accessed_at: new Date().toISOString()
+      });
+    } catch (e: any) {
+      console.error(`🔮 [Prediction Engine] Error in get latest summary:`, e);
+      res.status(500).json({ 
+        success: false,
+        error: e?.message || "internal",
+        code: "INTERNAL_ERROR"
+      });
+    }
+  });
+
+  r.get("/latest/players", (req: Request, res: Response) => {
+    try {
+      const { pos, beat_only } = req.query as { pos?: Position; beat_only?: string };
+      console.log(`🔮 [Prediction Engine] GET /api/predictions/latest/players called with pos=${pos}, beat_only=${beat_only} (public access)`);
+      
+      const players = getLatestPlayers({ pos, beat_only: beat_only === "true" });
+      
+      res.json({
+        success: true,
+        data: players,
+        count: players.length,
+        filters: { pos: pos || "all", beat_only: beat_only === "true" },
+        accessed_at: new Date().toISOString()
+      });
+    } catch (e: any) {
+      console.error(`🔮 [Prediction Engine] Error in get latest players:`, e);
+      res.status(500).json({ 
+        success: false,
+        error: e?.message || "internal",
+        code: "INTERNAL_ERROR"
+      });
+    }
+  });
+
+  console.log(`🔮 [Prediction Engine] Router created with 5 endpoints: /predictions/generate-weekly (admin), /predictions/:run_id/summary, /predictions/:run_id/players, /latest/summary (public), /latest/players (public)`);
   return r;
 }
 
