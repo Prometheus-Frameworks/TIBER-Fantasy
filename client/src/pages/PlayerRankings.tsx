@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { TrendingUp, TrendingDown, Minus, Clock, AlertCircle, Trophy, Target, Filter, Compass, Database } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Clock, AlertCircle, Trophy, Target, Filter, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,145 +15,61 @@ interface RankingPlayer {
   name: string;
   team: string;
   pos: string;
-  our_rank: number;
-  ecr_rank?: number;
-  edge_vs_ecr?: number;
-  beat_flag?: boolean;
+  rank: number;
 }
 
-interface RankingResponse {
+interface OTCFinalRankingsResponse {
   success: boolean;
   data: RankingPlayer[];
-}
-
-// Compass/fusion player data structure from the fallback endpoint
-interface CompassPlayer {
-  player_id: string;
-  name: string;
-  pos: string;
-  team: string;
-  rank: number;
-  score: number;
-  north: number;
-  east: number;
-  south: number;
-  west: number;
-  badges?: string[];
-  age?: number;
-  tier?: string;
-}
-
-interface CompassResponse {
-  mode: string;
-  position: string;
-  data: CompassPlayer[];
+  metadata: {
+    generated_at: string;
+    total_players: number;
+    positions: string[];
+    source: string;
+  };
 }
 
 export default function PlayerRankings() {
   const [position, setPosition] = useState<Position>("All");
+  const queryClient = useQueryClient();
 
-  // Primary data source - predictions
-  const { data: predictionsData, isLoading: predictionsLoading, error: predictionsError } = useQuery({
-    queryKey: ["player-predictions", position],
+  // Single authoritative data source - OTC Final Rankings
+  const { data: rankingsData, isLoading, error, refetch } = useQuery({
+    queryKey: ["otc-final-rankings", position],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (position !== "All") {
         params.set('pos', position);
       }
-      params.set('beat_only', 'false');
       
-      const response = await fetch(`/api/predictions/latest/players?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to load predictions data');
+      const response = await fetch(`/api/rankings/otc-final?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error(`Failed to load OTC final rankings: ${response.status} ${response.statusText}`);
+      }
       const result = await response.json();
-      return result as RankingResponse;
+      return result as OTCFinalRankingsResponse;
     },
-    retry: 1
+    retry: 2,
+    staleTime: 5 * 60 * 1000, // Consider data stale after 5 minutes
+    gcTime: 30 * 60 * 1000, // Cache for 30 minutes
   });
 
-  // Fallback data source - compass rankings
-  const { data: compassData, isLoading: compassLoading, error: compassError } = useQuery({
-    queryKey: ["compass-rankings", position],
-    queryFn: async () => {
-      const posParam = position === "All" ? "" : `&position=${position}`;
-      const response = await fetch(`/api/rankings/deepseek/v3.2?mode=dynasty${posParam}`);
-      if (!response.ok) throw new Error('Failed to load compass data');
-      const result = await response.json();
-      return result as CompassResponse;
-    },
-    retry: 1,
-    enabled: !predictionsData?.data?.length // Only run if predictions are empty
-  });
-
-  // Transform compass data to ranking format
-  const transformCompassToRankings = (compassPlayers: CompassPlayer[]): RankingPlayer[] => {
-    return compassPlayers.map(player => {
-      // Mock consensus data based on our rank with some variance for demonstration
-      const baseEcrRank = player.rank;
-      const variance = Math.floor(Math.random() * 10) - 5; // +/- 5 positions
-      const mockEcrRank = Math.max(1, baseEcrRank + variance);
-      const mockEcrPoints = Math.max(0, 20 - (mockEcrRank * 0.5) + Math.random() * 5);
-      
-      return {
-        player_id: player.player_id,
-        name: player.name,
-        team: player.team,
-        pos: player.pos,
-        our_rank: player.rank,
-        ecr_rank: mockEcrRank,
-        edge_vs_ecr: mockEcrPoints - (20 - (player.rank * 0.5)),
-        beat_flag: player.rank < mockEcrRank
-      };
-    });
-  };
-
-  // Determine data source and combine data
-  const isUsingFallback = !predictionsData?.data?.length && compassData?.data?.length;
-  const isLoading = predictionsLoading || (compassLoading && !predictionsData?.data?.length);
-  const error = predictionsError && compassError;
+  const players = rankingsData?.data || [];
   
-  let players: RankingPlayer[] = [];
-  if (predictionsData?.data?.length) {
-    players = predictionsData.data;
-  } else if (compassData?.data?.length) {
-    players = transformCompassToRankings(compassData.data);
-  }
-
-  const refetch = () => {
-    // This would invalidate both queries, but for now we'll keep it simple
-    window.location.reload();
+  const handleRefresh = async () => {
+    // Use TanStack Query invalidation instead of page reload
+    await queryClient.invalidateQueries({ 
+      queryKey: ["otc-final-rankings"] 
+    });
+    refetch();
   };
 
-  // Calculate difference between our rank and market consensus rank
-  const calculateDifference = (ourRank: number, ecrRank?: number): { diff: number, isPositive: boolean } => {
-    if (!ecrRank) return { diff: 0, isPositive: false };
-    // Positive difference means we rank the player higher (lower number = better rank)
-    const diff = ecrRank - ourRank;
-    return { diff: Math.abs(diff), isPositive: diff > 0 };
-  };
-
-  // Get icon for ranking difference
-  const getDifferenceIcon = (ourRank: number, ecrRank?: number) => {
-    if (!ecrRank) return <Minus className="h-4 w-4 text-gray-400" />;
-    const { isPositive } = calculateDifference(ourRank, ecrRank);
-    return isPositive ? 
-      <TrendingUp className="h-4 w-4 text-green-600" /> : 
-      <TrendingDown className="h-4 w-4 text-red-600" />;
-  };
-
-  // Get badge color for difference
-  const getDifferenceBadgeColor = (ourRank: number, ecrRank?: number) => {
-    if (!ecrRank) return "bg-gray-100 text-gray-800";
-    const { isPositive } = calculateDifference(ourRank, ecrRank);
-    return isPositive ? 
-      "bg-green-100 text-green-800 border-green-300" : 
-      "bg-red-100 text-red-800 border-red-300";
-  };
 
   // Filter players based on position
   const filteredPlayers = position === "All" ? players : players.filter(p => p.pos === position);
 
-  // Sort players by our ranking
-  const sortedPlayers = [...filteredPlayers].sort((a, b) => a.our_rank - b.our_rank);
+  // Sort players by ranking
+  const sortedPlayers = [...filteredPlayers].sort((a, b) => a.rank - b.rank);
 
   if (isLoading) {
     return (
@@ -209,7 +125,7 @@ export default function PlayerRankings() {
             <p className="text-red-600 mb-4">
               {error instanceof Error ? error.message : 'An unexpected error occurred'}
             </p>
-            <Button onClick={() => refetch()} variant="outline" data-testid="button-retry-rankings">
+            <Button onClick={handleRefresh} variant="outline" data-testid="button-retry-rankings">
               <Clock className="h-4 w-4 mr-2" />
               Try Again
             </Button>
@@ -227,22 +143,16 @@ export default function PlayerRankings() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-page-title">
-                Player Rankings Comparison
+                OTC Player Rankings
               </h1>
               <div className="flex items-center gap-4 mb-4">
                 <p className="text-gray-600" data-testid="text-page-description">
-                  Our rankings compared to market consensus with difference indicators
+                  Official OTC player rankings combining consensus data with proprietary adjustments
                 </p>
-                {isUsingFallback && (
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300" data-testid="badge-fallback-data">
-                    <Compass className="h-3 w-3 mr-1" />
-                    Compass Data
-                  </Badge>
-                )}
-                {!isUsingFallback && players.length > 0 && (
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300" data-testid="badge-predictions-data">
-                    <Database className="h-3 w-3 mr-1" />
-                    Predictions
+                {rankingsData?.metadata && (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300" data-testid="badge-authoritative-data">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Authoritative
                   </Badge>
                 )}
               </div>
@@ -269,7 +179,7 @@ export default function PlayerRankings() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => refetch()}
+                  onClick={handleRefresh}
                   data-testid="button-refresh-rankings"
                 >
                   <Clock className="h-4 w-4 mr-2" />
@@ -279,9 +189,16 @@ export default function PlayerRankings() {
             </div>
 
             <div className="text-right">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Trophy className="h-4 w-4" />
-                <span data-testid="text-total-players">{sortedPlayers.length} Players</span>
+              <div className="flex flex-col items-end gap-1 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4" />
+                  <span data-testid="text-total-players">{sortedPlayers.length} Players</span>
+                </div>
+                {rankingsData?.metadata?.generated_at && (
+                  <div className="text-xs text-gray-500">
+                    Updated: {new Date(rankingsData.metadata.generated_at).toLocaleString()}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -292,20 +209,10 @@ export default function PlayerRankings() {
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5" />
-              Player Rankings Comparison
+              OTC Player Rankings
             </CardTitle>
             <CardDescription>
-              {isUsingFallback ? (
-                <div className="space-y-1">
-                  <div>Showing compass-based rankings with market consensus comparison</div>
-                  <div className="text-xs text-amber-600 flex items-center gap-1">
-                    <Compass className="h-3 w-3" />
-                    Using fallback data - prediction data not available
-                  </div>
-                </div>
-              ) : (
-                "Rankings comparison showing where we differ from expert consensus"
-              )}
+              Authoritative OTC player rankings combining consensus data from multiple sources with our proprietary adjustments and algorithms
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -321,95 +228,46 @@ export default function PlayerRankings() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-16">Our Rank</TableHead>
+                    <TableHead className="w-16">Rank</TableHead>
                     <TableHead>Player</TableHead>
                     <TableHead className="w-20">Position</TableHead>
-                    <TableHead className="w-16">Market</TableHead>
-                    <TableHead className="w-24">Difference</TableHead>
+                    <TableHead className="w-20">Team</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedPlayers.map((player) => {
-                    const { diff, isPositive } = calculateDifference(player.our_rank, player.ecr_rank);
-                    
-                    return (
-                      <TableRow 
-                        key={player.player_id} 
-                        className="hover:bg-gray-50"
-                        data-testid={`row-player-${player.player_id}`}
-                      >
-                        <TableCell className="font-mono text-center" data-testid={`text-our-rank-${player.player_id}`}>
-                          <Badge variant="outline" className="font-mono">
-                            {player.our_rank}
-                          </Badge>
-                        </TableCell>
-                        
-                        <TableCell data-testid={`text-player-info-${player.player_id}`}>
-                          <div>
-                            <div className="font-semibold">{player.name}</div>
-                            <div className="text-sm text-gray-500">{player.team}</div>
-                          </div>
-                        </TableCell>
-                        
-                        <TableCell data-testid={`text-position-${player.player_id}`}>
-                          <Badge variant="secondary" className="font-mono">
-                            {player.pos}
-                          </Badge>
-                        </TableCell>
-                        
-                        <TableCell className="text-center" data-testid={`text-ecr-rank-${player.player_id}`}>
-                          {player.ecr_rank ? (
-                            <Badge variant="outline" className="font-mono">
-                              {player.ecr_rank}
-                            </Badge>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </TableCell>
-                        
-                        <TableCell className="text-center" data-testid={`text-difference-${player.player_id}`}>
-                          {player.ecr_rank ? (
-                            <div className="flex items-center justify-center gap-1">
-                              {getDifferenceIcon(player.our_rank, player.ecr_rank)}
-                              <Badge 
-                                variant="outline" 
-                                className={`font-mono ${getDifferenceBadgeColor(player.our_rank, player.ecr_rank)}`}
-                              >
-                                {isPositive ? '+' : '-'}{diff}
-                              </Badge>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {sortedPlayers.map((player) => (
+                    <TableRow 
+                      key={player.player_id} 
+                      className="hover:bg-gray-50"
+                      data-testid={`row-player-${player.player_id}`}
+                    >
+                      <TableCell className="font-mono text-center" data-testid={`text-rank-${player.player_id}`}>
+                        <Badge variant="outline" className="font-mono">
+                          {player.rank}
+                        </Badge>
+                      </TableCell>
+                      
+                      <TableCell data-testid={`text-player-name-${player.player_id}`}>
+                        <div className="font-semibold">{player.name}</div>
+                      </TableCell>
+                      
+                      <TableCell data-testid={`text-position-${player.player_id}`}>
+                        <Badge variant="secondary" className="font-mono">
+                          {player.pos}
+                        </Badge>
+                      </TableCell>
+                      
+                      <TableCell data-testid={`text-team-${player.player_id}`}>
+                        <span className="font-medium text-gray-700">{player.team}</span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             )}
           </CardContent>
         </Card>
 
-        {/* Legend */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-center gap-8 text-sm">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-green-600" />
-                <span>We rank higher than market</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-red-600" />
-                <span>We rank lower than market</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Minus className="h-4 w-4 text-gray-400" />
-                <span>No market data available</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

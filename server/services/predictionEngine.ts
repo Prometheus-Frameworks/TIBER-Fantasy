@@ -411,10 +411,10 @@ export async function assemblePlayerFeatures(
           pos,
           team: player.team,
           age: player.age || 25,
-          xfp_recent: player.xFpg || player.fpg,
-          xfp_season: player.fpg,
+          xfp_recent: player.xFpg ?? player.fpg ?? undefined,
+          xfp_season: player.fpg ?? undefined,
           targets_g: player.targetShare ? (player.targetShare * 17) : undefined,
-          tprr_share: player.targetShare,
+          tprr_share: player.targetShare ?? undefined,
           yprr: player.xFpg ? (player.xFpg / 10) : undefined,
           season_fpts: player.fpg ? (player.fpg * 17) : undefined,
           weekly_scores: [] // Would need game log data
@@ -518,11 +518,11 @@ export async function assemblePlayerFeatures(
         adp_rank: player.adp || Math.ceil(Math.random() * 100), // Use real ADP where available
         model_rank: Math.ceil((compass.north + compass.east + compass.south + compass.west) / 4), // Derive model rank from compass
         position: pos,
-        contract_years_left: player.contractLength || 2, // Use real contract data where available
+        contract_years_left: (player as any).contractLength ?? 2, // Use real contract data where available
         dynasty_value: player.dynastyValue,
         rostered_pct: player.rosteredPct || 50,
-        rookie_status: player.experience === 0 ? 'Rookie' : 'Veteran',
-        draft_year: player.draftYear || (new Date().getFullYear() - (player.experience || 3)),
+        rookie_status: (player as any).experience === 0 ? 'Rookie' : 'Veteran',
+        draft_year: player.draftYear || (new Date().getFullYear() - ((player as any).experience ?? 3)),
         team_stability: 0.7 // Could be enhanced with coaching/scheme stability data
       }, 'redraft');
       
@@ -754,7 +754,7 @@ export function getLatestRunId(): string | null {
   let latestRunId = null;
   let latestTime = 0;
   
-  for (const [runId, predictions] of memory.predictions.entries()) {
+  for (const [runId, predictions] of Array.from(memory.predictions.entries())) {
     if (predictions.length > 0) {
       // Use the first prediction's week and assume they're ordered by recency
       // In a real implementation, you'd store generation timestamps

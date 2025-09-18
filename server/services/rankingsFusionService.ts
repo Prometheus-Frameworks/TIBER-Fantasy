@@ -91,11 +91,11 @@ interface FusionResult {
   
   // Debug breakdown (if requested)
   debug?: {
-    north: { components: any; score: number };
+    north: { components: any; score: number; rookie_capped?: boolean };
     east: { components: any; score: number };
     south: { components: any; score: number };
-    west: { components: any; score: number };
-    final: { dynasty_score?: number; redraft_score?: number; tier: string; badges: string[] };
+    west: { components: any; score: number; market_capped?: boolean };
+    final: { dynasty_score?: number; redraft_score?: number; tier: string; badges: string[]; prior_applied?: boolean; proven_elite_floor?: number };
   };
 }
 
@@ -858,7 +858,7 @@ export class RankingsFusionService {
    */
   async generateFusionRankings(
     mode: Mode = 'dynasty', 
-    position?: Position,
+    position?: Position | 'ALL',
     debug: boolean = false
   ): Promise<FusionResult[]> {
     try {
@@ -869,7 +869,7 @@ export class RankingsFusionService {
       
       // Filter by position if requested (handle "ALL" case properly)
       const filteredPlayers = (position && position !== "ALL") ? 
-        players.filter(p => p.pos === position) : players;
+        players.filter(p => p.pos === position as Position) : players;
       
       if (filteredPlayers.length === 0) {
         console.log(`[Fusion v3.2] No players found for criteria`);
