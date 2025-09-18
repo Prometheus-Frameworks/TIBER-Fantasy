@@ -407,6 +407,122 @@ router.get('/api/sleeper/stats/:playerId', async (req: Request, res: Response) =
   }
 });
 
+// Trending players endpoint - Missing from original implementation
+router.get('/api/sleeper/trending/:type', async (req: Request, res: Response) => {
+  const t0 = Date.now();
+  try {
+    const { type } = req.params;
+    const hours = parseInt(req.query.hours as string) || 24;
+    const limit = parseInt(req.query.limit as string) || 25;
+    
+    if (!['add', 'drop'].includes(type)) {
+      return res.status(400).json(createErrorResponse('INVALID_TYPE', 'Type must be "add" or "drop"'));
+    }
+    
+    logInfo('Fetching trending players', { type, hours, limit });
+    
+    // Use Sleeper API directly for trending data
+    const response = await fetch(
+      `https://api.sleeper.app/v1/players/nfl/trending/${type}?lookback_hours=${hours}&limit=${limit}`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Sleeper API error: ${response.status}`);
+    }
+    
+    const trendingData = await response.json();
+    
+    res.json(createResponse({
+      data: trendingData,
+      type,
+      hours,
+      limit,
+      count: trendingData?.length || 0
+    }));
+    
+    logInfo('Trending players fetch successful', { 
+      type, 
+      count: trendingData?.length || 0,
+      durationMs: Date.now() - t0 
+    });
+  } catch (e: any) {
+    logError('Trending players fetch failed', e, { 
+      type: req.params.type,
+      durationMs: Date.now() - t0 
+    });
+    res.status(httpStatusFromError(e)).json(errFields(e));
+  }
+});
+
+// Player photo endpoint - Missing from original implementation  
+router.get('/api/sleeper/player/:playerId/photo', async (req: Request, res: Response) => {
+  const t0 = Date.now();
+  try {
+    const { playerId } = req.params;
+    const size = req.query.size as string || 'medium';
+    
+    if (!playerId) {
+      return res.status(400).json(createErrorResponse('INVALID_PLAYER_ID', 'Player ID is required'));
+    }
+    
+    logInfo('Fetching player photo', { playerId, size });
+    
+    // Sleeper uses a standard photo URL format
+    const photoUrl = `https://sleepercdn.com/content/nfl/players/${playerId}.jpg`;
+    
+    res.json(createResponse({
+      success: true,
+      playerId,
+      photoUrl,
+      size,
+      provider: 'sleeper'
+    }));
+    
+    logInfo('Player photo fetch successful', { 
+      playerId,
+      durationMs: Date.now() - t0 
+    });
+  } catch (e: any) {
+    logError('Player photo fetch failed', e, { 
+      playerId: req.params.playerId,
+      durationMs: Date.now() - t0 
+    });
+    res.status(httpStatusFromError(e)).json(errFields(e));
+  }
+});
+
+// Connection test endpoint - Missing from original implementation
+router.get('/api/sleeper/test-connection', async (_req: Request, res: Response) => {
+  const t0 = Date.now();
+  try {
+    logInfo('Testing Sleeper API connection');
+    
+    // Test connection to Sleeper API
+    const response = await fetch('https://api.sleeper.app/v1/state/nfl');
+    
+    if (!response.ok) {
+      throw new Error(`Connection test failed: ${response.status}`);
+    }
+    
+    const nflState = await response.json();
+    
+    res.json(createResponse({
+      connection_status: 'healthy',
+      api_status: nflState,
+      test_timestamp: new Date().toISOString()
+    }));
+    
+    logInfo('Connection test successful', { 
+      week: nflState?.week,
+      season: nflState?.season,
+      durationMs: Date.now() - t0 
+    });
+  } catch (e: any) {
+    logError('Connection test failed', e, { durationMs: Date.now() - t0 });
+    res.status(500).json(createErrorResponse('CONNECTION_TEST_FAILED', 'Connection test failed', e?.message));
+  }
+});
+
 // Health check endpoint for Sleeper integration (Batch #2 refinement)
 router.get('/api/sleeper/health', async (_req: Request, res: Response) => {
   try {
