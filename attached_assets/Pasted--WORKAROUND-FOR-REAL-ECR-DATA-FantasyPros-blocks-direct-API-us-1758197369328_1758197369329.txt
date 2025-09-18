@@ -1,0 +1,227 @@
+/*
+  WORKAROUND FOR REAL ECR DATA
+  -----------------------------
+  FantasyPros blocks direct API use. Two workarounds:
+    1. **CSV Download (Manual or Automated)**
+       - Each FantasyPros rankings page (weekly redraft, dynasty) has a “Download CSV” button.
+       - You or an automated headless script can fetch this once per week and drop into /data/week{n}.csv.
+       - This provider already parses that CSV format into ECR rows.
+
+    2. **Fallback / Mirror Source**
+       - If CSV download isn’t possible, use a lightweight service (e.g. publish the CSV to your own S3/GitHub repo).
+       - Point the ECR provider to that URL. The parsing logic remains the same.
+
+  Below: Updated provider supports both **local CSV** and **remote fetch** (URL). If local is missing, it will try remote.
+*/
+
+import fs from "fs";
+import path from "path";
+import Papa from "papaparse";
+import fetch from "node-fetch";
+import { generateWeekly, getSummary, GenerateWeeklyArgs, PlayerFeatureVector } from "./compass-ecr-engine";
+
+/*************************
+ * ECR Provider (FantasyPros CSV)
+ *************************/
+export interface EcrRow {
+  player: string;
+  team: string;
+  pos: string;
+  rank: number;
+  points?: number;
+}
+
+export class FantasyProsCsvProvider {
+  async loadWeekly(week: number, csvFile: string, remoteUrl?: string): Promise<EcrRow[]> {
+    let csv: string;
+    if (fs.existsSync(csvFile)) {
+      csv = fs.readFileSync(csvFile, "utf8");
+    } else if (remoteUrl) {
+      const res = await fetch(remoteUrl);
+      if (!res.ok) throw new Error(`Failed to fetch remote ECR CSV: ${res.status}`);
+      csv = await res.text();
+    } else {
+      throw new Error(`No CSV file at ${csvFile} and no remoteUrl provided.`);
+    }
+    const parsed = Papa.parse(csv, { header: true });
+    return (parsed.data as any[]).map(r => ({
+      player: r.Player,
+      team: r.Team,
+      pos: (r.POS || r.Position),
+      rank: parseInt(r.Rank, 10),
+      points: r.FPTS ? parseFloat(r.FPTS) : undefined,
+    }));
+  }
+}
+
+/*************************
+ * Market Provider (Sleeper)
+ *************************/
+export class SleeperMarketProvider {
+  async loadADP(): Promise<any[]> {
+    // Public Sleeper API: ADP endpoints vary by season/format.
+    // Example (redraft PPR): https://api.sleeper.app/v1/adp/nfl/ppr?season=2025&type=redraft
+    // Example (dynasty):     https://api.sleeper.app/v1/adp/nfl/ppr?season=2025&type=dynasty
+    try {
+      const res = await fetch("https://api.sleeper.app/v1/adp/nfl/ppr?season=2025&type=redraft");
+      if (!res.ok) throw new Error(`Sleeper ADP fetch failed: ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.error("SleeperMarketProvider error", err);
+      return [];
+    }
+  }
+}
+
+/*************************
+ * Feature ETL Helper (mock for now)
+ *************************/
+export function buildFeaturesFromMock(ecr: EcrRow[], week: number): PlayerFeatureVector[] {
+  return ecr.slice(0, 10).map(row => ({
+    player_id: `${row.team}-${row.player}`,
+    name: row.player,
+    team: row.team,
+    pos: (row.pos.includes("WR") ? "WR" : row.pos.includes("RB") ? "RB" : row.pos.includes("QB") ? "QB" : "TE"),
+    week,
+    routes_rate: 0.65,
+    targets_per_route: 0.2,
+    yprr: 1.8,
+    rush_share: 0.45,
+    target_share: 0.17,
+    red_zone_opps: 3,
+    usage_slope_2w: 0.2,
+    talent_insulation: 0.6,
+    team_proe: 0.05,
+    pace_overall: 0.55,
+    ol_pbwr: 0.62,
+    opp_pressure_rate: 0.28,
+    oc_tendency_delta: 0.1,
+    regime_shift_z: 0.5,
+    prac_wed: "FP",
+    prac_thu: "FP",
+    prac_fri: "FP",
+    games_missed_last_16: 1,
+    usage_volatility_4w: 0.2,
+    age: 25,
+    weather_risk: 0.1,
+    ecr_rank: row.rank,
+    ecr_points: row.points,
+    adp_movement_7d: 0.5,
+    start_pct_delta: 0.02,
+    contract_cliff_flag: false,
+  }));
+}
+
+/*************************
+ * Sanity Check Runner
+ *************************/
+export async function runSanityCheck() {
+  const provider = new FantasyProsCsvProvider();
+  const localCsv = path.join(__dirname, "data/week1.csv");
+  const remoteUrl = "https://raw.githubusercontent.com/your-repo/ecr-data/main/week1.csv"; // mirror option
+  const ecrRows = await provider.loadWeekly(1, localCsv, remoteUrl);
+  const features = buildFeaturesFromMock(ecrRows, 1);
+  const run = generateWeekly({ week: 1, cutoff_ts: new Date().toISOString(), features });
+  const summary = getSummary(run.run_id);
+  console.log("=== SANITY CHECK SUMMARY ===");
+  console.log(JSON.stringify(summary, null, 2));
+}
+
+// =============================
+// ROS SUPPORT + SEPARATE ECRs
+// =============================
+
+export type EcrKind = "weekly" | "ros" | "dynasty";
+
+/**
+ * Adds explicit ROS support alongside Weekly & Dynasty.
+ * - Many ROS CSVs mirror weekly headers (Player, Team, POS, ECR, FPTS). If a ROS-specific
+ *   column like ROS_FPTS exists, we map that; otherwise we fall back to FPTS when present.
+ */
+export class FantasyProsCsvProviderWithROS extends FantasyProsCsvProvider {
+  async loadROS(scoring: "PPR" | "HALF" | "STD", csvFile: string, remoteUrl?: string): Promise<EcrRow[]> {
+    let csv: string;
+    if (fs.existsSync(csvFile)) {
+      csv = fs.readFileSync(csvFile, "utf8");
+    } else if (remoteUrl) {
+      const res = await fetch(remoteUrl);
+      if (!res.ok) throw new Error(`Failed to fetch ROS ECR CSV: ${res.status}`);
+      csv = await res.text();
+    } else {
+      throw new Error(`No CSV file at ${csvFile} and no remoteUrl provided for ROS.`);
+    }
+    const parsed = Papa.parse(csv, { header: true });
+    const rows = (parsed.data as any[]).map(r => ({
+      player: r.Player,
+      team: r.Team,
+      pos: (r.POS || r.Position),
+      rank: parseInt(r.ECR || r.Rank, 10),
+      points: r.ROS_FPTS ? parseFloat(r.ROS_FPTS) : (r.FPTS ? parseFloat(r.FPTS) : undefined),
+    }));
+    return rows;
+  }
+}
+
+/**
+ * Build features for ROS display/analysis. We mark the week as 0 to indicate a ROS snapshot.
+ * The engine can still consume these (if desired) because it only requires ecr_rank/points;
+ * but typically you will *display* ROS comps rather than run weekly predictions.
+ */
+export function buildRosFeaturesFromMock(ecr: EcrRow[]): PlayerFeatureVector[] {
+  return ecr.slice(0, 10).map(row => ({
+    player_id: `${row.team}-${row.player}`,
+    name: row.player,
+    team: row.team,
+    pos: (row.pos.includes("WR") ? "WR" : row.pos.includes("RB") ? "RB" : row.pos.includes("QB") ? "QB" : "TE"),
+    week: 0, // ROS snapshot
+    // minimal dummy features; UI usually just compares our ROS ranks vs ECR
+    routes_rate: 0.65,
+    targets_per_route: 0.2,
+    yprr: 1.8,
+    rush_share: 0.45,
+    target_share: 0.17,
+    red_zone_opps: 2,
+    usage_slope_2w: 0.0,
+    talent_insulation: 0.6,
+    team_proe: 0.02,
+    pace_overall: 0.52,
+    ol_pbwr: 0.60,
+    opp_pressure_rate: 0.30,
+    oc_tendency_delta: 0.0,
+    regime_shift_z: 0.0,
+    prac_wed: "FP",
+    prac_thu: "FP",
+    prac_fri: "FP",
+    games_missed_last_16: 0,
+    usage_volatility_4w: 0.15,
+    age: 25,
+    weather_risk: 0,
+    ecr_rank: row.rank,
+    ecr_points: row.points,
+    adp_movement_7d: 0,
+    start_pct_delta: 0,
+    contract_cliff_flag: false,
+  }));
+}
+
+/**
+ * Quick sanity runner for ROS alongside Weekly.
+ * - Reads local or remote ROS CSV, logs the top few rows.
+ */
+export async function runRosSanityCheck() {
+  const provider = new FantasyProsCsvProviderWithROS();
+  const localCsv = path.join(__dirname, "data/ros_ppr_wr.csv");
+  const remoteUrl = "https://raw.githubusercontent.com/your-repo/ecr-data/main/ros_ppr_wr.csv";
+  const ecrRows = await provider.loadROS("PPR", localCsv, remoteUrl);
+  const features = buildRosFeaturesFromMock(ecrRows);
+  console.log("=== ROS ECR SAMPLE ===");
+  console.log(features.slice(0, 5).map(f => ({ name: f.name, team: f.team, pos: f.pos, ecr_rank: f.ecr_rank, ecr_points: f.ecr_points })));
+}
+
+// Convenience: run both weekly & ROS sanity when executed directly
+if (require.main === module) {
+  (async () => {
+    await runSanityCheck().catch(e => console.error("Weekly sanity failed", e));
+    await runRosSanityCheck().catch(e => console.error("ROS sanity failed", e));
+  })();
+}

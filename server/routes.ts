@@ -70,6 +70,7 @@ import consensusRoutes from './consensus';
 import consensusSeedingRoutes from './consensusSeeding';
 import articleRoutes from './routes/articleRoutes';
 import { createEcrLoaderRouter } from './services/ecrLoader';
+import { enhancedEcrService } from './services/enhancedEcrProvider';
 import { 
   getProfile, 
   updateProfile, 
@@ -2543,6 +2544,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ECR Data Loader for FantasyPros CSV uploads
   app.use('/api', createEcrLoaderRouter());
   console.log('📊 ECR Loader routes mounted at /api/admin/ecr/* and /api/ecr/*');
+
+  // Enhanced ECR Provider endpoints
+  app.get("/api/ecr/enhanced/sanity", async (req, res) => {
+    try {
+      const result = await enhancedEcrService.runSanityCheck();
+      res.json({
+        success: true,
+        message: "Enhanced ECR provider sanity check complete",
+        ...result
+      });
+    } catch (error) {
+      console.error("Enhanced ECR sanity check failed:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/ecr/enhanced/weekly", async (req, res) => {
+    try {
+      const { week = 1, pos = "ALL", scoring = "PPR" } = req.query;
+      
+      if (pos === "ALL") {
+        // For ALL positions, get each position separately and combine
+        const positions = ["QB", "RB", "WR", "TE"];
+        const allFeatures = [];
+        
+        for (const position of positions) {
+          try {
+            const features = await enhancedEcrService.getWeeklyFeatures(
+              Number(week), 
+              position, 
+              scoring as "PPR" | "HALF" | "STD"
+            );
+            allFeatures.push(...features);
+          } catch (error) {
+            console.warn(`No weekly data for ${position}, using mock data`);
+            // Generate mock features for this position when no real data available
+            const mockFeatures = await enhancedEcrService.runSanityCheck();
+            const positionFeatures = mockFeatures.features.filter(f => f.pos === position);
+            allFeatures.push(...positionFeatures);
+          }
+        }
+        
+        res.json({
+          success: true,
+          week: Number(week),
+          pos: "ALL",
+          scoring,
+          count: allFeatures.length,
+          features: allFeatures.sort((a, b) => a.ecr_rank - b.ecr_rank)
+        });
+      } else {
+        const features = await enhancedEcrService.getWeeklyFeatures(
+          Number(week),
+          pos as string,
+          scoring as "PPR" | "HALF" | "STD"
+        );
+        
+        res.json({
+          success: true,
+          week: Number(week),
+          pos,
+          scoring,
+          count: features.length,
+          features
+        });
+      }
+    } catch (error) {
+      console.error("Enhanced weekly ECR fetch failed:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/ecr/enhanced/ros", async (req, res) => {
+    try {
+      const { pos = "WR", scoring = "PPR" } = req.query;
+      const features = await enhancedEcrService.getRosFeatures(
+        pos as string,
+        scoring as "PPR" | "HALF" | "STD"
+      );
+      
+      res.json({
+        success: true,
+        type: "rest_of_season",
+        pos,
+        scoring,
+        count: features.length,
+        features
+      });
+    } catch (error) {
+      console.error("Enhanced ROS ECR fetch failed:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/ecr/enhanced/dynasty", async (req, res) => {
+    try {
+      const { pos = "WR", snapshot = "current" } = req.query;
+      const features = await enhancedEcrService.getDynastyFeatures(
+        pos as string,
+        snapshot as string
+      );
+      
+      res.json({
+        success: true,
+        type: "dynasty",
+        pos,
+        snapshot,
+        count: features.length,
+        features
+      });
+    } catch (error) {
+      console.error("Enhanced dynasty ECR fetch failed:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  console.log('🚀 Enhanced ECR Provider routes mounted at /api/ecr/enhanced/*');
   
   // Rookie system routes
   app.use('/api/rookies', rookieRoutes);

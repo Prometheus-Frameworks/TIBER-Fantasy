@@ -1,0 +1,224 @@
+/*
+  CONSENSUS BENCHMARK SERVICE — UNIFIED + ROBUST + LOW-MAINTENANCE
+  -----------------------------------------------------------------
+  Goal: Give the site a stable "awareness of consensus" (weekly + ROS),
+  without depending on a single provider. ECR becomes a *benchmark*, not a blocker.
+
+  What this provides:
+  - A single API to query consensus by kind: weekly | ros | dynasty
+  - Pluggable adapters (FantasyPros CSV upload/mirror, Sleeper ADP, KTC dynasty)
+  - Normalization to a common shape: ConsensusRank + ConsensusPoints (optional)
+  - Fallback policy + health/staleness metrics so UI can show status badges
+  - Rapport helpers: quick sentences comparing *our* rank vs consensus (personality)
+
+  Endpoints (Express router):
+    GET  /api/consensus/:kind?pos=&week=&scoring=   -> { rows, source, staleness, coverage }
+    GET  /api/consensus/rapport?pos=&week=          -> [{ player_id, summary_line }]
+
+  Plug it next to your compass engine & ecr-loader.
+*/
+
+import express, { Request, Response, Router } from "express";
+import fetch from "node-fetch";
+
+export type Kind = "weekly" | "ros" | "dynasty";
+export type Pos = "QB" | "RB" | "WR" | "TE";
+
+export interface ConsensusRow {
+  player_id?: string;     // optional if you map later
+  player: string;         // display name
+  team?: string;
+  pos: Pos;
+  rank: number;           // lower is better
+  points?: number;        // optional — projections or ROS pts
+  source: string;         // e.g. "FantasyPros:CSV" | "Sleeper:ADP" | "KTC"
+}
+
+export interface Provider {
+  kind: Kind;
+  name: string;
+  load(opts: { pos: Pos; week?: number; scoring?: "PPR"|"HALF"|"STD"; snapshot?: string }): Promise<ConsensusRow[]>;
+  freshness(): Promise<{ updated_at?: string }>; // can be a stub
+}
+
+/********************
+ * PROVIDERS
+ ********************/
+
+// 1) FantasyPros via your existing admin upload/mirror
+export class FantasyProsProvider implements Provider {
+  kind: Kind;
+  name = "FantasyPros:CSV";
+  constructor(kind: Kind, private baseUrl: string) { this.kind = kind; }
+  async load(opts: { pos: Pos; week?: number; scoring?: "PPR"|"HALF"|"STD"; snapshot?: string }): Promise<ConsensusRow[]> {
+    const u = new URL(this.kind === "weekly" ? `${this.baseUrl}/ecr/weekly` : `${this.baseUrl}/ecr/dynasty`);
+    if (this.kind === "weekly") {
+      u.searchParams.set("week", String(opts.week || 1));
+      u.searchParams.set("pos", opts.pos);
+      u.searchParams.set("scoring", String(opts.scoring || "PPR"));
+    } else {
+      u.searchParams.set("snapshot", String(opts.snapshot || "latest"));
+      u.searchParams.set("pos", opts.pos);
+    }
+    const res = await fetch(u.toString());
+    if (!res.ok) return [];
+    const json = await res.json();
+    const rows: any[] = json.rows || [];
+    return rows.map(r => ({ player: r.player, team: r.team, pos: r.pos, rank: r.ecr_rank, points: r.ecr_points, source: this.name }));
+  }
+  async freshness() { return { updated_at: new Date().toISOString() }; }
+}
+
+// 2) Sleeper ADP as a consensus proxy for weekly if no FP data
+export class SleeperAdpProvider implements Provider {
+  kind: Kind = "weekly";
+  name = "Sleeper:ADP";
+  constructor(private season: number, private type: "redraft"|"dynasty" = "redraft") {}
+  async load(opts: { pos: Pos }): Promise<ConsensusRow[]> {
+    const url = `https://api.sleeper.app/v1/adp/nfl/ppr?season=${this.season}&type=${this.type}`;
+    const res = await fetch(url, { headers: { "User-Agent": "OTC-Consensus/1.0" } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    // data is array with player_id, player_name, pos, team, adp
+    // Filter by position, map ADP -> rank (1..N)
+    const byPos = (data as any[]).filter(r => r.position === opts.pos);
+    byPos.sort((a, b) => a.adp - b.adp);
+    return byPos.map((r, i) => ({
+      player_id: String(r.player_id),
+      player: r.player_name,
+      team: r.team,
+      pos: r.position,
+      rank: i + 1,
+      source: this.name,
+    }));
+  }
+  async freshness() { return { updated_at: new Date().toISOString() }; }
+}
+
+// 3) KeepTradeCut (dynasty proxy) — optional stub with lightweight HTML parsing later
+export class KtcDynastyStubProvider implements Provider {
+  kind: Kind = "dynasty";
+  name = "KTC:Stub";
+  async load(opts: { pos: Pos }): Promise<ConsensusRow[]> {
+    // Placeholder: return empty -> acts as a low-priority fallback
+    return [];
+  }
+  async freshness() { return { updated_at: undefined }; }
+}
+
+/********************
+ * NORMALIZER + POLICY
+ ********************/
+
+export interface ConsensusPolicy {
+  order: string[]; // provider names in priority order
+  min_rows: number; // require at least this many rows to accept a provider
+}
+
+export async function pickConsensus(
+  providers: Provider[],
+  policy: ConsensusPolicy,
+  query: { kind: Kind; pos: Pos; week?: number; scoring?: "PPR"|"HALF"|"STD"; snapshot?: string }
+): Promise<{ rows: ConsensusRow[]; source: string; staleness: number; coverage: number }>
+{
+  for (const providerName of policy.order) {
+    const p = providers.find(pp => pp.name === providerName && pp.kind === query.kind);
+    if (!p) continue;
+    const rows = await p.load({ pos: query.pos, week: query.week, scoring: query.scoring, snapshot: query.snapshot });
+    if ((rows?.length || 0) >= policy.min_rows) {
+      const fresh = await p.freshness();
+      const updatedAt = fresh.updated_at ? Date.parse(fresh.updated_at) : Date.now();
+      const staleness = Math.max(0, Date.now() - updatedAt);
+      // Coverage is trivial here (you can map to your roster later); expose % of rows available
+      const coverage = rows.length;
+      return { rows, source: p.name, staleness, coverage };
+    }
+  }
+  return { rows: [], source: "none", staleness: Infinity, coverage: 0 };
+}
+
+/********************
+ * RAPPORT (personality lines)
+ ********************/
+export function rapportLine(
+  player: string,
+  ourRank: number | undefined,
+  consensusRank: number | undefined
+): string {
+  if (ourRank == null || consensusRank == null) return `${player}: no comparison yet — gathering signal.`;
+  const diff = consensusRank - ourRank; // positive = we're higher
+  if (diff >= 8) return `${player}: Compass is pounding the table — up ${diff} spots vs consensus.`;
+  if (diff >= 3) return `${player}: We like him more than the herd (+${diff}).`;
+  if (diff <= -8) return `${player}: Compass is out — consensus is late to the fade (${diff}).`;
+  if (diff <= -3) return `${player}: Cooler on him than ECR (${diff}).`;
+  return `${player}: Aligned with consensus (±2).`;
+}
+
+/********************
+ * EXPRESS ROUTER
+ ********************/
+export function createConsensusRouter(opts: {
+  baseUrlForFantasyProsApi: string; // your own server where ecr-loader serves /ecr/*
+  season: number;
+}): Router {
+  const r = express.Router();
+
+  const providers: Provider[] = [
+    new FantasyProsProvider("weekly", opts.baseUrlForFantasyProsApi),
+    new FantasyProsProvider("ros", opts.baseUrlForFantasyProsApi), // will read as dynasty endpoint with snapshot="ros" if you implement
+    new FantasyProsProvider("dynasty", opts.baseUrlForFantasyProsApi),
+    new SleeperAdpProvider(opts.season, "redraft"),
+    new KtcDynastyStubProvider(),
+  ];
+
+  // Provider priority by kind
+  const policyByKind: Record<Kind, ConsensusPolicy> = {
+    weekly:  { order: ["FantasyPros:CSV", "Sleeper:ADP"], min_rows: 30 },
+    ros:     { order: ["FantasyPros:CSV"], min_rows: 30 },
+    dynasty: { order: ["FantasyPros:CSV", "KTC:Stub"], min_rows: 30 },
+  };
+
+  r.get("/consensus/:kind", async (req: Request, res: Response) => {
+    const kind = req.params.kind as Kind;
+    const pos = req.query.pos as Pos;
+    const week = req.query.week ? Number(req.query.week) : undefined;
+    const scoring = (req.query.scoring as any) || "PPR";
+    const snapshot = req.query.snapshot ? String(req.query.snapshot) : undefined;
+
+    const policy = policyByKind[kind];
+    if (!policy) return res.status(400).json({ error: "invalid kind" });
+
+    const out = await pickConsensus(providers, policy, { kind, pos, week, scoring, snapshot });
+    res.json(out);
+  });
+
+  // Rapport demo endpoint — expects you to pass our ranks for comparison
+  r.post("/consensus/rapport", async (req: Request, res: Response) => {
+    const { rows, ourRanks } = req.body as { rows: ConsensusRow[]; ourRanks: Record<string, number> };
+    const msgs = rows.slice(0, 50).map(r => {
+      const key = (r.player_id || `${r.team}-${r.player}`).toLowerCase();
+      const our = ourRanks[key];
+      return { player: r.player, line: rapportLine(r.player, our, r.rank) };
+    });
+    res.json({ count: msgs.length, msgs });
+  });
+
+  return r;
+}
+
+/*
+HOW TO WIRE
+----------
+import express from "express";
+import { createConsensusRouter } from "./consensus-benchmark";
+
+const app = express();
+app.use(express.json());
+app.use("/api", createConsensusRouter({ baseUrlForFantasyProsApi: "http://localhost:3000/api", season: 2025 }));
+app.listen(3100, () => console.log("Consensus benchmark ready on :3100"));
+
+Frontend tips:
+- Hit GET /api/consensus/weekly?pos=WR&week=3&scoring=PPR → table of consensus rows with source + staleness ms.
+- Add a badge: source name (FantasyPros vs Sleeper) + freshness (e.g., "Updated 2h ago").
+- When rendering players, call POST /api/consensus/rapport with ourRanks to get mini one-liners for the UI.
+*/

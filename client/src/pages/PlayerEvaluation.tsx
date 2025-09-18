@@ -348,7 +348,7 @@ export default function PlayerEvaluation() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="space-y-1">
-              {predictions.slice(0, 30).map((prediction) => (
+              {predictions.slice(0, 30).map((prediction: WeeklyPrediction) => (
                 <div 
                   key={prediction.player_id} 
                   className="border-b border-gray-100 p-4 hover:bg-gray-50 transition-colors"
@@ -454,7 +454,7 @@ export default function PlayerEvaluation() {
                     <div>
                       <div className="font-medium text-gray-700 mb-1">Analysis</div>
                       <div className="space-y-1">
-                        {prediction.reasons.map((reason, idx) => (
+                        {prediction.reasons.map((reason: string, idx: number) => (
                           <div 
                             key={idx} 
                             className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded"
