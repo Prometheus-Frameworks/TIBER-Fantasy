@@ -71,6 +71,7 @@ import consensusSeedingRoutes from './consensusSeeding';
 import articleRoutes from './routes/articleRoutes';
 import { createEcrLoaderRouter } from './services/ecrLoader';
 import { enhancedEcrService } from './services/enhancedEcrProvider';
+import { createConsensusRouter } from './services/consensusBenchmark';
 import { 
   getProfile, 
   updateProfile, 
@@ -2673,6 +2674,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   console.log('🚀 Enhanced ECR Provider routes mounted at /api/ecr/enhanced/*');
+
+  // Consensus Benchmark Service - Unified ECR/ADP/Dynasty consensus with fallback policy
+  app.use('/api', createConsensusRouter({ 
+    baseUrlForFantasyProsApi: "http://localhost:5000/api", 
+    season: 2025,
+    enhancedEcrService: enhancedEcrService
+  }));
+  console.log('🎯 Consensus Benchmark routes mounted at /api/consensus/*');
   
   // Rookie system routes
   app.use('/api/rookies', rookieRoutes);
