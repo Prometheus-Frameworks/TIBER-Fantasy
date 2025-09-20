@@ -1,5 +1,7 @@
-// Enhanced Player Compass Service - Dynasty vs Redraft Separation
-// Tiber's in-house ratings engine with format-specific evaluations
+// Enhanced Player Compass Service - Dynasty vs Redraft Separation with OASIS Integration
+// Tiber's in-house ratings engine with format-specific evaluations and team environment data
+
+import { oasisEnvironmentService, type TeamEnvironment } from './oasisEnvironmentService';
 
 export interface CompassScore {
   score: number;
@@ -49,16 +51,16 @@ export class PlayerCompassService {
     // Position-specific dynasty calculations
     switch (position) {
       case 'WR':
-        ({ north, east, south, west } = this.calculateWRDynastyScores(age, rawStats, contextTags, draftCapital));
+        ({ north, east, south, west } = await this.calculateWRDynastyScores(age, rawStats, contextTags, draftCapital, playerData.team));
         break;
       case 'RB': 
-        ({ north, east, south, west } = this.calculateRBDynastyScores(age, rawStats, contextTags, draftCapital));
+        ({ north, east, south, west } = await this.calculateRBDynastyScores(age, rawStats, contextTags, draftCapital, playerData.team));
         break;
       case 'TE':
-        ({ north, east, south, west } = this.calculateTEDynastyScores(age, rawStats, contextTags, draftCapital));
+        ({ north, east, south, west } = await this.calculateTEDynastyScores(age, rawStats, contextTags, draftCapital, playerData.team));
         break;
       case 'QB':
-        ({ north, east, south, west } = this.calculateQBDynastyScores(age, rawStats, contextTags, draftCapital));
+        ({ north, east, south, west } = await this.calculateQBDynastyScores(age, rawStats, contextTags, draftCapital, playerData.team));
         break;
     }
 
@@ -130,7 +132,7 @@ export class PlayerCompassService {
   }
 
   // ===== WR DYNASTY CALCULATIONS =====
-  private calculateWRDynastyScores(age: number, rawStats: any, contextTags?: string[], draftCapital?: number) {
+  private async calculateWRDynastyScores(age: number, rawStats: any, contextTags?: string[], draftCapital?: number, team?: string) {
     const tags = contextTags || [];
     // Dynasty emphasizes: age curve, draft capital, long-term role security
     
@@ -142,13 +144,32 @@ export class PlayerCompassService {
     if (rawStats?.yardsPerTarget > 12) north += 1.0; // Efficiency bonus
     if (draftCapital && draftCapital <= 32) north += 1.5; // First round talent
 
-    // EAST: Environment (team context, QB, scheme fit)
+    // EAST: Environment (team context, QB, scheme fit) - ENHANCED WITH OASIS
     let east = 5.0;
+    
+    // Legacy context tags
     tags.forEach(tag => {
       if (tag.includes('alpha') || tag.includes('wr1')) east += 1.5;
       if (tag.includes('target_hog')) east += 1.0;
       if (tag.includes('crowded') || tag.includes('committee')) east -= 1.0;
     });
+
+    // OASIS Integration for WR/TE: PROE + QB stability + scoring environment
+    if (team) {
+      const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
+      if (teamEnv) {
+        // WR benefits from: PROE (p90 = +1.2), QB stability (p90 = +1.0), scoring environment (p90 = +0.8)
+        const proeBoost = this.calculatePercentileBoost(teamEnv.proe_pct, 1.2);
+        const qbBoost = this.calculatePercentileBoost(teamEnv.qb_stability_pct, 1.0);
+        const scoringBoost = this.calculatePercentileBoost(teamEnv.scoring_environment_pct, 0.8);
+        
+        east += proeBoost + qbBoost + scoringBoost;
+        
+        // Environment score cap/floor adjuster
+        const envAdjust = 0.04 * (teamEnv.environment_score - 82.5); // ~league mean
+        east += Math.max(-0.8, Math.min(0.8, envAdjust));
+      }
+    }
 
     // SOUTH: Risk/Durability (AGE IS CRITICAL FOR DYNASTY)
     let south = 5.0;
@@ -206,7 +227,7 @@ export class PlayerCompassService {
   }
 
   // ===== RB DYNASTY CALCULATIONS =====
-  private calculateRBDynastyScores(age: number, rawStats: any, contextTags?: string[], draftCapital?: number) {
+  private async calculateRBDynastyScores(age: number, rawStats: any, contextTags?: string[], draftCapital?: number, team?: string) {
     const tags = contextTags || [];
     // RBs age faster - dynasty calculation heavily weighted toward youth
     
@@ -216,11 +237,31 @@ export class PlayerCompassService {
     }
     if (rawStats?.yardsAfterContact > 3.5) north += 1.0;
 
+    // EAST: Environment - ENHANCED WITH OASIS
     let east = 5.0;
+    
+    // Legacy context tags
     tags.forEach(tag => {
       if (tag.includes('bellcow') || tag.includes('rb1')) east += 2.0;
       if (tag.includes('committee')) east -= 1.5;
     });
+
+    // OASIS Integration for RB: OL grade + red zone efficiency + pace
+    if (team) {
+      const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
+      if (teamEnv) {
+        // RB benefits from: OL grade (p90 = +1.2), red zone efficiency (p90 = +0.8), pace (p90 = +0.5)
+        const olBoost = this.calculatePercentileBoost(teamEnv.ol_grade_pct, 1.2);
+        const rzBoost = this.calculatePercentileBoost(teamEnv.red_zone_efficiency_pct, 0.8);
+        const paceBoost = this.calculatePercentileBoost(teamEnv.pace_pct, 0.5);
+        
+        east += olBoost + rzBoost + paceBoost;
+        
+        // Environment score cap/floor adjuster (scaled for RB = 0.8x)
+        const envAdjust = 0.032 * (teamEnv.environment_score - 82.5); // 0.8x scaling
+        east += Math.max(-0.64, Math.min(0.64, envAdjust));
+      }
+    }
 
     // CRITICAL: RB age cliff for dynasty
     let south = 5.0;
@@ -266,6 +307,16 @@ export class PlayerCompassService {
     return Math.round(weightedScore * 10) / 10;
   }
 
+  /**
+   * Calculate boost based on percentile with symmetric positive/negative adjustments
+   * 90th percentile gets full maxBoost, 10th percentile gets full negative maxBoost
+   */
+  private calculatePercentileBoost(percentile: number, maxBoost: number): number {
+    // Symmetric adjustment: p90 = +maxBoost, p50 = 0, p10 = -maxBoost
+    const adjustment = ((percentile - 50) / 40) * maxBoost;
+    return Math.max(-maxBoost, Math.min(maxBoost, adjustment));
+  }
+
   private clampScore(score: number): number {
     return Math.max(1.0, Math.min(10.0, Math.round(score * 10) / 10));
   }
@@ -290,21 +341,103 @@ export class PlayerCompassService {
     return 'Waiver Wire';
   }
 
-  // Placeholder methods for TE and QB (can be expanded)
-  private calculateTEDynastyScores(age: number, rawStats: any, contextTags?: string[], draftCapital?: number) {
-    return { north: 5.0, east: 5.0, south: 5.0, west: 5.0 };
+  // ===== TE DYNASTY CALCULATIONS =====
+  private async calculateTEDynastyScores(age: number, rawStats: any, contextTags?: string[], draftCapital?: number, team?: string) {
+    let north = 5.0;
+    let east = 5.0;
+    let south = 5.0;
+    let west = 5.0;
+
+    // OASIS Integration for TE (similar to WR): PROE + QB stability + scoring environment
+    if (team) {
+      const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
+      if (teamEnv) {
+        const proeBoost = this.calculatePercentileBoost(teamEnv.proe_pct, 1.2);
+        const qbBoost = this.calculatePercentileBoost(teamEnv.qb_stability_pct, 1.0);
+        const scoringBoost = this.calculatePercentileBoost(teamEnv.scoring_environment_pct, 0.8);
+        
+        east += proeBoost + qbBoost + scoringBoost;
+        
+        const envAdjust = 0.04 * (teamEnv.environment_score - 82.5);
+        east += Math.max(-0.8, Math.min(0.8, envAdjust));
+      }
+    }
+
+    return { north, east, south, west };
   }
 
-  private calculateTERedraftScores(age: number, rawStats: any, contextTags?: string[], team?: string) {
-    return { north: 5.0, east: 5.0, south: 5.0, west: 5.0 };
+  private async calculateTERedraftScores(age: number, rawStats: any, contextTags?: string[], team?: string) {
+    let north = 5.0;
+    let east = 5.0;
+    let south = 5.0;
+    let west = 5.0;
+
+    // OASIS Integration for TE
+    if (team) {
+      const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
+      if (teamEnv) {
+        const proeBoost = this.calculatePercentileBoost(teamEnv.proe_pct, 1.2);
+        const qbBoost = this.calculatePercentileBoost(teamEnv.qb_stability_pct, 1.0);
+        const scoringBoost = this.calculatePercentileBoost(teamEnv.scoring_environment_pct, 0.8);
+        
+        east += proeBoost + qbBoost + scoringBoost;
+        
+        const envAdjust = 0.04 * (teamEnv.environment_score - 82.5);
+        east += Math.max(-0.8, Math.min(0.8, envAdjust));
+      }
+    }
+
+    return { north, east, south, west };
   }
 
-  private calculateQBDynastyScores(age: number, rawStats: any, contextTags?: string[], draftCapital?: number) {
-    return { north: 5.0, east: 5.0, south: 5.0, west: 5.0 };
+  // ===== QB DYNASTY CALCULATIONS =====
+  private async calculateQBDynastyScores(age: number, rawStats: any, contextTags?: string[], draftCapital?: number, team?: string) {
+    let north = 5.0;
+    let east = 5.0;
+    let south = 5.0;
+    let west = 5.0;
+
+    // OASIS Integration for QB: QB stability + pace + PROE (scaled 1.2x)
+    if (team) {
+      const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
+      if (teamEnv) {
+        const qbBoost = this.calculatePercentileBoost(teamEnv.qb_stability_pct, 1.2);
+        const paceBoost = this.calculatePercentileBoost(teamEnv.pace_pct, 1.0);
+        const proeBoost = this.calculatePercentileBoost(teamEnv.proe_pct, 0.8);
+        
+        east += qbBoost + paceBoost + proeBoost;
+        
+        // QB gets 1.2x environment score adjustment
+        const envAdjust = 0.048 * (teamEnv.environment_score - 82.5);
+        east += Math.max(-0.96, Math.min(0.96, envAdjust));
+      }
+    }
+
+    return { north, east, south, west };
   }
 
-  private calculateQBRedraftScores(age: number, rawStats: any, contextTags?: string[], team?: string) {
-    return { north: 5.0, east: 5.0, south: 5.0, west: 5.0 };
+  private async calculateQBRedraftScores(age: number, rawStats: any, contextTags?: string[], team?: string) {
+    let north = 5.0;
+    let east = 5.0;
+    let south = 5.0;
+    let west = 5.0;
+
+    // OASIS Integration for QB
+    if (team) {
+      const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
+      if (teamEnv) {
+        const qbBoost = this.calculatePercentileBoost(teamEnv.qb_stability_pct, 1.2);
+        const paceBoost = this.calculatePercentileBoost(teamEnv.pace_pct, 1.0);
+        const proeBoost = this.calculatePercentileBoost(teamEnv.proe_pct, 0.8);
+        
+        east += qbBoost + paceBoost + proeBoost;
+        
+        const envAdjust = 0.048 * (teamEnv.environment_score - 82.5);
+        east += Math.max(-0.96, Math.min(0.96, envAdjust));
+      }
+    }
+
+    return { north, east, south, west };
   }
 }
 
