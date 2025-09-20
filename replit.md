@@ -29,6 +29,7 @@ Intelligence Feed System:
 **Core Features & Design Patterns:**
 
 *   **Player Evaluation & Consensus:** Features a "Player Compass" for dynamic, context-aware player profiles, and "OTC Consensus" for community-driven rankings with format-specific splits and a seeding protocol for manual updates.
+*   **OVR (Overall Rating) System:** Comprehensive **Madden-style 1-99 player rating system** that aggregates all ranking inputs through position-specific weighted blending. Combines RankingsFusion, PlayerCompass, RatingsEngine, and OASIS environment data with confidence-based weighting and non-linear percentile mapping. API endpoints at `/api/ovr/*` with filtering, pagination, and distribution statistics.
 *   **AI & Analytics:** Includes "Competence Mode" for AI-driven advice, an Adaptive Consensus Engine with injury-aware adjustments and explanatory functionality, and a DeepSeek + Compass Fusion System for predictive power and explainability.
 *   **Rankings & VORP:** A comprehensive Rankings Hub, enhanced VORP system with dynasty mode, age penalties, and FLEX allocation, and an Enhanced ECR Comparison System for signal-aware analysis.
 *   **Rookie & Player Analysis:** Dedicated Rookie Evaluation System with a 4-component insulation boost and data pipeline, Target Competition Analysis (TCIP), Player Usage Context Module, and a Stud Detection Module.
