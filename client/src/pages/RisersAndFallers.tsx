@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, Activity, Star, AlertCircle, Target, Search, SortAsc, SortDesc } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { TrendingUp, TrendingDown, Activity, Star, AlertCircle, Target, Search, SortAsc, SortDesc, Flame, DollarSign, MessageSquare } from 'lucide-react';
 
 interface Player {
   rank: number;
@@ -44,11 +45,31 @@ interface WeekInfo {
   timestamp: string;
 }
 
+interface WaiverHeatResult {
+  success: boolean;
+  playerId: string;
+  week: number;
+  waiver_heat: number;
+  components: {
+    usage_growth: number;
+    opportunity_delta: number;
+    market_lag: number;
+    news_weight: number;
+  };
+  scenario: string;
+  formula: string;
+  note_grok_fixes: string[];
+}
+
 export default function RisersAndFallers() {
   const [selectedPosition, setSelectedPosition] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'rank' | 'power_score' | 'name'>('rank');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // Rookie Risers state
+  const [rookiePlayerId, setRookiePlayerId] = useState('ayomanor');
+  const [rookieSearchQuery, setRookieSearchQuery] = useState('ayomanor');
 
   // Fetch current week information
   const { data: weekInfo, isLoading: weekLoading } = useQuery<WeekInfo>({
@@ -84,6 +105,18 @@ export default function RisersAndFallers() {
   const { data: teData } = useQuery<PowerRankingsResponse>({
     queryKey: ['/api/rankings/stats/TE'],
     queryFn: () => fetch('/api/rankings/stats/TE').then(res => res.json()),
+  });
+
+  // Fetch Rookie Waiver Heat data
+  const { data: waiverData, isLoading: waiverLoading, error: waiverError, refetch: refetchWaiver } = useQuery<WaiverHeatResult>({
+    queryKey: ['/api/rookie-risers/waiver-heat', rookiePlayerId],
+    queryFn: () => fetch(`/api/rookie-risers/waiver-heat?playerId=${rookiePlayerId}`).then(res => {
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return res.json();
+    }),
+    enabled: !!rookiePlayerId
   });
 
   const filteredAndSortedPlayers = useMemo(() => {
@@ -210,6 +243,41 @@ export default function RisersAndFallers() {
       return `Week 1 stats: ${notes}`;
     }
     return notes.length > 0 ? notes : null;
+  };
+
+  // Rookie Risers helper functions
+  const handleRookieSearch = () => {
+    if (rookieSearchQuery.trim()) {
+      setRookiePlayerId(rookieSearchQuery.trim().toLowerCase());
+    }
+  };
+
+  const getHeatColor = (heat: number) => {
+    if (heat >= 70) return 'text-red-500';
+    if (heat >= 50) return 'text-orange-500';
+    if (heat >= 30) return 'text-yellow-500';
+    return 'text-gray-500';
+  };
+
+  const getHeatLabel = (heat: number) => {
+    if (heat >= 70) return 'Must Add';
+    if (heat >= 50) return 'Strong Add';
+    if (heat >= 30) return 'Warm Add';
+    return 'Monitor';
+  };
+
+  const componentIcons = {
+    usage_growth: <TrendingUp className="h-4 w-4" />,
+    opportunity_delta: <Target className="h-4 w-4" />,
+    market_lag: <DollarSign className="h-4 w-4" />,
+    news_weight: <MessageSquare className="h-4 w-4" />
+  };
+
+  const componentLabels = {
+    usage_growth: 'Usage Growth',
+    opportunity_delta: 'Opportunity',
+    market_lag: 'Market Lag',
+    news_weight: 'News Weight'
   };
 
   const players = filteredAndSortedPlayers;
@@ -386,7 +454,7 @@ export default function RisersAndFallers() {
 
       {/* Player Categories */}
       <Tabs defaultValue="risers" className="w-full">
-        <TabsList>
+        <TabsList className="grid grid-cols-4 w-full">
           <TabsTrigger value="risers" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             Risers ({risers.length})
@@ -398,6 +466,10 @@ export default function RisersAndFallers() {
           <TabsTrigger value="stable" className="flex items-center gap-2">
             <Star className="h-4 w-4" />
             Steady Performers ({stable.length})
+          </TabsTrigger>
+          <TabsTrigger value="rookie-risers" className="flex items-center gap-2">
+            <Flame className="h-4 w-4" />
+            Rookie Risers
           </TabsTrigger>
         </TabsList>
         
@@ -444,6 +516,162 @@ export default function RisersAndFallers() {
                   </div>
                 </CardContent>
               </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="rookie-risers" className="mt-6">
+          <div className="space-y-6">
+            {/* Rookie Risers Header */}
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+                <Flame className="h-6 w-6 text-orange-500" />
+                Rookie Waiver Heat Index
+              </h2>
+              <p className="text-muted-foreground">
+                AI-powered waiver heat detection using Grok's formula: 40% Usage + 30% Opportunity + 20% Market + 10% News
+              </p>
+            </div>
+
+            {/* Rookie Search */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="h-5 w-5" />
+                  Calculate Rookie Waiver Heat
+                </CardTitle>
+                <CardDescription>
+                  Enter a rookie player ID to calculate their Waiver Heat Index
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Try: ayomanor, test_rookie, high_heat"
+                    value={rookieSearchQuery}
+                    onChange={(e) => setRookieSearchQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleRookieSearch()}
+                    className="flex-1"
+                  />
+                  <Button onClick={handleRookieSearch} disabled={!rookieSearchQuery.trim()}>
+                    Calculate Heat
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Waiver Heat Results */}
+            {waiverLoading && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center">Calculating Waiver Heat...</div>
+                </CardContent>
+              </Card>
+            )}
+
+            {waiverError && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center text-red-500">
+                    Error loading data. Try: 'ayomanor', 'test_rookie', or 'high_heat'
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {waiverData && (
+              <div className="grid gap-6">
+                {/* Main Heat Score */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>Waiver Heat Index</span>
+                      <Badge variant="outline" className={getHeatColor(waiverData.waiver_heat)}>
+                        {getHeatLabel(waiverData.waiver_heat)}
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription>
+                      Player: {waiverData.playerId} • Week {waiverData.week}
+                      {waiverData.scenario && (
+                        <div className="mt-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+                          📋 {waiverData.scenario}
+                        </div>
+                      )}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center">
+                      <div className={`text-6xl font-bold mb-2 ${getHeatColor(waiverData.waiver_heat)}`}>
+                        {waiverData.waiver_heat}
+                      </div>
+                      <div className="text-muted-foreground mb-4">out of 100</div>
+                      <Progress 
+                        value={waiverData.waiver_heat} 
+                        className="w-full h-3"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Component Breakdown */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {Object.entries(waiverData.components).map(([key, value]) => (
+                    <Card key={key}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2 text-sm">
+                          {componentIcons[key as keyof typeof componentIcons]}
+                          {componentLabels[key as keyof typeof componentLabels]}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold mb-1">
+                          {(value * 100).toFixed(0)}%
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Normalized Score: {value.toFixed(3)}
+                        </div>
+                        <Progress 
+                          value={value * 100} 
+                          className="mt-2 h-2"
+                        />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Example Players */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Try These Examples</CardTitle>
+                    <CardDescription>
+                      Click to test different rookie scenarios
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {[
+                        { id: 'ayomanor', name: 'Elic Ayomanor', scenario: 'Injury opportunity' },
+                        { id: 'test_rookie', name: 'Test Rookie', scenario: 'Baseline calculation' },
+                        { id: 'high_heat', name: 'High Heat Player', scenario: 'Must-add candidate' }
+                      ].map((player) => (
+                        <Button
+                          key={player.id}
+                          variant="outline"
+                          className="p-4 h-auto flex flex-col items-start"
+                          onClick={() => {
+                            setRookiePlayerId(player.id);
+                            setRookieSearchQuery(player.id);
+                            refetchWaiver();
+                          }}
+                        >
+                          <div className="font-semibold">{player.name}</div>
+                          <div className="text-xs text-muted-foreground">{player.scenario}</div>
+                        </Button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             )}
           </div>
         </TabsContent>
