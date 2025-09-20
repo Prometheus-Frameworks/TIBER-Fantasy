@@ -406,22 +406,24 @@ export class OasisSosService {
         { season: 2025, week, home: 'NE', away: 'DEN' }
       ],
       3: [
-        { season: 2025, week, home: 'MIA', away: 'DAL' },
-        { season: 2025, week, home: 'SF', away: 'KC' },
-        { season: 2025, week, home: 'BUF', away: 'NYG' },
-        { season: 2025, week, home: 'PHI', away: 'MIN' },
-        { season: 2025, week, home: 'WAS', away: 'CHI' },
-        { season: 2025, week, home: 'DET', away: 'GB' },
-        { season: 2025, week, home: 'TB', away: 'CAR' },
-        { season: 2025, week, home: 'ATL', away: 'NO' },
-        { season: 2025, week, home: 'LAR', away: 'ARI' },
-        { season: 2025, week, home: 'SEA', away: 'LV' },
-        { season: 2025, week, home: 'BAL', away: 'PIT' },
-        { season: 2025, week, home: 'CIN', away: 'CLE' },
-        { season: 2025, week, home: 'HOU', away: 'JAX' },
-        { season: 2025, week, home: 'IND', away: 'TEN' },
-        { season: 2025, week, home: 'DEN', away: 'LAC' },
-        { season: 2025, week, home: 'NYJ', away: 'NE' }
+        // Thursday Night Football
+        { season: 2025, week, home: 'BUF', away: 'MIA' },
+        // Sunday 1:00 PM ET Games
+        { season: 2025, week, home: 'NE', away: 'PIT' },
+        { season: 2025, week, home: 'CAR', away: 'ATL' },
+        { season: 2025, week, home: 'CLE', away: 'GB' },
+        { season: 2025, week, home: 'CIN', away: 'TEN' },
+        { season: 2025, week, home: 'JAX', away: 'NO' },
+        { season: 2025, week, home: 'WAS', away: 'LV' },
+        { season: 2025, week, home: 'DAL', away: 'CHI' },
+        // Sunday 4:05/4:25 PM ET Games  
+        { season: 2025, week, home: 'DEN', away: 'HOU' },
+        { season: 2025, week, home: 'PHI', away: 'LAR' },
+        { season: 2025, week, home: 'SF', away: 'ARI' },
+        // Sunday Night Football
+        { season: 2025, week, home: 'NYG', away: 'KC' },
+        // Monday Night Football
+        { season: 2025, week, home: 'BAL', away: 'DET' }
       ]
     };
 
