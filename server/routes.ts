@@ -62,6 +62,7 @@ import uphAdminRoutes from './routes/uphAdminRoutes';
 import sosRouter from './modules/sos/sos.router';
 import { ratingsRouter } from './src/modules/ratings';
 import rankingsV3Router from './routes/rankingsV3';
+import ovrRouter from './routes/ovrRoutes';
 import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
 import pythonRookieRoutes from './routes/pythonRookieRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';

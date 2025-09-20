@@ -1,0 +1,129 @@
+{
+  "version": "1.0",
+  "description": "OVR (Overall Rating) System Configuration - Madden-style 1-99 player ratings",
+  
+  "position_weights": {
+    "redraft": {
+      "QB": {
+        "fusion": 0.35,
+        "ratings_engine": 0.40,
+        "compass": 0.15,
+        "oasis_environment": 0.10
+      },
+      "RB": {
+        "fusion": 0.45,
+        "ratings_engine": 0.25,
+        "compass": 0.20,
+        "oasis_environment": 0.10
+      },
+      "WR": {
+        "fusion": 0.50,
+        "ratings_engine": 0.20,
+        "compass": 0.20,
+        "oasis_environment": 0.10
+      },
+      "TE": {
+        "fusion": 0.40,
+        "ratings_engine": 0.25,
+        "compass": 0.25,
+        "oasis_environment": 0.10
+      }
+    },
+    "dynasty": {
+      "QB": {
+        "fusion": 0.30,
+        "ratings_engine": 0.35,
+        "compass": 0.15,
+        "oasis_environment": 0.10,
+        "age_value": 0.10
+      },
+      "RB": {
+        "fusion": 0.35,
+        "ratings_engine": 0.20,
+        "compass": 0.15,
+        "oasis_environment": 0.10,
+        "age_value": 0.20
+      },
+      "WR": {
+        "fusion": 0.40,
+        "ratings_engine": 0.20,
+        "compass": 0.15,
+        "oasis_environment": 0.10,
+        "age_value": 0.15
+      },
+      "TE": {
+        "fusion": 0.35,
+        "ratings_engine": 0.25,
+        "compass": 0.20,
+        "oasis_environment": 0.10,
+        "age_value": 0.10
+      }
+    }
+  },
+
+  "confidence_parameters": {
+    "fusion": {
+      "full_data_threshold": 0.8,
+      "rookie_cap_penalty": 0.2,
+      "market_cap_penalty": 0.1
+    },
+    "ratings_engine": {
+      "full_data_threshold": 0.9,
+      "component_weight": 0.2
+    },
+    "compass": {
+      "full_data_threshold": 0.7,
+      "dynasty_redraft_split": 0.1
+    },
+    "oasis_environment": {
+      "freshness_hours": 24,
+      "fresh_confidence": 1.0,
+      "stale_confidence": 0.8,
+      "min_metrics_count": 3
+    }
+  },
+
+  "madden_curve": {
+    "description": "Non-linear mapping to avoid 50-70 clustering",
+    "formula": "OVR = round(1 + 98 * (0.75 * P + 0.25 * (3*P^2 - 2*P^3)))",
+    "target_distribution": {
+      "elite_threshold": 90,
+      "star_threshold": 80,
+      "starter_threshold": 70,
+      "backup_threshold": 60,
+      "median_target": 72
+    }
+  },
+
+  "proven_elite_floors": {
+    "QB": {
+      "elite_floor": 88,
+      "proven_floor": 82
+    },
+    "RB": {
+      "elite_floor": 86,
+      "proven_floor": 80
+    },
+    "WR": {
+      "elite_floor": 88,
+      "proven_floor": 82
+    },
+    "TE": {
+      "elite_floor": 85,
+      "proven_floor": 78
+    }
+  },
+
+  "cache_settings": {
+    "ttl_minutes": 60,
+    "batch_size": 50,
+    "enable_etag": true
+  },
+
+  "normalization": {
+    "compass_max_scale": 10,
+    "compass_multiplier": 10,
+    "oasis_percentile_count": 4,
+    "ratings_engine_max": 100
+  }
+}
