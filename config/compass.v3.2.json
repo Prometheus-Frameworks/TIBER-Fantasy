@@ -22,10 +22,11 @@
       "yprr": 0.05 
     },
     "east": { 
-      "proe": 0.35, 
+      "proe": 0.30, 
       "qb_stability": 0.25, 
-      "role_clarity": 0.20, 
-      "scheme_ol": 0.20 
+      "role_clarity": 0.15, 
+      "scheme_ol": 0.15,
+      "scoring_env": 0.15 
     },
     "south": { 
       "age_penalty": 0.55, 

@@ -13,6 +13,7 @@ import { xfpRepository } from './xfpRepository';
 import { predictXfp, type Row as XfpRow, type Coeffs } from './xfpTrainer';
 import { RiskEngine } from './riskEngine';
 import { MarketEngine } from './marketEngine';
+import { oasisEnvironmentService } from './oasisEnvironmentService';
 
 // Load fusion configuration
 const configPath = path.join(process.cwd(), 'config', 'compass.v3.2.json');
@@ -141,21 +142,80 @@ export class RankingsFusionService {
   }
   
   /**
-   * Calculate East quadrant (Environment/Scheme)
+   * Calculate East quadrant (Environment/Scheme) with OASIS integration
    */
-  private calculateEastQuadrant(
+  private async calculateEastQuadrant(
     player: FusionPlayer,
     bounds: { east: { min: number; max: number } }
-  ): number {
+  ): Promise<number> {
     const weights = config.quadrants.east;
     
+    // Get OASIS team environment data
+    const teamEnv = player.team ? await oasisEnvironmentService.getTeamEnvironment(player.team) : null;
+    
+    // Blend OASIS with existing metrics (60% OASIS, 40% existing if both present)
+    const blendedProe = this.blendMetrics(
+      teamEnv ? this.scaleToHundred(teamEnv.proe_pct) : NaN,
+      player.team_proe,
+      teamEnv
+    );
+    
+    const blendedQbStability = this.blendMetrics(
+      teamEnv ? teamEnv.qb_stability : NaN,
+      player.qb_stability,
+      teamEnv
+    );
+    
+    const blendedSchemeOl = this.blendMetrics(
+      teamEnv ? teamEnv.ol_grade : NaN,
+      player.scheme_ol,
+      teamEnv
+    );
+    
+    // Add scoring environment from OASIS
+    const scoringEnv = teamEnv ? this.scaleToHundred(teamEnv.scoring_environment_pct) : 50;
+    
     const comp =
-      weights.proe * safe(player.team_proe, NaN) +
-      weights.qb_stability * safe(player.qb_stability, NaN) +
-      weights.role_clarity * safe(player.role_clarity, NaN) +
-      weights.scheme_ol * safe(player.scheme_ol, NaN);
+      weights.proe * safe(blendedProe, NaN) +
+      weights.qb_stability * safe(blendedQbStability, NaN) +
+      weights.role_clarity * safe(player.role_clarity, NaN) + // role_clarity remains internal
+      weights.scheme_ol * safe(blendedSchemeOl, NaN) +
+      weights.scoring_env * safe(scoringEnv, NaN);
     
     return pct(comp, bounds.east.min, bounds.east.max);
+  }
+  
+  /**
+   * Blend OASIS and existing metrics with staleness adjustments
+   */
+  private blendMetrics(oasisValue: number, existingValue: number, teamEnv: any): number {
+    const hasOasis = Number.isFinite(oasisValue);
+    const hasExisting = Number.isFinite(existingValue);
+    
+    if (!hasOasis && !hasExisting) return 50; // Default
+    if (!hasOasis) return existingValue;
+    if (!hasExisting) return oasisValue;
+    
+    // Check staleness (>24h = stale)
+    const isStale = teamEnv && teamEnv.lastUpdated && 
+      (Date.now() - new Date(teamEnv.lastUpdated).getTime() > 24 * 60 * 60 * 1000);
+    
+    if (isStale) {
+      // Shrink OASIS toward league mean (50) by 20%
+      const shrunkOasis = oasisValue + (50 - oasisValue) * 0.2;
+      return 0.6 * shrunkOasis + 0.4 * existingValue;
+    }
+    
+    // Fresh data: 60% OASIS, 40% existing
+    return 0.6 * oasisValue + 0.4 * existingValue;
+  }
+  
+  /**
+   * Scale percentile (0-100) to expected range for fusion
+   */
+  private scaleToHundred(percentile: number): number {
+    if (!Number.isFinite(percentile)) return 50;
+    return Math.max(0, Math.min(100, percentile));
   }
   
   /**
@@ -325,27 +385,30 @@ export class RankingsFusionService {
   }
 
   /**
-   * Enhanced scoreWRBatch with proven elite priors and guardrails
+   * Enhanced scoreWRBatch with proven elite priors and guardrails (with OASIS integration)
    */
-  scoreWRBatch(
+  async scoreWRBatch(
     players: FusionPlayer[],
     cfg: any,
     mode: Mode = 'dynasty'
-  ): FusionResult[] {
+  ): Promise<FusionResult[]> {
     const bounds = this.calculateBounds(players, mode);
     
-    const results: FusionResult[] = players.map(player => {
+    const results: FusionResult[] = await Promise.all(players.map(async player => {
       // Apply proven elite priors for top-tier players
       const priorScore = this.getProvenElitePrior(player);
       
       const quadrants = {
         north: this.calculateNorthQuadrant(player, bounds),
-        east: this.calculateEastQuadrant(player, bounds),
+        east: await this.calculateEastQuadrant(player, bounds),
         south: this.calculateSouthQuadrant(player, bounds, mode),
         west: this.calculateWestQuadrant(player, bounds, mode)
       };
       
       let score = this.fuseScore(quadrants, mode);
+      
+      // Apply OASIS environment score adjustment after fusion
+      score = await this.applyEnvironmentAdjustment(score, player, mode);
       
       // Apply proven elite floor
       if (priorScore > 0) {
@@ -373,7 +436,7 @@ export class RankingsFusionService {
         xfp_season: player.xfp_season,
         season_fpts: player.season_fpts
       };
-    });
+    }));
     
     // Sort by score only (NO FPTS OVERRIDE)
     results.sort((a, b) => b.score - a.score);
@@ -384,6 +447,27 @@ export class RankingsFusionService {
     });
     
     return results;
+  }
+  
+  /**
+   * Apply OASIS environment score adjustment after fusion
+   */
+  private async applyEnvironmentAdjustment(score: number, player: FusionPlayer, mode: Mode): Promise<number> {
+    if (!player.team) return score;
+    
+    const teamEnv = await oasisEnvironmentService.getTeamEnvironment(player.team);
+    if (!teamEnv) return score;
+    
+    // Environment adjustment: clamp(3 * (environment_score_pct-50)/50, -3, +3)
+    const envAdj = Math.max(-3, Math.min(3, 3 * (teamEnv.environment_score_pct - 50) / 50));
+    
+    // Position scalars: WR/TE 1.0x, RB 0.8x, QB 1.2x
+    let positionScalar = 1.0;
+    if (player.pos === 'RB') positionScalar = 0.8;
+    else if (player.pos === 'QB') positionScalar = 1.2;
+    
+    const finalAdjustment = envAdj * positionScalar;
+    return Math.max(0, Math.min(100, score + finalAdjustment));
   }
 
   /**
