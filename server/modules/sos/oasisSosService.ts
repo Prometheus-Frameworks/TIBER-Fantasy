@@ -346,12 +346,21 @@ export class OasisSosService {
           )
         );
 
-      return games;
+      if (games.length > 0) {
+        return games;
+      }
     } catch (error) {
       console.warn(`[OASIS-SOS] Could not fetch schedule for ${season} Week ${week}:`, error);
-      // Return sample schedule for early 2025 if database doesn't have it yet
+    }
+    
+    // Return sample schedule for early 2025 if database doesn't have it yet
+    if (season === 2025 && week <= 3) {
+      console.info(`[OASIS-SOS] Using sample schedule for ${season} Week ${week}`);
       return this.getSampleSchedule(week);
     }
+    
+    console.warn(`[OASIS-SOS] No schedule data available for ${season} Week ${week}`);
+    return [];
   }
 
   /**
