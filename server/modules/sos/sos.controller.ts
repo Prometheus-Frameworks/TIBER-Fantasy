@@ -8,9 +8,9 @@ export const getWeekly = async (req: Request, res: Response) => {
     const week = parseInt((req.query.week as string) || '1', 10);
     const season = parseInt((req.query.season as string) || '2024', 10);
     
-    // Validate week boundaries by season
+    // Validate week boundaries by season (allow 2025 projections)
     const maxWeek = season === 2024 ? 17 : 18;
-    if (week > maxWeek) {
+    if (season !== 2025 && week > maxWeek) {
       return res.status(400).json({ error: `Invalid week for season ${season}. Week must be <= ${maxWeek}` });
     }
     
@@ -38,9 +38,9 @@ export const getROS = async (req: Request, res: Response) => {
     const window = parseInt((req.query.window as string) || '5', 10);
     const season = parseInt((req.query.season as string) || '2024', 10);
     
-    // Validate week boundaries by season
+    // Validate week boundaries by season (allow 2025 projections)
     const maxWeek = season === 2024 ? 17 : 18;
-    if (startWeek > maxWeek || (startWeek + window - 1) > maxWeek) {
+    if (season !== 2025 && (startWeek > maxWeek || (startWeek + window - 1) > maxWeek)) {
       return res.status(400).json({ error: `Invalid week range for season ${season}. Weeks must be <= ${maxWeek}` });
     }
     

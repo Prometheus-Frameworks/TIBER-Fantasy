@@ -1,6 +1,7 @@
 import { db } from '../../db';
 import { defenseVP, schedule, defenseContext } from '@shared/schema';
 import { eq, and, lte, between, gte } from 'drizzle-orm';
+import { oasisSosService } from './oasisSosService';
 
 export type Position = 'RB'|'WR'|'QB'|'TE';
 
@@ -252,6 +253,12 @@ async function getWeekGames(season: number, week: number): Promise<ScheduleRow[]
 
 /** Build weekly SOS for a position */
 export async function computeWeeklySOS(position: Position, week: number, season = DEFAULT_SEASON): Promise<WeeklySOS[]> {
+  // For 2025 early season, use OASIS projections when historical data isn't available
+  if (season === 2025 && week <= 3) {
+    console.info(`[SOS] Using OASIS projections for ${season} Week ${week}`);
+    return await oasisSosService.generateOasisWeeklySOS(position, week, season);
+  }
+
   const games = await getWeekGames(season, week);
   if (!games.length) return [];
 
@@ -324,6 +331,12 @@ export async function computeWeeklySOS(position: Position, week: number, season 
 
 /** Simple ROS: average of next N weeks */
 export async function computeROSSOS(position: Position, startWeek = 1, window = 5, season = DEFAULT_SEASON): Promise<ROSItem[]> {
+  // For 2025 early season, use OASIS projections
+  if (season === 2025 && startWeek <= 3) {
+    console.info(`[SOS] Using OASIS ROS projections for ${season} starting Week ${startWeek}`);
+    return await oasisSosService.generateOasisROSSOS(position, startWeek, window, season);
+  }
+
   const weeks = Array.from({length: window}, (_,i) => startWeek + i);
   const all: WeeklySOS[] = [];
   
@@ -419,6 +432,12 @@ export async function computeWeeklySOSv2(
   debug = false,
   samples = 0
 ) {
+  // For 2025 early season, use OASIS projections when historical data isn't available
+  if (season === 2025 && week <= 3) {
+    console.info(`[SOS] Using OASIS projections for ${season} Week ${week} (v2)`);
+    return await oasisSosService.generateOasisWeeklySOS(position, week, season);
+  }
+
   // Normalize weights to ensure they sum to 1.0
   weights = normalizeWeights(weights);
   const games = await getWeekGames(season, week);
