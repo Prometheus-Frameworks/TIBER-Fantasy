@@ -53,7 +53,7 @@ export const getROS = async (req: Request, res: Response) => {
     const weeks = Array.from({length: window}, (_,i)=> startWeek + i);
     const all:any[] = [];
     for (const w of weeks) {
-      const wk = await computeWeeklySOSv2(position, w, season, mode, weights, debug, false);
+      const wk = await computeWeeklySOSv2(position, w, season, mode, weights, debug, 0);
       all.push(...wk);
     }
     const byTeam = new Map<string, any[]>();

@@ -57,7 +57,17 @@ export class OasisSosService {
     console.info(`[OASIS-SOS] Generating defensive projections for ${season} ${position}`);
 
     try {
-      const allTeams = await oasisEnvironmentService.getAllTeams();
+      // Get OASIS team data for all 32 teams
+      const teamIds = ['BUF', 'KC', 'SF', 'MIA', 'DAL', 'NYG', 'PHI', 'WAS', 'MIN', 'DET', 'GB', 'CHI', 
+                       'TB', 'NO', 'ATL', 'CAR', 'LAR', 'SEA', 'ARI', 'SF', 'BAL', 'CIN', 'CLE', 'PIT',
+                       'HOU', 'IND', 'JAX', 'TEN', 'DEN', 'LV', 'LAC', 'NYJ'];
+      const allTeams = [];
+      for (const teamId of teamIds) {
+        const teamEnv = await oasisEnvironmentService.getTeamEnvironment(teamId);
+        if (teamEnv) {
+          allTeams.push({...teamEnv, teamId});
+        }
+      }
       const projections: OasisDefensiveProjection[] = [];
 
       for (const teamEnv of allTeams) {
@@ -348,16 +358,67 @@ export class OasisSosService {
    * Sample schedule for early 2025 weeks (fallback)
    */
   private getSampleSchedule(week: number) {
-    // This would typically come from an NFL schedule API
-    // For now, return a few sample games for testing
-    const sampleGames = [
-      { season: 2025, week, home: 'BUF', away: 'KC' },
-      { season: 2025, week, home: 'SF', away: 'MIA' },
-      { season: 2025, week, home: 'DAL', away: 'NYG' },
-    ];
+    // Comprehensive sample schedule for early 2025 weeks
+    const scheduleData = {
+      1: [
+        { season: 2025, week, home: 'BUF', away: 'KC' },
+        { season: 2025, week, home: 'SF', away: 'MIA' },
+        { season: 2025, week, home: 'DAL', away: 'NYG' },
+        { season: 2025, week, home: 'PHI', away: 'WAS' },
+        { season: 2025, week, home: 'GB', away: 'CHI' },
+        { season: 2025, week, home: 'DET', away: 'MIN' },
+        { season: 2025, week, home: 'TB', away: 'NO' },
+        { season: 2025, week, home: 'ATL', away: 'CAR' },
+        { season: 2025, week, home: 'LAR', away: 'SEA' },
+        { season: 2025, week, home: 'ARI', away: 'LV' },
+        { season: 2025, week, home: 'BAL', away: 'CIN' },
+        { season: 2025, week, home: 'CLE', away: 'PIT' },
+        { season: 2025, week, home: 'HOU', away: 'IND' },
+        { season: 2025, week, home: 'JAX', away: 'TEN' },
+        { season: 2025, week, home: 'DEN', away: 'LAC' },
+        { season: 2025, week, home: 'NYJ', away: 'NE' }
+      ],
+      2: [
+        { season: 2025, week, home: 'KC', away: 'MIA' },
+        { season: 2025, week, home: 'BUF', away: 'SF' },
+        { season: 2025, week, home: 'NYG', away: 'PHI' },
+        { season: 2025, week, home: 'WAS', away: 'DAL' },
+        { season: 2025, week, home: 'CHI', away: 'DET' },
+        { season: 2025, week, home: 'MIN', away: 'GB' },
+        { season: 2025, week, home: 'NO', away: 'ATL' },
+        { season: 2025, week, home: 'CAR', away: 'TB' },
+        { season: 2025, week, home: 'SEA', away: 'ARI' },
+        { season: 2025, week, home: 'LV', away: 'LAR' },
+        { season: 2025, week, home: 'CIN', away: 'CLE' },
+        { season: 2025, week, home: 'PIT', away: 'BAL' },
+        { season: 2025, week, home: 'IND', away: 'JAX' },
+        { season: 2025, week, home: 'TEN', away: 'HOU' },
+        { season: 2025, week, home: 'LAC', away: 'NYJ' },
+        { season: 2025, week, home: 'NE', away: 'DEN' }
+      ],
+      3: [
+        { season: 2025, week, home: 'MIA', away: 'DAL' },
+        { season: 2025, week, home: 'SF', away: 'KC' },
+        { season: 2025, week, home: 'BUF', away: 'NYG' },
+        { season: 2025, week, home: 'PHI', away: 'MIN' },
+        { season: 2025, week, home: 'WAS', away: 'CHI' },
+        { season: 2025, week, home: 'DET', away: 'GB' },
+        { season: 2025, week, home: 'TB', away: 'CAR' },
+        { season: 2025, week, home: 'ATL', away: 'NO' },
+        { season: 2025, week, home: 'LAR', away: 'ARI' },
+        { season: 2025, week, home: 'SEA', away: 'LV' },
+        { season: 2025, week, home: 'BAL', away: 'PIT' },
+        { season: 2025, week, home: 'CIN', away: 'CLE' },
+        { season: 2025, week, home: 'HOU', away: 'JAX' },
+        { season: 2025, week, home: 'IND', away: 'TEN' },
+        { season: 2025, week, home: 'DEN', away: 'LAC' },
+        { season: 2025, week, home: 'NYJ', away: 'NE' }
+      ]
+    };
 
-    console.info(`[OASIS-SOS] Using sample schedule for Week ${week}`);
-    return sampleGames;
+    const games = scheduleData[week as keyof typeof scheduleData] || scheduleData[3];
+    console.info(`[OASIS-SOS] Using sample schedule for Week ${week} with ${games.length} games`);
+    return games;
   }
 
   /**
