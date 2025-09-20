@@ -2736,8 +2736,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log('🚀 Enhanced ECR Provider routes mounted at /api/ecr/enhanced/*');
 
   // OVR (Overall Rating) System - Madden-style 1-99 player ratings
-  app.use('/api/ratings/ovr', ovrRouter);
-  console.log('📊 OVR (Madden-style 1-99) rating system mounted at /api/ratings/ovr/*');
+  app.use('/api/ovr', ovrRouter);
+  console.log('📊 OVR (Madden-style 1-99) rating system mounted at /api/ovr/*');
 
   // Consensus Benchmark Service - Unified ECR/ADP/Dynasty consensus with fallback policy
   app.use('/api', createConsensusRouter({ 
