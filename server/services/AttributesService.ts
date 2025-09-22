@@ -297,11 +297,129 @@ export class AttributesService {
       fantasyPtsHalfppr: null
     };
 
-    // TODO: Implement data source integrations in subsequent tasks
-    // For now, create placeholder entries to validate the pipeline
+    // Step 1 - Collect Sleeper data (game logs, injury status, fantasy points)
+    await this.collectSleeperData(attributes, season, week);
+
+    // TODO: Step 2 - Collect nflfastR data (EPA, air yards, YAC, sacks taken) 
+    // TODO: Step 3 - Collect OASIS data (opponent team, defensive rank, pace, implied totals)
     
     // Upsert the attributes
     await this.upsertPlayerAttributes(attributes);
+  }
+
+  /**
+   * Collect Sleeper API data for a player
+   */
+  private async collectSleeperData(attributes: InsertPlayerAttributes, season: number, week: number): Promise<void> {
+    try {
+      // Get player identity mapping
+      const identity = await this.getPlayerIdentity(attributes.otcId);
+      if (!identity?.sleeperId) {
+        console.log(`[AttributesService] No Sleeper ID found for ${attributes.otcId}`);
+        return;
+      }
+
+      // Fetch Sleeper stats for the specific week
+      const sleeperStats = await this.fetchSleeperWeeklyStats(identity.sleeperId, season, week);
+      if (!sleeperStats) {
+        console.log(`[AttributesService] No Sleeper stats found for ${identity.sleeperId} Week ${week}`);
+        return;
+      }
+
+      // Map Sleeper data to our schema
+      attributes.statusInjury = sleeperStats.injury_status || null;
+
+      // Basic stats from Sleeper
+      attributes.targets = sleeperStats.rec_tgt || null;
+      attributes.receptions = sleeperStats.rec || null;
+      attributes.recYd = sleeperStats.rec_yd || null;
+      attributes.recTd = sleeperStats.rec_td || null;
+      attributes.rushAtt = sleeperStats.rush_att || null;
+      attributes.rushYd = sleeperStats.rush_yd || null;
+      attributes.rushTd = sleeperStats.rush_td || null;
+      attributes.passAtt = sleeperStats.pass_att || null;
+      attributes.passCmp = sleeperStats.pass_cmp || null;
+      attributes.passYd = sleeperStats.pass_yd || null;
+      attributes.passTd = sleeperStats.pass_td || null;
+      attributes.passInt = sleeperStats.pass_int || null;
+      attributes.fumblesLost = sleeperStats.fum_lost || null;
+      attributes.twoPtMade = sleeperStats.pass_2pt || sleeperStats.rec_2pt || sleeperStats.rush_2pt || null;
+
+      // Fantasy points calculation (using standard scoring for now)
+      const fantasyPts = this.calculateFantasyPoints(sleeperStats);
+      attributes.fantasyPtsHalfppr = fantasyPts;
+
+      console.log(`[AttributesService] Sleeper data collected for ${identity.name}: ${fantasyPts} pts`);
+
+    } catch (error) {
+      console.error(`[AttributesService] Error collecting Sleeper data:`, error);
+    }
+  }
+
+  /**
+   * Get player identity from the player identity map
+   */
+  private async getPlayerIdentity(otcId: string): Promise<any> {
+    try {
+      const result = await db
+        .select()
+        .from(playerIdentityMap)
+        .where(eq(playerIdentityMap.otcId, otcId))
+        .limit(1);
+
+      return result[0] || null;
+    } catch (error) {
+      console.error(`[AttributesService] Error fetching player identity for ${otcId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch weekly stats from Sleeper API
+   */
+  private async fetchSleeperWeeklyStats(sleeperId: string, season: number, week: number): Promise<any> {
+    try {
+      const response = await fetch(`https://api.sleeper.app/v1/stats/nfl/regular/${season}/${week}`);
+      if (!response.ok) {
+        throw new Error(`Sleeper API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data[sleeperId] || null;
+    } catch (error) {
+      console.error(`[AttributesService] Error fetching Sleeper stats:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Calculate fantasy points using half-PPR scoring
+   */
+  private calculateFantasyPoints(stats: any): number {
+    const passingYds = stats.pass_yd || 0;
+    const passingTds = stats.pass_td || 0;
+    const passingInt = stats.pass_int || 0;
+    const rushingYds = stats.rush_yd || 0;
+    const rushingTds = stats.rush_td || 0;
+    const receivingYds = stats.rec_yd || 0;
+    const receivingTds = stats.rec_td || 0;
+    const receptions = stats.rec || 0;
+    const fumbles = stats.fum_lost || 0;
+
+    // Half PPR scoring (0.5 pts per reception)
+    const halfPpr = (
+      (passingYds * 0.04) + // 1 pt per 25 yards
+      (passingTds * 4) +
+      (passingInt * -2) +
+      (rushingYds * 0.1) + // 1 pt per 10 yards
+      (rushingTds * 6) +
+      (receivingYds * 0.1) + // 1 pt per 10 yards
+      (receivingTds * 6) +
+      (receptions * 0.5) + // Half PPR
+      (fumbles * -2)
+    );
+
+    return Math.round(halfPpr * 100) / 100;
   }
 
   /**
