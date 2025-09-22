@@ -132,13 +132,13 @@ export class OasisEnvironmentService {
     try {
       console.log('🔄 [OasisEnvironment] Refreshing team environment data...');
       
-      // Fetch current season/week data from OASIS API
-      const response = await fetch('http://localhost:5000/api/oasis/environment?season=2025&week=2');
-      if (!response.ok) {
-        throw new Error(`OASIS API error: ${response.status}`);
-      }
+      // Fetch current season/week data from OASIS API using production-ready config
+      const { internalFetch } = await import('../utils/apiConfig');
       
-      const data = await response.json();
+      const data = await internalFetch('/api/oasis/environment?season=2025&week=2', {
+        timeout: 12000,  // 12 second timeout for OASIS environment data
+        retries: 2       // Retry for environment data calls
+      });
       const teams: OasisRawData[] = data.teams;
       
       // Calculate league statistics

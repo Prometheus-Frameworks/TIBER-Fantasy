@@ -2851,44 +2851,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { format = 'dynasty', position = 'ALL', season = '2025', week = '3', limit = '100' } = req.query;
       
+      // Import ApiConfig for production-ready API calls
+      const { internalFetch } = await import('../utils/apiConfig');
+      
       console.log('[MergedPlayerData] Fetching OVR data...');
       
-      // Fetch OVR ratings
+      // Fetch OVR ratings with timeout and retry logic
       const ovrParams = new URLSearchParams();
       ovrParams.set('format', format as string);
       ovrParams.set('position', position as string);
       ovrParams.set('limit', limit as string);
       
-      const ovrResponse = await fetch(`http://localhost:5000/api/ovr?${ovrParams.toString()}`);
-      if (!ovrResponse.ok) {
-        throw new Error(`Failed to fetch OVR data: ${ovrResponse.status}`);
-      }
-      const ovrData = await ovrResponse.json();
+      const ovrData = await internalFetch(`/api/ovr?${ovrParams.toString()}`, {
+        timeout: 15000,  // 15 second timeout for complex OVR calculations
+        retries: 1       // Limited retries for internal calls
+      });
       console.log('[MergedPlayerData] OVR data fetched, players:', ovrData.data?.players?.length);
       
       console.log('[MergedPlayerData] Fetching attributes data...');
       
-      // Fetch weekly attributes
+      // Fetch weekly attributes with timeout
       const attrParams = new URLSearchParams();
       attrParams.set('season', season as string);
       attrParams.set('week', week as string);
       if (position !== 'ALL') attrParams.set('position', position as string);
       attrParams.set('limit', limit as string);
       
-      const attrResponse = await fetch(`http://localhost:5000/api/attributes/weekly?${attrParams.toString()}`);
-      if (!attrResponse.ok) {
-        throw new Error(`Failed to fetch attributes data: ${attrResponse.status}`);
-      }
-      const attrData = await attrResponse.json();
+      const attrData = await internalFetch(`/api/attributes/weekly?${attrParams.toString()}`, {
+        timeout: 10000,  // 10 second timeout for attributes
+        retries: 2       // More retries for attributes (lighter operation)
+      });
       console.log('[MergedPlayerData] Attributes data fetched, attributes:', attrData.data?.attributes?.length);
       
-      // Simple merge for testing - deterministic by exact ID match only
-      console.log('[MergedPlayerData] Starting simple merge...');
+      // Deterministic merge with exact ID matching (production-ready)
+      console.log('[MergedPlayerData] Starting deterministic merge...');
       const ovrPlayers = ovrData.data?.players || [];
       const attributes = attrData.data?.attributes || [];
       
       const mergedPlayers = ovrPlayers.map((player: any) => {
-        // Exact ID match only - no fuzzy matching
+        // Exact ID match only - no risky fuzzy matching in production
         const attribute = attributes.find((attr: any) => attr.otcId === player.player_id);
         
         return {

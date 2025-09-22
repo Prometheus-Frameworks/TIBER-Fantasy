@@ -76,9 +76,13 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const query = OVRQuerySchema.parse(req.query);
     
-    // Get real player data from player pool
-    const playerPoolResponse = await fetch('http://localhost:5000/api/player-pool?limit=1000');
-    const playerPoolData = await playerPoolResponse.json();
+    // Get real player data from player pool using production-ready API config
+    const { internalFetch } = await import('../utils/apiConfig');
+    
+    const playerPoolData = await internalFetch('/api/player-pool?limit=1000', {
+      timeout: 8000,   // 8 second timeout for player pool
+      retries: 2       // Retry for player pool calls
+    });
     
     if (!playerPoolData.ok || !playerPoolData.data) {
       throw new Error('Failed to fetch player pool data');
@@ -98,7 +102,7 @@ router.get('/', async (req: Request, res: Response) => {
     // Filter by position if specified
     let filteredPlayers = realPlayers;
     if (query.position !== 'ALL') {
-      filteredPlayers = realPlayers.filter(p => p.position === query.position);
+      filteredPlayers = realPlayers.filter((p: { position: string }) => p.position === query.position);
     }
     
     // Calculate OVR ratings
