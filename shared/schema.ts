@@ -1919,6 +1919,90 @@ export const playerWeekFacts = pgTable("player_week_facts", {
   playerSeasonIdx: index("pwf_player_season_idx").on(table.playerId, table.season),
 }));
 
+// ========================================
+// PLAYER ATTRIBUTES - WEEKLY ATTRIBUTE SYSTEM
+// ========================================
+
+// Player Attributes - Weekly granular stats from multiple sources for Madden-style scoring
+export const playerAttributes = pgTable("player_attributes", {
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  otcId: text("otc_id").notNull(),
+  team: text("team").notNull(),
+  position: text("position").notNull(),
+  oppTeam: text("opp_team"),
+  statusInjury: text("status_injury"),
+
+  // Passing stats (QB)
+  passAtt: integer("pass_att"),
+  passCmp: integer("pass_cmp"),
+  passYd: integer("pass_yd"),
+  passTd: integer("pass_td"),
+  passInt: integer("pass_int"),
+  sacksTaken: integer("sacks_taken"),
+
+  // Rushing stats (QB/RB)
+  rushAtt: integer("rush_att"),
+  rushYd: integer("rush_yd"),
+  rushTd: integer("rush_td"),
+
+  // Receiving stats (WR/TE/RB)
+  targets: integer("targets"),
+  receptions: integer("receptions"),
+  recYd: integer("rec_yd"),
+  recTd: integer("rec_td"),
+  fumblesLost: integer("fumbles_lost"),
+  twoPtMade: integer("two_pt_made"),
+
+  // Advanced metrics (nflfastR)
+  airYards: integer("air_yards"),
+  aDOT: real("a_dot"),
+  yac: integer("yac"),
+  epaTotal: real("epa_total"),
+  epaPerPlay: real("epa_per_play"),
+
+  // Environment/Context (OASIS)
+  teamPlays: integer("team_plays"),
+  oppDefRank: real("opp_def_rank"),
+  paceSituationAdj: real("pace_situation_adj"),
+  impliedTeamTotal: real("implied_team_total"),
+  adpSf: real("adp_sf"),
+  fantasyPtsHalfppr: real("fantasy_pts_halfppr"),
+
+  // Metadata
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Primary key: season, week, otcId
+  primaryKey: primaryKey({ columns: [table.season, table.week, table.otcId] }),
+  
+  // Performance indexes
+  seasonWeekIdx: index("player_attributes_season_week_idx").on(table.season, table.week),
+  otcIdSeasonIdx: index("player_attributes_otc_id_season_idx").on(table.otcId, table.season),
+  positionIdx: index("player_attributes_position_idx").on(table.position),
+  teamIdx: index("player_attributes_team_idx").on(table.team),
+  
+  // Query optimization indexes
+  positionSeasonWeekIdx: index("player_attributes_pos_season_week_idx").on(table.position, table.season, table.week),
+  teamSeasonWeekIdx: index("player_attributes_team_season_week_idx").on(table.team, table.season, table.week),
+}));
+
+// Player Attributes Relations
+export const playerAttributesRelations = relations(playerAttributes, ({ one }) => ({
+  player: one(playerIdentityMap, {
+    fields: [playerAttributes.otcId],
+    references: [playerIdentityMap.canonicalId],
+  }),
+}));
+
+// Player Attributes Types and Schemas
+export type PlayerAttributes = typeof playerAttributes.$inferSelect;
+export type InsertPlayerAttributes = z.infer<typeof insertPlayerAttributesSchema>;
+export const insertPlayerAttributesSchema = createInsertSchema(playerAttributes).omit({ 
+  createdAt: true, 
+  updatedAt: true 
+});
+
 // Buys/Sells Trade Advice - Weekly trade recommendations with supporting data
 export const buysSells = pgTable("buys_sells", {
   playerId: text("player_id").notNull(),
