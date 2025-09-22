@@ -1930,44 +1930,46 @@ export const playerAttributes = pgTable("player_attributes", {
   otcId: text("otc_id").notNull(),
   team: text("team").notNull(),
   position: text("position").notNull(),
-  oppTeam: text("opp_team"),
-  statusInjury: text("status_injury"),
+  
+  // Player identification  
+  playerName: text("player_name"),
+  nflId: text("nfl_id"),
+  sleeperId: text("sleeper_id"),
 
-  // Passing stats (QB)
-  passAtt: integer("pass_att"),
-  passCmp: integer("pass_cmp"),
-  passYd: integer("pass_yd"),
-  passTd: integer("pass_td"),
-  passInt: integer("pass_int"),
-  sacksTaken: integer("sacks_taken"),
+  // Rushing stats
+  carries: integer("carries"),
+  rushingYards: integer("rushing_yards"),
+  rushingTds: integer("rushing_tds"),
 
-  // Rushing stats (QB/RB)
-  rushAtt: integer("rush_att"),
-  rushYd: integer("rush_yd"),
-  rushTd: integer("rush_td"),
-
-  // Receiving stats (WR/TE/RB)
+  // Receiving stats
   targets: integer("targets"),
   receptions: integer("receptions"),
-  recYd: integer("rec_yd"),
-  recTd: integer("rec_td"),
-  fumblesLost: integer("fumbles_lost"),
-  twoPtMade: integer("two_pt_made"),
+  receivingYards: integer("receiving_yards"),
+  receivingTds: integer("receiving_tds"),
 
-  // Advanced metrics (nflfastR)
+  // Fantasy points
+  fantasyPtsHalfppr: real("fantasy_pts_halfppr"),
+  fantasyPtsPpr: real("fantasy_pts_ppr"),
+  fantasyPtsStandard: real("fantasy_pts_standard"),
+
+  // Advanced metrics
   airYards: integer("air_yards"),
-  aDOT: real("a_dot"),
   yac: integer("yac"),
+  aDOT: real("adot"),
   epaTotal: real("epa_total"),
   epaPerPlay: real("epa_per_play"),
 
-  // Environment/Context (OASIS)
+  // Context/Environment
+  opposingTeam: text("opposing_team"),
+  opponentDefRank: real("opponent_def_rank"),
+  gamePace: real("game_pace"),
+  impliedTotal: real("implied_total"),
+  depthPosition: text("depth_position"),
+  snapPercentage: real("snap_percentage"),
+  targetShare: real("target_share"),
   teamPlays: integer("team_plays"),
-  oppDefRank: real("opp_def_rank"),
-  paceSituationAdj: real("pace_situation_adj"),
-  impliedTeamTotal: real("implied_team_total"),
-  adpSf: real("adp_sf"),
-  fantasyPtsHalfppr: real("fantasy_pts_halfppr"),
+  injuryStatus: text("injury_status"),
+  questionable: boolean("questionable"),
 
   // Metadata
   createdAt: timestamp("created_at").defaultNow(),

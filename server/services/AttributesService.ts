@@ -138,44 +138,44 @@ export class AttributesService {
           set: {
             team: data.team,
             position: data.position,
-            oppTeam: data.oppTeam,
-            statusInjury: data.statusInjury,
-            
-            // Passing stats
-            passAtt: data.passAtt,
-            passCmp: data.passCmp,
-            passYd: data.passYd,
-            passTd: data.passTd,
-            passInt: data.passInt,
-            sacksTaken: data.sacksTaken,
+            playerName: data.playerName,
+            nflId: data.nflId,
+            sleeperId: data.sleeperId,
             
             // Rushing stats
-            rushAtt: data.rushAtt,
-            rushYd: data.rushYd,
-            rushTd: data.rushTd,
+            carries: data.carries,
+            rushingYards: data.rushingYards,
+            rushingTds: data.rushingTds,
             
             // Receiving stats
             targets: data.targets,
             receptions: data.receptions,
-            recYd: data.recYd,
-            recTd: data.recTd,
-            fumblesLost: data.fumblesLost,
-            twoPtMade: data.twoPtMade,
+            receivingYards: data.receivingYards,
+            receivingTds: data.receivingTds,
+            
+            // Fantasy points
+            fantasyPtsHalfppr: data.fantasyPtsHalfppr,
+            fantasyPtsPpr: data.fantasyPtsPpr,
+            fantasyPtsStandard: data.fantasyPtsStandard,
             
             // Advanced metrics
             airYards: data.airYards,
-            aDOT: data.aDOT,
             yac: data.yac,
+            aDOT: data.aDOT,
             epaTotal: data.epaTotal,
             epaPerPlay: data.epaPerPlay,
             
-            // Environment
+            // Context/Environment
+            opposingTeam: data.opposingTeam,
+            opponentDefRank: data.opponentDefRank,
+            gamePace: data.gamePace,
+            impliedTotal: data.impliedTotal,
+            depthPosition: data.depthPosition,
+            snapPercentage: data.snapPercentage,
+            targetShare: data.targetShare,
             teamPlays: data.teamPlays,
-            oppDefRank: data.oppDefRank,
-            paceSituationAdj: data.paceSituationAdj,
-            impliedTeamTotal: data.impliedTeamTotal,
-            adpSf: data.adpSf,
-            fantasyPtsHalfppr: data.fantasyPtsHalfppr,
+            injuryStatus: data.injuryStatus,
+            questionable: data.questionable,
             
             updatedAt: new Date()
           }
@@ -185,10 +185,14 @@ export class AttributesService {
       // Clear cache
       this.clearCache();
 
-      return result[0] || null;
+      if (result.length === 0) {
+        throw new Error('Upsert failed - no rows returned');
+      }
+      
+      return result[0];
     } catch (error) {
       console.error(`[AttributesService] Error upserting player attributes:`, error);
-      return null;
+      throw error; // Re-throw to propagate error
     }
   }
 
@@ -266,35 +270,37 @@ export class AttributesService {
       team: player.nflTeam || 'FA',
       position: player.position,
       
+      // Player identification
+      playerName: null,
+      nflId: null,
+      sleeperId: null,
+      
       // Initialize all fields as null (will be filled by data sources)
-      oppTeam: null,
-      statusInjury: null,
-      passAtt: null,
-      passCmp: null,
-      passYd: null,
-      passTd: null,
-      passInt: null,
-      sacksTaken: null,
-      rushAtt: null,
-      rushYd: null,
-      rushTd: null,
+      carries: null,
+      rushingYards: null,
+      rushingTds: null,
       targets: null,
       receptions: null,
-      recYd: null,
-      recTd: null,
-      fumblesLost: null,
-      twoPtMade: null,
+      receivingYards: null,
+      receivingTds: null,
+      fantasyPtsHalfppr: null,
+      fantasyPtsPpr: null,
+      fantasyPtsStandard: null,
       airYards: null,
-      aDOT: null,
       yac: null,
+      aDOT: null,
       epaTotal: null,
       epaPerPlay: null,
+      opposingTeam: null,
+      opponentDefRank: null,
+      gamePace: null,
+      impliedTotal: null,
+      depthPosition: null,
+      snapPercentage: null,
+      targetShare: null,
       teamPlays: null,
-      oppDefRank: null,
-      paceSituationAdj: null,
-      impliedTeamTotal: null,
-      adpSf: null,
-      fantasyPtsHalfppr: null
+      injuryStatus: null,
+      questionable: null
     };
 
     // Step 1 - Collect Sleeper data (game logs, injury status, fantasy points)
@@ -304,7 +310,12 @@ export class AttributesService {
     // TODO: Step 3 - Collect OASIS data (opponent team, defensive rank, pace, implied totals)
     
     // Upsert the attributes
-    await this.upsertPlayerAttributes(attributes);
+    try {
+      await this.upsertPlayerAttributes(attributes);
+    } catch (error) {
+      console.error(`[AttributesService] Failed to upsert attributes for ${player.otcId}:`, error);
+      throw error; // Re-throw to be caught by outer error handling
+    }
   }
 
   /**
@@ -327,17 +338,18 @@ export class AttributesService {
       }
 
       // Map Sleeper data to our schema
-      attributes.statusInjury = sleeperStats.injury_status || null;
+      attributes.injuryStatus = sleeperStats.injury_status || null;
 
       // Basic stats from Sleeper
       attributes.targets = sleeperStats.rec_tgt || null;
       attributes.receptions = sleeperStats.rec || null;
-      attributes.recYd = sleeperStats.rec_yd || null;
-      attributes.recTd = sleeperStats.rec_td || null;
-      attributes.rushAtt = sleeperStats.rush_att || null;
-      attributes.rushYd = sleeperStats.rush_yd || null;
-      attributes.rushTd = sleeperStats.rush_td || null;
-      attributes.passAtt = sleeperStats.pass_att || null;
+      attributes.receivingYards = sleeperStats.rec_yd || null;
+      attributes.receivingTds = sleeperStats.rec_td || null;
+      attributes.carries = sleeperStats.rush_att || null;
+      attributes.rushingYards = sleeperStats.rush_yd || null;
+      attributes.rushingTds = sleeperStats.rush_td || null;
+      // Fantasy points
+      attributes.fantasyPtsHalfppr = sleeperStats.pts_half_ppr || null;
       attributes.passCmp = sleeperStats.pass_cmp || null;
       attributes.passYd = sleeperStats.pass_yd || null;
       attributes.passTd = sleeperStats.pass_td || null;
@@ -364,7 +376,7 @@ export class AttributesService {
       const result = await db
         .select()
         .from(playerIdentityMap)
-        .where(eq(playerIdentityMap.otcId, otcId))
+        .where(eq(playerIdentityMap.canonicalId, otcId))
         .limit(1);
 
       return result[0] || null;
