@@ -1,0 +1,210 @@
+Got you, Boss Man J. Let’s lock the attribute sheet first—only fields we can actually pull from Sleeper, nflfastR, and OASIS (your context module). No fantasy land “routes run” unless we wire a provider later.
+
+I’m giving you:
+	•	a practical attribute list (per-week, per-player) with exact source mapping
+	•	a tight JSON/SQL shape you can drop in
+	•	rating buckets (Madden-style) built only from those attributes
+	•	sane fallback rules so nothing hallucinates
+
+⸻
+
+Attribute Sheet (one row per player-week)
+
+Attribute	Type	Source	Notes / How we get it (only if present)
+season, week	int	both	Pipeline params (truth)
+otc_id	text	xref	Your canonical ID (xref maps Sleeper/nflfastR → otc_id)
+team, position	text	Sleeper	From Sleeper player/game log meta
+opp_team	text	OASIS	OASIS opponent resolver for that week
+status_injury	text?	Sleeper	“questionable/out/IR” if Sleeper exposes; else null
+pass_att	int?	Sleeper	Game log
+pass_cmp	int?	Sleeper	Game log
+pass_yd	int?	Sleeper	Game log
+pass_td	int?	Sleeper	Game log
+pass_int	int?	Sleeper	Game log
+sacks_taken	int?	nflfastR	From pbp aggregations
+rush_att	int?	Sleeper	Game log
+rush_yd	int?	Sleeper	Game log
+rush_td	int?	Sleeper	Game log
+targets	int?	Sleeper/nflfastR	Prefer Sleeper; if missing, aggregate from nflfastR pbp
+receptions	int?	Sleeper	Game log
+rec_yd	int?	Sleeper	Game log
+rec_td	int?	Sleeper	Game log
+fumbles_lost	int?	Sleeper	Game log
+two_pt_made	int?	Sleeper	Game log (any 2PT)
+air_yards	int?	nflfastR	PBP aggregate (sum air_yards on targets)
+aDOT	float?	nflfastR	air_yards / targets if both present
+yac	int?	nflfastR	PBP aggregate (sum yards_after_catch)
+epa_total	float?	nflfastR	Sum EPA across plays involved
+epa_per_play	float?	nflfastR	epa_total / (rush_att + targets + pass_att)*
+team_plays	int?	nflfastR/OASIS	Offensive plays run by player’s team that week
+opp_def_rank	float?	OASIS	Your defensive strength index (lower = tougher)
+pace_situation_adj	float?	OASIS	Your seconds/play or pace index
+implied_team_total	float?	OASIS	Your implied points (from lines or OASIS model)
+adp_sf	float?	Sleeper/OASIS	Sleeper ADP (Superflex if you’ve got it) or OASIS stored ADP
+fantasy_pts_halfppr	float?	Sleeper	Nice for QA / UI
+
+* for epa_per_play, if pass_att is present we can use per-dropback instead; keep it simple for now.
+
+No routes or snap% in this v1, unless you confirm you have a safe field. We can add later under a “plus” provider.
+
+⸻
+
+JSON Schema (TypeScript zod style)
+
+const AttrRowSchema = z.object({
+  season: z.number(),
+  week: z.number(),
+  otc_id: z.string(),
+  team: z.string(),
+  position: z.string(),
+  opp_team: z.string().optional().nullable(),
+  status_injury: z.string().optional().nullable(),
+
+  pass_att: z.number().optional().nullable(),
+  pass_cmp: z.number().optional().nullable(),
+  pass_yd: z.number().optional().nullable(),
+  pass_td: z.number().optional().nullable(),
+  pass_int: z.number().optional().nullable(),
+  sacks_taken: z.number().optional().nullable(),
+
+  rush_att: z.number().optional().nullable(),
+  rush_yd: z.number().optional().nullable(),
+  rush_td: z.number().optional().nullable(),
+
+  targets: z.number().optional().nullable(),
+  receptions: z.number().optional().nullable(),
+  rec_yd: z.number().optional().nullable(),
+  rec_td: z.number().optional().nullable(),
+  fumbles_lost: z.number().optional().nullable(),
+  two_pt_made: z.number().optional().nullable(),
+
+  air_yards: z.number().optional().nullable(),
+  aDOT: z.number().optional().nullable(),
+  yac: z.number().optional().nullable(),
+  epa_total: z.number().optional().nullable(),
+  epa_per_play: z.number().optional().nullable(),
+
+  team_plays: z.number().optional().nullable(),
+  opp_def_rank: z.number().optional().nullable(),
+  pace_situation_adj: z.number().optional().nullable(),
+  implied_team_total: z.number().optional().nullable(),
+  adp_sf: z.number().optional().nullable(),
+  fantasy_pts_halfppr: z.number().optional().nullable()
+});
+
+SQL (lightweight)
+
+create table attributes (
+  season int not null,
+  week int not null,
+  otc_id text not null,
+  team text not null,
+  position text not null,
+  opp_team text,
+  status_injury text,
+
+  pass_att int, pass_cmp int, pass_yd int, pass_td int, pass_int int, sacks_taken int,
+  rush_att int, rush_yd int, rush_td int,
+  targets int, receptions int, rec_yd int, rec_td int,
+  fumbles_lost int, two_pt_made int,
+
+  air_yards int, aDOT numeric, yac int, epa_total numeric, epa_per_play numeric,
+
+  team_plays int, opp_def_rank numeric, pace_situation_adj numeric, implied_team_total numeric,
+  adp_sf numeric, fantasy_pts_halfppr numeric,
+
+  unique (season, week, otc_id)
+);
+
+
+⸻
+
+Deterministic Madden-Style Ratings (built ONLY from above)
+
+We’ll compute four subscores + an Overall. All math is transparent and reproducible.
+
+1) Projections-ish (production signal)
+	•	For QB: QB_PROJ = norm(pass_yd) + norm(pass_td) − norm(pass_int) + 0.5*norm(rush_yd) + 0.5*norm(rush_td) + 0.6*norm(epa_per_play)
+	•	For RB: RB_PROJ = 0.5*norm(rush_att) + norm(rush_yd) + 1.2*norm(rush_td) + 0.6*norm(receptions) + 0.8*norm(rec_yd) + 0.6*norm(epa_per_play)
+	•	For WR/TE: RECV_PROJ = 0.8*norm(targets) + 1.0*norm(receptions) + 1.0*norm(rec_yd) + 1.2*norm(rec_td) + 0.6*norm(epa_per_play)
+
+2) Usage/Opportunity
+	•	RB: USG = 0.8*norm(rush_att) + 0.8*norm(targets)
+	•	WR/TE: USG = 1.0*norm(targets) + 0.6*norm(air_yards)
+	•	QB: USG = 0.6*norm(pass_att) + 0.4*norm(rush_att)
+
+3) Matchup/Environment (from OASIS)
+
+ENV = 0.7*norm(implied_team_total) − 0.7*norm(opp_def_rank) + 0.3*norm(pace_situation_adj)
+
+(Lower opp_def_rank = harder; use negative weight.)
+
+4) Volatility/Explosiveness
+	•	Receivers: VOL = 0.7*norm(aDOT) + 0.3*norm(yac)
+	•	RB: VOL = 0.6*norm(yac) + 0.4*norm(air_yards) (air_yards usually ~0 for RBs; harmless)
+	•	QB: VOL = 0.5*norm(aDOT) + 0.5*norm(epa_per_play)
+
+Overall
+
+OVERALL = 0.45*PROJ + 0.30*USG + 0.15*ENV + 0.10*VOL
+
+Then rescale to 0–100 via a fixed clamp: score = clamp(50 + 15*z, 0, 100) where z = (value - mean)/std using per-week league baselines (compute from the actual distro each run; fallback to static priors if sample small).
+
+No ADP in the math by default (to keep it “on-field”). If you want market awareness, add a separate Market subscore with tiny weight later.
+
+⸻
+
+Merge Logic (exact and boring—good)
+	•	Build player_xref (source, external_id → otc_id).
+	•	Sleeper pass #1 → fill base: team/position + the box score stats + fantasy_pts_halfppr + injury.
+	•	nflfastR pass #2 → add: air_yards, yac, epa_total, epa_per_play, sacks_taken, team_plays (if you compute it here).
+	•	OASIS pass #3 → add: opp_team, opp_def_rank, pace_situation_adj, implied_team_total, (optional) ADP.
+	•	Derive aDOT = air_yards / targets when both present.
+
+If a field is missing, leave null—the scorer handles nulls as 0-impact after normalization.
+
+⸻
+
+Example Row (WR week)
+
+{
+  "season": 2025,
+  "week": 3,
+  "otc_id": "wr_puka_nacua",
+  "team": "LAR",
+  "position": "WR",
+  "opp_team": "SEA",
+  "status_injury": null,
+
+  "pass_att": null, "pass_cmp": null, "pass_yd": null, "pass_td": null, "pass_int": null,
+  "sacks_taken": null,
+
+  "rush_att": 1, "rush_yd": 7, "rush_td": 0,
+
+  "targets": 12, "receptions": 8, "rec_yd": 106, "rec_td": 1,
+  "fumbles_lost": 0, "two_pt_made": 0,
+
+  "air_yards": 132, "aDOT": 11.0, "yac": 36,
+  "epa_total": 4.8, "epa_per_play": 0.19,
+
+  "team_plays": 66, "opp_def_rank": 12.0, "pace_situation_adj": 0.4,
+  "implied_team_total": 24.8, "adp_sf": 15.3,
+  "fantasy_pts_halfppr": 22.6
+}
+
+
+⸻
+
+Why this works (and won’t BS you)
+	•	Every attribute is traceable to Sleeper, nflfastR, or OASIS.
+	•	If Sleeper doesn’t expose a stat in a given week, nflfastR can often fill (targets, air yards); if neither does, it stays null.
+	•	Ratings are deterministic and rebuildable from attributes. No mystery knobs.
+
+⸻
+
+Next steps (fast, surgical)
+	1.	✅ Approve this attribute list (add/remove anything you know you can fetch).
+	2.	I’ll wire a small normalize/mergeToAttributes.ts that only touches these fields and nothing else.
+	3.	Then a compute/score.ts that implements the four subscores above and returns 0–100.
+
+If you want snap% or routes later, we bolt on a providers/pff_plus.ts and extend the sheet—clean and versioned.
