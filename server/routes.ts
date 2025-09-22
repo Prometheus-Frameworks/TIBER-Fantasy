@@ -64,6 +64,7 @@ import { ratingsRouter } from './src/modules/ratings';
 import rankingsV3Router from './routes/rankingsV3';
 import ovrRouter from './routes/ovrRoutes';
 import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
+import attributesRoutes from './routes/attributesRoutes';
 import pythonRookieRoutes from './routes/pythonRookieRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
 import buysSellsRoutes from './routes/buysSellsRoutes';
@@ -579,6 +580,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount the new DeepSeek ratings router
   app.use('/api/ratings', ratingsRouter);
   app.use('/api', rankingsV3Router);
+  
+  // ===== PLAYER ATTRIBUTES SYSTEM =====
+  // Mount the player attributes router
+  app.use('/api/attributes', attributesRoutes);
   
   // ===== LEGACY RATINGS ENGINE (DEPRECATED) =====
   // Legacy ratings endpoint - disabled in favor of DeepSeek methodology

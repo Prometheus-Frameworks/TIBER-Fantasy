@@ -1,0 +1,400 @@
+import { db } from '../db';
+import { playerAttributes, playerIdentityMap, type PlayerAttributes, type InsertPlayerAttributes } from '@shared/schema';
+import { eq, and, desc } from 'drizzle-orm';
+
+/**
+ * Player Attributes Service - Manages weekly player attribute data collection and normalization
+ * 
+ * Implements the proposed attribute sheet system:
+ * - Sleeper API: Base stats, injury status, fantasy points
+ * - nflfastR: Advanced metrics (EPA, air yards, YAC, sacks)
+ * - OASIS: Environment data (opponent, defense rank, pace, implied totals)
+ * 
+ * Data flows: Bronze (raw) → Silver (normalized) → Gold (scored attributes)
+ */
+export class AttributesService {
+  private cache = new Map<string, PlayerAttributes[]>();
+  private cacheTimestamp = new Map<string, number>();
+  private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+  /**
+   * Get weekly attributes for a specific player
+   */
+  async getPlayerWeeklyAttributes(
+    otcId: string, 
+    season: number, 
+    week: number
+  ): Promise<PlayerAttributes | null> {
+    try {
+      const result = await db
+        .select()
+        .from(playerAttributes)
+        .where(
+          and(
+            eq(playerAttributes.otcId, otcId),
+            eq(playerAttributes.season, season),
+            eq(playerAttributes.week, week)
+          )
+        )
+        .limit(1);
+
+      return result[0] || null;
+    } catch (error) {
+      console.error(`[AttributesService] Error fetching player attributes for ${otcId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all attributes for a specific week and position
+   */
+  async getWeeklyAttributes(
+    season: number,
+    week: number,
+    position?: string,
+    team?: string,
+    limit = 100
+  ): Promise<PlayerAttributes[]> {
+    const cacheKey = `weekly-${season}-${week}-${position || 'ALL'}-${team || 'ALL'}-${limit}`;
+    
+    // Check cache
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey)!;
+    }
+
+    try {
+      // Build where conditions
+      const whereConditions = [
+        eq(playerAttributes.season, season),
+        eq(playerAttributes.week, week)
+      ];
+
+      // Add position filter if specified
+      if (position && position !== 'ALL') {
+        whereConditions.push(eq(playerAttributes.position, position));
+      }
+
+      // Add team filter if specified  
+      if (team && team !== 'ALL') {
+        whereConditions.push(eq(playerAttributes.team, team));
+      }
+
+      const query = db
+        .select()
+        .from(playerAttributes)
+        .where(and(...whereConditions));
+
+      const result = await query
+        .orderBy(desc(playerAttributes.fantasyPtsHalfppr))
+        .limit(limit);
+
+      // Cache result
+      this.cache.set(cacheKey, result);
+      this.cacheTimestamp.set(cacheKey, Date.now());
+
+      return result;
+    } catch (error) {
+      console.error(`[AttributesService] Error fetching weekly attributes:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get player's season-long attribute history
+   */
+  async getPlayerSeasonAttributes(
+    otcId: string,
+    season: number
+  ): Promise<PlayerAttributes[]> {
+    try {
+      const result = await db
+        .select()
+        .from(playerAttributes)
+        .where(
+          and(
+            eq(playerAttributes.otcId, otcId),
+            eq(playerAttributes.season, season)
+          )
+        )
+        .orderBy(desc(playerAttributes.week));
+
+      return result;
+    } catch (error) {
+      console.error(`[AttributesService] Error fetching season attributes for ${otcId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Create or update player attributes for a specific week
+   */
+  async upsertPlayerAttributes(data: InsertPlayerAttributes): Promise<PlayerAttributes | null> {
+    try {
+      const result = await db
+        .insert(playerAttributes)
+        .values(data)
+        .onConflictDoUpdate({
+          target: [playerAttributes.season, playerAttributes.week, playerAttributes.otcId],
+          set: {
+            team: data.team,
+            position: data.position,
+            oppTeam: data.oppTeam,
+            statusInjury: data.statusInjury,
+            
+            // Passing stats
+            passAtt: data.passAtt,
+            passCmp: data.passCmp,
+            passYd: data.passYd,
+            passTd: data.passTd,
+            passInt: data.passInt,
+            sacksTaken: data.sacksTaken,
+            
+            // Rushing stats
+            rushAtt: data.rushAtt,
+            rushYd: data.rushYd,
+            rushTd: data.rushTd,
+            
+            // Receiving stats
+            targets: data.targets,
+            receptions: data.receptions,
+            recYd: data.recYd,
+            recTd: data.recTd,
+            fumblesLost: data.fumblesLost,
+            twoPtMade: data.twoPtMade,
+            
+            // Advanced metrics
+            airYards: data.airYards,
+            aDOT: data.aDOT,
+            yac: data.yac,
+            epaTotal: data.epaTotal,
+            epaPerPlay: data.epaPerPlay,
+            
+            // Environment
+            teamPlays: data.teamPlays,
+            oppDefRank: data.oppDefRank,
+            paceSituationAdj: data.paceSituationAdj,
+            impliedTeamTotal: data.impliedTeamTotal,
+            adpSf: data.adpSf,
+            fantasyPtsHalfppr: data.fantasyPtsHalfppr,
+            
+            updatedAt: new Date()
+          }
+        })
+        .returning();
+
+      // Clear cache
+      this.clearCache();
+
+      return result[0] || null;
+    } catch (error) {
+      console.error(`[AttributesService] Error upserting player attributes:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Collect and merge attributes for a specific week from all data sources
+   */
+  async collectWeeklyAttributes(season: number, week: number): Promise<{
+    success: boolean;
+    processedPlayers: number;
+    errors: string[];
+  }> {
+    console.log(`[AttributesService] Starting attribute collection for ${season} Week ${week}`);
+    
+    const result = {
+      success: true,
+      processedPlayers: 0,
+      errors: [] as string[]
+    };
+
+    try {
+      // Step 1: Get player list from identity map
+      const players = await db
+        .select({
+          otcId: playerIdentityMap.canonicalId,
+          position: playerIdentityMap.position,
+          sleeperId: playerIdentityMap.sleeperId,
+          nflTeam: playerIdentityMap.nflTeam
+        })
+        .from(playerIdentityMap)
+        .where(eq(playerIdentityMap.isActive, true));
+
+      console.log(`[AttributesService] Found ${players.length} active players to process`);
+
+      // Step 2: Process each player (start with Sleeper data only for MVP)
+      for (const player of players) {
+        try {
+          await this.collectPlayerAttributes(player, season, week);
+          result.processedPlayers++;
+        } catch (error) {
+          const errorMsg = `Failed to process ${player.otcId}: ${error}`;
+          console.error(`[AttributesService] ${errorMsg}`);
+          result.errors.push(errorMsg);
+        }
+      }
+
+      console.log(`[AttributesService] Completed: ${result.processedPlayers}/${players.length} players processed`);
+      
+      if (result.errors.length > 0) {
+        result.success = false;
+        console.warn(`[AttributesService] ${result.errors.length} errors occurred during collection`);
+      }
+
+    } catch (error) {
+      console.error(`[AttributesService] Fatal error during attribute collection:`, error);
+      result.success = false;
+      result.errors.push(`Fatal error: ${error}`);
+    }
+
+    return result;
+  }
+
+  /**
+   * Collect attributes for a single player from available sources
+   */
+  private async collectPlayerAttributes(
+    player: { otcId: string; position: string; sleeperId: string | null; nflTeam: string | null },
+    season: number,
+    week: number
+  ): Promise<void> {
+    // Initialize attribute object with base data
+    const attributes: InsertPlayerAttributes = {
+      season,
+      week,
+      otcId: player.otcId,
+      team: player.nflTeam || 'FA',
+      position: player.position,
+      
+      // Initialize all fields as null (will be filled by data sources)
+      oppTeam: null,
+      statusInjury: null,
+      passAtt: null,
+      passCmp: null,
+      passYd: null,
+      passTd: null,
+      passInt: null,
+      sacksTaken: null,
+      rushAtt: null,
+      rushYd: null,
+      rushTd: null,
+      targets: null,
+      receptions: null,
+      recYd: null,
+      recTd: null,
+      fumblesLost: null,
+      twoPtMade: null,
+      airYards: null,
+      aDOT: null,
+      yac: null,
+      epaTotal: null,
+      epaPerPlay: null,
+      teamPlays: null,
+      oppDefRank: null,
+      paceSituationAdj: null,
+      impliedTeamTotal: null,
+      adpSf: null,
+      fantasyPtsHalfppr: null
+    };
+
+    // TODO: Implement data source integrations in subsequent tasks
+    // For now, create placeholder entries to validate the pipeline
+    
+    // Upsert the attributes
+    await this.upsertPlayerAttributes(attributes);
+  }
+
+  /**
+   * Calculate derived attributes (like aDOT from air_yards/targets)
+   */
+  private calculateDerivedAttributes(attributes: Partial<InsertPlayerAttributes>): void {
+    // Calculate aDOT (Average Depth of Target) if we have air_yards and targets
+    if (attributes.airYards !== null && attributes.airYards !== undefined && 
+        attributes.targets !== null && attributes.targets !== undefined && attributes.targets > 0) {
+      attributes.aDOT = attributes.airYards / attributes.targets;
+    }
+
+    // Calculate EPA per play if we have EPA total and play counts
+    if (attributes.epaTotal !== null && attributes.epaTotal !== undefined &&
+        attributes.teamPlays !== null && attributes.teamPlays !== undefined && attributes.teamPlays > 0) {
+      attributes.epaPerPlay = attributes.epaTotal / attributes.teamPlays;
+    }
+  }
+
+  /**
+   * Cache management
+   */
+  private isCacheValid(key: string): boolean {
+    const timestamp = this.cacheTimestamp.get(key);
+    if (!timestamp) return false;
+    
+    return Date.now() - timestamp < this.CACHE_TTL_MS;
+  }
+
+  private clearCache(): void {
+    this.cache.clear();
+    this.cacheTimestamp.clear();
+  }
+
+  /**
+   * Get processing statistics
+   */
+  async getProcessingStats(season: number, week: number): Promise<{
+    totalPlayers: number;
+    byPosition: Record<string, number>;
+    latestUpdate: Date | null;
+    completenessScore: number;
+  }> {
+    try {
+      const players = await this.getWeeklyAttributes(season, week, undefined, undefined, 1000);
+      
+      const byPosition: Record<string, number> = {};
+      let latestUpdate: Date | null = null;
+      let nonNullFields = 0;
+      let totalFields = 0;
+
+      for (const player of players) {
+        // Count by position
+        byPosition[player.position] = (byPosition[player.position] || 0) + 1;
+        
+        // Track latest update
+        if (!latestUpdate || (player.updatedAt && player.updatedAt > latestUpdate)) {
+          latestUpdate = player.updatedAt;
+        }
+        
+        // Calculate completeness (count non-null statistical fields)
+        const statFields = [
+          player.passAtt, player.passCmp, player.passYd, player.passTd, player.passInt,
+          player.rushAtt, player.rushYd, player.rushTd,
+          player.targets, player.receptions, player.recYd, player.recTd,
+          player.airYards, player.yac, player.epaTotal,
+          player.fantasyPtsHalfppr
+        ];
+        
+        statFields.forEach(field => {
+          totalFields++;
+          if (field !== null) nonNullFields++;
+        });
+      }
+
+      const completenessScore = totalFields > 0 ? (nonNullFields / totalFields) * 100 : 0;
+
+      return {
+        totalPlayers: players.length,
+        byPosition,
+        latestUpdate,
+        completenessScore: Math.round(completenessScore * 100) / 100
+      };
+    } catch (error) {
+      console.error(`[AttributesService] Error getting processing stats:`, error);
+      return {
+        totalPlayers: 0,
+        byPosition: {},
+        latestUpdate: null,
+        completenessScore: 0
+      };
+    }
+  }
+}
+
+export const attributesService = new AttributesService();

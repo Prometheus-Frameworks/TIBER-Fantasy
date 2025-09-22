@@ -22,6 +22,13 @@
       "when": 1758142205002,
       "tag": "0002_premium_deadpool",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1758563274886,
+      "tag": "0003_sturdy_hex",
+      "breakpoints": true
     }
   ]
 }
