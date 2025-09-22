@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { attributesService } from '../services/AttributesService';
+import { adminSecurity } from '../middleware/security';
 
 const router = Router();
 
@@ -120,8 +121,14 @@ router.get('/player/:otc_id', async (req, res) => {
 /**
  * POST /api/attributes/collect/:season/:week
  * Trigger attribute collection for a specific week (admin endpoint)
+ * SECURED: Requires admin authentication and rate limiting
  */
-router.post('/collect/:season/:week', async (req, res) => {
+router.post('/collect/:season/:week', 
+  ...adminSecurity({
+    rateLimitWindow: 5 * 60 * 1000, // 5 minutes
+    rateLimitMax: 3 // Maximum 3 collection requests per 5 minutes
+  }),
+  async (req, res) => {
   try {
     const season = parseInt(req.params.season);
     const week = parseInt(req.params.week);

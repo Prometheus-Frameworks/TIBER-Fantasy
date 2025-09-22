@@ -2852,7 +2852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { format = 'dynasty', position = 'ALL', season = '2025', week = '3', limit = '100' } = req.query;
       
       // Import ApiConfig for production-ready API calls
-      const { internalFetch } = await import('../utils/apiConfig');
+      const { internalFetch } = await import('./utils/apiConfig');
       
       console.log('[MergedPlayerData] Fetching OVR data...');
       
