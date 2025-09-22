@@ -25,6 +25,7 @@ type RatingRow = {
   vor?: number;
   bye?: number | string;
   age?: number;
+  ovr?: number; // Overall Rating (1-99 Madden-style)
   debug?: {
     calc_check?: number;
     final_score?: number;
@@ -60,6 +61,7 @@ export default function Rankings() {
   const [week, setWeek] = useState<number>(6); // Default to Week 6
   const [debugMode, setDebugMode] = useState(false);
   const [q, setQ] = useState("");
+  const [showOVR, setShowOVR] = useState(true);
 
   // Read URL parameters on component mount
   useEffect(() => {
@@ -110,7 +112,64 @@ export default function Rankings() {
     retry: 2,
   });
 
-  const { rows, updatedAt } = useMemo(() => normalize(data), [data]);
+  // Fetch OVR ratings to enhance the data
+  const { data: ovrData } = useQuery({
+    queryKey: ["ovr", pos, format],
+    queryFn: async () => {
+      try {
+        const ovrUrl = `/api/ovr?format=${format}&position=${pos}&limit=100`;
+        const res = await fetch(ovrUrl, { headers: { "accept": "application/json" } });
+        if (!res.ok) return { success: false, data: [] };
+        
+        const json = await res.json();
+        return json.success ? json.data : { players: [] };
+      } catch (err) {
+        console.warn("OVR fetch failed:", err);
+        return { success: false, data: [] };
+      }
+    },
+    staleTime: 60_000,
+    enabled: showOVR,
+  });
+
+  const { rows, updatedAt } = useMemo(() => {
+    const normalized = normalize(data);
+    
+    // If the main ratings data is empty but OVR data exists, use OVR data as primary source
+    if ((!normalized.rows || normalized.rows.length === 0) && ovrData?.players?.length) {
+      console.log('[Rankings] Using OVR data as primary source due to empty ratings data');
+      
+      // Convert OVR players to rating rows format
+      normalized.rows = ovrData.players.map((p: any) => ({
+        player_id: p.player_id,
+        name: p.name,
+        team: p.team,
+        position: p.position,
+        tier: p.tier,
+        score: p.composite_score,
+        vor: undefined, // OVR doesn't calculate VOR
+        ovr: p.ovr,
+        age: undefined
+      }));
+      
+      return normalized;
+    }
+    
+    // Otherwise merge OVR data with existing ratings data
+    if (ovrData?.players?.length) {
+      const ovrMap = new Map();
+      ovrData.players.forEach((p: any) => {
+        ovrMap.set(p.player_id, p.ovr);
+      });
+      
+      normalized.rows = normalized.rows.map(row => ({
+        ...row,
+        ovr: ovrMap.get(row.player_id) || undefined
+      }));
+    }
+    
+    return normalized;
+  }, [data, ovrData]);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -246,6 +305,7 @@ export default function Rankings() {
                       <th className="text-left py-3 px-4 font-medium">Rank</th>
                       <th className="text-left py-3 px-4 font-medium">Player</th>
                       <th className="text-left py-3 px-4 font-medium">Pos</th>
+                      <th className="text-right py-3 px-4 font-medium">OVR</th>
                       <th className="text-right py-3 px-4 font-medium">Score</th>
                       <th className="text-right py-3 px-4 font-medium">VOR</th>
                       <th className="text-right py-3 px-4 font-medium">Tier</th>
@@ -279,6 +339,21 @@ export default function Rankings() {
                           <Badge variant="outline" className="text-xs">
                             {r.position}
                           </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {r.ovr ? (
+                            <div className="flex items-center justify-end space-x-1">
+                              <span className="font-bold text-lg">{r.ovr}</span>
+                              <Badge 
+                                variant={r.ovr >= 90 ? "default" : r.ovr >= 80 ? "secondary" : "outline"}
+                                className="text-xs"
+                              >
+                                {r.ovr >= 90 ? "Elite" : r.ovr >= 80 ? "Star" : r.ovr >= 70 ? "Starter" : "Backup"}
+                              </Badge>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-right font-mono">
                           {r.score?.toFixed(1) ?? "-"}

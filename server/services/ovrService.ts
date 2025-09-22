@@ -173,67 +173,109 @@ export class OVRService {
   }
   
   /**
-   * Gather input data from all rating sources (using mock data for demo)
+   * Gather input data from all rating sources
    */
   private async gatherInputData(input: OVRInput, format: Format) {
     const inputData: any = {};
     
-    // Generate realistic mock scores based on player name/position for demonstration
-    const mockData = this.generateMockPlayerData(input, format);
-    
-    inputData.fusion_score = mockData.fusion_score;
-    inputData.ratings_engine_score = mockData.ratings_engine_score;
-    inputData.compass_score = mockData.compass_score;
-    inputData.oasis_environment_score = mockData.oasis_environment_score;
-    
-    if (format === 'dynasty') {
-      inputData.age_value_score = mockData.age_value_score;
+    try {
+      // Get Ratings Engine score from existing data
+      const allRatings = await this.ratingsEngine.getAllRatings();
+      const ratingsResult = allRatings.find(r => 
+        r.player_id === input.player_id || 
+        r.player_name.toLowerCase() === input.name.toLowerCase()
+      );
+      
+      if (ratingsResult) {
+        inputData.ratings_engine_score = ratingsResult.overall_rating;
+        inputData.ratings_raw = ratingsResult;
+      }
+    } catch (error) {
+      console.warn(`[OVR] Failed to get ratings engine score for ${input.name}:`, error);
     }
     
-    console.log(`[OVR] Generated mock data for ${input.name}: Fusion=${mockData.fusion_score}, Ratings=${mockData.ratings_engine_score}, Compass=${mockData.compass_score}, OASIS=${mockData.oasis_environment_score}`);
+    try {
+      // Get Compass score
+      const compassResult = await this.compassService.calculateCompass({
+        playerId: input.player_id,
+        playerName: input.name,
+        position: input.position,
+        age: input.age || 25,
+        team: input.team
+      }, format);
+      
+      if (compassResult) {
+        // Normalize compass score to 0-100
+        const maxScale = config.normalization.compass_max_scale;
+        const multiplier = config.normalization.compass_multiplier;
+        
+        inputData.compass_score = compassResult.score <= maxScale 
+          ? compassResult.score * multiplier 
+          : Math.min(compassResult.score, 100);
+        inputData.compass_raw = compassResult;
+      }
+    } catch (error) {
+      console.warn(`[OVR] Failed to get compass score for ${input.name}:`, error);
+    }
+    
+    try {
+      // Get OASIS environment score
+      const oasisData = await this.oasisService.getTeamEnvironment(input.team);
+      
+      if (oasisData) {
+        // Average key OASIS metrics using correct property names
+        const metrics = [
+          oasisData.environment_score_pct || 50,
+          oasisData.pace_pct || 50,
+          oasisData.scoring_environment_pct || 50,
+          oasisData.red_zone_efficiency_pct || 50
+        ];
+        
+        inputData.oasis_environment_score = metrics.reduce((sum, val) => sum + val, 0) / metrics.length;
+        inputData.oasis_raw = oasisData;
+      }
+    } catch (error) {
+      console.warn(`[OVR] Failed to get OASIS environment score for ${input.team}:`, error);
+    }
+    
+    try {
+      // Get Fusion score using appropriate position-specific method
+      const fusionPlayer = {
+        player_id: input.player_id,
+        name: input.name,
+        pos: input.position,
+        team: input.team,
+        age: input.age || 25
+      };
+
+      let fusionResults: any[] = [];
+      
+      // Call position-specific scoring method
+      if (input.position === 'WR') {
+        fusionResults = await this.fusionService.scoreWRBatch([fusionPlayer], config, format as any);
+      } else {
+        // For other positions, use the general scorePositionBatch method with required arguments
+        fusionResults = await this.fusionService.scorePositionBatch([fusionPlayer], input.position, config, format as any);
+      }
+      
+      if (fusionResults.length > 0) {
+        inputData.fusion_score = fusionResults[0].score;
+        inputData.fusion_raw = fusionResults[0];
+      }
+    } catch (error) {
+      console.warn(`[OVR] Failed to get fusion score for ${input.name}:`, error);
+    }
+    
+    // Dynasty age value component
+    if (format === 'dynasty' && input.age && inputData.ratings_raw?.age_adjusted_value) {
+      inputData.age_value_score = inputData.ratings_raw.age_adjusted_value;
+    }
+    
+    console.log(`[OVR] Gathered real data for ${input.name}: Fusion=${inputData.fusion_score || 'N/A'}, Ratings=${inputData.ratings_engine_score || 'N/A'}, Compass=${inputData.compass_score || 'N/A'}, OASIS=${inputData.oasis_environment_score || 'N/A'}`);
     
     return inputData;
   }
   
-  /**
-   * Generate realistic mock data for demonstration
-   */
-  private generateMockPlayerData(input: OVRInput, format: Format) {
-    // Elite players (deterministic based on name for consistency)
-    const elitePlayers = ['Josh Allen', 'Lamar Jackson', 'Christian McCaffrey', 'Saquon Barkley', 'Tyreek Hill', 'Travis Kelce'];
-    const isElite = elitePlayers.some(name => input.name.includes(name));
-    
-    // Generate base scores with position-specific adjustments
-    let baseScore = 50;
-    
-    if (isElite) {
-      baseScore = 85 + Math.random() * 10; // 85-95 for elite players
-    } else {
-      baseScore = 60 + Math.random() * 25; // 60-85 for other players
-    }
-    
-    // Position-specific variance
-    const positionAdjustments = {
-      'QB': { fusion: 5, ratings: 8, compass: -2, oasis: 3 },
-      'RB': { fusion: -3, ratings: 5, compass: 7, oasis: -1 },
-      'WR': { fusion: 8, ratings: -2, compass: 5, oasis: 2 },
-      'TE': { fusion: 2, ratings: 3, compass: -1, oasis: 4 }
-    };
-    
-    const adj = positionAdjustments[input.position];
-    
-    // Team environment boost for top teams
-    const topTeams = ['KC', 'BUF', 'SF', 'PHI', 'BAL', 'DET'];
-    const teamBoost = topTeams.includes(input.team) ? 5 : 0;
-    
-    return {
-      fusion_score: Math.max(30, Math.min(95, baseScore + adj.fusion + teamBoost + (Math.random() - 0.5) * 10)),
-      ratings_engine_score: Math.max(25, Math.min(100, baseScore + adj.ratings + teamBoost + (Math.random() - 0.5) * 8)),
-      compass_score: Math.max(35, Math.min(90, baseScore + adj.compass + teamBoost + (Math.random() - 0.5) * 12)),
-      oasis_environment_score: Math.max(40, Math.min(85, baseScore + adj.oasis + teamBoost + (Math.random() - 0.5) * 6)),
-      age_value_score: format === 'dynasty' ? Math.max(20, Math.min(95, 100 - (input.age || 25) * 2.5 + (Math.random() - 0.5) * 10)) : undefined
-    };
-  }
   
   /**
    * Calculate confidence weights for each input source

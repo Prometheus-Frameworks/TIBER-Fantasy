@@ -17,7 +17,7 @@ const router = Router();
 const OVRQuerySchema = z.object({
   format: z.enum(['dynasty', 'redraft']).default('redraft'),
   position: z.enum(['QB', 'RB', 'WR', 'TE', 'ALL']).default('ALL'),
-  limit: z.coerce.number().min(1).max(100).default(50),
+  limit: z.coerce.number().min(1).max(500).default(50),
   offset: z.coerce.number().min(0).default(0),
   min_ovr: z.coerce.number().min(1).max(99).optional(),
   max_ovr: z.coerce.number().min(1).max(99).optional()
@@ -76,22 +76,29 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const query = OVRQuerySchema.parse(req.query);
     
-    // Mock player data for testing (replace with actual player pool)
-    const mockPlayers = [
-      { player_id: 'josh_allen', name: 'Josh Allen', position: 'QB' as const, team: 'BUF', age: 28 },
-      { player_id: 'lamar_jackson', name: 'Lamar Jackson', position: 'QB' as const, team: 'BAL', age: 27 },
-      { player_id: 'christian_mccaffrey', name: 'Christian McCaffrey', position: 'RB' as const, team: 'SF', age: 28 },
-      { player_id: 'saquon_barkley', name: 'Saquon Barkley', position: 'RB' as const, team: 'PHI', age: 27 },
-      { player_id: 'tyreek_hill', name: 'Tyreek Hill', position: 'WR' as const, team: 'MIA', age: 30 },
-      { player_id: 'stefon_diggs', name: 'Stefon Diggs', position: 'WR' as const, team: 'HOU', age: 31 },
-      { player_id: 'travis_kelce', name: 'Travis Kelce', position: 'TE' as const, team: 'KC', age: 35 },
-      { player_id: 'sam_laporta', name: 'Sam LaPorta', position: 'TE' as const, team: 'DET', age: 25 }
-    ];
+    // Get real player data from player pool
+    const playerPoolResponse = await fetch('http://localhost:5000/api/player-pool?limit=1000');
+    const playerPoolData = await playerPoolResponse.json();
+    
+    if (!playerPoolData.ok || !playerPoolData.data) {
+      throw new Error('Failed to fetch player pool data');
+    }
+    
+    // Map player pool to OVR input format  
+    const realPlayers = playerPoolData.data
+      .filter((p: { pos?: string }) => p.pos && ['QB', 'RB', 'WR', 'TE'].includes(p.pos))
+      .map((p: { id: string; name: string; pos: string; team?: string; age?: number }) => ({
+        player_id: p.id,
+        name: p.name,
+        position: p.pos as 'QB' | 'RB' | 'WR' | 'TE',
+        team: p.team || 'FA',
+        age: p.age || 25
+      }));
     
     // Filter by position if specified
-    let filteredPlayers = mockPlayers;
+    let filteredPlayers = realPlayers;
     if (query.position !== 'ALL') {
-      filteredPlayers = mockPlayers.filter(p => p.position === query.position);
+      filteredPlayers = realPlayers.filter(p => p.position === query.position);
     }
     
     // Calculate OVR ratings
