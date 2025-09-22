@@ -69,6 +69,41 @@ interface OVRPlayer {
   recent_trend?: "up" | "down" | "stable";
 }
 
+interface MergedPlayer extends OVRPlayer {
+  weeklyData?: PlayerAttribute;
+  mappingResult?: {
+    canonicalId: string;
+    otcId: string;
+    sleeperId?: string;
+    confidence: number;
+    mappingMethod: string;
+    attributeMatchMethod?: string;
+  };
+  mappingError?: string;
+}
+
+interface MergedPlayerResponse {
+  success: boolean;
+  data: {
+    players: MergedPlayer[];
+    metadata: {
+      format: string;
+      position: string;
+      season: string;
+      week: string;
+      total_players: number;
+      ovr_source: any;
+      attributes_source: any;
+      mapping_stats: {
+        total_merged: number;
+        with_weekly_data: number;
+        mapping_errors: number;
+      };
+    };
+    generated_at: string;
+  };
+}
+
 interface OVRResponse {
   success: boolean;
   data: {
@@ -121,69 +156,41 @@ export default function PlayerRankings() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedWeek, setSelectedWeek] = useState(3);
 
-  // Fetch OVR ratings
-  const { data: ovrData, isLoading: ovrLoading, refetch: refetchOVR } = useQuery({
-    queryKey: ["ovr-ratings", position, format],
+  // Fetch merged player data using deterministic ID mapping
+  const { data: mergedData, isLoading, refetch } = useQuery({
+    queryKey: ["merged-player-data", position, format, selectedWeek],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.set('format', format);
       params.set('position', position);
+      params.set('season', '2025');
+      params.set('week', selectedWeek.toString());
       params.set('limit', '100');
       
-      const response = await fetch(`/api/ovr?${params.toString()}`);
+      const response = await fetch(`/api/player-data/merged?${params.toString()}`);
       if (!response.ok) {
-        throw new Error(`Failed to load OVR ratings: ${response.status}`);
+        throw new Error(`Failed to load merged player data: ${response.status}`);
       }
-      return response.json() as Promise<OVRResponse>;
+      return response.json() as Promise<MergedPlayerResponse>;
     },
     retry: 2,
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch weekly attributes for performance data
-  const { data: attributesData, isLoading: attributesLoading, refetch: refetchAttributes } = useQuery({
-    queryKey: ["weekly-attributes", position, selectedWeek],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      params.set('season', '2025');
-      params.set('week', selectedWeek.toString());
-      if (position !== "ALL") params.set('position', position);
-      params.set('limit', '100');
-      
-      const response = await fetch(`/api/attributes/weekly?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error(`Failed to load weekly attributes: ${response.status}`);
-      }
-      return response.json() as Promise<AttributesResponse>;
-    },
-    retry: 2,
-    staleTime: 2 * 60 * 1000,
-  });
-
-  // Merge OVR and attributes data
-  const players = (ovrData?.data?.players || []).map(player => {
-    const attribute = attributesData?.data?.attributes?.find(attr => 
-      attr.otcId === player.player_id || 
-      attr.playerName?.toLowerCase().includes(player.name.toLowerCase())
-    );
-    
-    return {
-      ...player,
-      weeklyData: attribute
-    };
-  });
+  // Extract players from merged data
+  const players: MergedPlayer[] = mergedData?.data?.players || [];
 
   // Filter players based on search
-  const filteredPlayers = players.filter(player => 
+  const filteredPlayers = players.filter((player: MergedPlayer) => 
     player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     player.team.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const isLoading = ovrLoading || attributesLoading;
-  const stats = attributesData?.data?.stats;
+  const stats = mergedData?.data?.metadata?.attributes_source;
+  const mappingStats = mergedData?.data?.metadata?.mapping_stats;
 
   const handleRefresh = async () => {
-    await Promise.all([refetchOVR(), refetchAttributes()]);
+    await refetch();
   };
 
   if (isLoading && !players.length) {
@@ -302,7 +309,7 @@ export default function PlayerRankings() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {filteredPlayers.filter(p => p.ovr >= 90).length}
+              {filteredPlayers.filter((p: MergedPlayer) => p.ovr >= 90).length}
             </div>
             <p className="text-xs text-muted-foreground">OVR 90+ ratings</p>
           </CardContent>
@@ -391,7 +398,7 @@ export default function PlayerRankings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPlayers.slice(0, 50).map((player, index) => (
+                {filteredPlayers.slice(0, 50).map((player: MergedPlayer, index: number) => (
                   <TableRow key={player.player_id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <TableCell className="font-medium">
                       <Badge variant="outline" className="w-8 h-8 rounded-full flex items-center justify-center">

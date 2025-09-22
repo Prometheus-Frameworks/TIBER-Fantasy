@@ -2843,6 +2843,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/etl', etlRoutes);
   app.use('/api/silver', silverLayerRoutes);
   app.use('/api/player-identity', playerIdentityRoutes);
+
+  // Enhanced player data merging with deterministic ID mapping
+  app.get('/api/player-data/merged', async (req, res) => {
+    console.log('[MergedPlayerData] Starting merge request with params:', req.query);
+    
+    try {
+      const { format = 'dynasty', position = 'ALL', season = '2025', week = '3', limit = '100' } = req.query;
+      
+      console.log('[MergedPlayerData] Fetching OVR data...');
+      
+      // Fetch OVR ratings
+      const ovrParams = new URLSearchParams();
+      ovrParams.set('format', format as string);
+      ovrParams.set('position', position as string);
+      ovrParams.set('limit', limit as string);
+      
+      const ovrResponse = await fetch(`http://localhost:5000/api/ovr?${ovrParams.toString()}`);
+      if (!ovrResponse.ok) {
+        throw new Error(`Failed to fetch OVR data: ${ovrResponse.status}`);
+      }
+      const ovrData = await ovrResponse.json();
+      console.log('[MergedPlayerData] OVR data fetched, players:', ovrData.data?.players?.length);
+      
+      console.log('[MergedPlayerData] Fetching attributes data...');
+      
+      // Fetch weekly attributes
+      const attrParams = new URLSearchParams();
+      attrParams.set('season', season as string);
+      attrParams.set('week', week as string);
+      if (position !== 'ALL') attrParams.set('position', position as string);
+      attrParams.set('limit', limit as string);
+      
+      const attrResponse = await fetch(`http://localhost:5000/api/attributes/weekly?${attrParams.toString()}`);
+      if (!attrResponse.ok) {
+        throw new Error(`Failed to fetch attributes data: ${attrResponse.status}`);
+      }
+      const attrData = await attrResponse.json();
+      console.log('[MergedPlayerData] Attributes data fetched, attributes:', attrData.data?.attributes?.length);
+      
+      // Simple merge for testing - deterministic by exact ID match only
+      console.log('[MergedPlayerData] Starting simple merge...');
+      const ovrPlayers = ovrData.data?.players || [];
+      const attributes = attrData.data?.attributes || [];
+      
+      const mergedPlayers = ovrPlayers.map((player: any) => {
+        // Exact ID match only - no fuzzy matching
+        const attribute = attributes.find((attr: any) => attr.otcId === player.player_id);
+        
+        return {
+          ...player,
+          weeklyData: attribute || null,
+          mappingResult: {
+            canonicalId: player.player_id,
+            otcId: player.player_id,
+            confidence: 1.0,
+            mappingMethod: attribute ? 'otc_id_exact' : 'no_match',
+            attributeMatchMethod: attribute ? 'otc_id_exact' : 'no_match'
+          }
+        };
+      });
+      
+      console.log('[MergedPlayerData] Merge completed, merged players:', mergedPlayers.length);
+      
+      const response = {
+        success: true,
+        data: {
+          players: mergedPlayers,
+          metadata: {
+            format,
+            position,
+            season,
+            week,
+            total_players: mergedPlayers.length,
+            ovr_source: ovrData.data?.metadata || {},
+            attributes_source: attrData.data?.stats || {},
+            mapping_stats: {
+              total_merged: mergedPlayers.length,
+              with_weekly_data: mergedPlayers.filter((p: any) => p.weeklyData).length,
+              mapping_errors: 0
+            }
+          },
+          generated_at: new Date().toISOString()
+        }
+      };
+      
+      console.log('[MergedPlayerData] Sending response');
+      res.json(response);
+      
+    } catch (error) {
+      console.error('[MergedPlayerData] Error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to merge player data',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
   
   // UPH Admin API - Comprehensive orchestration management
   app.use('/api/admin/uph', uphAdminRoutes);
