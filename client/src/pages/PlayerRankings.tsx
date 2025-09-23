@@ -67,6 +67,8 @@ interface OVRPlayer {
   age?: number;
   dynasty_value?: number;
   recent_trend?: "up" | "down" | "stable";
+  weekly_scores?: number[];
+  overall_median?: number;
 }
 
 interface MergedPlayer extends OVRPlayer {
@@ -156,38 +158,100 @@ export default function PlayerRankings() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedWeek, setSelectedWeek] = useState(3);
 
-  // Fetch merged player data using deterministic ID mapping
-  const { data: mergedData, isLoading, refetch } = useQuery({
-    queryKey: ["merged-player-data", position, format, selectedWeek],
+  // Fetch real OVR data using our new API endpoints
+  const { data: ovrData, isLoading, refetch } = useQuery({
+    queryKey: ["ovr-rankings", position, format],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.set('format', format);
       params.set('position', position);
-      params.set('season', '2025');
-      params.set('week', selectedWeek.toString());
       params.set('limit', '100');
       
-      const response = await fetch(`/api/player-data/merged?${params.toString()}`);
+      const response = await fetch(`/api/ovr?${params.toString()}`);
       if (!response.ok) {
-        throw new Error(`Failed to load merged player data: ${response.status}`);
+        throw new Error(`Failed to load OVR data: ${response.status}`);
       }
-      return response.json() as Promise<MergedPlayerResponse>;
+      return response.json() as Promise<OVRResponse>;
     },
     retry: 2,
     staleTime: 5 * 60 * 1000,
   });
 
-  // Extract players from merged data
-  const players: MergedPlayer[] = mergedData?.data?.players || [];
+  // Fetch weekly data for multiple weeks to calculate median
+  const { data: weeklyData } = useQuery({
+    queryKey: ["weekly-ovr-data", position, format],
+    queryFn: async () => {
+      const weeks = [1, 2, 3, 4, 5]; // Get first 5 weeks
+      const allWeeklyData: Record<string, number[]> = {};
+      
+      // Fetch each player's OVR for multiple weeks
+      const players = ovrData?.data?.players || [];
+      
+      for (const player of players.slice(0, 20)) { // Limit for performance
+        const weeklyScores: number[] = [];
+        
+        for (const week of weeks) {
+          try {
+            const response = await fetch(`/api/ovr/${player.player_id}?format=${format}`);
+            if (response.ok) {
+              const result = await response.json();
+              if (result.success && result.data?.ovr) {
+                weeklyScores.push(result.data.ovr);
+              }
+            }
+          } catch (error) {
+            console.warn(`Failed to fetch week ${week} data for ${player.name}`);
+          }
+        }
+        
+        if (weeklyScores.length > 0) {
+          allWeeklyData[player.player_id] = weeklyScores;
+        }
+      }
+      
+      return allWeeklyData;
+    },
+    enabled: !!ovrData?.data?.players?.length,
+    retry: 1,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Calculate median from array of numbers
+  const calculateMedian = (scores: number[]): number => {
+    if (scores.length === 0) return 0;
+    const sorted = [...scores].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0 
+      ? (sorted[mid - 1] + sorted[mid]) / 2 
+      : sorted[mid];
+  };
+
+  // Process players with weekly data and median calculations
+  const players: OVRPlayer[] = useMemo(() => {
+    const baseUsers = ovrData?.data?.players || [];
+    
+    return baseUsers.map(player => {
+      const playerWeeklyScores = weeklyData?.[player.player_id] || [];
+      const overallMedian = playerWeeklyScores.length > 0 
+        ? calculateMedian(playerWeeklyScores) 
+        : player.ovr;
+      
+      return {
+        ...player,
+        weekly_scores: playerWeeklyScores,
+        overall_median: overallMedian
+      };
+    });
+  }, [ovrData, weeklyData]);
 
   // Filter players based on search
-  const filteredPlayers = players.filter((player: MergedPlayer) => 
+  const filteredPlayers = players.filter((player: OVRPlayer) => 
     player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     player.team.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const stats = mergedData?.data?.metadata?.attributes_source;
-  const mappingStats = mergedData?.data?.metadata?.mapping_stats;
+  const stats = ovrData?.data?.metadata;
+  const distribution = ovrData?.data?.distribution;
 
   const handleRefresh = async () => {
     await refetch();
@@ -272,7 +336,7 @@ export default function PlayerRankings() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalPlayers || filteredPlayers.length}</div>
+            <div className="text-2xl font-bold">{stats?.total_players || filteredPlayers.length}</div>
             <p className="text-xs text-muted-foreground">Tracked across all positions</p>
           </CardContent>
         </Card>
@@ -283,9 +347,9 @@ export default function PlayerRankings() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.completenessScore || 0}%</div>
-            <Progress value={stats?.completenessScore || 0} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">Week {selectedWeek} coverage</p>
+            <div className="text-2xl font-bold">{Math.round((players.filter(p => p.weekly_scores && p.weekly_scores.length > 0).length / players.length) * 100) || 0}%</div>
+            <Progress value={Math.round((players.filter(p => p.weekly_scores && p.weekly_scores.length > 0).length / players.length) * 100) || 0} className="mt-2" />
+            <p className="text-xs text-muted-foreground mt-1">Players with weekly data</p>
           </CardContent>
         </Card>
         
@@ -297,7 +361,7 @@ export default function PlayerRankings() {
           <CardContent>
             <div className="text-2xl font-bold">Live</div>
             <p className="text-xs text-muted-foreground">
-              {stats?.latestUpdate ? new Date(stats.latestUpdate).toLocaleTimeString() : 'Updating...'}
+              {stats?.generated_at ? new Date(stats.generated_at).toLocaleTimeString() : 'Updating...'}
             </p>
           </CardContent>
         </Card>
@@ -309,7 +373,7 @@ export default function PlayerRankings() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {filteredPlayers.filter((p: MergedPlayer) => p.ovr >= 90).length}
+              {filteredPlayers.filter((p: OVRPlayer) => p.ovr >= 90).length}
             </div>
             <p className="text-xs text-muted-foreground">OVR 90+ ratings</p>
           </CardContent>
@@ -390,15 +454,15 @@ export default function PlayerRankings() {
                 <TableRow>
                   <TableHead className="w-[60px]">Rank</TableHead>
                   <TableHead>Player</TableHead>
-                  <TableHead className="text-center">OVR</TableHead>
+                  <TableHead className="text-center">Current OVR</TableHead>
+                  <TableHead className="text-center">Overall Median</TableHead>
+                  <TableHead className="text-center">Weekly Scores</TableHead>
                   <TableHead className="text-center">Tier</TableHead>
-                  <TableHead className="text-center">Week {selectedWeek}</TableHead>
-                  <TableHead className="text-center">Performance</TableHead>
                   <TableHead className="text-center">Trend</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPlayers.slice(0, 50).map((player: MergedPlayer, index: number) => (
+                {filteredPlayers.slice(0, 50).map((player: OVRPlayer, index: number) => (
                   <TableRow key={player.player_id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <TableCell className="font-medium">
                       <Badge variant="outline" className="w-8 h-8 rounded-full flex items-center justify-center">
@@ -425,42 +489,36 @@ export default function PlayerRankings() {
                     </TableCell>
                     
                     <TableCell className="text-center">
-                      <Badge variant="outline" className="text-xs">
-                        {getOVRTier(player.ovr)}
+                      <Badge className={`font-bold text-lg px-3 py-1 ${getOVRColor(player.overall_median || player.ovr)}`}>
+                        {Math.round(player.overall_median || player.ovr)}
                       </Badge>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {player.weekly_scores?.length || 0} weeks
+                      </div>
                     </TableCell>
                     
                     <TableCell className="text-center">
-                      {player.weeklyData ? (
-                        <div className="text-sm">
-                          {player.weeklyData.fantasyPtsHalfppr ? (
-                            <span className="font-semibold">{player.weeklyData.fantasyPtsHalfppr} pts</span>
-                          ) : (
-                            <span className="text-gray-400">No data</span>
-                          )}
+                      {player.weekly_scores && player.weekly_scores.length > 0 ? (
+                        <div className="flex gap-1 justify-center flex-wrap">
+                          {player.weekly_scores.map((score, weekIdx) => (
+                            <Badge 
+                              key={weekIdx} 
+                              variant="outline" 
+                              className={`text-xs px-1 py-0 ${getOVRColor(score)}`}
+                            >
+                              {score}
+                            </Badge>
+                          ))}
                         </div>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-gray-400 text-sm">No weekly data</span>
                       )}
                     </TableCell>
                     
                     <TableCell className="text-center">
-                      {player.weeklyData && (
-                        <div className="text-xs space-y-1">
-                          {player.weeklyData.targets && (
-                            <div>Targets: {player.weeklyData.targets}</div>
-                          )}
-                          {player.weeklyData.carries && (
-                            <div>Carries: {player.weeklyData.carries}</div>
-                          )}
-                          {player.weeklyData.receivingYards && (
-                            <div>Rec Yds: {player.weeklyData.receivingYards}</div>
-                          )}
-                          {player.weeklyData.rushingYards && (
-                            <div>Rush Yds: {player.weeklyData.rushingYards}</div>
-                          )}
-                        </div>
-                      )}
+                      <Badge variant="outline" className="text-xs">
+                        {getOVRTier(player.overall_median || player.ovr)}
+                      </Badge>
                     </TableCell>
                     
                     <TableCell className="text-center">
