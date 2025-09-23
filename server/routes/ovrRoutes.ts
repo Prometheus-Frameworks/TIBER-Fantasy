@@ -78,23 +78,41 @@ router.get('/', async (req: Request, res: Response) => {
     
     // Get live player data from Sleeper API (current teams)
     const url = "https://api.sleeper.app/v1/players/nfl";
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch Sleeper players: ${response.status}`);
+    const sleeperResponse = await fetch(url);
+    if (!sleeperResponse.ok) {
+      throw new Error(`Failed to fetch Sleeper players: ${sleeperResponse.status}`);
     }
-    const sleeperPlayers = await response.json() as Record<string, any>;
+    const sleeperPlayers = await sleeperResponse.json() as Record<string, any>;
     
-    // Convert Sleeper data to OVR input format with current teams
+    // Current 2024/2025 team corrections for real-world accuracy
+    const teamCorrections: Record<string, string> = {
+      'Davante Adams': 'LV',    // Las Vegas Raiders (current real team)
+      'DK Metcalf': 'SEA',      // Seattle Seahawks (current real team)
+      // Add more corrections as needed
+    };
+
+    // Convert Sleeper data to OVR input format with corrected teams
     const realPlayers = Object.values(sleeperPlayers)
       .filter((p: any) => p.position && ['QB', 'RB', 'WR', 'TE'].includes(p.position))
       .filter((p: any) => p.active !== false && p.status !== 'Inactive') // Only active players
-      .map((p: any) => ({
-        player_id: p.player_id,
-        name: p.full_name || `${p.first_name} ${p.last_name}`,
-        position: p.position as 'QB' | 'RB' | 'WR' | 'TE',
-        team: p.team || 'FA', // Current team from Sleeper
-        age: p.age || 25
-      }));
+      .map((p: any) => {
+        const playerName = p.full_name || `${p.first_name} ${p.last_name}`;
+        let team = p.team || 'FA';
+        
+        // Apply team corrections for real-world accuracy
+        if (teamCorrections[playerName]) {
+          team = teamCorrections[playerName];
+          console.log(`[OVR TEAM FIX] ${playerName}: ${p.team} → ${team}`);
+        }
+        
+        return {
+          player_id: p.player_id,
+          name: playerName,
+          position: p.position as 'QB' | 'RB' | 'WR' | 'TE',
+          team: team,
+          age: p.age || 25
+        };
+      });
     
     // Filter by position if specified
     let filteredPlayers = realPlayers;
@@ -159,11 +177,11 @@ router.get('/:player_id', async (req: Request, res: Response) => {
     
     // Get live player data from Sleeper API
     const url = "https://api.sleeper.app/v1/players/nfl";
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch Sleeper players: ${response.status}`);
+    const sleeperResponse = await fetch(url);
+    if (!sleeperResponse.ok) {
+      throw new Error(`Failed to fetch Sleeper players: ${sleeperResponse.status}`);
     }
-    const sleeperPlayers = await response.json() as Record<string, any>;
+    const sleeperPlayers = await sleeperResponse.json() as Record<string, any>;
     
     // Find player by ID or name-based lookup
     let playerData: any = null;
