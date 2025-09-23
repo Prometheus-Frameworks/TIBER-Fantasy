@@ -76,26 +76,23 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const query = OVRQuerySchema.parse(req.query);
     
-    // Get real player data from player pool using production-ready API config
-    const { internalFetch } = await import('../utils/apiConfig');
-    
-    const playerPoolData = await internalFetch('/api/player-pool?limit=1000', {
-      timeout: 8000,   // 8 second timeout for player pool
-      retries: 2       // Retry for player pool calls
-    });
-    
-    if (!playerPoolData.ok || !playerPoolData.data) {
-      throw new Error('Failed to fetch player pool data');
+    // Get live player data from Sleeper API (current teams)
+    const url = "https://api.sleeper.app/v1/players/nfl";
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Sleeper players: ${response.status}`);
     }
+    const sleeperPlayers = await response.json() as Record<string, any>;
     
-    // Map player pool to OVR input format  
-    const realPlayers = playerPoolData.data
-      .filter((p: { pos?: string }) => p.pos && ['QB', 'RB', 'WR', 'TE'].includes(p.pos))
-      .map((p: { id: string; name: string; pos: string; team?: string; age?: number }) => ({
-        player_id: p.id,
-        name: p.name,
-        position: p.pos as 'QB' | 'RB' | 'WR' | 'TE',
-        team: p.team || 'FA',
+    // Convert Sleeper data to OVR input format with current teams
+    const realPlayers = Object.values(sleeperPlayers)
+      .filter((p: any) => p.position && ['QB', 'RB', 'WR', 'TE'].includes(p.position))
+      .filter((p: any) => p.active !== false && p.status !== 'Inactive') // Only active players
+      .map((p: any) => ({
+        player_id: p.player_id,
+        name: p.full_name || `${p.first_name} ${p.last_name}`,
+        position: p.position as 'QB' | 'RB' | 'WR' | 'TE',
+        team: p.team || 'FA', // Current team from Sleeper
         age: p.age || 25
       }));
     
@@ -160,34 +157,45 @@ router.get('/:player_id', async (req: Request, res: Response) => {
       include_breakdown: z.enum(['true', 'false']).default('false')
     }).parse(req.query);
     
-    // Use player ID to create a realistic player lookup
-    // For Nico Collins specifically, let's use real data
-    const getActualPlayer = (playerId: string) => {
-      const playerMap: Record<string, any> = {
-        'nico-collins': {
-          name: 'Nico Collins',
-          position: 'WR',
-          team: 'HOU',
-          age: 25
-        },
-        // Add more real players as needed
-      };
-      
-      return playerMap[playerId] || {
-        name: playerId.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    // Get live player data from Sleeper API
+    const url = "https://api.sleeper.app/v1/players/nfl";
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Sleeper players: ${response.status}`);
+    }
+    const sleeperPlayers = await response.json() as Record<string, any>;
+    
+    // Find player by ID or name-based lookup
+    let playerData: any = null;
+    
+    // First try direct lookup by player_id
+    if (sleeperPlayers[player_id]) {
+      playerData = sleeperPlayers[player_id];
+    } else {
+      // Try slug-based lookup (convert player-id to name)
+      const searchName = player_id.replace('-', ' ').toLowerCase();
+      playerData = Object.values(sleeperPlayers).find((p: any) => {
+        const fullName = (p.full_name || `${p.first_name} ${p.last_name}`).toLowerCase();
+        return fullName.includes(searchName) || searchName.includes(fullName);
+      });
+    }
+    
+    // Fallback if not found
+    if (!playerData) {
+      playerData = {
+        full_name: player_id.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
         position: 'WR',
-        team: 'NFL',
+        team: 'FA',
         age: 25
       };
-    };
+    }
     
-    const playerData = getActualPlayer(player_id);
     const actualPlayer = {
       player_id,
-      name: playerData.name,
+      name: playerData.full_name || `${playerData.first_name} ${playerData.last_name}`,
       position: playerData.position as 'QB' | 'RB' | 'WR' | 'TE',
-      team: playerData.team,
-      age: playerData.age
+      team: playerData.team || 'FA', // Current team from Sleeper
+      age: playerData.age || 25
     };
     
     const ovrResult = await ovrService.calculateOVR(actualPlayer, query.format);
