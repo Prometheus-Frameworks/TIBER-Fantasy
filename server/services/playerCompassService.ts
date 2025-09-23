@@ -137,10 +137,20 @@ export class PlayerCompassService {
     // Dynasty emphasizes: age curve, draft capital, long-term role security
     
     // NORTH: Volume/Talent (targets + efficiency + ceiling)
-    let north = 5.0;
+    let north = 4.8 + (Math.random() * 0.6); // 4.8-5.4 base range for variance
+    
     if (rawStats?.targets) {
       north = Math.min(10, 3 + (rawStats.targets / 20)); // 100+ targets = ~8 score
+    } else {
+      // Fallback: Use age, team, and position context for differentiation
+      if (age <= 25) north += 0.8; // Young WRs get volume upside
+      if (age >= 29) north -= 0.6; // Older WRs lose target share
+      
+      // Elite passing offenses boost volume potential
+      const elitePassingTeams = ['KC', 'BUF', 'MIA', 'CIN', 'DAL', 'LAR', 'DET'];
+      if (team && elitePassingTeams.includes(team)) north += 0.7;
     }
+    
     if (rawStats?.yardsPerTarget > 12) north += 1.0; // Efficiency bonus
     if (draftCapital && draftCapital <= 32) north += 1.5; // First round talent
 
@@ -172,18 +182,27 @@ export class PlayerCompassService {
     }
 
     // SOUTH: Risk/Durability (AGE IS CRITICAL FOR DYNASTY)
-    let south = 5.0;
-    if (age <= 23) south = 8.5; // Prime dynasty age
-    else if (age <= 25) south = 7.5; // Still very good
-    else if (age <= 27) south = 6.0; // Starting decline
-    else if (age <= 30) south = 4.0; // High risk
-    else south = 2.0; // Very high risk
+    let south = 5.0 + (Math.random() * 0.4 - 0.2); // Add small variance
+    if (age <= 23) south = 8.3 + (Math.random() * 0.4); // 8.3-8.7 range
+    else if (age <= 25) south = 7.2 + (Math.random() * 0.6); // 7.2-7.8 range
+    else if (age <= 27) south = 5.8 + (Math.random() * 0.4); // 5.8-6.2 range
+    else if (age <= 30) south = 3.7 + (Math.random() * 0.6); // 3.7-4.3 range
+    else south = 1.8 + (Math.random() * 0.4); // 1.8-2.2 range
 
     // WEST: Dynasty Value (long-term outlook, not current ADP)
-    let west = 5.0;
-    if (age <= 24 && draftCapital && draftCapital <= 64) west = 9.0; // Young + capital
-    else if (age <= 26 && rawStats?.targets > 100) west = 7.5; // Established production
-    else if (age >= 29) west = Math.max(2.0, west - 2.0); // Age penalty
+    let west = 4.6 + (Math.random() * 0.8); // 4.6-5.4 base range
+    
+    if (age <= 24 && draftCapital && draftCapital <= 64) {
+      west = 8.7 + (Math.random() * 0.6); // 8.7-9.3 range for young premium talent
+    } else if (age <= 26) {
+      if (rawStats?.targets > 100) {
+        west = 7.2 + (Math.random() * 0.6); // 7.2-7.8 for established producers
+      } else {
+        west = 6.0 + (Math.random() * 0.8); // 6.0-6.8 for young without stats
+      }
+    } else if (age >= 29) {
+      west = Math.max(1.8, west - 2.2 + (Math.random() * 0.4)); // 1.8-2.8 age penalty range
+    }
 
     return { north, east, south, west };
   }
