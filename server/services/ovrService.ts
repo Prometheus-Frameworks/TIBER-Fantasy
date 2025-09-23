@@ -229,26 +229,38 @@ export class OVRService {
    */
   private async getRealSleeperGameLog(input: OVRInput, position: SleeperPosition): Promise<GameLogRow | null> {
     try {
-      // Try multiple data sources for real performance data
-      const sources = [
-        `/api/attributes/weekly?season=2025&week=3&player=${input.player_id}`,
-        `/api/logs/player/${input.player_id}?season=2025&week=3`,
-        `/api/player-data/merged?position=${position}&season=2025&week=3`
-      ];
+      // First, try to get the player's Sleeper ID if we have our internal mapping
+      const sleeperPlayerId = await this.getSleeperPlayerId(input);
+      if (!sleeperPlayerId) {
+        console.warn(`[OVR] No Sleeper player ID found for ${input.name}`);
+        return null;
+      }
 
-      for (const endpoint of sources) {
-        try {
-          const response = await fetch(`http://localhost:5000${endpoint}`);
-          const data = await response.json();
-          
-          if (data && this.hasValidGameData(data, input.player_id)) {
-            return this.convertToGameLogRow(data, input, position);
-          }
-        } catch (error) {
-          console.warn(`[OVR] Failed to fetch from ${endpoint}:`, error);
+      // Real Sleeper API: Get weekly stats for a specific player
+      const sleeperUrl = `https://api.sleeper.com/stats/nfl/player/${sleeperPlayerId}?season=2025&season_type=regular&grouping=week`;
+      
+      console.log(`[OVR] Fetching real Sleeper data for ${input.name} (ID: ${sleeperPlayerId})`);
+      const response = await fetch(sleeperUrl);
+      
+      if (!response.ok) {
+        console.warn(`[OVR] Sleeper API error for ${input.name}: ${response.status} ${response.statusText}`);
+        return null;
+      }
+
+      const data = await response.json();
+      
+      if (data && Array.isArray(data) && data.length > 0) {
+        // Find Week 3 data
+        const week3Data = data.find(weekData => weekData.week === 3);
+        if (week3Data) {
+          return this.convertSleeperDataToGameLogRow(week3Data, input, position);
+        } else {
+          console.warn(`[OVR] No Week 3 data found for ${input.name} in Sleeper response`);
+          return null;
         }
       }
 
+      console.warn(`[OVR] Invalid or empty Sleeper response for ${input.name}`);
       return null;
     } catch (error) {
       console.warn(`[OVR] Error getting real Sleeper data for ${input.name}:`, error);
@@ -257,34 +269,93 @@ export class OVRService {
   }
 
   /**
-   * Check if the data contains valid game performance metrics
+   * Get Sleeper player ID from our internal mapping
    */
-  private hasValidGameData(data: any, playerId: string): boolean {
-    if (!data) return false;
-    
-    // Check various data structure formats
-    if (data.data?.attributes) {
-      return data.data.attributes.some((attr: any) => 
-        attr.otcId === playerId && (attr.targets || attr.fantasyPtsHalfppr)
-      );
+  private async getSleeperPlayerId(input: OVRInput): Promise<string | null> {
+    try {
+      // Try the Sleeper API directly for all players
+      const response = await fetch('https://api.sleeper.app/v1/players/nfl');
+      const data = await response.json();
+      
+      if (data && typeof data === 'object') {
+        // Search through all players for a name match
+        for (const [playerId, playerData] of Object.entries(data)) {
+          const player = playerData as any;
+          const fullName = `${player.first_name || ''} ${player.last_name || ''}`.trim();
+          const searchName = player.search_full_name || fullName;
+          
+          if (
+            fullName.toLowerCase() === input.name.toLowerCase() ||
+            searchName.toLowerCase() === input.name.toLowerCase() ||
+            player.full_name?.toLowerCase() === input.name.toLowerCase() ||
+            playerId === input.player_id
+          ) {
+            console.log(`[OVR] Found Sleeper player ID for ${input.name}: ${playerId}`);
+            return playerId;
+          }
+        }
+      }
+      
+      console.warn(`[OVR] No Sleeper player ID found for ${input.name}`);
+      return null;
+    } catch (error) {
+      console.warn(`[OVR] Error getting Sleeper player ID for ${input.name}:`, error);
+      return null;
     }
-    
-    if (data.data?.players) {
-      return data.data.players.some((player: any) => 
-        player.id === playerId && (player.targets || player.fantasy_points)
-      );
-    }
-
-    return false;
   }
 
   /**
-   * Convert API response to GameLogRow format
+   * Convert Sleeper API response to GameLogRow format
    */
-  private convertToGameLogRow(data: any, input: OVRInput, position: SleeperPosition): GameLogRow | null {
-    // This would need to be implemented based on the actual data structure
-    // For now, return null to trigger the fail-fast behavior
-    return null;
+  private convertSleeperDataToGameLogRow(sleeperData: any, input: OVRInput, position: SleeperPosition): GameLogRow | null {
+    try {
+      const gameLog: GameLogRow = {
+        week: sleeperData.week || 3,
+        position,
+        fpts: sleeperData.pts_half_ppr || sleeperData.pts_std || 0,
+        snap_pct: sleeperData.snap_pct || 0,
+      };
+
+      // Position-specific stats
+      if (position === 'WR' || position === 'TE') {
+        gameLog.targets = sleeperData.rec_tgt || 0;
+        gameLog.rec = sleeperData.rec || 0;
+        gameLog.rec_yd = sleeperData.rec_yd || 0;
+        gameLog.rec_tds = sleeperData.rec_td || 0;
+      }
+
+      if (position === 'RB') {
+        gameLog.rush_att = sleeperData.rush_att || 0;
+        gameLog.rush_yd = sleeperData.rush_yd || 0;
+        gameLog.rush_tds = sleeperData.rush_td || 0;
+        gameLog.targets = sleeperData.rec_tgt || 0;
+        gameLog.rec = sleeperData.rec || 0;
+        gameLog.rec_yd = sleeperData.rec_yd || 0;
+        gameLog.rec_tds = sleeperData.rec_td || 0;
+      }
+
+      if (position === 'QB') {
+        gameLog.pass_att = sleeperData.pass_att || 0;
+        gameLog.pass_yd = sleeperData.pass_yd || 0;
+        gameLog.pass_tds = sleeperData.pass_td || 0;
+        gameLog.rush_att = sleeperData.rush_att || 0;
+        gameLog.rush_yd = sleeperData.rush_yd || 0;
+        gameLog.rush_tds = sleeperData.rush_td || 0;
+      }
+
+      console.log(`[OVR] Converted Sleeper data for ${input.name}:`, {
+        week: gameLog.week,
+        fpts: gameLog.fpts,
+        targets: gameLog.targets,
+        rec: gameLog.rec,
+        snap_pct: gameLog.snap_pct
+      });
+
+      return gameLog;
+    } catch (error) {
+      console.warn(`[OVR] Error converting Sleeper data for ${input.name}:`, error);
+      return null;
+    }
   }
 
   /**
