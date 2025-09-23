@@ -249,13 +249,18 @@ export class OVRService {
 
       const data = await response.json();
       
-      if (data && Array.isArray(data) && data.length > 0) {
-        // Find Week 3 data
-        const week3Data = data.find(weekData => weekData.week === 3);
-        if (week3Data) {
+      // Handle real Sleeper API format: object with week numbers as keys
+      if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+        console.log(`[OVR] Raw Sleeper response for ${input.name}:`, JSON.stringify(data, null, 2));
+        
+        // Look for Week 3 data using the week key
+        const week3Data = data['3'] || data[3];
+        if (week3Data && week3Data.stats) {
+          console.log(`[OVR] Found Week 3 data for ${input.name}:`, JSON.stringify(week3Data, null, 2));
           return this.convertSleeperDataToGameLogRow(week3Data, input, position);
         } else {
           console.warn(`[OVR] No Week 3 data found for ${input.name} in Sleeper response`);
+          console.log(`[OVR] Available weeks:`, Object.keys(data));
           return null;
         }
       }
@@ -309,29 +314,32 @@ export class OVRService {
    */
   private convertSleeperDataToGameLogRow(sleeperData: any, input: OVRInput, position: SleeperPosition): GameLogRow | null {
     try {
+      // Extract stats from the nested structure
+      const stats = sleeperData.stats || sleeperData;
+      
       const gameLog: GameLogRow = {
         week: sleeperData.week || 3,
         position,
-        fpts: sleeperData.pts_half_ppr || sleeperData.pts_std || 0,
-        snap_pct: sleeperData.snap_pct || 0,
+        fpts: stats.pts_half_ppr || stats.pts_std || 0,
+        snap_pct: (stats.off_snp && stats.tm_off_snp) ? (stats.off_snp / stats.tm_off_snp * 100) : 0,
       };
 
-      // Position-specific stats
+      // Position-specific stats using the stats object
       if (position === 'WR' || position === 'TE') {
-        gameLog.targets = sleeperData.rec_tgt || 0;
-        gameLog.rec = sleeperData.rec || 0;
-        gameLog.rec_yd = sleeperData.rec_yd || 0;
-        gameLog.rec_tds = sleeperData.rec_td || 0;
+        gameLog.targets = stats.rec_tgt || 0;
+        gameLog.rec = stats.rec || 0;
+        gameLog.rec_yd = stats.rec_yd || 0;
+        gameLog.rec_tds = stats.rec_td || 0;
       }
 
       if (position === 'RB') {
-        gameLog.rush_att = sleeperData.rush_att || 0;
-        gameLog.rush_yd = sleeperData.rush_yd || 0;
-        gameLog.rush_tds = sleeperData.rush_td || 0;
-        gameLog.targets = sleeperData.rec_tgt || 0;
-        gameLog.rec = sleeperData.rec || 0;
-        gameLog.rec_yd = sleeperData.rec_yd || 0;
-        gameLog.rec_tds = sleeperData.rec_td || 0;
+        gameLog.rush_att = stats.rush_att || 0;
+        gameLog.rush_yd = stats.rush_yd || 0;
+        gameLog.rush_tds = stats.rush_td || 0;
+        gameLog.targets = stats.rec_tgt || 0;
+        gameLog.rec = stats.rec || 0;
+        gameLog.rec_yd = stats.rec_yd || 0;
+        gameLog.rec_tds = stats.rec_td || 0;
       }
 
       if (position === 'QB') {
