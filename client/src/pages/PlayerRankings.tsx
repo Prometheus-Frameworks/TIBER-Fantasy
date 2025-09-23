@@ -142,15 +142,6 @@ function getOVRTier(ovr: number): string {
   return "BELOW AVG";
 }
 
-function getPositionIcon(position: string) {
-  switch (position) {
-    case "QB": return "🎯";
-    case "RB": return "⚡";
-    case "WR": return "🔥";
-    case "TE": return "💪";
-    default: return "⭐";
-  }
-}
 
 export default function PlayerRankings() {
   const [position, setPosition] = useState<Position>("ALL");
@@ -473,10 +464,12 @@ export default function PlayerRankings() {
                     <TableCell>
                       <Link href={`/players/${player.player_id}`} className="flex items-center gap-3 hover:underline">
                         <div className="flex items-center gap-2">
-                          <span className="text-lg">{getPositionIcon(player.position)}</span>
+                          <Badge variant="outline" className="text-xs font-bold px-2 py-1">
+                            {player.position}
+                          </Badge>
                           <div>
                             <div className="font-semibold">{player.name}</div>
-                            <div className="text-sm text-gray-500">{player.team} • {player.position}</div>
+                            <div className="text-sm text-gray-500">{player.team}</div>
                           </div>
                         </div>
                       </Link>
