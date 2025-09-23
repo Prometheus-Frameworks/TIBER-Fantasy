@@ -184,7 +184,7 @@ export class OVRService {
   /**
    * Try to use Sleeper-based performance scoring for redraft format
    */
-  private async trySleeperRedraftScoring(input: OVRInput): Promise<{score: number, debug: any} | null> {
+  private async trySleeperRedraftScoring(input: OVRInput): Promise<{score: number, debug: any, sub_scores?: any} | null> {
     try {
       // Map position to Sleeper scorer format
       const sleeperPosition = input.position as SleeperPosition;
@@ -211,7 +211,8 @@ export class OVRService {
         
         return {
           score: result.ovr,
-          debug: result
+          debug: result,
+          sub_scores: result.subs  // Expose detailed sub-scores
         };
       } else {
         // FAIL FAST: No real data available

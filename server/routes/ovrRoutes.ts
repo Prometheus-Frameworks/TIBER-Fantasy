@@ -204,7 +204,19 @@ router.get('/:player_id', async (req: Request, res: Response) => {
         input_sources: Object.keys(ovrResult.inputs).filter(key => ovrResult.inputs[key as keyof typeof ovrResult.inputs] != null),
         confidence_factors: ovrResult.confidence,
         weight_distribution: ovrResult.weights,
-        percentile_context: `${ovrResult.percentile.toFixed(1)}th percentile among ${ovrResult.position}s`
+        percentile_context: `${ovrResult.percentile.toFixed(1)}th percentile among ${ovrResult.position}s`,
+        // Add detailed sub-scores if available
+        ...(ovrResult.sub_scores && {
+          sub_scores: {
+            workload: ovrResult.sub_scores.workload,
+            snap_percentage: ovrResult.sub_scores.snap,
+            efficiency: ovrResult.sub_scores.efficiency,
+            production: ovrResult.sub_scores.production,
+            receiving: ovrResult.sub_scores.receiving,
+            ...(ovrResult.sub_scores.qbPassing && { qb_passing: ovrResult.sub_scores.qbPassing }),
+            ...(ovrResult.sub_scores.qbMistakes && { qb_mistakes: ovrResult.sub_scores.qbMistakes })
+          }
+        })
       };
     }
     
