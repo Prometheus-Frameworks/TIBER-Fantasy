@@ -1,0 +1,42 @@
+Short answer: the card is grading fake inputs.
+
+Look at your own payload:
+	•	performance_score: 44 with “estimated_targets: 4, estimated_receptions: 2, estimated_yards: 35”
+	•	Yet you’re telling me Nico was WR5 on the week. A WR5 week never looks like 2 for 35. That means your Sleeper parser didn’t pull the real game log; it fell back to an “estimator” (or the wrong week/team row), so all the subs are suppressed:
+	•	workload 41, efficiency 38, production 36… because the inputs are tiny.
+
+Also two other bugs are tanking the headline:
+	•	OVR is still decoupled (ovr: 15 while performance_score: 44). You’re still setting OVR from a different scale/path. Kill that. ovr = round(performance_score) for this “Sleeper-only” phase.
+	•	You’re still blending zombie modules: fusion_score: 26, oasis_environment_score: 0, composite_score: 30.67. Those should be gone if we’re doing Sleeper-only. Or at minimum, don’t let them touch OVR.
+
+⸻
+
+What to fix (now)
+	1.	Stop estimating. In the scorer call, log the raw inputs you pass in for each player/week. If you ever see estimated_* in the payload, throw and badge the card “DATA MISSING.”
+	2.	Validate the right row. Common off-by-one mistakes:
+	•	Wrong week index (0- vs 1-based)
+	•	Wrong season (pulling 2024)
+	•	Wrong team filter (HOU vs prior team)
+	•	Using rolling season line instead of weekly line
+	3.	Hard couple OVR.
+
+card.ovr = Math.max(1, Math.min(99, Math.round(performance_score)));
+
+
+	4.	Delete the overlays (for now). Don’t compute or display Fusion/OASIS/Composite. They’re just muddying the water.
+
+⸻
+
+Guardrails (so this never fools you again)
+	•	Sanity gate #1: if rank_pos <= 6 or fpts >= 25, then production_score >= 80. If your inputs produce less, your inputs are wrong → fail fast.
+	•	Sanity gate #2: if rec + targets < 5 and rank_pos <= 8, also fail fast (it’s almost never true).
+	•	Telemetry: write a one-liner to log [player, week, season, src_fpts, src_snap, src_tar, src_rec, src_yds] right before scoring and store the last 200 calls.
+
+⸻
+
+TL;DR on your Nico card
+	•	It used fake/placeholder stats (2-35 on 4 targets).
+	•	It still let Fusion/OASIS touch the headline.
+	•	It still mapped OVR from a different scale.
+
+Rip out the overlays, wire OVR directly to the Sleeper-derived performance_score, and fail if inputs don’t match a WR5 profile. After that, Nico’s week will land in the 80–90 range like it should.

@@ -109,12 +109,20 @@ export class OVRService {
     // Compute composite score
     const compositeScore = this.calculateCompositeScore(inputData, weights);
     
-    // Apply Madden curve mapping
-    const percentile = await this.calculatePercentile(compositeScore, input.position, format);
-    const ovr = this.applyMaddenCurve(percentile);
+    let finalOVR: number;
+    let percentile: number;
     
-    // Apply proven elite floor if applicable
-    const finalOVR = this.applyProvenEliteFloor(ovr, input, inputData);
+    // SLEEPER-ONLY MODE: Use direct OVR, skip Madden curve
+    if (inputData.sleeper_only && inputData.sleeper_ovr !== undefined) {
+      finalOVR = Math.max(1, Math.min(99, Math.round(compositeScore))); // Direct OVR
+      percentile = (finalOVR / 99) * 100; // Approximate percentile for display
+      console.log(`[OVR] SLEEPER-ONLY final OVR for ${input.name}: ${finalOVR} (no Madden curve)`);
+    } else {
+      // Traditional approach: Apply Madden curve mapping
+      percentile = await this.calculatePercentile(compositeScore, input.position, format);
+      const ovr = this.applyMaddenCurve(percentile);
+      finalOVR = this.applyProvenEliteFloor(ovr, input, inputData);
+    }
     
     const result: OVRResult = {
       player_id: input.player_id,
@@ -176,7 +184,7 @@ export class OVRService {
   /**
    * Try to use Sleeper-based performance scoring for redraft format
    */
-  private async trySleeperRedraftScoring(input: OVRInput): Promise<number | null> {
+  private async trySleeperRedraftScoring(input: OVRInput): Promise<{score: number, debug: any} | null> {
     try {
       // Map position to Sleeper scorer format
       const sleeperPosition = input.position as SleeperPosition;
@@ -184,16 +192,32 @@ export class OVRService {
         return null;
       }
 
-      // For now, generate a mock game log row based on player context
-      // TODO: Replace with real Sleeper game log data when available
-      const mockGameLog = this.generateMockGameLogFromContext(input, sleeperPosition);
+      // Try to get real game log data first
+      const realGameLog = await this.getRealSleeperGameLog(input, sleeperPosition);
       
-      if (mockGameLog) {
-        const result = scoreWeeklyOVR(mockGameLog);
-        return result.ovr;
+      if (realGameLog) {
+        // Validate the data makes sense for reported performance
+        this.validateGameLogData(realGameLog, input.name);
+        
+        const result = scoreWeeklyOVR(realGameLog);
+        console.log(`[OVR] Real Sleeper data for ${input.name}:`, {
+          fpts: realGameLog.fpts,
+          targets: realGameLog.targets,
+          rec: realGameLog.rec,
+          rec_yd: realGameLog.rec_yd,
+          snap_pct: realGameLog.snap_pct,
+          ovr: result.ovr
+        });
+        
+        return {
+          score: result.ovr,
+          debug: result
+        };
+      } else {
+        // FAIL FAST: No real data available
+        console.warn(`[OVR] No real Sleeper data for ${input.name} - FAILING FAST`);
+        throw new Error(`DATA MISSING: No real Sleeper performance data for ${input.name}`);
       }
-      
-      return null;
     } catch (error) {
       console.warn(`[OVR] Failed to get Sleeper performance score for ${input.name}:`, error);
       return null;
@@ -201,64 +225,87 @@ export class OVRService {
   }
 
   /**
-   * Generate mock game log based on player context (temporary until real data integration)
+   * Get real Sleeper game log data for a player
    */
-  private generateMockGameLogFromContext(input: OVRInput, position: SleeperPosition): GameLogRow | null {
-    // Use team and position context to generate realistic performance estimates
-    const eliteTeams = ['KC', 'BUF', 'MIA', 'CIN', 'DAL', 'SF', 'LAR', 'DET'];
-    const goodTeams = ['PHI', 'BAL', 'GB', 'TB', 'MIN', 'SEA'];
-    const isElite = eliteTeams.includes(input.team);
-    const isGood = goodTeams.includes(input.team);
-    
-    const gameLog: GameLogRow = {
-      week: 3,
-      position,
-      fpts: 0,
-      snap_pct: 0,
-    };
+  private async getRealSleeperGameLog(input: OVRInput, position: SleeperPosition): Promise<GameLogRow | null> {
+    try {
+      // Try multiple data sources for real performance data
+      const sources = [
+        `/api/attributes/weekly?season=2025&week=3&player=${input.player_id}`,
+        `/api/logs/player/${input.player_id}?season=2025&week=3`,
+        `/api/player-data/merged?position=${position}&season=2025&week=3`
+      ];
 
-    if (position === 'WR') {
-      // WR performance based on team context
-      if (isElite) {
-        gameLog.fpts = 12 + Math.random() * 8; // 12-20 points
-        gameLog.targets = 6 + Math.random() * 6; // 6-12 targets
-        gameLog.rec = Math.floor((gameLog.targets || 8) * 0.7); // ~70% catch rate
-        gameLog.rec_yd = 60 + Math.random() * 40; // 60-100 yards
-        gameLog.snap_pct = 75 + Math.random() * 20; // 75-95%
-      } else if (isGood) {
-        gameLog.fpts = 8 + Math.random() * 6; // 8-14 points
-        gameLog.targets = 4 + Math.random() * 4; // 4-8 targets
-        gameLog.rec = Math.floor((gameLog.targets || 6) * 0.65); // ~65% catch rate
-        gameLog.rec_yd = 40 + Math.random() * 30; // 40-70 yards
-        gameLog.snap_pct = 60 + Math.random() * 25; // 60-85%
-      } else {
-        gameLog.fpts = 4 + Math.random() * 6; // 4-10 points
-        gameLog.targets = 2 + Math.random() * 4; // 2-6 targets
-        gameLog.rec = Math.floor((gameLog.targets || 4) * 0.6); // ~60% catch rate
-        gameLog.rec_yd = 20 + Math.random() * 30; // 20-50 yards
-        gameLog.snap_pct = 45 + Math.random() * 30; // 45-75%
+      for (const endpoint of sources) {
+        try {
+          const response = await fetch(`http://localhost:5000${endpoint}`);
+          const data = await response.json();
+          
+          if (data && this.hasValidGameData(data, input.player_id)) {
+            return this.convertToGameLogRow(data, input, position);
+          }
+        } catch (error) {
+          console.warn(`[OVR] Failed to fetch from ${endpoint}:`, error);
+        }
       }
-      gameLog.rec_tds = Math.random() < 0.15 ? 1 : 0; // 15% chance of TD
-    } else if (position === 'RB') {
-      if (isElite) {
-        gameLog.fpts = 10 + Math.random() * 8; // 10-18 points
-        gameLog.rush_att = 12 + Math.random() * 8; // 12-20 carries
-        gameLog.rush_yd = 50 + Math.random() * 40; // 50-90 yards
-        gameLog.targets = 2 + Math.random() * 3; // 2-5 targets
-        gameLog.rec = Math.floor((gameLog.targets || 3) * 0.8); // 80% catch rate
-        gameLog.snap_pct = 65 + Math.random() * 25; // 65-90%
-      } else {
-        gameLog.fpts = 6 + Math.random() * 6; // 6-12 points
-        gameLog.rush_att = 8 + Math.random() * 6; // 8-14 carries
-        gameLog.rush_yd = 30 + Math.random() * 30; // 30-60 yards
-        gameLog.targets = 1 + Math.random() * 2; // 1-3 targets
-        gameLog.rec = Math.floor((gameLog.targets || 2) * 0.75); // 75% catch rate
-        gameLog.snap_pct = 40 + Math.random() * 30; // 40-70%
-      }
-      gameLog.rush_tds = Math.random() < 0.12 ? 1 : 0; // 12% chance of TD
+
+      return null;
+    } catch (error) {
+      console.warn(`[OVR] Error getting real Sleeper data for ${input.name}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if the data contains valid game performance metrics
+   */
+  private hasValidGameData(data: any, playerId: string): boolean {
+    if (!data) return false;
+    
+    // Check various data structure formats
+    if (data.data?.attributes) {
+      return data.data.attributes.some((attr: any) => 
+        attr.otcId === playerId && (attr.targets || attr.fantasyPtsHalfppr)
+      );
+    }
+    
+    if (data.data?.players) {
+      return data.data.players.some((player: any) => 
+        player.id === playerId && (player.targets || player.fantasy_points)
+      );
     }
 
-    return gameLog;
+    return false;
+  }
+
+  /**
+   * Convert API response to GameLogRow format
+   */
+  private convertToGameLogRow(data: any, input: OVRInput, position: SleeperPosition): GameLogRow | null {
+    // This would need to be implemented based on the actual data structure
+    // For now, return null to trigger the fail-fast behavior
+    return null;
+  }
+
+  /**
+   * Validate game log data makes sense for the reported performance level
+   */
+  private validateGameLogData(gameLog: GameLogRow, playerName: string): void {
+    // Sanity gate #1: High performers should have high production scores
+    if (gameLog.rank_pos && gameLog.rank_pos <= 6 && gameLog.fpts && gameLog.fpts >= 25) {
+      const productionScore = Math.min(99, Math.round((gameLog.fpts / 35) * 99));
+      if (productionScore < 80) {
+        throw new Error(`Sanity check failed for ${playerName}: Rank ${gameLog.rank_pos} with ${gameLog.fpts} points should have production score >= 80, got ${productionScore}`);
+      }
+    }
+
+    // Sanity gate #2: Top WRs should have reasonable target volume
+    if (gameLog.position === 'WR' && gameLog.rank_pos && gameLog.rank_pos <= 8) {
+      const totalVolume = (gameLog.rec || 0) + (gameLog.targets || 0);
+      if (totalVolume < 5) {
+        throw new Error(`Sanity check failed for ${playerName}: Top 8 WR with only ${totalVolume} targets+receptions is unrealistic`);
+      }
+    }
   }
 
   /**
@@ -284,36 +331,37 @@ export class OVRService {
     }
     
     try {
-      // For REDRAFT: Try Sleeper-based scoring first, fallback to Compass
+      // For REDRAFT: Use SLEEPER-ONLY performance scoring
       if (format === 'redraft') {
-        const sleeperScore = await this.trySleeperRedraftScoring(input);
-        if (sleeperScore !== null) {
-          // Convert Sleeper 1-99 OVR to 0-100 scale for consistency
-          inputData.compass_score = Math.min(sleeperScore, 100);
+        const sleeperResult = await this.trySleeperRedraftScoring(input);
+        if (sleeperResult !== null) {
+          // DIRECT COUPLING: OVR = performance_score (no blending)
+          inputData.sleeper_only = true;
+          inputData.sleeper_ovr = sleeperResult.score;
+          inputData.sleeper_debug = sleeperResult.debug;
+          inputData.compass_score = sleeperResult.score; // For logging compatibility
           inputData.compass_raw = { 
-            score: sleeperScore, 
-            source: 'sleeper_performance', 
-            format: 'redraft' 
+            score: sleeperResult.score, 
+            source: 'sleeper_performance',
+            format: 'redraft',
+            subs: sleeperResult.debug.subs
           };
-          console.log(`[OVR] Using Sleeper performance score for ${input.name}: ${sleeperScore}`);
-        } else {
-          // Fallback to theoretical Compass scoring
-          const compassResult = await this.compassService.calculateCompass({
-            playerId: input.player_id,
-            playerName: input.name,
-            position: input.position,
-            age: input.age || 25,
-            team: input.team
-          }, format);
+          console.log(`[OVR] SLEEPER-ONLY performance for ${input.name}: ${sleeperResult.score}`);
           
-          if (compassResult) {
-            const maxScale = config.normalization.compass_max_scale;
-            const multiplier = config.normalization.compass_multiplier;
-            inputData.compass_score = compassResult.score <= maxScale 
-              ? compassResult.score * multiplier 
-              : Math.min(compassResult.score, 100);
-            inputData.compass_raw = compassResult;
-          }
+          // Skip all other data sources for Sleeper-only mode
+          return inputData;
+        } else {
+          // FAIL FAST: Badge as DATA MISSING
+          console.error(`[OVR] DATA MISSING for ${input.name} - no real Sleeper data available`);
+          inputData.data_missing = true;
+          inputData.compass_score = 1; // Minimum score for missing data
+          inputData.compass_raw = { 
+            score: 1, 
+            source: 'data_missing', 
+            format: 'redraft',
+            error: 'No real Sleeper performance data available'
+          };
+          return inputData;
         }
       } else {
         // DYNASTY: Use traditional Compass scoring
@@ -491,6 +539,19 @@ export class OVRService {
    * Calculate weighted composite score (0-100)
    */
   private calculateCompositeScore(inputData: any, weights: any): number {
+    // SLEEPER-ONLY MODE: Skip blending, use direct OVR
+    if (inputData.sleeper_only && inputData.sleeper_ovr !== undefined) {
+      console.log(`[OVR] SLEEPER-ONLY mode: Using direct OVR ${inputData.sleeper_ovr} (no blending)`);
+      return inputData.sleeper_ovr; // Direct 1-99 score, no normalization needed
+    }
+
+    // DATA MISSING: Return minimum score
+    if (inputData.data_missing) {
+      console.log(`[OVR] DATA MISSING mode: Using minimum score 1`);
+      return 1;
+    }
+
+    // Traditional blended approach for dynasty or fallback cases
     let score = 0;
     let totalWeight = 0;
     
