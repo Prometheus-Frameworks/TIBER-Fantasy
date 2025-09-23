@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { TrendingUp, TrendingDown, Activity, Target, Users, Clock, Zap, Trophy, Filter, Search, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
