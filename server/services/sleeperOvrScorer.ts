@@ -1,0 +1,200 @@
+// otc-sleeper-ovr.ts
+// Simple 1–99 weekly OVR from a Sleeper-style game log row.
+// Works best for RB/WR/TE; QB has a basic path too.
+
+export type Position = "RB" | "WR" | "TE" | "QB";
+
+export type GameLogRow = {
+  week: number;
+  position: Position;
+  fpts?: number;         // Fantasy points (site's scoring)
+  snap_pct?: number;     // 0–100
+  rank_pos?: number;     // Positional rank for the week
+  // Rushing
+  rush_att?: number;
+  rush_yd?: number;
+  rush_tds?: number;
+  ypc?: number;          // yards per carry (if not given we compute)
+  // Receiving
+  targets?: number;
+  rec?: number;
+  rec_yd?: number;
+  rec_tds?: number;
+  ypt?: number;          // yards per target (if not given we compute)
+  ypr?: number;          // yards per reception (optional)
+  // Passing (QB)
+  pass_att?: number;
+  pass_yd?: number;
+  pass_tds?: number;
+  ints?: number;
+};
+
+export type OvrConfig = {
+  // hard caps keep outliers from breaking 0–99 scaling
+  caps: {
+    // shared
+    fpts: number;           // typical weekly ceiling
+    snap_pct: number;       // 100
+    rank_floor: number;     // worse rank we consider (e.g., 60)
+    // RB/WR/TE
+    touches: number;        // att + targets ceiling
+    targets: number;        // per-week cap
+    rec: number;            // receptions cap
+    ypc: number;            // RB yards/carry cap
+    ypt: number;            // WR/TE yards/target cap
+    // QB
+    pass_yd: number;
+    pass_tds: number;
+    ints: number;           // penalty cap
+  };
+  weights: {
+    workload: number;
+    snap: number;
+    efficiency: number;
+    production: number;
+    receiving: number; // low for RB, higher for WR/TE
+    qbPassing?: number; // used when position === "QB"
+    qbMistakes?: number;
+  };
+};
+
+export type OvrResult = {
+  ovr: number;          // 1–99
+  subs: {
+    workload: number;
+    snap: number;
+    efficiency: number;
+    production: number;
+    receiving: number;
+    qbPassing?: number;
+    qbMistakes?: number;
+  };
+  debug: {
+    touches: number;
+    computedYPC?: number;
+    computedYPT?: number;
+    weights: OvrConfig["weights"];
+    caps: OvrConfig["caps"];
+  };
+};
+
+const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
+const to99 = (value: number, cap: number) => clamp(Math.round((value / cap) * 99), 0, 99);
+
+// sensible defaults you can tweak anytime
+export const DEFAULT_CONFIG: OvrConfig = {
+  caps: {
+    fpts: 35,          // most non-outlier weekly ceilings sit <= 35 in .5-PPR
+    snap_pct: 100,
+    rank_floor: 60,    // anything worse than RB/WR60 just sits near 0
+    touches: 35,       // 30–35 is a real workhorse week
+    targets: 15,
+    rec: 12,
+    ypc: 7,            // elite efficiency
+    ypt: 3.0,          // for WR/TE, 2.5–3.0 is great YPT
+    pass_yd: 400,
+    pass_tds: 5,
+    ints: 3,
+  },
+  weights: {
+    workload: 0.30,
+    snap: 0.20,
+    efficiency: 0.20,
+    production: 0.20,
+    receiving: 0.10,       // RB baseline; WR/TE path bumps this automatically
+    qbPassing: 0.55,
+    qbMistakes: 0.15,
+  },
+};
+
+export function scoreWeeklyOVR(row: GameLogRow, cfg: OvrConfig = DEFAULT_CONFIG): OvrResult {
+  const c = cfg.caps;
+  const w = { ...cfg.weights };
+
+  // Basic deriveds
+  const touches = (row.rush_att ?? 0) + (row.targets ?? 0);
+
+  // Efficiency fallbacks
+  const computedYPC = row.ypc ?? (
+    (row.rush_att ?? 0) > 0 ? (row.rush_yd ?? 0) / (row.rush_att ?? 0) : undefined
+  );
+  const computedYPT = row.ypt ?? (
+    (row.targets ?? 0) > 0 ? (row.rec_yd ?? 0) / (row.targets ?? 0) : undefined
+  );
+
+  // Sub-scores (0–99)
+  const workload = to99(touches, c.touches);
+  const snap = to99(row.snap_pct ?? 0, c.snap_pct);
+
+  // Efficiency: RB prefers YPC, WR/TE prefers YPT
+  let efficiency = 0;
+  if (row.position === "RB") {
+    efficiency = to99(computedYPC ?? 0, c.ypc);
+  } else if (row.position === "WR" || row.position === "TE") {
+    efficiency = to99(computedYPT ?? 0, c.ypt);
+  } else {
+    // QB: use YPA proxy if we have it, else scale pass yards
+    const ypa = (row.pass_att ?? 0) > 0 ? (row.pass_yd ?? 0) / (row.pass_att ?? 1) : 0;
+    efficiency = to99(ypa, 9); // ~9 YPA = elite week
+  }
+
+  const production = to99(row.fpts ?? 0, c.fpts);
+
+  // Receiving: role signal (even for RB it matters a bit)
+  const receivingBase = (row.rec ?? 0) + (row.targets ?? 0) * 0.25;
+  let receiving = to99(receivingBase, c.rec + c.targets * 0.25);
+
+  // Position-aware weight tweaks
+  if (row.position === "WR" || row.position === "TE") {
+    // pass-catchers: bump receiving importance, nudge workload to target-heavy
+    w.receiving = 0.20;
+    w.workload = 0.25;
+  }
+
+  // QB extras
+  let qbPassing: number | undefined;
+  let qbMistakes: number | undefined;
+  if (row.position === "QB") {
+    const passScore =
+      0.60 * to99(row.pass_yd ?? 0, c.pass_yd) +
+      0.40 * to99(row.pass_tds ?? 0, c.pass_tds);
+    qbPassing = Math.round(passScore);
+
+    // interceptions penalize
+    const intPenalty = to99(row.ints ?? 0, c.ints); // 0..99 bad
+    qbMistakes = 99 - intPenalty;                    // 99 good, 0 awful
+
+    // For QB, blend a separate track into production lane
+    receiving = 0; // irrelevant
+  }
+
+  // Final blend
+  let raw =
+    w.workload * workload +
+    w.snap * snap +
+    w.efficiency * efficiency +
+    w.production * production +
+    w.receiving * receiving;
+
+  if (row.position === "QB") {
+    raw = (
+      0.30 * raw +                        // carry some generic mix
+      (w.qbPassing ?? 0.55) * (qbPassing ?? 0) +
+      (w.qbMistakes ?? 0.15) * (qbMistakes ?? 0)
+    );
+  }
+
+  // Optional small bonus for good positional rank (if provided)
+  if (row.rank_pos != null) {
+    const rankScore = 99 - to99(Math.max(1, Math.min(row.rank_pos, c.rank_floor)) - 1, c.rank_floor - 1);
+    raw = raw * 0.95 + rankScore * 0.05;
+  }
+
+  const ovr = clamp(Math.round(raw), 1, 99);
+
+  return {
+    ovr,
+    subs: { workload, snap, efficiency, production, receiving, qbPassing, qbMistakes },
+    debug: { touches, computedYPC, computedYPT, weights: w, caps: c },
+  };
+}
