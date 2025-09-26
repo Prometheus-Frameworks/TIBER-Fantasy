@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingUp, TrendingDown, Activity, Target, Users, Clock, Zap, Trophy, Filter, Search, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity, Target, Users, Clock, Zap, Trophy, Filter, Search, RefreshCw, Calendar, Shield, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,10 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link } from "wouter";
 
 type Position = "ALL" | "QB" | "RB" | "WR" | "TE";
 type Format = "dynasty" | "redraft";
+type RankingMode = "season" | "weekly";
 
 interface PlayerAttribute {
   season: number;
@@ -69,6 +71,26 @@ interface OVRPlayer {
   recent_trend?: "up" | "down" | "stable";
   weekly_scores?: number[];
   overall_median?: number;
+  
+  // Enhanced Power Rankings integration
+  components?: {
+    usage: number;
+    talent: number;
+    environment: number;
+    availability: number;
+    market_anchor: number;
+  };
+  confidence?: number;
+  badges?: string[];
+  explanation?: string;
+  
+  // SOS integration for weekly mode
+  sos_data?: {
+    opponent: string;
+    sos_score: number; // 0-100, higher = easier
+    tier: 'green' | 'yellow' | 'red';
+    adjustment: number; // Rating adjustment based on matchup
+  };
 }
 
 interface MergedPlayer extends OVRPlayer {
@@ -146,23 +168,47 @@ function getOVRTier(ovr: number): string {
 export default function PlayerRankings() {
   const [position, setPosition] = useState<Position>("ALL");
   const [format, setFormat] = useState<Format>("dynasty");
+  const [rankingMode, setRankingMode] = useState<RankingMode>("season");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedWeek, setSelectedWeek] = useState(3);
 
-  // Fetch real OVR data using our new API endpoints
+  // Fetch enhanced rankings data with mode support
   const { data: ovrData, isLoading, refetch } = useQuery({
-    queryKey: ["ovr-rankings", position, format],
+    queryKey: ["enhanced-rankings", position, format, rankingMode, selectedWeek],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      params.set('format', format);
-      params.set('position', position);
-      params.set('limit', '100');
-      
-      const response = await fetch(`/api/ovr?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error(`Failed to load OVR data: ${response.status}`);
+      if (rankingMode === "weekly") {
+        // Weekly mode - integrate with SOS
+        const params = new URLSearchParams();
+        params.set('format', format);
+        params.set('position', position);
+        params.set('week', selectedWeek.toString());
+        params.set('mode', 'weekly');
+        params.set('limit', '100');
+        
+        const response = await fetch(`/api/enhanced-rankings?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error(`Failed to load weekly rankings: ${response.status}`);
+        }
+        return response.json() as Promise<OVRResponse>;
+      } else {
+        // Season mode - existing OVR with component enhancement
+        const params = new URLSearchParams();
+        params.set('format', format);
+        params.set('position', position);
+        params.set('mode', 'season');
+        params.set('limit', '100');
+        
+        const response = await fetch(`/api/enhanced-rankings?${params.toString()}`);
+        if (!response.ok) {
+          // Fallback to existing OVR endpoint
+          const fallbackResponse = await fetch(`/api/ovr?${params.toString()}`);
+          if (!fallbackResponse.ok) {
+            throw new Error(`Failed to load season rankings: ${fallbackResponse.status}`);
+          }
+          return fallbackResponse.json() as Promise<OVRResponse>;
+        }
+        return response.json() as Promise<OVRResponse>;
       }
-      return response.json() as Promise<OVRResponse>;
     },
     retry: 2,
     staleTime: 5 * 60 * 1000,
@@ -371,6 +417,22 @@ export default function PlayerRankings() {
         </Card>
       </div>
 
+      {/* Mode Toggle */}
+      <div className="flex justify-center">
+        <Tabs value={rankingMode} onValueChange={(value) => setRankingMode(value as RankingMode)} className="w-fit">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="season" className="flex items-center gap-2" data-testid="season-mode">
+              <Trophy className="h-4 w-4" />
+              Rest of Season
+            </TabsTrigger>
+            <TabsTrigger value="weekly" className="flex items-center gap-2" data-testid="weekly-mode">
+              <Calendar className="h-4 w-4" />
+              This Week
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
       {/* Controls */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1">
@@ -410,16 +472,18 @@ export default function PlayerRankings() {
             </SelectContent>
           </Select>
           
-          <Select value={selectedWeek.toString()} onValueChange={(value) => setSelectedWeek(Number(value))}>
-            <SelectTrigger className="w-[100px]" data-testid="week-filter">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17].map(week => (
-                <SelectItem key={week} value={week.toString()}>Week {week}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {rankingMode === "weekly" && (
+            <Select value={selectedWeek.toString()} onValueChange={(value) => setSelectedWeek(Number(value))}>
+              <SelectTrigger className="w-[100px]" data-testid="week-filter">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17].map(week => (
+                  <SelectItem key={week} value={week.toString()}>Week {week}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
@@ -427,11 +491,14 @@ export default function PlayerRankings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            Player Rankings - {format.charAt(0).toUpperCase() + format.slice(1)} Format
+            {rankingMode === "season" ? <Trophy className="h-5 w-5" /> : <Calendar className="h-5 w-5" />}
+            {rankingMode === "season" ? "Rest of Season" : `Week ${selectedWeek}`} Rankings - {format.charAt(0).toUpperCase() + format.slice(1)}
           </CardTitle>
           <CardDescription>
-            Showing {filteredPlayers.length} players with live OVR ratings and Week {selectedWeek} performance data
+            {rankingMode === "season" 
+              ? `Long-term value rankings with component analysis across ${filteredPlayers.length} players`
+              : `Matchup-adjusted rankings for Week ${selectedWeek} across ${filteredPlayers.length} players`
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -445,11 +512,22 @@ export default function PlayerRankings() {
                 <TableRow>
                   <TableHead className="w-[60px]">Rank</TableHead>
                   <TableHead>Player</TableHead>
-                  <TableHead className="text-center">Current OVR</TableHead>
-                  <TableHead className="text-center">Overall Median</TableHead>
-                  <TableHead className="text-center">Weekly Scores</TableHead>
+                  <TableHead className="text-center">
+                    {rankingMode === "season" ? "Season OVR" : "Week OVR"}
+                  </TableHead>
+                  {rankingMode === "season" ? (
+                    <>
+                      <TableHead className="text-center">Components</TableHead>
+                      <TableHead className="text-center">Confidence</TableHead>
+                    </>
+                  ) : (
+                    <>
+                      <TableHead className="text-center">Matchup</TableHead>
+                      <TableHead className="text-center">SOS</TableHead>
+                    </>
+                  )}
+                  <TableHead className="text-center">Explanation</TableHead>
                   <TableHead className="text-center">Tier</TableHead>
-                  <TableHead className="text-center">Trend</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -462,17 +540,30 @@ export default function PlayerRankings() {
                     </TableCell>
                     
                     <TableCell>
-                      <Link href={`/players/${player.player_id}`} className="flex items-center gap-3 hover:underline">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs font-bold px-2 py-1">
-                            {player.position}
-                          </Badge>
-                          <div>
-                            <div className="font-semibold">{player.name}</div>
-                            <div className="text-sm text-gray-500">{player.team}</div>
+                      <TooltipProvider>
+                        <Link href={`/players/${player.player_id}`} className="flex items-center gap-3 hover:underline">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs font-bold px-2 py-1">
+                              {player.position}
+                            </Badge>
+                            <div>
+                              <div className="font-semibold flex items-center gap-1">
+                                {player.name}
+                                {player.badges && player.badges.length > 0 && (
+                                  <div className="flex gap-1">
+                                    {player.badges.slice(0, 2).map((badge, idx) => (
+                                      <Badge key={idx} variant="secondary" className="text-xs px-1 py-0">
+                                        {badge}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-500">{player.team}</div>
+                            </div>
                           </div>
-                        </div>
-                      </Link>
+                        </Link>
+                      </TooltipProvider>
                     </TableCell>
                     
                     <TableCell className="text-center">
@@ -481,45 +572,110 @@ export default function PlayerRankings() {
                       </Badge>
                     </TableCell>
                     
-                    <TableCell className="text-center">
-                      <Badge className={`font-bold text-lg px-3 py-1 ${getOVRColor(player.overall_median || player.ovr)}`}>
-                        {Math.round(player.overall_median || player.ovr)}
-                      </Badge>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {player.weekly_scores?.length || 0} weeks
-                      </div>
-                    </TableCell>
-                    
-                    <TableCell className="text-center">
-                      {player.weekly_scores && player.weekly_scores.length > 0 ? (
-                        <div className="flex gap-1 justify-center flex-wrap">
-                          {player.weekly_scores.map((score, weekIdx) => (
-                            <Badge 
-                              key={weekIdx} 
-                              variant="outline" 
-                              className={`text-xs px-1 py-0 ${getOVRColor(score)}`}
-                            >
-                              {score}
+                    {rankingMode === "season" ? (
+                      <>
+                        {/* Season Mode: Components */}
+                        <TableCell className="text-center">
+                          {player.components ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="grid grid-cols-2 gap-1 text-xs">
+                                    <div>U: {player.components.usage}</div>
+                                    <div>T: {player.components.talent}</div>
+                                    <div>E: {player.components.environment}</div>
+                                    <div>A: {player.components.availability}</div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="space-y-1">
+                                    <div>Usage: {player.components.usage}%</div>
+                                    <div>Talent: {player.components.talent}%</div>
+                                    <div>Environment: {player.components.environment}%</div>
+                                    <div>Availability: {player.components.availability}%</div>
+                                    <div>Market: {player.components.market_anchor}%</div>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-gray-400 text-sm">—</span>
+                          )}
+                        </TableCell>
+                        
+                        {/* Season Mode: Confidence */}
+                        <TableCell className="text-center">
+                          {player.confidence ? (
+                            <Badge className={`text-xs ${
+                              player.confidence >= 0.8 ? 'bg-green-100 text-green-800' : 
+                              player.confidence >= 0.6 ? 'bg-yellow-100 text-yellow-800' : 
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {Math.round(player.confidence * 100)}%
                             </Badge>
-                          ))}
-                        </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm">—</span>
+                          )}
+                        </TableCell>
+                      </>
+                    ) : (
+                      <>
+                        {/* Weekly Mode: Matchup */}
+                        <TableCell className="text-center">
+                          {player.sos_data ? (
+                            <div className="flex items-center justify-center gap-1">
+                              <span className="text-sm font-medium">vs {player.sos_data.opponent}</span>
+                              {player.sos_data.tier === 'green' && <Shield className="h-4 w-4 text-green-500" />}
+                              {player.sos_data.tier === 'yellow' && <Shield className="h-4 w-4 text-yellow-500" />}
+                              {player.sos_data.tier === 'red' && <Shield className="h-4 w-4 text-red-500" />}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm">—</span>
+                          )}
+                        </TableCell>
+                        
+                        {/* Weekly Mode: SOS Score */}
+                        <TableCell className="text-center">
+                          {player.sos_data ? (
+                            <Badge className={`text-xs ${
+                              player.sos_data.tier === 'green' ? 'bg-green-100 text-green-800' : 
+                              player.sos_data.tier === 'yellow' ? 'bg-yellow-100 text-yellow-800' : 
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {player.sos_data.sos_score}
+                            </Badge>
+                          ) : (
+                            <span className="text-gray-400 text-sm">—</span>
+                          )}
+                        </TableCell>
+                      </>
+                    )}
+                    
+                    {/* Explanation */}
+                    <TableCell className="text-center max-w-[200px]">
+                      {player.explanation ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="text-sm text-gray-600 truncate cursor-help">
+                                {player.explanation}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p>{player.explanation}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       ) : (
-                        <span className="text-gray-400 text-sm">No weekly data</span>
+                        <span className="text-gray-400 text-sm">—</span>
                       )}
                     </TableCell>
                     
+                    {/* Tier */}
                     <TableCell className="text-center">
                       <Badge variant="outline" className="text-xs">
-                        {getOVRTier(player.overall_median || player.ovr)}
+                        {getOVRTier(player.ovr)}
                       </Badge>
-                    </TableCell>
-                    
-                    <TableCell className="text-center">
-                      {player.recent_trend === "up" && <TrendingUp className="h-4 w-4 text-green-500 mx-auto" />}
-                      {player.recent_trend === "down" && <TrendingDown className="h-4 w-4 text-red-500 mx-auto" />}
-                      {(!player.recent_trend || player.recent_trend === "stable") && (
-                        <div className="w-4 h-4 bg-gray-300 rounded-full mx-auto"></div>
-                      )}
                     </TableCell>
                   </TableRow>
                 ))}

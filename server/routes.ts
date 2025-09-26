@@ -63,6 +63,7 @@ import sosRouter from './modules/sos/sos.router';
 import { ratingsRouter } from './src/modules/ratings';
 import rankingsV3Router from './routes/rankingsV3';
 import ovrRouter from './routes/ovrRoutes';
+import { registerEnhancedRankingsRoutes } from './routes/enhancedRankingsRoutes';
 import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
 import attributesRoutes from './routes/attributesRoutes';
 import pythonRookieRoutes from './routes/pythonRookieRoutes';
@@ -2376,6 +2377,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Mount Power Processing routes (Grok's Enhancement) 
   registerPowerProcessingRoutes(app);
+
+  // Mount Enhanced Rankings (unified Power + Player Rankings with SOS)
+  registerEnhancedRankingsRoutes(app);
+  console.log('📊 Enhanced Rankings system mounted at /api/enhanced-rankings/*');
 
   // Mount Rookie Risers routes
   app.use('/api/rookie-risers', rookieRisersRoutes);
