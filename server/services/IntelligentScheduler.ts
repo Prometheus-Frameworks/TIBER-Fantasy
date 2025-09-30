@@ -21,13 +21,15 @@ import {
   scheduleTriggers,
   datasetVersions,
   jobRuns,
-  type IntelligentScheduleState,
-  type ScheduleTriggers,
   scheduleTriggerTypeEnum,
   scheduleActionEnum,
-  uphJobTypeEnum,
-  type DatasetVersions
+  uphJobTypeEnum
 } from '@shared/schema';
+
+// Infer types from tables
+type IntelligentScheduleState = typeof intelligentScheduleState.$inferSelect;
+type ScheduleTriggers = typeof scheduleTriggers.$inferSelect;
+type DatasetVersions = typeof datasetVersions.$inferSelect;
 import { eq, and, desc, sql, gte, lte, count, max } from 'drizzle-orm';
 import { UPHCoordinator, type ProcessingOptions, type JobResult } from './UPHCoordinator';
 import { brandSignalsIntegration } from './BrandSignalsIntegration';
@@ -271,7 +273,7 @@ export class IntelligentScheduler {
   private async initializeScheduleStates(): Promise<void> {
     console.log('🗄️ [IntelligentScheduler] Initializing schedule states in database...');
 
-    for (const [scheduleKey, config] of this.scheduleConfigs) {
+    for (const [scheduleKey, config] of Array.from(this.scheduleConfigs.entries())) {
       try {
         // Check if schedule state already exists
         const existing = await db
@@ -320,7 +322,7 @@ export class IntelligentScheduler {
   private async startStateAwarePolling(): Promise<void> {
     console.log('📡 [IntelligentScheduler] Starting state-aware polling...');
 
-    for (const [scheduleKey, config] of this.scheduleConfigs) {
+    for (const [scheduleKey, config] of Array.from(this.scheduleConfigs.entries())) {
       if (config.enabled) {
         await this.startPollingForSchedule(scheduleKey, config);
       }
@@ -664,11 +666,11 @@ export class IntelligentScheduler {
     console.log(`   📋 Reason: ${context.reason}`);
     console.log(`   📊 Fresh datasets: ${context.freshnessStates.filter(f => f.staleness === 'fresh').length}`);
 
+    // Get season context before try block so it's available in catch
+    const seasonContext = await this.seasonService.current();
+
     try {
       let jobResult: JobResult | null = null;
-
-      // Determine processing type based on schedule key and context
-      const seasonContext = await this.seasonService.current();
 
       switch (scheduleKey) {
         case 'incremental_processing':
@@ -759,11 +761,14 @@ export class IntelligentScheduler {
       });
 
       // Update schedule state with successful execution
+      const currentState = await this.getScheduleState(scheduleKey);
       await this.updateScheduleState(scheduleKey, {
         lastRun: new Date(),
-        totalRuns: sql`${intelligentScheduleState.totalRuns} + 1`,
-        successfulRuns: sql`${intelligentScheduleState.successfulRuns} + 1`,
-        averageExecutionMs: sql`(${intelligentScheduleState.averageExecutionMs} + ${duration}) / 2`,
+        totalRuns: (currentState?.totalRuns || 0) + 1,
+        successfulRuns: (currentState?.successfulRuns || 0) + 1,
+        averageExecutionMs: currentState?.averageExecutionMs 
+          ? Math.round((currentState.averageExecutionMs + duration) / 2)
+          : duration,
         systemLoad: context.systemLoad,
         slaMetrics: context.slaMetrics
       });
@@ -1223,7 +1228,7 @@ export class IntelligentScheduler {
           console.warn('🚨 [IntelligentScheduler] System health degraded, applying protective measures');
           
           // Temporarily increase frequencies for all schedules to reduce load
-          for (const [scheduleKey, config] of this.scheduleConfigs) {
+          for (const [scheduleKey, config] of Array.from(this.scheduleConfigs.entries())) {
             if (config.enabled) {
               await this.adjustScheduleFrequency(
                 scheduleKey,
@@ -1313,7 +1318,7 @@ export class IntelligentScheduler {
     try {
       const schedules = [];
       
-      for (const [scheduleKey, config] of this.scheduleConfigs) {
+      for (const [scheduleKey, config] of Array.from(this.scheduleConfigs.entries())) {
         const state = await this.getScheduleState(scheduleKey);
         
         // Calculate success rate from recent triggers
@@ -1380,7 +1385,7 @@ export class IntelligentScheduler {
 
     try {
       // Stop all polling intervals
-      for (const [scheduleKey, interval] of this.pollingIntervals) {
+      for (const [scheduleKey, interval] of Array.from(this.pollingIntervals.entries())) {
         clearInterval(interval);
         console.log(`🛑 [IntelligentScheduler] Stopped polling for schedule: ${scheduleKey}`);
       }
