@@ -35,13 +35,14 @@ Intelligence Feed System:
 *   **Rookie & Player Analysis:** Dedicated Rookie Evaluation System with a 4-component insulation boost and data pipeline, Target Competition Analysis (TCIP), Player Usage Context Module, and a Stud Detection Module.
 *   **EPA Analytics:** Advanced efficiency metrics via nfl-data-py play-by-play data processing: EPA per play/target, Air EPA vs YAC EPA separation (route-running vs after-catch ability), success rates, YAC over expected, and team offensive/defensive EPA context rankings. Python-based EPA processor (`epaProcessor.py`) analyzes 35k+ plays to generate efficiency insights for QB, RB, WR, TE positions.
 *   **SOS Team Analytics (October 2025):** Comprehensive strength of schedule system with position-specific matchup intelligence powered by real team analytics data:
-    - **Database Architecture**: Four PostgreSQL tables (team_defensive_context, team_offensive_context, team_coverage_matchups, team_receiver_alignment_matchups) storing 28 NFL teams' analytics from screenshot datasets
+    - **Database Architecture**: Four PostgreSQL tables (team_defensive_context, team_offensive_context, team_coverage_matchups, team_receiver_alignment_matchups) storing 28 NFL teams' analytics from screenshot datasets. Schedule table enhanced with home_score, away_score, and result columns for game history tracking.
     - **Week 5 SOS Predictions (NEW)**: Accurate EPA-based ranking system for predictive matchup analysis:
       - **Defense Rankings**: Weighted scoring (50% pass EPA allowed, 30% rush EPA allowed, 20% pressure rate) where lower score = harder matchup. LAR #1 (balanced elite), DEN #2, MIN #3 (best pass D, weak run D)
       - **Offense Rankings**: Weighted scoring (60% pass EPA, 40% rush EPA) where higher score = better offense. BUF #1 (0.357 pass EPA), IND #2, DAL #3
       - **Week 5 Matchup Scores**: 0-100 scale where higher = easier matchup for offense (defense score inverted). Green tier (67+), Yellow (33-66), Red (<33)
-      - **API Endpoints**: `/api/sos/rankings/defense`, `/api/sos/rankings/offense`, `/api/sos/week5` with position/season filtering
-      - **Frontend Integration**: `/sos` page now defaults to "Week 5 (NEW)" mode with accurate predictions. Note: W5 mode always displays Week 5 regardless of week selector
+      - **API Endpoints**: `/api/sos/rankings/defense`, `/api/sos/rankings/offense`, `/api/sos/week5`, `/api/sos/team/history` with position/season/team filtering
+      - **Frontend Integration**: `/sos` page defaults to "Week 5 (NEW)" mode with accurate predictions. Note: W5 mode always displays Week 5 regardless of week selector
+      - **Expandable Team Game History**: Interactive dropdown UI on team rankings showing weeks 1-4 game results with color-coded W/L (green for wins, red for losses), opponent, score, and home/away indicators. Fetches real game data from nfl-data-py via fetchGameResults.py script.
     - **Position-Specific SOS**: SOSv3 function provides tailored matchup breakdowns by position (RB/WR/QB/TE) with alignment-aware and coverage-aware scoring
     - **Alignment Matchups**: Outside WR vs Slot vs TE with FPG allowed and matchup scores for WR/TE positions
     - **Coverage Breakdowns**: Zone/Man/2-High/1-High coverage with FPDB allowed, defensive usage rates, and matchup scores for QB/WR/TE positions  
