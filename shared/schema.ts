@@ -1487,6 +1487,9 @@ export const schedule = pgTable("schedule", {
   week: integer("week").notNull(),
   home: text("home").notNull(),
   away: text("away").notNull(),
+  homeScore: integer("home_score"),
+  awayScore: integer("away_score"),
+  result: integer("result"), // positive = home win, negative = away win, 0 = tie
 }, (table) => ({
   uniqueGame: unique().on(table.season, table.week, table.home, table.away),
 }));
