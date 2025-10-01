@@ -142,3 +142,59 @@ export const getWeek5SOS = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to generate Week 5 SOS' });
   }
 };
+
+export const getTeamGameHistory = async (req: Request, res: Response) => {
+  try {
+    const team = req.query.team as string;
+    const season = parseInt((req.query.season as string) || '2024', 10);
+    const maxWeek = parseInt((req.query.maxWeek as string) || '4', 10);
+    
+    if (!team) {
+      return res.status(400).json({ error: 'Team parameter is required' });
+    }
+    
+    const { db } = await import('../../db');
+    const { schedule } = await import('@shared/schema');
+    const { or, eq, and, lte } = await import('drizzle-orm');
+    
+    // Get games where team is home or away
+    const games = await db
+      .select()
+      .from(schedule)
+      .where(
+        and(
+          eq(schedule.season, season),
+          lte(schedule.week, maxWeek),
+          or(
+            eq(schedule.home, team),
+            eq(schedule.away, team)
+          )
+        )
+      )
+      .orderBy(schedule.week);
+    
+    // Transform to opponent-centric view
+    const history = games.map(game => {
+      const isHome = game.home === team;
+      const opponent = isHome ? game.away : game.home;
+      const teamScore = isHome ? game.homeScore : game.awayScore;
+      const oppScore = isHome ? game.awayScore : game.homeScore;
+      const won = (isHome && (game.result ?? 0) > 0) || (!isHome && (game.result ?? 0) < 0);
+      
+      return {
+        week: game.week,
+        opponent,
+        isHome,
+        teamScore,
+        oppScore,
+        won,
+        result: won ? 'W' : 'L'
+      };
+    });
+    
+    res.json({ team, season, maxWeek, history });
+  } catch (error) {
+    console.error('❌ Team Game History error:', error);
+    res.status(500).json({ error: 'Failed to fetch team game history' });
+  }
+};

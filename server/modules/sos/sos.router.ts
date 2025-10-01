@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getWeekly, getROS, getWeeklyV3, getDefenseRankings, getOffenseRankings, getWeek5SOS } from './sos.controller';
+import { getWeekly, getROS, getWeeklyV3, getDefenseRankings, getOffenseRankings, getWeek5SOS, getTeamGameHistory } from './sos.controller';
 import { SOSDashboardController } from './dashboard.controller';
 
 const router = Router();
@@ -17,6 +17,9 @@ router.get('/rankings/offense', getOffenseRankings); // /api/sos/rankings/offens
 
 // Week 5 SOS (uses Week 4 rankings)
 router.get('/week5', getWeek5SOS); // /api/sos/week5?position=RB
+
+// Team game history
+router.get('/team/history', getTeamGameHistory); // /api/sos/team/history?team=BUF&season=2024&maxWeek=4
 
 // Dashboard API endpoints
 router.get('/dashboard/preferences', SOSDashboardController.getPreferences);
