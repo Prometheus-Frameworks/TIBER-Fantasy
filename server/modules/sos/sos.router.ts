@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getWeekly, getROS, getWeeklyV3 } from './sos.controller';
+import { getWeekly, getROS, getWeeklyV3, getDefenseRankings, getOffenseRankings, getWeek5SOS } from './sos.controller';
 import { SOSDashboardController } from './dashboard.controller';
 
 const router = Router();
@@ -10,6 +10,13 @@ router.get('/ros', getROS);       // /api/sos/ros?position=RB&startWeek=1&window
 
 // Enhanced team analytics endpoint
 router.get('/weekly/v3', getWeeklyV3); // /api/sos/weekly/v3?position=WR&week=4&analytics=true
+
+// Team rankings based on Week 4 data
+router.get('/rankings/defense', getDefenseRankings); // /api/sos/rankings/defense
+router.get('/rankings/offense', getOffenseRankings); // /api/sos/rankings/offense
+
+// Week 5 SOS (uses Week 4 rankings)
+router.get('/week5', getWeek5SOS); // /api/sos/week5?position=RB
 
 // Dashboard API endpoints
 router.get('/dashboard/preferences', SOSDashboardController.getPreferences);

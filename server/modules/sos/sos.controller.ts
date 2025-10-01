@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { computeWeeklySOS, computeROSSOS, computeWeeklySOSv2, computeWeeklySOSv3, parseWeights, normalizeWeights } from './sos.service';
+import { rankDefenses, rankOffenses, generateWeek5SOS } from './teamRankings.service';
 import type { Position, Mode, Weights } from './sos.service';
 
 export const getWeekly = async (req: Request, res: Response) => {
@@ -100,5 +101,44 @@ export const getWeeklyV3 = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('❌ SOS Weekly v3 error:', error);
     res.status(500).json({ error: 'Failed to compute weekly SOS v3' });
+  }
+};
+
+export const getDefenseRankings = async (req: Request, res: Response) => {
+  try {
+    const season = parseInt((req.query.season as string) || '2024', 10);
+    const week = parseInt((req.query.week as string) || '4', 10);
+    
+    const rankings = await rankDefenses(season, week);
+    res.json({ season, week, rankings });
+  } catch (error) {
+    console.error('❌ Defense Rankings error:', error);
+    res.status(500).json({ error: 'Failed to rank defenses' });
+  }
+};
+
+export const getOffenseRankings = async (req: Request, res: Response) => {
+  try {
+    const season = parseInt((req.query.season as string) || '2024', 10);
+    const week = parseInt((req.query.week as string) || '4', 10);
+    
+    const rankings = await rankOffenses(season, week);
+    res.json({ season, week, rankings });
+  } catch (error) {
+    console.error('❌ Offense Rankings error:', error);
+    res.status(500).json({ error: 'Failed to rank offenses' });
+  }
+};
+
+export const getWeek5SOS = async (req: Request, res: Response) => {
+  try {
+    const position = (req.query.position as Position) || 'RB';
+    const season = parseInt((req.query.season as string) || '2024', 10);
+    
+    const items = await generateWeek5SOS(position, season);
+    res.json({ position, week: 5, season, items });
+  } catch (error) {
+    console.error('❌ Week 5 SOS error:', error);
+    res.status(500).json({ error: 'Failed to generate Week 5 SOS' });
   }
 };
