@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { computeWeeklySOS, computeROSSOS, computeWeeklySOSv2, parseWeights, normalizeWeights } from './sos.service';
+import { computeWeeklySOS, computeROSSOS, computeWeeklySOSv2, computeWeeklySOSv3, parseWeights, normalizeWeights } from './sos.service';
 import type { Position, Mode, Weights } from './sos.service';
 
 export const getWeekly = async (req: Request, res: Response) => {
@@ -73,5 +73,32 @@ export const getROS = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('❌ SOS ROS error:', error);
     res.status(500).json({ error: 'Failed to compute ROS SOS' });
+  }
+};
+
+export const getWeeklyV3 = async (req: Request, res: Response) => {
+  try {
+    const position = (req.query.position as Position) || 'RB';
+    const week = parseInt((req.query.week as string) || '1', 10);
+    const season = parseInt((req.query.season as string) || '2024', 10);
+    
+    // Validate week boundaries by season
+    const maxWeek = season === 2024 ? 17 : 18;
+    if (season !== 2025 && week > maxWeek) {
+      return res.status(400).json({ error: `Invalid week for season ${season}. Week must be <= ${maxWeek}` });
+    }
+    
+    const rawMode = req.query.mode as string;
+    const mode = (rawMode === 'fpa' || rawMode === 'ctx') ? rawMode as Mode : 'fpa';
+    const weights = normalizeWeights(parseWeights(req.query.weights as string | undefined));
+    
+    // includeAnalytics defaults to true, can be disabled with ?analytics=false
+    const includeAnalytics = req.query.analytics !== 'false';
+    
+    const data = await computeWeeklySOSv3(position, week, season, mode, weights, includeAnalytics);
+    res.json({ position, week, season, mode, weights, includeAnalytics, items: data });
+  } catch (error) {
+    console.error('❌ SOS Weekly v3 error:', error);
+    res.status(500).json({ error: 'Failed to compute weekly SOS v3' });
   }
 };

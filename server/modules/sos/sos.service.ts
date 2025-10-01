@@ -1,5 +1,5 @@
 import { db } from '../../db';
-import { defenseVP, schedule, defenseContext } from '@shared/schema';
+import { defenseVP, schedule, defenseContext, teamOffensiveContext, teamDefensiveContext, teamReceiverAlignmentMatchups, teamCoverageMatchups } from '@shared/schema';
 import { eq, and, lte, between, gte } from 'drizzle-orm';
 import { oasisSosService } from './oasisSosService';
 
@@ -423,6 +423,146 @@ async function getContext(season:number, week:number): Promise<Map<string, CtxRo
   }
 }
 
+// ==== Team Analytics Data Fetchers ====
+
+interface AlignmentMatchupData {
+  team: string;
+  offOutsideWrFpg: number | null;
+  offSlotFpg: number | null;
+  offTeFpg: number | null;
+  defOutsideWrFpgAllowed: number | null;
+  defSlotFpgAllowed: number | null;
+  defTeFpgAllowed: number | null;
+}
+
+interface CoverageMatchupData {
+  team: string;
+  offZoneFpdb: number | null;
+  offManFpdb: number | null;
+  offTwoHighFpdb: number | null;
+  offOneHighFpdb: number | null;
+  defZonePct: number | null;
+  defManPct: number | null;
+  defTwoHighPct: number | null;
+  defOneHighPct: number | null;
+  defZoneFpdbAllowed: number | null;
+  defManFpdbAllowed: number | null;
+  defTwoHighFpdbAllowed: number | null;
+  defOneHighFpdbAllowed: number | null;
+}
+
+interface OffensiveContextData {
+  team: string;
+  passEpa: number | null;
+  rushEpa: number | null;
+  ybcPerAtt: number | null;
+  pressureRateAllowed: number | null;
+}
+
+interface DefensiveContextData {
+  team: string;
+  passEpaAllowed: number | null;
+  rushEpaAllowed: number | null;
+  ybcPerAttAllowed: number | null;
+  pressureRateGenerated: number | null;
+}
+
+async function getAlignmentMatchups(season: number, week: number): Promise<Map<string, AlignmentMatchupData>> {
+  try {
+    const rows = await db
+      .select()
+      .from(teamReceiverAlignmentMatchups)
+      .where(
+        and(
+          eq(teamReceiverAlignmentMatchups.season, season),
+          eq(teamReceiverAlignmentMatchups.week, week)
+        )
+      );
+
+    const m = new Map<string, AlignmentMatchupData>();
+    rows.forEach(r => m.set(r.team, r as AlignmentMatchupData));
+    return m;
+  } catch (error) {
+    console.warn('team_receiver_alignment_matchups table not available');
+    return new Map();
+  }
+}
+
+async function getCoverageMatchups(season: number, week: number): Promise<Map<string, CoverageMatchupData>> {
+  try {
+    const rows = await db
+      .select()
+      .from(teamCoverageMatchups)
+      .where(
+        and(
+          eq(teamCoverageMatchups.season, season),
+          eq(teamCoverageMatchups.week, week)
+        )
+      );
+
+    const m = new Map<string, CoverageMatchupData>();
+    rows.forEach(r => m.set(r.team, r as CoverageMatchupData));
+    return m;
+  } catch (error) {
+    console.warn('team_coverage_matchups table not available');
+    return new Map();
+  }
+}
+
+async function getTeamOffensiveContext(season: number, week: number): Promise<Map<string, OffensiveContextData>> {
+  try {
+    const rows = await db
+      .select({
+        team: teamOffensiveContext.team,
+        passEpa: teamOffensiveContext.passEpa,
+        rushEpa: teamOffensiveContext.rushEpa,
+        ybcPerAtt: teamOffensiveContext.ybcPerAtt,
+        pressureRateAllowed: teamOffensiveContext.pressureRateAllowed
+      })
+      .from(teamOffensiveContext)
+      .where(
+        and(
+          eq(teamOffensiveContext.season, season),
+          eq(teamOffensiveContext.week, week)
+        )
+      );
+
+    const m = new Map<string, OffensiveContextData>();
+    rows.forEach(r => m.set(r.team, r as OffensiveContextData));
+    return m;
+  } catch (error) {
+    console.warn('team_offensive_context table not available');
+    return new Map();
+  }
+}
+
+async function getTeamDefensiveContext(season: number, week: number): Promise<Map<string, DefensiveContextData>> {
+  try {
+    const rows = await db
+      .select({
+        team: teamDefensiveContext.team,
+        passEpaAllowed: teamDefensiveContext.passEpaAllowed,
+        rushEpaAllowed: teamDefensiveContext.rushEpaAllowed,
+        ybcPerAttAllowed: teamDefensiveContext.ybcPerAttAllowed,
+        pressureRateGenerated: teamDefensiveContext.pressureRateGenerated
+      })
+      .from(teamDefensiveContext)
+      .where(
+        and(
+          eq(teamDefensiveContext.season, season),
+          eq(teamDefensiveContext.week, week)
+        )
+      );
+
+    const m = new Map<string, DefensiveContextData>();
+    rows.forEach(r => m.set(r.team, r as DefensiveContextData));
+    return m;
+  } catch (error) {
+    console.warn('team_defensive_context table not available');
+    return new Map();
+  }
+}
+
 export async function computeWeeklySOSv2(
   position: Position,
   week: number,
@@ -579,4 +719,201 @@ export async function computeWeeklySOSv2(
     }
   }
   return out;
+}
+
+// ==== SOSv3: Team Analytics Enhanced ====
+
+export interface TeamAnalyticsBreakdown {
+  alignmentMatchups?: {
+    outsideWr?: { score: number; fpgAllowed: number | null };
+    slot?: { score: number; fpgAllowed: number | null };
+    te?: { score: number; fpgAllowed: number | null };
+  };
+  coverageMatchups?: {
+    vsZone?: { score: number; fpdbAllowed: number | null; defUsageRate: number | null };
+    vsMan?: { score: number; fpdbAllowed: number | null; defUsageRate: number | null };
+    vs2High?: { score: number; fpdbAllowed: number | null; defUsageRate: number | null };
+    vs1High?: { score: number; fpdbAllowed: number | null; defUsageRate: number | null };
+  };
+  blockingContext?: {
+    runBlocking?: { score: number; ybcPerAtt: number | null };
+    passProtection?: { score: number; pressureRate: number | null };
+  };
+}
+
+export interface WeeklySOSv3 extends WeeklySOS {
+  analytics?: TeamAnalyticsBreakdown;
+}
+
+/**
+ * Compute weekly SOS with enhanced team analytics breakdowns
+ * Includes alignment matchups (WR/TE), coverage matchups (QB/WR/TE), and blocking context (RB/QB)
+ */
+export async function computeWeeklySOSv3(
+  position: Position,
+  week: number,
+  season = DEFAULT_SEASON,
+  mode: Mode = 'fpa',
+  weights: Weights = { w_fpa:0.55, w_epa:0.20, w_pace:0.15, w_rz:0.10 },
+  includeAnalytics = true
+): Promise<WeeklySOSv3[]> {
+  // Get base SOS scores from v2
+  const baseSOS = await computeWeeklySOSv2(position, week, season, mode, weights, false, 0);
+  
+  if (!includeAnalytics) {
+    return baseSOS as WeeklySOSv3[];
+  }
+  
+  // Fetch team analytics data
+  const [alignmentData, coverageData, offensiveContext, defensiveContext] = await Promise.all([
+    getAlignmentMatchups(season, week),
+    getCoverageMatchups(season, week),
+    getTeamOffensiveContext(season, week),
+    getTeamDefensiveContext(season, week)
+  ]);
+  
+  // If no analytics data available, return base SOS
+  if (alignmentData.size === 0 && coverageData.size === 0 && 
+      offensiveContext.size === 0 && defensiveContext.size === 0) {
+    return baseSOS as WeeklySOSv3[];
+  }
+  
+  // Collect values for percentile scaling
+  const alignmentVals = {
+    outsideWr: [] as number[],
+    slot: [] as number[],
+    te: [] as number[]
+  };
+  const coverageVals = {
+    zone: [] as number[],
+    man: [] as number[],
+    twoHigh: [] as number[],
+    oneHigh: [] as number[]
+  };
+  const blockingVals = {
+    ybc: [] as number[],
+    pressure: [] as number[]
+  };
+  
+  // Populate value pools for percentile scaling
+  alignmentData.forEach(data => {
+    if (data.defOutsideWrFpgAllowed != null) alignmentVals.outsideWr.push(data.defOutsideWrFpgAllowed);
+    if (data.defSlotFpgAllowed != null) alignmentVals.slot.push(data.defSlotFpgAllowed);
+    if (data.defTeFpgAllowed != null) alignmentVals.te.push(data.defTeFpgAllowed);
+  });
+  
+  coverageData.forEach(data => {
+    if (data.defZoneFpdbAllowed != null) coverageVals.zone.push(data.defZoneFpdbAllowed);
+    if (data.defManFpdbAllowed != null) coverageVals.man.push(data.defManFpdbAllowed);
+    if (data.defTwoHighFpdbAllowed != null) coverageVals.twoHigh.push(data.defTwoHighFpdbAllowed);
+    if (data.defOneHighFpdbAllowed != null) coverageVals.oneHigh.push(data.defOneHighFpdbAllowed);
+  });
+  
+  defensiveContext.forEach(data => {
+    if (data.ybcPerAttAllowed != null) blockingVals.ybc.push(data.ybcPerAttAllowed);
+    if (data.pressureRateGenerated != null) blockingVals.pressure.push(data.pressureRateGenerated);
+  });
+  
+  // Enhance each SOS entry with analytics
+  const enhanced = baseSOS.map(sos => {
+    const enhanced: WeeklySOSv3 = { ...sos };
+    const oppAlignment = alignmentData.get(sos.opponent);
+    const oppCoverage = coverageData.get(sos.opponent);
+    const oppDefense = defensiveContext.get(sos.opponent);
+    
+    const analytics: TeamAnalyticsBreakdown = {};
+    
+    // Add alignment matchups for WR/TE
+    if ((position === 'WR' || position === 'TE') && oppAlignment) {
+      analytics.alignmentMatchups = {};
+      
+      if (oppAlignment.defOutsideWrFpgAllowed != null && alignmentVals.outsideWr.length > 0) {
+        analytics.alignmentMatchups.outsideWr = {
+          score: percentileScale(alignmentVals.outsideWr, oppAlignment.defOutsideWrFpgAllowed),
+          fpgAllowed: oppAlignment.defOutsideWrFpgAllowed
+        };
+      }
+      
+      if (oppAlignment.defSlotFpgAllowed != null && alignmentVals.slot.length > 0) {
+        analytics.alignmentMatchups.slot = {
+          score: percentileScale(alignmentVals.slot, oppAlignment.defSlotFpgAllowed),
+          fpgAllowed: oppAlignment.defSlotFpgAllowed
+        };
+      }
+      
+      if (oppAlignment.defTeFpgAllowed != null && alignmentVals.te.length > 0) {
+        analytics.alignmentMatchups.te = {
+          score: percentileScale(alignmentVals.te, oppAlignment.defTeFpgAllowed),
+          fpgAllowed: oppAlignment.defTeFpgAllowed
+        };
+      }
+    }
+    
+    // Add coverage matchups for QB/WR/TE
+    if ((position === 'QB' || position === 'WR' || position === 'TE') && oppCoverage) {
+      analytics.coverageMatchups = {};
+      
+      if (oppCoverage.defZoneFpdbAllowed != null && coverageVals.zone.length > 0) {
+        analytics.coverageMatchups.vsZone = {
+          score: percentileScale(coverageVals.zone, oppCoverage.defZoneFpdbAllowed),
+          fpdbAllowed: oppCoverage.defZoneFpdbAllowed,
+          defUsageRate: oppCoverage.defZonePct
+        };
+      }
+      
+      if (oppCoverage.defManFpdbAllowed != null && coverageVals.man.length > 0) {
+        analytics.coverageMatchups.vsMan = {
+          score: percentileScale(coverageVals.man, oppCoverage.defManFpdbAllowed),
+          fpdbAllowed: oppCoverage.defManFpdbAllowed,
+          defUsageRate: oppCoverage.defManPct
+        };
+      }
+      
+      if (oppCoverage.defTwoHighFpdbAllowed != null && coverageVals.twoHigh.length > 0) {
+        analytics.coverageMatchups.vs2High = {
+          score: percentileScale(coverageVals.twoHigh, oppCoverage.defTwoHighFpdbAllowed),
+          fpdbAllowed: oppCoverage.defTwoHighFpdbAllowed,
+          defUsageRate: oppCoverage.defTwoHighPct
+        };
+      }
+      
+      if (oppCoverage.defOneHighFpdbAllowed != null && coverageVals.oneHigh.length > 0) {
+        analytics.coverageMatchups.vs1High = {
+          score: percentileScale(coverageVals.oneHigh, oppCoverage.defOneHighFpdbAllowed),
+          fpdbAllowed: oppCoverage.defOneHighFpdbAllowed,
+          defUsageRate: oppCoverage.defOneHighPct
+        };
+      }
+    }
+    
+    // Add blocking context for RB/QB
+    if ((position === 'RB' || position === 'QB') && oppDefense) {
+      analytics.blockingContext = {};
+      
+      if (oppDefense.ybcPerAttAllowed != null && blockingVals.ybc.length > 0) {
+        analytics.blockingContext.runBlocking = {
+          score: percentileScale(blockingVals.ybc, oppDefense.ybcPerAttAllowed),
+          ybcPerAtt: oppDefense.ybcPerAttAllowed
+        };
+      }
+      
+      if (oppDefense.pressureRateGenerated != null && blockingVals.pressure.length > 0) {
+        // For pressure rate, LOWER is better, so invert the percentile
+        const rawScore = percentileScale(blockingVals.pressure, oppDefense.pressureRateGenerated);
+        analytics.blockingContext.passProtection = {
+          score: 100 - rawScore, // Invert so lower pressure = higher score
+          pressureRate: oppDefense.pressureRateGenerated
+        };
+      }
+    }
+    
+    // Only add analytics if we have at least one category
+    if (Object.keys(analytics).length > 0) {
+      enhanced.analytics = analytics;
+    }
+    
+    return enhanced;
+  });
+  
+  return enhanced;
 }

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getWeekly, getROS } from './sos.controller';
+import { getWeekly, getROS, getWeeklyV3 } from './sos.controller';
 import { SOSDashboardController } from './dashboard.controller';
 
 const router = Router();
@@ -7,6 +7,9 @@ const router = Router();
 // Basic SOS endpoints
 router.get('/weekly', getWeekly); // /api/sos/weekly?position=RB&week=1
 router.get('/ros', getROS);       // /api/sos/ros?position=RB&startWeek=1&window=5
+
+// Enhanced team analytics endpoint
+router.get('/weekly/v3', getWeeklyV3); // /api/sos/weekly/v3?position=WR&week=4&analytics=true
 
 // Dashboard API endpoints
 router.get('/dashboard/preferences', SOSDashboardController.getPreferences);
