@@ -55,7 +55,8 @@ export async function rankDefenses(season: number, week: number): Promise<Defens
   // Rank each metric (lower EPA allowed = better defense)
   const passRanks = rankMetric(teams.map(t => t.passEpaAllowed), true); // true = lower is better
   const rushRanks = rankMetric(teams.map(t => t.rushEpaAllowed), true);
-  const pressureRanks = rankMetric(teams.map(t => t.pressureRate), false); // higher pressure = better
+  // Invert pressure rate so lower = better (for consistent scoring)
+  const pressureRanks = rankMetric(teams.map(t => -t.pressureRate), true);
 
   // Combine scores with weights
   const rankings = teams.map((t, i) => ({

@@ -19,13 +19,15 @@ export default function SOSPage() {
   const [position, setPosition] = useState<'RB'|'WR'|'QB'|'TE'>('RB');
   const [week, setWeek] = useState<number>(1);
   const [season, setSeason] = useState<number>(2024);
-  const [mode, setMode] = useState<'fpa'|'ctx'>('fpa');
+  const [mode, setMode] = useState<'fpa'|'ctx'|'w5'>('w5');
   const [debug, setDebug] = useState<boolean>(false);
   const [view, setView] = useState<ViewMode>("table");
   const [items, setItems] = useState<WeeklyItem[]>([]);
 
   useEffect(() => {
-    const url = `/api/sos/weekly?position=${position}&week=${week}&season=${season}&mode=${mode}${debug ? '&debug=1' : ''}&samples=1`;
+    const url = mode === 'w5' 
+      ? `/api/sos/week5?position=${position}&season=${season}`
+      : `/api/sos/weekly?position=${position}&week=${week}&season=${season}&mode=${mode}${debug ? '&debug=1' : ''}&samples=1`;
     fetch(url)
       .then(r => r.json())
       .then(d => setItems(d.items || []))
@@ -90,7 +92,7 @@ export default function SOSPage() {
             <div className="w-24 text-center">2024: Complete season | 2025: Live updates</div>
             <div className="w-16 text-center">Fantasy relevant</div>
             <div className="w-24 text-center">Regular season</div>
-            <div className="w-32 text-center">FPA: Fantasy points allowed | CTX: Advanced metrics</div>
+            <div className="w-32 text-center">W5: Week 5 rankings | FPA: Points allowed | CTX: Advanced</div>
             <div className="w-16 text-center">Component breakdown</div>
             <div className="w-20 text-center">Table or chart</div>
           </div>
@@ -106,6 +108,7 @@ export default function SOSPage() {
             </select>
             <input className="border rounded px-2 py-1 w-24" type="number" value={week} min={1} max={season === 2024 ? 17 : 18} onChange={e => setWeek(parseInt(e.target.value || '1',10))} />
             <select className="border rounded px-2 py-1 w-32" value={mode} onChange={e => setMode(e.target.value as any)}>
+              <option value="w5">Week 5 (NEW)</option>
               <option value="fpa">FPA (v1)</option>
               <option value="ctx">Contextual (v2)</option>
             </select>
@@ -124,7 +127,7 @@ export default function SOSPage() {
         <div className="lg:hidden space-y-3">
           <div className="text-center mb-3">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              FPA: Fantasy points allowed | CTX: Advanced metrics
+              W5: Week 5 EPA-based | FPA: Points allowed | CTX: Advanced metrics
             </p>
           </div>
           
@@ -154,6 +157,7 @@ export default function SOSPage() {
             <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Mode</label>
               <select className="w-full border rounded px-2 py-1 text-sm" value={mode} onChange={e => setMode(e.target.value as any)}>
+                <option value="w5">W5</option>
                 <option value="fpa">FPA</option>
                 <option value="ctx">CTX</option>
               </select>
