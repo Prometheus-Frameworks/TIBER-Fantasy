@@ -273,4 +273,43 @@ router.get('/metrics', (req, res) => {
   });
 });
 
+// GET /api/stats/2024/comparison - Worthy vs Allen comparison
+router.get('/comparison', async (req, res) => {
+  try {
+    const results = await db.execute(sql`
+      SELECT 
+        player_name,
+        position,
+        team,
+        games,
+        targets,
+        receptions,
+        rec_yards,
+        rec_tds,
+        routes,
+        target_share,
+        adot,
+        yprr,
+        racr,
+        wopr,
+        fpts_ppr,
+        ROUND(CAST(targets AS NUMERIC) / NULLIF(games, 0), 1) AS targets_per_game,
+        ROUND(CAST(rec_yards AS NUMERIC) / NULLIF(games, 0), 1) AS yards_per_game,
+        ROUND(CAST(routes AS NUMERIC) / NULLIF(games, 0), 1) AS routes_per_game,
+        ROUND(CAST(fpts_ppr AS NUMERIC) / NULLIF(games, 0), 1) AS ppg_half_ppr
+      FROM player_season_2024
+      WHERE player_id IN ('00-0039894', '00-0030279')
+      ORDER BY player_name
+    `);
+
+    res.json({
+      success: true,
+      players: results.rows
+    });
+  } catch (error) {
+    console.error('Comparison API Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

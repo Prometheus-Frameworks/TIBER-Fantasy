@@ -133,6 +133,7 @@ import LiveTierTraining from "@/pages/consensus/LiveTierTraining";
 import StartSit from "@/pages/StartSit";
 import Advice from "@/pages/Advice";
 import PlayerRankings from "@/pages/PlayerRankings";
+import PlayerComparison from "@/pages/PlayerComparison";
 
 function Router() {
   return (
@@ -149,6 +150,9 @@ function Router() {
       <Route path="/dynasty-values" component={DynastyValuesPage} />
       {/* Player Rankings - Primary Route */}
       <Route path="/player-rankings" component={PlayerRankings} />
+      
+      {/* Player Comparison */}
+      <Route path="/player-comparison" component={PlayerComparison} />
       
       {/* DEPRECATED: Player Evaluation - Redirects to Player Rankings for backward compatibility */}
       {/* TODO: Remove in future version after transition period */}
