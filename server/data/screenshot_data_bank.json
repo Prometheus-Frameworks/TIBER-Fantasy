@@ -1,7 +1,7 @@
 {
   "collection_date": "2025-10-01",
   "total_screenshots": 10,
-  "received_count": 1,
+  "received_count": 2,
   "purpose": "Data points from screenshots to implement in On The Clock platform",
   "screenshots": {
     "screenshot_1": {
@@ -39,7 +39,44 @@
       "raw_data": "Offense,OFF_EPA_per_DB,OFF_DB_Success_Rate,Defense,DEF_DB_EPA,DEF_DB_Success_Rate\nARI,0.109,45.90%,TEN,0.185,49.00%\nBAL,0.183,49.60%,HOU,-0.083,42.30%\nBUF,0.357,51.00%,NE,0.191,53.40%\nCAR,0.004,47.50%,MIA,0.387,57.90%\nCIN,-0.289,40.10%,DET,0.023,40.10%\nCLE,-0.272,36.30%,MIN,-0.272,43.50%\nDAL,0.202,48.20%,NYJ,0.342,46.70%\nDEN,0.106,42.30%,PHI,0.028,41.60%\nDET,0.288,53.00%,CIN,0.124,48.80%\nHOU,-0.040,43.90%,BAL,0.174,47.50%\nIND,0.239,54.50%,LV,0.164,47.70%\nJAX,0.060,46.20%,KC,0.032,45.40%\nKC,0.202,48.00%,JAX,-0.097,44.80%\nLAC,0.097,47.80%,WAS,0.219,48.00%\nLAR,0.150,47.10%,SF,0.048,46.50%\nLV,-0.023,43.20%,IND,0.040,46.50%\nMIA,0.019,43.80%,CAR,0.047,44.40%\nMIN,-0.113,44.10%,CLE,0.069,46.20%\nNE,0.301,52.80%,BUF,-0.023,40.50%\nNO,-0.052,46.60%,NYG,0.070,47.20%\nNYG,0.009,42.80%,NO,0.027,52.60%\nNYJ,0.068,50.00%,DAL,0.442,54.40%\nPHI,0.040,45.70%,DEN,-0.075,38.30%\nSEA,0.237,54.80%,TB,0.100,50.30%\nSF,0.140,45.20%,LAR,-0.115,43.10%\nTB,0.170,45.70%,SEA,0.039,45.40%\nTEN,-0.286,35.20%,ARI,0.108,52.90%\nWAS,0.088,46.80%,LAC,-0.096,36.70%"
     },
     "screenshot_2": {
-      "status": "pending"
+      "name": "Team Rushing EPA Metrics - Offense vs Defense",
+      "description": "Team-level rushing EPA per rush and success rates for both offensive and defensive units",
+      "data_type": "team_rushing_epa",
+      "fields": [
+        "Offense (team abbr)",
+        "OFF_Rush_EPA (offensive EPA per rush)",
+        "OFF_Rush_Success_Rate (offensive rush success rate %)",
+        "Defense (opponent team abbr)",
+        "DEF_Rush_EPA (defensive rushing EPA allowed)",
+        "DEF_Rush_Success_Rate (defensive rush success rate allowed %)"
+      ],
+      "sample_data": {
+        "BUF": {
+          "offense": {
+            "rush_epa": 0.091,
+            "success_rate": 0.474
+          }
+        },
+        "NE": {
+          "defense": {
+            "rush_epa_allowed": -0.179,
+            "success_rate_allowed": 0.469
+          }
+        }
+      },
+      "insights": [
+        "Best rushing offenses: BUF (0.091), WAS (0.089), DAL (0.052)",
+        "Worst rushing offenses: NE (-0.313), TB (-0.167), SEA (-0.154)",
+        "Best run defenses: TB (-0.318), LV (-0.277), DET (-0.228)",
+        "Worst run defenses: NO (0.160), TEN (0.118), BAL (0.108)"
+      ],
+      "use_cases": [
+        "RB value context (quality of offensive line and scheme)",
+        "Rushing matchup analysis (opponent run defense quality)",
+        "Game script predictions (teams that can run effectively control clock)",
+        "Dynasty RB evaluation (offensive environment matters more for RBs than any position)"
+      ],
+      "raw_data": "Offense,OFF_Rush_EPA,OFF_Rush_Success_Rate,Defense,DEF_Rush_EPA,DEF_Rush_Success_Rate\nARI,-0.131,30.10%,TEN,0.118,41.80%\nBAL,0.032,39.20%,HOU,-0.041,44.60%\nBUF,0.091,47.40%,NE,-0.179,46.90%\nCAR,-0.100,43.00%,MIA,-0.019,45.90%\nCIN,-0.098,37.70%,DET,-0.228,40.60%\nCLE,-0.026,32.20%,MIN,-0.016,42.60%\nDAL,0.052,52.00%,NYJ,-0.123,43.70%\nDEN,-0.049,41.40%,PHI,-0.134,47.90%\nDET,-0.028,43.00%,CIN,-0.054,47.90%\nHOU,-0.116,28.00%,BAL,0.108,47.30%\nIND,0.045,43.50%,LV,-0.277,35.70%\nJAX,-0.007,42.70%,KC,-0.131,52.80%\nKC,-0.053,43.50%,JAX,-0.052,28.60%\nLAC,-0.049,39.00%,WAS,-0.134,42.10%\nLAR,-0.143,51.00%,SF,-0.134,41.10%\nLV,-0.036,39.70%,IND,-0.014,44.40%\nMIA,-0.014,38.50%,CAR,-0.014,39.00%\nMIN,-0.033,45.10%,CLE,0.063,32.00%\nNE,-0.313,29.50%,BUF,-0.069,40.50%\nNO,-0.108,30.80%,NYG,-0.167,50.00%\nNYG,-0.113,40.80%,NO,0.160,47.30%\nNYJ,-0.125,45.70%,DAL,-0.108,44.80%\nPHI,-0.054,42.00%,DEN,-0.134,38.30%\nSEA,-0.154,35.10%,TB,-0.318,31.00%\nSF,-0.137,35.00%,LAR,-0.241,34.40%\nTB,-0.167,35.20%,SEA,-0.241,34.40%\nTEN,-0.137,35.20%,ARI,-0.241,34.40%\nWAS,0.089,45.70%,LAC,-0.121,37.90%"
     },
     "screenshot_3": {
       "status": "pending"
