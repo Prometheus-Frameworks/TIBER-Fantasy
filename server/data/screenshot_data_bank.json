@@ -1,7 +1,7 @@
 {
   "collection_date": "2025-10-01",
   "total_screenshots": 10,
-  "received_count": 6,
+  "received_count": 7,
   "purpose": "Data points from screenshots to implement in On The Clock platform",
   "screenshots": {
     "screenshot_1": {
@@ -245,7 +245,41 @@
       "raw_data": "Offense,Defense,OFF_ZONE_ATT_pct,OFF_ZONE_YPC,OFF_ZONE_SR,DEF_ZONE_YPC,DEF_ZONE_SR\nSF,LAR,63.2,3.45,44.8,4.19,35.8\nLV,IND,60.8,5.37,41.9,5.24,54.8\nSEA,TB,60.2,3.20,39.2,3.77,43.2\nNYJ,DAL,59.5,4.27,47.0,3.49,54.7\nNYG,MIA,58.4,3.18,37.2,3.43,48.9\nMIA,CAR,56.6,4.15,46.8,6.05,41.0\nDET,CIN,53.8,4.17,37.5,3.62,50.9\nBAL,HOU,51.2,6.98,40.9,3.84,56.3\nLAR,SF,51.1,4.56,40.0,4.13,53.6\nCAR,MIA,49.0,3.32,40.0,4.43,46.7\nMIN,CLE,47.9,4.43,42.5,4.01,41.0\nJAX,KC,46.0,4.43,52.8,4.86,37.6\nNO,NYG,46.0,4.43,52.8,4.86,37.6\nPHI,DEN,46.0,4.43,52.8,4.86,37.6\nCIN,DET,42.1,3.22,43.8,3.32,34.2\nDAL,NYJ,41.7,2.57,40.0,4.03,46.6\nIND,LV,41.3,3.62,34.0,4.77,48.6\nTEN,ARI,40.8,2.61,29.0,3.35,40.9\nBUF,NE,39.8,5.81,64.2,3.25,39.3\nKC,JAX,39.8,3.16,58.5,3.23,38.6\nHOU,BAL,38.7,4.61,40.0,3.85,56.3\nCLE,MIN,35.9,2.91,36.4,4.17,54.8\nDEN,PHI,32.7,2.57,35.7,3.97,42.2\nLAC,WAS,30.4,2.57,35.7,3.97,42.2\nTB,SEA,29.2,2.57,35.7,3.97,42.2\nWAS,LAC,25.7,6.15,59.3,3.88,46.5\nARI,TEN,21.3,2.55,25.0,3.55,40.9"
     },
     "screenshot_7": {
-      "status": "pending"
+      "name": "Pass Blocking & Pass Rush Matchups - Pressure Rates",
+      "description": "Team-level pass protection quality (pressure rate allowed) and pass rush quality (pressure rate generated)",
+      "data_type": "team_pass_protection_matchups",
+      "fields": [
+        "Offense (team abbr)",
+        "Defense (opponent team abbr)",
+        "OFF_Press_Rate_Allowed (offensive pressure rate allowed % - pass protection quality, lower is better)",
+        "DEF_Pressure_Rate (defensive pressure rate generated % - pass rush quality, higher is better)"
+      ],
+      "sample_data": {
+        "JAX": {
+          "offense": {
+            "pressure_rate_allowed": 17.1
+          }
+        },
+        "LAC": {
+          "defense": {
+            "pressure_rate_generated": 48.2
+          }
+        }
+      },
+      "insights": [
+        "Best pass protection: JAX (17.1%!), DEN (31.1%), MIA (31.1%), SF (32.9%)",
+        "Worst pass protection: NYJ (55.1%!), PHI (50.0%), CIN (44.9%), NYG (44.9%)",
+        "Best pass rush: LAC (48.2%), NE (47.2%), JAX (46.5%), SEA (46.5%)",
+        "Worst pass rush: NO (28.7%), LAR (29.9%), MIA (30.2%), LV (31.6%)"
+      ],
+      "use_cases": [
+        "QB value context (pass protection quality is critical for QB success and injury risk)",
+        "WR/TE value context (clean pockets = more time for routes to develop = more targets)",
+        "Matchup analysis (target QBs/pass catchers facing weak pass rushes)",
+        "Dynasty QB evaluation (elite O-line = career longevity and sustained production)",
+        "Injury risk assessment (QBs behind bad O-lines have higher injury risk)"
+      ],
+      "raw_data": "Offense,Defense,OFF_Press_Rate_Allowed,DEF_Pressure_Rate\nARI,TEN,35.7,34.6\nBAL,HOU,43.6,32.7\nBUF,NE,34.3,33.3\nCAR,MIA,37.8,33.8\nCIN,DET,44.9,38.8\nCLE,MIN,41.7,45.5\nDAL,NYJ,38.3,32.8\nDEN,PHI,31.1,42.8\nDET,CIN,37.5,32.1\nHOU,BAL,41.0,34.9\nIND,LV,36.1,39.6\nJAX,KC,17.1,46.5\nKC,JAX,39.2,38.0\nLAC,WAS,40.6,48.2\nLAR,SF,38.4,29.9\nLV,IND,41.0,31.6\nMIA,CAR,31.1,30.2\nMIN,CLE,38.7,45.4\nNE,BUF,40.1,47.2\nNO,NYG,39.6,37.4\nNYG,NO,44.9,28.7\nNYJ,DAL,55.1,42.5\nPHI,DEN,50.0,44.2\nSEA,TB,36.0,46.5\nSF,LAR,32.9,45.6\nTB,SEA,39.6,40.2\nTEN,ARI,45.3,36.7\nWAS,LAC,39.4,41.4"
     },
     "screenshot_8": {
       "status": "pending"
