@@ -1,7 +1,7 @@
 {
   "collection_date": "2025-10-01",
   "total_screenshots": 10,
-  "received_count": 8,
+  "received_count": 9,
   "purpose": "Data points from screenshots to implement in On The Clock platform",
   "screenshots": {
     "screenshot_1": {
@@ -324,7 +324,51 @@
       "raw_data": "Offense,YPA,CPOE,Defense,YPA_Allowed,CPOE_Allowed\nARI,5.71,2.5,TEN,7.42,5.4\nBAL,8.45,8.5,HOU,5.94,-2.9\nBUF,8.10,6.5,NE,8.19,6.6\nCAR,5.41,0.3,MIA,8.79,4.6\nCIN,5.79,-4.7,DET,7.58,3.5\nCLE,5.09,0.6,MIN,6.52,-2.5\nDAL,6.78,6.4,NYJ,7.51,0.9\nDEN,6.28,-1.2,PHI,6.28,-2.2\nDET,7.61,7.9,CIN,7.12,4.7\nHOU,7.11,-1.3,BAL,6.82,6.6\nIND,8.91,5.5,LV,7.24,7.6\nJAX,5.87,1.1,KC,6.43,5.6\nKC,6.61,2.6,JAX,6.31,-0.9\nLAC,7.13,3.7,WAS,8.63,3.5\nLAR,8.13,4.3,SF,5.61,3.1\nLV,7.46,-0.3,IND,6.76,0.5\nMIA,6.43,-1.2,CAR,6.85,4.3\nMIN,7.68,6.5,CLE,6.63,3.3\nNE,7.97,9.4,BUF,5.48,2.7\nNO,5.13,2.3,NYG,6.38,4.2\nNYG,6.85,2.0,NO,7.96,5.7\nNYJ,6.77,8.5,DAL,9.16,13.8\nPHI,6.03,4.1,DEN,6.37,-3.6\nSEA,8.93,9.1,TB,6.60,-0.8\nSF,7.51,6.2,LAR,6.81,0.7\nTB,6.50,-2.1,SEA,5.99,0.3\nTEN,4.91,-7.7,ARI,6.36,3.7\nWAS,6.63,3.9,LAC,5.55,-5.6"
     },
     "screenshot_9": {
-      "status": "pending"
+      "name": "Receiver Matchups By Alignment - Fantasy Points by Position",
+      "description": "Team-level fantasy production by receiver alignment (outside wide, slot, tight end) for both offensive production and defensive allowance",
+      "data_type": "team_receiver_alignment_matchups",
+      "fields": [
+        "Offense (team abbr)",
+        "Defense (opponent team abbr)",
+        "OFF_OutWide_FPG (offensive outside wide receiver fantasy points per game)",
+        "DEF_OutWide_FPG (defensive outside wide receiver fantasy points allowed per game)",
+        "OFF_Slot_FPG (offensive slot receiver fantasy points per game)",
+        "DEF_Slot_FPG (defensive slot receiver fantasy points allowed per game)",
+        "OFF_TE_FPG (offensive tight end fantasy points per game)",
+        "DEF_TE_FPG (defensive tight end fantasy points allowed per game)"
+      ],
+      "sample_data": {
+        "BAL": {
+          "offense": {
+            "outside_wide_fpg": 16.5,
+            "slot_fpg": 7.2,
+            "te_fpg": 7.9
+          }
+        },
+        "DAL": {
+          "defense": {
+            "outside_wide_fpg_allowed": 19.6,
+            "slot_fpg_allowed": 5.7,
+            "te_fpg_allowed": 9.6
+          }
+        }
+      },
+      "insights": [
+        "Best outside WR production: BAL (16.5), TB (14.6), DAL (15.9), LAC (15.0)",
+        "Worst outside WR defenses: DAL (19.6 FPG!), JAX (14.2), NO (13.8), LV (13.6)",
+        "Best slot WR production: DET (12.3), HOU (12.3 allowed), BUF (11.3), KC (11.7)",
+        "Worst slot WR defenses: HOU (12.3), DET (9.2), CIN (8.3)",
+        "Best TE production: SF (15.5), BUF (15.6), DET (14.0), LAC (13.1)",
+        "Worst TE defenses: HOU (14.7), SEA (14.3), CIN (13.5), DAL (12.5)"
+      ],
+      "use_cases": [
+        "WR/TE role-based matchup analysis (outside WR vs slot WR vs TE)",
+        "Dynasty WR value by role (outside WRs = higher volume, slot WRs = safer floor)",
+        "Weekly lineup decisions (target slot WRs vs weak slot defenses)",
+        "Trade analysis (identify WRs changing roles = value shift)",
+        "Rookie WR projection (landing spot role matters - outside vs slot)"
+      ],
+      "raw_data": "Offense,Defense,OFF_OutWide_FPG,DEF_OutWide_FPG,OFF_Slot_FPG,DEF_Slot_FPG,OFF_TE_FPG,DEF_TE_FPG\nARI,TEN,5.1,10.3,8.5,7.2,12.5,11.2\nBAL,HOU,16.5,8.8,7.2,6.5,7.9,8.1\nBUF,NE,9.2,11.1,11.3,6.2,15.6,11.2\nCAR,MIA,6.7,9.6,10.6,10.5,6.8,10.3\nCIN,DET,9.4,11.4,3.3,9.2,6.8,10.3\nCLE,MIN,6.2,6.8,7.1,4.9,10.1,7.1\nDAL,NYJ,15.9,9.1,9.4,8.2,10.7,12.5\nDEN,PHI,9.7,11.3,9.5,4.9,11.7,6.3\nDET,CIN,10.6,11.0,12.3,8.3,14.0,13.5\nHOU,BAL,8.8,10.8,5.3,12.3,7.9,14.7\nIND,LV,12.2,13.1,8.1,7.3,9.2,9.3\nJAX,KC,11.1,8.1,5.0,6.8,9.1,8.2\nKC,JAX,10.7,14.2,11.7,4.1,12.9,7.8\nLAC,WAS,15.0,11.0,10.8,7.2,13.1,10.8\nLAR,SF,12.9,7.1,8.9,7.5,13.7,12.3\nLV,IND,10.0,13.6,6.2,8.6,9.3,10.7\nMIA,CAR,12.4,6.1,9.1,7.3,9.2,10.2\nMIN,CLE,7.0,10.6,7.3,6.1,11.6,10.2\nNE,BUF,9.1,10.5,5.4,4.9,13.0,6.1\nNO,NYG,9.1,12.9,5.7,4.6,12.0,9.6\nNYG,NO,10.4,13.8,5.7,4.6,7.8,9.6\nNYJ,DAL,9.1,19.6,6.2,5.7,8.5,9.6\nPHI,DEN,6.7,8.2,8.1,5.8,11.1,10.5\nSEA,TB,12.0,7.7,3.4,8.7,9.9,11.5\nSF,LAR,8.1,10.5,7.7,8.6,15.5,10.5\nTB,SEA,14.6,4.9,5.3,5.7,5.6,14.3\nTEN,ARI,8.7,10.2,9.9,5.7,7.4,12.8\nWAS,LAC,11.4,5.6,7.8,8.1,10.0,10.6"
     },
     "screenshot_10": {
       "status": "pending"
