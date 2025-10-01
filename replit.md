@@ -34,6 +34,15 @@ Intelligence Feed System:
 *   **Rankings & VORP:** A comprehensive Rankings Hub, enhanced VORP system with dynasty mode, age penalties, and FLEX allocation, and an Enhanced ECR Comparison System for signal-aware analysis.
 *   **Rookie & Player Analysis:** Dedicated Rookie Evaluation System with a 4-component insulation boost and data pipeline, Target Competition Analysis (TCIP), Player Usage Context Module, and a Stud Detection Module.
 *   **EPA Analytics:** Advanced efficiency metrics via nfl-data-py play-by-play data processing: EPA per play/target, Air EPA vs YAC EPA separation (route-running vs after-catch ability), success rates, YAC over expected, and team offensive/defensive EPA context rankings. Python-based EPA processor (`epaProcessor.py`) analyzes 35k+ plays to generate efficiency insights for QB, RB, WR, TE positions.
+*   **SOS Team Analytics (October 2025):** Comprehensive strength of schedule system with position-specific matchup intelligence powered by real team analytics data:
+    - **Database Architecture**: Four PostgreSQL tables (team_epa, team_blocking_context, team_coverage_matchups, team_alignment_matchups) storing 28 NFL teams' analytics from screenshot datasets
+    - **Position-Specific SOS**: SOSv3 function provides tailored matchup breakdowns by position (RB/WR/QB/TE) with alignment-aware and coverage-aware scoring
+    - **Alignment Matchups**: Outside WR vs Slot vs TE with FPG allowed and matchup scores for WR/TE positions
+    - **Coverage Breakdowns**: Zone/Man/2-High/1-High coverage with FPDB allowed, defensive usage rates, and matchup scores for QB/WR/TE positions  
+    - **Blocking Context**: Run blocking (YBC per attempt) and pass protection (pressure rate inverted) for RB/QB positions
+    - **API Endpoint**: `/api/sos/weekly/v3` with position, week, season filtering returning enriched analytics
+    - **UI Components**: SOSAnalyticsPage at `/sos/analytics` with React Query data fetching, position filters, color-coded matchup cards, null-safe rendering
+    - **Home Page Integration**: Featured section showcasing SOS capabilities with EPA, alignment, coverage, and blocking analytics cards
 *   **Data Integration & Sync:** Implements Sleeper Sync with cache fallback, a Canonical Player Pool System, a Roster Shift Listener for transaction monitoring, and a Roster Sync System merging Sleeper and NFL data.
 *   **Live Data & Processing:** Features a Live Data Integration Pipeline with multi-source data capture (MySportsFeeds, SportsDataIO, Sleeper API), a Hot List Player Extraction System, and a Snap Counts Knowledge System.
 *   **Backend Services:** Includes a Backend Spine with Logs & Projections Service, a multi-format Ratings Engine, and a dedicated OTC Power Rankings Service microservice.
