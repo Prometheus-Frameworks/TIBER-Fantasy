@@ -1,7 +1,7 @@
 {
   "collection_date": "2025-10-01",
   "total_screenshots": 10,
-  "received_count": 7,
+  "received_count": 8,
   "purpose": "Data points from screenshots to implement in On The Clock platform",
   "screenshots": {
     "screenshot_1": {
@@ -282,7 +282,46 @@
       "raw_data": "Offense,Defense,OFF_Press_Rate_Allowed,DEF_Pressure_Rate\nARI,TEN,35.7,34.6\nBAL,HOU,43.6,32.7\nBUF,NE,34.3,33.3\nCAR,MIA,37.8,33.8\nCIN,DET,44.9,38.8\nCLE,MIN,41.7,45.5\nDAL,NYJ,38.3,32.8\nDEN,PHI,31.1,42.8\nDET,CIN,37.5,32.1\nHOU,BAL,41.0,34.9\nIND,LV,36.1,39.6\nJAX,KC,17.1,46.5\nKC,JAX,39.2,38.0\nLAC,WAS,40.6,48.2\nLAR,SF,38.4,29.9\nLV,IND,41.0,31.6\nMIA,CAR,31.1,30.2\nMIN,CLE,38.7,45.4\nNE,BUF,40.1,47.2\nNO,NYG,39.6,37.4\nNYG,NO,44.9,28.7\nNYJ,DAL,55.1,42.5\nPHI,DEN,50.0,44.2\nSEA,TB,36.0,46.5\nSF,LAR,32.9,45.6\nTB,SEA,39.6,40.2\nTEN,ARI,45.3,36.7\nWAS,LAC,39.4,41.4"
     },
     "screenshot_8": {
-      "status": "pending"
+      "name": "Passing Efficiency - YPA & CPOE",
+      "description": "Team-level passing efficiency metrics showing yards per attempt and completion percentage over expected for both offensive and defensive units",
+      "data_type": "team_passing_efficiency",
+      "fields": [
+        "Offense (team abbr)",
+        "YPA (offensive yards per attempt - passing efficiency)",
+        "CPOE (offensive completion percentage over expected - QB accuracy vs difficulty)",
+        "Defense (opponent team abbr)",
+        "YPA_Allowed (defensive yards per attempt allowed)",
+        "CPOE_Allowed (defensive completion percentage over expected allowed)"
+      ],
+      "sample_data": {
+        "SEA": {
+          "offense": {
+            "ypa": 8.93,
+            "cpoe": 9.1
+          }
+        },
+        "DAL": {
+          "defense": {
+            "ypa_allowed": 9.16,
+            "cpoe_allowed": 13.8
+          }
+        }
+      },
+      "insights": [
+        "Best passing offenses (YPA): IND (8.91), SEA (8.93), BAL (8.45), LAR (8.13)",
+        "Best QB accuracy (CPOE): NE (9.4%), SEA (9.1%), NYJ (8.5%), BAL (8.5%)",
+        "Worst passing offenses: TEN (4.91 YPA, -7.7% CPOE!), CLE (5.09 YPA), NO (5.13 YPA)",
+        "Worst pass defenses: DAL (9.16 YPA, 13.8% CPOE!), MIA (8.79 YPA), WAS (8.63 YPA)",
+        "Best pass defenses: BUF (5.48 YPA), LAC (5.55 YPA), SF (5.61 YPA)"
+      ],
+      "use_cases": [
+        "QB dynasty value assessment (CPOE shows true accuracy vs offensive system)",
+        "WR/TE value context (high YPA offenses = more deep threat opportunities)",
+        "Matchup analysis (target pass catchers facing weak pass defenses)",
+        "Buy-low identification (good CPOE with low YPA = QB hindered by scheme/weapons)",
+        "Sell-high identification (high YPA with low CPOE = unsustainable efficiency)"
+      ],
+      "raw_data": "Offense,YPA,CPOE,Defense,YPA_Allowed,CPOE_Allowed\nARI,5.71,2.5,TEN,7.42,5.4\nBAL,8.45,8.5,HOU,5.94,-2.9\nBUF,8.10,6.5,NE,8.19,6.6\nCAR,5.41,0.3,MIA,8.79,4.6\nCIN,5.79,-4.7,DET,7.58,3.5\nCLE,5.09,0.6,MIN,6.52,-2.5\nDAL,6.78,6.4,NYJ,7.51,0.9\nDEN,6.28,-1.2,PHI,6.28,-2.2\nDET,7.61,7.9,CIN,7.12,4.7\nHOU,7.11,-1.3,BAL,6.82,6.6\nIND,8.91,5.5,LV,7.24,7.6\nJAX,5.87,1.1,KC,6.43,5.6\nKC,6.61,2.6,JAX,6.31,-0.9\nLAC,7.13,3.7,WAS,8.63,3.5\nLAR,8.13,4.3,SF,5.61,3.1\nLV,7.46,-0.3,IND,6.76,0.5\nMIA,6.43,-1.2,CAR,6.85,4.3\nMIN,7.68,6.5,CLE,6.63,3.3\nNE,7.97,9.4,BUF,5.48,2.7\nNO,5.13,2.3,NYG,6.38,4.2\nNYG,6.85,2.0,NO,7.96,5.7\nNYJ,6.77,8.5,DAL,9.16,13.8\nPHI,6.03,4.1,DEN,6.37,-3.6\nSEA,8.93,9.1,TB,6.60,-0.8\nSF,7.51,6.2,LAR,6.81,0.7\nTB,6.50,-2.1,SEA,5.99,0.3\nTEN,4.91,-7.7,ARI,6.36,3.7\nWAS,6.63,3.9,LAC,5.55,-5.6"
     },
     "screenshot_9": {
       "status": "pending"
