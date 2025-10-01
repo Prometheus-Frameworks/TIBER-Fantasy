@@ -1,7 +1,7 @@
 {
   "collection_date": "2025-10-01",
   "total_screenshots": 10,
-  "received_count": 9,
+  "received_count": 10,
   "purpose": "Data points from screenshots to implement in On The Clock platform",
   "screenshots": {
     "screenshot_1": {
@@ -371,7 +371,59 @@
       "raw_data": "Offense,Defense,OFF_OutWide_FPG,DEF_OutWide_FPG,OFF_Slot_FPG,DEF_Slot_FPG,OFF_TE_FPG,DEF_TE_FPG\nARI,TEN,5.1,10.3,8.5,7.2,12.5,11.2\nBAL,HOU,16.5,8.8,7.2,6.5,7.9,8.1\nBUF,NE,9.2,11.1,11.3,6.2,15.6,11.2\nCAR,MIA,6.7,9.6,10.6,10.5,6.8,10.3\nCIN,DET,9.4,11.4,3.3,9.2,6.8,10.3\nCLE,MIN,6.2,6.8,7.1,4.9,10.1,7.1\nDAL,NYJ,15.9,9.1,9.4,8.2,10.7,12.5\nDEN,PHI,9.7,11.3,9.5,4.9,11.7,6.3\nDET,CIN,10.6,11.0,12.3,8.3,14.0,13.5\nHOU,BAL,8.8,10.8,5.3,12.3,7.9,14.7\nIND,LV,12.2,13.1,8.1,7.3,9.2,9.3\nJAX,KC,11.1,8.1,5.0,6.8,9.1,8.2\nKC,JAX,10.7,14.2,11.7,4.1,12.9,7.8\nLAC,WAS,15.0,11.0,10.8,7.2,13.1,10.8\nLAR,SF,12.9,7.1,8.9,7.5,13.7,12.3\nLV,IND,10.0,13.6,6.2,8.6,9.3,10.7\nMIA,CAR,12.4,6.1,9.1,7.3,9.2,10.2\nMIN,CLE,7.0,10.6,7.3,6.1,11.6,10.2\nNE,BUF,9.1,10.5,5.4,4.9,13.0,6.1\nNO,NYG,9.1,12.9,5.7,4.6,12.0,9.6\nNYG,NO,10.4,13.8,5.7,4.6,7.8,9.6\nNYJ,DAL,9.1,19.6,6.2,5.7,8.5,9.6\nPHI,DEN,6.7,8.2,8.1,5.8,11.1,10.5\nSEA,TB,12.0,7.7,3.4,8.7,9.9,11.5\nSF,LAR,8.1,10.5,7.7,8.6,15.5,10.5\nTB,SEA,14.6,4.9,5.3,5.7,5.6,14.3\nTEN,ARI,8.7,10.2,9.9,5.7,7.4,12.8\nWAS,LAC,11.4,5.6,7.8,8.1,10.0,10.6"
     },
     "screenshot_10": {
-      "status": "pending"
+      "name": "Receiver Matchups By Coverage - Fantasy Points vs Coverage Types",
+      "description": "Team-level fantasy production by defensive coverage type (zone, two-high safety, man, one-high safety) showing offensive efficiency and defensive usage rates",
+      "data_type": "team_coverage_matchups",
+      "fields": [
+        "Offense (team abbr)",
+        "Defense (opponent team abbr)",
+        "OFF_ZONE_FPDB (offensive fantasy points per dropback vs zone coverage)",
+        "DEF_ZONE_PCT (defensive zone coverage usage percentage)",
+        "ZONE_FPDB (zone coverage fantasy points per dropback allowed)",
+        "OFF_2H_FPDB (offensive fantasy points per dropback vs two-high safety)",
+        "DEF_2HIGH_PCT (defensive two-high safety usage percentage)",
+        "2H_FPDB (two-high safety fantasy points per dropback allowed)",
+        "OFF_MAN_FPDB (offensive fantasy points per dropback vs man coverage)",
+        "DEF_MAN_PCT (defensive man coverage usage percentage)",
+        "MAN_FPDB (man coverage fantasy points per dropback allowed)",
+        "OFF_1H_FPDB (offensive fantasy points per dropback vs one-high safety)",
+        "DEF_1HIGH_PCT (defensive one-high safety usage percentage)",
+        "1H_FPDB (one-high safety fantasy points per dropback allowed)"
+      ],
+      "sample_data": {
+        "BUF": {
+          "offense": {
+            "zone_fpdb": 0.71,
+            "two_high_fpdb": 0.67,
+            "man_fpdb": 0.86,
+            "one_high_fpdb": 0.63
+          }
+        },
+        "DAL": {
+          "defense": {
+            "zone_pct": 87.6,
+            "two_high_pct": 54.5,
+            "man_pct": 29.1,
+            "one_high_pct": 45.5
+          }
+        }
+      },
+      "insights": [
+        "Best vs zone coverage: BUF (0.71), LAC (0.48), NO (0.47), WAS (0.47)",
+        "Best vs man coverage: BUF (0.86), BAL (0.73), SEA (0.74), LAC (0.72)",
+        "Most zone-heavy defenses: IND (93.3%!), NYJ (87.6%), NYG (82.7%), CLE (81.4%)",
+        "Most man-heavy defenses: DAL (33.7%), BUF (30.4%), DET (31.4%), LAC (31.2%)",
+        "Most two-high safety: MIN (58.2%), IND (61.3%), NO (59.8%), TEN (55.5%)",
+        "Best vs two-high: MIA (0.62), CAR (0.63), NYG (0.56), SEA (0.57)"
+      ],
+      "use_cases": [
+        "WR/QB matchup analysis by coverage tendency (zone beaters vs man beaters)",
+        "Dynasty WR value by skillset (man coverage = elite separation, zone = route running)",
+        "Weekly DFS lineup optimization (stack pass catchers vs favorable coverage)",
+        "Trade evaluation (WRs moving to teams that play more man/zone)",
+        "Rookie WR projection (landing spot coverage context matters for year 1 success)"
+      ],
+      "raw_data": "Offense,Defense,OFF_ZONE_FPDB,DEF_ZONE_PCT,ZONE_FPDB,OFF_2H_FPDB,DEF_2HIGH_PCT,2H_FPDB,OFF_MAN_FPDB,DEF_MAN_PCT,MAN_FPDB,OFF_1H_FPDB,DEF_1HIGH_PCT,1H_FPDB\nARI,TEN,0.33,77.2,0.34,0.53,53.7,0.53,0.61,20.6,0.77,0.41,46.3,0.37\nBAL,HOU,0.52,78.7,0.52,0.54,47.8,0.54,0.73,19.3,0.49,0.32,52.7,0.35\nBUF,NE,0.71,68.1,0.69,0.67,47.8,0.67,0.86,30.4,0.78,0.63,52.2,0.57\nCAR,MIA,0.28,76.2,0.28,0.63,46.6,0.63,0.61,19.3,0.51,0.39,52.9,0.44\nCIN,DET,0.16,58.6,0.16,0.48,45.6,0.48,0.47,16.4,0.53,0.29,54.4,0.26\nCLE,MIN,0.27,81.4,0.27,0.45,57.8,0.45,0.48,21.3,0.54,0.32,58.7,0.31\nDAL,NYJ,0.38,63.0,0.37,0.49,49.0,0.49,0.46,33.7,0.64,0.46,51.0,0.38\nDEN,PHI,0.31,73.3,0.31,0.46,49.0,0.46,0.29,29.0,0.45,0.33,51.0,0.37\nDET,CIN,0.35,63.4,0.35,0.54,36.4,0.54,0.44,31.4,0.52,0.54,63.6,0.56\nHOU,BAL,0.35,65.6,0.35,0.45,51.0,0.45,0.62,19.0,0.57,0.35,49.0,0.37\nIND,LV,0.45,93.3,0.45,0.31,61.3,0.31,0.67,29.2,0.57,0.36,58.7,0.33\nJAX,KC,0.36,72.7,0.36,0.47,51.8,0.47,0.50,29.1,0.47,0.42,52.7,0.43\nKC,JAX,0.38,71.3,0.38,0.52,49.1,0.52,0.51,28.2,0.52,0.41,50.9,0.41\nLAC,WAS,0.48,80.8,0.48,0.38,54.5,0.38,0.72,31.2,0.65,0.36,51.5,0.34\nLAR,SF,0.38,72.2,0.38,0.46,52.2,0.46,0.51,22.4,0.52,0.42,54.0,0.42\nLV,IND,0.43,71.5,0.42,0.43,52.5,0.43,0.53,25.1,0.53,0.43,52.5,0.41\nMIA,CAR,0.29,79.2,0.29,0.62,42.0,0.62,0.60,22.4,0.63,0.47,58.0,0.45\nMIN,CLE,0.41,68.2,0.40,0.50,58.2,0.50,0.52,21.1,0.72,0.54,61.7,0.54\nNE,BUF,0.27,70.1,0.27,0.50,49.4,0.50,0.38,27.0,0.52,0.29,50.6,0.31\nNO,NYG,0.47,74.6,0.46,0.44,59.8,0.44,0.62,17.3,0.55,0.36,50.2,0.34\nNYG,NO,0.27,82.7,0.26,0.56,51.0,0.55,0.49,21.6,0.43,0.27,49.0,0.28\nNYJ,DAL,0.39,87.6,0.39,0.56,54.5,0.56,0.63,29.1,0.72,0.27,45.5,0.27\nPHI,DEN,0.36,74.5,0.36,0.54,52.7,0.54,0.44,22.4,0.51,0.42,47.3,0.39\nSEA,TB,0.51,74.5,0.50,0.57,52.0,0.57,0.74,26.6,0.64,0.38,48.0,0.34\nSF,LAR,0.43,72.5,0.43,0.51,54.0,0.51,0.64,21.8,0.66,0.35,46.0,0.33\nTB,SEA,0.19,77.6,0.19,0.25,55.1,0.25,0.39,20.8,0.36,0.18,44.9,0.18\nTEN,ARI,0.42,71.3,0.42,0.43,55.5,0.43,0.38,20.2,0.43,0.43,44.5,0.44\nWAS,LAC,0.47,78.3,0.31,0.48,53.5,0.48,0.36,14.6,0.78,0.49,46.5,0.44"
     }
   },
   "implementation_notes": "Will design and build features after all 10 screenshots are collected"
