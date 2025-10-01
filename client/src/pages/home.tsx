@@ -2,7 +2,7 @@ import GlowCard from "@/components/GlowCard";
 import GlowCTA from "@/components/GlowCTA";
 import TiberChat from "@/components/TiberChat";
 import { Section } from "@/components/Section";
-import { Trophy, Compass, Users, Sparkles, Link2, Zap } from "lucide-react";
+import { Trophy, Compass, Users, Sparkles, Link2, Zap, BarChart3, Shield } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Home(){
@@ -60,6 +60,63 @@ export default function Home(){
                 <Link2 className="h-4 w-4" />
                 Connect Your League
               </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Featured Analytics - SOS Team Analytics */}
+      <Section 
+        title="🎯 Team Analytics & Matchup Intelligence" 
+        action={<span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">New</span>} 
+      />
+      <div className="mb-8">
+        <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 shadow-lg hover:shadow-xl transition-all duration-300 group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-100/50 to-indigo-100/50 rounded-full blur-2xl -z-10"></div>
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+              <BarChart3 className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Advanced SOS & Team Analytics</h3>
+              <p className="text-gray-600 mb-4">
+                Go beyond basic strength of schedule. Analyze position-specific matchups with alignment data (outside WR, slot, TE), coverage breakdowns (zone/man/2-high/1-high), and blocking context powered by EPA analytics.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div className="bg-white/60 rounded-lg p-3 border border-blue-100">
+                  <div className="text-xs text-blue-600 font-semibold mb-1">EPA Analytics</div>
+                  <div className="text-xs text-gray-600">Pass/Rush efficiency metrics</div>
+                </div>
+                <div className="bg-white/60 rounded-lg p-3 border border-blue-100">
+                  <div className="text-xs text-blue-600 font-semibold mb-1">Alignment</div>
+                  <div className="text-xs text-gray-600">Outside WR • Slot • TE</div>
+                </div>
+                <div className="bg-white/60 rounded-lg p-3 border border-blue-100">
+                  <div className="text-xs text-blue-600 font-semibold mb-1">Coverage</div>
+                  <div className="text-xs text-gray-600">Zone • Man • 2/1-High</div>
+                </div>
+                <div className="bg-white/60 rounded-lg p-3 border border-blue-100">
+                  <div className="text-xs text-blue-600 font-semibold mb-1">Blocking</div>
+                  <div className="text-xs text-gray-600">Run • Pass Protection</div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Link 
+                  href="/sos/analytics" 
+                  className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors group-hover:scale-105 transform"
+                  data-testid="link-sos-analytics"
+                >
+                  <Shield className="h-4 w-4" />
+                  Explore Team Analytics
+                </Link>
+                <Link 
+                  href="/sos" 
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-blue-300 text-blue-700 rounded-lg font-medium hover:bg-blue-50 transition-colors"
+                  data-testid="link-sos-page"
+                >
+                  View SOS Dashboard
+                </Link>
+              </div>
             </div>
           </div>
         </div>
