@@ -90,15 +90,15 @@ export default function PlayerComparison() {
               </div>
               <div>
                 <p className="text-muted-foreground">0.5 PPR PPG</p>
-                <p className="text-2xl font-bold">{worthy?.ppg_half_ppr?.toFixed(1) || '0.0'}</p>
+                <p className="text-2xl font-bold">{worthy?.ppg_half_ppr ? Number(worthy.ppg_half_ppr).toFixed(1) : '0.0'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Targets/Game</p>
-                <p className="text-xl font-semibold">{worthy?.targets_per_game?.toFixed(1) || '0.0'}</p>
+                <p className="text-xl font-semibold">{worthy?.targets_per_game ? Number(worthy.targets_per_game).toFixed(1) : '0.0'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Yards/Game</p>
-                <p className="text-xl font-semibold">{worthy?.yards_per_game?.toFixed(1) || '0.0'}</p>
+                <p className="text-xl font-semibold">{worthy?.yards_per_game ? Number(worthy.yards_per_game).toFixed(1) : '0.0'}</p>
               </div>
             </div>
           </CardContent>
@@ -121,15 +121,15 @@ export default function PlayerComparison() {
               </div>
               <div>
                 <p className="text-muted-foreground">0.5 PPR PPG</p>
-                <p className="text-2xl font-bold">{allen?.ppg_half_ppr?.toFixed(1) || '0.0'}</p>
+                <p className="text-2xl font-bold">{allen?.ppg_half_ppr ? Number(allen.ppg_half_ppr).toFixed(1) : '0.0'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Targets/Game</p>
-                <p className="text-xl font-semibold">{allen?.targets_per_game?.toFixed(1) || '0.0'}</p>
+                <p className="text-xl font-semibold">{allen?.targets_per_game ? Number(allen.targets_per_game).toFixed(1) : '0.0'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Yards/Game</p>
-                <p className="text-xl font-semibold">{allen?.yards_per_game?.toFixed(1) || '0.0'}</p>
+                <p className="text-xl font-semibold">{allen?.yards_per_game ? Number(allen.yards_per_game).toFixed(1) : '0.0'}</p>
               </div>
             </div>
           </CardContent>
@@ -179,27 +179,27 @@ export default function PlayerComparison() {
               </TableRow>
               <TableRow>
                 <TableCell className="font-medium">0.5 PPR Total</TableCell>
-                <TableCell className="text-right">{worthy?.fpts_ppr?.toFixed(1) || '0.0'}</TableCell>
-                <TableCell className="text-right">{allen?.fpts_ppr?.toFixed(1) || '0.0'}</TableCell>
-                <TableCell className="text-right">{compareMetric(worthy?.fpts_ppr || 0, allen?.fpts_ppr || 0)}</TableCell>
+                <TableCell className="text-right">{worthy?.fpts_ppr ? Number(worthy.fpts_ppr).toFixed(1) : '0.0'}</TableCell>
+                <TableCell className="text-right">{allen?.fpts_ppr ? Number(allen.fpts_ppr).toFixed(1) : '0.0'}</TableCell>
+                <TableCell className="text-right">{compareMetric(Number(worthy?.fpts_ppr || 0), Number(allen?.fpts_ppr || 0))}</TableCell>
               </TableRow>
               <TableRow className="bg-muted/50">
                 <TableCell className="font-medium">Targets/Game</TableCell>
-                <TableCell className="text-right">{worthy?.targets_per_game?.toFixed(1) || '0.0'}</TableCell>
-                <TableCell className="text-right">{allen?.targets_per_game?.toFixed(1) || '0.0'}</TableCell>
-                <TableCell className="text-right">{compareMetric(worthy?.targets_per_game || 0, allen?.targets_per_game || 0)}</TableCell>
+                <TableCell className="text-right">{worthy?.targets_per_game ? Number(worthy.targets_per_game).toFixed(1) : '0.0'}</TableCell>
+                <TableCell className="text-right">{allen?.targets_per_game ? Number(allen.targets_per_game).toFixed(1) : '0.0'}</TableCell>
+                <TableCell className="text-right">{compareMetric(Number(worthy?.targets_per_game || 0), Number(allen?.targets_per_game || 0))}</TableCell>
               </TableRow>
               <TableRow className="bg-muted/50">
                 <TableCell className="font-medium">Yards/Game</TableCell>
-                <TableCell className="text-right">{worthy?.yards_per_game?.toFixed(1) || '0.0'}</TableCell>
-                <TableCell className="text-right">{allen?.yards_per_game?.toFixed(1) || '0.0'}</TableCell>
-                <TableCell className="text-right">{compareMetric(worthy?.yards_per_game || 0, allen?.yards_per_game || 0)}</TableCell>
+                <TableCell className="text-right">{worthy?.yards_per_game ? Number(worthy.yards_per_game).toFixed(1) : '0.0'}</TableCell>
+                <TableCell className="text-right">{allen?.yards_per_game ? Number(allen.yards_per_game).toFixed(1) : '0.0'}</TableCell>
+                <TableCell className="text-right">{compareMetric(Number(worthy?.yards_per_game || 0), Number(allen?.yards_per_game || 0))}</TableCell>
               </TableRow>
               <TableRow className="bg-muted/50">
                 <TableCell className="font-medium">0.5 PPR PPG</TableCell>
-                <TableCell className="text-right font-bold">{worthy?.ppg_half_ppr?.toFixed(1) || '0.0'}</TableCell>
-                <TableCell className="text-right font-bold">{allen?.ppg_half_ppr?.toFixed(1) || '0.0'}</TableCell>
-                <TableCell className="text-right">{compareMetric(worthy?.ppg_half_ppr || 0, allen?.ppg_half_ppr || 0)}</TableCell>
+                <TableCell className="text-right font-bold">{worthy?.ppg_half_ppr ? Number(worthy.ppg_half_ppr).toFixed(1) : '0.0'}</TableCell>
+                <TableCell className="text-right font-bold">{allen?.ppg_half_ppr ? Number(allen.ppg_half_ppr).toFixed(1) : '0.0'}</TableCell>
+                <TableCell className="text-right">{compareMetric(Number(worthy?.ppg_half_ppr || 0), Number(allen?.ppg_half_ppr || 0))}</TableCell>
               </TableRow>
             </TableBody>
           </Table>

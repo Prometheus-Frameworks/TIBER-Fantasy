@@ -6,6 +6,8 @@ import type { PlayerSeason2024, PlayerAdvanced2024 } from '@shared/schema';
 
 const router = express.Router();
 
+console.log('📊 Stats 2024 Routes loaded');
+
 // Map API metric names to Drizzle schema property names
 const METRIC_TO_COLUMN = {
   'rush_att': 'rushAtt',
