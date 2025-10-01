@@ -1,0 +1,70 @@
+{
+  "collection_date": "2025-10-01",
+  "total_screenshots": 10,
+  "received_count": 1,
+  "purpose": "Data points from screenshots to implement in On The Clock platform",
+  "screenshots": {
+    "screenshot_1": {
+      "name": "Team EPA Metrics - Offense vs Defense",
+      "description": "Team-level EPA per dropback and success rates for both offensive and defensive units",
+      "data_type": "team_epa_context",
+      "fields": [
+        "Offense (team abbr)",
+        "OFF_EPA_per_DB (offensive EPA per dropback)",
+        "OFF_DB_Success_Rate (offensive dropback success rate %)",
+        "Defense (opponent team abbr)",
+        "DEF_DB_EPA (defensive EPA allowed per dropback)",
+        "DEF_DB_Success_Rate (defensive success rate allowed %)"
+      ],
+      "sample_data": {
+        "BUF": {
+          "offense": {
+            "epa_per_db": 0.357,
+            "success_rate": 0.510
+          }
+        },
+        "DAL": {
+          "defense": {
+            "epa_allowed": 0.442,
+            "success_rate_allowed": 0.544
+          }
+        }
+      },
+      "use_cases": [
+        "Strength of schedule analysis",
+        "Player value adjustments (offense quality context)",
+        "Matchup analysis (opponent defense quality)",
+        "Trade analysis (identify buy-low candidates on bad offenses with good EPA)"
+      ],
+      "raw_data": "Offense,OFF_EPA_per_DB,OFF_DB_Success_Rate,Defense,DEF_DB_EPA,DEF_DB_Success_Rate\nARI,0.109,45.90%,TEN,0.185,49.00%\nBAL,0.183,49.60%,HOU,-0.083,42.30%\nBUF,0.357,51.00%,NE,0.191,53.40%\nCAR,0.004,47.50%,MIA,0.387,57.90%\nCIN,-0.289,40.10%,DET,0.023,40.10%\nCLE,-0.272,36.30%,MIN,-0.272,43.50%\nDAL,0.202,48.20%,NYJ,0.342,46.70%\nDEN,0.106,42.30%,PHI,0.028,41.60%\nDET,0.288,53.00%,CIN,0.124,48.80%\nHOU,-0.040,43.90%,BAL,0.174,47.50%\nIND,0.239,54.50%,LV,0.164,47.70%\nJAX,0.060,46.20%,KC,0.032,45.40%\nKC,0.202,48.00%,JAX,-0.097,44.80%\nLAC,0.097,47.80%,WAS,0.219,48.00%\nLAR,0.150,47.10%,SF,0.048,46.50%\nLV,-0.023,43.20%,IND,0.040,46.50%\nMIA,0.019,43.80%,CAR,0.047,44.40%\nMIN,-0.113,44.10%,CLE,0.069,46.20%\nNE,0.301,52.80%,BUF,-0.023,40.50%\nNO,-0.052,46.60%,NYG,0.070,47.20%\nNYG,0.009,42.80%,NO,0.027,52.60%\nNYJ,0.068,50.00%,DAL,0.442,54.40%\nPHI,0.040,45.70%,DEN,-0.075,38.30%\nSEA,0.237,54.80%,TB,0.100,50.30%\nSF,0.140,45.20%,LAR,-0.115,43.10%\nTB,0.170,45.70%,SEA,0.039,45.40%\nTEN,-0.286,35.20%,ARI,0.108,52.90%\nWAS,0.088,46.80%,LAC,-0.096,36.70%"
+    },
+    "screenshot_2": {
+      "status": "pending"
+    },
+    "screenshot_3": {
+      "status": "pending"
+    },
+    "screenshot_4": {
+      "status": "pending"
+    },
+    "screenshot_5": {
+      "status": "pending"
+    },
+    "screenshot_6": {
+      "status": "pending"
+    },
+    "screenshot_7": {
+      "status": "pending"
+    },
+    "screenshot_8": {
+      "status": "pending"
+    },
+    "screenshot_9": {
+      "status": "pending"
+    },
+    "screenshot_10": {
+      "status": "pending"
+    }
+  },
+  "implementation_notes": "Will design and build features after all 10 screenshots are collected"
+}
