@@ -1,7 +1,7 @@
 {
   "collection_date": "2025-10-01",
   "total_screenshots": 10,
-  "received_count": 4,
+  "received_count": 5,
   "purpose": "Data points from screenshots to implement in On The Clock platform",
   "screenshots": {
     "screenshot_1": {
@@ -157,7 +157,48 @@
       "raw_data": "Offense,Defense,OFF_YBCo_ATT,DEF_YBCo_ATT\nARI,TEN,1.29,2.19\nBAL,HOU,3.02,1.49\nBUF,NE,1.63,1.10\nCAR,MIA,1.78,1.56\nCIN,DET,0.68,1.67\nCLE,MIN,1.13,1.97\nDAL,NYJ,2.14,1.13\nDEN,PHI,2.34,1.71\nDET,CIN,2.18,2.06\nHOU,BAL,1.58,1.67\nIND,LV,1.60,1.15\nJAX,KC,2.53,1.89\nKC,JAX,1.28,1.56\nLAC,WAS,1.51,1.53\nLAR,SF,2.39,1.74\nLV,IND,1.56,2.18\nMIA,CAR,1.42,1.92\nMIN,CLE,1.96,0.51\nNE,BUF,1.35,2.62\nNO,NYG,1.96,2.26\nNYG,NO,1.07,1.63\nNYJ,DAL,1.92,1.32\nPHI,DEN,1.14,1.38\nSEA,TB,1.53,0.80\nSF,LAR,1.02,1.85\nTB,SEA,1.46,1.30\nTEN,ARI,1.32,1.57\nWAS,LAC,2.13,1.46"
     },
     "screenshot_5": {
-      "status": "pending"
+      "name": "Gap Rushing Concepts - Mid-Gap Attack Rate & Efficiency",
+      "description": "Team-level gap rushing schemes showing mid-gap attack frequency, yards per carry, and success rates for both offensive and defensive units",
+      "data_type": "team_gap_rushing",
+      "fields": [
+        "Offense (team abbr)",
+        "Defense (opponent team abbr)",
+        "OFF_MG_ATT_pct (offensive mid-gap attempt percentage - how often they run between the tackles)",
+        "OFF_GAP_YPC (offensive gap rushing yards per carry)",
+        "OFF_GAP_SR (offensive gap rushing success rate %)",
+        "DEF_GAP_YPC (defensive gap rushing yards per carry allowed)",
+        "DEF_GAP_SR (defensive gap rushing success rate allowed %)"
+      ],
+      "sample_data": {
+        "ARI": {
+          "offense": {
+            "mid_gap_pct": 59.6,
+            "gap_ypc": 4.29,
+            "gap_success_rate": 39.3
+          }
+        },
+        "NYJ": {
+          "defense": {
+            "gap_ypc_allowed": 1.89,
+            "gap_success_rate_allowed": 19.4
+          }
+        }
+      },
+      "insights": [
+        "Most gap-focused offenses: ARI (59.6%), WAS (54.3%), TB (54.0%), CLE (51.1%)",
+        "Most efficient gap rushing: SEA (7.31 YPC), IND (6.20), WAS (6.05), DAL (5.91)",
+        "Best success rate gap rushing: DAL (61.4%), IND (61.7%), NYJ (60.0%)",
+        "Best gap rush defenses: NYJ (1.89 YPC, 19.4% SR!), SEA (2.84 YPC, 28.1% SR)",
+        "Worst gap rush defenses: TEN (5.72 YPC, 56.6% SR), CAR (5.56 YPC)"
+      ],
+      "use_cases": [
+        "RB scheme fit analysis (gap runners vs outside zone runners)",
+        "Power back vs speed back evaluation (gap runners need power, outside zone needs speed)",
+        "O-line scheme identification (gap-heavy teams = power/inside zone scheme)",
+        "Rookie RB projection (match RB skillset to team's rushing scheme)",
+        "Weekly matchup analysis (target gap runners facing weak interior defenses)"
+      ],
+      "raw_data": "Offense,Defense,OFF_MG_ATT_pct,OFF_GAP_YPC,OFF_GAP_SR,DEF_GAP_YPC,DEF_GAP_SR\nARI,TEN,59.6,4.29,39.3,5.72,56.6\nWAS,LAC,54.3,6.05,59.6,3.56,50.0\nTB,SEA,54.0,4.51,44.3,3.72,52.4\nCLE,MIN,51.1,4.55,48.9,3.31,51.7\nLAC,WAS,47.8,5.82,55.8,4.52,44.3\nDAL,NYJ,45.8,5.91,61.4,1.89,19.4\nNE,BUF,44.8,3.71,47.0,3.82,51.8\nCIN,DET,44.7,2.09,41.2,4.55,52.4\nHOU,BAL,43.4,5.22,51.0,4.28,60.0\nDEN,PHI,43.4,5.22,51.0,4.28,60.0\nTEN,ARI,43.2,3.66,39.5,4.71,46.9\nNO,NYG,40.7,4.32,48.8,3.72,46.6\nIND,LV,38.8,6.20,61.7,3.77,49.2\nMIN,CLE,37.5,4.21,41.4,3.59,44.3\nLAR,SF,36.4,4.21,56.4,3.59,44.3\nCAR,MIA,36.3,4.75,47.5,5.56,37.5\nJAX,DET,34.8,4.75,47.5,5.56,37.5\nDET,CIN,34.7,3.95,52.4,4.21,52.4\nSEA,TB,31.4,7.31,58.8,2.84,28.1\nBAL,HOU,32.6,4.82,50.0,4.25,45.1\nBUF,NE,32.3,4.32,53.3,3.04,42.7\nKC,JAX,29.1,2.87,42.0,4.04,47.3\nMIA,CAR,27.7,5.52,52.2,5.34,37.8\nNYG,NO,26.5,3.43,34.4,4.25,47.2\nPHI,DEN,24.4,4.32,50.0,3.04,42.7\nSF,LAR,22.6,3.58,58.3,3.79,40.6\nLV,IND,21.6,3.95,50.0,4.25,42.7\nNYJ,DAL,18.0,5.65,60.0,3.46,48.0"
     },
     "screenshot_6": {
       "status": "pending"
