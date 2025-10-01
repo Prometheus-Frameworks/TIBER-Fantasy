@@ -15,6 +15,12 @@ type WeeklyItem = {
 
 type ViewMode = "table" | "chart";
 
+type TeamRanking = {
+  rank: number;
+  team: string;
+  score: number;
+};
+
 export default function SOSPage() {
   const [position, setPosition] = useState<'RB'|'WR'|'QB'|'TE'>('RB');
   const [week, setWeek] = useState<number>(1);
@@ -23,6 +29,8 @@ export default function SOSPage() {
   const [debug, setDebug] = useState<boolean>(false);
   const [view, setView] = useState<ViewMode>("table");
   const [items, setItems] = useState<WeeklyItem[]>([]);
+  const [defenseRankings, setDefenseRankings] = useState<TeamRanking[]>([]);
+  const [offenseRankings, setOffenseRankings] = useState<TeamRanking[]>([]);
 
   useEffect(() => {
     const url = mode === 'w5' 
@@ -33,6 +41,23 @@ export default function SOSPage() {
       .then(d => setItems(d.items || []))
       .catch(() => setItems([]));
   }, [position, week, season, mode, debug]);
+
+  useEffect(() => {
+    if (mode === 'w5') {
+      fetch(`/api/sos/rankings/defense?season=${season}&week=4`)
+        .then(r => r.json())
+        .then(d => setDefenseRankings(d.rankings || []))
+        .catch(() => setDefenseRankings([]));
+      
+      fetch(`/api/sos/rankings/offense?season=${season}&week=4`)
+        .then(r => r.json())
+        .then(d => setOffenseRankings(d.rankings || []))
+        .catch(() => setOffenseRankings([]));
+    } else {
+      setDefenseRankings([]);
+      setOffenseRankings([]);
+    }
+  }, [mode, season]);
 
   return (
     <div className="mx-auto max-w-5xl p-3 sm:p-6">
@@ -180,6 +205,72 @@ export default function SOSPage() {
         </div>
       </div>
       <SOSLegend />
+      
+      {mode === 'w5' && (defenseRankings.length > 0 || offenseRankings.length > 0) && (
+        <div className="mb-6 grid md:grid-cols-2 gap-4">
+          {/* Defense Rankings */}
+          {defenseRankings.length > 0 && (
+            <div className="border rounded-lg p-4 bg-white dark:bg-slate-800">
+              <h3 className="text-lg font-bold mb-3 text-red-600 dark:text-red-400">
+                🛡️ Defense Rankings (Week 4)
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                Lower score = tougher defense to face
+              </p>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {defenseRankings.map((team) => (
+                  <div
+                    key={team.team}
+                    className="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-700"
+                    data-testid={`defense-ranking-${team.team}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300 w-6">
+                        #{team.rank}
+                      </span>
+                      <span className="text-sm font-semibold">{team.team}</span>
+                    </div>
+                    <span className="text-xs font-mono text-slate-600 dark:text-slate-400">
+                      {team.score.toFixed(1)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Offense Rankings */}
+          {offenseRankings.length > 0 && (
+            <div className="border rounded-lg p-4 bg-white dark:bg-slate-800">
+              <h3 className="text-lg font-bold mb-3 text-green-600 dark:text-green-400">
+                ⚡ Offense Rankings (Week 4)
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                Higher score = stronger offense
+              </p>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {offenseRankings.map((team) => (
+                  <div
+                    key={team.team}
+                    className="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-700"
+                    data-testid={`offense-ranking-${team.team}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300 w-6">
+                        #{team.rank}
+                      </span>
+                      <span className="text-sm font-semibold">{team.team}</span>
+                    </div>
+                    <span className="text-xs font-mono text-slate-600 dark:text-slate-400">
+                      {team.score.toFixed(1)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       
       {view === "table" ? (
         <SOSTable items={items} debug={debug} position={position} />
