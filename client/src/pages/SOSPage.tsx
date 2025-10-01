@@ -21,6 +21,16 @@ type TeamRanking = {
   score: number;
 };
 
+type GameHistory = {
+  week: number;
+  opponent: string;
+  isHome: boolean;
+  teamScore: number | null;
+  oppScore: number | null;
+  won: boolean;
+  result: string;
+};
+
 export default function SOSPage() {
   const [position, setPosition] = useState<'RB'|'WR'|'QB'|'TE'>('RB');
   const [week, setWeek] = useState<number>(1);
@@ -31,6 +41,9 @@ export default function SOSPage() {
   const [items, setItems] = useState<WeeklyItem[]>([]);
   const [defenseRankings, setDefenseRankings] = useState<TeamRanking[]>([]);
   const [offenseRankings, setOffenseRankings] = useState<TeamRanking[]>([]);
+  const [expandedDefenseTeam, setExpandedDefenseTeam] = useState<string | null>(null);
+  const [expandedOffenseTeam, setExpandedOffenseTeam] = useState<string | null>(null);
+  const [teamHistory, setTeamHistory] = useState<Record<string, GameHistory[]>>({});
 
   useEffect(() => {
     const url = mode === 'w5' 
@@ -58,6 +71,40 @@ export default function SOSPage() {
       setOffenseRankings([]);
     }
   }, [mode, season]);
+
+  const toggleDefenseTeam = async (team: string) => {
+    if (expandedDefenseTeam === team) {
+      setExpandedDefenseTeam(null);
+    } else {
+      setExpandedDefenseTeam(team);
+      if (!teamHistory[team]) {
+        try {
+          const response = await fetch(`/api/sos/team/history?team=${team}&season=${season}&maxWeek=4`);
+          const data = await response.json();
+          setTeamHistory(prev => ({ ...prev, [team]: data.history || [] }));
+        } catch (error) {
+          console.error('Failed to fetch team history:', error);
+        }
+      }
+    }
+  };
+
+  const toggleOffenseTeam = async (team: string) => {
+    if (expandedOffenseTeam === team) {
+      setExpandedOffenseTeam(null);
+    } else {
+      setExpandedOffenseTeam(team);
+      if (!teamHistory[team]) {
+        try {
+          const response = await fetch(`/api/sos/team/history?team=${team}&season=${season}&maxWeek=4`);
+          const data = await response.json();
+          setTeamHistory(prev => ({ ...prev, [team]: data.history || [] }));
+        } catch (error) {
+          console.error('Failed to fetch team history:', error);
+        }
+      }
+    }
+  };
 
   return (
     <div className="mx-auto max-w-5xl p-3 sm:p-6">
@@ -215,24 +262,46 @@ export default function SOSPage() {
                 🛡️ Defense Rankings (Week 4)
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                Lower score = tougher defense to face
+                Lower score = tougher defense to face. Click to see game results.
               </p>
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {defenseRankings.map((team) => (
-                  <div
-                    key={team.team}
-                    className="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-700"
-                    data-testid={`defense-ranking-${team.team}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300 w-6">
-                        #{team.rank}
+                  <div key={team.team} data-testid={`defense-ranking-${team.team}`}>
+                    <div
+                      className="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
+                      onClick={() => toggleDefenseTeam(team.team)}
+                      data-testid={`defense-ranking-${team.team}-toggle`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-300 w-6">
+                          #{team.rank}
+                        </span>
+                        <span className="text-sm font-semibold">{team.team}</span>
+                        <span className="text-xs text-slate-400">
+                          {expandedDefenseTeam === team.team ? '▼' : '▶'}
+                        </span>
+                      </div>
+                      <span className="text-xs font-mono text-slate-600 dark:text-slate-400">
+                        {team.score.toFixed(1)}
                       </span>
-                      <span className="text-sm font-semibold">{team.team}</span>
                     </div>
-                    <span className="text-xs font-mono text-slate-600 dark:text-slate-400">
-                      {team.score.toFixed(1)}
-                    </span>
+                    {expandedDefenseTeam === team.team && teamHistory[team.team] && (
+                      <div className="mt-1 ml-8 space-y-1 pb-2" data-testid={`defense-history-${team.team}`}>
+                        {teamHistory[team.team].map((game) => (
+                          <div
+                            key={game.week}
+                            className={`text-xs p-1.5 rounded ${
+                              game.won 
+                                ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' 
+                                : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                            }`}
+                            data-testid={`defense-game-${team.team}-week${game.week}`}
+                          >
+                            <span className="font-semibold">{game.result}</span> Wk{game.week} {game.isHome ? 'vs' : '@'} {game.opponent} ({game.teamScore}-{game.oppScore})
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -246,24 +315,46 @@ export default function SOSPage() {
                 ⚡ Offense Rankings (Week 4)
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                Higher score = stronger offense
+                Higher score = stronger offense. Click to see game results.
               </p>
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {offenseRankings.map((team) => (
-                  <div
-                    key={team.team}
-                    className="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-700"
-                    data-testid={`offense-ranking-${team.team}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300 w-6">
-                        #{team.rank}
+                  <div key={team.team} data-testid={`offense-ranking-${team.team}`}>
+                    <div
+                      className="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
+                      onClick={() => toggleOffenseTeam(team.team)}
+                      data-testid={`offense-ranking-${team.team}-toggle`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-300 w-6">
+                          #{team.rank}
+                        </span>
+                        <span className="text-sm font-semibold">{team.team}</span>
+                        <span className="text-xs text-slate-400">
+                          {expandedOffenseTeam === team.team ? '▼' : '▶'}
+                        </span>
+                      </div>
+                      <span className="text-xs font-mono text-slate-600 dark:text-slate-400">
+                        {team.score.toFixed(1)}
                       </span>
-                      <span className="text-sm font-semibold">{team.team}</span>
                     </div>
-                    <span className="text-xs font-mono text-slate-600 dark:text-slate-400">
-                      {team.score.toFixed(1)}
-                    </span>
+                    {expandedOffenseTeam === team.team && teamHistory[team.team] && (
+                      <div className="mt-1 ml-8 space-y-1 pb-2" data-testid={`offense-history-${team.team}`}>
+                        {teamHistory[team.team].map((game) => (
+                          <div
+                            key={game.week}
+                            className={`text-xs p-1.5 rounded ${
+                              game.won 
+                                ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' 
+                                : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                            }`}
+                            data-testid={`offense-game-${team.team}-week${game.week}`}
+                          >
+                            <span className="font-semibold">{game.result}</span> Wk{game.week} {game.isHome ? 'vs' : '@'} {game.opponent} ({game.teamScore}-{game.oppScore})
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
