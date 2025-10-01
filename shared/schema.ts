@@ -1552,6 +1552,135 @@ export const sosUserPreferences = pgTable("sos_user_preferences", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// ========================================
+// TEAM ANALYTICS - Enhanced SOS Context Data (from screenshot_data_bank.json)
+// ========================================
+
+// Team Offensive Context - EPA, explosive plays, rushing concepts, passing efficiency
+export const teamOffensiveContext = pgTable("team_offensive_context", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(), // Up to date through this week
+  team: text("team").notNull(), // Team abbreviation
+  
+  // EPA metrics (screenshot #1)
+  passEpa: real("pass_epa"), // Passing EPA offense
+  rushEpa: real("rush_epa"), // Rushing EPA offense
+  
+  // Explosive plays (screenshot #2)
+  explosive20Plus: integer("explosive_20_plus"), // Count of 20+ yard plays
+  
+  // Passing efficiency (screenshot #8)
+  ypa: real("ypa"), // Yards per attempt
+  cpoe: real("cpoe"), // Completion percentage over expected
+  
+  // Run blocking (screenshot #3)
+  ybcPerAtt: real("ybc_per_att"), // Yards before contact per attempt
+  
+  // Rushing concepts (screenshots #4, #5, #6)
+  gapRunPct: real("gap_run_pct"), // Gap concept usage %
+  zoneRunPct: real("zone_run_pct"), // Zone concept usage %
+  runSuccessRate: real("run_success_rate"), // Run blocking success rate %
+  
+  // Pass protection (screenshot #7)
+  pressureRateAllowed: real("pressure_rate_allowed"), // Pressure rate allowed %
+  
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => ({
+  uniqueTeamWeek: unique().on(table.season, table.week, table.team),
+  teamIdx: index("team_offensive_context_team_idx").on(table.team),
+  seasonWeekIdx: index("team_offensive_context_season_week_idx").on(table.season, table.week),
+}));
+
+// Team Defensive Context - EPA allowed, explosive plays allowed, passing defense
+export const teamDefensiveContext = pgTable("team_defensive_context", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(), // Up to date through this week
+  team: text("team").notNull(), // Team abbreviation
+  
+  // EPA metrics allowed (screenshot #1)
+  passEpaAllowed: real("pass_epa_allowed"), // Passing EPA allowed by defense
+  rushEpaAllowed: real("rush_epa_allowed"), // Rushing EPA allowed by defense
+  
+  // Explosive plays allowed (screenshot #2)
+  explosive20PlusAllowed: integer("explosive_20_plus_allowed"), // Count of 20+ yard plays allowed
+  
+  // Passing efficiency allowed (screenshot #8)
+  ypaAllowed: real("ypa_allowed"), // Yards per attempt allowed
+  cpoeAllowed: real("cpoe_allowed"), // Completion percentage over expected allowed
+  
+  // Run defense (screenshot #3)
+  ybcPerAttAllowed: real("ybc_per_att_allowed"), // Yards before contact per attempt allowed
+  
+  // Run defense vs concepts (screenshots #4, #5, #6)
+  gapRunSuccessRate: real("gap_run_success_rate"), // Success rate vs gap runs %
+  zoneRunSuccessRate: real("zone_run_success_rate"), // Success rate vs zone runs %
+  
+  // Pass rush (screenshot #7)
+  pressureRateGenerated: real("pressure_rate_generated"), // Pressure rate generated %
+  
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => ({
+  uniqueTeamWeek: unique().on(table.season, table.week, table.team),
+  teamIdx: index("team_defensive_context_team_idx").on(table.team),
+  seasonWeekIdx: index("team_defensive_context_season_week_idx").on(table.season, table.week),
+}));
+
+// Team Receiver Alignment Matchups - Fantasy points by alignment (screenshot #9)
+export const teamReceiverAlignmentMatchups = pgTable("team_receiver_alignment_matchups", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(), // Up to date through this week
+  team: text("team").notNull(), // Team abbreviation
+  
+  // Offensive production by alignment
+  offOutsideWrFpg: real("off_outside_wr_fpg"), // Outside WR fantasy points per game
+  offSlotFpg: real("off_slot_fpg"), // Slot WR fantasy points per game
+  offTeFpg: real("off_te_fpg"), // TE fantasy points per game
+  
+  // Defensive production allowed by alignment
+  defOutsideWrFpgAllowed: real("def_outside_wr_fpg_allowed"), // Outside WR FPG allowed
+  defSlotFpgAllowed: real("def_slot_fpg_allowed"), // Slot WR FPG allowed
+  defTeFpgAllowed: real("def_te_fpg_allowed"), // TE FPG allowed
+  
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => ({
+  uniqueTeamWeek: unique().on(table.season, table.week, table.team),
+  teamIdx: index("team_receiver_alignment_matchups_team_idx").on(table.team),
+  seasonWeekIdx: index("team_receiver_alignment_matchups_season_week_idx").on(table.season, table.week),
+}));
+
+// Team Coverage Matchups - Fantasy points per dropback by coverage type (screenshot #10)
+export const teamCoverageMatchups = pgTable("team_coverage_matchups", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(), // Up to date through this week
+  team: text("team").notNull(), // Team abbreviation
+  
+  // Offensive efficiency vs coverage types
+  offZoneFpdb: real("off_zone_fpdb"), // FP per dropback vs zone coverage
+  offManFpdb: real("off_man_fpdb"), // FP per dropback vs man coverage
+  offTwoHighFpdb: real("off_two_high_fpdb"), // FP per dropback vs two-high safety
+  offOneHighFpdb: real("off_one_high_fpdb"), // FP per dropback vs one-high safety
+  
+  // Defensive coverage usage and FP allowed
+  defZonePct: real("def_zone_pct"), // Zone coverage usage %
+  defManPct: real("def_man_pct"), // Man coverage usage %
+  defTwoHighPct: real("def_two_high_pct"), // Two-high safety usage %
+  defOneHighPct: real("def_one_high_pct"), // One-high safety usage %
+  defZoneFpdbAllowed: real("def_zone_fpdb_allowed"), // FP per dropback allowed in zone
+  defManFpdbAllowed: real("def_man_fpdb_allowed"), // FP per dropback allowed in man
+  defTwoHighFpdbAllowed: real("def_two_high_fpdb_allowed"), // FP per dropback allowed in 2-high
+  defOneHighFpdbAllowed: real("def_one_high_fpdb_allowed"), // FP per dropback allowed in 1-high
+  
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => ({
+  uniqueTeamWeek: unique().on(table.season, table.week, table.team),
+  teamIdx: index("team_coverage_matchups_team_idx").on(table.team),
+  seasonWeekIdx: index("team_coverage_matchups_season_week_idx").on(table.season, table.week),
+}));
+
 // SOS Type Exports
 export type DefenseVP = typeof defenseVP.$inferSelect;
 export type InsertDefenseVP = typeof defenseVP.$inferInsert;
@@ -1559,6 +1688,16 @@ export type Schedule = typeof schedule.$inferSelect;
 export type InsertSchedule = typeof schedule.$inferInsert;
 export type SOSScore = typeof sosScores.$inferSelect;
 export type InsertSOSScore = typeof sosScores.$inferInsert;
+
+// Team Analytics Type Exports
+export type TeamOffensiveContext = typeof teamOffensiveContext.$inferSelect;
+export type InsertTeamOffensiveContext = typeof teamOffensiveContext.$inferInsert;
+export type TeamDefensiveContext = typeof teamDefensiveContext.$inferSelect;
+export type InsertTeamDefensiveContext = typeof teamDefensiveContext.$inferInsert;
+export type TeamReceiverAlignmentMatchups = typeof teamReceiverAlignmentMatchups.$inferSelect;
+export type InsertTeamReceiverAlignmentMatchups = typeof teamReceiverAlignmentMatchups.$inferInsert;
+export type TeamCoverageMatchups = typeof teamCoverageMatchups.$inferSelect;
+export type InsertTeamCoverageMatchups = typeof teamCoverageMatchups.$inferInsert;
 
 // 2024 Player Season Stats - Complete season data for leaderboards
 export const playerSeason2024 = pgTable("player_season_2024", {
