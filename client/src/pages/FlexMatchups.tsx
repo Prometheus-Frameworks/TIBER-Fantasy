@@ -83,27 +83,18 @@ export default function FlexMatchups() {
   };
 
   const MatchupCard = ({ matchup }: { matchup: FlexMatchup }) => (
-    <Card className={`border-2 ${getTierColor(matchup.tier)}`} data-testid={`matchup-card-${matchup.team}-${matchup.position}`}>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Badge className={`${getPositionColor(matchup.position)} text-white`}>
+    <Card className={`border ${getTierColor(matchup.tier)}`} data-testid={`matchup-card-${matchup.team}-${matchup.position}`}>
+      <CardContent className="p-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Badge className={`${getPositionColor(matchup.position)} text-white text-xs px-1.5 py-0.5`}>
               {matchup.position}
             </Badge>
-            <span className="font-bold text-lg">{matchup.team}</span>
+            <span className="font-bold text-sm">{matchup.team}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">vs</span>
+            <span className="font-semibold text-sm">{matchup.opponent}</span>
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold">{matchup.sos_score}</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Matchup Score</div>
-          </div>
-        </div>
-        <div className="text-sm text-slate-600 dark:text-slate-400">
-          vs <span className="font-semibold">{matchup.opponent}</span>
-        </div>
-        <div className="mt-2 text-xs">
-          <Badge variant="outline" className={getTierColor(matchup.tier)}>
-            {matchup.tier === 'green' ? 'Great Matchup' : matchup.tier === 'yellow' ? 'Average Matchup' : 'Tough Matchup'}
-          </Badge>
+          <div className="text-lg font-bold">{matchup.sos_score}</div>
         </div>
       </CardContent>
     </Card>
@@ -121,7 +112,7 @@ export default function FlexMatchups() {
     }
 
     return (
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filtered.map((matchup, idx) => (
           <MatchupCard key={`${matchup.team}-${matchup.position}-${idx}`} matchup={matchup} />
         ))}
