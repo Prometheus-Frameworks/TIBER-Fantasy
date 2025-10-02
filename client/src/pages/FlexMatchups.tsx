@@ -103,7 +103,15 @@ export default function FlexMatchups() {
   const MatchupList = ({ matchups, showPosition = false }: { matchups: FlexMatchup[], showPosition?: boolean }) => {
     const filtered = filterByTier(matchups);
     
-    if (filtered.length === 0) {
+    // Deduplicate by team - take the first occurrence of each team
+    const deduped = filtered.reduce((acc, matchup) => {
+      if (!acc.find(m => m.team === matchup.team)) {
+        acc.push(matchup);
+      }
+      return acc;
+    }, [] as FlexMatchup[]);
+    
+    if (deduped.length === 0) {
       return (
         <div className="text-center py-8 text-slate-500 dark:text-slate-400">
           No matchups found for selected filter
@@ -113,7 +121,7 @@ export default function FlexMatchups() {
 
     return (
       <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filtered.map((matchup, idx) => (
+        {deduped.map((matchup, idx) => (
           <MatchupCard key={`${matchup.team}-${matchup.position}-${idx}`} matchup={matchup} />
         ))}
       </div>
