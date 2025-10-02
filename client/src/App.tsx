@@ -135,6 +135,7 @@ import StartSit from "@/pages/StartSit";
 import Advice from "@/pages/Advice";
 import PlayerRankings from "@/pages/PlayerRankings";
 import PlayerComparison from "@/pages/PlayerComparison";
+import FlexMatchups from "@/pages/FlexMatchups";
 
 function Router() {
   return (
@@ -164,6 +165,9 @@ function Router() {
       
       {/* Start/Sit Calculator */}
       <Route path="/start-sit" component={StartSit} />
+      
+      {/* FLEX Matchup Finder */}
+      <Route path="/flex-matchups" component={FlexMatchups} />
       
       {/* Trade Advice */}
       <Route path="/advice" component={Advice} />
