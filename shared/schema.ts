@@ -2199,6 +2199,44 @@ export const insertBuysSellsSchema = createInsertSchema(buysSells).omit({
 });
 
 // ========================================
+// ADVANCED ANALYTICS - PHASE 1 FEATURES
+// ========================================
+
+// Win-Probability Context - Weekly WP/WPA splits for clutch performance analysis
+export const wpSplitsWeekly = pgTable("wp_splits_weekly", {
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  playerId: text("player_id").notNull(),
+  
+  // Core WP metrics
+  plays: integer("plays").notNull().default(0),
+  wpAvg: real("wp_avg"), // Average win probability when on field
+  wpaSum: real("wpa_sum"), // Total win probability added
+  
+  // High-leverage situations
+  highLeveragePlays: integer("high_leverage_plays").default(0), // WP ∈ [0.25, 0.75]
+  q4OneScorePlays: integer("q4_one_score_plays").default(0), // 4Q plays within 1 score
+  q4OneScoreEpa: real("q4_one_score_epa"), // EPA in clutch moments
+  
+  // Garbage time filter
+  kneelOutPlays: integer("kneel_out_plays").default(0), // Excluded from meaningful stats
+  
+  // Metadata
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => ({
+  primaryKey: primaryKey({ columns: [table.season, table.week, table.playerId] }),
+  seasonWeekIdx: index("wp_splits_season_week_idx").on(table.season, table.week),
+  playerSeasonIdx: index("wp_splits_player_season_idx").on(table.playerId, table.season),
+}));
+
+// WP Splits Insert Schema & Types
+export type WpSplitsWeekly = typeof wpSplitsWeekly.$inferSelect;
+export type InsertWpSplitsWeekly = z.infer<typeof insertWpSplitsWeeklySchema>;
+export const insertWpSplitsWeeklySchema = createInsertSchema(wpSplitsWeekly).omit({
+  lastUpdated: true,
+});
+
+// ========================================
 // GOLD LAYER - ANALYTICS-READY FACTS
 // ========================================
 

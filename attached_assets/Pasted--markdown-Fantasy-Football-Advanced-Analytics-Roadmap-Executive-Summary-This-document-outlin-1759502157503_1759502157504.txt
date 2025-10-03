@@ -1,0 +1,722 @@
+```markdown
+# Fantasy Football Advanced Analytics Roadmap
+
+## Executive Summary
+This document outlines the immediate data pipeline enhancements for Rankings, Start/Sit, and Trade Evaluation features. Focus: high-impact, production-ready additions that separate signal from noise.
+
+---
+
+## Phase 1: Ship Now (High Impact, Low/Med Effort)
+
+### 1. Win-Probability Context (WP/WPA)
+**Purpose**: Distinguish garbage-time production from high-leverage performance. Improves Start/Sit accuracy and late-game projections.
+
+**Table Schema**: `wp_splits_weekly`
+```sql
+CREATE TABLE wp_splits_weekly (
+  season INT NOT NULL,
+  week INT NOT NULL,
+  player_id VARCHAR(50) NOT NULL,
+  plays INT,
+  wp_avg DECIMAL(5,4),
+  wpa_sum DECIMAL(6,4),
+  high_leverage_plays INT,  -- plays where WP ∈ [0.25, 0.75]
+  q4_one_score_plays INT,   -- 4Q plays within 1 score
+  q4_one_score_epa DECIMAL(6,3),
+  kneel_out_plays INT,      -- excluded from meaningful stats
+  PRIMARY KEY (season, week, player_id)
+);
+```
+
+**API Endpoint**:
+
+```
+GET /api/context/wp?playerId={id}&window=last4
+```
+
+**Ranking Integration**:
+
+- Add “Clutch Factor” badge (+2 to +8 pts to floor/ceiling bands)
+- Weight `q4_one_score_epa` in This Week rankings
+
+-----
+
+### 2. Situational Usage
+
+**Purpose**: Capture high-value opportunities (red zone, goal line, third down, two-minute). Explains TD equity and PPR floor.
+
+**Table Schema**: `situational_usage_weekly`
+
+```sql
+CREATE TABLE situational_usage_weekly (
+  season INT NOT NULL,
+  week INT NOT NULL,
+  player_id VARCHAR(50) NOT NULL,
+  rz_touches INT,           -- red zone (inside 20)
+  rz_targets INT,
+  gl_rushes INT,            -- goal line (≤5 yards)
+  third_down_targets INT,
+  two_min_targets INT,
+  two_min_snaps INT,
+  PRIMARY KEY (season, week, player_id)
+);
+```
+
+**API Endpoint**:
+
+```
+GET /api/context/situational?playerId={id}&window=last4
+```
+
+**Ranking Integration**:
+
+- RB: TD-equity boost based on `gl_rushes` trend
+- WR: Third-down stickiness badge from `third_down_targets`
+- TE: “2-minute magnet” for high `two_min_targets`
+
+-----
+
+### 3. Target Quality
+
+**Purpose**: Separate real talent (route wins, YAC ability) from volume-driven stats.
+
+**Table Schema**: `target_quality_weekly`
+
+```sql
+CREATE TABLE target_quality_weekly (
+  season INT NOT NULL,
+  week INT NOT NULL,
+  player_id VARCHAR(50) NOT NULL,
+  targets INT,
+  air_yards INT,
+  air_epa DECIMAL(6,3),
+  yac_epa DECIMAL(6,3),
+  xyac_epa DECIMAL(6,3),    -- expected YAC EPA
+  yac_oe DECIMAL(6,3),      -- YAC over expected (yac_epa - xyac_epa)
+  deep_targets INT,         -- ≥20 air yards
+  short_targets INT,        -- <10 air yards
+  PRIMARY KEY (season, week, player_id)
+);
+```
+
+**API Endpoint**:
+
+```
+GET /api/receiving/quality?playerId={id}&window=last4
+```
+
+**Ranking Integration**:
+
+- WR/TE talent tier adjustments based on `yac_oe` + `air_epa`
+- Start/Sit ceiling toggles using `deep_targets` + opponent coverage shell
+
+-----
+
+### 4. QB Pressure & Protection Context
+
+**Purpose**: Contextualize QB performance, WR depth viability, and RB dump-off opportunities.
+
+**Table Schema**: `pressure_context_weekly`
+
+```sql
+-- QB-level metrics
+CREATE TABLE pressure_context_qb (
+  season INT NOT NULL,
+  week INT NOT NULL,
+  passer_player_id VARCHAR(50) NOT NULL,
+  dropbacks INT,
+  pressures INT,
+  sacks INT,
+  scrambles INT,
+  pressure_rate DECIMAL(4,3),
+  PRIMARY KEY (season, week, passer_player_id)
+);
+
+-- Team-level metrics (for RB context)
+CREATE TABLE pressure_context_team (
+  season INT NOT NULL,
+  week INT NOT NULL,
+  team VARCHAR(10) NOT NULL,
+  pass_rushers_avg DECIMAL(3,1),
+  defenders_in_box_avg DECIMAL(3,1),
+  PRIMARY KEY (season, week, team)
+);
+```
+
+**API Endpoints**:
+
+```
+GET /api/context/pressure/qb?qbId={id}&window=last4
+GET /api/context/pressure/team?team={abbr}&window=last4
+```
+
+**Ranking Integration**:
+
+- Downgrade deep-shot WRs when `pressure_rate` > P75
+- Boost RB target share when QB `pressure_rate` ↑
+- Factor `defenders_in_box_avg` into RB efficiency
+
+-----
+
+### 5. Weekly Aggregates
+
+**Purpose**: Fast-access rolling trend windows without querying raw play-by-play.
+
+**Table Schema**: `weekly_summary`
+
+```sql
+CREATE TABLE weekly_summary (
+  season INT NOT NULL,
+  week INT NOT NULL,
+  player_id VARCHAR(50) NOT NULL,
+  fantasy_pts_ppr DECIMAL(5,1),
+  snaps INT,
+  targets INT,
+  carries INT,
+  routes INT NULL,          -- nullable until consistently available
+  team_pass_attempts INT,
+  PRIMARY KEY (season, week, player_id)
+);
+```
+
+**API Endpoint**:
+
+```
+GET /api/weekly/summary?playerId={id}&span=5
+```
+
+**Ranking Integration**:
+
+- Powers rolling 3/5-game trend badges
+- Enables efficient Start/Sit confidence intervals
+
+-----
+
+### 6. Explosive Plays
+
+**Purpose**: Identify ceiling potential through big-play capability.
+
+**Table Schema**: `explosive_profile_weekly`
+
+```sql
+CREATE TABLE explosive_profile_weekly (
+  season INT NOT NULL,
+  week INT NOT NULL,
+  player_id VARCHAR(50) NOT NULL,
+  explosive_20_plus INT,    -- plays ≥20 yards
+  explosive_rate DECIMAL(4,3), -- explosive plays / total touches
+  long_gain INT,
+  PRIMARY KEY (season, week, player_id)
+);
+```
+
+**API Endpoint**:
+
+```
+GET /api/context/explosive?playerId={id}&window=last4
+```
+
+**Ranking Integration**:
+
+- Ceiling tier classification
+- Start/Sit tie-breaker when floors are equal
+
+-----
+
+## Phase 2: Ship Next (Medium Effort, Big Payoff)
+
+### 7. NGS Snapshot
+
+**Purpose**: Refine pressure and target quality models with advanced tracking data.
+
+**Table Schema**: `ngs_weekly`
+
+```sql
+CREATE TABLE ngs_weekly (
+  season INT NOT NULL,
+  week INT NOT NULL,
+  player_id VARCHAR(50) NOT NULL,
+  position VARCHAR(5) NOT NULL,
+  -- QB metrics
+  time_to_throw DECIMAL(3,2) NULL,
+  completed_air_yards INT NULL,
+  aggressiveness DECIMAL(4,3) NULL,
+  -- WR/TE metrics
+  avg_separation DECIMAL(3,1) NULL,
+  avg_cushion DECIMAL(3,1) NULL,
+  PRIMARY KEY (season, week, player_id)
+);
+```
+
+**Integration**:
+
+- QB `time_to_throw` → protection quality proxy
+- WR `avg_separation` → route-running talent proxy
+
+-----
+
+### 8. Core Infrastructure Tables
+
+**Rosters**:
+
+```sql
+CREATE TABLE rosters (
+  season INT NOT NULL,
+  team VARCHAR(10) NOT NULL,
+  player_id VARCHAR(50) NOT NULL,
+  position VARCHAR(5),
+  jersey_number INT,
+  status VARCHAR(20),  -- active, IR, etc.
+  PRIMARY KEY (season, team, player_id)
+);
+```
+
+**Depth Charts**:
+
+```sql
+CREATE TABLE depth_charts (
+  season INT NOT NULL,
+  week INT NOT NULL,
+  team VARCHAR(10) NOT NULL,
+  player_id VARCHAR(50) NOT NULL,
+  position VARCHAR(5),
+  depth_position VARCHAR(20),  -- LWR, RWR, SLOT, etc.
+  depth_order INT,
+  PRIMARY KEY (season, week, team, player_id)
+);
+```
+
+**Schedules**:
+
+```sql
+CREATE TABLE schedules (
+  season INT NOT NULL,
+  week INT NOT NULL,
+  game_id VARCHAR(50) NOT NULL,
+  home_team VARCHAR(10),
+  away_team VARCHAR(10),
+  gameday DATE,
+  gametime TIME,
+  PRIMARY KEY (season, week, game_id)
+);
+```
+
+**ID Mapping**:
+
+```sql
+CREATE TABLE id_map (
+  player_id VARCHAR(50) PRIMARY KEY,
+  gsis_id VARCHAR(50),
+  espn_id VARCHAR(50),
+  yahoo_id VARCHAR(50),
+  sleeper_id VARCHAR(50),
+  full_name VARCHAR(100),
+  first_name VARCHAR(50),
+  last_name VARCHAR(50)
+);
+```
+
+-----
+
+## Phase 3: Defer for Now
+
+**Not prioritized** (cool, but not moving fantasy wins this week):
+
+- Full drive-level decision trees
+- Penalty micro-taxonomies
+- Special teams minutiae
+- Weather engine (keep hook, don’t build cathedral)
+
+-----
+
+## Start/Sit: “Eager Matchup” Logic
+
+### Concept
+
+Auto-surface favorable matchups (e.g., Dallas defense weak vs outside WRs → highlight opposing outside WR).
+
+### Defense Weakness Model (Weekly, Rolling 4 Games)
+
+```typescript
+type DefWeakness = {
+  eagerOutside: boolean;  // bottom-8 EPA/target on outside throws (left+right)
+  eagerDeep: boolean;     // bottom-8 EPA/att on deep passes (≥20 air yards)
+  eagerSlot: boolean;     // (future: when slot data available)
+};
+```
+
+### Offense Role Match
+
+```typescript
+type WRProfile = {
+  outsideShare: number;   // targets left+right / total targets (threshold: ≥0.55)
+  deepShare: number;      // deep_targets / total targets (threshold: ≥0.30)
+  slotShare: number;      // (future)
+};
+```
+
+### Match Rules
+
+```typescript
+// Rule 1: Favorable Outside Matchup
+if (defense.eagerOutside && wr.outsideShare >= 0.55) {
+  applyBonus('Start Lean', +1.0);  // tier bump
+  addBadge('🎯 Favorable Outside Matchup');
+}
+
+// Rule 2: Deep Shot Upside
+if (defense.eagerDeep && wr.deepShare >= 0.30) {
+  applyBonus('Ceiling Spike', +0.5);
+  addBadge('💥 Deep Shot Upside');
+}
+
+// Rule 3: Pressure Tax
+if (qb.pressureRate >= leagueP75) {
+  dampenBonus('Deep Ceiling', 0.70);  // 30% reduction
+  addNote('⚠️ QB under pressure — deep ceiling capped');
+}
+```
+
+### Human-Readable Explanation
+
+```
+"Defense bleeds outside routes (rank 29th EPA/att). 
+You run 62% outside, 34% deep. 
+⚠️ QB pressure is high (31%), so deep ceiling slightly throttled."
+```
+
+-----
+
+## Rankings Integration
+
+### This Week Rankings
+
+```typescript
+const baseScore = usageWeight * 0.40;  // existing foundation
+
+// Situational Adders
+const situationalBonus = 
+  (glRushes * 2.5) +              // TD equity king
+  (rzTargets * 1.8) +             // red zone target value
+  (thirdDownTargets * 1.2) +      // floor insurance
+  (twoMinTargets * 1.5);          // crunch time
+
+// Context Modifiers
+const contextMod = 
+  (q4OneScoreEPA > 0 ? 3 : 0) +   // clutch badge
+  -(pressureRate > P75 ? deepShare * 0.3 : 0) +  // pressure tax
+  (explosiveRate > P60 ? 2 : 0);  // ceiling bump
+
+// Opponent Fit
+const matchupBonus = 
+  (eagerOutsideMatch ? 4 : 0) +   // favorable matchup
+  (eagerDeepMatch ? 2 : 0);       // ceiling spike
+
+const finalScore = baseScore + situationalBonus + contextMod + matchupBonus;
+```
+
+### ROS / Dynasty Rankings
+
+```typescript
+// Smooth situational measures with EWMA (α=0.3)
+const talentScore = 
+  (yacOE * 0.35) + 
+  (airEPA * 0.25) + 
+  (explosiveRate * 0.20);
+
+// Future: when NGS available
+const ngsBonus = 
+  (separation > P70 ? 3 : 0) +    // true talent signal
+  (timeToThrowStable ? 2 : 0);    // QB insulation
+```
+
+-----
+
+## Trade Evaluation Integration
+
+### RB Packages
+
+```typescript
+// Weight TD equity trend over raw fantasy points
+const rbValue = 
+  (glRushesTrend * 0.35) +        // goal-line role = king
+  (rzTouchesTrend * 0.25) +       // red zone work
+  (snapsTrend * 0.20) +           // volume floor
+  (explosiveRate * 0.20);         // ceiling potential
+```
+
+### WR Consolidations
+
+```typescript
+// Prefer talent over volume
+const wrValue = 
+  (airEPA * 0.30) +               // route wins
+  (yacOE * 0.25) +                // playmaking ability
+  (explosiveRate * 0.20) +        // ceiling
+  (targetShare * 0.25);           // opportunity
+```
+
+### QB Anchors
+
+```typescript
+// Stability = value
+if (pressureRate < P40 && timeToThrowStable) {
+  addBadge('🛡️ Insulated QB — Safe Floor');
+}
+```
+
+-----
+
+## ETL Pipeline
+
+### Nightly Job Flow
+
+```typescript
+async function runNightlyETL(season: number) {
+  // 1. Pull week's play-by-play
+  const pbp = await nfl.load_pbp_data([season]);
+  
+  // 2. Compute all 6 core tables
+  await computeWPSplits(pbp);
+  await computeSituationalUsage(pbp);
+  await computeTargetQuality(pbp);
+  await computePressureContext(pbp);
+  await computeExplosiveProfile(pbp);
+  
+  // 3. Pull weekly summary from nfl_data_py
+  await nfl.import_weekly_data([season]);
+  await transformToWeeklySummary();
+  
+  // 4. (Future) Pull NGS data
+  // await computeNGSWeekly();
+  
+  // 5. Upsert all tables
+  await db.upsert('wp_splits_weekly', wpRows, ['season', 'week', 'player_id']);
+  await db.upsert('situational_usage_weekly', sitRows, ['season', 'week', 'player_id']);
+  await db.upsert('target_quality_weekly', tqRows, ['season', 'week', 'player_id']);
+  await db.upsert('pressure_context_qb', pressQB, ['season', 'week', 'passer_player_id']);
+  await db.upsert('pressure_context_team', pressTeam, ['season', 'week', 'team']);
+  await db.upsert('explosive_profile_weekly', expRows, ['season', 'week', 'player_id']);
+  await db.upsert('weekly_summary', summaryRows, ['season', 'week', 'player_id']);
+}
+```
+
+### Data Quality Guardrails
+
+```typescript
+// 1. Drop garbage plays from WP splits
+pbp = pbp.filter(p => !['kneel', 'spike', 'no_play'].includes(p.play_type));
+
+// 2. Small-sample smoothing (if plays < 15)
+function shrinkToMean(playerStats, teamPosAvg, shrinkageFactor = 0.4) {
+  if (playerStats.plays < 15) {
+    playerStats.metric = 
+      (playerStats.metric * (1 - shrinkageFactor)) + 
+      (teamPosAvg * shrinkageFactor);
+  }
+  return playerStats;
+}
+
+// 3. Version control
+const FEATURES_VERSION = '1.0';  // add to every table
+```
+
+-----
+
+## TypeScript Type Definitions
+
+**File**: `@shared/types/advanced.ts`
+
+```typescript
+export type SituationalUsage = {
+  season: number;
+  week: number;
+  playerId: string;
+  rzTouches: number;
+  rzTargets: number;
+  glRushes: number;
+  thirdDownTargets: number;
+  twoMinTargets: number;
+  twoMinSnaps: number;
+};
+
+export type TargetQuality = {
+  season: number;
+  week: number;
+  playerId: string;
+  targets: number;
+  airYards: number;
+  airEPA: number;
+  yacEPA: number;
+  xyacEPA: number;
+  yacOE: number;
+  deepTargets: number;
+  shortTargets: number;
+};
+
+export type PressureContextQB = {
+  season: number;
+  week: number;
+  qbId: string;
+  dropbacks: number;
+  pressures: number;
+  sacks: number;
+  scrambles: number;
+  pressureRate: number;
+};
+
+export type PressureContextTeam = {
+  season: number;
+  week: number;
+  team: string;
+  passRushersAvg: number;
+  defendersInBoxAvg: number;
+};
+
+export type WinProbSplits = {
+  season: number;
+  week: number;
+  playerId: string;
+  plays: number;
+  wpAvg: number;
+  wpaSum: number;
+  highLeveragePlays: number;
+  q4OneScorePlays: number;
+  q4OneScoreEPA: number;
+  kneelOutPlays: number;
+};
+
+export type ExplosiveProfile = {
+  season: number;
+  week: number;
+  playerId: string;
+  explosive20Plus: number;
+  explosiveRate: number;
+  longGain: number;
+};
+
+export type WeeklySummary = {
+  season: number;
+  week: number;
+  playerId: string;
+  fantasyPtsPPR: number;
+  snaps: number;
+  targets: number;
+  carries: number;
+  routes: number | null;
+  teamPassAttempts: number;
+};
+
+export type DefenseWeakness = {
+  team: string;
+  eagerOutside: boolean;
+  eagerDeep: boolean;
+  eagerSlot: boolean;
+  outsideEPAPerTarget: number;
+  deepEPAPerAtt: number;
+};
+
+export type WRProfile = {
+  playerId: string;
+  outsideShare: number;
+  deepShare: number;
+  slotShare: number;
+};
+```
+
+-----
+
+## API Endpoint Reference
+
+### New Endpoints
+
+```
+GET /api/context/wp
+  Query params: playerId, window (default: last4)
+  Returns: WinProbSplits[]
+
+GET /api/context/situational
+  Query params: playerId, window (default: last4)
+  Returns: SituationalUsage[]
+
+GET /api/context/pressure/qb
+  Query params: qbId, window (default: last4)
+  Returns: PressureContextQB[]
+
+GET /api/context/pressure/team
+  Query params: team, window (default: last4)
+  Returns: PressureContextTeam[]
+
+GET /api/receiving/quality
+  Query params: playerId, window (default: last4)
+  Returns: TargetQuality[]
+
+GET /api/context/explosive
+  Query params: playerId, window (default: last4)
+  Returns: ExplosiveProfile[]
+
+GET /api/weekly/summary
+  Query params: playerId, span (default: 5)
+  Returns: WeeklySummary[]
+```
+
+-----
+
+## Sprint Checklist
+
+### Sprint 1: Core Pipeline (2 weeks)
+
+- [ ] Create database schemas for 6 core tables
+- [ ] Build ETL functions for each table
+- [ ] Implement nightly job scheduler
+- [ ] Add data quality guardrails
+- [ ] Create 6 new API endpoints
+- [ ] Add TypeScript types to shared package
+- [ ] Write unit tests for ETL functions
+- [ ] Deploy to staging
+
+### Sprint 2: Rankings Integration (1 week)
+
+- [ ] Wire Start/Sit eager-matchup logic
+- [ ] Add 3 new ranking badges (Clutch, 2-Min Magnet, Explosive)
+- [ ] Integrate situational bonuses into This Week rankings
+- [ ] Add matchup notes to player cards
+- [ ] Update ranking explainer text
+- [ ] Deploy to production
+
+### Sprint 3: Next Phase (Future)
+
+- [ ] NGS snapshot integration (TTT, separation)
+- [ ] Depth chart + injury designation wiring
+- [ ] Opponent coverage tendencies (FTN integration)
+- [ ] Advanced trade evaluation UI
+
+-----
+
+## Notes
+
+- **Performance**: All tables use composite primary keys for efficient queries
+- **Versioning**: Include `features_v` field for schema evolution
+- **Nullability**: Routes and NGS fields nullable until consistently available
+- **Rate Limiting**: Consider caching for frequently accessed rolling windows
+- **Monitoring**: Log row counts and computation time for each ETL step
+
+-----
+
+## Questions / Decisions Needed
+
+1. **Smoothing thresholds**: Confirm `plays < 15` for small-sample adjustment
+1. **Percentile cutoffs**: Validate P75 for pressure, bottom-8 for eager matchups
+1. **Window defaults**: Confirm `last4` for context endpoints, `span=5` for summary
+1. **Badge thresholds**: Review explosive rate P60, high-leverage EPA thresholds
+1. **NGS timeline**: When can we reliably access NGS data?
+
+-----
+
+**Last Updated**: [Current Date]  
+**Version**: 1.0  
+**Owner**: Data Engineering & Rankings Team
+
+```
+
+```
