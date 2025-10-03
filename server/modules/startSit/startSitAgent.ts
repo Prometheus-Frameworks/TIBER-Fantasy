@@ -245,30 +245,54 @@ export class StartSitAgent implements StartSitAgent1 {
     
     const profiles: StartSitPlayerProfile[] = [];
     
-    // Build all profiles
+    // Build all profiles, preserving original input IDs
+    const playerIdMap = new Map<string, string>(); // nfl-id -> original-input-id
+    
     for (const playerId of playerIds) {
       const opponent = "TBD"; // TODO: Schedule lookup
+      console.log(`[StartSitAgent] Building profile for: ${playerId}`);
       const assemblerResult = await buildStartSitPlayerProfile(playerId, week, opponent, season);
       
       if (assemblerResult) {
+        console.log(`[StartSitAgent] Profile built successfully for: ${assemblerResult.playerName}`);
         const profile = transformToStartSitProfile(assemblerResult);
+        console.log(`[StartSitAgent] Transform result:`, profile ? 'SUCCESS' : 'NULL', profile ? `score=${profile.factorBreakdown.normalizedScore}` : '');
         if (profile) {
+          // Map nfl-data-py ID back to original input ID
+          playerIdMap.set(profile.playerId, playerId);
           profiles.push(profile);
+          console.log(`[StartSitAgent] Added to profiles array. Total: ${profiles.length}`);
+        } else {
+          console.warn(`[StartSitAgent] Failed to transform profile for: ${playerId}`);
         }
+      } else {
+        console.warn(`[StartSitAgent] No assembler result for: ${playerId}`);
       }
     }
+    
+    console.log(`[StartSitAgent] Built ${profiles.length} profiles total`);
     
     // Sort by score
     profiles.sort((a, b) => b.factorBreakdown.normalizedScore - a.factorBreakdown.normalizedScore);
     
     // Transform to verdicts with ranking context
-    const verdicts = profiles.map((profile, idx) => 
-      transformToVerdict(profile, { 
+    const verdicts = profiles.map((profile, idx) => {
+      console.log(`[StartSitAgent] Transforming verdict for ${profile.name} (score: ${profile.factorBreakdown.normalizedScore})`);
+      const verdict = transformToVerdict(profile, { 
         totalPlayers: profiles.length, 
         rank: idx + 1 
-      })
-    );
+      });
+      
+      // Restore original input ID for API response mapping
+      const originalId = playerIdMap.get(profile.playerId);
+      if (originalId) {
+        verdict.playerId = originalId;
+      }
+      
+      return verdict;
+    });
     
+    console.log(`[StartSitAgent] Returning ${verdicts.length} verdicts`);
     return verdicts;
   }
 }

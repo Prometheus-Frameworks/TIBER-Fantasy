@@ -147,11 +147,23 @@ async function resolvePlayer(playerIdOrName: string) {
     };
   }
   
+  // Normalize input for name matching: replace hyphens/underscores with spaces, strip punctuation
+  // This handles: "justin-jefferson" → "justin jefferson", "jamarr-chase" → "jamarr chase"
+  const normalizedInput = playerIdOrName
+    .replace(/[-_]/g, ' ')  // hyphens/underscores → spaces
+    .replace(/['']/g, '')   // strip apostrophes
+    .replace(/\./g, '')     // strip periods
+    .trim();
+  
   // Try fuzzy name match in player_advanced_2024
+  // Strip punctuation from database names too for accurate matching
   const nameMatch = await db
     .select()
     .from(playerAdvanced2024)
-    .where(sql`LOWER(${playerAdvanced2024.playerName}) LIKE LOWER(${`%${playerIdOrName}%`})`)
+    .where(sql`
+      LOWER(REPLACE(REPLACE(REPLACE(${playerAdvanced2024.playerName}, '''', ''), '.', ''), '-', ' '))
+      LIKE LOWER(${`%${normalizedInput}%`})
+    `)
     .limit(1);
   
   if (nameMatch.length > 0) {
