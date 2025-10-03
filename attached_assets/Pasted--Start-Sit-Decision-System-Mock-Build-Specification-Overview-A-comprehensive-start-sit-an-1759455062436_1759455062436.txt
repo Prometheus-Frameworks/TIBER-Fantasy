@@ -1,0 +1,461 @@
+# 🎯 Start/Sit Decision System - Mock Build Specification
+
+## Overview
+
+A comprehensive start/sit analyzer that combines EPA analytics, SOS matchups, usage metrics, injury data, and market signals to generate actionable fantasy football decisions with full explainability.
+
+## System Architecture
+
+### 1. Data Layer Integration
+
+**Existing Data Sources:**
+
+```typescript
+// playerAdvanced2024: EPA Analytics
+- epa_per_play
+- adot (Air Distance on Target)
+- yprr (Yards Per Route Run)
+- target_share
+- wopr (Weighted Opportunity Rating)
+
+// gameLogs: Weekly Performance
+- fantasy_points
+- targets
+- carries
+- receptions
+- weekly_trends
+
+// sosScores + teamDefensiveContext: Matchup Intelligence
+- position_specific_sos (Week 5+)
+- defensive_efficiency_metrics
+- recent_form_adjustments
+
+// injuries: Health Status
+- injury_status
+- probability_to_play
+- impact_severity
+
+// playerWeekFacts: Usage Metrics
+- snap_percentage
+- route_participation
+- red_zone_usage
+
+// marketSignals: Consensus Data
+- ecr_ranking
+- adp_value
+- expert_consensus
+```
+
+### 2. Scoring Algorithm
+
+**Composite Score Calculation (0-100 scale):**
+
+```
+Final Score = (Projection × 0.30) + 
+              (Usage × 0.25) + 
+              (Matchup × 0.25) + 
+              (Efficiency × 0.15) + 
+              (Volatility × 0.05)
+```
+
+**Component Breakdowns:**
+
+**A. Projection Score (30%)**
+
+```typescript
+- Recent fantasy points trend (last 3 games)
+- Season average vs. projection
+- Market consensus (ECR) alignment
+- Floor/ceiling analysis
+```
+
+**B. Usage Score (25%)**
+
+```typescript
+- Snap % trend
+- Target/carry share
+- Red zone opportunity rate
+- Route participation (WR/TE)
+- Goal-line work (RB)
+```
+
+**C. Matchup Score (25%)**
+
+```typescript
+- Position-specific SOS score
+- Defensive EPA allowed
+- Recent defensive performance (3-game window)
+- Home/away splits
+- Weather factors (if applicable)
+```
+
+**D. Efficiency Score (15%)**
+
+```typescript
+- EPA per play vs. position average
+- YPRR (receivers)
+- Yards per carry (RBs)
+- Catch rate
+- Target quality (ADOT)
+```
+
+**E. Volatility Penalty (5%)**
+
+```typescript
+- Injury status impact (-20 for Questionable, -50 for Doubtful)
+- Consistency score (std dev of recent games)
+- Boom/bust tendency
+- Game script risk
+```
+
+### 3. Decision Tiers
+
+```
+🔥 SMASH START (80-100)
+- Elite player + favorable conditions
+- Minimal risk, maximum upside
+- "Set and forget" plays
+
+✅ START (65-79)
+- Solid floor with upside
+- Reliable weekly option
+- Confidence play
+
+⚠️ RISKY / SIT (40-64)
+- Volatile or unfavorable matchup
+- Bench for better options
+- Flex consideration only
+
+❌ FADE (0-39)
+- Avoid at all costs
+- Injury concerns or brutal matchup
+- Only in emergency scenarios
+```
+
+### 4. API Endpoints
+
+**POST /api/start-sit/analyze**
+
+```typescript
+Request Body:
+{
+  "playerId": string,
+  "week": number,
+  "opponent": string,
+  "format": "PPR" | "Half-PPR" | "Standard"
+}
+
+Response:
+{
+  "player": {
+    "id": string,
+    "name": string,
+    "position": string,
+    "team": string
+  },
+  "decision": {
+    "score": number,           // 0-100
+    "tier": "SMASH" | "START" | "SIT" | "FADE",
+    "confidence": number       // 0-100
+  },
+  "breakdown": {
+    "projection": {
+      "score": number,
+      "points": number,
+      "floor": number,
+      "ceiling": number
+    },
+    "usage": {
+      "score": number,
+      "snapPct": number,
+      "targetShare": number,
+      "trend": "UP" | "STABLE" | "DOWN"
+    },
+    "matchup": {
+      "score": number,
+      "sosRank": number,
+      "defenseRank": number,
+      "analysis": string
+    },
+    "efficiency": {
+      "score": number,
+      "epaPerPlay": number,
+      "yprr": number,
+      "positionRank": number
+    },
+    "volatility": {
+      "penalty": number,
+      "injuryStatus": string,
+      "consistencyScore": number
+    }
+  },
+  "reasoning": string[],        // Human-readable explanations
+  "alerts": string[]            // Warnings or key factors
+}
+```
+
+**POST /api/start-sit/compare**
+
+```typescript
+Request Body:
+{
+  "playerIds": string[],        // Up to 4 players
+  "week": number,
+  "format": "PPR" | "Half-PPR" | "Standard"
+}
+
+Response:
+{
+  "comparisons": Array<{
+    player: PlayerInfo,
+    decision: DecisionData,
+    breakdown: BreakdownData,
+    ranking: number             // 1-4 within comparison
+  }>,
+  "recommendation": {
+    "startPlayer": string,
+    "reasoning": string,
+    "confidenceGap": number     // Score difference
+  }
+}
+```
+
+### 5. Frontend Components
+
+**Page Structure: `/start-sit`**
+
+```
+┌─────────────────────────────────────┐
+│  🎯 Start/Sit Analyzer              │
+├─────────────────────────────────────┤
+│                                      │
+│  Week Selector:  [Week 5 ▼]         │
+│  Format: [PPR ▼] [Half ▼] [Std ▼]   │
+│                                      │
+│  ┌───────────────────────────────┐  │
+│  │ 🔍 Search Players             │  │
+│  │ [Type player name...]         │  │
+│  └───────────────────────────────┘  │
+│                                      │
+│  ┌─────────────────────────────────┐│
+│  │ PLAYER COMPARISON (up to 4)     ││
+│  │                                  ││
+│  │ [Player 1] vs [Player 2]        ││
+│  │ [+ Add Player]                  ││
+│  │                                  ││
+│  │ [Analyze Decision]              ││
+│  └─────────────────────────────────┘│
+│                                      │
+└─────────────────────────────────────┘
+```
+
+**Results Display:**
+
+```
+┌────────────────────────────────────────┐
+│ 🔥 SMASH START - Score: 87/100         │
+├────────────────────────────────────────┤
+│                                         │
+│ Ja'Marr Chase vs TEN (Week 5)          │
+│ WR, Cincinnati Bengals                  │
+│                                         │
+│ ⚡ Key Factors:                         │
+│ • Elite EPA/play (0.42, 95th percentile)│
+│ • TEN allows 3rd-most fantasy pts to WR│
+│ • 31% target share last 3 games        │
+│ • 94% route participation              │
+│ • Healthy, no injury concerns          │
+│                                         │
+│ ┌─────────────────────────────────┐   │
+│ │ SCORE BREAKDOWN                 │   │
+│ │ Projection:  28/30 ████████████ │   │
+│ │ Usage:       23/25 ██████████   │   │
+│ │ Matchup:     22/25 █████████    │   │
+│ │ Efficiency:  14/15 ██████████   │   │
+│ │ Volatility:   0/5  ████████████ │   │
+│ └─────────────────────────────────┘   │
+│                                         │
+│ 📊 Projected: 18.2 pts (14.5-24.8)     │
+│ 📈 Confidence: 92%                      │
+│                                         │
+└────────────────────────────────────────┘
+```
+
+### 6. Special Features
+
+**A. “Start Your Studs” Override Detection**
+
+- Flags when elite players (top 12 by position) have poor matchups
+- Displays historical performance in similar spots
+- Suggests whether to trust talent over matchup
+
+**B. Injury Impact Simulator**
+
+- Shows score changes based on injury status
+- “What if healthy?” projections for questionable players
+- Backup plan recommendations
+
+**C. Confidence Intervals**
+
+- Not just a single projection - show floor/ceiling ranges
+- Percentage chance of hitting benchmarks (10+ pts, 15+ pts, 20+ pts)
+- Boom/bust probability
+
+**D. Historical Validation**
+
+- “Last time vs. this opponent” stats
+- Similar matchup performance lookup
+- Trend indicators (hot/cold streaks)
+
+### 7. Database Queries Needed
+
+```sql
+-- Composite player profile for analysis
+WITH player_stats AS (
+  SELECT 
+    p.player_id,
+    p.player_name,
+    p.position,
+    p.team,
+    pa.epa_per_play,
+    pa.adot,
+    pa.yprr,
+    pa.target_share,
+    pa.wopr,
+    gl.fantasy_points,
+    pwf.snap_percentage,
+    pwf.route_participation,
+    i.injury_status,
+    ms.ecr_ranking
+  FROM players p
+  LEFT JOIN playerAdvanced2024 pa ON p.player_id = pa.player_id
+  LEFT JOIN gameLogs gl ON p.player_id = gl.player_id
+  LEFT JOIN playerWeekFacts pwf ON p.player_id = pwf.player_id
+  LEFT JOIN injuries i ON p.player_id = i.player_id
+  LEFT JOIN marketSignals ms ON p.player_id = ms.player_id
+  WHERE gl.week = :targetWeek
+),
+matchup_context AS (
+  SELECT
+    sos.position,
+    sos.opponent_team,
+    sos.sos_score,
+    tdc.epa_allowed,
+    tdc.recent_form
+  FROM sosScores sos
+  JOIN teamDefensiveContext tdc ON sos.opponent_team = tdc.team
+  WHERE sos.week = :targetWeek
+)
+SELECT * 
+FROM player_stats ps
+JOIN matchup_context mc 
+  ON ps.position = mc.position 
+  AND :opponent = mc.opponent_team;
+```
+
+### 8. File Structure
+
+```
+/pages/start-sit/
+  index.tsx                 // Main page
+  
+/components/start-sit/
+  PlayerSearch.tsx          // Autocomplete search
+  ComparisonGrid.tsx        // Side-by-side comparisons
+  DecisionCard.tsx          // Individual decision display
+  ScoreBreakdown.tsx        // Visual score components
+  ConfidenceChart.tsx       // Floor/ceiling visualization
+  AlertBanner.tsx           // Injury/news alerts
+  
+/lib/start-sit/
+  analyzer.ts               // Core scoring algorithm
+  dataAggregator.ts         // Pull all data sources
+  projectionEngine.ts       // Calculate projections
+  matchupAnalyzer.ts        // SOS integration
+  volatilityCalculator.ts   // Risk assessment
+  
+/api/start-sit/
+  analyze.ts                // Single player analysis
+  compare.ts                // Multi-player comparison
+  bulk-analyze.ts           // Full roster analysis
+```
+
+### 9. Implementation Priority
+
+**Phase 1: Core Engine (Week 1)**
+
+- Build scoring algorithm
+- Integrate existing data sources
+- Create API endpoints
+- Basic decision output
+
+**Phase 2: Frontend (Week 2)**
+
+- Search interface
+- Decision card display
+- Score breakdown visualization
+- Player comparison tool
+
+**Phase 3: Advanced Features (Week 3)**
+
+- Confidence intervals
+- Historical validation
+- Injury impact simulator
+- Bulk roster analysis
+
+**Phase 4: Polish & Testing (Week 4)**
+
+- Mobile responsiveness
+- Performance optimization
+- User testing
+- Documentation
+
+### 10. Success Metrics
+
+- **Accuracy**: Track start/sit recommendations vs. actual outcomes
+- **Usage**: Monitor which features users engage with most
+- **Trust**: Confidence score correlation with user decisions
+- **Speed**: API response time < 200ms for single analysis
+
+-----
+
+## Sample Usage Scenarios
+
+**Scenario 1: Simple Start/Sit**
+
+```
+User asks: "Should I start Breece Hall or James Conner this week?"
+
+System returns:
+- Breece Hall: 73/100 (START) - Better matchup, higher usage
+- James Conner: 68/100 (START) - Solid floor, TD upside
+- Recommendation: Start Breece Hall (5-point confidence gap)
+```
+
+**Scenario 2: Injury Concern**
+
+```
+User asks: "Cooper Kupp is questionable - should I risk it?"
+
+System returns:
+- Current Score: 58/100 (SIT) - Volatility penalty applied
+- If Healthy: 76/100 (START) - Would be clear start
+- Recommendation: Wait for final injury report or start backup plan
+- Backup suggestions: [List of alternatives]
+```
+
+**Scenario 3: Stud vs Matchup**
+
+```
+User asks: "Stefon Diggs vs shutdown corner - start or sit?"
+
+System returns:
+- Score: 71/100 (START)
+- "Start Your Studs" override: Active
+- Reasoning: Diggs' talent (95th percentile EPA) overcomes tough matchup
+- Historical: 14.2 avg pts in 5 games vs elite corners
+```
+
+-----
+
+This system combines all your data sources into a single, actionable recommendation engine with full transparency. Ready to implement! 🚀​​​​​​​​​​​​​​​​
