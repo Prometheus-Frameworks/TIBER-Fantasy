@@ -61,6 +61,8 @@ import playerIdentityRoutes from './routes/playerIdentityRoutes';
 import uphAdminRoutes from './routes/uphAdminRoutes';
 import sosRouter from './modules/sos/sos.router';
 import { ratingsRouter } from './src/modules/ratings';
+import { buildStartSitRouter } from './routes/startSitRoutes';
+import { startSitAgent } from './modules/startSit/startSitAgent';
 import rankingsV3Router from './routes/rankingsV3';
 import ovrRouter from './routes/ovrRoutes';
 import { registerEnhancedRankingsRoutes } from './routes/enhancedRankingsRoutes';
@@ -2763,6 +2765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/python-rookie', pythonRookieRoutes);
   app.use('/api/redraft', redraftWeeklyRoutes);
   app.use('/api/sos', sosRouter);
+  app.use('/api/start-sit', buildStartSitRouter(startSitAgent));
   app.use('/api/buys-sells', buysSellsRoutes);
 
   // Player resolution endpoint for converting Sleeper IDs to names
