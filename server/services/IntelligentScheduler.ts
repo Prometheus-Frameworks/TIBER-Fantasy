@@ -892,7 +892,7 @@ export class IntelligentScheduler {
       // Apply frequency change if significant
       if (Math.abs(newFrequency - currentState.frequencyMs) > 30000) { // 30 second threshold
         await this.updateScheduleState(scheduleKey, {
-          frequencyMs: newFrequency,
+          frequencyMs: Math.round(newFrequency),
           triggerSource: 'sla_adjustment',
           slaMetrics,
           systemLoad
@@ -910,7 +910,7 @@ export class IntelligentScheduler {
           success: true,
           triggerData: {
             oldFrequencyMs: currentState.frequencyMs,
-            newFrequencyMs: newFrequency,
+            newFrequencyMs: Math.round(newFrequency),
             adjustment,
             reason,
             slaMetrics,
@@ -918,7 +918,7 @@ export class IntelligentScheduler {
           }
         });
 
-        console.log(`📊 [IntelligentScheduler] Frequency ${adjustment} for ${scheduleKey}: ${currentState.frequencyMs}ms → ${newFrequency}ms (${reason})`);
+        console.log(`📊 [IntelligentScheduler] Frequency ${adjustment} for ${scheduleKey}: ${currentState.frequencyMs}ms → ${Math.round(newFrequency)}ms (${reason})`);
       }
 
     } catch (error) {

@@ -417,7 +417,7 @@ export class CoreWeekIngestETL {
                       !fact.playerId.includes('mock') &&
                       fact.playerId.length > 3;
     
-    return hasUsage && hasValidId;
+    return Boolean(hasUsage && hasValidId);
   }
 
   /**
