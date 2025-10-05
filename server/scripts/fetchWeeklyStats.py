@@ -39,9 +39,11 @@ def fetch_weekly_stats(week, season):
         
         print(f"✅ Loaded {len(week_data)} player records for Week {week}", file=sys.stderr)
         
-        # Import rosters to get team information
-        rosters = nfl.import_rosters([season])
-        roster_map = rosters[['player_id', 'team', 'position']].drop_duplicates(subset=['player_id'])
+        # Import weekly rosters to get team information
+        rosters = nfl.import_weekly_rosters([season])
+        # Filter to the specific week
+        week_rosters = rosters[rosters['week'] == week]
+        roster_map = week_rosters[['player_id', 'team', 'position']].drop_duplicates(subset=['player_id'])
         
         # Merge with roster data
         week_data = week_data.merge(
