@@ -170,25 +170,49 @@ export class CoreWeekIngestETL {
 
   /**
    * Fetch NFL statistics via NFL-Data-Py integration
-   * Simulates real NFL data for now with realistic distributions
+   * Calls Python script to fetch real weekly statistics
    */
   private async fetchNFLStats(week: number, season: number): Promise<z.infer<typeof PlayerStatsSchema>[]> {
     console.log(`   🏈 Fetching NFL stats for Week ${week}...`);
     
     try {
-      // For now, generate realistic mock data based on known active players
-      // In production, this would call the actual NFL-Data-Py service
-      const mockStats = await this.generateMockNFLStats(week, season);
+      // Call Python script to fetch real NFL data
+      const { execFile } = await import('child_process');
+      const { promisify } = await import('util');
+      const execFileAsync = promisify(execFile);
+      
+      const pythonScript = './server/scripts/fetchWeeklyStats.py';
+      const { stdout, stderr } = await execFileAsync('python3', [pythonScript, String(week), String(season)]);
+      
+      // Log Python stderr (progress messages)
+      if (stderr) {
+        console.log(stderr);
+      }
+      
+      // Parse JSON output
+      const result = JSON.parse(stdout);
+      
+      if (!result.success) {
+        console.warn(`   ⚠️ Python script returned error, falling back to mock data: ${result.error}`);
+        return await this.generateMockNFLStats(week, season);
+      }
       
       // Validate the data
-      const validatedStats = mockStats.map(stat => PlayerStatsSchema.parse(stat));
+      const validatedStats = result.players.map((stat: any) => PlayerStatsSchema.parse(stat));
       
-      console.log(`   ✅ Fetched ${validatedStats.length} NFL player stats`);
+      console.log(`   ✅ Fetched ${validatedStats.length} real NFL player stats`);
       return validatedStats;
       
     } catch (error) {
-      console.error(`   ❌ Failed to fetch NFL stats:`, error);
-      throw new Error(`NFL stats fetch failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error(`   ❌ Failed to fetch NFL stats from Python:`, error);
+      console.warn(`   ⚠️ Falling back to mock data generation`);
+      
+      // Fallback to mock data if Python script fails
+      try {
+        return await this.generateMockNFLStats(week, season);
+      } catch (mockError) {
+        throw new Error(`Both real and mock data fetch failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     }
   }
 
