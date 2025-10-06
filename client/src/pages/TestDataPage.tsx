@@ -15,7 +15,9 @@ export default function TestDataPage() {
       <table border={1} cellPadding={8} style={{ borderCollapse: 'collapse', marginTop: '20px' }}>
         <thead>
           <tr>
-            <th>Player ID</th>
+            <th>Player</th>
+            <th>Pos</th>
+            <th>Team</th>
             <th>Games</th>
             <th>Outside %</th>
             <th>Slot %</th>
@@ -28,7 +30,9 @@ export default function TestDataPage() {
         <tbody>
           {data?.data?.map((player: any) => (
             <tr key={player.player_id}>
-              <td>{player.player_id}</td>
+              <td>{player.player_name || player.player_id}</td>
+              <td>{player.position || '-'}</td>
+              <td>{player.team || '-'}</td>
               <td>{player.games_played}</td>
               <td>{player.avg_outside_pct || '-'}</td>
               <td>{player.avg_slot_pct || '-'}</td>

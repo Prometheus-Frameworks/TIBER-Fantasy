@@ -534,17 +534,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const result = await db.execute(sql`
         SELECT 
-          player_id,
-          games_played,
-          alignment_outside_pct as avg_outside_pct,
-          alignment_slot_pct as avg_slot_pct,
-          target_share_pct as avg_target_share,
-          latest_week,
-          latest_snap_share_pct as latest_snap_share,
-          latest_targets as max_targets
-        FROM player_usage_season_avg
-        WHERE season = 2025
-        ORDER BY target_share_pct DESC NULLS LAST
+          psa.player_id,
+          pim.full_name as player_name,
+          pim.position,
+          pim.nfl_team as team,
+          psa.games_played,
+          psa.alignment_outside_pct as avg_outside_pct,
+          psa.alignment_slot_pct as avg_slot_pct,
+          psa.target_share_pct as avg_target_share,
+          psa.latest_week,
+          psa.latest_snap_share_pct as latest_snap_share,
+          psa.latest_targets as max_targets
+        FROM player_usage_season_avg psa
+        LEFT JOIN player_identity_map pim ON psa.player_id = pim.nfl_data_py_id
+        WHERE psa.season = 2025
+        ORDER BY psa.target_share_pct DESC NULLS LAST
         LIMIT 20
       `);
       
