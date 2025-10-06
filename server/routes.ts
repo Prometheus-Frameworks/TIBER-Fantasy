@@ -559,6 +559,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player comparison endpoint
+  app.get('/api/player-usage-compare', async (req: Request, res: Response) => {
+    try {
+      const { player1, player2 } = req.query;
+      
+      if (!player1 || !player2) {
+        return res.status(400).json({ error: 'Both player1 and player2 parameters are required' });
+      }
+
+      const result = await db.execute(sql`
+        SELECT 
+          psa.player_id,
+          r.player_name,
+          r.position,
+          r.team,
+          psa.games_played,
+          psa.alignment_outside_pct,
+          psa.alignment_slot_pct,
+          psa.target_share_pct,
+          psa.carries_gap_pct,
+          psa.carries_zone_pct,
+          psa.latest_week,
+          psa.latest_targets,
+          CASE 
+            WHEN s.home = r.team THEN s.away
+            WHEN s.away = r.team THEN s.home
+            ELSE NULL
+          END as week6_opponent,
+          CASE
+            WHEN s.home = r.team THEN 'vs'
+            WHEN s.away = r.team THEN '@'
+            ELSE NULL
+          END as week6_location
+        FROM player_usage_season_avg psa
+        LEFT JOIN nflfastr_rosters r ON psa.player_id = r.player_id AND r.season = 2025
+        LEFT JOIN schedule s ON s.season = 2025 AND s.week = 6 AND (s.home = r.team OR s.away = r.team)
+        WHERE psa.season = 2025
+          AND LOWER(r.player_name) IN (LOWER(${player1}), LOWER(${player2}))
+      `);
+      
+      res.json({ data: result.rows });
+    } catch (error) {
+      console.error('Player comparison error:', error);
+      res.status(500).json({ error: 'Failed to fetch player comparison data' });
+    }
+  });
+
   // OTC Final Rankings - Authoritative endpoint combining consensus + OTC adjustments
   app.get('/api/rankings/otc-final', async (req: Request, res: Response) => {
     try {
