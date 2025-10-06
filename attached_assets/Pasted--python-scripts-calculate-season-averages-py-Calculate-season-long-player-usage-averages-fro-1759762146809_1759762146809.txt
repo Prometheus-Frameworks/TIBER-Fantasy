@@ -1,0 +1,207 @@
+```python
+# scripts/calculate_season_averages.py
+"""
+Calculate season-long player usage averages from weekly data.
+Run this after the weekly player usage data has been populated.
+"""
+
+import os
+from sqlalchemy import create_engine, text
+from datetime import datetime
+
+def get_db_connection():
+    """Create database connection"""
+    return create_engine(os.getenv('DATABASE_URL'))
+
+def calculate_season_averages(season=2025):
+    """
+    Calculate season-long averages for player usage metrics.
+    Saves to a new table: player_usage_season_avg
+    """
+    engine = get_db_connection()
+    
+    # Create season averages table if it doesn't exist
+    create_table_query = """
+    CREATE TABLE IF NOT EXISTS player_usage_season_avg (
+        id SERIAL PRIMARY KEY,
+        player_id VARCHAR(50) NOT NULL,
+        sleeper_id VARCHAR(50),
+        season INT NOT NULL,
+        
+        -- Season averages for alignment (stable metrics)
+        alignment_outside_pct DECIMAL(5,2),
+        alignment_slot_pct DECIMAL(5,2),
+        target_share_pct DECIMAL(5,2),
+        
+        -- RB carry splits
+        carries_gap_pct DECIMAL(5,2),
+        carries_zone_pct DECIMAL(5,2),
+        
+        -- Most recent game data (volatile metrics)
+        latest_week INT,
+        latest_snap_share_pct DECIMAL(5,2),
+        latest_routes_total INT,
+        latest_targets INT,
+        
+        -- Metadata
+        games_played INT,
+        last_updated TIMESTAMP DEFAULT NOW(),
+        
+        UNIQUE(player_id, season)
+    );
+    """
+    
+    with engine.connect() as conn:
+        conn.execute(text(create_table_query))
+        conn.commit()
+    
+    # Calculate season averages
+    calculate_query = """
+    WITH season_stats AS (
+        SELECT 
+            player_id,
+            sleeper_id,
+            season,
+            -- Average alignment percentages across all games
+            AVG(alignment_outside_pct) as avg_alignment_outside,
+            AVG(alignment_slot_pct) as avg_alignment_slot,
+            AVG(target_share_pct) as avg_target_share,
+            
+            -- RB carry distribution averages
+            AVG(CASE 
+                WHEN carries_total > 0 
+                THEN (carries_gap::DECIMAL / carries_total * 100) 
+                ELSE NULL 
+            END) as avg_carries_gap_pct,
+            AVG(CASE 
+                WHEN carries_total > 0 
+                THEN (carries_zone::DECIMAL / carries_total * 100) 
+                ELSE NULL 
+            END) as avg_carries_zone_pct,
+            
+            -- Count games played
+            COUNT(*) as games_played
+        FROM player_usage
+        WHERE season = :season
+            AND snaps > 0  -- Only count games where they actually played
+        GROUP BY player_id, sleeper_id, season
+    ),
+    latest_game AS (
+        SELECT DISTINCT ON (player_id)
+            player_id,
+            week as latest_week,
+            snap_share_pct as latest_snap_share,
+            routes_total as latest_routes,
+            targets as latest_targets
+        FROM player_usage
+        WHERE season = :season
+            AND snaps > 0
+        ORDER BY player_id, week DESC
+    )
+    INSERT INTO player_usage_season_avg (
+        player_id, sleeper_id, season,
+        alignment_outside_pct, alignment_slot_pct, target_share_pct,
+        carries_gap_pct, carries_zone_pct,
+        latest_week, latest_snap_share_pct, latest_routes_total, latest_targets,
+        games_played, last_updated
+    )
+    SELECT 
+        s.player_id,
+        s.sleeper_id,
+        s.season,
+        ROUND(s.avg_alignment_outside::numeric, 2),
+        ROUND(s.avg_alignment_slot::numeric, 2),
+        ROUND(s.avg_target_share::numeric, 2),
+        ROUND(s.avg_carries_gap_pct::numeric, 2),
+        ROUND(s.avg_carries_zone_pct::numeric, 2),
+        l.latest_week,
+        l.latest_snap_share,
+        l.latest_routes,
+        l.latest_targets,
+        s.games_played,
+        NOW()
+    FROM season_stats s
+    LEFT JOIN latest_game l ON s.player_id = l.player_id
+    ON CONFLICT (player_id, season) 
+    DO UPDATE SET
+        alignment_outside_pct = EXCLUDED.alignment_outside_pct,
+        alignment_slot_pct = EXCLUDED.alignment_slot_pct,
+        target_share_pct = EXCLUDED.target_share_pct,
+        carries_gap_pct = EXCLUDED.carries_gap_pct,
+        carries_zone_pct = EXCLUDED.carries_zone_pct,
+        latest_week = EXCLUDED.latest_week,
+        latest_snap_share_pct = EXCLUDED.latest_snap_share_pct,
+        latest_routes_total = EXCLUDED.latest_routes_total,
+        latest_targets = EXCLUDED.latest_targets,
+        games_played = EXCLUDED.games_played,
+        last_updated = NOW();
+    """
+    
+    with engine.connect() as conn:
+        result = conn.execute(text(calculate_query), {"season": season})
+        conn.commit()
+        print(f"✅ Calculated season averages for {result.rowcount} players")
+
+def verify_calculations(season=2025):
+    """Print sample data to verify calculations look correct"""
+    engine = get_db_connection()
+    
+    query = """
+    SELECT 
+        player_id,
+        games_played,
+        ROUND(alignment_outside_pct::numeric, 1) as outside_pct,
+        ROUND(target_share_pct::numeric, 1) as target_share,
+        latest_week,
+        ROUND(latest_snap_share_pct::numeric, 1) as latest_snaps
+    FROM player_usage_season_avg
+    WHERE season = :season
+        AND games_played >= 3  -- Only show players with meaningful sample
+    ORDER BY target_share_pct DESC NULLS LAST
+    LIMIT 10;
+    """
+    
+    with engine.connect() as conn:
+        result = conn.execute(text(query), {"season": season})
+        rows = result.fetchall()
+        
+        print("\n📊 Sample Season Averages (Top 10 by target share):")
+        print("-" * 80)
+        print(f"{'Player ID':<20} {'Games':<8} {'Outside%':<10} {'Target%':<10} {'Latest Week':<12} {'Latest Snaps%'}")
+        print("-" * 80)
+        
+        for row in rows:
+            print(f"{row[0]:<20} {row[1]:<8} {row[2] or 'N/A':<10} {row[3] or 'N/A':<10} {row[4]:<12} {row[5] or 'N/A'}")
+
+if __name__ == "__main__":
+    print(f"🔄 Starting season average calculations for 2025...")
+    
+    try:
+        calculate_season_averages(season=2025)
+        verify_calculations(season=2025)
+        print("\n✅ Season averages calculation complete!")
+        
+    except Exception as e:
+        print(f"\n❌ Error calculating season averages: {e}")
+        raise
+```
+
+**What this does:**
+
+1. Creates a new table `player_usage_season_avg` with:
+
+- Season-long averages for stable metrics (alignment %, target share, carry splits)
+- Most recent game data for volatile metrics (snap %, routes, targets)
+- Games played count and which week the latest data is from
+
+1. Calculates averages only from games where the player actually played (snaps > 0)
+1. Handles the upsert so you can run this weekly and it updates existing players
+1. Shows you a sample of the data so you can verify it looks right
+
+**To use it:**
+
+1. Drop this in `scripts/calculate_season_averages.py`
+1. Run it after your weekly usage data populates: `python scripts/calculate_season_averages.py`
+1. Query the `player_usage_season_avg` table in your API instead of doing the calculations on every request
+
+You can add this to your weekly cron job to run right after the player usage script completes.​​​​​​​​​​​​​​​​
