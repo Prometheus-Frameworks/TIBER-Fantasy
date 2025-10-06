@@ -1,0 +1,585 @@
+Perfect - your agent’s assessment is spot-on. You’re avoiding duplicate work and leveraging what already exists. Let me give you the streamlined spec that focuses **only** on what’s actually missing:
+
+-----
+
+<artifact identifier="streamlined-matchup-system" type="text/markdown" title="Streamlined Matchup Intelligence System - Build Only What's Missing">
+# Streamlined Matchup Intelligence System
+## Build Only What's Missing
+
+## WHAT YOU ALREADY HAVE ✓
+
+- `team_defensive_context` - defensive EPA, success rates, etc.
+- `team_coverage_matchups` - zone/man splits, FP/DB by coverage
+- `team_receiver_alignment_matchups` - outside/slot/TE FP allowed
+- `team_offensive_context` - offensive EPA, YPA, CPOE, etc.
+- Player search with fuzzy matching
+- Sleeper API integration
+- Weekly data ingestion pipeline
+
+## WHAT YOU’RE ACTUALLY BUILDING 🆕
+
+-----
+
+## 1. NEW DATABASE TABLE: player_usage
+
+```typescript
+// db/schema/playerUsage.ts
+import { pgTable, serial, varchar, integer, decimal, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+
+export const playerUsage = pgTable('player_usage', {
+  id: serial('id').primaryKey(),
+  playerId: varchar('player_id', { length: 50 }).notNull(),
+  sleeperId: varchar('sleeper_id', { length: 50 }),
+  week: integer('week').notNull(),
+  season: integer('season').notNull(),
+  
+  // WR Alignment Data
+  routesTotal: integer('routes_total'),
+  routesOutside: integer('routes_outside'),
+  routesSlot: integer('routes_slot'),
+  alignmentOutsidePct: decimal('alignment_outside_pct', { precision: 5, scale: 2 }),
+  alignmentSlotPct: decimal('alignment_slot_pct', { precision: 5, scale: 2 }),
+  
+  // Usage Metrics
+  snaps: integer('snaps'),
+  snapSharePct: decimal('snap_share_pct', { precision: 5, scale: 2 }),
+  targetSharePct: decimal('target_share_pct', { precision: 5, scale: 2 }),
+  targets: integer('targets'),
+  
+  // RB Specific
+  carriesGap: integer('carries_gap'),
+  carriesZone: integer('carries_zone'),
+  carriesTotal: integer('carries_total'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => ({
+  uniquePlayerWeek: uniqueIndex('player_usage_unique').on(table.playerId, table.week, table.season),
+}));
+```
+
+-----
+
+## 2. PYTHON SCRIPT: Calculate Player Usage from nflfastR
+
+```python
+# scripts/calculate_player_usage.py
+import nfl_data_py as nfl
+import pandas as pd
+import psycopg2
+from psycopg2.extras import execute_values
+import os
+from datetime import datetime
+
+def get_db_connection():
+    return psycopg2.connect(os.getenv('DATABASE_URL'))
+
+def calculate_wr_alignment_usage(season, week):
+    """Calculate WR alignment splits from play-by-play data"""
+    print(f"Calculating WR usage for {season} Week {week}...")
+    
+    # Load play-by-play data
+    pbp = nfl.import_pbp_data([season])
+    pbp = pbp[pbp['week'] == week]
+    
+    # Filter to pass plays with targets
+    targets = pbp[
+        (pbp['pass_attempt'] == 1) & 
+        (pbp['receiver_player_id'].notna())
+    ].copy()
+    
+    # Group by receiver
+    wr_usage = targets.groupby(['receiver_player_id', 'receiver_player_name', 'posteam']).agg({
+        'pass_attempt': 'count',  # Total targets
+        'receiver_player_id': 'count'  # Routes run (approximation)
+    }).reset_index()
+    
+    wr_usage.columns = ['player_id', 'player_name', 'team', 'targets', 'routes']
+    
+    # Calculate alignment splits (nflfastR doesn't have explicit alignment, use receiver position)
+    # This is a simplified version - you may need additional data sources for precise alignment
+    alignment_data = targets.groupby(['receiver_player_id']).apply(
+        lambda x: pd.Series({
+            'routes_outside': len(x),  # Placeholder - needs actual alignment parsing
+            'routes_slot': 0,  # Placeholder
+        })
+    ).reset_index()
+    
+    wr_usage = wr_usage.merge(alignment_data, left_on='player_id', right_on='receiver_player_id', how='left')
+    
+    # Calculate snap share (from rosters data)
+    rosters = nfl.import_seasonal_rosters([season])
+    weekly_rosters = nfl.import_weekly_rosters([season])
+    
+    # Merge snap counts if available
+    # Note: nflfastR doesn't have snap counts - you'll need another source
+    
+    return wr_usage
+
+def calculate_rb_usage(season, week):
+    """Calculate RB carry splits by concept"""
+    print(f"Calculating RB usage for {season} Week {week}...")
+    
+    pbp = nfl.import_pbp_data([season])
+    pbp = pbp[pbp['week'] == week]
+    
+    rush_plays = pbp[
+        (pbp['play_type'] == 'run') & 
+        (pbp['rusher_player_id'].notna())
+    ].copy()
+    
+    # Identify gap vs zone based on run_gap
+    # Gap concepts typically use specific gaps (A, B, C)
+    # Zone concepts typically use wider runs
+    rush_plays['is_gap'] = rush_plays['run_gap'].isin(['guard', 'tackle', 'end'])
+    rush_plays['is_zone'] = ~rush_plays['is_gap']
+    
+    rb_usage = rush_plays.groupby(['rusher_player_id', 'rusher_player_name', 'posteam']).agg({
+        'rush_attempt': 'count',
+        'is_gap': 'sum',
+        'is_zone': 'sum'
+    }).reset_index()
+    
+    rb_usage.columns = ['player_id', 'player_name', 'team', 'carries_total', 'carries_gap', 'carries_zone']
+    
+    return rb_usage
+
+def save_to_database(data, week, season):
+    """Insert player usage data into PostgreSQL"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    records = []
+    for _, row in data.iterrows():
+        records.append((
+            row.get('player_id'),
+            row.get('sleeper_id'),  # You'll need to map this
+            week,
+            season,
+            int(row.get('routes', 0)) if pd.notna(row.get('routes')) else None,
+            int(row.get('routes_outside', 0)) if pd.notna(row.get('routes_outside')) else None,
+            int(row.get('routes_slot', 0)) if pd.notna(row.get('routes_slot')) else None,
+            float(row.get('alignment_outside_pct', 0)) if pd.notna(row.get('alignment_outside_pct')) else None,
+            float(row.get('alignment_slot_pct', 0)) if pd.notna(row.get('alignment_slot_pct')) else None,
+            int(row.get('snaps', 0)) if pd.notna(row.get('snaps')) else None,
+            float(row.get('snap_share_pct', 0)) if pd.notna(row.get('snap_share_pct')) else None,
+            float(row.get('target_share_pct', 0)) if pd.notna(row.get('target_share_pct')) else None,
+            int(row.get('targets', 0)) if pd.notna(row.get('targets')) else None,
+            int(row.get('carries_gap', 0)) if pd.notna(row.get('carries_gap')) else None,
+            int(row.get('carries_zone', 0)) if pd.notna(row.get('carries_zone')) else None,
+            int(row.get('carries_total', 0)) if pd.notna(row.get('carries_total')) else None,
+        ))
+    
+    insert_query = """
+        INSERT INTO player_usage (
+            player_id, sleeper_id, week, season,
+            routes_total, routes_outside, routes_slot,
+            alignment_outside_pct, alignment_slot_pct,
+            snaps, snap_share_pct, target_share_pct, targets,
+            carries_gap, carries_zone, carries_total
+        ) VALUES %s
+        ON CONFLICT (player_id, week, season) 
+        DO UPDATE SET
+            routes_total = EXCLUDED.routes_total,
+            routes_outside = EXCLUDED.routes_outside,
+            updated_at = NOW()
+    """
+    
+    execute_values(cur, insert_query, records)
+    conn.commit()
+    cur.close()
+    conn.close()
+    
+    print(f"Inserted {len(records)} player usage records")
+
+if __name__ == "__main__":
+    SEASON = 2024
+    WEEK = 1  # Get from env or command line
+    
+    wr_data = calculate_wr_alignment_usage(SEASON, WEEK)
+    rb_data = calculate_rb_usage(SEASON, WEEK)
+    
+    # Combine WR and RB data
+    all_data = pd.concat([wr_data, rb_data], ignore_index=True)
+    
+    save_to_database(all_data, WEEK, SEASON)
+```
+
+-----
+
+## 3. CRON JOB: Trigger Python Script Weekly
+
+```typescript
+// jobs/updatePlayerUsage.ts
+import cron from 'node-cron';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+export function schedulePlayerUsageUpdate() {
+  // Run every Tuesday at 3 AM (after MNF)
+  cron.schedule('0 3 * * 2', async () => {
+    console.log('[CRON] Running player usage calculation...');
+    
+    const currentWeek = getCurrentNFLWeek(); // Your existing helper
+    
+    try {
+      const { stdout, stderr } = await execAsync(
+        `python scripts/calculate_player_usage.py ${currentWeek}`
+      );
+      
+      console.log('[CRON] Player usage updated:', stdout);
+      if (stderr) console.error('[CRON] Warnings:', stderr);
+      
+    } catch (error) {
+      console.error('[CRON] Failed to update player usage:', error);
+      // Add your error notification system here
+    }
+  });
+}
+```
+
+-----
+
+## 4. API ENDPOINT: Player Matchup Analysis
+
+```typescript
+// routes/matchup.ts
+import { Router } from 'express';
+import { db } from '@/db';
+import { eq, and } from 'drizzle-orm';
+
+const router = Router();
+
+router.get('/player/:sleeperId', async (req, res) => {
+  const { sleeperId } = req.params;
+  const week = parseInt(req.query.week as string) || getCurrentNFLWeek();
+  const season = 2024;
+  
+  try {
+    // 1. Get player info
+    const player = await db.query.players.findFirst({
+      where: eq(players.sleeperId, sleeperId)
+    });
+    
+    if (!player) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+    
+    // 2. Get opponent
+    const schedule = await getTeamSchedule(player.team, week);
+    const opponent = schedule.opponent;
+    
+    // 3. Get player usage (YOUR NEW TABLE)
+    const usage = await db.query.playerUsage.findFirst({
+      where: and(
+        eq(playerUsage.sleeperId, sleeperId),
+        eq(playerUsage.week, week),
+        eq(playerUsage.season, season)
+      )
+    });
+    
+    // 4. Get defensive matchup data (EXISTING TABLES)
+    const defensiveMatchup = await db.query.teamReceiverAlignmentMatchups.findFirst({
+      where: and(
+        eq(teamReceiverAlignmentMatchups.defenseTeam, opponent),
+        eq(teamReceiverAlignmentMatchups.week, week)
+      )
+    });
+    
+    // 5. Get team offensive context (EXISTING TABLE)
+    const offensiveContext = await db.query.teamOffensiveContext.findFirst({
+      where: and(
+        eq(teamOffensiveContext.team, player.team),
+        eq(teamOffensiveContext.week, week)
+      )
+    });
+    
+    // 6. Calculate matchup quality
+    const matchupAnalysis = analyzeMatchup(player, usage, defensiveMatchup, offensiveContext);
+    
+    res.json(matchupAnalysis);
+    
+  } catch (error) {
+    console.error('Matchup analysis error:', error);
+    res.status(500).json({ error: 'Failed to analyze matchup' });
+  }
+});
+
+export default router;
+```
+
+-----
+
+## 5. MATCHUP INTELLIGENCE LOGIC
+
+```typescript
+// services/matchupAnalyzer.ts
+
+interface MatchupFactors {
+  defensiveWeaknessPercentile: number;
+  usageConsistency: number;
+  offensiveEfficiency: number;
+  supportingMetrics: number;
+}
+
+export function analyzeMatchup(player, usage, defensiveMatchup, offensiveContext) {
+  
+  // Determine primary alignment
+  const primaryAlignment = usage.alignmentOutsidePct > 50 ? 'outside' : 'slot';
+  
+  // Get FP allowed to this alignment
+  const fpAllowed = primaryAlignment === 'outside' 
+    ? defensiveMatchup.fpAllowedWrOutside 
+    : defensiveMatchup.fpAllowedWrSlot;
+  
+  // Calculate percentile (you'll need league averages)
+  const leagueAvgFpAllowed = 12.5; // Calculate from all teams
+  const defensiveWeaknessPercentile = calculatePercentile(fpAllowed, leagueAvgFpAllowed);
+  
+  // Usage consistency (based on last 3 weeks)
+  const usageConsistency = calculateUsageConsistency(player.id, usage.week);
+  
+  // Offensive efficiency percentile
+  const offensiveEfficiency = calculatePercentile(
+    offensiveContext.epaPerDropback, 
+    0.05 // league avg EPA
+  );
+  
+  // Supporting metrics (pass protection, etc.)
+  const supportingMetrics = 50; // Placeholder
+  
+  // Calculate confidence score
+  const confidence = calculateConfidence({
+    defensiveWeaknessPercentile,
+    usageConsistency,
+    offensiveEfficiency,
+    supportingMetrics
+  });
+  
+  // Generate reasoning
+  const reasoning = generateReasoning(
+    player,
+    usage,
+    defensiveMatchup,
+    offensiveContext,
+    primaryAlignment,
+    fpAllowed
+  );
+  
+  return {
+    player: {
+      id: player.sleeperId,
+      name: player.name,
+      position: player.position,
+      team: player.team,
+      opponent: defensiveMatchup.defenseTeam
+    },
+    usage: {
+      alignment_primary: primaryAlignment,
+      alignment_outside_pct: usage.alignmentOutsidePct,
+      alignment_slot_pct: usage.alignmentSlotPct,
+      target_share_pct: usage.targetSharePct,
+      snap_share_pct: usage.snapSharePct
+    },
+    matchup: {
+      defensive_weakness_rank: calculateRank(fpAllowed),
+      fp_allowed_to_alignment: fpAllowed,
+      league_avg_fp_to_alignment: leagueAvgFpAllowed
+    },
+    recommendation: {
+      tier: getTier(confidence),
+      confidence,
+      reasoning,
+      projection_range: calculateProjection(player, usage, defensiveMatchup)
+    }
+  };
+}
+
+function calculateConfidence(factors: MatchupFactors): number {
+  return Math.round(
+    factors.defensiveWeaknessPercentile * 0.40 +
+    factors.usageConsistency * 0.30 +
+    factors.offensiveEfficiency * 0.20 +
+    factors.supportingMetrics * 0.10
+  );
+}
+
+function getTier(confidence: number): string {
+  if (confidence >= 80) return "STRONG START";
+  if (confidence >= 65) return "GOOD START";
+  if (confidence >= 50) return "FLEX PLAY";
+  if (confidence >= 35) return "RISKY START";
+  return "AVOID";
+}
+
+function generateReasoning(player, usage, defense, offense, alignment, fpAllowed): string[] {
+  const reasons = [];
+  
+  const leagueAvg = 12.5;
+  if (fpAllowed > leagueAvg * 1.2) {
+    const rank = calculateRank(fpAllowed);
+    reasons.push(`Plays ${usage.alignmentOutsidePct}% ${alignment} routes where ${defense.defenseTeam} allows ${fpAllowed} FP/G (${rank}${getOrdinalSuffix(rank)} worst)`);
+  }
+  
+  if (offense.cpoe > 3) {
+    reasons.push(`${player.team} passing offense efficient (${offense.cpoe}% CPOE)`);
+  }
+  
+  if (usage.targetSharePct > 25) {
+    reasons.push(`High target share (${usage.targetSharePct}%)`);
+  }
+  
+  return reasons;
+}
+```
+
+-----
+
+## 6. FRONTEND SEARCH COMPONENT
+
+```typescript
+// components/MatchupSearch.tsx
+'use client';
+
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+
+export function MatchupSearch() {
+  const [search, setSearch] = useState('');
+  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
+  
+  const { data: results } = useQuery({
+    queryKey: ['player-search', search],
+    queryFn: () => fetch(`/api/players/search?q=${search}`).then(r => r.json()),
+    enabled: search.length > 2
+  });
+  
+  const { data: matchup } = useQuery({
+    queryKey: ['matchup', selectedPlayer],
+    queryFn: () => fetch(`/api/matchup/player/${selectedPlayer}`).then(r => r.json()),
+    enabled: !!selectedPlayer
+  });
+  
+  return (
+    <div className="max-w-3xl mx-auto p-6">
+      <input
+        type="text"
+        placeholder="Search player..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full p-3 border rounded-lg mb-4"
+      />
+      
+      {results?.length > 0 && (
+        <div className="bg-white border rounded-lg shadow mb-4">
+          {results.map((player: any) => (
+            <button
+              key={player.sleeper_id}
+              onClick={() => setSelectedPlayer(player.sleeper_id)}
+              className="w-full p-3 text-left hover:bg-gray-50 border-b last:border-0"
+            >
+              {player.name} - {player.position} - {player.team}
+            </button>
+          ))}
+        </div>
+      )}
+      
+      {matchup && <MatchupCard matchup={matchup} />}
+    </div>
+  );
+}
+
+function MatchupCard({ matchup }: any) {
+  const tierColors = {
+    'STRONG START': 'bg-green-50 border-green-200 text-green-900',
+    'GOOD START': 'bg-blue-50 border-blue-200 text-blue-900',
+    'FLEX PLAY': 'bg-yellow-50 border-yellow-200 text-yellow-900',
+    'RISKY START': 'bg-orange-50 border-orange-200 text-orange-900',
+    'AVOID': 'bg-red-50 border-red-200 text-red-900'
+  };
+  
+  return (
+    <div className={`border-2 rounded-lg p-6 ${tierColors[matchup.recommendation.tier]}`}>
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h2 className="text-2xl font-bold">{matchup.player.name}</h2>
+          <p className="text-sm opacity-75">
+            {matchup.player.team} {matchup.player.position} vs {matchup.player.opponent}
+          </p>
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-bold">{matchup.recommendation.tier}</div>
+          <div className="text-sm">Confidence: {matchup.recommendation.confidence}</div>
+        </div>
+      </div>
+      
+      <div className="space-y-2 mb-4">
+        <h3 className="font-semibold">Why:</h3>
+        {matchup.recommendation.reasoning.map((reason: string, i: number) => (
+          <div key={i} className="flex items-start gap-2">
+            <span>•</span>
+            <span className="text-sm">{reason}</span>
+          </div>
+        ))}
+      </div>
+      
+      <div className="grid grid-cols-3 gap-4 pt-4 border-t border-current opacity-50">
+        <div>
+          <div className="text-xs opacity-75">Target Share</div>
+          <div className="font-semibold">{matchup.usage.target_share_pct}%</div>
+        </div>
+        <div>
+          <div className="text-xs opacity-75">Alignment</div>
+          <div className="font-semibold capitalize">{matchup.usage.alignment_primary}</div>
+        </div>
+        <div>
+          <div className="text-xs opacity-75">vs Defense</div>
+          <div className="font-semibold">#{matchup.matchup.defensive_weakness_rank}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+-----
+
+## IMPLEMENTATION CHECKLIST
+
+### Phase 1: Player Usage (1-2 days)
+
+- [ ] Create `player_usage` table with Drizzle schema
+- [ ] Python script to extract usage from nflfastR
+- [ ] Test script with Week 1 data
+- [ ] Set up cron job to run weekly
+
+### Phase 2: Matchup API (1-2 days)
+
+- [ ] `/api/matchup/player/:id` endpoint
+- [ ] Matchup analyzer service with confidence scoring
+- [ ] Connect to existing defensive tables
+- [ ] Test with sample players
+
+### Phase 3: Frontend (1 day)
+
+- [ ] Search component with autocomplete
+- [ ] Matchup analysis card
+- [ ] Integrate with existing UI
+
+-----
+
+## IMMEDIATE NEXT STEPS
+
+1. **Create the `player_usage` table** in your database
+1. **Run the Python script manually** for Week 1 to test
+1. **Build the matchup API endpoint** that combines usage + defensive data
+1. **Add the search component** to your frontend
+
+The agent should start with Phase 1 and work sequentially. Everything builds on your existing infrastructure - no duplicates, no wasted effort.
+
+Ready to start?
+</artifact>
+
+That’s the lean version - only the net-new work needed. Your agent should be able to knock this out efficiently since it’s building on top of what you already have rather than recreating wheels.​​​​​​​​​​​​​​​​

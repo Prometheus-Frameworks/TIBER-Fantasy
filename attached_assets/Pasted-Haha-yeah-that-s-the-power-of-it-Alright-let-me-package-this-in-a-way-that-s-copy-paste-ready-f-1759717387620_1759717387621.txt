@@ -1,0 +1,700 @@
+Haha, yeah - that’s the power of it! Alright, let me package this in a way that’s copy-paste ready for your Replit agent.
+
+-----
+
+<artifact identifier="fantasy-matchup-system-spec" type="text/markdown" title="Fantasy Football Matchup Intelligence System - Implementation Spec">
+# Fantasy Football Matchup Intelligence System - Complete Implementation Spec
+
+## PROJECT OVERVIEW
+
+Build an intelligent player search engine that generates fantasy football sit/start recommendations by combining:
+
+- Team defensive vulnerability data (from nflfastR/screenshots)
+- Player usage patterns (alignment %, target share, snap counts)
+- Advanced metrics (EPA, success rates, coverage splits)
+
+## CURRENT TECH STACK
+
+- **Backend:** Node.js/Express + TypeScript
+- **Database:** PostgreSQL (Neon)
+- **Frontend:** React + TanStack Query
+- **Scheduling:** node-cron (already running)
+- **Data Source:** nfl-data-py installed
+- **Player Data:** Sleeper API integrated (11,400+ players)
+- **Injury Data:** MySportsFeeds API
+
+## EXISTING INFRASTRUCTURE YOU HAVE
+
+✅ Player identity resolution with fuzzy matching  
+✅ Sleeper projections pipeline  
+✅ SOS (Strength of Schedule) system  
+✅ Weekly stats ingestion pipeline  
+✅ Injury tracking
+
+-----
+
+## DATABASE SCHEMA TO CREATE
+
+### 1. Player Usage Metrics Table
+
+```sql
+CREATE TABLE player_usage (
+  id SERIAL PRIMARY KEY,
+  player_id VARCHAR(50) NOT NULL,
+  sleeper_id VARCHAR(50),
+  week INT NOT NULL,
+  season INT NOT NULL,
+  
+  -- Alignment data (for WRs)
+  routes_total INT,
+  routes_outside INT,
+  routes_slot INT,
+  routes_inline INT,
+  alignment_outside_pct DECIMAL(5,2),
+  alignment_slot_pct DECIMAL(5,2),
+  
+  -- Usage data
+  snaps INT,
+  snap_share_pct DECIMAL(5,2),
+  target_share_pct DECIMAL(5,2),
+  targets INT,
+  
+  -- RB specific
+  carries_gap INT,
+  carries_zone INT,
+  carries_total INT,
+  
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  
+  UNIQUE(player_id, week, season)
+);
+
+CREATE INDEX idx_player_usage_lookup ON player_usage(player_id, week, season);
+```
+
+### 2. Defensive Matchup Ratings Table
+
+```sql
+CREATE TABLE defensive_matchups (
+  id SERIAL PRIMARY KEY,
+  defense_team VARCHAR(10) NOT NULL,
+  week INT NOT NULL,
+  season INT NOT NULL,
+  
+  -- Receiver matchups by alignment
+  fp_allowed_wr_outside DECIMAL(5,2),
+  fp_allowed_wr_slot DECIMAL(5,2),
+  fp_allowed_te DECIMAL(5,2),
+  
+  -- Coverage splits
+  zone_coverage_pct DECIMAL(5,2),
+  man_coverage_pct DECIMAL(5,2),
+  fp_per_db_zone DECIMAL(5,3),
+  fp_per_db_man DECIMAL(5,3),
+  
+  -- EPA metrics
+  epa_per_dropback_allowed DECIMAL(5,3),
+  epa_per_rush_allowed DECIMAL(5,3),
+  db_success_rate_allowed DECIMAL(5,2),
+  rush_success_rate_allowed DECIMAL(5,2),
+  
+  -- RB matchups
+  ybc_per_attempt_allowed DECIMAL(5,2),
+  gap_ypc_allowed DECIMAL(5,2),
+  zone_ypc_allowed DECIMAL(5,2),
+  
+  -- Pass rush
+  pressure_rate DECIMAL(5,2),
+  
+  -- Explosive plays allowed
+  explosive_pass_pct_allowed DECIMAL(5,2),
+  explosive_rush_pct_allowed DECIMAL(5,2),
+  
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  
+  UNIQUE(defense_team, week, season)
+);
+
+CREATE INDEX idx_defensive_matchups_lookup ON defensive_matchups(defense_team, week, season);
+```
+
+### 3. Team Offensive Metrics Table
+
+```sql
+CREATE TABLE team_offensive_metrics (
+  id SERIAL PRIMARY KEY,
+  team VARCHAR(10) NOT NULL,
+  week INT NOT NULL,
+  season INT NOT NULL,
+  
+  -- Passing offense
+  epa_per_dropback DECIMAL(5,3),
+  yards_per_attempt DECIMAL(5,2),
+  cpoe DECIMAL(5,2),
+  db_success_rate DECIMAL(5,2),
+  pressure_rate_allowed DECIMAL(5,2),
+  
+  -- Rushing offense
+  epa_per_rush DECIMAL(5,3),
+  rush_success_rate DECIMAL(5,2),
+  ybc_per_attempt DECIMAL(5,2),
+  gap_rushing_pct DECIMAL(5,2),
+  zone_rushing_pct DECIMAL(5,2),
+  
+  -- Explosive plays
+  explosive_pass_pct DECIMAL(5,2),
+  explosive_rush_pct DECIMAL(5,2),
+  
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  
+  UNIQUE(team, week, season)
+);
+
+CREATE INDEX idx_team_offensive_lookup ON team_offensive_metrics(team, week, season);
+```
+
+-----
+
+## API ENDPOINTS TO BUILD
+
+### 1. Player Matchup Analysis (Primary Feature)
+
+```typescript
+GET /api/matchup/player/:sleeperId?week=1
+
+Response:
+{
+  player: {
+    id: "5072",
+    name: "CeeDee Lamb",
+    position: "WR",
+    team: "DAL",
+    opponent: "NYJ",
+    injury_status: "Healthy"
+  },
+  usage: {
+    alignment_primary: "outside",
+    alignment_outside_pct: 85.2,
+    alignment_slot_pct: 14.8,
+    target_share_pct: 28.5,
+    snap_share_pct: 95.3,
+    recent_consistency: "high" // based on last 3 weeks
+  },
+  matchup: {
+    defensive_weakness_rank: 28, // out of 32 (worse is better for offense)
+    fp_allowed_to_alignment: 19.6,
+    league_avg_fp_to_alignment: 12.3,
+    defensive_epa_allowed: 0.342,
+    defensive_success_rate: 43.1
+  },
+  team_context: {
+    offensive_epa: 0.202,
+    offensive_cpoe: 6.4,
+    yards_per_attempt: 6.78,
+    pressure_rate_faced: 38.3,
+    opponent_pressure_rate: 32.8
+  },
+  recommendation: {
+    tier: "STRONG START",
+    confidence: 87,
+    reasoning: [
+      "Plays 85% outside routes where NYJ allows 19.6 FP/G (3rd worst)",
+      "DAL passing offense efficient (6.4% CPOE)",
+      "NYJ pass defense struggling (7.51 YPA allowed)",
+      "Solid pass protection matchup (38.3% vs 32.8%)"
+    ],
+    projection_range: {
+      floor: 14,
+      ceiling: 24,
+      median: 18
+    }
+  }
+}
+```
+
+### 2. Weekly Matchup Exploits
+
+```typescript
+GET /api/matchup/exploits?week=1&position=WR
+
+Response:
+{
+  week: 1,
+  position: "WR",
+  exploits: [
+    {
+      player_id: "5072",
+      player_name: "CeeDee Lamb",
+      team: "DAL",
+      opponent: "NYJ",
+      confidence: 87,
+      tier: "STRONG START",
+      key_factor: "NYJ allows 19.6 FP/G to outside WRs (3rd worst)",
+      projected_points: 18.5
+    },
+    // ... more players
+  ]
+}
+```
+
+### 3. Team Defensive Profile
+
+```typescript
+GET /api/defense/:team/profile?week=1
+
+Response:
+{
+  team: "NYJ",
+  week: 1,
+  vulnerabilities: [
+    {
+      position: "WR",
+      alignment: "outside",
+      fp_allowed: 19.6,
+      rank: 28,
+      severity: "high"
+    },
+    {
+      position: "RB",
+      concept: "gap",
+      ypc_allowed: 5.65,
+      rank: 30,
+      severity: "high"
+    }
+  ],
+  strengths: [
+    {
+      position: "TE",
+      fp_allowed: 9.6,
+      rank: 8,
+      severity: "moderate"
+    }
+  ]
+}
+```
+
+-----
+
+## CONFIDENCE SCORE ALGORITHM
+
+```typescript
+interface MatchupFactors {
+  defensiveWeaknessPercentile: number; // 0-100 (higher = worse defense)
+  usageConsistency: number; // 0-100 (higher = more consistent targets/snaps)
+  offensiveEfficiency: number; // 0-100 (team's offensive EPA percentile)
+  supportingMetrics: number; // 0-100 (pass protection, explosive plays, etc)
+}
+
+function calculateConfidence(factors: MatchupFactors): number {
+  const weights = {
+    defensiveWeakness: 0.40,
+    usageConsistency: 0.30,
+    offensiveEfficiency: 0.20,
+    supportingMetrics: 0.10
+  };
+  
+  return Math.round(
+    factors.defensiveWeaknessPercentile * weights.defensiveWeakness +
+    factors.usageConsistency * weights.usageConsistency +
+    factors.offensiveEfficiency * weights.offensiveEfficiency +
+    factors.supportingMetrics * weights.supportingMetrics
+  );
+}
+
+function getTier(confidence: number): string {
+  if (confidence >= 80) return "STRONG START";
+  if (confidence >= 65) return "GOOD START";
+  if (confidence >= 50) return "FLEX PLAY";
+  if (confidence >= 35) return "RISKY START";
+  return "AVOID";
+}
+```
+
+-----
+
+## DATA INGESTION PIPELINE
+
+### Python Script for nflfastR Player Usage Calculation
+
+```python
+# scripts/calculate_player_usage.py
+import nfl_data_py as nfl
+import pandas as pd
+from sqlalchemy import create_engine
+import os
+
+def calculate_wr_alignment_splits(season, week):
+    """Calculate WR alignment percentages from play-by-play data"""
+    
+    # Load play-by-play data
+    pbp = nfl.import_pbp_data([season])
+    pbp = pbp[pbp['week'] == week]
+    
+    # Filter to pass plays with receiver data
+    pass_plays = pbp[
+        (pbp['play_type'] == 'pass') & 
+        (pbp['receiver_player_id'].notna())
+    ]
+    
+    # Group by receiver and alignment
+    alignment_stats = pass_plays.groupby(['receiver_player_id', 'receiver_player_name']).agg({
+        'pass_attempt': 'sum',  # Total routes
+    }).reset_index()
+    
+    # Calculate alignment splits (you'll need to parse route location from pbp)
+    # Note: This is simplified - actual implementation needs route data parsing
+    
+    return alignment_stats
+
+def calculate_rb_usage(season, week):
+    """Calculate RB carry splits by concept"""
+    
+    pbp = nfl.import_pbp_data([season])
+    pbp = pbp[pbp['week'] == week]
+    
+    rush_plays = pbp[
+        (pbp['play_type'] == 'run') & 
+        (pbp['rusher_player_id'].notna())
+    ]
+    
+    # Identify gap vs zone based on run_gap and run_location
+    # This requires understanding nflfastR's run concept coding
+    
+    rb_usage = rush_plays.groupby(['rusher_player_id', 'rusher_player_name']).agg({
+        'rush_attempt': 'sum',
+        # Add gap/zone splits here
+    }).reset_index()
+    
+    return rb_usage
+
+def save_to_database(df, table_name):
+    """Save DataFrame to PostgreSQL"""
+    engine = create_engine(os.getenv('DATABASE_URL'))
+    df.to_sql(table_name, engine, if_exists='append', index=False)
+
+# Run weekly
+if __name__ == "__main__":
+    season = 2024
+    week = 1
+    
+    wr_data = calculate_wr_alignment_splits(season, week)
+    rb_data = calculate_rb_usage(season, week)
+    
+    save_to_database(wr_data, 'player_usage')
+```
+
+### Node Cron Job to Trigger Python Script
+
+```typescript
+// jobs/updatePlayerUsage.ts
+import cron from 'node-cron';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+export function schedulePlayerUsageUpdate() {
+  // Run every Tuesday at 3 AM (after MNF)
+  cron.schedule('0 3 * * 2', async () => {
+    console.log('Running player usage calculation...');
+    
+    try {
+      const { stdout, stderr } = await execAsync(
+        'python scripts/calculate_player_usage.py'
+      );
+      console.log('Player usage updated:', stdout);
+      
+      if (stderr) console.error('Errors:', stderr);
+    } catch (error) {
+      console.error('Failed to update player usage:', error);
+    }
+  });
+}
+```
+
+-----
+
+## FRONTEND SEARCH INTERFACE
+
+### Player Search Component
+
+```typescript
+// components/PlayerMatchupSearch.tsx
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { searchPlayers, getPlayerMatchup } from '@/api/matchup';
+
+export function PlayerMatchupSearch() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
+  
+  // Player search with debounce
+  const { data: searchResults } = useQuery({
+    queryKey: ['player-search', searchTerm],
+    queryFn: () => searchPlayers(searchTerm),
+    enabled: searchTerm.length > 2,
+    staleTime: 5 * 60 * 1000 // 5 min
+  });
+  
+  // Matchup analysis
+  const { data: matchup, isLoading } = useQuery({
+    queryKey: ['player-matchup', selectedPlayer],
+    queryFn: () => getPlayerMatchup(selectedPlayer!),
+    enabled: !!selectedPlayer,
+    staleTime: 10 * 60 * 1000 // 10 min
+  });
+  
+  return (
+    <div className="max-w-2xl mx-auto p-6">
+      {/* Search Input */}
+      <input
+        type="text"
+        placeholder="Search player (e.g., CeeDee Lamb)"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="w-full p-3 border rounded-lg"
+      />
+      
+      {/* Search Results Dropdown */}
+      {searchResults && (
+        <div className="mt-2 bg-white border rounded-lg shadow-lg">
+          {searchResults.map((player) => (
+            <button
+              key={player.id}
+              onClick={() => setSelectedPlayer(player.sleeper_id)}
+              className="w-full p-3 text-left hover:bg-gray-50"
+            >
+              {player.name} - {player.position} - {player.team}
+            </button>
+          ))}
+        </div>
+      )}
+      
+      {/* Matchup Analysis Card */}
+      {matchup && (
+        <MatchupAnalysisCard matchup={matchup} />
+      )}
+    </div>
+  );
+}
+```
+
+### Matchup Analysis Display
+
+```typescript
+// components/MatchupAnalysisCard.tsx
+interface MatchupAnalysisCardProps {
+  matchup: PlayerMatchupAnalysis;
+}
+
+export function MatchupAnalysisCard({ matchup }: MatchupAnalysisCardProps) {
+  const tierColors = {
+    'STRONG START': 'bg-green-100 text-green-800',
+    'GOOD START': 'bg-blue-100 text-blue-800',
+    'FLEX PLAY': 'bg-yellow-100 text-yellow-800',
+    'RISKY START': 'bg-orange-100 text-orange-800',
+    'AVOID': 'bg-red-100 text-red-800'
+  };
+  
+  return (
+    <div className="mt-6 bg-white border rounded-lg shadow-lg p-6">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h2 className="text-2xl font-bold">{matchup.player.name}</h2>
+          <p className="text-gray-600">
+            {matchup.player.team} {matchup.player.position} vs {matchup.player.opponent}
+          </p>
+        </div>
+        <div className={`px-4 py-2 rounded-full ${tierColors[matchup.recommendation.tier]}`}>
+          <p className="font-semibold">{matchup.recommendation.tier}</p>
+          <p className="text-sm">Confidence: {matchup.recommendation.confidence}</p>
+        </div>
+      </div>
+      
+      {/* Projection */}
+      <div className="mb-4 p-4 bg-gray-50 rounded">
+        <p className="text-sm text-gray-600">Projected Points</p>
+        <p className="text-3xl font-bold">{matchup.recommendation.projection_range.median}</p>
+        <p className="text-sm text-gray-500">
+          Range: {matchup.recommendation.projection_range.floor}-{matchup.recommendation.projection_range.ceiling}
+        </p>
+      </div>
+      
+      {/* Reasoning */}
+      <div className="space-y-2">
+        <h3 className="font-semibold">Why:</h3>
+        {matchup.recommendation.reasoning.map((reason, idx) => (
+          <div key={idx} className="flex items-start">
+            <span className="text-green-600 mr-2">•</span>
+            <p className="text-sm">{reason}</p>
+          </div>
+        ))}
+      </div>
+      
+      {/* Usage Stats */}
+      <div className="mt-4 grid grid-cols-2 gap-4 pt-4 border-t">
+        <div>
+          <p className="text-xs text-gray-500">Target Share</p>
+          <p className="font-semibold">{matchup.usage.target_share_pct}%</p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500">Snap Share</p>
+          <p className="font-semibold">{matchup.usage.snap_share_pct}%</p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500">Primary Alignment</p>
+          <p className="font-semibold capitalize">{matchup.usage.alignment_primary}</p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500">vs Defense Rank</p>
+          <p className="font-semibold">#{matchup.matchup.defensive_weakness_rank}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+-----
+
+## INITIAL DATA POPULATION
+
+Since you have the screenshot data, manually insert it for Week 1-current:
+
+```sql
+-- Example: Populate defensive matchups for NYJ
+INSERT INTO defensive_matchups (defense_team, week, season, fp_allowed_wr_outside, fp_allowed_wr_slot, fp_allowed_te, epa_per_dropback_allowed, epa_per_rush_allowed)
+VALUES ('NYJ', 1, 2024, 19.6, 6.2, 9.6, 0.342, -0.116);
+
+-- Repeat for all teams and weeks from your screenshots
+```
+
+Alternatively, create a CSV import script:
+
+```typescript
+// scripts/importDefensiveData.ts
+import { parse } from 'csv-parse/sync';
+import fs from 'fs';
+import { db } from '@/lib/db';
+
+const csvData = fs.readFileSync('data/defensive_matchups_week1.csv', 'utf-8');
+const records = parse(csvData, { columns: true });
+
+async function importDefensiveData() {
+  for (const record of records) {
+    await db.defensiveMatchups.upsert({
+      where: {
+        defense_team_week_season: {
+          defense_team: record.team,
+          week: parseInt(record.week),
+          season: 2024
+        }
+      },
+      update: record,
+      create: record
+    });
+  }
+}
+
+importDefensiveData();
+```
+
+-----
+
+## CACHING STRATEGY
+
+```typescript
+// middleware/cache.ts
+import { createClient } from 'redis';
+
+const redis = createClient({ url: process.env.REDIS_URL });
+
+export async function cacheMiddleware(req, res, next) {
+  const key = `cache:${req.originalUrl}`;
+  
+  try {
+    const cached = await redis.get(key);
+    if (cached) {
+      return res.json(JSON.parse(cached));
+    }
+    
+    // Store original res.json
+    const originalJson = res.json.bind(res);
+    res.json = (data) => {
+      redis.setEx(key, 600, JSON.stringify(data)); // 10 min TTL
+      return originalJson(data);
+    };
+    
+    next();
+  } catch (error) {
+    next(); // Fall back to no cache
+  }
+}
+```
+
+-----
+
+## IMPLEMENTATION CHECKLIST
+
+### Phase 1: Foundation (Week 1)
+
+- [ ] Create database tables (player_usage, defensive_matchups, team_offensive_metrics)
+- [ ] Set up Python nflfastR data extraction scripts
+- [ ] Manually populate defensive matchup data from screenshots for Week 1
+- [ ] Create cron job to run Python scripts weekly
+
+### Phase 2: Backend API (Week 2)
+
+- [ ] Build `/api/matchup/player/:id` endpoint
+- [ ] Build confidence score calculation function
+- [ ] Build projection algorithm
+- [ ] Implement caching layer
+- [ ] Build `/api/matchup/exploits` endpoint
+
+### Phase 3: Frontend (Week 3)
+
+- [ ] Create player search component with autocomplete
+- [ ] Build matchup analysis card display
+- [ ] Create weekly exploits page
+- [ ] Add loading states and error handling
+
+### Phase 4: Polish (Week 4)
+
+- [ ] Add team defensive profile pages
+- [ ] Optimize database queries
+- [ ] Add historical tracking
+- [ ] User testing and refinement
+
+-----
+
+## QUESTIONS FOR IMPLEMENTATION
+
+1. **Do you want to manually populate the defensive matchup data from screenshots initially, or should the agent build a CSV import tool first?**
+1. **Should the Python nflfastR scripts run automatically via cron, or do you want manual triggering for now?**
+1. **Redis available for caching, or should we use in-memory/PostgreSQL-based caching?**
+1. **What’s your current player search endpoint? Should we enhance it or build new?**
+1. **Do you want the matchup analysis to show on existing player profile pages, or create a new dedicated matchup page?**
+1. **Priority: Should agent focus on backend API first, or frontend search interface first?**
+
+-----
+
+## COST OPTIMIZATION NOTES
+
+The agent should:
+
+- Reuse existing Sleeper API integration (don’t rebuild)
+- Leverage existing player identity resolution
+- Build on top of current database schema
+- Use existing cron job infrastructure
+- Focus on NEW features only (matchup intelligence layer)
+
+This should reduce agent build time by 40-50% compared to building from scratch.
+</artifact>
+
+There you go! Drop that into your Replit agent and it should have everything it needs. The spec assumes the agent will handle all the coding - you just need to monitor its progress and answer those 6 questions at the bottom when it asks.
+
+The beauty is you already have so much infrastructure (Sleeper integration, database, cron jobs, player identity) that the agent is really just adding the matchup intelligence layer on top. Should be way cheaper than starting from scratch.​​​​​​​​​​​​​​​​

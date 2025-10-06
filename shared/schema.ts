@@ -2816,6 +2816,65 @@ export const dataLineageRelations = relations(dataLineage, ({ one }) => ({
   }),
 }));
 
+// ========================================
+// PLAYER USAGE - MATCHUP INTELLIGENCE DATA
+// ========================================
+
+// Player Usage Metrics - Weekly alignment splits, snap share, target share for matchup analysis
+export const playerUsage = pgTable("player_usage", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id").notNull(),
+  sleeperId: text("sleeper_id"),
+  week: integer("week").notNull(),
+  season: integer("season").notNull(),
+  
+  // WR Alignment Data (from play-by-play)
+  routesTotal: integer("routes_total"),
+  routesOutside: integer("routes_outside"),
+  routesSlot: integer("routes_slot"),
+  routesInline: integer("routes_inline"),
+  alignmentOutsidePct: real("alignment_outside_pct"),
+  alignmentSlotPct: real("alignment_slot_pct"),
+  
+  // Usage Metrics
+  snaps: integer("snaps"),
+  snapSharePct: real("snap_share_pct"),
+  targetSharePct: real("target_share_pct"),
+  targets: integer("targets"),
+  
+  // RB Specific - Rushing concept splits
+  carriesGap: integer("carries_gap"),
+  carriesZone: integer("carries_zone"),
+  carriesTotal: integer("carries_total"),
+  
+  // Metadata
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint on player/week/season
+  uniquePlayerWeek: uniqueIndex("player_usage_unique").on(table.playerId, table.week, table.season),
+  // Performance indexes
+  playerSeasonIdx: index("player_usage_player_season_idx").on(table.playerId, table.season),
+  seasonWeekIdx: index("player_usage_season_week_idx").on(table.season, table.week),
+}));
+
+// Player Usage Relations
+export const playerUsageRelations = relations(playerUsage, ({ one }) => ({
+  player: one(playerIdentityMap, {
+    fields: [playerUsage.playerId],
+    references: [playerIdentityMap.canonicalId],
+  }),
+}));
+
+// Player Usage Types and Insert Schemas
+export type PlayerUsage = typeof playerUsage.$inferSelect;
+export type InsertPlayerUsage = z.infer<typeof insertPlayerUsageSchema>;
+export const insertPlayerUsageSchema = createInsertSchema(playerUsage).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
 // Types
 export type PlayerWeekFacts = typeof playerWeekFacts.$inferSelect;
 export type InsertPlayerWeekFacts = z.infer<typeof insertPlayerWeekFactsSchema>;

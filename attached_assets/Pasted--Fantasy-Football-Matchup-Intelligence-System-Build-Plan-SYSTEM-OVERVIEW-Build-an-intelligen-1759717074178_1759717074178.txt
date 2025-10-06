@@ -1,0 +1,236 @@
+# Fantasy Football Matchup Intelligence System - Build Plan
+
+## SYSTEM OVERVIEW
+
+Build an intelligent player search engine that analyzes NFL matchup data to generate actionable fantasy football recommendations. The system aggregates team-level defensive vulnerabilities with player-level usage patterns to produce contextualized sit/start advice.
+
+-----
+
+## BUILD RECOMMENDATION
+
+### Phase 1: Data Pipeline (Week 1-2)
+
+**Step 1: Set up nflfastR data ingestion**
+
+- Schedule weekly pull (runs Tuesday mornings after MNF)
+- Extract required datasets:
+  - Play-by-play data (for alignment, routes, targets)
+  - Team-level EPA metrics (passing/rushing)
+  - Defensive performance by coverage/alignment
+  - Explosive play rates, success rates
+  - O-line/D-line metrics (YBC, pressure rates)
+
+**Step 2: Calculate team-level matchup metrics**
+Process raw data into these tables (examples from screenshots):
+
+- Receiver matchups by alignment (outside/slot/TE vs each defense)
+- Receiver matchups by coverage (zone/man vs each defense)
+- Rush defense by scheme (gap/zone concepts)
+- EPA per dropback/rush by matchup
+- Pass blocking vs pass rush matchups
+- Explosive play tendencies (15+ yd rush, 20+ yd pass)
+
+**Step 3: Calculate player-level usage data**
+From nflfastR play-by-play, aggregate per player:
+
+- Alignment splits (% snaps outside/slot for WRs)
+- Route participation rate
+- Target share
+- Carry distribution by run concept (gap vs zone)
+- Red zone usage
+- Snap count %
+
+**Step 4: Database schema**
+
+```
+Tables needed:
+- players (id, name, team, position, sleeper_id)
+- weekly_team_matchups (week, off_team, def_team, metric_type, value)
+- player_usage (player_id, week, alignment_pct, target_share, snap_pct)
+- player_stats (player_id, week, targets, receptions, yards, tds, etc)
+- defensive_ratings (team, week, position, alignment, fp_allowed)
+```
+
+-----
+
+### Phase 2: Matchup Intelligence Engine (Week 2-3)
+
+**Core logic flow:**
+
+```
+1. User searches player name
+2. Resolve player identity (position, team, opponent this week)
+3. Query player usage patterns (alignment %, route %, carries by scheme)
+4. Query defensive matchup data (opponent's weakness vs that position/alignment)
+5. Cross-reference supporting metrics (EPA, success rate, pressure, etc)
+6. Generate confidence score (0-100) based on:
+   - Defensive vulnerability rank (percentile)
+   - Player usage consistency
+   - Team offensive efficiency
+   - Supporting context (O-line vs D-line, explosive play rates)
+7. Return human-readable insight with data citations
+```
+
+**Example output format:**
+
+```
+STRONG START - CeeDee Lamb vs NYJ
+
+Why:
+• Plays 85% outside routes (primary alignment)
+• NYJ allows 19.6 FP/G to outside WRs (3rd worst in NFL)
+• DAL passing offense efficient (6.4% CPOE, 95th percentile)
+• NYJ pass defense struggling (7.51 YPA allowed, bottom 10)
+• DAL O-line solid (38.3% pressure allowed vs NYJ 32.8% pressure rate)
+
+Confidence: 87/100
+Projection: 18-22 fantasy points
+```
+
+-----
+
+### Phase 3: API Endpoints (Week 3)
+
+**Build these endpoints:**
+
+`POST /api/player/search`
+
+- Input: player name
+- Returns: player identity, basic stats, current team/opponent
+
+`GET /api/player/{id}/matchup-analysis`
+
+- Input: player ID, week (optional, defaults to current)
+- Returns: full matchup breakdown with confidence score and projection
+
+`GET /api/matchups/exploits`
+
+- Input: week, position filter (optional)
+- Returns: ranked list of best matchups by position
+- Example: “Top 10 WR matchups this week”
+
+`GET /api/team/{team}/defensive-profile`
+
+- Input: team abbreviation
+- Returns: what positions/alignments they’re weak/strong against
+
+-----
+
+### Phase 4: Frontend Search Interface (Week 4)
+
+**Two interfaces:**
+
+1. **Global search bar (navigation)**
+
+- Simple autocomplete player search
+- Click → shows compact matchup card
+- Links to full player profile page
+
+1. **Dedicated matchup exploits page**
+
+- Filterable table of all matchups
+- Sort by: confidence score, projected points, position
+- Toggle filters: my roster only, waivers available, etc.
+
+-----
+
+## DATA SOURCES
+
+**Primary: nflfastR (free, comprehensive)**
+
+- Play-by-play data with alignment, routes, coverage
+- Team-level aggregations
+- Updates Tuesday mornings
+
+**Supplementary options:**
+
+- **Sleeper API** (free, official): Player IDs, rosters, basic projections
+- **ESPN API** (unofficial): Snap counts, injury status
+- **Pro Football Reference** (scraping): Historical data, advanced stats
+
+**Recommended free tier combo:**
+
+- nflfastR for all matchup intelligence data
+- Sleeper API for player metadata and linking
+- Manual injury status updates (or scrape ESPN)
+
+-----
+
+## CRITICAL QUESTIONS FOR YOUR REPLIT AGENT
+
+### 1. Database & Infrastructure
+
+**Q1:** What database are you using? (Postgres, MySQL, SQLite, MongoDB?)
+**Q2:** Do you have scheduled jobs/cron capability for weekly data pulls?
+**Q3:** What’s your preferred caching strategy? (Redis, in-memory, database-level?)
+**Q4:** Current backend framework? (Node/Express, Python/Flask, Rails, etc?)
+
+### 2. Data Pipeline
+
+**Q5:** Do you have experience processing nflfastR data, or do you need specific instructions for the R → database pipeline?
+**Q6:** Should the system auto-calculate player alignment splits from play-by-play, or will you provide this data separately?
+**Q7:** How far back should historical data go? (Current season only, or multiple seasons for trends?)
+
+### 3. Player Data Integration
+
+**Q8:** Do you have existing player data (IDs, rosters, positions), or should we integrate Sleeper API from scratch?
+**Q9:** How do you want to handle player name resolution? (Fuzzy matching, exact match, autocomplete with suggestions?)
+**Q10:** Should the system track player injuries/status, or assume users check elsewhere?
+
+### 4. Matchup Intelligence Logic
+
+**Q11:** What constitutes a “strong” vs “weak” matchup threshold?
+
+- Suggestion: Use percentile rankings (top 25% = strong, bottom 25% = weak)
+- Or: Standard deviations from league average
+
+**Q12:** How should the confidence score be weighted?
+
+- Suggestion: 40% defensive weakness rank, 30% player usage consistency, 20% team offensive efficiency, 10% supporting metrics
+
+**Q13:** Should projections be simple (point ranges) or advanced (probability distributions)?
+
+### 5. Update Frequency & Performance
+
+**Q14:** How fresh does data need to be? (Updated Tuesday after games? Daily for injury news? Real-time?)
+**Q15:** Expected user volume? (Determines caching strategy and API rate limits)
+**Q16:** Should matchup analysis be pre-calculated weekly, or calculated on-demand per search?
+
+### 6. Feature Scope for MVP
+
+**Q17:** MVP should include:
+
+- [ ] Player search with matchup analysis
+- [ ] Weekly matchup exploits page
+- [ ] Team defensive profile pages
+- [ ] Historical player performance vs specific defenses
+- [ ] Waiver wire recommendations based on matchups
+
+Which features are must-haves for launch vs nice-to-haves for later?
+
+-----
+
+## RECOMMENDED BUILD ORDER
+
+1. Database schema + nflfastR ingestion pipeline
+1. Team-level matchup calculation scripts
+1. Player usage calculation from play-by-play
+1. Backend API endpoints (start with player search)
+1. Matchup intelligence logic + confidence scoring
+1. Frontend search interface
+1. Matchup exploits page
+1. Refinement + testing with real scenarios
+
+-----
+
+## TECHNICAL NOTES
+
+- nflfastR data is in R format but can be exported to CSV/JSON for ingestion
+- Player alignment data requires processing play-by-play (route column indicates alignment)
+- Defensive matchup tables should be pre-calculated weekly and cached
+- Individual player lookups can be real-time with 5-15 min cache TTL
+- Consider separate “confidence score” from “projected points” (one is matchup quality, other is volume + efficiency)
+
+-----
+
+Let me know which questions need answers first and I can provide more specific technical implementation details.​​​​​​​​​​​​​​​​
