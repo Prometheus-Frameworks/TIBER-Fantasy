@@ -82,7 +82,7 @@ def calculate_season_averages(season=2025):
             COUNT(*) as games_played
         FROM player_usage
         WHERE season = :season
-            AND snaps > 0  -- Only count games where they actually played
+            AND (targets > 0 OR carries_total > 0)  -- Player had actual usage
         GROUP BY player_id, sleeper_id, season
     ),
     latest_game AS (
@@ -94,7 +94,7 @@ def calculate_season_averages(season=2025):
             targets as latest_targets
         FROM player_usage
         WHERE season = :season
-            AND snaps > 0
+            AND (targets > 0 OR carries_total > 0)
         ORDER BY player_id, week DESC
     )
     INSERT INTO player_usage_season_avg (

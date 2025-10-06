@@ -535,17 +535,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await db.execute(sql`
         SELECT 
           player_id,
-          COUNT(*) as games_played,
-          ROUND(AVG(alignment_outside_pct)::numeric, 2) as avg_outside_pct,
-          ROUND(AVG(alignment_slot_pct)::numeric, 2) as avg_slot_pct,
-          ROUND(AVG(target_share_pct)::numeric, 2) as avg_target_share,
-          MAX(week) as latest_week,
-          MAX(snap_share_pct) as latest_snap_share,
-          MAX(targets) as max_targets
-        FROM player_usage
+          games_played,
+          alignment_outside_pct as avg_outside_pct,
+          alignment_slot_pct as avg_slot_pct,
+          target_share_pct as avg_target_share,
+          latest_week,
+          latest_snap_share_pct as latest_snap_share,
+          latest_targets as max_targets
+        FROM player_usage_season_avg
         WHERE season = 2025
-        GROUP BY player_id
-        ORDER BY max_targets DESC NULLS LAST
+        ORDER BY target_share_pct DESC NULLS LAST
         LIMIT 20
       `);
       
