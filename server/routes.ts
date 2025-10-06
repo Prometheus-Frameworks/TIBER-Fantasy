@@ -535,9 +535,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await db.execute(sql`
         SELECT 
           psa.player_id,
-          pim.full_name as player_name,
-          pim.position,
-          pim.nfl_team as team,
+          r.player_name,
+          r.position,
+          r.team,
           psa.games_played,
           psa.alignment_outside_pct as avg_outside_pct,
           psa.alignment_slot_pct as avg_slot_pct,
@@ -546,7 +546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           psa.latest_snap_share_pct as latest_snap_share,
           psa.latest_targets as max_targets
         FROM player_usage_season_avg psa
-        LEFT JOIN player_identity_map pim ON psa.player_id = pim.nfl_data_py_id
+        LEFT JOIN nflfastr_rosters r ON psa.player_id = r.player_id AND r.season = 2025
         WHERE psa.season = 2025
         ORDER BY psa.target_share_pct DESC NULLS LAST
         LIMIT 20
