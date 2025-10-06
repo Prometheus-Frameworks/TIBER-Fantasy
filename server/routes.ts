@@ -529,6 +529,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ success: true, message: "Test endpoint working" });
   });
 
+  // Test endpoint for player usage season averages
+  app.get('/api/test-usage-data', async (req: Request, res: Response) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT 
+          player_id,
+          COUNT(*) as games_played,
+          ROUND(AVG(alignment_outside_pct)::numeric, 2) as avg_outside_pct,
+          ROUND(AVG(alignment_slot_pct)::numeric, 2) as avg_slot_pct,
+          ROUND(AVG(target_share_pct)::numeric, 2) as avg_target_share,
+          MAX(week) as latest_week,
+          MAX(snap_share_pct) as latest_snap_share,
+          MAX(targets) as max_targets
+        FROM player_usage
+        WHERE season = 2025
+        GROUP BY player_id
+        ORDER BY max_targets DESC NULLS LAST
+        LIMIT 20
+      `);
+      
+      res.json({ data: result.rows, total: result.rows.length });
+    } catch (error) {
+      console.error('Test data error:', error);
+      res.status(500).json({ error: 'Failed to fetch test data' });
+    }
+  });
+
   // OTC Final Rankings - Authoritative endpoint combining consensus + OTC adjustments
   app.get('/api/rankings/otc-final', async (req: Request, res: Response) => {
     try {
