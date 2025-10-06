@@ -96,13 +96,20 @@ async function getPlayerUsageWithFallback(
     
     const player = playerData[0];
     
+    // Get GSIS ID for nflfastR data lookup
+    const gsisId = player.nflDataPyId;
+    if (!gsisId) {
+      console.warn(`Player ${playerId} has no GSIS ID mapped`);
+      return null;
+    }
+    
     // Try to get data for target week first
     let usageData = await db
       .select()
       .from(playerUsage)
       .where(
         and(
-          eq(playerUsage.playerId, playerId),
+          eq(playerUsage.playerId, gsisId),
           eq(playerUsage.week, targetWeek),
           eq(playerUsage.season, season)
         )
@@ -119,7 +126,7 @@ async function getPlayerUsageWithFallback(
         .from(playerUsage)
         .where(
           and(
-            eq(playerUsage.playerId, playerId),
+            eq(playerUsage.playerId, gsisId),
             eq(playerUsage.season, season)
           )
         )
