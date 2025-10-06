@@ -2,32 +2,107 @@
 """
 Calculate Player Usage Metrics from nflfastR Play-by-Play Data
 
-This script processes NFL play-by-play data to extract:
+This script downloads 2025 play-by-play data directly from nflfastR's GitHub repository
+and processes it to extract:
 - WR alignment splits (outside/slot)
 - Target share and snap share
 - RB rushing concept splits (gap/zone)
 """
 
-import nfl_data_py as nfl
 import pandas as pd
 import psycopg2
 from psycopg2.extras import execute_values
 import os
 import sys
-from datetime import datetime
+import requests
+from io import BytesIO
 
 def get_db_connection():
     """Create PostgreSQL connection from DATABASE_URL"""
     return psycopg2.connect(os.getenv('DATABASE_URL'))
 
-def calculate_wr_usage(season, week):
-    """Calculate WR usage metrics from play-by-play data"""
-    print(f"📊 Calculating WR usage for {season} Week {week}...", file=sys.stderr)
+def build_player_name_mapping():
+    """
+    Build mapping from (name, team) to canonical player ID
+    Returns dict: {(normalized_name, team): canonical_id}
+    """
+    print(f"🔗 Building player name mapping from database...", file=sys.stderr)
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
     
     try:
-        # Load play-by-play data
-        pbp = nfl.import_pbp_data([season])
+        cur.execute("""
+            SELECT canonical_id, full_name, nfl_team, position
+            FROM player_identity_map
+            WHERE nfl_team IS NOT NULL
+        """)
+        
+        name_to_canonical = {}
+        
+        for canonical_id, full_name, team, position in cur.fetchall():
+            # Normalize name (lowercase, remove periods, extra spaces)
+            normalized_name = full_name.lower().replace('.', '').replace('  ', ' ').strip()
+            key = (normalized_name, team)
+            name_to_canonical[key] = canonical_id
+        
+        print(f"✅ Loaded {len(name_to_canonical)} player name mappings", file=sys.stderr)
+        
+        return name_to_canonical
+        
+    except Exception as e:
+        print(f"❌ Error building player mapping: {e}", file=sys.stderr)
+        return {}
+    finally:
+        cur.close()
+        conn.close()
+
+def map_player_to_canonical(player_name, team, name_mapping):
+    """Map nflfastR player name to canonical ID"""
+    if not player_name or not team:
+        return None
+    
+    # Normalize the name
+    normalized = player_name.lower().replace('.', '').replace('  ', ' ').strip()
+    key = (normalized, team)
+    
+    return name_mapping.get(key)
+
+def download_pbp_data(season):
+    """Download play-by-play data directly from nflfastR GitHub repository"""
+    print(f"📥 Downloading {season} play-by-play data from nflfastR repository...", file=sys.stderr)
+    
+    # nflfastR data is hosted on GitHub releases
+    url = f"https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_{season}.parquet"
+    
+    try:
+        response = requests.get(url, timeout=60)
+        response.raise_for_status()
+        
+        # Load parquet file from bytes
+        pbp = pd.read_parquet(BytesIO(response.content))
+        print(f"✅ Downloaded {len(pbp)} plays from {season} season", file=sys.stderr)
+        return pbp
+        
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error downloading data: {e}", file=sys.stderr)
+        print(f"⚠️  URL attempted: {url}", file=sys.stderr)
+        return None
+    except Exception as e:
+        print(f"❌ Error loading parquet file: {e}", file=sys.stderr)
+        return None
+
+def calculate_wr_usage(pbp, week, name_mapping):
+    """Calculate WR usage metrics from play-by-play data"""
+    print(f"📊 Calculating WR usage for Week {week}...", file=sys.stderr)
+    
+    try:
+        # Filter to specific week
         pbp_week = pbp[pbp['week'] == week].copy()
+        
+        if len(pbp_week) == 0:
+            print(f"⚠️  No data found for Week {week}", file=sys.stderr)
+            return pd.DataFrame()
         
         # Filter to pass plays with targets
         targets = pbp_week[
@@ -36,7 +111,7 @@ def calculate_wr_usage(season, week):
         ].copy()
         
         if len(targets) == 0:
-            print(f"⚠️ No target data found for Week {week}", file=sys.stderr)
+            print(f"⚠️  No target data found for Week {week}", file=sys.stderr)
             return pd.DataFrame()
         
         # Group by receiver
@@ -50,15 +125,24 @@ def calculate_wr_usage(season, week):
         routes = pbp_week[pbp_week['pass_attempt'] == 1].groupby('posteam').size().to_dict()
         wr_usage['routes_total'] = wr_usage['team'].map(routes)
         
-        # Calculate alignment splits based on receiver position
-        # Note: nflfastR doesn't have explicit alignment data
-        # This is a simplified version - you may need additional data sources
-        alignment_data = targets.groupby('receiver_player_id').apply(
-            lambda x: pd.Series({
-                'routes_outside': int(len(x) * 0.7),  # Estimate: 70% outside
-                'routes_slot': int(len(x) * 0.3),     # Estimate: 30% slot
-            })
-        ).reset_index()
+        # Calculate alignment splits from receiver_alignment column if available
+        # Otherwise use approximation based on targets
+        if 'receiver_alignment' in targets.columns:
+            # Use actual alignment data
+            alignment_data = targets.groupby('receiver_player_id').apply(
+                lambda x: pd.Series({
+                    'routes_outside': len(x[x['receiver_alignment'].isin(['left', 'right'])]),
+                    'routes_slot': len(x[x['receiver_alignment'] == 'slot']),
+                })
+            ).reset_index()
+        else:
+            # Estimate alignment based on target distribution
+            alignment_data = targets.groupby('receiver_player_id').apply(
+                lambda x: pd.Series({
+                    'routes_outside': int(len(x) * 0.65),  # Estimate: 65% outside
+                    'routes_slot': int(len(x) * 0.35),     # Estimate: 35% slot
+                })
+            ).reset_index()
         
         wr_usage = wr_usage.merge(alignment_data, left_on='player_id', right_on='receiver_player_id', how='left')
         
@@ -72,20 +156,29 @@ def calculate_wr_usage(season, week):
             wr_usage.apply(lambda row: row['targets'] / team_targets.get(row['team'], 1) * 100, axis=1)
         ).round(2)
         
-        print(f"✅ Processed {len(wr_usage)} WR records", file=sys.stderr)
+        # Map to canonical player IDs
+        wr_usage['canonical_id'] = wr_usage.apply(
+            lambda row: map_player_to_canonical(row['player_name'], row['team'], name_mapping),
+            axis=1
+        )
+        
+        # Filter out players we couldn't map
+        mapped_count = wr_usage['canonical_id'].notna().sum()
+        wr_usage = wr_usage[wr_usage['canonical_id'].notna()].copy()
+        
+        print(f"✅ Processed {len(wr_usage)} WR records ({mapped_count} mapped to canonical IDs)", file=sys.stderr)
         return wr_usage
         
     except Exception as e:
         print(f"❌ Error calculating WR usage: {e}", file=sys.stderr)
         return pd.DataFrame()
 
-def calculate_rb_usage(season, week):
+def calculate_rb_usage(pbp, week, name_mapping):
     """Calculate RB usage metrics from play-by-play data"""
-    print(f"🏃 Calculating RB usage for {season} Week {week}...", file=sys.stderr)
+    print(f"🏃 Calculating RB usage for Week {week}...", file=sys.stderr)
     
     try:
-        # Load play-by-play data
-        pbp = nfl.import_pbp_data([season])
+        # Filter to specific week
         pbp_week = pbp[pbp['week'] == week].copy()
         
         # Filter to rush plays
@@ -98,9 +191,9 @@ def calculate_rb_usage(season, week):
             print(f"⚠️  No rushing data found for Week {week}", file=sys.stderr)
             return pd.DataFrame()
         
-        # Identify gap vs zone based on run_gap
-        # Gap concepts typically use specific gaps (guard, tackle)
-        # Zone concepts typically use wider runs (end, outside)
+        # Identify gap vs zone based on run_gap and run_location
+        # Gap concepts: guard, tackle (between gaps)
+        # Zone concepts: end, outside (wider runs)
         rush_plays['is_gap'] = rush_plays['run_gap'].isin(['guard', 'tackle']).fillna(False)
         rush_plays['is_zone'] = ~rush_plays['is_gap']
         
@@ -117,7 +210,39 @@ def calculate_rb_usage(season, week):
         rb_usage['carries_gap'] = rb_usage['carries_gap'].astype(int)
         rb_usage['carries_zone'] = rb_usage['carries_zone'].astype(int)
         
-        print(f"✅ Processed {len(rb_usage)} RB records", file=sys.stderr)
+        # Add receiving targets for RBs
+        targets = pbp_week[
+            (pbp_week['pass_attempt'] == 1) & 
+            (pbp_week['receiver_player_id'].notna())
+        ]
+        
+        rb_targets = targets.groupby(['receiver_player_id', 'posteam']).size().reset_index(name='targets')
+        rb_usage = rb_usage.merge(
+            rb_targets, 
+            left_on=['player_id', 'team'], 
+            right_on=['receiver_player_id', 'posteam'],
+            how='left'
+        )
+        rb_usage['targets'] = rb_usage['targets'].fillna(0).astype(int)
+        
+        # Calculate target share for pass-catching RBs
+        team_targets = targets.groupby('posteam').size().to_dict()
+        rb_usage['target_share_pct'] = rb_usage.apply(
+            lambda row: (row['targets'] / team_targets.get(row['team'], 1) * 100) if row['targets'] > 0 else 0, 
+            axis=1
+        ).round(2)
+        
+        # Map to canonical player IDs
+        rb_usage['canonical_id'] = rb_usage.apply(
+            lambda row: map_player_to_canonical(row['player_name'], row['team'], name_mapping),
+            axis=1
+        )
+        
+        # Filter out players we couldn't map
+        mapped_count = rb_usage['canonical_id'].notna().sum()
+        rb_usage = rb_usage[rb_usage['canonical_id'].notna()].copy()
+        
+        print(f"✅ Processed {len(rb_usage)} RB records ({mapped_count} mapped to canonical IDs)", file=sys.stderr)
         return rb_usage
         
     except Exception as e:
@@ -136,7 +261,7 @@ def save_to_database(data, week, season):
     records = []
     for _, row in data.iterrows():
         records.append((
-            str(row.get('player_id', '')),
+            str(row.get('canonical_id', '')),  # Use canonical_id instead of GSIS player_id
             row.get('sleeper_id'),  # Will need mapping - can add later
             week,
             season,
@@ -193,14 +318,24 @@ def save_to_database(data, week, season):
 def main():
     """Main execution"""
     # Get parameters from command line or use defaults
-    season = int(sys.argv[1]) if len(sys.argv) > 1 else 2024
+    season = int(sys.argv[1]) if len(sys.argv) > 1 else 2025
     week = int(sys.argv[2]) if len(sys.argv) > 2 else 1
     
     print(f"🏈 Starting player usage calculation for {season} Week {week}", file=sys.stderr)
     
+    # Build player name mapping
+    name_mapping = build_player_name_mapping()
+    
+    # Download play-by-play data
+    pbp = download_pbp_data(season)
+    
+    if pbp is None:
+        print(f"❌ Failed to download data. Exiting.", file=sys.stderr)
+        sys.exit(1)
+    
     # Calculate WR and RB usage
-    wr_data = calculate_wr_usage(season, week)
-    rb_data = calculate_rb_usage(season, week)
+    wr_data = calculate_wr_usage(pbp, week, name_mapping)
+    rb_data = calculate_rb_usage(pbp, week, name_mapping)
     
     # Combine all data
     all_data = pd.concat([wr_data, rb_data], ignore_index=True)

@@ -49,7 +49,7 @@ interface DefensiveMatchup {
   // From team_defensive_context
   passEpaAllowed?: number | null;
   rushEpaAllowed?: number | null;
-  pressureRatePct?: number | null;
+  pressureRateGenerated?: number | null;
   
   // From team_coverage_matchups
   coverageBreakdown?: {
@@ -184,7 +184,7 @@ function calculateRBMatchupScore(
   }
   
   // Pressure rate (affects pass-catching RBs)
-  const pressureRate = defensive.pressureRatePct || 0;
+  const pressureRate = defensive.pressureRateGenerated || 0;
   if (pressureRate > 30 && (usage.targets || 0) > 3) {
     score += 8;
     reasoning.push(`High pressure rate (${pressureRate.toFixed(1)}%) creates checkdown opportunities`);
@@ -251,7 +251,7 @@ export async function analyzePlayerMatchup(
       .limit(1);
     
     if (usageData.length === 0) {
-      console.log(`No usage data found for ${player.displayName} (Week ${week})`);
+      console.log(`No usage data found for ${player.fullName} (Week ${week})`);
       return null;
     }
     
@@ -301,7 +301,7 @@ export async function analyzePlayerMatchup(
       opponent,
       passEpaAllowed: defContext[0]?.passEpaAllowed ?? undefined,
       rushEpaAllowed: defContext[0]?.rushEpaAllowed ?? undefined,
-      pressureRatePct: defContext[0]?.pressureRatePct ?? undefined,
+      pressureRateGenerated: defContext[0]?.pressureRateGenerated ?? undefined,
       coverageBreakdown: coverageData[0] ? {
         zoneCoveragePct: coverageData[0].defZonePct ?? undefined,
         manCoveragePct: coverageData[0].defManPct ?? undefined,
@@ -342,7 +342,7 @@ export async function analyzePlayerMatchup(
     
     return {
       playerId,
-      playerName: player.displayName || playerId,
+      playerName: player.fullName || playerId,
       position,
       week,
       season,

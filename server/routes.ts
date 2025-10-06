@@ -55,6 +55,7 @@ import tradeAnalyzerRoutes from './routes/tradeAnalyzerRoutes';
 import compassCompareRoutes from './routes/compassCompareRoutes';
 import { nightlyProcessingRoutes } from './routes/nightlyProcessingRoutes';
 import etlRoutes from './routes/etlRoutes';
+import matchupRoutes from './routes/matchupRoutes';
 import silverLayerRoutes from './routes/silverLayerRoutes';
 import rookieRoutes from './routes/rookieRoutes';
 import playerIdentityRoutes from './routes/playerIdentityRoutes';
@@ -2767,6 +2768,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/sos', sosRouter);
   app.use('/api/start-sit', buildStartSitRouter(startSitAgent));
   app.use('/api/buys-sells', buysSellsRoutes);
+  app.use('/api/matchup', matchupRoutes);
+  console.log('🎯 Player Matchup Intelligence routes mounted at /api/matchup/*');
 
   // Player resolution endpoint for converting Sleeper IDs to names
   app.get('/api/players/resolve/:playerId', async (req, res) => {
