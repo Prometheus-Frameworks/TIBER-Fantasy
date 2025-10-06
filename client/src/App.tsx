@@ -124,6 +124,7 @@ import Footer from "@/components/Footer";
 import AdaptiveConsensusDemo from "@/pages/AdaptiveConsensusDemo";
 import CurvesDemo from "@/pages/CurvesDemo";
 import TestDataPage from "@/pages/TestDataPage";
+import ComparePage from "@/pages/ComparePage";
 import InjuryProfilesDemo from "@/pages/InjuryProfilesDemo";
 import CompassHub from "@/pages/compass/CompassHub";
 import PowerRankings from "@/pages/PowerRankings";
@@ -288,6 +289,7 @@ function Router() {
       <Route path="/promethean-vision" component={PrometheanVision} />
       {/* FantasyProTest route removed - service deprecated */}
       <Route path="/test-data" component={TestDataPage} />
+      <Route path="/compare" component={ComparePage} />
       <Route component={NotFound} />
     </Switch>
   );
