@@ -95,6 +95,11 @@ export default function ComparePage() {
             <td data-testid="player1-slot" style={{ textAlign: 'center' }}>{p1?.alignment_slot_pct || '-'}</td>
             <td data-testid="player2-slot" style={{ textAlign: 'center' }}>{p2?.alignment_slot_pct || '-'}</td>
           </tr>
+          <tr style={{ backgroundColor: '#e8f5e9' }}>
+            <td><strong>Latest Snap Share %</strong></td>
+            <td data-testid="player1-snap-share" style={{ textAlign: 'center' }}>{p1?.latest_snap_share_pct || '-'}</td>
+            <td data-testid="player2-snap-share" style={{ textAlign: 'center' }}>{p2?.latest_snap_share_pct || '-'}</td>
+          </tr>
           {(p1?.carries_gap_pct || p2?.carries_gap_pct) && (
             <tr>
               <td><strong>Gap Carries %</strong></td>

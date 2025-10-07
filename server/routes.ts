@@ -609,6 +609,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Both player1 and player2 parameters are required' });
       }
 
+      const player1Lower = String(player1).toLowerCase();
+      const player2Lower = String(player2).toLowerCase();
+
       const result = await db.execute(sql`
         SELECT 
           psa.player_id,
@@ -623,6 +626,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           psa.carries_zone_pct,
           psa.latest_week,
           psa.latest_targets,
+          psa.latest_snap_share_pct,
           CASE 
             WHEN s.home = r.team THEN s.away
             WHEN s.away = r.team THEN s.home
@@ -637,7 +641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LEFT JOIN nflfastr_rosters r ON psa.player_id = r.player_id AND r.season = 2025
         LEFT JOIN schedule s ON s.season = 2025 AND s.week = 6 AND (s.home = r.team OR s.away = r.team)
         WHERE psa.season = 2025
-          AND LOWER(r.player_name) IN (LOWER(${player1}), LOWER(${player2}))
+          AND LOWER(r.player_name) IN (${player1Lower}, ${player2Lower})
       `);
       
       res.json({ data: result.rows });
