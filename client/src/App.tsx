@@ -138,6 +138,7 @@ import Advice from "@/pages/Advice";
 import PlayerRankings from "@/pages/PlayerRankings";
 import PlayerComparison from "@/pages/PlayerComparison";
 import FlexMatchups from "@/pages/FlexMatchups";
+import DefenseRankings from "@/pages/DefenseRankings";
 
 function Router() {
   return (
@@ -170,6 +171,9 @@ function Router() {
       
       {/* FLEX Matchup Finder */}
       <Route path="/flex-matchups" component={FlexMatchups} />
+      
+      {/* Defense Rankings */}
+      <Route path="/defense-rankings" component={DefenseRankings} />
       
       {/* Trade Advice */}
       <Route path="/advice" component={Advice} />
