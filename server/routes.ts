@@ -498,6 +498,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Defense Rankings Route - Week 5 positional fantasy points allowed
+  app.get("/api/defense-rankings", async (req: Request, res: Response) => {
+    try {
+      const { defenseVP } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      
+      const week = 5;
+      const season = 2024;
+      
+      // Fetch defense data for Week 5
+      const defenseData = await db
+        .select()
+        .from(defenseVP)
+        .where(and(
+          eq(defenseVP.season, season),
+          eq(defenseVP.week, week)
+        ));
+      
+      // Group by team and pivot by position
+      const teamData = defenseData.reduce((acc, row) => {
+        if (!acc[row.defTeam]) {
+          acc[row.defTeam] = { team: row.defTeam };
+        }
+        acc[row.defTeam][row.position.toLowerCase()] = row.fpAllowed;
+        return acc;
+      }, {} as Record<string, any>);
+      
+      // Convert to array
+      const rankings = Object.values(teamData);
+      
+      res.json({ 
+        week, 
+        season, 
+        data: rankings 
+      });
+    } catch (error) {
+      console.error("Error fetching defense rankings:", error);
+      res.status(500).json({ error: "Failed to fetch defense rankings" });
+    }
+  });
+
   app.get('/api/projections/player/:playerId', async (req: Request, res: Response) => {
     try {
       const { logsProjectionsService } = await import('./services/logsProjectionsService');
@@ -5881,45 +5922,4 @@ function generateMockPowerRankings(ranking_type: string, season: number, week: n
     items: mockPlayers
   };
 }
-
-  // Defense Rankings Route - Week 5 positional fantasy points allowed
-  app.get("/api/defense-rankings", async (req, res) => {
-    try {
-      const { defenseVP } = await import("@shared/schema");
-      const { eq, and } = await import("drizzle-orm");
-      
-      const week = 5;
-      const season = 2024;
-      
-      // Fetch defense data for Week 5
-      const defenseData = await db
-        .select()
-        .from(defenseVP)
-        .where(and(
-          eq(defenseVP.season, season),
-          eq(defenseVP.week, week)
-        ));
-      
-      // Group by team and pivot by position
-      const teamData = defenseData.reduce((acc, row) => {
-        if (!acc[row.defTeam]) {
-          acc[row.defTeam] = { team: row.defTeam };
-        }
-        acc[row.defTeam][row.position.toLowerCase()] = row.fpAllowed;
-        return acc;
-      }, {} as Record<string, any>);
-      
-      // Convert to array
-      const rankings = Object.values(teamData);
-      
-      res.json({ 
-        week, 
-        season, 
-        data: rankings 
-      });
-    } catch (error) {
-      console.error("Error fetching defense rankings:", error);
-      res.status(500).json({ error: "Failed to fetch defense rankings" });
-    }
-  });
 
