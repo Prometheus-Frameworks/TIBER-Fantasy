@@ -27,12 +27,12 @@ interface CompareResponse {
 
 export default function PlayerCompare() {
   const [location] = useLocation();
-  const params = new URLSearchParams(location.split('?')[1]);
+  const params = new URLSearchParams(window.location.search);
   const player1Name = params.get('player1') || '';
   const player2Name = params.get('player2') || '';
 
   const { data, isLoading, error } = useQuery<CompareResponse>({
-    queryKey: ['/api/player-usage-compare', player1Name, player2Name],
+    queryKey: [`/api/player-usage-compare?player1=${encodeURIComponent(player1Name)}&player2=${encodeURIComponent(player2Name)}`, player1Name, player2Name],
     enabled: !!player1Name && !!player2Name,
   });
 
@@ -101,11 +101,17 @@ export default function PlayerCompare() {
   const player1 = players[0];
   const player2 = players[1] || players[0]; // Fallback if only one player found
 
-  const formatPct = (val: number | null | undefined) => 
-    val != null ? `${val.toFixed(1)}%` : 'N/A';
+  const formatPct = (val: number | string | null | undefined) => {
+    if (val == null) return 'N/A';
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    return isNaN(num) ? 'N/A' : `${num.toFixed(1)}%`;
+  };
 
-  const formatNumber = (val: number | null | undefined) => 
-    val != null ? val.toFixed(1) : 'N/A';
+  const formatNumber = (val: number | string | null | undefined) => {
+    if (val == null) return 'N/A';
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    return isNaN(num) ? 'N/A' : num.toFixed(1);
+  };
 
   return (
     <div className="container mx-auto py-8 px-4">

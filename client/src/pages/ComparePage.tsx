@@ -8,7 +8,7 @@ export default function ComparePage() {
   const player2 = params.get('player2') || '';
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['/api/player-usage-compare', player1, player2],
+    queryKey: [`/api/player-usage-compare?player1=${encodeURIComponent(player1)}&player2=${encodeURIComponent(player2)}`, player1, player2],
     enabled: !!player1 && !!player2,
   });
 
