@@ -286,9 +286,10 @@ export class SchemaDriftService {
       console.log('🔨 Generating SQL from schema definition...');
       
       // Use drizzle-kit generate to create SQL from current schema
-      const { stdout } = await execAsync('npx drizzle-kit generate', {
+      const { stdout } = await execAsync('npx drizzle-kit generate --config=drizzle.config.ts', {
         cwd: process.cwd(),
-        timeout: 30000
+        timeout: 30000,
+        env: { ...process.env, DRIZZLE_KIT_NO_INTERACTION: 'true' }
       });
       
       // Read the latest migration file or schema output
@@ -324,36 +325,40 @@ export class SchemaDriftService {
       // Use drizzle-kit introspect to read actual database
       const tempDir = `temp-introspect-${Date.now()}`;
       
-      const { stdout } = await execAsync(`npx drizzle-kit introspect --out ./${tempDir}`, {
+      const dbUrl = process.env.DATABASE_URL;
+      if (!dbUrl) {
+        throw new Error('DATABASE_URL not found in environment');
+      }
+      
+      const { stdout } = await execAsync(`npx drizzle-kit introspect --dialect=postgresql --url="${dbUrl}" --out=./${tempDir}`, {
         cwd: process.cwd(),
-        timeout: 30000,
-        env: { ...process.env, DRIZZLE_DB_URL: process.env.DATABASE_URL }
+        timeout: 30000
       });
       
-      // Read introspected schema files
+      // Read introspected schema files (TypeScript files from drizzle-kit introspect)
       const tempSchemaPath = path.join(process.cwd(), tempDir);
       
       if (!fs.existsSync(tempSchemaPath)) {
         throw new Error(`Introspection output directory not found: ${tempSchemaPath}`);
       }
       
-      const schemaFiles = fs.readdirSync(tempSchemaPath).filter(f => f.endsWith('.sql'));
+      const schemaFiles = fs.readdirSync(tempSchemaPath).filter(f => f.endsWith('.ts') || f.endsWith('.sql'));
       
-      let combinedSQL = '';
+      let combinedSchema = '';
       for (const file of schemaFiles) {
         const filePath = path.join(tempSchemaPath, file);
         const content = fs.readFileSync(filePath, 'utf-8');
-        combinedSQL += content + '\n';
+        combinedSchema += content + '\n';
       }
       
       // Clean up temp files
       fs.rmSync(tempSchemaPath, { recursive: true, force: true });
       
-      if (!combinedSQL.trim()) {
+      if (!combinedSchema.trim()) {
         throw new Error('No schema content returned from database introspection');
       }
       
-      return combinedSQL;
+      return combinedSchema;
     } catch (error) {
       console.error('❌ Database introspection failed:', error);
       throw new Error(`Failed to introspect live database: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -366,7 +371,7 @@ export class SchemaDriftService {
   private normalizeSchemaFile(content: string): string {
     return content
       .replace(/\/\/.*$/gm, '')          // Remove line comments
-      .replace(/\/\*.*?\*\//gs, '')     // Remove block comments
+      .replace(/\/\*[\s\S]*?\*\//g, '') // Remove block comments
       .replace(/\s+/g, ' ')            // Normalize whitespace
       .replace(/;\s*}/g, '}')          // Normalize semicolons before braces
       .replace(/,\s*}/g, '}')          // Normalize trailing commas
@@ -398,7 +403,7 @@ export class SchemaDriftService {
     return sql
       .replace(/\s+/g, ' ')           // Normalize whitespace
       .replace(/--.*$/gm, '')        // Remove comments
-      .replace(/\/\*.*?\*\//gs, '')  // Remove block comments
+      .replace(/\/\*[\s\S]*?\*\//g, '')  // Remove block comments
       .trim()
       .toLowerCase();
   }
@@ -555,6 +560,3 @@ export class SchemaDriftService {
 
 // Export singleton instance
 export const schemaDriftService = new SchemaDriftService();
-
-// Export validation utilities for testing
-export { DriftCheckResult, MigrationRecord };
