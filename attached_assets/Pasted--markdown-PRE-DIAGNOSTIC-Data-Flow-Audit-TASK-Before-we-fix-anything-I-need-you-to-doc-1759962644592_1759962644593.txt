@@ -1,0 +1,137 @@
+```markdown
+# PRE-DIAGNOSTIC: Data Flow Audit
+
+## TASK
+Before we fix anything, I need you to document our ACTUAL data architecture as currently implemented.
+
+## What to Document
+
+### 1. Data Sources (External APIs)
+List every external API we pull data from:
+- API name (e.g., Sleeper API, FantasyPros, NFL.com)
+- What data we fetch (players, projections, stats, etc.)
+- Where the fetch code lives (file path + function name)
+- When it runs (cron schedule, on-demand, etc.)
+
+**Example format:**
+```
+- Sleeper API
+  - Data: Player roster, IDs, basic info
+  - Code: server/services/sleeper-sync.ts > fetchSleeperPlayers()
+  - Schedule: Nightly cron at 2am (server/cron/sleeper-job.ts)
+```
+
+### 2. Database Tables (Where Data Lives)
+For each table in our schema, document:
+- Table name
+- What layer (Bronze/Silver/Gold)
+- What data it stores
+- What populates it (which function/service writes to it)
+
+**Example format:**
+```
+Bronze Layer:
+- bronze_sleeper_players
+  - Stores: Raw player data from Sleeper API
+  - Populated by: server/services/sleeper-sync.ts > syncSleeperPlayers()
+  
+Silver Layer:
+- players
+  - Stores: Normalized canonical player records
+  - Populated by: server/etl/bronze-to-silver.ts > transformPlayers()
+```
+
+### 3. Data Transformations (ETL Jobs)
+List every job that transforms data between layers:
+- Job name
+- What it does (Bronze→Silver, Silver→Gold, etc.)
+- Where the code lives
+- When it runs
+- What it reads from
+- What it writes to
+
+### 4. API Endpoints (What the Frontend Consumes)
+List every API endpoint that serves data to the UI:
+- Endpoint path (e.g., `/api/rankings`)
+- What data it returns
+- Which database tables it queries
+- Where the code lives (file + line number)
+
+**Example:**
+```
+GET /api/rankings
+- Returns: Array of players with overall ratings (1-99 scale)
+- Queries: players JOIN player_facts
+- Code: server/routes.ts:1146
+```
+
+### 5. Frontend Components (What Displays the Data)
+List the major pages/components that display data:
+- Component name + file path
+- What data it needs
+- How it fetches data (React Query? Direct fetch? Mock data?)
+- Which API endpoint(s) it calls
+
+**Example:**
+```
+RankingsPage (client/src/pages/Rankings.tsx)
+- Needs: Player rankings with overall scores
+- Fetches via: useQuery({ queryKey: ['/api/rankings'] })
+- Calls: GET /api/rankings
+```
+
+---
+
+## Output Format
+
+Provide the documentation in this structure:
+
+```
+=== DATA ARCHITECTURE MAP ===
+
+📥 EXTERNAL SOURCES
+[List all external APIs with details]
+
+💾 DATABASE TABLES
+Bronze Layer:
+[List tables]
+
+Silver Layer:
+[List tables]
+
+Gold Layer:
+[List tables]
+
+⚙️ ETL JOBS
+[List transformation jobs]
+
+🔌 API ENDPOINTS
+[List all endpoints that serve data]
+
+🎨 FRONTEND COMPONENTS
+[List pages/components that consume data]
+
+📊 COMPLETE DATA FLOW EXAMPLE
+[Trace one complete path, e.g.:]
+Sleeper API 
+  → bronze_sleeper_players (via sleeper-sync.ts)
+  → players table (via bronze-to-silver ETL)
+  → player_facts table (via analytics calculation)
+  → GET /api/rankings (queries player_facts)
+  → RankingsPage.tsx (useQuery hook)
+  → User sees rankings
+```
+
+---
+
+## CRITICAL
+- Do NOT invent or assume - only document what ACTUALLY EXISTS in the codebase
+- Include actual file paths and line numbers
+- If something is missing or broken, note it clearly
+- If you find multiple ways data flows (old vs new), document BOTH
+
+This map will help us identify:
+- Where data flow breaks
+- What's unused/legacy code
+- What's actually hooked up vs what's mock
+```
