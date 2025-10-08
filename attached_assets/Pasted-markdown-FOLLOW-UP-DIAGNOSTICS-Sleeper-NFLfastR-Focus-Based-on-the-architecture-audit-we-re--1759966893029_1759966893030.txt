@@ -1,0 +1,168 @@
+markdown# FOLLOW-UP DIAGNOSTICS - Sleeper + NFLfastR Focus
+
+Based on the architecture audit, we're **cutting FantasyPros** and focusing on:
+- ✅ Sleeper API (already working - 11,400 players)
+- ✅ NFLfastR (for raw NFL stats and play-by-play data)
+
+Run these specific checks:
+
+## 1. Schema Drift Error Details
+Start the dev server and capture the FULL error output:
+```bash
+npm run dev 2>&1 | head -n 50
+Paste the complete error, especially any "drift" or "schema" related messages.
+
+2. Gold Layer Data Check
+Run these SQL queries and paste FULL results:
+sql-- Check if we have calculated player ratings
+SELECT COUNT(*) as composite_facts FROM player_composite_facts;
+SELECT COUNT(*) as week_facts FROM player_week_facts;
+SELECT COUNT(*) as players_with_ovr FROM player_composite_facts WHERE ovr_rating IS NOT NULL;
+
+-- Sample the actual data
+SELECT player_id, ovr_rating, position, updated_at 
+FROM player_composite_facts 
+WHERE ovr_rating IS NOT NULL 
+ORDER BY ovr_rating DESC
+LIMIT 10;
+
+-- Check if we have recent Sleeper data feeding into this
+SELECT 
+  COUNT(*) as sleeper_bronze_players,
+  MAX(updated_at) as last_sleeper_sync
+FROM bronze_sleeper_players;
+
+SELECT 
+  COUNT(*) as silver_players,
+  MAX(updated_at) as last_silver_update
+FROM players;
+Key question: Do we have Sleeper Bronze → Silver data flowing, but Gold layer calculations failing?
+
+3. Active Scheduler Check
+Search for where schedulers are initialized:
+bashgrep -n "schedule\|Scheduler" server/index.ts server/cron/index.ts
+Also check which ETL jobs are registered:
+bashgrep -rn "UPH\|ETL\|pipeline" server/services/ server/cron/
+Paste the relevant code sections showing:
+
+Which scheduler is actually running (cron vs UPHScheduler vs IntelligentScheduler)
+Which ETL jobs are registered
+When they're supposed to run
+
+
+4. Remove FantasyPros Dependencies
+Find everywhere FantasyPros is referenced:
+bashgrep -rn "FantasyPros\|fantasypros\|fpros" server/ client/
+For each file found:
+
+Is it actually being used in any rankings/calculations?
+Can we safely delete it or does something depend on it?
+
+List all files that need FantasyPros code removed.
+
+5. NFLfastR Implementation Status
+Check if we have NFLfastR integration already:
+bashgrep -rn "nflfastR\|nfl_fast\|fastR" server/
+If it exists:
+
+Where is the code? (file path + function name)
+What data does it fetch?
+What Bronze table does it populate?
+
+If it doesn't exist:
+
+Confirm we need to build this from scratch
+What specific NFLfastR data do we need? (play-by-play, weekly stats, roster data?)
+
+
+6. Rankings Endpoint Query
+Show me the EXACT query used by /api/rankings or /api/ratings:
+bash# Find the rankings endpoints
+grep -rn "app.get.*rankings\|app.get.*ratings" server/routes.ts
+For the main rankings endpoint, paste:
+
+File path and line number
+The full SQL query or Drizzle query
+What tables it joins
+Does it reference FantasyPros anywhere?
+Does it use player_composite_facts.ovr_rating?
+
+Example of what I need to see:
+typescript// server/routes.ts:1146
+app.get('/api/rankings', async (req, res) => {
+  const players = await db
+    .select()
+    .from(playerCompositeFacts)
+    .where(eq(playerCompositeFacts.position, 'WR'))
+    .orderBy(desc(playerCompositeFacts.ovr_rating));
+  
+  res.json(players);
+});
+
+7. ETL Job Status - Critical
+The UPH (Unified Player Hub) coordinator should be running Bronze→Silver→Gold transformations.
+Find and show me:
+bash# Find the UPH coordinator
+grep -rn "UPHCoordinator\|uphCoordinator" server/
+
+# Find the Gold layer calculation job
+grep -rn "calculateFacts\|computeRatings\|calculateOVR" server/
+Paste:
+
+Where the Gold layer calculation lives
+When it's triggered (cron schedule? event-driven?)
+Does it actually run? (check logs)
+
+
+EXPECTED OUTPUT FORMAT
+=== FOLLOW-UP DIAGNOSTIC RESULTS ===
+
+1. SCHEMA DRIFT ERROR:
+[Paste first 50 lines of npm run dev output]
+
+2. GOLD LAYER DATA:
+- player_composite_facts rows: X
+- Players with ovr_rating: X
+- Latest update: DATE
+- Sample data: [PASTE TOP 10]
+- Sleeper Bronze last sync: DATE
+- Silver players count: X
+
+3. ACTIVE SCHEDULER:
+- Primary scheduler: [cron / UPHScheduler / IntelligentScheduler]
+- ETL jobs registered: [list jobs]
+- Code location: [file:line]
+
+4. FANTASYPROS REMOVAL:
+Files referencing FantasyPros:
+- server/services/fantasypros.ts (CAN DELETE)
+- server/routes.ts:234 (line references fpros data - NEEDS FIX)
+- client/src/pages/Consensus.tsx (uses fpros - NEEDS REDESIGN)
+
+5. NFLFASTR STATUS:
+[EXISTS / DOES NOT EXIST]
+- Code location: [if exists]
+- Data fetched: [if exists]
+- Bronze table: [if exists]
+
+6. RANKINGS ENDPOINT:
+- Location: server/routes.ts:LINE
+- Query: [PASTE FULL QUERY]
+- Uses FantasyPros: YES/NO
+- Uses player_composite_facts: YES/NO
+
+7. ETL JOB STATUS:
+- UPH Coordinator location: [file:line]
+- Gold calculation location: [file:line]
+- Trigger: [cron schedule / event]
+- Last run: [check logs if possible]
+
+NEXT STEPS AFTER DIAGNOSTICS
+Once you provide this info, we'll:
+
+Fix schema drift so app starts cleanly
+Verify/trigger ETL jobs to populate Gold layer with Sleeper data
+Remove all FantasyPros code from rankings
+Implement NFLfastR integration (if not already there)
+Connect rankings endpoint to real player_composite_facts data
+Build 1-99 Madden-style rating algorithm using Sleeper + NFLfastR data only
