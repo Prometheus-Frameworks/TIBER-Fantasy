@@ -1,0 +1,119 @@
+This is an **excellent** audit! You've identified the exact pressure points. Let me prioritize these fixes and add a few implementation details:
+
+## 🔴 Critical: Rate Limiting on Analytics Endpoints
+
+Your VORP calculation is doing **O(n²) comparisons** across potentially thousands of players. This should be your first fix:
+
+```typescript
+// server/routes.ts
+app.get('/api/rankings', rateLimiters.heavyOperation, async (req, res) => {
+  // existing VORP logic
+});
+
+app.post('/api/player-usage-compare', rateLimiters.heavyOperation, async (req, res) => {
+  // comparison logic
+});
+
+// Also protect these if they exist:
+app.get('/api/consensus', rateLimiters.heavyOperation, async (req, res) => {});
+app.get('/api/analytics/*', rateLimiters.heavyOperation, async (req, res) => {});
+```
+
+**Why this matters:** Without rate limiting, a single user (or bot) could hammer your VORP endpoint and:
+- Max out your Neon compute hours
+- Spike your Replit CPU usage
+- Block other users during calculation
+
+## 🟡 High Priority: Connection Pool Config
+
+```typescript
+// server/db.ts
+export const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  max: 20, // Up from default 10
+  idleTimeoutMillis: 30000, // Close idle connections after 30s
+  connectionTimeoutMillis: 2000, // Fail fast if pool exhausted
+  // Add these for Neon serverless optimization:
+  ssl: { rejectUnauthorized: false }, // If not already set
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
+});
+```
+
+**Neon-specific gotcha:** Neon serverless actually benefits from **shorter** idle timeouts since connections are cheap to recreate. Consider `idleTimeoutMillis: 10000` instead of 30s.
+
+## 🟢 Medium Priority: Connection Monitoring
+
+Add this to your startup logging (probably in `server/index.ts`):
+
+```typescript
+// Log pool stats every 5 minutes
+setInterval(() => {
+  console.log('Pool stats:', {
+    total: pool.totalCount,
+    idle: pool.idleCount,
+    waiting: pool.waitingCount
+  });
+}, 300000);
+
+// Alert if pool is saturated
+pool.on('error', (err) => {
+  console.error('Unexpected pool error:', err);
+});
+```
+
+If you see `waiting > 5` consistently, you need to either:
+- Increase `max` pool size
+- Optimize slow queries (check your VORP calculation)
+- Add caching layer (Redis/in-memory for computed rankings)
+
+## 💡 Schema Split - Future Enhancement
+
+Your current setup is fine, but when you hit ~4k lines, split like this:
+
+```typescript
+// shared/schema/index.ts
+export * from './bronze';
+export * from './silver';
+export * from './gold';
+export * from './orchestration';
+
+// Then in server/db.ts
+import * as schema from '@db/schema';
+// Works exactly the same
+```
+
+This is a 30-minute refactor, not urgent.
+
+## 📊 Cost Monitoring Query
+
+Run this weekly to track growth:
+
+```sql
+-- Storage by layer
+SELECT 
+  schemaname,
+  tablename,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
+FROM pg_tables
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+LIMIT 20;
+
+-- Active connections
+SELECT count(*) as active_connections FROM pg_stat_activity;
+```
+
+If your **bronze layer** tables are growing fastest, consider:
+- Archiving data older than 2 seasons
+- Partitioning by season/week
+- Moving to S3/object storage for cold data
+
+## 🎯 My Recommendation Priority
+
+1. **Today:** Add rate limiting to `/api/rankings` and `/api/player-usage-compare`
+2. **This week:** Update pool config with the settings above
+3. **This month:** Run the cost monitoring queries and set calendar reminders
+4. **Later:** Schema split when you add more tables
+
+The rate limiting fix alone will probably save you 30-40% on compute costs if you're getting any traffic. Want help implementing any of these?

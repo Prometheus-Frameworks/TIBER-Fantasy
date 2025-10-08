@@ -118,7 +118,8 @@ export const rateLimiters = {
  * Clean up expired rate limit entries
  */
 function cleanupExpiredEntries(now: number) {
-  for (const [key, record] of rateLimitStore.entries()) {
+  const entries = Array.from(rateLimitStore.entries());
+  for (const [key, record] of entries) {
     if (now > record.resetTime) {
       rateLimitStore.delete(key);
     }

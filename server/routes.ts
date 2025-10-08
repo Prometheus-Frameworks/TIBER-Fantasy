@@ -102,6 +102,7 @@ import { registerPowerProcessingRoutes } from './routes/powerProcessing';
 import { monitoringService } from './services/MonitoringService';
 import { adminService } from './services/AdminService';
 import { requireAdminAuth } from './middleware/adminAuth';
+import { rateLimiters } from './middleware/rateLimit';
 import { createCompassRouter } from './services/predictionEngine';
 import {
   validateSetSeason,
@@ -600,8 +601,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Player comparison endpoint
-  app.get('/api/player-usage-compare', async (req: Request, res: Response) => {
+  // Player comparison endpoint - rate limited due to complex SQL joins
+  app.get('/api/player-usage-compare', rateLimiters.heavyOperation, async (req: Request, res: Response) => {
     try {
       const { player1, player2 } = req.query;
       
@@ -1143,7 +1144,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // 🎯 ENHANCED VORP RANKINGS WITH DYNASTY MODE & POSITIONAL FILTERING
-  app.get('/api/rankings', async (req: Request, res: Response) => {
+  // Rate limited due to expensive VORP calculation (O(n²) comparisons)
+  app.get('/api/rankings', rateLimiters.heavyOperation, async (req: Request, res: Response) => {
     try {
       const mode = req.query.mode as string || 'redraft';
       const position = req.query.position ? (req.query.position as string).toUpperCase() : null;
@@ -4485,7 +4487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== OTC CONSENSUS RANKINGS API =====
   // Community Rankings (separate from Player Compass in-house ratings)
   
-  app.get('/api/consensus/:format', async (req: Request, res: Response) => {
+  app.get('/api/consensus/:format', rateLimiters.heavyOperation, async (req: Request, res: Response) => {
     try {
       const { otcConsensusService } = await import('./services/otcConsensusService');
       const format = req.params.format as 'dynasty' | 'redraft';
