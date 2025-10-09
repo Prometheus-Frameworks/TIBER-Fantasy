@@ -1158,11 +1158,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Import silverPlayerWeeklyStats from schema
       const { silverPlayerWeeklyStats } = await import('@shared/schema');
 
-      // Build base query conditions
+      // Build base query conditions with data quality safeguards
       const conditions = [
         eq(silverPlayerWeeklyStats.season, season),
-        eq(silverPlayerWeeklyStats.week, week)
+        eq(silverPlayerWeeklyStats.week, week),
+        // Ensure we have meaningful data (at least some usage)
+        sql`(${silverPlayerWeeklyStats.passAttempts} > 0 OR ${silverPlayerWeeklyStats.targets} > 0 OR ${silverPlayerWeeklyStats.rushAttempts} > 0)`
       ];
+
+      // Add position filter if requested
+      if (position && ['QB', 'RB', 'WR', 'TE'].includes(position)) {
+        conditions.push(eq(silverPlayerWeeklyStats.position, position));
+      }
 
       // Query silver_player_weekly_stats for NFLfastR aggregated stats
       const stats = await db
@@ -1236,17 +1243,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      // Filter by position if requested
-      let filteredPlayers = playersWithScores;
-      if (position && ['QB', 'RB', 'WR', 'TE'].includes(position)) {
-        filteredPlayers = playersWithScores.filter(p => p.position === position);
-      }
-
-      // Sort by composite score (higher = better)
-      filteredPlayers.sort((a, b) => b.compositeScore - a.compositeScore);
+      // Sort by composite score (higher = better) - position filtering already done in SQL query
+      playersWithScores.sort((a, b) => b.compositeScore - a.compositeScore);
 
       // Apply limit
-      const topPlayers = filteredPlayers.slice(0, limit);
+      const topPlayers = playersWithScores.slice(0, limit);
 
       // Calculate OVR ratings from composite scores
       const maxScore = topPlayers[0]?.compositeScore || 100;
