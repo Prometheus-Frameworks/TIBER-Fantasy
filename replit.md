@@ -49,6 +49,20 @@ Intelligence Feed System:
     - **Blocking Context**: Run blocking (YBC per attempt) and pass protection (pressure rate inverted) for RB/QB positions
     - **UI Components**: SOSAnalyticsPage at `/sos/analytics` with React Query data fetching, position filters, color-coded matchup cards, null-safe rendering
     - **Home Page Integration**: Featured section showcasing SOS capabilities with EPA, alignment, coverage, and blocking analytics cards
+*   **Defense vs Position (DvP) Matchup System (October 2025):** Complete fantasy matchup analyzer calculating fantasy points allowed by defenses against specific positions using real NFLfastR play-by-play data:
+    - **Database Architecture**: PostgreSQL table `defense_vs_position_stats` storing fantasy scoring (PPR/Half-PPR/Standard), rankings, matchup ratings, and advanced metrics (EPA, plays against, unique players faced)
+    - **Position-Specific Calculation Logic**:
+      - **QB**: Passing plays (1pt/25yds, 4pts/TD, -2pts/INT) + QB rushing plays (1pt/10yds, 6pts/TD)
+      - **RB**: Rushing plays (1pt/10yds, 6pts/TD) + receiving plays (1pt/rec PPR, 1pt/10yds, 6pts/TD)
+      - **WR/TE**: Receiving plays only (1pt/rec PPR, 1pt/10yds, 6pts/TD)
+    - **Unique Player Tracking**: Position-specific player identification (QB uses passer_id/rusher_id, RB uses rusher_id/receiver_id, WR/TE uses receiver_id only)
+    - **Matchup Rating System**: 5-tier system based on defensive rank (1-6: elite-matchup, 7-12: good, 13-20: neutral, 21-26: tough, 27-32: avoid)
+    - **API Endpoints**: 
+      - GET `/api/dvp?position={QB|RB|WR|TE}&season=2025&week={1-5}` - Returns ranked defenses vs position
+      - POST `/api/dvp/calculate` - Triggers DvP calculations from NFLfastR data
+      - GET `/api/dvp/matchup/{position}/{defense}?season=2025&week=1` - Returns specific matchup analysis with rating and projected boost
+    - **Frontend Integration**: `/dvp` page with position/week/scoring format filters, color-coded defense ranking cards showing fantasy points allowed, EPA, plays faced, and unique players
+    - **Week 1 2025 Data**: Fully calculated for all 4 positions (32 defenses per position) with verified accuracy (e.g., KC #1 worst vs QB: 22.6 PPR pts, SEA #1 worst vs TE: 21.9 PPR pts)
 *   **Data Integration & Sync:** Implements Sleeper Sync with cache fallback, a Canonical Player Pool System, a Roster Shift Listener for transaction monitoring, and a Roster Sync System merging Sleeper and NFL data.
 *   **Live Data & Processing:** Features a Live Data Integration Pipeline with multi-source data capture (MySportsFeeds, SportsDataIO, Sleeper API), a Hot List Player Extraction System, and a Snap Counts Knowledge System.
 *   **Backend Services:** Includes a Backend Spine with Logs & Projections Service, a multi-format Ratings Engine, and a dedicated OTC Power Rankings Service microservice.
