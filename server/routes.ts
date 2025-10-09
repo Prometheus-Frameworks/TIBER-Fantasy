@@ -2972,6 +2972,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/buys-sells', buysSellsRoutes);
   app.use('/api/matchup', matchupRoutes);
   console.log('🎯 Player Matchup Intelligence routes mounted at /api/matchup/*');
+  
+  // Defense vs Position (DvP) matchup system
+  const { calculateDefenseVsPosition, getDefenseVsPosition, getMatchupRating } = await import('./services/defenseVsPositionService');
+  
+  // GET /api/dvp - Get DvP stats
+  app.get('/api/dvp', async (req: Request, res: Response) => {
+    try {
+      const position = req.query.position as string | undefined;
+      const season = req.query.season ? parseInt(req.query.season as string) : 2025;
+      const week = req.query.week ? parseInt(req.query.week as string) : undefined;
+      
+      const stats = await getDefenseVsPosition(position, season, week);
+      
+      res.json({
+        success: true,
+        data: stats,
+        meta: {
+          position: position || 'all',
+          season,
+          week: week || 'season',
+          count: stats.length
+        }
+      });
+    } catch (error: any) {
+      console.error('Error fetching DvP stats:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // POST /api/dvp/calculate - Run DvP calculations
+  app.post('/api/dvp/calculate', async (req: Request, res: Response) => {
+    try {
+      const { season = 2025, week } = req.body;
+      
+      await calculateDefenseVsPosition(season, week);
+      
+      res.json({
+        success: true,
+        message: `DvP calculations completed for ${season} week ${week || 'season'}`,
+        season,
+        week: week || 'season'
+      });
+    } catch (error: any) {
+      console.error('Error calculating DvP:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // GET /api/dvp/matchup/:position/:defense - Get specific matchup rating
+  app.get('/api/dvp/matchup/:position/:defense', async (req: Request, res: Response) => {
+    try {
+      const { position, defense } = req.params;
+      const season = req.query.season ? parseInt(req.query.season as string) : 2025;
+      const week = req.query.week ? parseInt(req.query.week as string) : undefined;
+      
+      const matchup = await getMatchupRating(position, defense, season, week);
+      
+      if (!matchup) {
+        return res.status(404).json({
+          error: 'Matchup not found',
+          position,
+          defense,
+          season,
+          week
+        });
+      }
+      
+      res.json({
+        success: true,
+        data: matchup,
+        meta: {
+          position,
+          defense,
+          season,
+          week: week || 'season'
+        }
+      });
+    } catch (error: any) {
+      console.error('Error fetching matchup rating:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  console.log('🛡️ Defense vs Position (DvP) routes mounted at /api/dvp/*');
+  
   app.use('/api/player-comparison', playerComparisonRoutes);
   console.log('⚖️  Player Comparison Tool routes mounted at /api/player-comparison/*');
 
