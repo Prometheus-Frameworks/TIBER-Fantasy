@@ -18,7 +18,7 @@
 
 import { db } from '../db';
 import { 
-  players,
+  playerIdentityMap,
   playerSeasonFacts, 
   playerMarketFacts, 
   playerCompositeFacts,
@@ -418,17 +418,17 @@ export class GoldLayerService {
     }
 
     // Build conditions for querying active players
-    const conditions = [eq(players.isActive, true)];
+    const conditions = [eq(playerIdentityMap.isActive, true)];
     
     // Filter by positions if specified
     if (filters.positions?.length) {
-      conditions.push(inArray(players.position, filters.positions));
+      conditions.push(inArray(playerIdentityMap.position, filters.positions));
     }
 
     // Get all active players matching the filters
     const activePlayers = await db
-      .select({ canonicalId: players.canonicalId })
-      .from(players)
+      .select({ canonicalId: playerIdentityMap.canonicalId })
+      .from(playerIdentityMap)
       .where(and(...conditions));
       
     return activePlayers.map(p => p.canonicalId);

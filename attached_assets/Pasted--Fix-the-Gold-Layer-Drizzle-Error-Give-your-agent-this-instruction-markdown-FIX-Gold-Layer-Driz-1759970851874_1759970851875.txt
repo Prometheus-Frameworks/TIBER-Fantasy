@@ -1,0 +1,127 @@
+🔧 Fix the Gold Layer Drizzle Error
+Give your agent this instruction:
+markdown# FIX: Gold Layer Drizzle Query Builder Error
+
+## Problem
+`createWeeklyFactsInput` is returning an object with `undefined` select fields when no metrics are active, causing Drizzle's `orderSelectedFields` to crash.
+
+## Root Cause
+When building the select object for `player_week_facts`, if certain metrics aren't available, the function returns:
+```typescript
+{
+  player_id: players.id,
+  season: 2025,
+  week: 7,
+  usage_now: undefined,  // ❌ Drizzle can't handle undefined
+  talent: undefined,
+  // ... more undefined fields
+}
+Drizzle requires all fields to be valid column references or SQL expressions, not undefined.
+Solution
+Find where createWeeklyFactsInput is defined (likely in GoldLayerService.ts or a related file) and guard against undefined:
+Option A: Filter out undefined fields
+typescriptfunction createWeeklyFactsInput(player, metrics) {
+  const baseFields = {
+    player_id: player.id,
+    season: 2025,
+    week: 7,
+  };
+
+  // Only add fields that have actual values
+  const metricFields = {
+    ...(metrics.usage_now !== undefined && { usage_now: metrics.usage_now }),
+    ...(metrics.talent !== undefined && { talent: metrics.talent }),
+    ...(metrics.environment !== undefined && { environment: metrics.environment }),
+    // ... repeat for all metric fields
+  };
+
+  return { ...baseFields, ...metricFields };
+}
+Option B: Use NULL instead of undefined
+typescriptfunction createWeeklyFactsInput(player, metrics) {
+  return {
+    player_id: player.id,
+    season: 2025,
+    week: 7,
+    usage_now: metrics.usage_now ?? null,  // ✅ NULL is valid SQL
+    talent: metrics.talent ?? null,
+    environment: metrics.environment ?? null,
+    availability: metrics.availability ?? null,
+    // ... all other fields with ?? null fallback
+  };
+}
+Option C: Provide default values
+typescriptfunction createWeeklyFactsInput(player, metrics) {
+  return {
+    player_id: player.id,
+    season: 2025,
+    week: 7,
+    usage_now: metrics.usage_now ?? 0,  // Default to 0
+    talent: metrics.talent ?? 0,
+    environment: metrics.environment ?? 0,
+    availability: metrics.availability ?? 1.0,  // Default 100% available
+    // ... all other fields with sensible defaults
+  };
+}
+Recommended Approach
+Use Option B (NULL fallback) because:
+
+✅ SQL/PostgreSQL understands NULL
+✅ Preserves "no data" vs "zero value" semantics
+✅ Simplest to implement
+✅ Won't break Drizzle's query builder
+
+Implementation Steps
+
+Find the function:
+
+bashgrep -rn "createWeeklyFactsInput\|orderSelectedFields" server/services/
+
+Update the function to use ?? null for all metric fields
+Ensure the database schema allows NULLs:
+
+sql-- Check if columns allow NULL (they should)
+SELECT column_name, is_nullable 
+FROM information_schema.columns 
+WHERE table_name = 'player_week_facts' 
+  AND column_name IN ('usage_now', 'talent', 'environment');
+If any show is_nullable = 'NO', we need to alter the schema:
+sqlALTER TABLE player_week_facts 
+  ALTER COLUMN usage_now DROP NOT NULL,
+  ALTER COLUMN talent DROP NOT NULL,
+  ALTER COLUMN environment DROP NOT NULL;
+  -- repeat for other metric columns
+
+Test the fix:
+
+
+Restart server
+Wait for next ETL run (or trigger manually)
+Check logs for ✅ [Gold] Facts generation complete
+Verify data: SELECT COUNT(*) FROM player_week_facts;
+
+Expected Outcome
+After the fix:
+🚀 [UPHCoordinator] Starting INCREMENTAL processing
+✅ [Bronze] Data ingestion complete
+✅ [Silver] Data transformation complete  
+✅ [Gold] Generated 2 weekly facts  // ← This should now work!
+📊 [Result] 3/3 tasks successful, 0 failed
+Then check the database:
+sqlSELECT player_id, season, week, usage_now, talent, environment 
+FROM player_week_facts 
+ORDER BY created_at DESC 
+LIMIT 5;
+You should see rows with either real metric values OR NULL (not undefined errors).
+Next Step After This Works
+Once Gold layer populates successfully, we immediately move to Step 4: Update /api/rankings endpoint to query player_composite_facts instead of calculating VORP in-memory.
+
+---
+
+This is the **final blocker**. Once this undefined→null fix is applied:
+
+1. Gold layer will populate ✅
+2. `player_week_facts` will have data ✅  
+3. `player_composite_facts` will calculate OVR ratings ✅
+4. `/api/rankings` can query real data ✅
+5. UI shows real players ✅
