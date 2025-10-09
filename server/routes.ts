@@ -1271,14 +1271,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         return {
           rank: index + 1,
-          playerId: player.playerId,
-          player_name: player.playerName,
+          player_id: player.playerId,
+          name: player.playerName,
           position: player.position,
           team: player.team,
-          ovrRating,
+          ovr: ovrRating,
           tier,
+          score: player.compositeScore,
           
-          // NFLfastR stats
+          // NFLfastR stats for display
           passingEpa: player.passingEpa,
           passAttempts: player.passAttempts,
           passingYards: player.passingYards,
