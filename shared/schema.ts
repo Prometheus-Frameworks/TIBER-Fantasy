@@ -2062,6 +2062,89 @@ export const playerWeekFacts = pgTable("player_week_facts", {
 }));
 
 // ========================================
+// NFLFASTR 2025 DATA TABLES
+// ========================================
+
+// Bronze Layer: NFLfastR Play-by-Play Data
+export const bronzeNflfastrPlays = pgTable("bronze_nflfastr_plays", {
+  id: serial("id").primaryKey(),
+  playId: varchar("play_id", { length: 100 }).notNull().unique(),
+  gameId: varchar("game_id", { length: 50 }).notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  posteam: varchar("posteam", { length: 10 }),
+  defteam: varchar("defteam", { length: 10 }),
+  playType: varchar("play_type", { length: 50 }),
+  
+  passerPlayerId: varchar("passer_player_id", { length: 50 }),
+  passerPlayerName: varchar("passer_player_name", { length: 100 }),
+  receiverPlayerId: varchar("receiver_player_id", { length: 50 }),
+  receiverPlayerName: varchar("receiver_player_name", { length: 100 }),
+  rusherPlayerId: varchar("rusher_player_id", { length: 50 }),
+  rusherPlayerName: varchar("rusher_player_name", { length: 100 }),
+  
+  epa: real("epa"),
+  wpa: real("wpa"),
+  airYards: integer("air_yards"),
+  yardsAfterCatch: integer("yards_after_catch"),
+  yardsGained: integer("yards_gained"),
+  
+  completePass: boolean("complete_pass").default(false),
+  incompletePass: boolean("incomplete_pass").default(false),
+  interception: boolean("interception").default(false),
+  touchdown: boolean("touchdown").default(false),
+  
+  rawData: jsonb("raw_data"),
+  
+  importedAt: timestamp("imported_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  seasonWeekIdx: index("bronze_nflfastr_season_week_idx").on(table.season, table.week),
+  passerIdx: index("bronze_nflfastr_passer_idx").on(table.passerPlayerId),
+  receiverIdx: index("bronze_nflfastr_receiver_idx").on(table.receiverPlayerId),
+  rusherIdx: index("bronze_nflfastr_rusher_idx").on(table.rusherPlayerId),
+  playTypeIdx: index("bronze_nflfastr_play_type_idx").on(table.playType),
+}));
+
+// Silver Layer: Aggregated Weekly Player Stats
+export const silverPlayerWeeklyStats = pgTable("silver_player_weekly_stats", {
+  id: serial("id").primaryKey(),
+  playerId: varchar("player_id", { length: 50 }).notNull(),
+  playerName: varchar("player_name", { length: 100 }).notNull(),
+  position: varchar("position", { length: 10 }),
+  team: varchar("team", { length: 10 }),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  
+  passAttempts: integer("pass_attempts").default(0),
+  completions: integer("completions").default(0),
+  passingYards: integer("passing_yards").default(0),
+  passingTds: integer("passing_tds").default(0),
+  interceptions: integer("interceptions").default(0),
+  passingEpa: real("passing_epa"),
+  
+  targets: integer("targets").default(0),
+  receptions: integer("receptions").default(0),
+  receivingYards: integer("receiving_yards").default(0),
+  receivingTds: integer("receiving_tds").default(0),
+  receivingEpa: real("receiving_epa"),
+  airYards: integer("air_yards").default(0),
+  yac: integer("yac").default(0),
+  
+  rushAttempts: integer("rush_attempts").default(0),
+  rushingYards: integer("rushing_yards").default(0),
+  rushingTds: integer("rushing_tds").default(0),
+  rushingEpa: real("rushing_epa"),
+  
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniquePlayerWeek: unique("silver_player_weekly_stats_unique").on(table.playerId, table.season, table.week),
+  playerIdx: index("silver_weekly_stats_player_idx").on(table.playerId),
+  seasonWeekIdx: index("silver_weekly_stats_season_week_idx").on(table.season, table.week),
+}));
+
+// ========================================
 // PLAYER ATTRIBUTES - WEEKLY ATTRIBUTE SYSTEM
 // ========================================
 

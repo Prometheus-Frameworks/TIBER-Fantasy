@@ -1143,64 +1143,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 🎯 DATABASE-DRIVEN RANKINGS FROM PLAYER_WEEK_FACTS
-  // Uses real ETL data from Gold Layer instead of mock VORP calculations
+  // 🎯 DATABASE-DRIVEN RANKINGS FROM NFLFASTR 2025 DATA
+  // Uses real 2025 play-by-play data from Silver Layer (EPA-based rankings)
   app.get('/api/rankings', rateLimiters.heavyOperation, async (req: Request, res: Response) => {
     try {
       const position = req.query.position ? (req.query.position as string).toUpperCase() : null;
       const mode = req.query.mode as string || 'redraft';
       const limit = parseInt(req.query.limit as string) || 100;
-      const week = parseInt(req.query.week as string) || 6;
+      const week = parseInt(req.query.week as string) || 2; // We have weeks 1-2 data
       const season = parseInt(req.query.season as string) || 2025;
 
       console.log(`🚀 Rankings endpoint hit - Mode: ${mode}, Position: ${position || 'ALL'}, Week: ${week}, Season: ${season}`);
 
+      // Import silverPlayerWeeklyStats from schema
+      const { silverPlayerWeeklyStats } = await import('@shared/schema');
+
       // Build base query conditions
       const conditions = [
-        eq(playerWeekFacts.season, season),
-        eq(playerWeekFacts.week, week)
+        eq(silverPlayerWeeklyStats.season, season),
+        eq(silverPlayerWeeklyStats.week, week)
       ];
 
-      // Add position filter if requested
+      // Query silver_player_weekly_stats for NFLfastR aggregated stats
+      const stats = await db
+        .select({
+          playerId: silverPlayerWeeklyStats.playerId,
+          playerName: silverPlayerWeeklyStats.playerName,
+          position: silverPlayerWeeklyStats.position,
+          team: silverPlayerWeeklyStats.team,
+          
+          passAttempts: silverPlayerWeeklyStats.passAttempts,
+          passingEpa: silverPlayerWeeklyStats.passingEpa,
+          passingTds: silverPlayerWeeklyStats.passingTds,
+          passingYards: silverPlayerWeeklyStats.passingYards,
+          
+          targets: silverPlayerWeeklyStats.targets,
+          receptions: silverPlayerWeeklyStats.receptions,
+          receivingYards: silverPlayerWeeklyStats.receivingYards,
+          receivingEpa: silverPlayerWeeklyStats.receivingEpa,
+          receivingTds: silverPlayerWeeklyStats.receivingTds,
+          
+          rushAttempts: silverPlayerWeeklyStats.rushAttempts,
+          rushingYards: silverPlayerWeeklyStats.rushingYards,
+          rushingEpa: silverPlayerWeeklyStats.rushingEpa,
+          rushingTds: silverPlayerWeeklyStats.rushingTds,
+          
+          week: silverPlayerWeeklyStats.week,
+          season: silverPlayerWeeklyStats.season
+        })
+        .from(silverPlayerWeeklyStats)
+        .where(and(...conditions));
+
+      console.log(`📊 Found ${stats.length} players in NFLfastR data for week ${week}`);
+
+      // Calculate composite EPA score and OVR for each player
+      const playersWithScores = stats.map((player) => {
+        let primaryEPA = 0;
+        let usage = 0;
+        let detectedPosition = player.position || 'UNKNOWN';
+        
+        // Infer position from usage if not set
+        if (!player.position) {
+          if ((player.passAttempts || 0) > 10) detectedPosition = 'QB';
+          else if ((player.rushAttempts || 0) > 5) detectedPosition = 'RB';
+          else if ((player.targets || 0) > 3) detectedPosition = 'WR';
+        }
+        
+        // Position-specific EPA calculation
+        if (detectedPosition === 'QB') {
+          primaryEPA = player.passingEpa || 0;
+          usage = player.passAttempts || 0;
+        } else if (detectedPosition === 'WR' || detectedPosition === 'TE') {
+          primaryEPA = player.receivingEpa || 0;
+          usage = player.targets || 0;
+        } else if (detectedPosition === 'RB') {
+          const rushEPA = (player.rushingEpa || 0) * (player.rushAttempts || 0);
+          const recEPA = (player.receivingEpa || 0) * (player.targets || 0);
+          const totalUsage = (player.rushAttempts || 0) + (player.targets || 0);
+          primaryEPA = totalUsage > 0 ? (rushEPA + recEPA) / totalUsage : 0;
+          usage = totalUsage;
+        }
+
+        // Calculate composite score (EPA efficiency + usage volume)
+        const compositeScore = (primaryEPA * 100) + (usage * 0.5);
+
+        return {
+          ...player,
+          position: detectedPosition,
+          primaryEPA,
+          usage,
+          compositeScore
+        };
+      });
+
+      // Filter by position if requested
+      let filteredPlayers = playersWithScores;
       if (position && ['QB', 'RB', 'WR', 'TE'].includes(position)) {
-        conditions.push(eq(playerWeekFacts.position, position));
+        filteredPlayers = playersWithScores.filter(p => p.position === position);
       }
 
-      // Query player_week_facts for rankings
-      const rankings = await db
-        .select({
-          playerId: playerWeekFacts.playerId,
-          playerName: sql<string>`COALESCE(${playersTable.fullName}, ${playersTable.name}, ${playerWeekFacts.playerId})`.as('player_name'),
-          position: playerWeekFacts.position,
-          team: playersTable.team,
-          powerScore: playerWeekFacts.powerScore,
-          confidence: playerWeekFacts.confidence,
-          usageNow: playerWeekFacts.usageNow,
-          talent: playerWeekFacts.talent,
-          environment: playerWeekFacts.environment,
-          availability: playerWeekFacts.availability,
-          week: playerWeekFacts.week,
-          season: playerWeekFacts.season,
-          updatedAt: playerWeekFacts.lastUpdate
-        })
-        .from(playerWeekFacts)
-        .leftJoin(playersTable, eq(playerWeekFacts.playerId, playersTable.sleeperId))
-        .where(and(...conditions))
-        .orderBy(desc(playerWeekFacts.powerScore))
-        .limit(limit);
+      // Sort by composite score (higher = better)
+      filteredPlayers.sort((a, b) => b.compositeScore - a.compositeScore);
 
-      console.log(`📊 Found ${rankings.length} players in database for week ${week}`);
+      // Apply limit
+      const topPlayers = filteredPlayers.slice(0, limit);
 
-      // Calculate 1-99 OVR rating from power_score
-      const maxScore = rankings[0]?.powerScore || 3.0;
-      const minScore = rankings[rankings.length - 1]?.powerScore || 0;
+      // Calculate OVR ratings from composite scores
+      const maxScore = topPlayers[0]?.compositeScore || 100;
+      const minScore = topPlayers[topPlayers.length - 1]?.compositeScore || 0;
       
-      const rankingsWithOVR = rankings.map((player, index) => {
-        // Scale power_score to 1-99 (higher power_score = higher OVR)
-        let ovrRating = 50; // default mid-tier
+      const rankingsWithOVR = topPlayers.map((player, index) => {
+        // Scale composite score to 1-99 OVR
+        let ovrRating = 50;
         
-        if (maxScore !== minScore) {
-          const normalized = (Number(player.powerScore) - Number(minScore)) / (Number(maxScore) - Number(minScore));
+        if (maxScore !== minScore && maxScore > 0) {
+          const normalized = (player.compositeScore - minScore) / (maxScore - minScore);
           ovrRating = Math.round(40 + (normalized * 59)); // Scale to 40-99 range
         }
         
@@ -1220,24 +1277,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           team: player.team,
           ovrRating,
           tier,
-          vorp: Number(player.powerScore) * 100, // Convert to VORP-like scale for compatibility
-          powerScore: Number(player.powerScore),
-          confidence: Number(player.confidence),
-          usageNow: Number(player.usageNow),
-          talent: Number(player.talent),
-          environment: Number(player.environment),
-          availability: Number(player.availability),
-          updatedAt: player.updatedAt
+          
+          // NFLfastR stats
+          passingEpa: player.passingEpa,
+          passAttempts: player.passAttempts,
+          passingYards: player.passingYards,
+          passingTds: player.passingTds,
+          
+          receivingEpa: player.receivingEpa,
+          targets: player.targets,
+          receptions: player.receptions,
+          receivingYards: player.receivingYards,
+          receivingTds: player.receivingTds,
+          
+          rushingEpa: player.rushingEpa,
+          rushAttempts: player.rushAttempts,
+          rushingYards: player.rushingYards,
+          rushingTds: player.rushingTds,
+          
+          compositeScore: player.compositeScore,
+          primaryEPA: player.primaryEPA,
+          usage: player.usage
         };
       });
 
-      console.log(`✅ Rankings: Returning ${rankingsWithOVR.length} players from player_week_facts`);
+      console.log(`✅ Rankings: Returning ${rankingsWithOVR.length} players from NFLfastR 2025 data (Silver layer)`);
       
       res.json({
         ok: true,
         data: rankingsWithOVR,
         meta: {
-          source: 'player_week_facts',
+          source: 'nflfastr_2025_silver',
           mode: mode,
           week: week,
           season: season,
