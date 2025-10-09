@@ -3057,6 +3057,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   console.log('🛡️ Defense vs Position (DvP) routes mounted at /api/dvp/*');
   
+  // Sleeper Identity Sync - Map Sleeper IDs to identity map
+  const { sleeperIdentitySync } = await import('./services/SleeperIdentitySync');
+  
+  // POST /api/sync/sleeper-identity - Run Sleeper identity sync
+  app.post('/api/sync/sleeper-identity', async (req: Request, res: Response) => {
+    try {
+      const { dryRun = false, minConfidence = 0.90 } = req.body;
+      
+      console.log(`🔄 Starting Sleeper identity sync (dryRun: ${dryRun}, minConfidence: ${minConfidence})`);
+      
+      const report = await sleeperIdentitySync.syncSleeperIdentities(dryRun, minConfidence);
+      
+      res.json({
+        success: true,
+        message: dryRun ? 'Dry run completed - no changes made' : 'Sleeper identity sync completed',
+        report: {
+          summary: {
+            totalSleeperPlayers: report.totalSleeperPlayers,
+            alreadyMapped: report.alreadyMapped,
+            newlyMapped: report.newlyMapped,
+            highConfidenceMatches: report.highConfidenceMatches,
+            mediumConfidenceMatches: report.mediumConfidenceMatches,
+            unmatchedPlayers: report.unmatchedPlayers
+          },
+          topMatches: report.matchDetails.slice(0, 20),
+          topUnmatched: report.unmatchedDetails.slice(0, 20)
+        }
+      });
+    } catch (error: any) {
+      console.error('Error running Sleeper identity sync:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+  
+  // GET /api/sync/sleeper-identity/report - Get sync report without making changes
+  app.get('/api/sync/sleeper-identity/report', async (req: Request, res: Response) => {
+    try {
+      const minConfidence = req.query.minConfidence ? parseFloat(req.query.minConfidence as string) : 0.90;
+      
+      const report = await sleeperIdentitySync.getMatchReport(minConfidence);
+      
+      res.json({
+        success: true,
+        report: {
+          summary: {
+            totalSleeperPlayers: report.totalSleeperPlayers,
+            alreadyMapped: report.alreadyMapped,
+            highConfidenceMatches: report.highConfidenceMatches,
+            mediumConfidenceMatches: report.mediumConfidenceMatches,
+            unmatchedPlayers: report.unmatchedPlayers
+          },
+          notableUnmapped: report.unmatchedDetails
+            .filter(p => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
+            .slice(0, 50),
+          matchExamples: report.matchDetails
+            .filter(m => m.confidence >= minConfidence)
+            .slice(0, 20)
+        }
+      });
+    } catch (error: any) {
+      console.error('Error generating Sleeper identity report:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+  
+  console.log('🔗 Sleeper Identity Sync routes mounted at /api/sync/sleeper-identity/*');
+  
   app.use('/api/player-comparison', playerComparisonRoutes);
   console.log('⚖️  Player Comparison Tool routes mounted at /api/player-comparison/*');
 
