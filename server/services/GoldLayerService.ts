@@ -417,17 +417,20 @@ export class GoldLayerService {
       return filters.players;
     }
 
-    // Get all active players if no specific players requested
-    let query = db.select({ canonicalId: players.canonicalId })
-      .from(players)
-      .where(eq(players.isActive, true));
-
+    // Build conditions for querying active players
+    const conditions = [eq(players.isActive, true)];
+    
     // Filter by positions if specified
     if (filters.positions?.length) {
-      query = query.where(inArray(players.position, filters.positions)) as any;
+      conditions.push(inArray(players.position, filters.positions));
     }
 
-    const activePlayers = await query;
+    // Get all active players matching the filters
+    const activePlayers = await db
+      .select({ canonicalId: players.canonicalId })
+      .from(players)
+      .where(and(...conditions));
+      
     return activePlayers.map(p => p.canonicalId);
   }
 
