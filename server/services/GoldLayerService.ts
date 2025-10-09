@@ -18,6 +18,7 @@
 
 import { db } from '../db';
 import { 
+  players,
   playerSeasonFacts, 
   playerMarketFacts, 
   playerCompositeFacts,
@@ -417,8 +418,17 @@ export class GoldLayerService {
     }
 
     // Get all active players if no specific players requested
-    const players = await this.identityService.getAllActivePlayers(filters.positions);
-    return players.map(p => p.canonicalId);
+    let query = db.select({ canonicalId: players.canonicalId })
+      .from(players)
+      .where(eq(players.isActive, true));
+
+    // Filter by positions if specified
+    if (filters.positions?.length) {
+      query = query.where(inArray(players.position, filters.positions)) as any;
+    }
+
+    const activePlayers = await query;
+    return activePlayers.map(p => p.canonicalId);
   }
 
   /**

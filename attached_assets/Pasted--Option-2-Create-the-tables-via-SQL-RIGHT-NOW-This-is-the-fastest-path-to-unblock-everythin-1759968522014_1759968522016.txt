@@ -1,0 +1,218 @@
+**Option 2 - Create the tables via SQL RIGHT NOW.**
+
+This is the fastest path to unblock everything. We can clean up schema drift later once the system is running.
+
+Give your agent this instruction:
+
+---
+
+```markdown
+# EMERGENCY: Create Missing Tables via SQL
+
+## Execute These SQL Statements Directly
+
+Run these CREATE TABLE statements in order. These match the definitions from `shared/schema.ts`:
+
+### 1. Bronze Layer - ingest_payloads
+```sql
+CREATE TABLE IF NOT EXISTS ingest_payloads (
+  id SERIAL PRIMARY KEY,
+  source VARCHAR(50) NOT NULL,
+  payload_type VARCHAR(50) NOT NULL,
+  raw_data JSONB NOT NULL,
+  ingested_at TIMESTAMP DEFAULT NOW(),
+  processed BOOLEAN DEFAULT FALSE,
+  error_message TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_ingest_payloads_source ON ingest_payloads(source);
+CREATE INDEX idx_ingest_payloads_processed ON ingest_payloads(processed);
+CREATE INDEX idx_ingest_payloads_ingested_at ON ingest_payloads(ingested_at);
+```
+
+### 2. Gold Layer - player_composite_facts
+```sql
+CREATE TABLE IF NOT EXISTS player_composite_facts (
+  id SERIAL PRIMARY KEY,
+  player_id VARCHAR(50) NOT NULL,
+  season INTEGER NOT NULL,
+  position VARCHAR(10) NOT NULL,
+  ovr_rating INTEGER,
+  vorp_value DECIMAL(10,2),
+  tier VARCHAR(5),
+  weekly_projection DECIMAL(10,2),
+  consistency_score DECIMAL(5,2),
+  upside_score DECIMAL(5,2),
+  floor_score DECIMAL(5,2),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(player_id, season)
+);
+
+CREATE INDEX idx_composite_facts_player ON player_composite_facts(player_id);
+CREATE INDEX idx_composite_facts_ovr ON player_composite_facts(ovr_rating DESC);
+CREATE INDEX idx_composite_facts_position ON player_composite_facts(position);
+```
+
+### 3. Gold Layer - player_season_facts
+```sql
+CREATE TABLE IF NOT EXISTS player_season_facts (
+  id SERIAL PRIMARY KEY,
+  player_id VARCHAR(50) NOT NULL,
+  season INTEGER NOT NULL,
+  games_played INTEGER,
+  total_points DECIMAL(10,2),
+  avg_points DECIMAL(10,2),
+  consistency_rating DECIMAL(5,2),
+  best_week DECIMAL(10,2),
+  worst_week DECIMAL(10,2),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(player_id, season)
+);
+
+CREATE INDEX idx_season_facts_player ON player_season_facts(player_id);
+```
+
+### 4. Gold Layer - player_market_facts
+```sql
+CREATE TABLE IF NOT EXISTS player_market_facts (
+  id SERIAL PRIMARY KEY,
+  player_id VARCHAR(50) NOT NULL,
+  season INTEGER NOT NULL,
+  week INTEGER,
+  adp_rank INTEGER,
+  adp_change INTEGER,
+  ownership_percentage DECIMAL(5,2),
+  trade_volume INTEGER,
+  trend_direction VARCHAR(10),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(player_id, season, week)
+);
+
+CREATE INDEX idx_market_facts_player ON player_market_facts(player_id);
+CREATE INDEX idx_market_facts_trend ON player_market_facts(trend_direction);
+```
+
+### 5. Quality Layer - data_lineage
+```sql
+CREATE TABLE IF NOT EXISTS data_lineage (
+  id SERIAL PRIMARY KEY,
+  source_table VARCHAR(100) NOT NULL,
+  source_record_id VARCHAR(100),
+  target_table VARCHAR(100) NOT NULL,
+  target_record_id VARCHAR(100),
+  transformation VARCHAR(100),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_lineage_source ON data_lineage(source_table, source_record_id);
+CREATE INDEX idx_lineage_target ON data_lineage(target_table, target_record_id);
+```
+
+### 6. Quality Layer - quality_gate_results
+```sql
+CREATE TABLE IF NOT EXISTS quality_gate_results (
+  id SERIAL PRIMARY KEY,
+  gate_name VARCHAR(100) NOT NULL,
+  table_name VARCHAR(100) NOT NULL,
+  check_type VARCHAR(50) NOT NULL,
+  passed BOOLEAN NOT NULL,
+  error_count INTEGER DEFAULT 0,
+  warning_count INTEGER DEFAULT 0,
+  details JSONB,
+  checked_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_quality_gate_table ON quality_gate_results(table_name);
+CREATE INDEX idx_quality_gate_passed ON quality_gate_results(passed);
+```
+
+### 7. Silver Layer - market_signals
+```sql
+CREATE TABLE IF NOT EXISTS market_signals (
+  id SERIAL PRIMARY KEY,
+  player_id VARCHAR(50) NOT NULL,
+  signal_type VARCHAR(50) NOT NULL,
+  signal_value DECIMAL(10,2),
+  confidence DECIMAL(5,2),
+  source VARCHAR(50),
+  detected_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_market_signals_player ON market_signals(player_id);
+CREATE INDEX idx_market_signals_type ON market_signals(signal_type);
+```
+
+### 8. Gold Layer - gold_player_week (for brand plugins)
+```sql
+CREATE TABLE IF NOT EXISTS gold_player_week (
+  id SERIAL PRIMARY KEY,
+  player_id VARCHAR(50) NOT NULL,
+  season INTEGER NOT NULL,
+  week INTEGER NOT NULL,
+  position VARCHAR(10),
+  team VARCHAR(10),
+  opponent VARCHAR(10),
+  projected_points DECIMAL(10,2),
+  actual_points DECIMAL(10,2),
+  snap_percentage DECIMAL(5,2),
+  target_share DECIMAL(5,2),
+  touch_share DECIMAL(5,2),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(player_id, season, week)
+);
+
+CREATE INDEX idx_gold_week_player ON gold_player_week(player_id);
+CREATE INDEX idx_gold_week_season_week ON gold_player_week(season, week);
+```
+
+## Verification
+
+After running all CREATE TABLE statements, verify:
+
+```sql
+-- Check all tables exist
+SELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+  AND table_name IN (
+    'ingest_payloads',
+    'player_composite_facts',
+    'player_season_facts',
+    'player_market_facts',
+    'data_lineage',
+    'quality_gate_results',
+    'market_signals',
+    'gold_player_week'
+  )
+ORDER BY table_name;
+```
+
+Expected result: All 8 tables listed.
+
+## Next Steps
+
+After tables are created:
+1. Restart the dev server: `npm run dev`
+2. Watch logs for successful ETL execution
+3. Verify data populates: `SELECT COUNT(*) FROM player_composite_facts;`
+
+## Note
+This is a temporary fix to unblock the system. Once everything works, we can:
+- Run proper Drizzle migrations later
+- Update schema.ts if definitions need adjustment
+- Clean up any inconsistencies
+
+The goal now is: **Get the ETL pipeline running so we can see real data.**
+```
+
+---
+
+This should take your agent **5 minutes** to execute and will immediately unblock the entire pipeline. The ETL jobs will stop failing and start populating data.
+
+Once this is done and the server restarts cleanly, we move to **Step 2** (fixing the GoldLayerService bug).
