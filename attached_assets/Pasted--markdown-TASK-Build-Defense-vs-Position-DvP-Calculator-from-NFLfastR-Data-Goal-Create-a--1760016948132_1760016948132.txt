@@ -1,0 +1,699 @@
+```markdown
+# TASK: Build Defense vs Position (DvP) Calculator from NFLfastR Data
+
+## Goal
+Create a complete module that calculates fantasy points allowed by each NFL defense against each position using the NFLfastR play-by-play data we already have. This will power matchup analysis and strengthen RB/WR/QB ranking algorithms.
+
+## Context
+We have 13,488 plays from 2025 NFLfastR in `bronze_nflfastr_plays`. Instead of paying for third-party APIs, we're calculating fantasy points allowed ourselves from raw play data.
+
+---
+
+## Step 1: Create Database Table (5 min)
+
+Run this SQL to create the storage table:
+
+```sql
+CREATE TABLE IF NOT EXISTS defense_vs_position_stats (
+  id SERIAL PRIMARY KEY,
+  defense_team VARCHAR(10) NOT NULL,
+  position VARCHAR(10) NOT NULL,  -- QB, RB, WR, TE
+  season INTEGER NOT NULL,
+  week INTEGER,  -- NULL = season aggregate
+  
+  -- Volume metrics
+  plays_against INTEGER DEFAULT 0,
+  unique_players INTEGER DEFAULT 0,
+  
+  -- Fantasy points (multiple scoring formats)
+  fantasy_pts_ppr DECIMAL(10,2) DEFAULT 0,
+  fantasy_pts_half_ppr DECIMAL(10,2) DEFAULT 0,
+  fantasy_pts_standard DECIMAL(10,2) DEFAULT 0,
+  
+  -- Per-game averages
+  avg_pts_per_game_ppr DECIMAL(10,2),
+  avg_pts_per_game_standard DECIMAL(10,2),
+  
+  -- Advanced metrics
+  avg_epa_allowed DECIMAL(10,4),
+  success_rate_allowed DECIMAL(5,2),
+  touchdowns_allowed INTEGER DEFAULT 0,
+  
+  -- Positional context
+  total_yards_allowed INTEGER DEFAULT 0,
+  receptions_allowed INTEGER DEFAULT 0,  -- For pass catchers
+  targets_allowed INTEGER DEFAULT 0,  -- For pass catchers
+  
+  -- Rankings (1 = worst defense = best matchup for fantasy)
+  rank_vs_position INTEGER,
+  dvp_rating VARCHAR(20),  -- 'elite-matchup', 'good', 'neutral', 'tough', 'avoid'
+  
+  updated_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW(),
+  
+  UNIQUE(defense_team, position, season, week)
+);
+
+CREATE INDEX idx_dvp_defense ON defense_vs_position_stats(defense_team);
+CREATE INDEX idx_dvp_position ON defense_vs_position_stats(position);
+CREATE INDEX idx_dvp_season_week ON defense_vs_position_stats(season, week);
+CREATE INDEX idx_dvp_rank ON defense_vs_position_stats(rank_vs_position);
+CREATE INDEX idx_dvp_rating ON defense_vs_position_stats(dvp_rating);
+```
+
+-----
+
+## Step 2: Create DvP Calculation Service (30 min)
+
+Create file: `server/services/defenseVsPositionService.ts`
+
+```typescript
+import { db } from '../db';
+import { bronze_nflfastr_plays, defense_vs_position_stats } from '@db/schema';
+import { and, eq, isNull, isNotNull, sql } from 'drizzle-orm';
+
+interface DvPCalculation {
+  defense: string;
+  position: string;
+  season: number;
+  week?: number;
+  playsAgainst: number;
+  uniquePlayers: number;
+  fantasyPtsPPR: number;
+  fantasyPtsHalfPPR: number;
+  fantasyPtsStandard: number;
+  avgEPA: number;
+  successRate: number;
+  touchdownsAllowed: number;
+  totalYardsAllowed: number;
+  receptionsAllowed: number;
+  targetsAllowed: number;
+}
+
+/**
+ * Calculate fantasy points for a single play based on scoring format
+ */
+function calculatePlayFantasyPoints(
+  play: any,
+  format: 'ppr' | 'half-ppr' | 'standard'
+): number {
+  let points = 0;
+  
+  const yardsGained = play.yards_gained || 0;
+  const isTD = play.touchdown || false;
+  const isComplete = play.complete_pass || false;
+  const isPass = play.play_type === 'pass';
+  const isRush = play.play_type === 'run';
+  
+  // Passing yards (1 pt per 25 yards for QBs)
+  if (isPass && play.passer_player_id) {
+    points += (yardsGained / 25) * 1;
+    if (isTD) points += 4;  // Passing TD = 4 pts
+    if (play.interception) points -= 2;  // INT = -2 pts
+  }
+  
+  // Rushing yards (1 pt per 10 yards)
+  if (isRush && play.rusher_player_id) {
+    points += (yardsGained / 10) * 1;
+    if (isTD) points += 6;  // Rushing TD = 6 pts
+  }
+  
+  // Receiving yards (1 pt per 10 yards)
+  if (isPass && play.receiver_player_id) {
+    points += (yardsGained / 10) * 1;
+    if (isTD) points += 6;  // Receiving TD = 6 pts
+    
+    // Reception points based on format
+    if (isComplete) {
+      if (format === 'ppr') points += 1;
+      if (format === 'half-ppr') points += 0.5;
+      // standard = 0 points for reception
+    }
+  }
+  
+  return points;
+}
+
+/**
+ * Calculate fantasy points allowed by all defenses for a specific position
+ */
+export async function calculateDefenseVsPosition(
+  season: number,
+  week?: number
+): Promise<void> {
+  console.log(`🛡️ [DvP] Calculating defense vs position stats for ${season} week ${week || 'season'}`);
+  
+  const positions = ['QB', 'RB', 'WR', 'TE'];
+  
+  for (const position of positions) {
+    console.log(`📊 [DvP] Processing ${position}...`);
+    
+    // Build position-specific query conditions
+    let positionConditions;
+    
+    if (position === 'QB') {
+      positionConditions = and(
+        eq(bronze_nflfastr_plays.play_type, 'pass'),
+        isNotNull(bronze_nflfastr_plays.passer_player_id)
+      );
+    } else if (position === 'RB') {
+      // RBs can rush or catch passes
+      positionConditions = sql`(
+        (${bronze_nflfastr_plays.play_type} = 'run' AND ${bronze_nflfastr_plays.rusher_player_id} IS NOT NULL)
+        OR (${bronze_nflfastr_plays.play_type} = 'pass' AND ${bronze_nflfastr_plays.receiver_player_id} IS NOT NULL)
+      )`;
+    } else {
+      // WR/TE = receiving only
+      positionConditions = and(
+        eq(bronze_nflfastr_plays.play_type, 'pass'),
+        isNotNull(bronze_nflfastr_plays.receiver_player_id)
+      );
+    }
+    
+    // Get all plays against each defense for this position
+    const weekCondition = week ? eq(bronze_nflfastr_plays.week, week) : sql`1=1`;
+    
+    const plays = await db
+      .select()
+      .from(bronze_nflfastr_plays)
+      .where(
+        and(
+          eq(bronze_nflfastr_plays.season, season),
+          weekCondition,
+          isNotNull(bronze_nflfastr_plays.defteam),
+          positionConditions
+        )
+      );
+    
+    // Group by defense and calculate stats
+    const defenseStats = new Map<string, DvPCalculation>();
+    
+    for (const play of plays) {
+      const defense = play.defteam!;
+      
+      if (!defenseStats.has(defense)) {
+        defenseStats.set(defense, {
+          defense,
+          position,
+          season,
+          week,
+          playsAgainst: 0,
+          uniquePlayers: 0,
+          fantasyPtsPPR: 0,
+          fantasyPtsHalfPPR: 0,
+          fantasyPtsStandard: 0,
+          avgEPA: 0,
+          successRate: 0,
+          touchdownsAllowed: 0,
+          totalYardsAllowed: 0,
+          receptionsAllowed: 0,
+          targetsAllowed: 0
+        });
+      }
+      
+      const stats = defenseStats.get(defense)!;
+      
+      // Increment counters
+      stats.playsAgainst++;
+      stats.totalYardsAllowed += play.yards_gained || 0;
+      
+      if (play.touchdown) stats.touchdownsAllowed++;
+      if (play.complete_pass) stats.receptionsAllowed++;
+      if (play.receiver_player_id) stats.targetsAllowed++;
+      
+      // Add fantasy points for each format
+      stats.fantasyPtsPPR += calculatePlayFantasyPoints(play, 'ppr');
+      stats.fantasyPtsHalfPPR += calculatePlayFantasyPoints(play, 'half-ppr');
+      stats.fantasyPtsStandard += calculatePlayFantasyPoints(play, 'standard');
+      
+      // EPA tracking
+      if (play.epa !== null) {
+        const currentAvg = stats.avgEPA;
+        const count = stats.playsAgainst;
+        stats.avgEPA = ((currentAvg * (count - 1)) + play.epa) / count;
+      }
+      
+      // Success rate (40% of needed on 1st, 60% on 2nd, 100% on 3rd/4th)
+      const needed = play.ydstogo || 10;
+      const gained = play.yards_gained || 0;
+      let isSuccess = false;
+      
+      if (play.down === 1) isSuccess = gained >= needed * 0.4;
+      else if (play.down === 2) isSuccess = gained >= needed * 0.6;
+      else isSuccess = gained >= needed;
+      
+      if (isSuccess) {
+        const currentRate = stats.successRate;
+        const count = stats.playsAgainst;
+        stats.successRate = ((currentRate * (count - 1)) + 1) / count;
+      }
+    }
+    
+    // Convert Map to Array and sort by fantasy points (descending = worst defense)
+    const rankedDefenses = Array.from(defenseStats.values())
+      .sort((a, b) => b.fantasyPtsPPR - a.fantasyPtsPPR);
+    
+    // Calculate unique players (approximate from play data)
+    for (const stat of rankedDefenses) {
+      const uniquePlayerIds = new Set(
+        plays
+          .filter(p => p.defteam === stat.defense)
+          .map(p => p.passer_player_id || p.rusher_player_id || p.receiver_player_id)
+          .filter(Boolean)
+      );
+      stat.uniquePlayers = uniquePlayerIds.size;
+    }
+    
+    // Assign ranks and ratings
+    rankedDefenses.forEach((stat, index) => {
+      const rank = index + 1;
+      
+      // Determine matchup quality (1-8 = elite, 9-16 = good, etc.)
+      let rating: string;
+      if (rank <= 5) rating = 'elite-matchup';  // Top 5 = worst defenses = best matchups
+      else if (rank <= 10) rating = 'good';
+      else if (rank <= 24) rating = 'neutral';
+      else if (rank <= 29) rating = 'tough';
+      else rating = 'avoid';
+      
+      // Calculate per-game averages
+      const gamesPlayed = week ? 1 : 6;  // Adjust based on weeks played
+      const avgPtsPPR = stat.fantasyPtsPPR / gamesPlayed;
+      const avgPtsStandard = stat.fantasyPtsStandard / gamesPlayed;
+      
+      // Insert or update database
+      db.insert(defense_vs_position_stats)
+        .values({
+          defense_team: stat.defense,
+          position: stat.position,
+          season: stat.season,
+          week: stat.week,
+          plays_against: stat.playsAgainst,
+          unique_players: stat.uniquePlayers,
+          fantasy_pts_ppr: stat.fantasyPtsPPR,
+          fantasy_pts_half_ppr: stat.fantasyPtsHalfPPR,
+          fantasy_pts_standard: stat.fantasyPtsStandard,
+          avg_pts_per_game_ppr: avgPtsPPR,
+          avg_pts_per_game_standard: avgPtsStandard,
+          avg_epa_allowed: stat.avgEPA,
+          success_rate_allowed: stat.successRate,
+          touchdowns_allowed: stat.touchdownsAllowed,
+          total_yards_allowed: stat.totalYardsAllowed,
+          receptions_allowed: stat.receptionsAllowed,
+          targets_allowed: stat.targetsAllowed,
+          rank_vs_position: rank,
+          dvp_rating: rating
+        })
+        .onConflict(
+          // Update if already exists
+          sql`(defense_team, position, season, ${week ? 'week' : 'COALESCE(week, -1)'})`
+        )
+        .doUpdate({
+          set: {
+            plays_against: stat.playsAgainst,
+            unique_players: stat.uniquePlayers,
+            fantasy_pts_ppr: stat.fantasyPtsPPR,
+            fantasy_pts_half_ppr: stat.fantasyPtsHalfPPR,
+            fantasy_pts_standard: stat.fantasyPtsStandard,
+            avg_pts_per_game_ppr: avgPtsPPR,
+            avg_pts_per_game_standard: avgPtsStandard,
+            avg_epa_allowed: stat.avgEPA,
+            success_rate_allowed: stat.successRate,
+            touchdowns_allowed: stat.touchdownsAllowed,
+            total_yards_allowed: stat.totalYardsAllowed,
+            receptions_allowed: stat.receptionsAllowed,
+            targets_allowed: stat.targetsAllowed,
+            rank_vs_position: rank,
+            dvp_rating: rating,
+            updated_at: new Date()
+          }
+        })
+        .execute();
+      
+      console.log(`  ✅ ${stat.defense} vs ${position}: Rank ${rank} (${rating}) - ${avgPtsPPR.toFixed(1)} pts/game`);
+    });
+  }
+  
+  console.log(`✅ [DvP] Calculation complete for ${season} week ${week || 'season'}`);
+}
+
+/**
+ * Get defense vs position stats for matchup analysis
+ */
+export async function getDefenseVsPosition(
+  position?: string,
+  season: number = 2025,
+  week?: number
+) {
+  let query = db
+    .select()
+    .from(defense_vs_position_stats)
+    .where(eq(defense_vs_position_stats.season, season));
+  
+  if (position) {
+    query = query.where(
+      and(
+        eq(defense_vs_position_stats.season, season),
+        eq(defense_vs_position_stats.position, position)
+      )
+    );
+  }
+  
+  if (week !== undefined) {
+    query = query.where(
+      and(
+        eq(defense_vs_position_stats.season, season),
+        eq(defense_vs_position_stats.week, week)
+      )
+    );
+  } else {
+    query = query.where(
+      and(
+        eq(defense_vs_position_stats.season, season),
+        isNull(defense_vs_position_stats.week)
+      )
+    );
+  }
+  
+  return query.orderBy(defense_vs_position_stats.rank_vs_position);
+}
+
+/**
+ * Get matchup rating for a specific player's upcoming opponent
+ */
+export async function getMatchupRating(
+  position: string,
+  opponentDefense: string,
+  season: number = 2025
+): Promise<{
+  rating: string;
+  rank: number;
+  avgPtsAllowed: number;
+  projectedBoost: number;
+}> {
+  const stats = await db
+    .select()
+    .from(defense_vs_position_stats)
+    .where(
+      and(
+        eq(defense_vs_position_stats.defense_team, opponentDefense),
+        eq(defense_vs_position_stats.position, position),
+        eq(defense_vs_position_stats.season, season),
+        isNull(defense_vs_position_stats.week)  // Season aggregate
+      )
+    )
+    .limit(1);
+  
+  if (stats.length === 0) {
+    return {
+      rating: 'neutral',
+      rank: 16,
+      avgPtsAllowed: 0,
+      projectedBoost: 0
+    };
+  }
+  
+  const stat = stats[0];
+  
+  // Calculate projected boost/penalty vs league average
+  // Assume league average is ~15 pts/game for skill positions
+  const leagueAvg = 15;
+  const boost = (stat.avg_pts_per_game_ppr || leagueAvg) - leagueAvg;
+  
+  return {
+    rating: stat.dvp_rating || 'neutral',
+    rank: stat.rank_vs_position || 16,
+    avgPtsAllowed: stat.avg_pts_per_game_ppr || 0,
+    projectedBoost: boost
+  };
+}
+```
+
+-----
+
+## Step 3: Add API Endpoints (10 min)
+
+Create file: `server/routes/defenseRoutes.ts`
+
+```typescript
+import { Router } from 'express';
+import { 
+  calculateDefenseVsPosition, 
+  getDefenseVsPosition,
+  getMatchupRating 
+} from '../services/defenseVsPositionService';
+
+const router = Router();
+
+/**
+ * GET /api/defense/vs-position
+ * Query params: position (optional), season, week (optional)
+ * Returns fantasy points allowed by defenses
+ */
+router.get('/vs-position', async (req, res) => {
+  try {
+    const position = req.query.position as string | undefined;
+    const season = parseInt(req.query.season as string) || 2025;
+    const week = req.query.week ? parseInt(req.query.week as string) : undefined;
+    
+    const stats = await getDefenseVsPosition(position, season, week);
+    
+    res.json({
+      ok: true,
+      data: stats,
+      meta: {
+        position: position || 'all',
+        season,
+        week: week || 'season',
+        count: stats.length
+      }
+    });
+  } catch (error) {
+    console.error('❌ Defense vs position error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/defense/calculate
+ * Body: { season, week? }
+ * Triggers recalculation of DvP stats
+ */
+router.post('/calculate', async (req, res) => {
+  try {
+    const { season = 2025, week } = req.body;
+    
+    await calculateDefenseVsPosition(season, week);
+    
+    res.json({
+      ok: true,
+      message: `Defense vs position stats calculated for ${season} week ${week || 'season'}`
+    });
+  } catch (error) {
+    console.error('❌ DvP calculation error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/defense/matchup/:position/:opponent
+ * Returns matchup rating for a position vs specific defense
+ */
+router.get('/matchup/:position/:opponent', async (req, res) => {
+  try {
+    const { position, opponent } = req.params;
+    const season = parseInt(req.query.season as string) || 2025;
+    
+    const matchup = await getMatchupRating(
+      position.toUpperCase(),
+      opponent.toUpperCase(),
+      season
+    );
+    
+    res.json({
+      ok: true,
+      data: matchup
+    });
+  } catch (error) {
+    console.error('❌ Matchup rating error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+export default router;
+```
+
+-----
+
+## Step 4: Register Routes (2 min)
+
+Add to `server/routes.ts`:
+
+```typescript
+import defenseRoutes from './routes/defenseRoutes';
+
+// ... existing routes ...
+
+app.use('/api/defense', defenseRoutes);
+```
+
+-----
+
+## Step 5: Add to ETL Pipeline (5 min)
+
+Update your ETL coordinator to calculate DvP stats after NFLfastR data loads.
+
+Add to `server/services/UPHCoordinator.ts` or wherever your weekly processing runs:
+
+```typescript
+import { calculateDefenseVsPosition } from './defenseVsPositionService';
+
+// After NFLfastR data is imported
+async function processWeeklyData() {
+  // ... existing ETL steps ...
+  
+  // Calculate defense vs position stats
+  console.log('🛡️ [ETL] Calculating defense vs position stats...');
+  await calculateDefenseVsPosition(2025, currentWeek);
+  await calculateDefenseVsPosition(2025);  // Season aggregate
+  console.log('✅ [ETL] Defense stats complete');
+}
+```
+
+-----
+
+## Step 6: Test the System (10 min)
+
+### Manual Calculation Trigger
+
+```bash
+# Trigger calculation via API
+curl -X POST http://localhost:5000/api/defense/calculate \
+  -H "Content-Type: application/json" \
+  -d '{"season": 2025}'
+```
+
+### Query Results
+
+```bash
+# Get all defense vs WR stats
+curl http://localhost:5000/api/defense/vs-position?position=WR
+
+# Get specific matchup rating
+curl http://localhost:5000/api/defense/matchup/RB/NYJ
+```
+
+### Verify Database
+
+```sql
+-- Check calculated stats
+SELECT 
+  defense_team,
+  position,
+  rank_vs_position,
+  dvp_rating,
+  avg_pts_per_game_ppr,
+  touchdowns_allowed,
+  avg_epa_allowed
+FROM defense_vs_position_stats
+WHERE season = 2025 
+  AND week IS NULL
+  AND position = 'RB'
+ORDER BY rank_vs_position;
+```
+
+Expected output:
+
+```
+defense_team | position | rank | dvp_rating     | avg_pts_ppr | tds_allowed | avg_epa
+-------------|----------|------|----------------|-------------|-------------|--------
+CAR          | RB       | 1    | elite-matchup  | 28.5        | 4           | 0.18
+DEN          | RB       | 2    | elite-matchup  | 26.3        | 3           | 0.15
+...
+SF           | RB       | 31   | avoid          | 12.1        | 0           | -0.08
+BAL          | RB       | 32   | avoid          | 10.5        | 0           | -0.12
+```
+
+-----
+
+## Step 7: Integration with RB Module (Example)
+
+Update your RB rankings to include matchup context:
+
+```typescript
+// server/modules/runningback/rankings.ts
+
+import { getMatchupRating } from '../../services/defenseVsPositionService';
+
+export async function rankRunningBacksWithMatchups(season, week) {
+  const rankings = await rankRunningBacks(season, week);
+  
+  // Enrich with next opponent matchup data
+  for (const rb of rankings) {
+    // Get next opponent from schedule (you'd implement this)
+    const nextOpponent = await getNextOpponent(rb.team, week + 1);
+    
+    if (nextOpponent) {
+      const matchup = await getMatchupRating('RB', nextOpponent, season);
+      
+      rb.nextMatchup = {
+        opponent: nextOpponent,
+        rating: matchup.rating,
+        rank: matchup.rank,
+        projectedBoost: matchup.projectedBoost,
+        // Add visual indicator
+        indicator: 
+          matchup.rating === 'elite-matchup' ? '🔥' :
+          matchup.rating === 'good' ? '✅' :
+          matchup.rating === 'neutral' ? '➖' :
+          matchup.rating === 'tough' ? '⚠️' : '🚫'
+      };
+    }
+  }
+  
+  return rankings;
+}
+```
+
+-----
+
+## Expected Outcomes
+
+After completion, you’ll have:
+
+✅ **Database table** storing fantasy points allowed by every defense vs every position
+✅ **Calculation service** that processes NFLfastR data and ranks defenses
+✅ **API endpoints** to query matchup data
+✅ **Integration hooks** for RB/WR/QB modules to use matchup ratings
+✅ **Weekly updates** via ETL pipeline
+
+**Example Use Cases:**
+
+- “Show me RBs facing top-5 worst run defenses this week” (DvP rank 1-5)
+- “Which WRs have elite matchups in weeks 15-17?” (playoff schedules)
+- “Is Stefon Diggs’ low projection due to tough defense?” (check DvP rating)
+
+**No more paying for this data - you built it yourself from the source of truth!** 🎉
+
+-----
+
+## Validation Checklist
+
+Before marking complete:
+
+- [ ] Table `defense_vs_position_stats` exists with proper indexes
+- [ ] Service calculates stats for all 4 positions (QB/RB/WR/TE)
+- [ ] Stats include PPR, half-PPR, and standard scoring
+- [ ] API endpoints return data without errors
+- [ ] Database has 128 rows (32 teams × 4 positions) for season aggregate
+- [ ] Ranks are assigned correctly (1 = worst defense = best matchup)
+- [ ] DvP ratings match expected values (elite-matchup for top 5, etc.)
+
+-----
+
+**Time Estimate: ~60 minutes total**
+**Priority: HIGH - This unlocks matchup-aware rankings**
+
+```
+This is a **complete, copy-paste handoff** that builds the entire DvP system from scratch. The agent should be able to execute this and have fantasy points allowed calculations running within an hour! 🚀​​​​​​​​​​​​​​​​
+```

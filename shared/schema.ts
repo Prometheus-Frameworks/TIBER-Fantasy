@@ -2144,6 +2144,46 @@ export const silverPlayerWeeklyStats = pgTable("silver_player_weekly_stats", {
   seasonWeekIdx: index("silver_weekly_stats_season_week_idx").on(table.season, table.week),
 }));
 
+// Defense vs Position Stats - Fantasy matchup analysis
+export const defenseVsPositionStats = pgTable("defense_vs_position_stats", {
+  id: serial("id").primaryKey(),
+  defenseTeam: varchar("defense_team", { length: 10 }).notNull(),
+  position: varchar("position", { length: 10 }).notNull(),
+  season: integer("season").notNull(),
+  week: integer("week"),
+  
+  playsAgainst: integer("plays_against").default(0),
+  uniquePlayers: integer("unique_players").default(0),
+  
+  fantasyPtsPpr: real("fantasy_pts_ppr").default(0),
+  fantasyPtsHalfPpr: real("fantasy_pts_half_ppr").default(0),
+  fantasyPtsStandard: real("fantasy_pts_standard").default(0),
+  
+  avgPtsPerGamePpr: real("avg_pts_per_game_ppr"),
+  avgPtsPerGameStandard: real("avg_pts_per_game_standard"),
+  
+  avgEpaAllowed: real("avg_epa_allowed"),
+  successRateAllowed: real("success_rate_allowed"),
+  touchdownsAllowed: integer("touchdowns_allowed").default(0),
+  
+  totalYardsAllowed: integer("total_yards_allowed").default(0),
+  receptionsAllowed: integer("receptions_allowed").default(0),
+  targetsAllowed: integer("targets_allowed").default(0),
+  
+  rankVsPosition: integer("rank_vs_position"),
+  dvpRating: varchar("dvp_rating", { length: 20 }),
+  
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniqueDefensePositionWeek: unique("dvp_unique").on(table.defenseTeam, table.position, table.season, table.week),
+  defenseIdx: index("dvp_defense_idx").on(table.defenseTeam),
+  positionIdx: index("dvp_position_idx").on(table.position),
+  seasonWeekIdx: index("dvp_season_week_idx").on(table.season, table.week),
+  rankIdx: index("dvp_rank_idx").on(table.rankVsPosition),
+  ratingIdx: index("dvp_rating_idx").on(table.dvpRating),
+}));
+
 // ========================================
 // PLAYER ATTRIBUTES - WEEKLY ATTRIBUTE SYSTEM
 // ========================================
