@@ -10,8 +10,8 @@ import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generat
 // Removed deprecated imports
 import { PlayerFilteringService } from "./playerFiltering";
 import { db } from "./db";
-import { dynastyTradeHistory, players as playersTable } from "@shared/schema";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { dynastyTradeHistory, players as playersTable, playerWeekFacts } from "@shared/schema";
+import { eq, desc, and, sql, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 // Removed deprecated fantasy services
 import { rbDraftCapitalService } from './rbDraftCapitalContext';
@@ -1143,111 +1143,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 🎯 ENHANCED VORP RANKINGS WITH DYNASTY MODE & POSITIONAL FILTERING
-  // Rate limited due to expensive VORP calculation (O(n²) comparisons)
+  // 🎯 DATABASE-DRIVEN RANKINGS FROM PLAYER_WEEK_FACTS
+  // Uses real ETL data from Gold Layer instead of mock VORP calculations
   app.get('/api/rankings', rateLimiters.heavyOperation, async (req: Request, res: Response) => {
     try {
-      const mode = req.query.mode as string || 'redraft';
       const position = req.query.position ? (req.query.position as string).toUpperCase() : null;
-      const numTeams = parseInt(req.query.num_teams as string) || 12;
-      const starters = req.query.starters ? JSON.parse(req.query.starters as string) : { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 };
-      
-      console.log(`🚀 Rankings endpoint hit - Mode: ${mode}, Position: ${position || 'ALL'}, Teams: ${numTeams}`);
-      
-      let players = await getSleeperProjections();
-      
-      // Use enhanced fallback sample with proper positional distribution (always use this for demo)
-      if (players.length <= 5) {
-        console.log('📊 Using enhanced fallback sample...');
-        players = [
-          // Elite QBs
-          { player_name: "Josh Allen", position: "QB", team: "BUF", projected_fpts: 380, birthdate: "1996-05-21", receptions: 0 },
-          { player_name: "Patrick Mahomes", position: "QB", team: "KC", projected_fpts: 370, birthdate: "1995-09-17", receptions: 0 },
-          { player_name: "Lamar Jackson", position: "QB", team: "BAL", projected_fpts: 365, birthdate: "1997-01-07", receptions: 0 },
-          { player_name: "Jayden Daniels", position: "QB", team: "WAS", projected_fpts: 350, birthdate: "2001-12-18", receptions: 0 },
-          
-          // Elite RBs (scarcity position)
-          { player_name: "Bijan Robinson", position: "RB", team: "ATL", projected_fpts: 280, birthdate: "2002-01-30", receptions: 50 },
-          { player_name: "Saquon Barkley", position: "RB", team: "PHI", projected_fpts: 275, birthdate: "1997-02-09", receptions: 45 },
-          { player_name: "Jahmyr Gibbs", position: "RB", team: "DET", projected_fpts: 270, birthdate: "2002-03-20", receptions: 55 },
-          { player_name: "Breece Hall", position: "RB", team: "NYJ", projected_fpts: 265, birthdate: "2001-05-31", receptions: 50 },
-          { player_name: "Jonathan Taylor", position: "RB", team: "IND", projected_fpts: 260, birthdate: "1999-01-19", receptions: 40 },
-          { player_name: "De'Von Achane", position: "RB", team: "MIA", projected_fpts: 250, birthdate: "2001-10-13", receptions: 55 },
-          { player_name: "Christian McCaffrey", position: "RB", team: "SF", projected_fpts: 245, birthdate: "1996-06-07", receptions: 60 },
-          { player_name: "Ashton Jeanty", position: "RB", team: "LV", projected_fpts: 240, birthdate: "2003-12-02", receptions: 25 },
-          
-          // Elite WRs (deeper position)
-          { player_name: "Ja'Marr Chase", position: "WR", team: "CIN", projected_fpts: 290, birthdate: "2000-03-01", receptions: 105 },
-          { player_name: "Justin Jefferson", position: "WR", team: "MIN", projected_fpts: 285, birthdate: "1999-06-16", receptions: 100 },
-          { player_name: "CeeDee Lamb", position: "WR", team: "DAL", projected_fpts: 280, birthdate: "1999-04-08", receptions: 95 },
-          { player_name: "Malik Nabers", position: "WR", team: "NYG", projected_fpts: 275, birthdate: "2003-07-28", receptions: 90 },
-          { player_name: "Amon-Ra St. Brown", position: "WR", team: "DET", projected_fpts: 270, birthdate: "1999-10-24", receptions: 85 },
-          { player_name: "Puka Nacua", position: "WR", team: "LAR", projected_fpts: 265, birthdate: "2001-05-29", receptions: 80 },
-          { player_name: "A.J. Brown", position: "WR", team: "PHI", projected_fpts: 260, birthdate: "1997-06-30", receptions: 75 },
-          { player_name: "Garrett Wilson", position: "WR", team: "NYJ", projected_fpts: 255, birthdate: "2000-07-22", receptions: 70 },
-          { player_name: "Marvin Harrison Jr.", position: "WR", team: "ARI", projected_fpts: 250, birthdate: "2002-08-11", receptions: 65 },
-          { player_name: "Nico Collins", position: "WR", team: "HOU", projected_fpts: 245, birthdate: "1999-03-19", receptions: 60 },
-          
-          // Elite TEs
-          { player_name: "Sam LaPorta", position: "TE", team: "DET", projected_fpts: 200, birthdate: "2001-01-12", receptions: 75 },
-          { player_name: "Brock Bowers", position: "TE", team: "LV", projected_fpts: 195, birthdate: "2002-12-19", receptions: 70 },
-          { player_name: "Mark Andrews", position: "TE", team: "BAL", projected_fpts: 185, birthdate: "1995-09-06", receptions: 65 },
-          { player_name: "Travis Kelce", position: "TE", team: "KC", projected_fpts: 180, birthdate: "1989-10-05", receptions: 60 }
-        ];
-      }
-      
-      // Apply position filtering before VORP calculation
-      if (position) {
-        players = players.filter(p => p.position === position);
-        console.log(`🔍 Position filter applied: ${position} (${players.length} players)`);
-      }
-      
-      // Calculate VORP with dynasty mode and enhanced parameters
-      console.log(`📊 Calculating VORP with ${mode} mode...`);
-      const debugRaw = req.query.debug === 'true';
-      const format = req.query.format as string || '1qb';
-      const qbRushAdjust = req.query.qb_rush_adjust !== 'false'; // Default to true
-      const positionalBalance = req.query.positional_balance !== 'false'; // Default to true
-      const playersWithVORP = calculateVORP(players, numTeams, starters, mode, debugRaw, format, qbRushAdjust, positionalBalance);
-      
-      // Add debug information if requested
-      const debug = req.query.debug === 'true';
-      if (debug) {
-        const debugInfo = {
-          mode,
-          position: position || 'ALL',
-          numTeams,
-          starters,
-          totalPlayers: playersWithVORP.length,
-          samplePlayers: playersWithVORP.slice(0, 5).map(p => ({
-            name: p.player_name,
-            position: p.position,
-            projected_fpts: p.projected_fpts,
-            vorp: p.vorp?.toFixed(1)
-          }))
-        };
-        console.log('🔍 Debug info:', JSON.stringify(debugInfo, null, 2));
+      const mode = req.query.mode as string || 'redraft';
+      const limit = parseInt(req.query.limit as string) || 100;
+      const week = parseInt(req.query.week as string) || 6;
+      const season = parseInt(req.query.season as string) || 2025;
+
+      console.log(`🚀 Rankings endpoint hit - Mode: ${mode}, Position: ${position || 'ALL'}, Week: ${week}, Season: ${season}`);
+
+      // Build base query conditions
+      const conditions = [
+        eq(playerWeekFacts.season, season),
+        eq(playerWeekFacts.week, week)
+      ];
+
+      // Add position filter if requested
+      if (position && ['QB', 'RB', 'WR', 'TE'].includes(position)) {
+        conditions.push(eq(playerWeekFacts.position, position));
       }
 
-      // Add tier information based on VORP values for better frontend grouping
-      const playersWithTiers = playersWithVORP.map((player, index) => {
-        let tier = 1;
-        if (player.vorp && player.vorp > 0) {
-          if (player.vorp >= 400) tier = 1;      // Elite (400+ VORP)
-          else if (player.vorp >= 300) tier = 2; // Premium (300+ VORP)
-          else if (player.vorp >= 200) tier = 3; // Strong (200+ VORP)
-          else if (player.vorp >= 100) tier = 4; // Solid (100+ VORP)
-          else tier = 5;                         // Depth (under 100 VORP)
+      // Query player_week_facts for rankings
+      const rankings = await db
+        .select({
+          playerId: playerWeekFacts.playerId,
+          playerName: sql<string>`COALESCE(${playersTable.fullName}, ${playersTable.name}, ${playerWeekFacts.playerId})`.as('player_name'),
+          position: playerWeekFacts.position,
+          team: playersTable.team,
+          powerScore: playerWeekFacts.powerScore,
+          confidence: playerWeekFacts.confidence,
+          usageNow: playerWeekFacts.usageNow,
+          talent: playerWeekFacts.talent,
+          environment: playerWeekFacts.environment,
+          availability: playerWeekFacts.availability,
+          week: playerWeekFacts.week,
+          season: playerWeekFacts.season,
+          updatedAt: playerWeekFacts.lastUpdate
+        })
+        .from(playerWeekFacts)
+        .leftJoin(playersTable, eq(playerWeekFacts.playerId, playersTable.sleeperId))
+        .where(and(...conditions))
+        .orderBy(desc(playerWeekFacts.powerScore))
+        .limit(limit);
+
+      console.log(`📊 Found ${rankings.length} players in database for week ${week}`);
+
+      // Calculate 1-99 OVR rating from power_score
+      const maxScore = rankings[0]?.powerScore || 3.0;
+      const minScore = rankings[rankings.length - 1]?.powerScore || 0;
+      
+      const rankingsWithOVR = rankings.map((player, index) => {
+        // Scale power_score to 1-99 (higher power_score = higher OVR)
+        let ovrRating = 50; // default mid-tier
+        
+        if (maxScore !== minScore) {
+          const normalized = (Number(player.powerScore) - Number(minScore)) / (Number(maxScore) - Number(minScore));
+          ovrRating = Math.round(40 + (normalized * 59)); // Scale to 40-99 range
         }
-        return { ...player, tier };
+        
+        // Assign tiers based on OVR
+        let tier = 'C';
+        if (ovrRating >= 95) tier = 'S';
+        else if (ovrRating >= 85) tier = 'A';
+        else if (ovrRating >= 70) tier = 'B';
+        else if (ovrRating >= 55) tier = 'C';
+        else tier = 'D';
+
+        return {
+          rank: index + 1,
+          playerId: player.playerId,
+          player_name: player.playerName,
+          position: player.position,
+          team: player.team,
+          ovrRating,
+          tier,
+          vorp: Number(player.powerScore) * 100, // Convert to VORP-like scale for compatibility
+          powerScore: Number(player.powerScore),
+          confidence: Number(player.confidence),
+          usageNow: Number(player.usageNow),
+          talent: Number(player.talent),
+          environment: Number(player.environment),
+          availability: Number(player.availability),
+          updatedAt: player.updatedAt
+        };
       });
 
-      console.log(`✅ VORP Rankings: Returning ${playersWithTiers.length} players sorted by value (${mode} mode)`);
-      res.json(playersWithTiers);
+      console.log(`✅ Rankings: Returning ${rankingsWithOVR.length} players from player_week_facts`);
       
+      res.json({
+        ok: true,
+        data: rankingsWithOVR,
+        meta: {
+          source: 'player_week_facts',
+          mode: mode,
+          week: week,
+          season: season,
+          count: rankingsWithOVR.length,
+          timestamp: new Date().toISOString()
+        }
+      });
+
     } catch (error) {
-      console.error('❌ Rankings API error:', error instanceof Error ? error.message : 'Unknown error');
-      res.status(500).json({ error: 'Failed to fetch rankings' });
+      console.error('❌ Rankings endpoint error:', error);
+      res.status(500).json({ 
+        ok: false, 
+        error: 'Failed to fetch rankings',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

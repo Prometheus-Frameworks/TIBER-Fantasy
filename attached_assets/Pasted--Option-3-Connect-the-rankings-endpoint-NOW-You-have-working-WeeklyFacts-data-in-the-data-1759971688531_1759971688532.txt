@@ -1,0 +1,245 @@
+**Option 3 - Connect the rankings endpoint NOW.**
+
+You have **working WeeklyFacts data in the database**. That's enough to build real rankings. Don't worry about SeasonFacts or CompositeFacts yet - we can iterate on those later.
+
+---
+
+## 🚀 Connect Rankings to Real Database Data
+
+Give your agent this:
+
+```markdown
+# PRIORITY: Connect /api/rankings to Real Database Data
+
+## Current State
+✅ We have real player data in `player_week_facts`:
+- jameis-winston: power_score 1.68, confidence 0.81
+- amari-cooper: power_score 1.29, confidence 0.84
+- stefon-diggs: power_score 0.67, confidence 0.84
+
+## Goal
+Replace the in-memory VORP calculation with a database query that returns ranked players based on their `power_score` from `player_week_facts`.
+
+## Implementation
+
+### Step 1: Update /api/rankings endpoint
+
+**File:** `server/routes.ts` around line 1148
+
+**Replace the entire handler with:**
+
+```typescript
+app.get('/api/rankings', rateLimiters.heavyOperation, async (req, res) => {
+  try {
+    const position = req.query.position ? (req.query.position as string).toUpperCase() : null;
+    const mode = req.query.mode as string || 'redraft';
+    const limit = parseInt(req.query.limit as string) || 100;
+    const week = parseInt(req.query.week as string) || 6; // Current week
+    const season = parseInt(req.query.season as string) || 2025;
+
+    // Query player_week_facts for rankings
+    let query = db
+      .select({
+        playerId: playerWeekFacts.player_id,
+        playerName: sql`COALESCE(${players.full_name}, ${playerWeekFacts.player_id})`.as('player_name'),
+        position: playerWeekFacts.position,
+        team: playerWeekFacts.team,
+        powerScore: playerWeekFacts.power_score,
+        confidence: playerWeekFacts.confidence,
+        usageNow: playerWeekFacts.usage_now,
+        talent: playerWeekFacts.talent,
+        environment: playerWeekFacts.environment,
+        availability: playerWeekFacts.availability,
+        week: playerWeekFacts.week,
+        season: playerWeekFacts.season,
+        updatedAt: playerWeekFacts.last_update
+      })
+      .from(playerWeekFacts)
+      .leftJoin(players, eq(playerWeekFacts.player_id, players.sleeper_id))
+      .where(
+        and(
+          eq(playerWeekFacts.season, season),
+          eq(playerWeekFacts.week, week),
+          isNotNull(playerWeekFacts.power_score)
+        )
+      )
+      .orderBy(desc(playerWeekFacts.power_score))
+      .limit(limit);
+
+    // Filter by position if requested
+    if (position && ['QB', 'RB', 'WR', 'TE'].includes(position)) {
+      query = query.where(
+        and(
+          eq(playerWeekFacts.season, season),
+          eq(playerWeekFacts.week, week),
+          isNotNull(playerWeekFacts.power_score),
+          eq(playerWeekFacts.position, position)
+        )
+      );
+    }
+
+    const rankings = await query;
+
+    // Calculate 1-99 OVR rating from power_score
+    // Normalize power_score to 1-99 range
+    const maxScore = rankings[0]?.powerScore || 3.0;
+    const minScore = rankings[rankings.length - 1]?.powerScore || 0;
+    
+    const rankingsWithOVR = rankings.map((player, index) => {
+      // Scale power_score to 1-99 (higher power_score = higher OVR)
+      let ovrRating = 50; // default mid-tier
+      
+      if (maxScore !== minScore) {
+        const normalized = (player.powerScore - minScore) / (maxScore - minScore);
+        ovrRating = Math.round(40 + (normalized * 59)); // Scale to 40-99 range
+      }
+      
+      // Assign tiers based on OVR
+      let tier = 'C';
+      if (ovrRating >= 95) tier = 'S';
+      else if (ovrRating >= 85) tier = 'A';
+      else if (ovrRating >= 70) tier = 'B';
+      else if (ovrRating >= 55) tier = 'C';
+      else tier = 'D';
+
+      return {
+        rank: index + 1,
+        playerId: player.playerId,
+        playerName: player.playerName,
+        position: player.position,
+        team: player.team,
+        ovrRating,
+        tier,
+        powerScore: player.powerScore,
+        confidence: player.confidence,
+        usageNow: player.usageNow,
+        talent: player.talent,
+        environment: player.environment,
+        availability: player.availability,
+        updatedAt: player.updatedAt
+      };
+    });
+
+    res.json({
+      ok: true,
+      data: rankingsWithOVR,
+      meta: {
+        source: 'player_week_facts',
+        mode: mode,
+        week: week,
+        season: season,
+        count: rankingsWithOVR.length,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Rankings endpoint error:', error);
+    res.status(500).json({ 
+      ok: false, 
+      error: 'Failed to fetch rankings',
+      details: error.message 
+    });
+  }
+});
+```
+
+### Step 2: Add necessary imports at top of routes.ts
+
+```typescript
+import { playerWeekFacts } from '@db/schema';
+import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
+```
+
+### Step 3: Test the endpoint
+
+Restart the server and test:
+
+```bash
+# Test basic rankings
+curl http://localhost:5000/api/rankings
+
+# Test with position filter
+curl http://localhost:5000/api/rankings?position=WR
+
+# Test with limit
+curl http://localhost:5000/api/rankings?limit=20
+```
+
+### Step 4: Verify the response
+
+You should see JSON like:
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "rank": 1,
+      "playerId": "michael-burton",
+      "playerName": "Michael Burton",
+      "position": "FB",
+      "team": "DEN",
+      "ovrRating": 99,
+      "tier": "S",
+      "powerScore": 2.23,
+      "confidence": 0.81,
+      "updatedAt": "2025-10-08T..."
+    },
+    {
+      "rank": 2,
+      "playerId": "jameis-winston",
+      "playerName": "Jameis Winston",
+      "position": "QB",
+      "team": "CLE",
+      "ovrRating": 87,
+      "tier": "A",
+      "powerScore": 1.68,
+      "confidence": 0.81
+    }
+    // ... more players
+  ],
+  "meta": {
+    "source": "player_week_facts",
+    "mode": "redraft",
+    "week": 6,
+    "season": 2025,
+    "count": 3,
+    "timestamp": "2025-10-08T..."
+  }
+}
+```
+
+**Key features:**
+- ✅ Real player names from database
+- ✅ Madden-style 1-99 OVR ratings calculated from power_score
+- ✅ Tier assignments (S/A/B/C/D)
+- ✅ Sorted by power_score (best players first)
+- ✅ Position filtering works
+- ✅ Includes confidence scores and metrics
+- ❌ No more mock data fallback
+
+## Expected Result
+
+Once deployed:
+1. Frontend calls `GET /api/rankings`
+2. Returns real players: Jameis Winston, Amari Cooper, Stefon Diggs
+3. Each has calculated OVR rating (1-99) based on their power_score
+4. Sorted best to worst
+5. Updates automatically as ETL runs nightly
+
+## Next Steps After This Works
+
+1. **Test the frontend** - Verify Rankings page shows real data
+2. **Add more players** - ETL will populate more as it runs
+3. **Fine-tune OVR algorithm** - Adjust the 40-99 scaling if needed
+4. **Fix CompositeFacts** - Once we have more data, build composite ratings
+
+But for NOW, this gets you from **mock data** to **real database-driven rankings**! 🎉
+```
+
+---
+
+This is the **final step** to get real data showing in your UI. The agent should be able to implement this in **10 minutes**.
+
+Once this works, you'll see actual NFL players in your rankings page, sorted by their calculated power scores, with Madden-style 1-99 ratings. Mission accomplished! 🚀

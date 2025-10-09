@@ -84,12 +84,12 @@ export default function Rankings() {
   const url = useMemo(() => {
     const p = new URLSearchParams();
     if (pos !== "ALL") p.set("position", pos);
-    p.set("format", format);
-    p.set("season", "2024");
-    if (format === "redraft") p.set("week", week.toString());
+    p.set("mode", format);
+    p.set("season", "2025");
+    p.set("week", week.toString());
     if (debugMode) p.set("debug", "1");
     p.set("limit", "200");
-    return `${API_BASE}/api/ratings?${p.toString()}`;
+    return `${API_BASE}/api/rankings?${p.toString()}`;
   }, [pos, format, week, debugMode]);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
