@@ -12,6 +12,7 @@ dependencies = [
     "numpy>=1.26.4",
     "pandas>=1.5.3",
     "psycopg2-binary>=2.9.10",
+    "pyarrow>=21.0.0",
     "requests==2.32.3",
     "schedule>=1.2.2",
     "scikit-learn>=1.7.1",
