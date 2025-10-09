@@ -36,11 +36,17 @@ function calculatePlayFantasyPoints(
   const isPass = play.playType === 'pass';
   const isRush = play.playType === 'run';
   
-  // QB scoring
-  if (position === 'QB' && isPass) {
-    points += (yardsGained / 25);  // 1 pt per 25 passing yards
-    if (isTD) points += 4;  // Passing TD = 4 pts
-    if (play.interception) points -= 2;  // INT = -2 pts
+  // QB scoring (passing + rushing)
+  if (position === 'QB') {
+    if (isPass) {
+      points += (yardsGained / 25);  // 1 pt per 25 passing yards
+      if (isTD) points += 4;  // Passing TD = 4 pts
+      if (play.interception) points -= 2;  // INT = -2 pts
+    }
+    if (isRush) {
+      points += (yardsGained / 10);  // 1 pt per 10 rushing yards
+      if (isTD) points += 6;  // Rushing TD = 6 pts
+    }
   }
   
   // RB scoring (rushing + receiving)
@@ -92,21 +98,25 @@ export async function calculateDefenseVsPosition(
     let playQuery;
     
     if (position === 'QB') {
-      // QB = passing plays only
+      // QB = passing plays + QB rushing plays
       playQuery = db
         .select()
         .from(bronzeNflfastrPlays)
         .leftJoin(
           playerIdentityMap,
-          eq(bronzeNflfastrPlays.passerPlayerId, playerIdentityMap.nflDataPyId)
+          sql`(${bronzeNflfastrPlays.passerPlayerId} = ${playerIdentityMap.nflDataPyId} 
+               OR ${bronzeNflfastrPlays.rusherPlayerId} = ${playerIdentityMap.nflDataPyId})`
         )
         .where(
           and(
             eq(bronzeNflfastrPlays.season, season),
             weekCondition,
-            eq(bronzeNflfastrPlays.playType, 'pass'),
-            isNotNull(bronzeNflfastrPlays.passerPlayerId),
-            isNotNull(bronzeNflfastrPlays.defteam)
+            isNotNull(bronzeNflfastrPlays.defteam),
+            sql`(
+              (${bronzeNflfastrPlays.playType} = 'pass' AND ${bronzeNflfastrPlays.passerPlayerId} IS NOT NULL)
+              OR (${bronzeNflfastrPlays.playType} = 'run' AND ${bronzeNflfastrPlays.rusherPlayerId} IS NOT NULL)
+            )`,
+            eq(playerIdentityMap.position, 'QB')
           )
         );
     } else if (position === 'RB') {
@@ -204,14 +214,25 @@ export async function calculateDefenseVsPosition(
       }
     }
     
-    // Calculate unique players for each defense
+    // Calculate unique players for each defense - position-specific
     for (const [defense, stats] of Array.from(defenseStats.entries())) {
       const uniquePlayerIds = new Set(
         plays
           .filter(row => row.bronze_nflfastr_plays.defteam === defense)
           .map(row => {
             const play = row.bronze_nflfastr_plays;
-            return play.passerPlayerId || play.rusherPlayerId || play.receiverPlayerId;
+            
+            // Get the actual offensive player based on position
+            if (position === 'QB') {
+              // For QB, use passer for passes, rusher for runs
+              return play.passerPlayerId || play.rusherPlayerId;
+            } else if (position === 'RB') {
+              // For RB, use rusher for runs, receiver for passes
+              return play.rusherPlayerId || play.receiverPlayerId;
+            } else {
+              // For WR/TE, use receiver only
+              return play.receiverPlayerId;
+            }
           })
           .filter(Boolean)
       );
