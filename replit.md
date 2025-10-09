@@ -62,7 +62,13 @@ Intelligence Feed System:
       - POST `/api/dvp/calculate` - Triggers DvP calculations from NFLfastR data
       - GET `/api/dvp/matchup/{position}/{defense}?season=2025&week=1` - Returns specific matchup analysis with rating and projected boost
     - **Frontend Integration**: `/dvp` page with position/week/scoring format filters, color-coded defense ranking cards showing fantasy points allowed, EPA, plays faced, and unique players
-    - **Week 1 2025 Data**: Fully calculated for all 4 positions (32 defenses per position) with verified accuracy (e.g., KC #1 worst vs QB: 22.6 PPR pts, SEA #1 worst vs TE: 21.9 PPR pts)
+    - **2025 Season Coverage**: Weeks 1-5 fully calculated (563 total matchups):
+      - Week 1: 128 matchups (2,052 plays) - KC #1 worst vs QB: 22.6 PPR pts, SEA #1 worst vs TE: 21.9 PPR pts
+      - Week 2: 126 matchups (1,159 plays) - DAL #1 worst vs QB: 14.32 PPR pts
+      - Week 3: 122 matchups (665 plays)
+      - Week 4: 108 matchups (343 plays)
+      - Week 5: 79 matchups (197 plays) - LV #1 worst vs TE: 8.1 PPR pts
+    - **Bulk Import Pipeline**: Optimized Python script using `execute_batch()` for efficient NFLfastR data ingestion from nflverse parquet releases
 *   **Data Integration & Sync:** Implements Sleeper Sync with cache fallback, a Canonical Player Pool System, a Roster Shift Listener for transaction monitoring, and a Roster Sync System merging Sleeper and NFL data.
 *   **Live Data & Processing:** Features a Live Data Integration Pipeline with multi-source data capture (MySportsFeeds, SportsDataIO, Sleeper API), a Hot List Player Extraction System, and a Snap Counts Knowledge System.
 *   **Backend Services:** Includes a Backend Spine with Logs & Projections Service, a multi-format Ratings Engine, and a dedicated OTC Power Rankings Service microservice.
