@@ -141,11 +141,13 @@ import PlayerComparison from "@/pages/PlayerComparison";
 import FlexMatchups from "@/pages/FlexMatchups";
 import DefenseRankings from "@/pages/DefenseRankings";
 import PlayerCompare from "@/pages/PlayerCompare";
+import TiberDashboard from "@/pages/TiberDashboard";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/tiber-dashboard" component={TiberDashboard} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/sync" component={TeamSync} />
       <Route path="/players" component={PlayersPage} />
