@@ -1,0 +1,287 @@
+markdown# FIX: OVR API Performance - Add Caching Layer
+
+## Problem
+`ovrService.calculateBatchOVR()` is recalculating OVR ratings for 3,756 players on EVERY API request, causing:
+- 30+ second response times
+- Heavy database load
+- API timeouts
+- Poor user experience
+
+## Solution: Implement Caching with TTL
+
+### Step 1: Create In-Memory Cache for OVR Ratings
+
+**File:** `server/services/ovrCache.ts` (create new file)
+```typescript
+interface CachedOVR {
+  playerId: string;
+  playerName: string;
+  position: string;
+  team: string;
+  ovrRating: number;
+  tier: string;
+  powerScore: number;
+  confidence: number;
+  calculatedAt: Date;
+}
+
+class OVRCache {
+  private cache: Map<string, CachedOVR[]> = new Map();
+  private lastCalculation: Date | null = null;
+  private readonly TTL_MS = 6 * 60 * 60 * 1000; // 6 hours (matches ETL schedule)
+
+  /**
+   * Get cached OVR ratings, or null if expired/missing
+   */
+  get(cacheKey: string): CachedOVR[] | null {
+    if (!this.cache.has(cacheKey)) {
+      return null;
+    }
+
+    // Check if cache is stale
+    if (this.lastCalculation) {
+      const age = Date.now() - this.lastCalculation.getTime();
+      if (age > this.TTL_MS) {
+        console.log('⚠️ [OVRCache] Cache expired, will recalculate');
+        this.cache.clear();
+        return null;
+      }
+    }
+
+    console.log(`✅ [OVRCache] Serving from cache: ${cacheKey}`);
+    return this.cache.get(cacheKey) || null;
+  }
+
+  /**
+   * Store OVR ratings in cache
+   */
+  set(cacheKey: string, data: CachedOVR[]): void {
+    this.cache.set(cacheKey, data);
+    this.lastCalculation = new Date();
+    console.log(`💾 [OVRCache] Cached ${data.length} players for key: ${cacheKey}`);
+  }
+
+  /**
+   * Invalidate cache (call after ETL runs)
+   */
+  invalidate(): void {
+    this.cache.clear();
+    this.lastCalculation = null;
+    console.log('🗑️ [OVRCache] Cache invalidated');
+  }
+
+  /**
+   * Get cache stats
+   */
+  getStats() {
+    return {
+      cacheSize: this.cache.size,
+      lastCalculation: this.lastCalculation,
+      ttlHours: this.TTL_MS / (60 * 60 * 1000),
+      isExpired: this.lastCalculation 
+        ? (Date.now() - this.lastCalculation.getTime()) > this.TTL_MS
+        : true
+    };
+  }
+}
+
+// Export singleton instance
+export const ovrCache = new OVRCache();
+Step 2: Update OVR API Endpoint to Use Cache
+File: server/routes.ts (find the /api/ovr endpoint)
+Replace the current handler with:
+typescriptimport { ovrCache } from './services/ovrCache';
+
+app.get('/api/ovr', rateLimiters.heavyOperation, async (req, res) => {
+  try {
+    const position = req.query.position as string | undefined;
+    const limit = parseInt(req.query.limit as string) || 100;
+    const format = req.query.format as string || 'ppr';
+
+    // Create cache key based on filters
+    const cacheKey = `ovr:${position || 'all'}:${format}:${limit}`;
+
+    // Try to serve from cache first
+    const cachedData = ovrCache.get(cacheKey);
+    if (cachedData) {
+      return res.json({
+        ok: true,
+        data: cachedData,
+        meta: {
+          source: 'cache',
+          calculatedAt: cachedData[0]?.calculatedAt,
+          count: cachedData.length
+        }
+      });
+    }
+
+    // Cache miss - calculate OVR ratings
+    console.log('🔄 [OVR API] Cache miss, calculating ratings...');
+    const startTime = Date.now();
+
+    // Get cached Sleeper players (already optimized)
+    const players = sleeperSyncService.getPlayers();
+    if (!players || players.length === 0) {
+      return res.status(503).json({
+        ok: false,
+        error: 'Player data not available'
+      });
+    }
+
+    // Calculate OVR ratings (this is the slow part)
+    const ovrResults = await ovrService.calculateBatchOVR(players);
+
+    // Transform to cached format
+    const transformedData = ovrResults.map(player => ({
+      playerId: player.player_id,
+      playerName: player.full_name,
+      position: player.position,
+      team: player.team,
+      ovrRating: player.ovr_rating,
+      tier: player.tier,
+      powerScore: player.power_score || 0,
+      confidence: player.confidence || 0,
+      calculatedAt: new Date()
+    }));
+
+    // Filter by position if requested
+    let filteredData = transformedData;
+    if (position && ['QB', 'RB', 'WR', 'TE'].includes(position.toUpperCase())) {
+      filteredData = transformedData.filter(p => 
+        p.position === position.toUpperCase()
+      );
+    }
+
+    // Sort by OVR rating
+    filteredData.sort((a, b) => b.ovrRating - a.ovrRating);
+
+    // Limit results
+    const limitedData = filteredData.slice(0, limit);
+
+    // Cache the results
+    ovrCache.set(cacheKey, limitedData);
+
+    const duration = Date.now() - startTime;
+    console.log(`✅ [OVR API] Calculated in ${duration}ms, cached for 6 hours`);
+
+    res.json({
+      ok: true,
+      data: limitedData,
+      meta: {
+        source: 'calculated',
+        calculatedAt: new Date(),
+        count: limitedData.length,
+        durationMs: duration
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [OVR API] Error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to calculate OVR ratings',
+      details: error.message
+    });
+  }
+});
+Step 3: Add Cache Invalidation Hook
+File: server/services/UPHCoordinator.ts
+Find where the ETL job completes successfully and add:
+typescriptimport { ovrCache } from './ovrCache';
+
+// After successful ETL run (find the success callback)
+async function onETLComplete(result: ETLResult) {
+  if (result.success) {
+    console.log('✅ ETL completed successfully, invalidating OVR cache');
+    ovrCache.invalidate();
+  }
+}
+Step 4: Add Cache Stats Endpoint (Optional)
+File: server/routes.ts
+typescriptapp.get('/api/admin/cache/stats', async (req, res) => {
+  const stats = ovrCache.getStats();
+  res.json({
+    ok: true,
+    cache: stats
+  });
+});
+Step 5: Optimize calculateBatchOVR (If Still Slow)
+If the FIRST calculation is still taking 30+ seconds, we need to optimize the database queries.
+Find where calculateBatchOVR queries the database and add batching:
+typescript// Instead of querying one player at a time:
+for (const player of players) {
+  const stats = await db.select().from(playerWeekFacts).where(eq(playerWeekFacts.player_id, player.id));
+  // ... calculate OVR
+}
+
+// Batch query all players at once:
+const allPlayerIds = players.map(p => p.id);
+const allStats = await db
+  .select()
+  .from(playerWeekFacts)
+  .where(inArray(playerWeekFacts.player_id, allPlayerIds));
+
+// Group by player_id
+const statsByPlayer = allStats.reduce((acc, stat) => {
+  if (!acc[stat.player_id]) acc[stat.player_id] = [];
+  acc[stat.player_id].push(stat);
+  return acc;
+}, {});
+
+// Now calculate OVR for each player using grouped stats
+for (const player of players) {
+  const playerStats = statsByPlayer[player.id] || [];
+  // ... calculate OVR using playerStats
+}
+Expected Results
+Before (Current State):
+
+First request: 30+ seconds (timeout)
+Every request: Recalculates everything
+Database: Hammered on every request
+
+After (With Caching):
+
+First request: 5-10 seconds (one-time calculation)
+Subsequent requests: <100ms (instant from cache)
+Cache TTL: 6 hours (matches ETL schedule)
+Database: Only queried once per 6 hours
+
+Testing
+
+Test cache miss (first request):
+
+bashcurl http://localhost:5000/api/ovr?limit=10
+# Should take 5-10 seconds, then cache
+
+Test cache hit (second request):
+
+bashcurl http://localhost:5000/api/ovr?limit=10
+# Should return instantly (<100ms)
+
+Test cache stats:
+
+bashcurl http://localhost:5000/api/admin/cache/stats
+# Shows cache size, last calculation, TTL
+
+Test cache invalidation:
+
+
+Trigger an ETL run
+Cache should clear
+Next OVR request should recalculate
+
+Monitoring
+Add logging to see cache performance:
+typescript// In your server startup
+setInterval(() => {
+  const stats = ovrCache.getStats();
+  console.log('📊 [OVR Cache Stats]:', stats);
+}, 60000); // Log every minute
+Next Steps
+After implementing caching:
+
+Monitor first-request calculation time (should be <10s)
+If still slow, optimize calculateBatchOVR with batched queries
+Consider pre-warming cache on server startup
+Add cache metrics to admin dashboard

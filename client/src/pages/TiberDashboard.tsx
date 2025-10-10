@@ -31,7 +31,7 @@ function TiberDashboard() {
   const [dvpPosition, setDvpPosition] = useState('QB');
 
   // Fetch OVR rankings
-  const { data: ovrData, isLoading: ovrLoading } = useQuery<{ players: OVRPlayer[] }>({
+  const { data: ovrData, isLoading: ovrLoading } = useQuery<{ success: boolean; data: { players: OVRPlayer[] } }>({
     queryKey: ['/api/ovr', { format: selectedFormat, position: selectedPosition, limit: 100 }],
     enabled: selectedTab === 'rankings'
   });
@@ -88,7 +88,7 @@ function TiberDashboard() {
     return colors[matchup] || colors['neutral-matchup'];
   };
 
-  const filteredPlayers = ovrData?.players || [];
+  const filteredPlayers = ovrData?.data?.players || [];
   const dvpData = dvpResponse?.data || [];
   const topMatchups = topMatchupsResponse?.data || [];
   const topInsights = topMatchups.filter(m => m.matchup_rating === 'elite-matchup').slice(0, 3);
