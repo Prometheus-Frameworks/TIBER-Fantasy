@@ -9,6 +9,7 @@
 
 import { Router, Request, Response } from 'express';
 import { ovrService } from '../services/ovrService';
+import { sleeperSyncService } from '../services/sleeperSyncService';
 import { z } from 'zod';
 
 const router = Router();
@@ -76,13 +77,12 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const query = OVRQuerySchema.parse(req.query);
     
-    // Get live player data from Sleeper API (current teams)
-    const url = "https://api.sleeper.app/v1/players/nfl";
-    const sleeperResponse = await fetch(url);
-    if (!sleeperResponse.ok) {
-      throw new Error(`Failed to fetch Sleeper players: ${sleeperResponse.status}`);
-    }
-    const sleeperPlayers = await sleeperResponse.json() as Record<string, any>;
+    // Get cached player data from Sleeper sync service
+    const sleeperPlayersArray = await sleeperSyncService.getPlayers();
+    const sleeperPlayers: Record<string, any> = {};
+    sleeperPlayersArray.forEach(p => {
+      sleeperPlayers[p.player_id] = p;
+    });
     
     // Current 2024/2025 team corrections for real-world accuracy
     const teamCorrections: Record<string, string> = {
@@ -175,13 +175,12 @@ router.get('/:player_id', async (req: Request, res: Response) => {
       include_breakdown: z.enum(['true', 'false']).default('false')
     }).parse(req.query);
     
-    // Get live player data from Sleeper API
-    const url = "https://api.sleeper.app/v1/players/nfl";
-    const sleeperResponse = await fetch(url);
-    if (!sleeperResponse.ok) {
-      throw new Error(`Failed to fetch Sleeper players: ${sleeperResponse.status}`);
-    }
-    const sleeperPlayers = await sleeperResponse.json() as Record<string, any>;
+    // Get cached player data from Sleeper sync service
+    const sleeperPlayersArray = await sleeperSyncService.getPlayers();
+    const sleeperPlayers: Record<string, any> = {};
+    sleeperPlayersArray.forEach(p => {
+      sleeperPlayers[p.player_id] = p;
+    });
     
     // Find player by ID or name-based lookup
     let playerData: any = null;

@@ -37,13 +37,13 @@ function TiberDashboard() {
   });
 
   // Fetch DvP matchups
-  const { data: dvpData, isLoading: dvpLoading } = useQuery<DvPMatchup[]>({
+  const { data: dvpResponse, isLoading: dvpLoading } = useQuery<{ success: boolean; data: DvPMatchup[] }>({
     queryKey: ['/api/dvp', { position: dvpPosition, season: 2025, week: 5 }],
     enabled: selectedTab === 'matchups'
   });
 
   // Fetch insights (top DvP matchups)
-  const { data: topMatchups } = useQuery<DvPMatchup[]>({
+  const { data: topMatchupsResponse } = useQuery<{ success: boolean; data: DvPMatchup[] }>({
     queryKey: ['/api/dvp', { position: 'ALL', season: 2025, week: 5 }],
   });
 
@@ -89,7 +89,9 @@ function TiberDashboard() {
   };
 
   const filteredPlayers = ovrData?.players || [];
-  const topInsights = topMatchups?.filter(m => m.matchup_rating === 'elite-matchup').slice(0, 3) || [];
+  const dvpData = dvpResponse?.data || [];
+  const topMatchups = topMatchupsResponse?.data || [];
+  const topInsights = topMatchups.filter(m => m.matchup_rating === 'elite-matchup').slice(0, 3);
 
   return (
     <div className="min-h-screen bg-[#0a0e1a] text-gray-100">
