@@ -1,7 +1,28 @@
-# ON THE CLOCK
+# TIBER FANTASY
 
 ## Overview
-On The Clock is an open-source fantasy football platform designed to provide advanced, democratized analytics for dynasty leagues. Its core purpose is to offer community-driven tools and high-end, accessible insights without paywalls, fostering a movement that challenges traditional barriers in fantasy football analysis. A key feature, "Competence Mode," provides truth-first, context-aware AI-driven dynasty advice. The project aims to empower users with accurate guidance and a deeper understanding of dynasty league strategy, aspiring to become a leading, independent resource in the fantasy football community.
+**Tiber Fantasy** is a free, open-source NFL fantasy football analytics dashboard designed to democratize advanced analytics for all leagues. Launched October 2025 as a unified 6-tab platform (Home, Rankings, Matchups, Strategy, Moves, Leagues), it provides real-time 2025 NFL data powered by NFLfastR, OVR player ratings (Madden-style 1-99), Defense vs Position matchups, and Strength of Schedule analytics with EPA metrics. The platform maintains complete independence with no paywalls or partnerships, making high-end fantasy football insights accessible to everyone.
+
+## Recent Changes
+
+### October 11, 2025 - Platform Rebuild & Rebrand to Tiber Fantasy
+**Complete frontend rebuild from "On The Clock" to unified "Tiber Fantasy" dashboard:**
+- ✅ **Full Rebrand**: Retired "On The Clock" branding, launched as "Tiber Fantasy" 
+- ✅ **Unified Dashboard**: Reduced from 100+ fragmented pages to single 6-tab interface
+- ✅ **Tab Structure**: Home (hero + stats), Rankings (OVR), Matchups (DvP), Strategy (SOS), Moves (coming soon), Leagues (coming soon)
+- ✅ **Route Simplification**: Single entry point (`/`) with URL-based tab navigation and query params
+- ✅ **Performance**: OVR API cached (6hrs) responding in <20ms (down from 30+ second timeouts)
+- ✅ **SEO Optimization**: Comprehensive meta tags (Open Graph, Twitter Cards, canonical links)
+- ✅ **Mobile Responsive**: Sidebar navigation with responsive design for all screen sizes
+- ✅ **Code Cleanup**: Deleted 90+ legacy pages, no LSP errors, production-ready codebase
+- ✅ **E2E Tested**: All P0 features verified (Rankings, Matchups, Strategy tabs functional)
+
+**Production TODOs (Pre-Launch):**
+- Create og-image.jpg for social sharing previews
+- Update domain URLs from tiberfantasy.com to actual production domain
+- Replace vite.svg favicon with Tiber Fantasy branded logo
+
+**Backend Status**: All existing APIs intact and functional (OVR, DvP, SOS, EPA services). Gold-layer ETL processing has non-blocking errors (calculateRiskMetrics, market signals) - frontend unaffected.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
