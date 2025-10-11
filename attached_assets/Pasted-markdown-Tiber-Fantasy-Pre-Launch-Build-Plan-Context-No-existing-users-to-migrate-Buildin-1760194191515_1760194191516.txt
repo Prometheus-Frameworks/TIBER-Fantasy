@@ -1,0 +1,89 @@
+markdown# Tiber Fantasy - Pre-Launch Build Plan
+
+## Context
+- No existing users to migrate
+- Building from scratch as "Tiber Fantasy"  
+- Single unified dashboard experience
+- Launch-ready in 6-8 weeks
+
+## Immediate Tasks (This Week)
+
+### 1. Finalize Dashboard Structure
+Use the Tiber Dashboard artifact I created as the foundation:
+- Sidebar navigation with 6 tabs
+- Top nav bar with search/profile
+- Home page with hero + stats cards
+- Dark mode design system
+
+### 2. Consolidate Existing Code
+Instead of "migrating" features, just organize them into the right tabs:
+client/src/
+├── pages/
+│   └── TiberDashboard.tsx          (Single entry point)
+├── components/
+│   ├── tabs/
+│   │   ├── HomeTab.tsx             (Dashboard home)
+│   │   ├── RankingsTab.tsx         (Power rankings)
+│   │   ├── MatchupsTab.tsx         (DvP matchups)
+│   │   ├── StrategyTab.tsx         (Compass, SOS)
+│   │   ├── MovesTab.tsx            (Trade tools)
+│   │   └── LeaguesTab.tsx          (Coming soon)
+│   └── shared/
+│       ├── PlayerCard.tsx
+│       ├── StatCard.tsx
+│       └── LoadingState.tsx
+
+### 3. API Consolidation (Optional)
+Can keep existing `/api/rankings`, `/api/dvp` endpoints OR
+Create unified `/api/tiber/*` namespace - your choice, no users to break!
+
+### 4. Remove Any Old/Unused Code
+Since we're pre-launch, delete anything not being used:
+- Old experimental pages
+- Unused components
+- Dead code paths
+- Test/demo routes
+
+## Build Priority
+
+**P0 (Must have for launch):**
+- ✅ Home tab (hero, stats, quick actions)
+- ✅ Rankings tab (with real API data)
+- ✅ Matchups tab (DvP working)
+- ✅ Mobile responsive
+- ✅ Loading states
+- ✅ Error handling
+
+**P1 (Should have):**
+- ⚡ Strategy tab (Compass + SOS)
+- ⚡ Moves tab (Trade analyzer)
+- ⚡ Search functionality
+- ⚡ Player comparison
+
+**P2 (Nice to have):**
+- 🌟 Leagues tab
+- 🌟 Trends analysis
+- 🌟 User accounts
+- 🌟 Notifications
+
+## Success Criteria
+
+Before launch, verify:
+- [ ] All P0 features working
+- [ ] No console errors
+- [ ] Page loads in <2s
+- [ ] Works on mobile (test iPhone/Android)
+- [ ] All API calls succeed
+- [ ] Proper error messages if APIs fail
+- [ ] SEO meta tags set up
+- [ ] Analytics tracking ready (if using)
+
+## Next Steps
+
+1. Start with the TiberDashboard artifact as base
+2. Copy existing Rankings/DvP logic into tabs
+3. Wire up APIs with React Query
+4. Test thoroughly
+5. Deploy!
+
+No migration complexity - just build it clean! 🎉
