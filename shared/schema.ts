@@ -2068,7 +2068,7 @@ export const playerWeekFacts = pgTable("player_week_facts", {
 // Bronze Layer: NFLfastR Play-by-Play Data
 export const bronzeNflfastrPlays = pgTable("bronze_nflfastr_plays", {
   id: serial("id").primaryKey(),
-  playId: varchar("play_id", { length: 100 }).notNull().unique(),
+  playId: varchar("play_id", { length: 100 }).notNull(),
   gameId: varchar("game_id", { length: 50 }).notNull(),
   season: integer("season").notNull(),
   week: integer("week").notNull(),
@@ -2099,6 +2099,7 @@ export const bronzeNflfastrPlays = pgTable("bronze_nflfastr_plays", {
   importedAt: timestamp("imported_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
+  gamePlayUniqueIdx: unique("bronze_nflfastr_game_play_unique").on(table.gameId, table.playId),
   seasonWeekIdx: index("bronze_nflfastr_season_week_idx").on(table.season, table.week),
   passerIdx: index("bronze_nflfastr_passer_idx").on(table.passerPlayerId),
   receiverIdx: index("bronze_nflfastr_receiver_idx").on(table.receiverPlayerId),
