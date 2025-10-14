@@ -61,6 +61,7 @@ import silverLayerRoutes from './routes/silverLayerRoutes';
 import rookieRoutes from './routes/rookieRoutes';
 import playerIdentityRoutes from './routes/playerIdentityRoutes';
 import uphAdminRoutes from './routes/uphAdminRoutes';
+import gameLogRoutes from './routes/gameLogRoutes';
 import sosRouter from './modules/sos/sos.router';
 import { ratingsRouter } from './src/modules/ratings';
 import { buildStartSitRouter } from './routes/startSitRoutes';
@@ -2953,6 +2954,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // OVR (Overall Rating) System - Madden-style 1-99 player ratings
   app.use('/api/ovr', ovrRouter);
   console.log('📊 OVR (Madden-style 1-99) rating system mounted at /api/ovr/*');
+
+  // Game Logs - Player game statistics aggregated from NFLfastR
+  app.use('/api/game-logs', gameLogRoutes);
+  console.log('📋 Game Logs system mounted at /api/game-logs/*');
 
   // Consensus Benchmark Service - Unified ECR/ADP/Dynasty consensus with fallback policy
   app.use('/api', createConsensusRouter({ 
