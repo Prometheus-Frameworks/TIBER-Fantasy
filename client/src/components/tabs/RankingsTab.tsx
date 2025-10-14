@@ -23,8 +23,19 @@ export default function RankingsTab() {
   const [selectedPosition, setSelectedPosition] = useState('ALL');
   const [selectedFormat, setSelectedFormat] = useState<'dynasty' | 'redraft'>('redraft');
 
+  // Build query URL with params
+  const buildQueryUrl = () => {
+    const params = new URLSearchParams();
+    params.set('format', selectedFormat);
+    params.set('limit', '100');
+    if (selectedPosition !== 'ALL') {
+      params.set('position', selectedPosition);
+    }
+    return `/api/ovr?${params.toString()}`;
+  };
+
   const { data: ovrData, isLoading } = useQuery<OVRResponse>({
-    queryKey: ['/api/ovr', { format: selectedFormat, position: selectedPosition, limit: 100 }],
+    queryKey: [buildQueryUrl()],
   });
 
   const getTierColor = (tier: string) => {

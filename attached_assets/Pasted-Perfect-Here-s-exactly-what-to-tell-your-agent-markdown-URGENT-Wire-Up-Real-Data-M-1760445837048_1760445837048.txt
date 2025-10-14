@@ -1,0 +1,378 @@
+Perfect! Here’s exactly what to tell your agent:
+
+-----
+
+```markdown
+# URGENT: Wire Up Real Data & Make Site Functional
+
+## Goal
+Replace ALL mock/sample data with real API calls. Make every tab fully functional with live data from our backend.
+
+## Critical Tasks (Do These Now)
+
+### 1. Rankings Tab - Connect Real OVR Data
+
+**File:** `client/src/components/tabs/RankingsTab.tsx`
+
+**Replace mock data with:**
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+
+function RankingsTab() {
+  const [selectedPosition, setSelectedPosition] = useState('ALL');
+  const [selectedFormat, setSelectedFormat] = useState('PPR');
+
+  // Fetch real rankings data
+  const { data: rankings, isLoading, error } = useQuery({
+    queryKey: ['/api/ovr', { position: selectedPosition, format: selectedFormat }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedPosition !== 'ALL') params.set('position', selectedPosition);
+      params.set('format', selectedFormat.toLowerCase());
+      params.set('limit', '100');
+      
+      const res = await fetch(`/api/ovr?${params}`);
+      if (!res.ok) throw new Error('Failed to fetch rankings');
+      
+      const json = await res.json();
+      return json.data; // Returns array of players with OVR ratings
+    },
+    staleTime: 5 * 60 * 1000, // 5 min cache
+  });
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[1,2,3,4,5].map(i => (
+          <div key={i} className="bg-[#141824] rounded-xl p-6 animate-pulse">
+            <div className="h-4 bg-gray-700 rounded w-3/4 mb-3"></div>
+            <div className="h-4 bg-gray-700 rounded w-1/2"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center">
+        <p className="text-red-400 mb-4">Failed to load rankings: {error.message}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="px-4 py-2 bg-red-500 rounded-lg hover:bg-red-600"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  // Render real player data
+  return (
+    <div>
+      {/* Filter UI stays the same */}
+      
+      {/* Map over REAL rankings data */}
+      <div className="space-y-3">
+        {rankings?.map((player, idx) => (
+          <div key={player.playerId} className="bg-[#141824] border border-gray-800 rounded-xl p-6">
+            {/* Use real player data: player.playerName, player.ovrRating, etc. */}
+            <span className="text-3xl font-bold">{idx + 1}</span>
+            <h3 className="text-xl font-bold">{player.playerName}</h3>
+            <span className="text-gray-400">{player.position} • {player.team}</span>
+            <span className="font-bold">{player.ovrRating}</span>
+            {/* ... rest of player card */}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+-----
+
+### 2. Matchups Tab - Connect Real DvP Data
+
+**File:** `client/src/components/tabs/MatchupsTab.tsx`
+
+```typescript
+function MatchupsTab() {
+  const [selectedPosition, setSelectedPosition] = useState('QB');
+  const [selectedWeek, setSelectedWeek] = useState(7);
+
+  const { data: dvpData, isLoading, error } = useQuery({
+    queryKey: ['/api/dvp', { position: selectedPosition, week: selectedWeek }],
+    queryFn: async () => {
+      const res = await fetch(`/api/dvp?position=${selectedPosition}&week=${selectedWeek}`);
+      if (!res.ok) throw new Error('Failed to fetch DvP data');
+      
+      const json = await res.json();
+      // Handle both response formats
+      return json.data || json.defenses || [];
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
+  if (isLoading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+
+  return (
+    <div>
+      {/* Position tabs */}
+      <div className="flex gap-2 mb-6">
+        {['QB', 'RB', 'WR', 'TE'].map(pos => (
+          <button
+            key={pos}
+            onClick={() => setSelectedPosition(pos)}
+            className={selectedPosition === pos ? 'active-style' : 'inactive-style'}
+          >
+            {pos}
+          </button>
+        ))}
+      </div>
+
+      {/* Map real DvP data */}
+      <div className="grid gap-4">
+        {dvpData?.map((defense, idx) => (
+          <div key={idx} className="bg-[#141824] border border-green-500/20 rounded-xl p-6">
+            <h3 className="text-xl font-bold">{defense.team}</h3>
+            <p className="text-sm text-gray-400">Rank #{defense.rank} vs {defense.position}</p>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <div className="text-gray-400 text-xs">Fantasy Pts Allowed</div>
+                <div className="text-2xl font-bold">{defense.ptsAllowed || defense.fantasy_points_allowed}</div>
+              </div>
+              <div>
+                <div className="text-gray-400 text-xs">EPA</div>
+                <div className="text-2xl font-bold">+{defense.epa?.toFixed(2)}</div>
+              </div>
+              <div>
+                <div className="text-gray-400 text-xs">Sample Size</div>
+                <div className="text-2xl font-bold">{defense.plays}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+-----
+
+### 3. Strategy Tab - Connect Real SOS Data
+
+**File:** `client/src/components/tabs/StrategyTab.tsx`
+
+```typescript
+function StrategyTab() {
+  const [selectedPosition, setSelectedPosition] = useState('QB');
+
+  const { data: sosData, isLoading, error } = useQuery({
+    queryKey: ['/api/sos', { position: selectedPosition }],
+    queryFn: async () => {
+      const res = await fetch(`/api/sos?position=${selectedPosition}`);
+      if (!res.ok) throw new Error('Failed to fetch SOS data');
+      
+      const json = await res.json();
+      return json.data || json;
+    },
+    staleTime: 30 * 60 * 1000, // 30 min cache (SOS changes less frequently)
+  });
+
+  if (isLoading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+
+  return (
+    <div>
+      {/* Render real SOS data */}
+      <div className="grid gap-4">
+        {sosData?.map((team, idx) => (
+          <div key={idx} className="bg-[#141824] rounded-xl p-6">
+            <h3>{team.team}</h3>
+            <p>SOS Rank: {team.sos_rank}</p>
+            <p>Difficulty: {team.difficulty}</p>
+            {/* Add more SOS metrics as available */}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+-----
+
+### 4. Home Tab - Connect Real Platform Stats
+
+**File:** `client/src/components/tabs/HomeTab.tsx`
+
+```typescript
+function HomeTab() {
+  // Fetch real platform stats
+  const { data: stats } = useQuery({
+    queryKey: ['/api/platform/stats'],
+    queryFn: async () => {
+      // Option 1: If you have this endpoint
+      const res = await fetch('/api/platform/stats');
+      return res.json();
+      
+      // Option 2: If not, derive from existing endpoints
+      // const [players, facts] = await Promise.all([
+      //   fetch('/api/players/count').then(r => r.json()),
+      //   fetch('/api/player-week-facts/count').then(r => r.json())
+      // ]);
+      // return { players, facts };
+    },
+    staleTime: 30 * 60 * 1000,
+  });
+
+  return (
+    <div>
+      {/* Update stat cards with real data */}
+      <div className="grid grid-cols-4 gap-4">
+        <StatCard 
+          icon={Users}
+          label="Players"
+          value={stats?.totalPlayers || 3756}
+          subtitle="Synced from Sleeper"
+        />
+        <StatCard 
+          icon={BarChart3}
+          label="Data Points"
+          value={stats?.dataPoints || 875}
+          subtitle="Weekly facts"
+        />
+        {/* ... more stat cards */}
+      </div>
+    </div>
+  );
+}
+```
+
+-----
+
+### 5. Fix API Response Format Inconsistencies
+
+**If APIs return different formats, normalize them:**
+
+```typescript
+// Create a utility function
+function normalizeApiResponse(response) {
+  // Handle various response formats
+  if (response.ok && response.data) return response.data;
+  if (response.data) return response.data;
+  if (Array.isArray(response)) return response;
+  return [];
+}
+
+// Use in queries
+queryFn: async () => {
+  const res = await fetch('/api/ovr');
+  const json = await res.json();
+  return normalizeApiResponse(json);
+}
+```
+
+-----
+
+### 6. Add Global Error Boundary
+
+**File:** `client/src/App.tsx`
+
+```typescript
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000,
+    },
+  },
+});
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TiberDashboard />
+      <ReactQueryDevtools /> {/* Helps debug API calls */}
+    </QueryClientProvider>
+  );
+}
+```
+
+-----
+
+## Testing Checklist
+
+After wiring everything up, test:
+
+- [ ] Rankings tab loads real players (not mock data)
+- [ ] Filters work (QB shows only QBs, etc.)
+- [ ] DvP matchups show real defenses
+- [ ] Position selector updates DvP data
+- [ ] SOS tab shows real strength of schedule
+- [ ] Home page stats are accurate
+- [ ] Loading states show while fetching
+- [ ] Error messages display if API fails
+- [ ] No console errors
+- [ ] All API calls visible in Network tab
+
+## Common Issues to Watch For
+
+1. **API returns different format than expected**
+
+- Check actual response in Network tab
+- Adjust property names (e.g., `playerName` vs `full_name`)
+
+1. **CORS errors**
+
+- Verify server allows requests from frontend
+- Check if `/api` prefix is correct
+
+1. **Empty data arrays**
+
+- Check if APIs require authentication
+- Verify database has data (`SELECT COUNT(*) FROM player_week_facts`)
+
+1. **Slow loading**
+
+- Verify OVR cache is working (should be <100ms)
+- Check if multiple unnecessary API calls
+
+## Priority Order
+
+1. ✅ Rankings tab (most important)
+1. ✅ Matchups tab (second most important)
+1. ✅ Strategy tab (third)
+1. ⚡ Home stats (nice to have)
+1. 🌟 Moves/Leagues (placeholders are fine for now)
+
+Start with Rankings tab, verify it works, then move to Matchups, then Strategy.
+
+## Success Criteria
+
+Site is “functional” when:
+
+- [ ] Rankings shows 50+ real players with OVR ratings
+- [ ] Matchups shows 10+ real defenses with DvP data
+- [ ] Strategy shows SOS for at least one position
+- [ ] No mock/sample data visible anywhere
+- [ ] Filters actually filter the data
+- [ ] Page doesn’t crash on any navigation
+
+Let’s get this wired up and functional NOW! 🚀
+
+```
+---
+
+**That's the complete instruction set.** Your agent should be able to wire everything up in 1-2 hours. The key is replacing those mock arrays with real `useQuery` calls to your existing APIs! 💪​​​​​​​​​​​​​​​​
+```

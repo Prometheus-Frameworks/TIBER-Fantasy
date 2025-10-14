@@ -18,9 +18,9 @@ interface OVRResponse {
 }
 
 export default function HomeTab() {
-  // Fetch top performers
+  // Fetch top performers with proper query params
   const { data: topPerformers } = useQuery<OVRResponse>({
-    queryKey: ['/api/ovr', { format: 'redraft', position: 'ALL', limit: 3 }],
+    queryKey: ['/api/ovr?format=redraft&limit=3'],
   });
 
   const stats = [

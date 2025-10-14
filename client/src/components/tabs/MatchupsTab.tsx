@@ -19,8 +19,17 @@ interface DvPResponse {
 export default function MatchupsTab() {
   const [dvpPosition, setDvpPosition] = useState('QB');
 
+  // Build query URL with params
+  const buildDvpUrl = () => {
+    const params = new URLSearchParams();
+    params.set('position', dvpPosition);
+    params.set('season', '2025');
+    params.set('week', '5');
+    return `/api/dvp?${params.toString()}`;
+  };
+
   const { data: dvpResponse, isLoading } = useQuery<DvPResponse>({
-    queryKey: ['/api/dvp', { position: dvpPosition, season: 2025, week: 5 }],
+    queryKey: [buildDvpUrl()],
   });
 
   const getMatchupIcon = (matchup: string) => {
@@ -114,17 +123,21 @@ export default function MatchupsTab() {
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
                   <div className="text-gray-400 text-xs mb-1">Fantasy Pts Allowed</div>
-                  <div className="text-xl font-bold text-gray-100">{def.pts_allowed_ppr.toFixed(1)}</div>
+                  <div className="text-xl font-bold text-gray-100">
+                    {def.pts_allowed_ppr != null ? def.pts_allowed_ppr.toFixed(1) : 'N/A'}
+                  </div>
                   <div className="text-gray-500 text-xs">PPR PPG</div>
                 </div>
                 <div>
                   <div className="text-gray-400 text-xs mb-1">EPA</div>
-                  <div className="text-xl font-bold text-gray-100">{def.avg_epa > 0 ? '+' : ''}{def.avg_epa.toFixed(2)}</div>
+                  <div className="text-xl font-bold text-gray-100">
+                    {def.avg_epa != null ? `${def.avg_epa > 0 ? '+' : ''}${def.avg_epa.toFixed(2)}` : 'N/A'}
+                  </div>
                   <div className="text-gray-500 text-xs">per play</div>
                 </div>
                 <div>
                   <div className="text-gray-400 text-xs mb-1">Sample Size</div>
-                  <div className="text-xl font-bold text-gray-100">{def.plays_against}</div>
+                  <div className="text-xl font-bold text-gray-100">{def.plays_against || 0}</div>
                   <div className="text-gray-500 text-xs">plays</div>
                 </div>
               </div>

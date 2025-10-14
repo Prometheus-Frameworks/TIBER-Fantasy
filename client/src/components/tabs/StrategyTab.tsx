@@ -4,36 +4,47 @@ import { Shield, TrendingUp, TrendingDown, Target } from 'lucide-react';
 
 interface SOSRanking {
   team: string;
-  overall_score: number;
-  pass_epa_allowed?: number;
-  rush_epa_allowed?: number;
-  pressure_rate?: number;
+  score: number; // API returns "score" not "overall_score"
+  passDefScore?: number; // API returns camelCase
+  rushDefScore?: number;
+  pressureScore?: number;
   rank: number;
 }
 
 interface SOSResponse {
-  success: boolean;
-  data: SOSRanking[];
+  season: number;
+  week: number;
+  rankings: SOSRanking[]; // API returns "rankings" not "data"
 }
 
 export default function StrategyTab() {
   const [sosView, setSosView] = useState<'defense' | 'offense'>('defense');
   const [sosPosition, setSosPosition] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
 
+  // Build query URLs with params
+  const buildSosUrl = (type: 'defense' | 'offense') => {
+    const params = new URLSearchParams();
+    if (sosPosition !== 'ALL') {
+      params.set('position', sosPosition);
+    }
+    const queryString = params.toString();
+    return `/api/sos/rankings/${type}${queryString ? `?${queryString}` : ''}`;
+  };
+
   // Fetch SOS defense rankings
   const { data: sosDefense, isLoading: defenseLoading } = useQuery<SOSResponse>({
-    queryKey: ['/api/sos/rankings/defense', { position: sosPosition }],
+    queryKey: [buildSosUrl('defense')],
     enabled: sosView === 'defense',
   });
 
   // Fetch SOS offense rankings
   const { data: sosOffense, isLoading: offenseLoading } = useQuery<SOSResponse>({
-    queryKey: ['/api/sos/rankings/offense', { position: sosPosition }],
+    queryKey: [buildSosUrl('offense')],
     enabled: sosView === 'offense',
   });
 
   const isLoading = sosView === 'defense' ? defenseLoading : offenseLoading;
-  const sosData = sosView === 'defense' ? sosDefense?.data || [] : sosOffense?.data || [];
+  const sosData = sosView === 'defense' ? sosDefense?.rankings || [] : sosOffense?.rankings || [];
 
   const getRankColor = (rank: number, isOffense: boolean) => {
     if (isOffense) {
@@ -148,14 +159,14 @@ export default function StrategyTab() {
                 <div className="flex-1">
                   <h4 className="text-lg font-bold text-gray-100">{team.team}</h4>
                   <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
-                    {team.pass_epa_allowed !== undefined && (
-                      <span>Pass EPA: <span className="text-gray-300">{team.pass_epa_allowed.toFixed(3)}</span></span>
+                    {team.passDefScore !== undefined && (
+                      <span>Pass Def: <span className="text-gray-300">{team.passDefScore.toFixed(1)}</span></span>
                     )}
-                    {team.rush_epa_allowed !== undefined && (
-                      <span>Rush EPA: <span className="text-gray-300">{team.rush_epa_allowed.toFixed(3)}</span></span>
+                    {team.rushDefScore !== undefined && (
+                      <span>Rush Def: <span className="text-gray-300">{team.rushDefScore.toFixed(1)}</span></span>
                     )}
-                    {team.pressure_rate !== undefined && (
-                      <span>Pressure: <span className="text-gray-300">{(team.pressure_rate * 100).toFixed(1)}%</span></span>
+                    {team.pressureScore !== undefined && (
+                      <span>Pressure: <span className="text-gray-300">{team.pressureScore.toFixed(1)}</span></span>
                     )}
                   </div>
                 </div>
@@ -163,7 +174,7 @@ export default function StrategyTab() {
                 {/* Overall Score */}
                 <div className="flex-shrink-0">
                   <span className={`px-3 py-1 rounded-full text-sm font-bold ${getRankColor(team.rank, sosView === 'offense')}`}>
-                    {team.overall_score.toFixed(1)}
+                    {team.score.toFixed(1)}
                   </span>
                 </div>
               </div>
