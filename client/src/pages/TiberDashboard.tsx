@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, User, Bell, Home, TrendingUp, Shield, Target, Shuffle, Users } from 'lucide-react';
+import { User, Bell, Home, TrendingUp, Shield, Target, Shuffle, Users } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import HomeTab from '@/components/tabs/HomeTab';
 import RankingsTab from '@/components/tabs/RankingsTab';
@@ -7,6 +7,7 @@ import MatchupsTab from '@/components/tabs/MatchupsTab';
 import StrategyTab from '@/components/tabs/StrategyTab';
 import MovesTab from '@/components/tabs/MovesTab';
 import LeaguesTab from '@/components/tabs/LeaguesTab';
+import PlayerSearchBar from '@/components/PlayerSearchBar';
 
 const tabs = [
   { id: 'home', label: 'Home', icon: Home, component: HomeTab },
@@ -58,15 +59,7 @@ function TiberDashboard() {
 
             {/* Search */}
             <div className="hidden md:flex flex-1 max-w-md mx-8">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="Search players..."
-                  className="w-full pl-10 pr-4 py-2 bg-[#1e2330] border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  data-testid="input-player-search"
-                />
-              </div>
+              <PlayerSearchBar />
             </div>
 
             {/* Right Nav */}
