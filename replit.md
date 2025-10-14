@@ -41,9 +41,38 @@ The platform is built on a comprehensive 3-tier ELT architecture (Bronze → Sil
 - **Backend Services**: Backend Spine with Logs & Projections Service and a multi-format Ratings Engine.
 - **UI/UX Enhancements**: Interactive GlowCard components, pulsing GlowCTA buttons, skeleton loading, and a top loading bar.
 
+## Recent Changes
+
+### NFLfastR Data Pipeline Fix (October 2025)
+**Issue:** Player game logs showed incomplete/incorrect data due to database schema and import issues.
+**Root Cause:** NFLfastR play_id is NOT globally unique (4,499 unique IDs across 16,011 plays) - it's per-game unique.
+**Solution:**
+- Changed `bronzeNflfastrPlays` table from `.unique()` on `playId` to composite unique constraint `(gameId, playId)`
+- Created `fast_nflfastr_import.py` script using COPY with temp table for efficient bulk imports
+- Successfully imported complete Week 1-6 data: 16,011 plays
+- Fixed fantasy points calculation with Number() conversions for SQL aggregation values
+- API endpoints working: `/api/player-identity/player/:id` and `/api/game-logs/:nflfastrId/latest`
+
+**Next Steps:**
+1. Schedule fast_nflfastr_import.py for nightly runs to auto-load Week 7+ data
+2. Add regression test for known box scores
+3. Document import workflow (source URL, season range, conflict policy)
+
+### Player Search Feature (October 2025)
+**Feature:** "What did [player] do this Sunday?" - Search any player and see their latest game stats.
+**Components:**
+- `PlayerSearchBar`: Fuzzy search with autocomplete (Fuse.js)
+- `PlayerGameCard`: Displays passing, rushing, receiving stats and fantasy points
+**Data Flow:**
+1. Search → `/api/player-identity/search?name={query}` → canonical ID
+2. Player detail → `/api/player-identity/player/:canonicalId` → NFLfastR ID
+3. Game log → `/api/game-logs/:nflfastrId/latest` → Week X stats
+**Verified:** E2E test passed with Ashton Jeanty Week 6 (23-75-1, 2/4-11 rec, 16.6 PPR)
+
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
 - **Sleeper API**: Player projections, game logs, ADP data, league sync, and current roster data.
+- **NFLfastR (nflverse)**: 2025 play-by-play data via parquet files from GitHub releases. Complete Week 1-6 data (16,011 plays) loaded. Source: `https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2025.parquet`
 - **NFL-Data-Py**: 2024 weekly statistics via nflfastR, depth charts via nflverse APIs.
 - **R Server**: External API for OASIS (Offensive Architecture Scoring & Insight System) data.
 - **Axios**: HTTP requests.
