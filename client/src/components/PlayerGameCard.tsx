@@ -50,23 +50,29 @@ interface PlayerIdentityResponse {
   success: boolean;
   data: {
     canonicalId: string;
-    nflfastr_id?: string;
-    sleeper_id?: string;
-    espn_id?: string;
+    fullName: string;
+    position: string;
+    nflTeam: string;
+    externalIds?: {
+      sleeper?: string;
+      nfl_data_py?: string;
+      espn?: string;
+      yahoo?: string;
+    };
   };
 }
 
 export default function PlayerGameCard({ player, onClose }: PlayerGameCardProps) {
   // Fetch NFLfastR ID mapping
   const { data: identityData } = useQuery<PlayerIdentityResponse>({
-    queryKey: ['/api/player-identity', player.canonicalId],
+    queryKey: [`/api/player-identity/player/${player.canonicalId}`],
   });
 
-  const nflfastrId = identityData?.data?.nflfastr_id;
+  const nflfastrId = identityData?.data?.externalIds?.nfl_data_py;
 
   // Fetch latest game log
   const { data: gameData, isLoading, error } = useQuery<LatestGameData>({
-    queryKey: ['/api/game-logs', nflfastrId, 'latest'],
+    queryKey: [`/api/game-logs/${nflfastrId}/latest`],
     enabled: !!nflfastrId,
   });
 

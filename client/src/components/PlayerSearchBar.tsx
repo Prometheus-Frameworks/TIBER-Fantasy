@@ -29,6 +29,14 @@ export default function PlayerSearchBar() {
   // Search players API
   const { data: searchResults, isLoading } = useQuery<SearchResponse>({
     queryKey: ['/api/player-identity/search', searchQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams({ name: searchQuery, limit: '3' });
+      const res = await fetch(`/api/player-identity/search?${params}`, {
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
+      return res.json();
+    },
     enabled: searchQuery.length >= 2,
     staleTime: 1000 * 60 * 5, // 5 min cache
   });
