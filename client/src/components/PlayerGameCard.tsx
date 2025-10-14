@@ -64,7 +64,7 @@ interface PlayerIdentityResponse {
 
 export default function PlayerGameCard({ player, onClose }: PlayerGameCardProps) {
   // Fetch NFLfastR ID mapping
-  const { data: identityData } = useQuery<PlayerIdentityResponse>({
+  const { data: identityData, isLoading: identityLoading, error: identityError } = useQuery<PlayerIdentityResponse>({
     queryKey: [`/api/player-identity/player/${player.canonicalId}`],
   });
 

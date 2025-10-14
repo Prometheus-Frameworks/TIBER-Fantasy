@@ -139,17 +139,17 @@ router.get('/:playerId/latest', async (req: Request, res: Response) => {
     const rush = rushingStats[0] || { attempts: 0, yards: 0, touchdowns: 0 };
     const rec = receivingStats[0] || { targets: 0, receptions: 0, yards: 0, touchdowns: 0 };
 
-    // Calculate fantasy points
-    const passYardsPts = (pass.yards || 0) / 25;
-    const passTDPts = (pass.touchdowns || 0) * 4;
-    const passIntPts = (pass.interceptions || 0) * -2;
+    // Calculate fantasy points (convert all values to numbers since SQL returns strings)
+    const passYardsPts = Number(pass.yards || 0) / 25;
+    const passTDPts = Number(pass.touchdowns || 0) * 4;
+    const passIntPts = Number(pass.interceptions || 0) * -2;
     
-    const rushYardsPts = (rush.yards || 0) / 10;
-    const rushTDPts = (rush.touchdowns || 0) * 6;
+    const rushYardsPts = Number(rush.yards || 0) / 10;
+    const rushTDPts = Number(rush.touchdowns || 0) * 6;
     
-    const recYardsPts = (rec.yards || 0) / 10;
-    const recTDPts = (rec.touchdowns || 0) * 6;
-    const recPts = rec.receptions || 0;
+    const recYardsPts = Number(rec.yards || 0) / 10;
+    const recTDPts = Number(rec.touchdowns || 0) * 6;
+    const recPts = Number(rec.receptions || 0);
 
     const standardPts = passYardsPts + passTDPts + passIntPts + rushYardsPts + rushTDPts + recYardsPts + recTDPts;
     const halfPPR = standardPts + (recPts * 0.5);
