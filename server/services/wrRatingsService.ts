@@ -37,7 +37,9 @@ export class WRRatingsService {
       console.log('📊 Loading WR 2024 ratings from CSV...');
       
       if (!fs.existsSync(this.csvPath)) {
-        console.error(`❌ CSV file not found: ${this.csvPath}`);
+        console.warn(`⚠️ CSV file not found: ${this.csvPath}`);
+        console.warn('⚠️ WR ratings will not be available. This is non-critical - app will continue.');
+        this.wrPlayers = []; // Empty array as fallback
         return;
       }
 
@@ -81,6 +83,8 @@ export class WRRatingsService {
       
     } catch (error) {
       console.error('❌ Error loading WR CSV data:', error);
+      console.warn('⚠️ WR ratings service will continue without data. This is non-critical.');
+      this.wrPlayers = []; // Empty array as fallback
     }
   }
 

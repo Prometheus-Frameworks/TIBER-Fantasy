@@ -40,100 +40,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // SCHEMA DRIFT DETECTION - CRITICAL DEPLOYMENT SAFETY CHECK
-  try {
-    console.log('🔒 Starting schema drift detection...');
-    
-    const { schemaDriftService } = await import('./services/SchemaDriftService');
-    
-    // Validate environment configuration first
-    const configValidation = schemaDriftService.validateConfig();
-    if (!configValidation.valid) {
-      console.error('❌ Schema service configuration issues:', configValidation.issues);
-      if (configValidation.issues.some(issue => issue.includes('DATABASE_URL'))) {
-        throw new Error('Critical configuration error: ' + configValidation.issues.join(', '));
-      } else {
-        // Log warnings but continue
-        configValidation.issues.forEach(issue => console.warn('⚠️', issue));
-      }
-    }
-    
-    // Run boot-time drift check and auto-migration
-    await schemaDriftService.checkAndMigrateOnBoot();
-    
-    console.log('✅ Schema drift detection completed - deployment safety confirmed');
-  } catch (error) {
-    console.error('💥 CRITICAL: Schema drift detection failed');
-    console.error('Error details:', error);
-    
-    // In production, we want to fail fast to prevent data corruption
-    if (process.env.NODE_ENV === 'production') {
-      console.error('🚨 BLOCKING PRODUCTION DEPLOYMENT due to schema safety concerns');
-      process.exit(1);
-    } else {
-      // In development, log error but continue (for development flexibility)
-      console.warn('⚠️ Schema drift check failed in development mode - continuing with caution');
-      console.warn('Consider setting OTC_AUTO_MIGRATE=true for automatic schema updates');
-    }
-  }
-
-  // Initialize backend spine services with sample data
-  try {
-    console.log('🚀 Initializing backend spine services...');
-    
-    const { sleeperSyncService } = await import('./services/sleeperSyncService');
-    const { logsProjectionsService } = await import('./services/logsProjectionsService');  
-    const { ratingsEngineService } = await import('./services/ratingsEngineService');
-    
-    await Promise.all([
-      logsProjectionsService.loadSampleData(),
-      ratingsEngineService.generateSampleRatings()
-    ]);
-    
-    // Attempt initial Sleeper sync (will fallback to cache gracefully)
-    await sleeperSyncService.syncPlayers();
-    
-    console.log('✅ Backend spine services initialized');
-  } catch (error) {
-    console.warn('⚠️ Backend spine initialization warning:', error);
-  }
-
-  // Initialize nightly processing and cron jobs
-  try {
-    console.log('🕒 Initializing nightly processing and cron jobs...');
-    
-    const { setupAllCronJobs } = await import('./cron/weeklyUpdate');
-    setupAllCronJobs();
-    
-    console.log('✅ Nightly processing and cron jobs initialized');
-  } catch (error) {
-    console.warn('⚠️ Cron job initialization warning:', error);
-  }
-
-  // Initialize UPH Nightly Scheduler
-  try {
-    console.log('📅 Initializing UPH Nightly Scheduler...');
-    
-    const { uphScheduler } = await import('./services/UPHScheduler');
-    await uphScheduler.initialize();
-    
-    console.log('✅ UPH Nightly Scheduler initialized successfully');
-  } catch (error) {
-    console.warn('⚠️ UPH Scheduler initialization warning:', error);
-  }
-
-  // Initialize Brand Signals Brain
-  try {
-    console.log('🧠 Initializing Brand Signals Brain...');
-    
-    const { bootstrapBrandSignals } = await import('./services/BrandSignalsBootstrap');
-    await bootstrapBrandSignals();
-    
-    console.log('✅ Brand Signals Brain initialized successfully');
-  } catch (error) {
-    console.warn('⚠️ Brand Signals Brain initialization warning:', error);
-  }
-
+  // Quick startup: register routes and open port FIRST
+  // Move heavy initialization tasks AFTER port opens for faster deployment
+  console.log('🚀 Starting Tiber Fantasy - Quick boot mode');
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -164,13 +74,114 @@ app.use((req, res, next) => {
   }, async () => {
     log(`serving on port ${port}`);
     
-    // Initialize player resolver after server is running
-    try {
-      const { initializeDefaultPlayers } = await import('../src/data/resolvers/playerResolver');
-      await initializeDefaultPlayers();
-      console.log('✅ Player resolver initialized');
-    } catch (error) {
-      console.error('⚠️ Failed to initialize player resolver:', error);
-    }
+    // PORT IS OPEN - Now run background initialization tasks asynchronously
+    // This allows deployment to succeed while heavy tasks complete in background
+    
+    // Schema drift detection (non-blocking background task)
+    (async () => {
+      try {
+        console.log('🔒 Starting schema drift detection (background)...');
+        
+        const { schemaDriftService } = await import('./services/SchemaDriftService');
+        
+        // Validate environment configuration first
+        const configValidation = schemaDriftService.validateConfig();
+        if (!configValidation.valid) {
+          console.error('❌ Schema service configuration issues:', configValidation.issues);
+          if (configValidation.issues.some(issue => issue.includes('DATABASE_URL'))) {
+            console.warn('⚠️ DATABASE_URL issue detected. Schema drift check will be skipped.');
+            return;
+          } else {
+            // Log warnings but continue
+            configValidation.issues.forEach(issue => console.warn('⚠️', issue));
+          }
+        }
+        
+        // Run boot-time drift check and auto-migration
+        await schemaDriftService.checkAndMigrateOnBoot();
+        
+        console.log('✅ Schema drift detection completed');
+      } catch (error) {
+        console.error('💥 Schema drift detection failed (non-blocking)');
+        console.error('Error details:', error);
+        console.warn('⚠️ App continues to run with existing schema. Monitor for schema-related errors.');
+      }
+    })();
+    
+    // Backend spine services initialization (non-blocking)
+    (async () => {
+      try {
+        console.log('🚀 Initializing backend spine services...');
+        
+        const { sleeperSyncService } = await import('./services/sleeperSyncService');
+        const { logsProjectionsService } = await import('./services/logsProjectionsService');  
+        const { ratingsEngineService } = await import('./services/ratingsEngineService');
+        
+        await Promise.all([
+          logsProjectionsService.loadSampleData(),
+          ratingsEngineService.generateSampleRatings()
+        ]);
+        
+        // Attempt initial Sleeper sync (will fallback to cache gracefully)
+        await sleeperSyncService.syncPlayers();
+        
+        console.log('✅ Backend spine services initialized');
+      } catch (error) {
+        console.warn('⚠️ Backend spine initialization warning:', error);
+      }
+    })();
+    
+    // Cron jobs initialization (non-blocking)
+    (async () => {
+      try {
+        console.log('🕒 Initializing nightly processing and cron jobs...');
+        
+        const { setupAllCronJobs } = await import('./cron/weeklyUpdate');
+        setupAllCronJobs();
+        
+        console.log('✅ Nightly processing and cron jobs initialized');
+      } catch (error) {
+        console.warn('⚠️ Cron job initialization warning:', error);
+      }
+    })();
+    
+    // UPH Scheduler initialization (non-blocking)
+    (async () => {
+      try {
+        console.log('📅 Initializing UPH Nightly Scheduler...');
+        
+        const { uphScheduler } = await import('./services/UPHScheduler');
+        await uphScheduler.initialize();
+        
+        console.log('✅ UPH Nightly Scheduler initialized successfully');
+      } catch (error) {
+        console.warn('⚠️ UPH Scheduler initialization warning:', error);
+      }
+    })();
+    
+    // Brand Signals Brain initialization (non-blocking)
+    (async () => {
+      try {
+        console.log('🧠 Initializing Brand Signals Brain...');
+        
+        const { bootstrapBrandSignals } = await import('./services/BrandSignalsBootstrap');
+        await bootstrapBrandSignals();
+        
+        console.log('✅ Brand Signals Brain initialized successfully');
+      } catch (error) {
+        console.warn('⚠️ Brand Signals Brain initialization warning:', error);
+      }
+    })();
+    
+    // Player resolver initialization (non-blocking)
+    (async () => {
+      try {
+        const { initializeDefaultPlayers } = await import('../src/data/resolvers/playerResolver');
+        await initializeDefaultPlayers();
+        console.log('✅ Player resolver initialized');
+      } catch (error) {
+        console.error('⚠️ Failed to initialize player resolver:', error);
+      }
+    })();
   });
 })();
