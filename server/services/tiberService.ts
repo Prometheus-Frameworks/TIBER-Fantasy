@@ -427,14 +427,84 @@ export class TiberService {
 
   // Batch calculation for all players
   async calculateAllScores(week: number, season: number = 2025): Promise<void> {
-    // NOTE: This method is currently broken due to table structure
-    // TODO: Fix by querying player_identity_map for nfl_data_py_id (NFLfastR IDs)
-    // For MVP, use /api/tiber/score/:nflfastrId endpoint with known NFLfastR IDs
-    throw new Error('Batch calculation not yet implemented for TIBER v1 MVP. Use /api/tiber/score/:nflfastrId with NFLfastR player IDs.');
+    console.log(`🧠 TIBER Batch Calculation - Week ${week}, ${season} Season\n`);
 
-    console.log(`\n📈 TIBER calculation complete!`);
-    console.log(`   ✅ Success: ${successCount}`);
-    console.log(`   ❌ Failed: ${failCount}`);
+    // Get all players who have NFLfastR data for this week
+    const activePlayers = await db
+      .selectDistinct({
+        nflfastrId: sql<string>`COALESCE(${bronzeNflfastrPlays.receiverPlayerId}, ${bronzeNflfastrPlays.rusherPlayerId})`,
+      })
+      .from(bronzeNflfastrPlays)
+      .where(
+        and(
+          eq(bronzeNflfastrPlays.season, season),
+          lte(bronzeNflfastrPlays.week, week),
+          sql`${bronzeNflfastrPlays.playType} IN ('pass', 'run')`
+        )
+      )
+      .execute();
+
+    console.log(`Found ${activePlayers.length} players with data in Week ${week}\n`);
+
+    let calculated = 0;
+    let errors = 0;
+
+    for (const player of activePlayers) {
+      if (!player.nflfastrId) continue;
+
+      try {
+        const score = await this.calculateTiberScore(player.nflfastrId, week, season);
+        
+        // Save to tiber_scores table (without playerId since we don't have mapping yet)
+        await db.insert(tiberScores).values({
+          playerId: null,
+          nflfastrId: player.nflfastrId,
+          week,
+          season,
+          tiberScore: score.tiberScore,
+          tier: score.tier,
+          firstDownScore: score.breakdown.firstDownScore,
+          epaScore: score.breakdown.epaScore,
+          usageScore: score.breakdown.usageScore,
+          tdScore: score.breakdown.tdScore,
+          teamScore: score.breakdown.teamScore,
+          firstDownRate: score.metrics.firstDownRate,
+          totalFirstDowns: score.metrics.totalFirstDowns,
+          epaPerPlay: score.metrics.epaPerPlay,
+          snapPercentAvg: score.metrics.snapPercentAvg,
+          snapPercentTrend: score.metrics.snapTrend,
+          teamOffenseRank: score.metrics.teamOffenseRank,
+        }).onConflictDoUpdate({
+          target: [tiberScores.nflfastrId, tiberScores.week, tiberScores.season],
+          set: {
+            tiberScore: score.tiberScore,
+            tier: score.tier,
+            firstDownScore: score.breakdown.firstDownScore,
+            epaScore: score.breakdown.epaScore,
+            usageScore: score.breakdown.usageScore,
+            tdScore: score.breakdown.tdScore,
+            teamScore: score.breakdown.teamScore,
+            firstDownRate: score.metrics.firstDownRate,
+            totalFirstDowns: score.metrics.totalFirstDowns,
+            epaPerPlay: score.metrics.epaPerPlay,
+            snapPercentAvg: score.metrics.snapPercentAvg,
+            snapPercentTrend: score.metrics.snapTrend,
+            teamOffenseRank: score.metrics.teamOffenseRank,
+            calculatedAt: new Date(),
+          },
+        });
+
+        calculated++;
+        console.log(`✅ ${player.nflfastrId}: TIBER ${score.tiberScore} (${score.tier})`);
+
+      } catch (error) {
+        errors++;
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.log(`❌ ${player.nflfastrId}: ${errorMessage}`);
+      }
+    }
+
+    console.log(`\n📊 Batch Complete: ${calculated} calculated, ${errors} errors\n`);
   }
 }
 

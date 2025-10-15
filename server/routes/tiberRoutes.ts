@@ -12,49 +12,82 @@ router.get('/score/:playerId', async (req, res) => {
     const nflfastrId = req.params.playerId; // NFLfastR ID like "00-0036322"
     const week = parseInt(req.query.week as string) || 6; // Current week
     const season = parseInt(req.query.season as string) || 2025;
+    const forceRecalc = req.query.force === 'true'; // Force recalculation
 
-    // Check cache first
-    const cached = await db
-      .select()
-      .from(tiberScores)
-      .where(
-        and(
-          eq(tiberScores.nflfastrId, nflfastrId),
-          eq(tiberScores.week, week),
-          eq(tiberScores.season, season)
+    // Check cache first (unless force recalc)
+    if (!forceRecalc) {
+      const cached = await db
+        .select()
+        .from(tiberScores)
+        .where(
+          and(
+            eq(tiberScores.nflfastrId, nflfastrId),
+            eq(tiberScores.week, week),
+            eq(tiberScores.season, season)
+          )
         )
-      )
-      .limit(1);
+        .limit(1);
 
-    if (cached.length > 0) {
-      return res.json({ success: true, data: cached[0], source: 'cache' });
+      if (cached.length > 0) {
+        return res.json({ success: true, data: cached[0], source: 'cache' });
+      }
     }
 
-    // Calculate if not cached
-    const score = await tiberService.calculateTiberScore(nflfastrId, week, season);
+    // Calculate if not cached or force recalc
+    const calculatedScore = await tiberService.calculateTiberScore(nflfastrId, week, season);
     
-    // Save to cache (TIBER v1.5 with First Downs)
+    // Save to cache (TIBER v1.5 with First Downs + Live Data)
     await db.insert(tiberScores).values({
+      playerId: null,
       nflfastrId,
       week,
       season,
-      tiberScore: score.tiberScore,
-      tier: score.tier,
-      firstDownScore: score.breakdown.firstDownScore,
-      epaScore: score.breakdown.epaScore,
-      usageScore: score.breakdown.usageScore,
-      tdScore: score.breakdown.tdScore,
-      teamScore: score.breakdown.teamScore,
-      firstDownRate: score.metrics.firstDownRate,
-      totalFirstDowns: score.metrics.totalFirstDowns,
-      epaPerPlay: score.metrics.epaPerPlay,
-      snapPercentAvg: score.metrics.snapPercentAvg,
-      snapPercentTrend: score.metrics.snapTrend,
-      tdRate: score.metrics.tdRate,
-      teamOffenseRank: score.metrics.teamOffenseRank,
-    }).onConflictDoNothing();
+      tiberScore: calculatedScore.tiberScore,
+      tier: calculatedScore.tier,
+      firstDownScore: calculatedScore.breakdown.firstDownScore,
+      epaScore: calculatedScore.breakdown.epaScore,
+      usageScore: calculatedScore.breakdown.usageScore,
+      tdScore: calculatedScore.breakdown.tdScore,
+      teamScore: calculatedScore.breakdown.teamScore,
+      firstDownRate: calculatedScore.metrics.firstDownRate,
+      totalFirstDowns: calculatedScore.metrics.totalFirstDowns,
+      epaPerPlay: calculatedScore.metrics.epaPerPlay,
+      snapPercentAvg: calculatedScore.metrics.snapPercentAvg,
+      snapPercentTrend: calculatedScore.metrics.snapTrend,
+      tdRate: calculatedScore.metrics.tdRate,
+      teamOffenseRank: calculatedScore.metrics.teamOffenseRank,
+    }).onConflictDoUpdate({
+      target: [tiberScores.nflfastrId, tiberScores.week, tiberScores.season],
+      set: {
+        tiberScore: calculatedScore.tiberScore,
+        tier: calculatedScore.tier,
+        firstDownScore: calculatedScore.breakdown.firstDownScore,
+        epaScore: calculatedScore.breakdown.epaScore,
+        usageScore: calculatedScore.breakdown.usageScore,
+        tdScore: calculatedScore.breakdown.tdScore,
+        teamScore: calculatedScore.breakdown.teamScore,
+        firstDownRate: calculatedScore.metrics.firstDownRate,
+        totalFirstDowns: calculatedScore.metrics.totalFirstDowns,
+        epaPerPlay: calculatedScore.metrics.epaPerPlay,
+        snapPercentAvg: calculatedScore.metrics.snapPercentAvg,
+        snapPercentTrend: calculatedScore.metrics.snapTrend,
+        tdRate: calculatedScore.metrics.tdRate,
+        teamOffenseRank: calculatedScore.metrics.teamOffenseRank,
+        calculatedAt: new Date(),
+      },
+    });
 
-    res.json({ success: true, data: score, source: 'calculated' });
+    // Return the freshly calculated score (not from DB)
+    res.json({ 
+      success: true, 
+      data: {
+        nflfastrId,
+        week,
+        season,
+        ...calculatedScore
+      }, 
+      source: forceRecalc ? 'recalculated' : 'calculated' 
+    });
   } catch (error) {
     console.error('[TIBER] Score calculation error:', error);
     res.status(500).json({ 
@@ -103,18 +136,18 @@ router.get('/week/:week', async (req, res) => {
   }
 });
 
-// Compare two players
+// Compare two players (using NFLfastR IDs)
 router.get('/compare', async (req, res) => {
   try {
-    const playerA = parseInt(req.query.playerA as string);
-    const playerB = parseInt(req.query.playerB as string);
+    const playerAId = req.query.playerA as string;  // NFLfastR ID
+    const playerBId = req.query.playerB as string;  // NFLfastR ID
     const week = parseInt(req.query.week as string) || 6;
     const season = parseInt(req.query.season as string) || 2025;
 
-    if (!playerA || !playerB) {
+    if (!playerAId || !playerBId) {
       return res.status(400).json({ 
         success: false, 
-        error: 'playerA and playerB query params required' 
+        error: 'playerA and playerB query params required (NFLfastR IDs)' 
       });
     }
 
@@ -122,14 +155,14 @@ router.get('/compare', async (req, res) => {
     const [scoresA, scoresB] = await Promise.all([
       db.select().from(tiberScores).where(
         and(
-          eq(tiberScores.playerId, playerA),
+          eq(tiberScores.nflfastrId, playerAId),
           eq(tiberScores.week, week),
           eq(tiberScores.season, season)
         )
       ).limit(1),
       db.select().from(tiberScores).where(
         and(
-          eq(tiberScores.playerId, playerB),
+          eq(tiberScores.nflfastrId, playerBId),
           eq(tiberScores.week, week),
           eq(tiberScores.season, season)
         )
@@ -142,8 +175,8 @@ router.get('/compare', async (req, res) => {
     // Calculate if not cached
     if (!scoreA || !scoreB) {
       const [calcA, calcB] = await Promise.all([
-        scoreA ? Promise.resolve(scoreA) : tiberService.calculateTiberScore(playerA, week, season).catch(() => null),
-        scoreB ? Promise.resolve(scoreB) : tiberService.calculateTiberScore(playerB, week, season).catch(() => null)
+        scoreA ? Promise.resolve(scoreA) : tiberService.calculateTiberScore(playerAId, week, season).catch(() => null),
+        scoreB ? Promise.resolve(scoreB) : tiberService.calculateTiberScore(playerBId, week, season).catch(() => null)
       ]);
 
       return res.json({
