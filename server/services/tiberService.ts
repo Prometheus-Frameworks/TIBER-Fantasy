@@ -135,8 +135,13 @@ export class TiberService {
     // Calculate TD rate (TDs per 100 plays for better readability)
     const tdRate = totalPlays > 0 ? (totalTds / totalPlays) * 100 : 0;
 
-    // Calculate First Down Rate (1D per touch - Ryan Heath's predictive metric)
-    const firstDownRate = totalPlays > 0 ? totalFirstDowns / totalPlays : 0;
+    // Calculate First Down Rate per Route Run (Ryan Heath's predictive metric: 0.750 correlation)
+    // Routes run approximation: targets * 3.5 (industry standard for WR/TE)
+    // Elite receivers: 15-17% first down per route run
+    const targets = Number(data.targets || 0);
+    const routesRun = targets * 3.5; // WRs run ~3.5x more routes than targets
+    const receivingFirstDowns = Number(data.receivingFirstDowns || 0);
+    const firstDownRate = routesRun > 0 ? receivingFirstDowns / routesRun : 0;
 
     // TODO: Add snap % data (need to join with snap count data)
     // For MVP, use placeholder values based on play volume
