@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { tiberService } from '../services/tiberService';
 import { db } from '../db';
-import { tiberScores } from '../../shared/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { tiberScores, playerIdentityMap } from '../../shared/schema';
+import { eq, and, desc, sql, ilike } from 'drizzle-orm';
 
 const router = Router();
 
@@ -224,6 +224,128 @@ router.post('/calculate/:week', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: 'Failed to start TIBER calculation' 
+    });
+  }
+});
+
+// Get TIBER score by player name
+router.get('/by-name/:name', async (req, res) => {
+  try {
+    const playerName = req.params.name;
+    const week = parseInt(req.query.week as string) || 6;
+    const season = parseInt(req.query.season as string) || 2025;
+
+    // Look up player by name in playerIdentityMap
+    const player = await db
+      .select({
+        nflfastrId: playerIdentityMap.nflDataPyId,
+        name: playerIdentityMap.fullName,
+        position: playerIdentityMap.position,
+      })
+      .from(playerIdentityMap)
+      .where(ilike(playerIdentityMap.fullName, playerName))
+      .limit(1);
+
+    if (!player || player.length === 0 || !player[0].nflfastrId) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Player not found or missing NFLfastR ID' 
+      });
+    }
+
+    const nflfastrId = player[0].nflfastrId;
+
+    // Check cache
+    const cached = await db
+      .select()
+      .from(tiberScores)
+      .where(
+        and(
+          eq(tiberScores.nflfastrId, nflfastrId),
+          eq(tiberScores.week, week),
+          eq(tiberScores.season, season)
+        )
+      )
+      .limit(1);
+
+    if (cached.length > 0) {
+      return res.json({ 
+        success: true, 
+        data: cached[0],
+        playerInfo: { name: player[0].name, position: player[0].position },
+        source: 'cache' 
+      });
+    }
+
+    // Calculate if not cached
+    try {
+      const score = await tiberService.calculateTiberScore(nflfastrId, week, season);
+      
+      // Save to cache
+      await db.insert(tiberScores).values({
+        playerId: null,
+        nflfastrId,
+        week,
+        season,
+        tiberScore: score.tiberScore,
+        tier: score.tier,
+        firstDownScore: score.breakdown.firstDownScore,
+        epaScore: score.breakdown.epaScore,
+        usageScore: score.breakdown.usageScore,
+        tdScore: score.breakdown.tdScore,
+        teamScore: score.breakdown.teamScore,
+        firstDownRate: score.metrics.firstDownRate,
+        totalFirstDowns: score.metrics.totalFirstDowns,
+        epaPerPlay: score.metrics.epaPerPlay,
+        snapPercentAvg: score.metrics.snapPercentAvg,
+        snapPercentTrend: score.metrics.snapTrend,
+        tdRate: score.metrics.tdRate,
+        teamOffenseRank: score.metrics.teamOffenseRank,
+      }).onConflictDoUpdate({
+        target: [tiberScores.nflfastrId, tiberScores.week, tiberScores.season],
+        set: {
+          tiberScore: score.tiberScore,
+          tier: score.tier,
+          firstDownScore: score.breakdown.firstDownScore,
+          epaScore: score.breakdown.epaScore,
+          usageScore: score.breakdown.usageScore,
+          tdScore: score.breakdown.tdScore,
+          teamScore: score.breakdown.teamScore,
+          firstDownRate: score.metrics.firstDownRate,
+          totalFirstDowns: score.metrics.totalFirstDowns,
+          epaPerPlay: score.metrics.epaPerPlay,
+          snapPercentAvg: score.metrics.snapPercentAvg,
+          snapPercentTrend: score.metrics.snapTrend,
+          tdRate: score.metrics.tdRate,
+          teamOffenseRank: score.metrics.teamOffenseRank,
+          calculatedAt: new Date(),
+        },
+      });
+
+      res.json({ 
+        success: true, 
+        data: {
+          nflfastrId,
+          week,
+          season,
+          ...score
+        },
+        playerInfo: { name: player[0].name, position: player[0].position },
+        source: 'calculated' 
+      });
+    } catch (calcError) {
+      // Player found but no stats available
+      return res.status(404).json({ 
+        success: false, 
+        error: 'No stats available for this player',
+        playerInfo: { name: player[0].name, position: player[0].position }
+      });
+    }
+  } catch (error) {
+    console.error('[TIBER] By-name lookup error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to look up player TIBER score' 
     });
   }
 });
