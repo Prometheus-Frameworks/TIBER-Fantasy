@@ -2108,6 +2108,10 @@ export const bronzeNflfastrPlays = pgTable("bronze_nflfastr_plays", {
   interception: boolean("interception").default(false),
   touchdown: boolean("touchdown").default(false),
   
+  firstDown: boolean("first_down").default(false),
+  firstDownRush: boolean("first_down_rush").default(false),
+  firstDownPass: boolean("first_down_pass").default(false),
+  
   rawData: jsonb("raw_data"),
   
   importedAt: timestamp("imported_at").defaultNow(),
@@ -2216,12 +2220,15 @@ export const tiberScores = pgTable("tiber_scores", {
   tier: tiberTierEnum("tier").notNull(),
   
   // Component Scores (for transparency/breakdown)
+  firstDownScore: integer("first_down_score").notNull(),
   epaScore: integer("epa_score").notNull(),
   usageScore: integer("usage_score").notNull(),
   tdScore: integer("td_score").notNull(),
   teamScore: integer("team_score").notNull(),
   
   // Supporting Metrics
+  firstDownRate: real("first_down_rate"),
+  totalFirstDowns: integer("total_first_downs"),
   epaPerPlay: real("epa_per_play"),
   snapPercentAvg: real("snap_percent_avg"),
   snapPercentTrend: tiberTrendEnum("snap_percent_trend"),

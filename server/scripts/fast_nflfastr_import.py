@@ -60,6 +60,9 @@ for _, row in df.iterrows():
         '1' if row.get('incomplete_pass') == 1.0 else '0',
         '1' if row.get('interception') == 1.0 else '0',
         '1' if row.get('touchdown') == 1.0 else '0',
+        '1' if pd.notna(row.get('first_down')) and row.get('first_down') == 1.0 else '0',
+        '1' if pd.notna(row.get('first_down_rush')) and row.get('first_down_rush') == 1.0 else '0',
+        '1' if pd.notna(row.get('first_down_pass')) and row.get('first_down_pass') == 1.0 else '0',
     ])
 
 buffer.seek(0)
@@ -75,7 +78,8 @@ cur.copy_expert("""
         receiver_player_id, receiver_player_name,
         rusher_player_id, rusher_player_name,
         epa, wpa, air_yards, yards_after_catch, yards_gained,
-        complete_pass, incomplete_pass, interception, touchdown
+        complete_pass, incomplete_pass, interception, touchdown,
+        first_down, first_down_rush, first_down_pass
     ) FROM STDIN WITH CSV NULL ''
 """, buffer)
 
