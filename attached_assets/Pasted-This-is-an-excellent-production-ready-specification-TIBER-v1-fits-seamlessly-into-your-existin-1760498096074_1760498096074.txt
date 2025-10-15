@@ -1,0 +1,472 @@
+This is an **excellent, production-ready specification**. TIBER v1 fits seamlessly into your existing Tiber Fantasy architecture and addresses real user pain points. Let me give you tactical feedback on each section.
+
+-----
+
+## ✅ What’s Strong About This Spec
+
+1. **Clear User Value:** You’re solving actual decisions (start/sit, waivers, trades) not just creating vanity metrics
+1. **Data Foundation Already Exists:** You have NFLfastR data, player identity mapping, and DvP/SOS context
+1. **Transparent Scoring:** The 0-100 scale with weighted components is scannable and defensible
+1. **Phased Rollout Ready:** You can launch v1 with basic scoring, then iterate
+
+-----
+
+## 🎯 Answers to Your Open Questions
+
+### **1. Weighting Accuracy (40/30/20/10)**
+
+**My Recommendation:** Start with your proposed weights, but make them **configurable**
+
+```typescript
+// server/config/tiberWeights.ts
+export const TIBER_WEIGHTS = {
+  epaEfficiency: 0.40,
+  usageVolatility: 0.30,
+  tdRegression: 0.20,
+  teamContext: 0.10
+};
+
+// Easy to A/B test different formulas later
+export const TIBER_WEIGHTS_CONSERVATIVE = {
+  epaEfficiency: 0.50,
+  usageVolatility: 0.35,
+  tdRegression: 0.10,
+  teamContext: 0.05
+};
+```
+
+**Rationale:**
+
+- EPA at 40% is correct—efficiency is the core signal
+- Usage volatility at 30% makes sense for sustainability
+- TD regression at 20% might be slightly high (TDs are noisy), but defensible
+- Team context at 10% is appropriate as a tie-breaker
+
+**Suggested Refinement:** Consider bumping TD regression down to 15% and usage volatility up to 35% for more stable signals.
+
+-----
+
+### **2. Additional Metrics: YPRR?**
+
+**Strong Yes** for WRs and TEs, **add these:**
+
+```typescript
+// Position-specific bonuses (add to base score)
+const POSITION_METRICS = {
+  WR: {
+    yprr: 0.05,        // Yards per route run (efficiency)
+    adot: 0.03,        // Average depth of target (role context)
+    catchRate: 0.02    // Reliability factor
+  },
+  RB: {
+    ypc: 0.05,         // Yards per carry
+    evasionRate: 0.03, // Tackle avoidance
+    redZoneShare: 0.02 // Goal-line role
+  },
+  TE: {
+    yprr: 0.05,
+    redZoneTargets: 0.03,
+    blockingSnaps: -0.02 // Negative modifier if primarily blocking
+  }
+};
+```
+
+**Implementation:** Add these as **bonus/penalty modifiers** (±5 points max) rather than core weights. This keeps the base formula universal while adding position nuance.
+
+-----
+
+### **3. Position-Specific Scoring?**
+
+**Hybrid Approach:** Universal base formula + position adjustments
+
+**Why:**
+
+- QBs have fundamentally different usage patterns (100% snap share, rushing EPA matters more)
+- RBs vs WRs have different volatility profiles
+- TEs have dual roles (receiving vs blocking)
+
+**Suggested Formula:**
+
+```
+TIBER Score = Base Score (0-100) + Position Adjustment (-10 to +10)
+```
+
+**Position Adjustments:**
+
+- **QB:** Increase weight on team context (40% → 50%), decrease TD regression weight
+- **RB:** Increase usage volatility weight (injury risk, RBBC trends)
+- **WR/TE:** Add YPRR bonus, increase EPA weight for route-running efficiency
+- **TE:** Penalty for blocking-heavy roles (low TIBER even with decent TDs)
+
+-----
+
+### **4. Historical Baseline: 2024 vs 2025?**
+
+**Use 2024 Data for Validation, 2025 for Live Scoring**
+
+**Implementation Plan:**
+
+```
+Phase 1 (Week 1-6): Build model using 2024 full season
+├─ Establish league average EPA/target (e.g., 0.18)
+├─ Establish TD rate norms by position (WR: 11%, RB: 9%, etc.)
+└─ Validate TIBER scores against known 2024 outcomes
+
+Phase 2 (Week 7+): Switch to 2025 rolling data
+├─ Use 2025 YTD stats for current scores
+├─ Keep 2024 league averages as baseline
+└─ Update averages at season midpoint (Week 9)
+```
+
+**Why:** 2024 gives you a complete dataset to calibrate thresholds. 2025 data is limited (only 6 weeks), so you need a stable baseline for comparison.
+
+-----
+
+### **5. Update Frequency?**
+
+**Recommendation: Nightly after data refresh**
+
+Your existing pipeline already imports NFLfastR data nightly, so:
+
+```typescript
+// server/jobs/nightly.ts (expand your existing job)
+export async function nightlyDataRefresh() {
+  await importNFLfastRData();      // Existing
+  await updateDvPRatings();        // Existing
+  await calculateTiberScores();    // NEW
+  await cachePlayerComparisons();  // NEW (optional optimization)
+}
+```
+
+**Caching Strategy:**
+
+- Calculate TIBER scores for all active players (500-800 players)
+- Store in `tiber_scores` table with `week` + `calculated_at` timestamp
+- API reads from cache unless explicitly requested to recalculate
+
+**Why Nightly:** Fantasy decisions happen after games, not during. Users check waivers Tuesday-Wednesday, so overnight updates are sufficient.
+
+-----
+
+### **6. Roster % Integration for Waivers?**
+
+**Strong Yes—Use as Multiplier for “Hidden Gem” Scoring**
+
+```typescript
+// Waiver Wire Score = TIBER Score × Availability Multiplier
+const availabilityMultiplier = (rosterPercent: number) => {
+  if (rosterPercent < 5) return 1.3;   // Undiscovered gems
+  if (rosterPercent < 20) return 1.15; // Low-owned breakouts
+  if (rosterPercent < 50) return 1.0;  // Standard adds
+  return 0.85; // High-owned, likely on teams already
+};
+
+// Example:
+// Player A: TIBER 75, Roster % 3% → Waiver Score: 97.5 (BUY NOW)
+// Player B: TIBER 75, Roster % 65% → Waiver Score: 63.75 (meh, rostered)
+```
+
+**UI Display:**
+
+```
+🔥 Waiver Wire Gems (Week 7)
+
+Jaylen Warren (RB, PIT)
+TIBER: 78  |  Rostered: 12%  |  💎 Value Score: 90
+"Rising usage + efficient, low ownership = ADD"
+
+Jakobi Meyers (WR, LV)
+TIBER: 71  |  Rostered: 48%  |  📊 Value Score: 71
+"Stable floor play, but likely owned in your league"
+```
+
+-----
+
+## 🏗️ Implementation Refinements
+
+### **Database Schema Addition**
+
+Add to your Drizzle schema:
+
+```typescript
+// shared/schema.ts
+export const tiberScores = pgTable('tiber_scores', {
+  id: serial('id').primaryKey(),
+  playerId: integer('player_id').references(() => players.id).notNull(),
+  week: integer('week').notNull(),
+  season: integer('season').notNull(),
+  
+  // Core TIBER Score
+  tiberScore: integer('tiber_score').notNull(), // 0-100
+  tier: text('tier').notNull(), // 'breakout' | 'stable' | 'regression'
+  
+  // Component Scores (for transparency)
+  epaScore: integer('epa_score'),           // Out of 40
+  usageScore: integer('usage_score'),       // Out of 30
+  tdRegressionScore: integer('td_score'),   // Out of 20
+  teamContextScore: integer('team_score'),  // Out of 10
+  
+  // Supporting Metrics
+  epaPerPlay: real('epa_per_play'),
+  snapPercentTrend: text('snap_trend'), // 'rising' | 'stable' | 'falling'
+  tdRate: real('td_rate'),
+  teamOffenseRank: integer('team_offense_rank'),
+  
+  // Metadata
+  calculatedAt: timestamp('calculated_at').defaultNow(),
+  
+}, (table) => ({
+  uniquePlayerWeek: unique().on(table.playerId, table.week, table.season),
+  playerIdIdx: index().on(table.playerId),
+  weekIdx: index().on(table.week, table.season),
+}));
+```
+
+-----
+
+### **Service Layer Architecture**
+
+```typescript
+// server/services/tiberService.ts
+export class TiberService {
+  
+  // Main calculation method
+  async calculateTiberScore(playerId: number, week: number): Promise<TiberScore> {
+    const playerData = await this.getPlayerData(playerId, week);
+    
+    const epaScore = this.calculateEpaScore(playerData);
+    const usageScore = this.calculateUsageScore(playerData);
+    const tdScore = this.calculateTdRegressionScore(playerData);
+    const teamScore = this.calculateTeamContextScore(playerData);
+    
+    const totalScore = epaScore + usageScore + tdScore + teamScore;
+    const tier = this.getTier(totalScore);
+    
+    return {
+      tiberScore: totalScore,
+      tier,
+      breakdown: { epaScore, usageScore, tdScore, teamScore },
+      metrics: this.extractMetrics(playerData)
+    };
+  }
+  
+  // Component calculations
+  private calculateEpaScore(data: PlayerData): number {
+    // EPA efficiency relative to position average
+    // Return 0-40 based on percentile
+  }
+  
+  private calculateUsageScore(data: PlayerData): number {
+    // Snap % volatility + trend direction
+    // Return 0-30 based on stability
+  }
+  
+  private calculateTdRegressionScore(data: PlayerData): number {
+    // TD rate vs league average + red zone usage
+    // Return 0-20 (higher = more sustainable TDs)
+  }
+  
+  private calculateTeamContextScore(data: PlayerData): number {
+    // Team offense EPA rank + role stability
+    // Return 0-10
+  }
+  
+  private getTier(score: number): 'breakout' | 'stable' | 'regression' {
+    if (score >= 80) return 'breakout';
+    if (score >= 50) return 'stable';
+    return 'regression';
+  }
+}
+```
+
+-----
+
+### **API Routes**
+
+```typescript
+// server/routes/tiberRoutes.ts
+import { Router } from 'express';
+import { TiberService } from '../services/tiberService';
+
+const router = Router();
+const tiberService = new TiberService();
+
+// Get single player TIBER score
+router.get('/score/:playerId', async (req, res) => {
+  const { playerId } = req.params;
+  const week = req.query.week || getCurrentWeek();
+  const score = await tiberService.calculateTiberScore(+playerId, +week);
+  res.json(score);
+});
+
+// Compare two players
+router.get('/compare', async (req, res) => {
+  const { playerA, playerB } = req.query;
+  const week = req.query.week || getCurrentWeek();
+  
+  const [scoreA, scoreB] = await Promise.all([
+    tiberService.calculateTiberScore(+playerA, +week),
+    tiberService.calculateTiberScore(+playerB, +week)
+  ]);
+  
+  res.json({
+    playerA: scoreA,
+    playerB: scoreB,
+    recommendation: scoreA.tiberScore > scoreB.tiberScore ? 'playerA' : 'playerB'
+  });
+});
+
+// Waiver wire candidates
+router.get('/waivers', async (req, res) => {
+  const { position, threshold = 70 } = req.query;
+  const week = getCurrentWeek();
+  
+  const candidates = await tiberService.getWaiverCandidates(
+    position as string,
+    +threshold,
+    week
+  );
+  
+  res.json(candidates);
+});
+
+export default router;
+```
+
+-----
+
+## 🎨 UI Component Recommendations
+
+### **1. TIBER Badge Component**
+
+```tsx
+// client/src/components/TiberBadge.tsx
+interface TiberBadgeProps {
+  score: number;
+  tier: 'breakout' | 'stable' | 'regression';
+  size?: 'sm' | 'md' | 'lg';
+}
+
+export function TiberBadge({ score, tier, size = 'md' }: TiberBadgeProps) {
+  const colors = {
+    breakout: 'bg-green-100 text-green-800 border-green-300',
+    stable: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+    regression: 'bg-red-100 text-red-800 border-red-300'
+  };
+  
+  const icons = {
+    breakout: '🚀',
+    stable: '📊',
+    regression: '⚠️'
+  };
+  
+  return (
+    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border ${colors[tier]}`}>
+      <span>{icons[tier]}</span>
+      <span className="font-semibold">TIBER {score}</span>
+    </div>
+  );
+}
+```
+
+### **2. Player Compare View**
+
+```tsx
+// Inside your existing Player Compare page
+<div className="grid grid-cols-2 gap-4">
+  <PlayerCard player={playerA}>
+    <TiberBadge score={playerA.tiberScore} tier={playerA.tier} />
+    <TiberBreakdown breakdown={playerA.breakdown} />
+  </PlayerCard>
+  
+  <PlayerCard player={playerB}>
+    <TiberBadge score={playerB.tiberScore} tier={playerB.tier} />
+    <TiberBreakdown breakdown={playerB.breakdown} />
+  </PlayerCard>
+</div>
+
+<div className="mt-4 p-4 bg-blue-50 rounded">
+  <h3>TIBER Recommendation</h3>
+  {playerA.tiberScore > playerB.tiberScore + 10 ? (
+    <p>✅ <strong>Start {playerA.name}</strong> - Higher efficiency and lower regression risk</p>
+  ) : (
+    <p>↔️ Close call - Check matchup data for tiebreaker</p>
+  )}
+</div>
+```
+
+-----
+
+## 🚀 Phased Rollout Plan
+
+### **Phase 1: MVP (Weeks 1-2)**
+
+- [ ] Build TiberService with basic calculation logic
+- [ ] Add tiber_scores table to database
+- [ ] Create `/api/tiber/score/:playerId` endpoint
+- [ ] Add TIBER badge to Rankings page
+- [ ] Test with known 2024 data (Puka Nacua breakout, DJ Moore regression)
+
+### **Phase 2: Enhancements (Weeks 3-4)**
+
+- [ ] Add `/api/tiber/compare` endpoint
+- [ ] Build Player Compare UI with TIBER breakdown
+- [ ] Add position-specific adjustments
+- [ ] Launch TIBER on Strategy tab
+
+### **Phase 3: Waiver Wire Intelligence (Weeks 5-6)**
+
+- [ ] Integrate Sleeper roster % data
+- [ ] Build `/api/tiber/waivers` endpoint
+- [ ] Create Waiver Wire Gems page with value scores
+- [ ] Add “Hidden Gem” alerts
+
+### **Phase 4: Trade Analyzer (Weeks 7-8)**
+
+- [ ] Add ROS (rest of season) trend analysis
+- [ ] Build trade confidence scoring
+- [ ] Launch on Moves tab
+
+-----
+
+## ⚠️ Potential Issues to Watch
+
+1. **Data Freshness:** NFLfastR data updates Tuesday mornings—make sure TIBER recalculates after
+1. **Small Sample Size Early Season:** Weeks 1-3 are noisy; consider weighting recent games more heavily
+1. **Injury Context:** Need to flag IR players or else TIBER shows stale scores
+1. **Bye Weeks:** Don’t penalize players for zero usage on bye weeks
+1. **Position Flex:** TEs sometimes line up as WRs—use NFLfastR position on play, not roster position
+
+-----
+
+## 🎯 Success Validation Plan
+
+**Test TIBER v1 Against Known 2024 Outcomes:**
+
+|Player        |2024 Result  |Expected TIBER (Week 3)         |Validation             |
+|--------------|-------------|--------------------------------|-----------------------|
+|Puka Nacua    |Breakout WR  |85+ (rising usage + elite EPA)  |Should flag as breakout|
+|Kyren Williams|Regression RB|<45 (TD rate 18%, unsustainable)|Should flag regression |
+|Jordan Addison|Stable WR    |55-75 (good but not elite)      |Should be neutral      |
+|Tank Dell     |Injury Bust  |N/A (need injury flag)          |Edge case              |
+
+**If 70%+ of these validate correctly, launch to users.**
+
+-----
+
+## ✅ Final Verdict
+
+This spec is **production-ready with minor refinements**:
+
+1. ✅ Use your proposed weights but make them configurable
+1. ✅ Add YPRR for WRs/TEs as position bonus
+1. ✅ Use hybrid scoring (universal base + position adjustments)
+1. ✅ Validate with 2024 data, score with 2025 live data
+1. ✅ Update nightly after data refresh
+1. ✅ Use roster % as waiver wire multiplier
+
+**Time to build:** 2-3 weeks for MVP, 6-8 weeks for full feature set.
+
+**My recommendation:** Start with Phase 1 (basic scoring + badges) and launch quickly. Users will love seeing a single number that makes decisions clearer.
+
+Want me to help you build the TiberService calculation logic or design the database queries?​​​​​​​​​​​​​​​​

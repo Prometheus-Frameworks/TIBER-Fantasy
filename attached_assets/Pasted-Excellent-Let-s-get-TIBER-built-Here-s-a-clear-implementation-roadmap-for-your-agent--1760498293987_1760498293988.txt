@@ -1,0 +1,623 @@
+Excellent! Let’s get TIBER built. Here’s a clear implementation roadmap for your agent:
+
+-----
+
+## 🎯 Phase 1 Implementation Checklist (Week 1 MVP)
+
+### **Step 1: Database Schema (15 min)**
+
+Add to `shared/schema.ts`:
+
+```typescript
+export const tiberScores = pgTable('tiber_scores', {
+  id: serial('id').primaryKey(),
+  playerId: integer('player_id').references(() => players.id).notNull(),
+  week: integer('week').notNull(),
+  season: integer('season').notNull(),
+  
+  // Core Score
+  tiberScore: integer('tiber_score').notNull(),
+  tier: text('tier', { enum: ['breakout', 'stable', 'regression'] }).notNull(),
+  
+  // Component Scores (for UI breakdown)
+  epaScore: integer('epa_score').notNull(),
+  usageScore: integer('usage_score').notNull(),
+  tdScore: integer('td_score').notNull(),
+  teamScore: integer('team_score').notNull(),
+  
+  // Supporting Data
+  epaPerPlay: real('epa_per_play'),
+  snapPercentAvg: real('snap_percent_avg'),
+  snapPercentTrend: text('snap_trend', { enum: ['rising', 'stable', 'falling'] }),
+  tdRate: real('td_rate'),
+  teamOffenseRank: integer('team_offense_rank'),
+  
+  calculatedAt: timestamp('calculated_at').defaultNow(),
+}, (table) => ({
+  uniquePlayerWeek: unique().on(table.playerId, table.week, table.season),
+  playerIdIdx: index('tiber_player_idx').on(table.playerId),
+  weekIdx: index('tiber_week_idx').on(table.week, table.season),
+}));
+```
+
+**Then run:**
+
+```bash
+npm run db:push
+```
+
+-----
+
+### **Step 2: TIBER Service Core (2-3 hours)**
+
+Create `server/services/tiberService.ts`:
+
+```typescript
+import { db } from '../db';
+import { tiberScores, bronzeNflfastrPlays, players } from '../../shared/schema';
+import { eq, and, gte, lte, sql } from 'drizzle-orm';
+
+interface TiberScore {
+  tiberScore: number;
+  tier: 'breakout' | 'stable' | 'regression';
+  breakdown: {
+    epaScore: number;
+    usageScore: number;
+    tdScore: number;
+    teamScore: number;
+  };
+  metrics: {
+    epaPerPlay: number;
+    snapPercentAvg: number;
+    snapTrend: string;
+    tdRate: number;
+    teamOffenseRank: number;
+  };
+}
+
+export class TiberService {
+  private readonly WEIGHTS = {
+    EPA: 40,
+    USAGE: 30,
+    TD: 20,
+    TEAM: 10,
+  };
+
+  async calculateTiberScore(playerId: number, week: number, season: number = 2025): Promise<TiberScore> {
+    // Get player stats from NFLfastR data
+    const playerStats = await this.getPlayerStats(playerId, week, season);
+    
+    if (!playerStats) {
+      throw new Error(`No stats found for player ${playerId} in week ${week}`);
+    }
+
+    // Calculate each component
+    const epaScore = this.calculateEpaScore(playerStats);
+    const usageScore = this.calculateUsageScore(playerStats);
+    const tdScore = this.calculateTdScore(playerStats);
+    const teamScore = this.calculateTeamScore(playerStats);
+
+    const totalScore = Math.round(epaScore + usageScore + tdScore + teamScore);
+    const tier = this.getTier(totalScore);
+
+    return {
+      tiberScore: totalScore,
+      tier,
+      breakdown: {
+        epaScore: Math.round(epaScore),
+        usageScore: Math.round(usageScore),
+        tdScore: Math.round(tdScore),
+        teamScore: Math.round(teamScore),
+      },
+      metrics: {
+        epaPerPlay: playerStats.epaPerPlay,
+        snapPercentAvg: playerStats.snapPercentAvg,
+        snapTrend: playerStats.snapTrend,
+        tdRate: playerStats.tdRate,
+        teamOffenseRank: playerStats.teamOffenseRank,
+      },
+    };
+  }
+
+  private async getPlayerStats(playerId: number, week: number, season: number) {
+    // Query NFLfastR data for this player through the current week
+    const stats = await db
+      .select({
+        // Receiving stats
+        targets: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverId} = ${playerId} THEN 1 END)`,
+        receptions: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverId} = ${playerId} AND ${bronzeNflfastrPlays.completePass} = 1 THEN 1 END)`,
+        receivingEpa: sql<number>`SUM(CASE WHEN ${bronzeNflfastrPlays.receiverId} = ${playerId} THEN ${bronzeNflfastrPlays.epa} END)`,
+        receivingTds: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverId} = ${playerId} AND ${bronzeNflfastrPlays.touchdown} = 1 THEN 1 END)`,
+        
+        // Rushing stats
+        rushes: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.rusherId} = ${playerId} THEN 1 END)`,
+        rushingEpa: sql<number>`SUM(CASE WHEN ${bronzeNflfastrPlays.rusherId} = ${playerId} THEN ${bronzeNflfastrPlays.epa} END)`,
+        rushingTds: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.rusherId} = ${playerId} AND ${bronzeNflfastrPlays.touchdown} = 1 THEN 1 END)`,
+        
+        // Team context
+        teamAbbr: sql<string>`MAX(${bronzeNflfastrPlays.possTeam})`,
+      })
+      .from(bronzeNflfastrPlays)
+      .where(
+        and(
+          eq(bronzeNflfastrPlays.season, season),
+          lte(bronzeNflfastrPlays.week, week),
+          sql`(${bronzeNflfastrPlays.receiverId} = ${playerId} OR ${bronzeNflfastrPlays.rusherId} = ${playerId})`
+        )
+      )
+      .execute();
+
+    if (!stats[0] || (stats[0].targets === 0 && stats[0].rushes === 0)) {
+      return null;
+    }
+
+    const data = stats[0];
+    const totalPlays = (data.targets || 0) + (data.rushes || 0);
+    const totalEpa = (data.receivingEpa || 0) + (data.rushingEpa || 0);
+    const totalTds = (data.receivingTds || 0) + (data.rushingTds || 0);
+
+    // Calculate EPA per play
+    const epaPerPlay = totalPlays > 0 ? totalEpa / totalPlays : 0;
+    
+    // Calculate TD rate
+    const tdRate = totalPlays > 0 ? (totalTds / totalPlays) * 100 : 0;
+
+    // TODO: Add snap % data (need to join with roster/snap count data)
+    // For MVP, use placeholder values
+    const snapPercentAvg = 65; // Placeholder
+    const snapTrend = 'stable'; // Placeholder
+    const teamOffenseRank = 16; // Placeholder
+
+    return {
+      epaPerPlay,
+      snapPercentAvg,
+      snapTrend,
+      tdRate,
+      teamOffenseRank,
+      totalPlays,
+      totalTds,
+    };
+  }
+
+  private calculateEpaScore(stats: any): number {
+    // League average EPA/play for skill positions is ~0.15
+    // Top tier is ~0.30+, bottom tier is negative
+    const { epaPerPlay } = stats;
+    
+    // Normalize to 0-40 scale
+    // 0.30+ EPA = 40 points (elite)
+    // 0.15 EPA = 20 points (average)
+    // 0.00 EPA = 10 points (below average)
+    // Negative EPA = 0-10 points (poor)
+    
+    if (epaPerPlay >= 0.30) return this.WEIGHTS.EPA;
+    if (epaPerPlay >= 0.20) return this.WEIGHTS.EPA * 0.85;
+    if (epaPerPlay >= 0.15) return this.WEIGHTS.EPA * 0.65;
+    if (epaPerPlay >= 0.10) return this.WEIGHTS.EPA * 0.50;
+    if (epaPerPlay >= 0.05) return this.WEIGHTS.EPA * 0.35;
+    if (epaPerPlay >= 0.00) return this.WEIGHTS.EPA * 0.25;
+    return this.WEIGHTS.EPA * 0.10; // Negative EPA
+  }
+
+  private calculateUsageScore(stats: any): number {
+    // Based on snap % and trend
+    const { snapPercentAvg, snapTrend } = stats;
+    
+    let baseScore = 0;
+    
+    // Snap % scoring
+    if (snapPercentAvg >= 80) baseScore = this.WEIGHTS.USAGE * 0.9;
+    else if (snapPercentAvg >= 70) baseScore = this.WEIGHTS.USAGE * 0.8;
+    else if (snapPercentAvg >= 60) baseScore = this.WEIGHTS.USAGE * 0.7;
+    else if (snapPercentAvg >= 50) baseScore = this.WEIGHTS.USAGE * 0.6;
+    else if (snapPercentAvg >= 40) baseScore = this.WEIGHTS.USAGE * 0.4;
+    else baseScore = this.WEIGHTS.USAGE * 0.2;
+    
+    // Trend modifier
+    if (snapTrend === 'rising') baseScore *= 1.1;
+    else if (snapTrend === 'falling') baseScore *= 0.9;
+    
+    return Math.min(baseScore, this.WEIGHTS.USAGE); // Cap at max
+  }
+
+  private calculateTdScore(stats: any): number {
+    // TD regression analysis
+    const { tdRate, totalPlays } = stats;
+    
+    // League average TD rate by position:
+    // WR: ~10-12%, RB: ~8-10%, TE: ~8-10%
+    const leagueAvgTdRate = 10;
+    
+    // If TD rate is way above average, regression risk is high
+    if (tdRate > leagueAvgTdRate * 1.5) {
+      // Unsustainable (18%+ TD rate)
+      return this.WEIGHTS.TD * 0.2;
+    } else if (tdRate > leagueAvgTdRate * 1.2) {
+      // Slightly high (12-18% TD rate)
+      return this.WEIGHTS.TD * 0.6;
+    } else if (tdRate >= leagueAvgTdRate * 0.8) {
+      // Sustainable range (8-12% TD rate)
+      return this.WEIGHTS.TD * 1.0;
+    } else {
+      // Below average (<8% TD rate) - room for positive regression
+      return this.WEIGHTS.TD * 0.7;
+    }
+  }
+
+  private calculateTeamScore(stats: any): number {
+    // Team offense context
+    const { teamOffenseRank } = stats;
+    
+    // Top 10 offense = 10 points
+    // 11-20 = 7 points
+    // 21-32 = 4 points
+    if (teamOffenseRank <= 10) return this.WEIGHTS.TEAM;
+    if (teamOffenseRank <= 20) return this.WEIGHTS.TEAM * 0.7;
+    return this.WEIGHTS.TEAM * 0.4;
+  }
+
+  private getTier(score: number): 'breakout' | 'stable' | 'regression' {
+    if (score >= 80) return 'breakout';
+    if (score >= 50) return 'stable';
+    return 'regression';
+  }
+
+  // Batch calculation for all players
+  async calculateAllScores(week: number, season: number = 2025): Promise<void> {
+    // Get all active players
+    const activePlayers = await db
+      .select({ id: players.id })
+      .from(players)
+      .where(eq(players.active, true))
+      .execute();
+
+    console.log(`Calculating TIBER scores for ${activePlayers.length} players...`);
+
+    for (const player of activePlayers) {
+      try {
+        const score = await this.calculateTiberScore(player.id, week, season);
+        
+        // Save to database
+        await db.insert(tiberScores).values({
+          playerId: player.id,
+          week,
+          season,
+          tiberScore: score.tiberScore,
+          tier: score.tier,
+          epaScore: score.breakdown.epaScore,
+          usageScore: score.breakdown.usageScore,
+          tdScore: score.breakdown.tdScore,
+          teamScore: score.breakdown.teamScore,
+          epaPerPlay: score.metrics.epaPerPlay,
+          snapPercentAvg: score.metrics.snapPercentAvg,
+          snapPercentTrend: score.metrics.snapTrend,
+          tdRate: score.metrics.tdRate,
+          teamOffenseRank: score.metrics.teamOffenseRank,
+        }).onConflictDoUpdate({
+          target: [tiberScores.playerId, tiberScores.week, tiberScores.season],
+          set: {
+            tiberScore: score.tiberScore,
+            tier: score.tier,
+            calculatedAt: new Date(),
+          },
+        });
+        
+        console.log(`✓ Player ${player.id}: TIBER ${score.tiberScore} (${score.tier})`);
+      } catch (error) {
+        console.log(`✗ Player ${player.id}: No data`);
+      }
+    }
+
+    console.log('TIBER calculation complete!');
+  }
+}
+
+export const tiberService = new TiberService();
+```
+
+-----
+
+### **Step 3: API Routes (30 min)**
+
+Create `server/routes/tiberRoutes.ts`:
+
+```typescript
+import { Router } from 'express';
+import { tiberService } from '../services/tiberService';
+import { db } from '../db';
+import { tiberScores } from '../../shared/schema';
+import { eq, and, desc } from 'drizzle-orm';
+
+const router = Router();
+
+// Get TIBER score for a single player
+router.get('/score/:playerId', async (req, res) => {
+  try {
+    const playerId = parseInt(req.params.playerId);
+    const week = parseInt(req.query.week as string) || 6; // Current week
+    const season = parseInt(req.query.season as string) || 2025;
+
+    // Check cache first
+    const cached = await db
+      .select()
+      .from(tiberScores)
+      .where(
+        and(
+          eq(tiberScores.playerId, playerId),
+          eq(tiberScores.week, week),
+          eq(tiberScores.season, season)
+        )
+      )
+      .limit(1);
+
+    if (cached.length > 0) {
+      return res.json(cached[0]);
+    }
+
+    // Calculate if not cached
+    const score = await tiberService.calculateTiberScore(playerId, week, season);
+    res.json(score);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to calculate TIBER score' });
+  }
+});
+
+// Get all TIBER scores for a week
+router.get('/week/:week', async (req, res) => {
+  try {
+    const week = parseInt(req.params.week);
+    const season = parseInt(req.query.season as string) || 2025;
+
+    const scores = await db
+      .select()
+      .from(tiberScores)
+      .where(
+        and(
+          eq(tiberScores.week, week),
+          eq(tiberScores.season, season)
+        )
+      )
+      .orderBy(desc(tiberScores.tiberScore));
+
+    res.json(scores);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch TIBER scores' });
+  }
+});
+
+// Trigger batch calculation
+router.post('/calculate/:week', async (req, res) => {
+  try {
+    const week = parseInt(req.params.week);
+    const season = parseInt(req.query.season as string) || 2025;
+
+    // Run in background
+    tiberService.calculateAllScores(week, season).catch(console.error);
+
+    res.json({ message: 'TIBER calculation started' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to start calculation' });
+  }
+});
+
+export default router;
+```
+
+**Add to `server/routes.ts`:**
+
+```typescript
+import tiberRoutes from './routes/tiberRoutes';
+
+// ... existing routes ...
+
+app.use('/api/tiber', tiberRoutes);
+```
+
+-----
+
+### **Step 4: Frontend Component (1 hour)**
+
+Create `client/src/components/TiberBadge.tsx`:
+
+```tsx
+interface TiberBadgeProps {
+  score: number;
+  tier: 'breakout' | 'stable' | 'regression';
+  size?: 'sm' | 'md' | 'lg';
+  showBreakdown?: boolean;
+  breakdown?: {
+    epaScore: number;
+    usageScore: number;
+    tdScore: number;
+    teamScore: number;
+  };
+}
+
+export function TiberBadge({ 
+  score, 
+  tier, 
+  size = 'md', 
+  showBreakdown = false,
+  breakdown 
+}: TiberBadgeProps) {
+  const config = {
+    breakout: {
+      bg: 'bg-green-100',
+      text: 'text-green-800',
+      border: 'border-green-300',
+      icon: '🚀',
+      label: 'Breakout',
+    },
+    stable: {
+      bg: 'bg-yellow-100',
+      text: 'text-yellow-800',
+      border: 'border-yellow-300',
+      icon: '📊',
+      label: 'Stable',
+    },
+    regression: {
+      bg: 'bg-red-100',
+      text: 'text-red-800',
+      border: 'border-red-300',
+      icon: '⚠️',
+      label: 'Risk',
+    },
+  };
+
+  const sizeClasses = {
+    sm: 'text-xs px-2 py-0.5',
+    md: 'text-sm px-3 py-1',
+    lg: 'text-base px-4 py-2',
+  };
+
+  const style = config[tier];
+
+  return (
+    <div className="inline-block">
+      <div
+        className={`inline-flex items-center gap-1.5 rounded-full border ${style.bg} ${style.text} ${style.border} ${sizeClasses[size]} font-semibold`}
+      >
+        <span>{style.icon}</span>
+        <span>TIBER {score}</span>
+      </div>
+      
+      {showBreakdown && breakdown && (
+        <div className="mt-2 text-xs space-y-1">
+          <div className="flex justify-between">
+            <span className="text-gray-600">EPA Efficiency:</span>
+            <span className="font-medium">{breakdown.epaScore}/40</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Usage:</span>
+            <span className="font-medium">{breakdown.usageScore}/30</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">TD Sustainability:</span>
+            <span className="font-medium">{breakdown.tdScore}/20</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Team Context:</span>
+            <span className="font-medium">{breakdown.teamScore}/10</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+-----
+
+### **Step 5: Add to Rankings Page (30 min)**
+
+Update your Rankings page to fetch and display TIBER scores:
+
+```tsx
+// client/src/pages/Rankings.tsx
+import { useQuery } from '@tanstack/react-query';
+import { TiberBadge } from '../components/TiberBadge';
+
+function Rankings() {
+  const { data: players } = useQuery({
+    queryKey: ['/api/rankings'],
+    queryFn: async () => {
+      const res = await fetch('/api/rankings');
+      return res.json();
+    },
+  });
+
+  const { data: tiberScores } = useQuery({
+    queryKey: ['/api/tiber/week/6'],
+    queryFn: async () => {
+      const res = await fetch('/api/tiber/week/6');
+      return res.json();
+    },
+  });
+
+  // Merge TIBER scores with player rankings
+  const playersWithTiber = players?.map(player => ({
+    ...player,
+    tiber: tiberScores?.find(t => t.playerId === player.id),
+  }));
+
+  return (
+    <div>
+      <h1>Power Rankings</h1>
+      <div className="space-y-2">
+        {playersWithTiber?.map((player, idx) => (
+          <div key={player.id} className="flex items-center justify-between p-4 bg-white rounded border">
+            <div className="flex items-center gap-4">
+              <span className="text-2xl font-bold text-gray-400">
+                {idx + 1}
+              </span>
+              <div>
+                <div className="font-semibold">{player.name}</div>
+                <div className="text-sm text-gray-600">
+                  {player.position} · {player.team}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <div className="text-2xl font-bold">{player.ovr}</div>
+                <div className="text-xs text-gray-500">OVR</div>
+              </div>
+              
+              {player.tiber && (
+                <TiberBadge 
+                  score={player.tiber.tiberScore} 
+                  tier={player.tiber.tier}
+                />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+-----
+
+## 🚀 Testing Steps
+
+1. **Run the calculation:**
+
+```bash
+# In your terminal
+curl -X POST http://localhost:5000/api/tiber/calculate/6
+```
+
+1. **Check a player’s score:**
+
+```bash
+curl http://localhost:5000/api/tiber/score/123?week=6
+```
+
+1. **View in UI:**
+   Navigate to your Rankings page and see TIBER badges appear!
+
+-----
+
+## 📊 Expected First Results
+
+For validation, check these players:
+
+- **Christian McCaffrey** → Should score 85+ (elite EPA + usage)
+- **CeeDee Lamb** → Should score 80+ (high targets + efficient)
+- **Anyone with 4+ TDs in 6 games** → Check if TD score flags regression risk
+
+-----
+
+## 🎯 What to Tackle Next
+
+Once MVP works:
+
+1. Add snap % data (currently placeholder)
+1. Build Player Compare with TIBER
+1. Create Waiver Wire Intelligence page
+1. Add position-specific adjustments
+
+**Let me know when Phase 1 is done and we’ll move to Phase 2!** 🚀​​​​​​​​​​​​​​​​

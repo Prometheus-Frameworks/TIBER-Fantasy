@@ -80,6 +80,20 @@ export const brandEnum = pgEnum("brand", [
   "consensus"
 ]);
 
+// TIBER tier enum
+export const tiberTierEnum = pgEnum("tiber_tier", [
+  "breakout",
+  "stable",
+  "regression"
+]);
+
+// TIBER trend enum
+export const tiberTrendEnum = pgEnum("tiber_trend", [
+  "rising",
+  "stable",
+  "falling"
+]);
+
 // ========================================
 // BRONZE LAYER - RAW DATA STORAGE
 // ========================================
@@ -2183,6 +2197,44 @@ export const defenseVsPositionStats = pgTable("defense_vs_position_stats", {
   seasonWeekIdx: index("dvp_season_week_idx").on(table.season, table.week),
   rankIdx: index("dvp_rank_idx").on(table.rankVsPosition),
   ratingIdx: index("dvp_rating_idx").on(table.dvpRating),
+}));
+
+// ========================================
+// TIBER - TACTICAL INDEX FOR BREAKOUT EFFICIENCY AND REGRESSION
+// ========================================
+
+// TIBER Scores - Player volatility and regression analysis
+export const tiberScores = pgTable("tiber_scores", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
+  week: integer("week").notNull(),
+  season: integer("season").notNull(),
+  
+  // Core Score (0-100)
+  tiberScore: integer("tiber_score").notNull(),
+  tier: tiberTierEnum("tier").notNull(),
+  
+  // Component Scores (for transparency/breakdown)
+  epaScore: integer("epa_score").notNull(),
+  usageScore: integer("usage_score").notNull(),
+  tdScore: integer("td_score").notNull(),
+  teamScore: integer("team_score").notNull(),
+  
+  // Supporting Metrics
+  epaPerPlay: real("epa_per_play"),
+  snapPercentAvg: real("snap_percent_avg"),
+  snapPercentTrend: tiberTrendEnum("snap_percent_trend"),
+  tdRate: real("td_rate"),
+  teamOffenseRank: integer("team_offense_rank"),
+  
+  // Metadata
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+}, (table) => ({
+  uniquePlayerWeek: unique("tiber_unique").on(table.playerId, table.week, table.season),
+  playerIdIdx: index("tiber_player_idx").on(table.playerId),
+  weekIdx: index("tiber_week_idx").on(table.week, table.season),
+  tierIdx: index("tiber_tier_idx").on(table.tier),
+  scoreIdx: index("tiber_score_idx").on(table.tiberScore),
 }));
 
 // ========================================
