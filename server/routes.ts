@@ -68,6 +68,7 @@ import { buildStartSitRouter } from './routes/startSitRoutes';
 import { startSitAgent } from './modules/startSit/startSitAgent';
 import rankingsV3Router from './routes/rankingsV3';
 import ovrRouter from './routes/ovrRoutes';
+import tiberRouter from './routes/tiberRoutes';
 import { registerEnhancedRankingsRoutes } from './routes/enhancedRankingsRoutes';
 import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
 import attributesRoutes from './routes/attributesRoutes';
@@ -2954,6 +2955,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // OVR (Overall Rating) System - Madden-style 1-99 player ratings
   app.use('/api/ovr', ovrRouter);
   console.log('📊 OVR (Madden-style 1-99) rating system mounted at /api/ovr/*');
+
+  // TIBER - Tactical Index for Breakout Efficiency and Regression
+  app.use('/api/tiber', tiberRouter);
+  console.log('🎯 TIBER v1 MVP mounted at /api/tiber/*');
 
   // Game Logs - Player game statistics aggregated from NFLfastR
   app.use('/api/game-logs', gameLogRoutes);
