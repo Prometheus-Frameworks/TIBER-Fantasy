@@ -52,9 +52,14 @@ function TiberDashboard() {
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center font-bold text-white">
                 T
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                TIBER FANTASY
-              </span>
+              <div className="flex flex-col">
+                <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  TIBER FANTASY
+                </span>
+                <span className="text-[9px] text-gray-500 font-medium tracking-wider -mt-0.5">
+                  TACTICAL INDEX FOR BREAKOUT EFFICIENCY & REGRESSION
+                </span>
+              </div>
             </Link>
 
             {/* Search */}

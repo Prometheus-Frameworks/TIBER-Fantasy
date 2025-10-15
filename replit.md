@@ -86,19 +86,26 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 **Enhancement:** Added visible TIBER acronym explanation across the platform to help users understand what TIBER means.
 
 **Changes Applied:**
-1. **TiberInsights Widget (Home Tab):**
+1. **Main Header (All Pages):**
+   - Added acronym subtitle directly below "TIBER FANTASY" logo
+   - Shows "TACTICAL INDEX FOR BREAKOUT EFFICIENCY & REGRESSION" in uppercase
+   - Displayed in very small (9px), gray text with wide letter spacing
+   - Visible on all pages in sticky header
+
+2. **TiberInsights Widget (Home Tab):**
    - Added subtitle under "🧠 TIBER Insights" heading
    - Shows "Tactical Index for Breakout Efficiency and Regression" in small gray text
 
-2. **Rankings Tab TIBER Filter:**
+3. **Rankings Tab TIBER Filter:**
    - Added explanation below "TIBER Filter:" label
    - Shows "Tactical Index for Breakout Efficiency & Regression" in tiny gray text
 
-3. **TIBER Badge Tooltips:**
+4. **TIBER Badge Tooltips:**
    - Updated all badge hover tooltips to show full acronym
    - Format: "TIBER: Tactical Index for Breakout Efficiency and Regression\nScore: X/100 (Tier)"
 
 **Files Modified:**
+- `client/src/pages/TiberDashboard.tsx` - Added acronym to main header
 - `client/src/components/TiberInsights.tsx` - Added acronym subtitle to header
 - `client/src/components/TiberBadge.tsx` - Updated tooltip text
 - `client/src/components/tabs/RankingsTab.tsx` - Added acronym to filter section
