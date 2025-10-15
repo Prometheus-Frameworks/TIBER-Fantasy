@@ -83,6 +83,48 @@ const firstDownRate = receivingFirstDowns / routesRun;
 - `/api/tiber/score/:nflfastrId?week=6` - Calculate/retrieve TIBER score
 - Returns: `tiberScore`, `tier`, `breakdown` (with firstDownScore), `metrics` (with firstDownRate)
 
+### TIBER v1.5 Soft Launch (October 15, 2025)
+**Achievement:** Successfully launched TIBER v1.5 to production with full UI integration and E2E testing verified.
+
+**Deployed Features:**
+1. **Rankings Page Integration:**
+   - TIBER badges displayed for top 150 players (limit increased from 100)
+   - Per-player fetch via `/api/tiber/by-name/:name?week=6` endpoint
+   - 1-hour cache (staleTime) for performance optimization
+   - Skeleton loading states during TIBER score fetches
+   
+2. **Tier Filtering System:**
+   - Filter buttons: All / Breakouts / Regression
+   - Progressive filtering UX: cards remain visible during load, hide only after tier mismatch
+   - Breakouts filter: shows players with tier='breakout' (score ≥70)
+   - Regression filter: shows players with tier='regression' (score <40)
+   - Stable players: tier='stable' (score 40-69)
+
+3. **TiberInsights Dashboard Widget:**
+   - Added to Home tab between stats and top performers
+   - Three categories: Top Breakouts, Regression Watch, Hidden Gems
+   - `/api/tiber/insights` endpoint powers the widget
+   - Real-time Week 6 data from NFLfastR
+
+4. **Batch Calculation:**
+   - Triggered POST `/api/tiber/calculate/6` for Week 6 background processing
+   - Processes 150-200 players with complete NFLfastR play-by-play data
+
+**E2E Test Results:**
+- ✅ Home tab TiberInsights widget visible and populated
+- ✅ Rankings page shows TIBER badges for 100+ players
+- ✅ Tier filtering verified: Breakouts show scores ≥70, Regression shows <40
+- ✅ Progressive loading UX confirmed (no blank screens)
+- ✅ Mobile responsive design tested on 375x667 viewport
+
+**Files Modified:**
+- `client/src/components/tabs/RankingsTab.tsx`: Increased limit to 150, added tier filtering with progressive UX
+- `client/src/components/tabs/HomeTab.tsx`: Integrated TiberInsights widget
+- `client/src/components/TiberInsights.tsx`: New dashboard widget component
+- `server/routes/tiberRoutes.ts`: Added `/api/tiber/insights` and `/api/tiber/by-name/:name` endpoints
+
+**Launch Status:** Production-ready, all features verified via E2E testing
+
 ### NFLfastR Data Pipeline Fix (October 2025)
 **Issue:** Player game logs showed incomplete/incorrect data due to database schema and import issues.
 **Root Cause:** NFLfastR play_id is NOT globally unique (4,499 unique IDs across 16,011 plays) - it's per-game unique.
