@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
+import TiberBadge from '@/components/TiberBadge';
 
 interface OVRPlayer {
   player_id: string;
@@ -12,11 +13,107 @@ interface OVRPlayer {
   confidence: number;
 }
 
+interface TiberScore {
+  tiberScore: number;
+  tier: string;
+}
+
+// Test mapping of player names to NFLfastR IDs for TIBER MVP
+const TEST_TIBER_PLAYERS: Record<string, string> = {
+  'Justin Jefferson': '00-0036322',
+  'Ja\'Marr Chase': '00-0036945',
+  'CeeDee Lamb': '00-0036389',
+};
+
 interface OVRResponse {
   success: boolean;
   data: {
     players: OVRPlayer[];
   };
+}
+
+// PlayerCard with TIBER score integration
+function PlayerCard({ player, rank, getTierColor }: { 
+  player: OVRPlayer; 
+  rank: number; 
+  getTierColor: (tier: string) => string;
+}) {
+  // Fetch TIBER score if this is a test player
+  const nflfastrId = TEST_TIBER_PLAYERS[player.name];
+  const { data: tiberData } = useQuery<{ success: boolean; data: TiberScore }>({
+    queryKey: ['/api/tiber/score', nflfastrId],
+    queryFn: async () => {
+      const res = await fetch(`/api/tiber/score/${nflfastrId}?week=6`);
+      return res.json();
+    },
+    enabled: !!nflfastrId,
+  });
+
+  const tiberScore = tiberData?.success ? tiberData.data.tiberScore : null;
+
+  return (
+    <div
+      className="bg-[#1e2330] border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors"
+      data-testid={`player-card-${rank}`}
+    >
+      <div className="flex items-start gap-4">
+        {/* Rank */}
+        <div className="flex-shrink-0 w-8 text-center">
+          <span className="text-2xl font-bold text-gray-500">{rank + 1}</span>
+        </div>
+
+        {/* Player Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-lg font-bold text-gray-100">{player.name}</h3>
+            <span className="text-sm text-gray-400">{player.position} • {player.team}</span>
+            {tiberScore !== null && (
+              <TiberBadge score={tiberScore} size="sm" showLabel={false} />
+            )}
+          </div>
+
+          {/* Stats Bar */}
+          <div className="mb-3">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex-1 bg-gray-800 rounded-full h-2 overflow-hidden">
+                <div
+                  className={`h-full bg-gradient-to-r ${getTierColor(player.tier)} transition-all`}
+                  style={{ width: `${player.ovr}%` }}
+                />
+              </div>
+              <span className={`text-lg font-bold px-2 py-1 rounded bg-gradient-to-r ${getTierColor(player.tier)}`}>
+                {player.ovr}
+              </span>
+            </div>
+            <div className="flex items-center gap-4 text-sm text-gray-400">
+              <span>Tier: <span className="text-gray-300 font-semibold">{player.tier}</span></span>
+              <span>Confidence: <span className="text-gray-300 font-mono">{(player.confidence * 100).toFixed(0)}%</span></span>
+              {tiberScore !== null && (
+                <span>TIBER: <span className="text-gray-300 font-mono">{tiberScore}</span></span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex-shrink-0 flex flex-col gap-2">
+          <Link 
+            href={`/players/${player.player_id}`}
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors text-center"
+            data-testid={`button-view-${rank}`}
+          >
+            View
+          </Link>
+          <button
+            className="px-4 py-2 bg-[#141824] hover:bg-[#1e2330] border border-gray-700 rounded-lg text-sm font-medium transition-colors text-center"
+            data-testid={`button-compare-${rank}`}
+          >
+            Compare
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function RankingsTab() {
@@ -120,62 +217,12 @@ export default function RankingsTab() {
       ) : (
         <div className="space-y-3">
           {players.map((player, idx) => (
-            <div
-              key={player.player_id}
-              className="bg-[#1e2330] border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors"
-              data-testid={`player-card-${idx}`}
-            >
-              <div className="flex items-start gap-4">
-                {/* Rank */}
-                <div className="flex-shrink-0 w-8 text-center">
-                  <span className="text-2xl font-bold text-gray-500">{idx + 1}</span>
-                </div>
-
-                {/* Player Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-bold text-gray-100">{player.name}</h3>
-                    <span className="text-sm text-gray-400">{player.position} • {player.team}</span>
-                  </div>
-
-                  {/* Stats Bar */}
-                  <div className="mb-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="flex-1 bg-gray-800 rounded-full h-2 overflow-hidden">
-                        <div
-                          className={`h-full bg-gradient-to-r ${getTierColor(player.tier)} transition-all`}
-                          style={{ width: `${player.ovr}%` }}
-                        />
-                      </div>
-                      <span className={`text-lg font-bold px-2 py-1 rounded bg-gradient-to-r ${getTierColor(player.tier)}`}>
-                        {player.ovr}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-400">
-                      <span>Tier: <span className="text-gray-300 font-semibold">{player.tier}</span></span>
-                      <span>Confidence: <span className="text-gray-300 font-mono">{(player.confidence * 100).toFixed(0)}%</span></span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex-shrink-0 flex flex-col gap-2">
-                  <Link 
-                    href={`/players/${player.player_id}`}
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors text-center"
-                    data-testid={`button-view-${idx}`}
-                  >
-                    View
-                  </Link>
-                  <button
-                    className="px-4 py-2 bg-[#141824] hover:bg-[#1e2330] border border-gray-700 rounded-lg text-sm font-medium transition-colors text-center"
-                    data-testid={`button-compare-${idx}`}
-                  >
-                    Compare
-                  </button>
-                </div>
-              </div>
-            </div>
+            <PlayerCard 
+              key={player.player_id} 
+              player={player} 
+              rank={idx} 
+              getTierColor={getTierColor} 
+            />
           ))}
         </div>
       )}
