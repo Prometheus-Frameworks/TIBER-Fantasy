@@ -86,6 +86,9 @@ export default function TiberInsights() {
           <h2 className="text-xl font-bold text-gray-100">
             🧠 TIBER Insights
           </h2>
+          <p className="text-xs text-gray-500 mt-0.5 font-medium tracking-wide">
+            Tactical Index for Breakout Efficiency and Regression
+          </p>
           <p className="text-sm text-gray-400 mt-1">
             Week {insights?.week} · {insights?.totalPlayers || 0} players analyzed
           </p>

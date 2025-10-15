@@ -82,6 +82,27 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - `server/routes/ovrRoutes.ts` - Response format and data mapping
 - `client/src/components/tabs/RankingsTab.tsx` - Query key and filtering logic
 
+### TIBER Acronym Display (October 15, 2025)
+**Enhancement:** Added visible TIBER acronym explanation across the platform to help users understand what TIBER means.
+
+**Changes Applied:**
+1. **TiberInsights Widget (Home Tab):**
+   - Added subtitle under "🧠 TIBER Insights" heading
+   - Shows "Tactical Index for Breakout Efficiency and Regression" in small gray text
+
+2. **Rankings Tab TIBER Filter:**
+   - Added explanation below "TIBER Filter:" label
+   - Shows "Tactical Index for Breakout Efficiency & Regression" in tiny gray text
+
+3. **TIBER Badge Tooltips:**
+   - Updated all badge hover tooltips to show full acronym
+   - Format: "TIBER: Tactical Index for Breakout Efficiency and Regression\nScore: X/100 (Tier)"
+
+**Files Modified:**
+- `client/src/components/TiberInsights.tsx` - Added acronym subtitle to header
+- `client/src/components/TiberBadge.tsx` - Updated tooltip text
+- `client/src/components/tabs/RankingsTab.tsx` - Added acronym to filter section
+
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
 - **Sleeper API**: Player projections, game logs, ADP data, league sync, and current roster data.

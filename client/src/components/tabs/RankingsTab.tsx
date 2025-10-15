@@ -228,7 +228,10 @@ export default function RankingsTab() {
 
       {/* TIBER Tier Filters */}
       <div className="flex gap-2 items-center">
-        <span className="text-sm text-gray-400 mr-2">TIBER Filter:</span>
+        <div className="mr-2">
+          <span className="text-sm text-gray-400">TIBER Filter:</span>
+          <p className="text-[10px] text-gray-600 -mt-0.5">Tactical Index for Breakout Efficiency & Regression</p>
+        </div>
         <button
           onClick={() => setTiberFilter('all')}
           className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${

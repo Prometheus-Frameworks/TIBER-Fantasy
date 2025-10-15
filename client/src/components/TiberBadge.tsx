@@ -59,7 +59,7 @@ export default function TiberBadge({ score, size = "md", showLabel = true, showB
     <div className={className}>
       <div 
         className={`inline-flex items-center gap-1.5 rounded-md border-2 ${color} ${bg} ${sizeClasses[size]} font-medium`}
-        title={`TIBER Score: ${score}/100 (${tier})`}
+        title={`TIBER: Tactical Index for Breakout Efficiency and Regression\nScore: ${score}/100 (${tier})`}
         data-testid={`tiber-badge-${score}`}
       >
         {showLabel && (
