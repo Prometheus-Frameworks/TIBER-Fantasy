@@ -25,13 +25,6 @@ interface TiberScore {
   };
 }
 
-// Test mapping of player names to NFLfastR IDs for TIBER MVP
-const TEST_TIBER_PLAYERS: Record<string, string> = {
-  'Justin Jefferson': '00-0036322',
-  'Ja\'Marr Chase': '00-0036945',
-  'CeeDee Lamb': '00-0036389',
-};
-
 interface OVRResponse {
   success: boolean;
   data: {
@@ -40,23 +33,35 @@ interface OVRResponse {
 }
 
 // PlayerCard with TIBER score integration
-function PlayerCard({ player, rank, getTierColor }: { 
+function PlayerCard({ player, rank, getTierColor, shouldShowTiber, tiberFilter }: { 
   player: OVRPlayer; 
   rank: number; 
   getTierColor: (tier: string) => string;
+  shouldShowTiber: boolean;
+  tiberFilter: 'all' | 'breakout' | 'regression';
 }) {
-  // Fetch TIBER score if this is a test player
-  const nflfastrId = TEST_TIBER_PLAYERS[player.name];
-  const { data: tiberData } = useQuery<{ success: boolean; data: TiberScore }>({
-    queryKey: ['/api/tiber/score', nflfastrId],
+  // Fetch TIBER score by player name (top 150 only)
+  const { data: tiberData, isLoading: tiberLoading } = useQuery<{ success: boolean; data: TiberScore }>({
+    queryKey: ['/api/tiber/by-name', player.name],
     queryFn: async () => {
-      const res = await fetch(`/api/tiber/score/${nflfastrId}?week=6`);
+      const res = await fetch(`/api/tiber/by-name/${encodeURIComponent(player.name)}?week=6`);
+      if (!res.ok) return null;
       return res.json();
     },
-    enabled: !!nflfastrId,
+    enabled: shouldShowTiber && !!player.name,
+    retry: false,
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour
   });
 
   const tiberScore = tiberData?.success ? tiberData.data.tiberScore : null;
+  const tiberTier = tiberData?.success ? tiberData.data.tier : null;
+
+  // Apply tier filter (only hide after TIBER loads and tier doesn't match)
+  const shouldHide = tiberFilter !== 'all' && shouldShowTiber && !tiberLoading && tiberTier && tiberTier !== tiberFilter;
+  
+  if (shouldHide) {
+    return null;
+  }
 
   return (
     <div
@@ -74,7 +79,10 @@ function PlayerCard({ player, rank, getTierColor }: {
           <div className="flex items-center gap-2 mb-2">
             <h3 className="text-lg font-bold text-gray-100">{player.name}</h3>
             <span className="text-sm text-gray-400">{player.position} • {player.team}</span>
-            {tiberScore !== null && (
+            {shouldShowTiber && tiberLoading && (
+              <div className="h-6 w-16 bg-gray-700 animate-pulse rounded" />
+            )}
+            {shouldShowTiber && tiberScore !== null && (
               <TiberBadge 
                 score={tiberScore} 
                 size="sm" 
@@ -132,12 +140,13 @@ function PlayerCard({ player, rank, getTierColor }: {
 export default function RankingsTab() {
   const [selectedPosition, setSelectedPosition] = useState('ALL');
   const [selectedFormat, setSelectedFormat] = useState<'dynasty' | 'redraft'>('redraft');
+  const [tiberFilter, setTiberFilter] = useState<'all' | 'breakout' | 'regression'>('all');
 
   // Build query URL with params
   const buildQueryUrl = () => {
     const params = new URLSearchParams();
     params.set('format', selectedFormat);
-    params.set('limit', '100');
+    params.set('limit', '150'); // Top 150 for TIBER coverage
     if (selectedPosition !== 'ALL') {
       params.set('position', selectedPosition);
     }
@@ -171,7 +180,7 @@ export default function RankingsTab() {
         <div>
           <h2 className="text-2xl font-bold">Power Rankings</h2>
           <p className="text-gray-400 mt-1">
-            Top {selectedPosition === 'ALL' ? '100' : selectedPosition} players • {selectedFormat === 'dynasty' ? 'Dynasty' : 'Redraft'} • Week 5
+            Top {selectedPosition === 'ALL' ? '150' : selectedPosition} players • {selectedFormat === 'dynasty' ? 'Dynasty' : 'Redraft'} • Week 6
           </p>
         </div>
       </div>
@@ -218,6 +227,44 @@ export default function RankingsTab() {
         </div>
       </div>
 
+      {/* TIBER Tier Filters */}
+      <div className="flex gap-2 items-center">
+        <span className="text-sm text-gray-400 mr-2">TIBER Filter:</span>
+        <button
+          onClick={() => setTiberFilter('all')}
+          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+            tiberFilter === 'all'
+              ? 'bg-blue-500 text-white'
+              : 'bg-[#1e2330] text-gray-400 hover:text-gray-300'
+          }`}
+          data-testid="button-filter-tiber-all"
+        >
+          📊 All Players
+        </button>
+        <button
+          onClick={() => setTiberFilter('breakout')}
+          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+            tiberFilter === 'breakout'
+              ? 'bg-green-500 text-white'
+              : 'bg-[#1e2330] text-gray-400 hover:text-gray-300'
+          }`}
+          data-testid="button-filter-tiber-breakout"
+        >
+          🚀 Breakouts Only
+        </button>
+        <button
+          onClick={() => setTiberFilter('regression')}
+          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+            tiberFilter === 'regression'
+              ? 'bg-red-500 text-white'
+              : 'bg-[#1e2330] text-gray-400 hover:text-gray-300'
+          }`}
+          data-testid="button-filter-tiber-regression"
+        >
+          ⚠️ Regression Risks
+        </button>
+      </div>
+
       {/* Player Cards */}
       {isLoading ? (
         <div className="space-y-3">
@@ -234,7 +281,9 @@ export default function RankingsTab() {
               key={player.player_id} 
               player={player} 
               rank={idx} 
-              getTierColor={getTierColor} 
+              getTierColor={getTierColor}
+              shouldShowTiber={idx < 150}
+              tiberFilter={tiberFilter}
             />
           ))}
         </div>

@@ -350,6 +350,74 @@ router.post('/calculate/:week', async (req, res) => {
   }
 });
 
+// Get insights: breakouts, regressions, hidden gems
+router.get('/insights', async (req, res) => {
+  try {
+    const week = parseInt(req.query.week as string) || 6;
+    const season = parseInt(req.query.season as string) || 2025;
+
+    // Get all TIBER scores for this week with player info
+    const allScores = await db
+      .select({
+        nflfastrId: tiberScores.nflfastrId,
+        name: playerIdentityMap.fullName,
+        team: playerIdentityMap.nflTeam,
+        position: playerIdentityMap.position,
+        tiberScore: tiberScores.tiberScore,
+        tier: tiberScores.tier,
+        firstDownRate: tiberScores.firstDownRate,
+      })
+      .from(tiberScores)
+      .innerJoin(
+        playerIdentityMap, 
+        eq(tiberScores.nflfastrId, playerIdentityMap.nflDataPyId)
+      )
+      .where(
+        and(
+          eq(tiberScores.week, week),
+          eq(tiberScores.season, season)
+        )
+      )
+      .orderBy(desc(tiberScores.tiberScore));
+
+    // Categorize players
+    const breakouts = allScores
+      .filter(s => s.tier === 'breakout')
+      .slice(0, 5);
+
+    const regressions = allScores
+      .filter(s => s.tier === 'regression')
+      .sort((a, b) => a.tiberScore - b.tiberScore) // Lowest scores first
+      .slice(0, 5);
+
+    // Hidden Gems: Breakout tier + skill positions (WR, RB, TE only)
+    const gems = allScores
+      .filter(s => 
+        s.tier === 'breakout' && 
+        s.position && ['WR', 'RB', 'TE'].includes(s.position)
+      )
+      .slice(0, 5);
+
+    res.json({
+      success: true,
+      week,
+      season,
+      breakouts,
+      regressions,
+      gems,
+      totalPlayers: allScores.length,
+      note: "Hidden Gems will include roster % filtering once Sleeper integration is complete"
+    });
+
+  } catch (error) {
+    console.error('[TIBER] Insights error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch insights' 
+    });
+  }
+});
+
 // Health check
 router.get('/health', (req, res) => {
   res.json({ 

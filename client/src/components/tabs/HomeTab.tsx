@@ -2,6 +2,7 @@ import { TrendingUp, Target, Shield, BarChart3, ArrowRight } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
+import TiberInsights from '@/components/TiberInsights';
 
 interface OVRResponse {
   success: boolean;
@@ -114,6 +115,9 @@ export default function HomeTab() {
           </div>
         ))}
       </div>
+
+      {/* TIBER Insights Widget */}
+      <TiberInsights />
 
       {/* Top Performers Section */}
       <div className="bg-[#141824] border border-gray-800 rounded-xl p-6">
