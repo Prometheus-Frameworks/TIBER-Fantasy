@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { tiberScores, bronzeNflfastrPlays, players } from '../../shared/schema';
+import { tiberScores, bronzeNflfastrPlays, players, playerIdentityMap } from '../../shared/schema';
 import { eq, and, or, lte, sql } from 'drizzle-orm';
 
 interface TiberScore {
@@ -44,6 +44,29 @@ export class TiberService {
     TEAM: 5,         // v1.5: Reduced from 10
   };
 
+  // Position-specific route run multipliers (TIBER v1.5)
+  private readonly ROUTE_MULTIPLIERS: Record<string, number> = {
+    'WR': 3.5,   // WRs run routes on ~78% of team pass plays
+    'TE': 2.8,   // TEs block more, run ~70% of pass plays  
+    'RB': 1.2,   // RBs mostly stay in to block, limited routes
+    'QB': 0,     // QBs don't run routes
+  };
+
+  /**
+   * Get position-specific route multiplier
+   */
+  private getRouteMultiplier(position: string): number {
+    return this.ROUTE_MULTIPLIERS[position.toUpperCase()] || 3.5; // Default to WR
+  }
+
+  /**
+   * Calculate routes run based on targets and position
+   */
+  private calculateRoutesRun(targets: number, position: string): number {
+    const multiplier = this.getRouteMultiplier(position);
+    return Math.round(targets * multiplier);
+  }
+
   async calculateTiberScore(nflfastrId: string, week: number, season: number = 2025): Promise<TiberScore> {
     // Get player stats from NFLfastR data
     const playerStats = await this.getPlayerStats(nflfastrId, week, season);
@@ -85,6 +108,17 @@ export class TiberService {
   }
 
   private async getPlayerStats(nflfastrId: string, week: number, season: number): Promise<PlayerStats | null> {
+    // Get player position from playerIdentityMap (TIBER v1.5: position-specific route multipliers)
+    const playerInfo = await db
+      .select({ 
+        position: playerIdentityMap.position,
+        name: playerIdentityMap.fullName 
+      })
+      .from(playerIdentityMap)
+      .where(eq(playerIdentityMap.nflDataPyId, nflfastrId))
+      .limit(1);
+    
+    const position = playerInfo[0]?.position || 'WR'; // Default to WR if not found
 
     // Query NFLfastR data for this player through the current week
     // Use parameterized queries to prevent SQL injection
@@ -136,13 +170,24 @@ export class TiberService {
     // Calculate TD rate (TDs per 100 plays for better readability)
     const tdRate = totalPlays > 0 ? (totalTds / totalPlays) * 100 : 0;
 
-    // Calculate First Down Rate per Route Run (Ryan Heath's predictive metric: 0.750 correlation)
-    // Routes run approximation: targets * 3.5 (industry standard for WR/TE)
-    // Elite receivers: 15-17% first down per route run
+    // Calculate First Down Rate (TIBER v1.5 - Position-specific calculation)
+    // WR/TE: First Downs per Route Run (Ryan Heath's metric: 0.750 correlation)
+    // RB: First Downs per Touch (rushing + receiving opportunities)
     const targets = Number(data.targets || 0);
-    const routesRun = targets * 3.5; // WRs run ~3.5x more routes than targets
+    const rushes = Number(data.rushes || 0);
     const receivingFirstDowns = Number(data.receivingFirstDowns || 0);
-    const firstDownRate = routesRun > 0 ? receivingFirstDowns / routesRun : 0;
+    const rushingFirstDowns = Number(data.rushingFirstDowns || 0);
+    
+    let firstDownRate: number;
+    if (position === 'RB') {
+      // RBs: Use first downs per touch (total opportunities)
+      const totalTouches = targets + rushes;
+      firstDownRate = totalTouches > 0 ? totalFirstDowns / totalTouches : 0;
+    } else {
+      // WR/TE: Use Heath's metric (first downs per route run)
+      const routesRun = this.calculateRoutesRun(targets, position);
+      firstDownRate = routesRun > 0 ? receivingFirstDowns / routesRun : 0;
+    }
 
     // Get live snap percentage data from play participation
     const snapData = await this.getPlayerSnapData(nflfastrId, week, season, teamAbbr);
