@@ -120,11 +120,9 @@ async function validateRankings() {
 }
 
 // Run validation
-if (require.main === module) {
-  validateRankings()
-    .then(() => process.exit(0))
-    .catch(err => {
-      console.error(err);
-      process.exit(1);
-    });
-}
+validateRankings()
+  .then(() => process.exit(0))
+  .catch(err => {
+    console.error(err);
+    process.exit(1);
+  });
