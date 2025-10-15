@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { tiberScores, bronzeNflfastrPlays, players } from '../../shared/schema';
-import { eq, and, lte, sql } from 'drizzle-orm';
+import { eq, and, or, lte, sql } from 'drizzle-orm';
 
 interface TiberScore {
   tiberScore: number;
@@ -77,18 +77,19 @@ export class TiberService {
   private async getPlayerStats(nflfastrId: string, week: number, season: number): Promise<PlayerStats | null> {
 
     // Query NFLfastR data for this player through the current week
+    // Use parameterized queries to prevent SQL injection
     const stats = await db
       .select({
         // Receiving stats
-        targets: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${sql.raw(`'${nflfastrId}'`)} THEN 1 END)`,
-        receptions: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${sql.raw(`'${nflfastrId}'`)} AND ${bronzeNflfastrPlays.completePass} = true THEN 1 END)`,
-        receivingEpa: sql<number>`COALESCE(SUM(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${sql.raw(`'${nflfastrId}'`)} THEN ${bronzeNflfastrPlays.epa} END), 0)`,
-        receivingTds: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${sql.raw(`'${nflfastrId}'`)} AND ${bronzeNflfastrPlays.touchdown} = true THEN 1 END)`,
+        targets: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${nflfastrId} THEN 1 END)`,
+        receptions: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${nflfastrId} AND ${bronzeNflfastrPlays.completePass} = true THEN 1 END)`,
+        receivingEpa: sql<number>`COALESCE(SUM(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${nflfastrId} THEN ${bronzeNflfastrPlays.epa} END), 0)`,
+        receivingTds: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${nflfastrId} AND ${bronzeNflfastrPlays.touchdown} = true THEN 1 END)`,
         
         // Rushing stats
-        rushes: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${sql.raw(`'${nflfastrId}'`)} THEN 1 END)`,
-        rushingEpa: sql<number>`COALESCE(SUM(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${sql.raw(`'${nflfastrId}'`)} THEN ${bronzeNflfastrPlays.epa} END), 0)`,
-        rushingTds: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${sql.raw(`'${nflfastrId}'`)} AND ${bronzeNflfastrPlays.touchdown} = true THEN 1 END)`,
+        rushes: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${nflfastrId} THEN 1 END)`,
+        rushingEpa: sql<number>`COALESCE(SUM(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${nflfastrId} THEN ${bronzeNflfastrPlays.epa} END), 0)`,
+        rushingTds: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${nflfastrId} AND ${bronzeNflfastrPlays.touchdown} = true THEN 1 END)`,
         
         // Team context
         teamAbbr: sql<string>`MAX(${bronzeNflfastrPlays.posteam})`,
@@ -98,7 +99,10 @@ export class TiberService {
         and(
           eq(bronzeNflfastrPlays.season, season),
           lte(bronzeNflfastrPlays.week, week),
-          sql`(${bronzeNflfastrPlays.receiverPlayerId} = ${sql.raw(`'${nflfastrId}'`)} OR ${bronzeNflfastrPlays.rusherPlayerId} = ${sql.raw(`'${nflfastrId}'`)})`
+          or(
+            eq(bronzeNflfastrPlays.receiverPlayerId, nflfastrId),
+            eq(bronzeNflfastrPlays.rusherPlayerId, nflfastrId)
+          )
         )
       )
       .execute();
@@ -224,59 +228,10 @@ export class TiberService {
 
   // Batch calculation for all players
   async calculateAllScores(week: number, season: number = 2025): Promise<void> {
-    // Get all active players with Sleeper IDs
-    const activePlayers = await db
-      .select({ id: players.id, name: players.name })
-      .from(players)
-      .where(sql`${players.sleeperId} IS NOT NULL`)
-      .limit(100) // Limit for MVP testing
-      .execute();
-
-    console.log(`📊 Calculating TIBER scores for ${activePlayers.length} players (Week ${week})...`);
-
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const player of activePlayers) {
-      try {
-        const score = await this.calculateTiberScore(player.id, week, season);
-        
-        // Save to database
-        await db.insert(tiberScores).values({
-          playerId: player.id,
-          week,
-          season,
-          tiberScore: score.tiberScore,
-          tier: score.tier,
-          epaScore: score.breakdown.epaScore,
-          usageScore: score.breakdown.usageScore,
-          tdScore: score.breakdown.tdScore,
-          teamScore: score.breakdown.teamScore,
-          epaPerPlay: score.metrics.epaPerPlay,
-          snapPercentAvg: score.metrics.snapPercentAvg,
-          snapPercentTrend: score.metrics.snapTrend,
-          tdRate: score.metrics.tdRate,
-          teamOffenseRank: score.metrics.teamOffenseRank,
-        }).onConflictDoUpdate({
-          target: [tiberScores.playerId, tiberScores.week, tiberScores.season],
-          set: {
-            tiberScore: score.tiberScore,
-            tier: score.tier,
-            epaScore: score.breakdown.epaScore,
-            usageScore: score.breakdown.usageScore,
-            tdScore: score.breakdown.tdScore,
-            teamScore: score.breakdown.teamScore,
-            calculatedAt: new Date(),
-          },
-        });
-        
-        console.log(`✅ ${player.name}: TIBER ${score.tiberScore} (${score.tier})`);
-        successCount++;
-      } catch (error) {
-        console.log(`❌ ${player.name}: No data - ${error instanceof Error ? error.message : 'Unknown error'}`);
-        failCount++;
-      }
-    }
+    // NOTE: This method is currently broken due to table structure
+    // TODO: Fix by querying player_identity_map for nfl_data_py_id (NFLfastR IDs)
+    // For MVP, use /api/tiber/score/:nflfastrId endpoint with known NFLfastR IDs
+    throw new Error('Batch calculation not yet implemented for TIBER v1 MVP. Use /api/tiber/score/:nflfastrId with NFLfastR player IDs.');
 
     console.log(`\n📈 TIBER calculation complete!`);
     console.log(`   ✅ Success: ${successCount}`);
