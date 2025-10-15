@@ -6,12 +6,15 @@ interface TiberScore {
   tiberScore: number;
   tier: 'breakout' | 'stable' | 'regression';
   breakdown: {
+    firstDownScore: number;
     epaScore: number;
     usageScore: number;
     tdScore: number;
     teamScore: number;
   };
   metrics: {
+    firstDownRate: number;
+    totalFirstDowns: number;
     epaPerPlay: number;
     snapPercentAvg: number;
     snapTrend: 'rising' | 'stable' | 'falling';
@@ -21,6 +24,8 @@ interface TiberScore {
 }
 
 interface PlayerStats {
+  firstDownRate: number;
+  totalFirstDowns: number;
   epaPerPlay: number;
   snapPercentAvg: number;
   snapTrend: 'rising' | 'stable' | 'falling';
@@ -32,10 +37,11 @@ interface PlayerStats {
 
 export class TiberService {
   private readonly WEIGHTS = {
-    EPA: 40,
-    USAGE: 30,
-    TD: 20,
-    TEAM: 10,
+    FIRST_DOWN: 35,  // v1.5: Most predictive metric (0.750 correlation)
+    EPA: 25,         // v1.5: Reduced from 40
+    USAGE: 25,       // v1.5: Reduced from 30
+    TD: 10,          // v1.5: Reduced from 20 (TDs are fluky)
+    TEAM: 5,         // v1.5: Reduced from 10
   };
 
   async calculateTiberScore(nflfastrId: string, week: number, season: number = 2025): Promise<TiberScore> {
@@ -46,25 +52,29 @@ export class TiberService {
       throw new Error(`No stats found for player ${nflfastrId} in week ${week}`);
     }
 
-    // Calculate each component
+    // Calculate each component (TIBER v1.5 weights: 35/25/25/10/5)
+    const firstDownScore = this.calculateFirstDownScore(playerStats);
     const epaScore = this.calculateEpaScore(playerStats);
     const usageScore = this.calculateUsageScore(playerStats);
     const tdScore = this.calculateTdScore(playerStats);
     const teamScore = this.calculateTeamScore(playerStats);
 
-    const totalScore = Math.round(epaScore + usageScore + tdScore + teamScore);
+    const totalScore = Math.round(firstDownScore + epaScore + usageScore + tdScore + teamScore);
     const tier = this.getTier(totalScore);
 
     return {
       tiberScore: totalScore,
       tier,
       breakdown: {
+        firstDownScore: Math.round(firstDownScore),
         epaScore: Math.round(epaScore),
         usageScore: Math.round(usageScore),
         tdScore: Math.round(tdScore),
         teamScore: Math.round(teamScore),
       },
       metrics: {
+        firstDownRate: playerStats.firstDownRate,
+        totalFirstDowns: playerStats.totalFirstDowns,
         epaPerPlay: playerStats.epaPerPlay,
         snapPercentAvg: playerStats.snapPercentAvg,
         snapTrend: playerStats.snapTrend,
@@ -85,11 +95,13 @@ export class TiberService {
         receptions: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${nflfastrId} AND ${bronzeNflfastrPlays.completePass} = true THEN 1 END)`,
         receivingEpa: sql<number>`COALESCE(SUM(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${nflfastrId} THEN ${bronzeNflfastrPlays.epa} END), 0)`,
         receivingTds: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${nflfastrId} AND ${bronzeNflfastrPlays.touchdown} = true THEN 1 END)`,
+        receivingFirstDowns: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${nflfastrId} AND ${bronzeNflfastrPlays.firstDownPass} = true THEN 1 END)`,
         
         // Rushing stats
         rushes: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${nflfastrId} THEN 1 END)`,
         rushingEpa: sql<number>`COALESCE(SUM(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${nflfastrId} THEN ${bronzeNflfastrPlays.epa} END), 0)`,
         rushingTds: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${nflfastrId} AND ${bronzeNflfastrPlays.touchdown} = true THEN 1 END)`,
+        rushingFirstDowns: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${nflfastrId} AND ${bronzeNflfastrPlays.firstDownRush} = true THEN 1 END)`,
         
         // Team context
         teamAbbr: sql<string>`MAX(${bronzeNflfastrPlays.posteam})`,
@@ -115,12 +127,16 @@ export class TiberService {
     const totalPlays = Number(data.targets || 0) + Number(data.rushes || 0);
     const totalEpa = Number(data.receivingEpa || 0) + Number(data.rushingEpa || 0);
     const totalTds = Number(data.receivingTds || 0) + Number(data.rushingTds || 0);
+    const totalFirstDowns = Number(data.receivingFirstDowns || 0) + Number(data.rushingFirstDowns || 0);
 
     // Calculate EPA per play
     const epaPerPlay = totalPlays > 0 ? totalEpa / totalPlays : 0;
     
     // Calculate TD rate (TDs per 100 plays for better readability)
     const tdRate = totalPlays > 0 ? (totalTds / totalPlays) * 100 : 0;
+
+    // Calculate First Down Rate (1D per touch - Ryan Heath's predictive metric)
+    const firstDownRate = totalPlays > 0 ? totalFirstDowns / totalPlays : 0;
 
     // TODO: Add snap % data (need to join with snap count data)
     // For MVP, use placeholder values based on play volume
@@ -129,6 +145,8 @@ export class TiberService {
     const teamOffenseRank = 16; // Placeholder
 
     return {
+      firstDownRate,
+      totalFirstDowns,
       epaPerPlay,
       snapPercentAvg,
       snapTrend,
@@ -139,19 +157,43 @@ export class TiberService {
     };
   }
 
+  private calculateFirstDownScore(stats: PlayerStats): number {
+    // First Down Rate is the most predictive metric (0.750 correlation with future FPG)
+    // Elite WRs: 15-17% 1D/RR (Puka Nacua, Rashee Rice)
+    // Average: 10-12%
+    // Below average: <8%
+    const { firstDownRate } = stats;
+    
+    // Normalize to 0-35 scale
+    // 17%+ = 35 points (elite chain-mover, QB trust)
+    // 15% = 32 points (very good)
+    // 12% = 25 points (above average)
+    // 10% = 21 points (average)
+    // 8% = 14 points (below average)
+    // <6% = 7 points (poor - TD dependent, low quality touches)
+    
+    if (firstDownRate >= 0.17) return this.WEIGHTS.FIRST_DOWN;
+    if (firstDownRate >= 0.15) return this.WEIGHTS.FIRST_DOWN * 0.91;
+    if (firstDownRate >= 0.12) return this.WEIGHTS.FIRST_DOWN * 0.71;
+    if (firstDownRate >= 0.10) return this.WEIGHTS.FIRST_DOWN * 0.60;
+    if (firstDownRate >= 0.08) return this.WEIGHTS.FIRST_DOWN * 0.40;
+    if (firstDownRate >= 0.06) return this.WEIGHTS.FIRST_DOWN * 0.30;
+    return this.WEIGHTS.FIRST_DOWN * 0.20; // Very poor
+  }
+
   private calculateEpaScore(stats: PlayerStats): number {
     // League average EPA/play for skill positions is ~0.15
     // Top tier is ~0.30+, bottom tier is negative
     const { epaPerPlay } = stats;
     
-    // Normalize to 0-40 scale
-    // 0.30+ EPA = 40 points (elite)
-    // 0.20 EPA = 34 points (very good)
-    // 0.15 EPA = 26 points (average)
-    // 0.10 EPA = 20 points (below average)
-    // 0.05 EPA = 14 points (poor)
-    // 0.00 EPA = 10 points (bad)
-    // Negative EPA = 4 points (terrible)
+    // Normalize to 0-25 scale (reduced from 40 in v1.5)
+    // 0.30+ EPA = 25 points (elite)
+    // 0.20 EPA = 21 points (very good)
+    // 0.15 EPA = 16 points (average)
+    // 0.10 EPA = 13 points (below average)
+    // 0.05 EPA = 9 points (poor)
+    // 0.00 EPA = 6 points (bad)
+    // Negative EPA = 3 points (terrible)
     
     if (epaPerPlay >= 0.30) return this.WEIGHTS.EPA;
     if (epaPerPlay >= 0.20) return this.WEIGHTS.EPA * 0.85;

@@ -33,17 +33,20 @@ router.get('/score/:playerId', async (req, res) => {
     // Calculate if not cached
     const score = await tiberService.calculateTiberScore(nflfastrId, week, season);
     
-    // Save to cache
+    // Save to cache (TIBER v1.5 with First Downs)
     await db.insert(tiberScores).values({
       nflfastrId,
       week,
       season,
       tiberScore: score.tiberScore,
       tier: score.tier,
+      firstDownScore: score.breakdown.firstDownScore,
       epaScore: score.breakdown.epaScore,
       usageScore: score.breakdown.usageScore,
       tdScore: score.breakdown.tdScore,
       teamScore: score.breakdown.teamScore,
+      firstDownRate: score.metrics.firstDownRate,
+      totalFirstDowns: score.metrics.totalFirstDowns,
       epaPerPlay: score.metrics.epaPerPlay,
       snapPercentAvg: score.metrics.snapPercentAvg,
       snapPercentTrend: score.metrics.snapTrend,
