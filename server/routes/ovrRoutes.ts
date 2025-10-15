@@ -66,14 +66,30 @@ router.get('/', async (req, res) => {
 
     console.log(`✅ Found ${fantasyPlayers.length} fantasy-relevant players`);
 
-    // Calculate OVR for each player
-    const playersWithOVR: PlayerWithOVR[] = fantasyPlayers.map((player) => {
+    // Calculate OVR for each player and format response
+    const playersWithOVR = fantasyPlayers.map((player) => {
       // Use existing avgPoints as base, or calculate simple OVR
       const ovr = player.avgPoints || calculateSimpleOVR(player);
+      const ovrRounded = Math.round(ovr);
+      
+      // Calculate tier based on OVR
+      let tier = 'C';
+      if (ovrRounded >= 90) tier = 'Elite';
+      else if (ovrRounded >= 80) tier = 'Great';
+      else if (ovrRounded >= 70) tier = 'Good';
+      else if (ovrRounded >= 60) tier = 'B';
+      
+      // Calculate confidence (higher for players with more data)
+      const confidence = player.avgPoints ? 0.85 : 0.65;
       
       return {
-        ...player,
-        ovr: Math.round(ovr),
+        player_id: String(player.id),
+        name: player.name,
+        position: player.position,
+        team: player.team,
+        ovr: ovrRounded,
+        tier,
+        confidence
       };
     });
 
@@ -85,7 +101,24 @@ router.get('/', async (req, res) => {
       });
     }
 
-    res.json(playersWithOVR);
+    // Return in expected format
+    res.json({
+      success: true,
+      data: {
+        format: 'redraft',
+        position: 'ALL',
+        total_players: playersWithOVR.length,
+        showing: playersWithOVR.length,
+        offset: 0,
+        limit: 150,
+        players: playersWithOVR
+      },
+      meta: {
+        source: 'database',
+        cached: false
+      },
+      generated_at: new Date().toISOString()
+    });
 
   } catch (error) {
     console.error('❌ Error fetching rankings:', error);

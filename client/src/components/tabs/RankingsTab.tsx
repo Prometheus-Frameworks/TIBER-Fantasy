@@ -142,19 +142,14 @@ export default function RankingsTab() {
   const [selectedFormat, setSelectedFormat] = useState<'dynasty' | 'redraft'>('redraft');
   const [tiberFilter, setTiberFilter] = useState<'all' | 'breakout' | 'regression'>('all');
 
-  // Build query URL with params
-  const buildQueryUrl = () => {
-    const params = new URLSearchParams();
-    params.set('format', selectedFormat);
-    params.set('limit', '150'); // Top 150 for TIBER coverage
-    if (selectedPosition !== 'ALL') {
-      params.set('position', selectedPosition);
-    }
-    return `/api/ovr?${params.toString()}`;
-  };
-
+  // Query with format in key for proper cache segregation
   const { data: ovrData, isLoading } = useQuery<OVRResponse>({
-    queryKey: [buildQueryUrl()],
+    queryKey: ['/api/ovr', selectedFormat],
+    queryFn: async () => {
+      const res = await fetch(`/api/ovr?format=${selectedFormat}&limit=150`);
+      if (!res.ok) throw new Error('Failed to fetch rankings');
+      return res.json();
+    }
   });
 
   const getTierColor = (tier: string) => {
@@ -171,7 +166,11 @@ export default function RankingsTab() {
     return colors[tier] || colors.C;
   };
 
-  const players = ovrData?.data?.players || [];
+  // Get all players and apply client-side position filtering
+  const allPlayers = ovrData?.data?.players || [];
+  const players = selectedPosition === 'ALL' 
+    ? allPlayers 
+    : allPlayers.filter(p => p.position === selectedPosition);
 
   return (
     <div className="space-y-6">
