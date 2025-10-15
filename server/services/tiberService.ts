@@ -38,12 +38,12 @@ export class TiberService {
     TEAM: 10,
   };
 
-  async calculateTiberScore(playerId: number, week: number, season: number = 2025): Promise<TiberScore> {
+  async calculateTiberScore(nflfastrId: string, week: number, season: number = 2025): Promise<TiberScore> {
     // Get player stats from NFLfastR data
-    const playerStats = await this.getPlayerStats(playerId, week, season);
+    const playerStats = await this.getPlayerStats(nflfastrId, week, season);
     
     if (!playerStats) {
-      throw new Error(`No stats found for player ${playerId} in week ${week}`);
+      throw new Error(`No stats found for player ${nflfastrId} in week ${week}`);
     }
 
     // Calculate each component
@@ -74,36 +74,21 @@ export class TiberService {
     };
   }
 
-  private async getPlayerStats(playerId: number, week: number, season: number): Promise<PlayerStats | null> {
-    // First, get the player's NFLfastR ID from player_identity_map
-    const playerIdentity = await db
-      .select({
-        nflfastrId: sql<string>`external_ids->>'nfl_data_py'`,
-      })
-      .from(sql`player_identity_map`)
-      .where(sql`canonical_id = (SELECT sleeper_id FROM players WHERE id = ${playerId})`)
-      .limit(1);
-
-    if (!playerIdentity || !playerIdentity[0]?.nflfastrId) {
-      console.log(`No NFLfastR ID found for player ${playerId}`);
-      return null;
-    }
-
-    const nflfastrId = playerIdentity[0].nflfastrId;
+  private async getPlayerStats(nflfastrId: string, week: number, season: number): Promise<PlayerStats | null> {
 
     // Query NFLfastR data for this player through the current week
     const stats = await db
       .select({
         // Receiving stats
-        targets: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${nflfastrId} THEN 1 END)`,
-        receptions: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${nflfastrId} AND ${bronzeNflfastrPlays.completePass} = true THEN 1 END)`,
-        receivingEpa: sql<number>`COALESCE(SUM(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${nflfastrId} THEN ${bronzeNflfastrPlays.epa} END), 0)`,
-        receivingTds: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${nflfastrId} AND ${bronzeNflfastrPlays.touchdown} = true THEN 1 END)`,
+        targets: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${sql.raw(`'${nflfastrId}'`)} THEN 1 END)`,
+        receptions: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${sql.raw(`'${nflfastrId}'`)} AND ${bronzeNflfastrPlays.completePass} = true THEN 1 END)`,
+        receivingEpa: sql<number>`COALESCE(SUM(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${sql.raw(`'${nflfastrId}'`)} THEN ${bronzeNflfastrPlays.epa} END), 0)`,
+        receivingTds: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.receiverPlayerId} = ${sql.raw(`'${nflfastrId}'`)} AND ${bronzeNflfastrPlays.touchdown} = true THEN 1 END)`,
         
         // Rushing stats
-        rushes: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${nflfastrId} THEN 1 END)`,
-        rushingEpa: sql<number>`COALESCE(SUM(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${nflfastrId} THEN ${bronzeNflfastrPlays.epa} END), 0)`,
-        rushingTds: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${nflfastrId} AND ${bronzeNflfastrPlays.touchdown} = true THEN 1 END)`,
+        rushes: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${sql.raw(`'${nflfastrId}'`)} THEN 1 END)`,
+        rushingEpa: sql<number>`COALESCE(SUM(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${sql.raw(`'${nflfastrId}'`)} THEN ${bronzeNflfastrPlays.epa} END), 0)`,
+        rushingTds: sql<number>`COUNT(CASE WHEN ${bronzeNflfastrPlays.rusherPlayerId} = ${sql.raw(`'${nflfastrId}'`)} AND ${bronzeNflfastrPlays.touchdown} = true THEN 1 END)`,
         
         // Team context
         teamAbbr: sql<string>`MAX(${bronzeNflfastrPlays.posteam})`,
@@ -113,7 +98,7 @@ export class TiberService {
         and(
           eq(bronzeNflfastrPlays.season, season),
           lte(bronzeNflfastrPlays.week, week),
-          sql`(${bronzeNflfastrPlays.receiverPlayerId} = ${nflfastrId} OR ${bronzeNflfastrPlays.rusherPlayerId} = ${nflfastrId})`
+          sql`(${bronzeNflfastrPlays.receiverPlayerId} = ${sql.raw(`'${nflfastrId}'`)} OR ${bronzeNflfastrPlays.rusherPlayerId} = ${sql.raw(`'${nflfastrId}'`)})`
         )
       )
       .execute();

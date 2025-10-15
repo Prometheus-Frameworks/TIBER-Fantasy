@@ -2206,7 +2206,8 @@ export const defenseVsPositionStats = pgTable("defense_vs_position_stats", {
 // TIBER Scores - Player volatility and regression analysis
 export const tiberScores = pgTable("tiber_scores", {
   id: serial("id").primaryKey(),
-  playerId: integer("player_id").references(() => players.id).notNull(),
+  playerId: integer("player_id").references(() => players.id),
+  nflfastrId: text("nflfastr_id").notNull(), // NFLfastR player ID (e.g., "00-0036322")
   week: integer("week").notNull(),
   season: integer("season").notNull(),
   
@@ -2230,8 +2231,8 @@ export const tiberScores = pgTable("tiber_scores", {
   // Metadata
   calculatedAt: timestamp("calculated_at").defaultNow(),
 }, (table) => ({
-  uniquePlayerWeek: unique("tiber_unique").on(table.playerId, table.week, table.season),
-  playerIdIdx: index("tiber_player_idx").on(table.playerId),
+  uniquePlayerWeek: unique("tiber_unique").on(table.nflfastrId, table.week, table.season),
+  nflfastrIdIdx: index("tiber_nflfastr_idx").on(table.nflfastrId),
   weekIdx: index("tiber_week_idx").on(table.week, table.season),
   tierIdx: index("tiber_tier_idx").on(table.tier),
   scoreIdx: index("tiber_score_idx").on(table.tiberScore),

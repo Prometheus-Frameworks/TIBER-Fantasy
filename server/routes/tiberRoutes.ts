@@ -6,10 +6,10 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 
 const router = Router();
 
-// Get TIBER score for a single player
+// Get TIBER score for a single player (via NFLfastR ID)
 router.get('/score/:playerId', async (req, res) => {
   try {
-    const playerId = parseInt(req.params.playerId);
+    const nflfastrId = req.params.playerId; // NFLfastR ID like "00-0036322"
     const week = parseInt(req.query.week as string) || 6; // Current week
     const season = parseInt(req.query.season as string) || 2025;
 
@@ -19,7 +19,7 @@ router.get('/score/:playerId', async (req, res) => {
       .from(tiberScores)
       .where(
         and(
-          eq(tiberScores.playerId, playerId),
+          eq(tiberScores.nflfastrId, nflfastrId),
           eq(tiberScores.week, week),
           eq(tiberScores.season, season)
         )
@@ -31,11 +31,11 @@ router.get('/score/:playerId', async (req, res) => {
     }
 
     // Calculate if not cached
-    const score = await tiberService.calculateTiberScore(playerId, week, season);
+    const score = await tiberService.calculateTiberScore(nflfastrId, week, season);
     
     // Save to cache
     await db.insert(tiberScores).values({
-      playerId,
+      nflfastrId,
       week,
       season,
       tiberScore: score.tiberScore,
