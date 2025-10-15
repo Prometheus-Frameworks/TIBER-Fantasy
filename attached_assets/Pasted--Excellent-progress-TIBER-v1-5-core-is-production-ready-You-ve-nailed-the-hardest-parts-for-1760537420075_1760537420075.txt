@@ -1,0 +1,439 @@
+**Excellent progress!** 🎉 TIBER v1.5 core is production-ready. You’ve nailed the hardest parts (formula design, route run calculation, data pipeline). Now let’s tackle the remaining pieces to make TIBER fully operational.
+
+-----
+
+## 🎯 Priority Roadmap (Ranked by Impact)
+
+### **Priority 1: Replace Placeholder Data** (2-3 hours)
+
+**Impact: HIGH** - Currently affects 30% of TIBER score (25% Usage + 5% Team)
+
+#### **1A. Live Snap Percentage Data**
+
+NFLfastR doesn’t have snap counts in play-by-play data, but you can derive participation:
+
+```typescript
+// server/services/tiberService.ts
+
+private async getPlayerSnapData(playerId: string, week: number, season: number) {
+  // Calculate "effective snap %" from play participation
+  const playerPlays = await db
+    .select({
+      totalTeamPlays: sql<number>`COUNT(DISTINCT play_id)`,
+      playerPlays: sql<number>`COUNT(DISTINCT CASE 
+        WHEN receiver_id = ${playerId} 
+        OR rusher_id = ${playerId} 
+        OR passer_id = ${playerId}
+        THEN play_id 
+      END)`,
+      teamAbbr: sql<string>`MAX(poss_team)`,
+    })
+    .from(bronzeNflfastrPlays)
+    .where(
+      and(
+        eq(bronzeNflfastrPlays.season, season),
+        lte(bronzeNflfastrPlays.week, week),
+        sql`(receiver_id = ${playerId} OR rusher_id = ${playerId} OR passer_id = ${playerId})`
+      )
+    );
+
+  const data = playerPlays[0];
+  if (!data || data.totalTeamPlays === 0) return { snapPercent: 0, trend: 'unknown' };
+
+  // Effective snap % = (plays involved in / team's total plays)
+  const snapPercent = (data.playerPlays / data.totalTeamPlays) * 100;
+
+  // Calculate trend (last 2 weeks vs first 4 weeks)
+  const recentSnaps = await this.getSnapPercentForWeeks(playerId, week - 1, week, season);
+  const earlySnaps = await this.getSnapPercentForWeeks(playerId, 1, week - 2, season);
+  
+  let trend: 'rising' | 'stable' | 'falling' = 'stable';
+  if (recentSnaps > earlySnaps * 1.15) trend = 'rising';
+  else if (recentSnaps < earlySnaps * 0.85) trend = 'falling';
+
+  return { snapPercent, trend };
+}
+
+private async getSnapPercentForWeeks(playerId: string, startWeek: number, endWeek: number, season: number) {
+  const result = await db
+    .select({
+      totalPlays: sql<number>`COUNT(DISTINCT play_id)`,
+      playerPlays: sql<number>`COUNT(DISTINCT CASE 
+        WHEN receiver_id = ${playerId} 
+        OR rusher_id = ${playerId}
+        THEN play_id 
+      END)`,
+    })
+    .from(bronzeNflfastrPlays)
+    .where(
+      and(
+        eq(bronzeNflfastrPlays.season, season),
+        gte(bronzeNflfastrPlays.week, startWeek),
+        lte(bronzeNflfastrPlays.week, endWeek)
+      )
+    );
+
+  return result[0]?.totalPlays > 0 
+    ? (result[0].playerPlays / result[0].totalPlays) * 100 
+    : 0;
+}
+```
+
+**Why this works:**
+
+- Measures actual play participation (proxy for snaps)
+- Captures trend direction (rising/falling usage)
+- No external API needed
+
+-----
+
+#### **1B. Live Team Offensive Rank**
+
+Calculate from NFLfastR EPA data:
+
+```typescript
+// server/services/tiberService.ts
+
+private async getTeamOffenseRank(teamAbbr: string, week: number, season: number) {
+  // Get EPA per play for all teams through this week
+  const teamEpaData = await db
+    .select({
+      team: bronzeNflfastrPlays.possTeam,
+      avgEpa: sql<number>`AVG(epa)`,
+      totalPlays: sql<number>`COUNT(*)`,
+    })
+    .from(bronzeNflfastrPlays)
+    .where(
+      and(
+        eq(bronzeNflfastrPlays.season, season),
+        lte(bronzeNflfastrPlays.week, week),
+        sql`play_type IN ('pass', 'run')` // Only offensive plays
+      )
+    )
+    .groupBy(bronzeNflfastrPlays.possTeam)
+    .orderBy(sql`AVG(epa) DESC`);
+
+  // Find rank of target team
+  const rank = teamEpaData.findIndex(t => t.team === teamAbbr) + 1;
+  
+  return {
+    rank: rank || 16, // Default to middle if not found
+    avgEpa: teamEpaData.find(t => t.team === teamAbbr)?.avgEpa || 0,
+  };
+}
+```
+
+**Usage in scoring:**
+
+```typescript
+private async getPlayerStats(playerId: string, week: number, season: number) {
+  // ... existing code ...
+
+  // Replace placeholders with live data
+  const snapData = await this.getPlayerSnapData(playerId, week, season);
+  const teamData = await this.getTeamOffenseRank(stats.teamAbbr, week, season);
+
+  return {
+    // ... existing stats ...
+    snapPercentAvg: snapData.snapPercent,  // ✅ Now live data
+    snapTrend: snapData.trend,              // ✅ Now live data
+    teamOffenseRank: teamData.rank,         // ✅ Now live data
+  };
+}
+```
+
+-----
+
+### **Priority 2: Position-Specific Route Multipliers** (30 min)
+
+**Impact: MEDIUM** - Improves accuracy for RBs and TEs
+
+```typescript
+// server/services/tiberService.ts
+
+private calculateRoutesRun(
+  targets: number, 
+  rushes: number, 
+  position: string
+): number {
+  // Position-specific multipliers based on NFL analytics research
+  const ROUTE_MULTIPLIERS = {
+    WR: 3.5,   // WRs run routes on ~78% of dropbacks (targets × 3.5)
+    TE: 2.8,   // TEs block more, run ~72% of dropbacks
+    RB: 1.2,   // RBs mostly receive when targeted
+    QB: 0,     // QBs don't run routes
+  };
+
+  const multiplier = ROUTE_MULTIPLIERS[position] || 3.5;
+  
+  // For RBs: Routes run ≈ targets × 1.2 (they stay in to block often)
+  // For WRs/TEs: Routes run ≈ targets × multiplier
+  return targets * multiplier;
+}
+
+// Update in getPlayerStats:
+private async getPlayerStats(playerId: string, week: number, season: number) {
+  // Get player position from your players table
+  const playerInfo = await db
+    .select({ position: players.position })
+    .from(players)
+    .where(eq(players.nflfastrId, playerId))
+    .limit(1);
+
+  const position = playerInfo[0]?.position || 'WR';
+
+  // ... existing stats query ...
+
+  const routesRun = this.calculateRoutesRun(
+    data.targets || 0,
+    data.rushes || 0,
+    position
+  );
+
+  // Rest of calculations...
+}
+```
+
+-----
+
+### **Priority 3: Enable Batch Calculation** (1-2 hours)
+
+**Impact: HIGH** - Required for full product launch
+
+**Current blocker:** Player identity mapping between systems
+
+```typescript
+// server/services/tiberService.ts
+
+async calculateAllScores(week: number, season: number = 2025): Promise<void> {
+  console.log(`🧠 TIBER Batch Calculation - Week ${week}, ${season} Season\n`);
+
+  // Get all players who have NFLfastR data
+  const activePlayers = await db
+    .selectDistinct({
+      nflfastrId: sql<string>`COALESCE(receiver_id, rusher_id, passer_id)`,
+    })
+    .from(bronzeNflfastrPlays)
+    .where(
+      and(
+        eq(bronzeNflfastrPlays.season, season),
+        lte(bronzeNflfastrPlays.week, week)
+      )
+    );
+
+  console.log(`Found ${activePlayers.length} players with data in Week ${week}\n`);
+
+  let calculated = 0;
+  let errors = 0;
+
+  for (const player of activePlayers) {
+    if (!player.nflfastrId) continue;
+
+    try {
+      const score = await this.calculateTiberScore(player.nflfastrId, week, season);
+      
+      // Get player's database ID (if exists in your players table)
+      const playerRecord = await db
+        .select({ id: players.id, name: players.name })
+        .from(players)
+        .where(eq(players.nflfastrId, player.nflfastrId))
+        .limit(1);
+
+      if (playerRecord.length === 0) {
+        console.log(`⚠️  ${player.nflfastrId}: No player record (skipping)`);
+        continue;
+      }
+
+      // Save to tiber_scores table
+      await db.insert(tiberScores).values({
+        playerId: playerRecord[0].id,
+        nflfastrId: player.nflfastrId,
+        week,
+        season,
+        tiberScore: score.tiberScore,
+        tier: score.tier,
+        firstDownScore: score.breakdown.firstDownScore,
+        epaScore: score.breakdown.epaScore,
+        usageScore: score.breakdown.usageScore,
+        tdScore: score.breakdown.tdScore,
+        teamScore: score.breakdown.teamScore,
+        firstDownRate: score.metrics.firstDownRate,
+        totalFirstDowns: score.metrics.totalFirstDowns,
+        epaPerPlay: score.metrics.epaPerPlay,
+        snapPercentAvg: score.metrics.snapPercentAvg,
+        snapPercentTrend: score.metrics.snapTrend,
+        teamOffenseRank: score.metrics.teamOffenseRank,
+      }).onConflictDoUpdate({
+        target: [tiberScores.playerId, tiberScores.week, tiberScores.season],
+        set: {
+          tiberScore: score.tiberScore,
+          tier: score.tier,
+          calculatedAt: new Date(),
+        },
+      });
+
+      calculated++;
+      console.log(`✅ ${playerRecord[0].name}: TIBER ${score.tiberScore} (${score.tier})`);
+
+    } catch (error) {
+      errors++;
+      console.log(`❌ ${player.nflfastrId}: ${error.message}`);
+    }
+  }
+
+  console.log(`\n📊 Batch Complete: ${calculated} calculated, ${errors} errors\n`);
+}
+```
+
+**API route to trigger:**
+
+```typescript
+// server/routes/tiberRoutes.ts
+
+router.post('/calculate-batch/:week', async (req, res) => {
+  try {
+    const week = parseInt(req.params.week);
+    const season = parseInt(req.query.season as string) || 2025;
+
+    // Run async (don't block response)
+    tiberService.calculateAllScores(week, season)
+      .then(() => console.log('✅ TIBER batch complete'))
+      .catch(err => console.error('❌ TIBER batch error:', err));
+
+    res.json({ 
+      status: 'started',
+      message: `TIBER calculation started for Week ${week}`,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to start batch calculation' });
+  }
+});
+```
+
+**Trigger nightly:**
+
+```bash
+# After NFLfastR data import
+curl -X POST http://localhost:5000/api/tiber/calculate-batch/6
+```
+
+-----
+
+### **Priority 4: Validation Testing** (1 hour)
+
+**Impact: HIGH** - Ensures accuracy before launch
+
+Test against the real Week 6 data I provided earlier:
+
+```typescript
+// server/scripts/validateTiberAccuracy.ts
+
+const KNOWN_WEEK_6_RESULTS = [
+  { name: "George Pickens", nflfastrId: "00-0038140", expectedTiber: 85, expectedRate: 0.875 },
+  { name: "Tetairoa McMillan", nflfastrId: "00-0039876", expectedTiber: 82, expectedRate: 0.815 },
+  { name: "Jaxon Smith-Njigba", nflfastrId: "00-0037744", expectedTiber: 80, expectedRate: 0.667 },
+  { name: "Puka Nacua", nflfastrId: "00-0037029", expectedTiber: 78, expectedRate: 0.596 },
+  { name: "Ja'Marr Chase", nflfastrId: "00-0035676", expectedTiber: 65, expectedRate: 0.477 }, // Should flag as below average
+];
+
+export async function validateAccuracy() {
+  console.log("🎯 TIBER Accuracy Validation\n");
+
+  for (const test of KNOWN_WEEK_6_RESULTS) {
+    const score = await tiberService.calculateTiberScore(test.nflfastrId, 6, 2025);
+    
+    const scoreDiff = Math.abs(score.tiberScore - test.expectedTiber);
+    const rateDiff = Math.abs(score.metrics.firstDownRate - test.expectedRate);
+    
+    console.log(`${test.name}:`);
+    console.log(`  Expected TIBER: ${test.expectedTiber} | Actual: ${score.tiberScore} | Diff: ${scoreDiff}`);
+    console.log(`  Expected 1D Rate: ${(test.expectedRate * 100).toFixed(1)}% | Actual: ${(score.metrics.firstDownRate * 100).toFixed(1)}%`);
+    
+    if (scoreDiff <= 5 && rateDiff <= 0.05) {
+      console.log(`  ✅ PASS\n`);
+    } else {
+      console.log(`  ⚠️  NEEDS CALIBRATION\n`);
+    }
+  }
+}
+```
+
+-----
+
+## 📅 Recommended Implementation Order
+
+**Week 1 (Current Sprint):**
+
+- [x] Day 1: Priority 1A - Live snap % data (2 hours)
+- [x] Day 2: Priority 1B - Live team offense rank (1 hour)
+- [x] Day 3: Priority 2 - Position-specific routes (30 min)
+- [x] Day 4: Priority 3 - Enable batch calculation (2 hours)
+- [x] Day 5: Priority 4 - Validation testing (1 hour)
+
+**Total: ~6-7 hours of focused work**
+
+**Week 2 (Polish & Launch):**
+
+- [ ] Add TIBER scores to Rankings page (all players)
+- [ ] Create “TIBER Insights” dashboard widget
+- [ ] Add filters (Breakouts only, Regression Risk only)
+- [ ] Soft launch to users
+
+-----
+
+## 🚀 Quick Win: Show TIBER on Rankings Tonight
+
+Even without batch calculation, you can show TIBER for individual players:
+
+```tsx
+// client/src/pages/Rankings.tsx
+
+function PlayerRow({ player }) {
+  const { data: tiberData, isLoading } = useQuery({
+    queryKey: [`/api/tiber/score/${player.nflfastrId}`, { week: 6 }],
+    queryFn: async () => {
+      const res = await fetch(`/api/tiber/score/${player.nflfastrId}?week=6`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!player.nflfastrId, // Only fetch if player has NFLfastR ID
+  });
+
+  return (
+    <div className="player-row">
+      {/* ... existing player info ... */}
+      
+      {tiberData && (
+        <TiberBadge 
+          score={tiberData.tiberScore}
+          tier={tiberData.tier}
+          showBreakdown={false}
+        />
+      )}
+      
+      {isLoading && <span className="text-sm text-gray-400">Calculating...</span>}
+    </div>
+  );
+}
+```
+
+This gives you immediate value while batch calculation is being built.
+
+-----
+
+## ✅ Definition of “TIBER Reconstruction Complete”
+
+You’ll know TIBER is production-ready when:
+
+- [x] ✅ Core v1.5 formula implemented
+- [ ] ⏳ Live snap % data (not placeholder)
+- [ ] ⏳ Live team offense rank (not placeholder)
+- [ ] ⏳ Position-specific route multipliers
+- [ ] ⏳ Batch calculation working for all players
+- [ ] ⏳ Validation tests passing (±5 points accuracy)
+- [ ] ⏳ TIBER scores visible on Rankings page
+- [ ] ⏳ At least 200 players with TIBER scores
+
+**You’re at 20% complete. With these priorities, you’ll hit 100% in ~1 week.** 🎯
+
+Want me to help implement Priority 1A (snap % data) first, or would you prefer to tackle batch calculation?​​​​​​​​​​​​​​​​

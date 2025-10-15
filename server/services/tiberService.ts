@@ -128,6 +128,7 @@ export class TiberService {
     const totalEpa = Number(data.receivingEpa || 0) + Number(data.rushingEpa || 0);
     const totalTds = Number(data.receivingTds || 0) + Number(data.rushingTds || 0);
     const totalFirstDowns = Number(data.receivingFirstDowns || 0) + Number(data.rushingFirstDowns || 0);
+    const teamAbbr = data.teamAbbr;
 
     // Calculate EPA per play
     const epaPerPlay = totalPlays > 0 ? totalEpa / totalPlays : 0;
@@ -143,22 +144,173 @@ export class TiberService {
     const receivingFirstDowns = Number(data.receivingFirstDowns || 0);
     const firstDownRate = routesRun > 0 ? receivingFirstDowns / routesRun : 0;
 
-    // TODO: Add snap % data (need to join with snap count data)
-    // For MVP, use placeholder values based on play volume
-    const snapPercentAvg = totalPlays > 20 ? 70 : totalPlays > 10 ? 50 : 30;
-    const snapTrend: 'rising' | 'stable' | 'falling' = 'stable';
-    const teamOffenseRank = 16; // Placeholder
+    // Get live snap percentage data from play participation
+    const snapData = await this.getPlayerSnapData(nflfastrId, week, season, teamAbbr);
+    
+    // Get live team offensive rank from EPA data
+    const teamData = await this.getTeamOffenseRank(teamAbbr, week, season);
 
     return {
       firstDownRate,
       totalFirstDowns,
       epaPerPlay,
-      snapPercentAvg,
-      snapTrend,
+      snapPercentAvg: snapData.snapPercent,
+      snapTrend: snapData.trend,
       tdRate,
-      teamOffenseRank,
+      teamOffenseRank: teamData.rank,
       totalPlays,
       totalTds,
+    };
+  }
+
+  private async getPlayerSnapData(
+    playerId: string, 
+    week: number, 
+    season: number,
+    teamAbbr: string
+  ): Promise<{ snapPercent: number; trend: 'rising' | 'stable' | 'falling' }> {
+    // Calculate "effective snap %" from play participation
+    // Total team offensive plays vs plays where player was involved
+    const teamPlaysResult = await db
+      .select({
+        totalTeamPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+      })
+      .from(bronzeNflfastrPlays)
+      .where(
+        and(
+          eq(bronzeNflfastrPlays.season, season),
+          lte(bronzeNflfastrPlays.week, week),
+          eq(bronzeNflfastrPlays.posteam, teamAbbr),
+          sql`${bronzeNflfastrPlays.playType} IN ('pass', 'run')`
+        )
+      );
+
+    const playerPlaysResult = await db
+      .select({
+        playerPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+      })
+      .from(bronzeNflfastrPlays)
+      .where(
+        and(
+          eq(bronzeNflfastrPlays.season, season),
+          lte(bronzeNflfastrPlays.week, week),
+          or(
+            eq(bronzeNflfastrPlays.receiverPlayerId, playerId),
+            eq(bronzeNflfastrPlays.rusherPlayerId, playerId),
+            eq(bronzeNflfastrPlays.passerPlayerId, playerId)
+          )
+        )
+      );
+
+    const totalTeamPlays = Number(teamPlaysResult[0]?.totalTeamPlays || 0);
+    const playerPlays = Number(playerPlaysResult[0]?.playerPlays || 0);
+
+    if (totalTeamPlays === 0) {
+      return { snapPercent: 0, trend: 'stable' };
+    }
+
+    // Effective snap % = (plays involved in / team's total plays) * 100
+    const snapPercent = (playerPlays / totalTeamPlays) * 100;
+
+    // Calculate trend (last 2 weeks vs earlier weeks)
+    let trend: 'rising' | 'stable' | 'falling' = 'stable';
+    
+    if (week >= 3) {
+      const recentSnaps = await this.getSnapPercentForWeeks(playerId, week - 1, week, season, teamAbbr);
+      const earlySnaps = await this.getSnapPercentForWeeks(playerId, 1, week - 2, season, teamAbbr);
+      
+      if (earlySnaps > 0) {
+        if (recentSnaps > earlySnaps * 1.15) trend = 'rising';
+        else if (recentSnaps < earlySnaps * 0.85) trend = 'falling';
+      }
+    }
+
+    return { snapPercent, trend };
+  }
+
+  private async getSnapPercentForWeeks(
+    playerId: string, 
+    startWeek: number, 
+    endWeek: number, 
+    season: number,
+    teamAbbr: string
+  ): Promise<number> {
+    const teamPlaysResult = await db
+      .select({
+        totalPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+      })
+      .from(bronzeNflfastrPlays)
+      .where(
+        and(
+          eq(bronzeNflfastrPlays.season, season),
+          sql`${bronzeNflfastrPlays.week} >= ${startWeek}`,
+          sql`${bronzeNflfastrPlays.week} <= ${endWeek}`,
+          eq(bronzeNflfastrPlays.posteam, teamAbbr),
+          sql`${bronzeNflfastrPlays.playType} IN ('pass', 'run')`
+        )
+      );
+
+    const playerPlaysResult = await db
+      .select({
+        playerPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+      })
+      .from(bronzeNflfastrPlays)
+      .where(
+        and(
+          eq(bronzeNflfastrPlays.season, season),
+          sql`${bronzeNflfastrPlays.week} >= ${startWeek}`,
+          sql`${bronzeNflfastrPlays.week} <= ${endWeek}`,
+          or(
+            eq(bronzeNflfastrPlays.receiverPlayerId, playerId),
+            eq(bronzeNflfastrPlays.rusherPlayerId, playerId)
+          )
+        )
+      );
+
+    const totalPlays = Number(teamPlaysResult[0]?.totalPlays || 0);
+    const playerPlays = Number(playerPlaysResult[0]?.playerPlays || 0);
+
+    return totalPlays > 0 ? (playerPlays / totalPlays) * 100 : 0;
+  }
+
+  private async getTeamOffenseRank(
+    teamAbbr: string, 
+    week: number, 
+    season: number
+  ): Promise<{ rank: number; avgEpa: number }> {
+    // Get EPA per play for all teams through this week
+    const teamEpaData = await db
+      .select({
+        team: bronzeNflfastrPlays.posteam,
+        avgEpa: sql<number>`AVG(${bronzeNflfastrPlays.epa})`,
+        totalPlays: sql<number>`COUNT(*)`,
+      })
+      .from(bronzeNflfastrPlays)
+      .where(
+        and(
+          eq(bronzeNflfastrPlays.season, season),
+          lte(bronzeNflfastrPlays.week, week),
+          sql`${bronzeNflfastrPlays.playType} IN ('pass', 'run')`
+        )
+      )
+      .groupBy(bronzeNflfastrPlays.posteam)
+      .execute();
+
+    // Sort by EPA descending to get rankings
+    const sortedTeams = teamEpaData
+      .map(t => ({
+        team: t.team,
+        avgEpa: Number(t.avgEpa || 0),
+      }))
+      .sort((a, b) => b.avgEpa - a.avgEpa);
+
+    // Find rank of target team
+    const rank = sortedTeams.findIndex(t => t.team === teamAbbr) + 1;
+    const avgEpa = sortedTeams.find(t => t.team === teamAbbr)?.avgEpa || 0;
+
+    return {
+      rank: rank || 16, // Default to middle if not found
+      avgEpa,
     };
   }
 
