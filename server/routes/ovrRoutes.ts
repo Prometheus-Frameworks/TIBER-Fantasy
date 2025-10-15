@@ -21,10 +21,9 @@ interface PlayerWithOVR {
   position: string;
   team: string;
   sleeperId: string | null;
-  nflfastrId: string | null;
   age: number | null;
   ovr: number;
-  powerScore: number | null;
+  avgPoints: number;
 }
 
 /**
@@ -49,10 +48,9 @@ router.get('/', async (req, res) => {
         position: players.position,
         team: players.team,
         sleeperId: players.sleeperId,
-        nflfastrId: players.nflfastrId,
         age: players.age,
         active: players.active,
-        powerScore: players.powerScore,
+        avgPoints: players.avgPoints,
       })
       .from(players)
       .where(
@@ -63,15 +61,15 @@ router.get('/', async (req, res) => {
           sql`${players.team} != ''`                   // Team not empty string
         )
       )
-      .orderBy(desc(players.powerScore))              // Sort by existing rating
+      .orderBy(desc(players.avgPoints))               // Sort by avg points
       .limit(150);                                     // Top 150 only
 
     console.log(`✅ Found ${fantasyPlayers.length} fantasy-relevant players`);
 
     // Calculate OVR for each player
     const playersWithOVR: PlayerWithOVR[] = fantasyPlayers.map((player) => {
-      // Use existing powerScore as base, or calculate simple OVR
-      const ovr = player.powerScore || calculateSimpleOVR(player);
+      // Use existing avgPoints as base, or calculate simple OVR
+      const ovr = player.avgPoints || calculateSimpleOVR(player);
       
       return {
         ...player,
@@ -117,7 +115,7 @@ router.get('/:playerId', async (req, res) => {
     }
 
     const playerData = player[0];
-    const ovr = playerData.powerScore || calculateSimpleOVR(playerData);
+    const ovr = playerData.avgPoints || calculateSimpleOVR(playerData);
 
     res.json({
       ...playerData,
