@@ -16,6 +16,13 @@ interface OVRPlayer {
 interface TiberScore {
   tiberScore: number;
   tier: string;
+  breakdown?: {
+    firstDownScore: number;
+    epaScore: number;
+    usageScore: number;
+    tdScore: number;
+    teamScore: number;
+  };
 }
 
 // Test mapping of player names to NFLfastR IDs for TIBER MVP
@@ -68,7 +75,13 @@ function PlayerCard({ player, rank, getTierColor }: {
             <h3 className="text-lg font-bold text-gray-100">{player.name}</h3>
             <span className="text-sm text-gray-400">{player.position} • {player.team}</span>
             {tiberScore !== null && (
-              <TiberBadge score={tiberScore} size="sm" showLabel={false} />
+              <TiberBadge 
+                score={tiberScore} 
+                size="sm" 
+                showLabel={false} 
+                showBreakdown={true}
+                breakdown={tiberData?.data.breakdown}
+              />
             )}
           </div>
 
