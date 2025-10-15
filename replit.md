@@ -43,6 +43,46 @@ The platform is built on a comprehensive 3-tier ELT architecture (Bronze → Sil
 
 ## Recent Changes
 
+### TIBER v1.5 Upgrade (October 15, 2025)
+**Feature:** Upgraded TIBER (Tactical Index for Breakout Efficiency and Regression) to v1.5 with First Downs per Route Run as the primary metric based on Ryan Heath research showing 0.750 correlation with future fantasy performance.
+
+**Implementation:**
+- New v1.5 formula weights: First Down (35%), EPA (25%), Usage (25%), TD (10%), Team (5%)
+- Added first down columns (`first_down`, `first_down_pass`, `first_down_rush`) to NFLfastR schema
+- Re-imported Week 1-6 data: 16,011 plays with 3,591 first downs (22.4% rate)
+- Routes run approximation: `targets * 3.5` (industry standard for WR/TE)
+- Updated `tiber_scores` table with `firstDownScore`, `firstDownRate`, `totalFirstDowns` columns
+
+**Calculation Details:**
+```typescript
+// Routes run approximation (since NFLfastR only tracks targeted plays)
+const routesRun = targets * 3.5; // WRs run ~3.5x more routes than targets
+const firstDownRate = receivingFirstDowns / routesRun;
+
+// Scoring thresholds:
+// Elite: >17% first down rate = 35 points
+// Very Good: 15% = 32 points
+// Above Average: 12% = 25 points
+// Average: 10% = 21 points
+// Below Average: 8% = 14 points
+// Poor: <6% = 7 points
+```
+
+**Test Results (Justin Jefferson Week 6):**
+- TIBER Score: 73 (Stable)
+- First Down Rate: 11.56% (17 first downs / 147 routes)
+- Breakdown: First Down 21 + EPA 21 + Usage 20 + TD 7 + Team 4 = 73
+
+**Files Updated:**
+- `server/services/tiberService.ts`: v1.5 weights and first down calculation
+- `server/routes/tiberRoutes.ts`: Cache insert with first down fields
+- `client/src/components/TiberBadge.tsx`: v1.5 breakdown UI display
+- `shared/schema.ts`: Added first down columns
+
+**API Endpoints:**
+- `/api/tiber/score/:nflfastrId?week=6` - Calculate/retrieve TIBER score
+- Returns: `tiberScore`, `tier`, `breakdown` (with firstDownScore), `metrics` (with firstDownRate)
+
 ### NFLfastR Data Pipeline Fix (October 2025)
 **Issue:** Player game logs showed incomplete/incorrect data due to database schema and import issues.
 **Root Cause:** NFLfastR play_id is NOT globally unique (4,499 unique IDs across 16,011 plays) - it's per-game unique.
