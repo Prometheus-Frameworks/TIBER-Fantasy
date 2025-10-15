@@ -116,6 +116,44 @@ const firstDownRate = receivingFirstDowns / routesRun;
 - `/api/tiber/score/:nflfastrId?week=6` - Calculate/retrieve TIBER score
 - Returns: `tiberScore`, `tier`, `breakdown` (with firstDownScore), `metrics` (with firstDownRate)
 
+### Fantasy-Relevance Filtering Fix (October 15, 2025)
+**Issue:** Rankings page showed practice squad players, retired players, and deep backups (Trenton Irwin, Chris Myarick, Malik Taylor, Laquon Treadwell, Raheem Mostert) instead of fantasy-relevant players.
+
+**Root Cause:** OVR API (`/api/ovr`) was pulling ALL 11,400+ Sleeper players without fantasy-relevance filtering.
+
+**Solution:** Replaced Sleeper-based player pool with curated players table filtering:
+
+**New Filtering Criteria:**
+```typescript
+// Query fantasy-relevant players from database
+db.select().from(players)
+  .where(
+    and(
+      eq(players.active, true),                    // Active only
+      sql`position IN ('QB','RB','WR','TE')`,     // Skill positions
+      isNotNull(players.team),                     // Must have team
+      sql`team != ''`                              // Team not empty
+    )
+  )
+  .orderBy(desc(players.avgPoints))               // Best players first
+  .limit(150);                                     // Top 150
+```
+
+**Results:**
+- ✅ Returns exactly 150 fantasy-relevant players
+- ✅ Top players: Josh Allen, Lamar Jackson, CMC, Saquon Barkley
+- ✅ NO practice squad/retired players in rankings
+- ✅ Validation script confirms filtering works correctly
+
+**Files Modified:**
+- `server/routes/ovrRoutes.ts`: Replaced Sleeper API with database query, uses `avgPoints` for sorting
+- `server/scripts/validateRankings.ts`: Validation script to verify player filtering
+
+**Validation Results:**
+- Total players in database: 1,277
+- Fantasy-relevant players: 1,260 (QB: 188, RB: 264, WR: 542, TE: 266)
+- Problem players NOT in top 150: Trenton Irwin, Malik Taylor, Laquon Treadwell, Raheem Mostert
+
 ### TIBER v1.5 Soft Launch (October 15, 2025)
 **Achievement:** Successfully launched TIBER v1.5 to production with full UI integration and E2E testing verified.
 
