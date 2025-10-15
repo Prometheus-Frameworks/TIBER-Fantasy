@@ -2676,8 +2676,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.use('/api/consensus', consensusRoutes);
   app.use('/api/consensus', consensusSeedingRoutes);
-  app.use('/api/tiber', tiberMemoryRoutes);
-  console.log('🧠 Tiber Memory System routes mounted');
+  app.use('/api/tiber-memory', tiberMemoryRoutes);
+  console.log('🧠 Tiber Memory System routes mounted at /api/tiber-memory');
   
   // OTC Consensus Engine v1.1 API Routes
   app.get('/api/profile/:username', getProfile);
