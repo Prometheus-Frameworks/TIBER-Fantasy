@@ -48,40 +48,38 @@ const BALDWIN_EPA_2025 = [
 
 // Player ID mapping (abbreviated name -> NFLfastR ID)
 const PLAYER_ID_MAP: Record<string, string> = {
-  'S. Darnold': 'S.Darnold',
-  'D. Prescott': 'D.Prescott',
-  'J. Goff': 'J.Goff',
-  'J. Love': 'J.Love',
-  'D. Jones': 'D.Jones',
-  'D. Maye': 'D.Maye',
-  'B. Mayfield': 'B.Mayfield',
-  'L. Jackson': 'L.Jackson',
-  'S. Rattler': 'S.Rattler',
-  'J. Herbert': 'J.Herbert',
-  'M. Stafford': 'M.Stafford',
-  'C. Stroud': 'C.Stroud',
-  'P. Mahomes': 'P.Mahomes',
-  'J. Allen': 'J.Allen',
-  'J. Daniels': 'J.Daniels',
-  'J. Dart': 'J.Dart',
-  'T. Tagovailoa': 'T.Tagovailoa',
-  'T. Lawrence': 'T.Lawrence',
-  'J. Flacco': 'J.Flacco',
-  'M. Jones': 'M.Jones',
-  'A. Rodgers': 'A.Rodgers',
-  'J. Hurts': 'J.Hurts',
-  'K. Murray': 'K.Murray',
-  'B. Young': 'B.Young',
-  'C. Wentz': 'C.Wentz',
-  'R. Wilson': 'R.Wilson',
-  'J. Browning': 'J.Browning',
-  'M. Penix': 'M.Penix',
-  'J. Fields': 'J.Fields',
-  'D. Gabriel': 'D.Gabriel',
-  'B. Nix': 'B.Nix',
-  'G. Smith': 'G.Smith',
-  'C. Ward': 'C.Ward',
-  'C. Williams': 'C.Williams',
+  'S. Darnold': '00-0034869',
+  'D. Prescott': '00-0033077',
+  'J. Goff': '00-0033106',
+  'J. Love': '00-0036264',
+  'D. Jones': '00-0035710',
+  'D. Maye': '00-0039851',
+  'B. Mayfield': '00-0034855',
+  'L. Jackson': '00-0034796',
+  'S. Rattler': '00-0039376',
+  'J. Herbert': '00-0036355',
+  'M. Stafford': '00-0026498',
+  'C. Stroud': '00-0039163',
+  'P. Mahomes': '00-0033873',
+  'J. Allen': '00-0034857',
+  'J. Daniels': '00-0039910',
+  'T. Tagovailoa': '00-0036212',
+  'T. Lawrence': '00-0036971',
+  'J. Flacco': '00-0026158',
+  'M. Jones': '00-0036972',
+  'A. Rodgers': '00-0023459',
+  'J. Hurts': '00-0036389',
+  'K. Murray': '00-0035228',
+  'B. Young': '00-0039150',
+  'C. Wentz': '00-0032950',
+  'R. Wilson': '00-0029263',
+  'J. Browning': '00-0035100',
+  'M. Penix': '00-0039917',
+  'J. Fields': '00-0036945',
+  'B. Nix': '00-0039732',
+  'G. Smith': '00-0030565',
+  'C. Ward': '00-0040676',
+  'C. Williams': '00-0039918',
 };
 
 export class EPASanityCheckService {
@@ -264,6 +262,9 @@ export class EPASanityCheckService {
     console.log(`🔍 [Tiber EPA] Found ${qbsWithContext.length} QBs with context metrics`);
     console.log(`🔍 [Tiber EPA] Found ${baldwinReference.length} Baldwin reference QBs`);
     
+    let successCount = 0;
+    let failCount = 0;
+    
     for (const qb of qbsWithContext) {
       try {
         // Find corresponding Baldwin reference for raw EPA
@@ -284,6 +285,8 @@ export class EPASanityCheckService {
         
         const totalAdjustment = dropAdjustment + pressureAdjustment + yacAdjustment + defAdjustment;
         const adjEpa = rawEpa + totalAdjustment;
+        
+        console.log(`🔍 [Tiber EPA] Attempting insert for ${qb.playerName} (${qb.playerId})`);
         
         await db.insert(qbEpaAdjusted).values({
           playerId: qb.playerId,
@@ -312,13 +315,18 @@ export class EPASanityCheckService {
         });
         
         console.log(`✅ [Tiber EPA] ${qb.playerName}: Raw=${rawEpa.toFixed(3)}, Adj=${adjEpa.toFixed(3)} (Δ${totalAdjustment.toFixed(3)})`);
+        successCount++;
         
-      } catch (error) {
-        console.warn(`⚠️  Failed to calculate Tiber EPA for ${qb.playerName}:`, error);
+      } catch (error: any) {
+        failCount++;
+        console.error(`❌ [Tiber EPA] Failed to insert ${qb.playerName} (${qb.playerId}):`, error?.message || error);
+        if (error?.constraint) {
+          console.error(`   Constraint violation: ${error.constraint}`);
+        }
       }
     }
     
-    console.log(`✅ [Tiber EPA] Calculated adjusted EPA for ${qbsWithContext.length} QBs`);
+    console.log(`📊 [Tiber EPA] Summary: ${successCount} successful, ${failCount} failed out of ${qbsWithContext.length} total`);
   }
 
   /**

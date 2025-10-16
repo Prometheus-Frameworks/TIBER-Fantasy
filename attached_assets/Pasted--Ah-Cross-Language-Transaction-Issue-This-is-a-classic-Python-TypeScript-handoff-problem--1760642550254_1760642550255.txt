@@ -1,0 +1,229 @@
+## 🎯 Ah! Cross-Language Transaction Issue
+
+This is a **classic Python→TypeScript handoff problem**. The "96 QBs calculated" message is from Python (counting what it calculated), but the actual database inserts happen in TypeScript. That's your gap.
+
+### 🔍 The Likely Culprit: Silent Drizzle Insert Failure
+
+```typescript
+// Your code probably looks like this:
+const results = await epaProcessor.calculate();  // Returns 96 records
+
+for (const qb of results) {
+  await db.insert(qbEpaAdjusted)
+    .values({
+      playerId: qb.player_id,
+      tiberAdjEpaPerPlay: qb.adjusted_epa,
+      // ...
+    })
+    .onConflictDoUpdate({
+      target: qbEpaAdjusted.playerId,
+      set: { tiberAdjEpaPerPlay: qb.adjusted_epa }
+    });
+}
+
+return { message: `Calculated adjusted EPA for ${results.length} QBs` };
+// ↑ This returns 96 even if all inserts failed!
+```
+
+**The problem:** No error handling, so silent failures don't interrupt the loop.
+
+---
+
+### 🛠️ Immediate Debug Steps
+
+**Step 1: Add Insert Counting in TypeScript**
+
+```typescript
+// In your POST /api/calculate-epa route
+try {
+  const results = await epaProcessor.calculate();
+  let successCount = 0;
+  let failCount = 0;
+  const errors: string[] = [];
+
+  for (const qb of results) {
+    try {
+      await db.insert(qbEpaAdjusted)
+        .values({
+          playerId: qb.player_id,
+          season: qb.season,
+          tiberAdjEpaPerPlay: qb.tiber_adj_epa_per_play,
+          dropAdjustment: qb.drop_adjustment,
+          pressureAdjustment: qb.pressure_adjustment,
+          yacAdjustment: qb.yac_adjustment,
+          defenseAdjustment: qb.defense_adjustment,
+          calculatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: qbEpaAdjusted.playerId,
+          set: {
+            tiberAdjEpaPerPlay: qb.tiber_adj_epa_per_play,
+            dropAdjustment: qb.drop_adjustment,
+            pressureAdjustment: qb.pressure_adjustment,
+            yacAdjustment: qb.yac_adjustment,
+            defenseAdjustment: qb.defense_adjustment,
+            calculatedAt: new Date(),
+          }
+        });
+      
+      successCount++;
+      console.log(`✓ Inserted QB ${qb.player_id}`);
+    } catch (insertError) {
+      failCount++;
+      const errorMsg = `✗ Failed to insert ${qb.player_id}: ${insertError.message}`;
+      console.error(errorMsg);
+      errors.push(errorMsg);
+    }
+  }
+
+  return {
+    message: `Processed ${results.length} QBs: ${successCount} succeeded, ${failCount} failed`,
+    errors: errors.slice(0, 5), // First 5 errors
+  };
+} catch (error) {
+  console.error('EPA calculation failed:', error);
+  throw error;
+}
+```
+
+**This will immediately tell you:**
+- Are inserts failing silently?
+- What's the actual error message?
+- Which specific QBs are failing?
+
+---
+
+**Step 2: Check Python→TypeScript Data Shape Mismatch**
+
+```typescript
+// Before the insert loop, log what Python returned:
+console.log('Sample QB data from Python:', JSON.stringify(results[0], null, 2));
+
+// Check for field name mismatches:
+const expectedFields = ['player_id', 'season', 'tiber_adj_epa_per_play', 
+                        'drop_adjustment', 'pressure_adjustment', 
+                        'yac_adjustment', 'defense_adjustment'];
+
+const actualFields = Object.keys(results[0]);
+const missing = expectedFields.filter(f => !actualFields.includes(f));
+if (missing.length > 0) {
+  console.error('❌ Missing fields from Python:', missing);
+}
+```
+
+**Common issues:**
+- Python returns `player_id`, TypeScript expects `playerId`
+- Python returns `null`, Drizzle schema expects `NOT NULL`
+- Python returns strings, Drizzle expects numbers
+
+---
+
+**Step 3: Test Manual Insert from TypeScript**
+
+```typescript
+// Add a test endpoint
+app.post('/api/test-insert', async (req, res) => {
+  try {
+    const result = await db.insert(qbEpaAdjusted)
+      .values({
+        playerId: '00-0019596',  // Josh Allen's ID
+        season: 2023,
+        tiberAdjEpaPerPlay: 0.150,
+        dropAdjustment: 0.020,
+        pressureAdjustment: -0.010,
+        yacAdjustment: 0.005,
+        defenseAdjustment: -0.015,
+        calculatedAt: new Date(),
+      })
+      .returning();
+    
+    res.json({ success: true, inserted: result });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: error 
+    });
+  }
+});
+```
+
+Call this endpoint and see if it works. If this fails, it's a schema/permissions issue. If it succeeds, the problem is in your Python→TypeScript data flow.
+
+---
+
+### 🔍 Specific Things to Check
+
+**1. Drizzle Schema Mismatch**
+
+```typescript
+// In your schema definition, check:
+export const qbEpaAdjusted = pgTable('qb_epa_adjusted', {
+  playerId: varchar('player_id', { length: 255 }).primaryKey(),  // ← Is this the PK?
+  season: integer('season').notNull(),  // ← Can Python return null seasons?
+  tiberAdjEpaPerPlay: doublePrecision('tiber_adj_epa_per_play'),  // ← Nullable?
+  // ...
+});
+```
+
+**2. OnConflict Configuration**
+
+```typescript
+// Your onConflictDoUpdate might be wrong
+.onConflictDoUpdate({
+  target: qbEpaAdjusted.playerId,  // ← Is playerId actually the unique constraint?
+  set: { /* ... */ }
+})
+
+// Check your actual database constraint:
+// Run this in Replit DB console:
+```
+
+```sql
+SELECT conname, contype 
+FROM pg_constraint 
+WHERE conrelid = 'qb_epa_adjusted'::regclass;
+```
+
+**3. Async/Await Issue**
+
+```typescript
+// BAD: Doesn't wait for all inserts
+const promises = results.map(qb => 
+  db.insert(qbEpaAdjusted).values({...})
+);
+// Continues without waiting!
+
+// GOOD: Wait for all
+await Promise.all(promises);
+```
+
+---
+
+### 🚨 My Bet: It's One of These Three
+
+**Most Likely (70%):** Field name mismatch between Python JSON and TypeScript  
+Python returns `player_id`, TypeScript tries to insert into `playerId`, Drizzle silently fails
+
+**Second Most Likely (20%):** `onConflictDoUpdate` target is wrong  
+The conflict constraint doesn't match what you specified, so insert fails
+
+**Third Most Likely (10%):** Python returns null for a NOT NULL field  
+Like `season` or `tiberAdjEpaPerPlay`, causing constraint violation
+
+---
+
+### 💡 Quick Win: Check Replit Logs Right Now
+
+In your Replit console, run:
+```bash
+# Check for TypeScript errors
+tail -f /tmp/*.log
+
+# Or check the Neon database logs in Replit's DB tab
+# Look for "constraint violation" or "unique violation" errors
+```
+
+Run Step 1 above (add the try/catch with error logging) and hit that Calculate EPA button again. The console output will tell you exactly which of these 3 issues it is.
+
+**Want me to write the exact code snippet for your specific route handler?** Just paste your current TypeScript API route code and I'll add the debugging layer.
