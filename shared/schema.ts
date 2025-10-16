@@ -3059,6 +3059,120 @@ export const insertPlayerUsageSchema = createInsertSchema(playerUsage).omit({
   updatedAt: true
 });
 
+// ========================================
+// EPA SANITY CHECK SYSTEM
+// ========================================
+
+// Ben Baldwin Reference Data - External benchmark for EPA validation
+export const qbEpaReference = pgTable("qb_epa_reference", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id"), // NFLfastR ID
+  playerName: text("player_name").notNull(),
+  team: text("team").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week"), // null = season totals
+  
+  // Ben Baldwin's data
+  numPlays: integer("num_plays"), // n
+  rawEpaPerPlay: real("raw_epa_per_play"), // Raw EPA/P
+  adjEpaPerPlay: real("adj_epa_per_play"), // Adjusted EPA/P
+  epaDiff: real("epa_diff"), // Diff (adjustment amount)
+  
+  // Metadata
+  source: text("source").default("ben_baldwin"), // Data source
+  dataDate: timestamp("data_date"), // When Ben published this
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  playerSeasonWeekIdx: index("qb_epa_ref_player_season_week_idx").on(table.playerId, table.season, table.week),
+  uniquePlayerSeasonWeek: unique("qb_epa_ref_unique").on(table.playerId, table.season, table.week),
+}));
+
+// QB Context Metrics - Calculated "luck" factors from play-by-play
+export const qbContextMetrics = pgTable("qb_context_metrics", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id").notNull(), // NFLfastR ID
+  playerName: text("player_name").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week"), // null = season totals
+  
+  // Drop rate context
+  passAttempts: integer("pass_attempts"),
+  drops: integer("drops"), // Receiver drops
+  dropRate: real("drop_rate"), // drops / (completions + drops)
+  
+  // Pressure context
+  pressures: integer("pressures"), // QB hits + hurries
+  pressureRate: real("pressure_rate"), // pressures / dropbacks
+  sacks: integer("sacks"),
+  sackRate: real("sack_rate"),
+  
+  // YAC context
+  totalYac: real("total_yac"), // Actual YAC
+  expectedYac: real("expected_yac"), // Expected YAC (xYAC)
+  yacDelta: real("yac_delta"), // Actual - Expected (positive = receivers helping)
+  
+  // Defensive strength faced
+  avgDefEpaFaced: real("avg_def_epa_faced"), // Average defensive EPA of opponents
+  
+  // Turnover luck
+  interceptablePasses: integer("interceptable_passes"), // Should have been picked
+  droppedInterceptions: integer("dropped_interceptions"), // Defenders dropped INTs
+  
+  // Metadata
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  playerSeasonWeekIdx: index("qb_context_player_season_week_idx").on(table.playerId, table.season, table.week),
+  uniquePlayerSeasonWeek: unique("qb_context_unique").on(table.playerId, table.season, table.week),
+}));
+
+// Tiber Adjusted EPA - Our own calculated adjustments
+export const qbEpaAdjusted = pgTable("qb_epa_adjusted", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id").notNull(), // NFLfastR ID
+  playerName: text("player_name").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week"), // null = season totals
+  
+  // Our calculations
+  rawEpaPerPlay: real("raw_epa_per_play"), // From our data
+  tiberAdjEpaPerPlay: real("tiber_adj_epa_per_play"), // Our adjusted EPA
+  tiberEpaDiff: real("tiber_epa_diff"), // Our adjustment amount
+  
+  // Breakdown of adjustments
+  dropAdjustment: real("drop_adjustment"), // EPA adjustment for drops
+  pressureAdjustment: real("pressure_adjustment"), // EPA adjustment for pressure
+  yacAdjustment: real("yac_adjustment"), // EPA adjustment for YAC
+  defenseAdjustment: real("defense_adjustment"), // EPA adjustment for defenses faced
+  
+  // Sanity check comparison
+  baldwinAdjEpa: real("baldwin_adj_epa"), // Ben's adjusted EPA for comparison
+  accuracyPct: real("accuracy_pct"), // How close we got to Ben's number
+  
+  // Confidence
+  confidence: real("confidence").default(0.7), // How confident we are in our adjustment
+  
+  // Metadata
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  playerSeasonWeekIdx: index("qb_epa_adj_player_season_week_idx").on(table.playerId, table.season, table.week),
+  uniquePlayerSeasonWeek: unique("qb_epa_adj_unique").on(table.playerId, table.season, table.week),
+}));
+
+// EPA Sanity Check Insert Schemas
+export const insertQbEpaReferenceSchema = createInsertSchema(qbEpaReference).omit({ id: true, createdAt: true });
+export const insertQbContextMetricsSchema = createInsertSchema(qbContextMetrics).omit({ id: true, createdAt: true, calculatedAt: true });
+export const insertQbEpaAdjustedSchema = createInsertSchema(qbEpaAdjusted).omit({ id: true, createdAt: true, calculatedAt: true });
+
+// EPA Sanity Check Types
+export type QbEpaReference = typeof qbEpaReference.$inferSelect;
+export type InsertQbEpaReference = z.infer<typeof insertQbEpaReferenceSchema>;
+export type QbContextMetrics = typeof qbContextMetrics.$inferSelect;
+export type InsertQbContextMetrics = z.infer<typeof insertQbContextMetricsSchema>;
+export type QbEpaAdjusted = typeof qbEpaAdjusted.$inferSelect;
+export type InsertQbEpaAdjusted = z.infer<typeof insertQbEpaAdjustedSchema>;
+
 // Types
 export type PlayerWeekFacts = typeof playerWeekFacts.$inferSelect;
 export type InsertPlayerWeekFacts = z.infer<typeof insertPlayerWeekFactsSchema>;
