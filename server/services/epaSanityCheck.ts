@@ -5,7 +5,7 @@
 
 import { db } from '../db';
 import { qbEpaReference, qbContextMetrics, qbEpaAdjusted } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql as rawSql } from 'drizzle-orm';
 
 // Ben Baldwin's Adjusted EPA data (2025-10-15 publication)
 // Source: @benbbaldwin on X/Twitter
@@ -246,9 +246,15 @@ export class EPASanityCheckService {
    * 
    * Formula mirrors Ben Baldwin's methodology:
    * Adjusted EPA = Raw EPA + (drop_adjustment + pressure_adjustment + yac_adjustment + def_adjustment)
+   * 
+   * Note: Idempotent - clears existing data before recalculation
    */
   async calculateTiberAdjustedEpa(season: number = 2025): Promise<void> {
     console.log(`📊 [Tiber EPA] Calculating adjusted EPA for ${season}...`);
+    
+    // Clear existing data for idempotency (prevents duplicates from repeated runs)
+    await db.delete(qbEpaAdjusted).where(eq(qbEpaAdjusted.season, season));
+    console.log(`🗑️  [Tiber EPA] Cleared existing ${season} data for fresh calculation`);
     
     // Get all QBs with context metrics
     const qbsWithContext = await db
@@ -349,18 +355,47 @@ export class EPASanityCheckService {
 
   /**
    * Compare Tiber's adjusted EPA with Ben Baldwin's reference
+   * 
+   * Returns comparison data with freshness metadata for data quality monitoring
    */
-  async compareWithBaldwin(season: number = 2025): Promise<any[]> {
+  async compareWithBaldwin(season: number = 2025): Promise<{
+    comparisons: any[];
+    metadata: {
+      tiberLastCalculated: Date | null;
+      contextLastCalculated: Date | null;
+      hasDuplicates: boolean;
+    };
+  }> {
     console.log(`🔬 [EPA Compare] Comparing Tiber vs Baldwin for ${season}...`);
     
     // Get all QBs from Baldwin reference
     const baldwinData = await this.getAllBaldwinReference(season);
     
-    // Get Tiber's adjusted EPA
+    // Get Tiber's adjusted EPA with freshness check
     const tiberData = await db
       .select()
       .from(qbEpaAdjusted)
       .where(eq(qbEpaAdjusted.season, season));
+    
+    // Check for duplicates (data quality issue)
+    const uniquePlayerIds = new Set(tiberData.map(t => t.playerId));
+    const hasDuplicates = uniquePlayerIds.size !== tiberData.length;
+    
+    // Get freshness timestamps
+    const tiberFreshness = tiberData.length > 0 
+      ? tiberData.reduce((latest, curr) => 
+          curr.calculatedAt && (!latest || curr.calculatedAt > latest) ? curr.calculatedAt : latest, 
+          null as Date | null
+        )
+      : null;
+    
+    const contextData = await db
+      .select()
+      .from(qbContextMetrics)
+      .where(eq(qbContextMetrics.season, season))
+      .limit(1);
+    
+    const contextFreshness = contextData[0]?.calculatedAt || null;
     
     // Match by player ID and compare
     const comparisons = baldwinData.map(baldwin => {
@@ -389,7 +424,14 @@ export class EPASanityCheckService {
       };
     });
     
-    return comparisons;
+    return {
+      comparisons,
+      metadata: {
+        tiberLastCalculated: tiberFreshness,
+        contextLastCalculated: contextFreshness,
+        hasDuplicates,
+      },
+    };
   }
 }
 

@@ -180,7 +180,8 @@ router.get('/compare-epa', async (req, res) => {
     
     console.log(`🔬 [API] Comparing Tiber vs Baldwin for ${season}...`);
     
-    const comparisons = await epaSanityCheckService.compareWithBaldwin(season);
+    const result = await epaSanityCheckService.compareWithBaldwin(season);
+    const { comparisons, metadata } = result;
     
     const withDifference = comparisons.filter(c => c.difference !== null);
     const avgDifference = withDifference.length > 0
@@ -196,6 +197,14 @@ router.get('/compare-epa', async (req, res) => {
           total: comparisons.length,
           withTiberData: comparisons.filter(c => c.tiber !== null).length,
           avgDifference,
+        },
+        dataQuality: {
+          tiberLastCalculated: metadata.tiberLastCalculated,
+          contextLastCalculated: metadata.contextLastCalculated,
+          hasDuplicates: metadata.hasDuplicates,
+          isStale: metadata.tiberLastCalculated 
+            ? (Date.now() - metadata.tiberLastCalculated.getTime()) > 24 * 60 * 60 * 1000 
+            : true,
         },
       },
     });
