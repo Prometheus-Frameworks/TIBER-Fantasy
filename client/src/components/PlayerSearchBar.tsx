@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import PlayerGameCard from './PlayerGameCard';
+import EnhancedPlayerCard from './EnhancedPlayerCard';
 
 interface PlayerSearchResult {
   canonicalId: string;
@@ -142,10 +142,10 @@ export default function PlayerSearchBar() {
         </div>
       )}
 
-      {/* Selected Player Game Card */}
+      {/* Selected Player Card */}
       {selectedPlayer && (
-        <div className="absolute top-full mt-2 w-full md:w-[500px] z-50">
-          <PlayerGameCard player={selectedPlayer} onClose={handleClear} />
+        <div className="absolute top-full mt-2 w-full md:w-[800px] z-50">
+          <EnhancedPlayerCard player={selectedPlayer} onClose={handleClear} />
         </div>
       )}
     </div>
