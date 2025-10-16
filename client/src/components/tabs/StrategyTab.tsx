@@ -103,15 +103,31 @@ export default function StrategyTab() {
     enabled: activeTab === 'sos' && sosView === 'offense',
   });
 
+  // Build query URLs with params
+  const buildStartSitUrl = () => {
+    const params = new URLSearchParams();
+    params.set('week', startSitWeek.toString());
+    if (startSitPosition !== 'ALL') {
+      params.set('position', startSitPosition);
+    }
+    return `/api/strategy/start-sit?${params.toString()}`;
+  };
+
+  const buildWaiverUrl = () => {
+    const params = new URLSearchParams();
+    params.set('week', startSitWeek.toString());
+    return `/api/strategy/targets?${params.toString()}`;
+  };
+
   // Fetch start/sit recommendations
   const { data: startSitData, isLoading: startSitLoading } = useQuery<StartSitResponse>({
-    queryKey: [`/api/strategy/start-sit`, { week: startSitWeek, position: startSitPosition !== 'ALL' ? startSitPosition : undefined }],
+    queryKey: [buildStartSitUrl()],
     enabled: activeTab === 'startsit',
   });
 
   // Fetch waiver targets
   const { data: waiverTargets, isLoading: waiversLoading } = useQuery<WaiverTargetsResponse>({
-    queryKey: [`/api/strategy/targets`, { week: startSitWeek }],
+    queryKey: [buildWaiverUrl()],
     enabled: activeTab === 'waivers',
   });
 

@@ -110,6 +110,62 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - `client/src/components/TiberBadge.tsx` - Updated tooltip text
 - `client/src/components/tabs/RankingsTab.tsx` - Added acronym to filter section
 
+### Enhanced Player Cards & Week 7 Strategy Guide (October 16, 2025)
+**Enhancement:** Built comprehensive Week 7 decision-making tools featuring enhanced player cards with TIBER trend analysis and a revamped Strategy Tab with context-aware start/sit recommendations.
+
+**1. Enhanced Player Card Component:**
+- **TIBER Trend Chart**: Recharts line graph showing weeks 1-6 TIBER volatility scores for breakout/regression pattern recognition
+- **Last 3 Weeks Summary**: Recent performance snapshot with key metrics (targets, receptions, yards, TDs, fantasy points)
+- **ROS Matchup Calendar**: Weeks 7-18 schedule with color-coded DvP (Defense vs Position) difficulty ratings
+  - Elite matchup (green), Good (blue), Neutral (gray), Tough (orange), Avoid (red)
+- **API Endpoint**: `GET /api/tiber/history/:nflfastrId` - Returns weeks 1-6 TIBER trend data
+- **API Endpoint**: `GET /api/matchup/ros/:canonicalId` - Returns weeks 7-18 schedule with DvP ratings
+
+**2. Strategy Tab Overhaul (3 Sections):**
+
+**Section 1: Start/Sit Recommendations**
+- Context-aware matchup analysis that respects player talent (won't bench OVR ≥90 superstars for tough matchups)
+- Confidence ratings (high/medium/low) based on TIBER trends, matchup difficulty, and recent performance
+- Reasoning explanations for each recommendation
+- API Endpoint: `GET /api/strategy/start-sit?week=7&position=WR`
+- Smart tier logic:
+  - Elite (OVR ≥90): Always start regardless of matchup
+  - Great (80-89): Start unless matchup is "avoid" tier
+  - Good (70-79): Matchup-dependent recommendations
+  - Below 70: Consider benching if tough matchup
+
+**Section 2: Waiver Wire Targets**
+- TIBER-based breakout candidates (tier: "breakout" or "potential-breakout")
+- Prioritizes high TIBER scores (≥70) showing upward momentum
+- Filters to skill positions only (QB, RB, WR, TE)
+- API Endpoint: `GET /api/strategy/targets?week=7`
+
+**Section 3: SOS Rankings** (Existing)
+- Team-level Strength of Schedule analysis
+- Position-specific defensive rankings
+- Offensive EPA-based team rankings
+
+**Implementation Details:**
+- All strategy routes mounted at `/api/strategy/*`
+- DvP calculation executed for 2025 weeks 1-6 via `POST /api/dvp/calculate`
+- Canonical player ID format: lowercase-hyphenated strings (e.g., "josh-allen", "ja-marr-chase")
+- Player search bar now opens enhanced cards with full trend analysis and matchup intelligence
+
+**Data Flow:**
+- TIBER scores from `tiber_scores` table (weeks 1-6 historical)
+- Schedule data from `schedule` table (weeks 7-18 ROS)
+- DvP ratings from `defense_vs_position_stats` table
+- Player data from `player_identity_map` table
+
+**Files Created/Modified:**
+- `client/src/components/EnhancedPlayerCard.tsx` - New comprehensive player profile card
+- `client/src/components/tabs/StrategyTab.tsx` - Complete redesign with 3-section layout
+- `server/routes/strategyRoutes.ts` - Smart start/sit and waiver target APIs
+- `server/routes/tiberRoutes.ts` - Added TIBER history endpoint
+- `server/routes/matchupRoutes.ts` - Added ROS matchup endpoint
+- `client/src/components/PlayerSearchBar.tsx` - Updated to use enhanced cards
+- `server/routes.ts` - Mounted strategy routes
+
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
 - **Sleeper API**: Player projections, game logs, ADP data, league sync, and current roster data.
