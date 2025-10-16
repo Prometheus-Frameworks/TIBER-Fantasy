@@ -105,4 +105,107 @@ router.get('/compare', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/sanity-check/calculate-context
+ * Calculate QB context metrics from NFLfastR play-by-play data
+ */
+router.post('/calculate-context', async (req, res) => {
+  try {
+    const { season = 2025 } = req.body;
+    
+    console.log(`🔬 [API] Calculating QB context metrics for ${season}...`);
+    
+    // Call Python EPA processor
+    const result = await epaSanityCheckService.calculateQbContextMetrics(season);
+    
+    if (result.error) {
+      return res.status(500).json({ 
+        success: false, 
+        error: result.error 
+      });
+    }
+    
+    // Store in database
+    await epaSanityCheckService.storeQbContextMetrics(result.qb_context);
+    
+    res.json({
+      success: true,
+      data: {
+        season: result.season,
+        qbCount: result.qb_context.length,
+        generatedAt: result.generated_at,
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ [API] Context calculation failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+/**
+ * POST /api/sanity-check/calculate-tiber-epa
+ * Calculate Tiber's adjusted EPA using context metrics
+ */
+router.post('/calculate-tiber-epa', async (req, res) => {
+  try {
+    const { season = 2025 } = req.body;
+    
+    console.log(`📊 [API] Calculating Tiber adjusted EPA for ${season}...`);
+    
+    await epaSanityCheckService.calculateTiberAdjustedEpa(season);
+    
+    res.json({
+      success: true,
+      message: `Calculated Tiber adjusted EPA for ${season}`,
+    });
+  } catch (error: any) {
+    console.error('❌ [API] Tiber EPA calculation failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+/**
+ * GET /api/sanity-check/compare-epa
+ * Compare Tiber's adjusted EPA with Ben Baldwin's reference
+ */
+router.get('/compare-epa', async (req, res) => {
+  try {
+    const season = parseInt(req.query.season as string) || 2025;
+    
+    console.log(`🔬 [API] Comparing Tiber vs Baldwin for ${season}...`);
+    
+    const comparisons = await epaSanityCheckService.compareWithBaldwin(season);
+    
+    const withDifference = comparisons.filter(c => c.difference !== null);
+    const avgDifference = withDifference.length > 0
+      ? withDifference.reduce((sum, c) => sum + Math.abs(c.difference!), 0) / withDifference.length
+      : 0;
+    
+    res.json({
+      success: true,
+      data: {
+        season,
+        comparisons,
+        summary: {
+          total: comparisons.length,
+          withTiberData: comparisons.filter(c => c.tiber !== null).length,
+          avgDifference,
+        },
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ [API] EPA comparison failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 export default router;

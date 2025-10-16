@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Bell, Home, TrendingUp, Shield, Target, Shuffle, Users } from 'lucide-react';
+import { User, Bell, Home, TrendingUp, Shield, Target, Shuffle, Users, FlaskConical } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import HomeTab from '@/components/tabs/HomeTab';
 import RankingsTab from '@/components/tabs/RankingsTab';
@@ -7,6 +7,7 @@ import MatchupsTab from '@/components/tabs/MatchupsTab';
 import StrategyTab from '@/components/tabs/StrategyTab';
 import MovesTab from '@/components/tabs/MovesTab';
 import LeaguesTab from '@/components/tabs/LeaguesTab';
+import EPASanityTab from '@/components/tabs/EPASanityTab';
 import PlayerSearchBar from '@/components/PlayerSearchBar';
 
 const tabs = [
@@ -16,6 +17,7 @@ const tabs = [
   { id: 'strategy', label: 'Strategy', icon: Target, component: StrategyTab },
   { id: 'moves', label: 'Moves', icon: Shuffle, component: MovesTab },
   { id: 'leagues', label: 'Leagues', icon: Users, component: LeaguesTab },
+  { id: 'epa-sanity', label: 'EPA Sanity', icon: FlaskConical, component: EPASanityTab },
 ];
 
 function TiberDashboard() {

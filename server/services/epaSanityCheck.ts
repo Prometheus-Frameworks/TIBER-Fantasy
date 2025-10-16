@@ -242,6 +242,131 @@ export class EPASanityCheckService {
     
     console.log(`✅ [EPA Context] Stored ${contextData.length} QB context records`);
   }
+
+  /**
+   * Calculate Tiber Adjusted EPA using context metrics
+   * 
+   * Formula mirrors Ben Baldwin's methodology:
+   * Adjusted EPA = Raw EPA + (drop_adjustment + pressure_adjustment + yac_adjustment + def_adjustment)
+   */
+  async calculateTiberAdjustedEpa(season: number = 2025): Promise<void> {
+    console.log(`📊 [Tiber EPA] Calculating adjusted EPA for ${season}...`);
+    
+    // Get all QBs with context metrics
+    const qbsWithContext = await db
+      .select()
+      .from(qbContextMetrics)
+      .where(eq(qbContextMetrics.season, season));
+    
+    // Get Baldwin reference data for raw EPA
+    const baldwinReference = await this.getAllBaldwinReference(season);
+    
+    console.log(`🔍 [Tiber EPA] Found ${qbsWithContext.length} QBs with context metrics`);
+    console.log(`🔍 [Tiber EPA] Found ${baldwinReference.length} Baldwin reference QBs`);
+    
+    for (const qb of qbsWithContext) {
+      try {
+        // Find corresponding Baldwin reference for raw EPA
+        const baldwinData = baldwinReference.find(b => b.playerId === qb.playerId);
+        
+        if (!baldwinData) {
+          console.warn(`⚠️  No Baldwin reference found for ${qb.playerName}, skipping`);
+          continue;
+        }
+        
+        const rawEpa = baldwinData.rawEpaPerPlay;
+        
+        // Calculate adjustments based on context
+        const dropAdjustment = (qb.dropRate || 0) * 0.15;  // Penalize high drop rates
+        const pressureAdjustment = (qb.pressureRate || 0) * -0.12;  // Reward handling pressure
+        const yacAdjustment = (qb.yacDelta || 0) * 0.002;  // Adjust for receiver YAC contribution
+        const defAdjustment = (qb.avgDefEpaFaced || 0) * -0.08;  // Adjust for defensive strength
+        
+        const totalAdjustment = dropAdjustment + pressureAdjustment + yacAdjustment + defAdjustment;
+        const adjEpa = rawEpa + totalAdjustment;
+        
+        await db.insert(qbEpaAdjusted).values({
+          playerId: qb.playerId,
+          playerName: qb.playerName,
+          season: qb.season,
+          week: null,
+          rawEpaPerPlay: rawEpa,
+          adjEpaPerPlay: adjEpa,
+          dropAdjustment,
+          pressureAdjustment,
+          yacAdjustment,
+          defStrengthAdjustment: defAdjustment,
+          totalAdjustment,
+          passAttempts: qb.passAttempts,
+        }).onConflictDoUpdate({
+          target: [qbEpaAdjusted.playerId, qbEpaAdjusted.season, qbEpaAdjusted.week],
+          set: {
+            rawEpaPerPlay: rawEpa,
+            adjEpaPerPlay: adjEpa,
+            dropAdjustment,
+            pressureAdjustment,
+            yacAdjustment,
+            defStrengthAdjustment: defAdjustment,
+            totalAdjustment,
+            passAttempts: qb.passAttempts,
+            calculatedAt: new Date(),
+          },
+        });
+        
+        console.log(`✅ [Tiber EPA] ${qb.playerName}: Raw=${rawEpa.toFixed(3)}, Adj=${adjEpa.toFixed(3)} (Δ${totalAdjustment.toFixed(3)})`);
+        
+      } catch (error) {
+        console.warn(`⚠️  Failed to calculate Tiber EPA for ${qb.playerName}:`, error);
+      }
+    }
+    
+    console.log(`✅ [Tiber EPA] Calculated adjusted EPA for ${qbsWithContext.length} QBs`);
+  }
+
+  /**
+   * Compare Tiber's adjusted EPA with Ben Baldwin's reference
+   */
+  async compareWithBaldwin(season: number = 2025): Promise<any[]> {
+    console.log(`🔬 [EPA Compare] Comparing Tiber vs Baldwin for ${season}...`);
+    
+    // Get all QBs from Baldwin reference
+    const baldwinData = await this.getAllBaldwinReference(season);
+    
+    // Get Tiber's adjusted EPA
+    const tiberData = await db
+      .select()
+      .from(qbEpaAdjusted)
+      .where(eq(qbEpaAdjusted.season, season));
+    
+    // Match by player ID and compare
+    const comparisons = baldwinData.map(baldwin => {
+      const tiber = tiberData.find(t => t.playerId === baldwin.playerId);
+      
+      return {
+        playerId: baldwin.playerId,
+        playerName: baldwin.playerName,
+        baldwin: {
+          rawEpa: baldwin.rawEpaPerPlay,
+          adjEpa: baldwin.adjEpaPerPlay,
+          diff: baldwin.epaDiff,
+        },
+        tiber: tiber ? {
+          rawEpa: tiber.rawEpaPerPlay,
+          adjEpa: tiber.adjEpaPerPlay,
+          totalAdj: tiber.totalAdjustment,
+          dropAdj: tiber.dropAdjustment,
+          pressureAdj: tiber.pressureAdjustment,
+          yacAdj: tiber.yacAdjustment,
+          defAdj: tiber.defStrengthAdjustment,
+        } : null,
+        difference: tiber && tiber.adjEpaPerPlay && baldwin.adjEpaPerPlay
+          ? tiber.adjEpaPerPlay - baldwin.adjEpaPerPlay
+          : null,
+      };
+    });
+    
+    return comparisons;
+  }
 }
 
 export const epaSanityCheckService = new EPASanityCheckService();

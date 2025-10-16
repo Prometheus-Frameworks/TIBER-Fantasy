@@ -1,7 +1,7 @@
 # Tiber Fantasy
 
 ## Overview
-Tiber Fantasy is a free, open-source NFL fantasy football analytics dashboard designed to democratize advanced analytics. Launched in October 2025, it offers a 6-tab platform with real-time 2025 NFL data, Madden-style OVR player ratings, Defense vs Position matchups, and Strength of Schedule analytics using EPA metrics. The platform is committed to complete independence, providing high-end fantasy football insights without paywalls or partnerships, aiming to transform statistical insights into meaningful conversations for better fantasy decisions.
+Tiber Fantasy is a free, open-source NFL fantasy football analytics dashboard launched in October 2025. It provides a 6-tab platform with real-time 2025 NFL data, Madden-style OVR player ratings, Defense vs Position matchups, and Strength of Schedule analytics using EPA metrics. The project aims to offer high-end fantasy football insights without paywalls or partnerships, fostering meaningful conversations and better decision-making for fantasy players.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -29,153 +29,22 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 **Core Features & Design Patterns:**
 - **Unified Player Hub (UPH)**: Centralized data architecture.
 - **Player Evaluation & Consensus**: "Player Compass" for dynamic profiles and "OTC Consensus" for community-driven rankings.
-- **OVR (Overall Rating) System**: Madden-style 1-99 player rating system based on weighted blending of multiple inputs (API endpoints at `/api/ovr/*`).
+- **OVR (Overall Rating) System**: Madden-style 1-99 player rating system based on weighted blending of multiple inputs.
 - **AI & Analytics**: "Competence Mode" for AI advice, Adaptive Consensus Engine, and DeepSeek + Compass Fusion System for predictive analysis.
 - **Rankings & VORP**: Comprehensive Rankings Hub, enhanced VORP with dynasty mode and age penalties, and an Enhanced ECR Comparison System.
 - **Rookie & Player Analysis**: Dedicated Rookie Evaluation System, Target Competition Analysis (TCIP), Player Usage Context Module, and Stud Detection Module.
 - **EPA Analytics**: Advanced efficiency metrics from nfl-data-py play-by-play data, including EPA per play/target, Air EPA vs YAC EPA, success rates, and team offensive/defensive EPA context rankings.
-- **SOS Team Analytics**: Comprehensive strength of schedule system with position-specific matchup intelligence, including EPA-based rankings and week-specific scores (API endpoints at `/api/sos/*`).
-- **Defense vs Position (DvP) Matchup System**: Calculates fantasy points allowed by defenses against specific positions using NFLfastR data, featuring a 5-tier rating system (API endpoints at `/api/dvp/*`).
+- **SOS Team Analytics**: Comprehensive strength of schedule system with position-specific matchup intelligence.
+- **Defense vs Position (DvP) Matchup System**: Calculates fantasy points allowed by defenses against specific positions using NFLfastR data, featuring a 5-tier rating system.
 - **Data Integration & Sync**: Sleeper Sync with cache fallback, Canonical Player Pool System, Roster Shift Listener, and Roster Sync System.
 - **Live Data & Processing**: Live Data Integration Pipeline with multi-source data capture and a Hot List Player Extraction System.
 - **Backend Services**: Backend Spine with Logs & Projections Service and a multi-format Ratings Engine.
 - **UI/UX Enhancements**: Interactive GlowCard components, pulsing GlowCTA buttons, skeleton loading, and a top loading bar.
-- **TIBER (Tactical Index for Breakout Efficiency and Regression)**: Version 1.5 implemented, using First Downs per Route Run as a primary metric, with API endpoints like `/api/tiber/score/:nflfastrId` and `/api/tiber/insights`.
+- **TIBER (Tactical Index for Breakout Efficiency and Regression)**: Version 1.5 implemented, using First Downs per Route Run as a primary metric.
 - **Player Search**: Feature for searching player game logs and statistics.
-
-## Recent Changes
-
-### Rankings Page Frontend Fix (October 15, 2025)
-**Issue:** Rankings tab displayed no players despite backend API returning 150 fantasy-relevant players correctly.
-
-**Root Causes:**
-1. API response format mismatch - frontend expected `{ success: true, data: { players: [...] } }` but backend returned flat array
-2. Missing required fields - frontend needed `player_id` (string), `tier`, `confidence` but backend returned `id` (number) without tier/confidence
-3. Dynasty/redraft toggle broken - position filter changes didn't trigger cache invalidation
-
-**Solutions Applied:**
-1. **Backend (server/routes/ovrRoutes.ts):**
-   - Wrapped response in `{ success: true, data: { players: [...] }, meta: {...} }` format
-   - Map database `id` to `player_id` as string
-   - Calculate `tier` based on OVR (Elite ≥90, Great ≥80, Good ≥70, B ≥60, else C)
-   - Add `confidence` score (0.85 for players with avgPoints, 0.65 fallback)
-
-2. **Frontend (client/src/components/tabs/RankingsTab.tsx):**
-   - Fixed queryKey to include format: `['/api/ovr', selectedFormat]` for proper cache segregation
-   - Added explicit queryFn with format parameter
-   - Implemented client-side position filtering (instant, no API calls)
-   - Removed dead code (unused buildQueryUrl function)
-
-**Architecture Pattern:**
-- **Format changes** (dynasty/redraft): Server-side with API call
-- **Position filtering** (QB/RB/WR/TE): Client-side instant filter
-- **TIBER filtering** (breakout/regression): Client-side instant filter
-
-**Test Results:**
-- ✅ 150 players display on Rankings tab
-- ✅ Position filters work: RB shows 33 RBs, WR shows 63 WRs, ALL shows 150
-- ✅ Dynasty/redraft toggle triggers new API calls with format parameter
-- ✅ TIBER badges, tier, confidence display correctly
-- ✅ Client-side filtering is instant (no API delays)
-
-**Files Modified:**
-- `server/routes/ovrRoutes.ts` - Response format and data mapping
-- `client/src/components/tabs/RankingsTab.tsx` - Query key and filtering logic
-
-### TIBER Acronym Display (October 15, 2025)
-**Enhancement:** Added visible TIBER acronym explanation across the platform to help users understand what TIBER means.
-
-**Changes Applied:**
-1. **Main Header (All Pages):**
-   - Added acronym subtitle directly below "TIBER FANTASY" logo
-   - Shows "TACTICAL INDEX FOR BREAKOUT EFFICIENCY & REGRESSION" in uppercase
-   - Displayed in very small (9px), gray text with wide letter spacing
-   - Visible on all pages in sticky header
-
-2. **TiberInsights Widget (Home Tab):**
-   - Added subtitle under "🧠 TIBER Insights" heading
-   - Shows "Tactical Index for Breakout Efficiency and Regression" in small gray text
-
-3. **Rankings Tab TIBER Filter:**
-   - Added explanation below "TIBER Filter:" label
-   - Shows "Tactical Index for Breakout Efficiency & Regression" in tiny gray text
-
-4. **TIBER Badge Tooltips:**
-   - Updated all badge hover tooltips to show full acronym
-   - Format: "TIBER: Tactical Index for Breakout Efficiency and Regression\nScore: X/100 (Tier)"
-
-**Files Modified:**
-- `client/src/pages/TiberDashboard.tsx` - Added acronym to main header
-- `client/src/components/TiberInsights.tsx` - Added acronym subtitle to header
-- `client/src/components/TiberBadge.tsx` - Updated tooltip text
-- `client/src/components/tabs/RankingsTab.tsx` - Added acronym to filter section
-
-### Enhanced Player Cards & Week 7 Strategy Guide (October 16, 2025)
-**Enhancement:** Built comprehensive Week 7 decision-making tools featuring enhanced player cards with TIBER trend analysis and a revamped Strategy Tab with context-aware start/sit recommendations.
-
-**1. Enhanced Player Card Component:**
-- **TIBER Trend Chart**: Recharts line graph showing weeks 1-6 TIBER volatility scores for breakout/regression pattern recognition
-- **Last 3 Weeks Summary**: Recent performance snapshot with key metrics (targets, receptions, yards, TDs, fantasy points)
-- **ROS Matchup Calendar**: Weeks 7-18 schedule with color-coded DvP (Defense vs Position) difficulty ratings
-  - Elite matchup (green), Good (blue), Neutral (gray), Tough (orange), Avoid (red)
-- **API Endpoint**: `GET /api/tiber/history/:nflfastrId` - Returns weeks 1-6 TIBER trend data
-- **API Endpoint**: `GET /api/matchup/ros/:canonicalId` - Returns weeks 7-18 schedule with DvP ratings
-
-**2. Strategy Tab Overhaul (3 Sections):**
-
-**Section 1: Start/Sit Recommendations**
-- Context-aware matchup analysis that respects player talent (won't bench OVR ≥90 superstars for tough matchups)
-- Confidence ratings (high/medium/low) based on TIBER trends, matchup difficulty, and recent performance
-- Reasoning explanations for each recommendation
-- API Endpoint: `GET /api/strategy/start-sit?week=7&position=WR`
-- Smart tier logic:
-  - Elite (OVR ≥90): Always start regardless of matchup
-  - Great (80-89): Start unless matchup is "avoid" tier
-  - Good (70-79): Matchup-dependent recommendations
-  - Below 70: Consider benching if tough matchup
-
-**Section 2: Waiver Wire Targets**
-- TIBER-based breakout candidates (tier: "breakout" or "potential-breakout")
-- Prioritizes high TIBER scores (≥70) showing upward momentum
-- Filters to skill positions only (QB, RB, WR, TE)
-- API Endpoint: `GET /api/strategy/targets?week=7`
-
-**Section 3: SOS Rankings** (Existing)
-- Team-level Strength of Schedule analysis
-- Position-specific defensive rankings
-- Offensive EPA-based team rankings
-
-**Implementation Details:**
-- All strategy routes mounted at `/api/strategy/*`
-- DvP calculation executed for 2025 weeks 1-6 via `POST /api/dvp/calculate`
-- Canonical player ID format: lowercase-hyphenated strings (e.g., "josh-allen", "ja-marr-chase")
-- Player search bar now opens enhanced cards with full trend analysis and matchup intelligence
-
-**Data Flow:**
-- TIBER scores from `tiber_scores` table (weeks 1-6 historical)
-- Schedule data from `schedule` table (weeks 7-18 ROS)
-- DvP ratings from `defense_vs_position_stats` table
-- Player data from `player_identity_map` table
-
-**Performance Optimization (October 16, 2025):**
-- **Issue**: Original implementation had O(N)×3 N+1 query pattern with 600+ sequential database calls causing timeouts
-- **Solution**: Refactored to batch queries with 4 total queries + in-memory joins:
-  1. Batch fetch all players (1 query)
-  2. Batch fetch week schedule for all teams (1 query)
-  3. Batch fetch DvP ratings for all position-opponent pairs (1 query)
-  4. Batch fetch TIBER scores for all nflfastrIds (1 query)
-- **Fallback Logic**: Players without nflfastrId now included in recommendations with reduced confidence (low) instead of being silently dropped
-- **Early Return**: When no games scheduled for requested week, endpoint returns immediately with informative message
-- **Data Limitation**: Week 7+ schedule data not yet available. System gracefully handles missing data with user-facing message: "No games scheduled for week X. Schedule data will be available closer to game week."
-
-**Files Created/Modified:**
-- `client/src/components/EnhancedPlayerCard.tsx` - New comprehensive player profile card
-- `client/src/components/tabs/StrategyTab.tsx` - Complete redesign with 3-section layout + missing schedule messaging
-- `server/routes/strategyRoutes.ts` - Smart start/sit and waiver target APIs with batch queries
-- `server/routes/tiberRoutes.ts` - Added TIBER history endpoint
-- `server/routes/matchupRoutes.ts` - Added ROS matchup endpoint
-- `client/src/components/PlayerSearchBar.tsx` - Updated to use enhanced cards
-- `server/routes.ts` - Mounted strategy routes
+- **EPA Sanity Check System**: Internal validation system for QB context metrics, comparing against Ben Baldwin's adjusted EPA methodology.
+- **Enhanced Player Card Component**: Features TIBER trend charts, last 3 weeks summary, and ROS Matchup Calendar.
+- **Strategy Tab Overhaul**: Redesigned for Start/Sit recommendations with context-aware analysis, Waiver Wire Targets based on TIBER, and SOS Rankings.
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
