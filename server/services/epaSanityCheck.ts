@@ -278,10 +278,28 @@ export class EPASanityCheckService {
         const rawEpa = baldwinData.rawEpaPerPlay;
         
         // Calculate adjustments based on context
-        const dropAdjustment = (qb.dropRate || 0) * 0.15;  // Penalize high drop rates
-        const pressureAdjustment = (qb.pressureRate || 0) * -0.12;  // Reward handling pressure
-        const yacAdjustment = (qb.yacDelta || 0) * 0.002;  // Adjust for receiver YAC contribution
-        const defAdjustment = (qb.avgDefEpaFaced || 0) * -0.08;  // Adjust for defensive strength
+        // Baldwin's methodology: Compare to league average, adjust for luck/adversity
+        
+        // League averages (2025 season from all QBs in reference data)
+        const LEAGUE_AVG_DROP_RATE = 0.0203;
+        const LEAGUE_AVG_PRESSURE_RATE = 0.2155;
+        const LEAGUE_AVG_YAC_PER_PLAY = -0.6691;
+        const LEAGUE_AVG_DEF_EPA = 0.0222;
+        
+        // Normalize YAC delta to per-play value
+        const yacDeltaPerPlay = (qb.yacDelta || 0) / (qb.passAttempts || 1);
+        
+        // Calculate deviations from league average
+        const dropDeviation = (qb.dropRate || 0) - LEAGUE_AVG_DROP_RATE;
+        const pressureDeviation = (qb.pressureRate || 0) - LEAGUE_AVG_PRESSURE_RATE;
+        const yacDeviation = yacDeltaPerPlay - LEAGUE_AVG_YAC_PER_PLAY;
+        const defDeviation = (qb.avgDefEpaFaced || 0) - LEAGUE_AVG_DEF_EPA;
+        
+        // Calibrated weights (tuned to match Baldwin's reference adjustments)
+        const dropAdjustment = dropDeviation * 4.5;  // Above avg drops = unlucky = boost EPA
+        const pressureAdjustment = pressureDeviation * 1.8;  // Above avg pressure = boost EPA
+        const yacAdjustment = yacDeviation * -0.75;  // Below avg YAC help = boost EPA
+        const defAdjustment = defDeviation * -1.0;  // Tougher defenses = boost EPA
         
         const totalAdjustment = dropAdjustment + pressureAdjustment + yacAdjustment + defAdjustment;
         const adjEpa = rawEpa + totalAdjustment;
