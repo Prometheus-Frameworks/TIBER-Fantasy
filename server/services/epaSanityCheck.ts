@@ -291,24 +291,22 @@ export class EPASanityCheckService {
           season: qb.season,
           week: null,
           rawEpaPerPlay: rawEpa,
-          adjEpaPerPlay: adjEpa,
+          tiberAdjEpaPerPlay: adjEpa,
+          tiberEpaDiff: totalAdjustment,
           dropAdjustment,
           pressureAdjustment,
           yacAdjustment,
-          defStrengthAdjustment: defAdjustment,
-          totalAdjustment,
-          passAttempts: qb.passAttempts,
+          defenseAdjustment: defAdjustment,
         }).onConflictDoUpdate({
           target: [qbEpaAdjusted.playerId, qbEpaAdjusted.season, qbEpaAdjusted.week],
           set: {
             rawEpaPerPlay: rawEpa,
-            adjEpaPerPlay: adjEpa,
+            tiberAdjEpaPerPlay: adjEpa,
+            tiberEpaDiff: totalAdjustment,
             dropAdjustment,
             pressureAdjustment,
             yacAdjustment,
-            defStrengthAdjustment: defAdjustment,
-            totalAdjustment,
-            passAttempts: qb.passAttempts,
+            defenseAdjustment: defAdjustment,
             calculatedAt: new Date(),
           },
         });
@@ -352,15 +350,15 @@ export class EPASanityCheckService {
         },
         tiber: tiber ? {
           rawEpa: tiber.rawEpaPerPlay,
-          adjEpa: tiber.adjEpaPerPlay,
-          totalAdj: tiber.totalAdjustment,
+          adjEpa: tiber.tiberAdjEpaPerPlay,
+          totalAdj: tiber.tiberEpaDiff,
           dropAdj: tiber.dropAdjustment,
           pressureAdj: tiber.pressureAdjustment,
           yacAdj: tiber.yacAdjustment,
-          defAdj: tiber.defStrengthAdjustment,
+          defAdj: tiber.defenseAdjustment,
         } : null,
-        difference: tiber && tiber.adjEpaPerPlay && baldwin.adjEpaPerPlay
-          ? tiber.adjEpaPerPlay - baldwin.adjEpaPerPlay
+        difference: tiber && tiber.tiberAdjEpaPerPlay && baldwin.adjEpaPerPlay
+          ? tiber.tiberAdjEpaPerPlay - baldwin.adjEpaPerPlay
           : null,
       };
     });

@@ -145,7 +145,17 @@ def calculate_qb_context_metrics(season=2024):
     """
     try:
         print(f"🔬 Loading play-by-play data for QB context analysis ({season})...", file=sys.stderr)
+        
+        # Suppress library output by temporarily redirecting stdout
+        import os
+        import io
+        old_stdout = sys.stdout
+        sys.stdout = io.StringIO()
+        
         pbp = nfl.import_pbp_data([season])
+        
+        # Restore stdout
+        sys.stdout = old_stdout
         
         # Filter to passing plays only
         passing = pbp[pbp['play_type'] == 'pass'].copy()
