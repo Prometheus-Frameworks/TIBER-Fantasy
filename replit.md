@@ -157,10 +157,21 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - DvP ratings from `defense_vs_position_stats` table
 - Player data from `player_identity_map` table
 
+**Performance Optimization (October 16, 2025):**
+- **Issue**: Original implementation had O(N)×3 N+1 query pattern with 600+ sequential database calls causing timeouts
+- **Solution**: Refactored to batch queries with 4 total queries + in-memory joins:
+  1. Batch fetch all players (1 query)
+  2. Batch fetch week schedule for all teams (1 query)
+  3. Batch fetch DvP ratings for all position-opponent pairs (1 query)
+  4. Batch fetch TIBER scores for all nflfastrIds (1 query)
+- **Fallback Logic**: Players without nflfastrId now included in recommendations with reduced confidence (low) instead of being silently dropped
+- **Early Return**: When no games scheduled for requested week, endpoint returns immediately with informative message
+- **Data Limitation**: Week 7+ schedule data not yet available. System gracefully handles missing data with user-facing message: "No games scheduled for week X. Schedule data will be available closer to game week."
+
 **Files Created/Modified:**
 - `client/src/components/EnhancedPlayerCard.tsx` - New comprehensive player profile card
-- `client/src/components/tabs/StrategyTab.tsx` - Complete redesign with 3-section layout
-- `server/routes/strategyRoutes.ts` - Smart start/sit and waiver target APIs
+- `client/src/components/tabs/StrategyTab.tsx` - Complete redesign with 3-section layout + missing schedule messaging
+- `server/routes/strategyRoutes.ts` - Smart start/sit and waiver target APIs with batch queries
 - `server/routes/tiberRoutes.ts` - Added TIBER history endpoint
 - `server/routes/matchupRoutes.ts` - Added ROS matchup endpoint
 - `client/src/components/PlayerSearchBar.tsx` - Updated to use enhanced cards
