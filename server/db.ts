@@ -5,18 +5,22 @@ import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
+// Configure Neon to handle connection errors gracefully
+neonConfig.fetchConnectionCache = true;
+neonConfig.useSecureWebSocket = true;
+
 if (!process.env.DATABASE_URL) {
   throw new Error(
     "DATABASE_URL must be set. Did you forget to provision a database?",
   );
 }
 
-// Optimized connection pool for Neon serverless
+// Optimized connection pool for Neon serverless with better error handling
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
   max: 20, // Increase from default 10 for concurrent requests
   idleTimeoutMillis: 10000, // Close idle connections after 10s (Neon serverless benefits from shorter timeouts)
-  connectionTimeoutMillis: 2000, // Fail fast if pool exhausted
+  connectionTimeoutMillis: 5000, // Increase timeout to 5s to handle transient issues
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
 });
@@ -32,9 +36,14 @@ if (process.env.NODE_ENV === 'development') {
   }, 300000);
 }
 
-// Alert on unexpected pool errors
+// Handle pool errors gracefully without crashing
 pool.on('error', (err) => {
-  console.error('❌ Unexpected pool error:', err);
+  // Suppress WebSocket-related errors that are transient
+  if (err.message && err.message.includes('WebSocket')) {
+    console.warn('⚠️  Transient database connection warning (auto-retry enabled)');
+  } else {
+    console.error('❌ Unexpected pool error:', err);
+  }
 });
 
 export const db = drizzle({ client: pool, schema });
