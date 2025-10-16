@@ -418,7 +418,11 @@ export class EPASanityCheckService {
           yacAdj: tiber.yacAdjustment,
           defAdj: tiber.defenseAdjustment,
         } : null,
-        difference: tiber && tiber.tiberAdjEpaPerPlay && baldwin.adjEpaPerPlay
+        difference: tiber && 
+                    tiber.tiberAdjEpaPerPlay !== null && 
+                    tiber.tiberAdjEpaPerPlay !== undefined &&
+                    baldwin.adjEpaPerPlay !== null && 
+                    baldwin.adjEpaPerPlay !== undefined
           ? tiber.tiberAdjEpaPerPlay - baldwin.adjEpaPerPlay
           : null,
       };
