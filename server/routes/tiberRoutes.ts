@@ -418,6 +418,76 @@ router.get('/insights', async (req, res) => {
   }
 });
 
+// Get TIBER history for trend charts (weeks 1-6)
+router.get('/history/:nflfastrId', async (req, res) => {
+  try {
+    const { nflfastrId } = req.params;
+    const season = parseInt(req.query.season as string) || 2025;
+    const startWeek = parseInt(req.query.startWeek as string) || 1;
+    const endWeek = parseInt(req.query.endWeek as string) || 6;
+
+    const history = await db
+      .select({
+        week: tiberScores.week,
+        tiberScore: tiberScores.tiberScore,
+        tier: tiberScores.tier,
+        firstDownRate: tiberScores.firstDownRate,
+        epaPerPlay: tiberScores.epaPerPlay,
+        snapPercentAvg: tiberScores.snapPercentAvg,
+        snapPercentTrend: tiberScores.snapPercentTrend,
+        calculatedAt: tiberScores.calculatedAt,
+      })
+      .from(tiberScores)
+      .where(
+        and(
+          eq(tiberScores.nflfastrId, nflfastrId),
+          eq(tiberScores.season, season),
+          sql`${tiberScores.week} >= ${startWeek} AND ${tiberScores.week} <= ${endWeek}`
+        )
+      )
+      .orderBy(tiberScores.week);
+
+    if (history.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No TIBER history found for this player'
+      });
+    }
+
+    const lastThreeWeeks = history.slice(-3);
+    const trend = lastThreeWeeks.length >= 2
+      ? lastThreeWeeks[lastThreeWeeks.length - 1].tiberScore - lastThreeWeeks[0].tiberScore
+      : 0;
+
+    res.json({
+      success: true,
+      data: {
+        nflfastrId,
+        season,
+        history,
+        summary: {
+          totalWeeks: history.length,
+          currentScore: history[history.length - 1]?.tiberScore || 0,
+          currentTier: history[history.length - 1]?.tier || 'neutral',
+          trend: trend > 0 ? 'up' : trend < 0 ? 'down' : 'stable',
+          trendValue: trend,
+          lastThreeWeeks: lastThreeWeeks.map(w => ({
+            week: w.week,
+            score: w.tiberScore,
+            tier: w.tier
+          }))
+        }
+      }
+    });
+  } catch (error) {
+    console.error('[TIBER] History error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch TIBER history'
+    });
+  }
+});
+
 // Health check
 router.get('/health', (req, res) => {
   res.json({ 
