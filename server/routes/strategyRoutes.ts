@@ -86,6 +86,8 @@ router.get('/start-sit', async (req, res) => {
         )
       ) : [];
 
+    console.log(`[Strategy] Week ${week}: Found ${players.length} players, ${teams.length} teams, ${games.length} games`);
+
     // Early return if no games scheduled for this week
     if (games.length === 0) {
       return res.json({
