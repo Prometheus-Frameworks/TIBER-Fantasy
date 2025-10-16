@@ -56,6 +56,7 @@ import compassCompareRoutes from './routes/compassCompareRoutes';
 import { nightlyProcessingRoutes } from './routes/nightlyProcessingRoutes';
 import etlRoutes from './routes/etlRoutes';
 import matchupRoutes from './routes/matchupRoutes';
+import strategyRoutes from './routes/strategyRoutes';
 import playerComparisonRoutes from './routes/playerComparisonRoutes';
 import silverLayerRoutes from './routes/silverLayerRoutes';
 import rookieRoutes from './routes/rookieRoutes';
@@ -2981,6 +2982,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/start-sit', buildStartSitRouter(startSitAgent));
   app.use('/api/buys-sells', buysSellsRoutes);
   app.use('/api/matchup', matchupRoutes);
+  app.use('/api/strategy', strategyRoutes);
+  console.log('🎯 Strategy routes mounted at /api/strategy/*');
   console.log('🎯 Player Matchup Intelligence routes mounted at /api/matchup/*');
   
   // Defense vs Position (DvP) matchup system
