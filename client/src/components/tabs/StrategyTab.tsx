@@ -230,6 +230,11 @@ export default function StrategyTab() {
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"></div>
             </div>
+          ) : startSitData?.message ? (
+            <div className="text-center py-12 text-gray-400">
+              <AlertTriangle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>{startSitData.message}</p>
+            </div>
           ) : startSitData?.recommendations && startSitData.recommendations.length > 0 ? (
             <>
               {/* Summary Stats */}

@@ -2,12 +2,13 @@
  * Strategy API Routes
  * 
  * Start/Sit recommendations, waiver targets, and lineup optimization
+ * Optimized with batch queries to avoid N+1 problems
  */
 
 import { Router } from 'express';
 import { db } from '../db';
 import { playerIdentityMap, defenseVsPositionStats, schedule, tiberScores } from '../../shared/schema';
-import { eq, and, or, sql, desc, asc } from 'drizzle-orm';
+import { eq, and, or, sql, desc, asc, inArray } from 'drizzle-orm';
 
 const router = Router();
 
@@ -34,148 +35,228 @@ router.get('/start-sit', async (req, res) => {
     }
 
     const positions = position ? [position] : ['QB', 'RB', 'WR', 'TE'];
-    const recommendations: any[] = [];
 
-    for (const pos of positions) {
-      // Get all players at this position with their matchups
-      const players = await db
-        .select({
-          canonicalId: playerIdentityMap.canonicalId,
-          fullName: playerIdentityMap.fullName,
-          position: playerIdentityMap.position,
-          nflTeam: playerIdentityMap.nflTeam,
-          nflfastrId: playerIdentityMap.nflDataPyId,
-        })
-        .from(playerIdentityMap)
-        .where(
-          and(
-            eq(playerIdentityMap.position, pos),
-            sql`${playerIdentityMap.nflTeam} IS NOT NULL`
+    // BATCH 1: Get all eligible players with their teams
+    const players = await db
+      .select({
+        canonicalId: playerIdentityMap.canonicalId,
+        fullName: playerIdentityMap.fullName,
+        position: playerIdentityMap.position,
+        nflTeam: playerIdentityMap.nflTeam,
+        nflfastrId: playerIdentityMap.nflDataPyId,
+      })
+      .from(playerIdentityMap)
+      .where(
+        and(
+          inArray(playerIdentityMap.position, positions),
+          sql`${playerIdentityMap.nflTeam} IS NOT NULL`
+        )
+      );
+
+    if (players.length === 0) {
+      return res.json({
+        success: true,
+        week,
+        season,
+        position: position || 'ALL',
+        recommendations: [],
+        summary: { totalAnalyzed: 0, startHighConfidence: 0, sitRecommendations: 0 }
+      });
+    }
+
+    // Extract unique teams for batch schedule query
+    const teams = [...new Set(players.map(p => p.nflTeam).filter(Boolean))];
+
+    // BATCH 2: Get all games for these teams in this week
+    const games = teams.length > 0 ? await db
+      .select({
+        week: schedule.week,
+        home: schedule.home,
+        away: schedule.away,
+      })
+      .from(schedule)
+      .where(
+        and(
+          eq(schedule.season, season),
+          eq(schedule.week, week),
+          or(
+            inArray(schedule.home, teams),
+            inArray(schedule.away, teams)
           )
-        );
+        )
+      ) : [];
 
-      for (const player of players) {
-        // Get player's matchup for this week
-        const [game] = await db
-          .select({
-            week: schedule.week,
-            opponent: sql<string>`CASE 
-              WHEN ${schedule.home} = ${player.nflTeam} THEN ${schedule.away}
-              WHEN ${schedule.away} = ${player.nflTeam} THEN ${schedule.home}
-              ELSE NULL
-            END`,
-            isHome: sql<boolean>`${schedule.home} = ${player.nflTeam}`,
-          })
-          .from(schedule)
-          .where(
-            and(
-              eq(schedule.season, season),
-              eq(schedule.week, week),
-              sql`(${schedule.home} = ${player.nflTeam} OR ${schedule.away} = ${player.nflTeam})`
-            )
-          )
-          .limit(1);
+    // Early return if no games scheduled for this week
+    if (games.length === 0) {
+      return res.json({
+        success: true,
+        week,
+        season,
+        position: position || 'ALL',
+        recommendations: [],
+        summary: {
+          totalAnalyzed: 0,
+          startHighConfidence: 0,
+          sitRecommendations: 0
+        },
+        message: `No games scheduled for week ${week}. Schedule data will be available closer to game week.`
+      });
+    }
 
-        if (!game || !game.opponent) continue;
+    // Build team->opponent map
+    const teamMatchups = new Map<string, { opponent: string; isHome: boolean }>();
+    games.forEach(game => {
+      teamMatchups.set(game.home, { opponent: game.away, isHome: true });
+      teamMatchups.set(game.away, { opponent: game.home, isHome: false });
+    });
 
-        // Get DvP rating for matchup
-        const [dvpStats] = await db
-          .select({
-            rankVsPosition: defenseVsPositionStats.rankVsPosition,
-            dvpRating: defenseVsPositionStats.dvpRating,
-            avgPtsAllowed: defenseVsPositionStats.avgPtsPerGamePpr,
-          })
-          .from(defenseVsPositionStats)
-          .where(
-            and(
-              eq(defenseVsPositionStats.defenseTeam, game.opponent),
-              eq(defenseVsPositionStats.position, player.position),
-              eq(defenseVsPositionStats.season, season)
-            )
-          )
-          .limit(1);
-
-        // Get TIBER trend (last 3 weeks)
-        const tiberHistory = await db
-          .select({
-            week: tiberScores.week,
-            tiberScore: tiberScores.tiberScore,
-            tier: tiberScores.tier,
-          })
-          .from(tiberScores)
-          .where(
-            and(
-              eq(tiberScores.nflfastrId, player.nflfastrId || ''),
-              eq(tiberScores.season, season),
-              sql`${tiberScores.week} >= ${week - 3} AND ${tiberScores.week} < ${week}`
-            )
-          )
-          .orderBy(desc(tiberScores.week))
-          .limit(3);
-
-        const avgTiberScore = tiberHistory.length > 0
-          ? tiberHistory.reduce((sum, t) => sum + t.tiberScore, 0) / tiberHistory.length
-          : 50;
-
-        // Smart recommendation logic
-        const isSuperstar = avgTiberScore >= 70; // High TIBER = superstar
-        const isEliteMatchup = dvpStats?.dvpRating === 'elite-matchup';
-        const isToughMatchup = dvpStats?.dvpRating === 'tough' || dvpStats?.dvpRating === 'avoid';
-        const isBreakingOut = tiberHistory.length >= 2 && 
-          tiberHistory[0].tier === 'breakout';
-
-        let recommendation = 'start';
-        let confidence = 'medium';
-        let reasoning = '';
-
-        if (isSuperstar) {
-          recommendation = 'start';
-          confidence = 'high';
-          reasoning = `Elite player - start regardless of matchup (TIBER: ${avgTiberScore.toFixed(0)})`;
-        } else if (isEliteMatchup) {
-          recommendation = 'start';
-          confidence = isBreakingOut ? 'high' : 'medium';
-          reasoning = `Great matchup vs ${game.opponent} (Defense Rank: #${dvpStats?.rankVsPosition})`;
-        } else if (isToughMatchup && !isSuperstar) {
-          recommendation = 'sit';
-          confidence = 'medium';
-          reasoning = `Tough matchup vs ${game.opponent} (Defense Rank: #${dvpStats?.rankVsPosition})`;
-        } else if (isBreakingOut) {
-          recommendation = 'start';
-          confidence = 'medium';
-          reasoning = `Breakout trend - ride the hot hand`;
-        } else {
-          recommendation = 'start';
-          confidence = 'low';
-          reasoning = `Neutral matchup - standard lineup decision`;
-        }
-
-        recommendations.push({
-          player: {
-            canonicalId: player.canonicalId,
-            fullName: player.fullName,
-            position: player.position,
-            team: player.nflTeam,
-          },
-          matchup: {
-            week,
-            opponent: game.opponent,
-            isHome: game.isHome,
-            dvpRating: dvpStats?.dvpRating || 'unknown',
-            rankVsPosition: dvpStats?.rankVsPosition || null,
-          },
-          recommendation,
-          confidence,
-          reasoning,
-          metrics: {
-            avgTiberScore: Math.round(avgTiberScore),
-            isSuperstar,
-            recentTrend: tiberHistory.length >= 2 ? 
-              (tiberHistory[0].tiberScore - tiberHistory[tiberHistory.length - 1].tiberScore > 0 ? 'up' : 'down') : 'stable',
-          }
+    // Extract unique opponents and positions for batch DvP query
+    const opponentPositionPairs: Array<{ opponent: string; position: string }> = [];
+    players.forEach(player => {
+      const matchup = teamMatchups.get(player.nflTeam || '');
+      if (matchup) {
+        opponentPositionPairs.push({
+          opponent: matchup.opponent,
+          position: player.position
         });
       }
+    });
+
+    // BATCH 3: Get all DvP ratings for relevant positions this season
+    // Simpler query - fetch all data for these positions, filter in memory
+    const dvpRatings = await db
+      .select({
+        defenseTeam: defenseVsPositionStats.defenseTeam,
+        position: defenseVsPositionStats.position,
+        rankVsPosition: defenseVsPositionStats.rankVsPosition,
+        dvpRating: defenseVsPositionStats.dvpRating,
+        avgPtsAllowed: defenseVsPositionStats.avgPtsPerGamePpr,
+      })
+      .from(defenseVsPositionStats)
+      .where(
+        and(
+          eq(defenseVsPositionStats.season, season),
+          inArray(defenseVsPositionStats.position, positions)
+        )
+      );
+
+    // Build DvP lookup map
+    const dvpMap = new Map<string, typeof dvpRatings[0]>();
+    dvpRatings.forEach(dvp => {
+      dvpMap.set(`${dvp.defenseTeam}_${dvp.position}`, dvp);
+    });
+
+    // Extract players with nflfastrIds for batch TIBER query
+    const playersWithNflFastr = players.filter(p => p.nflfastrId);
+    const nflfastrIds = playersWithNflFastr.map(p => p.nflfastrId!);
+
+    // BATCH 4: Get all TIBER scores for last 3 weeks
+    let tiberHistory: any[] = [];
+    if (nflfastrIds.length > 0) {
+      tiberHistory = await db
+        .select({
+          nflfastrId: tiberScores.nflfastrId,
+          week: tiberScores.week,
+          tiberScore: tiberScores.tiberScore,
+          tier: tiberScores.tier,
+        })
+        .from(tiberScores)
+        .where(
+          and(
+            inArray(tiberScores.nflfastrId, nflfastrIds),
+            eq(tiberScores.season, season),
+            sql`${tiberScores.week} >= ${week - 3} AND ${tiberScores.week} < ${week}`
+          )
+        )
+        .orderBy(tiberScores.nflfastrId, desc(tiberScores.week));
     }
+
+    // Build TIBER lookup map (player -> scores array)
+    const tiberMap = new Map<string, typeof tiberHistory>();
+    tiberHistory.forEach(t => {
+      if (!tiberMap.has(t.nflfastrId)) {
+        tiberMap.set(t.nflfastrId, []);
+      }
+      tiberMap.get(t.nflfastrId)!.push(t);
+    });
+
+    // BUILD RECOMMENDATIONS from batched data
+    const recommendations: any[] = [];
+
+    players.forEach(player => {
+      const matchup = teamMatchups.get(player.nflTeam || '');
+      if (!matchup) return; // No game this week
+
+      const dvpKey = `${matchup.opponent}_${player.position}`;
+      const dvpStats = dvpMap.get(dvpKey);
+
+      const playerTiber = tiberMap.get(player.nflfastrId || '') || [];
+      const avgTiberScore = playerTiber.length > 0
+        ? playerTiber.reduce((sum, t) => sum + t.tiberScore, 0) / playerTiber.length
+        : player.nflfastrId ? 50 : 40; // Lower confidence for players without TIBER data
+
+      // Smart recommendation logic
+      const isSuperstar = avgTiberScore >= 70;
+      const isEliteMatchup = dvpStats?.dvpRating === 'elite-matchup';
+      const isToughMatchup = dvpStats?.dvpRating === 'tough' || dvpStats?.dvpRating === 'avoid';
+      const isBreakingOut = playerTiber.length >= 2 && playerTiber[0].tier === 'breakout';
+
+      let recommendation = 'start';
+      let confidence = 'medium';
+      let reasoning = '';
+
+      if (!player.nflfastrId) {
+        // Fallback for players without TIBER data
+        recommendation = 'start';
+        confidence = 'low';
+        reasoning = `Limited data available - proceed with caution`;
+      } else if (isSuperstar) {
+        recommendation = 'start';
+        confidence = 'high';
+        reasoning = `Elite player - start regardless of matchup (TIBER: ${avgTiberScore.toFixed(0)})`;
+      } else if (isEliteMatchup) {
+        recommendation = 'start';
+        confidence = isBreakingOut ? 'high' : 'medium';
+        reasoning = `Great matchup vs ${matchup.opponent}${dvpStats?.rankVsPosition ? ` (Defense Rank: #${dvpStats.rankVsPosition})` : ''}`;
+      } else if (isToughMatchup && !isSuperstar) {
+        recommendation = 'sit';
+        confidence = 'medium';
+        reasoning = `Tough matchup vs ${matchup.opponent}${dvpStats?.rankVsPosition ? ` (Defense Rank: #${dvpStats.rankVsPosition})` : ''}`;
+      } else if (isBreakingOut) {
+        recommendation = 'start';
+        confidence = 'medium';
+        reasoning = `Breakout trend - ride the hot hand`;
+      } else {
+        recommendation = 'start';
+        confidence = 'low';
+        reasoning = `Neutral matchup - standard lineup decision`;
+      }
+
+      recommendations.push({
+        player: {
+          canonicalId: player.canonicalId,
+          fullName: player.fullName,
+          position: player.position,
+          team: player.nflTeam,
+        },
+        matchup: {
+          week,
+          opponent: matchup.opponent,
+          isHome: matchup.isHome,
+          dvpRating: dvpStats?.dvpRating || 'unknown',
+          rankVsPosition: dvpStats?.rankVsPosition || null,
+        },
+        recommendation,
+        confidence,
+        reasoning,
+        metrics: {
+          avgTiberScore: Math.round(avgTiberScore),
+          isSuperstar,
+          recentTrend: playerTiber.length >= 2 ? 
+            (playerTiber[0].tiberScore - playerTiber[playerTiber.length - 1].tiberScore > 0 ? 'up' : 'down') : 'stable',
+        }
+      });
+    });
 
     // Sort: Start (high confidence) > Start (medium) > Sit
     const sorted = recommendations.sort((a, b) => {
@@ -210,6 +291,7 @@ router.get('/start-sit', async (req, res) => {
 /**
  * GET /api/strategy/targets
  * Get waiver wire targets based on matchups and trends
+ * Optimized with batch queries
  * 
  * Query params:
  * - week: number (required) - week to target for
@@ -229,8 +311,10 @@ router.get('/targets', async (req, res) => {
       });
     }
 
-    // Find players with elite matchups and breakout trends
-    const targets = await db
+    const positions = position ? [position] : ['QB', 'RB', 'WR', 'TE'];
+
+    // BATCH 1: Get eligible players
+    const players = await db
       .select({
         canonicalId: playerIdentityMap.canonicalId,
         fullName: playerIdentityMap.fullName,
@@ -241,28 +325,53 @@ router.get('/targets', async (req, res) => {
       .from(playerIdentityMap)
       .where(
         and(
-          position ? eq(playerIdentityMap.position, position) : sql`1=1`,
-          sql`${playerIdentityMap.nflTeam} IS NOT NULL`
+          inArray(playerIdentityMap.position, positions),
+          sql`${playerIdentityMap.nflTeam} IS NOT NULL`,
+          sql`${playerIdentityMap.nflDataPyId} IS NOT NULL`
         )
       )
-      .limit(100);
+      .limit(200);
 
-    const recommendations: any[] = [];
+    if (players.length === 0) {
+      return res.json({
+        success: true,
+        week,
+        season,
+        targets: []
+      });
+    }
 
-    for (const player of targets) {
-      // Get TIBER score
-      const [latestTiber] = await db
-        .select()
-        .from(tiberScores)
-        .where(
-          and(
-            eq(tiberScores.nflfastrId, player.nflfastrId || ''),
-            eq(tiberScores.season, season)
-          )
+    const nflfastrIds = players.map(p => p.nflfastrId!);
+
+    // BATCH 2: Get latest TIBER scores for all players
+    const tiberScoresData = await db
+      .select({
+        nflfastrId: tiberScores.nflfastrId,
+        week: tiberScores.week,
+        tiberScore: tiberScores.tiberScore,
+        tier: tiberScores.tier,
+      })
+      .from(tiberScores)
+      .where(
+        and(
+          inArray(tiberScores.nflfastrId, nflfastrIds),
+          eq(tiberScores.season, season)
         )
-        .orderBy(desc(tiberScores.week))
-        .limit(1);
+      )
+      .orderBy(tiberScores.nflfastrId, desc(tiberScores.week));
 
+    // Build map of player -> latest TIBER score
+    const latestTiberMap = new Map<string, typeof tiberScoresData[0]>();
+    tiberScoresData.forEach(t => {
+      if (!latestTiberMap.has(t.nflfastrId)) {
+        latestTiberMap.set(t.nflfastrId, t);
+      }
+    });
+
+    // Filter for breakout candidates
+    const recommendations: any[] = [];
+    players.forEach(player => {
+      const latestTiber = latestTiberMap.get(player.nflfastrId || '');
       if (latestTiber?.tier === 'breakout' && latestTiber.tiberScore >= 60) {
         recommendations.push({
           player: {
@@ -276,7 +385,7 @@ router.get('/targets', async (req, res) => {
           targetReason: 'Breakout candidate with favorable trend'
         });
       }
-    }
+    });
 
     res.json({
       success: true,
