@@ -57,6 +57,7 @@ import { nightlyProcessingRoutes } from './routes/nightlyProcessingRoutes';
 import etlRoutes from './routes/etlRoutes';
 import matchupRoutes from './routes/matchupRoutes';
 import strategyRoutes from './routes/strategyRoutes';
+import epaSanityCheckRoutes from './routes/epaSanityCheckRoutes';
 import playerComparisonRoutes from './routes/playerComparisonRoutes';
 import silverLayerRoutes from './routes/silverLayerRoutes';
 import rookieRoutes from './routes/rookieRoutes';
@@ -2985,6 +2986,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/strategy', strategyRoutes);
   console.log('🎯 Strategy routes mounted at /api/strategy/*');
   console.log('🎯 Player Matchup Intelligence routes mounted at /api/matchup/*');
+  
+  // EPA Sanity Check System
+  app.use('/api/sanity-check', epaSanityCheckRoutes);
+  console.log('🔬 EPA Sanity Check routes mounted at /api/sanity-check/*');
   
   // Defense vs Position (DvP) matchup system
   const { calculateDefenseVsPosition, getDefenseVsPosition, getMatchupRating } = await import('./services/defenseVsPositionService');
