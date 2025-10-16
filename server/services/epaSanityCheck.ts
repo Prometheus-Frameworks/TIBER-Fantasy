@@ -155,6 +155,93 @@ export class EPASanityCheckService {
       .where(eq(qbEpaReference.season, season))
       .orderBy(qbEpaReference.adjEpaPerPlay);
   }
+
+  /**
+   * Call Python EPA processor to calculate QB context metrics
+   */
+  async calculateQbContextMetrics(season: number = 2025): Promise<any> {
+    console.log(`🔬 [EPA Context] Calculating QB context metrics for ${season}...`);
+    
+    try {
+      // Execute Python EPA processor
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+      
+      const { stdout, stderr } = await execAsync(
+        `python3 server/epaProcessor.py context ${season}`,
+        { maxBuffer: 10 * 1024 * 1024 } // 10MB buffer
+      );
+      
+      if (stderr && !stderr.includes('FutureWarning')) {
+        console.warn('⚠️  Python stderr:', stderr);
+      }
+      
+      const result = JSON.parse(stdout);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      console.log(`✅ [EPA Context] Calculated metrics for ${result.qb_context?.length || 0} QBs`);
+      return result;
+      
+    } catch (error: any) {
+      console.error('❌ [EPA Context] Calculation failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Store QB context metrics in database
+   */
+  async storeQbContextMetrics(contextData: any[]): Promise<void> {
+    console.log(`💾 [EPA Context] Storing ${contextData.length} QB context records...`);
+    
+    for (const qb of contextData) {
+      try {
+        await db.insert(qbContextMetrics).values({
+          playerId: qb.player_id,
+          playerName: qb.player_name,
+          season: qb.season,
+          week: null, // Season totals
+          passAttempts: qb.pass_attempts,
+          drops: qb.drops,
+          dropRate: qb.drop_rate,
+          pressures: qb.pressures,
+          pressureRate: qb.pressure_rate,
+          sacks: qb.sacks,
+          sackRate: qb.sack_rate,
+          totalYac: qb.total_yac_epa,
+          expectedYac: qb.expected_yac_epa,
+          yacDelta: qb.yac_delta,
+          avgDefEpaFaced: qb.avg_def_epa_faced,
+          interceptablePasses: qb.interceptable_passes,
+          droppedInterceptions: null, // TODO: Calculate from play-by-play
+        }).onConflictDoUpdate({
+          target: [qbContextMetrics.playerId, qbContextMetrics.season, qbContextMetrics.week],
+          set: {
+            passAttempts: qb.pass_attempts,
+            drops: qb.drops,
+            dropRate: qb.drop_rate,
+            pressures: qb.pressures,
+            pressureRate: qb.pressure_rate,
+            sacks: qb.sacks,
+            sackRate: qb.sack_rate,
+            totalYac: qb.total_yac_epa,
+            expectedYac: qb.expected_yac_epa,
+            yacDelta: qb.yac_delta,
+            avgDefEpaFaced: qb.avg_def_epa_faced,
+            calculatedAt: new Date(),
+          },
+        });
+      } catch (error) {
+        console.warn(`⚠️  Failed to store context for ${qb.player_name}:`, error);
+      }
+    }
+    
+    console.log(`✅ [EPA Context] Stored ${contextData.length} QB context records`);
+  }
 }
 
 export const epaSanityCheckService = new EPASanityCheckService();

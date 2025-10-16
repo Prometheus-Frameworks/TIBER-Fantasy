@@ -137,6 +137,118 @@ def calculate_player_epa_metrics(season=2024):
         traceback.print_exc()
         return {'error': str(e)}
 
+def calculate_qb_context_metrics(season=2024):
+    """
+    Calculate QB context metrics - "luck" factors that Ben Baldwin adjusts for
+    
+    Returns context data for: drops, pressure, YAC delta, defensive EPA faced
+    """
+    try:
+        print(f"🔬 Loading play-by-play data for QB context analysis ({season})...", file=sys.stderr)
+        pbp = nfl.import_pbp_data([season])
+        
+        # Filter to passing plays only
+        passing = pbp[pbp['play_type'] == 'pass'].copy()
+        passing = passing[passing['passer_player_id'].notna()]
+        
+        print(f"✅ Loaded {len(passing):,} passing plays", file=sys.stderr)
+        
+        # Calculate context metrics for each QB
+        qb_context = []
+        
+        for qb_id in passing['passer_player_id'].unique():
+            qb_plays = passing[passing['passer_player_id'] == qb_id]
+            qb_name = qb_plays['passer_player_name'].iloc[0] if len(qb_plays) > 0 else 'Unknown'
+            
+            if len(qb_plays) < 100:  # Min 100 dropbacks
+                continue
+            
+            # === Drop Rate ===
+            # Incomplete passes that weren't QB's fault (receiver drops)
+            pass_attempts = len(qb_plays)
+            completions = qb_plays['complete_pass'].sum()
+            incomplete = qb_plays['incomplete_pass'].sum()
+            
+            # Estimate drops as incompletions on catchable balls (not sacks, throwaways)
+            non_sack_attempts = qb_plays[qb_plays['sack'] == 0]
+            catchable_incompletions = non_sack_attempts['incomplete_pass'].sum()
+            estimated_drops = int(catchable_incompletions * 0.08)  # Rough estimate: 8% drop rate
+            drop_rate = estimated_drops / pass_attempts if pass_attempts > 0 else 0
+            
+            # === Pressure Rate ===
+            # QB hits + hurries
+            qb_hit = qb_plays['qb_hit'].fillna(0).sum()
+            sacks = qb_plays['sack'].fillna(0).sum()
+            total_pressures = qb_hit + sacks
+            pressure_rate = total_pressures / pass_attempts if pass_attempts > 0 else 0
+            sack_rate = sacks / pass_attempts if pass_attempts > 0 else 0
+            
+            # === YAC Context ===
+            # YAC EPA vs Expected YAC EPA
+            yac_plays = qb_plays[qb_plays['yac_epa'].notna() & qb_plays['xyac_epa'].notna()]
+            total_yac_epa = yac_plays['yac_epa'].sum()
+            expected_yac_epa = yac_plays['xyac_epa'].sum()
+            yac_delta = total_yac_epa - expected_yac_epa
+            
+            # === Defensive Strength Faced ===
+            # Average defensive EPA allowed by opponents faced
+            opponents = qb_plays['defteam'].unique()
+            
+            # Calculate avg defensive EPA for opponents
+            def_epa_values = []
+            for opp in opponents:
+                opp_def_plays = pbp[pbp['defteam'] == opp]
+                if len(opp_def_plays) > 0:
+                    avg_def_epa = opp_def_plays['epa'].mean()
+                    if pd.notna(avg_def_epa):
+                        def_epa_values.append(avg_def_epa)
+            
+            avg_def_epa_faced = np.mean(def_epa_values) if len(def_epa_values) > 0 else None
+            
+            # === Turnover Luck ===
+            interceptions = qb_plays['interception'].fillna(0).sum()
+            # Estimate "should have been intercepted" plays (this is rough without advanced tracking)
+            interceptable = int(interceptions * 1.3)  # Rough estimate
+            
+            context_data = {
+                'player_id': qb_id,
+                'player_name': qb_name,
+                'season': season,
+                'pass_attempts': int(pass_attempts),
+                'drops': estimated_drops,
+                'drop_rate': round(drop_rate, 3),
+                'pressures': int(total_pressures),
+                'pressure_rate': round(pressure_rate, 3),
+                'sacks': int(sacks),
+                'sack_rate': round(sack_rate, 3),
+                'total_yac_epa': round(float(total_yac_epa), 2) if pd.notna(total_yac_epa) else None,
+                'expected_yac_epa': round(float(expected_yac_epa), 2) if pd.notna(expected_yac_epa) else None,
+                'yac_delta': round(float(yac_delta), 2) if pd.notna(yac_delta) else None,
+                'avg_def_epa_faced': round(float(avg_def_epa_faced), 3) if avg_def_epa_faced is not None else None,
+                'interceptable_passes': interceptable,
+                'actual_interceptions': int(interceptions)
+            }
+            
+            qb_context.append(context_data)
+        
+        print(f"✅ Calculated context metrics for {len(qb_context)} QBs", file=sys.stderr)
+        
+        return {
+            'season': season,
+            'generated_at': datetime.now().isoformat(),
+            'qb_context': qb_context,
+            'metadata': {
+                'qb_count': len(qb_context),
+                'min_attempts': 100
+            }
+        }
+        
+    except Exception as e:
+        print(f"❌ Error calculating QB context metrics: {str(e)}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        return {'error': str(e)}
+
 def get_player_epa_summary(player_id=None, player_name=None, season=2024):
     """
     Get EPA summary for a specific player by ID or name
@@ -204,13 +316,23 @@ def get_player_epa_summary(player_id=None, player_name=None, season=2024):
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
-        # Single player lookup
-        player_identifier = sys.argv[1]
-        season = int(sys.argv[2]) if len(sys.argv) > 2 else 2024
+        command = sys.argv[1]
         
-        print(f"🔍 Looking up EPA for: {player_identifier}")
-        result = get_player_epa_summary(player_name=player_identifier, season=season)
-        print(json.dumps(result, indent=2))
+        if command == 'context':
+            # Calculate QB context metrics
+            season = int(sys.argv[2]) if len(sys.argv) > 2 else 2025
+            print(f"🔬 Calculating QB context metrics for {season}...", file=sys.stderr)
+            result = calculate_qb_context_metrics(season)
+            print(json.dumps(result))  # Print to stdout for parsing
+            
+        else:
+            # Single player lookup
+            player_identifier = command
+            season = int(sys.argv[2]) if len(sys.argv) > 2 else 2024
+            
+            print(f"🔍 Looking up EPA for: {player_identifier}", file=sys.stderr)
+            result = get_player_epa_summary(player_name=player_identifier, season=season)
+            print(json.dumps(result, indent=2))
     else:
         # Calculate all EPA metrics
         print("🚀 Calculating EPA metrics for all players...")
