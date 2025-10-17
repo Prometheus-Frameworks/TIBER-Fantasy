@@ -37,7 +37,7 @@ function TakesList({ takes, position }: { takes: WeeklyTake[]; position: string 
         <li key={idx} className="flex items-start gap-2" data-testid={`take-${position.toLowerCase()}-${idx}`}>
           <span className="text-primary mt-0.5">•</span>
           <div className="flex-1">
-            <span className="font-medium text-foreground">{take.player}</span>
+            <strong className="font-semibold text-foreground">{take.player}</strong>
             <span className="text-gray-300"> - {take.insight}</span>
           </div>
         </li>
