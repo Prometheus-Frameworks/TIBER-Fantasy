@@ -172,34 +172,35 @@ export default function EPASanityTab() {
         </TabsList>
 
         <TabsContent value="qb" className="space-y-6 mt-6">
-          <div className="flex items-center justify-end gap-3">
+          {/* Action Buttons - Stack on mobile, row on desktop */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
             <Button
               onClick={() => setShowDiagnostics(!showDiagnostics)}
               variant="outline"
-              className="border-gray-700"
+              className="border-gray-700 w-full sm:w-auto"
               data-testid="button-toggle-diagnostics"
             >
               <LineChart className="w-4 h-4 mr-2" />
-              {showDiagnostics ? 'Hide' : 'Show'} Diagnostics
+              <span className="truncate">{showDiagnostics ? 'Hide' : 'Show'} Diagnostics</span>
             </Button>
             <Button
               onClick={handleRunCalibration}
               disabled={isCalibrating}
               variant="outline"
-              className="border-blue-500 text-blue-400"
+              className="border-blue-500 text-blue-400 w-full sm:w-auto"
               data-testid="button-run-calibration"
             >
               <Settings className="w-4 h-4 mr-2" />
-              {isCalibrating ? 'Calibrating...' : 'Run Auto-Calibration'}
+              <span className="truncate">{isCalibrating ? 'Calibrating...' : 'Auto-Calibrate'}</span>
             </Button>
             <Button
               onClick={handleCalculateContext}
               disabled={isCalculating}
-              className="bg-gradient-to-r from-blue-500 to-purple-600"
+              className="bg-gradient-to-r from-blue-500 to-purple-600 w-full sm:w-auto"
               data-testid="button-calculate-epa"
             >
               <FlaskConical className="w-4 h-4 mr-2" />
-              {isCalculating ? 'Calculating...' : 'Calculate QB EPA'}
+              <span className="truncate">{isCalculating ? 'Calculating...' : 'Calculate EPA'}</span>
             </Button>
           </div>
 
@@ -216,7 +217,7 @@ export default function EPASanityTab() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* OLS Results */}
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold text-blue-400">OLS Regression</h3>
@@ -342,22 +343,22 @@ export default function EPASanityTab() {
             </Card>
           )}
 
-      {/* Summary Card */}
+      {/* System Overview - Responsive grid */}
       {(comparisonData as any)?.data?.summary && (
         <Card className="bg-[#141824] border-gray-800">
           <CardHeader>
             <CardTitle className="text-lg text-gray-100">System Overview</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-3 gap-4">
-            <div>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="text-center sm:text-left">
               <p className="text-sm text-gray-400">Total QBs</p>
               <p className="text-2xl font-bold text-gray-100">{(comparisonData as any).data.summary.total}</p>
             </div>
-            <div>
+            <div className="text-center sm:text-left">
               <p className="text-sm text-gray-400">With Tiber Data</p>
               <p className="text-2xl font-bold text-blue-400">{(comparisonData as any).data.summary.withTiberData}</p>
             </div>
-            <div>
+            <div className="text-center sm:text-left">
               <p className="text-sm text-gray-400">Avg Difference</p>
               <p className="text-2xl font-bold text-purple-400">
                 {(comparisonData as any).data.summary.avgDifference?.toFixed(3) || 'N/A'}
@@ -390,7 +391,7 @@ export default function EPASanityTab() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Baldwin Column */}
                       <div>
                         <h3 className="text-sm font-semibold text-gray-400 mb-3">Ben Baldwin's EPA</h3>
@@ -536,21 +537,21 @@ export default function EPASanityTab() {
             <Button
               onClick={handleCalculateRBContext}
               disabled={isCalculatingRB}
-              className="bg-gradient-to-r from-green-500 to-teal-600"
+              className="bg-gradient-to-r from-green-500 to-teal-600 w-full sm:w-auto"
               data-testid="button-calculate-rb-epa"
             >
               <FlaskConical className="w-4 h-4 mr-2" />
-              {isCalculatingRB ? 'Calculating...' : 'Calculate RB EPA'}
+              <span className="truncate">{isCalculatingRB ? 'Calculating...' : 'Calculate RB EPA'}</span>
             </Button>
           </div>
 
-          {/* RB Summary Card */}
+          {/* RB Summary Card - Responsive grid */}
           {(rbComparisonData as any)?.data?.summary && (
             <Card className="bg-[#141824] border-gray-800">
               <CardHeader>
                 <CardTitle className="text-lg text-gray-100">RB Context Overview</CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-4 gap-4">
+              <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
                   <p className="text-sm text-gray-400">Total RBs</p>
                   <p className="text-2xl font-bold text-gray-100">{(rbComparisonData as any).data.summary.totalRbs}</p>
