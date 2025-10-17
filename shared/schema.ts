@@ -3239,6 +3239,45 @@ export const rbEpaAdjusted = pgTable("rb_epa_adjusted", {
   uniquePlayerSeasonWeek: unique("rb_epa_adj_unique").on(table.playerId, table.season, table.week),
 }));
 
+// Calibrated EPA Weights - Stores regression-optimized weights for EPA adjustments
+export const calibratedEpaWeights = pgTable("calibrated_epa_weights", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  position: text("position").notNull(), // 'QB' or 'RB'
+  regressionType: text("regression_type").notNull(), // 'ols', 'ridge', 'lasso'
+  
+  // QB weights
+  dropWeight: real("drop_weight"),
+  pressureWeight: real("pressure_weight"),
+  yacWeight: real("yac_weight"),
+  defenseWeight: real("defense_weight"),
+  
+  // RB weights (for future use)
+  boxCountWeight: real("box_count_weight"),
+  ybcWeight: real("ybc_weight"),
+  brokenTackleWeight: real("broken_tackle_weight"),
+  targetShareWeight: real("target_share_weight"),
+  glWeight: real("gl_weight"),
+  rbDefenseWeight: real("rb_defense_weight"),
+  
+  // Performance metrics
+  rmse: real("rmse"), // Root mean squared error
+  r2: real("r2"), // R-squared score
+  mae: real("mae"), // Mean absolute error
+  
+  // Status
+  isActive: boolean("is_active").default(false), // Whether these weights are currently in use
+  
+  // Metadata
+  calibratedBy: text("calibrated_by").default('auto'), // 'auto' or 'manual'
+  notes: text("notes"), // Optional notes about this calibration
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  seasonPositionIdx: index("calibrated_weights_season_position_idx").on(table.season, table.position),
+  activeIdx: index("calibrated_weights_active_idx").on(table.isActive),
+  uniqueActiveSeasonPosition: unique("calibrated_weights_unique_active").on(table.season, table.position, table.isActive),
+}));
+
 // EPA Sanity Check Insert Schemas - QB
 export const insertQbEpaReferenceSchema = createInsertSchema(qbEpaReference).omit({ id: true, createdAt: true });
 export const insertQbContextMetricsSchema = createInsertSchema(qbContextMetrics).omit({ id: true, createdAt: true, calculatedAt: true });
@@ -3247,6 +3286,9 @@ export const insertQbEpaAdjustedSchema = createInsertSchema(qbEpaAdjusted).omit(
 // EPA Sanity Check Insert Schemas - RB
 export const insertRbContextMetricsSchema = createInsertSchema(rbContextMetrics).omit({ id: true, createdAt: true, calculatedAt: true });
 export const insertRbEpaAdjustedSchema = createInsertSchema(rbEpaAdjusted).omit({ id: true, createdAt: true, calculatedAt: true });
+
+// Calibrated EPA Weights Insert Schema
+export const insertCalibratedEpaWeightsSchema = createInsertSchema(calibratedEpaWeights).omit({ id: true, createdAt: true });
 
 // EPA Sanity Check Types - QB
 export type QbEpaReference = typeof qbEpaReference.$inferSelect;
@@ -3261,6 +3303,10 @@ export type RbContextMetrics = typeof rbContextMetrics.$inferSelect;
 export type InsertRbContextMetrics = z.infer<typeof insertRbContextMetricsSchema>;
 export type RbEpaAdjusted = typeof rbEpaAdjusted.$inferSelect;
 export type InsertRbEpaAdjusted = z.infer<typeof insertRbEpaAdjustedSchema>;
+
+// Calibrated EPA Weights Types
+export type CalibratedEpaWeights = typeof calibratedEpaWeights.$inferSelect;
+export type InsertCalibratedEpaWeights = z.infer<typeof insertCalibratedEpaWeightsSchema>;
 
 // Types
 export type PlayerWeekFacts = typeof playerWeekFacts.$inferSelect;

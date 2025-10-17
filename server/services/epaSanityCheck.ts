@@ -4,8 +4,8 @@
  */
 
 import { db } from '../db';
-import { qbEpaReference, qbContextMetrics, qbEpaAdjusted } from '@shared/schema';
-import { eq, and, sql as rawSql } from 'drizzle-orm';
+import { qbEpaReference, qbContextMetrics, qbEpaAdjusted, calibratedEpaWeights } from '@shared/schema';
+import { eq, and, sql as rawSql, desc } from 'drizzle-orm';
 
 // Ben Baldwin's Adjusted EPA data (2025-10-15 publication)
 // Source: @benbbaldwin on X/Twitter
@@ -279,6 +279,17 @@ export class EPASanityCheckService {
     // Calculate weighted averages based on attempts (more attempts = more weight)
     const totalAttempts = baldwinQbContext.reduce((sum, qb) => sum + (qb.passAttempts || 0), 0);
     
+    // Defensive check: If no attempts found, use fallback values to prevent division by zero
+    if (totalAttempts === 0) {
+      console.warn(`⚠️  [League Avg] No pass attempts found for Baldwin QBs in ${season}, using fallback values`);
+      return {
+        dropRate: 0.0203,
+        pressureRate: 0.2155,
+        yacPerPlay: -0.6691,
+        defEpa: 0.0222
+      };
+    }
+    
     const avgDropRate = baldwinQbContext.reduce((sum, qb) => 
       sum + (qb.dropRate || 0) * (qb.passAttempts || 0), 0
     ) / totalAttempts;
@@ -337,6 +348,34 @@ export class EPASanityCheckService {
     // Calculate league averages dynamically from Baldwin's QBs only
     const leagueAvg = await this.calculateLeagueAverages(season);
     
+    // Load calibrated weights if available, otherwise use defaults
+    const calibratedWeightsData = await db
+      .select()
+      .from(calibratedEpaWeights)
+      .where(
+        and(
+          eq(calibratedEpaWeights.season, season),
+          eq(calibratedEpaWeights.position, 'QB'),
+          eq(calibratedEpaWeights.isActive, true)
+        )
+      )
+      .orderBy(desc(calibratedEpaWeights.createdAt))
+      .limit(1);
+    
+    const weights = calibratedWeightsData[0] || {
+      dropWeight: 4.5,
+      pressureWeight: 1.8,
+      yacWeight: -0.75,
+      defenseWeight: -1.0
+    };
+    
+    if (calibratedWeightsData[0]) {
+      console.log(`📐 [Tiber EPA] Using calibrated weights (${weights.regressionType}):`);
+      console.log(`   Drop=${weights.dropWeight?.toFixed(3)}, Pressure=${weights.pressureWeight?.toFixed(3)}, YAC=${weights.yacWeight?.toFixed(3)}, Def=${weights.defenseWeight?.toFixed(3)}`);
+    } else {
+      console.log(`📐 [Tiber EPA] Using default hardcoded weights (no calibration found)`);
+    }
+    
     console.log(`🔍 [Tiber EPA] Found ${qbsWithContext.length} QBs with context metrics`);
     console.log(`🔍 [Tiber EPA] Found ${baldwinReference.length} Baldwin reference QBs`);
     
@@ -364,11 +403,11 @@ export class EPASanityCheckService {
         const yacDeviation = yacDeltaPerPlay - leagueAvg.yacPerPlay;
         const defDeviation = (qb.avgDefEpaFaced || 0) - leagueAvg.defEpa;
         
-        // Calibrated weights (tuned to match Baldwin's reference adjustments)
-        const dropAdjustment = dropDeviation * 4.5;  // Above avg drops = unlucky = boost EPA
-        const pressureAdjustment = pressureDeviation * 1.8;  // Above avg pressure = boost EPA
-        const yacAdjustment = yacDeviation * -0.75;  // Below avg YAC help = boost EPA
-        const defAdjustment = defDeviation * -1.0;  // Tougher defenses = boost EPA
+        // Use calibrated or default weights
+        const dropAdjustment = dropDeviation * (weights.dropWeight || 4.5);  // Above avg drops = unlucky = boost EPA
+        const pressureAdjustment = pressureDeviation * (weights.pressureWeight || 1.8);  // Above avg pressure = boost EPA
+        const yacAdjustment = yacDeviation * (weights.yacWeight || -0.75);  // Below avg YAC help = boost EPA
+        const defAdjustment = defDeviation * (weights.defenseWeight || -1.0);  // Tougher defenses = boost EPA
         
         const totalAdjustment = dropAdjustment + pressureAdjustment + yacAdjustment + defAdjustment;
         const adjEpa = rawEpa + totalAdjustment;
@@ -603,6 +642,37 @@ export class EPASanityCheckService {
       console.log(`✅ [Calibration] Optimal weights found:`);
       console.log(`   OLS: Drop=${result.calibration.ols.weights.drop.toFixed(3)}, Pressure=${result.calibration.ols.weights.pressure.toFixed(3)}, YAC=${result.calibration.ols.weights.yac.toFixed(3)}, Def=${result.calibration.ols.weights.defense.toFixed(3)}`);
       console.log(`   RMSE: ${result.calibration.ols.rmse.toFixed(4)}, R²: ${result.calibration.ols.r2.toFixed(3)}`);
+      
+      // Deactivate any existing active weights for this season/position
+      await db
+        .update(calibratedEpaWeights)
+        .set({ isActive: false })
+        .where(
+          and(
+            eq(calibratedEpaWeights.season, season),
+            eq(calibratedEpaWeights.position, 'QB'),
+            eq(calibratedEpaWeights.isActive, true)
+          )
+        );
+      
+      // Save calibrated weights to database
+      await db.insert(calibratedEpaWeights).values({
+        season,
+        position: 'QB',
+        regressionType: 'ols',
+        dropWeight: result.calibration.ols.weights.drop,
+        pressureWeight: result.calibration.ols.weights.pressure,
+        yacWeight: result.calibration.ols.weights.yac,
+        defenseWeight: result.calibration.ols.weights.defense,
+        rmse: result.calibration.ols.rmse,
+        r2: result.calibration.ols.r2,
+        mae: result.calibration.ols.mae || null,
+        isActive: true, // Set as active weight configuration
+        calibratedBy: 'auto',
+        notes: `Auto-calibrated using ${contextData.length} Baldwin reference QBs`
+      });
+      
+      console.log(`💾 [Calibration] Weights saved to database and activated`);
       
       return result;
       
