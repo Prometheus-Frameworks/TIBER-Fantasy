@@ -625,7 +625,8 @@ export class SeasonFactsProcessor {
             result.avgAdp = signal.avgRank;
             break;
           case 'ecr':
-            result.ecrRank = signal.avgRank;
+            // Round avgRank to integer since ecrRank column is defined as integer
+            result.ecrRank = signal.avgRank != null ? Math.round(Number(signal.avgRank)) : null;
             break;
           case 'ownership':
             result.avgOwnership = signal.avgValue;
