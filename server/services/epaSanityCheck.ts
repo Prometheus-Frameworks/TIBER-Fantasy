@@ -898,7 +898,7 @@ export class EPASanityCheckService {
         baldwin: {
           rawEpa: ref.rawEpaPerPlay,
           adjEpa: ref.adjEpaPerPlay,
-          epaDiff: ref.epasDiff,
+          epaDiff: ref.epaDiff,
           numPlays: ref.numPlays,
         },
         
