@@ -242,6 +242,75 @@ export class EPASanityCheckService {
   }
 
   /**
+   * Calculate league averages from Baldwin's reference QBs only
+   * Critical: Must use same population as Baldwin to avoid baseline pollution
+   */
+  private async calculateLeagueAverages(season: number = 2025): Promise<{
+    dropRate: number;
+    pressureRate: number;
+    yacPerPlay: number;
+    defEpa: number;
+  }> {
+    // Get Baldwin reference QBs to filter population
+    const baldwinReference = await this.getAllBaldwinReference(season);
+    const baldwinPlayerIds = baldwinReference.map(b => b.playerId).filter(id => id);
+    
+    // Get context metrics for Baldwin's QBs only (avoid backup QB pollution)
+    const baldwinQbContext = await db
+      .select()
+      .from(qbContextMetrics)
+      .where(
+        and(
+          eq(qbContextMetrics.season, season),
+          rawSql`${qbContextMetrics.playerId} IN (${baldwinPlayerIds.map(id => `'${id}'`).join(',')})`
+        )
+      );
+    
+    if (baldwinQbContext.length === 0) {
+      console.warn('⚠️  No context metrics found for Baldwin QBs, using fallback averages');
+      return {
+        dropRate: 0.0203,
+        pressureRate: 0.2155,
+        yacPerPlay: -0.6691,
+        defEpa: 0.0222
+      };
+    }
+    
+    // Calculate weighted averages based on attempts (more attempts = more weight)
+    const totalAttempts = baldwinQbContext.reduce((sum, qb) => sum + (qb.passAttempts || 0), 0);
+    
+    const avgDropRate = baldwinQbContext.reduce((sum, qb) => 
+      sum + (qb.dropRate || 0) * (qb.passAttempts || 0), 0
+    ) / totalAttempts;
+    
+    const avgPressureRate = baldwinQbContext.reduce((sum, qb) => 
+      sum + (qb.pressureRate || 0) * (qb.passAttempts || 0), 0
+    ) / totalAttempts;
+    
+    const avgYacPerPlay = baldwinQbContext.reduce((sum, qb) => {
+      const yacPerPlay = (qb.yacDelta || 0) / (qb.passAttempts || 1);
+      return sum + yacPerPlay * (qb.passAttempts || 0);
+    }, 0) / totalAttempts;
+    
+    const avgDefEpa = baldwinQbContext.reduce((sum, qb) => 
+      sum + (qb.avgDefEpaFaced || 0) * (qb.passAttempts || 0), 0
+    ) / totalAttempts;
+    
+    console.log(`📊 [League Avg] Calculated from ${baldwinQbContext.length} Baldwin QBs (${totalAttempts} attempts):`);
+    console.log(`   Drop Rate: ${avgDropRate.toFixed(4)} (was 0.0203)`);
+    console.log(`   Pressure Rate: ${avgPressureRate.toFixed(4)} (was 0.2155)`);
+    console.log(`   YAC/Play: ${avgYacPerPlay.toFixed(4)} (was -0.6691)`);
+    console.log(`   Def EPA: ${avgDefEpa.toFixed(4)} (was 0.0222)`);
+    
+    return {
+      dropRate: avgDropRate,
+      pressureRate: avgPressureRate,
+      yacPerPlay: avgYacPerPlay,
+      defEpa: avgDefEpa
+    };
+  }
+
+  /**
    * Calculate Tiber Adjusted EPA using context metrics
    * 
    * Formula mirrors Ben Baldwin's methodology:
@@ -265,6 +334,9 @@ export class EPASanityCheckService {
     // Get Baldwin reference data for raw EPA
     const baldwinReference = await this.getAllBaldwinReference(season);
     
+    // Calculate league averages dynamically from Baldwin's QBs only
+    const leagueAvg = await this.calculateLeagueAverages(season);
+    
     console.log(`🔍 [Tiber EPA] Found ${qbsWithContext.length} QBs with context metrics`);
     console.log(`🔍 [Tiber EPA] Found ${baldwinReference.length} Baldwin reference QBs`);
     
@@ -283,23 +355,14 @@ export class EPASanityCheckService {
         
         const rawEpa = baldwinData.rawEpaPerPlay;
         
-        // Calculate adjustments based on context
-        // Baldwin's methodology: Compare to league average, adjust for luck/adversity
-        
-        // League averages (2025 season from all QBs in reference data)
-        const LEAGUE_AVG_DROP_RATE = 0.0203;
-        const LEAGUE_AVG_PRESSURE_RATE = 0.2155;
-        const LEAGUE_AVG_YAC_PER_PLAY = -0.6691;
-        const LEAGUE_AVG_DEF_EPA = 0.0222;
-        
         // Normalize YAC delta to per-play value
         const yacDeltaPerPlay = (qb.yacDelta || 0) / (qb.passAttempts || 1);
         
-        // Calculate deviations from league average
-        const dropDeviation = (qb.dropRate || 0) - LEAGUE_AVG_DROP_RATE;
-        const pressureDeviation = (qb.pressureRate || 0) - LEAGUE_AVG_PRESSURE_RATE;
-        const yacDeviation = yacDeltaPerPlay - LEAGUE_AVG_YAC_PER_PLAY;
-        const defDeviation = (qb.avgDefEpaFaced || 0) - LEAGUE_AVG_DEF_EPA;
+        // Calculate deviations from league average (now dynamic, not hardcoded)
+        const dropDeviation = (qb.dropRate || 0) - leagueAvg.dropRate;
+        const pressureDeviation = (qb.pressureRate || 0) - leagueAvg.pressureRate;
+        const yacDeviation = yacDeltaPerPlay - leagueAvg.yacPerPlay;
+        const defDeviation = (qb.avgDefEpaFaced || 0) - leagueAvg.defEpa;
         
         // Calibrated weights (tuned to match Baldwin's reference adjustments)
         const dropAdjustment = dropDeviation * 4.5;  // Above avg drops = unlucky = boost EPA
