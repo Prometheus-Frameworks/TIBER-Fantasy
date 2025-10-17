@@ -111,6 +111,12 @@ export default function EPASanityTab() {
     try {
       const result = await apiRequest('POST', '/api/sanity-check/calibrate', { season: 2025 });
       setCalibrationResults((result as any)?.data);
+      
+      // Auto-refresh: Recalculate EPA with new calibrated weights
+      await apiRequest('POST', '/api/sanity-check/calculate-tiber-epa', { season: 2025 });
+      
+      // Refresh comparison view to show updated results
+      await refetchComparison();
     } catch (error) {
       console.error('Failed to run calibration:', error);
     } finally {
