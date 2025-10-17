@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FlaskConical, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, MinusCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -26,8 +27,32 @@ interface EPAComparison {
   difference: number | null;
 }
 
+interface RBEPAComparison {
+  playerId: string;
+  playerName: string;
+  team: string;
+  rawEpa: number;
+  adjustedEpa: number;
+  totalAdjustment: number;
+  context: {
+    boxCountRate: number;
+    yardsBeforeContact: number;
+    brokenTackles: number;
+    targetShare: number;
+    glCarries: number;
+  };
+  adjustments: {
+    boxAdj: number;
+    ybcAdj: number;
+    btAdj: number;
+    tsAdj: number;
+    glAdj: number;
+  };
+}
+
 export default function EPASanityTab() {
   const [isCalculating, setIsCalculating] = useState(false);
+  const [isCalculatingRB, setIsCalculatingRB] = useState(false);
 
   // Query Baldwin reference data
   const { data: baldwinData, isLoading: isLoadingBaldwin } = useQuery({
@@ -37,6 +62,11 @@ export default function EPASanityTab() {
   // Query comparison data
   const { data: comparisonData, isLoading: isLoadingComparison, refetch: refetchComparison } = useQuery({
     queryKey: ['/api/sanity-check/compare-epa'],
+  });
+
+  // Query RB context comparison data
+  const { data: rbComparisonData, isLoading: isLoadingRBComparison, refetch: refetchRBComparison } = useQuery({
+    queryKey: ['/api/sanity-check/rb-context'],
   });
 
   const handleCalculateContext = async () => {
@@ -49,6 +79,19 @@ export default function EPASanityTab() {
       console.error('Failed to calculate:', error);
     } finally {
       setIsCalculating(false);
+    }
+  };
+
+  const handleCalculateRBContext = async () => {
+    setIsCalculatingRB(true);
+    try {
+      await apiRequest('POST', '/api/sanity-check/calculate-rb-context', { season: 2025 });
+      await apiRequest('POST', '/api/sanity-check/calculate-rb-epa', { season: 2025 });
+      await refetchRBComparison();
+    } catch (error) {
+      console.error('Failed to calculate RB context:', error);
+    } finally {
+      setIsCalculatingRB(false);
     }
   };
 
@@ -77,6 +120,8 @@ export default function EPASanityTab() {
     return AlertCircle;
   };
 
+  const rbComparisons: RBEPAComparison[] = (rbComparisonData as any)?.data?.comparisons || [];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -86,19 +131,29 @@ export default function EPASanityTab() {
             EPA Sanity Check
           </h1>
           <p className="text-gray-400 text-sm mt-1">
-            Validate our EPA calculations against Ben Baldwin's adjusted EPA methodology
+            Validate our EPA calculations with position-specific context metrics
           </p>
         </div>
-        <Button
-          onClick={handleCalculateContext}
-          disabled={isCalculating}
-          className="bg-gradient-to-r from-blue-500 to-purple-600"
-          data-testid="button-calculate-epa"
-        >
-          <FlaskConical className="w-4 h-4 mr-2" />
-          {isCalculating ? 'Calculating...' : 'Calculate EPA'}
-        </Button>
       </div>
+
+      <Tabs defaultValue="qb" className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="qb">QB EPA (Baldwin)</TabsTrigger>
+          <TabsTrigger value="rb">RB EPA (Context)</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="qb" className="space-y-6 mt-6">
+          <div className="flex items-center justify-end">
+            <Button
+              onClick={handleCalculateContext}
+              disabled={isCalculating}
+              className="bg-gradient-to-r from-blue-500 to-purple-600"
+              data-testid="button-calculate-epa"
+            >
+              <FlaskConical className="w-4 h-4 mr-2" />
+              {isCalculating ? 'Calculating...' : 'Calculate QB EPA'}
+            </Button>
+          </div>
 
       {/* Summary Card */}
       {(comparisonData as any)?.data?.summary && (
@@ -287,6 +342,111 @@ export default function EPASanityTab() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
         </div>
       )}
+        </TabsContent>
+
+        <TabsContent value="rb" className="space-y-6 mt-6">
+          <div className="flex items-center justify-end">
+            <Button
+              onClick={handleCalculateRBContext}
+              disabled={isCalculatingRB}
+              className="bg-gradient-to-r from-green-500 to-teal-600"
+              data-testid="button-calculate-rb-epa"
+            >
+              <FlaskConical className="w-4 h-4 mr-2" />
+              {isCalculatingRB ? 'Calculating...' : 'Calculate RB EPA'}
+            </Button>
+          </div>
+
+          {/* RB Summary Card */}
+          {(rbComparisonData as any)?.data?.summary && (
+            <Card className="bg-[#141824] border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-lg text-gray-100">RB Context Overview</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-4 gap-4">
+                <div>
+                  <p className="text-sm text-gray-400">Total RBs</p>
+                  <p className="text-2xl font-bold text-gray-100">{(rbComparisonData as any).data.summary.totalRbs}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400">Avg Raw EPA</p>
+                  <p className="text-2xl font-bold text-blue-400">
+                    {(rbComparisonData as any).data.summary.avgRawEpa?.toFixed(3) || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400">Avg Adjusted EPA</p>
+                  <p className="text-2xl font-bold text-green-400">
+                    {(rbComparisonData as any).data.summary.avgAdjEpa?.toFixed(3) || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400">Avg Adjustment</p>
+                  <p className="text-2xl font-bold text-purple-400">
+                    {(rbComparisonData as any).data.summary.avgDifference?.toFixed(3) || 'N/A'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* RB Comparison Table */}
+          {rbComparisons.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold text-gray-100 mb-4">All RBs EPA Context</h2>
+              <Card className="bg-[#141824] border-gray-800">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-800">
+                          <th className="text-left p-4 text-sm font-semibold text-gray-400">RB</th>
+                          <th className="text-left p-4 text-sm font-semibold text-gray-400">Team</th>
+                          <th className="text-right p-4 text-sm font-semibold text-gray-400">Raw EPA</th>
+                          <th className="text-right p-4 text-sm font-semibold text-gray-400">Adj EPA</th>
+                          <th className="text-right p-4 text-sm font-semibold text-gray-400">Box %</th>
+                          <th className="text-right p-4 text-sm font-semibold text-gray-400">YBC</th>
+                          <th className="text-right p-4 text-sm font-semibold text-gray-400">BT</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rbComparisons.map(rb => (
+                          <tr key={rb.playerId} className="border-b border-gray-800/50 hover:bg-gray-800/30">
+                            <td className="p-4 text-sm text-gray-300">{rb.playerName}</td>
+                            <td className="p-4 text-sm text-gray-400">{rb.team}</td>
+                            <td className="p-4 text-sm font-mono text-right text-blue-400">
+                              {rb.rawEpa.toFixed(3)}
+                            </td>
+                            <td className="p-4 text-sm font-mono text-right text-green-400">
+                              {rb.adjustedEpa.toFixed(3)}
+                            </td>
+                            <td className="p-4 text-sm font-mono text-right text-gray-300">
+                              {(rb.context.boxCountRate * 100).toFixed(1)}%
+                            </td>
+                            <td className="p-4 text-sm font-mono text-right text-gray-300">
+                              {rb.context.yardsBeforeContact.toFixed(1)}
+                            </td>
+                            <td className="p-4 text-sm font-mono text-right text-gray-300">
+                              {rb.context.brokenTackles}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* RB Loading State */}
+          {isLoadingRBComparison && (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
