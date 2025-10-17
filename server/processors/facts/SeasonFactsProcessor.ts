@@ -375,19 +375,27 @@ export class SeasonFactsProcessor {
       )
       .orderBy(asc(playerWeekFacts.week));
 
+    // Build where conditions
+    const whereConditions = [
+      eq(playerWeekFacts.playerId, request.canonicalPlayerId),
+      eq(playerWeekFacts.season, request.season)
+    ];
+
     // Apply week range filter if specified
     if (request.weekRange) {
-      query = query.where(
-        and(
-          eq(playerWeekFacts.playerId, request.canonicalPlayerId),
-          eq(playerWeekFacts.season, request.season),
-          gte(playerWeekFacts.week, request.weekRange.start),
-          lte(playerWeekFacts.week, request.weekRange.end)
-        )
+      whereConditions.push(
+        gte(playerWeekFacts.week, request.weekRange.start),
+        lte(playerWeekFacts.week, request.weekRange.end)
       );
     }
 
-    return await query;
+    const finalQuery = db
+      .select()
+      .from(playerWeekFacts)
+      .where(and(...whereConditions))
+      .orderBy(asc(playerWeekFacts.week));
+
+    return await finalQuery;
   }
 
   /**
@@ -622,17 +630,17 @@ export class SeasonFactsProcessor {
       marketData.forEach(signal => {
         switch (signal.signalType) {
           case 'adp':
-            result.avgAdp = signal.avgRank;
+            result.avgAdp = signal.avgRank != null ? Number(signal.avgRank) : null;
             break;
           case 'ecr':
             // Round avgRank to integer since ecrRank column is defined as integer
             result.ecrRank = signal.avgRank != null ? Math.round(Number(signal.avgRank)) : null;
             break;
           case 'ownership':
-            result.avgOwnership = signal.avgValue;
+            result.avgOwnership = signal.avgValue != null ? Number(signal.avgValue) : null;
             break;
           case 'start_pct':
-            result.avgStartPct = signal.avgValue;
+            result.avgStartPct = signal.avgValue != null ? Number(signal.avgValue) : null;
             break;
         }
       });

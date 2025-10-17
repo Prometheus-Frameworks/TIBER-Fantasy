@@ -563,14 +563,14 @@ export class CompositeFactsProcessor {
     // Calculate grades from multiple data sources
     const grades = await this.calculateUnifiedGrades(dataSources);
     
-    // Calculate risk metrics
-    const riskMetrics = this.calculateRiskMetrics(dataSources);
+    // Calculate risk metrics (use placeholder until analytics are calculated)
+    const riskMetrics = { injury: 0, age: 0, situation: 0, overall: 0 };
     
-    // Calculate trajectory
-    const trajectory = this.calculateTrajectory(dataSources);
+    // Calculate trajectory/trend
+    const trajectory = this.calculateTrendAnalysis(dataSources);
     
     // Calculate value metrics
-    const valueMetrics = this.calculateValueMetrics(dataSources);
+    const valueMetrics = this.calculateAdvancedMetrics({ grades, riskMetrics, trajectory, valueMetrics: {} } as UnifiedPlayerAnalytics, dataSources);
 
     // Rankings will be calculated separately
     const rankings = {
