@@ -255,6 +255,17 @@ export class EPASanityCheckService {
     const baldwinReference = await this.getAllBaldwinReference(season);
     const baldwinPlayerIds = baldwinReference.map(b => b.playerId).filter(id => id);
     
+    // Defensive check: If no Baldwin reference QBs, return fallback averages immediately
+    if (baldwinPlayerIds.length === 0) {
+      console.warn(`⚠️  [League Avg] No Baldwin reference QBs found for ${season}, using fallback values`);
+      return {
+        dropRate: 0.0203,
+        pressureRate: 0.2155,
+        yacPerPlay: -0.6691,
+        defEpa: 0.0222
+      };
+    }
+    
     // Get context metrics for Baldwin's QBs only (avoid backup QB pollution)
     const baldwinQbContext = await db
       .select()
