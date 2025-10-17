@@ -151,7 +151,7 @@ export class EPASanityCheckService {
       .select()
       .from(qbEpaReference)
       .where(eq(qbEpaReference.season, season))
-      .orderBy(qbEpaReference.adjEpaPerPlay);
+      .orderBy(desc(qbEpaReference.adjEpaPerPlay));
   }
 
   /**

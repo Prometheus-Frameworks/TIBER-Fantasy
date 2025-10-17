@@ -44,6 +44,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **Player Search**: Feature for searching player game logs and statistics.
 - **EPA Sanity Check System**: Internal validation system for QB context metrics, comparing against Ben Baldwin's adjusted EPA methodology.
 - **EPA Rankings Tab**: Production-ready public rankings page showing QBs ordered by adjusted EPA with 5-tier classification system (Elite/Good/Average/Below Average/Poor), podium icons for top 3, and comprehensive performance metrics.
+- **QB Stats Review Tab**: Comprehensive QB validation page displaying all available NFLfastR stats, Baldwin reference data, context metrics (drops, pressures, YAC, defense faced), and Tiber adjustments. Enables manual eye-testing of rankings with complete statistical breakdown per QB, sorted by Baldwin's adjusted EPA (descending).
 - **Enhanced Player Card Component**: Features TIBER trend charts, last 3 weeks summary, and ROS Matchup Calendar.
 - **Strategy Tab Overhaul**: Redesigned for Start/Sit recommendations with context-aware analysis, Waiver Wire Targets based on TIBER, and SOS Rankings.
 
