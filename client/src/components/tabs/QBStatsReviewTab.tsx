@@ -54,8 +54,8 @@ interface QBStatsResponse {
 function StatRow({ label, value, className = "" }: { label: string; value: string | number; className?: string }) {
   return (
     <div className="flex justify-between items-center py-1 border-b border-border/30">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className={`text-sm font-medium ${className}`}>{value}</span>
+      <span className="text-sm text-gray-300">{label}</span>
+      <span className={`text-sm font-medium ${className || 'text-gray-100'}`}>{value}</span>
     </div>
   );
 }
@@ -82,7 +82,7 @@ function QBCard({ qb, rank }: { qb: QBStats; rank: number }) {
             <span className={`text-2xl ${getRankColor(rank)}`}>#{rank}</span>
             <div>
               <CardTitle className="text-lg">{qb.playerName}</CardTitle>
-              <p className="text-sm text-muted-foreground">{qb.team}</p>
+              <p className="text-sm text-gray-400">{qb.team}</p>
             </div>
           </div>
           {qb.baldwin && (
@@ -90,7 +90,7 @@ function QBCard({ qb, rank }: { qb: QBStats; rank: number }) {
               <div className="text-2xl font-bold text-primary">
                 {qb.baldwin.adjEpa.toFixed(3)}
               </div>
-              <div className="text-xs text-muted-foreground flex items-center gap-1">
+              <div className="text-xs text-gray-300 flex items-center gap-1">
                 {getTrendIcon(qb.baldwin.epaDiff)}
                 <span>EPA/play</span>
               </div>
