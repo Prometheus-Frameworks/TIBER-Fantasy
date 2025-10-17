@@ -417,6 +417,201 @@ export class EPASanityCheckService {
   }
 
   /**
+   * Generate diagnostic breakdown for each QB
+   * Shows raw metrics, deviations, individual adjustments, and Baldwin comparison
+   */
+  async getDiagnosticBreakdown(season: number = 2025): Promise<any[]> {
+    console.log(`🔍 [Diagnostics] Generating QB diagnostic breakdown for ${season}...`);
+    
+    // Get all necessary data
+    const baldwinReference = await this.getAllBaldwinReference(season);
+    const qbContext = await db
+      .select()
+      .from(qbContextMetrics)
+      .where(eq(qbContextMetrics.season, season));
+    const tiberAdjusted = await db
+      .select()
+      .from(qbEpaAdjusted)
+      .where(eq(qbEpaAdjusted.season, season));
+    
+    // Calculate league averages
+    const leagueAvg = await this.calculateLeagueAverages(season);
+    
+    const diagnostics = [];
+    
+    for (const baldwin of baldwinReference) {
+      const context = qbContext.find(c => c.playerId === baldwin.playerId);
+      const tiber = tiberAdjusted.find(t => t.playerId === baldwin.playerId);
+      
+      if (!context || !tiber) {
+        diagnostics.push({
+          qbName: baldwin.playerName,
+          playerId: baldwin.playerId,
+          status: 'missing_data',
+          hasContext: !!context,
+          hasTiber: !!tiber
+        });
+        continue;
+      }
+      
+      // Calculate YAC per play
+      const yacDeltaPerPlay = (context.yacDelta || 0) / (context.passAttempts || 1);
+      
+      // Calculate deviations
+      const dropDeviation = (context.dropRate || 0) - leagueAvg.dropRate;
+      const pressureDeviation = (context.pressureRate || 0) - leagueAvg.pressureRate;
+      const yacDeviation = yacDeltaPerPlay - leagueAvg.yacPerPlay;
+      const defDeviation = (context.avgDefEpaFaced || 0) - leagueAvg.defEpa;
+      
+      // Calculate what Baldwin's implied adjustment was
+      const baldwinImpliedAdj = (baldwin.adjEpaPerPlay || 0) - (baldwin.rawEpaPerPlay || 0);
+      
+      diagnostics.push({
+        qbName: baldwin.playerName,
+        playerId: baldwin.playerId,
+        team: baldwin.team,
+        attempts: context.passAttempts,
+        
+        // Raw EPA
+        rawEPA: baldwin.rawEpaPerPlay,
+        
+        // Raw metrics
+        rawMetrics: {
+          dropRate: context.dropRate,
+          pressureRate: context.pressureRate,
+          yacDeltaPerPlay,
+          defEpaFaced: context.avgDefEpaFaced
+        },
+        
+        // League averages used
+        leagueAverages: {
+          dropRate: leagueAvg.dropRate,
+          pressureRate: leagueAvg.pressureRate,
+          yacPerPlay: leagueAvg.yacPerPlay,
+          defEpa: leagueAvg.defEpa
+        },
+        
+        // Deviations from average
+        deviations: {
+          drop: dropDeviation,
+          pressure: pressureDeviation,
+          yac: yacDeviation,
+          defense: defDeviation
+        },
+        
+        // Individual adjustments (with current weights)
+        adjustments: {
+          drop: tiber.dropAdjustment,
+          pressure: tiber.pressureAdjustment,
+          yac: tiber.yacAdjustment,
+          defense: tiber.defenseAdjustment,
+          total: tiber.tiberEpaDiff
+        },
+        
+        // Baldwin comparison
+        baldwin: {
+          adjEPA: baldwin.adjEpaPerPlay,
+          impliedAdjustment: baldwinImpliedAdj
+        },
+        
+        // Tiber results
+        tiber: {
+          adjEPA: tiber.tiberAdjEpaPerPlay,
+          totalAdjustment: tiber.tiberEpaDiff
+        },
+        
+        // Final difference
+        difference: (tiber.tiberAdjEpaPerPlay || 0) - (baldwin.adjEpaPerPlay || 0),
+        adjustmentDiff: (tiber.tiberEpaDiff || 0) - baldwinImpliedAdj,
+        
+        // Flag large divergences
+        largeDivergence: Math.abs((tiber.tiberAdjEpaPerPlay || 0) - (baldwin.adjEpaPerPlay || 0)) > 0.10
+      });
+    }
+    
+    console.log(`✅ [Diagnostics] Generated breakdown for ${diagnostics.length} QBs`);
+    return diagnostics;
+  }
+
+  /**
+   * Auto-calibrate EPA adjustment weights using linear regression
+   * Finds optimal weights that minimize RMSE against Baldwin's reference
+   */
+  async calibrateWeights(season: number = 2025): Promise<any> {
+    console.log(`🎯 [Calibration] Running auto-calibration for ${season}...`);
+    
+    try {
+      // Get context metrics for Baldwin's QBs
+      const baldwinReference = await this.getAllBaldwinReference(season);
+      const baldwinPlayerIds = baldwinReference.map(b => b.playerId).filter(id => id);
+      
+      const qbContext = await db
+        .select()
+        .from(qbContextMetrics)
+        .where(
+          and(
+            eq(qbContextMetrics.season, season),
+            rawSql`${qbContextMetrics.playerId} IN (${baldwinPlayerIds.map(id => `'${id}'`).join(',')})`
+          )
+        );
+      
+      // Prepare data for Python calibration script
+      const contextData = qbContext.map(qb => ({
+        player_id: qb.playerId,
+        player_name: qb.playerName,
+        pass_attempts: qb.passAttempts,
+        drop_rate: qb.dropRate,
+        pressure_rate: qb.pressureRate,
+        yac_delta: qb.yacDelta,
+        avg_def_epa_faced: qb.avgDefEpaFaced
+      }));
+      
+      const baldwinData = baldwinReference.map(b => ({
+        player_id: b.playerId,
+        player_name: b.playerName,
+        raw_epa_per_play: b.rawEpaPerPlay,
+        adj_epa_per_play: b.adjEpaPerPlay
+      }));
+      
+      const inputData = {
+        context_data: contextData,
+        baldwin_data: baldwinData
+      };
+      
+      // Execute Python calibration script
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+      
+      const inputJson = JSON.stringify(inputData);
+      const { stdout, stderr } = await execAsync(
+        `echo '${inputJson.replace(/'/g, "'\\''")}' | python3 server/calibrateEpaWeights.py`,
+        { maxBuffer: 10 * 1024 * 1024 }
+      );
+      
+      if (stderr && !stderr.includes('FutureWarning')) {
+        console.log('📊 [Calibration] Python output:', stderr);
+      }
+      
+      const result = JSON.parse(stdout);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Calibration failed');
+      }
+      
+      console.log(`✅ [Calibration] Optimal weights found:`);
+      console.log(`   OLS: Drop=${result.calibration.ols.weights.drop.toFixed(3)}, Pressure=${result.calibration.ols.weights.pressure.toFixed(3)}, YAC=${result.calibration.ols.weights.yac.toFixed(3)}, Def=${result.calibration.ols.weights.defense.toFixed(3)}`);
+      console.log(`   RMSE: ${result.calibration.ols.rmse.toFixed(4)}, R²: ${result.calibration.ols.r2.toFixed(3)}`);
+      
+      return result;
+      
+    } catch (error: any) {
+      console.error('❌ [Calibration] Failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Compare Tiber's adjusted EPA with Ben Baldwin's reference
    * 
    * Returns comparison data with freshness metadata for data quality monitoring

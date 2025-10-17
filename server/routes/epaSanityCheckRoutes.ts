@@ -219,6 +219,76 @@ router.get('/compare-epa', async (req, res) => {
 });
 
 /**
+ * POST /api/sanity-check/calibrate
+ * Auto-calibrate EPA weights using linear regression
+ */
+router.post('/calibrate', async (req, res) => {
+  try {
+    const { season = 2025 } = req.body;
+    
+    console.log(`🎯 [API] Running weight calibration for ${season}...`);
+    
+    const result = await epaSanityCheckService.calibrateWeights(season);
+    
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error('❌ [API] Calibration failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+/**
+ * GET /api/sanity-check/diagnostics
+ * Get detailed diagnostic breakdown for each QB
+ */
+router.get('/diagnostics', async (req, res) => {
+  try {
+    const season = parseInt(req.query.season as string) || 2025;
+    
+    console.log(`🔍 [API] Getting QB diagnostic breakdown for ${season}...`);
+    
+    const diagnostics = await epaSanityCheckService.getDiagnosticBreakdown(season);
+    
+    // Calculate summary stats
+    const withData = diagnostics.filter(d => d.status !== 'missing_data');
+    const largeDivergences = withData.filter(d => d.largeDivergence);
+    
+    const avgAbsDiff = withData.length > 0
+      ? withData.reduce((sum, d) => sum + Math.abs(d.difference || 0), 0) / withData.length
+      : 0;
+    
+    res.json({
+      success: true,
+      data: {
+        season,
+        diagnostics,
+        summary: {
+          total: diagnostics.length,
+          withData: withData.length,
+          largeDivergences: largeDivergences.length,
+          avgAbsoluteDifference: avgAbsDiff,
+          directionalAccuracy: withData.length > 0 
+            ? (withData.filter(d => Math.sign(d.difference) === Math.sign(d.baldwin.impliedAdjustment)).length / withData.length * 100).toFixed(1) + '%'
+            : '0%'
+        }
+      }
+    });
+  } catch (error: any) {
+    console.error('❌ [API] Diagnostics failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+/**
  * ========================================
  * RB CONTEXT CHECK ROUTES
  * ========================================
