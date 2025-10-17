@@ -856,6 +856,119 @@ export class EPASanityCheckService {
       summary,
     };
   }
+
+  /**
+   * Get comprehensive QB stats for eye-testing and validation
+   * Combines all available data: context metrics, EPA values, Baldwin reference
+   */
+  async getQbStatsReview(season: number = 2025): Promise<{
+    qbs: any[];
+    summary: any;
+  }> {
+    console.log(`👁️ [QB Stats Review] Getting comprehensive stats for ${season}...`);
+
+    // Fetch all data sources
+    const [contextMetrics, epaAdjusted, baldwinRef] = await Promise.all([
+      db.select().from(qbContextMetrics).where(eq(qbContextMetrics.season, season)),
+      db.select().from(qbEpaAdjusted).where(eq(qbEpaAdjusted.season, season)),
+      db.select().from(qbEpaReference).where(eq(qbEpaReference.season, season)),
+    ]);
+
+    // Deduplicate EPA adjusted data (keep most recent)
+    const seenPlayers = new Map();
+    const uniqueEpaAdjusted = epaAdjusted.filter(qb => {
+      if (!seenPlayers.has(qb.playerId)) {
+        seenPlayers.set(qb.playerId, qb);
+        return true;
+      }
+      return false;
+    });
+
+    // Combine all data for each QB
+    const qbMap = new Map();
+
+    // Start with Baldwin reference (ground truth)
+    baldwinRef.forEach(ref => {
+      qbMap.set(ref.playerId, {
+        playerId: ref.playerId,
+        playerName: ref.playerName,
+        team: ref.team || 'UNK',
+        
+        // Baldwin reference (ground truth)
+        baldwin: {
+          rawEpa: ref.rawEpaPerPlay,
+          adjEpa: ref.adjEpaPerPlay,
+          epaDiff: ref.epasDiff,
+          numPlays: ref.numPlays,
+        },
+        
+        // Will be filled in below
+        context: null,
+        tiber: null,
+      });
+    });
+
+    // Add context metrics
+    contextMetrics.forEach(ctx => {
+      if (qbMap.has(ctx.playerId)) {
+        qbMap.get(ctx.playerId).context = {
+          passAttempts: ctx.passAttempts,
+          drops: ctx.drops,
+          dropRate: ctx.dropRate,
+          pressures: ctx.pressures,
+          pressureRate: ctx.pressureRate,
+          sacks: ctx.sacks,
+          sackRate: ctx.sackRate,
+          totalYac: ctx.totalYac,
+          expectedYac: ctx.expectedYac,
+          yacDelta: ctx.yacDelta,
+          avgDefEpaFaced: ctx.avgDefEpaFaced,
+          interceptablePasses: ctx.interceptablePasses,
+          droppedInterceptions: ctx.droppedInterceptions,
+        };
+      }
+    });
+
+    // Add Tiber adjusted EPA
+    uniqueEpaAdjusted.forEach(adj => {
+      if (qbMap.has(adj.playerId)) {
+        qbMap.get(adj.playerId).tiber = {
+          rawEpa: adj.rawEpaPerPlay,
+          adjEpa: adj.tiberAdjEpaPerPlay,
+          epaDiff: adj.tiberEpaDiff,
+          dropAdjustment: adj.dropAdjustment,
+          pressureAdjustment: adj.pressureAdjustment,
+          yacAdjustment: adj.yacAdjustment,
+          defenseAdjustment: adj.defenseAdjustment,
+        };
+      }
+    });
+
+    // Convert to array and sort by Baldwin's adjusted EPA (descending)
+    const qbs = Array.from(qbMap.values()).sort((a, b) => {
+      const aEpa = a.baldwin?.adjEpa || -999;
+      const bEpa = b.baldwin?.adjEpa || -999;
+      return bEpa - aEpa;
+    });
+
+    // Calculate summary
+    const withContextData = qbs.filter(q => q.context !== null).length;
+    const withTiberData = qbs.filter(q => q.tiber !== null).length;
+
+    const summary = {
+      total: qbs.length,
+      withContextData,
+      withTiberData,
+      withCompleteData: qbs.filter(q => q.context && q.tiber).length,
+    };
+
+    console.log(`✅ [QB Stats Review] Found ${qbs.length} QBs - ${withContextData} with context, ${withTiberData} with Tiber EPA`);
+
+    return {
+      qbs,
+      summary,
+    };
+  }
 }
 
 export const epaSanityCheckService = new EPASanityCheckService();

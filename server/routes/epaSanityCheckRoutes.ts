@@ -428,4 +428,33 @@ router.get('/epa-rankings', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/sanity-check/qb-stats-review
+ * Get comprehensive QB stats for eye-testing and validation
+ */
+router.get('/qb-stats-review', async (req, res) => {
+  try {
+    const season = parseInt(req.query.season as string) || 2025;
+    
+    console.log(`👁️ [API] Getting QB stats review for ${season}...`);
+    
+    const result = await epaSanityCheckService.getQbStatsReview(season);
+    
+    res.json({
+      success: true,
+      data: {
+        season,
+        qbs: result.qbs,
+        summary: result.summary,
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ [API] QB stats review failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 export default router;
