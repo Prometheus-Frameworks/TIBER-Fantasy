@@ -267,9 +267,10 @@ export class WeeklyTakesService {
         const leader = recentGameLogs[0];
         const playerInfo = await this.getPlayerInfo(leader.sleeperId);
         if (playerInfo && leader.avgTargets) {
+          const avgTargets = Number(leader.avgTargets);
           takes.push({
             player: playerInfo.name,
-            insight: `${leader.avgTargets.toFixed(1)} targets per game last 3 weeks - Volume-based WR1 floor`,
+            insight: `${avgTargets.toFixed(1)} targets per game last 3 weeks - Volume-based WR1 floor`,
             position: 'WR'
           });
         }
@@ -378,9 +379,10 @@ export class WeeklyTakesService {
         const elite = teGameLogs[0];
         const playerInfo = await this.getPlayerInfo(elite.sleeperId);
         if (playerInfo && elite.avgTargets) {
+          const avgTargets = Number(elite.avgTargets);
           takes.push({
             player: playerInfo.name,
-            insight: `${elite.avgTargets.toFixed(1)} targets per game last 3 weeks - Elite TE1 with high floor`,
+            insight: `${avgTargets.toFixed(1)} targets per game last 3 weeks - Elite TE1 with high floor`,
             position: 'TE'
           });
         }
@@ -391,9 +393,11 @@ export class WeeklyTakesService {
         const te2 = teGameLogs[1];
         const playerInfo = await this.getPlayerInfo(te2.sleeperId);
         if (playerInfo) {
+          const avgTargets = Number(te2.avgTargets);
+          const avgFantasyPts = Number(te2.avgFantasyPts);
           takes.push({
             player: playerInfo.name,
-            insight: `${te2.avgTargets.toFixed(1)} targets/game, ${te2.avgFantasyPts.toFixed(1)} PPR points - Consistent TE production`,
+            insight: `${avgTargets.toFixed(1)} targets/game, ${avgFantasyPts.toFixed(1)} PPR points - Consistent TE production`,
             position: 'TE'
           });
         }
@@ -405,9 +409,10 @@ export class WeeklyTakesService {
         const streamTE = teGameLogs[2];
         const playerInfo = await this.getPlayerInfo(streamTE.sleeperId);
         if (playerInfo && streamTE.avgTargets) {
+          const avgTargets = Number(streamTE.avgTargets);
           takes.push({
             player: playerInfo.name,
-            insight: `${softestDefense.defTeam} allows ${softestDefense.fpAllowed?.toFixed(1)} FPG - ${streamTE.avgTargets.toFixed(1)} targets, streaming TE option`,
+            insight: `${softestDefense.defTeam} allows ${softestDefense.fpAllowed?.toFixed(1)} FPG - ${avgTargets.toFixed(1)} targets, streaming TE option`,
             position: 'TE'
           });
         }
