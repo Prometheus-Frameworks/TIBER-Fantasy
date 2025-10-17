@@ -5,6 +5,7 @@
 
 import { Router } from 'express';
 import { epaSanityCheckService } from '../services/epaSanityCheck';
+import { rbContextCheckService } from '../services/rbContextCheck';
 
 const router = Router();
 
@@ -210,6 +211,117 @@ router.get('/compare-epa', async (req, res) => {
     });
   } catch (error: any) {
     console.error('❌ [API] EPA comparison failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+/**
+ * ========================================
+ * RB CONTEXT CHECK ROUTES
+ * ========================================
+ */
+
+/**
+ * POST /api/sanity-check/rb/calculate-context
+ * Calculate RB context metrics from NFLfastR play-by-play data
+ */
+router.post('/rb/calculate-context', async (req, res) => {
+  try {
+    const { season = 2024 } = req.body;
+    
+    console.log(`🏃 [API] Calculating RB context metrics for ${season}...`);
+    
+    await rbContextCheckService.storeRbContextMetrics(season);
+    
+    res.json({
+      success: true,
+      message: `Calculated and stored RB context metrics for ${season}`,
+    });
+  } catch (error: any) {
+    console.error('❌ [API] RB context calculation failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+/**
+ * POST /api/sanity-check/rb/calculate-adjusted-epa
+ * Calculate Tiber's adjusted EPA for RBs using context metrics
+ */
+router.post('/rb/calculate-adjusted-epa', async (req, res) => {
+  try {
+    const { season = 2024 } = req.body;
+    
+    console.log(`📊 [API] Calculating RB adjusted EPA for ${season}...`);
+    
+    await rbContextCheckService.calculateTiberAdjustedEpa(season);
+    
+    res.json({
+      success: true,
+      message: `Calculated RB adjusted EPA for ${season}`,
+    });
+  } catch (error: any) {
+    console.error('❌ [API] RB EPA calculation failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+/**
+ * GET /api/sanity-check/rb-context
+ * Get RB context comparison data - raw EPA vs adjusted EPA with context breakdown
+ */
+router.get('/rb-context', async (req, res) => {
+  try {
+    const season = parseInt(req.query.season as string) || 2024;
+    
+    console.log(`🔬 [API] Getting RB context comparison for ${season}...`);
+    
+    const result = await rbContextCheckService.getRbContextComparison(season);
+    
+    res.json({
+      success: true,
+      data: {
+        season,
+        comparisons: result.comparisons,
+        summary: result.summary,
+        dataQuality: result.dataQuality,
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ [API] RB context comparison failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+/**
+ * POST /api/sanity-check/rb/run-full-check
+ * Run full RB context check workflow (context metrics + adjusted EPA)
+ */
+router.post('/rb/run-full-check', async (req, res) => {
+  try {
+    const { season = 2024 } = req.body;
+    
+    console.log(`🚀 [API] Running full RB context check for ${season}...`);
+    
+    await rbContextCheckService.runFullRbContextCheck(season);
+    
+    res.json({
+      success: true,
+      message: `Full RB context check completed for ${season}`,
+    });
+  } catch (error: any) {
+    console.error('❌ [API] RB full check failed:', error);
     res.status(500).json({ 
       success: false, 
       error: error.message 
