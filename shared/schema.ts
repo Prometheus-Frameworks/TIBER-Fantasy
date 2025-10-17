@@ -3160,18 +3160,107 @@ export const qbEpaAdjusted = pgTable("qb_epa_adjusted", {
   uniquePlayerSeasonWeek: unique("qb_epa_adj_unique").on(table.playerId, table.season, table.week),
 }));
 
-// EPA Sanity Check Insert Schemas
+// ========================================
+// RB EPA CONTEXT & SANITY CHECK
+// ========================================
+
+// RB Context Metrics - Calculated context factors from play-by-play
+export const rbContextMetrics = pgTable("rb_context_metrics", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id").notNull(), // NFLfastR ID
+  playerName: text("player_name").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week"), // null = season totals
+  
+  // Box count context
+  rushAttempts: integer("rush_attempts"),
+  boxCount8Plus: integer("box_count_8_plus"), // Carries vs 8+ defenders
+  boxCountRate: real("box_count_rate"), // % of carries vs stacked box
+  
+  // Yards before contact (O-line quality)
+  yardsBeforeContact: real("yards_before_contact"), // Average YBC
+  yardsAfterContact: real("yards_after_contact"), // Average YAC on runs
+  ybcRate: real("ybc_rate"), // YBC / Total rushing yards
+  
+  // Elusiveness metrics
+  brokenTackles: integer("broken_tackles"),
+  brokenTackleRate: real("broken_tackle_rate"), // Broken tackles / attempts
+  
+  // Receiving context
+  targets: integer("targets"),
+  receptions: integer("receptions"),
+  targetShare: real("target_share"), // % of team targets
+  
+  // Goal line opportunity
+  glCarries: integer("gl_carries"), // Carries inside 5-yard line
+  glTouchdowns: integer("gl_touchdowns"),
+  glConversionRate: real("gl_conversion_rate"), // TD% on goal line carries
+  
+  // Defensive strength faced
+  avgDefEpaFaced: real("avg_def_epa_faced"), // Average defensive EPA of opponents
+  
+  // Metadata
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  playerSeasonWeekIdx: index("rb_context_player_season_week_idx").on(table.playerId, table.season, table.week),
+  uniquePlayerSeasonWeek: unique("rb_context_unique").on(table.playerId, table.season, table.week),
+}));
+
+// Tiber Adjusted EPA for RBs - Our own calculated adjustments
+export const rbEpaAdjusted = pgTable("rb_epa_adjusted", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id").notNull(), // NFLfastR ID
+  playerName: text("player_name").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week"), // null = season totals
+  
+  // Our calculations
+  rawEpaPerPlay: real("raw_epa_per_play"), // From our data
+  tiberAdjEpaPerPlay: real("tiber_adj_epa_per_play"), // Our adjusted EPA
+  tiberEpaDiff: real("tiber_epa_diff"), // Our adjustment amount
+  
+  // Breakdown of adjustments
+  boxCountAdjustment: real("box_count_adjustment"), // EPA adjustment for stacked boxes
+  ybcAdjustment: real("ybc_adjustment"), // EPA adjustment for O-line quality
+  brokenTackleAdjustment: real("broken_tackle_adjustment"), // EPA adjustment for elusiveness
+  targetShareAdjustment: real("target_share_adjustment"), // EPA adjustment for receiving work
+  glAdjustment: real("gl_adjustment"), // EPA adjustment for goal line usage
+  defenseAdjustment: real("defense_adjustment"), // EPA adjustment for defenses faced
+  
+  // Confidence
+  confidence: real("confidence").default(0.7), // How confident we are in our adjustment
+  
+  // Metadata
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  playerSeasonWeekIdx: index("rb_epa_adj_player_season_week_idx").on(table.playerId, table.season, table.week),
+  uniquePlayerSeasonWeek: unique("rb_epa_adj_unique").on(table.playerId, table.season, table.week),
+}));
+
+// EPA Sanity Check Insert Schemas - QB
 export const insertQbEpaReferenceSchema = createInsertSchema(qbEpaReference).omit({ id: true, createdAt: true });
 export const insertQbContextMetricsSchema = createInsertSchema(qbContextMetrics).omit({ id: true, createdAt: true, calculatedAt: true });
 export const insertQbEpaAdjustedSchema = createInsertSchema(qbEpaAdjusted).omit({ id: true, createdAt: true, calculatedAt: true });
 
-// EPA Sanity Check Types
+// EPA Sanity Check Insert Schemas - RB
+export const insertRbContextMetricsSchema = createInsertSchema(rbContextMetrics).omit({ id: true, createdAt: true, calculatedAt: true });
+export const insertRbEpaAdjustedSchema = createInsertSchema(rbEpaAdjusted).omit({ id: true, createdAt: true, calculatedAt: true });
+
+// EPA Sanity Check Types - QB
 export type QbEpaReference = typeof qbEpaReference.$inferSelect;
 export type InsertQbEpaReference = z.infer<typeof insertQbEpaReferenceSchema>;
 export type QbContextMetrics = typeof qbContextMetrics.$inferSelect;
 export type InsertQbContextMetrics = z.infer<typeof insertQbContextMetricsSchema>;
 export type QbEpaAdjusted = typeof qbEpaAdjusted.$inferSelect;
 export type InsertQbEpaAdjusted = z.infer<typeof insertQbEpaAdjustedSchema>;
+
+// EPA Sanity Check Types - RB
+export type RbContextMetrics = typeof rbContextMetrics.$inferSelect;
+export type InsertRbContextMetrics = z.infer<typeof insertRbContextMetricsSchema>;
+export type RbEpaAdjusted = typeof rbEpaAdjusted.$inferSelect;
+export type InsertRbEpaAdjusted = z.infer<typeof insertRbEpaAdjustedSchema>;
 
 // Types
 export type PlayerWeekFacts = typeof playerWeekFacts.$inferSelect;
