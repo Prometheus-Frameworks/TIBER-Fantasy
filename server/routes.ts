@@ -103,6 +103,7 @@ import { createRagRouter, initRagOnBoot } from './routes/ragRoutes';
 import tiberMemoryRoutes from './routes/tiberMemoryRoutes';
 import rookieRisersRoutes from './routes/rookieRisersRoutes';
 import { registerPowerProcessingRoutes } from './routes/powerProcessing';
+import weeklyTakesRoutes from './routes/weeklyTakesRoutes';
 import { monitoringService } from './services/MonitoringService';
 import { adminService } from './services/AdminService';
 import { requireAdminAuth } from './middleware/adminAuth';
@@ -2986,6 +2987,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/strategy', strategyRoutes);
   console.log('🎯 Strategy routes mounted at /api/strategy/*');
   console.log('🎯 Player Matchup Intelligence routes mounted at /api/matchup/*');
+
+  // Weekly Takes routes
+  app.use('/api/weekly-takes', weeklyTakesRoutes);
+  console.log('📝 Weekly Takes routes mounted at /api/weekly-takes/*');
   
   // EPA Sanity Check System
   app.use('/api/sanity-check', epaSanityCheckRoutes);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Bell, Home, TrendingUp, Shield, Target, Shuffle, Users, FlaskConical, BarChart3, Eye } from 'lucide-react';
+import { User, Bell, Home, TrendingUp, Shield, Target, Shuffle, Users, FlaskConical, BarChart3, Eye, Lightbulb } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import HomeTab from '@/components/tabs/HomeTab';
 import RankingsTab from '@/components/tabs/RankingsTab';
@@ -10,6 +10,7 @@ import LeaguesTab from '@/components/tabs/LeaguesTab';
 import EPASanityTab from '@/components/tabs/EPASanityTab';
 import EPARankingsTab from '@/components/tabs/EPARankingsTab';
 import QBStatsReviewTab from '@/components/tabs/QBStatsReviewTab';
+import WeeklyTakesTab from '@/components/tabs/WeeklyTakesTab';
 import PlayerSearchBar from '@/components/PlayerSearchBar';
 
 const tabs = [
@@ -19,6 +20,7 @@ const tabs = [
   { id: 'qb-stats', label: 'QB Stats', icon: Eye, component: QBStatsReviewTab },
   { id: 'matchups', label: 'Matchups', icon: Shield, component: MatchupsTab },
   { id: 'strategy', label: 'Strategy', icon: Target, component: StrategyTab },
+  { id: 'weekly-takes', label: 'Weekly Takes', icon: Lightbulb, component: WeeklyTakesTab },
   { id: 'moves', label: 'Moves', icon: Shuffle, component: MovesTab },
   { id: 'leagues', label: 'Leagues', icon: Users, component: LeaguesTab },
   { id: 'epa-sanity', label: 'EPA Sanity', icon: FlaskConical, component: EPASanityTab },
