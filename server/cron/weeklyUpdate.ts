@@ -7,6 +7,7 @@ import cron from 'node-cron';
 import { weeklyHotListETL } from '../etl/weeklyHotListUpdate';
 import { nightlyBuysSellsETL } from '../etl/nightlyBuysSellsUpdate';
 import { setupEPASanityCheckCron } from './epaSanityCheck';
+import { setupRBContextCheckCron } from './rbContextCheck';
 
 export function setupWeeklyHotListCron() {
   console.log('📅 Setting up weekly Hot List cron job...');
@@ -111,6 +112,7 @@ export function setupAllCronJobs() {
   setupNightlyBuysSellsCron();
   setupWeeklyDataProcessing();
   setupEPASanityCheckCron();
+  setupRBContextCheckCron();
   
   console.log('✅ All cron jobs initialized successfully');
 }
