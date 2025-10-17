@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FlaskConical, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, MinusCircle } from 'lucide-react';
+import { FlaskConical, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, MinusCircle, Settings, LineChart } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 
 interface EPAComparison {
@@ -53,6 +53,8 @@ interface RBEPAComparison {
 export default function EPASanityTab() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [isCalculatingRB, setIsCalculatingRB] = useState(false);
+  const [isCalibrating, setIsCalibrating] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   // Query Baldwin reference data
   const { data: baldwinData, isLoading: isLoadingBaldwin } = useQuery({
@@ -68,6 +70,15 @@ export default function EPASanityTab() {
   const { data: rbComparisonData, isLoading: isLoadingRBComparison, refetch: refetchRBComparison } = useQuery({
     queryKey: ['/api/sanity-check/rb-context'],
   });
+
+  // Query diagnostics (only when showDiagnostics is true)
+  const { data: diagnosticsData, isLoading: isLoadingDiagnostics } = useQuery({
+    queryKey: ['/api/sanity-check/diagnostics'],
+    enabled: showDiagnostics,
+  });
+
+  // State for calibration results
+  const [calibrationResults, setCalibrationResults] = useState<any>(null);
 
   const handleCalculateContext = async () => {
     setIsCalculating(true);
@@ -92,6 +103,18 @@ export default function EPASanityTab() {
       console.error('Failed to calculate RB context:', error);
     } finally {
       setIsCalculatingRB(false);
+    }
+  };
+
+  const handleRunCalibration = async () => {
+    setIsCalibrating(true);
+    try {
+      const result = await apiRequest('POST', '/api/sanity-check/calibrate', { season: 2025 });
+      setCalibrationResults((result as any)?.data);
+    } catch (error) {
+      console.error('Failed to run calibration:', error);
+    } finally {
+      setIsCalibrating(false);
     }
   };
 
@@ -143,7 +166,26 @@ export default function EPASanityTab() {
         </TabsList>
 
         <TabsContent value="qb" className="space-y-6 mt-6">
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-end gap-3">
+            <Button
+              onClick={() => setShowDiagnostics(!showDiagnostics)}
+              variant="outline"
+              className="border-gray-700"
+              data-testid="button-toggle-diagnostics"
+            >
+              <LineChart className="w-4 h-4 mr-2" />
+              {showDiagnostics ? 'Hide' : 'Show'} Diagnostics
+            </Button>
+            <Button
+              onClick={handleRunCalibration}
+              disabled={isCalibrating}
+              variant="outline"
+              className="border-blue-500 text-blue-400"
+              data-testid="button-run-calibration"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              {isCalibrating ? 'Calibrating...' : 'Run Auto-Calibration'}
+            </Button>
             <Button
               onClick={handleCalculateContext}
               disabled={isCalculating}
@@ -154,6 +196,145 @@ export default function EPASanityTab() {
               {isCalculating ? 'Calculating...' : 'Calculate QB EPA'}
             </Button>
           </div>
+
+          {/* Calibration Results */}
+          {calibrationResults && (
+            <Card className="bg-[#141824] border-green-800">
+              <CardHeader>
+                <CardTitle className="text-lg text-green-400 flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5" />
+                  Auto-Calibration Results
+                </CardTitle>
+                <CardDescription className="text-gray-400">
+                  Optimal weights found using linear regression on {calibrationResults.metadata?.sample_size || 0} QBs
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-6">
+                  {/* OLS Results */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-blue-400">OLS Regression</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">Drop Weight</span>
+                        <span className="text-sm font-mono text-gray-200">
+                          {calibrationResults.calibration?.ols?.weights?.drop?.toFixed(3) || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">Pressure Weight</span>
+                        <span className="text-sm font-mono text-gray-200">
+                          {calibrationResults.calibration?.ols?.weights?.pressure?.toFixed(3) || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">YAC Weight</span>
+                        <span className="text-sm font-mono text-gray-200">
+                          {calibrationResults.calibration?.ols?.weights?.yac?.toFixed(3) || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">Defense Weight</span>
+                        <span className="text-sm font-mono text-gray-200">
+                          {calibrationResults.calibration?.ols?.weights?.defense?.toFixed(3) || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Performance Metrics */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-purple-400">Performance</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">RMSE</span>
+                        <span className="text-sm font-mono text-green-400">
+                          {calibrationResults.calibration?.ols?.rmse?.toFixed(4) || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">R² Score</span>
+                        <span className="text-sm font-mono text-green-400">
+                          {calibrationResults.calibration?.ols?.r2?.toFixed(3) || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">CV RMSE</span>
+                        <span className="text-sm font-mono text-yellow-400">
+                          {calibrationResults.calibration?.cross_validation?.rmse?.toFixed(4) || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">Intercept (bias)</span>
+                        <span className="text-sm font-mono text-gray-400">
+                          {calibrationResults.calibration?.ols?.intercept?.toFixed(4) || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Diagnostics Panel */}
+          {showDiagnostics && diagnosticsData && (
+            <Card className="bg-[#141824] border-blue-800">
+              <CardHeader>
+                <CardTitle className="text-lg text-blue-400">QB Diagnostic Breakdown</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Detailed analysis: {(diagnosticsData as any)?.data?.summary?.withData || 0} QBs with complete data
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-700">
+                        <th className="text-left py-2 px-3 text-gray-400">QB</th>
+                        <th className="text-right py-2 px-3 text-gray-400">Raw EPA</th>
+                        <th className="text-right py-2 px-3 text-gray-400">Baldwin Adj</th>
+                        <th className="text-right py-2 px-3 text-gray-400">Tiber Adj</th>
+                        <th className="text-right py-2 px-3 text-gray-400">Diff</th>
+                        <th className="text-right py-2 px-3 text-gray-400">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {((diagnosticsData as any)?.data?.diagnostics || []).slice(0, 10).map((qb: any) => (
+                        <tr key={qb.playerId} className="border-b border-gray-800">
+                          <td className="py-2 px-3 text-gray-200">{qb.qbName}</td>
+                          <td className="text-right py-2 px-3 font-mono text-gray-300">
+                            {qb.rawEPA?.toFixed(3) || 'N/A'}
+                          </td>
+                          <td className="text-right py-2 px-3 font-mono text-blue-400">
+                            {qb.baldwin?.adjEPA?.toFixed(3) || 'N/A'}
+                          </td>
+                          <td className="text-right py-2 px-3 font-mono text-purple-400">
+                            {qb.tiber?.adjEPA?.toFixed(3) || 'N/A'}
+                          </td>
+                          <td className={`text-right py-2 px-3 font-mono ${getDifferenceColor(qb.difference)}`}>
+                            {qb.difference ? (qb.difference > 0 ? '+' : '') + qb.difference.toFixed(3) : 'N/A'}
+                          </td>
+                          <td className="text-right py-2 px-3">
+                            {qb.largeDivergence ? (
+                              <Badge variant="destructive" className="text-xs">Large Div</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs border-green-600 text-green-400">OK</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {(diagnosticsData as any)?.data?.diagnostics?.length > 10 && (
+                  <p className="text-xs text-gray-500 mt-3 text-center">
+                    Showing 10 of {(diagnosticsData as any)?.data?.diagnostics?.length} QBs
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
       {/* Summary Card */}
       {(comparisonData as any)?.data?.summary && (

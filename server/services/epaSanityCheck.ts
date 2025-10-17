@@ -545,15 +545,16 @@ export class EPASanityCheckService {
       const baldwinReference = await this.getAllBaldwinReference(season);
       const baldwinPlayerIds = baldwinReference.map(b => b.playerId).filter(id => id);
       
-      const qbContext = await db
+      // Get ALL context metrics for this season, then filter in memory
+      const allQbContext = await db
         .select()
         .from(qbContextMetrics)
-        .where(
-          and(
-            eq(qbContextMetrics.season, season),
-            rawSql`${qbContextMetrics.playerId} IN (${baldwinPlayerIds.map(id => `'${id}'`).join(',')})`
-          )
-        );
+        .where(eq(qbContextMetrics.season, season));
+      
+      // Filter for Baldwin QBs only
+      const qbContext = allQbContext.filter(qb => 
+        baldwinPlayerIds.includes(qb.playerId || '')
+      );
       
       // Prepare data for Python calibration script
       const contextData = qbContext.map(qb => ({
