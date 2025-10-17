@@ -788,13 +788,23 @@ export class EPASanityCheckService {
     console.log(`📊 [EPA Rankings] Getting rankings for ${season}...`);
 
     // Get all Tiber adjusted EPA data, ordered by adjusted EPA (descending)
-    const epaData = await db
+    const epaDataRaw = await db
       .select()
       .from(qbEpaAdjusted)
       .where(eq(qbEpaAdjusted.season, season))
       .orderBy(desc(qbEpaAdjusted.tiberAdjEpaPerPlay));
 
-    console.log(`✅ [EPA Rankings] Found ${epaData.length} QBs with EPA data`);
+    // DEDUPLICATE: Keep only the most recent record for each player
+    const seenPlayers = new Map();
+    const epaData = epaDataRaw.filter(qb => {
+      if (!seenPlayers.has(qb.playerId)) {
+        seenPlayers.set(qb.playerId, qb);
+        return true;
+      }
+      return false;
+    });
+
+    console.log(`✅ [EPA Rankings] Found ${epaData.length} unique QBs (${epaDataRaw.length} total records, ${epaDataRaw.length - epaData.length} duplicates removed)`);
 
     // Determine tiers based on adjusted EPA
     const getTier = (adjEpa: number | null): 'elite' | 'good' | 'average' | 'below-average' | 'poor' => {
@@ -811,11 +821,11 @@ export class EPASanityCheckService {
       rank: index + 1,
       playerId: qb.playerId,
       playerName: qb.playerName,
-      team: qb.team || 'UNK',
+      team: 'UNK', // Team info not stored in qb_epa_adjusted table
       rawEpa: qb.rawEpaPerPlay || 0,
       adjustedEpa: qb.tiberAdjEpaPerPlay || 0,
       totalAdjustment: qb.tiberEpaDiff || 0,
-      attempts: qb.attempts || 0,
+      attempts: 0, // Attempts not stored in qb_epa_adjusted table
       tier: getTier(qb.tiberAdjEpaPerPlay),
     }));
 

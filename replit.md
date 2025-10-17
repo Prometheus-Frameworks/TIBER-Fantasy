@@ -43,6 +43,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **TIBER (Tactical Index for Breakout Efficiency and Regression)**: Version 1.5 implemented, using First Downs per Route Run as a primary metric.
 - **Player Search**: Feature for searching player game logs and statistics.
 - **EPA Sanity Check System**: Internal validation system for QB context metrics, comparing against Ben Baldwin's adjusted EPA methodology.
+- **EPA Rankings Tab**: Production-ready public rankings page showing QBs ordered by adjusted EPA with 5-tier classification system (Elite/Good/Average/Below Average/Poor), podium icons for top 3, and comprehensive performance metrics.
 - **Enhanced Player Card Component**: Features TIBER trend charts, last 3 weeks summary, and ROS Matchup Calendar.
 - **Strategy Tab Overhaul**: Redesigned for Start/Sit recommendations with context-aware analysis, Waiver Wire Targets based on TIBER, and SOS Rankings.
 
