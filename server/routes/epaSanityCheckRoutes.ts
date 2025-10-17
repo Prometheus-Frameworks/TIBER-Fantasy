@@ -399,4 +399,33 @@ router.post('/rb/run-full-check', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/sanity-check/epa-rankings
+ * Get QB EPA rankings ordered from best to worst
+ */
+router.get('/epa-rankings', async (req, res) => {
+  try {
+    const season = parseInt(req.query.season as string) || 2025;
+    
+    console.log(`📊 [API] Getting EPA rankings for ${season}...`);
+    
+    const result = await epaSanityCheckService.getEpaRankings(season);
+    
+    res.json({
+      success: true,
+      data: {
+        season,
+        rankings: result.rankings,
+        summary: result.summary,
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ [API] EPA rankings failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 export default router;

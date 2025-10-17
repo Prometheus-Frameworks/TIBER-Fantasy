@@ -777,6 +777,75 @@ export class EPASanityCheckService {
       },
     };
   }
+
+  /**
+   * Get EPA rankings ordered from best to worst
+   */
+  async getEpaRankings(season: number = 2025): Promise<{
+    rankings: any[];
+    summary: any;
+  }> {
+    console.log(`📊 [EPA Rankings] Getting rankings for ${season}...`);
+
+    // Get all Tiber adjusted EPA data, ordered by adjusted EPA (descending)
+    const epaData = await db
+      .select()
+      .from(qbEpaAdjusted)
+      .where(eq(qbEpaAdjusted.season, season))
+      .orderBy(desc(qbEpaAdjusted.tiberAdjEpaPerPlay));
+
+    console.log(`✅ [EPA Rankings] Found ${epaData.length} QBs with EPA data`);
+
+    // Determine tiers based on adjusted EPA
+    const getTier = (adjEpa: number | null): 'elite' | 'good' | 'average' | 'below-average' | 'poor' => {
+      if (adjEpa === null) return 'poor';
+      if (adjEpa >= 0.20) return 'elite';
+      if (adjEpa >= 0.10) return 'good';
+      if (adjEpa >= 0.00) return 'average';
+      if (adjEpa >= -0.10) return 'below-average';
+      return 'poor';
+    };
+
+    // Map to rankings format
+    const rankings = epaData.map((qb, index) => ({
+      rank: index + 1,
+      playerId: qb.playerId,
+      playerName: qb.playerName,
+      team: qb.team || 'UNK',
+      rawEpa: qb.rawEpaPerPlay || 0,
+      adjustedEpa: qb.tiberAdjEpaPerPlay || 0,
+      totalAdjustment: qb.tiberEpaDiff || 0,
+      attempts: qb.attempts || 0,
+      tier: getTier(qb.tiberAdjEpaPerPlay),
+    }));
+
+    // Calculate summary stats
+    const totalQbs = rankings.length;
+    const avgAdjustedEpa = rankings.length > 0
+      ? rankings.reduce((sum, qb) => sum + qb.adjustedEpa, 0) / rankings.length
+      : 0;
+    const eliteCount = rankings.filter(r => r.tier === 'elite').length;
+
+    const summary = {
+      total: totalQbs,
+      avgAdjustedEpa,
+      eliteCount,
+      tiers: {
+        elite: rankings.filter(r => r.tier === 'elite').length,
+        good: rankings.filter(r => r.tier === 'good').length,
+        average: rankings.filter(r => r.tier === 'average').length,
+        belowAverage: rankings.filter(r => r.tier === 'below-average').length,
+        poor: rankings.filter(r => r.tier === 'poor').length,
+      },
+    };
+
+    console.log(`📊 [EPA Rankings] Rankings generated - Top: ${rankings[0]?.playerName || 'N/A'} (${rankings[0]?.adjustedEpa?.toFixed(3) || 'N/A'})`);
+
+    return {
+      rankings,
+      summary,
+    };
+  }
 }
 
 export const epaSanityCheckService = new EPASanityCheckService();
