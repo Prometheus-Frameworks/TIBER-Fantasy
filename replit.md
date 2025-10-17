@@ -47,6 +47,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **QB Stats Review Tab**: Comprehensive QB validation page displaying all available NFLfastR stats, Baldwin reference data, context metrics (drops, pressures, YAC, defense faced), and Tiber adjustments. Enables manual eye-testing of rankings with complete statistical breakdown per QB, sorted by Baldwin's adjusted EPA (descending).
 - **Enhanced Player Card Component**: Features TIBER trend charts, last 3 weeks summary, and ROS Matchup Calendar.
 - **Strategy Tab Overhaul**: Redesigned for Start/Sit recommendations with context-aware analysis, Waiver Wire Targets based on TIBER, and SOS Rankings.
+- **Weekly Takes System**: Quick, punchy matchup insights tab featuring position-specific one-liners (QB/RB/WR/TE) with concrete statistics. Format: **Player Name** - key insight with stat. Currently using sample data, ready for live integration with DvP matchups, EPA context, and usage trends. Avoids DFS terminology, focuses on actionable fantasy insights.
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
