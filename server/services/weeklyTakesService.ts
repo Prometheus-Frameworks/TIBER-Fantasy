@@ -105,8 +105,8 @@ export class WeeklyTakesService {
     const takes: WeeklyTake[] = [];
 
     try {
-      // Get RB EPA data
-      const rbEpaData = await db
+      // Try current season first, fallback to 2024
+      let rbEpaData = await db
         .select()
         .from(rbEpaAdjusted)
         .where(and(
@@ -116,8 +116,21 @@ export class WeeklyTakesService {
         .orderBy(desc(rbEpaAdjusted.tiberAdjEpaPerPlay))
         .limit(15);
 
+      // Fallback to 2024 if no 2025 data
+      if (rbEpaData.length === 0 && season === 2025) {
+        rbEpaData = await db
+          .select()
+          .from(rbEpaAdjusted)
+          .where(and(
+            eq(rbEpaAdjusted.season, 2024),
+            sql`${rbEpaAdjusted.week} IS NULL`
+          ))
+          .orderBy(desc(rbEpaAdjusted.tiberAdjEpaPerPlay))
+          .limit(15);
+      }
+
       // Get RB context metrics
-      const rbContext = await db
+      let rbContext = await db
         .select()
         .from(rbContextMetrics)
         .where(and(
@@ -125,6 +138,18 @@ export class WeeklyTakesService {
           sql`${rbContextMetrics.week} IS NULL` // Season totals
         ))
         .limit(15);
+
+      // Fallback to 2024
+      if (rbContext.length === 0 && season === 2025) {
+        rbContext = await db
+          .select()
+          .from(rbContextMetrics)
+          .where(and(
+            eq(rbContextMetrics.season, 2024),
+            sql`${rbContextMetrics.week} IS NULL`
+          ))
+          .limit(15);
+      }
 
       // Elite EPA RB
       if (rbEpaData.length > 0) {
@@ -175,7 +200,7 @@ export class WeeklyTakesService {
       // Get recent game logs (last 3 weeks) for target leaders
       const recentWeeks = [week - 1, week - 2, week - 3].filter(w => w > 0);
       
-      const recentGameLogs = await db
+      let recentGameLogs = await db
         .select({
           sleeperId: gameLogs.sleeperId,
           avgTargets: sql<number>`AVG(${gameLogs.targets})`.as('avg_targets'),
@@ -194,6 +219,30 @@ export class WeeklyTakesService {
         .groupBy(gameLogs.sleeperId)
         .orderBy(desc(sql`AVG(${gameLogs.targets})`))
         .limit(20);
+
+      // Fallback to 2024 data if no 2025 game logs
+      if (recentGameLogs.length === 0 && season === 2025) {
+        const fallbackWeeks = [13, 14, 15]; // Use weeks 13-15 from 2024
+        recentGameLogs = await db
+          .select({
+            sleeperId: gameLogs.sleeperId,
+            avgTargets: sql<number>`AVG(${gameLogs.targets})`.as('avg_targets'),
+            totalTargets: sql<number>`SUM(${gameLogs.targets})`.as('total_targets'),
+            avgReceptions: sql<number>`AVG(${gameLogs.receptions})`.as('avg_receptions'),
+            avgRecYards: sql<number>`AVG(${gameLogs.recYards})`.as('avg_rec_yards'),
+          })
+          .from(gameLogs)
+          .innerJoin(players, eq(gameLogs.playerId, players.id))
+          .where(and(
+            eq(gameLogs.season, 2024),
+            sql`${gameLogs.week} IN (${sql.join(fallbackWeeks, sql`, `)})`,
+            eq(players.position, 'WR'),
+            gte(gameLogs.targets, 5)
+          ))
+          .groupBy(gameLogs.sleeperId)
+          .orderBy(desc(sql`AVG(${gameLogs.targets})`))
+          .limit(20);
+      }
 
       // Get player usage data for alignment splits
       const usageData = await db
@@ -270,7 +319,7 @@ export class WeeklyTakesService {
       // Get recent TE game logs
       const recentWeeks = [week - 1, week - 2, week - 3].filter(w => w > 0);
       
-      const teGameLogs = await db
+      let teGameLogs = await db
         .select({
           sleeperId: gameLogs.sleeperId,
           avgTargets: sql<number>`AVG(${gameLogs.targets})`.as('avg_targets'),
@@ -290,6 +339,31 @@ export class WeeklyTakesService {
         .groupBy(gameLogs.sleeperId)
         .orderBy(desc(sql`AVG(${gameLogs.targets})`))
         .limit(15);
+
+      // Fallback to 2024 data if no 2025 game logs
+      if (teGameLogs.length === 0 && season === 2025) {
+        const fallbackWeeks = [13, 14, 15]; // Use weeks 13-15 from 2024
+        teGameLogs = await db
+          .select({
+            sleeperId: gameLogs.sleeperId,
+            avgTargets: sql<number>`AVG(${gameLogs.targets})`.as('avg_targets'),
+            totalTargets: sql<number>`SUM(${gameLogs.targets})`.as('total_targets'),
+            avgReceptions: sql<number>`AVG(${gameLogs.receptions})`.as('avg_receptions'),
+            avgRecYards: sql<number>`AVG(${gameLogs.recYards})`.as('avg_rec_yards'),
+            avgFantasyPts: sql<number>`AVG(${gameLogs.fantasyPointsPpr})`.as('avg_fantasy_pts'),
+          })
+          .from(gameLogs)
+          .innerJoin(players, eq(gameLogs.playerId, players.id))
+          .where(and(
+            eq(gameLogs.season, 2024),
+            sql`${gameLogs.week} IN (${sql.join(fallbackWeeks, sql`, `)})`,
+            eq(players.position, 'TE'),
+            gte(gameLogs.targets, 3)
+          ))
+          .groupBy(gameLogs.sleeperId)
+          .orderBy(desc(sql`AVG(${gameLogs.targets})`))
+          .limit(15);
+      }
 
       // Get DvP data for TE matchups
       const teMatchups = await db
