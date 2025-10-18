@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useTopProgress } from "@/hooks/useTopProgress";
 import TiberDashboard from "@/pages/TiberDashboard";
+import PlayerComparePilot from "@/pages/PlayerComparePilot";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -13,6 +14,9 @@ function Router() {
     <Switch>
       {/* Main Route - Tiber Fantasy Dashboard */}
       <Route path="/" component={TiberDashboard} />
+      
+      {/* Player Compare Pilot */}
+      <Route path="/compare" component={PlayerComparePilot} />
       
       {/* 404 Catch-all */}
       <Route component={NotFound} />
