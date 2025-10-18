@@ -122,7 +122,7 @@ export default function PlayerComparePilot() {
   const [player2Name, setPlayer2Name] = useState('');
 
   const { data, isLoading } = useQuery<{ success: boolean; data: PlayerComparisonData }>({
-    queryKey: ['/api/player-compare-pilot', player1Name, player2Name],
+    queryKey: [`/api/player-compare-pilot?player1=${encodeURIComponent(player1Name)}&player2=${encodeURIComponent(player2Name)}`],
     enabled: !!(player1Name && player2Name),
   });
 
