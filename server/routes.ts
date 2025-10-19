@@ -105,6 +105,7 @@ import rookieRisersRoutes from './routes/rookieRisersRoutes';
 import { registerPowerProcessingRoutes } from './routes/powerProcessing';
 import weeklyTakesRoutes from './routes/weeklyTakesRoutes';
 import playerComparePilotRoutes from './routes/playerComparePilotRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
 import { monitoringService } from './services/MonitoringService';
 import { adminService } from './services/AdminService';
 import { requireAdminAuth } from './middleware/adminAuth';
@@ -2996,6 +2997,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Compare Pilot
   app.use('/api/player-compare-pilot', playerComparePilotRoutes);
   console.log('🔍 Player Compare Pilot routes mounted at /api/player-compare-pilot/*');
+  
+  // Analytics
+  app.use('/api/analytics', analyticsRoutes);
+  console.log('📊 Analytics routes mounted at /api/analytics/*');
   
   // EPA Sanity Check System
   app.use('/api/sanity-check', epaSanityCheckRoutes);

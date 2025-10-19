@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useTopProgress } from "@/hooks/useTopProgress";
 import TiberDashboard from "@/pages/TiberDashboard";
 import PlayerComparePilot from "@/pages/PlayerComparePilot";
+import AnalyticsPage from "@/pages/AnalyticsPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -17,6 +18,9 @@ function Router() {
       
       {/* Player Compare Pilot */}
       <Route path="/compare" component={PlayerComparePilot} />
+      
+      {/* Analytics */}
+      <Route path="/analytics" component={AnalyticsPage} />
       
       {/* 404 Catch-all */}
       <Route component={NotFound} />
