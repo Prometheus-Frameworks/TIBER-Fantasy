@@ -91,7 +91,7 @@ export default function AnalyticsPage() {
             </h1>
           </div>
           <p className="text-gray-400">
-            Raw NFLfastR stats from 2025 weeks 1-6 • No analysis, just numbers
+            Raw NFLfastR stats from 2024 weeks 13-15 • No analysis, just numbers
           </p>
         </div>
 
@@ -141,7 +141,7 @@ export default function AnalyticsPage() {
         <Card className="bg-card/50 border-border/50">
           <CardHeader>
             <CardTitle className="text-lg text-white">
-              {POSITION_STATS[position].find(s => s.value === stat)?.label || stat} • 2025 Weeks 1-6
+              {POSITION_STATS[position].find(s => s.value === stat)?.label || stat} • {data?.data?.season || 2024} Weeks {data?.data?.week || '13-15'}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -186,7 +186,7 @@ export default function AnalyticsPage() {
         {/* Footer Info */}
         {data?.data && (
           <div className="text-center text-sm text-gray-400">
-            Showing {chartData.length} {position} players • 2025 Season Weeks 1-6 • Data from NFLfastR
+            Showing {chartData.length} {position} players • {data.data.season} Season Weeks {data.data.week} • Data from NFLfastR
           </div>
         )}
       </div>

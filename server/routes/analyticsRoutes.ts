@@ -68,8 +68,8 @@ router.get('/', async (req, res) => {
       });
     }
 
-    // Query aggregated stats for 2025 weeks 1-6
-    const playerStats = await db
+    // Try 2025 weeks 1-6 first, fallback to 2024 weeks 13-15
+    let playerStats = await db
       .select({
         sleeperId: gameLogs.sleeperId,
         firstName: players.firstName,
@@ -89,6 +89,34 @@ router.get('/', async (req, res) => {
       .orderBy(sql`stat_value DESC`)
       .limit(25); // Top 25 players
 
+    let usedSeason = 2025;
+    let usedWeeks = '1-6';
+
+    // Fallback to 2024 data if no 2025 data available
+    if (playerStats.length === 0) {
+      playerStats = await db
+        .select({
+          sleeperId: gameLogs.sleeperId,
+          firstName: players.firstName,
+          lastName: players.lastName,
+          team: players.team,
+          value: selectedStat.as('stat_value'),
+        })
+        .from(gameLogs)
+        .innerJoin(players, eq(gameLogs.playerId, players.id))
+        .where(and(
+          eq(gameLogs.season, 2024),
+          sql`${gameLogs.week} IN (13, 14, 15)`,
+          eq(players.position, position as string)
+        ))
+        .groupBy(gameLogs.sleeperId, players.firstName, players.lastName, players.team)
+        .orderBy(sql`stat_value DESC`)
+        .limit(25);
+
+      usedSeason = 2024;
+      usedWeeks = '13-15';
+    }
+
     const formattedPlayers: PlayerStat[] = playerStats.map(p => ({
       name: `${p.firstName ? p.firstName.charAt(0) + '.' : ''} ${p.lastName || 'Unknown'}`.trim(),
       value: Number(p.value) || 0,
@@ -97,8 +125,8 @@ router.get('/', async (req, res) => {
 
     const response: AnalyticsData = {
       players: formattedPlayers,
-      week: '1-6',
-      season: 2025,
+      week: usedWeeks,
+      season: usedSeason,
       position: position as string,
       stat: stat as string
     };
