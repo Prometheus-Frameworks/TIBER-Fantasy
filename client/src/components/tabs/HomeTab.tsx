@@ -1,4 +1,4 @@
-import { TrendingUp, Target, Shield, BarChart3, ArrowRight } from 'lucide-react';
+import { TrendingUp, Target, Shield, BarChart3, ArrowRight, LineChart, Search } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
@@ -162,29 +162,60 @@ export default function HomeTab() {
         )}
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Link href="?tab=strategy">
-          <button className="w-full bg-[#141824] border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors text-left group">
-            <div className="flex items-center justify-between mb-3">
-              <Target className="w-6 h-6 text-orange-400" />
-              <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-gray-400 transition-colors" />
-            </div>
-            <h4 className="font-semibold text-gray-100 mb-2">Strategy & SOS</h4>
-            <p className="text-sm text-gray-400">Analyze strength of schedule and team matchups</p>
-          </button>
-        </Link>
+      {/* Research Tools */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-100 mb-4">Research Tools</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link href="/analytics">
+            <button className="w-full bg-[#141824] border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors text-left group" data-testid="home-card-analytics">
+              <div className="flex items-center justify-between mb-3">
+                <LineChart className="w-6 h-6 text-green-400" />
+                <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-gray-400 transition-colors" />
+              </div>
+              <h4 className="font-semibold text-gray-100 mb-2">Analytics</h4>
+              <p className="text-sm text-gray-400">Visualize player stats with interactive charts</p>
+            </button>
+          </Link>
 
-        <Link href="?tab=moves">
-          <button className="w-full bg-[#141824] border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors text-left group">
-            <div className="flex items-center justify-between mb-3">
-              <TrendingUp className="w-6 h-6 text-green-400" />
-              <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-gray-400 transition-colors" />
-            </div>
-            <h4 className="font-semibold text-gray-100 mb-2">Trade & Moves</h4>
-            <p className="text-sm text-gray-400">Evaluate trades and roster decisions (Coming Soon)</p>
-          </button>
-        </Link>
+          <Link href="/compare">
+            <button className="w-full bg-[#141824] border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors text-left group" data-testid="home-card-compare">
+              <div className="flex items-center justify-between mb-3">
+                <Search className="w-6 h-6 text-blue-400" />
+                <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-gray-400 transition-colors" />
+              </div>
+              <h4 className="font-semibold text-gray-100 mb-2">Player Compare</h4>
+              <p className="text-sm text-gray-400">Side-by-side player comparison with stats and matchups</p>
+            </button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-100 mb-4">Quick Actions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link href="?tab=strategy">
+            <button className="w-full bg-[#141824] border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors text-left group">
+              <div className="flex items-center justify-between mb-3">
+                <Target className="w-6 h-6 text-orange-400" />
+                <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-gray-400 transition-colors" />
+              </div>
+              <h4 className="font-semibold text-gray-100 mb-2">Strategy & SOS</h4>
+              <p className="text-sm text-gray-400">Analyze strength of schedule and team matchups</p>
+            </button>
+          </Link>
+
+          <Link href="?tab=moves">
+            <button className="w-full bg-[#141824] border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors text-left group">
+              <div className="flex items-center justify-between mb-3">
+                <TrendingUp className="w-6 h-6 text-green-400" />
+                <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-gray-400 transition-colors" />
+              </div>
+              <h4 className="font-semibold text-gray-100 mb-2">Trade & Moves</h4>
+              <p className="text-sm text-gray-400">Evaluate trades and roster decisions (Coming Soon)</p>
+            </button>
+          </Link>
+        </div>
       </div>
     </div>
   );
