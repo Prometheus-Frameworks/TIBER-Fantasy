@@ -110,13 +110,18 @@ for week in target_weeks:
                     week,       # week
                     'REG',      # season_type
                     None,       # opponent (we don't have this easily)
+                    pass_att,
+                    pass_cmp,
+                    pass_yards,
+                    pass_tds,
+                    pass_int,
+                    rush_att,
+                    rush_yards,
+                    rush_tds,
                     targets,
                     receptions,
                     rec_yards,
                     rec_tds,
-                    rush_att,
-                    rush_yards,
-                    rush_tds,
                     fantasy_points_ppr
                 ))
                 logs_this_week += 1
@@ -174,8 +179,10 @@ if len(game_logs_data) > 0:
     insert_query = """
         INSERT INTO game_logs (
             player_id, sleeper_id, season, week, season_type, opponent,
+            pass_attempts, pass_completions, pass_yards, pass_td, pass_int,
+            rush_attempts, rush_yards, rush_td,
             targets, receptions, rec_yards, rec_td,
-            rush_attempts, rush_yards, rush_td, fantasy_points_ppr
+            fantasy_points_ppr
         ) VALUES %s
     """
     
