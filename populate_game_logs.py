@@ -17,7 +17,7 @@ if not DATABASE_URL:
     exit(1)
 
 print("🏈 Starting game logs population...")
-print(f"📊 Target: game_logs table with 2024 data")
+print(f"📊 Target: game_logs table with 2025 weeks 1-6 data")
 
 # Fetch Sleeper players database
 print("\n📡 Fetching Sleeper players database...")
@@ -28,10 +28,10 @@ print(f"✅ Loaded {len(all_players)} players from Sleeper")
 # Create player_id mapping (sleeper_id -> internal player ID will be generated)
 # For now, we'll use sleeper_id as the lookup key
 
-# Fetch stats for weeks 1-17 of 2024
-print("\n📊 Fetching 2024 weekly stats...")
+# Fetch stats for weeks 1-6 of 2025
+print("\n📊 Fetching 2025 weekly stats...")
 
-# We'll collect game logs for RB, WR, TE positions
+# We'll collect game logs for QB, RB, WR, TE positions
 game_logs_data = []
 player_cache = {}  # Cache to avoid duplicate player lookups
 
@@ -44,14 +44,14 @@ cur.execute("SELECT id, sleeper_id FROM players WHERE sleeper_id IS NOT NULL")
 player_db_mapping = {row[1]: row[0] for row in cur.fetchall()}
 print(f"✅ Found {len(player_db_mapping)} players with Sleeper IDs in database")
 
-# Fetch weekly stats for weeks 13-15 (recent weeks for testing)
-test_weeks = [13, 14, 15]
-print(f"\n🔄 Fetching stats for weeks {test_weeks} of 2024 season...")
+# Fetch weekly stats for weeks 1-6 (2025 season)
+target_weeks = [1, 2, 3, 4, 5, 6]
+print(f"\n🔄 Fetching stats for weeks {target_weeks} of 2025 season...")
 
-for week in test_weeks:
+for week in target_weeks:
     print(f"  Week {week}...", end=" ")
     try:
-        stats_response = requests.get(f'https://api.sleeper.app/v1/stats/nfl/regular/2024/{week}')
+        stats_response = requests.get(f'https://api.sleeper.app/v1/stats/nfl/regular/2025/{week}')
         week_stats = stats_response.json()
         
         logs_this_week = 0
@@ -62,8 +62,8 @@ for week in test_weeks:
             player_info = all_players[player_id]
             position = player_info.get('position')
             
-            # Only process RB, WR, TE
-            if position not in ['RB', 'WR', 'TE']:
+            # Only process QB, RB, WR, TE
+            if position not in ['QB', 'RB', 'WR', 'TE']:
                 continue
             
             # Check if player exists in our database
@@ -72,7 +72,7 @@ for week in test_weeks:
             
             db_player_id = player_db_mapping[player_id]
             
-            # Extract relevant stats
+            # Extract relevant stats for all positions
             targets = stats.get('rec_tgt', 0) or 0
             receptions = stats.get('rec_rec', 0) or 0
             rec_yards = stats.get('rec_yd', 0) or 0
@@ -82,21 +82,31 @@ for week in test_weeks:
             rush_yards = stats.get('rush_yd', 0) or 0
             rush_tds = stats.get('rush_td', 0) or 0
             
+            # QB-specific stats
+            pass_att = stats.get('pass_att', 0) or 0
+            pass_cmp = stats.get('pass_cmp', 0) or 0
+            pass_yards = stats.get('pass_yd', 0) or 0
+            pass_tds = stats.get('pass_td', 0) or 0
+            pass_int = stats.get('pass_int', 0) or 0
+            
             # Calculate PPR fantasy points
             fantasy_points_ppr = (
                 receptions * 1.0 +  # 1 point per reception
                 rec_yards * 0.1 +   # 0.1 per receiving yard
                 rec_tds * 6.0 +     # 6 points per receiving TD
                 rush_yards * 0.1 +  # 0.1 per rushing yard
-                rush_tds * 6.0      # 6 points per rushing TD
+                rush_tds * 6.0 +    # 6 points per rushing TD
+                pass_yards * 0.04 + # 0.04 per passing yard (1 pt per 25 yds)
+                pass_tds * 4.0 -    # 4 points per passing TD
+                pass_int * 2.0      # -2 points per interception
             )
             
             # Only include if player had some activity
-            if targets > 0 or rush_att > 0:
+            if targets > 0 or rush_att > 0 or pass_att > 0:
                 game_logs_data.append((
                     db_player_id,
                     player_id,  # sleeper_id
-                    2024,       # season
+                    2025,       # season
                     week,       # week
                     'REG',      # season_type
                     None,       # opponent (we don't have this easily)
@@ -152,13 +162,13 @@ if player_names_to_update:
 if len(game_logs_data) > 0:
     print("\n💾 Inserting into database...")
     
-    # Clear existing test data for these weeks
+    # Clear existing data for these weeks
     cur.execute("""
         DELETE FROM game_logs 
-        WHERE season = 2024 AND week IN (13, 14, 15)
+        WHERE season = 2025 AND week IN (1, 2, 3, 4, 5, 6)
     """)
     deleted = cur.rowcount
-    print(f"🗑️  Cleared {deleted} existing records for weeks 13-15")
+    print(f"🗑️  Cleared {deleted} existing records for 2025 weeks 1-6")
     
     # Insert new data
     insert_query = """
@@ -181,7 +191,7 @@ if len(game_logs_data) > 0:
                gl.rec_yards, gl.fantasy_points_ppr
         FROM game_logs gl
         JOIN players p ON gl.player_id = p.id
-        WHERE gl.season = 2024 AND gl.week IN (13, 14, 15)
+        WHERE gl.season = 2025 AND gl.week IN (1, 2, 3, 4, 5, 6)
         ORDER BY gl.fantasy_points_ppr DESC
         LIMIT 10
     """)
