@@ -1,4 +1,4 @@
-import { TrendingUp, Target, Shield, BarChart3, ArrowRight, LineChart, Search } from 'lucide-react';
+import { TrendingUp, Target, Shield, BarChart3, ArrowRight, LineChart, Search, Trophy } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
@@ -165,7 +165,18 @@ export default function HomeTab() {
       {/* Research Tools */}
       <div>
         <h3 className="text-lg font-semibold text-gray-100 mb-4">Research Tools</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link href="/leaders">
+            <button className="w-full bg-[#141824] border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors text-left group" data-testid="home-card-leaders">
+              <div className="flex items-center justify-between mb-3">
+                <Trophy className="w-6 h-6 text-yellow-400" />
+                <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-gray-400 transition-colors" />
+              </div>
+              <h4 className="font-semibold text-gray-100 mb-2">Leaders</h4>
+              <p className="text-sm text-gray-400">Top performers by position and stat category</p>
+            </button>
+          </Link>
+
           <Link href="/analytics">
             <button className="w-full bg-[#141824] border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors text-left group" data-testid="home-card-analytics">
               <div className="flex items-center justify-between mb-3">

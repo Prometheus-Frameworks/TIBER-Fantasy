@@ -8,6 +8,7 @@ import { useTopProgress } from "@/hooks/useTopProgress";
 import TiberDashboard from "@/pages/TiberDashboard";
 import PlayerComparePilot from "@/pages/PlayerComparePilot";
 import AnalyticsPage from "@/pages/AnalyticsPage";
+import LeadersPage from "@/pages/LeadersPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -21,6 +22,9 @@ function Router() {
       
       {/* Analytics */}
       <Route path="/analytics" component={AnalyticsPage} />
+      
+      {/* Leaders */}
+      <Route path="/leaders" component={LeadersPage} />
       
       {/* 404 Catch-all */}
       <Route component={NotFound} />

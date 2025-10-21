@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Bell, Home, TrendingUp, Shield, Target, Shuffle, Users, FlaskConical, BarChart3, Eye, Lightbulb, Search, LineChart } from 'lucide-react';
+import { User, Bell, Home, TrendingUp, Shield, Target, Shuffle, Users, FlaskConical, BarChart3, Eye, Lightbulb, Search, LineChart, Trophy } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import HomeTab from '@/components/tabs/HomeTab';
 import RankingsTab from '@/components/tabs/RankingsTab';
@@ -77,6 +77,10 @@ function TiberDashboard() {
 
             {/* Right Nav */}
             <div className="flex items-center gap-2">
+              <Link href="/leaders" className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 transition-colors text-sm font-medium" data-testid="link-nav-leaders">
+                <Trophy className="w-4 h-4" />
+                Leaders
+              </Link>
               <Link href="/analytics" className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 transition-colors text-sm font-medium">
                 <LineChart className="w-4 h-4" />
                 Analytics
