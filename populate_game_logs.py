@@ -74,7 +74,7 @@ for week in target_weeks:
             
             # Extract relevant stats for all positions
             targets = stats.get('rec_tgt', 0) or 0
-            receptions = stats.get('rec_rec', 0) or 0
+            receptions = stats.get('rec', 0) or 0  # Fixed: 'rec' not 'rec_rec'
             rec_yards = stats.get('rec_yd', 0) or 0
             rec_tds = stats.get('rec_td', 0) or 0
             
