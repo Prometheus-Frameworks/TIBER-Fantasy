@@ -17,7 +17,7 @@ if not DATABASE_URL:
     exit(1)
 
 print("🏈 Starting game logs population...")
-print(f"📊 Target: game_logs table with 2025 weeks 1-6 data")
+print(f"📊 Target: game_logs table with 2025 weeks 1-7 data")
 
 # Fetch Sleeper players database
 print("\n📡 Fetching Sleeper players database...")
@@ -44,8 +44,8 @@ cur.execute("SELECT id, sleeper_id FROM players WHERE sleeper_id IS NOT NULL")
 player_db_mapping = {row[1]: row[0] for row in cur.fetchall()}
 print(f"✅ Found {len(player_db_mapping)} players with Sleeper IDs in database")
 
-# Fetch weekly stats for weeks 1-6 (2025 season)
-target_weeks = [1, 2, 3, 4, 5, 6]
+# Fetch weekly stats for weeks 1-7 (2025 season)
+target_weeks = [1, 2, 3, 4, 5, 6, 7]
 print(f"\n🔄 Fetching stats for weeks {target_weeks} of 2025 season...")
 
 for week in target_weeks:
@@ -170,10 +170,10 @@ if len(game_logs_data) > 0:
     # Clear existing data for these weeks
     cur.execute("""
         DELETE FROM game_logs 
-        WHERE season = 2025 AND week IN (1, 2, 3, 4, 5, 6)
+        WHERE season = 2025 AND week IN (1, 2, 3, 4, 5, 6, 7)
     """)
     deleted = cur.rowcount
-    print(f"🗑️  Cleared {deleted} existing records for 2025 weeks 1-6")
+    print(f"🗑️  Cleared {deleted} existing records for 2025 weeks 1-7")
     
     # Insert new data
     insert_query = """
@@ -198,7 +198,7 @@ if len(game_logs_data) > 0:
                gl.rec_yards, gl.fantasy_points_ppr
         FROM game_logs gl
         JOIN players p ON gl.player_id = p.id
-        WHERE gl.season = 2025 AND gl.week IN (1, 2, 3, 4, 5, 6)
+        WHERE gl.season = 2025 AND gl.week IN (1, 2, 3, 4, 5, 6, 7)
         ORDER BY gl.fantasy_points_ppr DESC
         LIMIT 10
     """)

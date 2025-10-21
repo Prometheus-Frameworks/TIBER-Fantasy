@@ -68,7 +68,7 @@ router.get('/', async (req, res) => {
       });
     }
 
-    // Try 2025 weeks 1-6 first, fallback to 2024 weeks 13-15
+    // Try 2025 weeks 1-7 first, fallback to 2024 weeks 13-15
     let playerStats = await db
       .select({
         sleeperId: gameLogs.sleeperId,
@@ -82,7 +82,7 @@ router.get('/', async (req, res) => {
       .where(and(
         eq(gameLogs.season, 2025),
         gte(gameLogs.week, 1),
-        lte(gameLogs.week, 6),
+        lte(gameLogs.week, 7),
         eq(players.position, position as string)
       ))
       .groupBy(gameLogs.sleeperId, players.firstName, players.lastName, players.team)
@@ -90,7 +90,7 @@ router.get('/', async (req, res) => {
       .limit(25); // Top 25 players
 
     let usedSeason = 2025;
-    let usedWeeks = '1-6';
+    let usedWeeks = '1-7';
 
     // Fallback to 2024 data if no 2025 data available
     if (playerStats.length === 0) {
