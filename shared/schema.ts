@@ -2434,7 +2434,7 @@ export const playerSeasonFacts = pgTable("player_season_facts", {
   // Core stats
   gamesPlayed: integer("games_played").notNull().default(0),
   gamesStarted: integer("games_started").notNull().default(0),
-  snapCount: integer("snap_count").notNull().default(0),
+  snapCount: real("snap_count").notNull().default(0),
   snapShare: real("snap_share").notNull().default(0),
   
   // Fantasy production
@@ -2457,8 +2457,8 @@ export const playerSeasonFacts = pgTable("player_season_facts", {
   targetShare: real("target_share").default(0),
   airYards: real("air_yards").default(0),
   yac: real("yac").default(0),
-  redZoneTargets: integer("red_zone_targets").default(0),
-  redZoneCarries: integer("red_zone_carries").default(0),
+  redZoneTargets: real("red_zone_targets").default(0),
+  redZoneCarries: real("red_zone_carries").default(0),
   
   // Market data
   avgAdp: real("avg_adp"),
