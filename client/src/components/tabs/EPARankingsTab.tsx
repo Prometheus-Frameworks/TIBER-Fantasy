@@ -12,6 +12,8 @@ interface EPARanking {
   adjustedEpa: number;
   totalAdjustment: number;
   attempts: number;
+  cpoe: number | null;
+  completionPct: number | null;
   tier: 'elite' | 'good' | 'average' | 'below-average' | 'poor';
 }
 
@@ -139,7 +141,8 @@ export default function EPARankingsTab() {
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Team</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">Raw EPA</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">Adj EPA</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">Change</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">CPOE</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">Comp %</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">Attempts</th>
                   <th className="text-center py-3 px-4 text-sm font-semibold text-gray-400">Tier</th>
                 </tr>
@@ -174,16 +177,14 @@ export default function EPARankingsTab() {
                       </span>
                     </td>
                     <td className="text-right py-3 px-4">
-                      <div className="flex items-center justify-end gap-1">
-                        {qb.totalAdjustment > 0 ? (
-                          <TrendingUp className="w-3 h-3 text-green-400" />
-                        ) : qb.totalAdjustment < 0 ? (
-                          <TrendingDown className="w-3 h-3 text-red-400" />
-                        ) : null}
-                        <span className={`font-mono text-sm ${qb.totalAdjustment > 0 ? 'text-green-400' : qb.totalAdjustment < 0 ? 'text-red-400' : 'text-gray-500'}`}>
-                          {qb.totalAdjustment > 0 ? '+' : ''}{qb.totalAdjustment.toFixed(3)}
-                        </span>
-                      </div>
+                      <span className={`font-mono text-sm ${qb.cpoe !== null && qb.cpoe !== undefined ? (qb.cpoe > 0 ? 'text-green-400' : 'text-red-400') : 'text-gray-500'}`}>
+                        {qb.cpoe !== null && qb.cpoe !== undefined ? `${(qb.cpoe * 100).toFixed(1)}%` : 'N/A'}
+                      </span>
+                    </td>
+                    <td className="text-right py-3 px-4">
+                      <span className="font-mono text-sm text-gray-400">
+                        {qb.completionPct !== null && qb.completionPct !== undefined ? `${(qb.completionPct * 100).toFixed(1)}%` : 'N/A'}
+                      </span>
                     </td>
                     <td className="text-right py-3 px-4">
                       <span className="font-mono text-sm text-gray-400">{qb.attempts}</span>

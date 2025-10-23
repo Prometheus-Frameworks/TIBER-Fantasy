@@ -800,6 +800,15 @@ export class EPASanityCheckService {
       .where(eq(qbEpaAdjusted.season, season))
       .orderBy(desc(qbEpaAdjusted.tiberAdjEpaPerPlay));
 
+    // Get context metrics for CPOE and completion data
+    const contextMetrics = await db
+      .select()
+      .from(qbContextMetrics)
+      .where(eq(qbContextMetrics.season, season));
+
+    // Create a map of player ID to context data
+    const contextMap = new Map(contextMetrics.map(ctx => [ctx.playerId, ctx]));
+
     // DEDUPLICATE: Keep only the most recent record for each player
     const seenPlayers = new Map();
     const epaData = epaDataRaw.filter(qb => {
@@ -822,18 +831,23 @@ export class EPASanityCheckService {
       return 'poor';
     };
 
-    // Map to rankings format
-    const rankings = epaData.map((qb, index) => ({
-      rank: index + 1,
-      playerId: qb.playerId,
-      playerName: qb.playerName,
-      team: 'UNK', // Team info not stored in qb_epa_adjusted table
-      rawEpa: qb.rawEpaPerPlay || 0,
-      adjustedEpa: qb.tiberAdjEpaPerPlay || 0,
-      totalAdjustment: qb.tiberEpaDiff || 0,
-      attempts: 0, // Attempts not stored in qb_epa_adjusted table
-      tier: getTier(qb.tiberAdjEpaPerPlay),
-    }));
+    // Map to rankings format with CPOE from context
+    const rankings = epaData.map((qb, index) => {
+      const context = contextMap.get(qb.playerId);
+      return {
+        rank: index + 1,
+        playerId: qb.playerId,
+        playerName: qb.playerName,
+        team: 'UNK', // Team info not stored in qb_epa_adjusted table
+        rawEpa: qb.rawEpaPerPlay || 0,
+        adjustedEpa: qb.tiberAdjEpaPerPlay || 0,
+        totalAdjustment: qb.tiberEpaDiff || 0,
+        attempts: context?.passAttempts || 0,
+        cpoe: context?.cpoe || null,
+        completionPct: context?.completionPct || null,
+        tier: getTier(qb.tiberAdjEpaPerPlay),
+      };
+    });
 
     // Calculate summary stats
     const totalQbs = rankings.length;
@@ -919,6 +933,9 @@ export class EPASanityCheckService {
       if (qbMap.has(ctx.playerId)) {
         qbMap.get(ctx.playerId).context = {
           passAttempts: ctx.passAttempts,
+          completions: ctx.completions,
+          completionPct: ctx.completionPct,
+          cpoe: ctx.cpoe,
           drops: ctx.drops,
           dropRate: ctx.dropRate,
           pressures: ctx.pressures,

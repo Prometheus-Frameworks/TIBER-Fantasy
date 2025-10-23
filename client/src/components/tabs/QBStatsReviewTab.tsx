@@ -16,6 +16,9 @@ interface QBStats {
   } | null;
   context: {
     passAttempts: number;
+    completions: number;
+    completionPct: number;
+    cpoe: number;
     drops: number;
     dropRate: number;
     pressures: number;
@@ -125,6 +128,12 @@ function QBCard({ qb, rank }: { qb: QBStats; rank: number }) {
             </div>
             <div className="grid grid-cols-2 gap-2 pl-6">
               <StatRow label="Pass Attempts" value={qb.context.passAttempts} />
+              <StatRow label="Completions" value={`${qb.context.completions} (${(qb.context.completionPct * 100).toFixed(1)}%)`} />
+              <StatRow 
+                label="CPOE" 
+                value={qb.context.cpoe !== null && qb.context.cpoe !== undefined ? `${(qb.context.cpoe * 100).toFixed(1)}%` : 'N/A'} 
+                className={qb.context.cpoe !== null && qb.context.cpoe !== undefined ? (qb.context.cpoe > 0 ? "text-green-500" : "text-red-500") : ""} 
+              />
               <StatRow label="Drops" value={`${qb.context.drops} (${(qb.context.dropRate * 100).toFixed(1)}%)`} />
               <StatRow label="Pressures" value={`${qb.context.pressures} (${(qb.context.pressureRate * 100).toFixed(1)}%)`} />
               <StatRow label="Sacks" value={`${qb.context.sacks} (${(qb.context.sackRate * 100).toFixed(1)}%)`} />
