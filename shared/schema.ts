@@ -3111,6 +3111,11 @@ export const qbContextMetrics = pgTable("qb_context_metrics", {
   expectedYac: real("expected_yac"), // Expected YAC (xYAC)
   yacDelta: real("yac_delta"), // Actual - Expected (positive = receivers helping)
   
+  // Completion accuracy
+  cpoe: real("cpoe"), // Completion Percentage Over Expected (difficulty-adjusted accuracy)
+  completions: integer("completions"), // Total completions
+  completionPct: real("completion_pct"), // Raw completion percentage
+  
   // Defensive strength faced
   avgDefEpaFaced: real("avg_def_epa_faced"), // Average defensive EPA of opponents
   

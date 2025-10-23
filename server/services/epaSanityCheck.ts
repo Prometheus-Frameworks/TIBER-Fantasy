@@ -204,6 +204,9 @@ export class EPASanityCheckService {
           season: qb.season,
           week: null, // Season totals
           passAttempts: qb.pass_attempts,
+          completions: qb.completions,
+          completionPct: qb.completion_pct,
+          cpoe: qb.cpoe,
           drops: qb.drops,
           dropRate: qb.drop_rate,
           pressures: qb.pressures,
@@ -220,6 +223,9 @@ export class EPASanityCheckService {
           target: [qbContextMetrics.playerId, qbContextMetrics.season, qbContextMetrics.week],
           set: {
             passAttempts: qb.pass_attempts,
+            completions: qb.completions,
+            completionPct: qb.completion_pct,
+            cpoe: qb.cpoe,
             drops: qb.drops,
             dropRate: qb.drop_rate,
             pressures: qb.pressures,

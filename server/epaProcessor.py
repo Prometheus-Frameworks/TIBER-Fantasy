@@ -220,11 +220,20 @@ def calculate_qb_context_metrics(season=2024):
             # Estimate "should have been intercepted" plays (this is rough without advanced tracking)
             interceptable = int(interceptions * 1.3)  # Rough estimate
             
+            # === CPOE (Completion Percentage Over Expected) ===
+            # Extract CPOE from nflfastR data (already calculated by Next Gen Stats model)
+            cpoe_plays = qb_plays[qb_plays['cpoe'].notna()]
+            avg_cpoe = cpoe_plays['cpoe'].mean() if len(cpoe_plays) > 0 else None
+            completion_pct = (completions / pass_attempts) if pass_attempts > 0 else None
+            
             context_data = {
                 'player_id': qb_id,
                 'player_name': qb_name,
                 'season': season,
                 'pass_attempts': int(pass_attempts),
+                'completions': int(completions),
+                'completion_pct': round(float(completion_pct), 3) if completion_pct is not None else None,
+                'cpoe': round(float(avg_cpoe), 3) if avg_cpoe is not None and pd.notna(avg_cpoe) else None,
                 'drops': estimated_drops,
                 'drop_rate': round(drop_rate, 3),
                 'pressures': int(total_pressures),
