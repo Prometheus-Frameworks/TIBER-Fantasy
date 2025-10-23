@@ -9,6 +9,7 @@ import TiberDashboard from "@/pages/TiberDashboard";
 import PlayerComparePilot from "@/pages/PlayerComparePilot";
 import AnalyticsPage from "@/pages/AnalyticsPage";
 import LeadersPage from "@/pages/LeadersPage";
+import TeamReportsPage from "@/pages/TeamReportsPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -25,6 +26,9 @@ function Router() {
       
       {/* Leaders */}
       <Route path="/leaders" component={LeadersPage} />
+      
+      {/* Team Reports */}
+      <Route path="/team-reports" component={TeamReportsPage} />
       
       {/* 404 Catch-all */}
       <Route component={NotFound} />

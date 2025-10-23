@@ -106,6 +106,7 @@ import { registerPowerProcessingRoutes } from './routes/powerProcessing';
 import weeklyTakesRoutes from './routes/weeklyTakesRoutes';
 import playerComparePilotRoutes from './routes/playerComparePilotRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
+import teamReportsRoutes from './routes/teamReportsRoutes';
 import { monitoringService } from './services/MonitoringService';
 import { adminService } from './services/AdminService';
 import { requireAdminAuth } from './middleware/adminAuth';
@@ -3001,6 +3002,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Analytics
   app.use('/api/analytics', analyticsRoutes);
   console.log('📊 Analytics routes mounted at /api/analytics/*');
+  
+  // Team Reports
+  app.use('/api/team-reports', teamReportsRoutes);
+  console.log('🏈 Team Reports routes mounted at /api/team-reports/*');
   
   // EPA Sanity Check System
   app.use('/api/sanity-check', epaSanityCheckRoutes);
