@@ -76,7 +76,7 @@ export default function LeadersPage() {
     queryKey: [`/api/analytics?position=${position}&stat=${stat}`],
   });
 
-  const leaderboardData = data?.data.players || [];
+  const leaderboardData = data?.data?.players || [];
   const positionColor = POSITION_COLORS[position];
 
   const getRankIcon = (rank: number) => {
@@ -108,6 +108,25 @@ export default function LeadersPage() {
             Top performers by position • 2025 Season Weeks 1-7
           </p>
         </div>
+
+        {/* DEBUG PANEL */}
+        {leaderboardData.length > 0 && (
+          <Card className="bg-yellow-900/20 border-yellow-500/50">
+            <CardHeader>
+              <CardTitle className="text-yellow-400">DEBUG INFO</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <pre className="text-white text-xs overflow-auto">
+                {JSON.stringify({ 
+                  totalPlayers: leaderboardData.length,
+                  firstPlayer: leaderboardData[0],
+                  firstPlayerName: leaderboardData[0]?.name,
+                  nameType: typeof leaderboardData[0]?.name 
+                }, null, 2)}
+              </pre>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Controls */}
         <Card className="bg-card/50 border-border/50">
