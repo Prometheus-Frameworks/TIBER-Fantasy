@@ -216,9 +216,9 @@ export default function LeadersPage() {
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 px-4">
-                          <span className="text-white font-medium" data-testid={`text-player-name-${index}`}>
-                            {player.name}
+                        <td className="py-3 px-4 bg-blue-500/10">
+                          <span className="text-white font-medium bg-red-500/20 px-2" data-testid={`text-player-name-${index}`}>
+                            {player.name || 'NO NAME'}
                           </span>
                         </td>
                         <td className="py-3 px-4">
