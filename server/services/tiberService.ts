@@ -327,22 +327,28 @@ export class TiberService {
   }
 
   private calculateUsageScore(stats: PlayerStats): number {
-    // ORIGINAL METHODOLOGY: Simple snap percentage-based usage
+    // IMPROVED METHODOLOGY: Continuous scaling with elite bonuses and fringe penalties
     const { snapPercentAvg, snapTrend } = stats;
     
-    // Universal snap % thresholds (all positions)
-    // 80%+ snaps = elite usage
-    // 60-80% = high usage
-    // 40-60% = medium usage
-    // 20-40% = situational
-    // <20% = backup
-    let baseScore = 0;
+    // Continuous scale from 0 to 25 points based on snap %
+    let baseScore = (snapPercentAvg / 100) * this.WEIGHTS.USAGE;
     
-    if (snapPercentAvg >= 80) baseScore = this.WEIGHTS.USAGE * 0.9;
-    else if (snapPercentAvg >= 60) baseScore = this.WEIGHTS.USAGE * 0.7;
-    else if (snapPercentAvg >= 40) baseScore = this.WEIGHTS.USAGE * 0.5;
-    else if (snapPercentAvg >= 20) baseScore = this.WEIGHTS.USAGE * 0.3;
-    else baseScore = this.WEIGHTS.USAGE * 0.1;
+    // Bonus tiers for elite reliability
+    if (snapPercentAvg >= 90) {
+      baseScore *= 1.10; // +10% bonus for ironman usage
+    } else if (snapPercentAvg >= 80) {
+      baseScore *= 1.05; // +5% bonus for high reliability
+    }
+    
+    // Penalties for unreliable or fringe roles
+    if (snapPercentAvg < 20) {
+      baseScore *= 0.3; // borderline benchwarmer penalty
+    } else if (snapPercentAvg < 40) {
+      baseScore *= 0.6; // rotational player penalty
+    }
+    
+    // Clamp score between 0 and 25 just in case of overflow
+    baseScore = Math.min(baseScore, this.WEIGHTS.USAGE);
     
     // Trend modifier
     if (snapTrend === 'rising') baseScore *= 1.1;
