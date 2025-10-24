@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Trophy, Medal, Award } from 'lucide-react';
+import { Trophy, Medal, TrendingUp } from 'lucide-react';
 
 interface AnalyticsData {
   players: PlayerStat[];
@@ -55,13 +51,6 @@ const POSITION_STATS: Record<Position, { value: string; label: string }[]> = {
   ],
 };
 
-const POSITION_COLORS: Record<Position, string> = {
-  QB: 'text-blue-400',
-  RB: 'text-green-400',
-  WR: 'text-purple-400',
-  TE: 'text-amber-400',
-};
-
 export default function LeadersPage() {
   const [position, setPosition] = useState<Position>('QB');
   const [stat, setStat] = useState('pass_yards');
@@ -76,156 +65,160 @@ export default function LeadersPage() {
     queryKey: [`/api/analytics?position=${position}&stat=${stat}`],
   });
 
-  const leaderboardData = data?.data?.players || [];
-  const positionColor = POSITION_COLORS[position];
+  const leaders = data?.data?.players || [];
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Trophy className="h-5 w-5 text-yellow-400" />;
-    if (rank === 2) return <Medal className="h-5 w-5 text-gray-300" />;
-    if (rank === 3) return <Award className="h-5 w-5 text-amber-600" />;
-    return null;
+    if (rank === 1) return <Trophy className="w-6 h-6 text-yellow-400" />;
+    if (rank === 2) return <Medal className="w-6 h-6 text-gray-400" />;
+    if (rank === 3) return <Medal className="w-6 h-6 text-amber-600" />;
+    return <span className="text-gray-400 font-bold">{rank}</span>;
+  };
+
+  const getStatLabel = () => {
+    const statOption = POSITION_STATS[position].find(s => s.value === stat);
+    return statOption?.label || '';
   };
 
   const formatValue = (value: number, statKey: string) => {
     if (statKey === 'completion_pct' || statKey === 'ypr') {
       return value.toFixed(1);
     }
-    return Math.round(value).toString();
+    return Math.round(value).toLocaleString();
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-6">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <Trophy className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold text-white" data-testid="header-leaders">
-              Leaders
-            </h1>
-          </div>
-          <p className="text-gray-400">
-            Top performers by position • 2025 Season Weeks 1-7
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2 flex items-center gap-3" data-testid="header-leaders">
+            <TrendingUp className="w-10 h-10 text-purple-400" />
+            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              NFL Leaders
+            </span>
+          </h1>
+          <p className="text-slate-400">
+            2025 Season • Weeks {data?.data?.week || '1-7'}
           </p>
         </div>
 
-        {/* Controls */}
-        <Card className="bg-card/50 border-border/50">
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              {/* Position Toggles */}
-              <div className="space-y-2">
-                <label className="text-sm text-gray-400 font-medium">Position</label>
-                <div className="flex gap-2">
-                  {(['QB', 'RB', 'WR', 'TE'] as Position[]).map((pos) => (
-                    <Button
-                      key={pos}
-                      onClick={() => handlePositionChange(pos)}
-                      variant={position === pos ? 'default' : 'outline'}
-                      className={position === pos ? 'bg-primary text-white' : 'text-gray-400'}
-                      data-testid={`button-position-${pos.toLowerCase()}`}
-                    >
-                      {pos}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Stat Selector */}
-              <div className="space-y-2">
-                <label className="text-sm text-gray-400 font-medium">Category</label>
-                <Select value={stat} onValueChange={setStat}>
-                  <SelectTrigger className="bg-background/50" data-testid="select-stat-category">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {POSITION_STATS[position].map((statOption) => (
-                      <SelectItem key={statOption.value} value={statOption.value}>
-                        {statOption.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Leaderboard Table */}
-        <Card className="bg-card/50 border-border/50">
-          <CardHeader>
-            <CardTitle className="text-lg text-white">
-              {POSITION_STATS[position].find(s => s.value === stat)?.label || stat} Leaders
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
+        {/* Filters */}
+        <div className="bg-white/5 backdrop-blur border border-purple-500/20 rounded-xl p-6 mb-6">
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Position Selector */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Position
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {(['QB', 'RB', 'WR', 'TE'] as Position[]).map(pos => (
+                  <button
+                    key={pos}
+                    onClick={() => handlePositionChange(pos)}
+                    className={`py-3 px-4 rounded-lg font-semibold transition-all ${
+                      position === pos
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50'
+                        : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                    }`}
+                    data-testid={`button-position-${pos.toLowerCase()}`}
+                  >
+                    {pos}
+                  </button>
                 ))}
               </div>
-            ) : leaderboardData.length === 0 ? (
-              <div className="h-40 flex items-center justify-center text-gray-400">
-                No data available for this position/stat combination
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full" data-testid="table-leaderboard">
-                  <thead>
-                    <tr className="border-b border-border/50">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-400 w-16">Rank</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Player</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Team</th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-400">
-                        {POSITION_STATS[position].find(s => s.value === stat)?.label}
-                      </th>
+            </div>
+
+            {/* Stat Category Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Statistical Category
+              </label>
+              <select
+                value={stat}
+                onChange={(e) => setStat(e.target.value)}
+                className="w-full bg-white/10 border border-purple-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                data-testid="select-stat-category"
+              >
+                {POSITION_STATS[position].map(statOption => (
+                  <option key={statOption.value} value={statOption.value} className="bg-slate-800">
+                    {statOption.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Leaderboard Table */}
+        <div className="bg-white/5 backdrop-blur border border-purple-500/20 rounded-xl overflow-hidden">
+          <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-b border-purple-500/20 px-6 py-4">
+            <h2 className="text-xl font-bold text-white">
+              Top {position} by {getStatLabel()}
+            </h2>
+          </div>
+
+          {isLoading ? (
+            <div className="p-12 text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+              <p className="mt-4 text-slate-400">Loading leaders...</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full" data-testid="table-leaderboard">
+                <thead>
+                  <tr className="border-b border-purple-500/20">
+                    <th className="text-left px-6 py-4 text-slate-400 font-medium text-sm">Rank</th>
+                    <th className="text-left px-6 py-4 text-slate-400 font-medium text-sm">Player</th>
+                    <th className="text-left px-6 py-4 text-slate-400 font-medium text-sm">Team</th>
+                    <th className="text-right px-6 py-4 text-slate-400 font-medium text-sm">{getStatLabel()}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaders.map((leader, index) => (
+                    <tr
+                      key={`${leader.name}-${index}`}
+                      className={`border-b border-purple-500/10 hover:bg-white/5 transition-colors ${
+                        index < 3 ? 'bg-gradient-to-r from-purple-500/5 to-pink-500/5' : ''
+                      }`}
+                      data-testid={`row-player-${index}`}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center w-8">
+                          {getRankIcon(index + 1)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-white font-semibold text-base" data-testid={`text-player-name-${index}`}>
+                          {leader.name}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-block bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 px-3 py-1 rounded-full text-sm font-medium border border-purple-500/30">
+                          {leader.team}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="text-white font-bold text-lg">
+                          {formatValue(leader.value, stat)}
+                        </span>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {leaderboardData.map((player, index) => (
-                      <tr
-                        key={`${player.name}-${index}`}
-                        className="border-b border-border/30 hover:bg-accent/10 transition-colors"
-                        data-testid={`row-player-${index}`}
-                      >
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            {getRankIcon(index + 1)}
-                            <span className={`text-sm font-semibold ${index < 3 ? positionColor : 'text-gray-400'}`}>
-                              {index + 1}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span 
-                            className="font-medium" 
-                            data-testid={`text-player-name-${index}`}
-                            style={{ color: '#ffffff' }}
-                          >
-                            {player.name}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="text-gray-400 text-sm">{player.team}</span>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <span className={`font-bold ${index < 3 ? positionColor : 'text-white'}`}>
-                            {formatValue(player.value, stat)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </tbody>
+              </table>
+
+              {leaders.length === 0 && (
+                <div className="p-12 text-center text-slate-400">
+                  No data available for this category
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Footer */}
-        <div className="text-center text-sm text-gray-500">
-          {data?.data?.season || 2025} Season Weeks {data?.data?.week || '1-7'} • Data from NFLfastR
+        <div className="mt-6 text-center text-sm text-slate-400">
+          {data?.data?.season || 2025} Season • Data from NFLfastR
         </div>
       </div>
     </div>

@@ -1,0 +1,285 @@
+import React, { useState, useEffect } from ‘react’;
+import { Trophy, Medal, TrendingUp } from ‘lucide-react’;
+
+export default function NFLLeaders() {
+const [position, setPosition] = useState(‘QB’);
+const [statCategory, setStatCategory] = useState(‘passing_yards’);
+const [leaders, setLeaders] = useState([]);
+const [loading, setLoading] = useState(false);
+
+// Position-specific stat categories
+const statsByPosition = {
+QB: [
+{ value: ‘passing_yards’, label: ‘Passing Yards’ },
+{ value: ‘passing_tds’, label: ‘Passing TDs’ },
+{ value: ‘completions’, label: ‘Completions’ },
+{ value: ‘attempts’, label: ‘Attempts’ },
+{ value: ‘completion_pct’, label: ‘Completion %’ }
+],
+RB: [
+{ value: ‘rushing_yards’, label: ‘Rushing Yards’ },
+{ value: ‘rushing_tds’, label: ‘Rushing TDs’ },
+{ value: ‘rush_attempts’, label: ‘Rush Attempts’ },
+{ value: ‘targets’, label: ‘Targets’ },
+{ value: ‘receptions’, label: ‘Receptions’ },
+{ value: ‘receiving_yards’, label: ‘Receiving Yards’ },
+{ value: ‘receiving_tds’, label: ‘Receiving TDs’ }
+],
+WR: [
+{ value: ‘targets’, label: ‘Targets’ },
+{ value: ‘receptions’, label: ‘Receptions’ },
+{ value: ‘receiving_yards’, label: ‘Receiving Yards’ },
+{ value: ‘receiving_tds’, label: ‘Receiving TDs’ },
+{ value: ‘yards_per_reception’, label: ‘Yards per Reception’ }
+],
+TE: [
+{ value: ‘targets’, label: ‘Targets’ },
+{ value: ‘receptions’, label: ‘Receptions’ },
+{ value: ‘receiving_yards’, label: ‘Receiving Yards’ },
+{ value: ‘receiving_tds’, label: ‘Receiving TDs’ },
+{ value: ‘yards_per_reception’, label: ‘Yards per Reception’ }
+]
+};
+
+// Mock data for demonstration - replace with actual API call
+const mockData = {
+QB: {
+passing_yards: [
+{ name: ‘J. Herbert’, value: 1913, team: ‘LAC’ },
+{ name: ‘D. Prescott’, value: 1881, team: ‘DAL’ },
+{ name: ‘M. Stafford’, value: 1866, team: ‘LAR’ },
+{ name: ‘J. Allen’, value: 1845, team: ‘BUF’ },
+{ name: ‘P. Mahomes’, value: 1823, team: ‘KC’ },
+{ name: ‘J. Burrow’, value: 1798, team: ‘CIN’ },
+{ name: ‘T. Tagovailoa’, value: 1776, team: ‘MIA’ },
+{ name: ‘L. Jackson’, value: 1745, team: ‘BAL’ },
+{ name: ‘J. Goff’, value: 1723, team: ‘DET’ },
+{ name: ‘B. Mayfield’, value: 1689, team: ‘TB’ }
+],
+passing_tds: [
+{ name: ‘P. Mahomes’, value: 18, team: ‘KC’ },
+{ name: ‘J. Allen’, value: 17, team: ‘BUF’ },
+{ name: ‘D. Prescott’, value: 16, team: ‘DAL’ },
+{ name: ‘J. Herbert’, value: 15, team: ‘LAC’ },
+{ name: ‘J. Burrow’, value: 14, team: ‘CIN’ }
+]
+},
+RB: {
+rushing_yards: [
+{ name: ‘D. Henry’, value: 823, team: ‘BAL’ },
+{ name: ‘S. Barkley’, value: 791, team: ‘PHI’ },
+{ name: ‘J. Jacobs’, value: 756, team: ‘GB’ },
+{ name: ‘K. Mixon’, value: 734, team: ‘HOU’ },
+{ name: ‘J. Taylor’, value: 712, team: ‘IND’ }
+]
+},
+WR: {
+receiving_yards: [
+{ name: ‘T. Hill’, value: 634, team: ‘MIA’ },
+{ name: ‘C. Lamb’, value: 621, team: ‘DAL’ },
+{ name: ‘A. St. Brown’, value: 598, team: ‘DET’ },
+{ name: ‘J. Jefferson’, value: 587, team: ‘MIN’ },
+{ name: ‘D. Adams’, value: 576, team: ‘LV’ }
+]
+},
+TE: {
+receiving_yards: [
+{ name: ‘T. Kelce’, value: 512, team: ‘KC’ },
+{ name: ‘M. Andrews’, value: 487, team: ‘BAL’ },
+{ name: ‘G. Kittle’, value: 465, team: ‘SF’ },
+{ name: ‘D. Goedert’, value: 443, team: ‘PHI’ },
+{ name: ‘E. Engram’, value: 421, team: ‘JAX’ }
+]
+}
+};
+
+// Fetch leaders data
+useEffect(() => {
+setLoading(true);
+
+```
+// Simulate API call - replace with actual fetch to /api/analytics
+setTimeout(() => {
+  const data = mockData[position]?.[statCategory] || mockData[position]?.[Object.keys(mockData[position])[0]] || [];
+  setLeaders(data);
+  setLoading(false);
+}, 300);
+
+// Real API call would look like:
+/*
+fetch(`/api/analytics?position=${position}&stat=${statCategory}`)
+  .then(res => res.json())
+  .then(data => {
+    setLeaders(data);
+    setLoading(false);
+  })
+  .catch(err => {
+    console.error('Error fetching leaders:', err);
+    setLoading(false);
+  });
+*/
+```
+
+}, [position, statCategory]);
+
+// Update stat category when position changes
+useEffect(() => {
+const firstStat = statsByPosition[position][0].value;
+setStatCategory(firstStat);
+}, [position]);
+
+const getRankIcon = (rank) => {
+if (rank === 1) return <Trophy className="w-6 h-6 text-yellow-400" />;
+if (rank === 2) return <Medal className="w-6 h-6 text-gray-400" />;
+if (rank === 3) return <Medal className="w-6 h-6 text-amber-600" />;
+return <span className="text-gray-400 font-bold">{rank}</span>;
+};
+
+const getStatLabel = () => {
+const stat = statsByPosition[position].find(s => s.value === statCategory);
+return stat?.label || ‘’;
+};
+
+return (
+<div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-6">
+<div className="max-w-6xl mx-auto">
+{/* Header */}
+<div className="mb-8">
+<h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
+<TrendingUp className="w-10 h-10 text-purple-400" />
+<span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+NFL Leaders
+</span>
+</h1>
+<p className="text-slate-400">2025 Season • Weeks 1-7</p>
+</div>
+
+```
+    {/* Filters */}
+    <div className="bg-white/5 backdrop-blur border border-purple-500/20 rounded-xl p-6 mb-6">
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Position Selector */}
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">
+            Position
+          </label>
+          <div className="grid grid-cols-4 gap-2">
+            {['QB', 'RB', 'WR', 'TE'].map(pos => (
+              <button
+                key={pos}
+                onClick={() => setPosition(pos)}
+                className={`py-3 px-4 rounded-lg font-semibold transition-all ${
+                  position === pos
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50'
+                    : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                }`}
+              >
+                {pos}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Stat Category Dropdown */}
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">
+            Statistical Category
+          </label>
+          <select
+            value={statCategory}
+            onChange={(e) => setStatCategory(e.target.value)}
+            className="w-full bg-white/10 border border-purple-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            {statsByPosition[position].map(stat => (
+              <option key={stat.value} value={stat.value} className="bg-slate-800">
+                {stat.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    {/* Leaderboard Table */}
+    <div className="bg-white/5 backdrop-blur border border-purple-500/20 rounded-xl overflow-hidden">
+      <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-b border-purple-500/20 px-6 py-4">
+        <h2 className="text-xl font-bold text-white">
+          Top {position} by {getStatLabel()}
+        </h2>
+      </div>
+
+      {loading ? (
+        <div className="p-12 text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+          <p className="mt-4 text-slate-400">Loading leaders...</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-purple-500/20">
+                <th className="text-left px-6 py-4 text-slate-400 font-medium text-sm">Rank</th>
+                <th className="text-left px-6 py-4 text-slate-400 font-medium text-sm">Player</th>
+                <th className="text-left px-6 py-4 text-slate-400 font-medium text-sm">Team</th>
+                <th className="text-right px-6 py-4 text-slate-400 font-medium text-sm">{getStatLabel()}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaders.map((leader, index) => (
+                <tr
+                  key={index}
+                  className={`border-b border-purple-500/10 hover:bg-white/5 transition-colors ${
+                    index < 3 ? 'bg-gradient-to-r from-purple-500/5 to-pink-500/5' : ''
+                  }`}
+                >
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-center w-8">
+                      {getRankIcon(index + 1)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-white font-semibold text-base">
+                      {leader.name}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="inline-block bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 px-3 py-1 rounded-full text-sm font-medium border border-purple-500/30">
+                      {leader.team}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className="text-white font-bold text-lg">
+                      {leader.value.toLocaleString()}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {leaders.length === 0 && (
+            <div className="p-12 text-center text-slate-400">
+              No data available for this category
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+
+    {/* Debug Panel (optional - remove in production) */}
+    <div className="mt-6 bg-white/5 backdrop-blur border border-purple-500/20 rounded-lg p-4">
+      <details>
+        <summary className="cursor-pointer text-sm text-slate-400 hover:text-purple-300">
+          Debug Info
+        </summary>
+        <pre className="mt-2 text-xs text-purple-200 overflow-auto">
+          {JSON.stringify({ position, statCategory, leadersCount: leaders.length }, null, 2)}
+        </pre>
+      </details>
+    </div>
+  </div>
+</div>
+```
+
+);
+}
