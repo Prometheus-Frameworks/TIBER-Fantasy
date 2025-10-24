@@ -46,19 +46,19 @@ router.get('/rankings', async (req, res) => {
 
     // Add sample QB and RB players if none exist in database (temporary for UI development)
     const sampleQBs = [
-      { name: 'Josh Allen', position: 'QB', team: 'BUF', tiberScore: 92, tier: 'breakout', nflfastrId: 'sample-qb-1' },
-      { name: 'Patrick Mahomes', position: 'QB', team: 'KC', tiberScore: 88, tier: 'breakout', nflfastrId: 'sample-qb-2' },
-      { name: 'Lamar Jackson', position: 'QB', team: 'BAL', tiberScore: 85, tier: 'stable', nflfastrId: 'sample-qb-3' },
-      { name: 'Jalen Hurts', position: 'QB', team: 'PHI', tiberScore: 82, tier: 'stable', nflfastrId: 'sample-qb-4' },
-      { name: 'Joe Burrow', position: 'QB', team: 'CIN', tiberScore: 79, tier: 'stable', nflfastrId: 'sample-qb-5' },
+      { name: 'Josh Allen', position: 'QB', team: 'BUF', tiberScore: 92, tier: 'breakout' as const, nflfastrId: 'sample-qb-1', sleeperId: null },
+      { name: 'Patrick Mahomes', position: 'QB', team: 'KC', tiberScore: 88, tier: 'breakout' as const, nflfastrId: 'sample-qb-2', sleeperId: null },
+      { name: 'Lamar Jackson', position: 'QB', team: 'BAL', tiberScore: 85, tier: 'stable' as const, nflfastrId: 'sample-qb-3', sleeperId: null },
+      { name: 'Jalen Hurts', position: 'QB', team: 'PHI', tiberScore: 82, tier: 'stable' as const, nflfastrId: 'sample-qb-4', sleeperId: null },
+      { name: 'Joe Burrow', position: 'QB', team: 'CIN', tiberScore: 79, tier: 'stable' as const, nflfastrId: 'sample-qb-5', sleeperId: null },
     ];
     
     const sampleRBs = [
-      { name: 'Christian McCaffrey', position: 'RB', team: 'SF', tiberScore: 90, tier: 'breakout', nflfastrId: 'sample-rb-1' },
-      { name: 'Bijan Robinson', position: 'RB', team: 'ATL', tiberScore: 86, tier: 'stable', nflfastrId: 'sample-rb-2' },
-      { name: 'Saquon Barkley', position: 'RB', team: 'PHI', tiberScore: 83, tier: 'stable', nflfastrId: 'sample-rb-3' },
-      { name: 'Breece Hall', position: 'RB', team: 'NYJ', tiberScore: 80, tier: 'stable', nflfastrId: 'sample-rb-4' },
-      { name: 'Jahmyr Gibbs', position: 'RB', team: 'DET', tiberScore: 77, tier: 'regression', nflfastrId: 'sample-rb-5' },
+      { name: 'Christian McCaffrey', position: 'RB', team: 'SF', tiberScore: 90, tier: 'breakout' as const, nflfastrId: 'sample-rb-1', sleeperId: null },
+      { name: 'Bijan Robinson', position: 'RB', team: 'ATL', tiberScore: 86, tier: 'stable' as const, nflfastrId: 'sample-rb-2', sleeperId: null },
+      { name: 'Saquon Barkley', position: 'RB', team: 'PHI', tiberScore: 83, tier: 'stable' as const, nflfastrId: 'sample-rb-3', sleeperId: null },
+      { name: 'Breece Hall', position: 'RB', team: 'NYJ', tiberScore: 80, tier: 'stable' as const, nflfastrId: 'sample-rb-4', sleeperId: null },
+      { name: 'Jahmyr Gibbs', position: 'RB', team: 'DET', tiberScore: 77, tier: 'regression' as const, nflfastrId: 'sample-rb-5', sleeperId: null },
     ];
 
     // Convert to response format
