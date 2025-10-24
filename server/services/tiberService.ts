@@ -33,6 +33,7 @@ interface PlayerStats {
   teamOffenseRank: number;
   totalPlays: number;
   totalTds: number;
+  position: string;
 }
 
 export class TiberService {
@@ -189,8 +190,8 @@ export class TiberService {
       firstDownRate = routesRun > 0 ? receivingFirstDowns / routesRun : 0;
     }
 
-    // Get live snap percentage data from play participation
-    const snapData = await this.getPlayerSnapData(nflfastrId, week, season, teamAbbr);
+    // Get live snap percentage data from play participation (position-specific)
+    const snapData = await this.getPlayerSnapData(nflfastrId, week, season, teamAbbr, position);
     
     // Get live team offensive rank from EPA data
     const teamData = await this.getTeamOffenseRank(teamAbbr, week, season);
@@ -205,6 +206,7 @@ export class TiberService {
       teamOffenseRank: teamData.rank,
       totalPlays,
       totalTds,
+      position,
     };
   }
 
@@ -212,57 +214,136 @@ export class TiberService {
     playerId: string, 
     week: number, 
     season: number,
-    teamAbbr: string
+    teamAbbr: string,
+    position: string
   ): Promise<{ snapPercent: number; trend: 'rising' | 'stable' | 'falling' }> {
-    // Calculate "effective snap %" from play participation
-    // Total team offensive plays vs plays where player was involved
-    const teamPlaysResult = await db
-      .select({
-        totalTeamPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
-      })
-      .from(bronzeNflfastrPlays)
-      .where(
-        and(
-          eq(bronzeNflfastrPlays.season, season),
-          lte(bronzeNflfastrPlays.week, week),
-          eq(bronzeNflfastrPlays.posteam, teamAbbr),
-          sql`${bronzeNflfastrPlays.playType} IN ('pass', 'run')`
-        )
-      );
+    // Position-specific usage calculation (TIBER v1.5 - Route Participation Fix)
+    // WR/TE: targets / team pass attempts (route participation)
+    // RB: (rushes + targets) / team total plays (opportunity share)
+    // QB: pass attempts / team pass attempts (should be ~100%)
+    
+    let snapPercent: number;
+    
+    if (position === 'WR' || position === 'TE') {
+      // For WRs/TEs: Calculate route participation (targets / team pass attempts)
+      const teamPassPlaysResult = await db
+        .select({
+          totalPassPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+        })
+        .from(bronzeNflfastrPlays)
+        .where(
+          and(
+            eq(bronzeNflfastrPlays.season, season),
+            lte(bronzeNflfastrPlays.week, week),
+            eq(bronzeNflfastrPlays.posteam, teamAbbr),
+            eq(bronzeNflfastrPlays.playType, 'pass')
+          )
+        );
 
-    const playerPlaysResult = await db
-      .select({
-        playerPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
-      })
-      .from(bronzeNflfastrPlays)
-      .where(
-        and(
-          eq(bronzeNflfastrPlays.season, season),
-          lte(bronzeNflfastrPlays.week, week),
-          or(
-            eq(bronzeNflfastrPlays.receiverPlayerId, playerId),
-            eq(bronzeNflfastrPlays.rusherPlayerId, playerId),
+      const playerTargetsResult = await db
+        .select({
+          targets: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+        })
+        .from(bronzeNflfastrPlays)
+        .where(
+          and(
+            eq(bronzeNflfastrPlays.season, season),
+            lte(bronzeNflfastrPlays.week, week),
+            eq(bronzeNflfastrPlays.receiverPlayerId, playerId)
+          )
+        );
+
+      const totalPassPlays = Number(teamPassPlaysResult[0]?.totalPassPlays || 0);
+      const playerTargets = Number(playerTargetsResult[0]?.targets || 0);
+      
+      snapPercent = totalPassPlays > 0 ? (playerTargets / totalPassPlays) * 100 : 0;
+      
+    } else if (position === 'RB') {
+      // For RBs: Calculate opportunity share ((rushes + targets) / team total plays)
+      const teamPlaysResult = await db
+        .select({
+          totalTeamPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+        })
+        .from(bronzeNflfastrPlays)
+        .where(
+          and(
+            eq(bronzeNflfastrPlays.season, season),
+            lte(bronzeNflfastrPlays.week, week),
+            eq(bronzeNflfastrPlays.posteam, teamAbbr),
+            sql`${bronzeNflfastrPlays.playType} IN ('pass', 'run')`
+          )
+        );
+
+      const playerTouchesResult = await db
+        .select({
+          touches: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+        })
+        .from(bronzeNflfastrPlays)
+        .where(
+          and(
+            eq(bronzeNflfastrPlays.season, season),
+            lte(bronzeNflfastrPlays.week, week),
+            or(
+              eq(bronzeNflfastrPlays.receiverPlayerId, playerId),
+              eq(bronzeNflfastrPlays.rusherPlayerId, playerId)
+            )
+          )
+        );
+
+      const totalTeamPlays = Number(teamPlaysResult[0]?.totalTeamPlays || 0);
+      const playerTouches = Number(playerTouchesResult[0]?.touches || 0);
+      
+      snapPercent = totalTeamPlays > 0 ? (playerTouches / totalTeamPlays) * 100 : 0;
+      
+    } else if (position === 'QB') {
+      // For QBs: Calculate pass play participation (pass attempts / team pass attempts)
+      const teamPassPlaysResult = await db
+        .select({
+          totalPassPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+        })
+        .from(bronzeNflfastrPlays)
+        .where(
+          and(
+            eq(bronzeNflfastrPlays.season, season),
+            lte(bronzeNflfastrPlays.week, week),
+            eq(bronzeNflfastrPlays.posteam, teamAbbr),
+            eq(bronzeNflfastrPlays.playType, 'pass')
+          )
+        );
+
+      const playerPassPlaysResult = await db
+        .select({
+          passPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+        })
+        .from(bronzeNflfastrPlays)
+        .where(
+          and(
+            eq(bronzeNflfastrPlays.season, season),
+            lte(bronzeNflfastrPlays.week, week),
             eq(bronzeNflfastrPlays.passerPlayerId, playerId)
           )
-        )
-      );
+        );
 
-    const totalTeamPlays = Number(teamPlaysResult[0]?.totalTeamPlays || 0);
-    const playerPlays = Number(playerPlaysResult[0]?.playerPlays || 0);
-
-    if (totalTeamPlays === 0) {
+      const totalPassPlays = Number(teamPassPlaysResult[0]?.totalPassPlays || 0);
+      const playerPassPlays = Number(playerPassPlaysResult[0]?.passPlays || 0);
+      
+      snapPercent = totalPassPlays > 0 ? (playerPassPlays / totalPassPlays) * 100 : 0;
+      
+    } else {
+      // Fallback for unknown positions
+      snapPercent = 0;
+    }
+    
+    if (snapPercent === 0) {
       return { snapPercent: 0, trend: 'stable' };
     }
-
-    // Effective snap % = (plays involved in / team's total plays) * 100
-    const snapPercent = (playerPlays / totalTeamPlays) * 100;
 
     // Calculate trend (last 2 weeks vs earlier weeks)
     let trend: 'rising' | 'stable' | 'falling' = 'stable';
     
     if (week >= 3) {
-      const recentSnaps = await this.getSnapPercentForWeeks(playerId, week - 1, week, season, teamAbbr);
-      const earlySnaps = await this.getSnapPercentForWeeks(playerId, 1, week - 2, season, teamAbbr);
+      const recentSnaps = await this.getSnapPercentForWeeks(playerId, week - 1, week, season, teamAbbr, position);
+      const earlySnaps = await this.getSnapPercentForWeeks(playerId, 1, week - 2, season, teamAbbr, position);
       
       if (earlySnaps > 0) {
         if (recentSnaps > earlySnaps * 1.15) trend = 'rising';
@@ -278,44 +359,123 @@ export class TiberService {
     startWeek: number, 
     endWeek: number, 
     season: number,
-    teamAbbr: string
+    teamAbbr: string,
+    position: string
   ): Promise<number> {
-    const teamPlaysResult = await db
-      .select({
-        totalPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
-      })
-      .from(bronzeNflfastrPlays)
-      .where(
-        and(
-          eq(bronzeNflfastrPlays.season, season),
-          sql`${bronzeNflfastrPlays.week} >= ${startWeek}`,
-          sql`${bronzeNflfastrPlays.week} <= ${endWeek}`,
-          eq(bronzeNflfastrPlays.posteam, teamAbbr),
-          sql`${bronzeNflfastrPlays.playType} IN ('pass', 'run')`
-        )
-      );
-
-    const playerPlaysResult = await db
-      .select({
-        playerPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
-      })
-      .from(bronzeNflfastrPlays)
-      .where(
-        and(
-          eq(bronzeNflfastrPlays.season, season),
-          sql`${bronzeNflfastrPlays.week} >= ${startWeek}`,
-          sql`${bronzeNflfastrPlays.week} <= ${endWeek}`,
-          or(
-            eq(bronzeNflfastrPlays.receiverPlayerId, playerId),
-            eq(bronzeNflfastrPlays.rusherPlayerId, playerId)
+    // Use same position-specific logic as main function
+    if (position === 'WR' || position === 'TE') {
+      // For WRs/TEs: targets / team pass attempts
+      const teamPassPlaysResult = await db
+        .select({
+          totalPassPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+        })
+        .from(bronzeNflfastrPlays)
+        .where(
+          and(
+            eq(bronzeNflfastrPlays.season, season),
+            sql`${bronzeNflfastrPlays.week} >= ${startWeek}`,
+            sql`${bronzeNflfastrPlays.week} <= ${endWeek}`,
+            eq(bronzeNflfastrPlays.posteam, teamAbbr),
+            eq(bronzeNflfastrPlays.playType, 'pass')
           )
-        )
-      );
+        );
 
-    const totalPlays = Number(teamPlaysResult[0]?.totalPlays || 0);
-    const playerPlays = Number(playerPlaysResult[0]?.playerPlays || 0);
+      const playerTargetsResult = await db
+        .select({
+          targets: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+        })
+        .from(bronzeNflfastrPlays)
+        .where(
+          and(
+            eq(bronzeNflfastrPlays.season, season),
+            sql`${bronzeNflfastrPlays.week} >= ${startWeek}`,
+            sql`${bronzeNflfastrPlays.week} <= ${endWeek}`,
+            eq(bronzeNflfastrPlays.receiverPlayerId, playerId)
+          )
+        );
 
-    return totalPlays > 0 ? (playerPlays / totalPlays) * 100 : 0;
+      const totalPassPlays = Number(teamPassPlaysResult[0]?.totalPassPlays || 0);
+      const playerTargets = Number(playerTargetsResult[0]?.targets || 0);
+      
+      return totalPassPlays > 0 ? (playerTargets / totalPassPlays) * 100 : 0;
+      
+    } else if (position === 'RB') {
+      // For RBs: (rushes + targets) / team total plays
+      const teamPlaysResult = await db
+        .select({
+          totalPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+        })
+        .from(bronzeNflfastrPlays)
+        .where(
+          and(
+            eq(bronzeNflfastrPlays.season, season),
+            sql`${bronzeNflfastrPlays.week} >= ${startWeek}`,
+            sql`${bronzeNflfastrPlays.week} <= ${endWeek}`,
+            eq(bronzeNflfastrPlays.posteam, teamAbbr),
+            sql`${bronzeNflfastrPlays.playType} IN ('pass', 'run')`
+          )
+        );
+
+      const playerTouchesResult = await db
+        .select({
+          touches: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+        })
+        .from(bronzeNflfastrPlays)
+        .where(
+          and(
+            eq(bronzeNflfastrPlays.season, season),
+            sql`${bronzeNflfastrPlays.week} >= ${startWeek}`,
+            sql`${bronzeNflfastrPlays.week} <= ${endWeek}`,
+            or(
+              eq(bronzeNflfastrPlays.receiverPlayerId, playerId),
+              eq(bronzeNflfastrPlays.rusherPlayerId, playerId)
+            )
+          )
+        );
+
+      const totalPlays = Number(teamPlaysResult[0]?.totalPlays || 0);
+      const playerTouches = Number(playerTouchesResult[0]?.touches || 0);
+      
+      return totalPlays > 0 ? (playerTouches / totalPlays) * 100 : 0;
+      
+    } else if (position === 'QB') {
+      // For QBs: pass attempts / team pass attempts
+      const teamPassPlaysResult = await db
+        .select({
+          totalPassPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+        })
+        .from(bronzeNflfastrPlays)
+        .where(
+          and(
+            eq(bronzeNflfastrPlays.season, season),
+            sql`${bronzeNflfastrPlays.week} >= ${startWeek}`,
+            sql`${bronzeNflfastrPlays.week} <= ${endWeek}`,
+            eq(bronzeNflfastrPlays.posteam, teamAbbr),
+            eq(bronzeNflfastrPlays.playType, 'pass')
+          )
+        );
+
+      const playerPassPlaysResult = await db
+        .select({
+          passPlays: sql<number>`COUNT(DISTINCT CONCAT(${bronzeNflfastrPlays.gameId}, '-', ${bronzeNflfastrPlays.playId}))`,
+        })
+        .from(bronzeNflfastrPlays)
+        .where(
+          and(
+            eq(bronzeNflfastrPlays.season, season),
+            sql`${bronzeNflfastrPlays.week} >= ${startWeek}`,
+            sql`${bronzeNflfastrPlays.week} <= ${endWeek}`,
+            eq(bronzeNflfastrPlays.passerPlayerId, playerId)
+          )
+        );
+
+      const totalPassPlays = Number(teamPassPlaysResult[0]?.totalPassPlays || 0);
+      const playerPassPlays = Number(playerPassPlaysResult[0]?.passPlays || 0);
+      
+      return totalPassPlays > 0 ? (playerPassPlays / totalPassPlays) * 100 : 0;
+    }
+    
+    return 0;
   }
 
   private async getTeamOffenseRank(
@@ -407,18 +567,50 @@ export class TiberService {
   }
 
   private calculateUsageScore(stats: PlayerStats): number {
-    // Based on snap % and trend
-    const { snapPercentAvg, snapTrend } = stats;
+    // Position-specific usage scoring (TIBER v1.5 - Route Participation Fix)
+    const { snapPercentAvg, snapTrend, position } = stats;
     
     let baseScore = 0;
     
-    // Snap % scoring
-    if (snapPercentAvg >= 80) baseScore = this.WEIGHTS.USAGE * 0.9;
-    else if (snapPercentAvg >= 70) baseScore = this.WEIGHTS.USAGE * 0.8;
-    else if (snapPercentAvg >= 60) baseScore = this.WEIGHTS.USAGE * 0.7;
-    else if (snapPercentAvg >= 50) baseScore = this.WEIGHTS.USAGE * 0.6;
-    else if (snapPercentAvg >= 40) baseScore = this.WEIGHTS.USAGE * 0.4;
-    else baseScore = this.WEIGHTS.USAGE * 0.2;
+    if (position === 'WR' || position === 'TE') {
+      // WR/TE: Route participation % (targets / team pass attempts)
+      // Elite WR1s: 25-30% (getting ~1 in 4 targets)
+      // Good WR1s: 20-25%
+      // WR2s: 15-20%
+      // WR3s: 10-15%
+      // Role players: <10%
+      if (snapPercentAvg >= 25) baseScore = this.WEIGHTS.USAGE * 0.9;
+      else if (snapPercentAvg >= 20) baseScore = this.WEIGHTS.USAGE * 0.8;
+      else if (snapPercentAvg >= 15) baseScore = this.WEIGHTS.USAGE * 0.7;
+      else if (snapPercentAvg >= 10) baseScore = this.WEIGHTS.USAGE * 0.5;
+      else if (snapPercentAvg >= 5) baseScore = this.WEIGHTS.USAGE * 0.3;
+      else baseScore = this.WEIGHTS.USAGE * 0.1;
+      
+    } else if (position === 'RB') {
+      // RB: Opportunity share % (touches / team total plays)
+      // Bell cow RBs: 40-50%
+      // Lead backs: 30-40%
+      // Committee backs: 20-30%
+      // Change of pace: 10-20%
+      // Backup: <10%
+      if (snapPercentAvg >= 40) baseScore = this.WEIGHTS.USAGE * 0.9;
+      else if (snapPercentAvg >= 30) baseScore = this.WEIGHTS.USAGE * 0.8;
+      else if (snapPercentAvg >= 20) baseScore = this.WEIGHTS.USAGE * 0.6;
+      else if (snapPercentAvg >= 10) baseScore = this.WEIGHTS.USAGE * 0.4;
+      else baseScore = this.WEIGHTS.USAGE * 0.2;
+      
+    } else if (position === 'QB') {
+      // QB: Pass play participation (should be 90-100% for starters)
+      if (snapPercentAvg >= 90) baseScore = this.WEIGHTS.USAGE * 0.9;
+      else if (snapPercentAvg >= 80) baseScore = this.WEIGHTS.USAGE * 0.8;
+      else if (snapPercentAvg >= 70) baseScore = this.WEIGHTS.USAGE * 0.6;
+      else if (snapPercentAvg >= 50) baseScore = this.WEIGHTS.USAGE * 0.4;
+      else baseScore = this.WEIGHTS.USAGE * 0.2;
+      
+    } else {
+      // Fallback for unknown positions
+      baseScore = this.WEIGHTS.USAGE * 0.5;
+    }
     
     // Trend modifier
     if (snapTrend === 'rising') baseScore *= 1.1;
