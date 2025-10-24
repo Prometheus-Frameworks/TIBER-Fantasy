@@ -87,27 +87,27 @@ export default function LeadersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-6">
+    <div className="min-h-screen bg-[#0a0e1a] text-gray-100 p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2 flex items-center gap-3" data-testid="header-leaders">
-            <TrendingUp className="w-10 h-10 text-purple-400" />
-            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            <TrendingUp className="w-10 h-10 text-blue-400" />
+            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               NFL Leaders
             </span>
           </h1>
-          <p className="text-slate-400">
+          <p className="text-gray-400">
             2025 Season • Weeks {data?.data?.week || '1-7'}
           </p>
         </div>
 
         {/* Filters */}
-        <div className="bg-white/5 backdrop-blur border border-purple-500/20 rounded-xl p-6 mb-6">
+        <div className="bg-[#141824] border border-gray-800 rounded-xl p-6 mb-6">
           <div className="grid md:grid-cols-2 gap-4">
             {/* Position Selector */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-gray-400 mb-2">
                 Position
               </label>
               <div className="grid grid-cols-4 gap-2">
@@ -117,8 +117,8 @@ export default function LeadersPage() {
                     onClick={() => handlePositionChange(pos)}
                     className={`py-3 px-4 rounded-lg font-semibold transition-all ${
                       position === pos
-                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50'
-                        : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                        ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-400 border border-blue-500/50'
+                        : 'text-gray-400 hover:bg-[#1e2330] hover:text-gray-300'
                     }`}
                     data-testid={`button-position-${pos.toLowerCase()}`}
                   >
@@ -130,17 +130,17 @@ export default function LeadersPage() {
 
             {/* Stat Category Dropdown */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-gray-400 mb-2">
                 Statistical Category
               </label>
               <select
                 value={stat}
                 onChange={(e) => setStat(e.target.value)}
-                className="w-full bg-white/10 border border-purple-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full bg-[#1e2330] border border-gray-700 rounded-lg px-4 py-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
                 data-testid="select-stat-category"
               >
                 {POSITION_STATS[position].map(statOption => (
-                  <option key={statOption.value} value={statOption.value} className="bg-slate-800">
+                  <option key={statOption.value} value={statOption.value} className="bg-[#141824]">
                     {statOption.label}
                   </option>
                 ))}
@@ -150,35 +150,35 @@ export default function LeadersPage() {
         </div>
 
         {/* Leaderboard Table */}
-        <div className="bg-white/5 backdrop-blur border border-purple-500/20 rounded-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-b border-purple-500/20 px-6 py-4">
-            <h2 className="text-xl font-bold text-white">
+        <div className="bg-[#141824] border border-gray-800 rounded-xl overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-b border-gray-800 px-6 py-4">
+            <h2 className="text-xl font-bold text-gray-100">
               Top {position} by {getStatLabel()}
             </h2>
           </div>
 
           {isLoading ? (
             <div className="p-12 text-center">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
-              <p className="mt-4 text-slate-400">Loading leaders...</p>
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+              <p className="mt-4 text-gray-400">Loading leaders...</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full" data-testid="table-leaderboard">
                 <thead>
-                  <tr className="border-b border-purple-500/20">
-                    <th className="text-left px-6 py-4 text-slate-400 font-medium text-sm">Rank</th>
-                    <th className="text-left px-6 py-4 text-slate-400 font-medium text-sm">Player</th>
-                    <th className="text-left px-6 py-4 text-slate-400 font-medium text-sm">Team</th>
-                    <th className="text-right px-6 py-4 text-slate-400 font-medium text-sm">{getStatLabel()}</th>
+                  <tr className="border-b border-gray-800">
+                    <th className="text-left px-6 py-4 text-gray-400 font-medium text-sm">Rank</th>
+                    <th className="text-left px-6 py-4 text-gray-400 font-medium text-sm">Player</th>
+                    <th className="text-left px-6 py-4 text-gray-400 font-medium text-sm">Team</th>
+                    <th className="text-right px-6 py-4 text-gray-400 font-medium text-sm">{getStatLabel()}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {leaders.map((leader, index) => (
                     <tr
                       key={`${leader.name}-${index}`}
-                      className={`border-b border-purple-500/10 hover:bg-white/5 transition-colors ${
-                        index < 3 ? 'bg-gradient-to-r from-purple-500/5 to-pink-500/5' : ''
+                      className={`border-b border-gray-800/50 hover:bg-[#1e2330] transition-colors ${
+                        index < 3 ? 'bg-gradient-to-r from-blue-500/5 to-purple-500/5' : ''
                       }`}
                       data-testid={`row-player-${index}`}
                     >
@@ -188,17 +188,17 @@ export default function LeadersPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-white font-semibold text-base" data-testid={`text-player-name-${index}`}>
+                        <span className="text-gray-100 font-semibold text-base" data-testid={`text-player-name-${index}`}>
                           {leader.name}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-block bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 px-3 py-1 rounded-full text-sm font-medium border border-purple-500/30">
+                        <span className="inline-block bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full text-sm font-medium border border-blue-500/30">
                           {leader.team}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <span className="text-white font-bold text-lg">
+                        <span className="text-gray-100 font-bold text-lg">
                           {formatValue(leader.value, stat)}
                         </span>
                       </td>
@@ -208,7 +208,7 @@ export default function LeadersPage() {
               </table>
 
               {leaders.length === 0 && (
-                <div className="p-12 text-center text-slate-400">
+                <div className="p-12 text-center text-gray-400">
                   No data available for this category
                 </div>
               )}
@@ -217,7 +217,7 @@ export default function LeadersPage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-6 text-center text-sm text-slate-400">
+        <div className="mt-6 text-center text-sm text-gray-500">
           {data?.data?.season || 2025} Season • Data from NFLfastR
         </div>
       </div>

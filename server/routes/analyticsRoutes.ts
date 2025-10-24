@@ -69,6 +69,16 @@ router.get('/', async (req, res) => {
     }
 
     // Try 2025 weeks 1-7 first, fallback to 2024 weeks 13-15
+    // Build HAVING clause for minimum thresholds on percentage/average stats
+    let havingClause = sql`1=1`; // Default: no filter
+    if (stat === 'completion_pct') {
+      // Minimum 50 attempts to qualify for completion % leaderboard (filters out backup QBs)
+      havingClause = sql`SUM(${gameLogs.passAttempts}) >= 50`;
+    } else if (stat === 'ypr') {
+      // Minimum 10 receptions to qualify for yards per reception leaderboard
+      havingClause = sql`SUM(${gameLogs.receptions}) >= 10`;
+    }
+
     let playerStats = await db
       .select({
         sleeperId: gameLogs.sleeperId,
@@ -86,6 +96,7 @@ router.get('/', async (req, res) => {
         eq(players.position, position as string)
       ))
       .groupBy(gameLogs.sleeperId, players.firstName, players.lastName, players.team)
+      .having(havingClause)
       .orderBy(sql`stat_value DESC`)
       .limit(25); // Top 25 players
 
@@ -110,6 +121,7 @@ router.get('/', async (req, res) => {
           eq(players.position, position as string)
         ))
         .groupBy(gameLogs.sleeperId, players.firstName, players.lastName, players.team)
+        .having(havingClause) // Apply same minimum thresholds to fallback query
         .orderBy(sql`stat_value DESC`)
         .limit(25);
 
