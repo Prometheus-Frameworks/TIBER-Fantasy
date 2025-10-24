@@ -36,9 +36,9 @@ export default function RankingsTab() {
   const [teExpanded, setTeExpanded] = useState(true);
 
   const { data, isLoading } = useQuery<TiberRankingsResponse>({
-    queryKey: ['/api/tiber/rankings', 8, 2025],
+    queryKey: ['/api/tiber/rankings', 7, 2025],
     queryFn: async () => {
-      const res = await fetch('/api/tiber/rankings?week=8&season=2025&limit=150');
+      const res = await fetch('/api/tiber/rankings?week=7&season=2025&limit=150');
       if (!res.ok) throw new Error('Failed to fetch TIBER rankings');
       return res.json();
     }
@@ -152,7 +152,7 @@ export default function RankingsTab() {
       <div>
         <h2 className="text-2xl font-bold text-white">TIBER Rankings</h2>
         <p className="text-gray-400 mt-1">
-          All Positions • Week {data?.data?.week || 8} • 2025 Season
+          All Positions • Week {data?.data?.week || 7} • 2025 Season
         </p>
       </div>
 
@@ -184,7 +184,7 @@ export default function RankingsTab() {
 
       {/* Footer */}
       <div className="mt-6 text-center text-sm text-gray-500">
-        {data?.data?.season || 2025} Season • Week {data?.data?.week || 8} • Data from NFLfastR
+        {data?.data?.season || 2025} Season • Week {data?.data?.week || 7} • Data from NFLfastR
       </div>
     </div>
   );

@@ -544,26 +544,30 @@ export class TiberService {
   }
 
   private calculateEpaScore(stats: PlayerStats): number {
-    // League average EPA/play for skill positions is ~0.15
-    // Top tier is ~0.30+, bottom tier is negative
+    // VOLUME-FIRST PHILOSOPHY: High-volume players get targets for a reason
+    // Don't overly penalize negative EPA - volume = opportunity = fantasy value
     const { epaPerPlay } = stats;
     
-    // Normalize to 0-25 scale (MORE GENEROUS - top 24 should get 18-25 points)
-    // 0.25+ EPA = 25 points (elite)
-    // 0.20 EPA = 23 points (very good)
-    // 0.15 EPA = 21 points (average - league baseline)
-    // 0.10 EPA = 18 points (below average but playable)
-    // 0.05 EPA = 14 points (poor)
-    // 0.00 EPA = 10 points (bad)
-    // Negative EPA = 5 points (terrible)
+    // Normalize to 0-25 scale (EXTREMELY GENEROUS - reward volume over efficiency)
+    // 0.25+ EPA = 25 points (100% - elite)
+    // 0.20 EPA = 24 points (96% - very good)
+    // 0.15 EPA = 23 points (92% - good)
+    // 0.10 EPA = 22 points (88% - average)
+    // 0.05 EPA = 21 points (84% - below avg)
+    // 0.00 EPA = 20 points (80% - slight negative)
+    // -0.05 EPA = 19 points (76% - moderate negative)
+    // -0.15 EPA = 18 points (72% - poor efficiency but high volume)
+    // < -0.15 EPA = 15 points (60% - very poor)
     
     if (epaPerPlay >= 0.25) return this.WEIGHTS.EPA;
-    if (epaPerPlay >= 0.20) return this.WEIGHTS.EPA * 0.92;
-    if (epaPerPlay >= 0.15) return this.WEIGHTS.EPA * 0.84;
-    if (epaPerPlay >= 0.10) return this.WEIGHTS.EPA * 0.72;
-    if (epaPerPlay >= 0.05) return this.WEIGHTS.EPA * 0.56;
-    if (epaPerPlay >= 0.00) return this.WEIGHTS.EPA * 0.40;
-    return this.WEIGHTS.EPA * 0.20; // Negative EPA
+    if (epaPerPlay >= 0.20) return this.WEIGHTS.EPA * 0.96;
+    if (epaPerPlay >= 0.15) return this.WEIGHTS.EPA * 0.92;
+    if (epaPerPlay >= 0.10) return this.WEIGHTS.EPA * 0.88;
+    if (epaPerPlay >= 0.05) return this.WEIGHTS.EPA * 0.84;
+    if (epaPerPlay >= 0.00) return this.WEIGHTS.EPA * 0.80;
+    if (epaPerPlay >= -0.05) return this.WEIGHTS.EPA * 0.76;
+    if (epaPerPlay >= -0.15) return this.WEIGHTS.EPA * 0.72;
+    return this.WEIGHTS.EPA * 0.60; // Very poor efficiency
   }
 
   private calculateUsageScore(stats: PlayerStats): number {
