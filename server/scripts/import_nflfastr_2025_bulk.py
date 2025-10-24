@@ -42,6 +42,10 @@ def import_nflfastr_2025_bulk():
     records = []
     
     for _, row in df.iterrows():
+        # Convert first down floats (1.0/0.0) to booleans
+        first_down_pass = bool(row.get('first_down_pass')) if pd.notna(row.get('first_down_pass')) and row.get('first_down_pass') == 1.0 else False
+        first_down_rush = bool(row.get('first_down_rush')) if pd.notna(row.get('first_down_rush')) and row.get('first_down_rush') == 1.0 else False
+        
         record = (
             str(row.get('play_id')) if pd.notna(row.get('play_id')) else None,
             str(row.get('game_id')) if pd.notna(row.get('game_id')) else None,
@@ -65,9 +69,17 @@ def import_nflfastr_2025_bulk():
             bool(row.get('incomplete_pass')) if pd.notna(row.get('incomplete_pass')) else False,
             bool(row.get('interception')) if pd.notna(row.get('interception')) else False,
             bool(row.get('touchdown')) if pd.notna(row.get('touchdown')) else False,
+            first_down_pass,  # Added first down pass
+            first_down_rush,  # Added first down rush
             Json({k: (None if pd.isna(v) else v) for k, v in row.to_dict().items()})
         )
         records.append(record)
+    
+    # Delete existing 2025 data first to avoid conflicts
+    print("🗑️  Deleting existing 2025 data...")
+    cur.execute("DELETE FROM bronze_nflfastr_plays WHERE season = 2025")
+    conn.commit()
+    print(f"   Deleted {cur.rowcount} existing plays")
     
     # Bulk insert using execute_batch (much faster)
     print(f"🚀 Bulk inserting {len(records):,} plays...")
@@ -80,14 +92,15 @@ def import_nflfastr_2025_bulk():
             rusher_player_id, rusher_player_name,
             epa, wpa, air_yards, yards_after_catch, yards_gained,
             complete_pass, incomplete_pass, interception, touchdown,
+            first_down_pass, first_down_rush,
             raw_data
         ) VALUES (
             %s, %s, %s, %s, %s, %s, %s,
             %s, %s, %s, %s, %s, %s,
             %s, %s, %s, %s, %s,
-            %s, %s, %s, %s, %s
+            %s, %s, %s, %s,
+            %s, %s, %s
         )
-        ON CONFLICT (play_id) DO NOTHING
     """, records, page_size=500)
     
     conn.commit()
