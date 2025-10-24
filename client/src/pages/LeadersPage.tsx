@@ -207,9 +207,13 @@ export default function LeadersPage() {
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 px-4">
-                          <span className="text-white font-medium" data-testid={`text-player-name-${index}`}>
-                            {player.name}
+                        <td className="py-3 px-4" style={{ backgroundColor: 'rgba(255,0,0,0.1)' }}>
+                          <span 
+                            className="text-white font-medium" 
+                            data-testid={`text-player-name-${index}`}
+                            style={{ color: '#ffffff !important', display: 'inline-block', backgroundColor: 'rgba(0,255,0,0.1)' }}
+                          >
+                            TEST: {player.name || 'NO NAME'} - {typeof player.name}
                           </span>
                         </td>
                         <td className="py-3 px-4">
