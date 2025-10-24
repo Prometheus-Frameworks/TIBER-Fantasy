@@ -15,102 +15,54 @@ router.get('/rankings', async (req, res) => {
 
     console.log(`📊 [TIBER Rankings] Fetching top ${limit} WR/TE players for Week ${week}, ${season}`);
 
-    // Get top WR/TE players from playerIdentityMap with NFLfastR IDs
-    const eligiblePlayers = await db
+    // Query TIBER scores directly, sorted by score (highest first)
+    // Join with player_identity_map to get player details
+    const rankedPlayers = await db
       .select({
-        nflfastrId: playerIdentityMap.nflDataPyId,
+        nflfastrId: tiberScores.nflfastrId,
+        tiberScore: tiberScores.tiberScore,
+        tier: tiberScores.tier,
         name: playerIdentityMap.fullName,
         position: playerIdentityMap.position,
         team: playerIdentityMap.nflTeam,
         sleeperId: playerIdentityMap.sleeperId,
       })
-      .from(playerIdentityMap)
+      .from(tiberScores)
+      .innerJoin(
+        playerIdentityMap,
+        eq(tiberScores.nflfastrId, playerIdentityMap.nflDataPyId)
+      )
       .where(
         and(
+          eq(tiberScores.week, week),
+          eq(tiberScores.season, season),
           inArray(playerIdentityMap.position, ['WR', 'TE']),
-          isNotNull(playerIdentityMap.nflDataPyId),
-          isNotNull(playerIdentityMap.nflTeam),
-          sql`${playerIdentityMap.nflTeam} != ''`
+          isNotNull(playerIdentityMap.nflTeam)
         )
       )
+      .orderBy(desc(tiberScores.tiberScore))
       .limit(limit);
 
-    console.log(`✅ Found ${eligiblePlayers.length} eligible WR/TE players`);
+    console.log(`✅ Found ${rankedPlayers.length} players with TIBER scores for Week ${week}`);
 
-    // Calculate or fetch TIBER scores for each player
-    const playersWithScores: any[] = [];
-
-    for (const player of eligiblePlayers) {
-      if (!player.nflfastrId) continue;
-
-      try {
-        // Check cache first
-        const cached = await db
-          .select()
-          .from(tiberScores)
-          .where(
-            and(
-              eq(tiberScores.nflfastrId, player.nflfastrId),
-              eq(tiberScores.week, week),
-              eq(tiberScores.season, season)
-            )
-          )
-          .limit(1);
-
-        let tiberScore, tier;
-
-        if (cached.length > 0) {
-          // Use cached score
-          tiberScore = cached[0].tiberScore;
-          tier = cached[0].tier;
-        } else {
-          // Calculate new score
-          const score = await tiberService.calculateTiberScore(player.nflfastrId, week, season);
-          tiberScore = score.tiberScore;
-          tier = score.tier;
-
-          // Save to cache
-          await db.insert(tiberScores).values({
-            playerId: null,
-            nflfastrId: player.nflfastrId,
-            week,
-            season,
-            tiberScore: score.tiberScore,
-            tier: score.tier,
-            firstDownScore: score.breakdown.firstDownScore,
-            epaScore: score.breakdown.epaScore,
-            usageScore: score.breakdown.usageScore,
-            tdScore: score.breakdown.tdScore,
-            teamScore: score.breakdown.teamScore,
-            firstDownRate: score.metrics.firstDownRate,
-            totalFirstDowns: score.metrics.totalFirstDowns,
-            epaPerPlay: score.metrics.epaPerPlay,
-            snapPercentAvg: score.metrics.snapPercentAvg,
-            snapPercentTrend: score.metrics.snapTrend,
-            tdRate: score.metrics.tdRate,
-            teamOffenseRank: score.metrics.teamOffenseRank,
-          }).onConflictDoNothing();
-        }
-
-        playersWithScores.push({
-          name: player.name,
-          position: player.position,
-          team: player.team,
-          sleeperId: player.sleeperId,
-          tiberScore,
-          tier,
-          nflfastrId: player.nflfastrId,
-        });
-
-      } catch (error) {
-        // Skip players without stats
-        console.log(`⏭️ Skipping ${player.name}: No stats available`);
-        continue;
-      }
+    if (rankedPlayers.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No TIBER scores available for Week ' + week,
+        details: 'No WR/TE players found with TIBER scores for this week. Scores must be pre-calculated.',
+      });
     }
 
-    // Sort by TIBER score (highest first)
-    playersWithScores.sort((a, b) => b.tiberScore - a.tiberScore);
+    // Convert to response format
+    const playersWithScores = rankedPlayers.map(p => ({
+      name: p.name,
+      position: p.position,
+      team: p.team,
+      sleeperId: p.sleeperId,
+      tiberScore: p.tiberScore,
+      tier: p.tier,
+      nflfastrId: p.nflfastrId,
+    }));
 
     // Calculate positional ranks
     const wrRank = new Map<string, number>();
@@ -129,7 +81,7 @@ router.get('/rankings', async (req, res) => {
     });
 
     // Add positional rank to each player
-    const rankedPlayers = playersWithScores.map(player => ({
+    const playersWithRanks = playersWithScores.map(player => ({
       ...player,
       positionalRank: player.position === 'WR' 
         ? wrRank.get(player.nflfastrId) || 0
@@ -139,17 +91,17 @@ router.get('/rankings', async (req, res) => {
         : `TE${teRank.get(player.nflfastrId) || 0}`,
     }));
 
-    console.log(`✅ [TIBER Rankings] Ranked ${rankedPlayers.length} players (${wrCount} WRs, ${teCount} TEs)`);
+    console.log(`✅ [TIBER Rankings] Ranked ${playersWithRanks.length} players (${wrCount} WRs, ${teCount} TEs)`);
 
     res.json({
       success: true,
       data: {
         week,
         season,
-        total: rankedPlayers.length,
+        total: playersWithRanks.length,
         wrCount,
         teCount,
-        players: rankedPlayers,
+        players: playersWithRanks,
       },
       generated_at: new Date().toISOString(),
     });
