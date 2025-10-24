@@ -109,25 +109,6 @@ export default function LeadersPage() {
           </p>
         </div>
 
-        {/* DEBUG PANEL */}
-        {leaderboardData.length > 0 && (
-          <Card className="bg-yellow-900/20 border-yellow-500/50">
-            <CardHeader>
-              <CardTitle className="text-yellow-400">DEBUG INFO</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <pre className="text-white text-xs overflow-auto">
-                {JSON.stringify({ 
-                  totalPlayers: leaderboardData.length,
-                  firstPlayer: leaderboardData[0],
-                  firstPlayerName: leaderboardData[0]?.name,
-                  nameType: typeof leaderboardData[0]?.name 
-                }, null, 2)}
-              </pre>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Controls */}
         <Card className="bg-card/50 border-border/50">
           <CardContent className="pt-6">
@@ -216,9 +197,9 @@ export default function LeadersPage() {
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 px-4 bg-blue-500/10">
-                          <span className="text-white font-medium bg-red-500/20 px-2" data-testid={`text-player-name-${index}`}>
-                            {player.name || 'NO NAME'}
+                        <td className="py-3 px-4">
+                          <span className="text-white font-medium" data-testid={`text-player-name-${index}`}>
+                            {player.name}
                           </span>
                         </td>
                         <td className="py-3 px-4">
