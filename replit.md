@@ -16,6 +16,26 @@ Intelligence Feed System:
 - `/api/intel` endpoint serves scouting reports with filtering by player, position, and signal strength
 - Ready to receive meaningful intel updates during regular season
 
+## Design Standards (Official)
+**Color Scheme** - TIBER FANTASY brand palette (October 2025):
+- Background: `bg-[#0a0e1a]` (dark navy)
+- Cards/Containers: `bg-[#141824]` (slate)
+- Borders: `border-gray-800`
+- Selected/Active States: Blue-purple gradients `from-blue-500/20 to-purple-500/20` with `border-blue-500/50`
+- Accent Elements: `bg-blue-500/10 text-blue-400 border-blue-500/30`
+- Typography: White/light text with explicit color declarations
+
+**Data Quality Standards**:
+- Completion %: Minimum 50 attempts (filters backup QBs)
+- Yards Per Reception: Minimum 10 receptions
+- Apply thresholds to both primary and fallback queries
+
+**Layout Patterns**:
+- Clean position/stat filters with visual active states
+- Grid layouts for player cards (auto-responsive)
+- Consistent spacing and card designs across all pages
+- Footer attribution: Season/week info with data source credit
+
 ## System Architecture
 The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold layers) for enterprise-grade data processing and analytics.
 
