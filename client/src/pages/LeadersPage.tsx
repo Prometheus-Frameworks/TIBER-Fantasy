@@ -109,6 +109,16 @@ export default function LeadersPage() {
           </p>
         </div>
 
+        {/* DEBUG: Show what data we're receiving */}
+        {!isLoading && leaderboardData.length > 0 && (
+          <div className="bg-yellow-900/30 border border-yellow-500 p-4 rounded">
+            <p className="text-yellow-400 font-bold">DEBUG:</p>
+            <p className="text-white text-sm">Total players: {leaderboardData.length}</p>
+            <p className="text-white text-sm">First player object: {JSON.stringify(leaderboardData[0])}</p>
+            <p className="text-white text-sm">First player name: "{leaderboardData[0]?.name}" (type: {typeof leaderboardData[0]?.name})</p>
+          </div>
+        )}
+
         {/* Controls */}
         <Card className="bg-card/50 border-border/50">
           <CardContent className="pt-6">
