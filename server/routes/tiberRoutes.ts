@@ -21,7 +21,7 @@ router.get('/rankings', async (req, res) => {
         nflfastrId: playerIdentityMap.nflDataPyId,
         name: playerIdentityMap.fullName,
         position: playerIdentityMap.position,
-        team: playerIdentityMap.team,
+        team: playerIdentityMap.nflTeam,
         sleeperId: playerIdentityMap.sleeperId,
       })
       .from(playerIdentityMap)
@@ -29,8 +29,8 @@ router.get('/rankings', async (req, res) => {
         and(
           inArray(playerIdentityMap.position, ['WR', 'TE']),
           isNotNull(playerIdentityMap.nflDataPyId),
-          isNotNull(playerIdentityMap.team),
-          sql`${playerIdentityMap.team} != ''`
+          isNotNull(playerIdentityMap.nflTeam),
+          sql`${playerIdentityMap.nflTeam} != ''`
         )
       )
       .limit(limit);

@@ -1,295 +1,145 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'wouter';
-import TiberBadge from '@/components/TiberBadge';
 
-interface OVRPlayer {
-  player_id: string;
+interface TiberPlayer {
   name: string;
-  position: 'QB' | 'RB' | 'WR' | 'TE';
+  position: 'WR' | 'TE';
   team: string;
-  ovr: number;
-  tier: string;
-  confidence: number;
-}
-
-interface TiberScore {
   tiberScore: number;
-  tier: string;
-  breakdown?: {
-    firstDownScore: number;
-    epaScore: number;
-    usageScore: number;
-    tdScore: number;
-    teamScore: number;
-  };
+  tier: 'breakout' | 'stable' | 'regression';
+  positionalRank: number;
+  tiberRank: string;
 }
 
-interface OVRResponse {
+interface TiberRankingsResponse {
   success: boolean;
   data: {
-    players: OVRPlayer[];
+    week: number;
+    season: number;
+    total: number;
+    wrCount: number;
+    teCount: number;
+    players: TiberPlayer[];
   };
-}
-
-// PlayerCard with TIBER score integration
-function PlayerCard({ player, rank, getTierColor, shouldShowTiber, tiberFilter }: { 
-  player: OVRPlayer; 
-  rank: number; 
-  getTierColor: (tier: string) => string;
-  shouldShowTiber: boolean;
-  tiberFilter: 'all' | 'breakout' | 'regression';
-}) {
-  // Fetch TIBER score by player name (top 150 only)
-  const { data: tiberData, isLoading: tiberLoading } = useQuery<{ success: boolean; data: TiberScore }>({
-    queryKey: ['/api/tiber/by-name', player.name],
-    queryFn: async () => {
-      const res = await fetch(`/api/tiber/by-name/${encodeURIComponent(player.name)}?week=6`);
-      if (!res.ok) return null;
-      return res.json();
-    },
-    enabled: shouldShowTiber && !!player.name,
-    retry: false,
-    staleTime: 1000 * 60 * 60, // Cache for 1 hour
-  });
-
-  const tiberScore = tiberData?.success ? tiberData.data.tiberScore : null;
-  const tiberTier = tiberData?.success ? tiberData.data.tier : null;
-
-  // Apply tier filter (only hide after TIBER loads and tier doesn't match)
-  const shouldHide = tiberFilter !== 'all' && shouldShowTiber && !tiberLoading && tiberTier && tiberTier !== tiberFilter;
-  
-  if (shouldHide) {
-    return null;
-  }
-
-  return (
-    <div
-      className="bg-[#1e2330] border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors"
-      data-testid={`player-card-${rank}`}
-    >
-      <div className="flex items-start gap-4">
-        {/* Rank */}
-        <div className="flex-shrink-0 w-8 text-center">
-          <span className="text-2xl font-bold text-gray-500">{rank + 1}</span>
-        </div>
-
-        {/* Player Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-lg font-bold text-gray-100">{player.name}</h3>
-            <span className="text-sm text-gray-400">{player.position} • {player.team}</span>
-            {shouldShowTiber && tiberLoading && (
-              <div className="h-6 w-16 bg-gray-700 animate-pulse rounded" />
-            )}
-            {shouldShowTiber && tiberScore !== null && (
-              <TiberBadge 
-                score={tiberScore} 
-                size="sm" 
-                showLabel={false} 
-                showBreakdown={true}
-                breakdown={tiberData?.data.breakdown}
-              />
-            )}
-          </div>
-
-          {/* Stats Bar */}
-          <div className="mb-3">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="flex-1 bg-gray-800 rounded-full h-2 overflow-hidden">
-                <div
-                  className={`h-full bg-gradient-to-r ${getTierColor(player.tier)} transition-all`}
-                  style={{ width: `${player.ovr}%` }}
-                />
-              </div>
-              <span className={`text-lg font-bold px-2 py-1 rounded bg-gradient-to-r ${getTierColor(player.tier)}`}>
-                {player.ovr}
-              </span>
-            </div>
-            <div className="flex items-center gap-4 text-sm text-gray-400">
-              <span>Tier: <span className="text-gray-300 font-semibold">{player.tier}</span></span>
-              <span>Confidence: <span className="text-gray-300 font-mono">{(player.confidence * 100).toFixed(0)}%</span></span>
-              {tiberScore !== null && (
-                <span>TIBER: <span className="text-gray-300 font-mono">{tiberScore}</span></span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex-shrink-0 flex flex-col gap-2">
-          <Link 
-            href={`/players/${player.player_id}`}
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors text-center"
-            data-testid={`button-view-${rank}`}
-          >
-            View
-          </Link>
-          <button
-            className="px-4 py-2 bg-[#141824] hover:bg-[#1e2330] border border-gray-700 rounded-lg text-sm font-medium transition-colors text-center"
-            data-testid={`button-compare-${rank}`}
-          >
-            Compare
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function RankingsTab() {
-  const [selectedPosition, setSelectedPosition] = useState('ALL');
-  const [selectedFormat, setSelectedFormat] = useState<'dynasty' | 'redraft'>('redraft');
-  const [tiberFilter, setTiberFilter] = useState<'all' | 'breakout' | 'regression'>('all');
+  const [selectedPosition, setSelectedPosition] = useState<'ALL' | 'WR' | 'TE'>('ALL');
 
-  // Query with format in key for proper cache segregation
-  const { data: ovrData, isLoading } = useQuery<OVRResponse>({
-    queryKey: ['/api/ovr', selectedFormat],
+  const { data, isLoading } = useQuery<TiberRankingsResponse>({
+    queryKey: ['/api/tiber/rankings', 8, 2025],
     queryFn: async () => {
-      const res = await fetch(`/api/ovr?format=${selectedFormat}&limit=150`);
-      if (!res.ok) throw new Error('Failed to fetch rankings');
+      const res = await fetch('/api/tiber/rankings?week=8&season=2025&limit=150');
+      if (!res.ok) throw new Error('Failed to fetch TIBER rankings');
       return res.json();
     }
   });
 
-  const getTierColor = (tier: string) => {
-    const colors: Record<string, string> = {
-      S: 'from-purple-500 to-purple-700',
-      Elite: 'from-purple-500 to-purple-700',
-      A: 'from-blue-500 to-blue-700',
-      Great: 'from-blue-500 to-blue-700',
-      B: 'from-green-500 to-green-700',
-      Good: 'from-green-500 to-green-700',
-      C: 'from-yellow-500 to-yellow-700',
-      D: 'from-red-500 to-red-700'
-    };
-    return colors[tier] || colors.C;
-  };
-
-  // Get all players and apply client-side position filtering
-  const allPlayers = ovrData?.data?.players || [];
+  const allPlayers = data?.data?.players || [];
   const players = selectedPosition === 'ALL' 
     ? allPlayers 
     : allPlayers.filter(p => p.position === selectedPosition);
 
+  const getTierColor = (tier: string) => {
+    const colors: Record<string, string> = {
+      breakout: 'from-green-500 to-green-700',
+      stable: 'from-blue-500 to-blue-700',
+      regression: 'from-red-500 to-red-700',
+    };
+    return colors[tier] || colors.stable;
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Power Rankings</h2>
-          <p className="text-gray-400 mt-1">
-            Top {selectedPosition === 'ALL' ? '150' : selectedPosition} players • {selectedFormat === 'dynasty' ? 'Dynasty' : 'Redraft'} • Week 6
-          </p>
-        </div>
+      <div>
+        <h2 className="text-2xl font-bold text-white">TIBER Rankings</h2>
+        <p className="text-gray-400 mt-1">
+          WR/TE • Week {data?.data?.week || 8} • 2025 Season
+        </p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4 items-center">
-        {/* Position Filters */}
-        <div className="flex gap-2">
-          {['ALL', 'QB', 'RB', 'WR', 'TE'].map(pos => (
-            <button
-              key={pos}
-              onClick={() => setSelectedPosition(pos)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                selectedPosition === pos
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-[#1e2330] text-gray-400 hover:text-gray-300'
-              }`}
-              data-testid={`button-filter-${pos.toLowerCase()}`}
-            >
-              {pos}
-            </button>
-          ))}
-        </div>
-
-        {/* Format Toggle */}
-        <div className="flex gap-2 ml-auto">
-          {[
-            { id: 'redraft', label: 'Redraft' },
-            { id: 'dynasty', label: 'Dynasty' }
-          ].map(format => (
-            <button
-              key={format.id}
-              onClick={() => setSelectedFormat(format.id as 'dynasty' | 'redraft')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                selectedFormat === format.id
-                  ? 'bg-purple-500 text-white'
-                  : 'bg-[#1e2330] text-gray-400 hover:text-gray-300'
-              }`}
-              data-testid={`button-format-${format.id}`}
-            >
-              {format.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* TIBER Tier Filters */}
-      <div className="flex gap-2 items-center">
-        <div className="mr-2">
-          <span className="text-sm text-gray-400">TIBER Filter:</span>
-          <p className="text-[10px] text-gray-600 -mt-0.5">Tactical Index for Breakout Efficiency & Regression</p>
-        </div>
-        <button
-          onClick={() => setTiberFilter('all')}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-            tiberFilter === 'all'
-              ? 'bg-blue-500 text-white'
-              : 'bg-[#1e2330] text-gray-400 hover:text-gray-300'
-          }`}
-          data-testid="button-filter-tiber-all"
-        >
-          📊 All Players
-        </button>
-        <button
-          onClick={() => setTiberFilter('breakout')}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-            tiberFilter === 'breakout'
-              ? 'bg-green-500 text-white'
-              : 'bg-[#1e2330] text-gray-400 hover:text-gray-300'
-          }`}
-          data-testid="button-filter-tiber-breakout"
-        >
-          🚀 Breakouts Only
-        </button>
-        <button
-          onClick={() => setTiberFilter('regression')}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-            tiberFilter === 'regression'
-              ? 'bg-red-500 text-white'
-              : 'bg-[#1e2330] text-gray-400 hover:text-gray-300'
-          }`}
-          data-testid="button-filter-tiber-regression"
-        >
-          ⚠️ Regression Risks
-        </button>
+      {/* Position Filters */}
+      <div className="flex gap-2">
+        {['ALL', 'WR', 'TE'].map(pos => (
+          <button
+            key={pos}
+            onClick={() => setSelectedPosition(pos as 'ALL' | 'WR' | 'TE')}
+            className={`px-6 py-2 rounded-lg font-medium transition-all ${
+              selectedPosition === pos
+                ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/50 text-white'
+                : 'bg-[#141824] text-gray-400 hover:text-gray-300 border border-gray-800'
+            }`}
+            data-testid={`button-filter-${pos.toLowerCase()}`}
+          >
+            {pos}
+          </button>
+        ))}
       </div>
 
       {/* Player Cards */}
       {isLoading ? (
         <div className="space-y-3">
-          {[...Array(5)].map((_, idx) => (
-            <div key={idx} className="bg-[#1e2330] border border-gray-700 rounded-lg p-4 animate-pulse">
-              <div className="h-20 bg-gray-700/50 rounded"></div>
+          {[...Array(10)].map((_, idx) => (
+            <div key={idx} className="bg-[#141824] border border-gray-800 rounded-lg p-4 animate-pulse">
+              <div className="h-16 bg-gray-700/30 rounded"></div>
             </div>
           ))}
         </div>
       ) : (
         <div className="space-y-3">
           {players.map((player, idx) => (
-            <PlayerCard 
-              key={player.player_id} 
-              player={player} 
-              rank={idx} 
-              getTierColor={getTierColor}
-              shouldShowTiber={idx < 150}
-              tiberFilter={tiberFilter}
-            />
+            <div
+              key={`${player.name}-${idx}`}
+              className="bg-[#141824] border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-colors"
+              data-testid={`player-card-${idx}`}
+            >
+              <div className="flex items-center justify-between">
+                {/* Left: Rank & Player Info */}
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="text-2xl font-bold text-gray-500 w-12 text-center">
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-lg font-bold text-white">{player.name}</h3>
+                      <span className="px-2 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded text-sm font-medium">
+                        {player.team}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 text-sm text-gray-400">
+                      <span>{player.position}</span>
+                      <span className="text-gray-600">•</span>
+                      <span className="text-gray-300">Bye: TBD</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: TIBER Score Badge */}
+                <div className="flex flex-col items-end gap-1">
+                  <div className={`px-4 py-2 rounded-lg bg-gradient-to-r ${getTierColor(player.tier)} font-bold text-white text-lg`}>
+                    {player.tiberRank}
+                  </div>
+                  <div className="text-xs text-gray-500 uppercase">
+                    TIBER Score
+                  </div>
+                </div>
+              </div>
+            </div>
           ))}
+
+          {players.length === 0 && !isLoading && (
+            <div className="text-center py-12 text-gray-500">
+              No players found for this position
+            </div>
+          )}
         </div>
       )}
+
+      {/* Footer */}
+      <div className="mt-6 text-center text-sm text-gray-500">
+        {data?.data?.season || 2025} Season • Week {data?.data?.week || 8} • Data from NFLfastR
+      </div>
     </div>
   );
 }
