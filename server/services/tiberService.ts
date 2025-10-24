@@ -526,21 +526,21 @@ export class TiberService {
     // Below average: <8%
     const { firstDownRate } = stats;
     
-    // Normalize to 0-35 scale (MORE GENEROUS - top 24 should get 25-35 points)
+    // Normalize to 0-35 scale
     // 15%+ = 35 points (elite chain-mover, QB trust)
     // 12% = 32 points (very good)
     // 10% = 28 points (above average)
-    // 8% = 25 points (average - most WR1s/WR2s land here)
-    // 6% = 18 points (below average)
-    // <4% = 10 points (poor - TD dependent, low quality touches)
+    // 8% = 21 points (average)
+    // 6% = 14 points (below average)
+    // <4% = 7 points (poor - TD dependent, low quality touches)
     
     if (firstDownRate >= 0.15) return this.WEIGHTS.FIRST_DOWN;
     if (firstDownRate >= 0.12) return this.WEIGHTS.FIRST_DOWN * 0.91;
     if (firstDownRate >= 0.10) return this.WEIGHTS.FIRST_DOWN * 0.80;
-    if (firstDownRate >= 0.08) return this.WEIGHTS.FIRST_DOWN * 0.71;
-    if (firstDownRate >= 0.06) return this.WEIGHTS.FIRST_DOWN * 0.51;
-    if (firstDownRate >= 0.04) return this.WEIGHTS.FIRST_DOWN * 0.29;
-    return this.WEIGHTS.FIRST_DOWN * 0.15; // Very poor
+    if (firstDownRate >= 0.08) return this.WEIGHTS.FIRST_DOWN * 0.60;
+    if (firstDownRate >= 0.06) return this.WEIGHTS.FIRST_DOWN * 0.40;
+    if (firstDownRate >= 0.04) return this.WEIGHTS.FIRST_DOWN * 0.20;
+    return this.WEIGHTS.FIRST_DOWN * 0.10; // Very poor
   }
 
   private calculateEpaScore(stats: PlayerStats): number {
@@ -645,15 +645,15 @@ export class TiberService {
   }
 
   private calculateTeamScore(stats: PlayerStats): number {
-    // Team offense context (LESS PUNITIVE - don't overly penalize great players on bad teams)
+    // Team offense context
     const { teamOffenseRank } = stats;
     
     // Top 10 offense = 5 points
-    // 11-22 = 4 points (most teams in the middle)
-    // 23-32 = 3 points (bottom 10 - still playable)
+    // 11-20 = 3.5 points
+    // 21-32 = 2 points
     if (teamOffenseRank <= 10) return this.WEIGHTS.TEAM;
-    if (teamOffenseRank <= 22) return this.WEIGHTS.TEAM * 0.8;
-    return this.WEIGHTS.TEAM * 0.6; // Less harsh for bad teams
+    if (teamOffenseRank <= 20) return this.WEIGHTS.TEAM * 0.7;
+    return this.WEIGHTS.TEAM * 0.4;
   }
 
   private getTier(score: number): 'breakout' | 'stable' | 'regression' {
