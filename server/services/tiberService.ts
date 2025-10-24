@@ -67,22 +67,19 @@ export class TiberService {
     return Math.round(targets * multiplier);
   }
 
-  async calculateTiberScore(nflfastrId: string, week: number, season: number = 2025, position?: string): Promise<TiberScore> {
-    // Get player stats from NFLfastR data
-    const playerData = await this.getPlayerStats(nflfastrId, week, season);
+  async calculateTiberScore(nflfastrId: string, week: number, season: number = 2025): Promise<TiberScore> {
+    // Get player stats from NFLfastR data (WR/TE only for now)
+    const playerStats = await this.getPlayerStats(nflfastrId, week, season);
     
-    if (!playerData) {
+    if (!playerStats) {
       throw new Error(`No stats found for player ${nflfastrId} in week ${week}`);
     }
 
-    const { playerStats, detectedPosition } = playerData;
-    const pos = position || detectedPosition;
-
-    // Calculate each component using position-specific logic
-    const firstDownScore = this.calculateFirstDownScore(playerStats, pos);
-    const epaScore = this.calculateEpaScore(playerStats, pos);
-    const usageScore = this.calculateUsageScore(playerStats, pos);
-    const tdScore = this.calculateTdScore(playerStats, pos);
+    // Calculate each component (TIBER v1.5 weights: 35/25/25/10/5 for WR/TE)
+    const firstDownScore = this.calculateFirstDownScore(playerStats);
+    const epaScore = this.calculateEpaScore(playerStats);
+    const usageScore = this.calculateUsageScore(playerStats);
+    const tdScore = this.calculateTdScore(playerStats);
     const teamScore = this.calculateTeamScore(playerStats);
 
     const totalScore = Math.round(firstDownScore + epaScore + usageScore + tdScore + teamScore);
