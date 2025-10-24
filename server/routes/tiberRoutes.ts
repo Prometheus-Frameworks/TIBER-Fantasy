@@ -15,8 +15,7 @@ router.get('/rankings', async (req, res) => {
 
     console.log(`📊 [TIBER Rankings] Fetching top ${limit} WR/TE players for Week ${week}, ${season}`);
 
-    // Query TIBER scores directly, sorted by score (highest first)
-    // Join with player_identity_map to get player details
+    // Query TIBER scores for all positions (QB, RB, WR, TE)
     const rankedPlayers = await db
       .select({
         nflfastrId: tiberScores.nflfastrId,
@@ -36,7 +35,7 @@ router.get('/rankings', async (req, res) => {
         and(
           eq(tiberScores.week, week),
           eq(tiberScores.season, season),
-          inArray(playerIdentityMap.position, ['WR', 'TE']),
+          inArray(playerIdentityMap.position, ['QB', 'RB', 'WR', 'TE']),
           isNotNull(playerIdentityMap.nflTeam)
         )
       )
@@ -45,33 +44,66 @@ router.get('/rankings', async (req, res) => {
 
     console.log(`✅ Found ${rankedPlayers.length} players with TIBER scores for Week ${week}`);
 
-    if (rankedPlayers.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'No TIBER scores available for Week ' + week,
-        details: 'No WR/TE players found with TIBER scores for this week. Scores must be pre-calculated.',
-      });
-    }
+    // Add sample QB and RB players if none exist in database (temporary for UI development)
+    const sampleQBs = [
+      { name: 'Josh Allen', position: 'QB', team: 'BUF', tiberScore: 92, tier: 'breakout', nflfastrId: 'sample-qb-1' },
+      { name: 'Patrick Mahomes', position: 'QB', team: 'KC', tiberScore: 88, tier: 'breakout', nflfastrId: 'sample-qb-2' },
+      { name: 'Lamar Jackson', position: 'QB', team: 'BAL', tiberScore: 85, tier: 'stable', nflfastrId: 'sample-qb-3' },
+      { name: 'Jalen Hurts', position: 'QB', team: 'PHI', tiberScore: 82, tier: 'stable', nflfastrId: 'sample-qb-4' },
+      { name: 'Joe Burrow', position: 'QB', team: 'CIN', tiberScore: 79, tier: 'stable', nflfastrId: 'sample-qb-5' },
+    ];
+    
+    const sampleRBs = [
+      { name: 'Christian McCaffrey', position: 'RB', team: 'SF', tiberScore: 90, tier: 'breakout', nflfastrId: 'sample-rb-1' },
+      { name: 'Bijan Robinson', position: 'RB', team: 'ATL', tiberScore: 86, tier: 'stable', nflfastrId: 'sample-rb-2' },
+      { name: 'Saquon Barkley', position: 'RB', team: 'PHI', tiberScore: 83, tier: 'stable', nflfastrId: 'sample-rb-3' },
+      { name: 'Breece Hall', position: 'RB', team: 'NYJ', tiberScore: 80, tier: 'stable', nflfastrId: 'sample-rb-4' },
+      { name: 'Jahmyr Gibbs', position: 'RB', team: 'DET', tiberScore: 77, tier: 'regression', nflfastrId: 'sample-rb-5' },
+    ];
 
     // Convert to response format
-    const playersWithScores = rankedPlayers.map(p => ({
+    let playersWithScores = rankedPlayers.map(p => ({
       name: p.name,
       position: p.position,
       team: p.team,
       sleeperId: p.sleeperId,
       tiberScore: p.tiberScore,
-      tier: p.tier,
+      tier: p.tier as 'breakout' | 'stable' | 'regression',
       nflfastrId: p.nflfastrId,
     }));
 
+    // Add sample QB and RB players (temporary until algorithms are built)
+    const hasQBs = playersWithScores.some(p => p.position === 'QB');
+    const hasRBs = playersWithScores.some(p => p.position === 'RB');
+    
+    if (!hasQBs) {
+      playersWithScores = [...sampleQBs, ...playersWithScores];
+    }
+    if (!hasRBs) {
+      playersWithScores = [...sampleRBs, ...playersWithScores];
+    }
+
+    // Sort by TIBER score descending
+    playersWithScores.sort((a, b) => b.tiberScore - a.tiberScore);
+
     // Calculate positional ranks
+    const qbRank = new Map<string, number>();
+    const rbRank = new Map<string, number>();
     const wrRank = new Map<string, number>();
     const teRank = new Map<string, number>();
+    let qbCount = 0;
+    let rbCount = 0;
     let wrCount = 0;
     let teCount = 0;
 
     playersWithScores.forEach(player => {
-      if (player.position === 'WR') {
+      if (player.position === 'QB') {
+        qbCount++;
+        qbRank.set(player.nflfastrId, qbCount);
+      } else if (player.position === 'RB') {
+        rbCount++;
+        rbRank.set(player.nflfastrId, rbCount);
+      } else if (player.position === 'WR') {
         wrCount++;
         wrRank.set(player.nflfastrId, wrCount);
       } else if (player.position === 'TE') {
@@ -81,17 +113,32 @@ router.get('/rankings', async (req, res) => {
     });
 
     // Add positional rank to each player
-    const playersWithRanks = playersWithScores.map(player => ({
-      ...player,
-      positionalRank: player.position === 'WR' 
-        ? wrRank.get(player.nflfastrId) || 0
-        : teRank.get(player.nflfastrId) || 0,
-      tiberRank: player.position === 'WR' 
-        ? `WR${wrRank.get(player.nflfastrId) || 0}`
-        : `TE${teRank.get(player.nflfastrId) || 0}`,
-    }));
+    const playersWithRanks = playersWithScores.map(player => {
+      let positionalRank = 0;
+      let tiberRank = '';
+      
+      if (player.position === 'QB') {
+        positionalRank = qbRank.get(player.nflfastrId) || 0;
+        tiberRank = `QB${positionalRank}`;
+      } else if (player.position === 'RB') {
+        positionalRank = rbRank.get(player.nflfastrId) || 0;
+        tiberRank = `RB${positionalRank}`;
+      } else if (player.position === 'WR') {
+        positionalRank = wrRank.get(player.nflfastrId) || 0;
+        tiberRank = `WR${positionalRank}`;
+      } else if (player.position === 'TE') {
+        positionalRank = teRank.get(player.nflfastrId) || 0;
+        tiberRank = `TE${positionalRank}`;
+      }
+      
+      return {
+        ...player,
+        positionalRank,
+        tiberRank,
+      };
+    });
 
-    console.log(`✅ [TIBER Rankings] Ranked ${playersWithRanks.length} players (${wrCount} WRs, ${teCount} TEs)`);
+    console.log(`✅ [TIBER Rankings] Ranked ${playersWithRanks.length} players (${qbCount} QBs, ${rbCount} RBs, ${wrCount} WRs, ${teCount} TEs)`);
 
     res.json({
       success: true,
@@ -99,6 +146,8 @@ router.get('/rankings', async (req, res) => {
         week,
         season,
         total: playersWithRanks.length,
+        qbCount,
+        rbCount,
         wrCount,
         teCount,
         players: playersWithRanks,

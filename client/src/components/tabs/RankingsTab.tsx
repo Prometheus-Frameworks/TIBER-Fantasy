@@ -4,7 +4,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 
 interface TiberPlayer {
   name: string;
-  position: 'WR' | 'TE';
+  position: 'QB' | 'RB' | 'WR' | 'TE';
   team: string;
   tiberScore: number;
   tier: 'breakout' | 'stable' | 'regression';
@@ -18,13 +18,20 @@ interface TiberRankingsResponse {
     week: number;
     season: number;
     total: number;
+    qbCount: number;
+    rbCount: number;
     wrCount: number;
     teCount: number;
     players: TiberPlayer[];
   };
 }
 
+type Position = 'QB' | 'RB' | 'WR' | 'TE';
+
 export default function RankingsTab() {
+  const [selectedPosition, setSelectedPosition] = useState<Position | 'ALL'>('ALL');
+  const [qbExpanded, setQbExpanded] = useState(true);
+  const [rbExpanded, setRbExpanded] = useState(true);
   const [wrExpanded, setWrExpanded] = useState(true);
   const [teExpanded, setTeExpanded] = useState(true);
 
@@ -38,6 +45,8 @@ export default function RankingsTab() {
   });
 
   const allPlayers = data?.data?.players || [];
+  const qbPlayers = allPlayers.filter(p => p.position === 'QB');
+  const rbPlayers = allPlayers.filter(p => p.position === 'RB');
   const wrPlayers = allPlayers.filter(p => p.position === 'WR');
   const tePlayers = allPlayers.filter(p => p.position === 'TE');
 
@@ -50,7 +59,17 @@ export default function RankingsTab() {
     return colors[tier] || colors.stable;
   };
 
-  const renderPlayerSection = (players: TiberPlayer[], position: 'WR' | 'TE', expanded: boolean, setExpanded: (val: boolean) => void) => (
+  const getPositionLabel = (position: Position): string => {
+    const labels: Record<Position, string> = {
+      QB: 'Quarterbacks',
+      RB: 'Running Backs',
+      WR: 'Wide Receivers',
+      TE: 'Tight Ends',
+    };
+    return labels[position];
+  };
+
+  const renderPlayerSection = (players: TiberPlayer[], position: Position, expanded: boolean, setExpanded: (val: boolean) => void) => (
     <div className="bg-[#141824] border border-gray-800 rounded-lg overflow-hidden">
       {/* Section Header Toggle */}
       <button
@@ -60,7 +79,7 @@ export default function RankingsTab() {
       >
         <div className="flex items-center gap-3">
           {expanded ? <ChevronDown className="text-gray-400" size={20} /> : <ChevronRight className="text-gray-400" size={20} />}
-          <h3 className="text-xl font-bold text-white">{position === 'WR' ? 'Wide Receivers' : 'Tight Ends'}</h3>
+          <h3 className="text-xl font-bold text-white">{getPositionLabel(position)}</h3>
           <span className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-full text-sm font-medium">
             {players.length}
           </span>
@@ -123,21 +142,45 @@ export default function RankingsTab() {
     </div>
   );
 
+  const visiblePositions = selectedPosition === 'ALL' 
+    ? ['QB', 'RB', 'WR', 'TE'] as Position[]
+    : [selectedPosition] as Position[];
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-white">TIBER Rankings</h2>
         <p className="text-gray-400 mt-1">
-          WR/TE • Week {data?.data?.week || 8} • 2025 Season
+          All Positions • Week {data?.data?.week || 8} • 2025 Season
         </p>
       </div>
 
-      {/* Wide Receivers Section */}
-      {renderPlayerSection(wrPlayers, 'WR', wrExpanded, setWrExpanded)}
+      {/* Position Filter Buttons */}
+      <div className="flex gap-2 flex-wrap">
+        {(['ALL', 'QB', 'RB', 'WR', 'TE'] as const).map(pos => (
+          <button
+            key={pos}
+            onClick={() => setSelectedPosition(pos)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              selectedPosition === pos
+                ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/50 text-white'
+                : 'bg-[#141824] text-gray-400 hover:text-gray-300 border border-gray-800'
+            }`}
+            data-testid={`button-filter-${pos.toLowerCase()}`}
+          >
+            {pos}
+          </button>
+        ))}
+      </div>
 
-      {/* Tight Ends Section */}
-      {renderPlayerSection(tePlayers, 'TE', teExpanded, setTeExpanded)}
+      {/* Position Sections */}
+      <div className="space-y-4">
+        {visiblePositions.includes('QB') && renderPlayerSection(qbPlayers, 'QB', qbExpanded, setQbExpanded)}
+        {visiblePositions.includes('RB') && renderPlayerSection(rbPlayers, 'RB', rbExpanded, setRbExpanded)}
+        {visiblePositions.includes('WR') && renderPlayerSection(wrPlayers, 'WR', wrExpanded, setWrExpanded)}
+        {visiblePositions.includes('TE') && renderPlayerSection(tePlayers, 'TE', teExpanded, setTeExpanded)}
+      </div>
 
       {/* Footer */}
       <div className="mt-6 text-center text-sm text-gray-500">
