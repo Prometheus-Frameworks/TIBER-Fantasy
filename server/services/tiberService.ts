@@ -567,50 +567,22 @@ export class TiberService {
   }
 
   private calculateUsageScore(stats: PlayerStats): number {
-    // Position-specific usage scoring (TIBER v1.5 - Route Participation Fix)
-    const { snapPercentAvg, snapTrend, position } = stats;
+    // ORIGINAL METHODOLOGY: Simple snap percentage-based usage
+    const { snapPercentAvg, snapTrend } = stats;
     
+    // Universal snap % thresholds (all positions)
+    // 80%+ snaps = elite usage
+    // 60-80% = high usage
+    // 40-60% = medium usage
+    // 20-40% = situational
+    // <20% = backup
     let baseScore = 0;
     
-    if (position === 'WR' || position === 'TE') {
-      // WR/TE: Route participation % (targets / team pass attempts)
-      // Elite WR1s: 25-30% (getting ~1 in 4 targets)
-      // Good WR1s: 20-25%
-      // WR2s: 15-20%
-      // WR3s: 10-15%
-      // Role players: <10%
-      if (snapPercentAvg >= 25) baseScore = this.WEIGHTS.USAGE * 0.9;
-      else if (snapPercentAvg >= 20) baseScore = this.WEIGHTS.USAGE * 0.8;
-      else if (snapPercentAvg >= 15) baseScore = this.WEIGHTS.USAGE * 0.7;
-      else if (snapPercentAvg >= 10) baseScore = this.WEIGHTS.USAGE * 0.5;
-      else if (snapPercentAvg >= 5) baseScore = this.WEIGHTS.USAGE * 0.3;
-      else baseScore = this.WEIGHTS.USAGE * 0.1;
-      
-    } else if (position === 'RB') {
-      // RB: Opportunity share % (touches / team total plays)
-      // Bell cow RBs: 40-50%
-      // Lead backs: 30-40%
-      // Committee backs: 20-30%
-      // Change of pace: 10-20%
-      // Backup: <10%
-      if (snapPercentAvg >= 40) baseScore = this.WEIGHTS.USAGE * 0.9;
-      else if (snapPercentAvg >= 30) baseScore = this.WEIGHTS.USAGE * 0.8;
-      else if (snapPercentAvg >= 20) baseScore = this.WEIGHTS.USAGE * 0.6;
-      else if (snapPercentAvg >= 10) baseScore = this.WEIGHTS.USAGE * 0.4;
-      else baseScore = this.WEIGHTS.USAGE * 0.2;
-      
-    } else if (position === 'QB') {
-      // QB: Pass play participation (should be 90-100% for starters)
-      if (snapPercentAvg >= 90) baseScore = this.WEIGHTS.USAGE * 0.9;
-      else if (snapPercentAvg >= 80) baseScore = this.WEIGHTS.USAGE * 0.8;
-      else if (snapPercentAvg >= 70) baseScore = this.WEIGHTS.USAGE * 0.6;
-      else if (snapPercentAvg >= 50) baseScore = this.WEIGHTS.USAGE * 0.4;
-      else baseScore = this.WEIGHTS.USAGE * 0.2;
-      
-    } else {
-      // Fallback for unknown positions
-      baseScore = this.WEIGHTS.USAGE * 0.5;
-    }
+    if (snapPercentAvg >= 80) baseScore = this.WEIGHTS.USAGE * 0.9;
+    else if (snapPercentAvg >= 60) baseScore = this.WEIGHTS.USAGE * 0.7;
+    else if (snapPercentAvg >= 40) baseScore = this.WEIGHTS.USAGE * 0.5;
+    else if (snapPercentAvg >= 20) baseScore = this.WEIGHTS.USAGE * 0.3;
+    else baseScore = this.WEIGHTS.USAGE * 0.1;
     
     // Trend modifier
     if (snapTrend === 'rising') baseScore *= 1.1;
