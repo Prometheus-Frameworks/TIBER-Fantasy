@@ -205,7 +205,7 @@ export default function PlayerDetailDrawer({
                 <div className="space-y-1">
                   <p className="text-xs text-gray-500">Snap %</p>
                   <p className="text-lg font-bold text-white flex items-center gap-1">
-                    {(tiberData.data.metrics.snapPercentAvg * 100).toFixed(0)}%
+                    {tiberData.data.metrics.snapPercentAvg.toFixed(1)}%
                     {tiberData.data.metrics.snapTrend === 'up' && (
                       <TrendingUp size={14} className="text-green-400" />
                     )}
