@@ -132,7 +132,9 @@ export class InjurySyncService {
   }
 
   /**
-   * Map injury status codes to our schema
+   * Map injury status codes from injuryClient to our schema
+   * injuryClient returns: 'Q' | 'D' | 'O' | 'IR' | 'Healthy'
+   * Our schema uses: 'questionable' | 'doubtful' | 'out' | 'ir' | 'healthy'
    */
   private mapInjuryStatus(status: 'Q' | 'D' | 'O' | 'IR' | 'Healthy'): string {
     switch (status) {
@@ -140,7 +142,10 @@ export class InjurySyncService {
       case 'O': return 'out';
       case 'D': return 'doubtful';
       case 'Q': return 'questionable';
-      default: return 'healthy';
+      case 'Healthy': return 'healthy';
+      default:
+        console.warn(`⚠️  [InjurySync] Unknown injury status: ${status}, defaulting to healthy`);
+        return 'healthy';
     }
   }
 
