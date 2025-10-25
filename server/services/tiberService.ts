@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { tiberScores, tiberSeasonRatings, bronzeNflfastrPlays, players, playerIdentityMap } from '../../shared/schema';
+import { tiberScores, tiberSeasonRatings, bronzeNflfastrPlays, bronzeNflfastrSnapCounts, players, playerIdentityMap } from '../../shared/schema';
 import { eq, and, or, lte, sql } from 'drizzle-orm';
 
 interface TiberScore {
@@ -222,12 +222,87 @@ export class TiberService {
     position: string,
     totalPlays: number
   ): Promise<{ snapPercent: number; trend: 'rising' | 'stable' | 'falling' }> {
-    // ORIGINAL METHODOLOGY: Use placeholder snap % based on play volume
-    // This matched the screenshot baseline (Amon-Ra: 90, JSN: 85, Puka: 82, Chase: 76, Olave: 58)
-    const snapPercent = totalPlays > 20 ? 70 : totalPlays > 10 ? 50 : 30;
-    const trend: 'rising' | 'stable' | 'falling' = 'stable';
-    
-    return { snapPercent, trend };
+    try {
+      // Get player name from bronzeNflfastrPlays (receiver or rusher or passer)
+      const playerInfo = await db
+        .selectDistinct({ name: bronzeNflfastrPlays.receiverPlayerName })
+        .from(bronzeNflfastrPlays)
+        .where(eq(bronzeNflfastrPlays.receiverPlayerId, playerId))
+        .limit(1);
+      
+      let playerName: string | null = playerInfo.length > 0 ? playerInfo[0].name : null;
+      
+      // If not found as receiver, try rusher
+      if (!playerName) {
+        const rusherInfo = await db
+          .selectDistinct({ name: bronzeNflfastrPlays.rusherPlayerName })
+          .from(bronzeNflfastrPlays)
+          .where(eq(bronzeNflfastrPlays.rusherPlayerId, playerId))
+          .limit(1);
+        playerName = rusherInfo.length > 0 ? rusherInfo[0].name : null;
+      }
+      
+      // If not found as rusher, try passer
+      if (!playerName) {
+        const passerInfo = await db
+          .selectDistinct({ name: bronzeNflfastrPlays.passerPlayerName })
+          .from(bronzeNflfastrPlays)
+          .where(eq(bronzeNflfastrPlays.passerPlayerId, playerId))
+          .limit(1);
+        playerName = passerInfo.length > 0 ? passerInfo[0].name : null;
+      }
+      
+      if (!playerName) {
+        console.warn(`⚠️ No player name found for ${playerId}, using placeholder snap %`);
+        return { snapPercent: totalPlays > 20 ? 70 : totalPlays > 10 ? 50 : 30, trend: 'stable' };
+      }
+      
+      // Query real snap data from bronze_nflfastr_snap_counts
+      const snapData = await db
+        .select({
+          week: bronzeNflfastrSnapCounts.week,
+          offensePct: bronzeNflfastrSnapCounts.offensePct,
+        })
+        .from(bronzeNflfastrSnapCounts)
+        .where(
+          and(
+            eq(bronzeNflfastrSnapCounts.player, playerName),
+            eq(bronzeNflfastrSnapCounts.season, season),
+            eq(bronzeNflfastrSnapCounts.position, position)
+          )
+        )
+        .orderBy(bronzeNflfastrSnapCounts.week);
+      
+      if (snapData.length === 0) {
+        console.warn(`⚠️ No snap data found for ${playerName} (${position}), using placeholder`);
+        return { snapPercent: totalPlays > 20 ? 70 : totalPlays > 10 ? 50 : 30, trend: 'stable' };
+      }
+      
+      // Get specific week's snap %
+      const weekData = snapData.find(s => s.week === week);
+      const snapPercent = weekData ? (weekData.offensePct || 0) * 100 : 0;
+      
+      // Calculate trend (compare last 2 weeks to previous 2)
+      let trend: 'rising' | 'stable' | 'falling' = 'stable';
+      if (snapData.length >= 4) {
+        const recent = snapData.slice(-2).reduce((sum, s) => sum + (s.offensePct || 0), 0) / 2;
+        const previous = snapData.slice(-4, -2).reduce((sum, s) => sum + (s.offensePct || 0), 0) / 2;
+        
+        if (recent > previous * 1.1) {
+          trend = 'rising';
+        } else if (recent < previous * 0.9) {
+          trend = 'falling';
+        }
+      }
+      
+      console.log(`✅ Real snap data for ${playerName}: ${snapPercent.toFixed(0)}% (${trend})`);
+      return { snapPercent, trend };
+      
+    } catch (error) {
+      console.error(`❌ Error fetching snap data:`, error);
+      // Fallback to placeholder
+      return { snapPercent: totalPlays > 20 ? 70 : totalPlays > 10 ? 50 : 30, trend: 'stable' };
+    }
   }
 
   private async getSnapPercentForWeeks(
