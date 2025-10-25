@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { tiberService } from '../services/tiberService';
 import { db } from '../db';
-import { tiberScores, playerIdentityMap, players } from '../../shared/schema';
+import { tiberScores, playerIdentityMap, players, injuries } from '../../shared/schema';
 import { eq, and, desc, sql, ilike, inArray, isNotNull } from 'drizzle-orm';
 
 const router = Router();
@@ -43,6 +43,7 @@ router.get('/rankings', async (req, res) => {
     console.log(`📊 [TIBER Rankings] Fetching top ${limit} WR/TE players for Week ${week}, ${season}`);
 
     // Query TIBER scores for all positions (QB, RB, WR, TE)
+    // Exclude injured/inactive players and filter for meaningful participation
     const rankedPlayers = await db
       .select({
         nflfastrId: tiberScores.nflfastrId,
@@ -52,18 +53,35 @@ router.get('/rankings', async (req, res) => {
         position: playerIdentityMap.position,
         team: playerIdentityMap.nflTeam,
         sleeperId: playerIdentityMap.sleeperId,
+        snapPercentAvg: tiberScores.snapPercentAvg,
+        totalFirstDowns: tiberScores.totalFirstDowns,
+        injuryStatus: injuries.status,
       })
       .from(tiberScores)
       .innerJoin(
         playerIdentityMap,
         eq(tiberScores.nflfastrId, playerIdentityMap.nflDataPyId)
       )
+      .leftJoin(
+        injuries,
+        and(
+          eq(injuries.canonicalPlayerId, playerIdentityMap.canonicalId),
+          eq(injuries.isResolved, false),
+          eq(injuries.season, season)
+        )
+      )
       .where(
         and(
           eq(tiberScores.week, week),
           eq(tiberScores.season, season),
           inArray(playerIdentityMap.position, ['QB', 'RB', 'WR', 'TE']),
-          isNotNull(playerIdentityMap.nflTeam)
+          isNotNull(playerIdentityMap.nflTeam),
+          // Minimum participation filter: at least 2 first downs OR 30% snap share
+          // This ensures players actually played meaningful snaps
+          sql`(${tiberScores.totalFirstDowns} >= 2 OR ${tiberScores.snapPercentAvg} >= 30)`,
+          // Exclude currently injured players (out, IR, doubtful)
+          // If no injury record exists (NULL), player is considered healthy
+          sql`(${injuries.status} IS NULL OR ${injuries.status} NOT IN ('out', 'ir', 'doubtful'))`
         )
       )
       .orderBy(desc(tiberScores.tiberScore))
