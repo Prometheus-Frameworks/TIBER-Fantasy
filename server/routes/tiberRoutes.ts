@@ -6,6 +6,33 @@ import { eq, and, desc, sql, ilike, inArray, isNotNull } from 'drizzle-orm';
 
 const router = Router();
 
+// Helper function to transform flat DB record to nested structure
+function transformCachedScore(cachedRecord: any) {
+  return {
+    nflfastrId: cachedRecord.nflfastrId,
+    week: cachedRecord.week,
+    season: cachedRecord.season,
+    tiberScore: cachedRecord.tiberScore,
+    tier: cachedRecord.tier,
+    breakdown: {
+      firstDownScore: cachedRecord.firstDownScore || 0,
+      epaScore: cachedRecord.epaScore || 0,
+      usageScore: cachedRecord.usageScore || 0,
+      tdScore: cachedRecord.tdScore || 0,
+      teamScore: cachedRecord.teamScore || 0,
+    },
+    metrics: {
+      firstDownRate: cachedRecord.firstDownRate || 0,
+      totalFirstDowns: cachedRecord.totalFirstDowns || 0,
+      epaPerPlay: cachedRecord.epaPerPlay || 0,
+      snapPercentAvg: cachedRecord.snapPercentAvg || 0,
+      snapTrend: cachedRecord.snapPercentTrend || 'stable',
+      tdRate: cachedRecord.tdRate || 0,
+      teamOffenseRank: cachedRecord.teamOffenseRank || 0,
+    }
+  };
+}
+
 // Batch TIBER Rankings - Top WR/TE players with positional ranks
 router.get('/rankings', async (req, res) => {
   try {
@@ -206,9 +233,10 @@ router.get('/by-name/:name', async (req, res) => {
       .limit(1);
 
     if (cached.length > 0) {
+      // Transform flat DB record to nested structure to match calculated response
       return res.json({ 
         success: true, 
-        data: cached[0],
+        data: transformCachedScore(cached[0]),
         playerInfo: { name: player[0].name, position: player[0].position },
         source: 'cache' 
       });
@@ -310,7 +338,12 @@ router.get('/score/:playerId', async (req, res) => {
         .limit(1);
 
       if (cached.length > 0) {
-        return res.json({ success: true, data: cached[0], source: 'cache' });
+        // Transform flat DB record to nested structure to match calculated response
+        return res.json({ 
+          success: true, 
+          data: transformCachedScore(cached[0]), 
+          source: 'cache' 
+        });
       }
     }
 
@@ -453,28 +486,26 @@ router.get('/compare', async (req, res) => {
     const scoreA = scoresA[0];
     const scoreB = scoresB[0];
 
-    // Calculate if not cached
-    if (!scoreA || !scoreB) {
-      const [calcA, calcB] = await Promise.all([
-        scoreA ? Promise.resolve(scoreA) : tiberService.calculateTiberScore(playerAId, week, season).catch(() => null),
-        scoreB ? Promise.resolve(scoreB) : tiberService.calculateTiberScore(playerBId, week, season).catch(() => null)
-      ]);
-
-      return res.json({
-        success: true,
-        playerA: calcA,
-        playerB: calcB,
-        recommendation: calcA && calcB ? (calcA.tiberScore > calcB.tiberScore ? 'playerA' : 'playerB') : null,
-        scoreDiff: calcA && calcB ? Math.abs(calcA.tiberScore - calcB.tiberScore) : null
-      });
-    }
+    // Transform cached scores or calculate if not cached
+    const [calcA, calcB] = await Promise.all([
+      scoreA 
+        ? Promise.resolve(transformCachedScore(scoreA)) 
+        : tiberService.calculateTiberScore(playerAId, week, season)
+            .then(score => ({ nflfastrId: playerAId, week, season, ...score }))
+            .catch(() => null),
+      scoreB 
+        ? Promise.resolve(transformCachedScore(scoreB)) 
+        : tiberService.calculateTiberScore(playerBId, week, season)
+            .then(score => ({ nflfastrId: playerBId, week, season, ...score }))
+            .catch(() => null)
+    ]);
 
     res.json({
       success: true,
-      playerA: scoreA,
-      playerB: scoreB,
-      recommendation: scoreA.tiberScore > scoreB.tiberScore ? 'playerA' : 'playerB',
-      scoreDiff: Math.abs(scoreA.tiberScore - scoreB.tiberScore)
+      playerA: calcA,
+      playerB: calcB,
+      recommendation: calcA && calcB ? (calcA.tiberScore > calcB.tiberScore ? 'playerA' : 'playerB') : null,
+      scoreDiff: calcA && calcB ? Math.abs(calcA.tiberScore - calcB.tiberScore) : null
     });
   } catch (error) {
     console.error('[TIBER] Compare error:', error);

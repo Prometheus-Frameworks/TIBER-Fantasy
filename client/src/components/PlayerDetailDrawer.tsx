@@ -130,9 +130,10 @@ export default function PlayerDetailDrawer({
             <Skeleton className="h-32 bg-gray-800/50" />
             <Skeleton className="h-40 bg-gray-800/50" />
           </div>
-        ) : tiberData ? (
+        ) : tiberData && tiberData.data ? (
           <div className="space-y-6">
             {/* TIBER Score Breakdown */}
+            {tiberData.data.breakdown && (
             <div className="bg-[#111217] border border-gray-800/50 rounded-xl p-5 space-y-1">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
                 <Activity className="text-red-400" size={16} />
@@ -174,8 +175,10 @@ export default function PlayerDetailDrawer({
                 )}
               </div>
             </div>
+            )}
 
             {/* Key Metrics */}
+            {tiberData.data.metrics && (
             <div className="bg-[#111217] border border-gray-800/50 rounded-xl p-5">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">
                 Key Metrics (Week {week})
@@ -225,6 +228,7 @@ export default function PlayerDetailDrawer({
                 </div>
               </div>
             </div>
+            )}
 
             {/* Why This Score? */}
             <div className="bg-gradient-to-r from-red-500/10 to-transparent border border-red-500/20 rounded-xl p-5">
@@ -235,7 +239,7 @@ export default function PlayerDetailDrawer({
                 {tiberData.data.tier === 'breakout' && (
                   <p>
                     <strong className="text-green-400">Breakout Signal:</strong> High efficiency across multiple categories. 
-                    This player is producing at an elite level with {(tiberData.data.metrics.firstDownRate * 100).toFixed(0)}% 
+                    This player is producing at an elite level with {tiberData.data.metrics?.firstDownRate ? (tiberData.data.metrics.firstDownRate * 100).toFixed(0) : 'N/A'}% 
                     first down rate and strong EPA impact.
                   </p>
                 )}
