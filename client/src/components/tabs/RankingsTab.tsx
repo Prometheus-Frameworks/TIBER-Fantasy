@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
+import PlayerDetailDrawer from '@/components/PlayerDetailDrawer';
 
 interface TiberPlayer {
   name: string;
@@ -10,6 +11,7 @@ interface TiberPlayer {
   tier: 'breakout' | 'stable' | 'regression';
   positionalRank: number;
   tiberRank: string;
+  nflfastrId: string;
 }
 
 interface TiberRankingsResponse {
@@ -38,6 +40,21 @@ export default function RankingsTab() {
   const [rbExpanded, setRbExpanded] = useState(true);
   const [wrExpanded, setWrExpanded] = useState(true);
   const [teExpanded, setTeExpanded] = useState(true);
+  
+  // Player detail drawer state
+  const [selectedPlayer, setSelectedPlayer] = useState<TiberPlayer | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const handlePlayerClick = (player: TiberPlayer) => {
+    setSelectedPlayer(player);
+    setIsDrawerOpen(true);
+  };
+
+  const handleDrawerClose = () => {
+    setIsDrawerOpen(false);
+    // Delay clearing to avoid flicker during close animation
+    setTimeout(() => setSelectedPlayer(null), 300);
+  };
 
   const { data, isLoading } = useQuery<TiberRankingsResponse>({
     queryKey: ['/api/tiber/rankings', selectedWeek, 2025],
@@ -102,9 +119,10 @@ export default function RankingsTab() {
           ) : (
             <div>
               {players.map((player, idx) => (
-                <div
+                <button
                   key={`${player.name}-${idx}`}
-                  className="px-3 sm:px-6 py-3.5 border-b border-white/5 hover:bg-gradient-to-r hover:from-red-500/5 hover:to-transparent transition-all"
+                  onClick={() => handlePlayerClick(player)}
+                  className="w-full text-left px-3 sm:px-6 py-3.5 border-b border-white/5 hover:bg-gradient-to-r hover:from-red-500/5 hover:to-transparent transition-all cursor-pointer"
                   data-testid={`player-card-${position.toLowerCase()}-${idx}`}
                 >
                   <div className="flex items-center justify-between gap-2 sm:gap-4">
@@ -139,7 +157,7 @@ export default function RankingsTab() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
 
               {players.length === 0 && (
@@ -227,6 +245,20 @@ export default function RankingsTab() {
           TIBER v1.0 — Tactical Index for Breakout Efficiency & Regression
         </div>
       </div>
+
+      {/* Player Detail Drawer */}
+      {selectedPlayer && (
+        <PlayerDetailDrawer
+          isOpen={isDrawerOpen}
+          onClose={handleDrawerClose}
+          nflfastrId={selectedPlayer.nflfastrId}
+          playerName={selectedPlayer.name}
+          team={selectedPlayer.team}
+          position={selectedPlayer.position}
+          week={selectedWeek}
+          season={2025}
+        />
+      )}
     </div>
   );
 }
