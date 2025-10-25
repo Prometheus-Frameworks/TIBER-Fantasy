@@ -65,11 +65,14 @@ def integrate_tcip_dynasty(player_name: str):
         # Get base dynasty tier weight (would normally come from dynasty tier engine)
         base_tier_input = request.args.get('base_tier', '85.0')
         try:
+            # Guard against NaN injection before typecast
+            if base_tier_input.lower().strip() == 'nan':
+                raise ValueError("NaN is not a valid dynasty tier weight")
             base_tier_weight = float(base_tier_input)
-            # Guard against NaN injection and ensure reasonable range
-            if base_tier_weight != base_tier_weight or not (0 < base_tier_weight <= 1000):
+            # Ensure reasonable range
+            if not (0 < base_tier_weight <= 1000):
                 raise ValueError("Dynasty tier weight must be between 0 and 1000")
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, AttributeError):
             return jsonify({'error': 'Invalid base_tier parameter. Must be a valid number between 0 and 1000'}), 400
         
         # Find player data
