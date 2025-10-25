@@ -104,31 +104,31 @@ export default function RankingsTab() {
               {players.map((player, idx) => (
                 <div
                   key={`${player.name}-${idx}`}
-                  className="px-6 py-3.5 border-b border-white/5 hover:bg-gradient-to-r hover:from-red-500/5 hover:to-transparent transition-all"
+                  className="px-3 sm:px-6 py-3.5 border-b border-white/5 hover:bg-gradient-to-r hover:from-red-500/5 hover:to-transparent transition-all"
                   data-testid={`player-card-${position.toLowerCase()}-${idx}`}
                 >
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center justify-between gap-2 sm:gap-4">
                     {/* Left: Rank & Player Info */}
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className="text-lg font-semibold text-gray-500 w-8 flex-shrink-0 tracking-wide">
+                    <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+                      <div className="text-base sm:text-lg font-semibold text-gray-500 w-6 sm:w-8 flex-shrink-0 tracking-wide">
                         {idx + 1}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-base font-semibold text-white tracking-wide truncate">
+                        <h4 className="text-sm sm:text-base font-semibold text-white tracking-wide break-words">
                           {player.name}
                         </h4>
                       </div>
                     </div>
 
                     {/* Right: Team, Position, and TIBER Score Badge */}
-                    <div className="flex items-center gap-2.5 flex-shrink-0">
-                      <span className="px-2 py-1 bg-gray-800/70 text-gray-300 rounded text-xs font-medium tracking-wide">
+                    <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
+                      <span className="hidden sm:inline-block px-2 py-1 bg-gray-800/70 text-gray-300 rounded text-xs font-medium tracking-wide">
                         {player.team}
                       </span>
-                      <span className="text-gray-500 text-xs font-medium tracking-wide min-w-[2.5rem] text-center">
+                      <span className="hidden sm:inline-block text-gray-500 text-xs font-medium tracking-wide min-w-[2.5rem] text-center">
                         {player.tiberRank}
                       </span>
-                      <div className={`px-3 py-1.5 rounded-md font-bold text-sm tracking-wide shadow-md min-w-[3.5rem] text-center ${
+                      <div className={`px-2.5 sm:px-3 py-1.5 rounded-md font-bold text-sm tracking-wide shadow-md min-w-[3rem] sm:min-w-[3.5rem] text-center ${
                         player.tier === 'breakout' 
                           ? 'bg-gradient-to-r from-green-600/30 to-green-500/30 text-green-400 border border-green-500/30 shadow-green-500/20' :
                         player.tier === 'regression' 
