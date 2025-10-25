@@ -543,6 +543,8 @@ export const injuries = pgTable("injuries", {
   activeInjuriesIdx: index("injuries_active_idx").on(table.isResolved).where(sql`${table.isResolved} = false`),
   // Composite index for TIBER rankings LEFT JOIN filter performance
   playerSeasonStatusIdx: index("injuries_player_season_status_idx").on(table.canonicalPlayerId, table.season, table.status),
+  // Unique constraint for upsert operations (one injury record per player per season)
+  uniquePlayerSeason: unique("injuries_unique_player_season").on(table.canonicalPlayerId, table.season),
 }));
 
 // Depth Charts - Team depth chart positions
