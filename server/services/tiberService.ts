@@ -261,7 +261,6 @@ export class TiberService {
       // Note: Play-by-play uses abbreviated names (G.Pickens) but snap counts use full names (George Pickens)
       // Extract last name for fuzzy matching, constrain by TEAM to avoid surname collisions
       const lastNameMatch = playerName.split('.').pop()?.trim(); // "G.Pickens" -> "Pickens"
-      console.log(`🔍 Looking for snap data: playerName="${playerName}", lastName="${lastNameMatch}", team="${teamAbbr}", pos="${position}", season=${season}, week=${week}`);
       
       const snapData = await db
         .select()
@@ -274,11 +273,6 @@ export class TiberService {
             eq(bronzeNflfastrSnapCounts.position, position)
           )
         );
-      
-      console.log(`📊 Found ${snapData.length} snap records for "${lastNameMatch}" on ${teamAbbr}`);
-      if (snapData.length > 0) {
-        console.log(`  First match: ${snapData[0].player} (${snapData[0].team} ${snapData[0].position})`);
-      }
       
       if (snapData.length === 0) {
         console.warn(`⚠️ No snap data found for ${playerName} (${position}), using placeholder`);
@@ -296,7 +290,6 @@ export class TiberService {
       if (!weekData && sortedSnaps.length > 0) {
         const mostRecentWeek = sortedSnaps[sortedSnaps.length - 1];
         snapPercent = ((mostRecentWeek.offensePct || 0) * 100);
-        console.log(`⚠️ Week ${week} not found for ${playerName}, using Week ${mostRecentWeek.week}: ${snapPercent.toFixed(0)}%`);
       }
       
       // Calculate trend (compare last 2 weeks to previous 2)
@@ -312,7 +305,6 @@ export class TiberService {
         }
       }
       
-      console.log(`✅ Real snap data for ${playerName}: ${snapPercent.toFixed(0)}% (${trend})`);
       return { snapPercent, trend };
       
     } catch (error) {

@@ -60,7 +60,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **Live Data & Processing**: Live Data Integration Pipeline with multi-source data capture and a Hot List Player Extraction System.
 - **Backend Services**: Backend Spine with Logs & Projections Service and a multi-format Ratings Engine.
 - **UI/UX Enhancements**: Interactive GlowCard components, pulsing GlowCTA buttons, skeleton loading, and a top loading bar.
-- **TIBER (Tactical Index for Breakout Efficiency and Regression)**: Version 1.5 implemented, using First Downs per Route Run as a primary metric.
+- **TIBER (Tactical Index for Breakout Efficiency and Regression)**: Version 1.5 implemented, using First Downs per Route Run as a primary metric with **real NFLfastR snap count data** integration (October 2025). Replaces placeholder snap percentages with accurate play participation data from `bronze_nflfastr_snap_counts` table. Uses team-constrained lastname matching to prevent surname collisions and includes 4-week trend analysis (rising/stable/falling).
 - **Player Search**: Feature for searching player game logs and statistics.
 - **EPA Sanity Check System**: Internal validation system for QB context metrics, comparing against Ben Baldwin's adjusted EPA methodology.
 - **EPA Rankings Tab**: Production-ready public rankings page showing QBs ordered by adjusted EPA with 5-tier classification system (Elite/Good/Average/Below Average/Poor), podium icons for top 3, and comprehensive performance metrics.
@@ -75,7 +75,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
 - **Sleeper API**: Player projections, game logs, ADP data, league sync, and current roster data.
 - **NFLfastR (nflverse)**: 2025 play-by-play data via parquet files from GitHub releases.
-- **NFL-Data-Py**: 2024 weekly statistics via nflfastR, depth charts via nflverse APIs.
+- **NFL-Data-Py**: 2024 weekly statistics via nflfastR, depth charts via nflverse APIs, **2025 snap count data** for TIBER scoring (player participation percentages by week, position, and team).
 - **R Server**: External API for OASIS (Offensive Architecture Scoring & Insight System) data.
 - **Axios**: HTTP requests.
 - **Zod**: Runtime type validation.
