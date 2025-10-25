@@ -1,0 +1,138 @@
+Alright, Boss Man J — I see what you’re working with. The current chart layout is functional but a bit flat — it looks like an early build: clean, but not yet tactical. Let’s make it pop with hierarchy, focus, and a little TIBER flavor.
+
+Here’s how I’d redesign it:
+
+⸻
+
+🎯 Core Design Goals
+	•	Make it feel like a command terminal, not a generic table.
+	•	Highlight rank, player, and TIBER score as the primary eye path.
+	•	Add subtle data layer vibes — small separators, faint gridlines, gradient rows.
+	•	Reinforce brand identity: gunmetal base, crimson highlights, white accents.
+
+⸻
+
+🔧 Visual Layout Redesign
+
+1. Header Zone
+
+Keep your header bar (TIBER FANTASY + tagline) but shrink the vertical padding slightly and extend the accent line across the top in crimson.
+Example:
+
+header {
+  background: #0d0e11;
+  border-bottom: 1px solid rgba(255, 0, 0, 0.2);
+  padding: 8px 16px;
+}
+
+
+⸻
+
+2. Table Container
+
+Use a card-like container with subtle depth — dark slate background, faint drop shadow:
+
+.table-container {
+  background: #111217;
+  border-radius: 12px;
+  box-shadow: 0 0 16px rgba(255, 0, 0, 0.05);
+  padding: 12px;
+}
+
+
+⸻
+
+3. Column Structure
+
+Simplify and space out:
+
+Rank	Player	Team	Pos	TIBER	Trend
+You don’t need to show “WR1 / WR2” redundantly in this context; it’s implied by rank.					
+
+
+⸻
+
+4. Player Row Styling
+
+Each row gets:
+	•	Faint divider between rows.
+	•	Slight highlight on hover.
+	•	Right-aligned TIBER score badge (biggest visual anchor).
+
+.player-row {
+  display: grid;
+  grid-template-columns: 40px 1fr 60px 60px 60px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.15s;
+}
+.player-row:hover {
+  background: rgba(255, 0, 0, 0.05);
+}
+
+
+⸻
+
+5. Rank + Player
+
+.rank {
+  font-size: 1.1rem;
+  color: #c0c3d0;
+  font-weight: 600;
+}
+
+.player-name {
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.player-team {
+  color: #8a8f9d;
+  font-size: 0.85rem;
+}
+
+
+⸻
+
+6. TIBER Score Badge
+
+Give it real command terminal energy:
+
+.tiber-score {
+  background: linear-gradient(145deg, #ff0033 0%, #b30024 100%);
+  color: white;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 6px 10px;
+  border-radius: 6px;
+  min-width: 45px;
+}
+
+Optional: add a sparkline or small up/down arrow next to it for trend (green for up, red for down).
+
+⸻
+
+7. Typography + Spacing
+
+Use a system font like Inter or Rajdhani for that tactical, grid feel:
+
+font-family: 'Rajdhani', sans-serif;
+letter-spacing: 0.5px;
+
+
+⸻
+
+8. Brand Integration
+
+At the bottom of the chart, faintly include:
+
+TIBER v1.0 — Tactical Index for Breakout Efficiency & Regression
+
+in microtext (grey, 70% opacity), acting as a watermark.
+
+⸻
+
+If you want, I can mock up the full visual redesign for you — flat concept image that shows how this layout would look with the first 5 WRs.
+Would you like me to generate that next?
