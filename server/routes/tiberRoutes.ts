@@ -340,10 +340,12 @@ router.get('/score/:playerId', async (req, res) => {
     const nflfastrId = req.params.playerId; // NFLfastR ID like "00-0036322"
     const week = parseInt(req.query.week as string) || 6; // Current week
     const season = parseInt(req.query.season as string) || 2025;
+    const mode = (req.query.mode as 'weekly' | 'season') || 'season'; // Data aggregation mode
     const forceRecalc = req.query.force === 'true'; // Force recalculation
 
-    // Check cache first (unless force recalc)
-    if (!forceRecalc) {
+    // Check cache first (only for season mode and unless force recalc)
+    // Weekly mode always calculates fresh since it's single-week data
+    if (!forceRecalc && mode === 'season') {
       const cached = await db
         .select()
         .from(tiberScores)
@@ -361,16 +363,18 @@ router.get('/score/:playerId', async (req, res) => {
         return res.json({ 
           success: true, 
           data: transformCachedScore(cached[0]), 
-          source: 'cache' 
+          source: 'cache',
+          mode
         });
       }
     }
 
-    // Calculate if not cached or force recalc
-    const calculatedScore = await tiberService.calculateTiberScore(nflfastrId, week, season);
+    // Calculate if not cached or force recalc or weekly mode
+    const calculatedScore = await tiberService.calculateTiberScore(nflfastrId, week, season, mode);
     
-    // Save to cache (TIBER v1.5 with First Downs + Live Data)
-    await db.insert(tiberScores).values({
+    // Save to cache (only for season mode - weekly data is dynamic)
+    if (mode === 'season') {
+      await db.insert(tiberScores).values({
       playerId: null,
       nflfastrId,
       week,
@@ -409,6 +413,7 @@ router.get('/score/:playerId', async (req, res) => {
         calculatedAt: new Date(),
       },
     });
+    }
 
     // Return the freshly calculated score (not from DB)
     res.json({ 
@@ -419,7 +424,8 @@ router.get('/score/:playerId', async (req, res) => {
         season,
         ...calculatedScore
       }, 
-      source: forceRecalc ? 'recalculated' : 'calculated' 
+      source: forceRecalc ? 'recalculated' : (mode === 'weekly' ? 'weekly_calculated' : 'calculated'),
+      mode
     });
   } catch (error) {
     console.error('[TIBER] Score calculation error:', error);

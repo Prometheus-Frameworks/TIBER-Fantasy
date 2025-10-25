@@ -68,9 +68,9 @@ export class TiberService {
     return Math.round(targets * multiplier);
   }
 
-  async calculateTiberScore(nflfastrId: string, week: number, season: number = 2025): Promise<TiberScore> {
+  async calculateTiberScore(nflfastrId: string, week: number, season: number = 2025, mode: 'weekly' | 'season' = 'season'): Promise<TiberScore> {
     // Get player stats from NFLfastR data (WR/TE only for now)
-    const playerStats = await this.getPlayerStats(nflfastrId, week, season);
+    const playerStats = await this.getPlayerStats(nflfastrId, week, season, mode);
     
     if (!playerStats) {
       throw new Error(`No stats found for player ${nflfastrId} in week ${week}`);
@@ -108,7 +108,7 @@ export class TiberService {
     };
   }
 
-  private async getPlayerStats(nflfastrId: string, week: number, season: number): Promise<PlayerStats | null> {
+  private async getPlayerStats(nflfastrId: string, week: number, season: number, mode: 'weekly' | 'season' = 'season'): Promise<PlayerStats | null> {
     // Get player position from playerIdentityMap (TIBER v1.5: position-specific route multipliers)
     const playerInfo = await db
       .select({ 
@@ -121,8 +121,12 @@ export class TiberService {
     
     const position = playerInfo[0]?.position || 'WR'; // Default to WR if not found
 
-    // Query NFLfastR data for this player through the current week
-    // Use parameterized queries to prevent SQL injection
+    // Query NFLfastR data for this player
+    // Mode: 'weekly' = single week only, 'season' = cumulative through week
+    const weekCondition = mode === 'weekly' 
+      ? eq(bronzeNflfastrPlays.week, week)
+      : lte(bronzeNflfastrPlays.week, week);
+
     const stats = await db
       .select({
         // Receiving stats
@@ -145,7 +149,7 @@ export class TiberService {
       .where(
         and(
           eq(bronzeNflfastrPlays.season, season),
-          lte(bronzeNflfastrPlays.week, week),
+          weekCondition,
           or(
             eq(bronzeNflfastrPlays.receiverPlayerId, nflfastrId),
             eq(bronzeNflfastrPlays.rusherPlayerId, nflfastrId)

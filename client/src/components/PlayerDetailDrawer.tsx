@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Sheet,
@@ -7,6 +8,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TrendingUp, TrendingDown, Activity, Target, Zap, Users } from 'lucide-react';
 
 interface PlayerDetailDrawerProps {
@@ -54,11 +56,12 @@ export default function PlayerDetailDrawer({
   week,
   season,
 }: PlayerDetailDrawerProps) {
+  const [mode, setMode] = useState<'weekly' | 'season'>('weekly');
   
   const { data: tiberData, isLoading } = useQuery<TiberScoreData>({
-    queryKey: ['/api/tiber/score', nflfastrId, week, season],
+    queryKey: ['/api/tiber/score', nflfastrId, week, season, mode],
     queryFn: async () => {
-      const res = await fetch(`/api/tiber/score/${nflfastrId}?week=${week}&season=${season}`);
+      const res = await fetch(`/api/tiber/score/${nflfastrId}?week=${week}&season=${season}&mode=${mode}`);
       if (!res.ok) throw new Error('Failed to fetch TIBER score');
       return res.json();
     },
@@ -122,6 +125,28 @@ export default function PlayerDetailDrawer({
               </div>
             )}
           </div>
+          
+          {/* Mode Toggle */}
+          <div className="mt-4">
+            <Tabs value={mode} onValueChange={(value) => setMode(value as 'weekly' | 'season')} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-gray-800/50 border border-gray-700/50">
+                <TabsTrigger 
+                  value="weekly" 
+                  data-testid="tab-weekly"
+                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/50"
+                >
+                  Week {week} Only
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="season" 
+                  data-testid="tab-season"
+                  className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400 data-[state=active]:border-purple-500/50"
+                >
+                  Season Total
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </SheetHeader>
 
         {isLoading ? (
@@ -180,8 +205,11 @@ export default function PlayerDetailDrawer({
             {/* Key Metrics */}
             {tiberData.data.metrics && (
             <div className="bg-[#111217] border border-gray-800/50 rounded-xl p-5">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">
-                Key Metrics (Week {week})
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center justify-between">
+                <span>Key Metrics ({mode === 'weekly' ? `Week ${week}` : 'Season Total'})</span>
+                <span className={`text-xs px-2 py-1 rounded ${mode === 'weekly' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                  {mode === 'weekly' ? 'Single Week' : 'Cumulative'}
+                </span>
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
