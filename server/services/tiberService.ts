@@ -259,10 +259,7 @@ export class TiberService {
       
       // Query real snap data from bronze_nflfastr_snap_counts
       const snapData = await db
-        .select({
-          week: bronzeNflfastrSnapCounts.week,
-          offensePct: bronzeNflfastrSnapCounts.offensePct,
-        })
+        .select()
         .from(bronzeNflfastrSnapCounts)
         .where(
           and(
@@ -270,23 +267,25 @@ export class TiberService {
             eq(bronzeNflfastrSnapCounts.season, season),
             eq(bronzeNflfastrSnapCounts.position, position)
           )
-        )
-        .orderBy(bronzeNflfastrSnapCounts.week);
+        );
       
       if (snapData.length === 0) {
         console.warn(`⚠️ No snap data found for ${playerName} (${position}), using placeholder`);
         return { snapPercent: totalPlays > 20 ? 70 : totalPlays > 10 ? 50 : 30, trend: 'stable' };
       }
       
+      // Sort by week
+      const sortedSnaps = snapData.sort((a, b) => (a.week || 0) - (b.week || 0));
+      
       // Get specific week's snap %
-      const weekData = snapData.find(s => s.week === week);
-      const snapPercent = weekData ? (weekData.offensePct || 0) * 100 : 0;
+      const weekData = sortedSnaps.find(s => s.week === week);
+      const snapPercent = weekData ? ((weekData.offensePct || 0) * 100) : 0;
       
       // Calculate trend (compare last 2 weeks to previous 2)
       let trend: 'rising' | 'stable' | 'falling' = 'stable';
-      if (snapData.length >= 4) {
-        const recent = snapData.slice(-2).reduce((sum, s) => sum + (s.offensePct || 0), 0) / 2;
-        const previous = snapData.slice(-4, -2).reduce((sum, s) => sum + (s.offensePct || 0), 0) / 2;
+      if (sortedSnaps.length >= 4) {
+        const recent = sortedSnaps.slice(-2).reduce((sum, s) => sum + ((s.offensePct || 0) * 100), 0) / 2;
+        const previous = sortedSnaps.slice(-4, -2).reduce((sum, s) => sum + ((s.offensePct || 0) * 100), 0) / 2;
         
         if (recent > previous * 1.1) {
           trend = 'rising';
