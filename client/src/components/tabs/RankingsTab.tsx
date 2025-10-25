@@ -110,21 +110,28 @@ export default function RankingsTab() {
                         {idx + 1}
                       </div>
                       <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <h4 className="text-base font-bold text-white">{player.name}</h4>
-                          <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded text-xs font-medium">
-                            {player.team}
-                          </span>
-                        </div>
+                        <h4 className="text-base font-bold text-white">{player.name}</h4>
                       </div>
                     </div>
 
-                    {/* Right: TIBER Score - Smaller text-like display */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">TIBER:</span>
-                      <span className={`px-3 py-1 rounded bg-gradient-to-r ${getTierColor(player.tier)} font-bold text-white text-sm`}>
+                    {/* Right: Team, Positional Rank, and TIBER Score */}
+                    <div className="flex items-center gap-3">
+                      <span className="px-2 py-1 bg-gray-800 text-gray-300 rounded text-xs font-medium">
+                        {player.team}
+                      </span>
+                      <span className="text-gray-500 text-sm font-medium">
                         {player.tiberRank}
                       </span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-gray-500">TIBER</span>
+                        <span className={`px-2.5 py-1 rounded font-bold text-base ${
+                          player.tier === 'breakout' ? 'bg-green-500/20 text-green-400' :
+                          player.tier === 'regression' ? 'bg-red-500/20 text-red-400' :
+                          'bg-blue-500/20 text-blue-400'
+                        }`}>
+                          {player.tiberScore}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
