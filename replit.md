@@ -69,6 +69,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **Strategy Tab Overhaul**: Redesigned for Start/Sit recommendations with context-aware analysis, Waiver Wire Targets based on TIBER, and SOS Rankings.
 - **Weekly Takes System**: Quick, punchy matchup insights tab featuring position-specific one-liners (QB/RB/WR/TE) with concrete statistics. Format: **Player Name** - key insight with stat. Currently using sample data, ready for live integration with DvP matchups, EPA context, and usage trends. Avoids DFS terminology, focuses on actionable fantasy insights.
 - **Interactive TIBER Breakdown**: Click any player in the Rankings tab to open a detailed drawer showing complete TIBER score breakdown (first down efficiency, EPA impact, usage, TD upside, team context) with comprehensive metrics and game stats. Features consistent API response structure across cached and calculated scores via transformCachedScore() helper function, ensuring reliable data presentation regardless of cache state.
+- **Weekly/Season Toggle**: TIBER player drawer includes toggle to view either single-week performance (Weekly mode) or season-to-date cumulative stats (Season mode). Weekly mode uses eq() for precise single-week data; Season mode uses lte() for cumulative totals. Cache strategy: Season mode writes to cache for performance; Weekly mode always calculates fresh to ensure accuracy.
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
