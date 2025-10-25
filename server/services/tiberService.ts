@@ -258,16 +258,26 @@ export class TiberService {
       }
       
       // Query real snap data from bronze_nflfastr_snap_counts
+      // Note: Play-by-play uses abbreviated names (G.Pickens) but snap counts use full names (George Pickens)
+      // Extract last name for fuzzy matching
+      const lastNameMatch = playerName.split('.').pop()?.trim(); // "G.Pickens" -> "Pickens"
+      console.log(`🔍 Looking for snap data: playerName="${playerName}", lastName="${lastNameMatch}", pos="${position}", season=${season}, week=${week}`);
+      
       const snapData = await db
         .select()
         .from(bronzeNflfastrSnapCounts)
         .where(
           and(
-            eq(bronzeNflfastrSnapCounts.player, playerName),
+            sql`${bronzeNflfastrSnapCounts.player} LIKE ${'%' + lastNameMatch + '%'}`,
             eq(bronzeNflfastrSnapCounts.season, season),
             eq(bronzeNflfastrSnapCounts.position, position)
           )
         );
+      
+      console.log(`📊 Found ${snapData.length} snap records for "${lastNameMatch}"`);
+      if (snapData.length > 0) {
+        console.log(`  First match: ${snapData[0].player} (${snapData[0].position})`);
+      }
       
       if (snapData.length === 0) {
         console.warn(`⚠️ No snap data found for ${playerName} (${position}), using placeholder`);
