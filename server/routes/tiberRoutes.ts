@@ -3,6 +3,7 @@ import { tiberService } from '../services/tiberService';
 import { db } from '../db';
 import { tiberScores, playerIdentityMap, players, injuries } from '../../shared/schema';
 import { eq, and, desc, sql, ilike, inArray, isNotNull } from 'drizzle-orm';
+import { injurySyncService } from '../services/injurySyncService';
 
 const router = Router();
 
@@ -715,6 +716,43 @@ router.get('/history/:nflfastrId', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch TIBER history'
+    });
+  }
+});
+
+// Sync injury data from SportsDataIO
+router.post('/admin/sync-injuries', async (req, res) => {
+  try {
+    const season = parseInt(req.query.season as string) || 2025;
+    const clearFirst = req.query.clearFirst === 'true';
+
+    console.log(`🏥 [Admin] Injury sync requested for ${season} season (clearFirst: ${clearFirst})`);
+
+    // Optionally clear existing injuries first
+    if (clearFirst) {
+      await injurySyncService.clearSeasonInjuries(season);
+    }
+
+    // Sync current injuries
+    const result = await injurySyncService.syncCurrentInjuries(season);
+
+    res.json({
+      success: true,
+      season,
+      clearFirst,
+      result: {
+        synced: result.synced,
+        skipped: result.skipped,
+        errorCount: result.errors.length,
+        errors: result.errors.length > 0 ? result.errors.slice(0, 5) : []
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [Admin] Injury sync failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to sync injuries'
     });
   }
 });
