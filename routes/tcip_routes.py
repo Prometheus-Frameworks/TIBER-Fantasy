@@ -6,11 +6,57 @@ API endpoints for target competition tier evaluation and dynasty integration
 
 from flask import Blueprint, jsonify, request
 from typing import Dict, Any
+import math
+import re
 from modules.tcip_pipeline import get_tcip_pipeline
 from modules.rookie_pipeline import get_rookie_pipeline
 
 # Create blueprint for TCIP routes
 tcip_bp = Blueprint('tcip_bp', __name__)
+
+# Strict numeric matcher (blocks nan, inf, and non-numeric strings)
+_NUMERIC_RE = re.compile(r'^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$', re.IGNORECASE)
+
+def parse_strict_float(value_str: str, param_name: str, min_val: float, max_val: float) -> float:
+    """
+    Parse and validate a float from user input with strict guards against NaN/Inf injection.
+    
+    Args:
+        value_str: The string value to parse
+        param_name: Name of the parameter (for error messages)
+        min_val: Minimum allowed value (exclusive)
+        max_val: Maximum allowed value (inclusive)
+    
+    Returns:
+        Validated float value
+    
+    Raises:
+        ValueError: If value is invalid, non-finite, or out of range
+    """
+    if not value_str:
+        raise ValueError(f"{param_name} cannot be empty")
+    
+    s = value_str.strip().lower()
+    
+    # Block known poison values before casting
+    poison_values = {"nan", "+nan", "-nan", "inf", "+inf", "-inf", "infinity", "+infinity", "-infinity"}
+    if s in poison_values:
+        raise ValueError(f"{param_name} cannot be NaN or Infinity")
+    
+    # Only allow canonical numeric strings
+    if not _NUMERIC_RE.match(s):
+        raise ValueError(f"{param_name} must be a valid number")
+    
+    # Safe cast and final finiteness check
+    val = float(s)
+    if not math.isfinite(val):
+        raise ValueError(f"{param_name} must be a finite number")
+    
+    # Enforce domain range
+    if not (min_val < val <= max_val):
+        raise ValueError(f"{param_name} must be between {min_val} and {max_val}")
+    
+    return val
 
 @tcip_bp.route('/api/tcip/evaluate/<player_name>', methods=['GET'])
 def evaluate_player_tcip(player_name: str):
@@ -65,15 +111,9 @@ def integrate_tcip_dynasty(player_name: str):
         # Get base dynasty tier weight (would normally come from dynasty tier engine)
         base_tier_input = request.args.get('base_tier', '85.0')
         try:
-            # Guard against NaN injection before typecast
-            if base_tier_input.lower().strip() == 'nan':
-                raise ValueError("NaN is not a valid dynasty tier weight")
-            base_tier_weight = float(base_tier_input)
-            # Ensure reasonable range
-            if not (0 < base_tier_weight <= 1000):
-                raise ValueError("Dynasty tier weight must be between 0 and 1000")
-        except (ValueError, TypeError, AttributeError):
-            return jsonify({'error': 'Invalid base_tier parameter. Must be a valid number between 0 and 1000'}), 400
+            base_tier_weight = parse_strict_float(base_tier_input, 'base_tier', 0, 1000)
+        except ValueError as e:
+            return jsonify({'error': f'Invalid base_tier parameter: {str(e)}'}), 400
         
         # Find player data
         rookies = pipeline.get_rookies_for_rankings()

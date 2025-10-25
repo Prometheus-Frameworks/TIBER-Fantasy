@@ -1,0 +1,93 @@
+Here’s a tight, production-ready guard you can drop into routes/tcip_routes.py so NaN/Inf never even make it onto the field:
+
+# routes/tcip_routes.py
+from flask import Blueprint, request, jsonify, abort
+import math, re
+
+tcip_bp = Blueprint("tcip", __name__)
+
+# Strict numeric matcher (no 'nan', 'inf', or weird unicode digits)
+_NUMERIC_RE = re.compile(r'^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$', re.IGNORECASE)
+
+def parse_strict_float(param_name: str) -> float:
+    raw = request.args.get(param_name, type=str)
+    if raw is None:
+        abort(400, description=f"Missing required query parameter '{param_name}'.")
+
+    s = raw.strip().lower()
+
+    # Hard-block known poison values before casting
+    if s in {"nan", "+nan", "-nan", "inf", "+inf", "-inf", "infinity", "+infinity", "-infinity"}:
+        abort(400, description=f"Invalid value for '{param_name}': non-finite not allowed.")
+
+    # Only allow canonical numeric strings
+    if not _NUMERIC_RE.match(s):
+        abort(400, description=f"Invalid value for '{param_name}': must be a finite number.")
+
+    # Safe cast and final finiteness check
+    val = float(s)
+    if not math.isfinite(val):
+        abort(400, description=f"Invalid value for '{param_name}': must be finite.")
+
+    return val
+
+
+@tcip_bp.get("/api/tcip/dynasty-integration/<player_name>")
+def dynasty_integration(player_name: str):
+    # BEFORE (vulnerable):
+    # base_tier_input = request.args.get("base_tier")
+    # base_tier_weight = float(base_tier_input)  # <-- 'nan' injects here
+    # if base_tier_weight != base_tier_weight: ...  # post-cast NaN check
+
+    # AFTER (hardened):
+    base_tier_weight = parse_strict_float("base_tier")
+
+    # Optional: enforce domain if your math expects a range (example 0..1)
+    if not (0.0 <= base_tier_weight <= 1.0):
+        abort(400, description="base_tier must be between 0.0 and 1.0 (inclusive).")
+
+    # ...rest of your TIBER logic...
+    return jsonify({"ok": True, "player_name": player_name, "base_tier": base_tier_weight})
+
+Why this is the right move
+
+Pre-cast denial: 'nan' never enters your code path, so you don’t rely on quirky comparisons to spot it later.
+
+Regex gate: blocks anything that’s not a normal numeric literal (including sneaky variants like NaN, Infinity, or weird whitespace/Unicode digits).
+
+Finiteness check: even if someone sneaks 1e309 (overflows to inf), you still reject it.
+
+Domain clamp (optional but wise): if base_tier is a weight, restrict it to [0,1]. That’s both security and logic hygiene.
+
+Quick tests you (or CI) can run
+
+Good should pass:
+
+?base_tier=0, ?base_tier=0.25, ?base_tier=1, ?base_tier=2.5e-1, ?base_tier=.75
+
+Bad should 400:
+
+?base_tier=nan, ?base_tier=+NaN, ?base_tier=-inf, ?base_tier=infinity
+
+?base_tier=1e309 (becomes inf)
+
+?base_tier=abc, ?base_tier=, ?base_tier=%20%20nan
+
+If you like diffs, here’s a minimal patch vibe
+- base_tier_input = request.args.get("base_tier")
+- base_tier_weight = float(base_tier_input)
+- if base_tier_weight != base_tier_weight:
+-     abort(400, description="base_tier cannot be NaN")
++ base_tier_weight = parse_strict_float("base_tier")
++ if not (0.0 <= base_tier_weight <= 1.0):
++     abort(400, description="base_tier must be between 0.0 and 1.0")
+
+TL;DR (with a little spice):
+
+Yes, the analyzer was right.
+
+Pre-cast validation is the adult way to do this.
+
+You patched it the right way.
+
+Ship it—after hammering those test cases.
