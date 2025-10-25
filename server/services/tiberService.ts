@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { tiberScores, bronzeNflfastrPlays, players, playerIdentityMap } from '../../shared/schema';
+import { tiberScores, tiberSeasonRatings, bronzeNflfastrPlays, players, playerIdentityMap } from '../../shared/schema';
 import { eq, and, or, lte, sql } from 'drizzle-orm';
 
 interface TiberScore {
@@ -480,6 +480,109 @@ export class TiberService {
     }
 
     console.log(`\n📊 Batch Complete: ${calculated} calculated, ${errors} errors\n`);
+  }
+
+  /**
+   * Calculate season average rating for a specific player
+   */
+  async calculateSeasonRating(nflfastrId: string, season: number = 2025): Promise<void> {
+    // Get all weekly scores for this player
+    const weeklyScores = await db
+      .select()
+      .from(tiberScores)
+      .where(and(
+        eq(tiberScores.nflfastrId, nflfastrId),
+        eq(tiberScores.season, season)
+      ))
+      .orderBy(tiberScores.week);
+
+    if (weeklyScores.length === 0) {
+      console.log(`⚠️  No weekly scores found for ${nflfastrId}`);
+      return;
+    }
+
+    // Calculate average
+    const scores = weeklyScores.map(ws => ws.tiberScore);
+    const seasonAverage = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+    
+    // Calculate standard deviation (consistency metric)
+    const mean = seasonAverage;
+    const squaredDiffs = scores.map(score => Math.pow(score - mean, 2));
+    const variance = squaredDiffs.reduce((sum, diff) => sum + diff, 0) / scores.length;
+    const scoreStdDev = Math.sqrt(variance);
+
+    // Determine tier based on season average
+    const seasonTier = this.getTier(Math.round(seasonAverage));
+
+    // Determine trend (last 3 weeks vs previous weeks)
+    const lastThreeWeeks = weeklyScores.slice(-3);
+    const earlierWeeks = weeklyScores.slice(0, -3);
+    let trend: 'rising' | 'stable' | 'falling' = 'stable';
+    
+    if (earlierWeeks.length > 0 && lastThreeWeeks.length > 0) {
+      const lastThreeAvg = lastThreeWeeks.reduce((sum, ws) => sum + ws.tiberScore, 0) / lastThreeWeeks.length;
+      const earlierAvg = earlierWeeks.reduce((sum, ws) => sum + ws.tiberScore, 0) / earlierWeeks.length;
+      
+      if (lastThreeAvg > earlierAvg + 5) trend = 'rising';
+      else if (lastThreeAvg < earlierAvg - 5) trend = 'falling';
+    }
+
+    const lastWeekData = weeklyScores[weeklyScores.length - 1];
+
+    // Insert or update season rating
+    await db
+      .insert(tiberSeasonRatings)
+      .values({
+        nflfastrId,
+        season,
+        seasonAverage,
+        weeksIncluded: weeklyScores.length,
+        seasonTier,
+        trend,
+        lastWeekScore: lastWeekData.tiberScore,
+        lastWeek: lastWeekData.week,
+        scoreStdDev,
+        highestWeekScore: Math.max(...scores),
+        lowestWeekScore: Math.min(...scores),
+      })
+      .onConflictDoUpdate({
+        target: [tiberSeasonRatings.nflfastrId, tiberSeasonRatings.season],
+        set: {
+          seasonAverage,
+          weeksIncluded: weeklyScores.length,
+          seasonTier,
+          trend,
+          lastWeekScore: lastWeekData.tiberScore,
+          lastWeek: lastWeekData.week,
+          scoreStdDev,
+          highestWeekScore: Math.max(...scores),
+          lowestWeekScore: Math.min(...scores),
+          updatedAt: new Date(),
+        },
+      });
+  }
+
+  /**
+   * Calculate season ratings for all players with weekly scores
+   */
+  async calculateAllSeasonRatings(season: number = 2025): Promise<void> {
+    console.log(`📊 Calculating season averages for ${season}...\n`);
+
+    // Get all unique players with scores
+    const playersWithScores = await db
+      .selectDistinct({ nflfastrId: tiberScores.nflfastrId })
+      .from(tiberScores)
+      .where(eq(tiberScores.season, season));
+
+    console.log(`Found ${playersWithScores.length} players with weekly scores\n`);
+
+    let calculated = 0;
+    for (const player of playersWithScores) {
+      await this.calculateSeasonRating(player.nflfastrId, season);
+      calculated++;
+    }
+
+    console.log(`\n✅ Season ratings calculated for ${calculated} players\n`);
   }
 }
 

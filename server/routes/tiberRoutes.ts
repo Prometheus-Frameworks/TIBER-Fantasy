@@ -509,6 +509,29 @@ router.post('/calculate/:week', async (req, res) => {
   }
 });
 
+// Trigger season ratings calculation (calculates averages from weekly scores)
+router.post('/calculate-season-ratings', async (req, res) => {
+  try {
+    const season = parseInt(req.query.season as string) || 2025;
+
+    // Return immediately and run in background
+    res.json({ 
+      success: true, 
+      message: `Season ratings calculation started for ${season}` 
+    });
+
+    // Run in background
+    tiberService.calculateAllSeasonRatings(season).catch(err => {
+      console.error('[TIBER] Season ratings calculation error:', err);
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to start season ratings calculation' 
+    });
+  }
+});
+
 // Get insights: breakouts, regressions, hidden gems
 router.get('/insights', async (req, res) => {
   try {

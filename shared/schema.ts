@@ -2245,6 +2245,39 @@ export const tiberScores = pgTable("tiber_scores", {
   scoreIdx: index("tiber_score_idx").on(table.tiberScore),
 }));
 
+// TIBER Season Ratings - Rolling averages of weekly scores
+export const tiberSeasonRatings = pgTable("tiber_season_ratings", {
+  id: serial("id").primaryKey(),
+  nflfastrId: text("nflfastr_id").notNull(),
+  season: integer("season").notNull(),
+  
+  // Season Average Score (0-100)
+  seasonAverage: real("season_average").notNull(),
+  weeksIncluded: integer("weeks_included").notNull(),
+  
+  // Tier based on season average
+  seasonTier: tiberTierEnum("season_tier").notNull(),
+  
+  // Trend analysis
+  trend: tiberTrendEnum("trend").notNull(), // Is average rising, stable, or falling?
+  lastWeekScore: integer("last_week_score"), // Most recent week's score
+  lastWeek: integer("last_week"), // Most recent week calculated
+  
+  // Volatility metrics
+  scoreStdDev: real("score_std_dev"), // How consistent are they?
+  highestWeekScore: integer("highest_week_score"),
+  lowestWeekScore: integer("lowest_week_score"),
+  
+  // Metadata
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniquePlayerSeason: unique("tiber_season_unique").on(table.nflfastrId, table.season),
+  nflfastrIdIdx: index("tiber_season_nflfastr_idx").on(table.nflfastrId),
+  seasonIdx: index("tiber_season_season_idx").on(table.season),
+  avgScoreIdx: index("tiber_season_avg_idx").on(table.seasonAverage),
+}));
+
 // ========================================
 // PLAYER ATTRIBUTES - WEEKLY ATTRIBUTE SYSTEM
 // ========================================
@@ -3312,6 +3345,16 @@ export type InsertRbEpaAdjusted = z.infer<typeof insertRbEpaAdjustedSchema>;
 // Calibrated EPA Weights Types
 export type CalibratedEpaWeights = typeof calibratedEpaWeights.$inferSelect;
 export type InsertCalibratedEpaWeights = z.infer<typeof insertCalibratedEpaWeightsSchema>;
+
+// TIBER Insert Schemas
+export const insertTiberScoreSchema = createInsertSchema(tiberScores).omit({ id: true, calculatedAt: true });
+export const insertTiberSeasonRatingSchema = createInsertSchema(tiberSeasonRatings).omit({ id: true, calculatedAt: true, updatedAt: true });
+
+// TIBER Types
+export type TiberScore = typeof tiberScores.$inferSelect;
+export type InsertTiberScore = z.infer<typeof insertTiberScoreSchema>;
+export type TiberSeasonRating = typeof tiberSeasonRatings.$inferSelect;
+export type InsertTiberSeasonRating = z.infer<typeof insertTiberSeasonRatingSchema>;
 
 // Types
 export type PlayerWeekFacts = typeof playerWeekFacts.$inferSelect;
