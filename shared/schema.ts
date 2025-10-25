@@ -2129,6 +2129,37 @@ export const bronzeNflfastrPlays = pgTable("bronze_nflfastr_plays", {
   playTypeIdx: index("bronze_nflfastr_play_type_idx").on(table.playType),
 }));
 
+// Bronze Layer: NFLfastR Snap Counts (Real 2025 Data)
+export const bronzeNflfastrSnapCounts = pgTable("bronze_nflfastr_snap_counts", {
+  id: serial("id").primaryKey(),
+  gameId: varchar("game_id", { length: 50 }).notNull(),
+  pfrGameId: varchar("pfr_game_id", { length: 50 }),
+  season: integer("season").notNull(),
+  gameType: varchar("game_type", { length: 20 }),
+  week: integer("week").notNull(),
+  
+  player: varchar("player", { length: 100 }).notNull(),
+  pfrPlayerId: varchar("pfr_player_id", { length: 50 }),
+  position: varchar("position", { length: 10 }),
+  team: varchar("team", { length: 10 }),
+  opponent: varchar("opponent", { length: 10 }),
+  
+  offenseSnaps: integer("offense_snaps"),
+  offensePct: real("offense_pct"),
+  defenseSnaps: integer("defense_snaps"),
+  defensePct: real("defense_pct"),
+  stSnaps: integer("st_snaps"),
+  stPct: real("st_pct"),
+  
+  importedAt: timestamp("imported_at").defaultNow(),
+}, (table) => ({
+  gamePlayerUniqueIdx: unique("bronze_snap_counts_game_player_unique").on(table.gameId, table.player),
+  seasonWeekIdx: index("bronze_snap_counts_season_week_idx").on(table.season, table.week),
+  playerIdx: index("bronze_snap_counts_player_idx").on(table.player),
+  positionIdx: index("bronze_snap_counts_position_idx").on(table.position),
+  pfrPlayerIdx: index("bronze_snap_counts_pfr_player_idx").on(table.pfrPlayerId),
+}));
+
 // Silver Layer: Aggregated Weekly Player Stats
 export const silverPlayerWeeklyStats = pgTable("silver_player_weekly_stats", {
   id: serial("id").primaryKey(),
