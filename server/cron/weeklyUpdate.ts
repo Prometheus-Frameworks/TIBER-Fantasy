@@ -8,6 +8,7 @@ import { weeklyHotListETL } from '../etl/weeklyHotListUpdate';
 import { nightlyBuysSellsETL } from '../etl/nightlyBuysSellsUpdate';
 import { setupEPASanityCheckCron } from './epaSanityCheck';
 import { setupRBContextCheckCron } from './rbContextCheck';
+import { setupInjurySyncCron } from './injurySync';
 
 export function setupWeeklyHotListCron() {
   console.log('📅 Setting up weekly Hot List cron job...');
@@ -111,6 +112,7 @@ export function setupAllCronJobs() {
   setupWeeklyHotListCron();
   setupNightlyBuysSellsCron();
   setupWeeklyDataProcessing();
+  setupInjurySyncCron();
   setupEPASanityCheckCron();
   setupRBContextCheckCron();
   
