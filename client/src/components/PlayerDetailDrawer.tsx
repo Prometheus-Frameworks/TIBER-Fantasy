@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, Activity, Target, Zap, Users } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Target, Zap, Users, Trophy } from 'lucide-react';
 
 interface PlayerDetailDrawerProps {
   isOpen: boolean;
@@ -43,6 +43,30 @@ interface TiberScoreData {
       tdRate: number;
       teamOffenseRank: number;
     };
+    gameLog?: {
+      opponent: string | null;
+      gameDate: Date | null;
+      gamesPlayed?: number;
+      fantasyPoints: number;
+      passing: {
+        attempts: number;
+        completions: number;
+        yards: number;
+        touchdowns: number;
+        interceptions: number;
+      };
+      rushing: {
+        attempts: number;
+        yards: number;
+        touchdowns: number;
+      };
+      receiving: {
+        receptions: number;
+        targets: number;
+        yards: number;
+        touchdowns: number;
+      };
+    } | null;
   };
 }
 
@@ -255,6 +279,138 @@ export default function PlayerDetailDrawer({
                   </p>
                 </div>
               </div>
+            </div>
+            )}
+
+            {/* Game Log Section */}
+            {tiberData.data.gameLog && (
+            <div className="bg-[#111217] border border-gray-800/50 rounded-xl p-5">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Trophy className="text-yellow-400" size={16} />
+                {mode === 'weekly' ? `Week ${week} Game Log` : `Season Stats (Weeks 1-${week})`}
+              </h3>
+              
+              {/* Opponent and Fantasy Points */}
+              <div className="grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-gray-800/50">
+                {mode === 'weekly' && tiberData.data.gameLog.opponent && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-500">Opponent</p>
+                    <p className="text-lg font-bold text-white">
+                      vs {tiberData.data.gameLog.opponent}
+                    </p>
+                  </div>
+                )}
+                {mode === 'season' && tiberData.data.gameLog.gamesPlayed && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-500">Games Played</p>
+                    <p className="text-lg font-bold text-white">
+                      {tiberData.data.gameLog.gamesPlayed}
+                    </p>
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-500">Fantasy Points (PPR)</p>
+                  <p className="text-lg font-bold text-green-400">
+                    {tiberData.data.gameLog.fantasyPoints?.toFixed(1) || '0.0'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Position-Specific Stats */}
+              {position === 'QB' && tiberData.data.gameLog.passing.attempts > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Passing</h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <p className="text-xs text-gray-500">CMP/ATT</p>
+                      <p className="text-sm font-bold text-white">
+                        {tiberData.data.gameLog.passing.completions}/{tiberData.data.gameLog.passing.attempts}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-gray-500">YDS</p>
+                      <p className="text-sm font-bold text-white">{tiberData.data.gameLog.passing.yards}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-gray-500">TD/INT</p>
+                      <p className="text-sm font-bold text-white">
+                        {tiberData.data.gameLog.passing.touchdowns}/{tiberData.data.gameLog.passing.interceptions}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {(position === 'WR' || position === 'TE') && tiberData.data.gameLog.receiving.targets > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Receiving</h4>
+                  <div className="grid grid-cols-4 gap-3">
+                    <div className="space-y-1">
+                      <p className="text-xs text-gray-500">TGT</p>
+                      <p className="text-sm font-bold text-white">{tiberData.data.gameLog.receiving.targets}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-gray-500">REC</p>
+                      <p className="text-sm font-bold text-white">{tiberData.data.gameLog.receiving.receptions}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-gray-500">YDS</p>
+                      <p className="text-sm font-bold text-white">{tiberData.data.gameLog.receiving.yards}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-gray-500">TD</p>
+                      <p className="text-sm font-bold text-green-400">{tiberData.data.gameLog.receiving.touchdowns}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {position === 'RB' && (
+                <div className="space-y-4">
+                  {tiberData.data.gameLog.rushing.attempts > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Rushing</h4>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <p className="text-xs text-gray-500">ATT</p>
+                          <p className="text-sm font-bold text-white">{tiberData.data.gameLog.rushing.attempts}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-gray-500">YDS</p>
+                          <p className="text-sm font-bold text-white">{tiberData.data.gameLog.rushing.yards}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-gray-500">TD</p>
+                          <p className="text-sm font-bold text-green-400">{tiberData.data.gameLog.rushing.touchdowns}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {tiberData.data.gameLog.receiving.targets > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Receiving</h4>
+                      <div className="grid grid-cols-4 gap-3">
+                        <div className="space-y-1">
+                          <p className="text-xs text-gray-500">TGT</p>
+                          <p className="text-sm font-bold text-white">{tiberData.data.gameLog.receiving.targets}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-gray-500">REC</p>
+                          <p className="text-sm font-bold text-white">{tiberData.data.gameLog.receiving.receptions}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-gray-500">YDS</p>
+                          <p className="text-sm font-bold text-white">{tiberData.data.gameLog.receiving.yards}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-gray-500">TD</p>
+                          <p className="text-sm font-bold text-green-400">{tiberData.data.gameLog.receiving.touchdowns}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             )}
 

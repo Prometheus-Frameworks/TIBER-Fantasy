@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { tiberService } from '../services/tiberService';
 import { db } from '../db';
-import { tiberScores, playerIdentityMap, players, injuries } from '../../shared/schema';
+import { tiberScores, playerIdentityMap, players, injuries, gameLogs } from '../../shared/schema';
 import { eq, and, desc, sql, ilike, inArray, isNotNull } from 'drizzle-orm';
 import { injurySyncService } from '../services/injurySyncService';
 
@@ -32,6 +32,120 @@ function transformCachedScore(cachedRecord: any) {
       teamOffenseRank: cachedRecord.teamOffenseRank || 0,
     }
   };
+}
+
+// Helper function to fetch game log data for a player
+async function fetchGameLog(nflfastrId: string, week: number, season: number, mode: 'weekly' | 'season') {
+  try {
+    // Get sleeperId from player_identity_map
+    const playerMapping = await db
+      .select({ sleeperId: playerIdentityMap.sleeperId })
+      .from(playerIdentityMap)
+      .where(eq(playerIdentityMap.nflDataPyId, nflfastrId))
+      .limit(1);
+
+    if (playerMapping.length === 0 || !playerMapping[0].sleeperId) {
+      return null;
+    }
+
+    const sleeperId = playerMapping[0].sleeperId;
+
+    // For weekly mode, get single week's game log
+    if (mode === 'weekly') {
+      const gameLog = await db
+        .select()
+        .from(gameLogs)
+        .where(
+          and(
+            eq(gameLogs.sleeperId, sleeperId),
+            eq(gameLogs.season, season),
+            eq(gameLogs.week, week),
+            sql`UPPER(${gameLogs.seasonType}) = 'REG'`
+          )
+        )
+        .limit(1);
+
+      if (gameLog.length === 0) return null;
+
+      const log = gameLog[0];
+      return {
+        opponent: log.opponent,
+        gameDate: log.gameDate,
+        fantasyPoints: log.fantasyPointsPpr,
+        passing: {
+          attempts: log.passAttempts,
+          completions: log.passCompletions,
+          yards: log.passYards,
+          touchdowns: log.passTd,
+          interceptions: log.passInt,
+        },
+        rushing: {
+          attempts: log.rushAttempts,
+          yards: log.rushYards,
+          touchdowns: log.rushTd,
+        },
+        receiving: {
+          receptions: log.receptions,
+          targets: log.targets,
+          yards: log.recYards,
+          touchdowns: log.recTd,
+        },
+      };
+    }
+
+    // For season mode, aggregate stats across all weeks up to current week
+    const gameLogs_data = await db
+      .select()
+      .from(gameLogs)
+      .where(
+        and(
+          eq(gameLogs.sleeperId, sleeperId),
+          eq(gameLogs.season, season),
+          sql`${gameLogs.week} <= ${week}`,
+          sql`UPPER(${gameLogs.seasonType}) = 'REG'`
+        )
+      );
+
+    if (gameLogs_data.length === 0) return null;
+
+    // Aggregate all stats
+    const totals = gameLogs_data.reduce((acc, log) => ({
+      fantasyPoints: (acc.fantasyPoints || 0) + (log.fantasyPointsPpr || 0),
+      passing: {
+        attempts: (acc.passing.attempts || 0) + (log.passAttempts || 0),
+        completions: (acc.passing.completions || 0) + (log.passCompletions || 0),
+        yards: (acc.passing.yards || 0) + (log.passYards || 0),
+        touchdowns: (acc.passing.touchdowns || 0) + (log.passTd || 0),
+        interceptions: (acc.passing.interceptions || 0) + (log.passInt || 0),
+      },
+      rushing: {
+        attempts: (acc.rushing.attempts || 0) + (log.rushAttempts || 0),
+        yards: (acc.rushing.yards || 0) + (log.rushYards || 0),
+        touchdowns: (acc.rushing.touchdowns || 0) + (log.rushTd || 0),
+      },
+      receiving: {
+        receptions: (acc.receiving.receptions || 0) + (log.receptions || 0),
+        targets: (acc.receiving.targets || 0) + (log.targets || 0),
+        yards: (acc.receiving.yards || 0) + (log.recYards || 0),
+        touchdowns: (acc.receiving.touchdowns || 0) + (log.recTd || 0),
+      },
+    }), {
+      fantasyPoints: 0,
+      passing: { attempts: 0, completions: 0, yards: 0, touchdowns: 0, interceptions: 0 },
+      rushing: { attempts: 0, yards: 0, touchdowns: 0 },
+      receiving: { receptions: 0, targets: 0, yards: 0, touchdowns: 0 },
+    });
+
+    return {
+      opponent: null, // Season mode doesn't have single opponent
+      gameDate: null,
+      gamesPlayed: gameLogs_data.length,
+      ...totals,
+    };
+  } catch (error) {
+    console.error('[TIBER] Error fetching game log:', error);
+    return null;
+  }
 }
 
 // Batch TIBER Rankings - Top WR/TE players with positional ranks
@@ -360,9 +474,13 @@ router.get('/score/:playerId', async (req, res) => {
 
       if (cached.length > 0) {
         // Transform flat DB record to nested structure to match calculated response
+        const gameLog = await fetchGameLog(nflfastrId, week, season, mode);
         return res.json({ 
           success: true, 
-          data: transformCachedScore(cached[0]), 
+          data: {
+            ...transformCachedScore(cached[0]),
+            gameLog
+          }, 
           source: 'cache',
           mode
         });
@@ -415,6 +533,9 @@ router.get('/score/:playerId', async (req, res) => {
     });
     }
 
+    // Fetch game log data
+    const gameLog = await fetchGameLog(nflfastrId, week, season, mode);
+
     // Return the freshly calculated score (not from DB)
     res.json({ 
       success: true, 
@@ -422,7 +543,8 @@ router.get('/score/:playerId', async (req, res) => {
         nflfastrId,
         week,
         season,
-        ...calculatedScore
+        ...calculatedScore,
+        gameLog
       }, 
       source: forceRecalc ? 'recalculated' : (mode === 'weekly' ? 'weekly_calculated' : 'calculated'),
       mode
