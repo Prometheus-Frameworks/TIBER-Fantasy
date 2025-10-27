@@ -4,15 +4,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = [
-  "R",
-  "arrow-cpp",
-  "glibcLocales",
-  "jq",
-  "libxcrypt",
-  "pkg-config",
-  "xsimd",
-]
+packages = ["glibcLocales", "jq", "libxcrypt", "pkg-config", "xsimd"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -42,67 +34,58 @@ waitForPort = 5000
 
 [[ports]]
 localPort = 5000
-externalPort = 5000
-
-[[ports]]
-localPort = 32795
-externalPort = 5173
-
-[[ports]]
-localPort = 33643
-externalPort = 8000
-
-[[ports]]
-localPort = 35277
 externalPort = 80
 
 [[ports]]
-localPort = 35619
-externalPort = 6000
+localPort = 8000
+externalPort = 8000
 
 [[ports]]
-localPort = 36565
-externalPort = 3002
-
-[[ports]]
-localPort = 37977
-externalPort = 8081
-
-[[ports]]
-localPort = 38801
-externalPort = 3003
-
-[[ports]]
-localPort = 39241
-externalPort = 8099
-
-[[ports]]
-localPort = 41503
-externalPort = 3001
-
-[[ports]]
-localPort = 42685
-externalPort = 8008
-
-[[ports]]
-localPort = 42741
-externalPort = 9000
-
-[[ports]]
-localPort = 43865
-externalPort = 8080
-
-[[ports]]
-localPort = 44869
-externalPort = 6800
-
-[[ports]]
-localPort = 45867
+localPort = 8084
 externalPort = 3000
 
 [[ports]]
-localPort = 45915
+localPort = 33889
+externalPort = 3002
+
+[[ports]]
+localPort = 38221
 externalPort = 4200
-[agent]
+
+[[ports]]
+localPort = 39625
+externalPort = 8081
+
+[[ports]]
+localPort = 40005
+externalPort = 8080
+
+[[ports]]
+localPort = 40257
+externalPort = 5000
+
+[[ports]]
+localPort = 42047
+externalPort = 6000
+
+[[ports]]
+localPort = 42731
+externalPort = 6800
+
+[[ports]]
+localPort = 44737
+externalPort = 3001
+
+[[ports]]
+localPort = 45125
+externalPort = 5173
+
+[[ports]]
+localPort = 45577
+externalPort = 8008
+
+[[ports]]
+localPort = 46527
+externalPort = 3003
 
 [agent]
