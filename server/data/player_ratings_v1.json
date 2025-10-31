@@ -14,6 +14,15 @@
       "upside": 98,
       "floor": 88
     },
+    "fpgMetrics": {
+      "fpg": 24.8,
+      "xFpg": 24.2,
+      "projFpg": 25.1,
+      "upsideIndex": 85,
+      "upsideBoost": 6.2,
+      "fpgTrend": "stable",
+      "explosivePlays": 12
+    },
     "format_ratings": {
       "redraft": 94,
       "dynasty": 96,
@@ -22,7 +31,7 @@
       "superflex": 98
     },
     "age_adjusted_value": 95,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "lamar_jackson",
@@ -39,6 +48,15 @@
       "upside": 96,
       "floor": 85
     },
+    "fpgMetrics": {
+      "fpg": 26.1,
+      "xFpg": 25.8,
+      "projFpg": 26.4,
+      "upsideIndex": 92,
+      "upsideBoost": 7.8,
+      "fpgTrend": "stable",
+      "explosivePlays": 15
+    },
     "format_ratings": {
       "redraft": 92,
       "dynasty": 94,
@@ -47,7 +65,7 @@
       "superflex": 96
     },
     "age_adjusted_value": 93,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "patrick_mahomes",
@@ -64,6 +82,15 @@
       "upside": 94,
       "floor": 90
     },
+    "fpgMetrics": {
+      "fpg": 23.4,
+      "xFpg": 23.8,
+      "projFpg": 24.1,
+      "upsideIndex": 72,
+      "upsideBoost": 4.8,
+      "fpgTrend": "stable",
+      "explosivePlays": 8
+    },
     "format_ratings": {
       "redraft": 91,
       "dynasty": 95,
@@ -72,7 +99,7 @@
       "superflex": 95
     },
     "age_adjusted_value": 95,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "jayden_daniels",
@@ -89,6 +116,15 @@
       "upside": 95,
       "floor": 80
     },
+    "fpgMetrics": {
+      "fpg": 21.7,
+      "xFpg": 20.9,
+      "projFpg": 22.8,
+      "upsideIndex": 88,
+      "upsideBoost": 7.2,
+      "fpgTrend": "rising",
+      "explosivePlays": 11
+    },
     "format_ratings": {
       "redraft": 88,
       "dynasty": 92,
@@ -97,7 +133,75 @@
       "superflex": 92
     },
     "age_adjusted_value": 89.75,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
+  },
+  {
+    "player_id": "drake_maye",
+    "player_name": "Drake Maye",
+    "position": "QB",
+    "team": "NE",
+    "overall_rating": 79,
+    "positional_rank": 8,
+    "tier": "B",
+    "components": {
+      "talent": 85,
+      "opportunity": 75,
+      "consistency": 65,
+      "upside": 92,
+      "floor": 70
+    },
+    "fpgMetrics": {
+      "fpg": 18.4,
+      "xFpg": 19.8,
+      "projFpg": 21.2,
+      "upsideIndex": 89,
+      "upsideBoost": 7.5,
+      "fpgTrend": "rising",
+      "explosivePlays": 9
+    },
+    "format_ratings": {
+      "redraft": 72,
+      "dynasty": 85,
+      "half_ppr": 72,
+      "full_ppr": 72,
+      "superflex": 76
+    },
+    "age_adjusted_value": 81,
+    "last_updated": "2025-10-31T17:42:24.080Z"
+  },
+  {
+    "player_id": "jj_mccarthy",
+    "player_name": "J.J. McCarthy",
+    "position": "QB",
+    "team": "MIN",
+    "overall_rating": 74,
+    "positional_rank": 12,
+    "tier": "B",
+    "components": {
+      "talent": 78,
+      "opportunity": 70,
+      "consistency": 60,
+      "upside": 90,
+      "floor": 65
+    },
+    "fpgMetrics": {
+      "fpg": 16.2,
+      "xFpg": 18.5,
+      "projFpg": 20.1,
+      "upsideIndex": 86,
+      "upsideBoost": 7.8,
+      "fpgTrend": "rising",
+      "explosivePlays": 7
+    },
+    "format_ratings": {
+      "redraft": 65,
+      "dynasty": 82,
+      "half_ppr": 65,
+      "full_ppr": 65,
+      "superflex": 68
+    },
+    "age_adjusted_value": 76,
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "jalen_hurts",
@@ -114,6 +218,15 @@
       "upside": 88,
       "floor": 82
     },
+    "fpgMetrics": {
+      "fpg": 20.8,
+      "xFpg": 20.2,
+      "projFpg": 21.5,
+      "upsideIndex": 83,
+      "upsideBoost": 6.8,
+      "fpgTrend": "stable",
+      "explosivePlays": 10
+    },
     "format_ratings": {
       "redraft": 85,
       "dynasty": 87,
@@ -122,7 +235,7 @@
       "superflex": 89
     },
     "age_adjusted_value": 88.75,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "joe_burrow",
@@ -147,7 +260,7 @@
       "superflex": 88
     },
     "age_adjusted_value": 89.75,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "anthony_richardson",
@@ -172,7 +285,7 @@
       "superflex": 86
     },
     "age_adjusted_value": 84.75,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "cj_stroud",
@@ -197,7 +310,7 @@
       "superflex": 85
     },
     "age_adjusted_value": 86.75,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "dak_prescott",
@@ -222,7 +335,7 @@
       "superflex": 82
     },
     "age_adjusted_value": 82.75,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "tua_tagovailoa",
@@ -247,7 +360,7 @@
       "superflex": 81
     },
     "age_adjusted_value": 82.75,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "jordan_love",
@@ -272,7 +385,7 @@
       "superflex": 80
     },
     "age_adjusted_value": 83.75,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "brock_purdy",
@@ -297,7 +410,7 @@
       "superflex": 79
     },
     "age_adjusted_value": 82.75,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "kyler_murray",
@@ -322,7 +435,7 @@
       "superflex": 72
     },
     "age_adjusted_value": 77,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "caleb_williams",
@@ -347,7 +460,7 @@
       "superflex": 71
     },
     "age_adjusted_value": 77,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "drake_maye",
@@ -372,7 +485,7 @@
       "superflex": 70
     },
     "age_adjusted_value": 74,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "bo_nix",
@@ -397,7 +510,7 @@
       "superflex": 69
     },
     "age_adjusted_value": 73,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "jamarr_chase",
@@ -423,7 +536,7 @@
     },
     "age_adjusted_value": 95,
     "breakout_probability": 15,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "ceedee_lamb",
@@ -448,7 +561,7 @@
       "superflex": 93
     },
     "age_adjusted_value": 94,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   },
   {
     "player_id": "christian_mccaffrey",
@@ -474,6 +587,6 @@
     },
     "age_adjusted_value": 91,
     "decline_risk": 25,
-    "last_updated": "2025-10-29T00:12:19.022Z"
+    "last_updated": "2025-10-31T17:42:24.080Z"
   }
 ]
