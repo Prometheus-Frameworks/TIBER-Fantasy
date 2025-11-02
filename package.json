@@ -11,7 +11,7 @@
     "typecheck": "tsc -p .",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
-  }
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",
     "@google-cloud/storage": "^7.16.0",
