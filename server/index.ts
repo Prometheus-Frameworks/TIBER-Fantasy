@@ -1,1 +1,186 @@
+// server/index.ts
+import express, { type Request, Response, NextFunction } from "express";
+import { registerRoutes } from "./routes";
+import { attachSignatureHeader } from "./middleware/signature";
+import { OTC_SIGNATURE } from "../shared/otcSignature";
 
+// silence unused OTC_SIGNATURE in strict builds
+void OTC_SIGNATURE;
+
+// tiny logger so we don't import Vite's log helper
+const log = (...args: any[]) => console.log(...args);
+
+const app = express();
+
+/** Core middleware */
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(attachSignatureHeader);
+
+/** Lightweight request logger for /api JSON responses */
+app.use((req, res, next) => {
+  const start = Date.now();
+  const path = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined;
+
+  const originalResJson = res.json;
+  // @ts-expect-error preserve original signature
+  res.json = function (bodyJson: any, ...args: any[]) {
+    capturedJsonResponse = bodyJson as Record<string, any>;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+
+  res.on("finish", () => {
+    if (!path.startsWith("/api")) return;
+    const duration = Date.now() - start;
+    let line = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+    if (capturedJsonResponse) {
+      try {
+        line += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      } catch {
+        /* ignore */
+      }
+    }
+    if (line.length > 80) line = line.slice(0, 79) + "…";
+    log(line);
+  });
+
+  next();
+});
+
+/** Healthcheck */
+app.get("/health", (_req, res) => res.json({ ok: true }));
+
+(async () => {
+  console.log("🚀 Starting Tiber Fantasy (quick boot mode)…");
+
+  // If registerRoutes returns an http.Server, we'll use it to listen
+  const server = await registerRoutes(app);
+
+  /** Error handler */
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err?.status || err?.statusCode || 500;
+    const message = err?.message || "Internal Server Error";
+    res.status(status).json({ message });
+    console.error("Unhandled app error:", err);
+  });
+
+  /** Choose the listener (server or app) */
+  const httpListener: { listen: (...args: any[]) => any } =
+    (server as any)?.listen ? (server as any) : (app as any);
+
+  /** Dev vs Prod assets — LAZY import to avoid bundling Vite in prod */
+  if (app.get("env") === "development") {
+    const { setupVite } = await import("./vite");
+    await setupVite(app, httpListener);
+  } else {
+    const { serveStatic } = await import("./vite");
+    serveStatic(app);
+  }
+
+  /** Listen (Render supplies PORT) */
+  const PORT = Number(process.env.PORT ?? 5000);
+  const HOST = "0.0.0.0";
+
+  httpListener.listen(PORT, HOST, async () => {
+    log(`serving on port ${PORT}`);
+
+    // ---------------------------
+    // Background initialization
+    // ---------------------------
+
+    // Schema drift detection (non-blocking)
+    (async () => {
+      try {
+        console.log("🔒 Starting schema drift detection (background)...");
+        const { schemaDriftService } = await import("./services/SchemaDriftService");
+        const configValidation = schemaDriftService.validateConfig();
+
+        if (!configValidation.valid) {
+          console.error("❌ Schema service configuration issues:", configValidation.issues);
+          if (configValidation.issues.some((i) => i.includes("DATABASE_URL"))) {
+            console.warn("⚠️ DATABASE_URL issue detected. Skipping drift check.");
+            return;
+          } else {
+            configValidation.issues.forEach((issue) => console.warn("⚠️", issue));
+          }
+        }
+
+        await schemaDriftService.checkAndMigrateOnBoot();
+        console.log("✅ Schema drift detection completed");
+      } catch (error) {
+        console.error("💥 Schema drift detection failed (non-blocking):", error);
+        console.warn("⚠️ App continues with existing schema.");
+      }
+    })();
+
+    // Backend spine services (non-blocking)
+    (async () => {
+      try {
+        console.log("🚀 Initializing backend spine services…");
+        const { sleeperSyncService } = await import("./services/sleeperSyncService");
+        const { logsProjectionsService } = await import("./services/logsProjectionsService");
+        const { ratingsEngineService } = await import("./services/ratingsEngineService");
+
+        await Promise.all([
+          logsProjectionsService.loadSampleData(),
+          ratingsEngineService.generateSampleRatings(),
+        ]);
+
+        await sleeperSyncService.syncPlayers();
+        console.log("✅ Backend spine services initialized");
+      } catch (error) {
+        console.warn("⚠️ Backend spine initialization warning:", error);
+      }
+    })();
+
+    // Cron jobs (non-blocking)
+    (async () => {
+      try {
+        console.log("🕒 Initializing nightly processing and cron jobs…");
+        const { setupAllCronJobs } = await import("./cron/weeklyUpdate");
+        setupAllCronJobs();
+        console.log("✅ Nightly processing and cron jobs initialized");
+      } catch (error) {
+        console.warn("⚠️ Cron job initialization warning:", error);
+      }
+    })();
+
+    // UPH Scheduler (non-blocking)
+    (async () => {
+      try {
+        console.log("📅 Initializing UPH Nightly Scheduler…");
+        const { uphScheduler } = await import("./services/UPHScheduler");
+        await uphScheduler.initialize();
+        console.log("✅ UPH Nightly Scheduler initialized successfully");
+      } catch (error) {
+        console.warn("⚠️ UPH Scheduler initialization warning:", error);
+      }
+    })();
+
+    // Brand Signals Brain (non-blocking)
+    (async () => {
+      try {
+        console.log("🧠 Initializing Brand Signals Brain…");
+        const { bootstrapBrandSignals } = await import("./services/BrandSignalsBootstrap");
+        await bootstrapBrandSignals();
+        console.log("✅ Brand Signals Brain initialized successfully");
+      } catch (error) {
+        console.warn("⚠️ Brand Signals Brain initialization warning:", error);
+      }
+    })();
+
+    // Player resolver (non-blocking)
+    (async () => {
+      try {
+        const { initializeDefaultPlayers } = await import(
+          "../src/data/resolvers/playerResolver"
+        );
+        await initializeDefaultPlayers();
+        console.log("✅ Player resolver initialized");
+      } catch (error) {
+        console.error("⚠️ Failed to initialize player resolver:", error);
+      }
+    })();
+  });
+})();
