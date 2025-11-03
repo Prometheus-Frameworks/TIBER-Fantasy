@@ -82,7 +82,39 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
     }
   }
 
-  // 4) Listen on Render port (or 5000 for local)
+  // 4) Auto-migrate database (non-fatal, runs in background)
+  async function autoMigrate() {
+    try {
+      log("🔄 Running database migrations...");
+      const { migrate } = await import("drizzle-orm/node-postgres/migrator");
+      const { db } = await import("./infra/db");
+      await migrate(db, { migrationsFolder: "migrations" });
+      log("✅ Drizzle migrations applied successfully");
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      console.warn("⚠️  Drizzle auto-migrate failed (continuing):", errMsg);
+    }
+  }
+
+  // 5) Verify database connection (non-fatal)
+  async function checkDatabase() {
+    try {
+      const { pingDb } = await import("./infra/db");
+      const ok = await pingDb();
+      log(ok ? "✅ Database ping successful" : "⚠️  Database ping failed (check connection)");
+      return ok;
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      console.warn("⚠️  Database ping error (continuing to boot):", errMsg);
+      return false;
+    }
+  }
+
+  // Run DB checks before starting server
+  await autoMigrate();
+  await checkDatabase();
+
+  // 6) Listen on Render port (or 5000 for local)
   const PORT = Number(process.env.PORT ?? 5000);
   const HOST = "0.0.0.0";
 
