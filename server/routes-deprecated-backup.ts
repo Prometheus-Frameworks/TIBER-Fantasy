@@ -8,7 +8,7 @@ import { playerAnalysisCache } from "./playerAnalysisCache";
 import { espnAPI } from "./espnAPI";
 import { playerMapping } from "./playerMapping";
 import { dataRefreshService } from "./dataRefresh";
-import { db } from "./db";
+import { db } from "./infra/db";
 import { dynastyTradeHistory, players as playersTable } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { z } from "zod";

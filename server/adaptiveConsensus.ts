@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { db } from "./db";
+import { db } from "./infra/db";
 import { 
   playerInjuries, playerBios, playerUsageWeekly, consensusExplanations,
   userRanks, consensusBoard, userProfiles 

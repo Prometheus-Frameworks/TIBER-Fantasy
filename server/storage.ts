@@ -35,7 +35,7 @@ import {
   type InsertWaiverRecommendations,
   type InsertInjuryTracker
 } from "@shared/schema";
-import { db } from "./db";
+import { db } from "./infra/db";
 import { eq, and } from "drizzle-orm";
 // Note: sportsDataAPI import removed - not used in current implementation
 

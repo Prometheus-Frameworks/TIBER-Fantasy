@@ -3,7 +3,7 @@
  * Comprehensive audit of all available statistical fields and data sources
  */
 
-import { db } from './db';
+import { db } from './infra/db';
 import { players } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 

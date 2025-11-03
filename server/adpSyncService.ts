@@ -3,7 +3,7 @@
  * Automatically fetches and updates ADP data from multiple sources
  */
 
-import { db } from './db';
+import { db } from './infra/db';
 import { players } from '../shared/schema';
 import { eq, sql } from 'drizzle-orm';
 

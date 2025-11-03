@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { db } from "./db";
+import { db } from "./infra/db";
 import { userProfiles, userRanks, fireEvents, consensusBoard, consensusMeta } from "@shared/schema";
 import { eq, and, sql, desc, asc } from "drizzle-orm";
 import type { Format, Position, ConsensusMetadata, CompareRanking } from "@shared/types/consensus";

@@ -5,7 +5,7 @@
  * Transforms raw data commits into brand-specific signals through plugin architecture.
  */
 
-import type { db as DB } from '../server/db';
+import type { db as DB } from '../server/infra/db';
 
 // ========================================
 // EVENT DEFINITIONS

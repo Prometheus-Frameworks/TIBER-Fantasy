@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "./db";
+import { db } from "./infra/db";
 import { consensusBoard, consensusMeta } from "@shared/schema";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { parseConsensusCommand, type ConsensusCommand, type ConsensusCommandResult } from "@shared/types/consensusSeeding";

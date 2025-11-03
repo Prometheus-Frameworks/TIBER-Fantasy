@@ -9,7 +9,7 @@ import { teamSyncService } from "./teamSync";
 import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generateWaiverRecommendations } from "./analytics";
 // Removed deprecated imports
 import { PlayerFilteringService } from "./playerFiltering";
-import { db } from "./db";
+import { db } from "./infra/db";
 import { dynastyTradeHistory, players as playersTable, playerWeekFacts } from "@shared/schema";
 import { eq, desc, and, sql, isNotNull } from "drizzle-orm";
 import { z } from "zod";

@@ -3,7 +3,7 @@
  * Collects ALL players with valid positions/teams, marks ADP missing players
  */
 
-import { db } from './db';
+import { db } from './infra/db';
 import { players } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 

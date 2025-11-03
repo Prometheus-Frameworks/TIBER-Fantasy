@@ -3,7 +3,7 @@
  * Fetches and stores player data from Sleeper API with filtering criteria
  */
 
-import { db } from './db';
+import { db } from './infra/db';
 import { players, gameLogs } from '@shared/schema';
 import { eq, or } from 'drizzle-orm';
 

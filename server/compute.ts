@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { eq, and, sql, gte } from 'drizzle-orm';
-import { db } from './db';
+import { db } from './infra/db';
 import { playerWeekFacts, buysSells, players, verdictEnum, formatEnum, pprEnum, type InsertBuysSells } from '@shared/schema';
 
 // Config: Weights/thresholds (changelog: v1.1: No changes)
