@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
-    "build": "esbuild server/index.ts --platform=node --bundle --format=esm --outfile=dist/index.mjs --external:@babel/* --external:@babel/preset-typescript --external:lightningcss* --external:vite --external:@vitejs/* --external:postcss --external:browserslist",
+"build": "esbuild server/index.ts --platform=node --bundle --packages=external --format=esm --outfile=dist/index.mjs",
     "start": "NODE_ENV=production node dist/index.mjs",
     "typecheck": "tsc -p .",
     "db:push": "drizzle-kit push",
