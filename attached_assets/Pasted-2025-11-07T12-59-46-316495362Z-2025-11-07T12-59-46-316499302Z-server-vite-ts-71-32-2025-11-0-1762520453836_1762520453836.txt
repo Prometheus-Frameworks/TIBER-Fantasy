@@ -1,0 +1,50 @@
+2025-11-07T12:59:46.316495362Z 
+2025-11-07T12:59:46.316499302Z     server/vite.ts:71:32:
+2025-11-07T12:59:46.316502562Z       71 │   const distPath = path.resolve(import.meta.dirname, "public");
+2025-11-07T12:59:46.316505653Z          ╵                                 ~~~~~~~~~~~
+2025-11-07T12:59:46.316507493Z 
+2025-11-07T12:59:46.316510763Z   You need to set the output format to "esm" for "import.meta" to work correctly.
+2025-11-07T12:59:46.316512423Z 
+2025-11-07T12:59:46.317296289Z ✘ [ERROR] Top-level await is currently not supported with the "cjs" output format
+2025-11-07T12:59:46.317304569Z 
+2025-11-07T12:59:46.31730707Z     vite.config.ts:13:10:
+2025-11-07T12:59:46.317308939Z       13 │           await import("@replit/vite-plugin-cartographer").then((m...
+2025-11-07T12:59:46.31731085Z          ╵           ~~~~~
+2025-11-07T12:59:46.317312479Z 
+2025-11-07T12:59:46.31731487Z ▲ [WARNING] "import.meta" is not available with the "cjs" output format and will be empty [empty-import-meta]
+2025-11-07T12:59:46.31731647Z 
+2025-11-07T12:59:46.3173182Z     vite.config.ts:21:24:
+2025-11-07T12:59:46.3173205Z       21 │       "@": path.resolve(import.meta.dirname, "client", "src"),
+2025-11-07T12:59:46.3173228Z          ╵                         ~~~~~~~~~~~
+2025-11-07T12:59:46.3173244Z 
+2025-11-07T12:59:46.31732663Z   You need to set the output format to "esm" for "import.meta" to work correctly.
+2025-11-07T12:59:46.31732824Z 
+2025-11-07T12:59:46.642557758Z ▲ [WARNING] "import.meta" is not available with the "cjs" output format and will be empty [empty-import-meta]
+2025-11-07T12:59:46.642579299Z 
+2025-11-07T12:59:46.642583129Z     vite.config.ts:22:30:
+2025-11-07T12:59:46.642586569Z       22 │       "@shared": path.resolve(import.meta.dirname, "shared"),
+2025-11-07T12:59:46.642590049Z          ╵                               ~~~~~~~~~~~
+2025-11-07T12:59:46.642592719Z 
+2025-11-07T12:59:46.642595799Z   You need to set the output format to "esm" for "import.meta" to work correctly.
+2025-11-07T12:59:46.642598089Z 
+2025-11-07T12:59:46.642600609Z ▲ [WARNING] "import.meta" is not available with the "cjs" output format and will be empty [empty-import-meta]
+2025-11-07T12:59:46.642602859Z 
+2025-11-07T12:59:46.642605259Z     vite.config.ts:23:30:
+2025-11-07T12:59:46.642607859Z       23 │ ...  "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+2025-11-07T12:59:46.642611019Z          ╵                              ~~~~~~~~~~~
+2025-11-07T12:59:46.642613409Z 
+2025-11-07T12:59:46.6426158Z   You need to set the output format to "esm" for "import.meta" to work correctly.
+2025-11-07T12:59:46.64261816Z 
+2025-11-07T12:59:46.64262073Z ▲ [WARNING] "import.meta" is not available with the "cjs" output format and will be empty [empty-import-meta]
+2025-11-07T12:59:46.64262302Z 
+2025-11-07T12:59:46.64262546Z     vite.config.ts:26:21:
+2025-11-07T12:59:46.64262805Z       26 │   root: path.resolve(import.meta.dirname, "client"),
+2025-11-07T12:59:46.64263456Z          ╵                      ~~~~~~~~~~~
+2025-11-07T12:59:46.6426487Z 
+2025-11-07T12:59:46.64265177Z   You need to set the output format to "esm" for "import.meta" to work correctly.
+2025-11-07T12:59:46.64265423Z 
+2025-11-07T12:59:46.64265678Z 5 of 11 warnings and 1 error shown (disable the message limit with --log-limit=0)
+2025-11-07T12:59:46.772481774Z ==> Build failed 😞
+2025-11-07T12:59:46.772497655Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+2025-11-07T12:59:46.888273462Z ==> Using Node.js version 20.19.0 via environment variable NODE_VERSION
+2025-11-07T12:59:46.912713607Z ==> Docs on specifying a Node.js version: https://render.com/docs/node-version
