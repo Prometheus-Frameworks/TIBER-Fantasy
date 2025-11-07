@@ -1,0 +1,50 @@
+2025-11-07T17:16:07.331121733Z ==> Uploading build...
+2025-11-07T17:17:40.008813575Z ==> Uploaded in 15.5s. Compression took 77.2s
+2025-11-07T17:17:40.053136965Z ==> Build successful 🎉
+2025-11-07T17:17:44.809921383Z ==> Deploying...
+2025-11-07T17:18:03.467373783Z ==> Running 'npm run start'
+2025-11-07T17:18:03.742601613Z 
+2025-11-07T17:18:03.742625494Z > tiber-fantasy@1.0.0 start
+2025-11-07T17:18:03.742630044Z > NODE_ENV=production node dist/index.mjs
+2025-11-07T17:18:03.742632194Z 
+2025-11-07T17:18:04.6300186Z file:///opt/render/project/src/dist/index.mjs:11
+2025-11-07T17:18:04.630042301Z   throw Error('Dynamic require of "' + x2 + '" is not supported');
+2025-11-07T17:18:04.630045621Z         ^
+2025-11-07T17:18:04.630048341Z 
+2025-11-07T17:18:04.630051821Z Error: Dynamic require of "path" is not supported
+2025-11-07T17:18:04.630054591Z     at file:///opt/render/project/src/dist/index.mjs:11:9
+2025-11-07T17:18:04.630058161Z     at node_modules/depd/index.js (file:///opt/render/project/src/dist/index.mjs:44:20)
+2025-11-07T17:18:04.630061081Z     at __require2 (file:///opt/render/project/src/dist/index.mjs:17:50)
+2025-11-07T17:18:04.630064641Z     at node_modules/body-parser/index.js (file:///opt/render/project/src/dist/index.mjs:17035:21)
+2025-11-07T17:18:04.630069801Z     at __require2 (file:///opt/render/project/src/dist/index.mjs:17:50)
+2025-11-07T17:18:04.630072672Z     at node_modules/express/lib/express.js (file:///opt/render/project/src/dist/index.mjs:23668:22)
+2025-11-07T17:18:04.630075442Z     at __require2 (file:///opt/render/project/src/dist/index.mjs:17:50)
+2025-11-07T17:18:04.630078252Z     at node_modules/express/index.js (file:///opt/render/project/src/dist/index.mjs:23737:22)
+2025-11-07T17:18:04.630081122Z     at __require2 (file:///opt/render/project/src/dist/index.mjs:17:50)
+2025-11-07T17:18:04.630083922Z     at file:///opt/render/project/src/dist/index.mjs:147724:32
+2025-11-07T17:18:04.630086632Z 
+2025-11-07T17:18:04.630089532Z Node.js v22.16.0
+2025-11-07T17:18:06.7794038Z ==> Exited with status 1
+2025-11-07T17:18:06.844685793Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+2025-11-07T17:18:06.935029013Z ==> Running 'npm run start'
+2025-11-07T17:18:07.145268626Z 
+2025-11-07T17:18:07.145289067Z > tiber-fantasy@1.0.0 start
+2025-11-07T17:18:07.145293467Z > NODE_ENV=production node dist/index.mjs
+2025-11-07T17:18:07.145295557Z 
+2025-11-07T17:18:07.943048601Z file:///opt/render/project/src/dist/index.mjs:11
+2025-11-07T17:18:07.943075362Z   throw Error('Dynamic require of "' + x2 + '" is not supported');
+2025-11-07T17:18:07.943083472Z         ^
+2025-11-07T17:18:07.943086242Z 
+2025-11-07T17:18:07.943089622Z Error: Dynamic require of "path" is not supported
+2025-11-07T17:18:07.943092322Z     at file:///opt/render/project/src/dist/index.mjs:11:9
+2025-11-07T17:18:07.943095753Z     at node_modules/depd/index.js (file:///opt/render/project/src/dist/index.mjs:44:20)
+2025-11-07T17:18:07.943098683Z     at __require2 (file:///opt/render/project/src/dist/index.mjs:17:50)
+2025-11-07T17:18:07.943101373Z     at node_modules/body-parser/index.js (file:///opt/render/project/src/dist/index.mjs:17035:21)
+2025-11-07T17:18:07.943104963Z     at __require2 (file:///opt/render/project/src/dist/index.mjs:17:50)
+2025-11-07T17:18:07.943106743Z     at node_modules/express/lib/express.js (file:///opt/render/project/src/dist/index.mjs:23668:22)
+2025-11-07T17:18:07.943108613Z     at __require2 (file:///opt/render/project/src/dist/index.mjs:17:50)
+2025-11-07T17:18:07.943110303Z     at node_modules/express/index.js (file:///opt/render/project/src/dist/index.mjs:23737:22)
+2025-11-07T17:18:07.943111963Z     at __require2 (file:///opt/render/project/src/dist/index.mjs:17:50)
+2025-11-07T17:18:07.943113993Z     at file:///opt/render/project/src/dist/index.mjs:147724:32
+2025-11-07T17:18:07.943115553Z 
+2025-11-07T17:18:07.943117193Z Node.js v22.16.0
