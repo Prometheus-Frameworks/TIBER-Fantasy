@@ -1,0 +1,68 @@
+2025-11-07T23:33:30.149514182Z ==> Cloning from https://github.com/Prometheus-Frameworks/TIBER-Fantasy
+2025-11-07T23:33:31.331751171Z ==> Checking out commit 922e3f903911cf72a34a98a304f4a6224e8c73a8 in branch main
+2025-11-07T23:35:47.164718304Z ==> Deploying...
+2025-11-07T23:36:15.624316929Z ==> Running 'npm run start'
+2025-11-07T23:36:15.919007811Z 
+2025-11-07T23:36:15.919040491Z > tiber-fantasy@1.0.0 start
+2025-11-07T23:36:15.919047352Z > NODE_ENV=production node dist/index.mjs
+2025-11-07T23:36:15.919051752Z 
+2025-11-07T23:36:18.805673622Z The `fetchConnectionCache` option is deprecated (now always `true`)
+2025-11-07T23:36:18.809018464Z 📊 Loading WR 2024 ratings from CSV...
+2025-11-07T23:36:18.809098346Z ⚠️ CSV file not found: /opt/render/project/src/data/WR_2024_Ratings_With_Tags.csv
+2025-11-07T23:36:18.809105217Z ⚠️ WR ratings will not be available. This is non-critical - app will continue.
+2025-11-07T23:36:18.809763791Z ✅ Player pool loaded: 101 players
+2025-11-07T23:36:18.814688438Z 🔧 [QualityConfig] Initialized for environment: production
+2025-11-07T23:36:18.814830021Z 🔧 [QualityGates] Initializing quality rules
+2025-11-07T23:36:18.814967434Z ✅ [QualityGates] Initialized 8 quality rules
+2025-11-07T23:36:18.829808477Z 📊 [ECR Provider] Created data directory: /opt/render/project/src/data/ecr
+2025-11-07T23:36:18.916914176Z 🧠 [BrandBus] Initializing Brand Intelligence Hub...
+2025-11-07T23:36:18.990592671Z 🚀 Starting Tiber Fantasy – quick boot
+2025-11-07T23:36:18.994008475Z {"level":"info","src":"SleeperRoutes","msg":"sleeper sync disabled"}
+2025-11-07T23:36:18.994300012Z ✅ Registering Tiber stats endpoint
+2025-11-07T23:36:18.997139954Z ✅ Lexicon loaded: 4 categories
+2025-11-07T23:36:18.997319848Z ✅ Player synonyms loaded: 34 mappings
+2025-11-07T23:36:18.99745185Z ✅ Team synonyms loaded: 6 mappings
+2025-11-07T23:36:18.997460751Z 🤖 RAG: Lexicon loaded, Player synonyms loaded, Team synonyms loaded
+2025-11-07T23:36:19.010340931Z BM25 index rebuilt: 97 docs
+2025-11-07T23:36:19.010356852Z 🤖 RAG: Search index rebuilt on boot
+2025-11-07T23:36:19.010806641Z 📊 Enhanced Rankings system mounted at /api/enhanced-rankings/*
+2025-11-07T23:36:19.011975327Z 🧠 Tiber Memory System routes mounted at /api/tiber-memory
+2025-11-07T23:36:19.012363795Z 🔮 [Prediction Engine] Router created with 6 endpoints: /predictions/generate-weekly (admin), /predictions/:run_id/summary, /predictions/:run_id/players, /latest/summary (public), /latest/players (public), /ecr-sanity-check (public)
+2025-11-07T23:36:19.012382346Z 🔮 Prediction Engine routes mounted at /api/predictions/*
+2025-11-07T23:36:19.01257146Z 📊 [ECR Loader] Router created with 5 endpoints: POST /admin/ecr/upload, POST /admin/ecr/fetch, GET /ecr/weekly, GET /ecr/dynasty, GET /admin/ecr/status
+2025-11-07T23:36:19.01258561Z 📊 ECR Loader routes mounted at /api/admin/ecr/* and /api/ecr/*
+2025-11-07T23:36:19.012628621Z 🚀 Enhanced ECR Provider routes mounted at /api/ecr/enhanced/*
+2025-11-07T23:36:19.012632981Z 📊 OVR (Madden-style 1-99) rating system mounted at /api/ovr/*
+2025-11-07T23:36:19.012656292Z 🎯 TIBER v1 MVP mounted at /api/tiber/*
+2025-11-07T23:36:19.012660342Z 📋 Game Logs system mounted at /api/game-logs/*
+2025-11-07T23:36:19.012930508Z 🎯 Consensus Benchmark routes mounted at /api/consensus/*
+2025-11-07T23:36:19.013097822Z 🎯 Strategy routes mounted at /api/strategy/*
+2025-11-07T23:36:19.013107372Z 🎯 Player Matchup Intelligence routes mounted at /api/matchup/*
+2025-11-07T23:36:19.013116602Z 📝 Weekly Takes routes mounted at /api/weekly-takes/*
+2025-11-07T23:36:19.013121142Z 🔍 Player Compare Pilot routes mounted at /api/player-compare-pilot/*
+2025-11-07T23:36:19.013141752Z 📊 Analytics routes mounted at /api/analytics/*
+2025-11-07T23:36:19.013155973Z 🏈 Team Reports routes mounted at /api/team-reports/*
+2025-11-07T23:36:19.013160933Z 🔬 EPA Sanity Check routes mounted at /api/sanity-check/*
+2025-11-07T23:36:19.013319616Z 🛡️ Defense vs Position (DvP) routes mounted at /api/dvp/*
+2025-11-07T23:36:19.014161935Z 🔗 Sleeper Identity Sync routes mounted at /api/sync/sleeper-identity/*
+2025-11-07T23:36:19.014166695Z ⚖️  Player Comparison Tool routes mounted at /api/player-comparison/*
+2025-11-07T23:36:19.015533775Z ✅ OLC API routes registered
+2025-11-07T23:36:19.015733619Z ⚠️ Could not start automated updates: Dynamic require of "node-cron" is not supported
+2025-11-07T23:36:19.016127937Z ✅ Start/Sit live routes registered at /api/start-sit-live
+2025-11-07T23:36:19.016332952Z ✅ League assist routes registered
+2025-11-07T23:36:19.016586387Z ✅ Quick Start/Sit routes registered
+2025-11-07T23:36:19.017024297Z 📊 Stats 2024 Routes loaded
+2025-11-07T23:36:19.017567919Z ℹ️  No dist/public directory found; serving API only
+2025-11-07T23:36:19.017641741Z 🔄 Running database migrations...
+2025-11-07T23:36:19.525493776Z ✅ Drizzle migrations applied successfully
+2025-11-07T23:36:19.526731983Z ✅ Database ping successful
+2025-11-07T23:36:19.527768616Z [express] serving on port 10000
+2025-11-07T23:36:27.931660678Z ==> Your service is live 🎉
+2025-11-07T23:36:28.635446514Z ==> 
+2025-11-07T23:36:28.725972693Z ==> ///////////////////////////////////////////////////////////
+2025-11-07T23:36:28.806061913Z ==> 
+2025-11-07T23:36:28.887104703Z ==> Available at your primary URL https://tiber-fantasy.onrender.com
+2025-11-07T23:36:28.973666912Z ==> 
+2025-11-07T23:36:29.063780721Z ==> ///////////////////////////////////////////////////////////
+2025-11-07T23:41:24.400809169Z ==> Detected service running on port 10000
+2025-11-07T23:41:24.61588525Z ==> Docs on specifying a port: https://render.com/docs/web-services#port-binding

@@ -1,0 +1,89 @@
+ we just successfully deployed TIBER Fantasy to Render (https://tiber-fantasy.onrender.com). Database migration complete, app is live, but we need a comprehensive audit before building the RAG layer on top of this foundation.
+Context:
+
+PostgreSQL on Render (connected successfully)
+Node.js/Express backend with TypeScript
+Multiple analytics modules and API endpoints
+Planning to add pgvector + RAG embeddings next
+Joe's in trade school, needs clear prioritized action items
+
+AUDIT SCOPE:
+1. Critical Issues (Fix Immediately)
+
+ node-cron dynamic require failure - blocking automated Tuesday data pulls from NFLfastR
+ Missing data file: /opt/render/project/src/data/WR_2024_Ratings_With_Tags.csv
+ Any broken endpoints or non-functional features
+ Security vulnerabilities (exposed secrets, SQL injection risks, unvalidated inputs)
+ Database connection pooling/timeout issues
+
+2. Deprecation Warnings
+
+ fetchConnectionCache deprecated warning - what needs updating?
+ Review all npm dependencies for deprecation notices
+ Check for outdated database drivers (psycopg versions, etc.)
+
+3. Code Quality
+
+ Dead code or unused imports
+ Inconsistent error handling patterns
+ Missing TypeScript types in critical areas
+ Console.logs that should be proper logging
+ Hard-coded values that should be environment variables
+
+4. Data Pipeline Health
+
+ Verify Tuesday NFLfastR pull automation (currently broken due to node-cron)
+ Check data processing modules for TIBER calculations
+ Confirm CSV/data file paths are correct for Render deployment
+ Test database write operations
+
+5. API Endpoint Verification
+
+ Test critical endpoints (list which ones work/don't work)
+ Check rate limiting implementation
+ Verify CORS configuration
+ Authentication/authorization review
+
+6. Performance
+
+ Database query optimization opportunities
+ Memory leak risks
+ Large payload endpoints that need pagination
+ Slow routes that need caching
+
+7. Documentation Gaps
+
+ Missing README sections
+ Undocumented environment variables
+ API endpoint documentation completeness
+
+8. Render-Specific Issues
+
+ Build script optimization
+ Proper health check endpoint
+ Log management strategy
+ Resource utilization (are we on right Render tier?)
+
+OUTPUT FORMAT:
+Please provide:
+
+Critical Issues List (must fix before RAG work) - prioritized 1-N
+Medium Priority (fix in next sprint) - prioritized
+Nice-to-Have (technical debt for later)
+Quick Wins (easy fixes with high impact)
+
+For each issue:
+
+Description of problem
+Why it matters
+Suggested fix
+Estimated effort (quick/medium/complex)
+Files/locations affected
+
+SPECIFIC QUESTIONS:
+
+Why is node-cron failing with "Dynamic require not supported"? ESM vs CommonJS issue?
+Where should WR_2024_Ratings_With_Tags.csv live, and what's the correct path?
+Are all the mounted routes actually functional, or just registered?
+What's the current database schema state - any migration issues?
+Are we ready for pgvector installation, or will that break anything?
