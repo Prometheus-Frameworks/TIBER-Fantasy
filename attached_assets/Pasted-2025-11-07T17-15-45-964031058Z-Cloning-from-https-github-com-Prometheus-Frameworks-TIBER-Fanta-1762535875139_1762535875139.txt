@@ -1,0 +1,42 @@
+2025-11-07T17:15:45.964031058Z ==> Cloning from https://github.com/Prometheus-Frameworks/TIBER-Fantasy
+2025-11-07T17:15:47.126745924Z ==> Checking out commit 48aac6e87fc04abd9cb3b730edcc11b28781e2c5 in branch main
+2025-11-07T17:15:48.02964893Z ==> Using Node.js version 22.16.0 (default)
+2025-11-07T17:15:48.054502444Z ==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+2025-11-07T17:15:50.108035468Z ==> Running build command 'npm ci && npm run build'...
+2025-11-07T17:16:07.331121733Z ==> Uploading build...
+2025-11-07T17:16:03.653148974Z 
+2025-11-07T17:16:03.653176035Z added 802 packages, and audited 803 packages in 13s
+2025-11-07T17:16:03.653187455Z 
+2025-11-07T17:16:03.653227156Z 130 packages are looking for funding
+2025-11-07T17:16:03.653237437Z   run `npm fund` for details
+2025-11-07T17:16:03.683475576Z 
+2025-11-07T17:16:03.683505007Z 5 moderate severity vulnerabilities
+2025-11-07T17:16:03.683510547Z 
+2025-11-07T17:16:03.683515747Z To address issues that do not require attention, run:
+2025-11-07T17:16:03.683520127Z   npm audit fix
+2025-11-07T17:16:03.683523017Z 
+2025-11-07T17:16:03.683525817Z To address all issues (including breaking changes), run:
+2025-11-07T17:16:03.683529348Z   npm audit fix --force
+2025-11-07T17:16:03.683532157Z 
+2025-11-07T17:16:03.683535858Z Run `npm audit` for details.
+2025-11-07T17:16:03.891908754Z 
+2025-11-07T17:16:03.891928924Z > tiber-fantasy@1.0.0 build
+2025-11-07T17:16:03.891934644Z > esbuild server/index.ts --platform=node --bundle --format=esm --outfile=dist/index.mjs --external:@babel/* --external:@babel/preset-typescript --external:lightningcss* --external:vite --external:@vitejs/* --external:postcss --external:browserslist
+2025-11-07T17:16:03.891941584Z 
+2025-11-07T17:16:04.14015132Z ▲ [WARNING] Duplicate member "applyAdjusters" in class body [duplicate-class-member]
+2025-11-07T17:16:04.14016818Z 
+2025-11-07T17:16:04.140173981Z     server/olc/adjusters.ts:204:2:
+2025-11-07T17:16:04.140179301Z       204 │   applyAdjusters(
+2025-11-07T17:16:04.140183501Z           ╵   ~~~~~~~~~~~~~~
+2025-11-07T17:16:04.140187681Z 
+2025-11-07T17:16:04.140191991Z   The original member "applyAdjusters" is here:
+2025-11-07T17:16:04.140196011Z 
+2025-11-07T17:16:04.140200941Z     server/olc/adjusters.ts:97:2:
+2025-11-07T17:16:04.140205351Z       97 │   applyAdjusters(
+2025-11-07T17:16:04.140209662Z          ╵   ~~~~~~~~~~~~~~
+2025-11-07T17:16:04.140213422Z 
+2025-11-07T17:16:04.557748645Z 1 warning
+2025-11-07T17:16:04.557797326Z 
+2025-11-07T17:16:04.557803947Z   dist/index.mjs  8.5mb ⚠️
+2025-11-07T17:16:04.557807747Z 
+2025-11-07T17:16:04.557811887Z ⚡ Done in 658ms
