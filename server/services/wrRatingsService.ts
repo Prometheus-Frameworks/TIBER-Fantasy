@@ -26,7 +26,7 @@ export interface WRPlayer {
 
 export class WRRatingsService {
   private wrPlayers: WRPlayer[] = [];
-  private csvPath = path.join(__dirname, '../data/WR_2024_Ratings_With_Tags.csv');
+  private csvPath = path.join(process.cwd(), 'server/data/wr_ratings.csv');
 
   constructor() {
     this.loadWRData();
@@ -34,7 +34,7 @@ export class WRRatingsService {
 
   private loadWRData(): void {
     try {
-      console.log('📊 Loading WR 2024 ratings from CSV...');
+      console.log('📊 Loading WR ratings from CSV...');
       
       if (!fs.existsSync(this.csvPath)) {
         console.warn(`⚠️ CSV file not found: ${this.csvPath}`);

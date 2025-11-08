@@ -2360,7 +2360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         count: rankingsData.length,
         data: rankingsData,
-        source: 'WR_2024_Ratings_With_Tags.csv',
+        source: 'wr_ratings.csv',
         timestamp: new Date().toISOString()
       });
       
@@ -2386,7 +2386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success: true,
           player_found: true,
           data: playerProfile,
-          source: 'WR_2024_Ratings_With_Tags.csv',
+          source: 'wr_ratings.csv',
           timestamp: new Date().toISOString()
         });
       } else {
@@ -2417,7 +2417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         data: statsOverview,
-        source: 'WR_2024_Ratings_With_Tags.csv',
+        source: 'wr_ratings.csv',
         timestamp: new Date().toISOString()
       });
       
@@ -2480,7 +2480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const __dirname = path.dirname(__filename);
       
       // Load elite WRs from CSV
-      const csvPath = path.join(__dirname, '../services/../data/WR_2024_Ratings_With_Tags.csv');
+      const csvPath = path.join(process.cwd(), 'server/data/wr_ratings.csv');
       const eliteWRs: any[] = [];
       
       if (fs.existsSync(csvPath)) {

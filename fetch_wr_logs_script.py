@@ -14,7 +14,7 @@ from typing import Dict, List, Set
 def load_excluded_players() -> Set[str]:
     excluded = set()
     try:
-        with open('server/data/WR_2024_Ratings_With_Tags.csv', 'r') as f:
+        with open('server/data/wr_ratings.csv', 'r') as f:
             reader = csv.DictReader(f)
             for row in reader:
                 player_name = row['player_name'].strip()

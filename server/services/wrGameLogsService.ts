@@ -43,7 +43,7 @@ export class WRGameLogsService {
 
   private loadExcludedPlayers(): void {
     try {
-      const csvPath = path.join(__dirname, '../data/WR_2024_Ratings_With_Tags.csv');
+      const csvPath = path.join(process.cwd(), 'server/data/wr_ratings.csv');
       if (fs.existsSync(csvPath)) {
         const csvContent = fs.readFileSync(csvPath, 'utf-8');
         const lines = csvContent.trim().split('\n');
