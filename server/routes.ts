@@ -4295,8 +4295,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { type, player, position, signal } = req.query;
       
       // Load preseason intel data
-      const fs = require('fs');
-      const path = require('path');
+      const fs = await import('fs');
+      const path = await import('path');
       const intelPath = path.join(process.cwd(), 'data', 'preseason_intel_week1.json');
       
       if (!fs.existsSync(intelPath)) {

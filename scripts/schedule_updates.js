@@ -1,6 +1,6 @@
-const cron = require('node-cron');
-const { exec } = require('child_process');
-const fs = require('fs');
+import cron from 'node-cron';
+import { exec } from 'child_process';
+import fs from 'fs';
 
 // Function to run the Python update script
 function runPlayerVsDefenseUpdate() {

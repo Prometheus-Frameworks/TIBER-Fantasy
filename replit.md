@@ -82,3 +82,14 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **Recharts**: Charting and data visualization.
 - **connect-pg-simple**: PostgreSQL-based session storage.
 - **@neondatabase/serverless**: PostgreSQL connection for serverless environments.
+
+## Recent Technical Changes (November 2025)
+- **ESM Build Migration**: Converted to full ESM compatibility for production builds on Render
+  - `scripts/schedule_updates.js`: Converted from CommonJS require() to ESM imports (node-cron, child_process, fs)
+  - `server/routes.ts`: Converted require() to dynamic ESM imports for fs/path modules in /api/intel endpoint
+  - Cache operations in `sleeperRosterSync.ts` intentionally use synchronous require() for performance
+- **WR Ratings Module**: Standardized CSV naming and path resolution
+  - Renamed: `WR_2024_Ratings_With_Tags.csv` → `wr_ratings.csv`
+  - Updated path resolution: Changed from `__dirname` to `process.cwd()` for ESM bundle compatibility
+  - All references updated in services, routes, and Python scripts
+  - Module successfully loading 50 WR players with FPG, VORP, and archetype tags

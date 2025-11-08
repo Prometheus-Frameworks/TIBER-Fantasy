@@ -334,7 +334,7 @@ export class SleeperRosterSyncService {
   
   private getCachedPlayers(): Record<string, SleeperPlayer> | null {
     try {
-      const fs = require('fs');
+      const fs = require('fs'); // Keep synchronous for cache read performance
       const cached = fs.readFileSync('/tmp/sleeper_players_cache.json', 'utf8');
       const data = JSON.parse(cached);
       
@@ -351,7 +351,7 @@ export class SleeperRosterSyncService {
   
   private cachePlayersData(players: Record<string, SleeperPlayer>): void {
     try {
-      const fs = require('fs');
+      const fs = require('fs'); // Keep synchronous for cache write performance
       const cacheData = {
         timestamp: Date.now(),
         players
