@@ -84,6 +84,12 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **@neondatabase/serverless**: PostgreSQL connection for serverless environments.
 
 ## Recent Technical Changes (November 2025)
+- **Database Infrastructure Consolidation** (November 8, 2025):
+  - Canonical database module: `server/infra/db.ts` (standard PostgreSQL with SSL)
+  - Migrated 65+ files from legacy `server/db.ts` (Neon-specific) to canonical module
+  - Deleted legacy `server/db.ts` - all imports now use `server/infra/db.ts`
+  - Resolved fetchConnectionCache deprecation warning in pg configuration
+  - Production deployment on Render with standard PostgreSQL (not Neon serverless)
 - **ESM Build Migration**: Converted to full ESM compatibility for production builds on Render
   - `scripts/schedule_updates.js`: Converted from CommonJS require() to ESM imports (node-cron, child_process, fs)
   - `server/routes.ts`: Converted require() to dynamic ESM imports for fs/path modules in /api/intel endpoint
