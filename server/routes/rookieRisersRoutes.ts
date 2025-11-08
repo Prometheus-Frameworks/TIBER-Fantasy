@@ -4,7 +4,7 @@
  */
 
 import express from 'express';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { sql } from 'drizzle-orm';
 import { 
   calculateWaiverHeat, 

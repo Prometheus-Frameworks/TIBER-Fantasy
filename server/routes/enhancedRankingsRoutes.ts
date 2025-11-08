@@ -8,7 +8,7 @@
  */
 
 import type { Express, Request, Response } from "express";
-import { db } from "../db";
+import { db } from "../infra/db";
 import { eq, and, desc } from "drizzle-orm";
 import { computeWeeklySOS } from "../modules/sos/sos.service";
 import { oasisEnvironmentService } from "../services/oasisEnvironmentService";

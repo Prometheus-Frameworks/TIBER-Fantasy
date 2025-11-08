@@ -6,7 +6,7 @@
  */
 
 import { Router } from 'express';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { playerIdentityMap, defenseVsPositionStats, schedule, tiberScores } from '../../shared/schema';
 import { eq, and, or, sql, desc, asc, inArray } from 'drizzle-orm';
 

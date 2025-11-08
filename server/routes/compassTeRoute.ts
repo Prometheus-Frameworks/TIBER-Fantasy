@@ -1,6 +1,6 @@
 import { Express, Request, Response } from "express";
 import { z } from "zod";
-import { db } from "../db";
+import { db } from "../infra/db";
 import { players } from "../../shared/schema";
 import { and, eq, ilike, or, sql } from "drizzle-orm";
 import { LRUCache } from "lru-cache";

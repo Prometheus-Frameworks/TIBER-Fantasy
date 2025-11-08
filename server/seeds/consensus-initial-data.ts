@@ -1,5 +1,5 @@
 // Initial consensus data seeding for tier management
-import { db } from "../db";
+import { db } from "../infra/db";
 import { consensusBoard, consensusMeta } from "@shared/schema";
 import { sql } from "drizzle-orm";
 

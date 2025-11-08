@@ -27,7 +27,7 @@ import { RiskEngine } from "./riskEngine";
 import { MarketEngine } from "./marketEngine";
 import { ECRService } from "./ecrService";
 import { ecrAdapter } from "../adapters/ECRAdapter";
-import { db } from "../db";
+import { db } from "../infra/db";
 import { players, playerWeekFacts, playerSeasonFacts } from "@shared/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 

@@ -1,4 +1,4 @@
-import { db } from "../db";
+import { db } from "../infra/db";
 import { schemaRegistry } from "../../shared/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { createHash } from "crypto";

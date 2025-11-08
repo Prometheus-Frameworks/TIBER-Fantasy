@@ -10,7 +10,7 @@
  */
 
 import type { Express, Request, Response } from "express";
-import { db } from "../db";
+import { db } from "../infra/db";
 import { players, advancedSignals } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import axios from "axios";

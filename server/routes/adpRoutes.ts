@@ -4,7 +4,7 @@
 
 import type { Express } from 'express';
 import { adpSyncService } from '../adpSyncService';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { players } from '../../shared/schema';
 import { sql, desc, eq } from 'drizzle-orm';
 import { PlayerFilteringService } from '../playerFiltering';

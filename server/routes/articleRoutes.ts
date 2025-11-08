@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { articles, insertArticleSchema, Article } from '../../shared/schema';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { eq, desc, sql, and, like, or } from 'drizzle-orm';
 import { z } from 'zod';
 

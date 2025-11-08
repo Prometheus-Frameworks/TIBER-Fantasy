@@ -1,4 +1,4 @@
-import { db } from "../db";
+import { db } from "../infra/db";
 import { consensusBoard, consensusMeta } from "@shared/schema";
 import { playerPoolService } from "../playerPool";
 

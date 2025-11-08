@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { eq, and, desc, gte } from 'drizzle-orm';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { buysSells, playerWeekFacts } from '@shared/schema';
 import { 
   computeBuysSellsForWeek, 

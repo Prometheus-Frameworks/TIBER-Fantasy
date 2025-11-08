@@ -1,6 +1,6 @@
 // Tiber Memory System Routes
 import { Router } from 'express';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { tiberMemory } from '@shared/schema';
 import { eq, ilike, or, desc } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';

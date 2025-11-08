@@ -1,4 +1,4 @@
-import { db } from "../db";
+import { db } from "../infra/db";
 import { consensusRanks, consensusAudit } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { inMemoryConsensusStore } from "./inMemoryStore";
