@@ -15,7 +15,7 @@
  * - Cross-Source Consensus: Agreement across multiple data sources
  */
 
-import { db } from '../../db';
+import { db } from '../../infra/db';
 import { 
   playerWeekFacts,
   playerSeasonFacts,

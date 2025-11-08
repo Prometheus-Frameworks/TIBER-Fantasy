@@ -1,4 +1,4 @@
-import { db } from "../../../db";
+import { db } from "../../../infra/db";
 import { DEFAULT_WEIGHTS, REPLACEMENT_LINES, type Position, type Format, parseWeights } from "./weights";
 
 interface PlayerInputsRow {

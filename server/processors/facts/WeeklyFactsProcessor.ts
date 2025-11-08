@@ -14,7 +14,7 @@
  * - Team context and environmental factors
  */
 
-import { db } from '../../db';
+import { db } from '../../infra/db';
 import { 
   playerWeekFacts,
   playerWeekFactsMetadata,

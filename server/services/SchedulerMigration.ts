@@ -12,7 +12,7 @@
  * 5. Maintain backup cron schedules during transition
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { intelligentScheduleState, scheduleTriggers } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 

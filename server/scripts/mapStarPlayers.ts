@@ -4,7 +4,7 @@
  */
 
 import { playerIdentityService } from '../services/PlayerIdentityService';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { playerIdentityMap } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 

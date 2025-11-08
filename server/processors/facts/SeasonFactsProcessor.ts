@@ -14,7 +14,7 @@
  * - Market integration and consensus rankings
  */
 
-import { db } from '../../db';
+import { db } from '../../infra/db';
 import { 
   playerSeasonFacts,
   playerWeekFacts,

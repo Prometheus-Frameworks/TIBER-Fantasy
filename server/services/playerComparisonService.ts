@@ -4,7 +4,7 @@
  * Compare two players side-by-side with usage stats and opponent matchup analysis
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { 
   playerUsage, 

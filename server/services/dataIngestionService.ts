@@ -3,7 +3,7 @@
  * Handles large data dumps and batch processing
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { players } from '../../shared/schema';
 import { eq, sql } from 'drizzle-orm';
 

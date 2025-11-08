@@ -16,7 +16,7 @@
  * - Resource monitoring and performance optimization
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { 
   jobRuns, 
   taskRuns,

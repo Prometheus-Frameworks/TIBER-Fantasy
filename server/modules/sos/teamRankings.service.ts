@@ -1,4 +1,4 @@
-import { db } from '../../db';
+import { db } from '../../infra/db';
 import { teamDefensiveContext, teamOffensiveContext, teamCoverageMatchups, teamReceiverAlignmentMatchups, schedule } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 

@@ -14,7 +14,7 @@
  * - Error logging and retry mechanisms
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { ingestPayloads, type IngestPayload, dataSourceEnum, ingestStatusEnum } from '@shared/schema';
 import { eq, and, desc, count, gte, lte, inArray, sql } from 'drizzle-orm';
 import crypto from 'crypto';

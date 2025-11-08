@@ -4,7 +4,7 @@
  * Data source: Sleeper API (injury_status field)
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { injuries, playerIdentityMap } from '../../shared/schema';
 import { eq, and } from 'drizzle-orm';
 

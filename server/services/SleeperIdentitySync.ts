@@ -5,7 +5,7 @@
  * using tiered matching with confidence scoring
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { playerIdentityMap } from '@shared/schema';
 import { eq, or, and, ilike, sql } from 'drizzle-orm';
 import { sleeperSyncService, type SleeperPlayer } from './sleeperSyncService';

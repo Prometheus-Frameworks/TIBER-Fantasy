@@ -14,7 +14,7 @@
  * - Batch processing with comprehensive error handling
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { 
   ingestPayloads, 
   playerIdentityMap, 

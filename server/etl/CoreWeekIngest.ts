@@ -12,7 +12,7 @@
 
 import { z } from 'zod';
 import { eq, and, sql } from 'drizzle-orm';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { playerWeekFacts, players, type InsertPlayerWeekFacts } from '@shared/schema';
 import { getCurrentNFLWeek } from '../cron/weeklyUpdate';
 import { getAllPlayers, resolvePlayer } from '../../src/data/resolvers/playerResolver';

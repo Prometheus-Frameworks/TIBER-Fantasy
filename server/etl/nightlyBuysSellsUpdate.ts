@@ -3,7 +3,7 @@
  * Runs after player data updates to generate fresh trade recommendations
  */
 import { computeBuysSellsForAllPositions } from '../compute';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { getCurrentNFLWeek } from '../cron/weeklyUpdate';
 
 interface ProcessingResult {

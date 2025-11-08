@@ -11,7 +11,7 @@
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { db } from '../../db';
+import { db } from '../../infra/db';
 import { sql } from 'drizzle-orm';
 import {
   teamOffensiveContext,

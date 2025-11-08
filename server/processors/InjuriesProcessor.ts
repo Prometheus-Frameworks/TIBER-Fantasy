@@ -5,7 +5,7 @@
  * canonical injuries table with proper player identity resolution.
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { 
   injuries,
   type IngestPayload,

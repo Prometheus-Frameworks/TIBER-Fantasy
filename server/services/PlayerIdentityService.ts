@@ -8,7 +8,7 @@
  * and fuzzy matching for ambiguous cases.
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { playerIdentityMap, type PlayerIdentityMap } from '@shared/schema';
 import { eq, and, sql, or, ilike, desc } from 'drizzle-orm';
 import { cacheKey, getCache, setCache } from '../../src/data/cache';

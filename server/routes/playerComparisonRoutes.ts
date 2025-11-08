@@ -4,7 +4,7 @@
 
 import { Router } from 'express';
 import { comparePlayers } from '../services/playerComparisonService';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { playerIdentityMap } from '../../shared/schema';
 import { sql, or, ilike } from 'drizzle-orm';
 

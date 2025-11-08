@@ -1,7 +1,7 @@
 // server/scripts/validateRankings.ts
 // Run this to verify rankings are showing correct players
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { players } from '../../shared/schema';
 import { eq, and, desc, sql, isNotNull } from 'drizzle-orm';
 

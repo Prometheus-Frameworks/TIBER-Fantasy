@@ -11,7 +11,7 @@
  * Integrates with: BrandSignalsIntegration, SeasonService, MonitoringService, BrandBus
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { 
   brandSignals, 
   seasonState, 

@@ -3,7 +3,7 @@
  * Provides intelligent season/week detection using Sleeper API → DB → ENV
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { seasonState } from '@shared/schema';
 import { desc, sql } from 'drizzle-orm';
 

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { computeRedraftWeek, computeDynastySeason } from './compute';
 import { type Position, type Format, parseWeights } from './weights';
-import { db } from '../../../db';
+import { db } from '../../../infra/db';
 
 const VALID_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE']);
 const VALID_FORMATS = new Set(['redraft', 'dynasty']);

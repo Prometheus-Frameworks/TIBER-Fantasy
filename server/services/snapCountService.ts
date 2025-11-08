@@ -3,7 +3,7 @@
  * Fetches real snap count data from NFLfastR via nfl-data-py
  */
 import { spawn } from 'child_process';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { bronzeNflfastrSnapCounts } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 

@@ -5,7 +5,7 @@
  * Player Identity Map. Manages cross-platform identity resolution and data merging.
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { 
   playerIdentityMap,
   type IngestPayload,

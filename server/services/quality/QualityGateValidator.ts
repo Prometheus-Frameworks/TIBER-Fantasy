@@ -13,7 +13,7 @@
  * - Outliers: Statistical anomaly detection and flagging
  */
 
-import { db } from '../../db';
+import { db } from '../../infra/db';
 import { 
   qualityGateResults,
   playerWeekFacts,

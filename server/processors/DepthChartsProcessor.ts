@@ -5,7 +5,7 @@
  * with proper player identity resolution and positional hierarchy tracking.
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { 
   depthCharts,
   type IngestPayload,

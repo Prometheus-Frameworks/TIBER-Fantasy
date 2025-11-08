@@ -11,7 +11,7 @@
  * - Integration with UPH job tracking and schema drift service
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { 
   monitoringJobRuns, 
   datasetVersions, 

@@ -3,7 +3,7 @@
  * Validates our EPA calculations against Ben Baldwin's adjusted EPA methodology
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { qbEpaReference, qbContextMetrics, qbEpaAdjusted, calibratedEpaWeights } from '@shared/schema';
 import { eq, and, sql as rawSql, desc } from 'drizzle-orm';
 

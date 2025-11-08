@@ -15,7 +15,7 @@
  * - Comprehensive scheduling metrics and monitoring integration
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import {
   intelligentScheduleState,
   scheduleTriggers,

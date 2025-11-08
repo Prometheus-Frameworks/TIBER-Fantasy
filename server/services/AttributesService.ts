@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { db } from '../infra/db';
 import { playerAttributes, playerIdentityMap, type PlayerAttributes, type InsertPlayerAttributes } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
 

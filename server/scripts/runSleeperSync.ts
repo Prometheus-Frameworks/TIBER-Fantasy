@@ -4,7 +4,7 @@
  * Runs the sync independently without server interference
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { sleeperIdentitySync } from '../services/SleeperIdentitySync';
 
 async function runSync() {

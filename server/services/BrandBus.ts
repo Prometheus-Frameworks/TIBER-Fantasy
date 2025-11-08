@@ -11,7 +11,7 @@
  * - Performance monitoring: Full metrics tracking for each brand plugin
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { brandSignals, insertBrandSignalsSchema, type InsertBrandSignals } from '@shared/schema';
 import { MonitoringService } from './MonitoringService';
 import { SeasonService } from './SeasonService';

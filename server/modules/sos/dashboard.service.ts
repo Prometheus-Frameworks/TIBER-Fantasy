@@ -1,4 +1,4 @@
-import { db } from '../../db';
+import { db } from '../../infra/db';
 import { sosDashboards, sosWidgets, sosUserPreferences } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 

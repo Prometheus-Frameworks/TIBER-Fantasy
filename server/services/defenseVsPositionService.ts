@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { db } from '../infra/db';
 import { bronzeNflfastrPlays, defenseVsPositionStats, playerIdentityMap } from '@shared/schema';
 import { and, eq, isNull, isNotNull, sql, desc } from 'drizzle-orm';
 

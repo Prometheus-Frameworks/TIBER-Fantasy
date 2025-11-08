@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { tiberService } from '../services/tiberService';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { tiberScores, playerIdentityMap, players, injuries, gameLogs } from '../../shared/schema';
 import { eq, and, desc, sql, ilike, inArray, isNotNull } from 'drizzle-orm';
 import { injurySyncService } from '../services/injurySyncService';

@@ -1,5 +1,5 @@
 import { TiberService } from '../services/tiberService';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { bronzeNflfastrPlays, playerIdentityMap } from '../../shared/schema';
 import { eq, and, lte, or, sql } from 'drizzle-orm';
 

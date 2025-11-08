@@ -14,7 +14,7 @@
  * - Trade value and dynasty value calculations
  */
 
-import { db } from '../../db';
+import { db } from '../../infra/db';
 import { 
   playerCompositeFacts,
   playerSeasonFacts,

@@ -5,7 +5,7 @@
  * Manages team metadata, divisions, conferences, and cross-platform team ID mapping.
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { 
   nflTeamsDim,
   type IngestPayload,

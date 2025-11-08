@@ -5,7 +5,7 @@
  * confidence-scored start/sit recommendations for fantasy football.
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { sql, eq, and, desc } from 'drizzle-orm';
 import { 
   playerUsage, 

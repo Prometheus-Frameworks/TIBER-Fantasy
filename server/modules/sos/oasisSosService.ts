@@ -1,6 +1,6 @@
 import { oasisEnvironmentService } from '../../services/oasisEnvironmentService';
 import type { Position, WeeklySOS, ROSItem } from './sos.types';
-import { db } from '../../db';
+import { db } from '../../infra/db';
 import { schedule } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 

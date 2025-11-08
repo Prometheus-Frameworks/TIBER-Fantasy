@@ -13,7 +13,7 @@
  * - Comprehensive audit trails for regulatory compliance
  */
 
-import { db } from '../../db';
+import { db } from '../../infra/db';
 import { 
   dataLineage,
   ingestPayloads,

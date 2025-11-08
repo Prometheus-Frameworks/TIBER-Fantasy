@@ -5,7 +5,7 @@
 
 import { resolvePlayerId, fetchPlayerWeekBundle } from './dataAdapter';
 import { decideStartSit, decideTrade, reasonsFromMetrics, contingencies } from './deciders';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { tiberMemory } from '@shared/schema';
 import { ilike, or, sql, desc } from 'drizzle-orm';
 import axios from 'axios';

@@ -16,7 +16,7 @@
  * - Performance-optimized for large dataset processing
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { 
   playerIdentityMap,
   playerSeasonFacts, 

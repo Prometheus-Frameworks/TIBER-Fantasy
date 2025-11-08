@@ -14,7 +14,7 @@
  * - Predictive market analytics and breakout/bust indicators
  */
 
-import { db } from '../../db';
+import { db } from '../../infra/db';
 import { 
   playerMarketFacts,
   marketSignals,

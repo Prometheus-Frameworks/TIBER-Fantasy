@@ -1,5 +1,5 @@
 import express from 'express';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { playerSeason2024, playerAdvanced2024 } from '@shared/schema';
 import { eq, desc, asc, and, gte, sql } from 'drizzle-orm';
 import type { PlayerSeason2024, PlayerAdvanced2024 } from '@shared/schema';

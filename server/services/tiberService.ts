@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { db } from '../infra/db';
 import { tiberScores, tiberSeasonRatings, bronzeNflfastrPlays, bronzeNflfastrSnapCounts, players, playerIdentityMap } from '../../shared/schema';
 import { eq, and, or, lte, sql } from 'drizzle-orm';
 

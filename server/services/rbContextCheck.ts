@@ -4,7 +4,7 @@
  * Similar to QB sanity check but with RB-relevant factors
  */
 
-import { db } from '../db';
+import { db } from '../infra/db';
 import { rbContextMetrics, rbEpaAdjusted } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { players, gameLogs } from '@shared/schema';
 import { eq, and, sql, gte, lte } from 'drizzle-orm';
 

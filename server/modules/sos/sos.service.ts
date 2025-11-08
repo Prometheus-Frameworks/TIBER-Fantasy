@@ -1,4 +1,4 @@
-import { db } from '../../db';
+import { db } from '../../infra/db';
 import { defenseVP, schedule, defenseContext, teamOffensiveContext, teamDefensiveContext, teamReceiverAlignmentMatchups, teamCoverageMatchups } from '@shared/schema';
 import { eq, and, lte, between, gte } from 'drizzle-orm';
 import { oasisSosService } from './oasisSosService';

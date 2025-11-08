@@ -4,7 +4,7 @@ import { fetchGameOdds } from '../data/sources/vegas.js';
 import { fetchGameWeather } from '../data/sources/weather.js';
 import { fetchDefenseSplits } from '../data/sources/defenseSplits.js';
 import { fetchRouteAlign } from '../data/sources/alignments.js';
-import { db } from '../db';
+import { db } from '../infra/db';
 import { tiberMemory } from '@shared/schema';
 import { ilike, or, sql, desc } from 'drizzle-orm';
 
