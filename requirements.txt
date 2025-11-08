@@ -1,0 +1,16 @@
+# Core NFL data dependencies
+nfl_data_py>=0.3.2
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Database connections
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+
+# Data processing
+pyarrow>=12.0.0
+scipy>=1.10.0
+
+# HTTP and utilities
+requests>=2.31.0
+beautifulsoup4>=4.12.0
