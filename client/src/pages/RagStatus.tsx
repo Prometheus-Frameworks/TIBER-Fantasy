@@ -93,11 +93,8 @@ export default function RagStatus() {
 
   const chatMutation = useMutation({
     mutationFn: async (message: string) => {
-      const response = await apiRequest<ChatResponse>('/api/rag/chat', {
-        method: 'POST',
-        body: JSON.stringify({ message, user_level: 1 }),
-      });
-      return response;
+      const response = await apiRequest('POST', '/api/rag/chat', { message, user_level: 1 });
+      return response.json();
     },
     onSuccess: (data) => {
       setChatResponse(data);
