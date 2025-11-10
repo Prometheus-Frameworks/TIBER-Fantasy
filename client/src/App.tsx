@@ -10,6 +10,7 @@ import PlayerComparePilot from "@/pages/PlayerComparePilot";
 import AnalyticsPage from "@/pages/AnalyticsPage";
 import LeadersPage from "@/pages/LeadersPage";
 import TeamReportsPage from "@/pages/TeamReportsPage";
+import RagStatus from "@/pages/RagStatus";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -29,6 +30,9 @@ function Router() {
       
       {/* Team Reports */}
       <Route path="/team-reports" component={TeamReportsPage} />
+      
+      {/* Admin: RAG Status */}
+      <Route path="/admin/rag-status" component={RagStatus} />
       
       {/* 404 Catch-all */}
       <Route component={NotFound} />

@@ -6056,6 +6056,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /**
+   * GET /api/admin/rag-status - RAG System Status Dashboard
+   */
+  app.get('/api/admin/rag-status', async (req: Request, res: Response) => {
+    try {
+      const { chunks, chatSessions, chatMessages } = await import('@shared/schema');
+      
+      // Get table counts
+      const [chunksCount] = await db.select({ count: sql<number>`count(*)` }).from(chunks);
+      const [sessionsCount] = await db.select({ count: sql<number>`count(*)` }).from(chatSessions);
+      const [messagesCount] = await db.select({ count: sql<number>`count(*)` }).from(chatMessages);
+
+      // Get sample chunks (first 5)
+      const sampleChunks = await db
+        .select({
+          id: chunks.id,
+          content: chunks.content,
+          metadata: chunks.metadata,
+          createdAt: chunks.createdAt,
+        })
+        .from(chunks)
+        .orderBy(desc(chunks.createdAt))
+        .limit(5);
+
+      // Get recent sessions
+      const recentSessionsData = await db
+        .select({
+          id: chatSessions.id,
+          userLevel: chatSessions.userLevel,
+          updatedAt: chatSessions.updatedAt,
+        })
+        .from(chatSessions)
+        .orderBy(desc(chatSessions.updatedAt))
+        .limit(10);
+
+      // Get message counts for each session separately
+      const sessionsWithCounts = await Promise.all(
+        recentSessionsData.map(async (session) => {
+          const [msgCount] = await db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(chatMessages)
+            .where(eq(chatMessages.sessionId, session.id));
+          
+          return {
+            id: session.id,
+            user_level: session.userLevel,
+            message_count: msgCount.count,
+            updated_at: session.updatedAt?.toISOString() || null,
+          };
+        })
+      );
+
+      // Check pgvector extension
+      const vectorCheck = await db.execute(sql`
+        SELECT extname, extversion 
+        FROM pg_extension 
+        WHERE extname = 'vector';
+      `);
+
+      res.json({
+        success: true,
+        tables: {
+          chunks: { count: chunksCount.count },
+          chat_sessions: { count: sessionsCount.count },
+          chat_messages: { count: messagesCount.count },
+        },
+        pgvector_enabled: vectorCheck.rows.length > 0,
+        pgvector_version: vectorCheck.rows[0]?.extversion || null,
+        sample_chunks: sampleChunks.map(chunk => ({
+          id: chunk.id,
+          content_preview: chunk.content?.substring(0, 150) || '',
+          metadata: chunk.metadata,
+          created_at: chunk.createdAt?.toISOString() || null,
+        })),
+        recent_sessions: sessionsWithCounts,
+        timestamp: new Date().toISOString(),
+      });
+
+    } catch (error) {
+      console.error('❌ [AdminAPI] RAG status failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
