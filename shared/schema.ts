@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, real, boolean, timestamp, varchar, jsonb, unique, pgEnum, uniqueIndex, index, smallint, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, real, boolean, timestamp, varchar, jsonb, unique, pgEnum, uniqueIndex, index, smallint, primaryKey, vector } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -3396,3 +3396,54 @@ export type PlayerWeekFacts = typeof playerWeekFacts.$inferSelect;
 export type InsertPlayerWeekFacts = z.infer<typeof insertPlayerWeekFactsSchema>;
 export type BuysSells = typeof buysSells.$inferSelect;
 export type InsertBuysSells = z.infer<typeof insertBuysSellsSchema>;
+
+// ========================================
+// RAG SYSTEM TABLES
+// ========================================
+
+// Chunks table - Stores embedded TIBER analysis narratives
+export const chunks = pgTable("chunks", {
+  id: serial("id").primaryKey(),
+  content: text("content").notNull(),
+  embedding: vector("embedding", { dimensions: 768 }), // Gemini Flash embeddings (768 dimensions)
+  metadata: jsonb("metadata").$type<{
+    player_id?: string;
+    position?: string;
+    week?: number;
+    season?: number;
+    tags?: string[];
+  }>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Chat sessions table - User conversation sessions
+export const chatSessions = pgTable("chat_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userLevel: integer("user_level").default(1).notNull(), // 1-5 skill level
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Chat messages table - Individual messages in conversations
+export const chatMessages = pgTable("chat_messages", {
+  id: serial("id").primaryKey(),
+  sessionId: varchar("session_id").notNull().references(() => chatSessions.id),
+  role: text("role").notNull(), // 'user' or 'assistant'
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  sessionIdIdx: index("chat_messages_session_id_idx").on(table.sessionId),
+}));
+
+// RAG System Insert Schemas
+export const insertChunkSchema = createInsertSchema(chunks).omit({ id: true, createdAt: true });
+export const insertChatSessionSchema = createInsertSchema(chatSessions).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, createdAt: true });
+
+// RAG System Types
+export type Chunk = typeof chunks.$inferSelect;
+export type InsertChunk = z.infer<typeof insertChunkSchema>;
+export type ChatSession = typeof chatSessions.$inferSelect;
+export type InsertChatSession = z.infer<typeof insertChatSessionSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
