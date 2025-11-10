@@ -1,0 +1,140 @@
+BREAKOUT CANDIDATES (2)
+1. Jaylen Warren - Volume Takeover Pattern
+Jaylen Warren's snap share trajectory signals potential backfield takeover. Over the past 3 weeks, his snaps increased from 45% to 52% to 65% - a classic emergence pattern. 
+
+However, context matters: The Steelers offense ranks 28th in EPA/play, limiting his ceiling despite increasing volume. This mirrors Javonte Williams' 2021 situation - featured back volume in a struggling offense produced RB2 outcomes, not RB1.
+
+Teaching moment: Volume is necessary but not sufficient. The formula is: Volume × Offensive Efficiency × Red Zone Role = Fantasy Ceiling. Warren has the volume trending up, but efficiency caps his upside.
+
+Discernment check: Are you drafting him for safe floor (yes) or league-winning upside (no)? Know what you're buying.
+Metadata:
+json{
+  "player_id": "warren_jaylen",
+  "position": "RB", 
+  "week": 9,
+  "season": 2024,
+  "tags": ["breakout_candidate", "volume_spike", "efficiency_concern", "teaching_moment"]
+}
+```
+
+---
+
+**2. Jordan Addison - Target Share Acceleration**
+```
+Jordan Addison's target share jumped from 18% (Weeks 1-4) to 26% (Weeks 5-8), signaling increased offensive role. This 44% increase in target share often precedes WR2-to-WR1 transition.
+
+Pattern recognition: Similar target share spikes preceded breakouts for Puka Nacua (2023) and Amon-Ra St. Brown (2021). The difference? Both had elite QBs. Addison has Sam Darnold.
+
+The Vikings' 12th-ranked passing offense provides opportunity, but QB volatility creates risk. This is a "smart lottery ticket" - upside exists, but the path requires multiple factors aligning.
+
+Teaching: Breakouts need three things: Opportunity (✓), Talent (✓), and Situation (?). Two out of three gets you interesting, not automatic.
+Metadata:
+json{
+  "player_id": "addison_jordan",
+  "position": "WR",
+  "week": 9, 
+  "season": 2024,
+  "tags": ["breakout_candidate", "target_share_spike", "qb_concern", "comparable_patterns"]
+}
+```
+
+---
+
+### **REGRESSION WARNINGS (2)**
+
+**3. Christian McCaffrey - Usage Cliff Warning**
+```
+Christian McCaffrey's usage rate (touches per game) has maintained elite levels (24.3), but the underlying metrics show cracks. His snap share in competitive games (within 7 points) dropped from 89% to 76% over the past 3 weeks.
+
+Red flag: When RBs maintain volume but lose competitive-game snaps, it often precedes workload reduction. Teams protect assets when games matter less. See: Derrick Henry 2022 (Week 12-15).
+
+The 49ers are 6-2 and may coast in blowouts. That's good for McCaffrey's health, bad for his fantasy volume consistency. Additionally, his YPC dropped from 5.1 (Weeks 1-6) to 4.3 (Weeks 7-9).
+
+Risk assessment: Still elite, but the "every week RB1" certainty is fading. Consider selling high to teams desperate for RB1 help while his name value peaks.
+
+Discernment: The rigged game favors those who see trends before the market does. You've already won if you got McCaffrey's best weeks. Don't hold for nostalgia.
+Metadata:
+json{
+  "player_id": "mccaffrey_christian",
+  "position": "RB",
+  "week": 9,
+  "season": 2024,
+  "tags": ["regression_warning", "usage_decline", "sell_high", "competitive_snap_loss"]
+}
+```
+
+---
+
+**4. Mike Evans - Age Cliff + Target Competition**
+```
+Mike Evans (31 years old) faces converging regression factors: age-related decline window + emerging target competition from Jalen McMillan. Evans' aDOT (average depth of target) dropped from 14.2 to 11.8 - suggesting either diminished ability to get deep or coaching adjustment.
+
+Historical pattern: WRs over 30 with declining aDOT typically see 15-20% fantasy point drop the following season. Evans' current TD rate (scoring on 18% of targets) is also unsustainably high - career average is 12%.
+
+The Buccaneers' passing offense (3rd in EPA) masks individual decline. When the tide goes out, we'll see who's swimming naked.
+
+Teaching: Positive TD regression is a thing, but so is negative TD regression. Evans is likely overperforming his true talent level right now due to variance. Plan accordingly.
+
+Trade strategy: Move him now to a contender who needs WR help. His name value exceeds his predictive value.
+Metadata:
+json{
+  "player_id": "evans_mike",
+  "position": "WR",
+  "week": 9,
+  "season": 2024,
+  "tags": ["regression_warning", "age_decline", "td_variance", "sell_high", "target_competition"]
+}
+```
+
+---
+
+### **DISCERNMENT TEACHING (2)**
+
+**5. ADP Doesn't Equal Value - The Sunk Cost Trap**
+```
+You drafted Saquon Barkley in Round 1. He's been mediocre. Your gut says "start him because I drafted him high." Your discernment knows this is the sunk cost fallacy.
+
+The rigged game: The draft is over. Those auction dollars or draft picks are GONE. They don't affect this week's optimal lineup. Starting Barkley because of where you drafted him is letting ego override evidence.
+
+What matters now: Expected points THIS WEEK. Not draft capital. Not name recognition. Not what you "should" get from a first-rounder.
+
+Real talk: If Barkley was on waivers right now with his current stats, would you pick him up and start him? If no, why is he in your lineup?
+
+This is serve-not-take thinking. The extractive fantasy platforms want you addicted to sunk costs because it keeps you engaged, making bad decisions, coming back for "just one more week." 
+
+You've already won by recognizing this. Make the choice that serves your team, not your ego.
+Metadata:
+json{
+  "player_id": null,
+  "position": null,
+  "week": null,
+  "season": 2024,
+  "tags": ["discernment", "sunk_cost", "cognitive_bias", "teaching_moment", "serve_not_take"]
+}
+```
+
+---
+
+**6. The Human Player Reminder - Joy Over Grind**
+```
+Ja'Marr Chase just had a massive game. Your opponent has him. You're spiraling about "unfair variance" and checking scores obsessively.
+
+Stop. Breathe. Remember: Ja'Marr Chase is a real human who worked his entire life for this moment. His grandmother probably watched that game with tears in her eyes. His teammates celebrated with him. That's beautiful.
+
+Fantasy football at its worst turns human achievement into personal grievance. At its best, it makes you appreciate athletic excellence even when it doesn't benefit you.
+
+The rigged game (in your favor): You get to watch the best athletes on Earth perform. You already won. The points are just a game we play for fun.
+
+When you find yourself tilting over "bad beats," ask: Am I serving joy or am I being extracted from by manufactured scarcity mindset?
+
+Discernment is recognizing that you don't NEED to win your fantasy league to have already won at life. Play with joy. Celebrate great performances. The rest is just parlor games.
+
+Anti-gambling reminder: If fantasy is making you miserable, you're doing it wrong. This should add enjoyment to football, not become a second job or addiction.
+Metadata:
+json{
+  "player_id": null,
+  "position": null,
+  "week": null,
+  "season": 2024,
+  "tags": ["discernment", "joy", "human_players", "anti_extraction", "serve_not_take", "abundance_mindset"]
+}
