@@ -3416,13 +3416,54 @@ export const chunks = pgTable("chunks", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Leagues table - User-created league contexts (similar to Claude Projects)
+export const leagues = pgTable("leagues", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(), // Will integrate auth later
+  leagueName: text("league_name").notNull(),
+  platform: text("platform"), // 'sleeper', 'espn', 'yahoo', 'manual'
+  leagueIdExternal: text("league_id_external"), // For API sync
+  settings: jsonb("settings").notNull().$type<{
+    scoring?: string; // 'ppr', 'half-ppr', 'standard'
+    teams?: number;
+    rosterSpots?: Record<string, number>;
+    playoffs?: Record<string, any>;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("leagues_user_id_idx").on(table.userId),
+  platformIdx: index("leagues_platform_idx").on(table.platform),
+}));
+
+// League context table - Vector-searchable league-specific information
+export const leagueContext = pgTable("league_context", {
+  id: serial("id").primaryKey(),
+  leagueId: varchar("league_id").notNull().references(() => leagues.id, { onDelete: 'cascade' }),
+  content: text("content").notNull(), // "User traded CMC for Evans + 2nd round pick"
+  embedding: vector("embedding", { dimensions: 768 }), // Gemini Flash embeddings
+  metadata: jsonb("metadata").notNull().$type<{
+    type?: string; // 'trade', 'roster_move', 'waiver', 'note'
+    week?: number;
+    season?: number;
+    players?: string[]; // Player IDs involved
+    tags?: string[];
+  }>(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  leagueIdIdx: index("league_context_league_id_idx").on(table.leagueId),
+}));
+
 // Chat sessions table - User conversation sessions
 export const chatSessions = pgTable("chat_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leagueId: varchar("league_id").references(() => leagues.id, { onDelete: 'set null' }), // Link to league context
   userLevel: integer("user_level").default(1).notNull(), // 1-5 skill level
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  leagueIdIdx: index("chat_sessions_league_id_idx").on(table.leagueId),
+}));
 
 // Chat messages table - Individual messages in conversations
 export const chatMessages = pgTable("chat_messages", {
@@ -3435,10 +3476,20 @@ export const chatMessages = pgTable("chat_messages", {
   sessionIdIdx: index("chat_messages_session_id_idx").on(table.sessionId),
 }));
 
+// League System Insert Schemas
+export const insertLeagueSchema = createInsertSchema(leagues).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertLeagueContextSchema = createInsertSchema(leagueContext).omit({ id: true, createdAt: true });
+
 // RAG System Insert Schemas
 export const insertChunkSchema = createInsertSchema(chunks).omit({ id: true, createdAt: true });
 export const insertChatSessionSchema = createInsertSchema(chatSessions).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, createdAt: true });
+
+// League System Types
+export type League = typeof leagues.$inferSelect;
+export type InsertLeague = z.infer<typeof insertLeagueSchema>;
+export type LeagueContext = typeof leagueContext.$inferSelect;
+export type InsertLeagueContext = z.infer<typeof insertLeagueContextSchema>;
 
 // RAG System Types
 export type Chunk = typeof chunks.$inferSelect;

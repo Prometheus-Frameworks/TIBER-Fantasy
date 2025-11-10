@@ -84,6 +84,15 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **@neondatabase/serverless**: PostgreSQL connection for serverless environments.
 
 ## Recent Technical Changes (November 2025)
+- **League System - Claude Projects-style Contexts** (November 10, 2025):
+  - **Database Schema**: Added 3 new tables for league-specific AI contexts
+    - `leagues`: User-created fantasy leagues with platform sync (Sleeper/ESPN/Yahoo), league settings (scoring, roster spots, teams)
+    - `league_context`: Vector-searchable league-specific events (trades, roster moves, waivers) with 768-dim embeddings
+    - `chat_sessions.league_id`: Links conversations to specific leagues for contextual memory
+  - **Vector Search**: League context embedded using Gemini (768-dim) for semantic retrieval of past league discussions
+  - **Architecture**: Similar to Claude Projects - each league is an isolated context where TIBER remembers roster, trades, and past advice
+  - **External Sync**: Ready for Sleeper/ESPN/Yahoo API integration via `league_id_external` field
+  - **Cascade Deletion**: Deleting a league cascades to all league_context entries; chat sessions set league_id to NULL
 - **RAG Chat System with Citation Tracking** (November 10, 2025):
   - **Gemini Integration**: Google Gemini AI for 768-dimension embeddings (text-embedding-004) and chat generation (gemini-2.0-flash)
   - **Embeddings Service**: `server/services/geminiEmbeddings.ts` handles embedding generation and chat responses with TIBER personality
@@ -95,6 +104,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
   - **Admin Dashboard**: `/admin/rag-status` page with auto-refresh (30s), semantic search test, and chat test interface
   - **Vector Storage**: Raw SQL for vector operations due to Drizzle ORM parameter quoting with pgvector
   - **Database Tables**: `chunks` (narratives + embeddings), `chat_sessions` (user conversations), `chat_messages` (message history)
+  - **ChatHomepage**: NotebookLM-style conversational UI as default homepage with session persistence, mobile responsive, source citation transparency
 - **Database Infrastructure Consolidation** (November 8, 2025):
   - Canonical database module: `server/infra/db.ts` (standard PostgreSQL with SSL)
   - Migrated 65+ files from legacy `server/db.ts` (Neon-specific) to canonical module
