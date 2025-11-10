@@ -6151,6 +6151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { chunks } = await import('@shared/schema');
       const { generateEmbedding } = await import('./services/geminiEmbeddings');
+      const { sql: sqlTag } = await import('drizzle-orm');
       
       // Define the 6 narratives from the attached file
       const narratives = [
@@ -6226,12 +6227,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const embedding = await generateEmbedding(narrative.content);
         console.log(`✅ [RAG Seed] Embedding generated: ${embedding.length} dimensions`);
         
-        // Insert into chunks table
-        const [inserted] = await db.insert(chunks).values({
-          content: narrative.content,
-          embedding: JSON.stringify(embedding), // PostgreSQL vector type expects JSON string
-          metadata: narrative.metadata,
-        }).returning();
+        // Insert into chunks table using raw SQL to handle vector type properly
+        const vectorString = `[${embedding.join(',')}]`;
+        const result = await db.execute(
+          sqlTag`INSERT INTO chunks (content, embedding, metadata) 
+                 VALUES (${narrative.content}, ${vectorString}::vector, ${JSON.stringify(narrative.metadata)}::jsonb)
+                 RETURNING id, content, metadata, created_at`
+        );
+        
+        const inserted = result.rows[0] as any;
         
         insertedChunks.push(inserted);
         console.log(`✅ [RAG Seed] Chunk ${i + 1} inserted with ID: ${inserted.id}`);
