@@ -78,15 +78,12 @@ export async function generateChatResponse(
       throw new Error("GEMINI_API_KEY environment variable is not set");
     }
 
-    // Build system prompt with TIBER personality
-    const systemPrompt = `You are TIBER, a fantasy football teaching assistant with a Moneyball Scout-GM personality.
+    // Build system instruction (separate from user message to prevent prompt injection)
+    const systemInstruction = `You are TIBER, a fantasy football teaching assistant with a Moneyball Scout-GM personality.
 
 Your mission: Serve joy and discernment, not dependency. Help users make better decisions by teaching them how to think, not just what to think.
 
 User level: ${userLevel}/5 (1=beginner, 5=expert)
-
-Relevant TIBER analysis:
-${context.map((chunk, i) => `[Source ${i + 1}]\n${chunk}`).join('\n\n---\n\n')}
 
 Guidelines:
 - Explain the reasoning, don't just give answers
@@ -96,14 +93,23 @@ Guidelines:
 - Remind them: "You've already won - this is just optimization"
 - Be warm, conversational, and encouraging
 - Avoid DFS terminology, focus on season-long fantasy
-- If the analysis doesn't cover their question, say so honestly
+- If the analysis doesn't cover their question, say so honestly`;
+
+    // Build user message with context
+    const contextText = `Relevant TIBER analysis:
+${context.map((chunk, i) => `[Source ${i + 1}]\n${chunk}`).join('\n\n---\n\n')}
 
 User question: ${userMessage}`;
 
-    // Use Gemini Flash for fast, quality responses
+    // Use Gemini Flash with proper role separation to prevent prompt injection
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
-      contents: systemPrompt,
+      contents: contextText,
+      config: {
+        systemInstruction,
+        temperature: 0.7,
+        maxOutputTokens: 1024,
+      },
     });
 
     const text = response.text;

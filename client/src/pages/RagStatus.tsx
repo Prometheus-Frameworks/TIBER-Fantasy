@@ -46,9 +46,26 @@ interface SearchResponse {
   count: number;
 }
 
+interface ChatSource {
+  chunk_id: number;
+  relevance_score: number;
+  content_preview: string;
+  metadata: any;
+}
+
+interface ChatResponse {
+  success: boolean;
+  session_id: string;
+  response: string;
+  sources: ChatSource[];
+  message_id: number;
+}
+
 export default function RagStatus() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
+  const [chatMessage, setChatMessage] = useState('');
+  const [chatResponse, setChatResponse] = useState<ChatResponse | null>(null);
 
   const { data, isLoading, error } = useQuery<RagStatusData>({
     queryKey: ['/api/admin/rag-status'],
@@ -71,6 +88,25 @@ export default function RagStatus() {
   const handleSearch = () => {
     if (searchQuery.trim()) {
       searchMutation.mutate(searchQuery);
+    }
+  };
+
+  const chatMutation = useMutation({
+    mutationFn: async (message: string) => {
+      const response = await apiRequest<ChatResponse>('/api/rag/chat', {
+        method: 'POST',
+        body: JSON.stringify({ message, user_level: 1 }),
+      });
+      return response;
+    },
+    onSuccess: (data) => {
+      setChatResponse(data);
+    },
+  });
+
+  const handleChat = () => {
+    if (chatMessage.trim()) {
+      chatMutation.mutate(chatMessage);
     }
   };
 
@@ -301,6 +337,80 @@ export default function RagStatus() {
             {searchResults === null && !searchMutation.isPending && (
               <p className="text-sm text-gray-500 text-center py-4">
                 Enter a query to test semantic search
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-[#141824] border-gray-800">
+          <CardHeader>
+            <CardTitle className="text-white">Test RAG Chat (with Citations)</CardTitle>
+            <CardDescription>Ask TIBER a question and see source citations</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                data-testid="input-chat-message"
+                type="text"
+                placeholder="Ask: 'Should I trade for Jaylen Warren?'"
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleChat()}
+                className="bg-[#0a0e1a] border-gray-700 text-white placeholder:text-gray-500"
+              />
+              <Button
+                data-testid="button-chat"
+                onClick={handleChat}
+                disabled={chatMutation.isPending || !chatMessage.trim()}
+                className="bg-purple-500 hover:bg-purple-600"
+              >
+                {chatMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Ask'
+                )}
+              </Button>
+            </div>
+
+            {chatMutation.isError && (
+              <p className="text-sm text-red-400">
+                Error: {(chatMutation.error as Error)?.message || 'Chat failed'}
+              </p>
+            )}
+
+            {chatResponse && (
+              <div className="space-y-4">
+                <div className="border border-blue-500/30 rounded-lg p-4 bg-blue-500/5">
+                  <p className="text-sm font-semibold text-blue-400 mb-2">TIBER Response:</p>
+                  <p className="text-sm text-gray-300 whitespace-pre-wrap">{chatResponse.response}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-gray-400">
+                    Sources ({chatResponse.sources.length} chunks):
+                  </p>
+                  {chatResponse.sources.map((source, idx) => (
+                    <div
+                      key={source.chunk_id}
+                      data-testid={`chat-source-${idx}`}
+                      className="border border-gray-700 rounded-lg p-3 bg-[#0a0e1a] space-y-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-400 border-purple-500/30">
+                          Source {idx + 1}: {(source.relevance_score * 100).toFixed(1)}% match
+                        </Badge>
+                        <span className="text-xs text-gray-500">Chunk #{source.chunk_id}</span>
+                      </div>
+                      <p className="text-xs text-gray-400">{source.content_preview}...</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!chatResponse && !chatMutation.isPending && (
+              <p className="text-sm text-gray-500 text-center py-4">
+                Ask a fantasy football question to see TIBER's response with citations
               </p>
             )}
           </CardContent>
