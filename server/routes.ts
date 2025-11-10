@@ -6264,6 +6264,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RAG Semantic Search endpoint
+  app.post('/api/admin/rag/search', async (req, res) => {
+    try {
+      const { query, limit = 3 } = req.body;
+
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: 'Query is required and must be a string',
+        });
+      }
+
+      console.log(`🔍 [RAG Search] Searching for: "${query}"`);
+
+      // Generate embedding for the query
+      const queryEmbedding = await generateEmbedding(query);
+      console.log(`✅ [RAG Search] Query embedding generated: ${queryEmbedding.length} dimensions`);
+
+      // Search using pgvector cosine similarity
+      // The <-> operator returns cosine distance (0 = identical, 2 = opposite)
+      // We convert to similarity score: 1 - (distance / 2)
+      const vectorString = `[${queryEmbedding.join(',')}]`;
+      const result = await db.execute(
+        sqlTag`SELECT 
+                 id, 
+                 content, 
+                 metadata,
+                 (1 - (embedding <-> ${vectorString}::vector) / 2) as similarity
+               FROM chunks
+               ORDER BY embedding <-> ${vectorString}::vector
+               LIMIT ${limit}`
+      );
+
+      const results = result.rows.map((row: any) => ({
+        id: row.id,
+        content: row.content,
+        content_preview: row.content?.substring(0, 200) || '',
+        metadata: row.metadata,
+        similarity: parseFloat(row.similarity),
+      }));
+
+      console.log(`✅ [RAG Search] Found ${results.length} results`);
+
+      res.json({
+        success: true,
+        query,
+        results,
+        count: results.length,
+      });
+
+    } catch (error) {
+      console.error('❌ [RAG Search] Failed to search:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

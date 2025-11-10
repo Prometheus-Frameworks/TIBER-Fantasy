@@ -1,6 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { apiRequest } from '@/lib/queryClient';
+import { Search, Loader2 } from 'lucide-react';
 
 interface RagStatusData {
   success: boolean;
@@ -26,11 +31,48 @@ interface RagStatusData {
   timestamp: string;
 }
 
+interface SearchResult {
+  id: number;
+  content: string;
+  content_preview: string;
+  metadata: any;
+  similarity: number;
+}
+
+interface SearchResponse {
+  success: boolean;
+  query: string;
+  results: SearchResult[];
+  count: number;
+}
+
 export default function RagStatus() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
+
   const { data, isLoading, error } = useQuery<RagStatusData>({
     queryKey: ['/api/admin/rag-status'],
     refetchInterval: 30000,
   });
+
+  const searchMutation = useMutation({
+    mutationFn: async (query: string) => {
+      const response = await apiRequest<SearchResponse>('/api/admin/rag/search', {
+        method: 'POST',
+        body: JSON.stringify({ query, limit: 3 }),
+      });
+      return response;
+    },
+    onSuccess: (data) => {
+      setSearchResults(data.results);
+    },
+  });
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      searchMutation.mutate(searchQuery);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -167,6 +209,99 @@ export default function RagStatus() {
                   </div>
                 ))}
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-[#141824] border-gray-800">
+          <CardHeader>
+            <CardTitle className="text-white">Test Semantic Search</CardTitle>
+            <CardDescription>Test vector similarity search using Gemini embeddings</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                data-testid="input-search-query"
+                type="text"
+                placeholder="Try: 'safe floor player' or 'breakout candidates'"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="bg-[#0a0e1a] border-gray-700 text-white placeholder:text-gray-500"
+              />
+              <Button
+                data-testid="button-search"
+                onClick={handleSearch}
+                disabled={searchMutation.isPending || !searchQuery.trim()}
+                className="bg-blue-500 hover:bg-blue-600"
+              >
+                {searchMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+
+            {searchMutation.isError && (
+              <p className="text-sm text-red-400">
+                Error: {(searchMutation.error as Error)?.message || 'Search failed'}
+              </p>
+            )}
+
+            {searchResults && (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-400">
+                  Found {searchResults.length} results for "{searchMutation.data?.query}"
+                </p>
+                {searchResults.map((result, idx) => (
+                  <div
+                    key={result.id}
+                    data-testid={`search-result-${idx}`}
+                    className="border border-gray-700 rounded-lg p-4 space-y-2 bg-[#0a0e1a]"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-400 border-blue-500/30">
+                          {(result.similarity * 100).toFixed(1)}% match
+                        </Badge>
+                        <span className="text-xs text-gray-500">ID: {result.id}</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-300">{result.content_preview}...</p>
+                    {result.metadata && (
+                      <div className="flex gap-2 flex-wrap">
+                        {result.metadata.player_id && (
+                          <Badge variant="outline" className="text-xs">
+                            {result.metadata.player_id}
+                          </Badge>
+                        )}
+                        {result.metadata.position && (
+                          <Badge variant="outline" className="text-xs">
+                            {result.metadata.position}
+                          </Badge>
+                        )}
+                        {result.metadata.week && (
+                          <Badge variant="outline" className="text-xs">
+                            Week {result.metadata.week}
+                          </Badge>
+                        )}
+                        {result.metadata.tags && result.metadata.tags.slice(0, 3).map((tag: string) => (
+                          <Badge key={tag} variant="outline" className="text-xs bg-purple-500/10 text-purple-400">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {searchResults === null && !searchMutation.isPending && (
+              <p className="text-sm text-gray-500 text-center py-4">
+                Enter a query to test semantic search
+              </p>
             )}
           </CardContent>
         </Card>
