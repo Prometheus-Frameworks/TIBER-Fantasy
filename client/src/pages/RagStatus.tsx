@@ -74,11 +74,8 @@ export default function RagStatus() {
 
   const searchMutation = useMutation({
     mutationFn: async (query: string) => {
-      const response = await apiRequest<SearchResponse>('/api/admin/rag/search', {
-        method: 'POST',
-        body: JSON.stringify({ query, limit: 3 }),
-      });
-      return response;
+      const response = await apiRequest('POST', '/api/admin/rag/search', { query, limit: 3 });
+      return response.json() as Promise<SearchResponse>;
     },
     onSuccess: (data) => {
       setSearchResults(data.results);
@@ -285,7 +282,7 @@ export default function RagStatus() {
             {searchResults && (
               <div className="space-y-3">
                 <p className="text-sm text-gray-400">
-                  Found {searchResults.length} results for "{searchMutation.data?.query}"
+                  Found {searchResults.length} results for "{searchQuery}"
                 </p>
                 {searchResults.map((result, idx) => (
                   <div
