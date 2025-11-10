@@ -97,3 +97,4 @@ localPort = 45915
 externalPort = 4200
 
 [agent]
+integrations = ["javascript_gemini:1.0.0"]
