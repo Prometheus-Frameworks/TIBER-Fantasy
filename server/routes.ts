@@ -45,6 +45,7 @@ import { sleeperStrictSnapService } from './services/sleeperStrictSnapService';
 import { wrRatingsService } from './services/wrRatingsService';
 import { wrGameLogsService } from './services/wrGameLogsService';
 import { playerPoolService } from './playerPool';
+import { generateEmbedding } from './services/geminiEmbeddings';
 // Live compass routes imported in registerRoutes function
 import rbCompassRoutes from './routes/rbCompassRoutes';
 import publicRoutes from './routes/public';
@@ -6287,14 +6288,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // We convert to similarity score: 1 - (distance / 2)
       const vectorString = `[${queryEmbedding.join(',')}]`;
       const result = await db.execute(
-        sqlTag`SELECT 
-                 id, 
-                 content, 
-                 metadata,
-                 (1 - (embedding <-> ${vectorString}::vector) / 2) as similarity
-               FROM chunks
-               ORDER BY embedding <-> ${vectorString}::vector
-               LIMIT ${limit}`
+        sql`SELECT 
+              id, 
+              content, 
+              metadata,
+              (1 - (embedding <-> ${vectorString}::vector) / 2) as similarity
+            FROM chunks
+            ORDER BY embedding <-> ${vectorString}::vector
+            LIMIT ${limit}`
       );
 
       const results = result.rows.map((row: any) => ({
