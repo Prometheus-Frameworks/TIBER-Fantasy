@@ -10,7 +10,7 @@ import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generat
 // Removed deprecated imports
 import { PlayerFilteringService } from "./playerFiltering";
 import { db } from "./infra/db";
-import { dynastyTradeHistory, players as playersTable, playerWeekFacts } from "@shared/schema";
+import { dynastyTradeHistory, players as playersTable, playerWeekFacts, chunks, chatSessions, chatMessages } from "@shared/schema";
 import { eq, desc, and, sql, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 // Removed deprecated fantasy services
@@ -45,7 +45,7 @@ import { sleeperStrictSnapService } from './services/sleeperStrictSnapService';
 import { wrRatingsService } from './services/wrRatingsService';
 import { wrGameLogsService } from './services/wrGameLogsService';
 import { playerPoolService } from './playerPool';
-import { generateEmbedding } from './services/geminiEmbeddings';
+import { generateEmbedding, generateChatResponse } from './services/geminiEmbeddings';
 // Live compass routes imported in registerRoutes function
 import rbCompassRoutes from './routes/rbCompassRoutes';
 import publicRoutes from './routes/public';
@@ -6317,6 +6317,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error) {
       console.error('❌ [RAG Search] Failed to search:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
+  // RAG Chat endpoint with citation tracking
+  app.post('/api/rag/chat', async (req, res) => {
+    try {
+      const { session_id, message, user_level = 1 } = req.body;
+
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: 'Message is required and must be a string',
+        });
+      }
+
+      console.log(`💬 [RAG Chat] Processing message: "${message.substring(0, 50)}..."`);
+      console.log(`💬 [RAG Chat] Session ID: ${session_id || 'new session'}, User level: ${user_level}`);
+
+      // Step 1: Generate embedding for user message
+      const queryEmbedding = await generateEmbedding(message);
+      console.log(`✅ [RAG Chat] Query embedding generated: ${queryEmbedding.length} dimensions`);
+
+      // Step 2: Retrieve relevant chunks (top 5)
+      const vectorString = `[${queryEmbedding.join(',')}]`;
+      const searchResult = await db.execute(
+        sql`SELECT 
+              id, 
+              content, 
+              metadata,
+              (1 - (embedding <-> ${vectorString}::vector) / 2) as similarity
+            FROM chunks
+            ORDER BY embedding <-> ${vectorString}::vector
+            LIMIT 5`
+      );
+
+      const relevantChunks = searchResult.rows.map((row: any) => ({
+        chunk_id: row.id,
+        content: row.content,
+        content_preview: row.content?.substring(0, 150) || '',
+        metadata: row.metadata,
+        relevance_score: parseFloat(row.similarity),
+      }));
+
+      console.log(`✅ [RAG Chat] Found ${relevantChunks.length} relevant chunks`);
+
+      // Step 3: Build context and generate response
+      const context = relevantChunks.map(chunk => chunk.content);
+      const aiResponse = await generateChatResponse(message, context, user_level);
+      console.log(`✅ [RAG Chat] Response generated: ${aiResponse.substring(0, 100)}...`);
+
+      // Step 4: Save to database
+      let sessionId = session_id;
+      
+      // Create new session if needed
+      if (!sessionId) {
+        const [newSession] = await db.insert(chatSessions).values({
+          userLevel: user_level,
+        }).returning();
+        sessionId = newSession.id;
+        console.log(`✅ [RAG Chat] Created new session: ${sessionId}`);
+      } else {
+        // Update session timestamp
+        await db.update(chatSessions)
+          .set({ updatedAt: new Date() })
+          .where(eq(chatSessions.id, sessionId));
+        console.log(`✅ [RAG Chat] Updated session: ${sessionId}`);
+      }
+
+      // Save user message
+      const [userMessage] = await db.insert(chatMessages).values({
+        sessionId,
+        role: 'user',
+        content: message,
+      }).returning();
+
+      // Save assistant response
+      const [assistantMessage] = await db.insert(chatMessages).values({
+        sessionId,
+        role: 'assistant',
+        content: aiResponse,
+      }).returning();
+
+      console.log(`✅ [RAG Chat] Messages saved (user: ${userMessage.id}, assistant: ${assistantMessage.id})`);
+
+      // Step 5: Return response with sources
+      res.json({
+        success: true,
+        session_id: sessionId,
+        response: aiResponse,
+        sources: relevantChunks.map(chunk => ({
+          chunk_id: chunk.chunk_id,
+          relevance_score: chunk.relevance_score,
+          content_preview: chunk.content_preview,
+          metadata: chunk.metadata,
+        })),
+        message_id: assistantMessage.id,
+      });
+
+    } catch (error) {
+      console.error('❌ [RAG Chat] Failed to process chat:', error);
       res.status(500).json({
         success: false,
         error: (error as Error).message || 'Unknown error',
