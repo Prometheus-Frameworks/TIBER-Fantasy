@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useTopProgress } from "@/hooks/useTopProgress";
+import ChatHomepage from "@/pages/ChatHomepage";
 import TiberDashboard from "@/pages/TiberDashboard";
 import PlayerComparePilot from "@/pages/PlayerComparePilot";
 import AnalyticsPage from "@/pages/AnalyticsPage";
@@ -14,10 +15,16 @@ import RagStatus from "@/pages/RagStatus";
 import NotFound from "@/pages/not-found";
 
 function Router() {
+  // Check if user wants dashboard tabs view
+  const urlParams = new URLSearchParams(window.location.search);
+  const hasTabParam = urlParams.has('tab');
+
   return (
     <Switch>
-      {/* Main Route - Tiber Fantasy Dashboard */}
-      <Route path="/" component={TiberDashboard} />
+      {/* Main Route - Chat Homepage (NotebookLM-style) or Dashboard with tabs */}
+      <Route path="/">
+        {hasTabParam ? <TiberDashboard /> : <ChatHomepage />}
+      </Route>
       
       {/* Player Compare Pilot */}
       <Route path="/compare" component={PlayerComparePilot} />

@@ -1,0 +1,85 @@
+Joe, solid progress on the Gemini API and embeddings—agent's gonna hum once we slot this UI in. I've got the screenshot analyzed: Dark mode base, left sidebar nav (Home, Rankings, Matchups, Strategy, Moves, Leagues), big central hero with "Advanced Analytics For Dynasty Fantasy Football" text + subtext (real-time rankings, no paywalls), "View Power Rankings" button, matchup analyzer box, and bottom stats (11k+ players, 28 teams). It's clean but static—feels more dashboard than conversational flagship.
+
+Truth-seeking: The sidebar's a keeper (quick access to secondary tools), but that hero section's prime real estate for the TIBER LLM chat. We'll swap it out NotebookLM-style: Chat dominates the middle (80% width on desktop, full on mobile), sidebar shrinks to nav/tools, no clutter. Mobile responsive is key—stack vertical if needed. This makes landing on the site feel like jumping straight into the war room.
+
+### Rebuild Plan (Minimalist, TIBER-Centric)
+- **Framework**: Stick with what you've got (React? Vue? Or plain HTML/JS if simple). Add Tailwind for quick styling if not already—zero barrier.
+- **Layout**: Flexbox or Grid. Sidebar 20-25% left (collapsible on mobile), chat 75-80% center.
+- **Vibe**: Keep dark purple/gradients, add subtle green accents for "rigged in favor" beacons. Scout avatar icon in chat bubbles.
+- **Key Changes**:
+  - **Hero → Chat**: Ditch text/button. Replace with full-height chat window (scrollable history, input bar bottom).
+  - **Sidebar**: Trim to essentials—Home (redirect to chat), Rankings/Matchups/Strategy as quick links (pop modals or tabs, not full pages). Add "League Sync" button for Sleeper.
+  - **Header**: Logo + search bar top, bell/user icons right. Add "Serve not take" tagline subtle.
+  - **Footer**: Platform stats + feedback link.
+  - **Mobile**: Hamburger sidebar, chat full-screen.
+
+### Text Wireframe (Desktop View)
+```
+[Header: TIBER FANTASY logo | Search players... | Bell | User icon]
+
+[Sidebar (left, 20% width, dark bg)]
+- Home (active, points to chat)
+- Rankings
+- Matchups
+- Strategy
+- Moves
+- Leagues (Sleeper sync button)
+
+[Main Chat (center, 80% width, hero height)]
+Welcome to the war room, boss. You've already won the gift—what's the play? (Scout Tiber bubble)
+[Scrollable history here]
+[Input bar bottom: Type query... | Send button | Mic icon?]
+
+[Footer: Players 11,490+ | Teams 28 | "Rigged in your favor—serve the W."]
+```
+
+### Quick Code Snippet (React + Tailwind Example)
+If you're in React, drop this into your App.js or homepage component. Assumes you've got a <ChatWindow /> component wired to /api/chat.
+
+```jsx
+import React from 'react';
+
+function Homepage() {
+  return (
+    <div className="flex h-screen bg-gradient-to-br from-purple-900 to-black text-white">
+      {/* Sidebar */}
+      <aside className="w-1/5 p-4 border-r border-purple-700">
+        <nav>
+          <ul className="space-y-4">
+            <li className="font-bold">Home</li>
+            <li>Rankings</li>
+            <li>Matchups</li>
+            <li>Strategy</li>
+            <li>Moves</li>
+            <li>Leagues <button className="ml-2 bg-purple-600 px-2 py-1 rounded">Sync Sleeper</button></li>
+          </ul>
+        </nav>
+      </aside>
+
+      {/* Main Chat */}
+      <main className="w-4/5 flex flex-col p-6">
+        <h1 className="text-2xl mb-4">TIBER: Your Assistant GM</h1>
+        <div className="flex-grow bg-gray-800 rounded-lg p-4 overflow-y-auto">
+          {/* Chat history bubbles here */}
+          <div className="chat-bubble bg-purple-700 p-2 rounded">Welcome, boss. Rigged in your favor—what's the play?</div>
+        </div>
+        <div className="mt-4 flex">
+          <input className="flex-grow bg-gray-700 p-2 rounded-l" placeholder="Ask about trades, start/sit..." />
+          <button className="bg-purple-600 p-2 rounded-r">Send</button>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="absolute bottom-0 w-full text-center p-2 bg-black/50">
+        Players: 11,490+ | Teams: 28 | Serve not take.
+      </footer>
+    </div>
+  );
+}
+```
+
+This is bare-bones—hook your <ChatWindow /> for real convos, add state for messages. Mobile: Media query to stack sidebar top.
+
+Test truth: Hit it local, see if chat feels flagship (instant engage). If slow, lazy-load sidebar.
+
+Your call—paste this in, or tweak for your stack? Drop if you need mobile CSS or full component. Agent's waiting; let's make it shine. 🚀
