@@ -1,11 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, X, User, Bell, Search, Send, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Menu, X, User, Bell, Search, Send, Loader2, ChevronDown, ChevronUp, Plus, Users } from 'lucide-react';
 import { Link } from 'wouter';
-import { useMutation } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { 
+  Dialog,
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface ChatMessage {
   id: string;
@@ -30,12 +44,41 @@ interface ChatResponse {
   message_id: number;
 }
 
+interface League {
+  id: string;
+  userId: string;
+  leagueName: string;
+  platform: string | null;
+  leagueIdExternal: string | null;
+  settings: {
+    scoring?: string;
+    teams?: number;
+    rosterSpots?: Record<string, number>;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function ChatHomepage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
+  const [createLeagueOpen, setCreateLeagueOpen] = useState(false);
+  const [leaguesExpanded, setLeaguesExpanded] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch user's leagues
+  const { data: leaguesData } = useQuery({
+    queryKey: ['/api/leagues'],
+    queryFn: async () => {
+      const response = await fetch('/api/leagues?user_id=default_user');
+      return response.json();
+    },
+  });
+
+  const leagues = leaguesData?.leagues || [];
 
   // Load session from localStorage on mount
   useEffect(() => {
@@ -82,6 +125,7 @@ export default function ChatHomepage() {
         message,
         user_level: 2,
         session_id: sessionId,
+        league_id: selectedLeagueId,
       });
       return response.json() as Promise<ChatResponse>;
     },
@@ -166,13 +210,81 @@ export default function ChatHomepage() {
             <li>
               <button
                 data-testid="nav-home"
-                onClick={() => setSidebarOpen(false)}
-                className="w-full text-left px-3 py-2 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30 font-medium"
+                onClick={() => {
+                  setSelectedLeagueId(null);
+                  setSidebarOpen(false);
+                }}
+                className={`w-full text-left px-3 py-2 rounded ${
+                  !selectedLeagueId
+                    ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30 font-medium'
+                    : 'hover:bg-gray-700/50 text-gray-300'
+                } transition-colors`}
               >
-                Home
+                Generic Chat
               </button>
             </li>
-            <li>
+
+            {/* League Selector Section */}
+            <li className="mt-4">
+              <button
+                data-testid="button-toggle-leagues"
+                onClick={() => setLeaguesExpanded(!leaguesExpanded)}
+                className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700/30 text-gray-300 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  <span className="text-sm font-medium">My Leagues</span>
+                </div>
+                {leaguesExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+
+              {leaguesExpanded && (
+                <div className="mt-2 ml-2 space-y-1">
+                  {leagues.length === 0 ? (
+                    <p className="text-xs text-gray-500 px-3 py-2">No leagues yet</p>
+                  ) : (
+                    leagues.map((league: League) => (
+                      <button
+                        key={league.id}
+                        data-testid={`league-${league.id}`}
+                        onClick={() => {
+                          setSelectedLeagueId(league.id);
+                          setSidebarOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded text-sm ${
+                          selectedLeagueId === league.id
+                            ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+                            : 'hover:bg-gray-700/30 text-gray-400'
+                        } transition-colors`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="truncate">{league.leagueName}</span>
+                          {league.settings.teams && (
+                            <Badge variant="secondary" className="text-xs ml-2">
+                              {league.settings.teams}T
+                            </Badge>
+                          )}
+                        </div>
+                        {league.platform && (
+                          <span className="text-xs text-gray-500 capitalize">{league.platform}</span>
+                        )}
+                      </button>
+                    ))
+                  )}
+                  
+                  <button
+                    data-testid="button-create-league"
+                    onClick={() => setCreateLeagueOpen(true)}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-green-500/10 text-green-400 transition-colors text-sm border border-dashed border-green-500/30"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Create New League</span>
+                  </button>
+                </div>
+              )}
+            </li>
+
+            <li className="mt-4 pt-4 border-t border-gray-700">
               <Link href="/?tab=rankings">
                 <button
                   data-testid="nav-rankings"
@@ -239,7 +351,16 @@ export default function ChatHomepage() {
             >
               <Menu className="h-6 w-6" />
             </button>
-            <h1 className="text-lg font-bold hidden sm:block">TIBER: Your Assistant GM</h1>
+            <div className="flex flex-col">
+              <h1 className="text-lg font-bold hidden sm:block">TIBER: Your Assistant GM</h1>
+              {selectedLeagueId && (
+                <p data-testid="league-context-indicator" className="text-xs text-blue-400 hidden sm:block">
+                  📊 {leagues.find((l: League) => l.id === selectedLeagueId)?.leagueName || 'League'}
+                  {leagues.find((l: League) => l.id === selectedLeagueId)?.settings.teams && 
+                    ` (${leagues.find((l: League) => l.id === selectedLeagueId)?.settings.teams}T ${leagues.find((l: League) => l.id === selectedLeagueId)?.settings.scoring?.toUpperCase() || 'PPR'})`}
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -327,7 +448,172 @@ export default function ChatHomepage() {
           onClick={() => setSidebarOpen(false)}
         />
       )}
+
+      {/* Create League Modal */}
+      <CreateLeagueModal 
+        open={createLeagueOpen}
+        onClose={() => setCreateLeagueOpen(false)}
+        onSuccess={(newLeague) => {
+          setSelectedLeagueId(newLeague.id);
+          setCreateLeagueOpen(false);
+          queryClient.invalidateQueries({ queryKey: ['/api/leagues'] });
+        }}
+      />
     </div>
+  );
+}
+
+// Create League Modal Component
+function CreateLeagueModal({ open, onClose, onSuccess }: {
+  open: boolean;
+  onClose: () => void;
+  onSuccess: (league: any) => void;
+}) {
+  const [leagueName, setLeagueName] = useState('');
+  const [platform, setPlatform] = useState('manual');
+  const [scoring, setScoring] = useState('ppr');
+  const [teams, setTeams] = useState('12');
+
+  const createLeagueMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/leagues', {
+        league_name: leagueName,
+        platform,
+        settings: {
+          scoring,
+          teams: parseInt(teams),
+        },
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        onSuccess(data.league);
+        // Reset form
+        setLeagueName('');
+        setPlatform('manual');
+        setScoring('ppr');
+        setTeams('12');
+      }
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (leagueName.trim()) {
+      createLeagueMutation.mutate();
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md bg-[#141824] text-white border-gray-700">
+        <DialogHeader>
+          <DialogTitle>Create New League</DialogTitle>
+          <DialogDescription className="text-gray-400">
+            Set up a league context for TIBER to remember your roster and trades
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <div>
+            <label htmlFor="league-name" className="text-sm font-medium text-gray-300 block mb-2">
+              League Name
+            </label>
+            <Input
+              id="league-name"
+              data-testid="input-league-name"
+              type="text"
+              placeholder="My Dynasty League"
+              value={leagueName}
+              onChange={(e) => setLeagueName(e.target.value)}
+              className="bg-[#0a0e1a] border-gray-700 text-white"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="platform" className="text-sm font-medium text-gray-300 block mb-2">
+              Platform
+            </label>
+            <Select value={platform} onValueChange={setPlatform}>
+              <SelectTrigger data-testid="select-platform" className="bg-[#0a0e1a] border-gray-700 text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-[#141824] border-gray-700 text-white">
+                <SelectItem value="manual">Manual</SelectItem>
+                <SelectItem value="sleeper">Sleeper</SelectItem>
+                <SelectItem value="espn">ESPN</SelectItem>
+                <SelectItem value="yahoo">Yahoo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="scoring" className="text-sm font-medium text-gray-300 block mb-2">
+                Scoring
+              </label>
+              <Select value={scoring} onValueChange={setScoring}>
+                <SelectTrigger data-testid="select-scoring" className="bg-[#0a0e1a] border-gray-700 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#141824] border-gray-700 text-white">
+                  <SelectItem value="ppr">PPR</SelectItem>
+                  <SelectItem value="half-ppr">0.5 PPR</SelectItem>
+                  <SelectItem value="standard">Standard</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label htmlFor="teams" className="text-sm font-medium text-gray-300 block mb-2">
+                Teams
+              </label>
+              <Select value={teams} onValueChange={setTeams}>
+                <SelectTrigger data-testid="select-teams" className="bg-[#0a0e1a] border-gray-700 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#141824] border-gray-700 text-white">
+                  {[8, 10, 12, 14].map((num) => (
+                    <SelectItem key={num} value={num.toString()}>
+                      {num}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button
+              type="button"
+              data-testid="button-cancel-create"
+              variant="outline"
+              onClick={onClose}
+              className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-700/50"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              data-testid="button-submit-create"
+              disabled={!leagueName.trim() || createLeagueMutation.isPending}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {createLeagueMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create League'
+              )}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

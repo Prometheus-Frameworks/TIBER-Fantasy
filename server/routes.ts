@@ -6324,10 +6324,181 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // RAG Chat endpoint with citation tracking
+  // ========================================
+  // LEAGUE MANAGEMENT ROUTES
+  // ========================================
+
+  // GET /api/leagues - List all leagues for a user
+  app.get('/api/leagues', async (req, res) => {
+    try {
+      const { leagues: leaguesTable } = await import('@shared/schema');
+      const { user_id = 'default_user' } = req.query; // TODO: Replace with actual auth
+
+      const userLeagues = await db
+        .select()
+        .from(leaguesTable)
+        .where(eq(leaguesTable.userId, user_id as string));
+
+      console.log(`✅ [Leagues] Found ${userLeagues.length} leagues for user: ${user_id}`);
+      
+      res.json({
+        success: true,
+        leagues: userLeagues,
+      });
+    } catch (error) {
+      console.error('❌ [Leagues] Failed to fetch leagues:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
+  // POST /api/leagues - Create a new league
+  app.post('/api/leagues', async (req, res) => {
+    try {
+      const { leagues: leaguesTable, insertLeagueSchema } = await import('@shared/schema');
+      const { league_name, platform, league_id_external, settings } = req.body;
+      const user_id = 'default_user'; // TODO: Replace with actual auth
+
+      // Validate and create league
+      const leagueData = {
+        userId: user_id,
+        leagueName: league_name,
+        platform: platform || null,
+        leagueIdExternal: league_id_external || null,
+        settings: settings || {},
+      };
+
+      const [newLeague] = await db.insert(leaguesTable).values(leagueData).returning();
+
+      console.log(`✅ [Leagues] Created league: ${newLeague.leagueName} (${newLeague.id})`);
+
+      res.json({
+        success: true,
+        league: newLeague,
+      });
+    } catch (error) {
+      console.error('❌ [Leagues] Failed to create league:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
+  // GET /api/leagues/:id - Get league details
+  app.get('/api/leagues/:id', async (req, res) => {
+    try {
+      const { leagues: leaguesTable } = await import('@shared/schema');
+      const { id } = req.params;
+
+      const [league] = await db
+        .select()
+        .from(leaguesTable)
+        .where(eq(leaguesTable.id, id));
+
+      if (!league) {
+        return res.status(404).json({
+          success: false,
+          error: 'League not found',
+        });
+      }
+
+      console.log(`✅ [Leagues] Retrieved league: ${league.leagueName}`);
+
+      res.json({
+        success: true,
+        league,
+      });
+    } catch (error) {
+      console.error('❌ [Leagues] Failed to fetch league:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
+  // PUT /api/leagues/:id - Update league
+  app.put('/api/leagues/:id', async (req, res) => {
+    try {
+      const { leagues: leaguesTable } = await import('@shared/schema');
+      const { id } = req.params;
+      const { league_name, platform, league_id_external, settings } = req.body;
+
+      const updateData: any = { updatedAt: new Date() };
+      if (league_name) updateData.leagueName = league_name;
+      if (platform) updateData.platform = platform;
+      if (league_id_external !== undefined) updateData.leagueIdExternal = league_id_external;
+      if (settings) updateData.settings = settings;
+
+      const [updatedLeague] = await db
+        .update(leaguesTable)
+        .set(updateData)
+        .where(eq(leaguesTable.id, id))
+        .returning();
+
+      if (!updatedLeague) {
+        return res.status(404).json({
+          success: false,
+          error: 'League not found',
+        });
+      }
+
+      console.log(`✅ [Leagues] Updated league: ${updatedLeague.leagueName}`);
+
+      res.json({
+        success: true,
+        league: updatedLeague,
+      });
+    } catch (error) {
+      console.error('❌ [Leagues] Failed to update league:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
+  // DELETE /api/leagues/:id - Delete league
+  app.delete('/api/leagues/:id', async (req, res) => {
+    try {
+      const { leagues: leaguesTable } = await import('@shared/schema');
+      const { id } = req.params;
+
+      const [deletedLeague] = await db
+        .delete(leaguesTable)
+        .where(eq(leaguesTable.id, id))
+        .returning();
+
+      if (!deletedLeague) {
+        return res.status(404).json({
+          success: false,
+          error: 'League not found',
+        });
+      }
+
+      console.log(`✅ [Leagues] Deleted league: ${deletedLeague.leagueName} (cascade to league_context)`);
+
+      res.json({
+        success: true,
+        message: 'League deleted successfully',
+        league: deletedLeague,
+      });
+    } catch (error) {
+      console.error('❌ [Leagues] Failed to delete league:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
+  // RAG Chat endpoint with citation tracking + league context
   app.post('/api/rag/chat', async (req, res) => {
     try {
-      const { session_id, message, user_level = 1 } = req.body;
+      const { session_id, message, user_level = 1, league_id } = req.body;
 
       if (!message || typeof message !== 'string') {
         return res.status(400).json({
@@ -6337,34 +6508,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`💬 [RAG Chat] Processing message: "${message.substring(0, 50)}..."`);
-      console.log(`💬 [RAG Chat] Session ID: ${session_id || 'new session'}, User level: ${user_level}`);
+      console.log(`💬 [RAG Chat] Session ID: ${session_id || 'new session'}, User level: ${user_level}, League: ${league_id || 'generic'}`);
 
       // Step 1: Generate embedding for user message
       const queryEmbedding = await generateEmbedding(message);
       console.log(`✅ [RAG Chat] Query embedding generated: ${queryEmbedding.length} dimensions`);
 
-      // Step 2: Retrieve relevant chunks (top 5)
+      // Step 2: Retrieve relevant context
       const vectorString = `[${queryEmbedding.join(',')}]`;
-      const searchResult = await db.execute(
+      const relevantChunks: any[] = [];
+
+      // 2a. Search league-specific context if league_id provided
+      if (league_id) {
+        console.log(`🏈 [RAG Chat] Searching league-specific context for league: ${league_id}`);
+        const leagueSearchResult = await db.execute(
+          sql`SELECT 
+                id, 
+                content, 
+                metadata,
+                (1 - (embedding <-> ${vectorString}::vector) / 2) as similarity,
+                'league' as source_type
+              FROM league_context
+              WHERE league_id = ${league_id}
+              AND embedding IS NOT NULL
+              ORDER BY embedding <=> ${vectorString}::vector
+              LIMIT 3`
+        );
+
+        const leagueChunks = leagueSearchResult.rows.map((row: any) => ({
+          chunk_id: row.id,
+          content: row.content,
+          content_preview: row.content?.substring(0, 150) || '',
+          metadata: row.metadata,
+          relevance_score: parseFloat(row.similarity),
+          source_type: 'league',
+        }));
+
+        relevantChunks.push(...leagueChunks);
+        console.log(`✅ [RAG Chat] Found ${leagueChunks.length} league-specific chunks`);
+      }
+
+      // 2b. Search general TIBER knowledge chunks
+      const generalSearchResult = await db.execute(
         sql`SELECT 
               id, 
               content, 
               metadata,
-              (1 - (embedding <-> ${vectorString}::vector) / 2) as similarity
+              (1 - (embedding <-> ${vectorString}::vector) / 2) as similarity,
+              'general' as source_type
             FROM chunks
             ORDER BY embedding <-> ${vectorString}::vector
-            LIMIT 5`
+            LIMIT ${league_id ? 3 : 5}`
       );
 
-      const relevantChunks = searchResult.rows.map((row: any) => ({
+      const generalChunks = generalSearchResult.rows.map((row: any) => ({
         chunk_id: row.id,
         content: row.content,
         content_preview: row.content?.substring(0, 150) || '',
         metadata: row.metadata,
         relevance_score: parseFloat(row.similarity),
+        source_type: 'general',
       }));
 
-      console.log(`✅ [RAG Chat] Found ${relevantChunks.length} relevant chunks`);
+      relevantChunks.push(...generalChunks);
+      console.log(`✅ [RAG Chat] Found ${generalChunks.length} general knowledge chunks`);
+      console.log(`✅ [RAG Chat] Total relevant chunks: ${relevantChunks.length}`);
 
       // Step 3: Build context and generate response
       const context = relevantChunks.map(chunk => chunk.content);
@@ -6376,15 +6584,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create new session if needed
       if (!sessionId) {
-        const [newSession] = await db.insert(chatSessions).values({
-          userLevel: user_level,
-        }).returning();
+        const sessionData: any = { userLevel: user_level };
+        if (league_id) {
+          sessionData.leagueId = league_id;
+        }
+        
+        const [newSession] = await db.insert(chatSessions).values(sessionData).returning();
         sessionId = newSession.id;
-        console.log(`✅ [RAG Chat] Created new session: ${sessionId}`);
+        console.log(`✅ [RAG Chat] Created new session: ${sessionId} ${league_id ? `(League: ${league_id})` : '(Generic)'}`);
       } else {
-        // Update session timestamp
+        // Update session timestamp and league_id
+        const updateData: any = { updatedAt: new Date() };
+        if (league_id !== undefined) {
+          updateData.leagueId = league_id;
+        }
+        
         await db.update(chatSessions)
-          .set({ updatedAt: new Date() })
+          .set(updateData)
           .where(eq(chatSessions.id, sessionId));
         console.log(`✅ [RAG Chat] Updated session: ${sessionId}`);
       }
