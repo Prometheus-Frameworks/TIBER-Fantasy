@@ -84,6 +84,14 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **@neondatabase/serverless**: PostgreSQL connection for serverless environments.
 
 ## Recent Technical Changes (November 2025)
+- **RAG System with Gemini Embeddings** (November 10, 2025):
+  - **Gemini Integration**: Added Google Gemini AI integration for generating 768-dimension text embeddings (text-embedding-004 model)
+  - **Embeddings Service**: Created `server/services/geminiEmbeddings.ts` for generating embeddings with validation and error handling
+  - **Narrative Seeding**: Implemented `POST /api/admin/rag/seed-narratives` endpoint to populate chunks table with TIBER analysis narratives
+  - **Initial Dataset**: Seeded 6 TIBER narratives covering breakout candidates (Jaylen Warren, Jordan Addison), regression warnings (Christian McCaffrey, Mike Evans), and discernment teaching moments (sunk cost fallacy, joy over grind)
+  - **Admin Dashboard**: Created `/admin/rag-status` page with auto-refresh (30s) to monitor chunks, sessions, messages, and pgvector status
+  - **Vector Storage**: Using raw SQL for vector column inserts to avoid ORM parameter quoting issues with pgvector extension
+  - **Metadata Structure**: Each chunk includes player_id, position, week, season, and tags for semantic filtering
 - **Database Infrastructure Consolidation** (November 8, 2025):
   - Canonical database module: `server/infra/db.ts` (standard PostgreSQL with SSL)
   - Migrated 65+ files from legacy `server/db.ts` (Neon-specific) to canonical module
