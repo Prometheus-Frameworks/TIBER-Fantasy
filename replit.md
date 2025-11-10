@@ -93,6 +93,21 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
   - **Architecture**: Similar to Claude Projects - each league is an isolated context where TIBER remembers roster, trades, and past advice
   - **External Sync**: Ready for Sleeper/ESPN/Yahoo API integration via `league_id_external` field
   - **Cascade Deletion**: Deleting a league cascades to all league_context entries; chat sessions set league_id to NULL
+  - **Backend API Routes** (✅ COMPLETE):
+    - GET /api/leagues - List user's leagues
+    - POST /api/leagues - Create new league
+    - GET /api/leagues/:id - Get league details
+    - PUT /api/leagues/:id - Update league settings
+    - DELETE /api/leagues/:id - Delete league (cascades to league_context)
+    - POST /api/rag/chat - Updated to accept optional league_id parameter for context-aware responses
+  - **Frontend UI** (✅ COMPLETE):
+    - ChatHomepage league selector in sidebar: Collapsible "My Leagues" section with toggle
+    - Create League Modal: shadcn Dialog with form fields (name, platform, scoring, teams)
+    - League context indicator in header: Shows active league name and settings (e.g., "📊 Test Dynasty League (12T PPR)")
+    - Generic Chat mode: Resets to no league context when "Generic Chat" button clicked
+    - Active league highlighting: Blue border/background for selected league
+    - Auto-select new league after creation with cache invalidation
+  - **Integration**: RAG chat seamlessly switches between generic knowledge and league-specific context based on selectedLeagueId state
 - **RAG Chat System with Citation Tracking** (November 10, 2025):
   - **Gemini Integration**: Google Gemini AI for 768-dimension embeddings (text-embedding-004) and chat generation (gemini-2.0-flash)
   - **Embeddings Service**: `server/services/geminiEmbeddings.ts` handles embedding generation and chat responses with TIBER personality
