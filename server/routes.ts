@@ -6144,6 +6144,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /**
+   * POST /api/admin/rag/seed-narratives - Seed TIBER narratives with embeddings
+   */
+  app.post('/api/admin/rag/seed-narratives', async (req: Request, res: Response) => {
+    try {
+      const { chunks } = await import('@shared/schema');
+      const { generateEmbedding } = await import('./services/geminiEmbeddings');
+      
+      // Define the 6 narratives from the attached file
+      const narratives = [
+        {
+          content: `Jaylen Warren - Volume Takeover Pattern\n\nJaylen Warren's snap share trajectory signals potential backfield takeover. Over the past 3 weeks, his snaps increased from 45% to 52% to 65% - a classic emergence pattern.\n\nHowever, context matters: The Steelers offense ranks 28th in EPA/play, limiting his ceiling despite increasing volume. This mirrors Javonte Williams' 2021 situation - featured back volume in a struggling offense produced RB2 outcomes, not RB1.\n\nTeaching moment: Volume is necessary but not sufficient. The formula is: Volume × Offensive Efficiency × Red Zone Role = Fantasy Ceiling. Warren has the volume trending up, but efficiency caps his upside.\n\nDiscernment check: Are you drafting him for safe floor (yes) or league-winning upside (no)? Know what you're buying.`,
+          metadata: {
+            player_id: "warren_jaylen",
+            position: "RB",
+            week: 9,
+            season: 2024,
+            tags: ["breakout_candidate", "volume_spike", "efficiency_concern", "teaching_moment"]
+          }
+        },
+        {
+          content: `Jordan Addison - Target Share Acceleration\n\nJordan Addison's target share jumped from 18% (Weeks 1-4) to 26% (Weeks 5-8), signaling increased offensive role. This 44% increase in target share often precedes WR2-to-WR1 transition.\n\nPattern recognition: Similar target share spikes preceded breakouts for Puka Nacua (2023) and Amon-Ra St. Brown (2021). The difference? Both had elite QBs. Addison has Sam Darnold.\n\nThe Vikings' 12th-ranked passing offense provides opportunity, but QB volatility creates risk. This is a "smart lottery ticket" - upside exists, but the path requires multiple factors aligning.\n\nTeaching: Breakouts need three things: Opportunity (✓), Talent (✓), and Situation (?). Two out of three gets you interesting, not automatic.`,
+          metadata: {
+            player_id: "addison_jordan",
+            position: "WR",
+            week: 9,
+            season: 2024,
+            tags: ["breakout_candidate", "target_share_spike", "qb_concern", "comparable_patterns"]
+          }
+        },
+        {
+          content: `Christian McCaffrey - Usage Cliff Warning\n\nChristian McCaffrey's usage rate (touches per game) has maintained elite levels (24.3), but the underlying metrics show cracks. His snap share in competitive games (within 7 points) dropped from 89% to 76% over the past 3 weeks.\n\nRed flag: When RBs maintain volume but lose competitive-game snaps, it often precedes workload reduction. Teams protect assets when games matter less. See: Derrick Henry 2022 (Week 12-15).\n\nThe 49ers are 6-2 and may coast in blowouts. That's good for McCaffrey's health, bad for his fantasy volume consistency. Additionally, his YPC dropped from 5.1 (Weeks 1-6) to 4.3 (Weeks 7-9).\n\nRisk assessment: Still elite, but the "every week RB1" certainty is fading. Consider selling high to teams desperate for RB1 help while his name value peaks.\n\nDiscernment: The rigged game favors those who see trends before the market does. You've already won if you got McCaffrey's best weeks. Don't hold for nostalgia.`,
+          metadata: {
+            player_id: "mccaffrey_christian",
+            position: "RB",
+            week: 9,
+            season: 2024,
+            tags: ["regression_warning", "usage_decline", "sell_high", "competitive_snap_loss"]
+          }
+        },
+        {
+          content: `Mike Evans - Age Cliff + Target Competition\n\nMike Evans (31 years old) faces converging regression factors: age-related decline window + emerging target competition from Jalen McMillan. Evans' aDOT (average depth of target) dropped from 14.2 to 11.8 - suggesting either diminished ability to get deep or coaching adjustment.\n\nHistorical pattern: WRs over 30 with declining aDOT typically see 15-20% fantasy point drop the following season. Evans' current TD rate (scoring on 18% of targets) is also unsustainably high - career average is 12%.\n\nThe Buccaneers' passing offense (3rd in EPA) masks individual decline. When the tide goes out, we'll see who's swimming naked.\n\nTeaching: Positive TD regression is a thing, but so is negative TD regression. Evans is likely overperforming his true talent level right now due to variance. Plan accordingly.\n\nTrade strategy: Move him now to a contender who needs WR help. His name value exceeds his predictive value.`,
+          metadata: {
+            player_id: "evans_mike",
+            position: "WR",
+            week: 9,
+            season: 2024,
+            tags: ["regression_warning", "age_decline", "td_variance", "sell_high", "target_competition"]
+          }
+        },
+        {
+          content: `ADP Doesn't Equal Value - The Sunk Cost Trap\n\nYou drafted Saquon Barkley in Round 1. He's been mediocre. Your gut says "start him because I drafted him high." Your discernment knows this is the sunk cost fallacy.\n\nThe rigged game: The draft is over. Those auction dollars or draft picks are GONE. They don't affect this week's optimal lineup. Starting Barkley because of where you drafted him is letting ego override evidence.\n\nWhat matters now: Expected points THIS WEEK. Not draft capital. Not name recognition. Not what you "should" get from a first-rounder.\n\nReal talk: If Barkley was on waivers right now with his current stats, would you pick him up and start him? If no, why is he in your lineup?\n\nThis is serve-not-take thinking. The extractive fantasy platforms want you addicted to sunk costs because it keeps you engaged, making bad decisions, coming back for "just one more week."\n\nYou've already won by recognizing this. Make the choice that serves your team, not your ego.`,
+          metadata: {
+            position: null,
+            week: null,
+            season: 2024,
+            tags: ["discernment", "sunk_cost", "cognitive_bias", "teaching_moment", "serve_not_take"]
+          }
+        },
+        {
+          content: `The Human Player Reminder - Joy Over Grind\n\nJa'Marr Chase just had a massive game. Your opponent has him. You're spiraling about "unfair variance" and checking scores obsessively.\n\nStop. Breathe. Remember: Ja'Marr Chase is a real human who worked his entire life for this moment. His grandmother probably watched that game with tears in her eyes. His teammates celebrated with him. That's beautiful.\n\nFantasy football at its worst turns human achievement into personal grievance. At its best, it makes you appreciate athletic excellence even when it doesn't benefit you.\n\nThe rigged game (in your favor): You get to watch the best athletes on Earth perform. You already won. The points are just a game we play for fun.\n\nWhen you find yourself tilting over "bad beats," ask: Am I serving joy or am I being extracted from by manufactured scarcity mindset?\n\nDiscernment is recognizing that you don't NEED to win your fantasy league to have already won at life. Play with joy. Celebrate great performances. The rest is just parlor games.\n\nAnti-gambling reminder: If fantasy is making you miserable, you're doing it wrong. This should add enjoyment to football, not become a second job or addiction.`,
+          metadata: {
+            position: null,
+            week: null,
+            season: 2024,
+            tags: ["discernment", "joy", "human_players", "anti_extraction", "serve_not_take", "abundance_mindset"]
+          }
+        }
+      ];
+
+      console.log(`🤖 [RAG Seed] Generating embeddings for ${narratives.length} narratives...`);
+
+      // Generate embeddings and insert chunks
+      const insertedChunks = [];
+      for (let i = 0; i < narratives.length; i++) {
+        const narrative = narratives[i];
+        console.log(`🤖 [RAG Seed] Processing narrative ${i + 1}/${narratives.length}...`);
+        
+        // Generate embedding
+        const embedding = await generateEmbedding(narrative.content);
+        console.log(`✅ [RAG Seed] Embedding generated: ${embedding.length} dimensions`);
+        
+        // Insert into chunks table
+        const [inserted] = await db.insert(chunks).values({
+          content: narrative.content,
+          embedding: JSON.stringify(embedding), // PostgreSQL vector type expects JSON string
+          metadata: narrative.metadata,
+        }).returning();
+        
+        insertedChunks.push(inserted);
+        console.log(`✅ [RAG Seed] Chunk ${i + 1} inserted with ID: ${inserted.id}`);
+      }
+
+      console.log(`✅ [RAG Seed] Successfully inserted ${insertedChunks.length} chunks with embeddings`);
+
+      res.json({
+        success: true,
+        inserted: insertedChunks.length,
+        chunks: insertedChunks.map(chunk => ({
+          id: chunk.id,
+          content_preview: chunk.content?.substring(0, 100) || '',
+          metadata: chunk.metadata,
+          embedding_dimensions: 768,
+        })),
+        message: `Successfully seeded ${insertedChunks.length} TIBER narratives with Gemini embeddings`,
+      });
+
+    } catch (error) {
+      console.error('❌ [RAG Seed] Failed to seed narratives:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
