@@ -1,7 +1,7 @@
 # Tiber Fantasy
 
 ## Overview
-Tiber Fantasy is a free, open-source NFL fantasy football analytics dashboard launched in October 2025. It provides a 6-tab platform with real-time 2025 NFL data, Madden-style OVR player ratings, Defense vs Position matchups, and Strength of Schedule analytics using EPA metrics. The project aims to offer high-end fantasy football insights without paywalls or partnerships, fostering meaningful conversations and better decision-making for fantasy players.
+Tiber Fantasy is a free, open-source NFL fantasy football analytics dashboard launched in October 2025. It provides a 6-tab platform with real-time 2025 NFL data, Madden-style OVR player ratings, Defense vs Position matchups, and Strength of Schedule analytics using EPA metrics. The project aims to offer high-end fantasy football insights without paywalls or partnerships, fostering meaningful conversations and better decision-making for fantasy players. Its ambition is to offer a dynamic "Player Compass" for player evaluation and an "OTC Consensus" for community-driven rankings, alongside advanced AI insights.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -16,122 +16,47 @@ Intelligence Feed System:
 - `/api/intel` endpoint serves scouting reports with filtering by player, position, and signal strength
 - Ready to receive meaningful intel updates during regular season
 
-## Design Standards (Official)
-**Color Scheme** - TIBER FANTASY brand palette (October 2025):
-- Background: `bg-[#0a0e1a]` (dark navy)
-- Cards/Containers: `bg-[#141824]` (slate)
-- Borders: `border-gray-800`
-- Selected/Active States: Blue-purple gradients `from-blue-500/20 to-purple-500/20` with `border-blue-500/50`
-- Accent Elements: `bg-blue-500/10 text-blue-400 border-blue-500/30`
-- Typography: White/light text with explicit color declarations
-
-**Data Quality Standards**:
-- Completion %: Minimum 50 attempts (filters backup QBs)
-- Yards Per Reception: Minimum 10 receptions
-- Apply thresholds to both primary and fallback queries
-
-**Layout Patterns**:
-- Clean position/stat filters with visual active states
-- Grid layouts for player cards (auto-responsive)
-- Consistent spacing and card designs across all pages
-- Footer attribution: Season/week info with data source credit
-
 ## System Architecture
-The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold layers) for enterprise-grade data processing and analytics.
+The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layers) for robust data processing.
 
 **Core Infrastructure:**
-- **Backend**: Node.js/TypeScript (Express.js) and Python (Flask) with an ELT pipeline.
+- **Backend**: Node.js/TypeScript (Express.js) and Python (Flask).
 - **Frontend**: React 18, TypeScript, Tailwind CSS, TanStack Query, shadcn/ui.
 - **Database**: PostgreSQL with Drizzle ORM.
 - **Player Identity**: Unified resolution for 11,400+ players across major fantasy platforms.
-- **Quality System**: Multi-dimensional validation, data lineage tracking, and confidence scoring.
+- **Data Quality**: Multi-dimensional validation, data lineage, and confidence scoring.
 
 **Core Features & Design Patterns:**
-- **Unified Player Hub (UPH)**: Centralized data architecture.
-- **Player Evaluation & Consensus**: "Player Compass" for dynamic profiles and "OTC Consensus" for community-driven rankings.
-- **OVR (Overall Rating) System**: Madden-style 1-99 player rating system based on weighted blending of multiple inputs.
+- **UI/UX Decisions**: Dark navy background (`bg-[#0a0e1a]`), slate cards (`bg-[#141824]`), blue-purple gradient accents, and white/light typography. Features interactive GlowCard components, pulsing GlowCTA buttons, skeleton loading, and a top loading bar.
+- **Unified Player Hub (UPH)**: Centralized data architecture for player information.
+- **Player Evaluation**: "Player Compass" for dynamic profiles, "OTC Consensus" for community rankings, and a Madden-style 1-99 OVR (Overall Rating) system.
 - **AI & Analytics**: "Competence Mode" for AI advice, Adaptive Consensus Engine, and DeepSeek + Compass Fusion System for predictive analysis.
-- **Rankings & VORP**: Comprehensive Rankings Hub, enhanced VORP with dynasty mode and age penalties, and an Enhanced ECR Comparison System.
-- **Rookie & Player Analysis**: Dedicated Rookie Evaluation System, Target Competition Analysis (TCIP), Player Usage Context Module, and Stud Detection Module.
-- **EPA Analytics**: Advanced efficiency metrics from nfl-data-py play-by-play data, including EPA per play/target, Air EPA vs YAC EPA, success rates, and team offensive/defensive EPA context rankings.
+- **Rankings & VORP**: Comprehensive Rankings Hub, enhanced VORP with dynasty and age adjustments, and an Enhanced ECR Comparison System.
+- **Player Analysis**: Dedicated Rookie Evaluation System, Target Competition Analysis (TCIP), Player Usage Context Module, and Stud Detection Module.
+- **EPA Analytics**: Advanced efficiency metrics from nfl-data-py play-by-play data, including EPA per play/target, Air EPA vs YAC EPA, success rates, and team offensive/defensive EPA context rankings. Includes an EPA Sanity Check System and a production-ready EPA Rankings Tab with a 5-tier classification.
 - **SOS Team Analytics**: Comprehensive strength of schedule system with position-specific matchup intelligence.
 - **Defense vs Position (DvP) Matchup System**: Calculates fantasy points allowed by defenses against specific positions using NFLfastR data, featuring a 5-tier rating system.
 - **Data Integration & Sync**: Sleeper Sync with cache fallback, Canonical Player Pool System, Roster Shift Listener, and Roster Sync System.
-- **Live Data & Processing**: Live Data Integration Pipeline with multi-source data capture and a Hot List Player Extraction System.
+- **Live Data Processing**: Live Data Integration Pipeline with multi-source data capture and a Hot List Player Extraction System.
 - **Backend Services**: Backend Spine with Logs & Projections Service and a multi-format Ratings Engine.
-- **UI/UX Enhancements**: Interactive GlowCard components, pulsing GlowCTA buttons, skeleton loading, and a top loading bar.
-- **TIBER (Tactical Index for Breakout Efficiency and Regression)**: Version 1.5 implemented, using First Downs per Route Run as a primary metric with **real NFLfastR snap count data** integration (October 2025). Replaces placeholder snap percentages with accurate play participation data from `bronze_nflfastr_snap_counts` table. Uses team-constrained lastname matching to prevent surname collisions and includes 4-week trend analysis (rising/stable/falling).
-- **Player Search**: Feature for searching player game logs and statistics.
-- **EPA Sanity Check System**: Internal validation system for QB context metrics, comparing against Ben Baldwin's adjusted EPA methodology.
-- **EPA Rankings Tab**: Production-ready public rankings page showing QBs ordered by adjusted EPA with 5-tier classification system (Elite/Good/Average/Below Average/Poor), podium icons for top 3, and comprehensive performance metrics.
-- **QB Stats Review Tab**: Comprehensive QB validation page displaying all available NFLfastR stats, Baldwin reference data, context metrics (drops, pressures, YAC, defense faced), and Tiber adjustments. Enables manual eye-testing of rankings with complete statistical breakdown per QB, sorted by Baldwin's adjusted EPA (descending).
+- **TIBER (Tactical Index for Breakout Efficiency and Regression)**: Version 1.5, using First Downs per Route Run and real NFLfastR snap count data for player participation. Includes 4-week trend analysis and detailed player drawer with weekly/season toggle.
+- **Player Search**: Functionality to search player game logs and statistics.
+- **QB Stats Review Tab**: Comprehensive validation page for QBs displaying all available NFLfastR stats, Baldwin reference data, and Tiber adjustments.
 - **Enhanced Player Card Component**: Features TIBER trend charts, last 3 weeks summary, and ROS Matchup Calendar.
-- **Strategy Tab Overhaul**: Redesigned for Start/Sit recommendations with context-aware analysis, Waiver Wire Targets based on TIBER, and SOS Rankings.
-- **Weekly Takes System**: Quick, punchy matchup insights tab featuring position-specific one-liners (QB/RB/WR/TE) with concrete statistics. Format: **Player Name** - key insight with stat. Currently using sample data, ready for live integration with DvP matchups, EPA context, and usage trends. Avoids DFS terminology, focuses on actionable fantasy insights.
-- **Interactive TIBER Breakdown**: Click any player in the Rankings tab to open a detailed drawer showing complete TIBER score breakdown (first down efficiency, EPA impact, usage, TD upside, team context) with comprehensive metrics and game stats. Features consistent API response structure across cached and calculated scores via transformCachedScore() helper function, ensuring reliable data presentation regardless of cache state.
-- **Weekly/Season Toggle**: TIBER player drawer includes toggle to view either single-week performance (Weekly mode) or season-to-date cumulative stats (Season mode). Weekly mode uses eq() for precise single-week data; Season mode uses lte() for cumulative totals. Cache strategy: Season mode writes to cache for performance; Weekly mode always calculates fresh to ensure accuracy.
+- **Strategy Tab**: Redesigned for Start/Sit recommendations, Waiver Wire Targets based on TIBER, and SOS Rankings.
+- **Weekly Takes System**: Quick, punchy matchup insights with position-specific one-liners and concrete statistics.
+- **League System**: Supports user-created fantasy leagues with context-aware AI interactions, integrating league settings, trades, and roster moves via vector-searchable context. Includes Sleeper league auto-sync for rosters and transactions.
+- **RAG Chat System**: Integrates Google Gemini AI for embeddings and chat generation, providing teaching-focused responses with source citations.
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
 - **Sleeper API**: Player projections, game logs, ADP data, league sync, and current roster data.
-- **NFLfastR (nflverse)**: 2025 play-by-play data via parquet files from GitHub releases.
-- **NFL-Data-Py**: 2024 weekly statistics via nflfastR, depth charts via nflverse APIs, **2025 snap count data** for TIBER scoring (player participation percentages by week, position, and team).
+- **NFLfastR (nflverse)**: 2025 play-by-play data.
+- **NFL-Data-Py**: 2024 weekly statistics, depth charts, and 2025 snap count data.
 - **R Server**: External API for OASIS (Offensive Architecture Scoring & Insight System) data.
 - **Axios**: HTTP requests.
 - **Zod**: Runtime type validation.
 - **Recharts**: Charting and data visualization.
 - **connect-pg-simple**: PostgreSQL-based session storage.
 - **@neondatabase/serverless**: PostgreSQL connection for serverless environments.
-
-## Recent Technical Changes (November 2025)
-- **League System - Claude Projects-style Contexts** (November 10, 2025):
-  - **Database Schema**: Added 3 new tables for league-specific AI contexts
-    - `leagues`: User-created fantasy leagues with platform sync (Sleeper/ESPN/Yahoo), league settings (scoring, roster spots, teams)
-    - `league_context`: Vector-searchable league-specific events (trades, roster moves, waivers) with 768-dim embeddings
-    - `chat_sessions.league_id`: Links conversations to specific leagues for contextual memory
-  - **Vector Search**: League context embedded using Gemini (768-dim) for semantic retrieval of past league discussions
-  - **Architecture**: Similar to Claude Projects - each league is an isolated context where TIBER remembers roster, trades, and past advice
-  - **External Sync**: Ready for Sleeper/ESPN/Yahoo API integration via `league_id_external` field
-  - **Cascade Deletion**: Deleting a league cascades to all league_context entries; chat sessions set league_id to NULL
-  - **Backend API Routes** (✅ COMPLETE):
-    - GET /api/leagues - List user's leagues
-    - POST /api/leagues - Create new league
-    - GET /api/leagues/:id - Get league details
-    - PUT /api/leagues/:id - Update league settings
-    - DELETE /api/leagues/:id - Delete league (cascades to league_context)
-    - POST /api/rag/chat - Updated to accept optional league_id parameter for context-aware responses
-  - **Frontend UI** (✅ COMPLETE):
-    - ChatHomepage league selector in sidebar: Collapsible "My Leagues" section with toggle
-    - Create League Modal: shadcn Dialog with form fields (name, platform, scoring, teams)
-    - League context indicator in header: Shows active league name and settings (e.g., "📊 Test Dynasty League (12T PPR)")
-    - Generic Chat mode: Resets to no league context when "Generic Chat" button clicked
-    - Active league highlighting: Blue border/background for selected league
-    - Auto-select new league after creation with cache invalidation
-  - **Integration**: RAG chat seamlessly switches between generic knowledge and league-specific context based on selectedLeagueId state
-- **RAG Chat System with Citation Tracking** (November 10, 2025):
-  - **Gemini Integration**: Google Gemini AI for 768-dimension embeddings (text-embedding-004) and chat generation (gemini-2.0-flash)
-  - **Embeddings Service**: `server/services/geminiEmbeddings.ts` handles embedding generation and chat responses with TIBER personality
-  - **Chat Endpoint**: `POST /api/rag/chat` accepts questions, retrieves top 5 relevant chunks via semantic search, generates teaching-focused responses, tracks sessions/messages
-  - **Security**: Prompt injection vulnerability fixed by separating system instructions from user input using `config.systemInstruction`
-  - **Response Format**: Returns AI response + source citations with relevance scores, chunk IDs, content previews, and metadata
-  - **Narrative Seeding**: `POST /api/admin/rag/seed-narratives` populates chunks table with TIBER narratives
-  - **Initial Dataset**: 6 TIBER narratives (Jaylen Warren, Jordan Addison breakouts; CMC, Evans regressions; sunk cost/joy teaching moments)
-  - **Admin Dashboard**: `/admin/rag-status` page with auto-refresh (30s), semantic search test, and chat test interface
-  - **Vector Storage**: Raw SQL for vector operations due to Drizzle ORM parameter quoting with pgvector
-  - **Database Tables**: `chunks` (narratives + embeddings), `chat_sessions` (user conversations), `chat_messages` (message history)
-  - **ChatHomepage**: NotebookLM-style conversational UI as default homepage with session persistence, mobile responsive, source citation transparency
-- **Database Infrastructure Consolidation** (November 8, 2025):
-  - Canonical database module: `server/infra/db.ts` (standard PostgreSQL with SSL)
-  - Migrated 65+ files from legacy `server/db.ts` (Neon-specific) to canonical module
-  - Deleted legacy `server/db.ts` - all imports now use `server/infra/db.ts`
-  - Resolved fetchConnectionCache deprecation warning in pg configuration
-  - Production deployment on Render with standard PostgreSQL (not Neon serverless)
-- **ESM Build Migration**: Converted to full ESM compatibility for production builds on Render
-  - `scripts/schedule_updates.js`: Converted from CommonJS require() to ESM imports (node-cron, child_process, fs)
-  - `server/routes.ts`: Converted require() to dynamic ESM imports for fs/path modules in /api/intel endpoint
-  - Cache operations in `sleeperRosterSync.ts` intentionally use synchronous require() for performance
-- **WR Ratings Module**: Standardized CSV naming and path resolution
-  - Renamed: `WR_2024_Ratings_With_Tags.csv` → `wr_ratings.csv`
-  - Updated path resolution: Changed from `__dirname` to `process.cwd()` for ESM bundle compatibility
-  - All references updated in services, routes, and Python scripts
-  - Module successfully loading 50 WR players with FPG, VORP, and archetype tags
+- **Google Gemini API**: For AI embeddings and chat generation within the RAG system.
