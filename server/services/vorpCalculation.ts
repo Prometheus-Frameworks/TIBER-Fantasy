@@ -78,14 +78,14 @@ export class VORPCalculationService {
     const normalizedSearch = playerName.toLowerCase().trim();
     
     // Exact match first
-    for (const player of this.sleeperPlayersCache.values()) {
+    for (const player of Array.from(this.sleeperPlayersCache.values())) {
       if (player.full_name.toLowerCase() === normalizedSearch) {
         return player;
       }
     }
     
     // Partial match (for abbreviated names like "J. Jefferson")
-    for (const player of this.sleeperPlayersCache.values()) {
+    for (const player of Array.from(this.sleeperPlayersCache.values())) {
       if (player.full_name.toLowerCase().includes(normalizedSearch)) {
         return player;
       }

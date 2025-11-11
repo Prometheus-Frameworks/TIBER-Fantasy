@@ -46,6 +46,7 @@ import { wrRatingsService } from './services/wrRatingsService';
 import { wrGameLogsService } from './services/wrGameLogsService';
 import { playerPoolService } from './playerPool';
 import { generateEmbedding, generateChatResponse } from './services/geminiEmbeddings';
+import { vorpCalculationService } from './services/vorpCalculation';
 // Live compass routes imported in registerRoutes function
 import rbCompassRoutes from './routes/rbCompassRoutes';
 import publicRoutes from './routes/public';
@@ -6578,6 +6579,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to extract player names from message
+  function extractPlayerNamesFromMessage(message: string): string[] {
+    const players: string[] = [];
+    
+    // Common NFL player name patterns (First + Last name, capitalized)
+    // Match 2-4 consecutive capitalized words (handles names like "Amon-Ra St. Brown")
+    const namePattern = /\b[A-Z][a-z]+(?:['-][A-Z][a-z]+)?(?: [A-Z][a-z'.]+){1,3}\b/g;
+    const matches = message.match(namePattern);
+    
+    if (matches) {
+      // Filter out common non-player words
+      const excludeWords = new Set([
+        'Should', 'Would', 'Could', 'Will', 'Can', 'Start', 'Sit', 'Trade',
+        'Week', 'Season', 'Game', 'Points', 'Dynasty', 'Redraft', 'The', 'This',
+        'Against', 'Versus', 'Next', 'Last', 'Over', 'Under', 'Who', 'What',
+        'When', 'Where', 'Why', 'How', 'Fantasy', 'Football', 'League', 'Team',
+      ]);
+      
+      for (const match of matches) {
+        // Skip if it's an excluded word
+        if (excludeWords.has(match)) continue;
+        
+        // Only include names with at least 2 words (First + Last)
+        const words = match.split(' ');
+        if (words.length >= 2) {
+          players.push(match);
+        }
+      }
+    }
+    
+    // Deduplicate
+    return Array.from(new Set(players));
+  }
+
   // RAG Chat endpoint with citation tracking + league context
   app.post('/api/rag/chat', async (req, res) => {
     try {
@@ -6730,8 +6765,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`✅ [RAG Chat] Found ${generalChunks.length} general knowledge chunks`);
       console.log(`✅ [RAG Chat] Total relevant chunks: ${relevantChunks.length}`);
 
+      // Step 2c: Detect player mentions and fetch VORP data
+      const detectedPlayers = extractPlayerNamesFromMessage(message);
+      const vorpDataList: string[] = [];
+      
+      if (detectedPlayers.length > 0) {
+        console.log(`🎯 [VORP] Detected ${detectedPlayers.length} player(s): ${detectedPlayers.join(', ')}`);
+        
+        // Calculate VORP for each detected player (max 3 to avoid slowdown)
+        for (const playerName of detectedPlayers.slice(0, 3)) {
+          try {
+            const vorpData = await vorpCalculationService.calculatePlayerVORP(playerName);
+            if (vorpData) {
+              const vorpContext = vorpCalculationService.formatForPrompt(vorpData);
+              vorpDataList.push(vorpContext);
+              console.log(`✅ [VORP] ${vorpContext}`);
+            }
+          } catch (error) {
+            console.warn(`⚠️  [VORP] Failed to calculate VORP for ${playerName}:`, error);
+          }
+        }
+      }
+
       // Step 3: Build context and generate response
       const context = relevantChunks.map(chunk => chunk.content);
+      
+      // Prepend VORP data if available
+      if (vorpDataList.length > 0) {
+        const vorpSection = `**2024 Season Performance (PPR)**\n${vorpDataList.join('\n')}\n\n`;
+        context.unshift(vorpSection);
+        console.log(`✅ [VORP] Added ${vorpDataList.length} player VORP data to context`);
+      }
       
       // Prepend roster snapshot if available
       if (rosterSnapshot) {
