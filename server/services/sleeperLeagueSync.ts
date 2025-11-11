@@ -85,12 +85,12 @@ export async function syncSleeperLeague(
 
     console.log(`✅ [Sleeper Sync] Updated league settings`);
 
-    // 4) Find user's roster by matching roster_id
-    const userRoster = rosters.find(r => r.rosterId.toString() === sleeperRosterId.toString());
+    // 4) Find user's roster by matching roster_id (stored as teamId in RosterData)
+    const userRoster = rosters.find(r => r.teamId.toString() === sleeperRosterId.toString());
     
     if (!userRoster) {
       errors.push(`Roster ID ${sleeperRosterId} not found in league`);
-      console.warn(`⚠️  [Sleeper Sync] Roster ${sleeperRosterId} not found. Available rosters: ${rosters.map(r => r.rosterId).join(', ')}`);
+      console.warn(`⚠️  [Sleeper Sync] Roster ${sleeperRosterId} not found. Available rosters: ${rosters.map(r => r.teamId).join(', ')}`);
     }
     
     if (userRoster) {

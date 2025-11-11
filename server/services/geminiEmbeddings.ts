@@ -80,9 +80,11 @@ export async function generateChatResponse(
       throw new Error("GEMINI_API_KEY environment variable is not set");
     }
 
-    // Detect casual greetings
-    const casualGreetings = /^(hey|hi|hello|what'?s up|sup|yo|howdy|greetings)/i;
-    const isCasualGreeting = casualGreetings.test(userMessage.trim()) && userMessage.length < 50;
+    // Detect casual greetings (only true small-talk, not fantasy questions)
+    const casualGreetings = /^(hey|hi|hello|what'?s up|sup|yo|howdy|greetings)$/i;
+    const hasQuestion = /\?|should|start|sit|trade|pick|rank|who|what|which|best|better|worth/i.test(userMessage);
+    const hasFantasyKeywords = /rb|wr|qb|te|flex|waiver|draft|ppr|dynasty|redraft|sleeper|player|team|roster/i.test(userMessage);
+    const isCasualGreeting = casualGreetings.test(userMessage.trim()) && !hasQuestion && !hasFantasyKeywords;
 
     // Build system instruction based on context
     let systemInstruction = '';
