@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, X, User, Bell, Search, Send, Loader2, ChevronDown, ChevronUp, Plus, Users, MoreVertical, Trash2 } from 'lucide-react';
+import { Menu, X, User, Bell, Search, Send, Loader2, ChevronDown, ChevronUp, Plus, Users, MoreVertical, Trash2, MessageSquarePlus } from 'lucide-react';
 import { Link } from 'wouter';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -103,10 +103,15 @@ export default function ChatHomepage() {
   // Load session from localStorage on mount
   useEffect(() => {
     const savedSession = localStorage.getItem('tiber_chat_session');
+    const savedLeagueId = localStorage.getItem('tiber_chat_league');
     const savedMessages = localStorage.getItem('tiber_chat_messages');
     
     if (savedSession) {
       setSessionId(savedSession);
+    }
+    
+    if (savedLeagueId) {
+      setSelectedLeagueId(savedLeagueId);
     }
     
     if (savedMessages) {
@@ -150,10 +155,13 @@ export default function ChatHomepage() {
       return response.json() as Promise<ChatResponse>;
     },
     onSuccess: (data) => {
-      // Save session ID
+      // Save session ID and league ID
       if (!sessionId) {
         setSessionId(data.session_id);
         localStorage.setItem('tiber_chat_session', data.session_id);
+      }
+      if (selectedLeagueId) {
+        localStorage.setItem('tiber_chat_league', selectedLeagueId);
       }
 
       // Add assistant message
@@ -197,6 +205,51 @@ export default function ChatHomepage() {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  // Handle new chat - clear session and messages
+  const handleNewChat = () => {
+    // Clear localStorage
+    localStorage.removeItem('tiber_chat_session');
+    localStorage.removeItem('tiber_chat_messages');
+    localStorage.removeItem('tiber_chat_league');
+    
+    // Reset state
+    setSessionId(null);
+    setSelectedLeagueId(null);
+    
+    // Show fresh welcome message
+    setMessages([{
+      id: 'welcome',
+      role: 'assistant',
+      content: "Hey, welcome to TIBER. I'm here to help with player analysis, start/sit decisions, and trade evaluations. What can I help you with?",
+      timestamp: new Date(),
+    }]);
+  };
+
+  // Handle league switch - start new session with league context
+  const handleLeagueSwitch = (leagueId: string | null) => {
+    // Clear old session
+    localStorage.removeItem('tiber_chat_session');
+    localStorage.removeItem('tiber_chat_messages');
+    localStorage.setItem('tiber_chat_league', leagueId || '');
+    
+    // Reset session state
+    setSessionId(null);
+    setSelectedLeagueId(leagueId);
+    
+    // Show welcome message with league context
+    const leagueName = leagueId ? leagues.find((l: League) => l.id === leagueId)?.leagueName : null;
+    setMessages([{
+      id: 'welcome',
+      role: 'assistant',
+      content: leagueId && leagueName 
+        ? `Hey! I've got your ${leagueName} roster loaded. What can I help you with today?`
+        : "Hey, welcome to TIBER. I'm here to help with player analysis, start/sit decisions, and trade evaluations. What can I help you with?",
+      timestamp: new Date(),
+    }]);
+    
+    setSidebarOpen(false);
   };
 
   // Delete league mutation
@@ -275,10 +328,7 @@ export default function ChatHomepage() {
             <li>
               <button
                 data-testid="nav-home"
-                onClick={() => {
-                  setSelectedLeagueId(null);
-                  setSidebarOpen(false);
-                }}
+                onClick={() => handleLeagueSwitch(null)}
                 className={`w-full text-left px-3 py-2 rounded ${
                   !selectedLeagueId
                     ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30 font-medium'
@@ -319,10 +369,7 @@ export default function ChatHomepage() {
                         } transition-colors`}
                       >
                         <button
-                          onClick={() => {
-                            setSelectedLeagueId(league.id);
-                            setSidebarOpen(false);
-                          }}
+                          onClick={() => handleLeagueSwitch(league.id)}
                           className="flex-1 text-left"
                         >
                           <div className="flex items-center justify-between">
@@ -459,7 +506,17 @@ export default function ChatHomepage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 bg-[#0a0e1a] border border-gray-700 rounded-lg px-3 py-1.5">
+            <Button
+              data-testid="button-new-chat"
+              onClick={handleNewChat}
+              variant="outline"
+              size="sm"
+              className="hidden sm:flex items-center gap-2 bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20 hover:text-green-300"
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+              <span className="text-sm">New Chat</span>
+            </Button>
+            <div className="hidden md:flex items-center gap-2 bg-[#0a0e1a] border border-gray-700 rounded-lg px-3 py-1.5">
               <Search className="h-4 w-4 text-gray-500" />
               <input
                 data-testid="input-search"
@@ -549,9 +606,9 @@ export default function ChatHomepage() {
         open={createLeagueOpen}
         onClose={() => setCreateLeagueOpen(false)}
         onSuccess={(newLeague) => {
-          setSelectedLeagueId(newLeague.id);
-          setCreateLeagueOpen(false);
           queryClient.invalidateQueries({ queryKey: ['/api/leagues'] });
+          setCreateLeagueOpen(false);
+          handleLeagueSwitch(newLeague.id);
         }}
       />
 
