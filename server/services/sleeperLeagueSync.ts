@@ -258,23 +258,30 @@ export async function fetchSleeperRosters(sleeperLeagueId: string): Promise<Arra
   losses: number;
 }> | null> {
   try {
-    const adapter = new SleeperSyncAdapter();
-    const credentials: PlatformCredentials = {
-      platform: 'sleeper',
-      leagueId: sleeperLeagueId,
-      teamId: 'temp'
-    };
+    const [rostersResponse, usersResponse] = await Promise.all([
+      fetch(`https://api.sleeper.app/v1/league/${sleeperLeagueId}/rosters`),
+      fetch(`https://api.sleeper.app/v1/league/${sleeperLeagueId}/users`)
+    ]);
 
-    const rosters = await adapter.fetchRosters(credentials);
+    if (!rostersResponse.ok || !usersResponse.ok) {
+      console.error('Failed to fetch Sleeper data');
+      return null;
+    }
+
+    const rosters = await rostersResponse.json();
+    const users = await usersResponse.json();
+
     if (!rosters || rosters.length === 0) {
       return null;
     }
 
-    return rosters.map(r => ({
-      rosterId: r.rosterId,
-      ownerDisplayName: r.ownerDisplayName,
-      wins: r.wins || 0,
-      losses: r.losses || 0,
+    const userMap = new Map(users.map((u: any) => [u.user_id, u.display_name]));
+
+    return rosters.map((r: any) => ({
+      rosterId: r.roster_id.toString(),
+      ownerDisplayName: userMap.get(r.owner_id) || 'Unknown Owner',
+      wins: r.settings?.wins || 0,
+      losses: r.settings?.losses || 0,
     }));
   } catch (error) {
     console.error('Sleeper rosters fetch error:', error);
