@@ -56,6 +56,37 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
   - **Investigative Conversation Framework**: 4-phase approach (Acknowledge roster, Ask priorities, Provide tailored recommendations, Invite follow-up).
   - **Metadata-First Extraction**: Uses `metadata.playerName` from Sleeper sync for reliable roster parsing, with regex fallback for legacy data.
 
+## Database Schema
+
+**Core Tables:**
+- `chunks` - TIBER narratives with 768-dim vector embeddings (Gemini)
+  - id, content, embedding (vector), metadata (JSONB), created_at
+- `leagues` - User fantasy leagues  
+  - id (UUID), user_id, league_name, platform, league_id_external, settings (JSONB), created_at, updated_at
+- `league_context` - Vector-searchable league events (trades, roster moves)
+  - id, league_id (FK), content, embedding (vector), metadata (JSONB), created_at
+- `chat_sessions` - User conversation sessions
+  - id (UUID), user_level, league_id (FK, nullable), created_at, updated_at
+- `chat_messages` - Chat history
+  - id, session_id (FK), role ('user'|'assistant'), content, created_at
+
+**Extensions:**
+- pgvector 0.8.0 - Vector similarity search for semantic retrieval
+
+## Deployment
+
+**Production Environment:**
+- **URL**: https://tiber-fantasy.onrender.com (API-only, no frontend)
+- **Database**: PostgreSQL 17 on Render with pgvector 0.8.0 enabled
+- **Web Service**: Node.js on Render (auto-deploys from GitHub main branch)
+- **Build Pipeline**: `pip install -r requirements.txt && npm ci && npm run build`
+- **Python Dependencies**: Installed during build (nfl_data_py, pandas, numpy, etc.)
+
+**Development Environment:**
+- **Frontend**: Replit (mobile/desktop preview)
+- **Database**: PostgreSQL with pgvector (local or Render)
+- **Hot Reload**: Vite dev server
+
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
 - **Sleeper API**: Player projections, game logs, ADP data, league sync, and current roster data.
@@ -68,3 +99,22 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 - **connect-pg-simple**: PostgreSQL-based session storage.
 - **@neondatabase/serverless**: PostgreSQL connection for serverless environments.
 - **Google Gemini API**: For AI embeddings and chat generation within the RAG system.
+
+## Known Issues & Roadmap
+
+**Active Development:**
+- League context retrieval optimization (ensuring roster data surfaces in chat responses)
+- Conversational flow refinement (multi-turn investigative dialogue)
+- Sidebar feature audit (validating which features are functional vs placeholders)
+
+**Planned Features:**
+- Scale RAG narratives from 6 to 50-100+ player analyses
+- Sleeper auto-sync scheduling (weekly roster/transaction updates)
+- User authentication system
+- Production frontend deployment strategy
+
+**Technical Debt:**
+- Legacy module deprecation audit (20+ analytics modules, some unused)
+- Automated testing framework
+- API endpoint comprehensive documentation
+- Performance optimization for vector search at scale
