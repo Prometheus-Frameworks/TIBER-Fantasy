@@ -6742,29 +6742,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // 2b. Search general TIBER knowledge chunks
-      const generalSearchResult = await db.execute(
-        sql`SELECT 
-              id, 
-              content, 
-              metadata,
-              (1 - (embedding <-> ${vectorString}::vector) / 2) as similarity,
-              'general' as source_type
-            FROM chunks
-            ORDER BY embedding <-> ${vectorString}::vector
-            LIMIT ${league_id ? 3 : 5}`
-      );
+      // CRITICAL: Suppress general chunks when league context exists to prevent contamination
+      // NOTE: rosterSnapshot is checked BEFORE this, so we can safely reference it
+      const hasAnyLeagueData = !!rosterSnapshot || leagueChunksCount > 0;
+      const generalLimit = league_id && hasAnyLeagueData ? 0 : 5;
+      console.log(`🔍 [RAG Chat] General chunks limit: ${generalLimit} (league_id: ${league_id ? 'YES' : 'NO'}, roster: ${!!rosterSnapshot}, league chunks: ${leagueChunksCount})`);
+      
+      if (generalLimit > 0) {
+        const generalSearchResult = await db.execute(
+          sql`SELECT 
+                id, 
+                content, 
+                metadata,
+                (1 - (embedding <-> ${vectorString}::vector) / 2) as similarity,
+                'general' as source_type
+              FROM chunks
+              ORDER BY embedding <-> ${vectorString}::vector
+              LIMIT ${generalLimit}`
+        );
 
-      const generalChunks = generalSearchResult.rows.map((row: any) => ({
-        chunk_id: row.id,
-        content: row.content,
-        content_preview: row.content?.substring(0, 150) || '',
-        metadata: row.metadata,
-        relevance_score: parseFloat(row.similarity),
-        source_type: 'general',
-      }));
+        const generalChunks = generalSearchResult.rows.map((row: any) => ({
+          chunk_id: row.id,
+          content: row.content,
+          content_preview: row.content?.substring(0, 150) || '',
+          metadata: row.metadata,
+          relevance_score: parseFloat(row.similarity),
+          source_type: 'general',
+        }));
 
-      relevantChunks.push(...generalChunks);
-      console.log(`✅ [RAG Chat] Found ${generalChunks.length} general knowledge chunks`);
+        relevantChunks.push(...generalChunks);
+        console.log(`✅ [RAG Chat] Found ${generalChunks.length} general knowledge chunks`);
+      } else {
+        console.log(`🚫 [RAG Chat] Skipping general chunks - league context takes priority`);
+      }
+      
       console.log(`✅ [RAG Chat] Total relevant chunks: ${relevantChunks.length}`);
 
       // Step 2c: Detect player mentions and fetch VORP data
@@ -6792,23 +6803,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Step 3: Build context and generate response
-      const context = relevantChunks.map(chunk => chunk.content);
+      // CRITICAL: Pin roster and VORP as dedicated preamble (not buried in chunks)
+      const pinnedContext: string[] = [];
+      const retrievalContext = relevantChunks.map(chunk => chunk.content);
       
-      // Prepend VORP data if available
-      if (vorpDataList.length > 0) {
-        const vorpSection = `**2024 Season Performance (PPR)**\n${vorpDataList.join('\n')}\n\n`;
-        context.unshift(vorpSection);
-        console.log(`✅ [VORP] Added ${vorpDataList.length} player VORP data to context`);
-      }
-      
-      // Prepend roster snapshot if available
+      // Pin roster snapshot FIRST (highest priority)
       if (rosterSnapshot) {
-        context.unshift(rosterSnapshot);
+        pinnedContext.push(rosterSnapshot);
+        console.log(`📌 [RAG Chat] Pinned roster snapshot at top of context`);
       }
+      
+      // Pin VORP data SECOND (objective stats)
+      if (vorpDataList.length > 0) {
+        const vorpSection = `**2025 Season Performance (PPR)**\n${vorpDataList.join('\n')}\n\n`;
+        pinnedContext.push(vorpSection);
+        console.log(`📌 [VORP] Pinned ${vorpDataList.length} player VORP data (2025 season)`);
+      }
+      
+      // Combine: [Pinned Roster/VORP] + [League Chunks] + [General Chunks (if no league)]
+      const fullContext = [...pinnedContext, ...retrievalContext];
       
       // True if we have roster data OR league context chunks
       const hasLeagueContext = !!rosterSnapshot || (league_id && leagueChunksCount > 0);
-      const aiResponse = await generateChatResponse(message, context, user_level, hasLeagueContext);
+      console.log(`🎯 [RAG Chat] Final context: ${pinnedContext.length} pinned + ${retrievalContext.length} retrieval = ${fullContext.length} total`);
+      
+      const aiResponse = await generateChatResponse(message, fullContext, user_level, hasLeagueContext);
       console.log(`✅ [RAG Chat] Response generated: ${aiResponse.substring(0, 100)}...`);
 
       // Step 4: Save to database

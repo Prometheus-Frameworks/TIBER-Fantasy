@@ -1,0 +1,52 @@
+Testing reveals three critical failures in RAG chat system:
+1. League Context NOT Being Retrieved
+
+User is in 'Fifa Ballerz Dynasty' league (synced from Sleeper)
+User's roster includes Josh Jacobs at RB
+When asked about trading Jacobs, TIBER says 'who else is on your roster?'
+This proves league_context is NOT being queried or included in prompt
+
+Fix needed:
+
+In /api/rag/chat endpoint, BEFORE building prompt:
+Query league_context table WHERE league_id = session.league_id
+Extract roster info from content/metadata
+Prepend to prompt: 'User's Fifa Ballerz Dynasty roster: RB: Josh Jacobs, [other players]...'
+TIBER should ALWAYS reference actual roster when discussing trades
+
+2. VORP Data NOT Being Used in Responses
+
+Josh Jacobs is RB6 in 2025 season
+TIBER claimed 'his production hasn't been elite'
+No mention of VORP, ranking, or objective stats
+Player detection working but VORP context not surfacing in response
+
+Fix needed:
+
+Verify VORP data is being injected into prompt (check logs)
+Ensure system prompt instructs TIBER to reference VORP when discussing player performance
+Test: User mentions Jacobs → VORP should appear in response
+
+3. Old RAG Context Contaminating Fresh Conversations
+
+User said 'hey tiber' in fresh league chat
+TIBER mentioned McCaffrey, Chase, Barkley (from yesterday's narrative seeding)
+User NEVER mentioned these players in THIS session
+RAG is retrieving irrelevant chunks from general narratives instead of league-specific context
+
+Fix needed:
+
+When league_id exists, prioritize league_context over general chunks
+Search strategy: league_context WHERE league_id=X FIRST, then general chunks as supplement
+Don't let generic TIBER narratives override actual roster context
+
+Test to validate fixes:
+User in League A with Jacobs on roster asks: 'Should I trade Josh Jacobs?'
+Expected response:
+
+'Looking at your Fifa Ballerz roster, you've got Jacobs at RB...'
+'Jacobs is RB6 with +X VORP - that's elite production'
+'You're 10-0 - why fix what's working? Unless it's a haul, ride him'
+NO mention of players not on user's roster or in conversation
+
+Priority: CRITICAL - This breaks the core value proposition (personalized league advice).
