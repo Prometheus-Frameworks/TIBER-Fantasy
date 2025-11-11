@@ -689,7 +689,7 @@ function CreateLeagueModal({ open, onClose, onSuccess }: {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-[#141824] text-white border-gray-700">
+      <DialogContent className="sm:max-w-md bg-[#141824] text-white border-gray-700 max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Create New League</DialogTitle>
           <DialogDescription className="text-gray-400">
@@ -697,7 +697,7 @@ function CreateLeagueModal({ open, onClose, onSuccess }: {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4 overflow-y-auto pr-2">
           <div>
             <label htmlFor="league-name" className="text-sm font-medium text-gray-300 block mb-2">
               League Name
@@ -793,7 +793,7 @@ function CreateLeagueModal({ open, onClose, onSuccess }: {
                 <SelectTrigger data-testid="select-roster" className="bg-[#0a0e1a] border-gray-700 text-white">
                   <SelectValue placeholder="Choose your roster..." />
                 </SelectTrigger>
-                <SelectContent className="bg-[#141824] border-gray-700 text-white">
+                <SelectContent className="bg-[#141824] border-gray-700 text-white max-h-[300px]">
                   {fetchedRosters.map((roster) => (
                     <SelectItem key={roster.rosterId} value={roster.rosterId.toString()}>
                       {roster.ownerDisplayName} ({roster.wins}-{roster.losses})
