@@ -250,7 +250,7 @@ export default function ChatHomepage() {
       <aside
         className={`${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0 fixed md:relative z-40 w-64 md:w-1/5 h-full bg-[#141824] border-r border-gray-800 transition-transform duration-300 flex flex-col`}
+        } md:translate-x-0 fixed md:relative z-40 w-64 md:w-1/5 min-h-screen bg-[#141824] border-r border-gray-800 transition-transform duration-300 flex flex-col`}
       >
         {/* Sidebar Header */}
         <div className="p-4 border-b border-gray-800 flex items-center justify-between">
