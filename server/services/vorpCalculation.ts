@@ -40,6 +40,27 @@ const VORP_TIERS = [
 
 export class VORPCalculationService {
   private sleeperPlayersCache: Map<string, SleeperPlayerData> = new Map();
+  private currentSeasonCache: string | null = null;
+  
+  /**
+   * Fetch current NFL season year from Sleeper API
+   */
+  private async getCurrentSeason(): Promise<string> {
+    if (this.currentSeasonCache) {
+      return this.currentSeasonCache;
+    }
+    
+    try {
+      const response = await axios.get('https://api.sleeper.app/v1/state/nfl');
+      const season = response.data.season;
+      this.currentSeasonCache = season;
+      console.log(`✅ Current NFL season: ${season}`);
+      return season;
+    } catch (error) {
+      console.error('❌ Failed to fetch current NFL season, falling back to current year:', error);
+      return new Date().getFullYear().toString();
+    }
+  }
   
   /**
    * Fetch all Sleeper players and cache them
@@ -130,9 +151,12 @@ export class VORPCalculationService {
     const playerTotals = new Map<string, { totalPoints: number; gamesPlayed: number }>();
     
     try {
-      // Fetch weeks 1-11 (current 2024 season progress)
+      // Get current NFL season from Sleeper API
+      const currentSeason = await this.getCurrentSeason();
+      
+      // Fetch weeks 1-11 (current season progress)
       for (let week = 1; week <= 11; week++) {
-        const response = await axios.get(`https://api.sleeper.app/v1/stats/nfl/regular/2024/${week}`);
+        const response = await axios.get(`https://api.sleeper.app/v1/stats/nfl/regular/${currentSeason}/${week}`);
         const weekStats = response.data;
         
         if (!weekStats) continue;
@@ -196,7 +220,8 @@ export class VORPCalculationService {
       // Find player's rank
       const playerIndex = positionalData.findIndex(p => p.playerId === player.player_id);
       if (playerIndex === -1) {
-        console.warn(`⚠️ No stats found for ${player.full_name} in 2024`);
+        const currentSeason = await this.getCurrentSeason();
+        console.warn(`⚠️ No stats found for ${player.full_name} in ${currentSeason}`);
         return null;
       }
       

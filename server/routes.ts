@@ -47,6 +47,7 @@ import { wrGameLogsService } from './services/wrGameLogsService';
 import { playerPoolService } from './playerPool';
 import { generateEmbedding, generateChatResponse } from './services/geminiEmbeddings';
 import { vorpCalculationService } from './services/vorpCalculation';
+import { expandPlayerAliases } from './services/playerAliases';
 // Live compass routes imported in registerRoutes function
 import rbCompassRoutes from './routes/rbCompassRoutes';
 import publicRoutes from './routes/public';
@@ -6584,8 +6585,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const players: string[] = [];
     
     // Common NFL player name patterns (First + Last name, capitalized)
-    // Match 2-4 consecutive capitalized words (handles names like "Amon-Ra St. Brown")
-    const namePattern = /\b[A-Z][a-z]+(?:['-][A-Z][a-z]+)?(?: [A-Z][a-z'.]+){1,3}\b/g;
+    // Match 2-4 consecutive capitalized words (handles names like "Amon-Ra St. Brown", "Christian McCaffrey")
+    // Updated to allow mid-word capitals (e.g., "McCaffrey", "McMillan", "Ogbongbemiga")
+    const namePattern = /\b[A-Z][a-zA-Z]+(?:['-][A-Z][a-zA-Z]+)?(?: [A-Z][a-zA-Z'.]+){1,3}\b/g;
     const matches = message.match(namePattern);
     
     if (matches) {
@@ -6766,7 +6768,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`✅ [RAG Chat] Total relevant chunks: ${relevantChunks.length}`);
 
       // Step 2c: Detect player mentions and fetch VORP data
-      const detectedPlayers = extractPlayerNamesFromMessage(message);
+      // Expand player aliases/nicknames before detection (e.g., "Tet" → "Tetairola McMillan")
+      const expandedMessage = expandPlayerAliases(message);
+      const detectedPlayers = extractPlayerNamesFromMessage(expandedMessage);
       const vorpDataList: string[] = [];
       
       if (detectedPlayers.length > 0) {

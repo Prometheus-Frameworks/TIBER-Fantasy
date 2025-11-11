@@ -1,0 +1,89 @@
+The VORP system is using 2024 season data, but we're in Week 11 of 2025. Update the Sleeper API call to fetch 2025 game logs.
+Fix in server/services/vorpCalculation.ts:
+Change the Sleeper API endpoint from:
+typescriptconst response = await fetch(`https://api.sleeper.app/v1/stats/nfl/2024/${playerId}?season_type=regular`);
+To:
+typescriptconst response = await fetch(`https://api.sleeper.app/v1/stats/nfl/2025/${playerId}?season_type=regular`);
+Also update any hardcoded season references to dynamically use current year:
+typescriptconst currentSeason = new Date().getFullYear(); // 2025
+const response = await fetch(`https://api.sleeper.app/v1/stats/nfl/${currentSeason}/${playerId}?season_type=regular`);
+Test with Saquon Barkley to verify 2025 stats are being returned."
+
+Issue #2: Player Name Detection (Nicknames/Shortened Names)
+Current problem:
+
+"Tet McMillan" not detected (real name: Tetairola McMillan)
+"CMC" works → "Christian McCaffrey" ✅
+Need smart nickname mapping
+
+Solution: Player Alias System
+Tell Tiber:
+"Add a player alias/nickname detection system so TIBER can recognize common shortened names.
+Create server/services/playerAliases.ts:
+typescript// Common player nicknames and aliases
+export const PLAYER_ALIASES: Record<string, string> = {
+  // Running Backs
+  'cmc': 'Christian McCaffrey',
+  'cmac': 'Christian McCaffrey',
+  
+  // Wide Receivers
+  'tet': 'Tetairola McMillan',
+  'tez': 'Tez Walker',
+  'amonra': 'Amon-Ra St. Brown',
+  'amon ra': 'Amon-Ra St. Brown',
+  'sun god': 'Amon-Ra St. Brown',
+  'jj': 'Justin Jefferson', // Context-dependent, but common
+  'dk': 'DK Metcalf',
+  'aj': 'A.J. Brown', // If no other AJ mentioned
+  
+  // Quarterbacks
+  'mahomes': 'Patrick Mahomes',
+  'patty': 'Patrick Mahomes',
+  'lamar': 'Lamar Jackson',
+  'josh': 'Josh Allen', // Context-dependent
+  
+  // Tight Ends
+  'kittle': 'George Kittle',
+  'kelce': 'Travis Kelce',
+};
+
+// Function to expand aliases in user message
+export function expandPlayerAliases(message: string): string {
+  let expandedMessage = message;
+  
+  // Case-insensitive replacement
+  Object.entries(PLAYER_ALIASES).forEach(([alias, fullName]) => {
+    const regex = new RegExp(`\\b${alias}\\b`, 'gi');
+    expandedMessage = expandedMessage.replace(regex, fullName);
+  });
+  
+  return expandedMessage;
+}
+Update chat endpoint in server/routes.ts:
+Before player detection, expand aliases:
+typescriptimport { expandPlayerAliases } from '../services/playerAliases';
+
+// In the chat endpoint:
+const expandedMessage = expandPlayerAliases(message);
+// Then use expandedMessage for VORP detection
+Start with these high-priority aliases:
+
+Tet → Tetairola McMillan
+CMC → Christian McCaffrey (already works, keep it)
+Amon-Ra / Sun God → Amon-Ra St. Brown
+JJ → Justin Jefferson (common in dynasty)
+
+We can expand this list over time as users report missed nicknames."
+
+Why These Matter:
+2025 Stats:
+
+Without current data, TIBER gives advice based on last year's performance
+Player values change dramatically year-to-year
+Critical for trade evaluation accuracy
+
+Nickname Detection:
+
+Users naturally use shortened names ("Tet", "CMC", "Sun God")
+Missing nicknames breaks VORP integration
+Makes TIBER feel less intuitive
