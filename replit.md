@@ -47,6 +47,9 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 - **Weekly Takes System**: Quick, punchy matchup insights with position-specific one-liners and concrete statistics.
 - **League System**: Supports user-created fantasy leagues with context-aware AI interactions, integrating league settings, trades, and roster moves via vector-searchable context. Includes Sleeper league auto-sync for rosters and transactions.
 - **RAG Chat System**: Integrates Google Gemini AI for embeddings and chat generation, providing teaching-focused responses with source citations.
+  - **Context-Aware Personality**: Natural, friendly tone for casual greetings; full Scout-GM voice for fantasy questions
+  - **League Context Integration**: When user selects a league, TIBER has access to roster data and references actual players naturally
+  - **Smart Greeting Detection**: Distinguishes true small-talk from fantasy questions (e.g., "hey should I start Gibbs?" gets full analysis)
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
