@@ -121,7 +121,7 @@ export default function ChatHomepage() {
       setMessages([{
         id: 'welcome',
         role: 'assistant',
-        content: "Welcome to the war room. You've already won the gift—what's the play?",
+        content: "Hey, welcome to TIBER. I'm here to help with player analysis, start/sit decisions, and trade evaluations. What can I help you with?",
         timestamp: new Date(),
       }]);
     }

@@ -6600,6 +6600,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Step 2: Retrieve relevant context
       const vectorString = `[${queryEmbedding.join(',')}]`;
       const relevantChunks: any[] = [];
+      let leagueChunksCount = 0;
 
       // 2a. Search league-specific context if league_id provided
       if (league_id) {
@@ -6628,6 +6629,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }));
 
         relevantChunks.push(...leagueChunks);
+        leagueChunksCount = leagueChunks.length;
         console.log(`✅ [RAG Chat] Found ${leagueChunks.length} league-specific chunks`);
       }
 
@@ -6659,7 +6661,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Step 3: Build context and generate response
       const context = relevantChunks.map(chunk => chunk.content);
-      const aiResponse = await generateChatResponse(message, context, user_level);
+      const hasLeagueContext = league_id && leagueChunksCount > 0;
+      const aiResponse = await generateChatResponse(message, context, user_level, hasLeagueContext);
       console.log(`✅ [RAG Chat] Response generated: ${aiResponse.substring(0, 100)}...`);
 
       // Step 4: Save to database
