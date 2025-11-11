@@ -1,5 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -14,10 +14,45 @@ import TeamReportsPage from "@/pages/TeamReportsPage";
 import RagStatus from "@/pages/RagStatus";
 import NotFound from "@/pages/not-found";
 
+// Custom hook to reactively track URL search params (wouter only tracks pathname)
+function useSearchParams() {
+  const [search, setSearch] = useState(window.location.search);
+  
+  useEffect(() => {
+    const updateSearch = () => setSearch(window.location.search);
+    
+    // Listen to popstate (browser back/forward button)
+    window.addEventListener('popstate', updateSearch);
+    
+    // Wouter uses pushState for Link navigation, which doesn't fire popstate
+    // Patch pushState/replaceState to detect all navigation
+    const originalPushState = window.history.pushState.bind(window.history);
+    const originalReplaceState = window.history.replaceState.bind(window.history);
+    
+    window.history.pushState = function(...args) {
+      originalPushState(...args);
+      updateSearch();
+    };
+    
+    window.history.replaceState = function(...args) {
+      originalReplaceState(...args);
+      updateSearch();
+    };
+    
+    return () => {
+      window.removeEventListener('popstate', updateSearch);
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+    };
+  }, []);
+  
+  return new URLSearchParams(search);
+}
+
 function Router() {
-  // Check if user wants dashboard tabs view
-  const urlParams = new URLSearchParams(window.location.search);
-  const hasTabParam = urlParams.has('tab');
+  // Reactively track search params (wouter's useLocation only tracks pathname)
+  const searchParams = useSearchParams();
+  const hasTabParam = searchParams.has('tab');
 
   return (
     <Switch>
