@@ -245,12 +245,12 @@ export default function ChatHomepage() {
   });
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-purple-900/20 via-[#0a0e1a] to-black text-white">
+    <div className="flex h-screen bg-gradient-to-br from-purple-900/20 via-[#0a0e1a] to-black text-white overflow-hidden">
       {/* Sidebar */}
       <aside
         className={`${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0 fixed md:relative z-40 w-64 md:w-1/5 min-h-screen bg-[#141824] border-r border-gray-800 transition-transform duration-300 flex flex-col`}
+        } md:translate-x-0 fixed md:relative z-40 w-64 md:w-1/5 h-screen bg-[#141824] border-r border-gray-800 transition-transform duration-300 flex flex-col`}
       >
         {/* Sidebar Header */}
         <div className="p-4 border-b border-gray-800 flex items-center justify-between">
@@ -270,7 +270,7 @@ export default function ChatHomepage() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-2">
             <li>
               <button
