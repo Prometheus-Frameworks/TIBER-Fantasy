@@ -6499,7 +6499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/leagues/:id/sync-sleeper', async (req, res) => {
     try {
       const { id } = req.params;
-      const { sleeper_league_id } = req.body;
+      const { sleeper_league_id, sleeper_roster_id } = req.body;
 
       if (!sleeper_league_id) {
         return res.status(400).json({
@@ -6508,8 +6508,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      if (!sleeper_roster_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'sleeper_roster_id is required',
+        });
+      }
+
       const { syncSleeperLeague } = await import('./services/sleeperLeagueSync');
-      const result = await syncSleeperLeague(id, sleeper_league_id);
+      const result = await syncSleeperLeague(id, sleeper_league_id, sleeper_roster_id);
 
       if (!result.success) {
         return res.status(400).json({
@@ -6536,26 +6543,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/sleeper/validate/:league_id - Validate Sleeper league ID
+  // GET /api/sleeper/validate/:league_id - Validate Sleeper league ID and fetch rosters
   app.get('/api/sleeper/validate/:league_id', async (req, res) => {
     try {
       const { league_id } = req.params;
 
-      const { validateSleeperLeagueId } = await import('./services/sleeperLeagueSync');
-      const result = await validateSleeperLeagueId(league_id);
+      const { validateSleeperLeagueId, fetchSleeperRosters } = await import('./services/sleeperLeagueSync');
+      const [validateResult, rosters] = await Promise.all([
+        validateSleeperLeagueId(league_id),
+        fetchSleeperRosters(league_id)
+      ]);
 
-      if (!result.valid) {
+      if (!validateResult.valid) {
         return res.status(404).json({
           success: false,
           valid: false,
-          error: result.error || 'League not found',
+          error: validateResult.error || 'League not found',
         });
       }
 
       res.json({
         success: true,
         valid: true,
-        league: result.league,
+        league: validateResult.league,
+        rosters: rosters || [],
       });
     } catch (error) {
       console.error('❌ [Sleeper Validate] Validation failed:', error);

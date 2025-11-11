@@ -24,24 +24,25 @@ interface SleeperSyncResult {
 
 /**
  * Sync Sleeper league data and create league_context entries
+ * @param sleeperRosterId - The Sleeper roster_id for the user's team (e.g., '1', '2', etc.)
  */
 export async function syncSleeperLeague(
   leagueId: string,
   sleeperLeagueId: string,
-  userId: string = 'default_user'
+  sleeperRosterId: string
 ): Promise<SleeperSyncResult> {
   const adapter = new SleeperSyncAdapter();
   const errors: string[] = [];
   let contextsCreated = 0;
 
   try {
-    console.log(`🔄 [Sleeper Sync] Starting sync for league ${leagueId} (Sleeper ID: ${sleeperLeagueId})`);
+    console.log(`🔄 [Sleeper Sync] Starting sync for league ${leagueId} (Sleeper ID: ${sleeperLeagueId}, Roster: ${sleeperRosterId})`);
 
     // 1) Verify Sleeper league exists and fetch data
     const credentials: PlatformCredentials = { 
       platform: 'sleeper',
       leagueId: sleeperLeagueId, 
-      teamId: userId 
+      teamId: sleeperRosterId 
     };
     
     const isValid = await adapter.authenticate(credentials);
@@ -84,8 +85,13 @@ export async function syncSleeperLeague(
 
     console.log(`✅ [Sleeper Sync] Updated league settings`);
 
-    // 4) Find user's roster (try to match by teamId)
-    const userRoster = rosters.length > 0 ? rosters[0] : null; // Default to first roster
+    // 4) Find user's roster by matching roster_id
+    const userRoster = rosters.find(r => r.rosterId.toString() === sleeperRosterId.toString());
+    
+    if (!userRoster) {
+      errors.push(`Roster ID ${sleeperRosterId} not found in league`);
+      console.warn(`⚠️  [Sleeper Sync] Roster ${sleeperRosterId} not found. Available rosters: ${rosters.map(r => r.rosterId).join(', ')}`);
+    }
     
     if (userRoster) {
       // Create context entries for each player on roster
@@ -119,9 +125,9 @@ export async function syncSleeperLeague(
       console.warn(`⚠️  [Sleeper Sync] Could not find user's roster in league`);
     }
 
-    // 5) Create context entries for recent transactions
+    // 5) Create context entries for recent transactions (filter by roster ID)
     const recentTransactions = transactions
-      .filter(t => t.involvedTeams?.includes(userId))
+      .filter(t => t.involvedTeams?.includes(sleeperRosterId))
       .slice(0, 20); // Limit to 20 most recent
 
     for (const transaction of recentTransactions) {
@@ -239,5 +245,39 @@ export async function validateSleeperLeagueId(sleeperLeagueId: string): Promise<
       valid: false,
       error: error instanceof Error ? error.message : 'Unknown error'
     };
+  }
+}
+
+/**
+ * Fetch Sleeper rosters for team selection
+ */
+export async function fetchSleeperRosters(sleeperLeagueId: string): Promise<Array<{
+  rosterId: string;
+  ownerDisplayName: string;
+  wins: number;
+  losses: number;
+}> | null> {
+  try {
+    const adapter = new SleeperSyncAdapter();
+    const credentials: PlatformCredentials = {
+      platform: 'sleeper',
+      leagueId: sleeperLeagueId,
+      teamId: 'temp'
+    };
+
+    const rosters = await adapter.fetchRosters(credentials);
+    if (!rosters || rosters.length === 0) {
+      return null;
+    }
+
+    return rosters.map(r => ({
+      rosterId: r.rosterId,
+      ownerDisplayName: r.ownerDisplayName,
+      wins: r.wins || 0,
+      losses: r.losses || 0,
+    }));
+  } catch (error) {
+    console.error('Sleeper rosters fetch error:', error);
+    return null;
   }
 }

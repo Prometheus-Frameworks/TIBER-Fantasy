@@ -473,12 +473,38 @@ function CreateLeagueModal({ open, onClose, onSuccess }: {
   const [platform, setPlatform] = useState('manual');
   const [scoring, setScoring] = useState('ppr');
   const [teams, setTeams] = useState('12');
+  const [sleeperLeagueId, setSleeperLeagueId] = useState('');
+  const [sleeperRosterId, setSleeperRosterId] = useState('');
+  const [fetchedLeagueData, setFetchedLeagueData] = useState<any>(null);
+  const [fetchedRosters, setFetchedRosters] = useState<any[]>([]);
+
+  // Fetch Sleeper league data
+  const fetchSleeperMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/sleeper/validate/${sleeperLeagueId}`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.valid && data.league) {
+        setFetchedLeagueData(data.league);
+        setFetchedRosters(data.rosters || []);
+        setLeagueName(data.league.name);
+        setTeams(data.league.total_rosters?.toString() || data.league.teams?.toString() || '12');
+        // Map Sleeper scoring to our format
+        const scoringType = data.league.scoring_settings?.rec || 0;
+        if (scoringType === 1) setScoring('ppr');
+        else if (scoringType === 0.5) setScoring('half-ppr');
+        else setScoring('standard');
+      }
+    },
+  });
 
   const createLeagueMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', '/api/leagues', {
         league_name: leagueName,
         platform,
+        league_id_external: platform === 'sleeper' ? sleeperLeagueId : null,
         settings: {
           scoring,
           teams: parseInt(teams),
@@ -486,14 +512,30 @@ function CreateLeagueModal({ open, onClose, onSuccess }: {
       });
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.success) {
+        // If Sleeper league, trigger sync
+        if (platform === 'sleeper' && sleeperLeagueId && sleeperRosterId) {
+          try {
+            await apiRequest('POST', `/api/leagues/${data.league.id}/sync-sleeper`, {
+              sleeper_league_id: sleeperLeagueId,
+              sleeper_roster_id: sleeperRosterId,
+            });
+          } catch (error) {
+            console.error('Failed to sync Sleeper league:', error);
+          }
+        }
+        
         onSuccess(data.league);
         // Reset form
         setLeagueName('');
         setPlatform('manual');
         setScoring('ppr');
         setTeams('12');
+        setSleeperLeagueId('');
+        setSleeperRosterId('');
+        setFetchedLeagueData(null);
+        setFetchedRosters([]);
       }
     },
   });
@@ -549,6 +591,82 @@ function CreateLeagueModal({ open, onClose, onSuccess }: {
             </Select>
           </div>
 
+          {/* Sleeper League ID Input */}
+          {platform === 'sleeper' && (
+            <div>
+              <label htmlFor="sleeper-id" className="text-sm font-medium text-gray-300 block mb-2">
+                Sleeper League ID
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  id="sleeper-id"
+                  data-testid="input-sleeper-league-id"
+                  type="text"
+                  placeholder="Enter your Sleeper league ID"
+                  value={sleeperLeagueId}
+                  onChange={(e) => setSleeperLeagueId(e.target.value)}
+                  className="bg-[#0a0e1a] border-gray-700 text-white flex-1"
+                />
+                <Button
+                  type="button"
+                  data-testid="button-fetch-sleeper"
+                  onClick={() => fetchSleeperMutation.mutate()}
+                  disabled={!sleeperLeagueId.trim() || fetchSleeperMutation.isPending}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {fetchSleeperMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'Fetch'
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Find your league ID in the Sleeper app URL
+              </p>
+            </div>
+          )}
+
+          {/* Fetched League Data Preview */}
+          {fetchedLeagueData && (
+            <div data-testid="sleeper-preview" className="bg-[#0a0e1a] border border-green-500/30 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                <span className="text-sm font-medium text-green-400">League Found</span>
+              </div>
+              <p className="text-sm text-gray-300 mb-1">
+                <strong>{fetchedLeagueData.name}</strong>
+              </p>
+              <p className="text-xs text-gray-500">
+                {fetchedLeagueData.total_rosters || fetchedLeagueData.teams} teams • {fetchedLeagueData.scoring_settings?.rec === 1 ? 'PPR' : fetchedLeagueData.scoring_settings?.rec === 0.5 ? '0.5 PPR' : 'Standard'}
+              </p>
+            </div>
+          )}
+
+          {/* Roster Selection */}
+          {fetchedRosters.length > 0 && (
+            <div>
+              <label htmlFor="roster-select" className="text-sm font-medium text-gray-300 block mb-2">
+                Select Your Team
+              </label>
+              <Select value={sleeperRosterId} onValueChange={setSleeperRosterId}>
+                <SelectTrigger data-testid="select-roster" className="bg-[#0a0e1a] border-gray-700 text-white">
+                  <SelectValue placeholder="Choose your roster..." />
+                </SelectTrigger>
+                <SelectContent className="bg-[#141824] border-gray-700 text-white">
+                  {fetchedRosters.map((roster) => (
+                    <SelectItem key={roster.rosterId} value={roster.rosterId.toString()}>
+                      {roster.ownerDisplayName} ({roster.wins}-{roster.losses})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500 mt-1">
+                Select which team is yours so TIBER can sync your roster
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="scoring" className="text-sm font-medium text-gray-300 block mb-2">
@@ -598,7 +716,11 @@ function CreateLeagueModal({ open, onClose, onSuccess }: {
             <Button
               type="submit"
               data-testid="button-submit-create"
-              disabled={!leagueName.trim() || createLeagueMutation.isPending}
+              disabled={
+                !leagueName.trim() || 
+                createLeagueMutation.isPending ||
+                (platform === 'sleeper' && !sleeperRosterId)
+              }
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
             >
               {createLeagueMutation.isPending ? (
