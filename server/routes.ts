@@ -6601,9 +6601,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const vectorString = `[${queryEmbedding.join(',')}]`;
       const relevantChunks: any[] = [];
       let leagueChunksCount = 0;
+      let rosterSnapshot = '';
 
-      // 2a. Search league-specific context if league_id provided
+      // 2a. Pre-fetch roster data if league_id provided (before vector search)
       if (league_id) {
+        console.log(`🏈 [RAG Chat] Pre-fetching roster data for league: ${league_id}`);
+        
+        // Query ALL roster entries (not via vector search)
+        const rosterResult = await db.execute(
+          sql`SELECT content, metadata
+              FROM league_context
+              WHERE league_id = ${league_id}
+              AND metadata->>'type' = 'roster'
+              ORDER BY content`
+        );
+
+        if (rosterResult.rows.length > 0) {
+          // Group players by position (dynamic - handles all positions)
+          const rosterByPosition: Record<string, string[]> = {};
+          
+          rosterResult.rows.forEach((row: any) => {
+            const metadata = row.metadata;
+            const content = row.content;
+            
+            // Extract from metadata (most reliable - no regex parsing)
+            let playerName = metadata?.playerName || '';
+            let position = '';
+            
+            if (metadata?.tags && Array.isArray(metadata.tags) && metadata.tags.length >= 1) {
+              // tags format: [position, team] (from Sleeper sync)
+              position = metadata.tags[0];
+            }
+            
+            // Fallback: If metadata is missing, try regex extraction (legacy data)
+            if (!playerName || !position) {
+              const match = content.match(/User has (.+?) \((.+?),/);
+              if (match) {
+                if (!playerName) playerName = match[1];
+                if (!position) position = match[2];
+              }
+            }
+            
+            if (playerName && position) {
+              // Normalize multi-position variants to primary position
+              const normalizedPos = position.split('/')[0]; // "RB/WR" → "RB"
+              
+              // Only include skill positions (QB, RB, WR, TE) - skip DEF, K, etc.
+              if (['QB', 'RB', 'WR', 'TE'].includes(normalizedPos)) {
+                if (!rosterByPosition[normalizedPos]) {
+                  rosterByPosition[normalizedPos] = [];
+                }
+                rosterByPosition[normalizedPos].push(playerName);
+              }
+            }
+          });
+
+          // Build structured roster snapshot in consistent order
+          const positionOrder = ['QB', 'RB', 'WR', 'TE'];
+          const rosterParts = [];
+          
+          for (const pos of positionOrder) {
+            if (rosterByPosition[pos] && rosterByPosition[pos].length > 0) {
+              rosterParts.push(`${pos}: ${rosterByPosition[pos].join(', ')}`);
+            }
+          }
+          
+          if (rosterParts.length > 0) {
+            rosterSnapshot = `**User's Roster**\n${rosterParts.join(' | ')}\n\n`;
+            console.log(`✅ [RAG Chat] Roster snapshot created: ${rosterResult.rows.length} players across ${rosterParts.length} positions`);
+          } else {
+            console.warn(`⚠️  [RAG Chat] Roster query returned ${rosterResult.rows.length} rows but no skill positions extracted`);
+          }
+        }
+
+        // Now do vector search for relevant league context
         console.log(`🏈 [RAG Chat] Searching league-specific context for league: ${league_id}`);
         const leagueSearchResult = await db.execute(
           sql`SELECT 
@@ -6661,7 +6732,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Step 3: Build context and generate response
       const context = relevantChunks.map(chunk => chunk.content);
-      const hasLeagueContext = league_id && leagueChunksCount > 0;
+      
+      // Prepend roster snapshot if available
+      if (rosterSnapshot) {
+        context.unshift(rosterSnapshot);
+      }
+      
+      // True if we have roster data OR league context chunks
+      const hasLeagueContext = !!rosterSnapshot || (league_id && leagueChunksCount > 0);
       const aiResponse = await generateChatResponse(message, context, user_level, hasLeagueContext);
       console.log(`✅ [RAG Chat] Response generated: ${aiResponse.substring(0, 100)}...`);
 

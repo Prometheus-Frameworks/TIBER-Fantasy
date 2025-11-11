@@ -3443,11 +3443,13 @@ export const leagueContext = pgTable("league_context", {
   content: text("content").notNull(), // "User traded CMC for Evans + 2nd round pick"
   embedding: vector("embedding", { dimensions: 768 }), // Gemini Flash embeddings
   metadata: jsonb("metadata").notNull().$type<{
-    type?: string; // 'trade', 'roster_move', 'waiver', 'note'
+    type?: string; // 'trade', 'roster_move', 'waiver', 'note', 'roster'
     week?: number;
     season?: number;
     players?: string[]; // Player IDs involved
-    tags?: string[];
+    playerName?: string; // Player name for reliable extraction (added for roster entries)
+    tags?: string[]; // [position, team] for roster entries
+    synced_at?: string;
   }>(),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({

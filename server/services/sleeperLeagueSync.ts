@@ -109,6 +109,7 @@ export async function syncSleeperLeague(
             metadata: {
               type: 'roster',
               players: [player.playerId],
+              playerName: player.playerName, // Store name for reliable extraction
               tags: [player.position, player.team],
               synced_at: new Date().toISOString()
             }
