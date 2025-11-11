@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, X, User, Bell, Search, Send, Loader2, ChevronDown, ChevronUp, Plus, Users } from 'lucide-react';
+import { Menu, X, User, Bell, Search, Send, Loader2, ChevronDown, ChevronUp, Plus, Users, MoreVertical, Trash2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -14,12 +14,29 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChatMessage {
   id: string;
@@ -67,7 +84,10 @@ export default function ChatHomepage() {
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
   const [createLeagueOpen, setCreateLeagueOpen] = useState(false);
   const [leaguesExpanded, setLeaguesExpanded] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [leagueToDelete, setLeagueToDelete] = useState<League | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   // Fetch user's leagues
   const { data: leaguesData } = useQuery({
@@ -179,6 +199,51 @@ export default function ChatHomepage() {
     }
   };
 
+  // Delete league mutation
+  const deleteLeagueMutation = useMutation({
+    mutationFn: async (leagueId: string) => {
+      const response = await apiRequest('DELETE', `/api/leagues/${leagueId}`, {});
+      return response.json();
+    },
+    onSuccess: (data, deletedLeagueId) => {
+      // Check if deletion was successful
+      if (!data.success) {
+        toast({
+          title: "Delete failed",
+          description: data.error || "Failed to delete league",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Invalidate leagues cache
+      queryClient.invalidateQueries({ queryKey: ['/api/leagues'] });
+      
+      // If deleted league was selected, reset to null
+      if (selectedLeagueId === deletedLeagueId) {
+        setSelectedLeagueId(null);
+      }
+      
+      // Close dialog and reset state
+      setDeleteDialogOpen(false);
+      const leagueName = leagueToDelete?.leagueName;
+      setLeagueToDelete(null);
+      
+      // Show success toast
+      toast({
+        title: "League deleted",
+        description: `${leagueName || 'League'} has been permanently removed.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Delete failed",
+        description: error.message || "Failed to delete league. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <div className="flex h-screen bg-gradient-to-br from-purple-900/20 via-[#0a0e1a] to-black text-white">
       {/* Sidebar */}
@@ -244,31 +309,61 @@ export default function ChatHomepage() {
                     <p className="text-xs text-gray-500 px-3 py-2">No leagues yet</p>
                   ) : (
                     leagues.map((league: League) => (
-                      <button
+                      <div
                         key={league.id}
                         data-testid={`league-${league.id}`}
-                        onClick={() => {
-                          setSelectedLeagueId(league.id);
-                          setSidebarOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded text-sm ${
+                        className={`w-full flex items-center gap-1 px-3 py-2 rounded text-sm ${
                           selectedLeagueId === league.id
                             ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
                             : 'hover:bg-gray-700/30 text-gray-400'
                         } transition-colors`}
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="truncate">{league.leagueName}</span>
-                          {league.settings.teams && (
-                            <Badge variant="secondary" className="text-xs ml-2">
-                              {league.settings.teams}T
-                            </Badge>
+                        <button
+                          onClick={() => {
+                            setSelectedLeagueId(league.id);
+                            setSidebarOpen(false);
+                          }}
+                          className="flex-1 text-left"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="truncate">{league.leagueName}</span>
+                            {league.settings.teams && (
+                              <Badge variant="secondary" className="text-xs ml-2">
+                                {league.settings.teams}T
+                              </Badge>
+                            )}
+                          </div>
+                          {league.platform && (
+                            <span className="text-xs text-gray-500 capitalize">{league.platform}</span>
                           )}
-                        </div>
-                        {league.platform && (
-                          <span className="text-xs text-gray-500 capitalize">{league.platform}</span>
-                        )}
-                      </button>
+                        </button>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              data-testid={`league-menu-${league.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-1 rounded hover:bg-gray-700/50 text-gray-400 hover:text-white transition-colors"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="bg-[#141824] border-gray-700 text-white">
+                            <DropdownMenuItem
+                              data-testid={`delete-league-${league.id}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setLeagueToDelete(league);
+                                setDeleteDialogOpen(true);
+                              }}
+                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete League
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     ))
                   )}
                   
@@ -459,6 +554,51 @@ export default function ChatHomepage() {
           queryClient.invalidateQueries({ queryKey: ['/api/leagues'] });
         }}
       />
+
+      {/* Delete League Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+        setDeleteDialogOpen(open);
+        if (!open) setLeagueToDelete(null); // Clear on external dismiss
+      }}>
+        <AlertDialogContent className="bg-[#141824] text-white border-gray-700">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete League?</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              This will permanently delete "<strong>{leagueToDelete?.leagueName}</strong>" and all its associated context (roster, trades, waivers). This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setLeagueToDelete(null);
+              }}
+              className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="confirm-delete-league"
+              onClick={() => {
+                if (leagueToDelete) {
+                  deleteLeagueMutation.mutate(leagueToDelete.id);
+                }
+              }}
+              disabled={deleteLeagueMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleteLeagueMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete League'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
