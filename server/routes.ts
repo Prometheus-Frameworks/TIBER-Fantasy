@@ -6495,6 +6495,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/leagues/:id/sync-sleeper - Sync Sleeper league data
+  app.post('/api/leagues/:id/sync-sleeper', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { sleeper_league_id } = req.body;
+
+      if (!sleeper_league_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'sleeper_league_id is required',
+        });
+      }
+
+      const { syncSleeperLeague } = await import('./services/sleeperLeagueSync');
+      const result = await syncSleeperLeague(id, sleeper_league_id);
+
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          error: result.errors.join('; '),
+        });
+      }
+
+      console.log(`✅ [Sleeper Sync] Synced league ${id}: ${result.contextsCreated} contexts created`);
+
+      res.json({
+        success: true,
+        message: 'Sleeper league synced successfully',
+        contextsCreated: result.contextsCreated,
+        league: result.league,
+        errors: result.errors.length > 0 ? result.errors : undefined,
+      });
+    } catch (error) {
+      console.error('❌ [Sleeper Sync] Sync failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
+  // GET /api/sleeper/validate/:league_id - Validate Sleeper league ID
+  app.get('/api/sleeper/validate/:league_id', async (req, res) => {
+    try {
+      const { league_id } = req.params;
+
+      const { validateSleeperLeagueId } = await import('./services/sleeperLeagueSync');
+      const result = await validateSleeperLeagueId(league_id);
+
+      if (!result.valid) {
+        return res.status(404).json({
+          success: false,
+          valid: false,
+          error: result.error || 'League not found',
+        });
+      }
+
+      res.json({
+        success: true,
+        valid: true,
+        league: result.league,
+      });
+    } catch (error) {
+      console.error('❌ [Sleeper Validate] Validation failed:', error);
+      res.status(500).json({
+        success: false,
+        valid: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
   // RAG Chat endpoint with citation tracking + league context
   app.post('/api/rag/chat', async (req, res) => {
     try {
