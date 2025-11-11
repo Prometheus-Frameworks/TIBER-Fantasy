@@ -22,12 +22,15 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 **Core Infrastructure:**
 - **Backend**: Node.js/TypeScript (Express.js) and Python (Flask).
 - **Frontend**: React 18, TypeScript, Tailwind CSS, TanStack Query, shadcn/ui.
-- **Database**: PostgreSQL with Drizzle ORM.
+- **Database**: PostgreSQL with Drizzle ORM and `pgvector` extension.
 - **Player Identity**: Unified resolution for 11,400+ players across major fantasy platforms.
 - **Data Quality**: Multi-dimensional validation, data lineage, and confidence scoring.
 
-**Core Features & Design Patterns:**
-- **UI/UX Decisions**: Dark navy background (`bg-[#0a0e1a]`), slate cards (`bg-[#141824]`), blue-purple gradient accents, and white/light typography. Features interactive GlowCard components, pulsing GlowCTA buttons, skeleton loading, and a top loading bar.
+**UI/UX Decisions**:
+- Dark navy background (`bg-[#0a0e1a]`), slate cards (`bg-[#141824]`), blue-purple gradient accents, and white/light typography.
+- Features interactive GlowCard components, pulsing GlowCTA buttons, skeleton loading, and a top loading bar.
+
+**Technical Implementations & Feature Specifications:**
 - **Unified Player Hub (UPH)**: Centralized data architecture for player information.
 - **Player Evaluation**: "Player Compass" for dynamic profiles, "OTC Consensus" for community rankings, and a Madden-style 1-99 OVR (Overall Rating) system.
 - **AI & Analytics**: "Competence Mode" for AI advice, Adaptive Consensus Engine, and DeepSeek + Compass Fusion System for predictive analysis.
@@ -47,11 +50,11 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 - **Weekly Takes System**: Quick, punchy matchup insights with position-specific one-liners and concrete statistics.
 - **League System**: Supports user-created fantasy leagues with context-aware AI interactions, integrating league settings, trades, and roster moves via vector-searchable context. Includes Sleeper league auto-sync for rosters and transactions.
 - **RAG Chat System**: Integrates Google Gemini AI for embeddings and chat generation, providing teaching-focused responses with source citations.
-  - **Context-Aware Personality**: Natural, friendly tone for casual greetings; full Scout-GM voice for fantasy questions
-  - **League Context Integration**: Pre-fetches complete roster data from league_context table, builds structured snapshot (QB: ... | RB: ... | WR: ... | TE: ...), and prepends to context for reliable roster awareness
-  - **Smart Greeting Detection**: Distinguishes true small-talk from fantasy questions (e.g., "hey should I start Gibbs?" gets full analysis)
-  - **Investigative Conversation Framework**: 4-phase approach (1. Acknowledge roster, 2. Ask priorities, 3. Provide tailored recommendations, 4. Invite follow-up) - no dismissive "good luck" endings
-  - **Metadata-First Extraction**: Uses metadata.playerName from Sleeper sync for reliable roster parsing, with regex fallback for legacy data
+  - **Context-Aware Personality**: Natural, friendly tone for casual greetings; full Scout-GM voice for fantasy questions.
+  - **League Context Integration**: Pre-fetches complete roster data from `league_context` table, builds structured snapshot, and prepends to context for reliable roster awareness.
+  - **Smart Greeting Detection**: Distinguishes true small-talk from fantasy questions.
+  - **Investigative Conversation Framework**: 4-phase approach (Acknowledge roster, Ask priorities, Provide tailored recommendations, Invite follow-up).
+  - **Metadata-First Extraction**: Uses `metadata.playerName` from Sleeper sync for reliable roster parsing, with regex fallback for legacy data.
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
