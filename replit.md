@@ -50,12 +50,14 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 - **Weekly Takes System**: Quick, punchy matchup insights with position-specific one-liners and concrete statistics.
 - **League System**: Supports user-created fantasy leagues with context-aware AI interactions, integrating league settings, trades, and roster moves via vector-searchable context. Includes Sleeper league auto-sync for rosters and transactions.
 - **RAG Chat System**: Integrates Google Gemini AI for embeddings and chat generation, providing teaching-focused responses with source citations.
-  - **Context-Aware Personality**: Natural, friendly tone for casual greetings; full Scout-GM voice for fantasy questions.
+  - **Context-Aware Personality**: Natural, friendly tone for casual greetings; full Scout-GM voice for fantasy questions. Strict anti-hallucination rules requiring data-backed claims with actual numbers from VORP/EPA/context. Honest acknowledgment of data gaps instead of fabricated stats.
   - **League Context Integration**: Pre-fetches complete roster data from `league_context` table, builds structured snapshot, and prepends to context for reliable roster awareness.
+  - **Session Isolation**: Complete chat session management with "New Chat" button and automatic session reset on league switching. Prevents context contamination between generic chats and league-specific conversations. localStorage tracks session_id, messages, and league_id for proper restoration after page refresh.
   - **Smart Greeting Detection**: Distinguishes true small-talk from fantasy questions.
-  - **Investigative Conversation Framework**: 4-phase approach (Acknowledge roster, Ask priorities, Provide tailored recommendations, Invite follow-up).
+  - **Investigative Conversation Framework**: 4-phase approach (Acknowledge roster, Ask priorities, Provide tailored recommendations, Invite follow-up). Uses collaborative scout dialogue instead of scripted questions.
   - **Metadata-First Extraction**: Uses `metadata.playerName` from Sleeper sync for reliable roster parsing, with regex fallback for legacy data.
-  - **VORP Integration**: Automatically detects player mentions in chat messages and calculates real-time VORP (Value Over Replacement Player) from 2024 Sleeper game logs. Provides objective performance data (position rank, total points, PPG, VORP score, tier classification) to complement narrative analysis. Supports QB/RB/WR/TE with replacement levels at QB12, RB24, WR36, TE12 for 12-team PPR leagues.
+  - **VORP Integration**: Automatically detects player mentions (including nicknames like "CMC", "Tet", "JJ") in chat messages and calculates real-time VORP (Value Over Replacement Player) from 2025 Sleeper game logs (dynamic season detection via `/v1/state/nfl` endpoint). Provides objective performance data (position rank, total points, PPG, VORP score, tier classification) to complement narrative analysis. Supports QB/RB/WR/TE with replacement levels at QB12, RB24, WR36, TE12 for 12-team PPR leagues.
+  - **Player Alias System**: ~80 common nicknames (CMC, Tet, JJ, etc.) in `server/services/playerAliases.ts`, length-sorted to prevent premature matches. Expands aliases before player detection for reliable VORP lookups while preserving original message for embeddings.
 
 ## Database Schema
 
@@ -103,9 +105,15 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 
 ## Known Issues & Roadmap
 
+**Recently Completed (Nov 2025):**
+- ✅ Chat session isolation system with "New Chat" button and league-specific session management
+- ✅ Conversational AI improvements: eliminated hallucinations, added data-backed responses, natural scout dialogue
+- ✅ 2025 season data integration with dynamic year detection
+- ✅ Player nickname detection system (~80 aliases) for natural language queries
+- ✅ Fixed player name regex for mid-word capitals (McCaffrey, McMillan)
+
 **Active Development:**
 - League context retrieval optimization (ensuring roster data surfaces in chat responses)
-- Conversational flow refinement (multi-turn investigative dialogue)
 - Sidebar feature audit (validating which features are functional vs placeholders)
 
 **Planned Features:**
