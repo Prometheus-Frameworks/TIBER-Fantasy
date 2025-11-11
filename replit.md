@@ -55,6 +55,7 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
   - **Smart Greeting Detection**: Distinguishes true small-talk from fantasy questions.
   - **Investigative Conversation Framework**: 4-phase approach (Acknowledge roster, Ask priorities, Provide tailored recommendations, Invite follow-up).
   - **Metadata-First Extraction**: Uses `metadata.playerName` from Sleeper sync for reliable roster parsing, with regex fallback for legacy data.
+  - **VORP Integration**: Automatically detects player mentions in chat messages and calculates real-time VORP (Value Over Replacement Player) from 2024 Sleeper game logs. Provides objective performance data (position rank, total points, PPG, VORP score, tier classification) to complement narrative analysis. Supports QB/RB/WR/TE with replacement levels at QB12, RB24, WR36, TE12 for 12-team PPR leagues.
 
 ## Database Schema
 
