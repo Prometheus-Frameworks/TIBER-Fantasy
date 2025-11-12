@@ -6622,35 +6622,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   function extractPlayerNamesFromMessage(message: string): string[] {
     const players: string[] = [];
     
+    // Filter out common non-player words BEFORE regex matching
+    const excludeWords = new Set([
+      'Should', 'Would', 'Could', 'Will', 'Can', 'Start', 'Sit', 'Trade',
+      'Week', 'Season', 'Game', 'Points', 'Dynasty', 'Redraft', 'The', 'This',
+      'Against', 'Versus', 'Next', 'Last', 'Over', 'Under', 'Who', 'What',
+      'When', 'Where', 'Why', 'How', 'Fantasy', 'Football', 'League', 'Team',
+      'Tiber', 'TIBER', 'PPR', 'VORP', 'EPA', 'Are', 'Is', 'Do', 'Does',
+      'Tell', 'About', 'Me', 'My', 'I', 'And', 'Or', 'From', 'But', 'Not',
+    ]);
+    
+    // Pre-filter: Replace excluded words with lowercase to break capitalization chains
+    let cleanedMessage = message;
+    for (const word of excludeWords) {
+      // Case-insensitive replace to handle "Is", "is", etc.
+      const regex = new RegExp(`\\b${word}\\b`, 'gi');
+      cleanedMessage = cleanedMessage.replace(regex, word.toLowerCase());
+    }
+    
     // Common NFL player name patterns (First + Last name, capitalized)
     // Match 2-4 consecutive capitalized words (handles names like "Amon-Ra St. Brown", "Christian McCaffrey")
     // Updated to allow mid-word capitals (e.g., "McCaffrey", "McMillan", "Ogbongbemiga")
     const namePattern = /\b[A-Z][a-zA-Z]+(?:['-][A-Z][a-zA-Z]+)?(?: [A-Z][a-zA-Z'.]+){0,3}\b/g;
-    const matches = message.match(namePattern);
+    const matches = cleanedMessage.match(namePattern);
     
     if (matches) {
-      // Filter out common non-player words
-      const excludeWords = new Set([
-        'Should', 'Would', 'Could', 'Will', 'Can', 'Start', 'Sit', 'Trade',
-        'Week', 'Season', 'Game', 'Points', 'Dynasty', 'Redraft', 'The', 'This',
-        'Against', 'Versus', 'Next', 'Last', 'Over', 'Under', 'Who', 'What',
-        'When', 'Where', 'Why', 'How', 'Fantasy', 'Football', 'League', 'Team',
-        'Tiber', 'TIBER', 'PPR', 'VORP', 'EPA', 'Are', 'Is', 'Do', 'Does',
-        'Tell', 'About', 'Me', 'My', 'I',
-      ]);
-      
       for (const match of matches) {
-        // Skip if it's an excluded word
+        // Skip if it's still an excluded word
         if (excludeWords.has(match)) continue;
         
-        // Split into words and check if any word is excluded
-        const words = match.split(' ');
-        const hasExcludedWord = words.some(word => excludeWords.has(word));
-        
-        if (hasExcludedWord) continue;
-        
         // Require at least 2 words (First + Last name) to avoid false positives
-        // Users should provide full player names for accurate detection
+        const words = match.split(' ');
         if (words.length >= 2) {
           players.push(match);
         }
