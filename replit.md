@@ -56,11 +56,14 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
   - **Investigative Conversation Framework**: 4-phase approach (Acknowledge roster, Ask priorities, Provide tailored recommendations, Invite follow-up).
   - **Metadata-First Extraction**: Uses `metadata.playerName` from Sleeper sync for reliable roster parsing, with regex fallback.
   - **VORP Integration**: Automatically detects player mentions (requires full names: "Josh Jacobs" not "Jacobs") and calculates real-time VORP from 2025 Sleeper game logs. Provides objective performance data (position rank, total points, PPG, VORP score, tier classification). VORP data is pinned at top of context for priority citation.
+  - **Top Performers Season Awareness**: Fetches and caches top 24 players at each position (QB, RB, WR, TE) from 2025 Sleeper data. Automatically included in EVERY chat for comprehensive season context. 1-hour cache TTL with stale-data fallback prevents API overload while maintaining awareness. TIBER now knows season leaders (RB1-RB24, WR1-WR24, etc.) without explicit user mentions.
   - **Citation System**: Strict enforcement of citing provided VORP data. System prompt requires exact position ranks and stats when available. No [Source N] labels in user-facing responses.
   - **Conversational Focus**: Answers user's actual question first (150-250 words), then optionally expands. Avoids mentioning 5+ players before addressing core question.
   - **Elite Player Recognition**: Top-12 performers at each position acknowledged as legitimate starters/studs, not "dart throws." System prompt enforces recognition of elite production.
+  - **Player Detection**: Pre-filtering of excluded words (Is, Are, And, etc.) before regex matching to prevent false positives. Requires minimum 2 capitalized words for reliable full-name detection.
   - **Player Alias System**: Supports ~80 common nicknames for reliable VORP lookups.
   - **Pattern Observation System**: Epistemic-framed pattern bank teaching evaluation frameworks. Includes a jargon dictionary, 6 embedded pattern chunks with epistemic framing, and an NFLfastR validation service for live data queries.
+  - **Regression Test Suite**: 8 automated tests covering VORP citation, source leakage, elite recognition, season awareness, conversational focus, player detection, hallucination prevention, and tier classification. Run via `tsx server/tests/rag-regression-tests.ts`.
   - **Ancient Observer Personality**: TIBER identity evolution with dual meaning (technical acronym + philosophical metaphor), 80/15/5 voice modulation for varying interaction depths, and a mystery element.
 
 ## External Dependencies

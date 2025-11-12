@@ -42,6 +42,13 @@ export class VORPCalculationService {
   private sleeperPlayersCache: Map<string, SleeperPlayerData> = new Map();
   private currentSeasonCache: string | null = null;
   
+  // Top performers cache (refreshes every 1 hour)
+  private topPerformersCache: {
+    data: string;
+    timestamp: number;
+  } | null = null;
+  private readonly TOP_PERFORMERS_CACHE_TTL = 60 * 60 * 1000; // 1 hour in ms
+  
   /**
    * Fetch current NFL season year from Sleeper API
    */
@@ -268,9 +275,19 @@ export class VORPCalculationService {
   
   /**
    * Get top 24 performers for each position (for season awareness context)
+   * Uses 1-hour cache to avoid 40+ API calls on every chat request
    */
   async getTopPerformersContext(): Promise<string> {
     try {
+      // Check cache first
+      const now = Date.now();
+      if (this.topPerformersCache && (now - this.topPerformersCache.timestamp) < this.TOP_PERFORMERS_CACHE_TTL) {
+        console.log(`📊 [Top Performers] Using cached data (${Math.floor((now - this.topPerformersCache.timestamp) / 60000)} min old)`);
+        return this.topPerformersCache.data;
+      }
+      
+      console.log(`📊 [Top Performers] Cache miss or expired - fetching fresh data...`);
+      
       await this.fetchSleeperPlayers();
       const currentSeason = await this.getCurrentSeason();
       
@@ -314,10 +331,27 @@ export class VORPCalculationService {
         `**TE Top 12**: ${topPerformers.TE.slice(0, 12).join(', ')}`,
       ];
       
-      return contextLines.join('\n');
+      const contextString = contextLines.join('\n');
+      
+      // Update cache
+      this.topPerformersCache = {
+        data: contextString,
+        timestamp: now,
+      };
+      
+      console.log(`✅ [Top Performers] Cached fresh data (valid for ${this.TOP_PERFORMERS_CACHE_TTL / 60000} min)`);
+      
+      return contextString;
     } catch (error) {
       console.error('❌ Failed to fetch top performers context:', error);
-      return ''; // Return empty string on error to not break chat
+      
+      // If cache exists but expired, return stale data rather than breaking chat
+      if (this.topPerformersCache) {
+        console.log(`⚠️  [Top Performers] Returning stale cache as fallback`);
+        return this.topPerformersCache.data;
+      }
+      
+      return ''; // Return empty string only if no cache exists
     }
   }
   
