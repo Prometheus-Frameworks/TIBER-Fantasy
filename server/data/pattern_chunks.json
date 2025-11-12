@@ -1,0 +1,187 @@
+[
+  {
+    "content": "Working assumption: Elite WR threshold combines Route Win Rate above 15% with Yards Per Route Run above 2.0. Observed pattern: Only 12 receivers hit both marks in 2025 season data, suggesting this dual threshold identifies true separation ability combined with efficiency. Notable cases: Alec Pierce (17.1% RWR, 2.36 YPRR) crosses into elite territory using this framework. JSN's 4.56 YPRR appears historically unprecedented, indicating offensive scheme may be maximizing his specific skill set. Pattern recognition lens: When receivers cross BOTH thresholds mid-season (not just one), this suggests sustainable breakout rather than volume spike. Caveat: Route win rate metrics require external data sources (NextGenStats) - not directly queryable from NFLfastR. Use this as an evaluation framework rather than precise measurement. Context matters: Elite profiles in low-volume offenses may underperform expectations despite meeting thresholds.",
+    "metadata": {
+      "type": "pattern_observation",
+      "pattern_type": "elite_wr_threshold",
+      "source": "aggregated_data_analysis",
+      "observation_date": "2025-11-11",
+      "applicable_to": ["wr"],
+      "teaches": "How to identify elite WR performance using dual-threshold system",
+      "tags": ["wr_evaluation", "efficiency_metrics", "breakout_indicator"],
+      "confidence": "medium",
+      "epistemic_status": "working_assumption",
+      "metrics_used": [
+        {
+          "jargon_term": "route_win_rate",
+          "nflfastr_field": null,
+          "calculation": "External source only",
+          "queryable": false,
+          "requires_external_data": "NextGenStats"
+        },
+        {
+          "jargon_term": "yards_per_route_run",
+          "nflfastr_field": "receiving_yards",
+          "calculation": "receiving_yards / routes_run",
+          "queryable": false,
+          "requires_external_data": "routes_run"
+        }
+      ],
+      "revalidate_weekly": false,
+      "note": "Metrics require external data - use as observation framework only"
+    }
+  },
+  {
+    "content": "Observed correlation: Low dropback rate while trailing often indicates team quality and positive game script. Pattern suggests: Teams ranking bottom 5 in trailing dropbacks typically control games and rarely chase points - they're winning. Fantasy implications lens: RBs on these teams see consistent volume without game script abandonment, WRs get quality targets but less garbage time padding, overall offense operates efficiently. Example observation: Seahawks rank 32nd in trailing dropbacks (11.4% as of Nov 2025), suggesting elite game control. Working assumption: This game script indicator helps identify positive offensive environments. Caveat: High-scoring offenses may trail in shootouts despite being elite - context matters. Exception cases: Teams trailing due to defensive struggles rather than offensive inefficiency break this pattern. Monitor offensive EPA alongside dropback rate for complete picture.",
+    "metadata": {
+      "type": "pattern_observation",
+      "pattern_type": "team_quality_indicator",
+      "source": "twitter",
+      "source_handle": "@jagibbs_23",
+      "observation_date": "2025-11-10",
+      "applicable_to": ["all_teams", "rb", "wr"],
+      "team": "seahawks",
+      "teaches": "How to identify positive offensive environments using dropback rate data",
+      "tags": ["game_script", "team_quality", "rb_volume", "efficiency_metric"],
+      "confidence": "high",
+      "epistemic_status": "working_assumption",
+      "metrics_used": [
+        {
+          "jargon_term": "dropback_rate_while_trailing",
+          "nflfastr_field": "play_type",
+          "calculation": "COUNT(pass=1 AND score_differential < 0) / COUNT(*)",
+          "queryable": true
+        }
+      ],
+      "revalidate_weekly": true,
+      "data_as_of": "2025-11-10"
+    }
+  },
+  {
+    "content": "Observed pattern: Alec Pierce's profile shows historically rare combination - highest average route depth in NFL (2017-present data) while maintaining 20% target rate on routes. Historical context: Deep-route specialists typically draw less than 10% target rates. Pierce receiving targets at approximately 2x the rate of comparable deep threats suggests unusual quarterback trust. Pattern from multi-year data: Players combining elite route depth with high target rates tend to eventually score touchdowns at elevated rates. Current situation: Pierce has only 1 TD through 10 weeks despite this profile. Working assumption: Positive TD regression likely incoming based on historical precedent - the usage pattern typically precedes scoring. Caveat: Colts' offensive efficiency matters significantly here. Elite individual profile in weak offense can still underperform. Monitor red zone snap rates as confirmation signal. Exception consideration: If Colts abandon deep passing or QB changes occur, this pattern may not hold. Context dependency: TD regression assumes maintained usage and offensive competence.",
+    "metadata": {
+      "type": "player_insight",
+      "pattern_type": "td_positive_regression",
+      "source": "aggregated_data_analysis",
+      "observation_date": "2025-11-11",
+      "player_id": "alec_pierce",
+      "position": "wr",
+      "applicable_to": ["wr"],
+      "teaches": "How to identify TD regression candidates using route depth + target rate combination",
+      "tags": ["td_upside", "deep_threat", "positive_regression", "historical_anomaly"],
+      "confidence": "medium",
+      "epistemic_status": "working_assumption",
+      "historical_period": "2017-2025",
+      "metrics_used": [
+        {
+          "jargon_term": "route_depth",
+          "nflfastr_field": "air_yards",
+          "calculation": "AVG(air_yards) WHERE receiver_player_name = 'A.Pierce'",
+          "queryable": true
+        },
+        {
+          "jargon_term": "target_rate_per_route",
+          "nflfastr_field": "targets",
+          "calculation": "COUNT(targets) / routes_run",
+          "queryable": false,
+          "requires_external_data": "routes_run"
+        }
+      ],
+      "revalidate_weekly": true,
+      "data_as_of": "2025-11-11"
+    }
+  },
+  {
+    "content": "RB explosiveness evaluation framework: Track percentage of runs hitting chunk yardage thresholds (10+, 15+, 20+, 30+ yards) to identify ceiling potential. Pattern observation: Elite backs typically rank top 3 in multiple tiers, not just one. De'Von Achane 2025 example: 16.1% rate at 10+ yards, 9.1% at 15+, 5.6% at 20+, 2.8% at 30+ - demonstrates elite performance across all thresholds. Working assumption: This multi-tier explosiveness profile suggests league-winning upside independent of pure volume concerns. Evaluation lens: When assessing RBs, consider prioritizing multi-tier explosiveness over raw volume metrics - big plays can win fantasy weeks even with lower touch counts. Caveat: Explosive backs in limited roles face volatility risk. Consistency matters for championship rosters. Exception cases: Volume-dependent leagues or formats may weight high-floor backs differently. Context consideration: Offense quality affects whether explosive plays turn into scoring opportunities.",
+    "metadata": {
+      "type": "pattern_observation",
+      "pattern_type": "rb_explosiveness_evaluation",
+      "source": "aggregated_data_analysis",
+      "observation_date": "2025-11-11",
+      "player_example": "devon_achane",
+      "position": "rb",
+      "applicable_to": ["rb"],
+      "teaches": "How to identify RBs with league-winning ceiling using chunk yardage rates",
+      "tags": ["rb_evaluation", "explosiveness", "upside_indicator", "big_play_ability"],
+      "confidence": "high",
+      "epistemic_status": "working_assumption",
+      "metrics_used": [
+        {
+          "jargon_term": "chunk_yardage_rate",
+          "nflfastr_field": "yards_gained",
+          "calculation": "COUNT(yards_gained >= [10,15,20,30]) / COUNT(*) WHERE rusher_player_id = ?",
+          "queryable": true
+        }
+      ],
+      "revalidate_weekly": true,
+      "data_as_of": "2025-11-11"
+    }
+  },
+  {
+    "content": "Efficiency-precedes-volume hypothesis: First Downs Per Route Run (1D/RR) may identify efficient receivers before volume increases arrive. Working example: Jaylin Noel post-bye shows 0.154 1D/RR with 2.69 YPRR - comparable to Puka Nacua's legendary rookie efficiency (0.126 1D/RR, 2.75 YPRR). Pattern recognition framework: When low-volume receivers match elite efficiency benchmarks, they may be earning coaching staff trust. Observed timeline: Volume typically follows efficiency gains by 2-4 weeks as coaches recognize chain-moving ability. Current situation: Noel running 9 fewer routes than Kirk while leading team in 1D/RR suggests potential opportunity shift incoming. Working assumption: Efficiency demonstrates capability, which precedes opportunity allocation. Caveat: This pattern assumes coaching staffs make rational allocation decisions based on performance - not always guaranteed. Exception cases: Veteran presence, contract considerations, or scheme fit can override efficiency metrics. Context matters: Team winning affects whether coaches experiment with personnel changes. Monitor snap count trends as confirmation signal.",
+    "metadata": {
+      "type": "breakout_indicator",
+      "pattern_type": "efficiency_precedes_volume",
+      "source": "aggregated_data_analysis",
+      "observation_date": "2025-11-11",
+      "player_example": "jaylin_noel",
+      "benchmark_player": "puka_nacua",
+      "position": "wr",
+      "applicable_to": ["wr"],
+      "teaches": "How to spot volume increases before they happen using efficiency metrics",
+      "tags": ["efficiency_metrics", "volume_predictor", "chain_moving", "trust_building", "breakout_indicator"],
+      "confidence": "medium",
+      "epistemic_status": "working_assumption",
+      "metrics_used": [
+        {
+          "jargon_term": "first_downs_per_route_run",
+          "nflfastr_field": "first_down",
+          "calculation": "COUNT(first_down=1 AND receiver) / routes_run",
+          "queryable": false,
+          "requires_external_data": "routes_run"
+        },
+        {
+          "jargon_term": "yards_per_route_run",
+          "nflfastr_field": "receiving_yards",
+          "calculation": "receiving_yards / routes_run",
+          "queryable": false,
+          "requires_external_data": "routes_run"
+        }
+      ],
+      "revalidate_weekly": true,
+      "data_as_of": "2025-11-11"
+    }
+  },
+  {
+    "content": "RB talent evaluation framework: Success rate on runs with 1+ yard before contact attempts to isolate vision and decision-making from offensive line quality. Observed pattern: Elite tier shows 75%+ success rate in this metric. 2025 examples include Dobbins, Jeanty, Williams, Taylor, Cook, Henry, Robinson - all maximizing created opportunities. Working assumption: RBs achieving this threshold demonstrate league-winning upside potential even with volume concerns, because they efficiently convert the opportunities they receive. Evaluation lens: When assessing RBs, consider prioritizing success rate with YBIC over raw volume metrics - measures 'what they do with the chances they get' independent of blocking quality. Caveat: Yards before contact itself depends on scheme and play-calling tendencies. Different run concepts create different YBIC baselines. Exception consideration: Power backs in gap schemes may show lower success rates while still being effective. Context matters: 75% threshold derived from 2025 observation - may shift year-to-year with league trends. Monitor relative rankings within season rather than absolute thresholds.",
+    "metadata": {
+      "type": "talent_evaluation",
+      "pattern_type": "rb_efficiency_independent_of_line",
+      "source": "aggregated_data_analysis",
+      "observation_date": "2025-11-11",
+      "position": "rb",
+      "applicable_to": ["rb"],
+      "teaches": "How to evaluate RB talent independent of offensive line quality",
+      "tags": ["rb_evaluation", "vision", "decision_making", "efficiency", "talent_indicator"],
+      "confidence": "medium",
+      "epistemic_status": "working_assumption",
+      "metrics_used": [
+        {
+          "jargon_term": "success_rate",
+          "nflfastr_field": "success",
+          "calculation": "COUNT(success=1) / COUNT(*) WHERE rusher_player_id = ? AND yards_before_contact >= 1",
+          "queryable": true
+        },
+        {
+          "jargon_term": "yards_before_contact",
+          "nflfastr_field": "yards_gained",
+          "calculation": "yards_gained - yards_after_contact",
+          "queryable": true
+        }
+      ],
+      "revalidate_weekly": true,
+      "threshold": "75%",
+      "data_as_of": "2025-11-11"
+    }
+  }
+]
