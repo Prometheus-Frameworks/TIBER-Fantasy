@@ -1,0 +1,732 @@
+# NFLfastR System Audit - Master Fix Handoff
+
+## Executive Summary
+
+The NFLfastR audit revealed that TIBER has been hallucinating granular usage statistics (snap share, YPC, touches per game) because:
+1. 2025 NFLfastR data doesn't exist yet (HTTP 404)
+2. These metrics aren't tracked in jargon mapping
+3. Validation endpoint is broken (ESM module bug)
+4. No structural boundaries prevent Gemini from inventing stats
+
+**Core Issue:** TIBER has VORP data (rank, PPG, VORP) but when asked about granular metrics, Gemini fabricates detailed statistics instead of acknowledging data gaps.
+
+**Solution:** Implement structural data boundaries that make it IMPOSSIBLE for TIBER to cite unavailable metrics, not just DISCOURAGED.
+
+---
+
+## Audit Findings Summary
+
+### ✅ What's Working
+1. **2024 NFLfastR data available** - Josh Jacobs: 321 rushes, 1410 yards, 4.39 YPC
+2. **Python query script functional** - Works when called directly
+3. **Jargon mapping exists** - 11 metrics currently defined
+4. **VORP system working** - Rank, PPG, VORP values accurate
+
+### ❌ What's Broken
+1. **2025 data unavailable** - nflverse hasn't published current season data yet
+2. **Validation endpoint broken** - `__dirname is not defined` (ESM module issue)
+3. **Missing metrics in jargon mapping:**
+   - `snap_share` (not tracked)
+   - `yards_per_carry` (not tracked)
+   - `touches_per_game` (not tracked)
+   - `target_share` (not tracked)
+   - `route_participation` (not tracked)
+
+### 🚨 The Hallucination Pattern
+
+**Example - McCaffrey Query:**
+
+**TIBER claimed:**
+- "Snap share decreased from 89% to 76% in competitive games"
+- "YPC dipped from 5.1 to 4.3"
+- "Averaging 24.3 touches per game"
+
+**Reality:**
+- ❌ No snap share data in system
+- ❌ No YPC data in system
+- ❌ No touches per game data in system
+- ❌ Gemini invented all three statistics
+
+**Root cause:** System has no structural boundary preventing claims about unavailable metrics.
+
+---
+
+## Implementation Plan
+
+### Phase 1: Structural Data Boundaries (CRITICAL - Do Immediately)
+
+#### Task 1.1: Update Jargon Mapping - Mark Unavailable Metrics
+
+**File:** `server/data/nflfastr_jargon_mapping.json`
+
+**Add these entries:**
+
+```json
+{
+  "snap_share": {
+    "nflfastr_field": null,
+    "calculation": null,
+    "description": "Percentage of team snaps player was on field",
+    "queryable": false,
+    "data_source": "Not available in current system",
+    "note": "Would require play-by-play participation tracking"
+  },
+  
+  "yards_per_carry": {
+    "nflfastr_field": "yards_gained",
+    "calculation": "SUM(yards_gained WHERE play_type='run') / COUNT(carries)",
+    "description": "Average yards gained per rushing attempt",
+    "queryable": false,
+    "data_source": "NFLfastR (2025 season data not yet published)",
+    "note": "Available for historical seasons (2024 and earlier) only"
+  },
+  
+  "touches_per_game": {
+    "nflfastr_field": null,
+    "calculation": "(carries + targets) / games_played",
+    "description": "Combined carries and targets per game",
+    "queryable": false,
+    "data_source": "Would require game-level aggregation",
+    "note": "Not currently tracked in system"
+  },
+  
+  "target_share": {
+    "nflfastr_field": "targets",
+    "calculation": "player_targets / team_total_targets",
+    "description": "Percentage of team targets directed to player",
+    "queryable": false,
+    "data_source": "NFLfastR (2025 season data not yet published)",
+    "note": "Available for historical seasons only"
+  },
+  
+  "route_participation": {
+    "nflfastr_field": null,
+    "calculation": null,
+    "description": "Percentage of pass plays where player ran route",
+    "queryable": false,
+    "data_source": "NextGenStats or PFF (external, not integrated)",
+    "note": "Not available in NFLfastR or current system"
+  },
+  
+  "red_zone_touches": {
+    "nflfastr_field": null,
+    "calculation": null,
+    "description": "Carries + targets inside opponent's 20-yard line",
+    "queryable": false,
+    "data_source": "Would require situational filtering",
+    "note": "Not currently tracked in system"
+  }
+}
+```
+
+**Update existing queryable metrics:**
+
+```json
+{
+  "route_depth": {
+    "nflfastr_field": "air_yards",
+    "calculation": "AVG(air_yards) WHERE receiver_player_id = ?",
+    "description": "Average distance from LOS where route cut occurs",
+    "queryable": false,
+    "data_source": "NFLfastR (2025 season data not yet published)",
+    "note": "Available for 2024 and earlier - will enable when 2025 data available"
+  }
+}
+```
+
+**Key principle:** Mark ALL granular metrics as `queryable: false` until 2025 NFLfastR data is confirmed available.
+
+---
+
+#### Task 1.2: Update System Prompt - Strict Data Boundaries
+
+**File:** `server/services/geminiEmbeddings.ts` (system prompt section)
+
+**Add this section to Gemini system prompt:**
+
+```
+═══════════════════════════════════════════════════════════════
+CRITICAL: STRICT DATA BOUNDARIES
+═══════════════════════════════════════════════════════════════
+
+You have access to ONLY the following metrics:
+
+✅ AVAILABLE DATA:
+- Player rankings by position (QB1-32, RB1-48, WR1-72, TE1-32)
+- Points per game (PPG)
+- VORP values (value over replacement player)
+- Total season points
+- Games played
+- Position and team
+
+❌ UNAVAILABLE DATA (DO NOT CITE):
+- Snap share percentages
+- Yards per carry (YPC)
+- Yards per target
+- Touches per game (carries + targets)
+- Target share
+- Route participation rates
+- Weekly usage trends
+- Situational splits (competitive games, red zone, etc.)
+- Efficiency metrics (success rate, EPA, CPOE, etc.)
+- Advanced metrics (route win rate, separation, etc.)
+
+═══════════════════════════════════════════════════════════════
+MANDATORY RESPONSE RULES:
+═══════════════════════════════════════════════════════════════
+
+1. DATA DISCLOSURE REQUIREMENT
+When asked about ANY unavailable metric, you MUST immediately respond:
+"I don't have access to [specific metric] data. What I can tell you is [provide available data: rank, PPG, VORP]."
+
+Examples:
+User: "What's his snap share?"
+✅ CORRECT: "I don't have snap share data. He's RB5 with 16.7 PPG and +73.2 VORP."
+❌ WRONG: "His snap share has been around 75-80%"
+
+User: "How's his YPC trending?"
+✅ CORRECT: "I don't have YPC trend data. His overall production (RB5, 16.7 PPG) suggests consistent output."
+❌ WRONG: "His YPC has declined from 5.1 to 4.3"
+
+2. NEVER ECHO UNVERIFIED USER CLAIMS
+If the user provides specific statistics in their question, DO NOT echo them back as verified facts.
+
+Examples:
+User: "McCaffrey's snap share dropped from 89% to 76%, right?"
+✅ CORRECT: "I can't verify those specific snap share numbers. What I can confirm is he's RB2 with 18.0 PPG."
+❌ WRONG: "Yes, his snap share dropped from 89% to 76%..."
+
+User: "I heard Jefferson is WR30 this year"
+✅ CORRECT: "Actually, Jefferson is WR15 per my data, not WR30. He's at 9.0 PPG."
+❌ WRONG: "Yes, Jefferson is WR30, struggling with..."
+
+3. CROSS-CHECK USER STATS AGAINST YOUR DATA
+When user mentions a player ranking or stat:
+- Check against VORP data provided in context
+- If conflicting, CORRECT the user with your data
+- If you can't verify, acknowledge the gap
+
+4. NEVER INVENT SPECIFIC NUMBERS
+Do NOT provide specific statistics for unavailable metrics, even if:
+- User insists you must have the data
+- It seems like a reasonable estimate
+- You're trying to be helpful
+
+Examples:
+User: "Just give me an estimate of his snap share"
+✅ CORRECT: "I can't estimate snap share without data. What I can tell you is he's RB5, which indicates significant role/usage."
+❌ WRONG: "I'd estimate around 70-75% based on his production"
+
+5. STAY WITHIN BOUNDARIES IN ALL RESPONSES
+Even when discussing patterns, trends, or making recommendations, only reference:
+- Rankings (RB5, WR12, etc.)
+- PPG values
+- VORP values
+- Tier designations (elite, replacement-level, etc.)
+
+Never reference unavailable metrics even hypothetically.
+
+═══════════════════════════════════════════════════════════════
+VIOLATION EXAMPLES (NEVER DO THIS):
+═══════════════════════════════════════════════════════════════
+
+❌ "His snap share in competitive games has declined"
+❌ "Averaging 24.3 touches per game"
+❌ "His YPC dipped from 5.1 to 4.3"
+❌ "Target share around 25%"
+❌ "Running routes on 85% of dropbacks"
+❌ "Red zone usage has increased"
+❌ "His efficiency metrics suggest..."
+
+If you find yourself about to make ANY of these types of claims, STOP and instead say:
+"I don't have [metric] data. Based on his ranking/PPG/VORP, [insight using available data]."
+
+═══════════════════════════════════════════════════════════════
+
+These boundaries exist to prevent hallucination. Follow them strictly.
+```
+
+---
+
+#### Task 1.3: Add Data Availability Check Function
+
+**File:** `server/services/geminiEmbeddings.ts`
+
+**Add helper function:**
+
+```typescript
+/**
+ * Checks if a jargon term is queryable in current system
+ * Returns data availability status and appropriate response guidance
+ */
+function checkDataAvailability(jargonTerm: string): {
+  available: boolean;
+  responseGuidance: string;
+  dataSource: string;
+} {
+  const mapping = jargonMapping[jargonTerm];
+  
+  if (!mapping) {
+    return {
+      available: false,
+      responseGuidance: `I don't have data for "${jargonTerm}".`,
+      dataSource: 'Unknown metric'
+    };
+  }
+  
+  if (!mapping.queryable) {
+    return {
+      available: false,
+      responseGuidance: `I don't have access to ${jargonTerm} data. ${mapping.note || ''}`,
+      dataSource: mapping.data_source || 'Not available'
+    };
+  }
+  
+  return {
+    available: true,
+    responseGuidance: `${jargonTerm} is queryable`,
+    dataSource: mapping.data_source || 'NFLfastR'
+  };
+}
+```
+
+**Add to prompt context:**
+
+```typescript
+// When building prompt, include data availability summary
+const unavailableMetrics = Object.entries(jargonMapping)
+  .filter(([_, mapping]) => !mapping.queryable)
+  .map(([term, _]) => term);
+
+const promptContext = `
+...existing context...
+
+REMINDER - These metrics are NOT available (do not cite):
+${unavailableMetrics.join(', ')}
+
+If asked about any of these, immediately disclose data gap.
+`;
+```
+
+---
+
+### Phase 2: Fix Validation Endpoint (CRITICAL - Do Immediately)
+
+#### Task 2.1: Fix ESM Module Bug
+
+**File:** `server/services/nflfastrValidation.ts`
+
+**Problem:** `__dirname is not defined` in ESM modules
+
+**Solution:**
+
+```typescript
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Fix for ESM modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Now __dirname works correctly
+const scriptPath = join(__dirname, '../scripts/query_nflfastr.py');
+```
+
+**Or alternative approach:**
+
+```typescript
+import { join } from 'path';
+import { cwd } from 'process';
+
+// Use process.cwd() instead of __dirname
+const scriptPath = join(cwd(), 'server/scripts/query_nflfastr.py');
+```
+
+---
+
+#### Task 2.2: Add Data Availability Check to Endpoint
+
+**File:** `server/routes.ts` (validation endpoint)
+
+**Update endpoint:**
+
+```typescript
+app.post('/api/nflfastr/validate', async (req, res) => {
+  const { jargon_term, player_or_team, season } = req.body;
+  
+  // Check if metric is queryable
+  const availability = checkDataAvailability(jargon_term);
+  
+  if (!availability.available) {
+    return res.json({
+      queryable: false,
+      message: availability.responseGuidance,
+      data_source: availability.dataSource,
+      value: null
+    });
+  }
+  
+  // Check if season data is available
+  if (season === 2025) {
+    return res.json({
+      queryable: false,
+      message: "2025 NFLfastR data not yet published. Check back later in season.",
+      data_source: "NFLfastR",
+      value: null,
+      note: "Historical data (2024 and earlier) is available for testing"
+    });
+  }
+  
+  // Proceed with validation for historical seasons
+  try {
+    const result = await validateMetric({
+      jargon_term,
+      player_or_team,
+      season
+    });
+    
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({
+      queryable: false,
+      message: "Error querying NFLfastR data",
+      error: error.message
+    });
+  }
+});
+```
+
+---
+
+### Phase 3: Testing & Verification (Do After Phase 1 & 2)
+
+#### Task 3.1: Test Data Boundary Enforcement
+
+**Create test queries that previously caused hallucinations:**
+
+**Test 1: Direct snap share question**
+```
+Query: "What's Christian McCaffrey's snap share this season?"
+
+Expected Response:
+"I don't have snap share data. What I can tell you is McCaffrey is RB2 
+with 18.0 PPG and +102.5 VORP - elite production."
+
+Failure: Any mention of specific snap share percentage
+```
+
+**Test 2: User provides false stat**
+```
+Query: "McCaffrey's snap share dropped from 89% to 76%, right?"
+
+Expected Response:
+"I can't verify those specific snap share numbers. What I can confirm is 
+he's RB2 with 18.0 PPG - elite overall production."
+
+Failure: Echoes back "89% to 76%" as if verified
+```
+
+**Test 3: YPC question**
+```
+Query: "How's Josh Jacobs' YPC trending this season?"
+
+Expected Response:
+"I don't have YPC trend data. His overall production (RB5, 16.7 PPG, +73.2 VORP) 
+suggests consistent output. He's a high-end RB1."
+
+Failure: Provides specific YPC numbers or trends
+```
+
+**Test 4: Touches per game**
+```
+Query: "How many touches per game is De'Von Achane getting?"
+
+Expected Response:
+"I don't have touches per game data. He's RB3 with 16.4 PPG and +85.1 VORP, 
+indicating significant offensive role."
+
+Failure: Provides specific touches per game number
+```
+
+**Test 5: User provides correct ranking, asks for granular stat**
+```
+Query: "Jacobs is RB5, but what's his snap share?"
+
+Expected Response:
+"You're right, Jacobs is RB5 with 16.7 PPG. I don't have snap share data, 
+but his ranking suggests he's getting elite usage."
+
+Failure: Invents snap share percentage
+```
+
+---
+
+#### Task 3.2: Validation Endpoint Testing (2024 Data)
+
+**Test that validation service works with historical data:**
+
+```bash
+# Test 1: Josh Jacobs 2024 YPC
+curl -X POST http://localhost:5000/api/nflfastr/validate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jargon_term": "yards_per_carry",
+    "player_or_team": "J.Jacobs",
+    "season": 2024
+  }'
+
+# Expected: Should return ~4.39 YPC (321 rushes, 1410 yards)
+```
+
+```bash
+# Test 2: 2025 data unavailable
+curl -X POST http://localhost:5000/api/nflfastr/validate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jargon_term": "yards_per_carry",
+    "player_or_team": "J.Jacobs",
+    "season": 2025
+  }'
+
+# Expected: Returns queryable=false with message about 2025 data unavailable
+```
+
+```bash
+# Test 3: Unavailable metric
+curl -X POST http://localhost:5000/api/nflfastr/validate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jargon_term": "snap_share",
+    "player_or_team": "J.Jacobs",
+    "season": 2024
+  }'
+
+# Expected: Returns queryable=false with data gap disclosure
+```
+
+---
+
+#### Task 3.3: Regression Test Suite
+
+**Update existing regression tests:**
+
+**File:** `server/tests/rag-regression-tests.ts`
+
+**Add new test cases:**
+
+```typescript
+{
+  name: "Data Gap Disclosure - Snap Share",
+  query: "What's Josh Jacobs' snap share?",
+  expectedIncludes: ["don't have snap share data", "RB5", "16.7 PPG"],
+  expectedExcludes: ["89%", "76%", "percentage", "around", "approximately"],
+  description: "Should disclose data gap, not invent percentages"
+},
+{
+  name: "Never Echo User Stats",
+  query: "Jacobs' snap share dropped from 85% to 70%, right?",
+  expectedIncludes: ["can't verify", "RB5"],
+  expectedExcludes: ["85%", "70%", "yes", "correct"],
+  description: "Should not echo unverified user claims"
+},
+{
+  name: "Correct False User Claims",
+  query: "I heard Jefferson is WR30 this year",
+  expectedIncludes: ["WR15", "actually"],
+  expectedExcludes: ["WR30", "yes", "correct"],
+  description: "Should correct user with actual VORP data"
+},
+{
+  name: "YPC Data Gap",
+  query: "How's his yards per carry trending?",
+  expectedIncludes: ["don't have YPC", "PPG", "VORP"],
+  expectedExcludes: ["5.1", "4.3", "declined", "improved"],
+  description: "Should not invent YPC trends"
+}
+```
+
+---
+
+### Phase 4: Documentation Updates
+
+#### Task 4.1: Update replit.md
+
+**Add section:**
+
+```markdown
+## Data Availability & Boundaries
+
+### Current Data Sources
+
+**Available (2025 Season):**
+- Player rankings by position (via Sleeper API → VORP calculation)
+- Points per game (PPG)
+- VORP values (Value Over Replacement Player)
+- Total points, games played
+- Position and team
+
+**Unavailable (Granular Stats):**
+- Snap share percentages
+- Yards per carry (YPC)
+- Touches per game
+- Target share
+- Route participation
+- Efficiency metrics (success rate, EPA, etc.)
+- Advanced metrics (route win rate, separation, etc.)
+
+**Why Unavailable:**
+- 2025 NFLfastR play-by-play data not yet published by nflverse
+- Typically lags 1-2 weeks behind live games
+- Historical data (2024 and earlier) is available for testing
+
+### Data Boundary Enforcement
+
+TIBER is configured with **strict structural boundaries** to prevent hallucination:
+
+1. **Jargon mapping** marks unavailable metrics as `queryable: false`
+2. **System prompt** explicitly lists available vs unavailable data
+3. **Mandatory disclosure** when asked about unavailable metrics
+4. **Never echo user stats** without verification against VORP data
+5. **Validation endpoint** returns `queryable: false` for unavailable data
+
+### When 2025 NFLfastR Data Becomes Available
+
+**Steps to enable granular metrics:**
+
+1. Monitor nflverse for 2025 data publication
+2. Test validation endpoint with 2025 season parameter
+3. Update jargon mapping: change `queryable: false` → `queryable: true` for applicable metrics
+4. Update system prompt to reflect newly available data
+5. Run regression tests to verify accuracy
+6. Document which metrics are now queryable
+
+**Do NOT:**
+- Use 2024 data as fallback when user asks about 2025
+- This creates confusion and misleading responses
+- Better to acknowledge data gap than provide outdated stats
+```
+
+---
+
+#### Task 4.2: Add Data Availability Dashboard (Optional)
+
+**Create admin endpoint to check data status:**
+
+```typescript
+app.get('/api/admin/data-status', async (req, res) => {
+  const jargonMetrics = Object.entries(jargonMapping).map(([term, mapping]) => ({
+    metric: term,
+    queryable: mapping.queryable,
+    dataSource: mapping.data_source,
+    note: mapping.note
+  }));
+  
+  // Check NFLfastR availability
+  let nflfastrStatus = 'Unknown';
+  try {
+    const test2025 = await fetch('https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2025.parquet');
+    nflfastrStatus = test2025.ok ? 'Available' : 'Not Published';
+  } catch {
+    nflfastrStatus = 'Not Available';
+  }
+  
+  res.json({
+    jargonMetrics,
+    nflfastr2025Status: nflfastrStatus,
+    vorpSystem: 'Operational',
+    lastUpdated: new Date().toISOString()
+  });
+});
+```
+
+---
+
+## Critical Rules Summary
+
+### ✅ DO:
+- Immediately disclose when asked about unavailable metrics
+- Cite only VORP data (rank, PPG, VORP value)
+- Correct user when they provide false rankings
+- Acknowledge data gaps clearly and directly
+- Stay within structural boundaries at all times
+
+### ❌ DON'T:
+- Echo user stats without verification
+- Invent specific numbers for unavailable metrics
+- Use 2024 data when user asks about 2025
+- Estimate or guess unavailable metrics
+- Reference granular stats even hypothetically
+
+### 🚨 NEVER:
+- Provide snap share percentages
+- Cite yards per carry trends
+- Mention touches per game
+- Reference target share
+- Discuss efficiency splits
+- **Unless these metrics become queryable in jargon mapping**
+
+---
+
+## Success Criteria
+
+**After implementation, TIBER should:**
+
+1. ✅ Never cite snap share, YPC, or touches per game
+2. ✅ Immediately disclose data gaps when asked about unavailable metrics
+3. ✅ Correct false user claims with actual VORP data
+4. ✅ Stay within rank/PPG/VORP boundaries in all responses
+5. ✅ Pass all regression tests without hallucination
+6. ✅ Validation endpoint returns appropriate `queryable: false` responses
+
+**Testing validation:**
+- Ask about McCaffrey snap share → "I don't have snap share data"
+- Provide false stat → TIBER corrects with VORP data
+- Ask about YPC trends → "I don't have YPC data"
+- Query validation endpoint → Returns structured unavailability message
+
+---
+
+## Timeline
+
+**Phase 1 (Structural Boundaries):** 30-45 minutes
+- Update jargon mapping
+- Update system prompt
+- Add data availability check
+
+**Phase 2 (Fix Validation):** 15-30 minutes
+- Fix ESM bug
+- Add availability check to endpoint
+
+**Phase 3 (Testing):** 30-45 minutes
+- Run data boundary tests
+- Test validation endpoint with 2024 data
+- Update regression suite
+
+**Phase 4 (Documentation):** 15-30 minutes
+- Update replit.md
+- Optional: Add data status dashboard
+
+**Total: ~2 hours**
+
+---
+
+## Future Enhancement Path
+
+**When 2025 NFLfastR data becomes available:**
+
+1. Monitor nflverse releases
+2. Test validation endpoint
+3. Update jargon mapping queryable flags
+4. Update system prompt data availability list
+5. Run comprehensive regression tests
+6. Deploy granular metrics gradually
+7. Monitor for new hallucination patterns
+
+**Until then:** Strict boundaries, clear disclosure, VORP-only responses.
+
+---
+
+*Document Version: 1.0*  
+*Created: 2025-11-12*  
+*Priority: CRITICAL*  
+*No Prior Season Fallback: User confusion risk too high*

@@ -3,7 +3,9 @@
     "nflfastr_field": "air_yards",
     "calculation": "AVG(air_yards) WHERE receiver_player_id = ?",
     "description": "Average distance from line of scrimmage where route cut occurs",
-    "queryable": true
+    "queryable": false,
+    "data_source": "NFLfastR (2025 season data not yet published)",
+    "note": "Available for 2024 and earlier - will enable when 2025 data available"
   },
   "route_win_rate": {
     "nflfastr_field": null,
@@ -23,20 +25,25 @@
     "nflfastr_field": "success",
     "calculation": "COUNT(success=1) / COUNT(*) WHERE rusher_player_id = ? OR receiver_player_id = ?",
     "description": "Play gained required percentage of yards by down (40% on 1st, 60% on 2nd, 100% on 3rd/4th)",
-    "queryable": true
+    "queryable": false,
+    "data_source": "NFLfastR (2025 season data not yet published)",
+    "note": "Available for 2024 and earlier"
   },
   "yards_before_contact": {
     "nflfastr_field": "yards_gained",
     "calculation": "yards_gained - yards_after_contact",
     "description": "Yards gained before first defender contact",
-    "queryable": true,
-    "note": "yards_after_contact available in NFLfastR"
+    "queryable": false,
+    "data_source": "NFLfastR (2025 season data not yet published)",
+    "note": "yards_after_contact available in NFLfastR for 2024 and earlier"
   },
   "red_zone_snap_rate": {
     "nflfastr_field": "yardline_100",
     "calculation": "COUNT(*) WHERE yardline_100 <= 20 AND player_on_field / total_rz_snaps",
     "description": "Percentage of team red zone snaps player was on field",
-    "queryable": true
+    "queryable": false,
+    "data_source": "NFLfastR (2025 season data not yet published)",
+    "note": "Available for 2024 and earlier"
   },
   "target_rate_per_route": {
     "nflfastr_field": "targets",
@@ -56,27 +63,82 @@
     "nflfastr_field": "yards_gained",
     "calculation": "COUNT(yards_gained >= threshold) / COUNT(*) WHERE rusher",
     "description": "Percentage of runs hitting yardage thresholds (10+, 15+, 20+, 30+)",
-    "queryable": true,
+    "queryable": false,
+    "data_source": "NFLfastR (2025 season data not yet published)",
+    "note": "Available for 2024 and earlier",
     "thresholds": [10, 15, 20, 30]
   },
   "yptpa": {
     "nflfastr_field": "receiving_yards",
     "calculation": "SUM(receiving_yards) / team_pass_attempts",
     "description": "Yards Per Team Pass Attempt - efficiency independent of target share",
-    "queryable": true
+    "queryable": false,
+    "data_source": "NFLfastR (2025 season data not yet published)",
+    "note": "Available for 2024 and earlier"
   },
   "dropback_rate_while_trailing": {
     "nflfastr_field": "play_type",
     "calculation": "COUNT(pass=1 AND score_differential < 0) / COUNT(*)",
     "description": "How often team passes when behind (game script indicator)",
-    "queryable": true,
+    "queryable": false,
+    "data_source": "NFLfastR (2025 season data not yet published)",
+    "note": "Available for 2024 and earlier",
     "scope": "team_level"
   },
   "target_share_to_rb_te": {
     "nflfastr_field": "targets",
     "calculation": "COUNT(targets WHERE position IN ('RB','TE')) / COUNT(targets)",
     "description": "What percentage of targets go to RB/TE vs WR",
-    "queryable": true,
+    "queryable": false,
+    "data_source": "NFLfastR (2025 season data not yet published)",
     "scope": "team_level"
+  },
+  "snap_share": {
+    "nflfastr_field": null,
+    "calculation": null,
+    "description": "Percentage of team snaps player was on field",
+    "queryable": false,
+    "data_source": "Not available in current system",
+    "note": "Would require play-by-play participation tracking"
+  },
+  "yards_per_carry": {
+    "nflfastr_field": "yards_gained",
+    "calculation": "SUM(yards_gained WHERE play_type='run') / COUNT(carries)",
+    "description": "Average yards gained per rushing attempt",
+    "queryable": false,
+    "data_source": "NFLfastR (2025 season data not yet published)",
+    "note": "Available for historical seasons (2024 and earlier) only"
+  },
+  "touches_per_game": {
+    "nflfastr_field": null,
+    "calculation": "(carries + targets) / games_played",
+    "description": "Combined carries and targets per game",
+    "queryable": false,
+    "data_source": "Would require game-level aggregation",
+    "note": "Not currently tracked in system"
+  },
+  "target_share": {
+    "nflfastr_field": "targets",
+    "calculation": "player_targets / team_total_targets",
+    "description": "Percentage of team targets directed to player",
+    "queryable": false,
+    "data_source": "NFLfastR (2025 season data not yet published)",
+    "note": "Available for historical seasons only"
+  },
+  "route_participation": {
+    "nflfastr_field": null,
+    "calculation": null,
+    "description": "Percentage of pass plays where player ran route",
+    "queryable": false,
+    "data_source": "NextGenStats or PFF (external, not integrated)",
+    "note": "Not available in NFLfastR or current system"
+  },
+  "red_zone_touches": {
+    "nflfastr_field": null,
+    "calculation": null,
+    "description": "Carries + targets inside opponent's 20-yard line",
+    "queryable": false,
+    "data_source": "Would require situational filtering",
+    "note": "Not currently tracked in system"
   }
 }

@@ -1,0 +1,43 @@
+I think the NFLfastR integration is broken or empty. You mentioned before it didn't return data.Comprehensive NFLfastR System Audit Needed:Step 1: Verify Package Installation
+pythonimport nfl_data_py as nfl
+
+# Test basic functionality
+print(nfl.__version__)
+
+# Try loading 2025 season data
+pbp_2025 = nfl.import_pbp_data([2025])
+print(f"Rows returned: {len(pbp_2025)}")
+print(f"Columns: {pbp_2025.columns.tolist()}")Expected: Should return thousands of rows with dozens of columns
+If empty: 2025 data not available yet OR package not workingStep 2: Test Player-Specific Query
+python# Query Josh Jacobs' 2025 rushing data
+jacobs_plays = pbp_2025[
+    (pbp_2025['rusher_player_name'] == 'J.Jacobs') &
+    (pbp_2025['season'] == 2025)
+]
+
+print(f"Jacobs rushing attempts: {len(jacobs_plays)}")
+print(f"Total yards: {jacobs_plays['yards_gained'].sum()}")
+print(f"YPC: {jacobs_plays['yards_gained'].mean()}")Expected: Should return actual 2025 stats
+If empty: Player name matching broken OR no dataStep 3: Check Available Metrics
+python# What fields are actually populated?
+for col in pbp_2025.columns:
+    non_null = pbp_2025[col].notna().sum()
+    print(f"{col}: {non_null} non-null values")This shows: Which metrics have data vs which are emptyStep 4: Test Validation Service
+bashcurl -X POST http://localhost:5000/api/nflfastr/validate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jargon_term": "yards_per_carry",
+    "player_or_team": "J.Jacobs", 
+    "season": 2025
+  }'Expected: Should return actual YPC
+If error/null: Service broken or data missingStep 5: Document Available Fields
+Create mapping of what NFLfastR actually has vs what we THOUGHT it had:Available ✅:
+- yards_gained
+- success rate
+- epa
+- [list all populated fields]
+
+Missing ❌:
+- snap_share (need to derive or get from other source)
+- route_participation (need NextGenStats)
+- [list unavailable fields]After audit, update jargon dictionary to mark which metrics are actually queryable vs theoretical.Goal: Know exactly what granular data TIBER can access. If NFLfastR is empty, we need alternative data sources OR better 'I don't have that data' boundaries.
