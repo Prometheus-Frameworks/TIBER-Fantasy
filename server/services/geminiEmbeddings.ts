@@ -1,10 +1,47 @@
 import { GoogleGenAI } from "@google/genai";
+import jargonMapping from '../data/nflfastr_jargon_mapping.json';
 
 // DON'T DELETE THIS COMMENT
 // Using blueprint:javascript_gemini for embeddings generation
 // Gemini Developer API Key (not Vertex AI)
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+
+/**
+ * Checks if a jargon term is queryable in current system
+ * Returns data availability status and appropriate response guidance
+ */
+export function checkDataAvailability(jargonTerm: string): {
+  available: boolean;
+  responseGuidance: string;
+  dataSource: string;
+} {
+  const mapping = jargonMapping[jargonTerm as keyof typeof jargonMapping];
+  
+  if (!mapping) {
+    return {
+      available: false,
+      responseGuidance: `I don't have data for "${jargonTerm}".`,
+      dataSource: 'Unknown metric'
+    };
+  }
+  
+  if (!mapping.queryable) {
+    const note = 'note' in mapping ? mapping.note : '';
+    const dataSource = 'data_source' in mapping ? mapping.data_source : 'Not available';
+    return {
+      available: false,
+      responseGuidance: `I don't have access to ${jargonTerm} data. ${note}`,
+      dataSource: dataSource as string
+    };
+  }
+  
+  return {
+    available: true,
+    responseGuidance: `${jargonTerm} is queryable`,
+    dataSource: 'data_source' in mapping ? (mapping.data_source as string) : 'NFLfastR'
+  };
+}
 
 /**
  * Generate 768-dimension embeddings for text using Gemini Flash
