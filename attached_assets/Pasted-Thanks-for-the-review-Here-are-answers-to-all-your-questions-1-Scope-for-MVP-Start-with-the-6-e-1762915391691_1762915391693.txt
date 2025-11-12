@@ -1,0 +1,101 @@
+Thanks for the review! Here are answers to all your questions:
+
+1. Scope for MVP:
+Start with the 6 example chunks provided in the handoff. We'll add more as I curate observations from Twitter analysts. Prove the system works end-to-end first, then scale.
+
+2. NFLfastR Data Access:
+Use the existing nfl-data-py Python package installed in our environment. Fetch on-demand for now (query when user asks about a player). We can optimize to weekly batch updates later once proven.
+
+3. Live Data Strategy:
+Start with real-time queries (fetch NFLfastR data when user asks about Pierce). Once the system is proven stable, we'll move to weekly batch pre-calculation for better performance. MVP = prove it works with on-demand.
+
+4. Existing Chunks Migration:
+Keep existing 6 narrative chunks (McCaffrey regression, Evans sell-high, etc.) as general player-specific knowledge.
+Add the 6 pattern observation chunks as NEW entries. Don't replace - both serve different purposes:
+
+Narrative chunks = Player-specific analysis (McCaffrey's usage declining)
+Pattern chunks = Evaluation frameworks (how to spot usage cliffs in general)
+
+Both are valuable. Keep both.
+
+5. Legal Compliance & Attribution:
+CRITICAL CHANGE: Do NOT cite analyst names in user-facing responses. No 'Jacob Gibbs observed...' or 'According to...'
+Why:
+
+Legal risk (analysts might object to AI using their insights)
+Makes TIBER sound like a parrot repeating others, not a teacher
+Creates dependency on specific analysts
+
+Instead:
+
+Keep source attribution in metadata ONLY (for our legal records/defense)
+
+source_handle: '@jagibbs_23' (internal)
+source_url: 'https://twitter.com/...' (internal)
+
+
+TIBER teaches patterns as general evaluation knowledge
+Present as 'here's how you evaluate X' NOT 'Analyst Y says...'
+
+Example:
+
+Metadata: source_handle: '@jagibbs_23' ← stored but never shown
+Response: 'Teams that rarely trail use their RBs consistently...' ← no citation
+
+Think of TIBER as a teacher who learned from many sources but teaches concepts as established knowledge, not as 'Professor Smith says...'
+
+6. ADDITIONAL: Epistemic Framework (CRITICAL)
+Treat all patterns as 'working assumptions' open to debate, not absolute facts.
+Key implementation changes:
+
+Chunk metadata: Add epistemic_status: 'working_assumption' field
+Content framing: Rewrite all pattern chunks to use hedging language:
+
+✅ 'Working assumption: ...'
+✅ 'Pattern suggests...'
+✅ 'Observed correlation: ...'
+❌ NOT: 'This IS true' or 'Always' or 'Definitely'
+
+
+Add caveats to each pattern:
+
+Example: 'Caveat: High-scoring offenses may trail in shootouts despite being elite - context matters'
+Acknowledge exceptions, limitations, edge cases
+
+
+Update system prompt with epistemic framework:
+
+Treat all patterns as working assumptions subject to debate, not absolute facts. 
+Your role is to help users THINK through decisions using multiple lenses, not provide unchallengeable truth.
+
+When presenting patterns:
+- Frame as 'working assumption' or 'observed pattern'  
+- Acknowledge exceptions/caveats
+- Encourage considering counterpoints
+- Use: 'This suggests...', 'Pattern indicates...', 'One lens shows...'
+- Avoid: 'This IS true', 'Always', 'Never', 'Definitely'
+
+Example:
+BAD: 'Pierce will score TDs because his route depth is elite. This always happens.'
+GOOD: 'Pierce's route depth + target rate combination historically precedes TD production. Working assumption: coaches trust him deep, red zone opportunities should follow. Caveat: Colts' offense efficiency matters - elite profile in weak offense can still underperform. Monitor red zone snaps as confirmation signal.'
+
+Goal: Teach users to hold assumptions lightly and think critically, not memorize 'facts.'
+Why this matters:
+
+Philosophical consistency (serve not take, build discernment)
+Sharper reasoning (can handle contradictions, nuance, exceptions)
+Legal protection (assumptions safer than claimed facts)
+Path to new insights (held-lightly beliefs can evolve)
+
+Paradox: The less certain TIBER sounds, the more trustworthy he becomes.
+
+Implementation order:
+
+Create jargon dictionary (start with 10-12 metrics from handoff)
+Rewrite 6 pattern chunks with epistemic framing + caveats
+Seed chunks into database with full metadata
+Build validation service (test with Pierce route depth query)
+Integrate with RAG chat (enrich with live data when queryable)
+Test end-to-end: User asks about Pierce → TIBER cites live data + presents pattern as 'working assumption'
+
+Proceed with this plan. Let me know if any clarifications needed.
