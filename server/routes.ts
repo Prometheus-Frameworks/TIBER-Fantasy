@@ -6326,6 +6326,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // NFLfastR Metric Validation endpoint
+  app.post('/api/nflfastr/validate', async (req, res) => {
+    try {
+      const { validateMetric } = await import('./services/nflfastrValidation');
+      const { jargon_term, player_name, team, season } = req.body;
+
+      if (!jargon_term) {
+        return res.status(400).json({
+          success: false,
+          error: 'jargon_term is required',
+        });
+      }
+
+      console.log(`🔍 [NFLfastR] Validating metric: ${jargon_term} for ${player_name || team}`);
+
+      const result = await validateMetric({
+        jargon_term,
+        player_name,
+        team,
+        season: season || 2025
+      });
+
+      console.log(`✅ [NFLfastR] Validation complete:`, result);
+
+      res.json({
+        success: true,
+        result
+      });
+
+    } catch (error) {
+      console.error('❌ [NFLfastR] Validation failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
   // ========================================
   // LEAGUE MANAGEMENT ROUTES
   // ========================================
