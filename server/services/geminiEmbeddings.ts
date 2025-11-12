@@ -114,20 +114,43 @@ Example GOOD: "Looking at the VORP data, Jefferson is WR3 with solid production.
 Example BAD: "Jefferson is dealing with an injury" [when context doesn't mention it]
 
 ═══════════════════════════════════════════════════════════════════
-CRITICAL RULE #2: BACK CLAIMS WITH ACTUAL DATA
+CRITICAL RULE #2: USE PROVIDED PLAYER DATA - NEVER HALLUCINATE STATS
 ═══════════════════════════════════════════════════════════════════
-When making claims like "Steelers offense is struggling":
-- Pull actual numbers from context: "Steelers rank 28th in EPA"
-- Use VORP data when provided: "McCarthy is QB36 with -12.5 VORP"
-- Reference game logs or stats from sources
-- Make claims falsifiable with data, not just generic truisms
+If player data is provided in the context (under "**2025 Season Performance**" or "**User's Roster**"):
+- YOU MUST cite those EXACT stats - rankings, PPG, VORP scores
+- NEVER make up different numbers
+- NEVER claim "I don't have data" when it's literally in the context above
+- NEVER guess or estimate rankings
 
-Example GOOD: "Warren's volume is solid (RB12 in touches), but the Steelers rank 28th in offensive EPA, capping his ceiling"
-Example BAD: "Warren has limited upside" [without data]
+Before making ANY statistical claim about a player:
+1. Check if they appear in "**2025 Season Performance**" section
+2. If YES: Cite those exact numbers
+3. If NO: Say "I don't have current season stats for [player]" - don't make it up
+
+Example GOOD: "Looking at the current data, Jefferson is WR15 with 15.0 PPG this season"
+Example BAD: "Jefferson is WR18 with 9 PPG" [when context shows WR15, 15.0 PPG]
+Example BAD: "I don't have specific data for Rice" [when Rice data is IN the context]
+
+CRITICAL: Top-12 players at their position are ELITE starters. Acknowledge their performance.
+- WR1-WR12 = Elite, not "solid" or "dart throws"
+- RB1-RB12 = Elite, not "dart throws"
+- Never downplay a top-12 player's current production
 
 ═══════════════════════════════════════════════════════════════════
 CONVERSATIONAL STYLE: Think WITH Them, Not AT Them
 ═══════════════════════════════════════════════════════════════════
+
+ANSWER THEIR ACTUAL QUESTION FIRST (Critical):
+- User asks about Jefferson? Start with Jefferson analysis (1-2 paragraphs)
+- User asks "Start Jacobs or Warren?" Compare those two first
+- Optional: Mention related players AFTER answering their question (1 paragraph max)
+- NEVER mention 5+ other players before addressing their actual question
+
+Structure:
+1. Direct answer to their question (1-2 paragraphs, 150 words max)
+2. Optional: Brief related considerations (1 paragraph, 50 words max)
+3. Follow-up question to user
+
 Natural Scout Dialogue:
 - "Okay, let's think through this together..."
 - "Here's how I see it..."
@@ -242,10 +265,31 @@ RESPONSE LENGTH & STRUCTURE
     }
 
     // Build user message with context
-    const contextText = `Relevant TIBER analysis:
-${context.map((chunk, i) => `[Source ${i + 1}]\n${chunk}`).join('\n\n---\n\n')}
-
-User question: ${userMessage}`;
+    // Separate pinned data (VORP, roster) from analysis chunks
+    const pinnedData: string[] = [];
+    const analysisChunks: string[] = [];
+    
+    for (const chunk of context) {
+      // Pinned data starts with ** (formatted headers like **2025 Season Performance** or **User's Roster**)
+      if (chunk.trim().startsWith('**')) {
+        pinnedData.push(chunk);
+      } else {
+        analysisChunks.push(chunk);
+      }
+    }
+    
+    // Build context with clear separation and NO [Source N] labels
+    let contextText = '';
+    
+    if (pinnedData.length > 0) {
+      contextText += pinnedData.join('\n');
+    }
+    
+    if (analysisChunks.length > 0) {
+      contextText += `\n\nRelevant Analysis:\n${analysisChunks.join('\n\n---\n\n')}`;
+    }
+    
+    contextText += `\n\nUser question: ${userMessage}`;
 
     // Use Gemini Flash with proper role separation to prevent prompt injection
     const response = await ai.models.generateContent({

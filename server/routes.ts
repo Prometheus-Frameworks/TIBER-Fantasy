@@ -6625,7 +6625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Common NFL player name patterns (First + Last name, capitalized)
     // Match 2-4 consecutive capitalized words (handles names like "Amon-Ra St. Brown", "Christian McCaffrey")
     // Updated to allow mid-word capitals (e.g., "McCaffrey", "McMillan", "Ogbongbemiga")
-    const namePattern = /\b[A-Z][a-zA-Z]+(?:['-][A-Z][a-zA-Z]+)?(?: [A-Z][a-zA-Z'.]+){1,3}\b/g;
+    const namePattern = /\b[A-Z][a-zA-Z]+(?:['-][A-Z][a-zA-Z]+)?(?: [A-Z][a-zA-Z'.]+){0,3}\b/g;
     const matches = message.match(namePattern);
     
     if (matches) {
@@ -6635,14 +6635,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Week', 'Season', 'Game', 'Points', 'Dynasty', 'Redraft', 'The', 'This',
         'Against', 'Versus', 'Next', 'Last', 'Over', 'Under', 'Who', 'What',
         'When', 'Where', 'Why', 'How', 'Fantasy', 'Football', 'League', 'Team',
+        'Tiber', 'TIBER', 'PPR', 'VORP', 'EPA', 'Are', 'Is', 'Do', 'Does',
+        'Tell', 'About', 'Me', 'My', 'I',
       ]);
       
       for (const match of matches) {
         // Skip if it's an excluded word
         if (excludeWords.has(match)) continue;
         
-        // Only include names with at least 2 words (First + Last)
+        // Split into words and check if any word is excluded
         const words = match.split(' ');
+        const hasExcludedWord = words.some(word => excludeWords.has(word));
+        
+        if (hasExcludedWord) continue;
+        
+        // Require at least 2 words (First + Last name) to avoid false positives
+        // Users should provide full player names for accurate detection
         if (words.length >= 2) {
           players.push(match);
         }
