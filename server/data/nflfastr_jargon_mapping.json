@@ -1,0 +1,82 @@
+{
+  "route_depth": {
+    "nflfastr_field": "air_yards",
+    "calculation": "AVG(air_yards) WHERE receiver_player_id = ?",
+    "description": "Average distance from line of scrimmage where route cut occurs",
+    "queryable": true
+  },
+  "route_win_rate": {
+    "nflfastr_field": null,
+    "external_source": "NextGenStats",
+    "description": "Percentage of routes where WR created separation",
+    "queryable": false,
+    "note": "Not available in NFLfastR - use observation only"
+  },
+  "yards_per_route_run": {
+    "nflfastr_field": "receiving_yards",
+    "calculation": "SUM(receiving_yards) / routes_run",
+    "description": "Efficiency metric independent of target share",
+    "queryable": false,
+    "requires_external_data": "routes_run (NextGenStats)"
+  },
+  "success_rate": {
+    "nflfastr_field": "success",
+    "calculation": "COUNT(success=1) / COUNT(*) WHERE rusher_player_id = ? OR receiver_player_id = ?",
+    "description": "Play gained required percentage of yards by down (40% on 1st, 60% on 2nd, 100% on 3rd/4th)",
+    "queryable": true
+  },
+  "yards_before_contact": {
+    "nflfastr_field": "yards_gained",
+    "calculation": "yards_gained - yards_after_contact",
+    "description": "Yards gained before first defender contact",
+    "queryable": true,
+    "note": "yards_after_contact available in NFLfastR"
+  },
+  "red_zone_snap_rate": {
+    "nflfastr_field": "yardline_100",
+    "calculation": "COUNT(*) WHERE yardline_100 <= 20 AND player_on_field / total_rz_snaps",
+    "description": "Percentage of team red zone snaps player was on field",
+    "queryable": true
+  },
+  "target_rate_per_route": {
+    "nflfastr_field": "targets",
+    "calculation": "COUNT(targets) / routes_run",
+    "description": "How often QB targets player when they run route",
+    "queryable": false,
+    "requires_external_data": "routes_run"
+  },
+  "first_downs_per_route_run": {
+    "nflfastr_field": "first_down",
+    "calculation": "COUNT(first_down=1 AND receiver) / routes_run",
+    "description": "Chain-moving efficiency metric",
+    "queryable": false,
+    "requires_external_data": "routes_run"
+  },
+  "chunk_yardage_rate": {
+    "nflfastr_field": "yards_gained",
+    "calculation": "COUNT(yards_gained >= threshold) / COUNT(*) WHERE rusher",
+    "description": "Percentage of runs hitting yardage thresholds (10+, 15+, 20+, 30+)",
+    "queryable": true,
+    "thresholds": [10, 15, 20, 30]
+  },
+  "yptpa": {
+    "nflfastr_field": "receiving_yards",
+    "calculation": "SUM(receiving_yards) / team_pass_attempts",
+    "description": "Yards Per Team Pass Attempt - efficiency independent of target share",
+    "queryable": true
+  },
+  "dropback_rate_while_trailing": {
+    "nflfastr_field": "play_type",
+    "calculation": "COUNT(pass=1 AND score_differential < 0) / COUNT(*)",
+    "description": "How often team passes when behind (game script indicator)",
+    "queryable": true,
+    "scope": "team_level"
+  },
+  "target_share_to_rb_te": {
+    "nflfastr_field": "targets",
+    "calculation": "COUNT(targets WHERE position IN ('RB','TE')) / COUNT(targets)",
+    "description": "What percentage of targets go to RB/TE vs WR",
+    "queryable": true,
+    "scope": "team_level"
+  }
+}

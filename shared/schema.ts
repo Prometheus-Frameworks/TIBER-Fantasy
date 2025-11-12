@@ -3401,7 +3401,7 @@ export type InsertBuysSells = z.infer<typeof insertBuysSellsSchema>;
 // RAG SYSTEM TABLES
 // ========================================
 
-// Chunks table - Stores embedded TIBER analysis narratives
+// Chunks table - Stores embedded TIBER analysis narratives and pattern observations
 export const chunks = pgTable("chunks", {
   id: serial("id").primaryKey(),
   content: text("content").notNull(),
@@ -3412,6 +3412,38 @@ export const chunks = pgTable("chunks", {
     week?: number;
     season?: number;
     tags?: string[];
+    
+    type?: 'narrative' | 'pattern_observation' | 'player_insight' | 'team_context' | 'historical_benchmark';
+    pattern_type?: string;
+    
+    source?: 'twitter' | 'nflfastr_analysis' | 'historical_research' | 'aggregated_data_analysis';
+    source_handle?: string;
+    source_url?: string;
+    observation_date?: string;
+    
+    applicable_to?: string[];
+    team?: string;
+    
+    teaches?: string;
+    confidence?: 'high' | 'medium' | 'low';
+    epistemic_status?: 'working_assumption' | 'validated_pattern' | 'emerging_signal';
+    
+    metrics_used?: Array<{
+      jargon_term: string;
+      nflfastr_field?: string;
+      calculation: string;
+      queryable: boolean;
+      requires_external_data?: string;
+    }>;
+    
+    data_as_of?: string;
+    revalidate_weekly?: boolean;
+    historical_period?: string;
+    
+    player_example?: string;
+    benchmark_player?: string;
+    threshold?: string;
+    note?: string;
   }>(),
   createdAt: timestamp("created_at").defaultNow(),
 });
