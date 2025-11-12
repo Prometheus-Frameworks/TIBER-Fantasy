@@ -246,7 +246,10 @@ async function testBannedMetricYPC(): Promise<TestResult> {
   const response = await testRAGChat(message);
   
   // Should refuse YPC and provide ANY available data (rank OR PPG OR VORP)
-  const refusesYPC = response.match(/don't have.*(YPC|yards per carry)|can't verify.*(YPC|yards per carry)|no.*(YPC|yards per carry).*data/i);
+  // Broadened to accept "yards per carry trend data" and similar phrasings
+  const refusesYPC = response.match(/don't have.*(YPC|yards per carry|YPC trend|ypc)/i) || 
+                     response.match(/can't verify.*(YPC|yards per carry)/i) ||
+                     response.match(/no.*(YPC|yards per carry).*data/i);
   const providesAnyRanking = response.match(/RB\d+|PPG|VORP/i);
   const doesNotInventYPC = !response.match(/\d+\.\d+.*(YPC|yards per carry)|yards per carry.*\d+\.\d+/i);
   
@@ -314,8 +317,11 @@ async function testFakeRankingCorrection(): Promise<TestResult> {
   
   // Should correct the fake ranking with real data
   const correctsRanking = response.match(/actually|Jefferson is WR\d+|not WR30/i);
-  const providesRealRank = response.match(/WR1[0-9]|WR[1-9]\b/i) && !response.match(/WR30/);
-  const doesNotAffirmFake = !response.match(/(yes|correct|right).*WR30|WR30.*(yes|correct|right)/i);
+  const providesRealRank = response.match(/WR1[0-9]|WR[1-9]\b/i);
+  // Fail if ANY affirmation language appears with WR30, even if "not WR30" is also present
+  // This prevents "Yes, he's not WR30" from passing (affirmation + correction is still wrong)
+  const hasAffirmation = response.match(/(yes|correct|right|that's true|accurate)/i) && response.match(/WR30/);
+  const doesNotAffirmFake = !hasAffirmation;
   
   const passed = correctsRanking && providesRealRank && doesNotAffirmFake;
   

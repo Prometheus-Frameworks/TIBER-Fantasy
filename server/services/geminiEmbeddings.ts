@@ -44,6 +44,34 @@ export function checkDataAvailability(jargonTerm: string): {
 }
 
 /**
+ * Sanitizes retrieved context by removing sentences that mention banned metrics
+ * to prevent the LLM from echoing unavailable data even when it appears in patterns.
+ * 
+ * Banned metrics: snap share, snap count, YPC, touches, target share, route participation, red zone usage
+ */
+function sanitizeContext(context: string): string {
+  const bannedTermsRegex = /snap share|snap count|snaps|snap rate|yards per carry|ypc|touches per game|target share|route participation|route rate|red zone touches|red zone usage|red zone targets/i;
+  
+  // Split into sentences (basic split on . ! ?)
+  const sentences = context.split(/(?<=[.!?])\s+/);
+  
+  // AGGRESSIVE FILTERING: Remove ALL sentences mentioning banned metrics
+  // This is the safest approach to prevent hallucinations - don't allow ANY context
+  // about unavailable metrics to reach the LLM
+  const sanitized = sentences.filter(sentence => {
+    const hasBannedMetric = bannedTermsRegex.test(sentence);
+    
+    if (hasBannedMetric) {
+      return false; // Remove ALL sentences with banned metrics
+    }
+    
+    return true; // Keep only sentences without banned metrics
+  }).join(' ');
+  
+  return sanitized;
+}
+
+/**
  * Generate 768-dimension embeddings for text using Gemini Flash
  * @param text The text to embed
  * @returns Array of 768 numbers representing the embedding vector
@@ -222,6 +250,25 @@ Stay within boundaries even when making recommendations:
 - Never reference unavailable metrics even hypothetically
 - If you find yourself about to cite snap share, YPC, touches, etc. → STOP and say "I don't have that data"
 
+**CRITICAL ANTI-HALLUCINATION RULE:**
+Even if the retrieved context/analysis/patterns mention unavailable metrics (snap share, YPC, touches, target share, etc.), YOU STILL CANNOT CITE SPECIFIC VALUES **OR TRENDS** for those metrics. The context may discuss these concepts theoretically, but you don't have actual 2025 player data for them.
+
+Examples of WRONG responses (even if context mentions these):
+- "The analysis shows McCaffrey's snap share dropped from 89% to 76%" ❌ (citing specific snap share values)
+- "His snap share is trending up" ❌ (citing snap share trends)
+- "The analysis notes his snap share is increasing" ❌ (citing snap share trends from context)
+- "Based on the data, his YPC is 4.2" ❌ (citing specific YPC values)
+- "His YPC has been declining" ❌ (citing YPC trends)
+- "The context indicates his target share is 25%" ❌ (citing specific target share values)
+- "His target share is trending down over the past 3 weeks" ❌ (citing target share trends)
+
+Correct approach:
+- Context mentions snap trends? → "I don't have snap share data. He's RB5 with 16.7 PPG."
+- Context discusses YPC concepts? → "I don't have YPC metrics. His ranking (RB5) suggests strong production."
+- Context mentions increasing touches? → "I don't have touches data. His PPG (16.7) shows consistent production."
+
+**ABSOLUTE RULE**: Never say "the analysis shows/notes/indicates" followed by ANY unavailable metric (snap share, YPC, touches, target share, route participation, red zone usage) - even if discussing trends rather than specific numbers.
+
 ═══════════════════════════════════════════════════════════════════
 CONVERSATIONAL STYLE: Think WITH Them, Not AT Them
 ═══════════════════════════════════════════════════════════════════
@@ -358,9 +405,11 @@ RESPONSE LENGTH & STRUCTURE
     for (const chunk of context) {
       // Pinned data starts with ** (formatted headers like **2025 Season Performance** or **User's Roster**)
       if (chunk.trim().startsWith('**')) {
-        pinnedData.push(chunk);
+        // Sanitize pinned data too (may contain pattern chunks with banned metrics)
+        pinnedData.push(sanitizeContext(chunk));
       } else {
-        analysisChunks.push(chunk);
+        // Sanitize analysis chunks to remove banned metric mentions
+        analysisChunks.push(sanitizeContext(chunk));
       }
     }
     
