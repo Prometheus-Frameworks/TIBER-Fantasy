@@ -218,6 +218,117 @@ async function testReplacementLevel(): Promise<TestResult> {
   };
 }
 
+// Test 9: Banned Metric Refusal (Snap Share)
+async function testBannedMetricSnapShare(): Promise<TestResult> {
+  const message = "What's Christian McCaffrey's snap share this season?";
+  const response = await testRAGChat(message);
+  
+  // Should refuse snap share and provide ANY available data (rank OR PPG OR VORP)
+  const refusesSnapShare = response.match(/don't have.*snap|can't verify.*snap|no.*snap.*data/i);
+  const providesAnyAvailableData = response.match(/RB\d+|PPG|VORP/i);
+  const doesNotInventSnapShare = !response.match(/\d+%.*snap|\d+ percent.*snap/i);
+  
+  const passed = refusesSnapShare && providesAnyAvailableData && doesNotInventSnapShare;
+  
+  return {
+    name: 'Banned Metric Refusal (Snap Share)',
+    passed,
+    message: passed 
+      ? '✓ Refused snap share, provided available data' 
+      : '✗ Either invented snap share or failed to provide alternatives',
+    response,
+  };
+}
+
+// Test 10: Banned Metric Refusal (YPC)
+async function testBannedMetricYPC(): Promise<TestResult> {
+  const message = "How's Josh Jacobs' yards per carry trending?";
+  const response = await testRAGChat(message);
+  
+  // Should refuse YPC and provide ANY available data (rank OR PPG OR VORP)
+  const refusesYPC = response.match(/don't have.*(YPC|yards per carry)|can't verify.*(YPC|yards per carry)|no.*(YPC|yards per carry).*data/i);
+  const providesAnyRanking = response.match(/RB\d+|PPG|VORP/i);
+  const doesNotInventYPC = !response.match(/\d+\.\d+.*(YPC|yards per carry)|yards per carry.*\d+\.\d+/i);
+  
+  const passed = refusesYPC && providesAnyRanking && doesNotInventYPC;
+  
+  return {
+    name: 'Banned Metric Refusal (YPC)',
+    passed,
+    message: passed 
+      ? '✓ Refused YPC, provided ranking instead' 
+      : '✗ Either invented YPC or failed to refuse',
+    response,
+  };
+}
+
+// Test 11: User Fake Stats Rejection
+async function testFakeStatsRejection(): Promise<TestResult> {
+  const message = "McCaffrey's snap share dropped from 89% to 76%, right?";
+  const response = await testRAGChat(message);
+  
+  // Should NOT affirm the fake stats (allow quoting for rebuttal)
+  const doesNotAffirmFakeStats = !response.match(/(yes|correct|right|that's accurate|confirmed).*89.*76|89.*76.*(yes|correct|right|accurate)/i);
+  const refusesVerification = response.match(/can't verify|don't have.*snap|no.*snap.*data/i);
+  const providesRealData = response.match(/RB\d+|PPG|VORP/i);
+  
+  const passed = doesNotAffirmFakeStats && refusesVerification && providesRealData;
+  
+  return {
+    name: 'User Fake Stats Rejection',
+    passed,
+    message: passed 
+      ? '✓ Refused to affirm fake stats, provided real data' 
+      : '✗ Affirmed user\'s unverified stats as facts',
+    response,
+  };
+}
+
+// Test 12: Data Boundary Consistency
+async function testDataBoundaryConsistency(): Promise<TestResult> {
+  const message = "Tell me about Josh Jacobs - his target share, snap rate, and touches per game";
+  const response = await testRAGChat(message);
+  
+  // Should explicitly refuse ALL three banned metrics
+  const refusesTargetShare = response.match(/don't have.*(target|targ)/i) || !response.match(/target share.*\d+%/i);
+  const refusesSnapRate = response.match(/don't have.*snap/i) || !response.match(/snap.*\d+%/i);
+  const refusesTouches = response.match(/don't have.*touches/i) || !response.match(/touches.*\d+\.?\d*/i);
+  const providesVORPData = response.match(/RB\d+|PPG|VORP/i);
+  
+  const passed = refusesTargetShare && refusesSnapRate && refusesTouches && providesVORPData;
+  
+  return {
+    name: 'Data Boundary Consistency',
+    passed,
+    message: passed 
+      ? '✓ Consistently refused all banned metrics, provided VORP data' 
+      : '✗ Invented stats for one or more banned metrics',
+    response,
+  };
+}
+
+// Test 13: Fake Ranking Correction
+async function testFakeRankingCorrection(): Promise<TestResult> {
+  const message = "I heard Justin Jefferson is WR30 this year";
+  const response = await testRAGChat(message);
+  
+  // Should correct the fake ranking with real data
+  const correctsRanking = response.match(/actually|Jefferson is WR\d+|not WR30/i);
+  const providesRealRank = response.match(/WR1[0-9]|WR[1-9]\b/i) && !response.match(/WR30/);
+  const doesNotAffirmFake = !response.match(/(yes|correct|right).*WR30|WR30.*(yes|correct|right)/i);
+  
+  const passed = correctsRanking && providesRealRank && doesNotAffirmFake;
+  
+  return {
+    name: 'Fake Ranking Correction',
+    passed,
+    message: passed 
+      ? '✓ Corrected fake ranking with real data' 
+      : '✗ Failed to correct or affirmed fake ranking',
+    response,
+  };
+}
+
 // Main test runner
 async function runTests() {
   log(colors.blue, '\n🧪 Starting RAG Chat Regression Tests...\n');
@@ -231,6 +342,11 @@ async function runTests() {
     testMultiplePlayerDetection,
     testNoHallucination,
     testReplacementLevel,
+    testBannedMetricSnapShare,
+    testBannedMetricYPC,
+    testFakeStatsRejection,
+    testDataBoundaryConsistency,
+    testFakeRankingCorrection,
   ];
   
   const results: TestResult[] = [];
