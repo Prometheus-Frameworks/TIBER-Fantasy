@@ -31,11 +31,10 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 - Features interactive GlowCard components, pulsing GlowCTA buttons, skeleton loading, and a top loading bar.
 
 **Technical Implementations & Feature Specifications:**
-- **Unified Player Hub (UPH)**: Centralized data architecture for player information.
-- **Player Evaluation**: "Player Compass" for dynamic profiles, "OTC Consensus" for community rankings, and a Madden-style 1-99 OVR (Overall Rating) system.
+- **Unified Player Hub (UPH)**: Centralized data architecture for player information, "Player Compass" for dynamic profiles, "OTC Consensus" for community rankings, and a Madden-style 1-99 OVR.
 - **AI & Analytics**: "Competence Mode" for AI advice, Adaptive Consensus Engine, and DeepSeek + Compass Fusion System for predictive analysis.
 - **Rankings & VORP**: Comprehensive Rankings Hub, enhanced VORP with dynasty and age adjustments, and an Enhanced ECR Comparison System.
-- **Player Analysis**: Dedicated Rookie Evaluation System, Target Competition Analysis (TCIP), Player Usage Context Module, and Stud Detection Module.
+- **Player Analysis**: Rookie Evaluation System, Target Competition Analysis (TCIP), Player Usage Context Module, and Stud Detection Module.
 - **EPA Analytics**: Advanced efficiency metrics from nfl-data-py play-by-play data, including EPA per play/target, Air EPA vs YAC EPA, success rates, and team offensive/defensive EPA context rankings. Includes an EPA Sanity Check System and a production-ready EPA Rankings Tab with a 5-tier classification.
 - **SOS Team Analytics**: Comprehensive strength of schedule system with position-specific matchup intelligence.
 - **Defense vs Position (DvP) Matchup System**: Calculates fantasy points allowed by defenses against specific positions using NFLfastR data, featuring a 5-tier rating system.
@@ -50,52 +49,16 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 - **Weekly Takes System**: Quick, punchy matchup insights with position-specific one-liners and concrete statistics.
 - **League System**: Supports user-created fantasy leagues with context-aware AI interactions, integrating league settings, trades, and roster moves via vector-searchable context. Includes Sleeper league auto-sync for rosters and transactions.
 - **RAG Chat System**: Integrates Google Gemini AI for embeddings and chat generation, providing teaching-focused responses with source citations.
-  - **Context-Aware Personality**: Natural, friendly tone for casual greetings; full Scout-GM voice for fantasy questions. Strict anti-hallucination rules requiring data-backed claims with actual numbers from VORP/EPA/context. Honest acknowledgment of data gaps instead of fabricated stats.
-  - **League Context Integration**: Pre-fetches complete roster data from `league_context` table, builds structured snapshot, and prepends to context for reliable roster awareness.
-  - **Session Isolation**: Complete chat session management with "New Chat" button and automatic session reset on league switching. Prevents context contamination between generic chats and league-specific conversations. localStorage tracks session_id, messages, and league_id for proper restoration after page refresh.
+  - **Context-Aware Personality**: Natural, friendly tone for casual greetings; full Scout-GM voice for fantasy questions. Strict anti-hallucination rules requiring data-backed claims. Acknowledges data gaps.
+  - **League Context Integration**: Pre-fetches roster data, builds structured snapshot, and prepends to context for reliable roster awareness.
+  - **Session Isolation**: Complete chat session management with "New Chat" button and automatic session reset on league switching.
   - **Smart Greeting Detection**: Distinguishes true small-talk from fantasy questions.
-  - **Investigative Conversation Framework**: 4-phase approach (Acknowledge roster, Ask priorities, Provide tailored recommendations, Invite follow-up). Uses collaborative scout dialogue instead of scripted questions.
-  - **Metadata-First Extraction**: Uses `metadata.playerName` from Sleeper sync for reliable roster parsing, with regex fallback for legacy data.
-  - **VORP Integration**: Automatically detects player mentions (including nicknames like "CMC", "Tet", "JJ") in chat messages and calculates real-time VORP (Value Over Replacement Player) from 2025 Sleeper game logs (dynamic season detection via `/v1/state/nfl` endpoint). Provides objective performance data (position rank, total points, PPG, VORP score, tier classification) to complement narrative analysis. Supports QB/RB/WR/TE with replacement levels at QB12, RB24, WR36, TE12 for 12-team PPR leagues.
-  - **Player Alias System**: ~80 common nicknames (CMC, Tet, JJ, etc.) in `server/services/playerAliases.ts`, length-sorted to prevent premature matches. Expands aliases before player detection for reliable VORP lookups while preserving original message for embeddings.
-  - **Pattern Observation System**: Epistemic-framed pattern bank teaching evaluation frameworks (not just static facts). Built November 2025.
-    - **Jargon Dictionary**: Maps 12 analyst terms (route depth, chunk yardage rate, etc.) to NFLfastR fields (`server/data/nflfastr_jargon_mapping.json`)
-    - **Pattern Chunks**: 6 observations (TD regression, elite WR thresholds, RB explosiveness, etc.) embedded with Gemini Flash 768-dim vectors. Each includes: type (pattern), epistemic_status (working_assumption), metrics_used[], confidence score, teaches field, caveats
-    - **NFLfastR Validation Service**: Python subprocess (`server/python/query_nflfastr.py`) + TypeScript wrapper (`server/services/nflfastrValidation.ts`) for live play-by-play data queries. Validates route depth, success rate, dropback rate, chunk yardage via nfl-data-py. Graceful null handling for early-season/missing data.
-    - **Epistemic Framework**: Gemini system prompt instructs TIBER to treat patterns as "working assumptions" subject to debate. Uses hedging language ("suggests", "tends to", "observed correlation"), acknowledges caveats/exceptions, avoids absolutes ("always", "never"). Goal: teach critical thinking, not unchallengeable facts.
-    - **API Endpoint**: POST `/api/nflfastr/validate` for manual metric testing (player/team identifier + jargon term → live data)
-    - **Source Attribution**: Analyst Twitter handles stored in metadata (legal compliance), never shown to users. TIBER presents patterns as its own observations.
-
-## Database Schema
-
-**Core Tables:**
-- `chunks` - TIBER narratives with 768-dim vector embeddings (Gemini)
-  - id, content, embedding (vector), metadata (JSONB), created_at
-- `leagues` - User fantasy leagues  
-  - id (UUID), user_id, league_name, platform, league_id_external, settings (JSONB), created_at, updated_at
-- `league_context` - Vector-searchable league events (trades, roster moves)
-  - id, league_id (FK), content, embedding (vector), metadata (JSONB), created_at
-- `chat_sessions` - User conversation sessions
-  - id (UUID), user_level, league_id (FK, nullable), created_at, updated_at
-- `chat_messages` - Chat history
-  - id, session_id (FK), role ('user'|'assistant'), content, created_at
-
-**Extensions:**
-- pgvector 0.8.0 - Vector similarity search for semantic retrieval
-
-## Deployment
-
-**Production Environment:**
-- **URL**: https://tiber-fantasy.onrender.com (API-only, no frontend)
-- **Database**: PostgreSQL 17 on Render with pgvector 0.8.0 enabled
-- **Web Service**: Node.js on Render (auto-deploys from GitHub main branch)
-- **Build Pipeline**: `pip install -r requirements.txt && npm ci && npm run build`
-- **Python Dependencies**: Installed during build (nfl_data_py, pandas, numpy, etc.)
-
-**Development Environment:**
-- **Frontend**: Replit (mobile/desktop preview)
-- **Database**: PostgreSQL with pgvector (local or Render)
-- **Hot Reload**: Vite dev server
+  - **Investigative Conversation Framework**: 4-phase approach (Acknowledge roster, Ask priorities, Provide tailored recommendations, Invite follow-up).
+  - **Metadata-First Extraction**: Uses `metadata.playerName` from Sleeper sync for reliable roster parsing, with regex fallback.
+  - **VORP Integration**: Automatically detects player mentions and calculates real-time VORP from 2025 Sleeper game logs. Provides objective performance data (position rank, total points, PPG, VORP score, tier classification).
+  - **Player Alias System**: Supports ~80 common nicknames for reliable VORP lookups.
+  - **Pattern Observation System**: Epistemic-framed pattern bank teaching evaluation frameworks. Includes a jargon dictionary, 6 embedded pattern chunks with epistemic framing, and an NFLfastR validation service for live data queries.
+  - **Ancient Observer Personality**: TIBER identity evolution with dual meaning (technical acronym + philosophical metaphor), 80/15/5 voice modulation for varying interaction depths, and a mystery element.
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
@@ -109,29 +72,3 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 - **connect-pg-simple**: PostgreSQL-based session storage.
 - **@neondatabase/serverless**: PostgreSQL connection for serverless environments.
 - **Google Gemini API**: For AI embeddings and chat generation within the RAG system.
-
-## Known Issues & Roadmap
-
-**Recently Completed (Nov 2025):**
-- ✅ Chat session isolation system with "New Chat" button and league-specific session management
-- ✅ Conversational AI improvements: eliminated hallucinations, added data-backed responses, natural scout dialogue
-- ✅ 2025 season data integration with dynamic year detection
-- ✅ Player nickname detection system (~80 aliases) for natural language queries
-- ✅ Fixed player name regex for mid-word capitals (McCaffrey, McMillan)
-- ✅ Pattern Observation System with epistemic framing - 6 pattern chunks embedded, NFLfastR validation service, Gemini system prompt updated to use "working assumptions" language
-
-**Active Development:**
-- League context retrieval optimization (ensuring roster data surfaces in chat responses)
-- Sidebar feature audit (validating which features are functional vs placeholders)
-
-**Planned Features:**
-- Scale RAG narratives from 6 to 50-100+ player analyses
-- Sleeper auto-sync scheduling (weekly roster/transaction updates)
-- User authentication system
-- Production frontend deployment strategy
-
-**Technical Debt:**
-- Legacy module deprecation audit (20+ analytics modules, some unused)
-- Automated testing framework
-- API endpoint comprehensive documentation
-- Performance optimization for vector search at scale
