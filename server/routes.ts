@@ -6861,14 +6861,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`📌 [RAG Chat] Pinned roster snapshot at top of context`);
       }
       
-      // Pin VORP data SECOND (objective stats)
+      // Pin VORP data SECOND (objective stats for mentioned players)
       if (vorpDataList.length > 0) {
         const vorpSection = `**2025 Season Performance (PPR)**\n${vorpDataList.join('\n')}\n\n`;
         pinnedContext.push(vorpSection);
         console.log(`📌 [VORP] Pinned ${vorpDataList.length} player VORP data (2025 season)`);
       }
       
-      // Combine: [Pinned Roster/VORP] + [League Chunks] + [General Chunks (if no league)]
+      // Pin Top Performers THIRD (full season awareness - ALWAYS included)
+      try {
+        const topPerformersContext = await vorpCalculationService.getTopPerformersContext();
+        if (topPerformersContext) {
+          pinnedContext.push(topPerformersContext);
+          console.log(`📊 [Top Performers] Added season leaders context for full awareness`);
+        }
+      } catch (error) {
+        console.warn(`⚠️  [Top Performers] Failed to fetch season leaders:`, error);
+      }
+      
+      // Combine: [Pinned Roster/VORP/Top Performers] + [League Chunks] + [General Chunks (if no league)]
       const fullContext = [...pinnedContext, ...retrievalContext];
       
       // True if we have roster data OR league context chunks

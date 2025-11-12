@@ -265,6 +265,75 @@ export class VORPCalculationService {
   formatForPrompt(vorpData: PlayerVORPData): string {
     return `**${vorpData.playerName} (${vorpData.position}${vorpData.positionRank})** - ${vorpData.totalPoints} pts in ${vorpData.gamesPlayed} games (${vorpData.pointsPerGame} PPG), ${vorpData.vorp > 0 ? '+' : ''}${vorpData.vorp} VORP (${vorpData.tier})`;
   }
+  
+  /**
+   * Get top 24 performers for each position (for season awareness context)
+   */
+  async getTopPerformersContext(): Promise<string> {
+    try {
+      await this.fetchSleeperPlayers();
+      const currentSeason = await this.getCurrentSeason();
+      
+      const topPerformers: { [position: string]: string[] } = {
+        QB: [],
+        RB: [],
+        WR: [],
+        TE: [],
+      };
+      
+      // Fetch top 24 for each position
+      for (const position of ['QB', 'RB', 'WR', 'TE']) {
+        const positionalData = await this.fetchPositionalData(position);
+        
+        // Sort by total points descending
+        positionalData.sort((a, b) => b.totalPoints - a.totalPoints);
+        
+        // Get top 24 players
+        const top24 = positionalData.slice(0, 24);
+        
+        topPerformers[position] = top24.map((p, index) => {
+          const player = this.sleeperPlayersCache.get(p.playerId);
+          if (!player) return '';
+          
+          const rank = index + 1;
+          const ppg = (p.totalPoints / p.gamesPlayed).toFixed(1);
+          return `${position}${rank}: ${player.full_name} (${ppg} PPG)`;
+        }).filter(Boolean);
+      }
+      
+      // Format as concise context
+      const contextLines = [
+        `📊 2025 Season Leaders (Week ${this.getCurrentWeek()} - ${currentSeason}):`,
+        '',
+        `**QB Top 12**: ${topPerformers.QB.slice(0, 12).join(', ')}`,
+        '',
+        `**RB Top 24**: ${topPerformers.RB.slice(0, 24).join(', ')}`,
+        '',
+        `**WR Top 24**: ${topPerformers.WR.slice(0, 24).join(', ')}`,
+        '',
+        `**TE Top 12**: ${topPerformers.TE.slice(0, 12).join(', ')}`,
+      ];
+      
+      return contextLines.join('\n');
+    } catch (error) {
+      console.error('❌ Failed to fetch top performers context:', error);
+      return ''; // Return empty string on error to not break chat
+    }
+  }
+  
+  /**
+   * Get current NFL week (estimate based on date)
+   */
+  private getCurrentWeek(): number {
+    // NFL 2025 season starts Sep 4, 2025
+    const seasonStart = new Date('2025-09-04');
+    const now = new Date();
+    const daysSinceStart = Math.floor((now.getTime() - seasonStart.getTime()) / (1000 * 60 * 60 * 24));
+    const weeksSinceStart = Math.floor(daysSinceStart / 7) + 1;
+    
+    // Cap at Week 18 (end of regular season)
+    return Math.min(Math.max(1, weeksSinceStart), 18);
+  }
 }
 
 export const vorpCalculationService = new VORPCalculationService();
