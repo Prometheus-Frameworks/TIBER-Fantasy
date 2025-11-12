@@ -1,6 +1,11 @@
 import { spawn } from 'child_process';
-import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import jargonMapping from '../data/nflfastr_jargon_mapping.json';
+
+// Fix for ESM modules - __dirname is not available
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 interface ValidationRequest {
   jargon_term: string;
@@ -47,7 +52,7 @@ export async function validateMetric(request: ValidationRequest): Promise<Valida
     throw new Error('player_name or team required for queryable metrics');
   }
 
-  const pythonScriptPath = path.join(__dirname, '../python/query_nflfastr.py');
+  const pythonScriptPath = join(__dirname, '../python/query_nflfastr.py');
   
   const pythonResult = await executePythonQuery(
     pythonScriptPath,
@@ -56,7 +61,7 @@ export async function validateMetric(request: ValidationRequest): Promise<Valida
     season
   );
   
-  const calculationUsed = 'calculation' in mapping ? mapping.calculation : mapping.description;
+  const calculationUsed = ('calculation' in mapping && mapping.calculation) ? mapping.calculation : mapping.description;
   
   // Handle null result (no data available for player/team)
   if (pythonResult === null || pythonResult === undefined) {
@@ -65,7 +70,7 @@ export async function validateMetric(request: ValidationRequest): Promise<Valida
       value: null,
       queryable: true,
       data_as_of: new Date().toISOString(),
-      calculation_used: calculationUsed,
+      calculation_used: calculationUsed || 'No calculation available',
       error: 'No data available for this player/team in the specified season'
     };
   }
@@ -77,7 +82,7 @@ export async function validateMetric(request: ValidationRequest): Promise<Valida
       value: null,
       queryable: true,
       data_as_of: new Date().toISOString(),
-      calculation_used: calculationUsed,
+      calculation_used: calculationUsed || 'No calculation available',
       error: pythonResult.error
     };
   }
@@ -87,7 +92,7 @@ export async function validateMetric(request: ValidationRequest): Promise<Valida
     value: pythonResult.value,
     queryable: true,
     data_as_of: new Date().toISOString(),
-    calculation_used: calculationUsed,
+    calculation_used: calculationUsed || 'No calculation available',
     sample_size: pythonResult.sample_size
   };
 }
