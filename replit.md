@@ -58,6 +58,13 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
   - **Metadata-First Extraction**: Uses `metadata.playerName` from Sleeper sync for reliable roster parsing, with regex fallback for legacy data.
   - **VORP Integration**: Automatically detects player mentions (including nicknames like "CMC", "Tet", "JJ") in chat messages and calculates real-time VORP (Value Over Replacement Player) from 2025 Sleeper game logs (dynamic season detection via `/v1/state/nfl` endpoint). Provides objective performance data (position rank, total points, PPG, VORP score, tier classification) to complement narrative analysis. Supports QB/RB/WR/TE with replacement levels at QB12, RB24, WR36, TE12 for 12-team PPR leagues.
   - **Player Alias System**: ~80 common nicknames (CMC, Tet, JJ, etc.) in `server/services/playerAliases.ts`, length-sorted to prevent premature matches. Expands aliases before player detection for reliable VORP lookups while preserving original message for embeddings.
+  - **Pattern Observation System**: Epistemic-framed pattern bank teaching evaluation frameworks (not just static facts). Built November 2025.
+    - **Jargon Dictionary**: Maps 12 analyst terms (route depth, chunk yardage rate, etc.) to NFLfastR fields (`server/data/nflfastr_jargon_mapping.json`)
+    - **Pattern Chunks**: 6 observations (TD regression, elite WR thresholds, RB explosiveness, etc.) embedded with Gemini Flash 768-dim vectors. Each includes: type (pattern), epistemic_status (working_assumption), metrics_used[], confidence score, teaches field, caveats
+    - **NFLfastR Validation Service**: Python subprocess (`server/python/query_nflfastr.py`) + TypeScript wrapper (`server/services/nflfastrValidation.ts`) for live play-by-play data queries. Validates route depth, success rate, dropback rate, chunk yardage via nfl-data-py. Graceful null handling for early-season/missing data.
+    - **Epistemic Framework**: Gemini system prompt instructs TIBER to treat patterns as "working assumptions" subject to debate. Uses hedging language ("suggests", "tends to", "observed correlation"), acknowledges caveats/exceptions, avoids absolutes ("always", "never"). Goal: teach critical thinking, not unchallengeable facts.
+    - **API Endpoint**: POST `/api/nflfastr/validate` for manual metric testing (player/team identifier + jargon term → live data)
+    - **Source Attribution**: Analyst Twitter handles stored in metadata (legal compliance), never shown to users. TIBER presents patterns as its own observations.
 
 ## Database Schema
 
@@ -111,6 +118,7 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 - ✅ 2025 season data integration with dynamic year detection
 - ✅ Player nickname detection system (~80 aliases) for natural language queries
 - ✅ Fixed player name regex for mid-word capitals (McCaffrey, McMillan)
+- ✅ Pattern Observation System with epistemic framing - 6 pattern chunks embedded, NFLfastR validation service, Gemini system prompt updated to use "working assumptions" language
 
 **Active Development:**
 - League context retrieval optimization (ensuring roster data surfaces in chat responses)
