@@ -48,14 +48,17 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 - **Strategy Tab**: Redesigned for Start/Sit recommendations, Waiver Wire Targets based on TIBER, and SOS Rankings.
 - **Weekly Takes System**: Quick, punchy matchup insights with position-specific one-liners and concrete statistics.
 - **League System**: Supports user-created fantasy leagues with context-aware AI interactions, integrating league settings, trades, and roster moves via vector-searchable context. Includes Sleeper league auto-sync for rosters and transactions.
-- **RAG Chat System**: Integrates Google Gemini AI for embeddings and chat generation, providing teaching-focused responses with source citations.
+- **RAG Chat System**: Integrates Google Gemini AI for embeddings and chat generation, providing teaching-focused responses with clean, natural language output.
   - **Context-Aware Personality**: Natural, friendly tone for casual greetings; full Scout-GM voice for fantasy questions. Strict anti-hallucination rules requiring data-backed claims. Acknowledges data gaps.
   - **League Context Integration**: Pre-fetches roster data, builds structured snapshot, and prepends to context for reliable roster awareness.
   - **Session Isolation**: Complete chat session management with "New Chat" button and automatic session reset on league switching.
   - **Smart Greeting Detection**: Distinguishes true small-talk from fantasy questions.
   - **Investigative Conversation Framework**: 4-phase approach (Acknowledge roster, Ask priorities, Provide tailored recommendations, Invite follow-up).
   - **Metadata-First Extraction**: Uses `metadata.playerName` from Sleeper sync for reliable roster parsing, with regex fallback.
-  - **VORP Integration**: Automatically detects player mentions and calculates real-time VORP from 2025 Sleeper game logs. Provides objective performance data (position rank, total points, PPG, VORP score, tier classification).
+  - **VORP Integration**: Automatically detects player mentions (requires full names: "Josh Jacobs" not "Jacobs") and calculates real-time VORP from 2025 Sleeper game logs. Provides objective performance data (position rank, total points, PPG, VORP score, tier classification). VORP data is pinned at top of context for priority citation.
+  - **Citation System**: Strict enforcement of citing provided VORP data. System prompt requires exact position ranks and stats when available. No [Source N] labels in user-facing responses.
+  - **Conversational Focus**: Answers user's actual question first (150-250 words), then optionally expands. Avoids mentioning 5+ players before addressing core question.
+  - **Elite Player Recognition**: Top-12 performers at each position acknowledged as legitimate starters/studs, not "dart throws." System prompt enforces recognition of elite production.
   - **Player Alias System**: Supports ~80 common nicknames for reliable VORP lookups.
   - **Pattern Observation System**: Epistemic-framed pattern bank teaching evaluation frameworks. Includes a jargon dictionary, 6 embedded pattern chunks with epistemic framing, and an NFLfastR validation service for live data queries.
   - **Ancient Observer Personality**: TIBER identity evolution with dual meaning (technical acronym + philosophical metaphor), 80/15/5 voice modulation for varying interaction depths, and a mystery element.
