@@ -1,0 +1,92 @@
+[
+  {
+    "content": "{\"name\":\"Joe Burrow\",\"yds\":4918,\"season\":2024,\"tm\":\"CIN\",\"gp\":17,\"cmp\":460,\"att\":652,\"pct\":70.6,\"avg\":7.5,\"yds_g\":289.3,\"td\":43,\"int\":9,\"rtg\":108.5,\"td_perc\":6.6,\"int_perc\":1.4,\"sck\":48,\"scky\":278}",
+    "metadata": {
+      "player_id": "Joe Burrow",
+      "position": "QB",
+      "season": 2024,
+      "analysis_type": "passing_stats"
+    }
+  },
+  {
+    "content": "{\"name\":\"Jared Goff\",\"yds\":4629,\"season\":2024,\"tm\":\"DET\",\"gp\":17,\"cmp\":390,\"att\":539,\"pct\":72.4,\"avg\":8.6,\"yds_g\":272.3,\"td\":37,\"int\":12,\"rtg\":111.8,\"td_perc\":6.9,\"int_perc\":2.2,\"sck\":31,\"scky\":234}",
+    "metadata": {
+      "player_id": "Jared Goff",
+      "position": "QB",
+      "season": 2024,
+      "analysis_type": "passing_stats"
+    }
+  },
+  {
+    "content": "{\"name\":\"Baker Mayfield\",\"yds\":4500,\"season\":2024,\"tm\":\"TB\",\"gp\":17,\"cmp\":407,\"att\":570,\"pct\":71.4,\"avg\":7.9,\"yds_g\":264.7,\"td\":41,\"int\":16,\"rtg\":106.8,\"td_perc\":7.2,\"int_perc\":2.8,\"sck\":40,\"scky\":248}",
+    "metadata": {
+      "player_id": "Baker Mayfield",
+      "position": "QB",
+      "season": 2024,
+      "analysis_type": "passing_stats"
+    }
+  },
+  {
+    "content": "{\"name\":\"Geno Smith\",\"yds\":4320,\"season\":2024,\"tm\":\"SEA\",\"gp\":17,\"cmp\":407,\"att\":578,\"pct\":70.4,\"avg\":7.5,\"yds_g\":254.1,\"td\":21,\"int\":15,\"rtg\":93.2,\"td_perc\":3.6,\"int_perc\":2.6,\"sck\":50,\"scky\":338}",
+    "metadata": {
+      "player_id": "Geno Smith",
+      "position": "QB",
+      "season": 2024,
+      "analysis_type": "passing_stats"
+    }
+  },
+  {
+    "content": "{\"name\":\"Sam Darnold\",\"yds\":4319,\"season\":2024,\"tm\":\"MIN\",\"gp\":17,\"cmp\":361,\"att\":545,\"pct\":66.2,\"avg\":7.9,\"yds_g\":254.1,\"td\":35,\"int\":12,\"rtg\":102.5,\"td_perc\":6.4,\"int_perc\":2.2,\"sck\":48,\"scky\":335}",
+    "metadata": {
+      "player_id": "Sam Darnold",
+      "position": "QB",
+      "season": 2024,
+      "analysis_type": "passing_stats"
+    }
+  },
+  {
+    "content": "{\"name\":\"Lamar Jackson\",\"yds\":4172,\"season\":2024,\"tm\":\"BAL\",\"gp\":17,\"cmp\":316,\"att\":474,\"pct\":66.7,\"avg\":8.8,\"yds_g\":245.4,\"td\":41,\"int\":4,\"rtg\":119.6,\"td_perc\":8.6,\"int_perc\":0.8,\"sck\":23,\"scky\":149}",
+    "metadata": {
+      "player_id": "Lamar Jackson",
+      "position": "QB",
+      "season": 2024,
+      "analysis_type": "passing_stats"
+    }
+  },
+  {
+    "content": "{\"name\":\"Patrick Mahomes\",\"yds\":3928,\"season\":2024,\"tm\":\"KC\",\"gp\":16,\"cmp\":392,\"att\":581,\"pct\":67.5,\"avg\":6.8,\"yds_g\":245.5,\"td\":26,\"int\":11,\"rtg\":93.5,\"td_perc\":4.5,\"int_perc\":1.9,\"sck\":36,\"scky\":239}",
+    "metadata": {
+      "player_id": "Patrick Mahomes",
+      "position": "QB",
+      "season": 2024,
+      "analysis_type": "passing_stats"
+    }
+  },
+  {
+    "content": "{\"name\":\"Aaron Rodgers\",\"yds\":3897,\"season\":2024,\"tm\":\"NYJ\",\"gp\":17,\"cmp\":368,\"att\":584,\"pct\":63.0,\"avg\":6.7,\"yds_g\":229.2,\"td\":28,\"int\":11,\"rtg\":90.5,\"td_perc\":4.8,\"int_perc\":1.9,\"sck\":40,\"scky\":302}",
+    "metadata": {
+      "player_id": "Aaron Rodgers",
+      "position": "QB",
+      "season": 2024,
+      "analysis_type": "passing_stats"
+    }
+  },
+  {
+    "content": "{\"name\":\"Justin Herbert\",\"yds\":3870,\"season\":2024,\"tm\":\"LAC\",\"gp\":17,\"cmp\":332,\"att\":504,\"pct\":65.9,\"avg\":7.7,\"yds_g\":227.6,\"td\":23,\"int\":3,\"rtg\":101.7,\"td_perc\":4.6,\"int_perc\":0.6,\"sck\":41,\"scky\":244}",
+    "metadata": {
+      "player_id": "Justin Herbert",
+      "position": "QB",
+      "season": 2024,
+      "analysis_type": "passing_stats"
+    }
+  },
+  {
+    "content": "{\"name\":\"Brock Purdy\",\"yds\":3864,\"season\":2024,\"tm\":\"SF\",\"gp\":15,\"cmp\":300,\"att\":455,\"pct\":65.9,\"avg\":8.5,\"yds_g\":257.6,\"td\":20,\"int\":12,\"rtg\":96.1,\"td_perc\":4.4,\"int_perc\":2.6,\"sck\":31,\"scky\":156}",
+    "metadata": {
+      "player_id": "Brock Purdy",
+      "position": "QB",
+      "season": 2024,
+      "analysis_type": "passing_stats"
+    }
+  }
+]
