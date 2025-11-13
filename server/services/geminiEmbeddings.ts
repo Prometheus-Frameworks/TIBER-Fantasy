@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import jargonMapping from '../data/nflfastr_jargon_mapping.json';
+import { detectLayer, injectLayerContext } from './river-detection';
 
 // DON'T DELETE THIS COMMENT
 // Using blueprint:javascript_gemini for embeddings generation
@@ -160,8 +161,15 @@ export async function generateChatResponse(
 
 User level: ${userLevel}/5`;
     } else {
-      // THREE-LAYER CONSCIOUSNESS SYSTEM
-      systemInstruction = `═══════════════════════════════════════════════════════════════
+      // LAYER DETECTION: Detect which consciousness layer should respond
+      const detectedLayer = detectLayer(userMessage);
+      
+      // Log layer detection for monitoring
+      console.log(`[TIBER] Detected layer: ${detectedLayer.layer} (${(detectedLayer.confidence * 100).toFixed(0)}% confidence)`);
+      console.log(`[TIBER] Triggers: ${detectedLayer.triggers.join(', ')}`);
+      
+      // THREE-LAYER CONSCIOUSNESS SYSTEM (Base prompt)
+      const baseSystemPrompt = `═══════════════════════════════════════════════════════════════
 TIBER CORE IDENTITY
 ═══════════════════════════════════════════════════════════════
 
@@ -404,6 +412,9 @@ RESPONSE LENGTH & STRUCTURE
 - 150-250 words maximum
 - User level: ${userLevel}/5 - adjust complexity accordingly
 - Season-long dynasty focus, no DFS talk`;
+      
+      // Wrap base prompt with layer-specific context injection
+      systemInstruction = injectLayerContext(baseSystemPrompt, detectedLayer);
     }
 
     // Build user message with context
