@@ -39,11 +39,14 @@ const patternContent = readFileSync(join(__dirname, '../../attached_assets/Paste
 const patternData: ChunkData[] = extractJSONArray(patternContent);
 
 // Elite baseline summaries (from handoff doc)
+// NOTE: These contain banned metrics (snap share, YPC, touches, route participation)
+// because they teach historical thresholds/frameworks, NOT current 2025 player data.
+// System prompt allows this for teaching purposes while preventing 2025 hallucination.
 const eliteBaselineSummaries: ChunkData[] = [
   {
     content: "2024 Elite Baseline for RB: Snap share 78%, YPC 4.5, touches per game 20.5, route participation 25%. Sample: Saquon Barkley, Derrick Henry, Jahmyr Gibbs. Working assumption based on top-12 finishers in 2024.",
     metadata: {
-      season: 2024,
+      season: "2024", // STRING type for consistent metadata filtering
       type: "elite_baseline_summary",
       position: "RB",
       data_source: "grok_aggregated",
@@ -54,7 +57,7 @@ const eliteBaselineSummaries: ChunkData[] = [
   {
     content: "2024 Elite Baseline for WR: Snap share 85%, YPT 7.8, targets per game 9.5, route participation 88%. Sample: Ja'Marr Chase, Justin Jefferson, Amon-Ra St. Brown. Working assumption based on top-12 finishers in 2024.",
     metadata: {
-      season: 2024,
+      season: "2024",
       type: "elite_baseline_summary",
       position: "WR",
       data_source: "grok_aggregated",
@@ -65,7 +68,7 @@ const eliteBaselineSummaries: ChunkData[] = [
   {
     content: "2024 Elite Baseline for TE: Snap share 75%, YPT 6.5, targets per game 7.0, route participation 65%. Sample: Brock Bowers, George Kittle, Trey McBride. Working assumption based on top-12 finishers in 2024.",
     metadata: {
-      season: 2024,
+      season: "2024",
       type: "elite_baseline_summary",
       position: "TE",
       data_source: "grok_aggregated",
@@ -121,11 +124,16 @@ async function loadAllData() {
       // Generate embedding
       const embedding = await generateEmbedding(humanReadable);
       
-      // Insert into database
+      // Insert into database with normalized metadata (season as string)
+      const normalizedMetadata = {
+        ...chunk.metadata,
+        season: chunk.metadata.season ? String(chunk.metadata.season) : chunk.metadata.season
+      };
+      
       await db.insert(chunks).values({
         content: humanReadable,
         embedding,
-        metadata: chunk.metadata
+        metadata: normalizedMetadata
       });
       
       totalInserted++;
@@ -143,17 +151,20 @@ async function loadAllData() {
       // Generate embedding
       const embedding = await generateEmbedding(pattern.content);
       
-      // Insert into database with enhanced metadata
+      // Insert into database with enhanced metadata (normalized season as string)
+      const normalizedPatternMetadata = {
+        ...pattern.metadata,
+        season: pattern.metadata.season ? String(pattern.metadata.season) : undefined,
+        type: 'historical_pattern',
+        source: 'grok_nflverse_analysis',
+        seasons: '2017-2024',
+        data_source: 'nflverse_aggregated'
+      };
+      
       await db.insert(chunks).values({
         content: pattern.content,
         embedding,
-        metadata: {
-          ...pattern.metadata,
-          type: 'historical_pattern',
-          source: 'grok_nflverse_analysis',
-          seasons: '2017-2024',
-          data_source: 'nflverse_aggregated'
-        }
+        metadata: normalizedPatternMetadata
       });
       
       patternCount++;
