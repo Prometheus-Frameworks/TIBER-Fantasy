@@ -1,0 +1,1178 @@
+[
+  {
+    "content": "{\"name\":\"Saquon Barkley\",\"rush_yds\":2005,\"rush_td\":13,\"ypc\":5.8,\"targets\":43,\"rec_yds\":278,\"rec_td\":2,\"season\":2024,\"tm\":\"PHI\",\"gp\":16}",
+    "metadata": {
+      "player_id": "saquon_barkley",
+      "player_name": "Saquon Barkley",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Derrick Henry\",\"rush_yds\":1921,\"rush_td\":16,\"ypc\":5.9,\"targets\":22,\"rec_yds\":193,\"rec_td\":2,\"season\":2024,\"tm\":\"BAL\",\"gp\":17}",
+    "metadata": {
+      "player_id": "derrick_henry",
+      "player_name": "Derrick Henry",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Bijan Robinson\",\"rush_yds\":1456,\"rush_td\":14,\"ypc\":4.8,\"targets\":72,\"rec_yds\":431,\"rec_td\":1,\"season\":2024,\"tm\":\"ATL\",\"gp\":17}",
+    "metadata": {
+      "player_id": "bijan_robinson",
+      "player_name": "Bijan Robinson",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Jahmyr Gibbs\",\"rush_yds\":1412,\"rush_td\":16,\"ypc\":5.6,\"targets\":63,\"rec_yds\":517,\"rec_td\":4,\"season\":2024,\"tm\":\"DET\",\"gp\":17}",
+    "metadata": {
+      "player_id": "jahmyr_gibbs",
+      "player_name": "Jahmyr Gibbs",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Jonathan Taylor\",\"rush_yds\":1431,\"rush_td\":11,\"ypc\":4.7,\"targets\":31,\"rec_yds\":136,\"rec_td\":1,\"season\":2024,\"tm\":\"IND\",\"gp\":14}",
+    "metadata": {
+      "player_id": "jonathan_taylor",
+      "player_name": "Jonathan Taylor",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Josh Jacobs\",\"rush_yds\":1329,\"rush_td\":15,\"ypc\":4.4,\"targets\":43,\"rec_yds\":342,\"rec_td\":1,\"season\":2024,\"tm\":\"GB\",\"gp\":17}",
+    "metadata": {
+      "player_id": "josh_jacobs",
+      "player_name": "Josh Jacobs",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Kyren Williams\",\"rush_yds\":1299,\"rush_td\":14,\"ypc\":4.1,\"targets\":40,\"rec_yds\":182,\"rec_td\":2,\"season\":2024,\"tm\":\"LAR\",\"gp\":16}",
+    "metadata": {
+      "player_id": "kyren_williams",
+      "player_name": "Kyren Williams",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Bucky Irving\",\"rush_yds\":1122,\"rush_td\":8,\"ypc\":5.4,\"targets\":52,\"rec_yds\":392,\"rec_td\":0,\"season\":2024,\"tm\":\"TB\",\"gp\":17}",
+    "metadata": {
+      "player_id": "bucky_irving",
+      "player_name": "Bucky Irving",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Aaron Jones Sr.\",\"rush_yds\":1138,\"rush_td\":5,\"ypc\":4.5,\"targets\":62,\"rec_yds\":408,\"rec_td\":2,\"season\":2024,\"tm\":\"MIN\",\"gp\":17}",
+    "metadata": {
+      "player_id": "aaron_jones_sr",
+      "player_name": "Aaron Jones Sr.",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"James Conner\",\"rush_yds\":1094,\"rush_td\":8,\"ypc\":4.6,\"targets\":55,\"rec_yds\":414,\"rec_td\":1,\"season\":2024,\"tm\":\"ARI\",\"gp\":16}",
+    "metadata": {
+      "player_id": "james_conner",
+      "player_name": "James Conner",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Rico Dowdle\",\"rush_yds\":1079,\"rush_td\":2,\"ypc\":4.6,\"targets\":49,\"rec_yds\":249,\"rec_td\":3,\"season\":2024,\"tm\":\"DAL\",\"gp\":16}",
+    "metadata": {
+      "player_id": "rico_dowdle",
+      "player_name": "Rico Dowdle",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Tony Pollard\",\"rush_yds\":1079,\"rush_td\":5,\"ypc\":4.2,\"targets\":57,\"rec_yds\":238,\"rec_td\":0,\"season\":2024,\"tm\":\"TEN\",\"gp\":16}",
+    "metadata": {
+      "player_id": "tony_pollard",
+      "player_name": "Tony Pollard",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Najee Harris\",\"rush_yds\":1043,\"rush_td\":6,\"ypc\":4.0,\"targets\":48,\"rec_yds\":283,\"rec_td\":0,\"season\":2024,\"tm\":\"PIT\",\"gp\":17}",
+    "metadata": {
+      "player_id": "najee_harris",
+      "player_name": "Najee Harris",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Joe Mixon\",\"rush_yds\":1016,\"rush_td\":11,\"ypc\":4.1,\"targets\":52,\"rec_yds\":309,\"rec_td\":1,\"season\":2024,\"tm\":\"HOU\",\"gp\":14}",
+    "metadata": {
+      "player_id": "joe_mixon",
+      "player_name": "Joe Mixon",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"James Cook III\",\"rush_yds\":1009,\"rush_td\":16,\"ypc\":4.9,\"targets\":38,\"rec_yds\":258,\"rec_td\":2,\"season\":2024,\"tm\":\"BUF\",\"gp\":16}",
+    "metadata": {
+      "player_id": "james_cook_iii",
+      "player_name": "James Cook III",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Chase Brown\",\"rush_yds\":990,\"rush_td\":7,\"ypc\":4.3,\"targets\":65,\"rec_yds\":360,\"rec_td\":4,\"season\":2024,\"tm\":\"CIN\",\"gp\":16}",
+    "metadata": {
+      "player_id": "chase_brown",
+      "player_name": "Chase Brown",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"D'Andre Swift\",\"rush_yds\":959,\"rush_td\":6,\"ypc\":3.8,\"targets\":52,\"rec_yds\":386,\"rec_td\":0,\"season\":2024,\"tm\":\"CHI\",\"gp\":17}",
+    "metadata": {
+      "player_id": "d_andre_swift",
+      "player_name": "D'Andre Swift",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Alvin Kamara\",\"rush_yds\":950,\"rush_td\":6,\"ypc\":4.2,\"targets\":89,\"rec_yds\":543,\"rec_td\":2,\"season\":2024,\"tm\":\"NO\",\"gp\":14}",
+    "metadata": {
+      "player_id": "alvin_kamara",
+      "player_name": "Alvin Kamara",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"De'Von Achane\",\"rush_yds\":907,\"rush_td\":6,\"ypc\":4.5,\"targets\":87,\"rec_yds\":592,\"rec_td\":6,\"season\":2024,\"tm\":\"MIA\",\"gp\":17}",
+    "metadata": {
+      "player_id": "de_von_achane",
+      "player_name": "De'Von Achane",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"J.K. Dobbins\",\"rush_yds\":905,\"rush_td\":9,\"ypc\":4.6,\"targets\":38,\"rec_yds\":153,\"rec_td\":0,\"season\":2024,\"tm\":\"LAC\",\"gp\":13}",
+    "metadata": {
+      "player_id": "j_k_dobbins",
+      "player_name": "J.K. Dobbins",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Breece Hall\",\"rush_yds\":876,\"rush_td\":5,\"ypc\":4.2,\"targets\":76,\"rec_yds\":483,\"rec_td\":3,\"season\":2024,\"tm\":\"NYJ\",\"gp\":16}",
+    "metadata": {
+      "player_id": "breece_hall",
+      "player_name": "Breece Hall",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Tyrone Tracy Jr.\",\"rush_yds\":839,\"rush_td\":5,\"ypc\":4.4,\"targets\":53,\"rec_yds\":284,\"rec_td\":1,\"season\":2024,\"tm\":\"NYG\",\"gp\":17}",
+    "metadata": {
+      "player_id": "tyrone_tracy_jr",
+      "player_name": "Tyrone Tracy Jr.",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Rhamondre Stevenson\",\"rush_yds\":801,\"rush_td\":7,\"ypc\":3.9,\"targets\":41,\"rec_yds\":168,\"rec_td\":1,\"season\":2024,\"tm\":\"NE\",\"gp\":15}",
+    "metadata": {
+      "player_id": "rhamondre_stevenson",
+      "player_name": "Rhamondre Stevenson",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Brian Robinson Jr.\",\"rush_yds\":799,\"rush_td\":8,\"ypc\":4.3,\"targets\":25,\"rec_yds\":159,\"rec_td\":0,\"season\":2024,\"tm\":\"WAS\",\"gp\":14}",
+    "metadata": {
+      "player_id": "brian_robinson_jr",
+      "player_name": "Brian Robinson Jr.",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Kareem Hunt\",\"rush_yds\":728,\"rush_td\":7,\"ypc\":3.6,\"targets\":32,\"rec_yds\":176,\"rec_td\":0,\"season\":2024,\"tm\":\"KC\",\"gp\":13}",
+    "metadata": {
+      "player_id": "kareem_hunt",
+      "player_name": "Kareem Hunt",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Tank Bigsby\",\"rush_yds\":766,\"rush_td\":7,\"ypc\":4.6,\"targets\":12,\"rec_yds\":54,\"rec_td\":0,\"season\":2024,\"tm\":\"JAX\",\"gp\":15}",
+    "metadata": {
+      "player_id": "tank_bigsby",
+      "player_name": "Tank Bigsby",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Chuba Hubbard\",\"rush_yds\":1195,\"rush_td\":10,\"ypc\":4.8,\"targets\":54,\"rec_yds\":171,\"rec_td\":1,\"season\":2024,\"tm\":\"CAR\",\"gp\":15}",
+    "metadata": {
+      "player_id": "chuba_hubbard",
+      "player_name": "Chuba Hubbard",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Rachaad White\",\"rush_yds\":613,\"rush_td\":3,\"ypc\":4.3,\"targets\":57,\"rec_yds\":393,\"rec_td\":6,\"season\":2024,\"tm\":\"TB\",\"gp\":15}",
+    "metadata": {
+      "player_id": "rachaad_white",
+      "player_name": "Rachaad White",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"David Montgomery\",\"rush_yds\":775,\"rush_td\":12,\"ypc\":4.2,\"targets\":38,\"rec_yds\":341,\"rec_td\":0,\"season\":2024,\"tm\":\"DET\",\"gp\":14}",
+    "metadata": {
+      "player_id": "david_montgomery",
+      "player_name": "David Montgomery",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Tyler Allgeier\",\"rush_yds\":644,\"rush_td\":3,\"ypc\":4.7,\"targets\":12,\"rec_yds\":89,\"rec_td\":0,\"season\":2024,\"tm\":\"ATL\",\"gp\":16}",
+    "metadata": {
+      "player_id": "tyler_allgeier",
+      "player_name": "Tyler Allgeier",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Travis Etienne Jr.\",\"rush_yds\":559,\"rush_td\":2,\"ypc\":3.8,\"targets\":51,\"rec_yds\":254,\"rec_td\":0,\"season\":2024,\"tm\":\"JAX\",\"gp\":14}",
+    "metadata": {
+      "player_id": "travis_etienne_jr",
+      "player_name": "Travis Etienne Jr.",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Antonio Gibson\",\"rush_yds\":539,\"rush_td\":1,\"ypc\":4.5,\"targets\":28,\"rec_yds\":194,\"rec_td\":0,\"season\":2024,\"tm\":\"NE\",\"gp\":16}",
+    "metadata": {
+      "player_id": "antonio_gibson",
+      "player_name": "Antonio Gibson",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Zach Charbonnet\",\"rush_yds\":570,\"rush_td\":8,\"ypc\":4.3,\"targets\":50,\"rec_yds\":326,\"rec_td\":1,\"season\":2024,\"tm\":\"SEA\",\"gp\":16}",
+    "metadata": {
+      "player_id": "zach_charbonnet",
+      "player_name": "Zach Charbonnet",
+      "position": "RB",
+      "season": 2024,
+      "analysis_type": "rushing_receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["rb", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Ja'Marr Chase\",\"targets\":175,\"rec\":127,\"rec_yds\":1708,\"rec_td\":17,\"ypr\":13.4,\"season\":2024,\"tm\":\"CIN\",\"gp\":17}",
+    "metadata": {
+      "player_id": "ja_marr_chase",
+      "player_name": "Ja'Marr Chase",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Justin Jefferson\",\"targets\":154,\"rec\":103,\"rec_yds\":1533,\"rec_td\":10,\"ypr\":14.9,\"season\":2024,\"tm\":\"MIN\",\"gp\":17}",
+    "metadata": {
+      "player_id": "justin_jefferson",
+      "player_name": "Justin Jefferson",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Brian Thomas Jr.\",\"targets\":133,\"rec\":87,\"rec_yds\":1282,\"rec_td\":10,\"ypr\":14.7,\"season\":2024,\"tm\":\"JAX\",\"gp\":17}",
+    "metadata": {
+      "player_id": "brian_thomas_jr",
+      "player_name": "Brian Thomas Jr.",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Drake London\",\"targets\":158,\"rec\":100,\"rec_yds\":1271,\"rec_td\":9,\"ypr\":12.7,\"season\":2024,\"tm\":\"ATL\",\"gp\":17}",
+    "metadata": {
+      "player_id": "drake_london",
+      "player_name": "Drake London",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Amon-Ra St. Brown\",\"targets\":141,\"rec\":115,\"rec_yds\":1263,\"rec_td\":12,\"ypr\":11.0,\"season\":2024,\"tm\":\"DET\",\"gp\":17}",
+    "metadata": {
+      "player_id": "amon_ra_st_brown",
+      "player_name": "Amon-Ra St. Brown",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Jerry Jeudy\",\"targets\":145,\"rec\":90,\"rec_yds\":1229,\"rec_td\":4,\"ypr\":13.7,\"season\":2024,\"tm\":\"CLE\",\"gp\":17}",
+    "metadata": {
+      "player_id": "jerry_jeudy",
+      "player_name": "Jerry Jeudy",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Ladd McConkey\",\"targets\":112,\"rec\":82,\"rec_yds\":1149,\"rec_td\":7,\"ypr\":14.0,\"season\":2024,\"tm\":\"LAC\",\"gp\":16}",
+    "metadata": {
+      "player_id": "ladd_mcconkey",
+      "player_name": "Ladd McConkey",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Garrett Wilson\",\"targets\":154,\"rec\":101,\"rec_yds\":1104,\"rec_td\":7,\"ypr\":10.9,\"season\":2024,\"tm\":\"NYJ\",\"gp\":17}",
+    "metadata": {
+      "player_id": "garrett_wilson",
+      "player_name": "Garrett Wilson",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Terry McLaurin\",\"targets\":117,\"rec\":82,\"rec_yds\":1096,\"rec_td\":13,\"ypr\":13.4,\"season\":2024,\"tm\":\"WAS\",\"gp\":17}",
+    "metadata": {
+      "player_id": "terry_mclaurin",
+      "player_name": "Terry McLaurin",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Courtland Sutton\",\"targets\":135,\"rec\":81,\"rec_yds\":1081,\"rec_td\":8,\"ypr\":13.3,\"season\":2024,\"tm\":\"DEN\",\"gp\":16}",
+    "metadata": {
+      "player_id": "courtland_sutton",
+      "player_name": "Courtland Sutton",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Zay Flowers\",\"targets\":116,\"rec\":74,\"rec_yds\":1059,\"rec_td\":4,\"ypr\":14.3,\"season\":2024,\"tm\":\"BAL\",\"gp\":17}",
+    "metadata": {
+      "player_id": "zay_flowers",
+      "player_name": "Zay Flowers",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Calvin Ridley\",\"targets\":120,\"rec\":64,\"rec_yds\":1017,\"rec_td\":4,\"ypr\":15.9,\"season\":2024,\"tm\":\"TEN\",\"gp\":17}",
+    "metadata": {
+      "player_id": "calvin_ridley",
+      "player_name": "Calvin Ridley",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"DK Metcalf\",\"targets\":108,\"rec\":66,\"rec_yds\":992,\"rec_td\":5,\"ypr\":15.0,\"season\":2024,\"tm\":\"SEA\",\"gp\":15}",
+    "metadata": {
+      "player_id": "dk_metcalf",
+      "player_name": "DK Metcalf",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Tyreek Hill\",\"targets\":123,\"rec\":81,\"rec_yds\":959,\"rec_td\":6,\"ypr\":11.8,\"season\":2024,\"tm\":\"MIA\",\"gp\":17}",
+    "metadata": {
+      "player_id": "tyreek_hill",
+      "player_name": "Tyreek Hill",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"DJ Moore\",\"targets\":140,\"rec\":98,\"rec_yds\":966,\"rec_td\":6,\"ypr\":9.9,\"season\":2024,\"tm\":\"CHI\",\"gp\":17}",
+    "metadata": {
+      "player_id": "dj_moore",
+      "player_name": "DJ Moore",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Marvin Harrison Jr.\",\"targets\":116,\"rec\":62,\"rec_yds\":885,\"rec_td\":8,\"ypr\":14.3,\"season\":2024,\"tm\":\"ARI\",\"gp\":17}",
+    "metadata": {
+      "player_id": "marvin_harrison_jr",
+      "player_name": "Marvin Harrison Jr.",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Jauan Jennings\",\"targets\":113,\"rec\":77,\"rec_yds\":975,\"rec_td\":6,\"ypr\":12.7,\"season\":2024,\"tm\":\"SF\",\"gp\":15}",
+    "metadata": {
+      "player_id": "jauan_jennings",
+      "player_name": "Jauan Jennings",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Jayden Reed\",\"targets\":75,\"rec\":55,\"rec_yds\":857,\"rec_td\":6,\"ypr\":15.6,\"season\":2024,\"tm\":\"GB\",\"gp\":17}",
+    "metadata": {
+      "player_id": "jayden_reed",
+      "player_name": "Jayden Reed",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Alec Pierce\",\"targets\":69,\"rec\":37,\"rec_yds\":824,\"rec_td\":7,\"ypr\":22.3,\"season\":2024,\"tm\":\"IND\",\"gp\":16}",
+    "metadata": {
+      "player_id": "alec_pierce",
+      "player_name": "Alec Pierce",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Rashod Bateman\",\"targets\":72,\"rec\":45,\"rec_yds\":756,\"rec_td\":9,\"ypr\":16.8,\"season\":2024,\"tm\":\"BAL\",\"gp\":16}",
+    "metadata": {
+      "player_id": "rashod_bateman",
+      "player_name": "Rashod Bateman",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Rome Odunze\",\"targets\":101,\"rec\":54,\"rec_yds\":734,\"rec_td\":3,\"ypr\":13.6,\"season\":2024,\"tm\":\"CHI\",\"gp\":17}",
+    "metadata": {
+      "player_id": "rome_odunze",
+      "player_name": "Rome Odunze",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Jaxon Smith-Njigba\",\"targets\":137,\"rec\":100,\"rec_yds\":1130,\"rec_td\":6,\"ypr\":11.3,\"season\":2024,\"tm\":\"SEA\",\"gp\":17}",
+    "metadata": {
+      "player_id": "jaxon_smith_njigba",
+      "player_name": "Jaxon Smith-Njigba",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Wan'Dale Robinson\",\"targets\":140,\"rec\":93,\"rec_yds\":699,\"rec_td\":3,\"ypr\":7.5,\"season\":2024,\"tm\":\"NYG\",\"gp\":17}",
+    "metadata": {
+      "player_id": "wan_dale_robinson",
+      "player_name": "Wan'Dale Robinson",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Jakobi Meyers\",\"targets\":129,\"rec\":87,\"rec_yds\":1027,\"rec_td\":4,\"ypr\":11.8,\"season\":2024,\"tm\":\"LV\",\"gp\":15}",
+    "metadata": {
+      "player_id": "jakobi_meyers",
+      "player_name": "Jakobi Meyers",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Darnell Mooney\",\"targets\":106,\"rec\":64,\"rec_yds\":992,\"rec_td\":5,\"ypr\":15.5,\"season\":2024,\"tm\":\"ATL\",\"gp\":16}",
+    "metadata": {
+      "player_id": "darnell_mooney",
+      "player_name": "Darnell Mooney",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Michael Pittman Jr.\",\"targets\":111,\"rec\":69,\"rec_yds\":808,\"rec_td\":3,\"ypr\":11.7,\"season\":2024,\"tm\":\"IND\",\"gp\":16}",
+    "metadata": {
+      "player_id": "michael_pittman_jr",
+      "player_name": "Michael Pittman Jr.",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"DeMario Douglas\",\"targets\":87,\"rec\":66,\"rec_yds\":621,\"rec_td\":3,\"ypr\":9.4,\"season\":2024,\"tm\":\"NE\",\"gp\":16}",
+    "metadata": {
+      "player_id": "demario_douglas",
+      "player_name": "DeMario Douglas",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Keenan Allen\",\"targets\":121,\"rec\":70,\"rec_yds\":744,\"rec_td\":7,\"ypr\":10.6,\"season\":2024,\"tm\":\"CHI\",\"gp\":15}",
+    "metadata": {
+      "player_id": "keenan_allen",
+      "player_name": "Keenan Allen",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Darius Slayton\",\"targets\":71,\"rec\":39,\"rec_yds\":573,\"rec_td\":2,\"ypr\":14.7,\"season\":2024,\"tm\":\"NYG\",\"gp\":16}",
+    "metadata": {
+      "player_id": "darius_slayton",
+      "player_name": "Darius Slayton",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Tyler Lockett\",\"targets\":74,\"rec\":49,\"rec_yds\":600,\"rec_td\":2,\"ypr\":12.2,\"season\":2024,\"tm\":\"SEA\",\"gp\":17}",
+    "metadata": {
+      "player_id": "tyler_lockett",
+      "player_name": "Tyler Lockett",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Ray-Ray McCloud\",\"targets\":87,\"rec\":62,\"rec_yds\":686,\"rec_td\":1,\"ypr\":11.1,\"season\":2024,\"tm\":\"ATL\",\"gp\":17}",
+    "metadata": {
+      "player_id": "ray_ray_mccloud",
+      "player_name": "Ray-Ray McCloud",
+      "position": "WR",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["wr", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Kyle Pitts Sr.\",\"targets\":74,\"rec\":47,\"rec_yds\":602,\"rec_td\":4,\"ypr\":12.8,\"season\":2024,\"tm\":\"ATL\",\"gp\":17}",
+    "metadata": {
+      "player_id": "kyle_pitts_sr",
+      "player_name": "Kyle Pitts Sr.",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Brock Bowers\",\"targets\":153,\"rec\":112,\"rec_yds\":1194,\"rec_td\":5,\"ypr\":10.7,\"season\":2024,\"tm\":\"LV\",\"gp\":17}",
+    "metadata": {
+      "player_id": "brock_bowers",
+      "player_name": "Brock Bowers",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"George Kittle\",\"targets\":94,\"rec\":78,\"rec_yds\":1106,\"rec_td\":8,\"ypr\":14.2,\"season\":2024,\"tm\":\"SF\",\"gp\":15}",
+    "metadata": {
+      "player_id": "george_kittle",
+      "player_name": "George Kittle",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Trey McBride\",\"targets\":147,\"rec\":111,\"rec_yds\":1146,\"rec_td\":2,\"ypr\":10.3,\"season\":2024,\"tm\":\"ARI\",\"gp\":16}",
+    "metadata": {
+      "player_id": "trey_mcbride",
+      "player_name": "Trey McBride",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Jonnu Smith\",\"targets\":111,\"rec\":88,\"rec_yds\":884,\"rec_td\":8,\"ypr\":10.0,\"season\":2024,\"tm\":\"MIA\",\"gp\":17}",
+    "metadata": {
+      "player_id": "jonnu_smith",
+      "player_name": "Jonnu Smith",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Travis Kelce\",\"targets\":133,\"rec\":97,\"rec_yds\":823,\"rec_td\":3,\"ypr\":8.5,\"season\":2024,\"tm\":\"KC\",\"gp\":16}",
+    "metadata": {
+      "player_id": "travis_kelce",
+      "player_name": "Travis Kelce",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Tucker Kraft\",\"targets\":70,\"rec\":50,\"rec_yds\":707,\"rec_td\":7,\"ypr\":14.1,\"season\":2024,\"tm\":\"GB\",\"gp\":17}",
+    "metadata": {
+      "player_id": "tucker_kraft",
+      "player_name": "Tucker Kraft",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Sam LaPorta\",\"targets\":83,\"rec\":60,\"rec_yds\":726,\"rec_td\":7,\"ypr\":12.1,\"season\":2024,\"tm\":\"DET\",\"gp\":16}",
+    "metadata": {
+      "player_id": "sam_laporta",
+      "player_name": "Sam LaPorta",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Mark Andrews\",\"targets\":69,\"rec\":55,\"rec_yds\":673,\"rec_td\":11,\"ypr\":12.2,\"season\":2024,\"tm\":\"BAL\",\"gp\":17}",
+    "metadata": {
+      "player_id": "mark_andrews",
+      "player_name": "Mark Andrews",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Zach Ertz\",\"targets\":91,\"rec\":66,\"rec_yds\":654,\"rec_td\":7,\"ypr\":9.9,\"season\":2024,\"tm\":\"WAS\",\"gp\":17}",
+    "metadata": {
+      "player_id": "zach_ertz",
+      "player_name": "Zach Ertz",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"David Njoku\",\"targets\":97,\"rec\":64,\"rec_yds\":505,\"rec_td\":5,\"ypr\":7.9,\"season\":2024,\"tm\":\"CLE\",\"gp\":11}",
+    "metadata": {
+      "player_id": "david_njoku",
+      "player_name": "David Njoku",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Cade Otton\",\"targets\":87,\"rec\":59,\"rec_yds\":600,\"rec_td\":4,\"ypr\":10.2,\"season\":2024,\"tm\":\"TB\",\"gp\":14}",
+    "metadata": {
+      "player_id": "cade_otton",
+      "player_name": "Cade Otton",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Pat Freiermuth\",\"targets\":78,\"rec\":65,\"rec_yds\":653,\"rec_td\":7,\"ypr\":10.0,\"season\":2024,\"tm\":\"PIT\",\"gp\":17}",
+    "metadata": {
+      "player_id": "pat_freiermuth",
+      "player_name": "Pat Freiermuth",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Will Dissly\",\"targets\":64,\"rec\":50,\"rec_yds\":481,\"rec_td\":2,\"ypr\":9.6,\"season\":2024,\"tm\":\"LAC\",\"gp\":15}",
+    "metadata": {
+      "player_id": "will_dissly",
+      "player_name": "Will Dissly",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Austin Hooper\",\"targets\":59,\"rec\":45,\"rec_yds\":476,\"rec_td\":3,\"ypr\":10.6,\"season\":2024,\"tm\":\"NE\",\"gp\":17}",
+    "metadata": {
+      "player_id": "austin_hooper",
+      "player_name": "Austin Hooper",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Hunter Henry\",\"targets\":97,\"rec\":66,\"rec_yds\":674,\"rec_td\":2,\"ypr\":10.2,\"season\":2024,\"tm\":\"NE\",\"gp\":16}",
+    "metadata": {
+      "player_id": "hunter_henry",
+      "player_name": "Hunter Henry",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Mike Gesicki\",\"targets\":83,\"rec\":65,\"rec_yds\":665,\"rec_td\":2,\"ypr\":10.2,\"season\":2024,\"tm\":\"CIN\",\"gp\":16}",
+    "metadata": {
+      "player_id": "mike_gesicki",
+      "player_name": "Mike Gesicki",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Dalton Schultz\",\"targets\":85,\"rec\":53,\"rec_yds\":532,\"rec_td\":2,\"ypr\":10.0,\"season\":2024,\"tm\":\"HOU\",\"gp\":17}",
+    "metadata": {
+      "player_id": "dalton_schultz",
+      "player_name": "Dalton Schultz",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Isaiah Likely\",\"targets\":58,\"rec\":42,\"rec_yds\":477,\"rec_td\":6,\"ypr\":11.4,\"season\":2024,\"tm\":\"BAL\",\"gp\":15}",
+    "metadata": {
+      "player_id": "isaiah_likely",
+      "player_name": "Isaiah Likely",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  },
+  {
+    "content": "{\"name\":\"Noah Fant\",\"targets\":64,\"rec\":48,\"rec_yds\":500,\"rec_td\":1,\"ypr\":10.4,\"season\":2024,\"tm\":\"SEA\",\"gp\":14}",
+    "metadata": {
+      "player_id": "noah_fant",
+      "player_name": "Noah Fant",
+      "position": "TE",
+      "season": 2024,
+      "analysis_type": "receiving_stats",
+      "data_source": "sports_api",
+      "type": "player_baseline_stats",
+      "epistemic_status": "historical_data",
+      "applicable_to": ["te", "all_positions"]
+    }
+  }
+]
