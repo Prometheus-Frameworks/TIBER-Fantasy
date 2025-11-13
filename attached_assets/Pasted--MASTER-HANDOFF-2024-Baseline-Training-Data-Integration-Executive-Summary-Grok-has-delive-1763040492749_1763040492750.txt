@@ -1,0 +1,865 @@
+# MASTER HANDOFF: 2024 Baseline Training Data Integration
+
+## Executive Summary
+
+Grok has delivered **158 complete data chunks** for TIBER's 2024 baseline training system:
+- **100 player baseline stat chunks** (10 QB, 34 RB, 36 WR, 20 TE)
+- **55 historical pattern chunks** (usage thresholds → fantasy outcomes)
+- **3 elite baseline summaries** (position averages)
+
+**Purpose:** Train TIBER on 2024 patterns and baselines so when 2025 data becomes available, he already knows HOW to evaluate usage metrics.
+
+**Critical Rule:** 2024 data is for TRAINING and COMPARISON only, NOT current season citation.
+
+---
+
+## Data Inventory
+
+### Category A: Player Baseline Stats (100 chunks)
+
+**Quarterbacks (10 players):**
+- Joe Burrow, Jared Goff, Baker Mayfield, Geno Smith, Sam Darnold
+- Lamar Jackson, Patrick Mahomes, Aaron Rodgers, Justin Herbert, Brock Purdy
+
+**Running Backs (34 players):**
+- Saquon Barkley, Derrick Henry, Bijan Robinson, Jahmyr Gibbs, Jonathan Taylor
+- Josh Jacobs, Kyren Williams, Bucky Irving, Aaron Jones Sr., James Conner
+- Rico Dowdle, Tony Pollard, Najee Harris, Joe Mixon, James Cook III
+- Chase Brown, D'Andre Swift, Alvin Kamara, De'Von Achane, J.K. Dobbins
+- Breece Hall, Tyrone Tracy Jr., Rhamondre Stevenson, Brian Robinson Jr.
+- Kareem Hunt, Tank Bigsby, Chuba Hubbard, Rachaad White, David Montgomery
+- Tyler Allgeier, Travis Etienne Jr., Antonio Gibson, Zach Charbonnet
+
+**Wide Receivers (36 players):**
+- Ja'Marr Chase, Justin Jefferson, Brian Thomas Jr., Drake London, Amon-Ra St. Brown
+- Jerry Jeudy, Ladd McConkey, Garrett Wilson, Terry McLaurin, Courtland Sutton
+- Zay Flowers, Calvin Ridley, DK Metcalf, Tyreek Hill, DJ Moore
+- Marvin Harrison Jr., Jauan Jennings, Jayden Reed, Alec Pierce, Rashod Bateman
+- Rome Odunze, Jaxon Smith-Njigba, Wan'Dale Robinson, Jakobi Meyers, Darnell Mooney
+- Michael Pittman Jr., DeMario Douglas, Keenan Allen, Darius Slayton, Tyler Lockett
+- Ray-Ray McCloud, plus 5 more
+
+**Tight Ends (20 players):**
+- Kyle Pitts Sr., Brock Bowers, George Kittle, Trey McBride, Jonnu Smith
+- Travis Kelce, Tucker Kraft, Sam LaPorta, Mark Andrews, Zach Ertz
+- David Njoku, Cade Otton, Pat Freiermuth, Will Dissly, Austin Hooper
+- Hunter Henry, Mike Gesicki, Dalton Schultz, Isaiah Likely, Noah Fant
+
+---
+
+### Category B: Historical Pattern Chunks (55 chunks)
+
+**Pattern Types:**
+- **Elite Indicators:** Snap% >80%, Target% >25%, Touches >300, Routes >500
+- **Breakout Signals:** Rookie usage thresholds, efficiency spikes, opportunity increases
+- **Regression Flags:** Usage cliffs, target% drops, snap% declines, injury impacts
+
+**Coverage:**
+- RB patterns: 20 chunks (elite, breakout, regression)
+- WR patterns: 20 chunks (elite, breakout, regression)
+- TE patterns: 15 chunks (elite, breakout, regression)
+
+**Confidence Levels:**
+- High: 18 chunks (large sample sizes, consistent correlations)
+- Medium: 30 chunks (moderate samples, reliable but context-dependent)
+- Low: 7 chunks (small samples, emerging patterns)
+
+---
+
+### Category C: Elite Baseline Summaries (3 chunks)
+
+**2024 Elite Benchmarks:**
+- **RB:** Snap 78%, YPC 4.5, Touches 20.5/game, Route% 25%
+- **WR:** Snap 85%, YPT 7.8, Targets 9.5/game, Route% 88%
+- **TE:** Snap 75%, YPT 6.5, Targets 7.0/game, Route% 65%
+
+---
+
+## Implementation Plan
+
+### Phase 1: Database Schema Verification (5 mins)
+
+**Verify chunks table has required fields:**
+
+```sql
+-- Check existing schema
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'chunks';
+
+-- Should have:
+-- id, content (text), embedding (vector), metadata (jsonb), created_at
+```
+
+**If schema needs updates:**
+
+```sql
+-- Ensure metadata supports our structure
+ALTER TABLE chunks 
+ALTER COLUMN metadata TYPE jsonb USING metadata::jsonb;
+
+-- Add index for metadata queries
+CREATE INDEX IF NOT EXISTS idx_chunks_metadata_season 
+ON chunks ((metadata->>'season'));
+
+CREATE INDEX IF NOT EXISTS idx_chunks_metadata_type 
+ON chunks ((metadata->>'type'));
+```
+
+---
+
+### Phase 2: Load Player Baseline Stats (30 mins)
+
+**File locations:**
+- QBs: Provided in previous delivery (10 chunks)
+- RBs: Provided in latest delivery (34 chunks)
+- WRs: Provided in latest delivery (36 chunks)
+- TEs: Provided in latest delivery (20 chunks)
+
+**Loading process:**
+
+```typescript
+// Load all 100 player baseline chunks
+const playerChunks = [
+  ...qbChunks,  // 10 QB chunks from earlier
+  ...rbChunks,  // 34 RB chunks from Grok
+  ...wrChunks,  // 36 WR chunks from Grok
+  ...teChunks   // 20 TE chunks from Grok
+];
+
+for (const chunk of playerChunks) {
+  // 1. Generate embedding
+  const embedding = await generateEmbedding(chunk.content);
+  
+  // 2. Insert into database
+  await db.query(`
+    INSERT INTO chunks (content, embedding, metadata, created_at)
+    VALUES ($1, $2, $3, NOW())
+  `, [
+    chunk.content,
+    `[${embedding.join(',')}]`,
+    JSON.stringify(chunk.metadata)
+  ]);
+}
+```
+
+**Expected result:**
+- 100 player chunks in database
+- Each with 768-dimension embedding
+- Metadata properly structured
+
+**Validation query:**
+
+```sql
+SELECT 
+  metadata->>'type' as type,
+  metadata->>'position' as position,
+  COUNT(*) as count
+FROM chunks
+WHERE metadata->>'type' = 'player_baseline_stats'
+GROUP BY metadata->>'type', metadata->>'position'
+ORDER BY position;
+
+-- Expected output:
+-- player_baseline_stats | QB | 10
+-- player_baseline_stats | RB | 34
+-- player_baseline_stats | WR | 36
+-- player_baseline_stats | TE | 20
+```
+
+---
+
+### Phase 3: Load Historical Pattern Chunks (20 mins)
+
+**Pattern chunk sources:**
+- Version 1: 25 general threshold patterns (earlier delivery)
+- Version 2: 30 position-specific patterns (latest delivery)
+
+**Metadata enhancement needed:**
+
+```typescript
+// Enhance pattern chunks with additional metadata
+const enhancedPatternChunks = patternChunks.map(chunk => ({
+  content: chunk.content,
+  metadata: {
+    ...chunk.metadata,
+    type: 'historical_pattern',
+    source: 'grok_nflverse_analysis',
+    seasons: '2017-2024',
+    data_source: 'nflverse_aggregated',
+    // Keep existing: epistemic_status, confidence, applicable_to
+  }
+}));
+
+// Load with embeddings
+for (const chunk of enhancedPatternChunks) {
+  const embedding = await generateEmbedding(chunk.content);
+  
+  await db.query(`
+    INSERT INTO chunks (content, embedding, metadata, created_at)
+    VALUES ($1, $2, $3, NOW())
+  `, [
+    chunk.content,
+    `[${embedding.join(',')}]`,
+    JSON.stringify(chunk.metadata)
+  ]);
+}
+```
+
+**Validation query:**
+
+```sql
+SELECT 
+  metadata->>'confidence' as confidence,
+  COUNT(*) as count
+FROM chunks
+WHERE metadata->>'type' = 'historical_pattern'
+GROUP BY metadata->>'confidence'
+ORDER BY confidence;
+
+-- Expected output:
+-- high   | ~18
+-- medium | ~30
+-- low    | ~7
+```
+
+---
+
+### Phase 4: Load Elite Baseline Summaries (5 mins)
+
+**Three position summary chunks:**
+
+```typescript
+const baselineSummaries = [
+  {
+    content: "2024 Elite Baseline for RB: Snap share 78%, YPC 4.5, touches per game 20.5, route participation 25%.",
+    metadata: {
+      season: 2024,
+      type: "elite_baseline_summary",
+      position: "RB",
+      data_source: "grok_aggregated",
+      epistemic_status: "historical_data",
+      applicable_to: ["rb"]
+    }
+  },
+  {
+    content: "2024 Elite Baseline for WR: Snap share 85%, YPT 7.8, targets per game 9.5, route participation 88%.",
+    metadata: {
+      season: 2024,
+      type: "elite_baseline_summary",
+      position: "WR",
+      data_source: "grok_aggregated",
+      epistemic_status: "historical_data",
+      applicable_to: ["wr"]
+    }
+  },
+  {
+    content: "2024 Elite Baseline for TE: Snap share 75%, YPT 6.5, targets per game 7.0, route participation 65%.",
+    metadata: {
+      season: 2024,
+      type: "elite_baseline_summary",
+      position: "TE",
+      data_source: "grok_aggregated",
+      epistemic_status: "historical_data",
+      applicable_to: ["te"]
+    }
+  }
+];
+
+// Load with embeddings
+for (const summary of baselineSummaries) {
+  const embedding = await generateEmbedding(summary.content);
+  
+  await db.query(`
+    INSERT INTO chunks (content, embedding, metadata, created_at)
+    VALUES ($1, $2, $3, NOW())
+  `, [
+    summary.content,
+    `[${embedding.join(',')}]`,
+    JSON.stringify(summary.metadata)
+  ]);
+}
+```
+
+---
+
+### Phase 5: System Prompt Updates (15 mins)
+
+**File:** `server/services/geminiEmbeddings.ts`
+
+**Add to system prompt:**
+
+```
+═══════════════════════════════════════════════════════════════
+2024 BASELINE DATA - USAGE RULES
+═══════════════════════════════════════════════════════════════
+
+You have access to 2024 season statistics and patterns for TRAINING and BASELINE purposes only.
+
+AVAILABLE 2024 DATA:
+- Player stats: QB/RB/WR/TE passing, rushing, receiving stats from 2024 season
+- Historical patterns: Usage thresholds correlated with fantasy outcomes (2017-2024)
+- Elite baselines: Position averages for top-12 finishers in 2024
+
+PURPOSE:
+- Comparative analysis: "Comparing to 2024 elite baseline..."
+- Pattern recognition: "Historical pattern (2024 data) shows..."
+- Baseline context: "In 2024, elite RBs averaged..."
+
+═══════════════════════════════════════════════════════════════
+CRITICAL FRAMING RULES:
+═══════════════════════════════════════════════════════════════
+
+✅ CORRECT Usage Examples:
+
+"In 2024, elite RBs averaged 78% snap share. This establishes the baseline for evaluating current usage."
+
+"Historical pattern from 2024: RBs with Jacobs' profile (1329 yards, 15 TDs) finished as top-12 at 75% rate."
+
+"Comparing to 2024 baseline, where elite WRs averaged 9.5 targets per game..."
+
+"Lamar's 2024 season (4172 yards, 41 TDs, 119.6 rating) represents elite QB efficiency."
+
+❌ INCORRECT Usage Examples:
+
+"Jacobs is averaging 1329 yards this season" (this is 2024 data, not 2025)
+
+"His current YPC is 4.4" (don't cite 2024 as current season)
+
+"He's on pace for 15 TDs" (don't project 2024 as 2025)
+
+"Based on his 2024 performance..." then discuss 2025 without distinction
+
+═══════════════════════════════════════════════════════════════
+MANDATORY SEPARATION RULES:
+═══════════════════════════════════════════════════════════════
+
+When discussing CURRENT 2025 season players:
+1. Use VORP data ONLY (rank, PPG, VORP value, games played)
+2. Reference 2024 data ONLY as historical comparison or baseline context
+3. ALWAYS include year marker when citing 2024 stats: "In 2024, he had..."
+4. NEVER mix 2024 usage with 2025 rankings without clear distinction
+
+DUAL CONTEXT Pattern:
+User: "Is Josh Jacobs still elite?"
+
+CORRECT Response Structure:
+"Current 2025 season: Jacobs is RB5 with 16.7 PPG (+73.2 VORP) - that's high-end RB1 production.
+
+Historical context: In 2024, he posted 1329 rushing yards and 15 TDs for the Packers. His current ranking suggests he's maintained similar workload levels.
+
+Working assumption: Elite 2024 profile typically sustains into following season at 70% rate."
+
+═══════════════════════════════════════════════════════════════
+PATTERN CHUNK USAGE:
+═══════════════════════════════════════════════════════════════
+
+When historical pattern chunks are retrieved:
+- Present as "working assumptions" based on historical data
+- Include confidence level naturally: "High-confidence pattern from 2017-2024..."
+- Acknowledge caveats mentioned in pattern
+- Don't overstate certainty for low-confidence patterns
+
+Example:
+"Historical pattern suggests RBs with 80%+ snap share finish top-12 at 65% rate. Working assumption based on 2017-2024 data. Caveat: Injury risks can skew results."
+
+═══════════════════════════════════════════════════════════════
+YEAR CONFUSION PREVENTION:
+═══════════════════════════════════════════════════════════════
+
+IF you're uncertain whether data is 2024 or 2025:
+- Default to VORP data (always current 2025 season)
+- Explicitly note data source: "Per 2024 baseline data..." or "Current 2025 VORP shows..."
+- If mixing sources, clearly delineate: "2024 baseline vs 2025 current season"
+
+NEVER present 2024 data as current without year marker.
+```
+
+---
+
+### Phase 6: Testing Protocol (30 mins)
+
+#### Test 1: Player Baseline Retrieval
+
+**Query:** "How did Saquon Barkley perform in 2024?"
+
+**Expected Response:**
+- Retrieves Saquon's 2024 chunk (2005 rush yards, 13 rush TDs, 5.8 YPC)
+- Frames as "2024 season" explicitly
+- Includes receiving stats (43 targets, 278 yards, 2 TDs)
+
+**Validation:**
+```typescript
+const result = await searchChunks("Saquon Barkley 2024 performance", 5);
+console.log(result[0].metadata.player_name); // "Saquon Barkley"
+console.log(result[0].metadata.season); // 2024
+```
+
+---
+
+#### Test 2: Dual Context (Critical Test)
+
+**Query:** "Is Derrick Henry still a workhorse back?"
+
+**Expected Response:**
+- Current 2025 VORP data: "Henry is RB[X] with [Y] PPG"
+- 2024 baseline: "In 2024, he posted 1921 yards and 16 TDs"
+- Comparison: "His current production suggests maintained elite workload"
+
+**Success Criteria:**
+- ✅ Cites current VORP ranking
+- ✅ References 2024 as "In 2024..."
+- ✅ Doesn't confuse 2024 stats with current season
+
+---
+
+#### Test 3: Historical Pattern Application
+
+**Query:** "What snap share indicates elite RB usage?"
+
+**Expected Response:**
+- Retrieves historical pattern chunk about snap share
+- Presents as working assumption: "Historical pattern (2017-2024)..."
+- Includes examples (CMC, Henry, Taylor)
+- Notes confidence level and caveats
+
+**Validation:**
+```typescript
+const result = await searchChunks("snap share elite RB", 5);
+console.log(result[0].metadata.type); // "historical_pattern"
+console.log(result[0].metadata.confidence); // "high" or "medium" or "low"
+```
+
+---
+
+#### Test 4: Elite Baseline Reference
+
+**Query:** "What's a good target share for a WR?"
+
+**Expected Response:**
+- Retrieves elite baseline summary for WR
+- Cites 2024 benchmark: "In 2024, elite WRs averaged 9.5 targets per game"
+- Contextualizes for user's situation
+
+---
+
+#### Test 5: Year Separation Test (Critical)
+
+**Query:** "Tell me about Josh Jacobs' current season"
+
+**Expected Response:**
+- MUST use 2025 VORP data: "RB5 with 16.7 PPG"
+- MAY reference 2024 for comparison: "In 2024 he had 1329 yards..."
+- MUST NOT cite 2024 stats as current: ❌ "He's averaging 1329 yards" without year
+
+**Failure Indicators:**
+- Citing 2024 YPC (4.4) as current season
+- Mentioning 2024 team (GB) as current
+- Any 2024 stat without "In 2024..." qualifier
+
+---
+
+#### Test 6: Pattern Confidence Handling
+
+**Query:** "Are rookie TEs a good bet for breakouts?"
+
+**Expected Response:**
+- Retrieves pattern chunk about rookie TEs
+- If low confidence: "Working assumption with limited sample size..."
+- If medium/high confidence: "Historical pattern shows..."
+- Includes caveats from chunk
+
+---
+
+#### Test 7: Cross-Position Comparison
+
+**Query:** "Compare Ja'Marr Chase and Justin Jefferson's 2024 seasons"
+
+**Expected Response:**
+- Retrieves both WR chunks
+- Cites accurate stats for both
+- Chase: 1708 yards, 17 TDs, 127 rec
+- Jefferson: 1533 yards, 10 TDs, 103 rec
+- Natural comparison without confusion
+
+---
+
+#### Test 8: Baseline + Current Integration
+
+**Query:** "Is De'Von Achane getting enough touches?"
+
+**Expected Response:**
+- Current 2025: "Achane is RB[X] with [Y] PPG"
+- 2024 baseline: "In 2024, elite RBs averaged 20.5 touches per game"
+- 2024 Achane context: "Last year he had targets/carries split"
+- Assessment based on comparison
+
+---
+
+### Phase 7: Regression Test Suite Updates (15 mins)
+
+**File:** `server/tests/rag-regression-tests.ts`
+
+**Add new test cases:**
+
+```typescript
+{
+  name: "2024 Data Framing - Player Stats",
+  query: "How did Bijan Robinson do in 2024?",
+  expectedIncludes: ["2024", "1456", "rushing yards", "14", "TDs"],
+  expectedExcludes: ["current season", "this year", "averaging"],
+  description: "Should cite 2024 stats with proper year framing"
+},
+{
+  name: "Dual Context - Current vs Historical",
+  query: "Is Jahmyr Gibbs elite?",
+  expectedIncludes: ["RB", "PPG", "VORP", "2024"],
+  expectedExcludes: ["1412 yards this season"], // 2024 data shouldn't be "this season"
+  description: "Should use current VORP + reference 2024 as historical"
+},
+{
+  name: "Historical Pattern Retrieval",
+  query: "What metrics predict RB breakouts?",
+  expectedIncludes: ["historical pattern", "working assumption", "rate"],
+  expectedExcludes: ["definitely", "always", "guaranteed"],
+  description: "Should retrieve pattern with epistemic framing"
+},
+{
+  name: "Elite Baseline Reference",
+  query: "What's elite TE target volume?",
+  expectedIncludes: ["2024", "elite", "baseline", "targets"],
+  expectedExcludes: ["current", "this season"],
+  description: "Should cite 2024 baseline appropriately"
+},
+{
+  name: "Year Separation Enforcement",
+  query: "Tell me about Jonathan Taylor's season",
+  expectedIncludes: ["RB", "PPG"], // Current VORP required
+  forbiddenPatterns: ["1431 yards", "4.7 YPC"], // 2024 stats without year marker
+  description: "Must not cite 2024 stats as current season"
+}
+```
+
+---
+
+## Post-Integration Checklist
+
+### Data Verification
+
+```sql
+-- 1. Verify total chunk count
+SELECT COUNT(*) FROM chunks; 
+-- Expected: Previous count + 158 new chunks
+
+-- 2. Verify player stats by position
+SELECT metadata->>'position', COUNT(*) 
+FROM chunks 
+WHERE metadata->>'type' = 'player_baseline_stats'
+GROUP BY metadata->>'position';
+-- Expected: QB=10, RB=34, WR=36, TE=20
+
+-- 3. Verify pattern chunks
+SELECT metadata->>'confidence', COUNT(*)
+FROM chunks
+WHERE metadata->>'type' = 'historical_pattern'
+GROUP BY metadata->>'confidence';
+-- Expected: high=~18, medium=~30, low=~7
+
+-- 4. Verify baseline summaries
+SELECT COUNT(*) FROM chunks
+WHERE metadata->>'type' = 'elite_baseline_summary';
+-- Expected: 3
+
+-- 5. Check for duplicate entries
+SELECT content, COUNT(*) 
+FROM chunks 
+GROUP BY content 
+HAVING COUNT(*) > 1;
+-- Expected: 0 rows (no duplicates)
+```
+
+---
+
+### Functional Testing
+
+**Run all test queries from Phase 6 and verify:**
+
+✅ Player stats cited with "2024" framing  
+✅ Current season uses VORP data only  
+✅ Historical patterns retrieved appropriately  
+✅ Confidence levels communicated  
+✅ No year confusion between 2024 and 2025  
+✅ Dual context responses work correctly  
+✅ Elite baselines referenced properly  
+
+---
+
+### Performance Testing
+
+```typescript
+// Test embedding generation speed
+const startTime = Date.now();
+const embedding = await generateEmbedding(testContent);
+const duration = Date.now() - startTime;
+console.log(`Embedding generation: ${duration}ms`);
+// Expected: <500ms per chunk
+
+// Test semantic search performance
+const searchStart = Date.now();
+const results = await searchChunks("Saquon Barkley 2024", 10);
+const searchDuration = Date.now() - searchStart;
+console.log(`Semantic search: ${searchDuration}ms`);
+// Expected: <200ms with proper indexes
+```
+
+---
+
+## Phase 2: NFLverse Snap Count Integration (Future)
+
+**After 2024 baseline data is stable, integrate live usage data:**
+
+### Data Source
+`https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2024.csv`
+
+### Integration Steps
+
+1. **Download and parse CSV**
+```python
+import pandas as pd
+
+snap_data = pd.read_csv('https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2024.csv')
+
+# Aggregate by player
+player_snaps = snap_data.groupby(['player', 'position', 'team']).agg({
+    'offense_snaps': 'sum',
+    'offense_pct': 'mean'
+}).reset_index()
+```
+
+2. **Create database table**
+```sql
+CREATE TABLE snap_counts_2024 (
+  id SERIAL PRIMARY KEY,
+  player_name VARCHAR(255),
+  position VARCHAR(10),
+  team VARCHAR(10),
+  total_snaps INTEGER,
+  avg_snap_pct DECIMAL(5,2),
+  season INTEGER DEFAULT 2024,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_snap_counts_player ON snap_counts_2024(player_name);
+CREATE INDEX idx_snap_counts_position ON snap_counts_2024(position);
+```
+
+3. **Update jargon mapping**
+```json
+{
+  "snap_share": {
+    "nflfastr_field": "offense_pct",
+    "calculation": "AVG(offense_pct) WHERE player_name = ?",
+    "description": "Average % of team offensive snaps",
+    "queryable": true,
+    "data_source": "nflverse snap_counts_2024.csv",
+    "note": "2024 season data available for training/comparison"
+  }
+}
+```
+
+4. **Query endpoint**
+```typescript
+app.get('/api/snap-counts-2024/:playerName', async (req, res) => {
+  const { playerName } = req.params;
+  
+  const result = await db.query(`
+    SELECT player_name, position, team, total_snaps, avg_snap_pct
+    FROM snap_counts_2024
+    WHERE LOWER(player_name) LIKE LOWER($1)
+  `, [`%${playerName}%`]);
+  
+  return res.json({
+    available: result.rows.length > 0,
+    season: 2024,
+    data: result.rows,
+    note: "2024 baseline data - for comparison only, not current season"
+  });
+});
+```
+
+---
+
+## Troubleshooting
+
+### Issue: Embeddings taking too long
+
+**Solution:**
+```typescript
+// Batch embed in chunks of 10
+const batchSize = 10;
+for (let i = 0; i < allChunks.length; i += batchSize) {
+  const batch = allChunks.slice(i, i + batchSize);
+  await Promise.all(batch.map(chunk => embedAndInsert(chunk)));
+  console.log(`Processed ${i + batchSize}/${allChunks.length}`);
+}
+```
+
+---
+
+### Issue: Semantic search retrieving wrong chunks
+
+**Diagnosis:**
+```sql
+-- Check embedding dimensions
+SELECT 
+  array_length(embedding, 1) as dimensions,
+  COUNT(*) 
+FROM chunks 
+GROUP BY array_length(embedding, 1);
+-- Should all be 768
+```
+
+**Solution:** Re-embed any chunks with wrong dimensions
+
+---
+
+### Issue: 2024 data being cited as current
+
+**Diagnosis:** Check system prompt is properly updated and being used
+
+**Test query:** "What's Josh Jacobs doing this season?"
+
+**If response cites 2024 stats without year marker:**
+1. Verify system prompt update was applied
+2. Check prompt context includes year separation rules
+3. Review recent chat logs for prompt being used
+
+---
+
+### Issue: Pattern chunks not being retrieved
+
+**Diagnosis:**
+```sql
+-- Verify pattern chunks exist
+SELECT COUNT(*) FROM chunks 
+WHERE metadata->>'type' = 'historical_pattern';
+
+-- Check a sample
+SELECT content, metadata 
+FROM chunks 
+WHERE metadata->>'type' = 'historical_pattern'
+LIMIT 3;
+```
+
+**Test semantic search:**
+```typescript
+const results = await searchChunks("snap share threshold elite RB", 5);
+console.log(results.map(r => r.metadata.type));
+// Should include 'historical_pattern'
+```
+
+---
+
+## Success Metrics
+
+After full integration, TIBER should demonstrate:
+
+✅ **Data Access:**
+- Can retrieve any of 100 player 2024 stats on request
+- Can reference historical patterns when relevant
+- Can cite elite baselines for comparison
+
+✅ **Proper Framing:**
+- Always marks 2024 data with year: "In 2024..."
+- Never presents 2024 stats as current season
+- Clearly distinguishes 2024 baseline from 2025 VORP
+
+✅ **Dual Context:**
+- Combines 2025 VORP + 2024 baseline seamlessly
+- Uses 2024 for comparison, not current season claims
+- Transitions naturally between historical and current
+
+✅ **Pattern Recognition:**
+- Retrieves relevant patterns for evaluation questions
+- Presents with epistemic framing
+- Includes confidence levels and caveats
+
+✅ **Baseline Reference:**
+- Cites elite benchmarks when appropriate
+- Uses for "is this good?" type questions
+- Compares current players to 2024 standards
+
+---
+
+## Timeline Estimate
+
+**Phase 1:** Schema verification - 5 minutes  
+**Phase 2:** Load player stats (100) - 30 minutes  
+**Phase 3:** Load patterns (55) - 20 minutes  
+**Phase 4:** Load baselines (3) - 5 minutes  
+**Phase 5:** System prompt updates - 15 minutes  
+**Phase 6:** Testing protocol - 30 minutes  
+**Phase 7:** Regression tests - 15 minutes  
+
+**Total estimated time: ~2 hours**
+
+---
+
+## Final Notes
+
+### Critical Success Factors
+
+1. **Year Separation:** This is the #1 risk. Users must never confuse 2024 baseline with 2025 current season.
+
+2. **System Prompt Compliance:** TIBER must consistently follow the 2024 framing rules in every response.
+
+3. **Dual Context Mastery:** The ability to combine "In 2024 he had X" with "Current 2025 he's RB5" is the hallmark of success.
+
+4. **Pattern Application:** Historical patterns should feel like natural evaluation frameworks, not rigid rules.
+
+### What This Enables
+
+**Immediate Benefits:**
+- TIBER can teach evaluation frameworks using real historical data
+- Users learn what metrics matter (snap%, targets, touches, etc.)
+- Comparative analysis possible ("comparing to 2024 elite baseline...")
+
+**Future Benefits:**
+- When 2025 data drops, TIBER already knows HOW to evaluate it
+- Just need to update queryable flags and data source
+- Pattern recognition training pays dividends immediately
+
+### Maintenance
+
+**Weekly:**
+- Monitor for 2024/2025 confusion in user conversations
+- Review any reported issues with year framing
+- Check if patterns being retrieved appropriately
+
+**When 2025 Data Available:**
+- Update jargon mapping (queryable: true for 2025 metrics)
+- Keep 2024 data as historical baseline
+- Maintain clear separation between seasons
+
+---
+
+## Appendix: Complete Data File Locations
+
+All data chunks are provided in the conversation history:
+
+1. **10 QB stats** - Earlier delivery (Burrow, Goff, Mayfield, etc.)
+2. **34 RB stats** - Latest delivery document
+3. **36 WR stats** - Latest delivery document  
+4. **20 TE stats** - Latest delivery document
+5. **25 pattern chunks (v1)** - Earlier delivery document
+6. **30 pattern chunks (v2)** - Latest delivery document
+7. **3 baseline summaries** - Latest delivery document
+
+**Total: 158 chunks ready for immediate loading**
+
+---
+
+*Document Version: 1.0*  
+*Created: 2025-11-13*  
+*Data Complete: 100 players + 55 patterns + 3 baselines = 158 total chunks*  
+*Priority: HIGH - Foundation for 2025 data integration*
