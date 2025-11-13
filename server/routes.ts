@@ -6663,6 +6663,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return Array.from(new Set(players));
   }
 
+  // Helper: Detect when user wants 2024 baseline historical data
+  function detect2024BaselineIntent(query: string): boolean {
+    const patterns = [
+      /2024/i,
+      /last (year|season)/i,
+      /(how did|what did).+(do|perform|finish)/i,
+      /baseline/i,
+      /historical/i,
+      /(compare|vs|versus).+(last|previous|2024)/i,
+      /elite.+(look like|production|performance)/i,
+    ];
+    
+    return patterns.some(p => p.test(query));
+  }
+
   // RAG Chat endpoint with citation tracking + league context
   app.post('/api/rag/chat', async (req, res) => {
     try {
@@ -6789,37 +6804,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`✅ [RAG Chat] Found ${leagueChunks.length} league-specific chunks`);
       }
 
-      // 2b. Search general TIBER knowledge chunks
+      // 2b. Search general TIBER knowledge chunks with 2024 baseline boosting
       // CRITICAL: Suppress general chunks when league context exists to prevent contamination
       // NOTE: rosterSnapshot is checked BEFORE this, so we can safely reference it
       const hasAnyLeagueData = !!rosterSnapshot || leagueChunksCount > 0;
-      const generalLimit = league_id && hasAnyLeagueData ? 0 : 5;
+      const generalLimit = league_id && hasAnyLeagueData ? 0 : 10;
       console.log(`🔍 [RAG Chat] General chunks limit: ${generalLimit} (league_id: ${league_id ? 'YES' : 'NO'}, roster: ${!!rosterSnapshot}, league chunks: ${leagueChunksCount})`);
       
       if (generalLimit > 0) {
-        const generalSearchResult = await db.execute(
-          sql`SELECT 
-                id, 
-                content, 
-                metadata,
-                (1 - (embedding <-> ${vectorString}::vector) / 2) as similarity,
-                'general' as source_type
-              FROM chunks
-              ORDER BY embedding <-> ${vectorString}::vector
-              LIMIT ${generalLimit}`
-        );
+        // Detect if user wants 2024 baseline historical data
+        const wants2024Baseline = detect2024BaselineIntent(message);
+        console.log(`🎯 [RAG Chat] 2024 baseline intent detected: ${wants2024Baseline}`);
 
-        const generalChunks = generalSearchResult.rows.map((row: any) => ({
-          chunk_id: row.id,
-          content: row.content,
-          content_preview: row.content?.substring(0, 150) || '',
-          metadata: row.metadata,
-          relevance_score: parseFloat(row.similarity),
-          source_type: 'general',
-        }));
+        let baseline2024Chunks: any[] = [];
+        let generalChunks: any[] = [];
 
-        relevantChunks.push(...generalChunks);
-        console.log(`✅ [RAG Chat] Found ${generalChunks.length} general knowledge chunks`);
+        if (wants2024Baseline) {
+          // HYBRID SEARCH: Get both 2024 baseline chunks AND general chunks
+          console.log(`📚 [RAG Chat] Running hybrid search: 2024 baseline + general chunks`);
+
+          // Search 1: 2024 baseline chunks (player stats, patterns, elite baselines)
+          const baseline2024Result = await db.execute(
+            sql`SELECT 
+                  id, 
+                  content, 
+                  metadata,
+                  (1 - (embedding <-> ${vectorString}::vector) / 2) as similarity,
+                  '2024_baseline' as source_type
+                FROM chunks
+                WHERE metadata->>'season' = '2024'
+                   OR metadata->>'type' = 'historical_pattern'
+                   OR metadata->>'type' = 'elite_baseline'
+                ORDER BY embedding <-> ${vectorString}::vector
+                LIMIT 5`
+          );
+
+          baseline2024Chunks = baseline2024Result.rows.map((row: any) => ({
+            chunk_id: row.id,
+            content: row.content,
+            content_preview: row.content?.substring(0, 150) || '',
+            metadata: row.metadata,
+            relevance_score: parseFloat(row.similarity),
+            source_type: '2024_baseline',
+            boosted: true, // Mark as boosted for priority
+          }));
+
+          console.log(`✅ [RAG Chat] Found ${baseline2024Chunks.length} 2024 baseline chunks`);
+
+          // Search 2: General chunks (excluding 2024 baseline to avoid duplicates)
+          const generalSearchResult = await db.execute(
+            sql`SELECT 
+                  id, 
+                  content, 
+                  metadata,
+                  (1 - (embedding <-> ${vectorString}::vector) / 2) as similarity,
+                  'general' as source_type
+                FROM chunks
+                WHERE (metadata->>'season' IS NULL OR metadata->>'season' != '2024')
+                  AND (metadata->>'type' IS NULL OR metadata->>'type' NOT IN ('historical_pattern', 'elite_baseline', 'player_baseline'))
+                ORDER BY embedding <-> ${vectorString}::vector
+                LIMIT 5`
+          );
+
+          generalChunks = generalSearchResult.rows.map((row: any) => ({
+            chunk_id: row.id,
+            content: row.content,
+            content_preview: row.content?.substring(0, 150) || '',
+            metadata: row.metadata,
+            relevance_score: parseFloat(row.similarity),
+            source_type: 'general',
+          }));
+
+          console.log(`✅ [RAG Chat] Found ${generalChunks.length} general knowledge chunks`);
+
+          // Merge: 2024 baseline chunks first (boosted), then general chunks
+          relevantChunks.push(...baseline2024Chunks, ...generalChunks.slice(0, Math.max(0, generalLimit - baseline2024Chunks.length)));
+          console.log(`✅ [RAG Chat] Hybrid search merged: ${baseline2024Chunks.length} baseline + ${Math.min(generalChunks.length, generalLimit - baseline2024Chunks.length)} general = ${relevantChunks.length} total`);
+
+        } else {
+          // Standard search: No 2024 baseline intent, use general chunks only
+          const generalSearchResult = await db.execute(
+            sql`SELECT 
+                  id, 
+                  content, 
+                  metadata,
+                  (1 - (embedding <-> ${vectorString}::vector) / 2) as similarity,
+                  'general' as source_type
+                FROM chunks
+                ORDER BY embedding <-> ${vectorString}::vector
+                LIMIT ${generalLimit}`
+          );
+
+          generalChunks = generalSearchResult.rows.map((row: any) => ({
+            chunk_id: row.id,
+            content: row.content,
+            content_preview: row.content?.substring(0, 150) || '',
+            metadata: row.metadata,
+            relevance_score: parseFloat(row.similarity),
+            source_type: 'general',
+          }));
+
+          relevantChunks.push(...generalChunks);
+          console.log(`✅ [RAG Chat] Found ${generalChunks.length} general knowledge chunks`);
+        }
       } else {
         console.log(`🚫 [RAG Chat] Skipping general chunks - league context takes priority`);
       }
