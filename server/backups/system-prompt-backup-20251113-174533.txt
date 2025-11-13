@@ -1,0 +1,5 @@
+BACKUP OF ORIGINAL SYSTEM PROMPT
+Created: $(date)
+Location: server/services/geminiEmbeddings.ts lines 155-454
+
+This is the complete systemInstruction logic before replacing with three-layer version.
