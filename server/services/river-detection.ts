@@ -50,9 +50,10 @@ const TACTICAL_PATTERNS = [
  * Questions about frameworks, evaluation methods, learning
  */
 const TEACHING_PATTERNS = [
-  /how (do you|should i) (evaluate|assess|analyze|judge)/i,
+  /how (do you|should i) (evaluate|assess|analyze|judge|identify)/i,
   /what makes (a|an|someone) (elite|good|valuable)/i,
   /what (metrics|stats|numbers) matter/i,
+  /why (do|does) .* (matter|count|important)/i,
   /teach me (about|how)/i,
   /explain (how|why|what)/i,
   /how to (think about|evaluate|analyze)/i,
@@ -61,6 +62,8 @@ const TEACHING_PATTERNS = [
   /help me understand/i,
   /walk me through/i,
   /show me how/i,
+  /what .* (predict|indicate|suggest|signal)/i,
+  /(identify|spot|find) (breakout|regression|pattern)/i,
 ];
 
 /**
@@ -69,18 +72,22 @@ const TEACHING_PATTERNS = [
  */
 const RIVER_PATTERNS = [
   // Direct pattern/cycle questions
-  /why do (breakouts|patterns|cycles|regressions?) (happen|occur|exist)/i,
+  /why do (breakouts|patterns|cycles|regressions?|these) (happen|occur|exist|repeat)/i,
   /nature of (the )?(game|patterns|cycles|breakouts?|regressions?)/i,
   /meaning of/i,
   /philosophy of/i,
   
   // Temporal/eternal language
   /eternal|timeless|ancient|always|forever|cycle/i,
-  /recur|repeat|pattern.*history/i,
+  /(over |across |through )(the )?(millennia|ages|time|centuries)/i,
+  /recur|repeat.*time/i,
+  /(patterns?|cycles?) repeat/i,
   /seen.*before|happen.*again/i,
+  /(remains?|constant|endures?) (through|across|over)/i,
   
   // River/flow metaphors
   /river|flow|current|stream|water/i,
+  /(river|water) (teach|shape|guide)/i,
   /pressure.*build/i,
   /inevitable/i,
   
@@ -95,6 +102,10 @@ const RIVER_PATTERNS = [
   /see the pattern/i,
   /underlying pattern/i,
   /historical pattern/i,
+  
+  // Observation/wisdom questions
+  /(what have you|what do you) (observed|witnessed|seen)/i,
+  /(what does|what do) .* (teach|tell|show)/i,
   
   // Philosophical framing
   /tell me about patterns/i,
