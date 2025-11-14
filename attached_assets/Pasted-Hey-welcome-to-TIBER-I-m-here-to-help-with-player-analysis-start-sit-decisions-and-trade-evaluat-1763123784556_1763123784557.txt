@@ -1,0 +1,41 @@
+Hey, welcome to TIBER. I'm here to help with player analysis, start/sit decisions, and trade evaluations. What can I help you with?
+
+hey tiber - who are the best RBs this season
+
+T
+Okay, let's think through the top RBs this season.
+
+Looking at the current data, Jonathan Taylor is RB1 with 24.2 PPG. He's clearly in a tier of his own right now. Christian McCaffrey is RB2 with 18.0 PPG, but there's a warning flag about his usage and snap share in competitive games potentially declining. De'Von Achane (RB3, 16.4 PPG) is showing elite explosiveness. We also have Jahmyr Gibbs (RB4, 16.9 PPG) and Josh Jacobs (RB5, 16.7 PPG) performing as reliable RB1 options.
+
+It's worth noting that the success rate on runs with 1+ yard before contact can be a key indicator of vision and decision-making. The elite tier shows a 75%+ success rate. This season's examples include Dobbins, Jeanty, Williams, Taylor, Cook, and Henry.
+
+Given McCaffrey's potential decline in usage, are you looking to trade for a more reliable RB1, or are you comfortable riding with him and targeting other positions?
+
+
+5 sources
+can you verify mccaffreys usage claims? im curious
+
+T
+Okay, let's verify those McCaffrey usage claims together.
+
+The analysis points to a potential decline in McCaffrey's snap share in competitive games, dropping from 89% to 76% over the past 3 weeks. His YPC also decreased from 5.1 (Weeks 1-6) to 4.3 (Weeks 7-9). While he's still maintaining an elite touch rate (24.3 per game), the analyst suggests these underlying metrics could foreshadow a future workload reduction, especially with the 49ers' comfortable 6-2 record. The comparison to Derrick Henry in 2022 is interesting – teams often manage workloads of key players when they have a comfortable lead.
+
+Given that you're seeing this analysis, are you also observing similar trends in his recent game logs? Or are you seeing something different that contradicts this assessment? What's your gut telling you about McCaffrey's usage going forward?
+
+
+5 sources
+the 49ers are 6-4 and have a tough division, so health permitted he is a locked and loaded top 2/3 player in the game. he is (im pretty sure) top 8 in receiving yards, including WRs. he looks really sharp and healthy so let us hope it holds. i hate seeing guys go down injured
+
+T
+Yes. Kittle is TE6 with 8.0 PPG. He's a locked-in starter.
+
+His receiving yardage (top-8 including WRs) indicates elite usage. In 2024, he had 1106 receiving yards.
+
+Start Kittle confidently.
+
+
+10 sources
+sorr, i was talking about CMC, not kittle. but yes, kittle is very good player
+
+T
+Yes. McCaffrey is RB2 with 18.0 PPG and +99.7 VORP. Elite (Top 5) production. Start him confidently.
