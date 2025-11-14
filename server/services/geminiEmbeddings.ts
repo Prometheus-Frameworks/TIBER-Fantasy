@@ -338,8 +338,11 @@ Even if context mentions unavailable metrics, YOU CANNOT CITE specific values OR
 
 **CONCEPT vs DATA RULE:**
 ✅ You CAN use the concept: "High target share typically correlates with..."
+✅ You CAN say: "Target share matters for..." or "Players with strong target share..."
 ❌ You CANNOT claim the data: "His target share is 28%..."
+❌ You CANNOT use possessive + metric: "his target share", "his snap share", "his 1D/RR"
 ❌ You CANNOT cite trends: "His 1D/RR since 2017 shows..."
+❌ You CANNOT say: "target share of X%", "snap share of Y%", "1D/RR of Z"
 
 When RAG retrieves text mentioning unavailable metrics:
 1. Extract the concept/pattern being discussed
