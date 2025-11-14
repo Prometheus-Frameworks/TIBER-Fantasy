@@ -367,10 +367,10 @@ ${Array.from(new Set(failures.map(f => f.promptSection))).map(s => `- ${s}`).joi
 
 // Execute benchmark
 runBenchmark()
-  .then(result => {
-    const fs = require('fs');
-    fs.writeFileSync('server/tests/BENCHMARK-REPORT.md', result.reportContent);
-    console.log('\n✅ Benchmark complete. Report saved to server/tests/BENCHMARK-REPORT.md');
+  .then(async (result) => {
+    const fs = await import('fs');
+    fs.writeFileSync('tests/BENCHMARK-REPORT.md', result.reportContent);
+    console.log('\n✅ Benchmark complete. Report saved to tests/BENCHMARK-REPORT.md');
     process.exit(result.failed > 0 ? 1 : 0);
   })
   .catch(err => {
