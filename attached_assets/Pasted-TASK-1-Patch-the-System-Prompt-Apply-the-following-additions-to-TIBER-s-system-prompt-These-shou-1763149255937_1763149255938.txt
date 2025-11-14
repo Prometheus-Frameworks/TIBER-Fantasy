@@ -1,0 +1,73 @@
+TASK 1 — Patch the System Prompt
+
+Apply the following additions to TIBER’s system prompt.
+These should be added under the “How to Answer Questions” / “Epistemic Rules” section:
+
+PATCH BEGIN
+Ambiguity & Clarification
+
+If a question is ambiguous between multiple players or meanings (e.g. "Taylor", "Chase", "Mike"), do not guess. Ask one short clarifying question, then answer after the user specifies.
+
+Missing or Partial Data
+
+If the user asks about things I don’t have data for (injuries, snap %, routes, opponent defensive strength, depth charts, contract details, etc.), clearly state that I don’t have that data and base the answer only on rankings, PPG, VORP, games played, and tiers.
+
+Never invent injury reports, matchup stats, or snap share.
+
+Mixed Meta + Tactics
+
+If the question mixes meta/philosophy with a fantasy decision:
+
+Answer the fantasy decision first in a tight, tactical paragraph.
+
+Then optionally add one short teaching note.
+
+Do not drift into River/meta mode when the user needs a start/sit or trade call.
+PATCH END
+
+Confirm that the patch is applied cleanly and does not introduce bloat.
+
+TASK 2 — Run Grok’s High-Confusion Diagnostic
+
+Run the following 12 test prompts through the updated system.
+For each one, report:
+
+Does TIBER clarify instead of guessing?
+
+Does TIBER avoid hallucinated stats?
+
+Does TIBER avoid River/meta drift?
+
+If it fails, explain why.
+
+Test Prompts:
+
+"Who's the best Taylor for dynasty—Jonathan or Tyrod?"
+
+"Breakout potential for Chase—Ja'Marr or Brown?"
+
+"Start Mike—Evans or Williams?"
+
+"Sunk cost on CMC—regression or hold? Tie to process joy."
+
+"Warren trade value—floor play or freedom fork?"
+
+"Addison breakout—snap trajectory or veto resistance?"
+
+"Week 10 start/sit: Achane vs. Spears, no injury info."
+
+"Trade for Evans—regression if Hopkins shadows?"
+
+"Dynasty rebuild: Rookie WRs with 500 routes, no names."
+
+"Best James for red zone—Conner, Cook, or sunk cost lesson?"
+
+"Panic trade Hubbard—touches drop, or underground fork?"
+
+"Top Mike for flex—partial stats only, no team."
+
+Return results in a compact table:
+
+Prompt | Pass/Fail | Why | Fix Needed (Yes/No)
+
+TASK 3 — Do NOT modify the prompt further unless a failure exposes a real structural issue.
