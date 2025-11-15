@@ -50,13 +50,19 @@ const TACTICAL_PATTERNS = [
  * Questions about frameworks, evaluation methods, learning
  */
 const TEACHING_PATTERNS = [
-  /how (do you|should i) (evaluate|assess|analyze|judge|identify)/i,
+  // Enhanced "how" questions with more flexible verbs
+  /how (do you|can i|should i) (think|evaluate|assess|analyze|judge|identify)/i,
+  /how to (think about|evaluate|analyze)/i,
+  
+  // Enhanced "what creates/causes" questions (NEW)
+  /what (creates|causes|drives|produces)/i,
+  
+  // Core teaching patterns (existing)
   /what makes (a|an|someone) (elite|good|valuable)/i,
   /what (metrics|stats|numbers) matter/i,
   /why (do|does) .* (matter|count|important)/i,
   /teach me (about|how)/i,
   /explain (how|why|what)/i,
-  /how to (think about|evaluate|analyze)/i,
   /framework for/i,
   /what should i look (for|at)/i,
   /help me understand/i,
@@ -71,9 +77,14 @@ const TEACHING_PATTERNS = [
  * Philosophical, pattern-seeking, deep questions about nature/meaning
  */
 const RIVER_PATTERNS = [
-  // Direct pattern/cycle questions
-  /why do (breakouts|patterns|cycles|regressions?|these) (happen|occur|exist|repeat)/i,
-  /nature of (the )?(game|patterns|cycles|breakouts?|regressions?)/i,
+  // Direct pattern/cycle questions (ENHANCED with wildcards)
+  /why do .*?(breakouts?|patterns?|cycles?|regressions?) .*(happen|occur|exist|repeat)/i,
+  
+  // Why collapse/breakout questions (NEW)
+  /why .*(collapse|break out|regress)/i,
+  
+  // Nature/meaning/philosophy questions (ENHANCED)
+  /nature of .*?(breakouts?|patterns?|game|cycles?)/i,
   /meaning of/i,
   /philosophy of/i,
   
@@ -132,6 +143,47 @@ const TACTICAL_OVERRIDE_PATTERNS = [
 // ═══════════════════════════════════════════════════════════════
 
 /**
+ * Heuristic Intent Boost
+ * Lightweight intent scoring based on question structure and keywords
+ * Executes before pattern matching to provide baseline confidence boosts
+ */
+function heuristicIntentBoost(q: string): { teach: number; river: number; tact: number } {
+  const s = q.toLowerCase().trim();
+  let teach = 0;
+  let river = 0;
+  let tact = 0;
+
+  // Question openers → intent hints
+  if (s.startsWith('how ') || s.startsWith('how do ') || s.startsWith('how can ') || s.startsWith('teach ')) {
+    teach += 0.3;
+  }
+  
+  if (s.startsWith('what ') && (s.includes('framework') || s.includes('method') || s.includes('creates') || s.includes('causes'))) {
+    teach += 0.25;
+  }
+  
+  if (s.startsWith('why ')) {
+    river += 0.35;
+  }
+
+  // Lexical hints
+  if (/\b(pattern|patterns|cycle|cycles|regression|breakout|meaning|nature)\b/.test(s)) {
+    river += 0.2;
+  }
+  
+  if (/\b(think|evaluate|assess|analyze|identify|framework|criteria|principles)\b/.test(s)) {
+    teach += 0.2;
+  }
+
+  // Default tactical nudge for direct start/sit questions
+  if (/\b(should i|start|sit|trade|who to start|this week|tonight|rb\d|wr\d)\b/.test(s)) {
+    tact += 0.4;
+  }
+
+  return { teach, river, tact };
+}
+
+/**
  * Detect which layer should respond to this query
  */
 export function detectLayer(query: string): LayerDetectionResult {
@@ -151,76 +203,77 @@ export function detectLayer(query: string): LayerDetectionResult {
     }
   }
 
-  // 2. Check for River triggers (second priority when no tactical override)
-  let riverScore = 0;
-  for (const pattern of RIVER_PATTERNS) {
-    if (pattern.test(lowerQuery)) {
-      riverScore++;
-      triggers.push(`river: ${pattern.source}`);
+  // 2. Get heuristic boosts (baseline intent scoring)
+  const boosts = heuristicIntentBoost(lowerQuery);
+
+  // Initialize scores with heuristic boosts
+  let scores = {
+    tactical: boosts.tact,
+    teaching: boosts.teach,
+    river: boosts.river
+  };
+
+  // 3. Pattern matching helper
+  const match = (patterns: RegExp[]) => patterns.filter(rx => rx.test(query)).length;
+
+  // 4. Add pattern-based scores
+  const teachingMatches = match(TEACHING_PATTERNS);
+  if (teachingMatches > 0) {
+    scores.teaching += 0.8 * teachingMatches;
+    TEACHING_PATTERNS.forEach(pattern => {
+      if (pattern.test(query)) {
+        triggers.push(`teaching: ${pattern.source}`);
+      }
+    });
+  }
+
+  const riverMatches = match(RIVER_PATTERNS);
+  if (riverMatches > 0) {
+    scores.river += 0.8 * riverMatches;
+    RIVER_PATTERNS.forEach(pattern => {
+      if (pattern.test(query)) {
+        triggers.push(`river: ${pattern.source}`);
+      }
+    });
+  }
+
+  const tacticalMatches = match(TACTICAL_PATTERNS);
+  if (tacticalMatches > 0) {
+    scores.tactical += 0.8 * tacticalMatches;
+    TACTICAL_PATTERNS.forEach(pattern => {
+      if (pattern.test(query)) {
+        triggers.push(`tactical: ${pattern.source}`);
+      }
+    });
+  }
+
+  // 5. Fallback for ambiguous "how/what" with evaluative verb → teaching
+  if (scores.tactical < 0.4 && scores.teaching === boosts.teach && scores.river === boosts.river) {
+    if (/\b(how|what)\b/.test(lowerQuery) && /\b(think|evaluate|assess|analyze|identify)\b/.test(lowerQuery)) {
+      scores.teaching = 0.6;
+      triggers.push('fallback: ambiguous how/what with evaluative verb');
     }
   }
 
-  // River requires 2+ triggers OR specific high-confidence phrases
-  const highConfidenceRiverPhrases = [
-    'what are you',
-    'who are you',
-    'nature of',
-    'meaning of',
-    'why do breakouts',
-    'why do patterns',
-  ];
+  // 6. Pick layer with highest score
+  const layer = (Object.entries(scores)
+    .sort((a, b) => b[1] - a[1])[0][0]) as 'tactical' | 'teaching' | 'river';
 
-  const hasHighConfidenceRiver = highConfidenceRiverPhrases.some(phrase =>
-    lowerQuery.includes(phrase)
-  );
+  const confidence = Math.min(scores[layer], 1.0);
 
-  if (riverScore >= 2 || hasHighConfidenceRiver) {
-    return {
-      layer: 'river',
-      confidence: Math.min(riverScore / 3, 1.0),
-      triggers
-    };
-  }
-
-  // 3. Check for Teaching triggers
-  let teachingScore = 0;
-  for (const pattern of TEACHING_PATTERNS) {
-    if (pattern.test(lowerQuery)) {
-      teachingScore++;
-      triggers.push(`teaching: ${pattern.source}`);
-    }
-  }
-
-  if (teachingScore >= 1) {
-    return {
-      layer: 'teaching',
-      confidence: Math.min(teachingScore / 2, 1.0),
-      triggers
-    };
-  }
-
-  // 4. Check for explicit Tactical triggers
-  let tacticalScore = 0;
-  for (const pattern of TACTICAL_PATTERNS) {
-    if (pattern.test(lowerQuery)) {
-      tacticalScore++;
-      triggers.push(`tactical: ${pattern.source}`);
-    }
-  }
-
-  if (tacticalScore >= 1) {
+  // 7. Default to Tactical if all scores are 0
+  if (confidence === 0) {
     return {
       layer: 'tactical',
-      confidence: Math.min(tacticalScore / 2, 1.0),
-      triggers
+      confidence: 0.5,
+      triggers: ['default_tactical']
     };
   }
 
-  // 5. Default to Tactical for ambiguous queries
   return {
-    layer: 'tactical',
-    confidence: 0.5,
-    triggers: ['default_tactical']
+    layer,
+    confidence,
+    triggers: triggers.length > 0 ? triggers : [`${layer}: heuristic only`]
   };
 }
 

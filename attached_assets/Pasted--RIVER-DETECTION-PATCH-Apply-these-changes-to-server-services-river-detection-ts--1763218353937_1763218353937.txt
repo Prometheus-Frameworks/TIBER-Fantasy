@@ -1,0 +1,177 @@
+/**
+ * RIVER DETECTION PATCH
+ * 
+ * Apply these changes to server/services/river-detection.ts
+ * 
+ * Changes:
+ * 1. Expanded TEACHING_PATTERNS (more flexible)
+ * 2. Expanded RIVER_PATTERNS (wildcard support)
+ * 3. New heuristicIntentBoost function
+ * 4. Blended pattern + heuristic scoring
+ * 5. Fallback for ambiguous how/what questions
+ */
+
+// ═══════════════════════════════════════════════════════════════
+// 1. EXPANDED TEACHING PATTERNS
+// ═══════════════════════════════════════════════════════════════
+
+const TEACHING_PATTERNS: RegExp[] = [
+  // Framework/method questions
+  /\bwhat\b.*\b(framework|method|process|criteria|heuristic|principles)\b/i,
+  
+  // How to think/evaluate questions (EXPANDED)
+  /\bhow (do you|should i|can i)\b.*\b(think|evaluate|assess|analyze|identify)\b/i,
+  
+  // What creates/causes questions (NEW)
+  /\bwhat (creates|causes|drives|produces)\b/i,
+  
+  // Direct teaching requests (NEW)
+  /\bteach me\b/i,
+  /\bhow to\b/i,
+  /\bexplain (why|how)\b/i,
+  
+  // Existing patterns (keep these)
+  /\bhow (should|can|do) (i|you)\b.*\b(evaluate|identify|spot|recognize|find)\b/i,
+  /\bwhat makes?\b.*\b(elite|good|bad|breakout)\b/i,
+];
+
+// ═══════════════════════════════════════════════════════════════
+// 2. EXPANDED RIVER PATTERNS
+// ═══════════════════════════════════════════════════════════════
+
+const RIVER_PATTERNS: RegExp[] = [
+  // Why do patterns repeat (with wildcard flexibility - NEW)
+  /\bwhy do\b.*?\b(patterns?|cycles?|regressions?|breakouts?)\b.*\b(happen|occur|exist|repeat)\b/i,
+  
+  // Why collapse/breakout questions (NEW)
+  /\bwhy\b.*\b(collapses?|collapse|regress|regression|break\s*out|breakouts?)\b/i,
+  
+  // Nature of / meaning of questions (NEW)
+  /\bwhat is the nature of\b/i,
+  /\bmeaning of\b.*\b(usage|patterns?|cycles?)\b/i,
+  
+  // Simple pattern questions (NEW)
+  /\bwhy\b.*\bpatterns?\b/i,
+  
+  // Existing patterns (keep these)
+  /\bwhat are you\b/i,
+  /\bwho are you\b/i,
+  /\byour (purpose|role|origin|story)\b/i,
+  /\bthrough (the ages|millennia|time|history)\b/i,
+  /\b(eternal|timeless|ancient|observe over)\b/i,
+];
+
+// ═══════════════════════════════════════════════════════════════
+// 3. HEURISTIC INTENT BOOST (NEW)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Lightweight intent scoring based on question structure and keywords
+ * Executes before pattern matching to provide baseline confidence boosts
+ */
+function heuristicIntentBoost(q: string): { teach: number; river: number; tact: number } {
+  const s = q.toLowerCase().trim();
+  let teach = 0;
+  let river = 0;
+  let tact = 0;
+
+  // Question openers → intent hints
+  if (s.startsWith('how ') || s.startsWith('how do ') || s.startsWith('how can ') || s.startsWith('teach ')) {
+    teach += 0.3;
+  }
+  
+  if (s.startsWith('what ') && (s.includes('framework') || s.includes('method') || s.includes('creates') || s.includes('causes'))) {
+    teach += 0.25;
+  }
+  
+  if (s.startsWith('why ')) {
+    river += 0.35;
+  }
+
+  // Lexical hints
+  if (/\b(pattern|patterns|cycle|cycles|regression|breakout|meaning|nature)\b/.test(s)) {
+    river += 0.2;
+  }
+  
+  if (/\b(think|evaluate|assess|analyze|identify|framework|criteria|principles)\b/.test(s)) {
+    teach += 0.2;
+  }
+
+  // Default tactical nudge for direct start/sit questions
+  if (/\b(should i|start|sit|trade|who to start|this week|tonight|rb\d|wr\d)\b/.test(s)) {
+    tact += 0.4;
+  }
+
+  return { teach, river, tact };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 4. UPDATED detectLayer() WITH HEURISTIC BLENDING
+// ═══════════════════════════════════════════════════════════════
+
+export function detectLayer(query: string): { layer: 'tactical' | 'teaching' | 'river'; confidence: number } {
+  const q = query.toLowerCase().trim();
+  
+  // Get heuristic boosts
+  const boosts = heuristicIntentBoost(q);
+  
+  // Pattern matching helper
+  const match = (arr: RegExp[]) => arr.some(rx => rx.test(query));
+  
+  // Initialize scores
+  let scores = {
+    tactical: 0,
+    teaching: 0,
+    river: 0
+  };
+  
+  // Pattern-based scoring
+  if (match(TEACHING_PATTERNS)) {
+    scores.teaching += 0.8;
+  }
+  
+  if (match(RIVER_PATTERNS)) {
+    scores.river += 0.8;
+  }
+  
+  // Tactical patterns (keep your existing tactical detection here)
+  // Example tactical patterns:
+  const TACTICAL_PATTERNS = [
+    /\b(start|sit|bench)\b/i,
+    /\b(trade|drop|add|pick up)\b/i,
+    /\b(rb\d+|wr\d+|qb\d+|te\d+)\b/i,
+    /\bthis week\b/i,
+    /\btonight\b/i,
+    /\b(should i start|who should i)\b/i,
+  ];
+  
+  if (match(TACTICAL_PATTERNS)) {
+    scores.tactical += 0.8;
+  }
+  
+  // Add heuristic boosts
+  scores.teaching += boosts.teach;
+  scores.river += boosts.river;
+  scores.tactical += boosts.tact;
+  
+  // Fallback: ambiguous "how/what" with evaluative verb → teaching
+  if (scores.tactical < 0.4 && scores.teaching === 0 && scores.river === 0) {
+    if (/\b(how|what)\b/.test(q) && /\b(think|evaluate|assess|analyze|identify)\b/.test(q)) {
+      scores.teaching = 0.6;
+    }
+  }
+  
+  // Pick layer with highest score
+  const layer = (Object.entries(scores)
+    .sort((a, b) => b[1] - a[1])[0][0]) as 'tactical' | 'teaching' | 'river';
+  
+  const confidence = scores[layer];
+  
+  return { layer, confidence };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 5. EXPORT
+// ═══════════════════════════════════════════════════════════════
+
+export { TEACHING_PATTERNS, RIVER_PATTERNS, heuristicIntentBoost };

@@ -1,0 +1,155 @@
+/**
+ * TELEMETRY LOGGING PATCH
+ * 
+ * Add this to track layer detection performance and catch routing issues
+ * 
+ * Purpose: Stop guessing, start measuring
+ * 
+ * Run for 1 week, then analyze logs to tune detection patterns
+ */
+
+// ═══════════════════════════════════════════════════════════════
+// TELEMETRY FUNCTION
+// ═══════════════════════════════════════════════════════════════
+
+interface LayerDetectionLog {
+  query: string;
+  layer: 'tactical' | 'teaching' | 'river';
+  confidence: number;
+  boosts?: {
+    teach: number;
+    river: number;
+    tact: number;
+  };
+  timestamp?: string;
+}
+
+function logLayerDetection(data: LayerDetectionLog) {
+  // Truncate query for readability
+  const truncatedQuery = data.query.length > 160 
+    ? data.query.slice(0, 157) + '...' 
+    : data.query;
+  
+  // Use your existing logger or console
+  console.log('[LAYER-DETECTION]', JSON.stringify({
+    q: truncatedQuery,
+    layer: data.layer,
+    conf: Number(data.confidence.toFixed(2)),
+    boosts: data.boosts,
+    ts: new Date().toISOString()
+  }));
+  
+  // Alternative: Send to your actual logging service
+  // logger.info('layer-choice', { ...data, q: truncatedQuery });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INTEGRATION INTO detectLayer()
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Add this at the END of your detectLayer() function:
+ */
+export function detectLayer(query: string): { layer: 'tactical' | 'teaching' | 'river'; confidence: number } {
+  // ... existing detection logic ...
+  
+  const q = query.toLowerCase().trim();
+  const boosts = heuristicIntentBoost(q);
+  
+  // ... pattern matching and scoring ...
+  
+  const layer = /* your layer selection logic */;
+  const confidence = scores[layer];
+  
+  // ═══════════════════════════════════════════════════════════════
+  // ADD THIS: Log the detection decision
+  // ═══════════════════════════════════════════════════════════════
+  
+  logLayerDetection({
+    query,
+    layer,
+    confidence,
+    boosts
+  });
+  
+  return { layer, confidence };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOW CONFIDENCE GUARDRAIL
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * If confidence < 0.5 and layer is not tactical, ask user for clarification
+ * 
+ * Add this to your chat response generation:
+ */
+function addLowConfidenceGuardrail(
+  response: string,
+  layer: string,
+  confidence: number
+): string {
+  // Only add guardrail for teaching/river with low confidence
+  if ((layer === 'teaching' || layer === 'river') && confidence < 0.5) {
+    const clarification = "\n\n*(Not sure if you want the framework or a specific start/sit recommendation - let me know if this wasn't what you needed!)*";
+    return response + clarification;
+  }
+  
+  return response;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOG ANALYSIS HELPER
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * After running for a week, analyze your logs with this:
+ */
+function analyzeLogs(logs: LayerDetectionLog[]) {
+  const lowConfidence = logs.filter(l => l.confidence < 0.5);
+  const byLayer = {
+    tactical: logs.filter(l => l.layer === 'tactical'),
+    teaching: logs.filter(l => l.layer === 'teaching'),
+    river: logs.filter(l => l.layer === 'river')
+  };
+  
+  console.log('═══════════════════════════════════════════════════════');
+  console.log('LAYER DETECTION TELEMETRY ANALYSIS');
+  console.log('═══════════════════════════════════════════════════════');
+  console.log(`Total queries: ${logs.length}`);
+  console.log(`\nBy Layer:`);
+  console.log(`  Tactical: ${byLayer.tactical.length} (${(byLayer.tactical.length/logs.length*100).toFixed(1)}%)`);
+  console.log(`  Teaching: ${byLayer.teaching.length} (${(byLayer.teaching.length/logs.length*100).toFixed(1)}%)`);
+  console.log(`  River: ${byLayer.river.length} (${(byLayer.river.length/logs.length*100).toFixed(1)}%)`);
+  console.log(`\nLow Confidence (<0.5): ${lowConfidence.length} (${(lowConfidence.length/logs.length*100).toFixed(1)}%)`);
+  
+  if (lowConfidence.length > 0) {
+    console.log('\nSample low-confidence queries:');
+    lowConfidence.slice(0, 5).forEach(l => {
+      console.log(`  - "${l.query}" → ${l.layer} (${l.confidence.toFixed(2)})`);
+    });
+  }
+  
+  // Average confidence by layer
+  const avgConf = {
+    tactical: byLayer.tactical.reduce((sum, l) => sum + l.confidence, 0) / byLayer.tactical.length,
+    teaching: byLayer.teaching.reduce((sum, l) => sum + l.confidence, 0) / byLayer.teaching.length,
+    river: byLayer.river.reduce((sum, l) => sum + l.confidence, 0) / byLayer.river.length
+  };
+  
+  console.log(`\nAverage Confidence:`);
+  console.log(`  Tactical: ${avgConf.tactical.toFixed(2)}`);
+  console.log(`  Teaching: ${avgConf.teaching.toFixed(2)}`);
+  console.log(`  River: ${avgConf.river.toFixed(2)}`);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════════
+
+export {
+  logLayerDetection,
+  addLowConfidenceGuardrail,
+  analyzeLogs,
+  LayerDetectionLog
+};

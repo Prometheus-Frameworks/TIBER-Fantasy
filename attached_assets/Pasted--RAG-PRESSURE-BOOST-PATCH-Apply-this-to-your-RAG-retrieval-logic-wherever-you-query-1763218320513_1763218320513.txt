@@ -1,0 +1,178 @@
+/**
+ * RAG PRESSURE BOOST PATCH
+ * 
+ * Apply this to your RAG retrieval logic (wherever you query vector store)
+ * 
+ * Purpose: Surface Pressure Module chunks when user asks about pressure/breakout/collapse
+ * 
+ * Implementation location: Wherever you build your vector search query
+ * (probably in server/services/rag.ts or similar)
+ */
+
+// ═══════════════════════════════════════════════════════════════
+// PRESSURE KEYWORD DETECTION
+// ═══════════════════════════════════════════════════════════════
+
+function detectsPressureQuery(userQuery: string): boolean {
+  const q = userQuery.toLowerCase();
+  return /\b(pressure|breakout|collapse|tension|accumulate|release)\b/.test(q);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OPTION A: Filter-based approach (if your vector store supports metadata filters)
+// ═══════════════════════════════════════════════════════════════
+
+async function retrieveWithPressureBoost_FilterBased(
+  userQuery: string,
+  embedding: number[],
+  vectorStore: any // Replace with your actual vector store type
+) {
+  const pressureHint = detectsPressureQuery(userQuery);
+  
+  const filters = [];
+  
+  if (pressureHint) {
+    // Add filter to prioritize pressure_theory chunks
+    filters.push({
+      key: 'topic',
+      op: 'eq',
+      value: 'pressure_theory'
+    });
+    
+    // Optionally also filter by layer
+    filters.push({
+      key: 'layer_hint',
+      op: 'in',
+      value: ['teaching', 'river'] // Exclude tactical from pressure queries
+    });
+  }
+  
+  // Execute retrieval with filters
+  return await vectorStore.search(embedding, {
+    k: 5,
+    filter: pressureHint ? { $and: filters } : undefined
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OPTION B: Score-based boosting (if your vector store supports score adjustments)
+// ═══════════════════════════════════════════════════════════════
+
+async function retrieveWithPressureBoost_ScoreBased(
+  userQuery: string,
+  embedding: number[],
+  retriever: any // Replace with your actual retriever type
+) {
+  const pressureHint = detectsPressureQuery(userQuery);
+  
+  if (pressureHint) {
+    // Boost pressure_theory chunks by 1.2x
+    retriever.addBoost({
+      field: 'topic',
+      equals: 'pressure_theory',
+      weight: 1.2
+    });
+    
+    // Boost teaching layer slightly when pressure detected
+    retriever.addBoost({
+      field: 'layer_hint',
+      equals: 'teaching',
+      weight: 1.1
+    });
+  }
+  
+  return await retriever.retrieve(embedding, { k: 5 });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OPTION C: Post-retrieval re-ranking (works with any vector store)
+// ═══════════════════════════════════════════════════════════════
+
+async function retrieveWithPressureBoost_Reranking(
+  userQuery: string,
+  embedding: number[],
+  vectorStore: any
+) {
+  const pressureHint = detectsPressureQuery(userQuery);
+  
+  // Get initial results
+  const results = await vectorStore.search(embedding, { k: 10 }); // Get more initially
+  
+  if (pressureHint) {
+    // Re-rank: boost pressure_theory chunks
+    results.forEach((chunk: any) => {
+      if (chunk.metadata?.topic === 'pressure_theory') {
+        chunk.score = (chunk.score || 0) * 1.3; // 30% boost
+      }
+      
+      if (chunk.metadata?.layer_hint === 'teaching' && 
+          chunk.metadata?.topic === 'pressure_theory') {
+        chunk.score = (chunk.score || 0) * 1.15; // Additional 15% for teaching + pressure
+      }
+    });
+    
+    // Re-sort by boosted scores
+    results.sort((a: any, b: any) => (b.score || 0) - (a.score || 0));
+    
+    // Return top 5
+    return results.slice(0, 5);
+  }
+  
+  return results.slice(0, 5);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CRITICAL: Keep Pressure chunks tagged as NARRATIVE
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * IMPORTANT: Ensure all Pressure Module chunks have:
+ * 
+ * metadata: {
+ *   content_type: "NARRATIVE",  // NOT "DATA"
+ *   topic: "pressure_theory",
+ *   layer_hint: "teaching" | "river",
+ *   epistemic_status: "reasoning_tool" | "metaphorical"
+ * }
+ * 
+ * This prevents epistemic rules from treating pressure reasoning as factual stats
+ */
+
+// ═══════════════════════════════════════════════════════════════
+// EXAMPLE INTEGRATION
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Example of how to integrate into your existing RAG flow:
+ */
+async function enhancedRAGRetrieval(userQuery: string, detectedLayer: string) {
+  // 1. Generate embedding
+  const embedding = await embedQuery(userQuery);
+  
+  // 2. Retrieve with pressure boost (choose one of the options above)
+  const chunks = await retrieveWithPressureBoost_Reranking(
+    userQuery,
+    embedding,
+    vectorStore
+  );
+  
+  // 3. Filter by layer if needed
+  const layerFilteredChunks = chunks.filter((chunk: any) => {
+    // Only return chunks matching the detected layer
+    return chunk.metadata?.layer_hint === detectedLayer ||
+           chunk.metadata?.layer_hint === 'internal'; // Internal always excluded
+  });
+  
+  return layerFilteredChunks;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════════
+
+export {
+  detectsPressureQuery,
+  retrieveWithPressureBoost_FilterBased,
+  retrieveWithPressureBoost_ScoreBased,
+  retrieveWithPressureBoost_Reranking
+};
