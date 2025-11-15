@@ -6690,17 +6690,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return chunks;
     }
 
-    // Re-rank: boost pressure_theory chunks by 30%
+    // Re-rank: boost ALL pressure-related chunks by 30%
     chunks.forEach((chunk: any) => {
-      if (chunk.metadata?.topic === 'pressure_theory') {
+      const topic = chunk.metadata?.topic || '';
+      const isPressureChunk = topic.includes('pressure') || 
+                              ['pressure_framework', 'pressure_components', 'pressure_teaching', 'pressure_metaphors'].includes(chunk.metadata?.type);
+      
+      if (isPressureChunk) {
         chunk.relevance_score = (chunk.relevance_score || 0) * 1.3;
         chunk.boosted = true;
         console.log(`🌊 [Pressure Boost] Boosted chunk by 30%: ${chunk.content_preview || ''}`.substring(0, 100));
       }
 
       // Additional 15% boost for teaching + pressure combo
-      if (chunk.metadata?.layer_hint === 'teaching' &&
-          chunk.metadata?.topic === 'pressure_theory') {
+      if (chunk.metadata?.layer_hint === 'teaching' && isPressureChunk) {
         chunk.relevance_score = (chunk.relevance_score || 0) * 1.15;
         console.log(`📚 [Teaching Pressure Boost] Additional 15% boost applied`);
       }
