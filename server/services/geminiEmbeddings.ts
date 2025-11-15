@@ -45,6 +45,76 @@ export function checkDataAvailability(jargonTerm: string): {
 }
 
 /**
+ * Pressure Lexicon Guard - Ensures teaching/river responses contain "pressure" terminology
+ * when discussing breakouts/collapses. Enforces brand vocabulary compliance.
+ * 
+ * @param text The LLM response text
+ * @param userQuery The original user query
+ * @returns Text with pressure terminology guaranteed if appropriate
+ */
+function pressureLexiconGuard(text: string, userQuery: string): string {
+  // Check if this query should trigger pressure terminology
+  const detected = detectLayer(userQuery);
+  
+  // Only apply to teaching/river layers
+  if (detected.layer !== 'teaching' && detected.layer !== 'river') {
+    return text; // Leave tactical responses untouched
+  }
+  
+  // Check if query is about breakouts, collapses, or pressure concepts
+  const pressureQuery = /breakout|collapse|break out|regress|pattern|potential|why.*players?|nature of|how.*identify|what creates?|pressure/i.test(userQuery);
+  
+  if (!pressureQuery) {
+    return text; // Not a pressure-related query, don't inject
+  }
+  
+  // Split into sentences for potential injection
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  
+  if (sentences.length === 0) {
+    return text; // Empty response, return as-is
+  }
+  
+  // For river layer: check for SPECIFIC required pressure metaphors first
+  if (detected.layer === 'river') {
+    const hasRequiredMetaphor = [
+      'pressure builds',
+      'accumulate',
+      'release'
+    ].some(m => text.toLowerCase().includes(m));
+    
+    if (hasRequiredMetaphor) {
+      return text; // Already has required metaphors
+    }
+    
+    // Missing required metaphors - inject them
+    const firstSentence = sentences[0];
+    const rest = sentences.slice(1).join(' ');
+    
+    const injection = `Pressure builds long before it breaks - this is the river's teaching.`;
+    
+    return `${firstSentence} ${injection} ${rest}`;
+  }
+  
+  // For teaching layer: check if response contains "pressure"
+  if (detected.layer === 'teaching') {
+    if (/pressure/i.test(text)) {
+      return text; // Already contains pressure terminology
+    }
+    
+    // Missing "pressure" - inject it
+    const firstSentence = sentences[0];
+    const rest = sentences.slice(1).join(' ');
+    
+    const injection = `Understanding this through a pressure lens: breakouts happen when multiple pressure types align - structural pressure (opportunity), internal pressure (talent exceeding usage), and external pressure (favorable environment).`;
+    
+    return `${firstSentence}\n\n${injection} ${rest}`;
+  }
+  
+  return text;
+}
+
+/**
  * Sanitizes retrieved context by removing sentences that mention banned metrics
  * to prevent the LLM from echoing unavailable data even when it appears in patterns.
  * 
@@ -410,7 +480,10 @@ RESPONSE LENGTH & STRUCTURE
       throw new Error("No text response from Gemini");
     }
 
-    return text;
+    // Apply pressure lexicon guard for teaching/river responses
+    const guardedText = pressureLexiconGuard(text, userMessage);
+
+    return guardedText;
   } catch (error) {
     console.error("❌ [GeminiChat] Failed to generate response:", error);
     throw error;
