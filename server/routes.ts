@@ -6678,6 +6678,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return patterns.some(p => p.test(query));
   }
 
+  // Helper: Detect pressure-related queries for Pressure Module boosting
+  function detectsPressureQuery(userQuery: string): boolean {
+    const q = userQuery.toLowerCase();
+    return /\b(pressure|breakout|collapse|tension|accumulate|release)\b/.test(q);
+  }
+
+  // Helper: Re-rank chunks to boost Pressure Module content when detected
+  function boostPressureChunks(chunks: any[], pressureHint: boolean): any[] {
+    if (!pressureHint) {
+      return chunks;
+    }
+
+    // Re-rank: boost pressure_theory chunks by 30%
+    chunks.forEach((chunk: any) => {
+      if (chunk.metadata?.topic === 'pressure_theory') {
+        chunk.relevance_score = (chunk.relevance_score || 0) * 1.3;
+        chunk.boosted = true;
+        console.log(`🌊 [Pressure Boost] Boosted chunk by 30%: ${chunk.content_preview || ''}`.substring(0, 100));
+      }
+
+      // Additional 15% boost for teaching + pressure combo
+      if (chunk.metadata?.layer_hint === 'teaching' &&
+          chunk.metadata?.topic === 'pressure_theory') {
+        chunk.relevance_score = (chunk.relevance_score || 0) * 1.15;
+        console.log(`📚 [Teaching Pressure Boost] Additional 15% boost applied`);
+      }
+    });
+
+    // Re-sort by boosted scores
+    chunks.sort((a: any, b: any) => (b.relevance_score || 0) - (a.relevance_score || 0));
+
+    return chunks;
+  }
+
   // RAG Chat endpoint with citation tracking + league context
   app.post('/api/rag/chat', async (req, res) => {
     try {
@@ -6912,6 +6946,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log(`✅ [RAG Chat] Total relevant chunks: ${relevantChunks.length}`);
+
+      // Step 2b.5: Apply Pressure Module boost if detected
+      const pressureHint = detectsPressureQuery(message);
+      if (pressureHint) {
+        console.log(`🌊 [Pressure Module] Pressure-related query detected, boosting pressure_theory chunks`);
+        boostPressureChunks(relevantChunks, true);
+      }
 
       // Step 2c: Detect player mentions and fetch VORP data
       // Expand player aliases/nicknames before detection (e.g., "Tet" → "Tetairola McMillan")
