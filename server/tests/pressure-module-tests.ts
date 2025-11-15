@@ -10,6 +10,7 @@
 
 import { generateChatResponse } from '../services/geminiEmbeddings';
 import { detectLayer } from '../services/river-detection';
+import { fileURLToPath } from 'url';
 
 // ═══════════════════════════════════════════════════════════════
 // TEST DATA STRUCTURES
@@ -752,7 +753,10 @@ export {
 };
 
 // Run if executed directly
-if (require.main === module) {
+const __filename = fileURLToPath(import.meta.url);
+const isMainModule = process.argv[1] === __filename;
+
+if (isMainModule) {
   runPressureTests()
     .then(results => {
       const failed = results.filter(r => r.status === 'FAIL').length;
