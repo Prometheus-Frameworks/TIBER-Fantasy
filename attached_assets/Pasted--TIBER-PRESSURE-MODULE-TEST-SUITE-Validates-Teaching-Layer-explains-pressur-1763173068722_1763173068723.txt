@@ -1,0 +1,432 @@
+/**
+ * TIBER PRESSURE MODULE - TEST SUITE
+ * 
+ * Validates:
+ * - Teaching Layer explains pressure concepts clearly
+ * - River Layer uses appropriate metaphors
+ * - Tactical snap-back works from River mode
+ * - No stat hallucination in any layer
+ */
+
+import { expect } from 'chai';
+import { detectLayer } from '../services/river-detection';
+
+// ═══════════════════════════════════════════════════════════════
+// TEST DATA STRUCTURES
+// ═══════════════════════════════════════════════════════════════
+
+interface PressureTestCase {
+  name: string;
+  query: string;
+  expectedLayer: 'tactical' | 'teaching' | 'river';
+  mustInclude: string[];
+  mustNotInclude: string[];
+  description: string;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TEACHING LAYER TESTS
+// ═══════════════════════════════════════════════════════════════
+
+const TEACHING_TESTS: PressureTestCase[] = [
+  {
+    name: "Pressure Framework Explanation",
+    query: "How do you think about breakout pressure?",
+    expectedLayer: "teaching",
+    mustInclude: [
+      "pressure"
+    ],
+    mustNotInclude: [
+      "river",
+      "water finding",
+      "eternal",
+      "I am",
+      "73.4", // No specific PI numbers
+      "his PI is",
+      "pressure index of"
+    ],
+    description: "Should explain four pressure types clearly without river metaphors or fake stats"
+  },
+  {
+    name: "Spotting Early Pressure",
+    query: "How can I identify players about to break out?",
+    expectedLayer: "teaching",
+    mustInclude: [
+      "pressure"
+    ],
+    mustNotInclude: [
+      "channel",
+      "banks",
+      "snap share 67%", // No fabricated specific stats
+      "target share 23%",
+      "route depth of"
+    ],
+    description: "Should teach pressure spotting framework without inventing numbers"
+  },
+  {
+    name: "Pressure Components Detail",
+    query: "What creates breakout conditions?",
+    expectedLayer: "teaching",
+    mustInclude: [
+      "pressure"
+    ],
+    mustNotInclude: [
+      "mystical",
+      "cosmic",
+      "I observe",
+      "exact PI of",
+      "PI score of"
+    ],
+    description: "Should explain pressure components in grounded teaching voice"
+  }
+];
+
+// ═══════════════════════════════════════════════════════════════
+// RIVER LAYER TESTS
+// ═══════════════════════════════════════════════════════════════
+
+const RIVER_TESTS: PressureTestCase[] = [
+  {
+    name: "Pressure Philosophy",
+    query: "What's the nature of breakout seasons?",
+    expectedLayer: "river",
+    mustInclude: [
+      "pressure"
+    ],
+    mustNotInclude: [
+      "PPG",
+      "VORP",
+      "I am the river",
+      "mystical force",
+      "his pressure index is 73"
+    ],
+    description: "Should use river metaphors about pressure WITHOUT inventing stats or claiming mystical identity"
+  },
+  {
+    name: "Pattern Recurrence",
+    query: "Why do breakout patterns repeat?",
+    expectedLayer: "river",
+    mustInclude: [
+      "pressure",
+      "pattern"
+    ],
+    mustNotInclude: [
+      "start/sit",
+      "this week",
+      "PPG",
+      "cosmic",
+      "I am"
+    ],
+    description: "Should explain pattern recurrence with pressure metaphors"
+  },
+  {
+    name: "Collapse vs Breakout",
+    query: "Why do some players collapse while others break out?",
+    expectedLayer: "river",
+    mustInclude: [
+      "pressure"
+    ],
+    mustNotInclude: [
+      "ranking",
+      "VORP",
+      "I transcend",
+      "snap counts show"
+    ],
+    description: "Should use pressure concepts philosophically without claiming unavailable data"
+  }
+];
+
+// ═══════════════════════════════════════════════════════════════
+// SNAP-BACK TESTS
+// ═══════════════════════════════════════════════════════════════
+
+const SNAPBACK_TESTS = [
+  {
+    name: "River to Tactical Snap-Back",
+    riverQuery: "What's the nature of pressure accumulation?",
+    tacticalQuery: "Should I start Rico Dowdle or Jaylen Warren?",
+    description: "Should snap from river metaphors to direct tactical answer"
+  },
+  {
+    name: "Teaching to Tactical Snap-Back",
+    teachingQuery: "How do you identify high-pressure situations?",
+    tacticalQuery: "Bijan Robinson this week?",
+    description: "Should snap from teaching framework to tactical recommendation"
+  }
+];
+
+// ═══════════════════════════════════════════════════════════════
+// NO-HALLUCINATION TESTS
+// ═══════════════════════════════════════════════════════════════
+
+const NO_HALLUCINATION_TESTS: PressureTestCase[] = [
+  {
+    name: "No Specific PI Fabrication",
+    query: "What's the pressure index for Alec Pierce?",
+    expectedLayer: "teaching",
+    mustInclude: [],
+    mustNotInclude: [
+      "67.3",
+      "73.4",
+      "PI is 82",
+      "pressure index of 71"
+    ],
+    description: "Should NOT fabricate specific PI numbers, only conceptual ranges"
+  },
+  {
+    name: "No Metric Invention in River",
+    query: "Why do patterns emerge?",
+    expectedLayer: "river",
+    mustInclude: [],
+    mustNotInclude: [
+      "snap share is",
+      "target share of",
+      "1D/RR shows",
+      "route depth since"
+    ],
+    description: "River mode should NEVER invent specific stats"
+  }
+];
+
+// ═══════════════════════════════════════════════════════════════
+// TEST EXECUTION
+// ═══════════════════════════════════════════════════════════════
+
+describe('TIBER Pressure Module Tests', () => {
+  
+  describe('Teaching Layer - Pressure Framework', () => {
+    
+    TEACHING_TESTS.forEach(test => {
+      it(test.name, async () => {
+        // Verify layer detection
+        const detected = detectLayer(test.query);
+        expect(detected.layer).to.equal(test.expectedLayer,
+          `Should detect ${test.expectedLayer} layer`);
+        
+        // Get response from TIBER
+        const response = await getTiberResponse(test.query);
+        
+        // For framework explanation test, check for pressure components with synonym flexibility
+        if (test.name === "Pressure Framework Explanation") {
+          const synonymGroups = [
+            ["structural", "team", "scheme", "depth chart", "role"],
+            ["internal", "talent", "ability", "skill", "capability"],
+            ["external", "environment", "schedule", "opponents", "matchup"],
+            ["latent", "hidden", "unexpressed", "under the surface", "potential"]
+          ];
+          
+          const hitGroups = synonymGroups.filter(group =>
+            group.some(term => response.toLowerCase().includes(term))
+          );
+          
+          expect(hitGroups.length, 'Should mention at least 3 of 4 pressure components').to.be.greaterThanOrEqual(3);
+        }
+        
+        // Check required content
+        test.mustInclude.forEach(term => {
+          expect(response.toLowerCase()).to.include(term.toLowerCase(),
+            `Should include "${term}"`);
+        });
+        
+        // Check forbidden content
+        test.mustNotInclude.forEach(term => {
+          expect(response.toLowerCase()).to.not.include(term.toLowerCase(),
+            `Should NOT include "${term}"`);
+        });
+      });
+    });
+  });
+  
+  describe('River Layer - Pressure Metaphors', () => {
+    
+    RIVER_TESTS.forEach(test => {
+      it(test.name, async () => {
+        const detected = detectLayer(test.query);
+        expect(detected.layer).to.equal(test.expectedLayer);
+        
+        const response = await getTiberResponse(test.query);
+        
+        // Must have at least one river-appropriate pressure metaphor
+        const riverMetaphors = [
+          'pressure builds',
+          'tension',
+          'accumulate',
+          'release',
+          'surface',
+          'beneath'
+        ];
+        
+        const hasRiverLanguage = riverMetaphors.some(m =>
+          response.toLowerCase().includes(m)
+        );
+        
+        expect(hasRiverLanguage, 'Should use river-appropriate pressure language').to.be.true;
+        
+        // Check required and forbidden content
+        test.mustInclude.forEach(term => {
+          expect(response.toLowerCase()).to.include(term.toLowerCase());
+        });
+        
+        test.mustNotInclude.forEach(term => {
+          expect(response.toLowerCase()).to.not.include(term.toLowerCase());
+        });
+      });
+    });
+  });
+  
+  describe('Snap-Back Protocol', () => {
+    
+    SNAPBACK_TESTS.forEach(test => {
+      it(test.name, async () => {
+        // First query: Teaching or River
+        const firstQuery = (test as any).riverQuery || (test as any).teachingQuery;
+        const firstResponse = await getTiberResponse(firstQuery);
+        
+        // Verify non-tactical response
+        const tacticalTerms = ['PPG', 'VORP', 'RB', 'WR', 'start him'];
+        const isTactical = tacticalTerms.some(t =>
+          firstResponse.includes(t)
+        );
+        
+        expect(isTactical, 'First response should not be tactical').to.be.false;
+        
+        // Second query: Tactical
+        const secondResponse = await getTiberResponse((test as any).tacticalQuery);
+        
+        // Verify tactical response (has metrics)
+        const hasTacticalMetrics = tacticalTerms.some(t =>
+          secondResponse.includes(t)
+        );
+        
+        expect(hasTacticalMetrics, 'Second response should be tactical with metrics').to.be.true;
+        
+        // Verify NO river/teaching bleeding
+        const riverTerms = [
+          'pressure builds',
+          'water',
+          'flow finding',
+          'tension accumulates'
+        ];
+        
+        const hasRiverBleed = riverTerms.some(t =>
+          secondResponse.toLowerCase().includes(t)
+        );
+        
+        expect(hasRiverBleed, 'Tactical response should have no river language').to.be.false;
+      });
+    });
+  });
+  
+  describe('No Hallucination Enforcement', () => {
+    
+    NO_HALLUCINATION_TESTS.forEach(test => {
+      it(test.name, async () => {
+        const response = await getTiberResponse(test.query);
+        
+        // Check forbidden fabrications
+        test.mustNotInclude.forEach(term => {
+          expect(response).to.not.include(term,
+            `Should NOT fabricate: "${term}"`);
+        });
+        
+        // If PI mentioned, should only be in conceptual ranges
+        if (response.toLowerCase().includes('pressure') ||
+            response.toLowerCase().includes('pi')) {
+          
+          // Look for problematic specific PI claims like "PI is 67.3" or "pressure index of 71"
+          // But allow range notation like "20.0-40.0"
+          const specificPIClaims = [
+            /\bPI is \d+/i,
+            /\bPI of \d+/i,
+            /pressure index is \d+/i,
+            /pressure index of \d+/i
+          ];
+          
+          specificPIClaims.forEach(pattern => {
+            expect(response).to.not.match(pattern,
+              'Should not claim specific PI numbers'
+            );
+          });
+        }
+      });
+    });
+  });
+  
+  describe('Integration Test - Full Pressure Workflow', () => {
+    
+    it('should handle Teaching → River → Tactical flow', async () => {
+      // Step 1: Teaching question
+      const teachingQuery = "How do breakouts happen?";
+      const teachingResponse = await getTiberResponse(teachingQuery);
+      
+      expect(teachingResponse.toLowerCase()).to.include('pressure');
+      expect(teachingResponse.toLowerCase()).to.not.include('river');
+      
+      // Step 2: River question
+      const riverQuery = "Why do patterns repeat?";
+      const riverResponse = await getTiberResponse(riverQuery);
+      
+      const hasRiverMetaphor = [
+        'pressure builds',
+        'accumulate',
+        'release'
+      ].some(m => riverResponse.toLowerCase().includes(m));
+      
+      expect(hasRiverMetaphor, 'Should have river metaphor').to.be.true;
+      
+      // Step 3: Tactical snap-back
+      const tacticalQuery = "Start Bijan?";
+      const tacticalResponse = await getTiberResponse(tacticalQuery);
+      
+      expect(tacticalResponse).to.match(/RB\d+/); // Has ranking
+      expect(tacticalResponse).to.include('PPG'); // Has metrics
+      expect(tacticalResponse.toLowerCase()).to.not.include('pressure builds');
+    });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// HELPER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Replace with actual TIBER API call
+ */
+async function getTiberResponse(query: string): Promise<string> {
+  // TODO: Wire to actual TIBER endpoint
+  // For now, throw to indicate implementation needed
+  throw new Error('Implement getTiberResponse with actual TIBER API');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MANUAL TEST RUNNER
+// ═══════════════════════════════════════════════════════════════
+
+export async function runPressureTests() {
+  console.log('═══════════════════════════════════════════════════════════════');
+  console.log('TIBER PRESSURE MODULE - MANUAL TEST RUNNER');
+  console.log('═══════════════════════════════════════════════════════════════\n');
+  
+  // Test layer detection
+  console.log('LAYER DETECTION TESTS:\n');
+  
+  [...TEACHING_TESTS, ...RIVER_TESTS].forEach(test => {
+    const result = detectLayer(test.query);
+    const match = result.layer === test.expectedLayer ? '✓' : '✗';
+    console.log(`${match} "${test.query}"`);
+    console.log(`  Expected: ${test.expectedLayer}, Got: ${result.layer}\n`);
+  });
+  
+  console.log('═══════════════════════════════════════════════════════════════');
+}
+
+if (require.main === module) {
+  runPressureTests();
+}
+
+export {
+  TEACHING_TESTS,
+  RIVER_TESTS,
+  SNAPBACK_TESTS,
+  NO_HALLUCINATION_TESTS
+};
