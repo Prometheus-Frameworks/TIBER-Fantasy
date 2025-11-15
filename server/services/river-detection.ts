@@ -22,6 +22,37 @@ interface LayerDetectionResult {
   triggers: string[];
 }
 
+interface LayerDetectionLog {
+  query: string;
+  layer: 'tactical' | 'teaching' | 'river';
+  confidence: number;
+  boosts?: {
+    teach: number;
+    river: number;
+    tact: number;
+  };
+  timestamp?: string;
+}
+
+/**
+ * Log layer detection decisions for performance tracking
+ */
+function logLayerDetection(data: LayerDetectionLog): void {
+  // Truncate query for readability
+  const truncatedQuery = data.query.length > 160
+    ? data.query.slice(0, 157) + '...'
+    : data.query;
+
+  // Log with timestamp
+  console.log('[LAYER-DETECTION]', JSON.stringify({
+    q: truncatedQuery,
+    layer: data.layer,
+    conf: Number(data.confidence.toFixed(2)),
+    boosts: data.boosts,
+    ts: new Date().toISOString()
+  }));
+}
+
 /**
  * Tactical Layer Triggers (Layer 1)
  * Direct questions requiring immediate answers
@@ -263,18 +294,38 @@ export function detectLayer(query: string): LayerDetectionResult {
 
   // 7. Default to Tactical if all scores are 0
   if (confidence === 0) {
-    return {
-      layer: 'tactical',
+    const result = {
+      layer: 'tactical' as const,
       confidence: 0.5,
       triggers: ['default_tactical']
     };
+
+    // Log telemetry
+    logLayerDetection({
+      query,
+      layer: result.layer,
+      confidence: result.confidence,
+      boosts
+    });
+
+    return result;
   }
 
-  return {
+  const result = {
     layer,
     confidence,
     triggers: triggers.length > 0 ? triggers : [`${layer}: heuristic only`]
   };
+
+  // Log telemetry for all layer detections
+  logLayerDetection({
+    query,
+    layer: result.layer,
+    confidence: result.confidence,
+    boosts
+  });
+
+  return result;
 }
 
 // ═══════════════════════════════════════════════════════════════
