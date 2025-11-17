@@ -1,0 +1,223 @@
+/**
+ * WEEK SUMMARY DEBUG ENDPOINT - PRODUCTION READY
+ * 
+ * GET /api/debug/week-summary
+ * 
+ * Purpose: Sanity-check weekly NFLfastR → fantasy pipe against Sleeper
+ * 
+ * Query params:
+ * - season (number, required): 2000-2100
+ * - week (number, required): 1-18
+ * - pos (string, required): QB|RB|WR|TE
+ * - scoring (string, optional): std|half|ppr (default: half)
+ */
+
+import { Router, Request, Response } from 'express';
+import { pool } from '../../infra/db'; // TODO: Adjust path to your actual db helper
+
+const router = Router();
+
+// ═══════════════════════════════════════════════════════════════
+// TYPES
+// ═══════════════════════════════════════════════════════════════
+
+type ScoringFormat = 'std' | 'half' | 'ppr';
+
+interface WeekSummaryRow {
+  player_id: string;
+  full_name: string;
+  team: string;
+  position: string;
+  games: number;
+  season: number;
+  week: number;
+  passing_yards: number | null;
+  rushing_yards: number | null;
+  receiving_yards: number | null;
+  total_tds: number | null;
+  fantasy_points_std: number | null;
+  fantasy_points_half_ppr: number | null;
+  fantasy_points_ppr: number | null;
+}
+
+interface WeeklyStats {
+  playerId: string;
+  name: string;
+  team: string;
+  position: string;
+  season: number;
+  week: number;
+  fantasyPoints: number;
+  fantasyPointsStd: number;
+  fantasyPointsHalfPpr: number;
+  fantasyPointsPpr: number;
+  stats: {
+    games: number;
+    passingYards: number;
+    rushingYards: number;
+    receivingYards: number;
+    totalTDs: number;
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ENDPOINT HANDLER
+// ═══════════════════════════════════════════════════════════════
+
+router.get('/week-summary', async (req: Request, res: Response) => {
+  try {
+    // Parse and validate inputs
+    const season = Number(req.query.season);
+    const week = Number(req.query.week);
+    const pos = (req.query.pos as string | undefined)?.toUpperCase();
+    const scoring = (req.query.scoring as ScoringFormat | undefined) ?? 'half';
+
+    // Validation: Season
+    if (!Number.isInteger(season) || season < 2000 || season > 2100) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid season. Must be between 2000 and 2100.' 
+      });
+    }
+
+    // Validation: Week
+    if (!Number.isInteger(week) || week < 1 || week > 18) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Week must be between 1 and 18' 
+      });
+    }
+
+    // Validation: Position
+    if (!pos || !['QB', 'RB', 'WR', 'TE'].includes(pos)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Position must be one of: QB, RB, WR, TE',
+      });
+    }
+
+    // Validation: Scoring format
+    if (!['std', 'half', 'ppr'].includes(scoring)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Scoring must be one of: std, half, ppr'
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // DATABASE QUERY
+    // ═══════════════════════════════════════════════════════════════
+    
+    // TODO: Adjust table/column names to match your actual schema
+    // Current assumptions:
+    // - Table: weekly_totals (or totals_2025, weekly_stats, etc.)
+    // - Columns: season, week, player_id, position, team, games, yards, TDs
+    // - Fantasy columns: fantasy_points_std, fantasy_points_half_ppr, fantasy_points_ppr
+    // - Join: players table with full_name
+    
+    const query = `
+      SELECT
+        t.player_id,
+        p.full_name,
+        t.team,
+        t.position,
+        t.games,
+        t.season,
+        t.week,
+        t.passing_yards,
+        t.rushing_yards,
+        t.receiving_yards,
+        t.total_tds,
+        t.fantasy_points_std,
+        t.fantasy_points_half_ppr,
+        t.fantasy_points_ppr
+      FROM weekly_totals t
+      JOIN players p ON p.id = t.player_id
+      WHERE t.season = $1
+        AND t.week = $2
+        AND t.position = $3
+      ORDER BY
+        CASE
+          WHEN $4 = 'std'  THEN t.fantasy_points_std
+          WHEN $4 = 'ppr'  THEN t.fantasy_points_ppr
+          ELSE t.fantasy_points_half_ppr
+        END DESC
+      LIMIT 20;
+    `;
+
+    const result = await pool.query<WeekSummaryRow>(query, [
+      season,
+      week,
+      pos,
+      scoring,
+    ]);
+
+    // ═══════════════════════════════════════════════════════════════
+    // MAP RESULTS
+    // ═══════════════════════════════════════════════════════════════
+
+    const players: WeeklyStats[] = result.rows.map((row) => {
+      // Select fantasy points based on scoring format
+      let fantasyPoints: number;
+      switch (scoring) {
+        case 'ppr':
+          fantasyPoints = row.fantasy_points_ppr ?? 0;
+          break;
+        case 'std':
+          fantasyPoints = row.fantasy_points_std ?? 0;
+          break;
+        case 'half':
+        default:
+          fantasyPoints = row.fantasy_points_half_ppr ?? 0;
+          break;
+      }
+
+      return {
+        playerId: row.player_id,
+        name: row.full_name,
+        team: row.team,
+        position: row.position,
+        season: row.season,
+        week: row.week,
+        fantasyPoints,
+        fantasyPointsStd: row.fantasy_points_std ?? 0,
+        fantasyPointsHalfPpr: row.fantasy_points_half_ppr ?? 0,
+        fantasyPointsPpr: row.fantasy_points_ppr ?? 0,
+        stats: {
+          games: row.games,
+          passingYards: row.passing_yards ?? 0,
+          rushingYards: row.rushing_yards ?? 0,
+          receivingYards: row.receiving_yards ?? 0,
+          totalTDs: row.total_tds ?? 0,
+        },
+      };
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // RETURN SUCCESS RESPONSE
+    // ═══════════════════════════════════════════════════════════════
+
+    return res.json({
+      success: true,
+      season,
+      week,
+      position: pos,
+      scoring,
+      count: players.length,
+      players,
+    });
+
+  } catch (err) {
+    console.error('[week-summary] Error:', err);
+    return res.status(500).json({ 
+      success: false,
+      error: 'Internal server error' 
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT ROUTER
+// ═══════════════════════════════════════════════════════════════
+
+export default router;

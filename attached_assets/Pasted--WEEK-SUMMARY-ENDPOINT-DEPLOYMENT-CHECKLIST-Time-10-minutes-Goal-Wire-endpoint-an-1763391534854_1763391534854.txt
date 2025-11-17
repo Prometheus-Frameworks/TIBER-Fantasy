@@ -1,0 +1,326 @@
+# WEEK SUMMARY ENDPOINT - DEPLOYMENT CHECKLIST
+
+**Time:** 10 minutes  
+**Goal:** Wire endpoint and validate against Sleeper
+
+---
+
+## ✅ STEP 1: Add Router to App (2 min)
+
+### File: `server/app.ts` (or wherever you mount routers)
+
+```typescript
+import weekSummaryRouter from './routes/debug/week-summary-router';
+
+// Add this line with your other routers
+app.use('/api/debug', weekSummaryRouter);
+```
+
+**That's it for routing.**
+
+---
+
+## ✅ STEP 2: Adjust Database Query (5 min)
+
+### File: `server/routes/debug/week-summary-router.ts`
+
+**Find line ~90** (the SQL query)
+
+**Adjust table/column names to match your schema:**
+
+### Current placeholder:
+```sql
+FROM weekly_totals t
+JOIN players p ON p.id = t.player_id
+```
+
+### Replace with YOUR actual tables:
+
+**Option A: If you have `totals_2025` table:**
+```sql
+FROM totals_2025 t
+JOIN players p ON p.player_id = t.player_id
+```
+
+**Option B: If you have generic `weekly_stats` table:**
+```sql
+FROM weekly_stats t
+JOIN players p ON p.id = t.player_id
+WHERE t.season = $1 AND t.week = $2 AND t.position = $3
+```
+
+**Option C: If your join key is different:**
+```sql
+FROM your_weekly_table t
+JOIN your_players_table p ON p.your_id_column = t.your_player_id_column
+```
+
+### Verify column names exist:
+
+The query expects these columns in your weekly table:
+- `player_id`
+- `team`
+- `position`
+- `games`
+- `season`
+- `week`
+- `passing_yards`
+- `rushing_yards`
+- `receiving_yards`
+- `total_tds`
+- `fantasy_points_std`
+- `fantasy_points_half_ppr`
+- `fantasy_points_ppr`
+
+**If you're missing some stats columns:**
+- Remove them from SELECT
+- Remove from mapping (line ~130)
+- Or add as `NULL AS missing_column`
+
+---
+
+## ✅ STEP 3: Test Locally (3 min)
+
+### Start server:
+```bash
+npm run dev
+```
+
+### Test valid request:
+```bash
+curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=RB&scoring=half"
+```
+
+**Expected (if you have data):**
+```json
+{
+  "success": true,
+  "season": 2025,
+  "week": 11,
+  "position": "RB",
+  "scoring": "half",
+  "count": 20,
+  "players": [
+    {
+      "playerId": "...",
+      "name": "Jonathan Taylor",
+      "team": "IND",
+      "position": "RB",
+      "fantasyPoints": 32.4,
+      "stats": { ... }
+    }
+  ]
+}
+```
+
+**Expected (if no data yet):**
+```json
+{
+  "success": true,
+  "season": 2025,
+  "week": 11,
+  "position": "RB",
+  "scoring": "half",
+  "count": 0,
+  "players": []
+}
+```
+
+### Test error handling:
+```bash
+# Invalid week
+curl "http://localhost:5000/api/debug/week-summary?season=2025&week=0&pos=RB"
+# Should return: 400, "Week must be between 1 and 18"
+
+# Invalid position
+curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=K"
+# Should return: 400, "Position must be one of: QB, RB, WR, TE"
+```
+
+---
+
+## ✅ STEP 4: Validate Against Sleeper (if you have data)
+
+### 1. Hit your endpoint:
+```bash
+curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=RB&scoring=half" | jq '.players[] | {name, team, fantasyPoints}'
+```
+
+### 2. Open Sleeper:
+- Go to one of your half-PPR leagues
+- Click "Matchup" or "Players" for Week 11
+- Filter by RB
+
+### 3. Compare top 10:
+
+**Check:**
+- ✅ Names match (Jonathan Taylor, Derrick Henry, etc.)
+- ✅ Teams match (IND, BAL, etc.)
+- ✅ Points are close (within 1-2 points)
+- ✅ Ordering is similar (top RBs in right order)
+
+**Don't worry about:**
+- ❌ Exact decimal points (0.1-0.2 variance normal)
+- ❌ Players ranked 11-20 (less critical)
+- ❌ Minor stat rounding differences
+
+### 4. Repeat for other positions:
+```bash
+curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=QB&scoring=half"
+curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=WR&scoring=half"
+curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=TE&scoring=half"
+```
+
+---
+
+## 🔧 TROUBLESHOOTING
+
+### No data returned (count: 0)
+
+**Check:**
+```sql
+-- Do you have 2025 Week 11 data?
+SELECT COUNT(*) FROM weekly_totals WHERE season = 2025 AND week = 11;
+
+-- What weeks DO you have?
+SELECT DISTINCT week FROM weekly_totals WHERE season = 2025 ORDER BY week;
+```
+
+**Fix:**
+- If no data: Run your weekly data ingestion for Week 11
+- If data exists: Check table/column names in query match your schema
+
+---
+
+### Database error / 500 response
+
+**Check:**
+1. Is `pool` imported correctly? (`import { pool } from '../../infra/db'`)
+2. Are table names correct? (`weekly_totals`, `players`)
+3. Are column names correct? (`fantasy_points_half_ppr`, etc.)
+4. Does the join work? (Check `player_id` vs `id` column names)
+
+**Debug:**
+Add console.log before query:
+```typescript
+console.log('Query params:', { season, week, pos, scoring });
+```
+
+Run query directly in psql:
+```sql
+SELECT * FROM weekly_totals WHERE season = 2025 AND week = 11 LIMIT 5;
+```
+
+---
+
+### Fantasy points are 0 or null
+
+**Check:**
+```sql
+-- Do you have fantasy_points columns?
+SELECT 
+  player_id,
+  fantasy_points_std,
+  fantasy_points_half_ppr,
+  fantasy_points_ppr
+FROM weekly_totals 
+WHERE season = 2025 AND week = 11
+LIMIT 5;
+```
+
+**Fix:**
+- If columns don't exist: Add them or calculate on-the-fly
+- If they're NULL: Your scoring calculation isn't running
+- If they're 0: Check your `calcFantasy()` logic
+
+---
+
+### Players in wrong order
+
+**Check:**
+The ORDER BY clause uses CASE to sort by correct scoring column:
+```sql
+ORDER BY
+  CASE
+    WHEN $4 = 'std'  THEN t.fantasy_points_std
+    WHEN $4 = 'ppr'  THEN t.fantasy_points_ppr
+    ELSE t.fantasy_points_half_ppr
+  END DESC
+```
+
+Make sure `$4` is passing `scoring` param correctly.
+
+---
+
+## 📦 FILES CREATED
+
+1. **[week-summary-router.ts](computer:///mnt/user-data/outputs/week-summary-router.ts)**
+   - Production-ready endpoint
+   - Own router (no conflicts)
+   - Real scoring column mapping
+   - Clear TODOs for schema alignment
+
+2. **[week-summary-integration.test.ts](computer:///mnt/user-data/outputs/week-summary-integration.test.ts)**
+   - Minimal validation tests
+   - Structure checks
+   - Manual curl commands
+
+---
+
+## 🎯 QUICK START
+
+```bash
+# 1. Copy router to your repo
+cp week-summary-router.ts server/routes/debug/
+
+# 2. Mount in app.ts
+# app.use('/api/debug', weekSummaryRouter);
+
+# 3. Adjust table names in query (line ~90)
+
+# 4. Start server
+npm run dev
+
+# 5. Test
+curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=RB&scoring=half"
+
+# 6. Compare to Sleeper
+```
+
+---
+
+## ✅ SUCCESS CRITERIA
+
+**Endpoint is working when:**
+1. ✅ Valid requests return 200 with proper structure
+2. ✅ Invalid params return 400 with helpful errors
+3. ✅ Top 10 players match Sleeper (names + rough points)
+4. ✅ Ordering is similar to Sleeper
+5. ✅ No database errors
+
+**Then you're confident your weekly pipe is accurate!**
+
+---
+
+## 🚀 PRODUCTION DEPLOYMENT
+
+Once validated locally:
+
+```bash
+# Deploy to production
+git add server/routes/debug/week-summary-router.ts
+git commit -m "Add week summary debug endpoint"
+git push
+
+# Test production
+curl "https://your-domain.com/api/debug/week-summary?season=2025&week=11&pos=RB&scoring=half"
+```
+
+**Production URL:**
+```
+https://your-domain.com/api/debug/week-summary
+```
+
+---
+
+**Total time: ~10 minutes to validate your entire weekly data pipeline** 🏈

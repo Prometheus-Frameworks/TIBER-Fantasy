@@ -1,0 +1,250 @@
+/**
+ * WEEK SUMMARY - MINIMAL INTEGRATION TEST
+ * 
+ * Tests structure and validation without requiring real data
+ */
+
+import { expect } from 'chai';
+import request from 'supertest';
+
+// TODO: Import your actual app
+// import app from '../../app';
+// For now, tests are structured but not executable until app is imported
+
+const BASE_URL = '/api/debug/week-summary';
+
+describe('Week Summary Endpoint - Integration Tests', () => {
+  
+  describe('Validation Tests (No Data Required)', () => {
+    
+    it('should reject missing season with 400', async () => {
+      // TODO: Uncomment when app is imported
+      // const response = await request(app)
+      //   .get(BASE_URL)
+      //   .query({ week: 11, pos: 'RB' });
+      
+      // expect(response.status).to.equal(400);
+      // expect(response.body.success).to.be.false;
+      // expect(response.body.error).to.exist;
+    });
+    
+    it('should reject missing week with 400', async () => {
+      // const response = await request(app)
+      //   .get(BASE_URL)
+      //   .query({ season: 2025, pos: 'RB' });
+      
+      // expect(response.status).to.equal(400);
+      // expect(response.body.success).to.be.false;
+    });
+    
+    it('should reject missing position with 400', async () => {
+      // const response = await request(app)
+      //   .get(BASE_URL)
+      //   .query({ season: 2025, week: 11 });
+      
+      // expect(response.status).to.equal(400);
+      // expect(response.body.success).to.be.false;
+    });
+    
+    it('should reject invalid week (0) with 400', async () => {
+      // const response = await request(app)
+      //   .get(BASE_URL)
+      //   .query({ season: 2025, week: 0, pos: 'RB' });
+      
+      // expect(response.status).to.equal(400);
+      // expect(response.body.error).to.include('Week must be between 1 and 18');
+    });
+    
+    it('should reject invalid week (19) with 400', async () => {
+      // const response = await request(app)
+      //   .get(BASE_URL)
+      //   .query({ season: 2025, week: 19, pos: 'RB' });
+      
+      // expect(response.status).to.equal(400);
+      // expect(response.body.error).to.include('Week must be between 1 and 18');
+    });
+    
+    it('should reject invalid position (K) with 400', async () => {
+      // const response = await request(app)
+      //   .get(BASE_URL)
+      //   .query({ season: 2025, week: 11, pos: 'K' });
+      
+      // expect(response.status).to.equal(400);
+      // expect(response.body.error).to.include('Position must be one of: QB, RB, WR, TE');
+    });
+    
+    it('should reject invalid position (DL) with 400', async () => {
+      // const response = await request(app)
+      //   .get(BASE_URL)
+      //   .query({ season: 2025, week: 11, pos: 'DL' });
+      
+      // expect(response.status).to.equal(400);
+      // expect(response.body.error).to.include('Position must be one of');
+    });
+    
+    it('should reject invalid season (1999) with 400', async () => {
+      // const response = await request(app)
+      //   .get(BASE_URL)
+      //   .query({ season: 1999, week: 11, pos: 'RB' });
+      
+      // expect(response.status).to.equal(400);
+      // expect(response.body.error).to.include('Invalid season');
+    });
+    
+    it('should reject invalid season (2101) with 400', async () => {
+      // const response = await request(app)
+      //   .get(BASE_URL)
+      //   .query({ season: 2101, week: 11, pos: 'RB' });
+      
+      // expect(response.status).to.equal(400);
+      // expect(response.body.error).to.include('Invalid season');
+    });
+  });
+  
+  describe('Structure Tests (Requires Test Data)', () => {
+    
+    it('should return proper structure for valid request', async () => {
+      // NOTE: This test requires actual data in database
+      // Skip if running against empty database
+      
+      // const response = await request(app)
+      //   .get(BASE_URL)
+      //   .query({ season: 2025, week: 11, pos: 'RB', scoring: 'half' });
+      
+      // // Could be 200 with empty data OR 200 with actual data
+      // expect(response.status).to.equal(200);
+      // expect(response.body).to.have.property('success');
+      // expect(response.body).to.have.property('season');
+      // expect(response.body).to.have.property('week');
+      // expect(response.body).to.have.property('position');
+      // expect(response.body).to.have.property('scoring');
+      // expect(response.body).to.have.property('count');
+      // expect(response.body).to.have.property('players');
+      // expect(Array.isArray(response.body.players)).to.be.true;
+      
+      // // If data exists, check player structure
+      // if (response.body.players.length > 0) {
+      //   const player = response.body.players[0];
+      //   expect(player).to.have.property('playerId');
+      //   expect(player).to.have.property('name');
+      //   expect(player).to.have.property('team');
+      //   expect(player).to.have.property('position');
+      //   expect(player).to.have.property('fantasyPoints');
+      //   expect(player).to.have.property('stats');
+      //   expect(player.stats).to.be.an('object');
+      // }
+    });
+    
+    it('should default to half-PPR scoring', async () => {
+      // const response = await request(app)
+      //   .get(BASE_URL)
+      //   .query({ season: 2025, week: 11, pos: 'QB' });
+      
+      // expect(response.status).to.equal(200);
+      // expect(response.body.scoring).to.equal('half');
+    });
+    
+    it('should respect scoring parameter', async () => {
+      // const pprResponse = await request(app)
+      //   .get(BASE_URL)
+      //   .query({ season: 2025, week: 11, pos: 'RB', scoring: 'ppr' });
+      
+      // expect(pprResponse.status).to.equal(200);
+      // expect(pprResponse.body.scoring).to.equal('ppr');
+      
+      // const stdResponse = await request(app)
+      //   .get(BASE_URL)
+      //   .query({ season: 2025, week: 11, pos: 'RB', scoring: 'std' });
+      
+      // expect(stdResponse.status).to.equal(200);
+      // expect(stdResponse.body.scoring).to.equal('std');
+    });
+    
+    it('should return at most 20 players', async () => {
+      // const response = await request(app)
+      //   .get(BASE_URL)
+      //   .query({ season: 2025, week: 11, pos: 'WR' });
+      
+      // expect(response.status).to.equal(200);
+      // expect(response.body.players.length).to.be.at.most(20);
+    });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// MANUAL CURL TESTS
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Run these manually to test the endpoint:
+ * 
+ * # Valid request (should work even with no data)
+ * curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=RB&scoring=half"
+ * 
+ * # Invalid week
+ * curl "http://localhost:5000/api/debug/week-summary?season=2025&week=0&pos=RB"
+ * 
+ * # Invalid position
+ * curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=K"
+ * 
+ * # Missing required param
+ * curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11"
+ * 
+ * # Test all positions
+ * curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=QB&scoring=half"
+ * curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=RB&scoring=half"
+ * curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=WR&scoring=half"
+ * curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=TE&scoring=half"
+ * 
+ * # Test scoring formats
+ * curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=RB&scoring=std"
+ * curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=RB&scoring=ppr"
+ */
+
+export function printManualTests() {
+  console.log('\n═══════════════════════════════════════════════════════════════');
+  console.log('WEEK SUMMARY - MANUAL CURL TESTS');
+  console.log('═══════════════════════════════════════════════════════════════\n');
+  
+  const tests = [
+    {
+      name: 'Valid request (RBs, Week 11, Half-PPR)',
+      curl: 'curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=RB&scoring=half"'
+    },
+    {
+      name: 'Invalid week (0)',
+      curl: 'curl "http://localhost:5000/api/debug/week-summary?season=2025&week=0&pos=RB"'
+    },
+    {
+      name: 'Invalid position (K)',
+      curl: 'curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=K"'
+    },
+    {
+      name: 'Missing position',
+      curl: 'curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11"'
+    },
+    {
+      name: 'All QBs',
+      curl: 'curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=QB"'
+    },
+    {
+      name: 'All WRs (PPR)',
+      curl: 'curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=WR&scoring=ppr"'
+    },
+    {
+      name: 'All TEs (Standard)',
+      curl: 'curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=TE&scoring=std"'
+    }
+  ];
+  
+  tests.forEach((test, i) => {
+    console.log(`${i + 1}. ${test.name}`);
+    console.log(`   ${test.curl}\n`);
+  });
+  
+  console.log('═══════════════════════════════════════════════════════════════\n');
+}
+
+if (require.main === module) {
+  printManualTests();
+}

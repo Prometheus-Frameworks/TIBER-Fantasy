@@ -1,0 +1,159 @@
+// server/routes/debug/week-summary.ts
+import { Router, Request, Response } from 'express';
+import { pool } from '../../infra/db'; // adjust path if needed
+
+const router = Router();
+
+// Helper: scoring param → column name in weekly_stats
+const SCORING_COLUMN_MAP: Record<string, string> = {
+  std: 'fantasyPointsStd',
+  half: 'fantasyPointsHalf',
+  ppr: 'fantasyPointsPpr',
+};
+
+router.get('/week-summary', async (req: Request, res: Response) => {
+  try {
+    const seasonRaw = req.query.season as string;
+    const weekRaw = req.query.week as string;
+    const posRaw = req.query.pos as string;
+    const scoringRaw = (req.query.scoring as string) || 'half';
+
+    // Basic validation
+    const season = parseInt(seasonRaw, 10);
+    const week = parseInt(weekRaw, 10);
+    const pos = posRaw?.toUpperCase();
+    const scoring = scoringRaw.toLowerCase();
+
+    if (!season || !week || !pos) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required query params: season, week, pos',
+      });
+    }
+
+    if (week < 1 || week > 18) {
+      return res.status(400).json({
+        success: false,
+        error: 'Week must be between 1 and 18',
+      });
+    }
+
+    if (!['QB', 'RB', 'WR', 'TE'].includes(pos)) {
+      return res.status(400).json({
+        success: false,
+        error: 'pos must be one of QB, RB, WR, TE',
+      });
+    }
+
+    const scoringColumn = SCORING_COLUMN_MAP[scoring];
+    if (!scoringColumn) {
+      return res.status(400).json({
+        success: false,
+        error: 'scoring must be one of std, half, ppr',
+      });
+    }
+
+    // We select * and compute the summary in JS so we don't have to guess
+    // every exact column name / casing (camel vs snake).
+    const query = `
+      SELECT *
+      FROM weekly_stats
+      WHERE season = $1
+        AND week = $2
+        AND position = $3
+        AND ${scoringColumn} IS NOT NULL
+        AND ${scoringColumn} > 0
+      ORDER BY ${scoringColumn} DESC
+      LIMIT 20
+    `;
+
+    const { rows } = await pool.query(query, [season, week, pos]);
+
+    // Map rows → clean debug payload
+    const data = rows.map((row: any) => {
+      // Handle both camelCase + snake_case safely
+      const playerId = row.playerId ?? row.player_id ?? null;
+      const playerName = row.playerName ?? row.player_name ?? null;
+      const team = row.team ?? row.team_abbr ?? row.team_abbreviation ?? null;
+      const position = row.position ?? row.pos ?? pos;
+
+      const rushYds = row.rushYd ?? row.rushYds ?? row.rushing_yards ?? 0;
+      const recYds = row.recYd ?? row.recYds ?? row.receiving_yards ?? 0;
+      const passYds = row.passYd ?? row.passing_yards ?? 0;
+
+      const rushTds = row.rushTd ?? row.rushing_tds ?? 0;
+      const recTds = row.recTd ?? row.receiving_tds ?? 0;
+      const passTds = row.passTd ?? row.passing_tds ?? 0;
+
+      const totalTds = (rushTds || 0) + (recTds || 0) + (passTds || 0);
+
+      return {
+        season: row.season,
+        week: row.week,
+        position,
+        playerId,
+        playerName,
+        team,
+        fantasyPoints: {
+          std:
+            row.fantasyPointsStd ??
+            row.fantasy_points_std ??
+            row.fantasy_points_standard ??
+            null,
+          half:
+            row.fantasyPointsHalf ??
+            row.fantasy_points_half ??
+            row.fantasy_points_half_ppr ??
+            null,
+          ppr:
+            row.fantasyPointsPpr ??
+            row.fantasy_points_ppr ??
+            row.fantasy_points_full_ppr ??
+            null,
+          used: row[scoringColumn],
+        },
+        stats: {
+          passYds,
+          rushYds,
+          recYds,
+          passTds,
+          rushTds,
+          recTds,
+          totalTds,
+        },
+        raw: row, // keep full row for debugging if you want
+      };
+    });
+
+    return res.json({
+      success: true,
+      season,
+      week,
+      pos,
+      scoring,
+      count: data.length,
+      data,
+    });
+  } catch (err: any) {
+    console.error('[week-summary] error:', err);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal server error in week-summary endpoint',
+    });
+  }
+});
+
+export default router;
+2️⃣ Wire it into your main router
+In whatever your main route file is (often server/routes/index.ts or similar):
+
+ts
+Copy code
+import weekSummaryRouter from './debug/week-summary';
+
+// ...
+
+router.use('/api/debug', weekSummaryRouter);
+So the full path becomes:
+
+GET /api/debug/week-summary?season=2025&week=11&pos=RB&scoring=half
