@@ -1,0 +1,438 @@
+## 🔍 DIAGNOSTIC: 2025 Weekly Data Pipeline Check
+
+**Context:**
+J’s weekly data pipeline is built and tested, but there’s confusion about whether 2025 data is available. NFLfastR provides weekly data DURING the season (not just after it ends). We need to verify where the pipeline is blocked.
+
+**Goal:**
+Find out why 2025 data isn’t flowing through the system and fix it.
+
+-----
+
+## ✅ STEP 1: Verify NFLfastR Has 2025 Data
+
+**Run this test script to confirm NFLfastR has 2025 Weeks 1-11 available:**
+
+```python
+# test_nflfastr_2025.py
+import nfl_data_py as nfl
+import pandas as pd
+
+print("=" * 60)
+print("TESTING: NFLfastR 2025 Data Availability")
+print("=" * 60)
+
+try:
+    # Attempt to fetch 2025 play-by-play data
+    print("\n1. Fetching 2025 play-by-play data...")
+    pbp_2025 = nfl.import_pbp_data([2025])
+    
+    if pbp_2025 is None or len(pbp_2025) == 0:
+        print("❌ No 2025 data returned from NFLfastR")
+        print("This might mean:")
+        print("  - NFLfastR hasn't updated for 2025 yet")
+        print("  - Network issue")
+        print("  - Library needs update: pip install nfl-data-py --upgrade --break-system-packages")
+    else:
+        print(f"✅ Successfully fetched {len(pbp_2025)} plays from 2025")
+        
+        # Check which weeks are available
+        print("\n2. Available weeks in 2025 data:")
+        weeks = sorted(pbp_2025['week'].unique())
+        print(f"   Weeks: {weeks}")
+        print(f"   Total weeks: {len(weeks)}")
+        
+        # Sample a few plays from Week 11
+        print("\n3. Sample plays from Week 11:")
+        week_11 = pbp_2025[pbp_2025['week'] == 11]
+        if len(week_11) > 0:
+            print(f"   Total Week 11 plays: {len(week_11)}")
+            print("\n   Sample play:")
+            sample = week_11.iloc[0]
+            print(f"   Game: {sample['home_team']} vs {sample['away_team']}")
+            print(f"   Date: {sample['game_date']}")
+        else:
+            print("   ⚠️ No Week 11 data found")
+        
+        # Check for player stats
+        print("\n4. Sample player stats from Week 11:")
+        if len(week_11) > 0:
+            # Get rushers
+            rushers = week_11[week_11['rusher_player_name'].notna()]['rusher_player_name'].value_counts().head(5)
+            print("\n   Top 5 rushers by attempts:")
+            print(rushers)
+            
+            # Get receivers
+            receivers = week_11[week_11['receiver_player_name'].notna()]['receiver_player_name'].value_counts().head(5)
+            print("\n   Top 5 receivers by targets:")
+            print(receivers)
+        
+        print("\n" + "=" * 60)
+        print("✅ RESULT: 2025 data IS available from NFLfastR")
+        print("=" * 60)
+
+except Exception as e:
+    print(f"\n❌ ERROR: {e}")
+    print("\nTroubleshooting:")
+    print("1. Install/upgrade nfl-data-py:")
+    print("   pip install nfl-data-py --upgrade --break-system-packages")
+    print("2. Check internet connection")
+    print("3. Try fetching 2024 data as a test:")
+    print("   nfl.import_pbp_data([2024])")
+```
+
+**Expected result:** Should show Weeks 1-11 available with thousands of plays
+
+**If it fails:** The issue is with NFLfastR access, not your pipeline
+
+-----
+
+## ✅ STEP 2: Check Your Weekly Data Fetcher
+
+**Find your weekly data fetcher script** (probably something like `scripts/fetch_weekly_data.py` or `server/scripts/ingest_weekly.py`)
+
+**Look for this pattern:**
+
+```python
+# Fetcher probably looks like this:
+def fetch_week_data(season, week):
+    # Does it filter to only past years?
+    if season >= 2025:  # ❌ BAD - blocks 2025
+        raise ValueError("Season not completed")
+    
+    # Or does it have a hardcoded year check?
+    if season not in [2020, 2021, 2022, 2023, 2024]:  # ❌ BAD - missing 2025
+        raise ValueError("Invalid season")
+    
+    # Or does it accept current season?
+    pbp = nfl.import_pbp_data([season])  # ✅ GOOD - should work for 2025
+    return pbp[pbp['week'] == week]
+```
+
+**CHECK FOR:**
+
+1. ❌ Year validation that blocks 2025
+1. ❌ Hardcoded year lists missing 2025
+1. ❌ “Season must be complete” checks
+1. ❌ Date validation blocking future dates
+
+**FIX:**
+Remove or update any checks that prevent 2025 data fetching.
+
+-----
+
+## ✅ STEP 3: Test Your Weekly Fetcher Directly
+
+**Run your fetcher for 2025 Week 11:**
+
+```bash
+# However you normally run it, try:
+python scripts/fetch_weekly_data.py --season 2025 --week 11
+
+# Or if it's a module:
+python -m server.scripts.fetch_weekly_data 2025 11
+
+# Or if it's integrated:
+npm run fetch-week -- 2025 11
+```
+
+**Watch for error messages like:**
+
+- ❌ “Season 2025 not valid”
+- ❌ “Season not completed”
+- ❌ “Invalid year”
+- ❌ “Data not available”
+
+**If you see these → Your fetcher has validation blocking 2025**
+
+-----
+
+## ✅ STEP 4: Check Database for 2025 Data
+
+**Query your database to see if any 2025 data exists:**
+
+```sql
+-- Check if you have ANY 2025 data
+SELECT COUNT(*) as total_rows
+FROM weekly_totals 
+WHERE season = 2025;
+
+-- Check which weeks you have for 2025
+SELECT DISTINCT week, COUNT(*) as player_count
+FROM weekly_totals
+WHERE season = 2025
+GROUP BY week
+ORDER BY week;
+
+-- Check if you have 2024 data (for comparison)
+SELECT COUNT(*) as total_rows
+FROM weekly_totals
+WHERE season = 2024;
+```
+
+**Expected results:**
+
+- If count = 0 for 2025 → Data never made it to database
+- If count > 0 for 2025 → Data IS in database, might be API issue
+
+-----
+
+## ✅ STEP 5: Check API Endpoint Filters
+
+**Find your `/api/totals/:season` endpoint** (or similar)
+
+**Look for year filtering:**
+
+```typescript
+// Does your API block 2025?
+router.get('/totals/:season', async (req, res) => {
+  const season = parseInt(req.params.season);
+  
+  // ❌ BAD - blocks future seasons
+  if (season > 2024) {
+    return res.status(400).json({ error: 'Season not available' });
+  }
+  
+  // ❌ BAD - only allows past seasons
+  const validSeasons = [2020, 2021, 2022, 2023, 2024];
+  if (!validSeasons.includes(season)) {
+    return res.status(400).json({ error: 'Invalid season' });
+  }
+  
+  // ✅ GOOD - just queries whatever is in database
+  const data = await db.query('SELECT * FROM weekly_totals WHERE season = $1', [season]);
+});
+```
+
+**CHECK FOR:**
+
+1. Hardcoded year validation
+1. “Current season” checks
+1. Date range filters
+
+**FIX:**
+Let the API serve whatever data exists in the database.
+
+-----
+
+## ✅ STEP 6: Check getCurrentNFLWeek Function
+
+**Find your `getCurrentNFLWeek()` helper** (you mentioned this in the weekly pipe implementation)
+
+**It might look like:**
+
+```typescript
+function getCurrentNFLWeek(): number {
+  const now = new Date();
+  const season = now.getFullYear();
+  
+  // ❌ BAD - assumes we can't get current season data
+  if (season === 2025) {
+    throw new Error("2025 season not available");
+  }
+  
+  // ✅ GOOD - calculates current week
+  const seasonStart = new Date('2025-09-05'); // Week 1 start
+  const weeksSinceStart = Math.floor((now - seasonStart) / (7 * 24 * 60 * 60 * 1000));
+  return Math.min(weeksSinceStart + 1, 18);
+}
+```
+
+**CHECK FOR:**
+
+- Season year validation
+- Hardcoded season start dates
+- Logic that assumes current season unavailable
+
+-----
+
+## 🔧 COMMON ISSUES & FIXES
+
+### Issue 1: Fetcher Blocks 2025
+
+**Symptom:** Script refuses to fetch 2025 data
+
+**Fix:**
+
+```python
+# BEFORE (bad):
+if season >= 2025:
+    raise ValueError("Season not complete")
+
+# AFTER (good):
+if season < 2020 or season > 2025:
+    raise ValueError("Season must be between 2020-2025")
+```
+
+-----
+
+### Issue 2: API Validates Year
+
+**Symptom:** API returns 400 for 2025 requests
+
+**Fix:**
+
+```typescript
+// BEFORE (bad):
+if (season > 2024) {
+  return res.status(400).json({ error: 'Season not available' });
+}
+
+// AFTER (good):
+if (season < 2020 || season > 2030) {
+  return res.status(400).json({ error: 'Invalid season' });
+}
+// Let database query handle whether data exists
+```
+
+-----
+
+### Issue 3: Database Has No 2025 Data
+
+**Symptom:** Database queries return 0 rows for 2025
+
+**Fix:**
+
+```bash
+# Manually ingest 2025 Week 11
+python scripts/fetch_weekly_data.py --season 2025 --week 11
+
+# Or ingest all available weeks
+for week in {1..11}; do
+  python scripts/fetch_weekly_data.py --season 2025 --week $week
+done
+```
+
+-----
+
+### Issue 4: Week Guard Validation
+
+**Symptom:** “Week 11 hasn’t happened yet” error in November
+
+**Fix:**
+
+```typescript
+// BEFORE (bad):
+const today = new Date();
+const week11Start = new Date('2025-11-15');
+if (today < week11Start) {
+  throw new Error("Week 11 hasn't happened yet");
+}
+
+// AFTER (good):
+// Remove future week checking - if NFLfastR has the data, we can use it
+// Just validate week is in valid range (1-18)
+if (week < 1 || week > 18) {
+  throw new Error("Week must be between 1 and 18");
+}
+```
+
+-----
+
+## 📋 DIAGNOSTIC CHECKLIST
+
+Run through these and report results:
+
+```
+[ ] 1. NFLfastR test script runs successfully
+    └─ Shows Weeks 1-11 available for 2025
+
+[ ] 2. Weekly fetcher accepts 2025 as valid season
+    └─ No "season not complete" errors
+
+[ ] 3. Database contains 2025 data
+    └─ SELECT COUNT(*) FROM weekly_totals WHERE season = 2025 > 0
+
+[ ] 4. API serves 2025 data
+    └─ GET /api/totals/2025 returns data (not 400 error)
+
+[ ] 5. Week-summary endpoint works for 2025
+    └─ GET /api/debug/week-summary?season=2025&week=11&pos=RB returns data
+```
+
+-----
+
+## 🎯 EXPECTED OUTCOME
+
+After fixing, you should be able to:
+
+```bash
+# 1. Fetch 2025 Week 11 data
+python scripts/fetch_weekly_data.py --season 2025 --week 11
+
+# 2. Query it from database
+psql -c "SELECT COUNT(*) FROM weekly_totals WHERE season = 2025 AND week = 11"
+
+# 3. Access via API
+curl "http://localhost:5000/api/totals/2025?week=11"
+
+# 4. Use week-summary endpoint
+curl "http://localhost:5000/api/debug/week-summary?season=2025&week=11&pos=RB&scoring=half"
+```
+
+-----
+
+## 📤 WHAT TO REPORT BACK
+
+After running diagnostics, tell J:
+
+1. **NFLfastR test results:** Does it show 2025 Weeks 1-11?
+1. **Where the block is:** Fetcher? API? Database? Validation logic?
+1. **What you fixed:** Specific code changes made
+1. **Final test:** Can you now query 2025 Week 11 data?
+
+-----
+
+## 🚨 IF NFLFASTR GENUINELY DOESN’T HAVE 2025 DATA
+
+**This would be shocking because:**
+
+- NFLfastR updates weekly during the season
+- It’s November 17, 2025 - Week 11 is complete
+- Thousands of apps use this data in real-time
+
+**But if somehow true:**
+
+**Fallback Option 1: Sleeper API**
+
+```python
+import requests
+url = "https://api.sleeper.app/v1/stats/nfl/2025/11"
+response = requests.get(url)
+stats = response.json()
+```
+
+**Fallback Option 2: ESPN API**
+
+```python
+url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+response = requests.get(url)
+data = response.json()
+```
+
+**Fallback Option 3: FantasyData API** (requires key)
+
+```python
+# Free tier available
+url = f"https://api.sportsdata.io/v3/nfl/stats/json/PlayerGameStatsByWeek/2025/11"
+```
+
+-----
+
+## 💡 LIKELY CULPRIT
+
+**Based on the confusion, I bet the issue is:**
+
+Your weekly fetcher or API has validation logic that says:
+
+```python
+if season >= 2025:
+    raise ValueError("Season not complete - wait until end of year")
+```
+
+**This made sense when you built it in 2024, but now it’s 2025 and blocking current season data.**
+
+**Find and remove this check.**
+
+-----
+
+**Run the diagnostics and report back what you find!** 🔍

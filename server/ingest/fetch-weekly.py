@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NFLfastR weekly data fetcher using nfl_data_py.
+NFLfastR weekly data fetcher using nflreadpy (nfl_data_py was archived Sept 2025).
 Fetches a single week of player statistics and returns JSON.
 """
 
@@ -8,7 +8,7 @@ import sys
 import json
 import warnings
 import pandas as pd
-import nfl_data_py as nfl
+import nflreadpy as nfl
 
 # Suppress ALL warnings to keep JSON output clean
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -17,7 +17,7 @@ pd.options.mode.chained_assignment = None
 
 def fetch_weekly_stats(season: int, week: int):
     """
-    Fetch weekly player statistics from NFLfastR via nfl_data_py.
+    Fetch weekly player statistics from NFLfastR via nflreadpy.
     
     Args:
         season: NFL season year (e.g., 2025)
@@ -27,8 +27,11 @@ def fetch_weekly_stats(season: int, week: int):
         JSON array of player stats for the specified week
     """
     try:
-        # Fetch weekly data from nfl_data_py
-        df = nfl.import_weekly_data([season])
+        # Fetch player stats from nflreadpy (returns Polars DataFrame)
+        df_polars = nfl.load_player_stats([season])
+        
+        # Convert to pandas for easier manipulation
+        df = df_polars.to_pandas()
         
         # Filter to the specific week
         week_df = df[df['week'] == week].copy()
@@ -37,14 +40,23 @@ def fetch_weekly_stats(season: int, week: int):
         if week_df.empty:
             return []
         
-        # Handle duplicate columns by selecting only the first occurrence
-        week_df = week_df.loc[:, ~week_df.columns.duplicated()]
+        # Calculate total fumbles (sack + rush + rec fumbles lost)
+        week_df['fumbles'] = (
+            week_df.get('sack_fumbles_lost', 0).fillna(0) +
+            week_df.get('rushing_fumbles_lost', 0).fillna(0) +
+            week_df.get('receiving_fumbles_lost', 0).fillna(0)
+        ).astype(int)
         
-        # Select and rename relevant columns
-        # Map NFLfastR column names to our WeeklyRow interface
+        # Calculate total 2pt conversions
+        week_df['two_pt'] = (
+            week_df.get('passing_2pt_conversions', 0).fillna(0) +
+            week_df.get('rushing_2pt_conversions', 0).fillna(0) +
+            week_df.get('receiving_2pt_conversions', 0).fillna(0)
+        ).astype(int)
+        
+        # Map nflreadpy columns to our WeeklyRow interface
         week_df = week_df.rename(columns={
             'player_display_name': 'player_name',
-            'recent_team': 'team',
             'carries': 'rush_att',
             'rushing_yards': 'rush_yd',
             'rushing_tds': 'rush_td',
@@ -53,28 +65,9 @@ def fetch_weekly_stats(season: int, week: int):
             'receiving_tds': 'rec_td',
             'passing_yards': 'pass_yd',
             'passing_tds': 'pass_td',
-            'interceptions': 'int',
-            'sacks': 'sacks',
-            'sack_fumbles_lost': 'fumbles',
-            'rushing_fumbles_lost': 'rush_fumbles',
-            'receiving_fumbles_lost': 'rec_fumbles',
-            'rushing_2pt_conversions': 'rush_2pt',
-            'receiving_2pt_conversions': 'rec_2pt',
-            'passing_2pt_conversions': 'pass_2pt',
+            'passing_interceptions': 'int',
+            'sacks_suffered': 'sacks',
         })
-        
-        # Calculate total fumbles and 2pt conversions
-        week_df['fumbles'] = (
-            week_df.get('fumbles', 0).fillna(0) +
-            week_df.get('rush_fumbles', 0).fillna(0) +
-            week_df.get('rec_fumbles', 0).fillna(0)
-        ).astype(int)
-        
-        week_df['two_pt'] = (
-            week_df.get('rush_2pt', 0).fillna(0) +
-            week_df.get('rec_2pt', 0).fillna(0) +
-            week_df.get('pass_2pt', 0).fillna(0)
-        ).astype(int)
         
         # Select final columns
         output_cols = [
@@ -103,7 +96,9 @@ def fetch_weekly_stats(season: int, week: int):
         # Convert numpy types to native Python types for JSON serialization
         for row in result:
             for key, value in row.items():
-                if hasattr(value, 'item'):  # numpy type
+                if pd.isna(value):
+                    row[key] = None
+                elif hasattr(value, 'item'):  # numpy type
                     row[key] = value.item()
         
         return result

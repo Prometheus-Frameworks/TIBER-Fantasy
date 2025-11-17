@@ -14,3 +14,9 @@ scipy>=1.10.0
 # HTTP and utilities
 requests>=2.31.0
 beautifulsoup4>=4.12.0
+feedparser
+flask
+modules
+nflreadpy
+schedule
+scikit-learn
