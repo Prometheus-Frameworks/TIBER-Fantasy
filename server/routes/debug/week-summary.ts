@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { dbPool as pool } from '../../infra/db';
+import { CURRENT_NFL_SEASON, hasWeeklyData, getNoWeeklyDataMessage } from '../../lib/weekly-data';
 
 const router = Router();
 
@@ -16,7 +17,7 @@ router.get('/week-summary', async (req: Request, res: Response) => {
     const posRaw = req.query.pos as string;
     const scoringRaw = (req.query.scoring as string) || 'half';
 
-    const season = parseInt(seasonRaw, 10);
+    const season = parseInt(seasonRaw, 10) || CURRENT_NFL_SEASON;
     const week = parseInt(weekRaw, 10);
     const pos = posRaw?.toUpperCase();
     const scoring = scoringRaw.toLowerCase();
@@ -26,6 +27,12 @@ router.get('/week-summary', async (req: Request, res: Response) => {
         success: false,
         error: 'Missing required query params: season, week, pos',
       });
+    }
+    
+    // Weekly data availability guard
+    const dataAvailable = await hasWeeklyData(season);
+    if (!dataAvailable) {
+      return res.status(404).json(getNoWeeklyDataMessage(season));
     }
 
     if (week < 1 || week > 18) {

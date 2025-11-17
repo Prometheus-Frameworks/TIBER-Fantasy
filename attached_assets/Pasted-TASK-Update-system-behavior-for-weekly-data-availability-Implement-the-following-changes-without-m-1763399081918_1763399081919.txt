@@ -1,0 +1,94 @@
+TASK: Update system behavior for weekly data availability
+
+Implement the following changes without modifying the core prompt, unless explicitly stated. Use post-processing guards and endpoint logic instead.
+
+1. Weekly Data Availability Rule
+
+Add a deterministic guard (similar to the pressure lexicon guard) that enforces:
+
+If a user requests weekly stats for a season where weekly data is NOT in the database, respond:
+
+I don’t have weekly stats for that season yet. 
+I do have full-season rankings and VORP for 2025, and full weekly stats for 2024 if you want historical context.
+
+
+This applies to:
+
+Queries like “week 10 2025”
+
+“last week” when last week is in a season without weekly data
+
+“how did X do in week Y?” for unavailable seasons
+
+2. Detect Weekly Availability
+
+Add a helper:
+
+async function hasWeeklyData(season: number): Promise<boolean> {
+  const row = await db.query(
+    `SELECT 1 FROM weekly_stats WHERE season = $1 LIMIT 1`,
+    [season]
+  );
+  return row.rowCount > 0;
+}
+
+
+This MUST be called before performing any weekly stats lookup.
+
+3. Modify Weekly Lookup Pipeline
+
+Before querying weekly_stats:
+
+Check hasWeeklyData(season)
+
+If false, trigger the “no weekly data available” fallback reply (above)
+
+If true, proceed as normal
+
+4. No Prompt Changes Needed
+
+Do not modify the system prompt unless absolutely necessary.
+This should be implemented using:
+
+RAG guards
+
+response guards
+
+pre-query logic in the weekly stats module
+
+Exactly like we did for:
+
+pressureLexiconGuard
+
+banned metric guard
+
+stat hallucination prevention
+
+5. Scope of Change
+
+Apply this rule to:
+
+weekly statline feature (in development)
+
+start/sit explanations referencing weekly production
+
+trade questions referencing recent weekly performance
+
+any query where week detection occurs
+
+6. Output Requirement
+
+When done, return:
+
+modified files list
+
+diff sections
+
+instructions for manual QA step:
+
+/api/debug/week-summary on a season with no data
+
+natural-language query test:
+“How did Rashee Rice do in week 9 of 2025?”
+
+End of task. Execute when ready.

@@ -1,6 +1,7 @@
 import { WeeklyRow } from '../../shared/types/fantasy';
 import { hydrateFantasyVariants } from '../lib/scoring';
 import { getCurrentNFLWeek } from '../lib/timebox';
+import { CURRENT_NFL_SEASON } from '../../shared/config/seasons';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
@@ -67,10 +68,10 @@ export async function fetchWeeklyFromNflfastR(season: number, week: number): Pro
  * Fetch season-to-date weekly stats (weeks 1..N).
  * Never tries to fetch "full season" for current year.
  * 
- * @param season - NFL season year (e.g., 2025)
+ * @param season - NFL season year (defaults to CURRENT_NFL_SEASON from config)
  * @returns Array of all weekly stats for completed weeks
  */
-export async function fetchSeasonToDate(season: number): Promise<WeeklyRow[]> {
+export async function fetchSeasonToDate(season: number = CURRENT_NFL_SEASON): Promise<WeeklyRow[]> {
   const endWeek = getCurrentNFLWeek(season);
   
   if (endWeek === 0) {

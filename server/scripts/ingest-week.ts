@@ -9,14 +9,16 @@
 
 import { fetchWeeklyFromNflfastR } from '../ingest/nflfastr';
 import { storage } from '../storage';
+import { CURRENT_NFL_SEASON } from '../../shared/config/seasons';
 
 async function main() {
   const week = parseInt(process.argv[2], 10);
-  const season = parseInt(process.argv[3], 10) || 2024; // Allow season override, default to 2024
+  const season = parseInt(process.argv[3], 10) || CURRENT_NFL_SEASON; // Allow season override
   
   if (!week || week < 1 || week > 18) {
-    console.error('❌ Invalid week. Usage: tsx server/scripts/ingest-week.ts <week>');
-    console.error('   Example: tsx server/scripts/ingest-week.ts 10');
+    console.error('❌ Invalid week. Usage: tsx server/scripts/ingest-week.ts <week> [season]');
+    console.error(`   Example: tsx server/scripts/ingest-week.ts 10 (defaults to ${CURRENT_NFL_SEASON})`);
+    console.error('   Example: tsx server/scripts/ingest-week.ts 10 2024');
     process.exit(1);
   }
   
