@@ -1,0 +1,269 @@
+1) Data contract (what TIBER needs, every week)
+
+We standardize one shape no matter the source:
+
+// shared/types/fantasy.ts
+export type Scoring = 'std' | 'half' | 'ppr';
+
+export interface WeeklyRow {
+  season: number;          // 2025
+  week: number;            // 1..18
+  gsis_id?: string;        // optional crosswalk
+  player_id: string;       // stable id in your system
+  player_name: string;
+  team: string;
+  position: 'QB'|'RB'|'WR'|'TE';
+  // usage
+  snaps?: number;
+  routes?: number;
+  targets?: number;
+  rush_att?: number;
+  // production
+  rec?: number;
+  rec_yd?: number;
+  rec_td?: number;
+  rush_yd?: number;
+  rush_td?: number;
+  pass_yd?: number;
+  pass_td?: number;
+  int?: number;
+  fumbles?: number;
+  two_pt?: number;
+  // fantasy
+  fantasy_points_std?: number;
+  fantasy_points_half?: number;
+  fantasy_points_ppr?: number;
+}
+
+2) Scoring once, everywhere (fixes .5 vs 1 PPR drift)
+// server/lib/scoring.ts
+import { WeeklyRow, Scoring } from '../../shared/types/fantasy';
+
+export function calcFantasy(row: WeeklyRow, scoring: Scoring): number {
+  const pass = (row.pass_yd ?? 0) / 25 + (row.pass_td ?? 0) * 4 - (row.int ?? 0);
+  const rush = (row.rush_yd ?? 0) / 10 + (row.rush_td ?? 0) * 6;
+  const recv = (row.rec_yd ?? 0) / 10 + (row.rec_td ?? 0) * 6;
+  const base = pass + rush + recv + (row.two_pt ?? 0) * 2 - (row.fumbles ?? 0) * 2;
+  const pprBonus = (row.rec ?? 0) * (scoring === 'ppr' ? 1 : scoring === 'half' ? 0.5 : 0);
+  return +(base + pprBonus).toFixed(2);
+}
+
+export function hydrateFantasyVariants(row: WeeklyRow): WeeklyRow {
+  return {
+    ...row,
+    fantasy_points_std: calcFantasy(row, 'std'),
+    fantasy_points_half: calcFantasy(row, 'half'),
+    fantasy_points_ppr: calcFantasy(row, 'ppr'),
+  };
+}
+
+3) NFLfastR weekly fetcher with safe fallbacks
+
+Core rule: never try “full season 2025”; fetch weeks 1..N. If a week is missing/empty, skip and log. (You can wire to nflverse CSV or your Python sidecar; the interface stays the same.)
+
+// server/ingest/nflfastr.ts
+import { WeeklyRow } from '../../shared/types/fantasy';
+import { hydrateFantasyVariants } from '../lib/scoring';
+import { getCurrentNFLWeek } from '../lib/timebox'; // simple utility you control
+
+export async function fetchWeeklyFromNflfastR(season: number, week: number): Promise<WeeklyRow[]> {
+  // IMPLEMENTATION NOTE:
+  // - Option A: hit your Python worker that wraps nfl_data_py/import_weekly_data
+  // - Option B: pull nflverse weekly CSV for (season, week)
+  // Return normalized WeeklyRow[]
+  const raw: any[] = await pullWeek(season, week); // <- fill in
+  const rows = raw.map(mapNflfastRToWeeklyRow).map(hydrateFantasyVariants);
+  // sanity: drop rows with zero stats
+  return rows.filter(r =>
+    (r.rush_att ?? 0) + (r.targets ?? 0) + (r.rec ?? 0) + (r.pass_yd ?? 0) > 0
+  );
+}
+
+export async function fetchSeasonToDate(season: number): Promise<WeeklyRow[]> {
+  const endWeek = getCurrentNFLWeek(season); // e.g., 11
+  const all: WeeklyRow[] = [];
+  for (let w = 1; w <= endWeek; w++) {
+    try {
+      const wk = await fetchWeeklyFromNflfastR(season, w);
+      all.push(...wk);
+    } catch (e) {
+      console.warn(`[NFLfastR] skip season=${season} week=${w}:`, (e as Error).message);
+    }
+  }
+  return all;
+}
+
+// example mapper stub (fill actual field mapping)
+function mapNflfastRToWeeklyRow(x: any): WeeklyRow {
+  return {
+    season: Number(x.season),
+    week: Number(x.week),
+    player_id: x.player_id ?? x.gsis_id ?? `${x.player}${x.season}${x.week}`,
+    player_name: x.player ?? x.player_name,
+    team: x.posteam ?? x.team,
+    position: x.position,
+    snaps: x.offense_snaps ?? undefined,
+    routes: x.routes_run ?? undefined,
+    targets: x.targets ?? undefined,
+    rush_att: x.carries ?? x.rush_att ?? 0,
+    rec: x.receptions ?? 0,
+    rec_yd: x.receiving_yards ?? 0,
+    rec_td: x.receiving_tds ?? 0,
+    rush_yd: x.rushing_yards ?? 0,
+    rush_td: x.rushing_tds ?? 0,
+    pass_yd: x.passing_yards ?? 0,
+    pass_td: x.passing_tds ?? 0,
+    int: x.interceptions ?? 0,
+    fumbles: x.fumbles_lost ?? 0,
+    two_pt: (x.two_point_conversions ?? 0),
+  };
+}
+
+
+Guardrail: if anyone calls a “full season” path for 2025, throw and tell them to use fetchSeasonToDate(2025).
+
+4) DB tables (Postgres) for weekly + rollups
+-- db/migrations/2025_11_16_weekly_stats.sql
+CREATE TABLE IF NOT EXISTS weekly_stats (
+  season INT NOT NULL,
+  week INT NOT NULL,
+  player_id TEXT NOT NULL,
+  player_name TEXT NOT NULL,
+  team TEXT,
+  position TEXT,
+  snaps INT,
+  routes INT,
+  targets INT,
+  rush_att INT,
+  rec INT,
+  rec_yd INT,
+  rec_td INT,
+  rush_yd INT,
+  rush_td INT,
+  pass_yd INT,
+  pass_td INT,
+  int INT,
+  fumbles INT,
+  two_pt INT,
+  fantasy_points_std NUMERIC,
+  fantasy_points_half NUMERIC,
+  fantasy_points_ppr NUMERIC,
+  PRIMARY KEY (season, week, player_id)
+);
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS season_totals AS
+SELECT
+  season,
+  player_id,
+  MAX(player_name) AS player_name,
+  MAX(team) AS team,
+  MAX(position) AS position,
+  SUM(fantasy_points_std)  AS fp_std,
+  SUM(fantasy_points_half) AS fp_half,
+  SUM(fantasy_points_ppr)  AS fp_ppr,
+  COUNT(*) AS games
+FROM weekly_stats
+GROUP BY season, player_id;
+
+-- Optional index for rankings
+CREATE INDEX IF NOT EXISTS idx_season_totals_fp_ppr ON season_totals (season, fp_ppr DESC);
+
+5) Sleeper reconciliation (the ranking truth)
+
+We make Sleeper the display rank (because that’s what users see), but compute our own points to power decisions. If the user supplies a league id, we detect the league’s scoring; otherwise default to half.
+
+// server/services/ranks.ts
+import { Scoring } from '../../shared/types/fantasy';
+import { getSleeperRanks } from './sleeper';
+import { getSeasonTotals } from './db';
+
+export async function getCurrentRanks(season: number, scoring: Scoring, opts?: { leagueId?: string }) {
+  const sleeper = await getSleeperRanks(opts?.leagueId); // returns { player_id, display_rank, source: 'sleeper' }
+  const ours = await getSeasonTotals(season);            // fp_std/half/ppr
+
+  // join on player_id; if mismatch, use your existing id-map
+  const joined = joinById(sleeper, ours);
+
+  return joined.map(row => ({
+    player_id: row.player_id,
+    player_name: row.player_name,
+    team: row.team,
+    position: row.position,
+    display_rank: row.display_rank, // Sleeper’s rank (what users expect)
+    tibers_fp: scoring === 'ppr' ? row.fp_ppr : scoring === 'half' ? row.fp_half : row.fp_std,
+    games: row.games,
+  }));
+}
+
+6) API surfaces TIBER can hit
+// server/routes/weekly.ts
+// GET /api/weekly/:season/:week?scoring=half
+// -> per-week rows with fantasy points
+// GET /api/totals/:season?scoring=half
+// -> materialized rollups
+// GET /api/ranks/current?season=2025&scoring=half&leagueId=XXXX
+// -> reconciled ranking (Sleeper display + TIBER points)
+
+7) Cron + safety
+
+Nightly job: fetchSeasonToDate(2025) → upsert into weekly_stats → refresh season_totals.
+
+Guards:
+
+If a week fetch returns 0 rows, don’t fail the job—log and continue.
+
+Never store partial duplicate (PK will protect).
+
+Require scoring everywhere TIBER needs exact ranks.
+
+8) Quick tests (catch the old bugs)
+// server/tests/weekly-ingest.spec.ts
+import { expect } from 'chai';
+import { fetchWeeklyFromNflfastR } from '../ingest/nflfastr';
+
+describe('Weekly ingest guardrails', () => {
+  it('never fetches full-season for current year', async () => {
+    // calling a forbidden path should throw
+    let threw = false;
+    try {
+      // @ts-expect-error simulate old call
+      await (fetchWeeklyFromNflfastR as any)(2025);
+    } catch { threw = true; }
+    expect(threw).to.equal(true);
+  });
+
+  it('hydrates fantasy points for all scoring variants', async () => {
+    const wk = await fetchWeeklyFromNflfastR(2024, 10);
+    expect(wk[0]).to.have.property('fantasy_points_half');
+    expect(wk[0]).to.have.property('fantasy_points_ppr');
+  });
+});
+
+9) Hand-off message you can paste to Grok
+Grok — implement WEEKLY DATA PIPE:
+
+1) Add shared type WeeklyRow and scoring utils (calcFantasy + hydrateFantasyVariants).
+2) Implement nflfastR weekly fetcher:
+   - fetchWeeklyFromNflfastR(season, week)
+   - fetchSeasonToDate(season) loops weeks 1..N (no full-season for 2025)
+   - Map fields and hydrate fantasy points for std/half/ppr.
+3) Create Postgres tables:
+   - weekly_stats (PRIMARY KEY (season, week, player_id))
+   - materialized view season_totals (fp_std/half/ppr).
+4) Reconcile ranks:
+   - getCurrentRanks(season, scoring, { leagueId? })
+   - Display rank from Sleeper; TIBER decisions from our computed points.
+5) Routes:
+   - GET /api/weekly/:season/:week?scoring=half
+   - GET /api/totals/:season?scoring=half
+   - GET /api/ranks/current?season=2025&scoring=half&leagueId=XXXX
+6) Cron:
+   - Nightly: fetchSeasonToDate(2025) → upsert → refresh materialized view.
+7) Tests:
+   - Guard against full-season 2025
+   - Ensure fantasy_points_* present
+
+After merge, TIBER should:
+- Answer with correct half vs ppr points
+- Stop citing non-existent 2025 “full season”
+- Use our weekly physics (derivatives) next step

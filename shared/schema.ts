@@ -589,6 +589,59 @@ export const depthCharts = pgTable("depth_charts", {
   ),
 }));
 
+// Weekly Stats - NFLfastR 2025 weekly player statistics with fantasy scoring
+export const weeklyStats = pgTable("weekly_stats", {
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  playerId: text("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  team: text("team"),
+  position: text("position"),
+  
+  // Usage metrics
+  snaps: integer("snaps"),
+  routes: integer("routes"),
+  targets: integer("targets"),
+  rushAtt: integer("rush_att"),
+  
+  // Production metrics
+  rec: integer("rec"),
+  recYd: integer("rec_yd"),
+  recTd: integer("rec_td"),
+  rushYd: integer("rush_yd"),
+  rushTd: integer("rush_td"),
+  passYd: integer("pass_yd"),
+  passTd: integer("pass_td"),
+  int: integer("int"),
+  fumbles: integer("fumbles"),
+  twoPt: integer("two_pt"),
+  
+  // Fantasy points (pre-calculated for all scoring formats)
+  fantasyPointsStd: real("fantasy_points_std"),
+  fantasyPointsHalf: real("fantasy_points_half"),
+  fantasyPointsPpr: real("fantasy_points_ppr"),
+  
+  // Metadata
+  gsisId: text("gsis_id"), // NFLfastR crosswalk ID
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Primary key: season + week + player_id (upsert-safe)
+  pk: primaryKey({ columns: [table.season, table.week, table.playerId] }),
+  
+  // Fast player lookups
+  playerIdIdx: index("weekly_stats_player_id_idx").on(table.playerId),
+  
+  // Season-wide queries
+  seasonPlayerIdx: index("weekly_stats_season_player_idx").on(table.season, table.playerId),
+  
+  // Week-specific queries
+  seasonWeekIdx: index("weekly_stats_season_week_idx").on(table.season, table.week),
+  
+  // Position-based rankings
+  seasonPositionIdx: index("weekly_stats_season_position_idx").on(table.season, table.position),
+}));
+
 // ========================================
 // ENUMS FOR BUYS/SELLS TRADE ADVICE MODEL
 // ========================================
