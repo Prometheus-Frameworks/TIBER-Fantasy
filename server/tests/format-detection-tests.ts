@@ -161,6 +161,28 @@ const TEST_CASES: TestCase[] = [
     minConfidence: 0.55,
     description: 'Future pick vs weekly need (dynasty pick signal stronger)',
   },
+  
+  // ═══════════════════════════════════════════════════════════════
+  // NEGATIVE TESTS (common phrases that should NOT trigger dynasty)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    query: 'Who scored the first touchdown last week?',
+    expectedFormat: 'redraft',
+    minConfidence: 0.5,
+    description: 'Negative test: "first touchdown" should not trigger dynasty',
+  },
+  {
+    query: 'What happened in the second half of the game?',
+    expectedFormat: 'dynasty',
+    minConfidence: 0.4,
+    description: 'Negative test: "second half" should not trigger dynasty (ambiguous)',
+  },
+  {
+    query: 'Did he get a second chance at the end zone?',
+    expectedFormat: 'dynasty',
+    minConfidence: 0.4,
+    description: 'Negative test: "a second chance" should not trigger dynasty',
+  },
 ];
 
 /**

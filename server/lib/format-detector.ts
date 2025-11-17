@@ -25,7 +25,7 @@ const REDRAFT_SIGNALS = [
   { pattern: /\bhalf ppr\b|\bfull ppr\b|\bstandard\b/i, weight: 1.0, reason: 'Scoring format (redraft context)' },
   
   // Weekly/temporal focus
-  { pattern: /\bthis week\b|\bnext week\b/i, weight: 1.5, reason: 'This week / next week' },
+  { pattern: /\b(this|next|last) week\b/i, weight: 1.5, reason: 'Weekly time reference' },
   { pattern: /\bweek \d+\b/i, weight: 1.3, reason: 'Specific week number' },
   { pattern: /\btonight\b|\bsunday\b|\bthursday\b|\bmonday\b/i, weight: 1.2, reason: 'Game day reference' },
   { pattern: /\bmatchup\b/i, weight: 1.0, reason: 'Matchup focus' },
@@ -54,18 +54,19 @@ const DYNASTY_SIGNALS = [
   
   // Draft picks
   { pattern: /\b20\d{2} (1st|2nd|3rd|first|second|third|pick)\b/i, weight: 2.0, reason: 'Future draft pick' },
-  { pattern: /\b(1st|2nd|3rd|first|second|third) round pick\b/i, weight: 1.5, reason: 'Draft pick discussion' },
+  { pattern: /\b(1st|2nd|3rd|first|second|third)( round)? pick\b/i, weight: 1.5, reason: 'Draft pick discussion' },
+  { pattern: /\b(trade|get|give|for|plus|\+).*?(a|the) (1st|2nd|3rd)\b/i, weight: 1.3, reason: 'Draft pick in trade context' },
   { pattern: /\bpick(s)?\b.*\btrade\b|\btrade\b.*\bpick(s)?\b/i, weight: 1.2, reason: 'Trade involving picks' },
   
   // Windows and timeline
   { pattern: /\b(contend|contending|rebuild|rebuilding|window)\b/i, weight: 1.5, reason: 'Window/rebuild language' },
   { pattern: /\blong[- ]term\b/i, weight: 1.2, reason: 'Long-term focus' },
-  { pattern: /\bnext (year|season)\b|20\d{2} season\b/i, weight: 1.0, reason: 'Future season focus' },
+  { pattern: /\b(next|20\d{2}) (year|season)\b|\bfor 20\d{2}\b/i, weight: 1.0, reason: 'Future season focus' },
   
   // Age and career arc
   { pattern: /\bage curve\b/i, weight: 1.8, reason: 'Age curve mention' },
-  { pattern: /\byoung (asset|player|talent)\b/i, weight: 1.0, reason: 'Young asset focus' },
-  { pattern: /\b(breakout|sophomore|rookie) season\b/i, weight: 0.7, reason: 'Development arc' },
+  { pattern: /\byoung (asset|player|talent|rb|wr|qb|te)\b/i, weight: 1.0, reason: 'Young asset focus' },
+  { pattern: /\b(breakout|sophomore|rookie) (season|potential|candidate)\b/i, weight: 0.7, reason: 'Development arc' },
   
   // Insulation and value
   { pattern: /\binsulation\b/i, weight: 1.5, reason: 'Insulation (dynasty concept)' },
@@ -79,13 +80,14 @@ const DYNASTY_SIGNALS = [
 export function detectFormat(message: string): FormatDetectionResult {
   let redraftScore = 0;
   let dynastyScore = 0;
-  const reasons: string[] = [];
+  const redraftReasons: string[] = [];
+  const dynastyReasons: string[] = [];
   
   // Score redraft signals
   for (const signal of REDRAFT_SIGNALS) {
     if (signal.pattern.test(message)) {
       redraftScore += signal.weight;
-      reasons.push(`Redraft: ${signal.reason}`);
+      redraftReasons.push(signal.reason);
     }
   }
   
@@ -93,7 +95,7 @@ export function detectFormat(message: string): FormatDetectionResult {
   for (const signal of DYNASTY_SIGNALS) {
     if (signal.pattern.test(message)) {
       dynastyScore += signal.weight;
-      reasons.push(`Dynasty: ${signal.reason}`);
+      dynastyReasons.push(signal.reason);
     }
   }
   
@@ -144,10 +146,13 @@ export function detectFormat(message: string): FormatDetectionResult {
   // Cap confidence at 0.95 (never 100% certain)
   confidence = Math.min(0.95, confidence);
   
+  // Return only the winning format's reasons for clearer logging
+  const winningReasons = format === 'dynasty' ? dynastyReasons : redraftReasons;
+  
   return {
     format,
     confidence,
-    reasons,
+    reasons: winningReasons,
   };
 }
 
