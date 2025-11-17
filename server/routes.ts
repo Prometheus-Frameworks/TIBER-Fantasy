@@ -110,6 +110,7 @@ import weeklyTakesRoutes from './routes/weeklyTakesRoutes';
 import playerComparePilotRoutes from './routes/playerComparePilotRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import teamReportsRoutes from './routes/teamReportsRoutes';
+import weekSummaryRouter from './routes/debug/week-summary';
 import { monitoringService } from './services/MonitoringService';
 import { adminService } from './services/AdminService';
 import { requireAdminAuth } from './middleware/adminAuth';
@@ -3013,6 +3014,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // EPA Sanity Check System
   app.use('/api/sanity-check', epaSanityCheckRoutes);
   console.log('🔬 EPA Sanity Check routes mounted at /api/sanity-check/*');
+  
+  // Week Summary Debug Endpoint - Validate NFLfastR pipeline against Sleeper
+  app.use('/api/debug', weekSummaryRouter);
+  console.log('🔍 Week Summary Debug routes mounted at /api/debug/week-summary');
   
   // Defense vs Position (DvP) matchup system
   const { calculateDefenseVsPosition, getDefenseVsPosition, getMatchupRating } = await import('./services/defenseVsPositionService');
