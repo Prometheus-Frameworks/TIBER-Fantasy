@@ -68,6 +68,12 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
     - **Mixed Meta + Tactics Rule**: Prioritizes tactical decisions in responses.
     - **Possessive Form Guard**: Avoids possessive form with banned metrics.
     - **2024 Baseline Training Data Integration**: Uses historical 2024 data (player stats, usage patterns, elite baselines) to teach evaluation frameworks, strictly framed as historical data.
+    - **Format Brain (Redraft vs Dynasty Detection)**: Dual-brain system detecting query format to adjust response depth and time horizon:
+        - **Redraft Detection**: Weekly matchups, start/sit, waivers, ROS focus → Tactical surface responses
+        - **Dynasty Detection**: Draft picks, age curves, windows, long-term value → Strategic depth responses
+        - **Implementation**: Heuristic-based with 80+ signal patterns, 25/25 test cases passing (100%)
+        - **Logging**: Format detection logged alongside layer detection for monitoring
+        - **Default Behavior**: Ambiguous queries default to dynasty (general player evaluation context)
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
