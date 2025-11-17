@@ -6365,6 +6365,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================================
+  // WEEKLY STATS DATA PIPE
+  // ========================================
+
+  // GET /api/weekly/:season/:week - Get weekly stats for a specific week
+  app.get('/api/weekly/:season/:week', async (req: Request, res: Response) => {
+    try {
+      const { season, week } = req.params;
+      const { scoring = 'half', position, playerId } = req.query;
+      
+      const filters: any = {
+        season: parseInt(season),
+        week: parseInt(week)
+      };
+      
+      if (position) filters.position = position as string;
+      if (playerId) filters.playerId = playerId as string;
+      
+      const stats = await storage.getWeeklyStats(filters);
+      
+      res.json({
+        success: true,
+        season: parseInt(season),
+        week: parseInt(week),
+        scoring: scoring as string,
+        count: stats.length,
+        data: stats
+      });
+    } catch (error) {
+      console.error('❌ [Weekly Stats] Failed to fetch weekly stats:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/totals/:season - Get season totals with fantasy scoring
+  app.get('/api/totals/:season', async (req: Request, res: Response) => {
+    try {
+      const { season } = req.params;
+      const { scoring = 'half' } = req.query;
+      
+      const totals = await storage.getSeasonTotals(
+        parseInt(season),
+        scoring as 'std' | 'half' | 'ppr'
+      );
+      
+      res.json({
+        success: true,
+        season: parseInt(season),
+        scoring: scoring as string,
+        count: totals.length,
+        data: totals
+      });
+    } catch (error) {
+      console.error('❌ [Season Totals] Failed to fetch season totals:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/weekly/player/:playerId - Get all weekly stats for a specific player
+  app.get('/api/weekly/player/:playerId', async (req: Request, res: Response) => {
+    try {
+      const { playerId } = req.params;
+      const { season = '2025' } = req.query;
+      
+      const stats = await storage.getPlayerWeeklyStats(
+        playerId,
+        parseInt(season as string)
+      );
+      
+      res.json({
+        success: true,
+        player_id: playerId,
+        season: parseInt(season as string),
+        weeks: stats.length,
+        data: stats
+      });
+    } catch (error) {
+      console.error('❌ [Player Weekly Stats] Failed to fetch player stats:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+
+  // POST /api/weekly/sync - Trigger weekly data sync
+  app.post('/api/weekly/sync', async (req: Request, res: Response) => {
+    try {
+      const { season = 2025, week } = req.body;
+      const { fetchSeasonToDate, fetchWeeklyFromNflfastR } = await import('./ingest/nflfastr');
+      
+      let stats;
+      if (week) {
+        console.log(`🔄 [Weekly Sync] Fetching season=${season} week=${week}...`);
+        stats = await fetchWeeklyFromNflfastR(season, week);
+      } else {
+        console.log(`🔄 [Weekly Sync] Fetching season=${season} (season-to-date)...`);
+        stats = await fetchSeasonToDate(season);
+      }
+      
+      const result = await storage.upsertWeeklyStats(stats);
+      
+      console.log(`✅ [Weekly Sync] Synced ${result.inserted} records for season=${season}`);
+      
+      res.json({
+        success: true,
+        season,
+        week: week || 'all',
+        records: result.inserted,
+        message: `Successfully synced ${result.inserted} weekly stat records`
+      });
+    } catch (error) {
+      console.error('❌ [Weekly Sync] Sync failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+
+  // ========================================
   // LEAGUE MANAGEMENT ROUTES
   // ========================================
 
