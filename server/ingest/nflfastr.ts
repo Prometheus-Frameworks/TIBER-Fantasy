@@ -4,6 +4,10 @@ import { getCurrentNFLWeek } from '../lib/timebox';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const execAsync = promisify(exec);
 
@@ -31,7 +35,11 @@ export async function fetchWeeklyFromNflfastR(season: number, week: number): Pro
       console.warn(`[NFLfastR] Python stderr for season=${season} week=${week}:`, stderr);
     }
     
-    const raw: any[] = JSON.parse(stdout);
+    // Strip any non-JSON text before the opening bracket (pandas warnings, etc.)
+    const jsonStart = stdout.indexOf('[');
+    const cleanOutput = jsonStart >= 0 ? stdout.substring(jsonStart) : stdout;
+    
+    const raw: any[] = JSON.parse(cleanOutput);
     
     if (raw.length === 0) {
       console.warn(`[NFLfastR] No data returned for season=${season} week=${week}`);

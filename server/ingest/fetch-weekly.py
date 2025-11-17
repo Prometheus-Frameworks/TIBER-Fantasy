@@ -6,7 +6,14 @@ Fetches a single week of player statistics and returns JSON.
 
 import sys
 import json
+import warnings
+import pandas as pd
 import nfl_data_py as nfl
+
+# Suppress ALL warnings to keep JSON output clean
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=UserWarning)
+pd.options.mode.chained_assignment = None
 
 def fetch_weekly_stats(season: int, week: int):
     """
@@ -90,8 +97,8 @@ def fetch_weekly_stats(season: int, week: int):
             (week_df['pass_yd'].fillna(0) > 0)
         ]
         
-        # Convert to dict and handle NaN values
-        result = week_df[output_cols].fillna(0).to_dict('records')
+        # Convert to dict - use replace instead of fillna to avoid downcasting messages
+        result = week_df[output_cols].replace({pd.NA: 0, pd.NaT: None}).to_dict('records')
         
         # Convert numpy types to native Python types for JSON serialization
         for row in result:
