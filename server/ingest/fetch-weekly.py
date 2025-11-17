@@ -30,6 +30,9 @@ def fetch_weekly_stats(season: int, week: int):
         if week_df.empty:
             return []
         
+        # Handle duplicate columns by selecting only the first occurrence
+        week_df = week_df.loc[:, ~week_df.columns.duplicated()]
+        
         # Select and rename relevant columns
         # Map NFLfastR column names to our WeeklyRow interface
         week_df = week_df.rename(columns={
