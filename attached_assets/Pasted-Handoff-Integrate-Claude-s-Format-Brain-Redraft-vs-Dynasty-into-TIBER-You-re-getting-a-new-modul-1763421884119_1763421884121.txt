@@ -1,0 +1,254 @@
+Handoff: Integrate Claude’s Format Brain (Redraft vs Dynasty) into TIBER
+
+You’re getting a new module from Claude that adds a second axis to TIBER’s brain:
+
+Existing axis: layer → tactical | teaching | river
+
+New axis: format → redraft | dynasty
+
+The goal is to:
+
+Detect format from the user’s message,
+
+Bias RAG toward the right content,
+
+Tell the LLM which format we’re in,
+
+Without breaking the 3-layer system, pressure module, or existing epistemic rules.
+
+📁 Files from Claude
+
+These are the files Claude has produced that I want integrated:
+
+format-detector.ts
+
+Exports: detectFormat, maybe detectFormatSimple
+
+Deterministic heuristics for format: 'redraft' | 'dynasty' with confidence + reasons.
+
+format-detection-tests.ts
+
+20+ test cases for redraft/dynasty detection.
+
+Should run like: npm test format-detection-tests (or whatever test runner we use).
+
+rag-format-integration.ts
+
+Adds format_hint?: 'redraft' | 'dynasty' | 'both' to chunk metadata.
+
+Exports helper(s) like retrieveFormatAwareChunks or applyFormatBoost
+to bias RAG toward matching format and downweight mismatches.
+
+system-prompt-format-additions.ts
+
+Small snippet (5–7 lines) that explains the format dimension to the LLM:
+
+Redraft → weekly focus, matchups, rest-of-season
+
+Dynasty → long-term value, insulation, windows
+
+chat-route-integration-example.ts
+
+Example wiring of detectLayer + detectFormat + format-aware RAG + system prompt.
+
+This is reference only, not production code. Use it as a wiring map.
+
+✅ What I Want You to Do
+1. Wire detectFormat into the real chat route
+
+In the actual TIBER chat handler (where we already do detectLayer(userMessage)):
+
+Import & call:
+
+const layerResult = detectLayer(userMessage);
+const formatResult = detectFormat(userMessage);
+
+
+Build a shared context:
+
+const context = {
+  layer: layerResult.layer,
+  layerConfidence: layerResult.confidence,
+  format: formatResult.format,
+  formatConfidence: formatResult.confidence,
+  userMessage,
+};
+
+
+Log it for now for debugging:
+
+console.log(
+  `[Context] layer=${context.layer} (${(context.layerConfidence * 100).toFixed(0)}%), ` +
+  `format=${context.format} (${(context.formatConfidence * 100).toFixed(0)}%)`
+);
+
+2. Bias RAG with format_hint
+
+Wherever we currently do base RAG retrieval, e.g.:
+
+const rawChunks = await retrieveRAGChunks(userMessage);
+
+
+Update it to:
+
+const rawChunks = await retrieveRAGChunks(userMessage);
+const formatAwareChunks = retrieveFormatAwareChunks(
+  userMessage,
+  context.format,
+  rawChunks
+);
+
+
+Then build the ragContext from formatAwareChunks instead of rawChunks.
+
+Also:
+
+Extend our chunk metadata to support format_hint?: 'redraft' | 'dynasty' | 'both'.
+
+Start by tagging critical docs:
+
+format_hint: 'both' → pressure module, regression concepts, general usage philosophy.
+
+format_hint: 'dynasty' → insulation, age curves, picks/windows, rebuild/contend.
+
+format_hint: 'redraft' → weekly matchup framing, waivers, ROS, playoff schedule.
+
+We can expand tagging over time. Don’t block on labeling everything day one.
+
+3. Inject format into the system prompt (minimal)
+
+Take the format dimension blurb from system-prompt-format-additions.ts and:
+
+Add it as a single small section in the main TIBER system prompt
+(after the 3-layer explanation, before pressure stuff).
+
+Then, in the chat route, add a dynamic context header like Claude’s example:
+
+const contextHeader = `
+## Current Message Context
+
+Layer: ${context.layer}
+Format: ${context.format}
+
+Respond accordingly: ${
+  context.format === 'redraft'
+    ? 'weekly focus, matchups, rest-of-season'
+    : 'long-term value, insulation, windows'
+}.
+${context.formatConfidence < 0.7
+  ? `\nNote: Format confidence is low (${(context.formatConfidence * 100).toFixed(0)}%). State your assumption if relevant.`
+  : ''}
+`.trim();
+
+const systemPrompt = `${baseTiberPrompt}\n\n${contextHeader}`;
+
+
+This way, the model sees both:
+
+how to answer (layer)
+
+what time horizon to prioritize (format)
+
+4. Run Claude’s tests
+
+Hook format-detection-tests.ts into our test runner and run:
+
+npm test format-detection-tests
+
+
+Goal: all tests pass before we go live.
+
+Then do end-to-end sanity checks in the UI:
+
+“Half PPR: start Puka or Pittman this week?”
+→ Expect: layer=tactical, format=redraft, weekly matchup answer, no dynasty window talk.
+
+“Dynasty: trade my 2026 1st for Kyler?”
+→ Expect: layer=tactical, format=dynasty, insulation/window conversation, not “this week’s matchup”.
+
+“Is Tank Dell good?”
+→ Probably format=dynasty by default; model may state assumption if confidence is low.
+
+🚨 Red Flag Warnings / Things Not to Screw Up
+
+Please keep an eye on these:
+
+Do NOT use the mock detectLayer in chat-route-integration-example.ts
+
+That file has a stub detectLayer – it’s just an example.
+
+The real chat handler must keep using our actual detectLayer implementation.
+
+No prompt bloat creep
+
+Only add the short format section from system-prompt-format-additions.ts.
+
+Do not paste the whole migration summary or comments into the system prompt.
+
+The format section should be ~5–7 lines, not another novella.
+
+Tagging discipline
+
+If every chunk is tagged both, format-aware RAG becomes meaningless.
+
+At minimum, ensure:
+
+Dynasty teaching docs are really tagged dynasty.
+
+Redraft docs are tagged redraft.
+
+Shared philosophy (pressure, regression, natural phenomena) = both.
+
+Format bleed
+Watch for cases where:
+
+Redraft question → answer talks about age curves, windows, pick economics.
+
+Dynasty question → answer obsessed with “this week’s matchup” only.
+
+If this happens:
+
+Check logs: was format detected correctly?
+
+Check RAG retrieval: are mismatched format_hint chunks ranking too high?
+
+We may need to tweak boost multipliers in rag-format-integration.ts
+(e.g. match = 1.25x, mismatch = 0.6x).
+
+Low-confidence handling
+
+When formatConfidence < 0.7, the prompt header already tells the model to state its assumption.
+
+Please make sure that line is included in the dynamic context header.
+
+That keeps TIBER honest instead of quietly guessing dynasty/redraft and bullshitting.
+
+Don’t touch existing safety / pressure logic
+
+Do not modify the pressure module, river snap-back rules, or epistemic guardrails.
+
+This format dimension should be additive, not a rewrite of core behavior.
+
+🎯 Success Criteria
+
+We’re good if, after integration:
+
+TIBER can cleanly separate:
+
+Redraft tactical advice vs Dynasty tactical advice.
+
+Teaching frameworks tailored to each format.
+
+Tests in format-detection-tests.ts all pass.
+
+RAG is clearly prioritizing the right docs for redraft/dynasty.
+
+No regressions in:
+
+3-layer routing,
+
+Pressure module tests,
+
+Epistemic hallucination rules.
+
+If you see anything that clashes with the existing river / pressure / epistemic stack, flag it in the report and propose the minimal change needed to resolve it.

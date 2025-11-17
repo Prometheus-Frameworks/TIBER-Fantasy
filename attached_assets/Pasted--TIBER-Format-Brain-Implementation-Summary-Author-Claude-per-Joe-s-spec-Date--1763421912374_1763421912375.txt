@@ -1,0 +1,248 @@
+/**
+ * TIBER Format Brain Implementation Summary
+ * 
+ * Author: Claude (per Joe's spec)
+ * Date: 2025-11-17
+ * 
+ * This document summarizes the format brain layer addition to TIBER
+ * and provides a step-by-step migration path.
+ */
+
+## Overview
+
+Added a second dimension (format: redraft | dynasty) to TIBER's existing 3-layer system.
+
+**Files Created:**
+1. `format-detector.ts` - Detection logic with deterministic heuristics
+2. `format-detection-tests.ts` - 20+ test cases for regression testing
+3. `rag-format-integration.ts` - RAG metadata and retrieval bias implementation
+4. `system-prompt-format-additions.ts` - Minimal prompt additions (5-7 lines)
+5. `chat-route-integration-example.ts` - Integration example for your chat endpoint
+
+**Key Principles Maintained:**
+- No breaking changes to 3-layer system (tactical/teaching/river)
+- No breaking changes to pressure module
+- Minimal prompt bloat (5-7 line addition)
+- Composable with existing layer detection
+- Deterministic and explainable detection logic
+- Testable and regression-safe
+
+---
+
+## Migration Path
+
+### Phase 1: Core Integration (Day 1)
+
+**Step 1: Add format detector**
+- Copy `format-detector.ts` to `server/utils/` or similar
+- Export `detectFormat` and `detectFormatSimple` functions
+
+**Step 2: Add to chat route**
+- In your main chat handler, add:
+  ```typescript
+  import { detectFormat } from './utils/format-detector';
+  
+  const layerResult = detectLayer(userMessage); // existing
+  const formatResult = detectFormat(userMessage); // new
+  ```
+
+**Step 3: Run baseline tests**
+- Copy `format-detection-tests.ts` to `server/tests/`
+- Run test suite: `npm test format-detection-tests`
+- Verify all tests pass before proceeding
+
+**Step 4: Add format to logs**
+- Log format detection results alongside layer detection
+- Monitor for unexpected detections in real usage
+
+### Phase 2: RAG Integration (Days 2-3)
+
+**Step 5: Extend RAG metadata schema**
+- Add `format_hint?: 'redraft' | 'dynasty' | 'both'` to chunk metadata
+- See `rag-format-integration.ts` for interface
+
+**Step 6: Tag existing content**
+- Start with high-value content:
+  - Tag pressure module as "both"
+  - Tag regression concepts as "both"
+  - Tag usage analysis as "both"
+- Create placeholders for dynasty/redraft-specific docs (see step 8)
+
+**Step 7: Integrate retrieval bias**
+- Import `applyFormatBoost` from `rag-format-integration.ts`
+- Apply after base RAG scoring, before final ranking
+- See `retrieveFormatAwareChunks` for example
+
+**Step 8: Create format-specific content**
+- Dynasty docs to create:
+  - Insulation framework (draft capital, contract, team commitment)
+  - Age curves (RB/WR/QB/TE patterns)
+  - Window management (rebuild vs contend)
+  - Pick economics and valuation
+- Redraft docs to create:
+  - Weekly matchup framework
+  - Schedule analysis (playoff schedule, bye weeks)
+  - Waiver wire strategy
+  - Rest-of-season projection methodology
+
+### Phase 3: Prompt Integration (Day 4)
+
+**Step 9: Add format dimension to system prompt**
+- Copy `FORMAT_DIMENSION_PROMPT` from `system-prompt-format-additions.ts`
+- Add to TIBER system prompt after 3-layer explanation
+- Keep it tight: 5-7 lines total
+
+**Step 10: Add dynamic context header**
+- See `buildSystemPrompt` in `chat-route-integration-example.ts`
+- Pass detected format + confidence to each generation
+- Include low-confidence warning if needed
+
+### Phase 4: Testing & Tuning (Days 5-7)
+
+**Step 11: End-to-end testing**
+- Test pure redraft queries (start/sit, waiver, playoffs)
+- Test pure dynasty queries (trades with picks, windows, age)
+- Test ambiguous queries (generic player evals)
+- Test mixed queries (dynasty + contending this year)
+
+**Step 12: Format bleed detection**
+- Look for dynasty language in redraft answers:
+  - Age curves in start/sit questions
+  - Pick valuation in waiver advice
+  - Window talk in weekly decisions
+- Look for redraft language in dynasty answers:
+  - "This week's matchup" in long-term trades
+  - Weekly volatility emphasis in window discussions
+
+**Step 13: Tune detection heuristics**
+- If tests show consistent misdetections, adjust:
+  - Signal weights in `format-detector.ts`
+  - Default assumptions for ambiguous cases
+  - Confidence thresholds
+- Re-run regression tests after each change
+
+**Step 14: Tune retrieval bias**
+- Monitor RAG chunk selection in production
+- Adjust boost multipliers in `applyFormatBoost` if needed:
+  - Currently: match = 1.25x, mismatch = 0.6x
+  - May need tuning based on real query patterns
+
+---
+
+## Integration Checklist
+
+**Before going live:**
+- [ ] Format detector integrated and tested
+- [ ] All 20+ test cases passing
+- [ ] Format logged alongside layer in chat route
+- [ ] RAG metadata schema extended with format_hint
+- [ ] Existing core content tagged as "both"
+- [ ] Retrieval bias implemented and tested
+- [ ] System prompt updated (5-7 line addition only)
+- [ ] Dynamic context header passing format to LLM
+- [ ] End-to-end testing complete
+- [ ] No format bleed in test responses
+- [ ] Detection heuristics tuned if needed
+- [ ] Retrieval boost multipliers tuned if needed
+
+**After going live:**
+- [ ] Monitor format detection in real usage
+- [ ] Log misdetections (user corrects format assumption)
+- [ ] Create dynasty-specific teaching content
+- [ ] Create redraft-specific teaching content
+- [ ] Expand test suite with real user queries
+- [ ] Iterate on detection heuristics based on feedback
+
+---
+
+## Testing Commands
+
+```bash
+# Run format detection tests
+npm test format-detection-tests
+
+# Test individual query
+npm run test-format "Dynasty: trade my 2026 1st for Kyler?"
+
+# Run full chat route with format detection
+npm run dev
+# Then send test queries via API/UI
+```
+
+---
+
+## Troubleshooting
+
+**Issue: Format detection is wrong**
+- Check `formatResult.reasons` in logs
+- Verify signal patterns in `format-detector.ts`
+- Add query to test suite if consistently wrong
+
+**Issue: Format bleed in responses**
+- Check RAG retrieval: are mismatched chunks ranking too high?
+- Verify retrieval bias is applied correctly
+- Check system prompt: is format context clear?
+
+**Issue: Low confidence on obvious queries**
+- Review signal weights in detection logic
+- May need to add more explicit signals
+- Consider if query truly is ambiguous
+
+**Issue: RAG not finding format-specific content**
+- Verify metadata tagging is correct
+- Check embedding pipeline preserves format_hint
+- Verify retrieval bias multipliers aren't too aggressive
+
+---
+
+## Future Enhancements (Not in Scope Yet)
+
+- Format-specific UI indicators (badge showing "Dynasty Mode")
+- User preference for default format (per-user setting)
+- Format history tracking (user mostly asks dynasty questions)
+- Advanced detection using historical context (previous messages)
+- Format-specific tone adjustments (dynasty = longer-term framing)
+
+---
+
+## Notes for Joe
+
+**What you need to do:**
+
+1. Copy files to your repo structure
+2. Run tests to baseline behavior
+3. Tag your existing RAG content with format_hint
+4. Create dynasty and redraft teaching docs (see step 8)
+5. Update your chat route to use both detectors (see integration example)
+6. Add format dimension to system prompt (5-7 lines)
+7. Test and tune based on real usage
+
+**What stays the same:**
+
+- 3-layer system (tactical/teaching/river)
+- Pressure module content and logic
+- Existing epistemic rules
+- RAG architecture (just extending metadata)
+- System prompt structure (minimal surgical addition)
+
+**Where to ask questions:**
+
+- Detection logic: see `format-detector.ts` comments
+- RAG integration: see `rag-format-integration.ts` comments
+- Prompt changes: see `system-prompt-format-additions.ts` comments
+- Integration: see `chat-route-integration-example.ts` comments
+
+**Philosophy check:**
+
+This implementation respects your "serve not take" principle:
+- Explicit detection (no black box ML)
+- Testable and explainable
+- Teaches format thinking (states assumptions when unsure)
+- Doesn't create dependency (users can override/clarify)
+- Composable with existing systems (doesn't replace, extends)
+
+Let me know if you need any clarification or want me to adjust the detection heuristics!
+
+---
+
+**End of Implementation Summary**

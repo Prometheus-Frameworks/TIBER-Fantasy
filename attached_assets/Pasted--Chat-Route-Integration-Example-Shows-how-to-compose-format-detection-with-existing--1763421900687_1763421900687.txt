@@ -1,0 +1,191 @@
+/**
+ * Chat Route Integration Example
+ * 
+ * Shows how to compose format detection with existing layer detection
+ * and pass both dimensions to RAG + prompt context
+ */
+
+import { detectFormat, Format } from './format-detector';
+import { retrieveFormatAwareChunks } from './rag-format-integration';
+
+// Assuming existing layer detection (you already have this)
+type Layer = 'tactical' | 'teaching' | 'river';
+
+interface LayerDetectionResult {
+  layer: Layer;
+  confidence: number;
+  reasons: string[];
+}
+
+// Mock of existing function (replace with your actual implementation)
+function detectLayer(message: string): LayerDetectionResult {
+  // Your existing implementation
+  return { layer: 'tactical', confidence: 0.8, reasons: ['mock'] };
+}
+
+/**
+ * Combined context for RAG and prompt
+ */
+interface MessageContext {
+  layer: Layer;
+  layerConfidence: number;
+  format: Format;
+  formatConfidence: number;
+  userMessage: string;
+}
+
+/**
+ * Main chat endpoint integration
+ */
+export async function handleChatMessage(userMessage: string) {
+  // 1. Detect both dimensions
+  const layerResult = detectLayer(userMessage);
+  const formatResult = detectFormat(userMessage);
+  
+  const context: MessageContext = {
+    layer: layerResult.layer,
+    layerConfidence: layerResult.confidence,
+    format: formatResult.format,
+    formatConfidence: formatResult.confidence,
+    userMessage,
+  };
+  
+  // 2. Log for debugging (optional, but useful)
+  console.log(`[Context] Layer: ${context.layer} (${(context.layerConfidence * 100).toFixed(0)}%), Format: ${context.format} (${(context.formatConfidence * 100).toFixed(0)}%)`);
+  if (formatResult.reasons.length > 0) {
+    console.log(`[Format Detection] ${formatResult.reasons.join('; ')}`);
+  }
+  
+  // 3. Retrieve RAG chunks with format awareness
+  const rawChunks = await retrieveRAGChunks(userMessage); // Your existing RAG retrieval
+  const formatAwareChunks = retrieveFormatAwareChunks(
+    userMessage,
+    context.format,
+    rawChunks
+  );
+  
+  // 4. Build prompt with both dimensions
+  const systemPrompt = buildSystemPrompt(context);
+  const ragContext = formatAwareChunks.map(c => c.content).join('\n\n');
+  
+  // 5. Generate response
+  const response = await generateResponse({
+    systemPrompt,
+    ragContext,
+    userMessage,
+    context,
+  });
+  
+  return response;
+}
+
+/**
+ * Build system prompt with format dimension
+ */
+function buildSystemPrompt(context: MessageContext): string {
+  // Start with base TIBER prompt (your existing prompt)
+  let prompt = getBaseTIBERPrompt(); // Your existing function
+  
+  // Add format dimension section (from system-prompt-format-additions.ts)
+  // This should be added once to your base prompt, not dynamically per message
+  
+  // Add dynamic context header
+  const contextHeader = `
+## Current Message Context
+
+Layer: ${context.layer}
+Format: ${context.format}
+
+Respond accordingly: ${context.format === 'redraft' ? 'weekly focus, matchups, rest-of-season' : 'long-term value, insulation, windows'}.
+${context.formatConfidence < 0.7 ? `\nNote: Format confidence is low (${(context.formatConfidence * 100).toFixed(0)}%). State your assumption if relevant.` : ''}
+`.trim();
+  
+  return `${prompt}\n\n${contextHeader}`;
+}
+
+/**
+ * Example response generation (simplified)
+ */
+async function generateResponse(config: {
+  systemPrompt: string;
+  ragContext: string;
+  userMessage: string;
+  context: MessageContext;
+}) {
+  // Your existing LLM call, e.g., OpenAI, Anthropic, etc.
+  // Pass systemPrompt, ragContext, and userMessage
+  
+  // Pseudo-code:
+  const response = await llm.generateCompletion({
+    system: config.systemPrompt,
+    messages: [
+      {
+        role: 'user',
+        content: `
+## Context from Knowledge Base
+
+${config.ragContext}
+
+## User Question
+
+${config.userMessage}
+        `.trim(),
+      },
+    ],
+  });
+  
+  return response;
+}
+
+/**
+ * Mock functions (replace with your actual implementations)
+ */
+function getBaseTIBERPrompt(): string {
+  return 'Your existing TIBER system prompt...';
+}
+
+async function retrieveRAGChunks(query: string): Promise<Array<{
+  content: string;
+  score: number;
+  metadata: { format_hint?: 'redraft' | 'dynasty' | 'both' };
+}>> {
+  // Your existing RAG retrieval
+  return [];
+}
+
+/**
+ * Usage example
+ */
+async function example() {
+  // Redraft question
+  const response1 = await handleChatMessage('Half PPR: start Puka or Pittman this week?');
+  // → Should detect format=redraft, layer=tactical
+  // → RAG should prioritize redraft + both chunks
+  
+  // Dynasty question
+  const response2 = await handleChatMessage('Dynasty: trade my 2026 1st for Kyler?');
+  // → Should detect format=dynasty, layer=tactical
+  // → RAG should prioritize dynasty + both chunks
+  
+  // Ambiguous question
+  const response3 = await handleChatMessage('Is Tank Dell good?');
+  // → Should detect format=dynasty (default), layer=teaching (probably)
+  // → Response should state assumption if confidence is low
+}
+
+/**
+ * Integration checklist for your existing chat route:
+ * 
+ * 1. Import detectFormat from format-detector.ts
+ * 2. Call detectFormat(userMessage) alongside detectLayer(userMessage)
+ * 3. Pass format to RAG retrieval for format-aware boosting
+ * 4. Include format in system prompt context (see buildSystemPrompt above)
+ * 5. Test with format-detection-tests.ts to ensure routing works
+ * 6. Monitor for format bleed (dynasty answers in redraft context, vice versa)
+ * 
+ * Key principle: Format and layer are COMPOSABLE dimensions.
+ * - Layer = tactical/teaching/river (how to answer)
+ * - Format = redraft/dynasty (what to prioritize)
+ * 
+ * Both should influence RAG retrieval and prompt construction.
+ */
