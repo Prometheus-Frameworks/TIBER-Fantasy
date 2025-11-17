@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import jargonMapping from '../data/nflfastr_jargon_mapping.json';
 import { detectLayer, injectLayerContext } from './river-detection';
+import { detectFormat, logFormatDetection } from '../lib/format-detector';
 
 // DON'T DELETE THIS COMMENT
 // Using blueprint:javascript_gemini for embeddings generation
@@ -234,9 +235,18 @@ User level: ${userLevel}/5`;
       // LAYER DETECTION: Detect which consciousness layer should respond
       const detectedLayer = detectLayer(userMessage);
       
+      // FORMAT DETECTION: Detect redraft vs dynasty focus
+      const detectedFormat = detectFormat(userMessage);
+      
       // Log layer detection for monitoring
       console.log(`[TIBER] Detected layer: ${detectedLayer.layer} (${(detectedLayer.confidence * 100).toFixed(0)}% confidence)`);
       console.log(`[TIBER] Triggers: ${detectedLayer.triggers.join(', ')}`);
+      
+      // Log format detection for monitoring
+      console.log(`[TIBER] Detected format: ${detectedFormat.format.toUpperCase()} (${(detectedFormat.confidence * 100).toFixed(0)}% confidence)`);
+      if (detectedFormat.reasons.length > 0) {
+        console.log(`[TIBER] Format signals: ${detectedFormat.reasons.slice(0, 3).join('; ')}`);
+      }
       
       // THREE-LAYER CONSCIOUSNESS SYSTEM (Lean v2 - 44% token reduction)
       const baseSystemPrompt = `═══════════════════════════════════════════════════════════════
