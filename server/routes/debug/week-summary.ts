@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { pool } from '../../infra/db';
+import { dbPool as pool } from '../../infra/db';
 
 const router = Router();
 
