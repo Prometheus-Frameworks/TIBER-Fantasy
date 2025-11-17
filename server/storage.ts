@@ -14,6 +14,7 @@ import {
   marketSignals,
   injuries,
   depthCharts,
+  weeklyStats,
   type Team, 
   type Player, 
   type TeamPlayer, 
@@ -148,6 +149,17 @@ export interface IStorage {
   
   createDepthChart(depthChart: Partial<DepthChart>): Promise<DepthChart>;
   getDepthChart(canonicalPlayerId: string): Promise<DepthChart[]>;
+  
+  // Weekly Stats operations
+  upsertWeeklyStats(stats: any[]): Promise<{ inserted: number; updated: number }>;
+  getWeeklyStats(filters: {
+    season: number;
+    week?: number;
+    playerId?: string;
+    position?: string;
+  }): Promise<any[]>;
+  getPlayerWeeklyStats(playerId: string, season: number): Promise<any[]>;
+  getSeasonTotals(season: number, scoring?: 'std' | 'half' | 'ppr'): Promise<any[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -768,6 +780,27 @@ export class MemStorage implements IStorage {
   }
 
   async getDepthChart(canonicalPlayerId: string): Promise<DepthChart[]> {
+    return [];
+  }
+  
+  async upsertWeeklyStats(stats: any[]): Promise<{ inserted: number; updated: number }> {
+    return { inserted: 0, updated: 0 };
+  }
+  
+  async getWeeklyStats(filters: {
+    season: number;
+    week?: number;
+    playerId?: string;
+    position?: string;
+  }): Promise<any[]> {
+    return [];
+  }
+  
+  async getPlayerWeeklyStats(playerId: string, season: number): Promise<any[]> {
+    return [];
+  }
+  
+  async getSeasonTotals(season: number, scoring?: 'std' | 'half' | 'ppr'): Promise<any[]> {
     return [];
   }
 }
@@ -1545,6 +1578,138 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(depthCharts)
       .where(eq(depthCharts.canonicalPlayerId, canonicalPlayerId));
+  }
+  
+  async upsertWeeklyStats(stats: any[]): Promise<{ inserted: number; updated: number }> {
+    if (stats.length === 0) {
+      return { inserted: 0, updated: 0 };
+    }
+    
+    let inserted = 0;
+    let updated = 0;
+    
+    for (const stat of stats) {
+      const values = {
+        season: stat.season,
+        week: stat.week,
+        playerId: stat.player_id,
+        playerName: stat.player_name,
+        team: stat.team,
+        position: stat.position,
+        snaps: stat.snaps,
+        routes: stat.routes,
+        targets: stat.targets,
+        rushAtt: stat.rush_att,
+        rec: stat.rec,
+        recYd: stat.rec_yd,
+        recTd: stat.rec_td,
+        rushYd: stat.rush_yd,
+        rushTd: stat.rush_td,
+        passYd: stat.pass_yd,
+        passTd: stat.pass_td,
+        int: stat.int,
+        fumbles: stat.fumbles,
+        twoPt: stat.two_pt,
+        fantasyPointsStd: stat.fantasy_points_std,
+        fantasyPointsHalf: stat.fantasy_points_half,
+        fantasyPointsPpr: stat.fantasy_points_ppr,
+        gsisId: stat.gsis_id,
+        updatedAt: new Date()
+      };
+      
+      await db.insert(weeklyStats)
+        .values(values)
+        .onConflictDoUpdate({
+          target: [weeklyStats.season, weeklyStats.week, weeklyStats.playerId],
+          set: values
+        });
+      
+      inserted++;
+    }
+    
+    return { inserted, updated: 0 };
+  }
+  
+  async getWeeklyStats(filters: {
+    season: number;
+    week?: number;
+    playerId?: string;
+    position?: string;
+  }): Promise<any[]> {
+    let query = db.select().from(weeklyStats);
+    
+    const conditions = [eq(weeklyStats.season, filters.season)];
+    
+    if (filters.week !== undefined) {
+      conditions.push(eq(weeklyStats.week, filters.week));
+    }
+    
+    if (filters.playerId) {
+      conditions.push(eq(weeklyStats.playerId, filters.playerId));
+    }
+    
+    if (filters.position) {
+      conditions.push(eq(weeklyStats.position, filters.position));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query;
+  }
+  
+  async getPlayerWeeklyStats(playerId: string, season: number): Promise<any[]> {
+    return await db
+      .select()
+      .from(weeklyStats)
+      .where(and(
+        eq(weeklyStats.playerId, playerId),
+        eq(weeklyStats.season, season)
+      ));
+  }
+  
+  async getSeasonTotals(season: number, scoring: 'std' | 'half' | 'ppr' = 'half'): Promise<any[]> {
+    const scoringColumn = scoring === 'ppr' 
+      ? weeklyStats.fantasyPointsPpr
+      : scoring === 'std'
+      ? weeklyStats.fantasyPointsStd
+      : weeklyStats.fantasyPointsHalf;
+    
+    const results = await db
+      .select()
+      .from(weeklyStats)
+      .where(eq(weeklyStats.season, season));
+    
+    const playerTotals = new Map<string, any>();
+    
+    for (const row of results) {
+      const key = row.playerId;
+      if (!playerTotals.has(key)) {
+        playerTotals.set(key, {
+          player_id: row.playerId,
+          player_name: row.playerName,
+          team: row.team,
+          position: row.position,
+          games: 0,
+          total_fantasy_points: 0
+        });
+      }
+      
+      const player = playerTotals.get(key);
+      player.games += 1;
+      
+      const points = scoring === 'ppr' 
+        ? row.fantasyPointsPpr 
+        : scoring === 'std' 
+        ? row.fantasyPointsStd 
+        : row.fantasyPointsHalf;
+      
+      player.total_fantasy_points += points || 0;
+    }
+    
+    return Array.from(playerTotals.values())
+      .sort((a, b) => b.total_fantasy_points - a.total_fantasy_points);
   }
 }
 
