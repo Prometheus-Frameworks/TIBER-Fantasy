@@ -21,7 +21,7 @@ router.get('/week-summary', async (req: Request, res: Response) => {
     const pos = posRaw?.toUpperCase();
     const scoring = scoringRaw.toLowerCase();
 
-    if (!season || !week || !pos) {
+    if (Number.isNaN(season) || Number.isNaN(week) || !pos) {
       return res.status(400).json({
         success: false,
         error: 'Missing required query params: season, week, pos',
@@ -65,18 +65,18 @@ router.get('/week-summary', async (req: Request, res: Response) => {
     const { rows } = await pool.query(query, [season, week, pos]);
 
     const data = rows.map((row: any) => {
-      const playerId = row.player_id ?? null;
-      const playerName = row.player_name ?? null;
+      const playerId = row.player_id ?? row.playerId ?? null;
+      const playerName = row.player_name ?? row.playerName ?? null;
       const team = row.team ?? null;
       const position = row.position ?? pos;
 
-      const rushYds = row.rush_yd ?? 0;
-      const recYds = row.rec_yd ?? 0;
-      const passYds = row.pass_yd ?? 0;
+      const rushYds = row.rush_yd ?? row.rushYd ?? row.rushing_yards ?? 0;
+      const recYds = row.rec_yd ?? row.recYd ?? row.receiving_yards ?? 0;
+      const passYds = row.pass_yd ?? row.passYd ?? row.passing_yards ?? 0;
 
-      const rushTds = row.rush_td ?? 0;
-      const recTds = row.rec_td ?? 0;
-      const passTds = row.pass_td ?? 0;
+      const rushTds = row.rush_td ?? row.rushTd ?? row.rushing_tds ?? 0;
+      const recTds = row.rec_td ?? row.recTd ?? row.receiving_tds ?? 0;
+      const passTds = row.pass_td ?? row.passTd ?? row.passing_tds ?? 0;
 
       const totalTds = (rushTds || 0) + (recTds || 0) + (passTds || 0);
 
@@ -88,9 +88,9 @@ router.get('/week-summary', async (req: Request, res: Response) => {
         playerName,
         team,
         fantasyPoints: {
-          std: row.fantasy_points_std ?? null,
-          half: row.fantasy_points_half ?? null,
-          ppr: row.fantasy_points_ppr ?? null,
+          std: row.fantasy_points_std ?? row.fantasyPointsStd ?? null,
+          half: row.fantasy_points_half ?? row.fantasyPointsHalf ?? null,
+          ppr: row.fantasy_points_ppr ?? row.fantasyPointsPpr ?? null,
           used: row[scoringColumn],
         },
         stats: {
