@@ -6464,6 +6464,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/weekly/player - Get single week stats for a player (query-param based)
+  // Used by Weekly Statline RAG v1 for chat context
+  app.get('/api/weekly/player', async (req: Request, res: Response) => {
+    try {
+      const { weeklyStats } = await import('@shared/schema');
+      const { hasWeeklyData } = await import('./lib/weekly-data');
+      const { CURRENT_NFL_SEASON } = await import('../shared/config/seasons');
+      
+      const seasonParam = req.query.season as string | undefined;
+      const weekParam = req.query.week as string | undefined;
+      const playerParam = req.query.player as string | undefined;
+      const scoring = (req.query.scoring as 'std' | 'half' | 'ppr' | undefined) ?? 'half';
+
+      // Validation
+      if (!weekParam || !playerParam) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'week and player parameters required' 
+        });
+      }
+
+      const week = parseInt(weekParam);
+      if (isNaN(week) || week < 1 || week > 18) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'week must be 1-18' 
+        });
+      }
+
+      const season = seasonParam ? parseInt(seasonParam) : CURRENT_NFL_SEASON;
+      if (isNaN(season) || season < 2000 || season > 2100) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'invalid season' 
+        });
+      }
+
+      // Check if weekly data exists for this season
+      const dataAvailable = await hasWeeklyData(season);
+      if (!dataAvailable) {
+        return res.status(404).json({ 
+          success: false, 
+          error: `No weekly data available for season ${season}.` 
+        });
+      }
+
+      // Fuzzy player name search
+      const candidates = await db
+        .select({
+          player_id: weeklyStats.playerId,
+          player_name: weeklyStats.playerName,
+          team: weeklyStats.team,
+          position: weeklyStats.position,
+        })
+        .from(weeklyStats)
+        .where(
+          and(
+            eq(weeklyStats.season, season),
+            eq(weeklyStats.week, week),
+            sql`LOWER(${weeklyStats.playerName}) LIKE LOWER(${'%' + playerParam + '%'})`
+          )
+        )
+        .limit(5);
+
+      if (candidates.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          error: `No weekly stats found for ${playerParam} in Week ${week}, ${season}.` 
+        });
+      }
+      
+      if (candidates.length > 1) {
+        return res.status(400).json({ 
+          success: false, 
+          error: `Multiple matches for '${playerParam}'. Be more specific.` 
+        });
+      }
+
+      const player = candidates[0];
+
+      // Get full row for matched player
+      const rows = await db
+        .select()
+        .from(weeklyStats)
+        .where(
+          and(
+            eq(weeklyStats.season, season),
+            eq(weeklyStats.week, week),
+            eq(weeklyStats.playerId, player.player_id)
+          )
+        );
+
+      if (!rows || rows.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          error: `No weekly stats found for ${playerParam} in Week ${week}, ${season}.` 
+        });
+      }
+
+      const row = rows[0];
+
+      const response = {
+        success: true,
+        season,
+        week,
+        playerId: row.playerId,
+        playerName: row.playerName,
+        team: row.team,
+        pos: row.position,
+        fantasyPoints: {
+          std: row.fantasyPointsStd ?? 0,
+          half: row.fantasyPointsHalf ?? 0,
+          ppr: row.fantasyPointsPpr ?? 0,
+        },
+        line: {
+          carries: row.rushAtt ?? 0,
+          rushYds: row.rushYd ?? 0,
+          rushTD: row.rushTd ?? 0,
+          targets: row.targets ?? 0,
+          receptions: row.rec ?? 0,
+          recYds: row.recYd ?? 0,
+          recTD: row.recTd ?? 0,
+          passYds: row.passYd ?? 0,
+          passTD: row.passTd ?? 0,
+          int: row.int ?? 0,
+        },
+        usage: {
+          snaps: row.snaps ?? null,
+          routes: row.routes ?? null,
+        },
+        efficiency: {
+          rushingEpa: null, // Not in our schema currently
+          receivingEpa: null, // Not in our schema currently
+        },
+        raw: row,
+      };
+
+      res.json(response);
+    } catch (error) {
+      console.error('❌ [Weekly Player Stats] Failed to fetch stats:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+
   // POST /api/weekly/sync - Trigger weekly data sync
   app.post('/api/weekly/sync', async (req: Request, res: Response) => {
     try {
