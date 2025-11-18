@@ -41,6 +41,7 @@ const VORP_TIERS = [
 export class VORPCalculationService {
   private sleeperPlayersCache: Map<string, SleeperPlayerData> = new Map();
   private currentSeasonCache: string | null = null;
+  private currentWeekCache: number | null = null;
   
   // Top performers cache (refreshes every 1 hour)
   private topPerformersCache: {
@@ -60,8 +61,10 @@ export class VORPCalculationService {
     try {
       const response = await axios.get('https://api.sleeper.app/v1/state/nfl');
       const season = response.data.season;
+      const week = response.data.week;
       this.currentSeasonCache = season;
-      console.log(`✅ Current NFL season: ${season}`);
+      this.currentWeekCache = week;
+      console.log(`✅ Current NFL season: ${season}, Week: ${week}`);
       return season;
     } catch (error) {
       console.error('❌ Failed to fetch current NFL season, falling back to current year:', error);
@@ -123,7 +126,7 @@ export class VORPCalculationService {
   }
   
   /**
-   * Calculate PPR fantasy points from weekly stats
+   * Calculate half-PPR fantasy points from weekly stats
    */
   private calculatePPRPoints(stats: any): number {
     const receiving = {
@@ -143,8 +146,8 @@ export class VORPCalculationService {
       interceptions: stats.pass_int || 0,
     };
     
-    // PPR scoring
-    const recPoints = receiving.receptions + (receiving.yards * 0.1) + (receiving.tds * 6);
+    // Half-PPR scoring (0.5 points per reception)
+    const recPoints = (receiving.receptions * 0.5) + (receiving.yards * 0.1) + (receiving.tds * 6);
     const rushPoints = (rushing.yards * 0.1) + (rushing.tds * 6);
     const passPoints = (passing.yards * 0.04) + (passing.tds * 4) - (passing.interceptions * 2);
     
@@ -158,11 +161,14 @@ export class VORPCalculationService {
     const playerTotals = new Map<string, { totalPoints: number; gamesPlayed: number }>();
     
     try {
-      // Get current NFL season from Sleeper API
+      // Get current NFL season and week from Sleeper API
       const currentSeason = await this.getCurrentSeason();
+      const currentWeek = await this.getCurrentWeek();
       
-      // Fetch weeks 1-11 (current season progress)
-      for (let week = 1; week <= 11; week++) {
+      console.log(`📊 Fetching ${position} data for weeks 1-${currentWeek} of ${currentSeason} season (half-PPR)`);
+      
+      // Fetch all weeks from 1 to current week
+      for (let week = 1; week <= currentWeek; week++) {
         const response = await axios.get(`https://api.sleeper.app/v1/stats/nfl/regular/${currentSeason}/${week}`);
         const weekStats = response.data;
         
@@ -291,6 +297,7 @@ export class VORPCalculationService {
       
       await this.fetchSleeperPlayers();
       const currentSeason = await this.getCurrentSeason();
+      const currentWeek = await this.getCurrentWeek();
       
       const topPerformers: { [position: string]: string[] } = {
         QB: [],
@@ -321,7 +328,7 @@ export class VORPCalculationService {
       
       // Format as concise context
       const contextLines = [
-        `📊 2025 Season Leaders (Week ${this.getCurrentWeek()} - ${currentSeason}):`,
+        `📊 2025 Season Leaders (Week ${currentWeek} - ${currentSeason}):`,
         '',
         `**QB Top 12**: ${topPerformers.QB.slice(0, 12).join(', ')}`,
         '',
@@ -357,17 +364,18 @@ export class VORPCalculationService {
   }
   
   /**
-   * Get current NFL week (estimate based on date)
+   * Get current NFL week from Sleeper API (cached)
    */
-  private getCurrentWeek(): number {
-    // NFL 2025 season starts Sep 4, 2025
-    const seasonStart = new Date('2025-09-04');
-    const now = new Date();
-    const daysSinceStart = Math.floor((now.getTime() - seasonStart.getTime()) / (1000 * 60 * 60 * 24));
-    const weeksSinceStart = Math.floor(daysSinceStart / 7) + 1;
+  private async getCurrentWeek(): Promise<number> {
+    if (this.currentWeekCache) {
+      return this.currentWeekCache;
+    }
     
-    // Cap at Week 18 (end of regular season)
-    return Math.min(Math.max(1, weeksSinceStart), 18);
+    // Fetch season (which also sets week cache)
+    await this.getCurrentSeason();
+    
+    // Return cached week or default to 11 as fallback
+    return this.currentWeekCache || 11;
   }
 }
 
