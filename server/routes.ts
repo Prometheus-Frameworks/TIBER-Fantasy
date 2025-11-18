@@ -6855,6 +6855,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return chunks;
   }
 
+  // Helper: Temporal Guard - Validate response adheres to requested year
+  interface TemporalGuardResult {
+    requestedYears: number[];
+    comparisonInvited: boolean;
+    violation: boolean;
+    violatingYears: number[];
+    shouldRegenerate: boolean;
+  }
+
+  function parseTemporalIntent(query: string): { requestedYears: number[]; comparisonInvited: boolean } {
+    const queryLower = query.toLowerCase();
+    
+    // Use the same extraction logic to ensure consistency
+    const requestedYears = extractTemporalReferences(query);
+    
+    // Detect comparison intent
+    const comparisonKeywords = [
+      /compar(e|ing|ison)/i,
+      /\bvs\b/i,
+      /versus/i,
+      /since/i,
+      /from\s+\d{4}\s+to\s+\d{4}/i,
+      /trend/i,
+      /change/i,
+      /difference/i,
+      /between\s+\d{4}\s+(and|&)\s+\d{4}/i
+    ];
+    
+    const comparisonInvited = comparisonKeywords.some(pattern => pattern.test(queryLower));
+    
+    return { requestedYears, comparisonInvited };
+  }
+
+  function extractTemporalReferences(text: string): number[] {
+    const textLower = text.toLowerCase();
+    const years: number[] = [];
+    
+    // Extract 4-digit years (1990-2049 range - comprehensive NFL coverage)
+    const yearMatches = text.match(/\b(19[9][0-9]|20[0-4][0-9])\b/g);
+    if (yearMatches) {
+      years.push(...yearMatches.map(Number));
+    }
+    
+    // Extract 2-digit shorthand ('90-'49)
+    const shortYearMatches = text.match(/[''](\d{2})\b/g);
+    if (shortYearMatches) {
+      shortYearMatches.forEach(match => {
+        const twoDigit = parseInt(match.substring(1));
+        // Map to 1990s or 2000s based on range
+        if (twoDigit >= 90 && twoDigit <= 99) {
+          years.push(1900 + twoDigit); // '90-'99 → 1990-1999
+        } else if (twoDigit >= 0 && twoDigit <= 49) {
+          years.push(2000 + twoDigit); // '00-'49 → 2000-2049
+        }
+      });
+    }
+    
+    // Map common temporal phrases to years
+    const currentYear = 2025;
+    if (/\blast (year|season)\b/i.test(textLower)) years.push(currentYear - 1);
+    if (/\bthis (year|season)\b/i.test(textLower)) years.push(currentYear);
+    if (/\bnext (year|season)\b/i.test(textLower)) years.push(currentYear + 1);
+    if (/\btwo (years|seasons) ago\b/i.test(textLower)) years.push(currentYear - 2);
+    if (/\bthree (years|seasons) ago\b/i.test(textLower)) years.push(currentYear - 3);
+    
+    return Array.from(new Set(years));
+  }
+
+  function validateTemporalPrecision(query: string, response: string): TemporalGuardResult {
+    const { requestedYears, comparisonInvited } = parseTemporalIntent(query);
+    
+    // If no specific year requested, or comparison invited, no violation possible
+    if (requestedYears.length === 0 || comparisonInvited) {
+      return {
+        requestedYears,
+        comparisonInvited,
+        violation: false,
+        violatingYears: [],
+        shouldRegenerate: false
+      };
+    }
+    
+    // Extract all temporal references from response (including phrases and shorthand)
+    const responseYears = extractTemporalReferences(response);
+    
+    // Find out-of-scope years
+    const violatingYears = responseYears.filter(year => !requestedYears.includes(year));
+    
+    const violation = violatingYears.length > 0;
+    
+    if (violation) {
+      console.log(`⚠️  [Temporal Guard] VIOLATION DETECTED`);
+      console.log(`   Query requested years: ${requestedYears.join(', ')}`);
+      console.log(`   Response mentioned years: ${responseYears.join(', ')}`);
+      console.log(`   Out-of-scope years: ${violatingYears.join(', ')}`);
+      console.log(`   Comparison invited: ${comparisonInvited}`);
+    }
+    
+    return {
+      requestedYears,
+      comparisonInvited,
+      violation,
+      violatingYears,
+      shouldRegenerate: violation
+    };
+  }
+
   // RAG Chat endpoint with citation tracking + league context
   app.post('/api/rag/chat', async (req, res) => {
     try {
@@ -7157,8 +7264,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasLeagueContext = !!rosterSnapshot || (league_id && leagueChunksCount > 0);
       console.log(`🎯 [RAG Chat] Final context: ${pinnedContext.length} pinned + ${retrievalContext.length} retrieval = ${fullContext.length} total`);
       
-      const aiResponse = await generateChatResponse(message, fullContext, user_level, hasLeagueContext);
+      let aiResponse = await generateChatResponse(message, fullContext, user_level, hasLeagueContext);
       console.log(`✅ [RAG Chat] Response generated: ${aiResponse.substring(0, 100)}...`);
+
+      // Temporal Guard: Validate response adheres to requested year
+      const temporalCheck = validateTemporalPrecision(message, aiResponse);
+      
+      if (temporalCheck.violation && temporalCheck.shouldRegenerate) {
+        console.log(`🔄 [Temporal Guard] Regenerating with inline year reminder...`);
+        
+        // Regenerate with inline reminder
+        const yearReminder = `CRITICAL: User asked specifically about ${temporalCheck.requestedYears.join(' and ')}. Do NOT mention ${temporalCheck.violatingYears.join(' or ')} unless explicitly invited.`;
+        const enhancedContext = [yearReminder, ...fullContext];
+        
+        aiResponse = await generateChatResponse(message, enhancedContext, user_level, hasLeagueContext);
+        console.log(`✅ [Temporal Guard] Regenerated response: ${aiResponse.substring(0, 100)}...`);
+        
+        // Re-validate regenerated response
+        const secondCheck = validateTemporalPrecision(message, aiResponse);
+        if (secondCheck.violation) {
+          console.error(`❌ [Temporal Guard] Regeneration failed - still violating temporal precision`);
+          console.error(`   Requested: [${secondCheck.requestedYears}], Still violating: [${secondCheck.violatingYears}]`);
+          
+          // Return guardrail error to user
+          return res.status(500).json({
+            success: false,
+            error: 'Temporal Guard: Unable to generate response within requested time constraints',
+            debug: {
+              requestedYears: secondCheck.requestedYears,
+              violatingYears: secondCheck.violatingYears
+            }
+          });
+        }
+        
+        // Log incident for monitoring
+        console.log(`📊 [Temporal Guard] Violation resolved after regeneration - Query: "${message.substring(0, 50)}...", Requested: [${temporalCheck.requestedYears}]`);
+      } else if (temporalCheck.requestedYears.length > 0) {
+        console.log(`✅ [Temporal Guard] Passed - Requested: [${temporalCheck.requestedYears}], Comparison invited: ${temporalCheck.comparisonInvited}`);
+      }
 
       // Step 4: Save to database
       let sessionId = session_id;
