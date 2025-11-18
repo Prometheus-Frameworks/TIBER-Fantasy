@@ -6795,15 +6795,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Helper: Detect when user wants 2024 baseline historical data
+  // CRITICAL: Only trigger for EXPLICIT historical queries, not tactical decisions
+  // 2024 data is for TEACHING frameworks, not current trade/start-sit advice
   function detect2024BaselineIntent(query: string): boolean {
+    // Exclude tactical queries (trades, start/sit, waivers, matchups)
+    const isTactical = /\b(trade|start|sit|waiver|matchup|pick up|drop|this week|next week|tonight|should i)\b/i.test(query);
+    if (isTactical) {
+      return false; // Never inject 2024 baseline for tactical decisions
+    }
+    
+    // Only trigger for EXPLICIT historical framing
     const patterns = [
-      /2024/i,
-      /last (year|season)/i,
-      /(how did|what did).+(do|perform|finish)/i,
-      /baseline/i,
-      /historical/i,
-      /(compare|vs|versus).+(last|previous|2024)/i,
-      /elite.+(look like|production|performance)/i,
+      /2024/i,                                           // Explicit year mention
+      /last (year|season)/i,                            // "last year", "last season"
+      /(how did|what did).+(do|perform|finish)/i,      // "how did X perform in 2024?"
+      /baseline/i,                                       // Explicit baseline request
+      /historical(ly)?/i,                                // "historically"
+      /(compare|comparison).+(last|previous|2024)/i,    // Comparison to past
+      /what (did|were).+(stats|numbers|production)/i,   // "what were his 2024 stats?"
     ];
     
     return patterns.some(p => p.test(query));

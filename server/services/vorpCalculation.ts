@@ -267,10 +267,11 @@ export class VORPCalculationService {
   }
   
   /**
-   * Format VORP data for prompt context
+   * Format VORP data for prompt context with team info
    */
   formatForPrompt(vorpData: PlayerVORPData): string {
-    return `**${vorpData.playerName} (${vorpData.position}${vorpData.positionRank})** - ${vorpData.totalPoints} pts in ${vorpData.gamesPlayed} games (${vorpData.pointsPerGame} PPG), ${vorpData.vorp > 0 ? '+' : ''}${vorpData.vorp} VORP (${vorpData.tier})`;
+    // Include team to provide fresh roster context and override stale RAG data
+    return `**${vorpData.playerName} (${vorpData.team} ${vorpData.position}${vorpData.positionRank})** - ${vorpData.totalPoints} pts in ${vorpData.gamesPlayed} games (${vorpData.pointsPerGame} PPG), ${vorpData.vorp > 0 ? '+' : ''}${vorpData.vorp} VORP (${vorpData.tier})`;
   }
   
   /**
