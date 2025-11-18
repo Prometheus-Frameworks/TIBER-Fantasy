@@ -77,6 +77,15 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
         - **Logging**: Format detection logged alongside layer detection for monitoring
         - **Default Behavior**: Ambiguous queries default to dynasty (general player evaluation context)
     - **Fresh Team Context in VORP**: VORP formatting includes team codes (e.g., "MIN WR20") from live Sleeper API data to counteract stale RAG roster information.
+    - **Temporal-Precision Enforcement**: Dual-layer system ensuring responses cite only the requested year when explicitly mentioned:
+        - **System Prompt Rule**: Instructs LLM to respect year-specific requests without cross-contamination
+        - **Temporal Detection (1990-2049)**: Comprehensive extraction of 4-digit years, 2-digit shorthand ('90-'49), and temporal phrases ("this season", "last year", "two years ago")
+        - **Query Parsing**: Unified temporal reference extraction with comparison intent detection
+        - **Response Validation**: Identifies out-of-scope year mentions in generated responses
+        - **Auto-Regeneration**: Violations trigger automatic regeneration with inline CRITICAL reminder
+        - **Re-Validation**: Regenerated responses validated again; HTTP 500 error if second attempt fails
+        - **Comprehensive Logging**: All violations, regenerations, and resolutions logged for monitoring
+        - **Comparison Support**: Multi-year context allowed when user explicitly invites comparison ("compare 2024 vs 2025", "how does this year differ from last")
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
