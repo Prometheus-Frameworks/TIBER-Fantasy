@@ -1,0 +1,48 @@
+•	When user asks for:
+	•	“What did X do in week Y?” in 2024 → use weekly_stats.
+	•	“What did X do in week Y?” in 2025 → respond with:
+“Right now I don’t have 2025 weekly box scores wired, only overall rankings and PPG. I can tell you where he ranks and how many points per game he’s scoring, but not a full box score.”
+	•	TIBER must not say “I don’t have NFLfastR access” anymore. It should describe what is wired in his own system.
+
+3. Force tactical layer on stats questions
+	•	In river/layer detection, add a hard override:
+	•	If the message contains any of:
+	•	“stats”, “statline”, “box score”, “how many yards”, “how many TDs”, “what did * do week”, “receptions”, “catches”
+	•	Then:
+	•	Force layer = 'tactical'.
+	•	Do not allow River or Teaching style in that response.
+	•	This prevents answers like “The river of time carries away the fleeting moments…” when the user literally asked for 2025 stats.
+
+4. Trade-eval answer format
+	•	For any trade question (detected via “trade”, “for”, “offer”, “sent”, “received” etc):
+	•	Enforce this structure:
+	1.	One-line verdict:
+“For redraft, I prefer the Henry + Adams side.”
+or
+“For dynasty, I lean toward the Jefferson side.”
+	2.	2–4 bullet points, using rankings/VORP/role.
+	3.	One line of context:
+“This leans my way without seeing your exact roster or record, but directionally I stand by it.”
+	•	Ban bare responses like: "Yes. You should make that trade."
+(We can enforce this with a simple post-processor that wraps trade verdicts in this template.)
+
+5. “Would you believe me if…” pattern
+	•	If the user says “would you believe me if i told you…”:
+	•	Treat this as a confession that the thing already happened.
+	•	Response pattern:
+“Okay, so you already did it. Let’s walk through whether that was actually bad in your situation…”
+	•	Never respond with a literal “No.” to that question.
+
+6. River discipline
+	•	River mode is allowed ONLY for:
+	•	Pattern / philosophy questions: “Why do breakouts happen?”, “Why do patterns repeat?”
+	•	River mode is NOT allowed for:
+	•	Direct stat questions
+	•	“Any more 2025 stats?” queries
+	•	If River is triggered but the question is clearly about stats or a specific week, snap back to tactical and give a grounded answer or an honest “I don’t have that level of detail yet.”
+
+Please:
+	•	Implement these as small, surgical changes.
+	•	Keep existing pressure module + 3-layer behavior intact.
+	•	Add 5–10 tests that recreate the failures Joe saw (Egbuka 2024 statline, Alec Pierce stat question → River leak, trade response shape, etc.).
+	•	Report back with: which files changed, and before/after examples of TIBER’s answers.
