@@ -3,6 +3,8 @@
 ## Overview
 Tiber Fantasy is a free, open-source NFL fantasy football analytics dashboard launched in October 2025. It provides a 6-tab platform with real-time 2025 NFL data, Madden-style OVR player ratings, Defense vs Position matchups, and Strength of Schedule analytics using EPA metrics. The project aims to offer high-end fantasy football insights without paywalls or partnerships, fostering meaningful conversations and better decision-making for fantasy players. Its ambition is to offer a dynamic "Player Compass" for player evaluation and an "OTC Consensus" for community-driven rankings, alongside advanced AI insights.
 
+**TIBER Brain OS v1** (November 2025): Universal fantasy philosophy system providing the foundational decision-making framework for all advice. Embedded in RAG system with force-include logic for strategy queries, minimal system prompt summary covering 10 Commandments, voice guidance, and anti-stat-dump guardrails.
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 League focus: Dynasty leagues (skill positions only - QB, RB, WR, TE). No kickers or defense.
@@ -96,6 +98,14 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
         - **System Prompt Updates**: Banned "I don't have NFLfastR access" phrase, describes actual data capabilities by season
         - **VORP TTL Cache**: 6-hour cache TTL for NFL state (season + week) to auto-advance throughout season, preventing frozen rankings
         - **Test Coverage**: 21/21 tests passing (100%) validating all fixes
+    - **TIBER Brain OS v1 Integration** (November 2025):
+        - **RAG Embedding**: Brain OS document embedded into chunks table with priority metadata (philosophy, core_os_rules tags)
+        - **System Prompt Integration**: Minimal base layer with 10 Commandments summary, voice guidance (Teaching/Tactical/River), and metrics translation rules
+        - **Force-Include Logic**: RAG retrieval automatically includes Brain OS chunks for strategy/philosophy/trade queries
+        - **Context Headers**: System displays current layer, format, and Brain OS status for transparency
+        - **Anti-Stat-Dump Guardrail**: Maximum 2 metrics per answer unless user explicitly requests more
+        - **Philosophy Foundation**: All advice aligns with core principles: process > prizes, youth → peak → age, opportunity > talent, buy/sell windows, positional scarcity, patience wins
+        - **Script**: `tsx server/scripts/embed-brain-os.ts` to re-embed Brain OS document after updates
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
