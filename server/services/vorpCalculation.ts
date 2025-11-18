@@ -40,8 +40,14 @@ const VORP_TIERS = [
 
 export class VORPCalculationService {
   private sleeperPlayersCache: Map<string, SleeperPlayerData> = new Map();
-  private currentSeasonCache: string | null = null;
-  private currentWeekCache: number | null = null;
+  
+  // NFL state cache (season + week) - refreshes every 6 hours
+  private nflStateCache: {
+    season: string;
+    week: number;
+    timestamp: number;
+  } | null = null;
+  private readonly NFL_STATE_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours in ms
   
   // Top performers cache (refreshes every 1 hour)
   private topPerformersCache: {
@@ -130,7 +136,7 @@ export class VORPCalculationService {
    */
   private calculatePPRPoints(stats: any): number {
     const receiving = {
-      receptions: stats.rec_rec || 0,
+      receptions: stats.rec || 0,  // Fixed: Use 'rec' not 'rec_rec'
       yards: stats.rec_yd || 0,
       tds: stats.rec_td || 0,
     };
