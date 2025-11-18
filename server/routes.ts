@@ -7329,9 +7329,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const requestedSeason = extractSeasonFromQuery(message) || new Date().getFullYear();
         const capabilities = getDataAvailability(requestedSeason);
         
-        // NOTE: Rookie guard (UX Fix #1) is implemented via system prompt instructions
-        // System prompt explicitly forbids citing NFL stats for players without data in requested season
-        // See geminiEmbeddings.ts:481-485 for the guard instructions
+        // Rookie guard monitoring (UX Fix #1 - Hybrid approach)
+        // Primary defense: System prompt instructions (geminiEmbeddings.ts:481-485)
+        // Secondary monitoring: Log violations to measure effectiveness
+        if (requestedSeason < new Date().getFullYear() && detectedPlayers.length > 0) {
+          const citesSpecificStats = /\d+ (receptions?|catches?|yards?|tds?|touchdowns?|targets?|carries?)/i.test(aiResponse);
+          const mentionsCollege = /college|university|ncaa|draft/i.test(aiResponse.toLowerCase());
+          
+          if (citesSpecificStats && !mentionsCollege) {
+            // Log potential rookie guard violation for monitoring
+            console.log(`⚠️  [ROOKIE GUARD] Potential violation detected`);
+            console.log(`   Player: ${detectedPlayers[0]}`);
+            console.log(`   Season: ${requestedSeason}`);
+            console.log(`   Query: ${message.substring(0, 100)}...`);
+            console.log(`   Response cited stats - system prompt should have prevented this`);
+            console.log(`   Action: Logged for monitoring. Review to decide if metadata-based guard needed.`);
+          }
+        }
         
         // Apply honest capability statement if asking for weekly data
         if (isWeeklyBoxScoreRequest(message)) {
