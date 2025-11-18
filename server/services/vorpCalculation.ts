@@ -57,25 +57,60 @@ export class VORPCalculationService {
   private readonly TOP_PERFORMERS_CACHE_TTL = 60 * 60 * 1000; // 1 hour in ms
   
   /**
-   * Fetch current NFL season year from Sleeper API
+   * Fetch current NFL season year from Sleeper API with TTL cache
    */
   private async getCurrentSeason(): Promise<string> {
-    if (this.currentSeasonCache) {
-      return this.currentSeasonCache;
+    const now = Date.now();
+    
+    // Check if cache is still valid (within TTL)
+    if (this.nflStateCache && (now - this.nflStateCache.timestamp) < this.NFL_STATE_CACHE_TTL) {
+      return this.nflStateCache.season;
     }
     
+    // Cache expired or doesn't exist - fetch fresh data
     try {
       const response = await axios.get('https://api.sleeper.app/v1/state/nfl');
       const season = response.data.season;
       const week = response.data.week;
-      this.currentSeasonCache = season;
-      this.currentWeekCache = week;
-      console.log(`✅ Current NFL season: ${season}, Week: ${week}`);
+      
+      // Update cache with timestamp
+      this.nflStateCache = {
+        season,
+        week,
+        timestamp: now,
+      };
+      
+      console.log(`✅ Current NFL season: ${season}, Week: ${week} (cache TTL: ${this.NFL_STATE_CACHE_TTL / 3600000}h)`);
       return season;
     } catch (error) {
       console.error('❌ Failed to fetch current NFL season, falling back to current year:', error);
+      
+      // If cache exists but expired, use stale data rather than breaking
+      if (this.nflStateCache) {
+        console.log(`⚠️  Using stale NFL state cache as fallback`);
+        return this.nflStateCache.season;
+      }
+      
       return new Date().getFullYear().toString();
     }
+  }
+  
+  /**
+   * Fetch current NFL week from Sleeper API with TTL cache
+   */
+  private async getCurrentWeek(): Promise<number> {
+    const now = Date.now();
+    
+    // Check if cache is still valid (within TTL)
+    if (this.nflStateCache && (now - this.nflStateCache.timestamp) < this.NFL_STATE_CACHE_TTL) {
+      return this.nflStateCache.week;
+    }
+    
+    // Cache expired or doesn't exist - fetch season (which updates cache)
+    await this.getCurrentSeason();
+    
+    // Return cached week or default to 11 as fallback
+    return this.nflStateCache?.week || 11;
   }
   
   /**
@@ -369,20 +404,6 @@ export class VORPCalculationService {
     }
   }
   
-  /**
-   * Get current NFL week from Sleeper API (cached)
-   */
-  private async getCurrentWeek(): Promise<number> {
-    if (this.currentWeekCache) {
-      return this.currentWeekCache;
-    }
-    
-    // Fetch season (which also sets week cache)
-    await this.getCurrentSeason();
-    
-    // Return cached week or default to 11 as fallback
-    return this.currentWeekCache || 11;
-  }
 }
 
 export const vorpCalculationService = new VORPCalculationService();

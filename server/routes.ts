@@ -46,6 +46,10 @@ import { wrRatingsService } from './services/wrRatingsService';
 import { wrGameLogsService } from './services/wrGameLogsService';
 import { playerPoolService } from './playerPool';
 import { generateEmbedding, generateChatResponse } from './services/geminiEmbeddings';
+import { detectLayerWithIntents } from './services/river-detection';
+import { detectFormat } from './lib/format-detector';
+import { formatTradeResponse, handleConfessionResponse, formatStatsResponse, applyRookieGuard, applyRiverSnapback } from './lib/responsePostProcessors';
+import { getDataAvailability, isWeeklyBoxScoreRequest, extractSeasonFromQuery } from './lib/dataAvailability';
 import { vorpCalculationService } from './services/vorpCalculation';
 import { expandPlayerAliases } from './services/playerAliases';
 // Live compass routes imported in registerRoutes function
@@ -7301,6 +7305,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`📊 [Temporal Guard] Violation resolved after regeneration - Query: "${message.substring(0, 50)}...", Requested: [${temporalCheck.requestedYears}]`);
       } else if (temporalCheck.requestedYears.length > 0) {
         console.log(`✅ [Temporal Guard] Passed - Requested: [${temporalCheck.requestedYears}], Comparison invited: ${temporalCheck.comparisonInvited}`);
+      }
+
+      // Step 3.5: Apply UX Post-Processors
+      const layerDetection = detectLayerWithIntents(message);
+      const { format: detectedFormat } = detectFormat(message);
+      
+      // Post-processor 1: Confession pattern handler (UX Fix #5)
+      if (layerDetection.intents.isConfession) {
+        console.log(`🔧 [UX Fix] Confession pattern detected - applying acknowledgment`);
+        aiResponse = handleConfessionResponse(aiResponse);
+      }
+      
+      // Post-processor 2: Trade evaluation formatter (UX Fix #4)
+      if (layerDetection.intents.isTradeEval) {
+        console.log(`🔧 [UX Fix] Trade evaluation detected - applying structured format (${detectedFormat})`);
+        aiResponse = formatTradeResponse(aiResponse, detectedFormat);
+      }
+      
+      // Post-processor 3: Stats query with data availability (UX Fix #2 & #3)
+      if (layerDetection.intents.isStatsQuery) {
+        console.log(`🔧 [UX Fix] Stats query detected - checking data availability`);
+        const requestedSeason = extractSeasonFromQuery(message) || new Date().getFullYear();
+        const capabilities = getDataAvailability(requestedSeason);
+        
+        // NOTE: Rookie guard (UX Fix #1) is implemented via system prompt instructions
+        // System prompt explicitly forbids citing NFL stats for players without data in requested season
+        // See geminiEmbeddings.ts:481-485 for the guard instructions
+        
+        // Apply honest capability statement if asking for weekly data
+        if (isWeeklyBoxScoreRequest(message)) {
+          aiResponse = formatStatsResponse(aiResponse, requestedSeason, capabilities.hasWeekly);
+        }
+        
+        // Apply River snapback if River language leaked in (UX Fix #6)
+        aiResponse = applyRiverSnapback(aiResponse, true);
       }
 
       // Step 4: Save to database

@@ -156,6 +156,45 @@ const RIVER_PATTERNS = [
 ];
 
 /**
+ * Stats Query Patterns (UX Fix #3)
+ * Direct stat questions that MUST use Tactical layer, never River/Teaching
+ */
+const STATS_KEYWORD_PATTERNS = [
+  /\bstats?\b/i,
+  /\bstatline\b/i,
+  /\bbox score\b/i,
+  /\bhow many (yards?|tds?|touchdowns?|receptions?|catches?|points?)\b/i,
+  /\bwhat did .+ do (?:in )?week\b/i,
+  /\breceptions?\b/i,
+  /\bcatches?\b/i,
+  /\byards?\b.*\bweek\b/i,
+  /\btouchdowns?\b.*\bweek\b/i,
+  /\bany more .* stats\b/i,
+];
+
+/**
+ * Confession Pattern Detection (UX Fix #5)
+ * "Would you believe me if..." = user already did the thing
+ */
+const CONFESSION_PATTERNS = [
+  /would you believe me if i told you/i,
+  /what if i told you/i,
+  /i already (did|made|accepted|traded)/i,
+];
+
+/**
+ * Trade Detection Patterns (UX Fix #4)
+ * For enforcing structured trade response format
+ */
+const TRADE_PATTERNS = [
+  /\btrade\b/i,
+  /\b(offer|offered|sent|received|accept|decline)\b.*\b(for)\b/i,  // "offered X for my Y"
+  /\bgive .+ (for|to get)\b/i,
+  /\breceive .+ for\b/i,
+  /\bmy .+ for (his|their|your)\b/i,  // "my CeeDee for his Saquon"
+];
+
+/**
  * Anti-River Patterns
  * Even if River triggers match, these override back to Tactical
  */
@@ -167,7 +206,44 @@ const TACTICAL_OVERRIDE_PATTERNS = [
   /tonight|sunday|thursday|monday/i,
   /trade/i,
   /sit.*or.*start/i,
+  ...STATS_KEYWORD_PATTERNS,  // Stats queries always tactical
 ];
+
+// ═══════════════════════════════════════════════════════════════
+// INTENT DETECTION HELPERS (UX Fixes)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Extended result with intent detection flags
+ */
+export interface EnhancedLayerDetectionResult extends LayerDetectionResult {
+  intents: {
+    isStatsQuery: boolean;
+    isConfession: boolean;
+    isTradeEval: boolean;
+  };
+}
+
+/**
+ * Check if query is asking for stats/statline (UX Fix #3)
+ */
+export function isStatsQuery(query: string): boolean {
+  return STATS_KEYWORD_PATTERNS.some(pattern => pattern.test(query));
+}
+
+/**
+ * Check if query is a confession pattern (UX Fix #5)
+ */
+export function isConfessionPattern(query: string): boolean {
+  return CONFESSION_PATTERNS.some(pattern => pattern.test(query));
+}
+
+/**
+ * Check if query is a trade evaluation (UX Fix #4)
+ */
+export function isTradeEvaluation(query: string): boolean {
+  return TRADE_PATTERNS.some(pattern => pattern.test(query));
+}
 
 // ═══════════════════════════════════════════════════════════════
 // DETECTION LOGIC
@@ -326,6 +402,22 @@ export function detectLayer(query: string): LayerDetectionResult {
   });
 
   return result;
+}
+
+/**
+ * Enhanced layer detection with intent flags (UX Fixes)
+ */
+export function detectLayerWithIntents(query: string): EnhancedLayerDetectionResult {
+  const baseResult = detectLayer(query);
+  
+  return {
+    ...baseResult,
+    intents: {
+      isStatsQuery: isStatsQuery(query),
+      isConfession: isConfessionPattern(query),
+      isTradeEval: isTradeEvaluation(query),
+    },
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════

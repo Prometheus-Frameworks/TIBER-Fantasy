@@ -86,6 +86,16 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
         - **Re-Validation**: Regenerated responses validated again; HTTP 500 error if second attempt fails
         - **Comprehensive Logging**: All violations, regenerations, and resolutions logged for monitoring
         - **Comparison Support**: Multi-year context allowed when user explicitly invites comparison ("compare 2024 vs 2025", "how does this year differ from last")
+    - **TIBER UX & Epistemic Fixes** (November 2025):
+        - **Rookie & Pre-NFL Guard**: Prevents citing non-existent stats for players without NFL data in requested seasons
+        - **Data Availability Contract**: Season capability helpers (2024 has weekly box scores, 2025 has rankings/PPG only)
+        - **Stats Keyword Override**: Forces tactical layer for stat queries ("stats", "statline", "box score", etc.) - never River/Teaching
+        - **Trade Evaluation Formatter**: Enforces structured 3-part responses (verdict → bullets → context caveat)
+        - **Confession Pattern Handler**: Detects "would you believe me if..." and acknowledges user already acted
+        - **River Discipline Snapback**: Removes River language from direct stat queries while preserving for philosophy questions
+        - **System Prompt Updates**: Banned "I don't have NFLfastR access" phrase, describes actual data capabilities by season
+        - **VORP TTL Cache**: 6-hour cache TTL for NFL state (season + week) to auto-advance throughout season, preventing frozen rankings
+        - **Test Coverage**: 21/21 tests passing (100%) validating all fixes
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
