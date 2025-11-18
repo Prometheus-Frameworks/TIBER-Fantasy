@@ -7398,6 +7398,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Step 2b.7: Detect and fetch weekly statline data (Weekly Statline RAG v1)
+      const { detectWeeklyQuery, fetchWeeklyStatsForPlayer, formatWeeklyStatlineDataChunk, weeklyStatlineMetadata } = await import('./lib/weeklyStatsHelpers');
+      const { CURRENT_NFL_SEASON } = await import('../shared/config/seasons');
+      
+      const weeklyQuery = detectWeeklyQuery(message);
+      if (weeklyQuery.isWeeklyQuery) {
+        console.log(`📊 [Weekly Stats] Detected weekly query: Week ${weeklyQuery.week || weeklyQuery.relativeWeek}, Player: ${weeklyQuery.playerName}`);
+        
+        try {
+          const weeklyStats = await fetchWeeklyStatsForPlayer(weeklyQuery, CURRENT_NFL_SEASON);
+          if (weeklyStats) {
+            const weeklyChunk = formatWeeklyStatlineDataChunk(weeklyStats);
+            const weeklyMeta = weeklyStatlineMetadata(weeklyStats);
+            
+            // Prepend to relevantChunks with highest priority (position 0)
+            relevantChunks.unshift({
+              chunk_id: `weekly_${weeklyStats.playerName}_${weeklyStats.week}`,
+              content: weeklyChunk,
+              content_preview: weeklyChunk.substring(0, 150),
+              metadata: weeklyMeta,
+              relevance_score: 1.0, // Max relevance for exact weekly data
+              source_type: 'weekly_statline',
+            });
+            
+            console.log(`✅ [Weekly Stats] Added weekly statline for ${weeklyStats.playerName} Week ${weeklyStats.week}`);
+          } else {
+            console.log(`⚠️  [Weekly Stats] No weekly data found for ${weeklyQuery.playerName} Week ${weeklyQuery.week || weeklyQuery.relativeWeek}`);
+          }
+        } catch (error) {
+          console.error(`❌ [Weekly Stats] Error fetching weekly stats:`, error);
+        }
+      }
+
       // Step 2c: Detect player mentions and fetch VORP data
       // Expand player aliases/nicknames before detection (e.g., "Tet" → "Tetairola McMillan")
       const expandedMessage = expandPlayerAliases(message);
