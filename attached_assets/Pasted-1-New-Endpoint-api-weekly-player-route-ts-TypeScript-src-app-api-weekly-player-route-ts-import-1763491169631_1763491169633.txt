@@ -1,0 +1,196 @@
+1. New Endpoint – /api/weekly/player/route.ts
+TypeScript// src/app/api/weekly/player/route.ts
+import { NextRequest } from 'next/server';
+import { db } from '@/lib/db';
+import { weekly_stats } from '@/schema';
+import { and, eq, gte, lte, sql, ilike } from 'drizzle-orm';
+import { CURRENT_NFL_SEASON, hasWeeklyData } from '@/lib/constants';
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const seasonParam = searchParams.get('season');
+  const weekParam = searchParams.get('week');
+  const playerParam = searchParams.get('player');
+  const scoring = (searchParams.get('scoring') as 'std' | 'half' | 'ppr' | null) ?? 'half';
+
+  // Validation
+  if (!weekParam || !playerParam) return new Response(JSON.stringify({ success: false, error: 'week and player required' }), { status: 400 });
+
+  const week = parseInt(weekParam);
+  if (isNaN(week) || week < 1 || week > 18) return new Response(JSON.stringify({ success: false, error: 'week must be 1-18' }), { status: 400 });
+
+  const season = seasonParam ? parseInt(seasonParam) : CURRENT_NFL_SEASON;
+  if (isNaN(season) || season < 2000 || season > 2100) return new Response(JSON.stringify({ success: false, error: 'invalid season' }), { status: 400 });
+
+  if (!hasWeeklyData(season)) {
+    return new Response(JSON.stringify({ success: false, error: `No weekly data available for season ${season}.` }), { status: 404 });
+  }
+
+  // Fuzzy player name search (you said you have player lookup logic – using simple ilike for now)
+  const candidates = await db
+    .select({
+      player_id: weekly_stats.player_id,
+      full_name: weekly_stats.full_name,
+      team: weekly_stats.team,
+      position: weekly_stats.position,
+    })
+    .from(weekly_stats)
+    .where(
+      and(
+        eq(weekly_stats.season, season),
+        eq(weekly_stats.week, week),
+        ilike(weekly_stats.full_name, `%${playerParam}%`)
+      )
+    )
+    .limit(5);
+
+  if (candidates.length === 0) {
+    return new Response(JSON.stringify({ success: false, error: `No weekly stats found for ${playerParam} in Week ${week}, ${season}.` }), { status: 404 });
+  }
+  if (candidates.length > 1) {
+    return new Response(JSON.stringify({ success: false, error: `Multiple matches for '${playerParam}'. Be more specific.` }), { status: 400 });
+  }
+
+  const player = candidates[0];
+
+  // Full row
+  const row = await db
+    .select()
+    .from(weekly_stats)
+    .where(
+      and(
+        eq(weekly_stats.season, season),
+        eq(weekly_stats.week, week),
+        eq(weekly_stats.player_id, player.player_id)
+      )
+    )
+    .then(r => r[0]);
+
+  const fp = {
+    std: row.fantasy_points_std ?? 0,
+    half: row.fantasy_points_half_ppr ?? 0,
+    ppr: row.fantasy_points_ppr ?? 0,
+  };
+
+  const response = {
+    success: true,
+    season,
+    week,
+    playerId: row.player_id,
+    playerName: row.full_name,
+    team: row.team,
+    pos: row.position,
+    fantasyPoints: fp,
+    line: {
+      carries: row.carries ?? 0,
+      rushYds: row.rushing_yards ?? 0,
+      rushTD: row.rushing_tds ?? 0,
+      targets: row.targets ?? 0,
+      receptions: row.receptions ?? 0,
+      recYds: row.receiving_yards ?? 0,
+      recTD: row.receiving_tds ?? 0,
+    },
+    usage: {
+      snapShare: row.offense_snaps ? row.offense_pct : null,
+      targetShare: row.target_share ?? null,
+      routesRun: row.routes ?? null,
+    },
+    efficiency: {
+      rushingEpa: row.rushing_epa ?? null,
+      receivingEpa: row.receiving_epa ?? null,
+    },
+    raw: row,
+  };
+
+  return new Response(JSON.stringify(response), { status: 200 });
+}
+2. detectWeeklyQuery Helper
+TypeScript// src/lib/weeklyQueryDetector.ts
+export interface WeeklyQuery {
+  isWeeklyQuery: boolean;
+  week?: number;
+  relativeWeek?: 'last' | 'this';
+  playerName?: string;
+}
+
+const WEEK_REGEX = /\b(week|wk|w)\s*(\d{1,2})\b/i;
+const REL_WEEK_REGEX = /\b(last|this)\s+week\b/i;
+const VERB_REGEX = /\b(what|how|did|do|put|statline|line|game\s*log|performance)\b/i;
+
+export function detectWeeklyQuery(message: string): WeeklyQuery {
+  const lower = message.toLowerCase();
+
+  const weekMatch = message.match(WEEK_REGEX);
+  const relMatch = lower.match(REL_WEEK_REGEX);
+  const hasVerb = VERB_REGEX.test(lower);
+
+  // Simple player name detection – assuming you have a list or fuzzy match later
+  const playerMatch = message.match(/([A-Z][a-z]+(?:['\-]?[A-Z]?[a-z]+)*\s+[A-Z][a-z]+)/g) || [];
+  const playerName = playerMatch.length === 1 ? playerMatch[0] : undefined;
+
+  const hasWeek = !!weekMatch || !!relMatch;
+
+  if (playerName && hasWeek && hasVerb) {
+    return {
+      isWeeklyQuery: true,
+      week: weekMatch ? parseInt(weekMatch[2]) : undefined,
+      relativeWeek: relMatch ? (relMatch[1] as 'last' | 'this') : undefined,
+      playerName,
+    };
+  }
+
+  return { isWeeklyQuery: false };
+}
+3. fetchWeeklyStatsForPlayer + Formatter
+TypeScript// src/lib/weeklyStatsFetcher.ts
+export interface WeeklyStatsResult { /* same as your spec */ }
+
+export async function fetchWeeklyStatsForPlayer(
+  query: WeeklyQuery,
+  season: number = CURRENT_NFL_SEASON
+): Promise<WeeklyStatsResult | null> {
+  if (!query.isWeeklyQuery) return null;
+
+  let week = query.week;
+  if (query.relativeWeek === 'last') week = getCurrentWeek() - 1;
+  if (query.relativeWeek === 'this') week = getCurrentWeek();
+
+  if (!week || week < 1 || week > 18) return null;
+
+  const url = `/api/weekly/player?season=${season}&week=${week}&player=${encodeURIComponent(query.playerName!)}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.success ? data : null;
+}
+
+export function formatWeeklyStatlineDataChunk(ws: WeeklyStatsResult): string {
+  return `[DATA: WEEKLY_STATLINE]
+Player: ${ws.playerName} (${ws.team}, ${ws.pos})
+Week: ${ws.week}, Season: ${ws.season}
+Scoring (half-PPR): ${ws.fantasyPoints.half.toFixed(1)} fantasy points
+Stat line: ${ws.line.receptions ?? 0} rec on ${ws.line.targets ?? 0} tgt for ${ws.line.recYds ?? 0} yds and ${ws.line.recTD ?? 0} rec TD${
+    ws.line.carries ? `, ${ws.line.carries} carries for ${ws.line.rushYds} rush yds and ${ws.line.rushTD} rush TD` : ''
+  }.
+[/DATA]`.trim();
+}
+
+export const weeklyStatlineMetadata = (ws: WeeklyStatsResult) => ({
+  type: 'weekly_statline',
+  season: ws.season,
+  week: ws.week,
+  player: ws.playerName,
+  epistemic_status: 'DATA',
+  format_hint: 'redraft',
+});
+4. Chat Route Integration (patch)
+In your chat handler before LLM call:
+TypeScriptconst weeklyQuery = detectWeeklyQuery(userMessage);
+if (weeklyQuery.isWeeklyQuery) {
+  const stats = await fetchWeeklyStatsForPlayer(weeklyQuery);
+  if (stats) {
+    const chunk = formatWeeklyStatlineDataChunk(stats);
+    contextChunks.unshift({ content: chunk, metadata: weeklyStatlineMetadata(stats) });
+  }
+}
+Drop these, run the debug route on a known player/week, and Tiber now speaks truth on weekly lines—no hallucinations.

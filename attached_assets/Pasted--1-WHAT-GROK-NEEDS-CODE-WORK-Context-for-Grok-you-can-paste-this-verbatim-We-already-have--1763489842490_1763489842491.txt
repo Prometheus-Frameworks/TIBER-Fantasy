@@ -1,0 +1,424 @@
+🧠 1) WHAT GROK NEEDS (CODE WORK)
+
+Context for Grok (you can paste this verbatim):
+
+We already have:
+
+weekly_stats table populated from nflreadpy/NFLfastR
+
+A debug route: GET /api/debug/week-summary?... that returns top-20 for a week/pos
+
+2024 weekly data working and verified vs Sleeper
+
+CURRENT_NFL_SEASON constant + hasWeeklyData(season) guard
+
+We now want to let TIBER answer questions like:
+
+“What did Ja’Marr Chase do Week 11?”
+by calling our own weekly data, not hallucinating.
+
+🎯 Grok Task: Weekly Statline API + Bridge Helpers
+
+Goal:
+Add one new endpoint + two helpers so the chat layer can fetch a single player’s week line as structured data.
+
+✅ Task 1 – New Endpoint: /api/weekly/player
+
+Create a new route:
+
+GET /api/weekly/player?season=2024&week=11&player=Ja%27Marr%20Chase&scoring=half
+
+Behavior:
+
+season
+
+optional, default: CURRENT_NFL_SEASON
+
+must be an integer; reject if outside something like 2000–2100
+
+week
+
+required, integer, 1–18 (use same validation as week-summary)
+
+player
+
+required, string, name search; reuse existing player lookup / mapping logic if we have it
+
+if ambiguous, return a clear 400 with message like "Multiple matches for 'Johnson'. Be more specific."
+
+scoring
+
+optional: std | half | ppr
+
+default: half
+
+Uses:
+
+hasWeeklyData(season) guard:
+
+if false → return: { success: false, error: "No weekly data available for season 2024." }
+
+Query weekly_stats directly by season, week, and player identity (id or name+team depending on schema).
+
+Response shape (on success):
+
+{
+  "success": true,
+  "season": 2024,
+  "week": 11,
+  "playerId": "CIN_JCHA001",
+  "playerName": "Ja'Marr Chase",
+  "team": "CIN",
+  "pos": "WR",
+  "fantasyPoints": {
+    "std": 6.2,
+    "half": 7.3,
+    "ppr": 8.4
+  },
+  "line": {
+    "carries": 0,
+    "rushYds": 0,
+    "rushTD": 0,
+    "targets": 9,
+    "receptions": 5,
+    "recYds": 48,
+    "recTD": 0
+  },
+  "usage": {
+    "snapShare": 0.90,
+    "targetShare": 0.29,
+    "routesRun": 38
+  },
+  "efficiency": {
+    "rushingEpa": null,
+    "receivingEpa": -0.03
+  },
+  "raw": { /* full DB row for debugging */ }
+}
+
+
+If player played but has literally no stats (decoy, got hurt, etc.), still return a row with 0s.
+
+If no row for that player/week:
+
+{
+  "success": false,
+  "error": "No weekly stats found for Ja'Marr Chase in Week 11, 2024."
+}
+
+
+Important:
+Do not modify existing endpoints. This is an additive route.
+
+✅ Task 2 – WeeklyQuery detector (chat-side helper)
+
+Add a small TS helper in the chat service layer that parses user messages for weekly stat intent.
+
+Something like:
+
+export interface WeeklyQuery {
+  isWeeklyQuery: boolean;
+  week?: number;
+  relativeWeek?: 'last' | 'this';
+  playerName?: string;
+}
+
+export function detectWeeklyQuery(message: string): WeeklyQuery {
+  // regex for "week 11", "wk 11", "w11"
+  // regex for "last week", "this week"
+  // look for verbs like: did, do, put up, statline, line, game log
+  // reuse existing player-name detection if possible
+}
+
+
+Rules:
+
+isWeeklyQuery = true when:
+
+message has a player name AND
+
+some week indicator (explicit week number or “last week”, “this week”) AND
+
+some “what did he do / statline” style verb
+
+Don’t overcomplicate; we can refine later.
+
+✅ Task 3 – fetchWeeklyStatsForPlayer helper
+
+Create a helper that the chat route can call before hitting the LLM:
+
+export interface WeeklyStatsResult {
+  season: number;
+  week: number;
+  playerName: string;
+  team: string;
+  pos: string;
+  scoring: {
+    std: number;
+    half: number;
+    ppr: number;
+  };
+  line: {
+    carries?: number;
+    rushYds?: number;
+    rushTD?: number;
+    targets?: number;
+    receptions?: number;
+    recYds?: number;
+    recTD?: number;
+  };
+  usage: {
+    snapShare?: number;
+    targetShare?: number;
+    routesRun?: number;
+  };
+  efficiency: {
+    rushingEpa?: number;
+    receivingEpa?: number;
+  };
+}
+
+export async function fetchWeeklyStatsForPlayer(
+  query: WeeklyQuery,
+  season: number
+): Promise<WeeklyStatsResult | null> {
+  // 1) resolve week: relativeWeek -> concrete week if needed
+  // 2) call /api/weekly/player
+  // 3) normalize to WeeklyStatsResult or return null on error
+}
+
+
+If the API returns success: false, return null and let the chat layer fall back to “I don’t have that week’s stats” messaging.
+
+✅ Task 4 – Wrap as [DATA] chunk for RAG
+
+Add a small function that turns WeeklyStatsResult into a text block the LLM uses as ground truth:
+
+export function formatWeeklyStatlineDataChunk(ws: WeeklyStatsResult): string {
+  return `
+[DATA: WEEKLY_STATLINE]
+Player: ${ws.playerName} (${ws.team}, ${ws.pos})
+Week: ${ws.week}, Season: ${ws.season}
+Scoring (half-PPR): ${ws.scoring.half.toFixed(1)} fantasy points
+Stat line: ${ws.line.receptions ?? 0} receptions on ${ws.line.targets ?? 0} targets for ${ws.line.recYds ?? 0} yards and ${ws.line.recTD ?? 0} receiving TDs, plus ${ws.line.carries ?? 0} carries for ${ws.line.rushYds ?? 0} rushing yards and ${ws.line.rushTD ?? 0} rushing TDs.
+[/DATA]
+`.trim();
+}
+
+
+Add metadata object alongside:
+
+{
+  type: 'weekly_statline',
+  season: ws.season,
+  week: ws.week,
+  player: ws.playerName,
+  epistemic_status: 'DATA',
+  format_hint: 'redraft'
+}
+
+
+The chat route should:
+
+Detect weekly query
+
+Call fetchWeeklyStatsForPlayer
+
+If non-null, prepend this [DATA] chunk to the RAG/context passed into the LLM.
+
+✅ Acceptance Criteria for Grok
+
+/api/weekly/player responds correctly for a known 2024 week/player (e.g. Week 11 RBs you already checked).
+
+detectWeeklyQuery("What did Ja'Marr Chase do Week 11?") → { isWeeklyQuery: true, week: 11, playerName: "Ja'Marr Chase" }
+
+Chat route can include [DATA: WEEKLY_STATLINE] chunk before sending to the model.
+
+No changes to existing endpoints or pressure module / Brain OS logic.
+
+🧠 2) WHAT CLAUDE NEEDS (PROMPT + RAG BEHAVIOR)
+
+Claude’s job: teach TIBER how to behave when that weekly [DATA] chunk is present.
+No infra changes, just prompt & retrieval behavior.
+
+You can paste this for Claude:
+
+🎯 Claude Task: Weekly Statline Behavior & Prompt Rules
+
+We just added:
+
+/api/weekly/player endpoint (single player/week)
+
+A helper that injects a [DATA: WEEKLY_STATLINE] ... [/DATA] block into the chat context whenever a user asks something like “What did X do Week Y?”
+
+Now I need you to:
+
+✅ Task 1 – System Prompt: Weekly Statline Section (small)
+
+Add a short section to the TIBER system prompt, after Brain OS and layer/format instructions.
+
+Something like:
+
+WEEKLY STATLINE RULES
+
+When a [DATA: WEEKLY_STATLINE] block is present, treat it as ground truth for that specific game.
+
+Do not invent extra stats (yards, targets, touchdowns) that aren’t in the data block.
+
+First, restate the statline in plain language (no stat salad).
+
+Then interpret it using your core philosophy (opportunity, efficiency, pressure, process > prizes, youth/peak/age, etc.).
+
+If the user asks about a “breakout”, “takeover”, or “what changed”, combine:
+
+This week’s line from [DATA: WEEKLY_STATLINE]
+
+Season context from VORP / Brain OS principles
+
+If there is no weekly data (no [DATA: WEEKLY_STATLINE] and the backend signaled no row), clearly say:
+
+"I don't have that week's statline for this player; I can still talk about their general profile if you want."
+
+Default to half-PPR language unless the user explicitly talks standard/PPR.
+
+Keep it tight: 6–10 lines max. No bloated manifesto.
+
+✅ Task 2 – RAG / Context Ordering Rule
+
+In the RAG assembly / context builder:
+
+When a weekly stat [DATA] chunk is present, ensure it is:
+
+High in the context order (near the top)
+
+Tagged epistemic_status: "DATA" and type: "weekly_statline"
+
+Rule for context construction:
+
+[DATA: WEEKLY_STATLINE] (if any)
+
+Other DATA chunks (season totals, VORP, etc.)
+
+Brain OS / philosophy chunks (NARRATIVE)
+
+Any pressure module or river narratives (NARRATIVE)
+
+Goal: data first, philosophy second.
+
+Document this ordering in replit.md under the “Weekly Statline Integration” section so Joe can find it easily.
+
+✅ Task 3 – Style Guard (no stat vomit)
+
+Add a reminder to the existing anti-stat-dump guardrail:
+
+When answering weekly questions:
+
+Use at most 1–2 key numbers from the statline (fantasy points + key usage detail)
+
+Wrap them in football language, not “EPA: 0.123, WOPR: 0.78”-style dumps.
+
+Only bring advanced metrics (EPA, WOPR, cpoe, etc.) if:
+
+The user explicitly asks, or
+
+You explain them in plain language (“he got the volume but didn’t do anything with it” vs listing decimals).
+
+✅ Task 4 – A Few Example Behaviors (for the prompt)
+
+Add 2–3 examples to the system prompt or internal examples section:
+
+Example 1: Pure statline
+
+User:
+
+“What did Ja’Marr Chase do Week 11?”
+
+TIBER (ideal):
+
+“In Week 11, 2024 he went 5 catches on 9 targets for 48 yards, no touchdowns — about 7.3 half-PPR points.
+That’s a ‘volume but no payoff’ game. The role is intact, you just didn’t get the spike week.”
+
+Example 2: Breakout question
+
+User:
+
+“Is Chris Rodriguez breaking out?”
+
+TIBER (ideal):
+
+“This week he took over most of the early-down work and put up a real fantasy line instead of backup noise.
+That’s what early breakout pressure looks like: structural change in usage plus enough production that you have to take it seriously. You don’t crown him yet, but you absolutely add/hold and watch the next two weeks.”
+
+No need to overdo examples—just enough to anchor behavior.
+
+🧠 3) WHAT THE REPLIT AGENT NEEDS (TIBER’S LOCAL TO-DO LIST)
+
+When both Grok and Claude are done, TIBER (Replit agent) should:
+
+Pull latest code
+
+git pull / sync as usual
+
+Run weekly ingest for at least one known week
+
+tsx server/scripts/ingest-week.ts 11
+
+Confirm weekly_stats has 2024 Week 11 rows populated
+
+Verify API endpoints
+
+In the Replit shell or HTTP client:
+
+GET /api/debug/week-summary?season=2024&week=11&pos=RB&scoring=half
+
+Confirms existing weekly summary still works
+
+GET /api/weekly/player?season=2024&week=11&player=Ja%27Marr%20Chase&scoring=half
+
+Confirms new endpoint returns the normalized structure
+
+Run tests (if Grok added any)
+
+e.g. npm test weekly-statline (or whatever Grok names it)
+
+Confirm green
+
+Manual chat smoke tests
+
+Using the TIBER chat UI:
+
+Ask:
+
+“What did Ja’Marr Chase do Week 11?”
+Expect:
+
+Exact statline that matches the API
+
+No hallucinated yards/TDs
+
+Interpretation in Brain OS language
+
+Ask:
+
+“Is Chris Rodriguez breaking out?”
+Expect:
+
+Uses weekly data if present
+
+Talks about role/usage shift + pressure
+
+Doesn’t pretend to know weeks that don’t exist
+
+Log a short note in replit.md
+
+Under a new heading like:
+
+## Weekly Statline RAG v1
+
+ /api/weekly/player live
+
+ Weekly [DATA] chunks wired
+
+ System prompt updated for WEEKLY_STATLINE rules
+
+ Tested on 2024 Week 11 (Chase, RBs)

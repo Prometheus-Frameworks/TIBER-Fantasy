@@ -1,0 +1,245 @@
+# TIBER Weekly Statline Quick Reference Card
+
+## 🎯 One-Sentence Summary
+TIBER can now answer "What did X do Week Y?" by fetching real weekly stats and interpreting them through Brain OS philosophy instead of hallucinating.
+
+---
+
+## 📋 What Got Built
+
+### Backend (Grok)
+1. **API Endpoint**: `/api/weekly/player?season=2024&week=11&player=Ja'Marr%20Chase&scoring=half`
+2. **Query Detector**: `detectWeeklyQuery(message)` → detects weekly stat intent
+3. **Data Fetcher**: `fetchWeeklyStatsForPlayer(query, season)` → calls API, returns structured data
+4. **Data Formatter**: `formatWeeklyStatlineDataChunk(stats)` → creates `[DATA: WEEKLY_STATLINE]` block
+
+### Frontend (Claude)
+1. **System Prompt**: 10-line Weekly Statline Rules section
+2. **RAG Ordering**: Weekly data first, then other data, then philosophy
+3. **Style Guards**: Max 2 numbers, plain language, no stat vomit
+4. **Examples**: 4 interaction patterns showing good vs bad responses
+
+---
+
+## 🔍 How It Works
+
+```
+User asks: "What did Ja'Marr Chase do Week 11?"
+              ↓
+detectWeeklyQuery() → {isWeeklyQuery: true, week: 11, playerName: "Ja'Marr Chase"}
+              ↓
+fetchWeeklyStatsForPlayer() → calls /api/weekly/player
+              ↓
+formatWeeklyStatlineDataChunk() → creates [DATA: WEEKLY_STATLINE] block
+              ↓
+RAG context assembled: [Weekly Data] + [Other Data] + [Philosophy]
+              ↓
+LLM generates response using data as ground truth
+              ↓
+TIBER says: "In Week 11, he went 5/9 for 48 yards, 0 TDs — 7.3 half-PPR. 
+That's volume but no payoff. Role intact, you just didn't get the spike week."
+```
+
+---
+
+## 📝 Key Rules for TIBER
+
+### When [DATA: WEEKLY_STATLINE] is present:
+1. **Trust the data**: Don't invent stats not in the block
+2. **Plain language first**: Translate numbers into football ("volume but no payoff")
+3. **Brain OS lens second**: Interpret through opportunity/efficiency/pressure
+4. **Max 2 numbers**: Fantasy points + one usage detail
+5. **Half-PPR default**: Unless user specifies standard/PPR
+
+### When NO data is available:
+- Say: *"I don't have that week's statline; I can still talk about their general profile if you want."*
+- Don't: Hallucinate numbers
+
+---
+
+## ✅ Good Response Pattern
+
+```
+User: "What did Saquon do Week 10?"
+
+Good: "Week 10, he went 17 carries for 96 yards and a TD, plus 3/3 for 24 yards 
+— about 18.0 half-PPR. Solid RB1 production with both volume and efficiency."
+
+Why good:
+✓ 2 numbers total (18.0 points + carries/yards)
+✓ Plain language ("solid RB1 production")
+✓ Interpretation (volume + efficiency)
+```
+
+---
+
+## ❌ Bad Response Pattern
+
+```
+User: "What did Saquon do Week 10?"
+
+Bad: "Week 10: 17 CAR, 96 RUSH YDS, 1 RUSH TD, 3 REC, 3 TGT, 24 REC YDS, 
+0 REC TD, 18.0 HPPR, 100% catch rate, 0.85 snap share, 0.42 carry share."
+
+Why bad:
+✗ 11 numbers (stat vomit)
+✗ CSV format (not conversational)
+✗ No interpretation (just data dump)
+```
+
+---
+
+## 🧪 Quick Test Commands
+
+### Test 1: Query Detection
+```typescript
+detectWeeklyQuery("What did Ja'Marr Chase do Week 11?")
+// Expected: {isWeeklyQuery: true, week: 11, playerName: "Ja'Marr Chase"}
+```
+
+### Test 2: API Call
+```bash
+curl "localhost:3000/api/weekly/player?season=2024&week=11&player=Ja%27Marr%20Chase"
+# Expected: 200 OK with structured JSON
+```
+
+### Test 3: End-to-End
+1. Ask TIBER: "What did Saquon Barkley do Week 10?"
+2. Check response:
+   - ✅ Contains actual stats (not hallucinated)
+   - ✅ Max 2 numbers in opening
+   - ✅ Includes interpretation
+   - ✅ Sounds like TIBER (not a stats bot)
+
+---
+
+## 🐛 Common Issues & Fixes
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| "No data found" for valid query | Player name mismatch | Check API player lookup logic |
+| TIBER still hallucinating stats | Data block not in context | Verify RAG context assembly |
+| Response is stat vomit | Style guard not applied | Check system prompt integration |
+| Query not detected | Regex miss | Update detectWeeklyQuery patterns |
+
+---
+
+## 📊 RAG Context Order (New)
+
+```
+Position 1: [DATA: WEEKLY_STATLINE]     ← NEW! Ground truth for the game
+Position 2: [DATA: Season Totals/VORP]  ← Existing data chunks
+Position 3: [NARRATIVE: Brain OS]       ← Philosophy & principles
+Position 4: [NARRATIVE: Pressure/River] ← Pattern recognition
+```
+
+**Why this order?**  
+Data closest to the question, principles further back. LLM sees facts → interprets through philosophy.
+
+---
+
+## 🎨 Language Pattern Cheat Sheet
+
+### For Good Games
+- "That's a role confirmation"
+- "The opportunity showed up"
+- "That's what his ceiling looks like"
+
+### For Bad Games
+- "Volume but no payoff"
+- "Role intact, results didn't show up"
+- "That's game script, not a demotion"
+
+### For Ambiguous Games
+- "One week is noise; two weeks is a pattern"
+- "Hold and see if it repeats"
+
+### For Breakouts
+- "Structural change in usage + production = early breakout pressure"
+- "You don't crown him yet, but you absolutely add/hold"
+
+---
+
+## 📅 Roadmap
+
+### Current (v1.0): MVP
+- ✅ Single-week queries
+- ✅ Explicit week numbers (Week 11)
+- ✅ Relative weeks (last week, this week)
+- ✅ Half-PPR default
+
+### Next (v1.5): Enhanced
+- Multi-week trends ("last 3 weeks")
+- Breakout detection (combines weekly + season)
+- Game script awareness
+
+### Future (v2.0): Advanced
+- Advanced stats (air yards, pressure, route tree)
+- Live game updates (Sunday real-time)
+- Visualization support (charts/graphs)
+
+---
+
+## 🚀 Launch Status
+
+### Current Season Support
+- **2024**: ✅ Full weekly data available (testing/validation)
+- **2025**: 🔜 Ready to ingest as games occur
+
+### Automatic Season Switching
+When 2025 data loads:
+1. Update: `CURRENT_NFL_SEASON = 2025`
+2. Verify: `hasWeeklyData(2025)` returns true
+3. System auto-switches (no code changes needed)
+
+---
+
+## 📚 Related Docs
+
+- **Comprehensive Guide**: `TIBER_Weekly_Statline_Integration.md`
+- **Code Reference**: `weekly-statline-helpers.ts`
+- **Prompt Text**: `weekly-statline-prompt-extension.ts`
+- **Integration Checklist**: `INTEGRATION_CHECKLIST.md`
+
+---
+
+## 💡 Philosophy Reminder
+
+> "Weekly statlines are ammunition for TIBER's brain, not the answer itself."
+> 
+> Data → Philosophy → Actionable Guidance.
+> 
+> That's the TIBER way.
+
+---
+
+## 🤝 Team Responsibilities
+
+| Team Member | Owns |
+|-------------|------|
+| **Grok** | Backend API, data fetching, query detection |
+| **Claude** | System prompt, RAG ordering, response quality |
+| **Joe** | Testing, validation, user experience |
+
+---
+
+## ✨ Success Metrics
+
+### Launch Day
+- [ ] Zero hallucinated stats when data present
+- [ ] < 500ms end-to-end response time
+- [ ] Users ask weekly questions naturally
+
+### Week 1
+- [ ] 95%+ API success rate
+- [ ] 80%+ user satisfaction (thumbs up)
+- [ ] Zero critical bugs
+
+### Month 1
+- [ ] Weekly queries = 20%+ of total queries
+- [ ] Feature adoption growing organically
+- [ ] Ready for 2025 season migration
+
+---
+
+**Let's ship this.** 🎯

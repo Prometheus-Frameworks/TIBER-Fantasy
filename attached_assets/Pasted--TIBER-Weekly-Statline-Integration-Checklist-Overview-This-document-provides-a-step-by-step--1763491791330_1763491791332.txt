@@ -1,0 +1,411 @@
+# TIBER Weekly Statline Integration Checklist
+
+## Overview
+This document provides a step-by-step integration plan for adding weekly statline RAG capabilities to TIBER.
+
+---
+
+## Phase 1: Backend Setup (Grok's Domain)
+
+### ✅ Prerequisites (Already Complete)
+- [x] `weekly_stats` table populated from nflreadpy/NFLfastR
+- [x] Debug route: `GET /api/debug/week-summary`
+- [x] 2024 weekly data verified vs Sleeper
+- [x] `CURRENT_NFL_SEASON` constant defined
+- [x] `hasWeeklyData(season)` guard function
+
+### 🎯 New Backend Tasks
+- [ ] **Task 1**: Create `/api/weekly/player` endpoint
+  - File: `src/routes/api/weekly/player.ts` (or similar)
+  - Validation: season (2000-2100), week (1-18), player name
+  - Response: Success/error with structured player weekly data
+  - Test: `curl "localhost:3000/api/weekly/player?season=2024&week=11&player=Ja'Marr%20Chase&scoring=half"`
+
+- [ ] **Task 2**: Create `detectWeeklyQuery()` helper
+  - File: `src/lib/chat/weekly-query-detector.ts` (or similar)
+  - Logic: Regex for week patterns + player names + stat verbs
+  - Test: Unit tests for various query formats
+
+- [ ] **Task 3**: Create `fetchWeeklyStatsForPlayer()` helper
+  - File: `src/lib/chat/weekly-stats-fetcher.ts` (or similar)
+  - Logic: Resolve relative weeks, call API, normalize response
+  - Test: Mock API responses, verify null handling
+
+- [ ] **Task 4**: Create `formatWeeklyStatlineDataChunk()` formatter
+  - File: `src/lib/chat/weekly-data-formatter.ts` (or similar)
+  - Logic: Convert WeeklyStatsResult → `[DATA: WEEKLY_STATLINE]` block
+  - Test: Verify output format matches RAG spec
+
+---
+
+## Phase 2: Frontend/RAG Setup (Claude's Domain)
+
+### 🎯 System Prompt Updates
+- [ ] **Add Weekly Statline Rules section**
+  - Location: After Brain OS core, before anti-stat-vomit
+  - Content: 10 lines from `weekly-statline-prompt-extension.ts`
+  - Validation: Prompt still renders correctly, no truncation
+
+- [ ] **Extend Anti-Stat-Vomit Guardrails**
+  - Location: Existing style guardrails section
+  - Content: Add weekly-specific rules (max 2 numbers, plain language)
+  - Validation: Check against existing guardrails for consistency
+
+- [ ] **Add Example Interactions**
+  - Location: Example section of system prompt
+  - Content: 4 examples (pure statline, breakout, no data, context-rich)
+  - Validation: Examples align with TIBER voice/style
+
+- [ ] **Add Language Pattern Templates**
+  - Location: Style & Voice section
+  - Content: Phrase templates for good/bad/ambiguous games
+  - Validation: Templates match existing TIBER vocabulary
+
+### 🎯 RAG Context Ordering
+- [ ] **Update context assembly logic**
+  - File: Chat route or RAG context builder
+  - Logic: 1) Weekly data, 2) Other data, 3) Philosophy, 4) Narratives
+  - Test: Log context order, verify weekly chunks appear first
+
+- [ ] **Add metadata tagging**
+  - Logic: Tag weekly chunks with `type: 'weekly_statline'`, `epistemic_status: 'DATA'`
+  - Test: Verify metadata present in RAG context
+
+### 🎯 Documentation
+- [ ] **Update `replit.md` or architecture docs**
+  - Section: "Weekly Statline Integration"
+  - Content: Context ordering rules, helper locations, testing notes
+  - Cross-reference: Link to this checklist
+
+---
+
+## Phase 3: Integration Testing
+
+### Test Suite 1: Data Flow Validation
+
+**Test 1.1: Query Detection**
+```typescript
+// Input
+const message = "What did Ja'Marr Chase do Week 11?";
+
+// Expected Output
+{
+  isWeeklyQuery: true,
+  week: 11,
+  playerName: "Ja'Marr Chase"
+}
+```
+
+**Test 1.2: API Call**
+```bash
+# Expected: 200 OK with structured data
+curl "localhost:3000/api/weekly/player?season=2024&week=11&player=Ja%27Marr%20Chase"
+```
+
+**Test 1.3: Data Formatting**
+```typescript
+// Input: WeeklyStatsResult from API
+
+// Expected Output: String starting with [DATA: WEEKLY_STATLINE]
+// Format:
+// Player: Ja'Marr Chase (CIN, WR)
+// Week: 11, Season: 2024
+// Scoring (half-PPR): 7.3 fantasy points
+// Stat line: ...
+```
+
+**Test 1.4: Context Injection**
+```typescript
+// Before LLM call, verify RAG context includes:
+// 1. [DATA: WEEKLY_STATLINE] block (position 0)
+// 2. Other data chunks (position 1+)
+// 3. Brain OS philosophy (later positions)
+```
+
+### Test Suite 2: Response Quality Validation
+
+**Test 2.1: Plain Language Statline**
+```
+Query: "What did Saquon Barkley do Week 10?"
+
+Good Response:
+"In Week 10, he went 17 carries for 96 yards and a TD, plus 3 catches for 24 yards — about 18.0 half-PPR points. Solid RB1 production."
+
+Bad Response:
+"Week 10: 17 CAR, 96 RUSH YDS, 1 RUSH TD, 3 REC, 3 TGT, 24 REC YDS, 0 REC TD, 18.0 HPPR, 0.85 snap share."
+
+Check: ✅ Max 2 numbers in opening sentence
+```
+
+**Test 2.2: Brain OS Interpretation**
+```
+Query: "Is Chris Rodriguez breaking out?"
+
+Good Response:
+"This week he took over early-down work and put up real production. That's early breakout pressure — structural usage change plus results. Don't crown him yet, but add/hold and watch."
+
+Bad Response:
+"He had 14 carries this week which is more than last week."
+
+Check: ✅ Uses Brain OS lens (structural change, pressure, process)
+```
+
+**Test 2.3: No Data Fallback**
+```
+Query: "What did Terry McLaurin do Week 1?"
+(Assuming Week 1 data not available)
+
+Good Response:
+"I don't have that week's statline for McLaurin; I can still talk about his general profile if you want."
+
+Bad Response:
+"Terry McLaurin had 6 catches for 82 yards." (hallucinated)
+
+Check: ✅ Honest about missing data, offers alternative
+```
+
+**Test 2.4: Metric Translation**
+```
+Query: "How efficient was Ja'Marr Chase Week 11?"
+
+Good Response:
+"He got the volume (9 targets) but didn't do much with it (48 yards, no TDs). That's opportunity without payoff — negative EPA means the touches didn't help the team."
+
+Bad Response:
+"Receiving EPA: -0.03"
+
+Check: ✅ Translates metrics into football language
+```
+
+### Test Suite 3: Edge Cases
+
+**Test 3.1: Ambiguous Player Name**
+```
+Query: "What did Johnson do Week 5?"
+
+Expected: "Multiple matches for 'Johnson'. Be more specific (e.g., Diontae Johnson, Tyler Johnson)."
+```
+
+**Test 3.2: Relative Week Resolution**
+```
+Query: "What did CMC do last week?"
+Current Week: 12
+
+Expected: Resolves to Week 11, fetches that data
+```
+
+**Test 3.3: Scoring Format Override**
+```
+Query: "What did Chase do Week 11 in standard scoring?"
+
+Expected: Uses std scoring (6.2 pts) instead of half-PPR (7.3 pts)
+```
+
+**Test 3.4: Invalid Week**
+```
+Query: "What did Chase do Week 19?"
+
+Expected: "Week must be between 1 and 18."
+```
+
+**Test 3.5: Future Week**
+```
+Query: "What will Chase do Week 13?"
+Current Week: 12
+
+Expected: "I don't have that week's statline yet; it hasn't been played."
+```
+
+---
+
+## Phase 4: Performance & Monitoring
+
+### Performance Checks
+- [ ] **API response time**: `/api/weekly/player` < 100ms
+- [ ] **Query detection latency**: < 10ms
+- [ ] **Data formatting latency**: < 5ms
+- [ ] **End-to-end (query → response)**: < 500ms
+
+### Monitoring Setup
+- [ ] **Log weekly query detection rate**
+  - Metric: `weekly_queries_detected / total_queries`
+  - Target: Track to understand usage patterns
+
+- [ ] **Log API success rate**
+  - Metric: `successful_fetches / total_fetch_attempts`
+  - Target: > 95% (excluding legitimate "no data" cases)
+
+- [ ] **Log response quality**
+  - Metric: User thumbs up/down on weekly stat answers
+  - Target: Baseline for future improvements
+
+### Error Handling
+- [ ] **API timeout**: Fallback to "data unavailable" message
+- [ ] **Malformed response**: Log error, return null
+- [ ] **Network error**: Retry once, then fallback
+
+---
+
+## Phase 5: Documentation & Handoff
+
+### Internal Docs
+- [ ] **Update architecture diagram**
+  - Add: `/api/weekly/player` endpoint
+  - Add: Chat helper functions
+  - Add: RAG context flow for weekly data
+
+- [ ] **Update developer README**
+  - Section: "Adding New Data Sources"
+  - Example: Weekly statline integration as case study
+
+- [ ] **Create troubleshooting guide**
+  - Issue: "Weekly queries not detected"
+  - Issue: "API returns 404"
+  - Issue: "TIBER hallucinating stats despite data block"
+
+### User-Facing
+- [ ] **Feature announcement** (when ready for soft launch)
+  - Headline: "Ask TIBER about any 2024 game"
+  - Examples: Show query variations
+  - Limitations: Clarify data availability (2024 only at launch)
+
+---
+
+## Phase 6: Future Enhancements (Post-Launch)
+
+### Multi-Week Queries
+```
+Query: "How has Puka Nacua trended over the last 3 weeks?"
+
+Required:
+- Multi-week endpoint or aggregation logic
+- Updated RAG ordering for multiple [DATA: WEEKLY_STATLINE] blocks
+- Prompt extension for trend interpretation
+```
+
+### Advanced Stats
+```
+Query: "Show me Chase's air yards Week 11"
+
+Required:
+- Extend weekly_stats schema with air yards, aDOT, etc.
+- Update API response format
+- Add advanced metric language patterns to prompt
+```
+
+### Game Script Context
+```
+Query: "Was Spears' 18 touches a blowout or real role change?"
+
+Required:
+- Integrate game script data (score differential by quarter)
+- Add game context to [DATA: WEEKLY_STATLINE] block
+- Teach TIBER to factor game script into interpretation
+```
+
+### Visualization
+```
+Query: "Chart CMC's usage over the last 5 weeks"
+
+Required:
+- Multi-week data aggregation
+- Chart generation capability
+- Update response format to include visualizations
+```
+
+---
+
+## Success Criteria
+
+### Minimum Viable Product (MVP)
+- ✅ User can ask "What did X do Week Y?" and get accurate stats
+- ✅ TIBER interprets stats through Brain OS lens (not just box score)
+- ✅ Graceful fallback when data unavailable
+- ✅ Sub-500ms end-to-end response time
+- ✅ No hallucinated stats when data block present
+
+### Version 1.5 (Enhanced)
+- ✅ Supports "last week" / "this week" relative queries
+- ✅ Handles all 3 scoring formats (std/half/ppr)
+- ✅ Breakout detection combines weekly + season context
+- ✅ User satisfaction > 80% (thumbs up rate)
+
+### Version 2.0 (Advanced)
+- ✅ Multi-week trend analysis
+- ✅ Game script awareness in interpretation
+- ✅ Advanced stats (air yards, pressure rate, route tree)
+- ✅ Visualization support
+
+---
+
+## Rollout Plan
+
+### Week 1: Internal Testing
+- Deploy to dev environment
+- Team tests with known queries
+- Fix critical bugs
+- Validate data accuracy
+
+### Week 2: Alpha Testing
+- Deploy to staging with limited user group
+- Collect feedback on response quality
+- Tune prompt language patterns
+- Monitor performance metrics
+
+### Week 3: Beta Launch
+- Deploy to production
+- Announce to wider user base
+- Monitor error rates and user feedback
+- Prepare for 2025 data migration
+
+### Week 4+: 2025 Season Prep
+- Ingest 2025 weekly data as games occur
+- Update `CURRENT_NFL_SEASON = 2025`
+- Verify `hasWeeklyData(2025)` returns true
+- System automatically shifts to 2025 (no code changes)
+
+---
+
+## Notes
+
+### Why This Matters
+Weekly statline integration is TIBER's first step toward **live game awareness**. It proves the architecture can:
+1. Detect user intent accurately
+2. Fetch real-time data on demand
+3. Interpret data through Brain OS philosophy
+4. Maintain voice consistency under new data types
+
+This is the foundation for future features like:
+- Live game updates during Sunday
+- Injury impact analysis
+- Weather/matchup overlays
+- Dynasty/keeper league support
+
+### What Could Go Wrong
+**Data quality issues**: If weekly_stats has gaps or errors, TIBER will propagate them. Solution: Rigorous validation during ingest.
+
+**Prompt drift**: As we add more data types, the system prompt could become bloated. Solution: Modular prompt architecture with conditional sections.
+
+**User expectations**: Users might expect TIBER to know things it doesn't (e.g., "Why did X only get 3 touches?"). Solution: Clear communication about data scope.
+
+### Success Signals
+- Users ask weekly questions naturally
+- Responses feel like TIBER, not a stats bot
+- Feature adoption grows organically
+- Feedback: "This is exactly what I wanted to know"
+
+---
+
+## Contact
+
+Questions about this integration? Check:
+- `TIBER_Weekly_Statline_Integration.md` (comprehensive guide)
+- `weekly-statline-helpers.ts` (code reference)
+- `weekly-statline-prompt-extension.ts` (prompt text)
+
+For technical issues, review logs:
+- API: `/api/weekly/player` response codes
+- Query detection: console logs in chat route
+- RAG context: inspect LLM input before API call
+
+Let's ship this. 🚀
