@@ -7208,6 +7208,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         boostPressureChunks(relevantChunks, true);
       }
 
+      // Step 2b.6: Force-include Brain OS chunks for strategy/philosophy questions
+      // Detect if query is about strategy, philosophy, or decision-making
+      const isStrategyQuery = /\b(how should i|how do i|what makes|what creates|how to think|strategy|philosophy|approach|framework|evaluate|decision|trade|draft|rebuild|contend|window)\b/i.test(message);
+      const isTradeQuery = /\b(trade|accept|offer|give|get|swap|exchange)\b/i.test(message);
+      const isPhilosophyQuery = /\b(why do|what makes|philosophy|pattern|framework|approach|think about)\b/i.test(message);
+      
+      const shouldIncludeBrainOS = isStrategyQuery || isTradeQuery || isPhilosophyQuery;
+      
+      if (shouldIncludeBrainOS && generalLimit > 0) {
+        console.log(`🧠 [Brain OS] Strategy/philosophy query detected - force-including Brain OS chunks`);
+        
+        // Search for Brain OS chunks
+        const brainOSResult = await db.execute(
+          sql`SELECT 
+                id, 
+                content, 
+                metadata,
+                (1 - (embedding <-> ${vectorString}::vector) / 2) as similarity,
+                'brain_os' as source_type
+              FROM chunks
+              WHERE metadata->>'doc_id' = 'tiber-brain-os-v1'
+              ORDER BY 
+                (metadata->>'priority')::int DESC,
+                embedding <-> ${vectorString}::vector
+              LIMIT 2`
+        );
+        
+        const brainOSChunks = brainOSResult.rows.map((row: any) => ({
+          chunk_id: row.id,
+          content: row.content,
+          content_preview: row.content?.substring(0, 150) || '',
+          metadata: row.metadata,
+          relevance_score: parseFloat(row.similarity),
+          source_type: 'brain_os',
+          forced: true, // Mark as forced-include
+        }));
+        
+        if (brainOSChunks.length > 0) {
+          relevantChunks.push(...brainOSChunks);
+          console.log(`✅ [Brain OS] Added ${brainOSChunks.length} Brain OS philosophy chunks`);
+        }
+      }
+
       // Step 2c: Detect player mentions and fetch VORP data
       // Expand player aliases/nicknames before detection (e.g., "Tet" → "Tetairola McMillan")
       const expandedMessage = expandPlayerAliases(message);

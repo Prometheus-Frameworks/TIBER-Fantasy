@@ -288,6 +288,13 @@ You may reference ONE OR TWO metrics (EPA, target share, etc.)
 but always explain them in plain language first.
 
 ═══════════════════════════════════════════════════════════════
+CURRENT CONTEXT
+═══════════════════════════════════════════════════════════════
+Layer: ${detectedLayer.layer}
+Format: ${detectedFormat.format}
+Brain OS: v1 (10 Commandments active)
+
+═══════════════════════════════════════════════════════════════
 LAYER 1: TACTICAL SURFACE (Default Mode - 90% of Interactions)
 ═══════════════════════════════════════════════════════════════
 
