@@ -1,0 +1,194 @@
+
+
+Yeah this is money.
+
+
+# TASK: Integrate "TIBER BRAIN OS v1" Into Tiber
+
+Goal: Make TIBER BRAIN OS v1 the philosophical spine for all advice,
+without bloating prompts or spamming users with stats.
+
+We already have:
+- Layer detection (tactical / teaching / river)
+- Format detection (redraft / dynasty)
+- RAG system with metadata
+- Weekly + VORP data
+
+Use the following plan.
+
+---
+
+## PHASE 1 – Add Brain OS to RAG (Single Core Doc)
+
+1. Create a file in the repo, e.g.:
+
+   `knowledge/core/tiber-brain-os-v1.md`
+
+   Paste the full package content Joe provided (the 10 Commandments + philosophy).
+
+2. When embedding this doc into the RAG index, tag it:
+
+   ```ts
+   {
+     id: "tiber-brain-os-v1",
+     layer_hint: "teaching",
+     secondary_layer_hint: "river",
+     format_hint: "both",              // applies to redraft + dynasty
+     content_type: "PHILOSOPHY",
+     priority: "core_os"               // highest weight for non-DATA docs
+   }
+
+	3.	In the RAG retrieval pipeline, before returning chunks to the LLM:
+	•	Always include at least 1 chunk from tiber-brain-os-v1
+when the question is about:
+	•	strategy
+	•	trades
+	•	team-building
+	•	draft philosophy
+	•	“how should I think about…?”
+	•	This should never override DATA chunks, just sit alongside them.
+You can implement this as:
+	•	normal search
+	•	then “force include” 1–2 high-scoring chunks from core_os
+if the query intent is strategy/philosophy.
+
+⸻
+
+PHASE 2 – System Prompt: Minimal base layer
+
+We do not want to dump the full OS into the system prompt.
+	1.	In the base TIBER system prompt, add a short section like:
+TIBER BRAIN OS v1 (Core Rules)
+	•	Process over prizes (judge decisions, not luck)
+	•	Youth → peak → age (entropy is inevitable)
+	•	Opportunity over talent (volume > vibes)
+	•	Buy low/sell high windows are real (markets misprice uncertainty + recency)
+	•	Positional scarcity matters (QB in superflex, elite TEs, etc.)
+	•	Never fall in love with players (treat them as assets)
+	•	Patience wins more leagues than panic
+Always align your advice with these rules.
+	2.	Also add a short instruction about VOICES:
+Voices
+	•	Teaching: explain frameworks calmly and clearly.
+	•	Tactical: be blunt and decisive for start/sit and trades.
+	•	River: when asked for big-picture or “why do patterns repeat?”,
+you may use a more poetic, philosophical style.
+Default to Teaching + Tactical. River is optional and rare.
+	3.	Explicitly forbid stat-dumps:
+Translate advanced stats into football meaning.
+Do not list long stat tables or raw metric names unless the user asks.
+You may reference one or two metrics (EPA, target share, etc.)
+but always explain them in plain language first.
+
+⸻
+
+PHASE 3 – Tie Into Layer & Format Detection
+
+We already have:
+	•	detectLayer(message): tactical | teaching | river
+	•	detectFormat(message): redraft | dynasty
+
+Extend their usage, don’t rewrite them.
+	1.	When building the system prompt context header, add:
+
+Layer: <layer>
+Format: <format>
+BrainOS: v1 (10 Commandments active)
+
+
+	2.	Behavior rules:
+	•	If layer = tactical:
+	•	Use Tactical voice.
+	•	Still implicitly obey Brain OS (e.g. mention volume, opportunity, regression).
+	•	Answers should be short and decisive.
+	•	If layer = teaching:
+	•	Pull more chunks from tiber-brain-os-v1.
+	•	Explain decisions in terms of:
+	•	process vs outcome
+	•	youth/age curve
+	•	opportunity vs talent
+	•	buy/sell windows
+	•	positional scarcity
+	•	If layer = river:
+	•	You may use the “River Voice” snippets from the document,
+but keep it grounded and not overused.
+	•	Still tie back to an actual actionable takeaway.
+	3.	Tiny format rule on top:
+	•	If format = redraft, bias toward:
+	•	weekly volume
+	•	rest-of-season usage
+	•	playoff schedule
+	•	ignore long-term “age insulation” unless user asks.
+	•	If format = dynasty, bias toward:
+	•	age curve
+	•	contract + draft capital
+	•	2–3 year windows
+	•	youth vs peak vs age discussions.
+Brain OS is the same; the emphasis changes.
+
+⸻
+
+PHASE 4 – Anti-Stat-Dump Guardrail
+
+Create a small helper in the chat layer, something like:
+
+interface StatUsePolicy {
+  maxMetricsPerAnswer: number; // default 2
+  allowRawNames: boolean;      // default false
+}
+
+const defaultStatPolicy: StatUsePolicy = {
+  maxMetricsPerAnswer: 2,
+  allowRawNames: false,
+};
+
+Add to the system prompt:
+
+You are allowed to reference at most two advanced metrics per answer
+(e.g. EPA, target share, WOPR), unless the user explicitly asks for more.
+When you reference a metric, first explain what it means in normal football language, then (optionally) name it. Do not spam acronyms.
+
+If needed, we can later add a post-processor to detect “EPA / CPOE / WOPR / PACR / RACR” spam and compress it, but for now keep it as a prompt-only constraint.
+
+⸻
+
+PHASE 5 – Smoke Tests
+
+After implementation, run these manual tests:
+	1.	Redraft trade test
+	•	Prompt: “Half PPR redraft: trade Henry + Adams for Jefferson + Pierce + Rodriguez?”
+	•	Expect:
+	•	Tactical voice.
+	•	Brain OS language: process, opportunity, age, window.
+	•	No stat spam.
+	2.	Dynasty philosophy test
+	•	Prompt: “Dynasty: why do people say youth over peak over age?”
+	•	Expect:
+	•	Teaching + River voices.
+	•	Age curve explanation.
+	•	Entropy/variance language from Brain OS.
+	3.	Metrics translation test
+	•	Prompt: “What does it mean if a WR has great WOPR and bad EPA?”
+	•	Expect:
+	•	Explanation in human terms first.
+	•	At most two metrics named.
+	•	No raw table.
+	4.	Format bleed test
+	•	Ask same question once as redraft, once as dynasty.
+	•	Ensure redraft answer focuses on 2025 season + weekly edge.
+	•	Ensure dynasty answer talks about multi-year windows + insulation.
+
+If any of these fail, adjust:
+	•	RAG priority for tiber-brain-os-v1
+	•	System prompt wording
+	•	Detection heuristics (only if truly needed)
+
+⸻
+
+RED FLAGS / DO-NOTS
+	•	Do NOT paste the full Brain OS doc into the system prompt. It belongs in RAG + a small summary.
+	•	Do NOT let DATA chunks get crowded out by philosophy chunks. DATA must stay primary for start/sit and trade math.
+	•	Do NOT reimplement layer/format detectors; only extend usage.
+	•	Do NOT allow the model to dump 5+ metrics in one answer unless the user clearly asks for raw stats or deep analytics.
+
+
