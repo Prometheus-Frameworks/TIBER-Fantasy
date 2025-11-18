@@ -68,12 +68,15 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
     - **Mixed Meta + Tactics Rule**: Prioritizes tactical decisions in responses.
     - **Possessive Form Guard**: Avoids possessive form with banned metrics.
     - **2024 Baseline Training Data Integration**: Uses historical 2024 data (player stats, usage patterns, elite baselines) to teach evaluation frameworks, strictly framed as historical data.
+        - **Tactical Contamination Guard**: Blocks 2024 baseline RAG chunks from tactical queries (trade/start-sit/waivers) to prevent historical data from overriding current 2025 stats in decision-making.
     - **Format Brain (Redraft vs Dynasty Detection)**: Dual-brain system detecting query format to adjust response depth and time horizon:
         - **Redraft Detection**: Weekly matchups, start/sit, waivers, ROS focus → Tactical surface responses
         - **Dynasty Detection**: Draft picks, age curves, windows, long-term value → Strategic depth responses
         - **Implementation**: Heuristic-based with 80+ signal patterns, 25/25 test cases passing (100%)
+        - **Response Frameworks**: Explicit redraft/dynasty playbooks with decision rules and language patterns to enforce format-appropriate advice
         - **Logging**: Format detection logged alongside layer detection for monitoring
         - **Default Behavior**: Ambiguous queries default to dynasty (general player evaluation context)
+    - **Fresh Team Context in VORP**: VORP formatting includes team codes (e.g., "MIN WR20") from live Sleeper API data to counteract stale RAG roster information.
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
