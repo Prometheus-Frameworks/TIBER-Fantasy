@@ -4,11 +4,12 @@
  * Detects whether user query is focused on:
  * - Redraft: Weekly matchups, rest-of-season, start/sit, waivers
  * - Dynasty: Long-term value, age curves, picks, windows, insulation
+ * - Neutral: General player evaluation, greetings, ambiguous queries
  * 
  * Composable with existing 3-layer system (tactical/teaching/river)
  */
 
-export type Format = 'redraft' | 'dynasty';
+export type Format = 'redraft' | 'dynasty' | 'neutral';
 
 export interface FormatDetectionResult {
   format: Format;
@@ -102,12 +103,12 @@ export function detectFormat(message: string): FormatDetectionResult {
   // Determine format and confidence
   const totalScore = redraftScore + dynastyScore;
   
-  // If no strong signals, default to dynasty (general player eval context)
+  // If no strong signals, default to neutral (avoid dynasty/redraft assumptions on greetings)
   if (totalScore < 0.3) {
     return {
-      format: 'dynasty',
+      format: 'neutral',
       confidence: 0.5,
-      reasons: ['No strong format signals - defaulting to dynasty (general player evaluation)'],
+      reasons: ['No strong format signals - neutral mode (general player evaluation)'],
     };
   }
   
