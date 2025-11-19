@@ -80,8 +80,8 @@ export function detectWeeklyQuery(message: string): WeeklyQuery {
 
   // Case-insensitive player name detection
   // Matches 2+ consecutive words (handles both "Ja'Marr Chase" and "jaylen warren")
-  // Excludes common question words and stat terms
-  const excludeWords = /^(what|how|did|do|does|week|wk|last|this|his|the|in|put|up|score|finish|game|log|stat|statline|line|performance)$/i;
+  // Excludes common question words, verbs, and analysis terms
+  const excludeWords = /^(what|how|did|do|does|week|wk|last|this|his|the|in|put|up|score|finish|game|log|stat|statline|line|performance|break|down|breakdown|analyze|using|framework|against|commandments?|play|played|fantasy|points?|yards?|targets?|catches?|receptions?|touchdowns?|tds?|and|or|with|for|from|about|was|were|had|have|my|your|his|her|their)$/i;
   
   const words = message.match(/\b[a-z]+(?:['\-][a-z]+)?\b/gi) || [];
   const candidateWords = words.filter(w => !excludeWords.test(w));
