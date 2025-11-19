@@ -5,7 +5,7 @@
  * and formats as [DATA: WEEKLY_STATLINE] chunks for RAG.
  */
 
-import { CURRENT_NFL_SEASON } from '../../shared/config/seasons';
+import { CURRENT_NFL_SEASON, getCurrentNFLWeek } from '../../shared/config/seasons';
 
 // ========================================
 // TYPE DEFINITIONS
@@ -141,16 +141,24 @@ export async function fetchWeeklyStatsForPlayer(
   let week = query.week;
   
   // Resolve relative week references
-  if (query.relativeWeek === 'last') {
-    // Note: getCurrentWeek() would need to be implemented or passed in
-    // For now, we'll use the explicit week number when provided
-    if (!week) return null; // Fallback: require explicit week for now
-  }
-  if (query.relativeWeek === 'this') {
-    if (!week) return null; // Fallback: require explicit week for now
+  if (query.relativeWeek && !week) {
+    const currentWeek = getCurrentNFLWeek(season);
+    if (!currentWeek) {
+      console.warn(`[Weekly Stats] Cannot resolve "${query.relativeWeek} week" - season ${season} not started or no current week available`);
+      return null;
+    }
+    
+    if (query.relativeWeek === 'last') {
+      week = Math.max(1, currentWeek - 1); // Clamp to Week 1 minimum
+    } else if (query.relativeWeek === 'this') {
+      week = currentWeek;
+    }
+    
+    console.log(`[Weekly Stats] Resolved "${query.relativeWeek} week" to Week ${week} (current: ${currentWeek})`);
   }
 
   if (!week || week < 1 || week > 18) {
+    console.warn(`[Weekly Stats] Invalid week number: ${week}`);
     return null;
   }
 
