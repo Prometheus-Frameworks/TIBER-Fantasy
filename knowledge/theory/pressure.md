@@ -1,0 +1,362 @@
+# Pressure Theory Module
+
+## RAG-Optimized Framework for Breakout Detection
+
+**Version**: 1.0  
+**Purpose**: Identify and evaluate multi-dimensional breakout catalysts  
+**Tags**: ["deep_theory", "river", "teaching", "breakouts", "regression"]
+**Metadata**: {
+  "layer_hint": "teaching",
+  "content_type": "THEORY",
+  "format_hint": "both"
+}
+
+-----
+
+## Core Concept
+
+Breakouts occur when three independent forces align simultaneously. Each force operates on a different axis — talent, structure, environment — and their compounding creates non-linear production explosions.
+
+Players are pressure vessels. When forces compound, production explodes. When forces scatter, output returns to equilibrium.
+
+**This is not additive. This is multiplicative.**
+
+## Core Concept
+
+Breakouts occur when three independent forces align simultaneously. Each force operates on a different axis — talent, structure, environment — and their compounding creates non-linear production explosions.
+
+Players are pressure vessels. When forces compound, production explodes. When forces scatter, output returns to equilibrium.
+
+**This is not additive. This is multiplicative.**
+
+-----
+
+## The Three Pressure Vectors
+
+### 1. Internal Pressure (Talent × Athleticism)
+
+**Definition**: Raw physical capability and football skill independent of opportunity.
+
+**Indicators**:
+
+- Measurable athleticism (speed, burst, agility)
+- Route-running precision / vision / contact balance
+- Catch radius / contested catch ability
+- Football IQ and processing speed
+- College domination / draft capital
+- Physical development trajectory (rookie gaining NFL strength)
+
+**Key Insight**: Internal pressure can exist dormant for years. A 3rd-round pick sitting behind veterans doesn’t lose talent — he lacks structural access.
+
+**Example**: Puka Nacua had elite physical traits but zero structural pressure as a 5th-rounder. Once the Rams cleared the depth chart (injury vacuum), internal + structural aligned = breakout.
+
+-----
+
+### 2. Structural Pressure (Role × Volume × Opportunity)
+
+**Definition**: Team-mandated usage patterns that grant access to production.
+
+**Indicators**:
+
+- Snap share elevation (70%+ = bell-cow territory)
+- Target/touch share consolidation
+- Role clarity (WR1, early-down back, RZ specialist)
+- Depth chart monopoly (no committee)
+- Play-type assignments (vertical routes, goal-line work)
+- Sticky usage across multiple games (not single-week spike)
+
+**Key Insight**: Structural pressure is binary. You either have the role or you don’t. A talented backup getting 30% snaps has zero structural pressure until injury/trade creates a vacancy.
+
+**Example**: Brian Robinson Jr. got 15+ carries per game after Antonio Gibson was demoted. That’s structural pressure — repeatable, coach-mandated volume.
+
+-----
+
+### 3. External Pressure (Environmental Catalyst)
+
+**Definition**: System-level changes that unlock dormant talent + structure combinations.
+
+**Catalysts**:
+
+- Coaching/coordinator change (new scheme fit)
+- Quarterback upgrade (gunslinger vs game-manager)
+- Offensive line improvement
+- Injury vacuum (starter goes down)
+- Trade/release of depth-chart blocker
+- Pace-of-play shift (hurry-up offense)
+- Contract year motivation
+
+**Key Insight**: External pressure is the spark that ignites existing fuel. Without internal + structural pressure already present, external changes produce nothing.
+
+**Example**: DeVonta Smith’s breakout when Eagles hired a pass-heavy OC. He always had talent (internal) and WR1 role (structural), but the scheme shift (external) unlocked ceiling usage.
+
+-----
+
+## Pressure Alignment Framework
+
+### Triple Alignment = Breakout (High Confidence)
+
+**Requirements**:
+
+- ✅ Proven talent (draft capital, college domination, or NFL efficiency samples)
+- ✅ Role consolidation (70%+ snaps, 20%+ target/touch share)
+- ✅ Environmental catalyst (scheme change, injury, QB upgrade)
+
+**Action**: Aggressive buy. This is the highest-edge scenario.
+
+**Example**: Rookie WR drafted Round 1 → gets alpha role Week 1 → paired with elite QB in pass-heavy offense = all three forces aligned.
+
+-----
+
+### Dual Alignment = Watch Zone (Medium Confidence)
+
+**Two forces present, one missing**:
+
+**Talent + Structure, Missing External**:
+
+- Elite player in stable role but bad ecosystem
+- **Action**: Hold or buy at discount. One catalyst away from explosion.
+- **Example**: WR1 on run-first team with game-manager QB. If QB upgrades, breakout unlocks.
+
+**Talent + External, Missing Structure**:
+
+- Skilled backup in upgraded offense but no playing time
+- **Action**: Speculative stash. Requires injury or trade.
+- **Example**: RB2 with elite athleticism behind an aging starter in new pass-heavy offense.
+
+**Structure + External, Missing Talent**:
+
+- Opportunity without ability
+- **Action**: Fade. Usage without production = regression incoming.
+- **Example**: Replacement-level RB thrust into bell-cow role due to injury. High volume, low efficiency.
+
+-----
+
+### Single Pressure = Noise (Low Confidence)
+
+**Only one force present**:
+
+- **Talent only**: Backup with no path to playing time
+- **Structure only**: Mediocre player getting volume due to injury
+- **External only**: System change that doesn’t affect player’s role
+
+**Action**: Avoid. Single-pressure spikes regress to mean.
+
+**Example**: Third-string RB getting 20 touches in one blowout game. Volume spike without talent or sustainable role = noise.
+
+-----
+
+## Pressure Decay (Regression Framework)
+
+Breakouts reverse when pressure forces scatter:
+
+### Internal Pressure Decay
+
+- Aging (entropy)
+- Injury accumulation
+- Physical decline (speed loss, burst reduction)
+
+### Structural Pressure Decay
+
+- Role compression (rookie drafted, veteran signed)
+- Committee backfield formation
+- Snap share erosion
+- Depth chart demotion
+
+### External Pressure Decay
+
+- Coordinator fired (scheme change)
+- QB downgrade
+- Offensive line collapse
+- Pace-of-play slowdown
+
+**Key Insight**: Regression often precedes visible stats. Structural decay (target share dropping from 28% → 22%) signals pressure release before fantasy points crater.
+
+-----
+
+## Decision Rules
+
+### When to Buy
+
+1. **Pre-breakout**: Two forces aligned, third force imminent
+- Example: Talented rookie getting promoted to starter next week
+1. **Post-confirmation**: Triple alignment confirmed across 2-3 weeks
+- Example: Rookie WR gets role + volume + produces efficiently for 3 straight weeks
+
+### When to Hold
+
+1. **Dual alignment stable**: Two forces present, waiting for catalyst
+1. **Temporary pressure loss**: External pressure dip (tough matchup, weather) but structure intact
+
+### When to Sell
+
+1. **Single force remaining**: Lost two of three pressure vectors
+- Example: Lost starter role (structure) and QB got hurt (external) = only talent remains
+1. **Pressure mimics without substance**: Volume spike without efficiency or talent confirmation
+1. **Aging + role compression**: Veteran losing structural pressure to younger player
+
+### When to Fade Entirely
+
+1. **Single-pressure spike**: Only one force present, other two absent or weakening
+1. **Opportunity without talent**: Replacement-level player thrust into volume via injury
+1. **Narrative without data**: Market hype contradicts structural/efficiency reality
+
+-----
+
+## Pressure vs Other Theories (Non-Overlap Validation)
+
+**Pressure ≠ Ecosystem**:
+
+- Pressure = player-specific forces converging
+- Ecosystem = team-level infrastructure affecting all players
+- Example: Ecosystem explains why all Dolphins WRs produce. Pressure explains why Tyreek Hill dominates within that ecosystem.
+
+**Pressure ≠ Signal**:
+
+- Pressure = catalysts that create production
+- Signal = repeatable patterns that survive chaos
+- Example: Pressure explains the breakout. Signal confirms it’s sustainable across 3+ weeks.
+
+**Pressure ≠ Market Psychology**:
+
+- Pressure = objective forces (role, talent, scheme)
+- Market Psychology = subjective crowd perception
+- Example: Pressure identifies the breakout candidate. Market Psychology determines if he’s underpriced or overpriced.
+
+-----
+
+## Edge Cases & Nuance
+
+### When Pressure Exceeds Role Stability
+
+**Scenario**: Player has immense talent (internal) + scheme fit (external) but role is volatile week-to-week.
+
+**Analysis**: High upside, high variance. Structural pressure incomplete.
+
+**Example**: Pass-catching RB in committee. Elite talent, pass-heavy offense, but only gets 40% snaps and usage fluctuates based on game script.
+
+**Action**: Flex play, not lineup anchor. Needs role consolidation for sustainable pressure alignment.
+
+-----
+
+### When External Pressure Amplifies Mediocre Talent
+
+**Scenario**: Scheme change creates volume for replacement-level player.
+
+**Analysis**: Temporary structural pressure without internal pressure support. Regression inevitable.
+
+**Example**: Backup TE getting 8 targets per game after starter injured, but has stone hands and poor route-running. Volume is structural noise, not sustainable pressure.
+
+**Action**: Sell into hype immediately. Window closes when talent deficit becomes obvious.
+
+-----
+
+### When Pressure Builds Slowly vs Explosively
+
+**Slow Build**:
+
+- Rookie WR gradually earning targets over first 6 weeks
+- All three forces present but ramping up
+- **Action**: Buy before breakout fully manifests
+
+**Explosive Build**:
+
+- Starter injury creates instant 90% snap share for backup
+- Immediate triple alignment
+- **Action**: React fast or miss the window
+
+-----
+
+## TIBER Voice Examples
+
+**Teaching Mode (Primary)**:
+“Pressure doesn’t lie. When it builds in multiple directions, something has to give — usually the box score. But you need all three forces. Talent alone won’t score if you’re not on the field. Role alone won’t produce if you can’t execute. And environmental upgrades don’t matter if you’re third on the depth chart.”
+
+**Tactical Mode (Sparse)**:
+“He’s got two of three: talent + new pass-happy OC. Missing: the role. Once the starter gets hurt or they bench the veteran, that’s your cue. Not before.”
+
+**River Mode (Rare, Powerful)**:
+“Pressure compounds until equilibrium shatters. You’re not predicting — you’re measuring force vectors. When three arrows point the same direction, the dam breaks. Your job isn’t guessing when. It’s recognizing the geometry.”
+
+-----
+
+## Application Workflow
+
+### Step 1: Identify Internal Pressure
+
+- Check draft capital, college domination, measurables
+- Review efficiency metrics (yards per route run, yards per touch)
+- Assess athletic profile
+
+### Step 2: Assess Structural Pressure
+
+- Current snap share, target/touch share
+- Role clarity and depth chart position
+- Usage consistency over 2-3 weeks
+
+### Step 3: Scan for External Catalysts
+
+- Coaching changes, QB upgrades, pace shifts
+- Injury vacancies, trades, releases
+- Scheme fit improvements
+
+### Step 4: Determine Alignment Level
+
+- Triple = aggressive buy
+- Dual = watch zone, buy on confirmation
+- Single = avoid or sell
+
+### Step 5: Monitor Pressure Maintenance
+
+- Does structure hold across multiple weeks?
+- Is efficiency backing up volume?
+- Are external factors stable or shifting?
+
+-----
+
+## Common Mistakes
+
+**Mistake 1: Chasing Single-Pressure Spikes**
+
+- Buying the backup RB after one 20-touch game
+- **Fix**: Require 2-3 weeks of structural confirmation
+
+**Mistake 2: Ignoring Pressure Decay**
+
+- Holding aging RB as snap share erodes
+- **Fix**: Sell when structural pressure drops below 60% snaps
+
+**Mistake 3: Overweighting Talent**
+
+- Assuming elite athlete will produce without role
+- **Fix**: Talent is necessary but insufficient. Demand structure.
+
+**Mistake 4: Confusing External Noise for Pressure**
+
+- Scheme change that doesn’t affect player’s specific role
+- **Fix**: External pressure must directly impact player usage
+
+-----
+
+## Validation Checklist
+
+Before declaring “pressure alignment”:
+
+- [ ] Internal: Draft capital or proven efficiency?
+- [ ] Structural: 70%+ snaps and 20%+ target/touch share?
+- [ ] External: Tangible catalyst (coaching, injury, QB, scheme)?
+- [ ] Confirmation: Pattern holding 2-3 weeks minimum?
+- [ ] Non-overlap: This is pressure, not ecosystem or signal analysis?
+
+-----
+
+## Module Metadata
+
+**Epistemic Status**: THEORY  
+**Confidence Level**: High (validated across multiple seasons)  
+**Update Frequency**: Annual (minor refinements)  
+**Dependencies**: Requires Signal Theory for confirmation, Ecosystem Theory for context  
+**Use Cases**: Breakout identification, regression prediction, buy/sell timing
+
+-----
+
+**END OF MODULE**

@@ -7398,6 +7398,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Step 2b.6.5: Force-include Deep Theory chunks for conceptual/teaching questions
+      // Detect if query is asking "why", "explain", or is conceptual/strategic
+      const isWhyQuery = /\b(why|how come|what makes|what causes|what creates)\b/i.test(message);
+      const isExplainQuery = /\b(explain|describe|break down|walk me through|help me understand)\b/i.test(message);
+      const isConceptualQuery = /\b(concept|theory|framework|principle|philosophy|pattern)\b/i.test(message);
+      const isTradeLogicQuery = /\b(trade|value|worth|fair|accept|offer)\b/i.test(message) && /\b(why|logic|thinking|reasoning)\b/i.test(message);
+      const isDynastyLogicQuery = /\b(dynasty|long.?term|rebuild|contend|window|age|draft pick)\b/i.test(message) && /\b(why|how|explain)\b/i.test(message);
+      
+      const shouldIncludeTheory = isWhyQuery || isExplainQuery || isConceptualQuery || isTradeLogicQuery || isDynastyLogicQuery;
+      
+      if (shouldIncludeTheory && generalLimit > 0) {
+        console.log(`📚 [Theory] Conceptual/teaching query detected - force-including Deep Theory chunks`);
+        
+        // Search for Deep Theory chunks (pressure, signal, entropy, psychology, ecosystem)
+        const theoryResult = await db.execute(
+          sql`SELECT 
+                id, 
+                content, 
+                metadata,
+                (1 - (embedding <-> ${vectorString}::vector) / 2) as similarity,
+                'theory' as source_type
+              FROM chunks
+              WHERE metadata->>'type' = 'theory'
+              ORDER BY 
+                (metadata->>'priority')::int DESC,
+                embedding <-> ${vectorString}::vector
+              LIMIT 1`
+        );
+        
+        const theoryChunks = theoryResult.rows.map((row: any) => ({
+          chunk_id: row.id,
+          content: row.content,
+          content_preview: row.content?.substring(0, 150) || '',
+          metadata: row.metadata,
+          relevance_score: parseFloat(row.similarity),
+          source_type: 'theory',
+          forced: true, // Mark as forced-include
+        }));
+        
+        if (theoryChunks.length > 0) {
+          relevantChunks.push(...theoryChunks);
+          console.log(`✅ [Theory] Added ${theoryChunks.length} Deep Theory chunks (module: ${theoryChunks[0].metadata?.module || 'unknown'})`);
+        }
+      }
+
       // Step 2b.7: Detect and fetch weekly statline data (Weekly Statline RAG v1)
       const { detectWeeklyQuery, fetchWeeklyStatsForPlayer, formatWeeklyStatlineDataChunk, weeklyStatlineMetadata } = await import('./lib/weeklyStatsHelpers');
       const { CURRENT_NFL_SEASON } = await import('../shared/config/seasons');

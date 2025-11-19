@@ -1,0 +1,561 @@
+# TIBER Deep Theory Modules - Master Index
+
+## Complete RAG-Optimized Framework Collection
+
+**Version**: 1.0  
+**Delivered**: November 18, 2025  
+**Purpose**: Comprehensive reference for all TIBER theory modules
+
+-----
+
+## 📚 Module Collection Overview
+
+**Total Modules**: 5  
+**Total Content**: ~25,000 words  
+**Format**: RAG-optimized with clear sections, bullet points, decision rules  
+**Voice**: Teaching-primary, Tactical-sparse, River-rare
+
+-----
+
+## 🎯 Quick Navigation
+
+### [1. Pressure Theory Module](#pressure-theory)
+
+**Core Question**: Why do breakouts happen?  
+**Answer**: Triple force alignment (Internal + Structural + External)  
+**Use Cases**: Breakout identification, regression prediction, buy/sell timing
+
+### [2. Signal Theory Module](#signal-theory)
+
+**Core Question**: Is this production sustainable?  
+**Answer**: Distinguish repeatable patterns from random variance  
+**Use Cases**: Pattern confirmation, sustainability assessment, noise filtration
+
+### [3. Entropy & Aging Theory Module](#entropy-aging)
+
+**Core Question**: When will this player decline?  
+**Answer**: Thermodynamic decay by position and age curves  
+**Use Cases**: Career trajectory prediction, age-based roster construction, exit timing
+
+### [4. Market Psychology Theory Module](#market-psychology)
+
+**Core Question**: Is this player correctly priced?  
+**Answer**: Price = Reality + Crowd Tilt, exploit the gap  
+**Use Cases**: Buy/sell timing, trade evaluation, contrarian opportunities
+
+### [5. Ecosystem & Role Theory Module](#ecosystem-role)
+
+**Core Question**: Does the system support production?  
+**Answer**: System + Role first, Talent second  
+**Use Cases**: Player valuation, ecosystem change detection, context analysis
+
+-----
+
+## 1. Pressure Theory
+
+**File**: `PRESSURE_THEORY_MODULE.md`  
+**Length**: ~5,000 words  
+**Tags**: [“deep_theory”, “river”, “teaching”, “breakouts”, “regression”]
+
+### Core Concept
+
+Breakouts occur when three independent forces align simultaneously:
+
+- **Internal Pressure**: Raw talent + athleticism
+- **Structural Pressure**: Role + volume + opportunity
+- **External Pressure**: Scheme change, injury vacuum, QB upgrade
+
+Players are pressure vessels. When forces compound, production explodes. When they scatter, output returns to equilibrium.
+
+### Key Decision Rules
+
+- Never chase breakouts missing at least two pressure sources
+- Fade single-pressure spikes (talent-only or opportunity-only)
+- Buy alignment, sell equilibrium
+- Triple alignment = aggressive buy
+- Dual alignment = watch zone
+- Single alignment = avoid
+
+### Critical Sections
+
+- Three Pressure Vectors (detailed definitions)
+- Pressure Alignment Framework (triple, dual, single)
+- Pressure Decay (regression mechanics)
+- Edge Cases (when pressure exceeds role stability)
+- Non-Overlap Validation vs other theories
+
+### TIBER Voice Highlight
+
+> “Pressure doesn’t lie. When it builds in multiple directions, something has to give — usually the box score.”
+
+-----
+
+## 2. Signal Theory
+
+**File**: `SIGNAL_THEORY_MODULE.md`  
+**Length**: ~4,500 words  
+**Tags**: [“deep_theory”, “river”, “teaching”, “signal_detection”, “sustainability”]
+
+### Core Concept
+
+Signal = repeatable, coach-intentioned patterns that survive chaos  
+Noise = everything else
+
+Signal persists. Noise reverts.
+
+### Signal Characteristics
+
+1. Stable role week-to-week
+1. Sticky usage metrics (target share, touch share)
+1. Repeatable efficiency
+1. Consistent deployment regardless of score
+
+### Noise Characteristics
+
+1. Random touchdowns (no red-zone role)
+1. Garbage-time volume
+1. One-game weather anomalies
+1. Temporary teammate injuries
+
+### Key Decision Rules
+
+- Require three consecutive weeks before treating pattern as signal
+- Discount single-game explosions unless role confirms
+- Prioritize sticky usage (shares) over flashy box scores (totals)
+- Signal with low efficiency = monitor for improvement or role erosion
+
+### Critical Sections
+
+- Three-Week Rule (confirmation protocol)
+- Signal vs Noise Decision Framework
+- Edge Cases (signal conflicts with low efficiency, short-term noise becomes long-term signal)
+- Common Mistakes (overreacting to explosions, ignoring role decay)
+
+### TIBER Voice Highlight
+
+> “His target share held for a month — that’s signal. The three-TD game in a blowout? Noise.”
+
+-----
+
+## 3. Entropy & Aging Theory
+
+**File**: `ENTROPY_AGING_THEORY_MODULE.md`  
+**Length**: ~4,800 words  
+**Tags**: [“deep_theory”, “river”, “teaching”, “aging”, “decay”, “lifecycle”]
+
+### Core Concept
+
+Fantasy careers follow thermodynamic decay: youth stores potential, peak converts it, age leaks it irreversibly.
+
+Entropy is one-directional. Once decay begins, it doesn’t reverse.
+
+### Three Lifecycle Phases
+
+1. **Ascending Youth**: Potential energy (buy pre-proof)
+1. **Peak Production**: Kinetic energy (rent aggressively)
+1. **Declining Age**: Entropy leak (sell before cliff)
+
+### Entropy Vectors
+
+1. Loss of explosiveness & burst
+1. Accumulated injuries
+1. Role compression from younger players
+1. Scheme irrelevance
+1. Declining recovery
+
+### Positional Entropy Curves
+
+- **RBs**: Sharp cliff at 27-28
+- **WR/TE**: Gradual decline until 30-31
+- **QBs**: Sustained longer unless mobility-dependent
+
+### Key Decision Rules
+
+- Buy ascending youth before proof
+- Rent peak production aggressively
+- Sell aging assets before market sees drop
+- Exit one season too early > holding one season too long
+
+### Critical Sections
+
+- Entropy Vectors (detailed decay mechanisms)
+- Positional Curves (position-specific timelines)
+- Early Warning Signals (three-tier red flag system)
+- Edge Case (second peak after ecosystem upgrade)
+
+### TIBER Voice Highlight
+
+> “Entropy doesn’t send a memo. One year you’re elite, next year you’re surviving on reputation.”
+
+-----
+
+## 4. Market Psychology Theory
+
+**File**: `MARKET_PSYCHOLOGY_THEORY_MODULE.md`  
+**Length**: ~5,200 words  
+**Tags**: [“deep_theory”, “river”, “teaching”, “psychology”, “valuation”, “edge”]
+
+### Core Concept
+
+Fantasy markets are driven by emotion at least as much as performance.
+
+**Price = Reality + Crowd Tilt**
+
+Your edge is separating the two.
+
+### Primary Exploitable Biases
+
+1. **Recency Bias**: Overweighting recent games
+1. **Rookie Fever & Age Panic**: Systematic over/undervaluation by age
+1. **Narrative Chasing**: Pricing storylines over data
+1. **FOMO**: Panic buying
+1. **Post-Injury Over-Correction**: Over-panic or over-ignore
+
+### Market Cycle Patterns
+
+- **Fear Windows**: Maximum buy opportunity (panic selling)
+- **Greed Windows**: Maximum sell opportunity (euphoria)
+- **Uncertainty as Edge**: Crowds avoid ambiguity = value
+
+### Key Decision Rules
+
+- Buy maximum fear windows (panic on intact roles)
+- Sell maximum greed windows (FOMO spikes)
+- Exploit uncertainty when math favors you
+- Be contrarian when crowd is emotional, consensus when crowd is logical
+
+### Critical Sections
+
+- Price = Reality + Crowd Tilt formula
+- Market vs Reality Framework
+- Sentiment Analysis (bullish/bearish indicators)
+- Real-World Examples (recency bias, rookie fever, post-injury buy)
+
+### TIBER Voice Highlight
+
+> “The market just cut his value in half because he laid an egg. That’s not a red flag — that’s the discount rack.”
+
+-----
+
+## 5. Ecosystem & Role Theory
+
+**File**: `ECOSYSTEM_ROLE_THEORY_MODULE.md`  
+**Length**: ~5,500 words  
+**Tags**: [“deep_theory”, “river”, “teaching”, “ecosystem”, “context”, “infrastructure”]
+
+### Core Concept
+
+Production is a function of system + role first, talent second.
+
+No player exists in isolation.
+
+### Evaluation Hierarchy (in order)
+
+1. Offensive philosophy & pace
+1. Quarterback competence
+1. Offensive line quality & scheme fit
+1. Depth-chart monopoly
+1. Red-zone hierarchy
+1. Game-script tendency
+
+### Ecosystem Impact Formula
+
+```
+Production Ceiling = (Talent × Ecosystem Quality × Role %)
+```
+
+### Ecosystem Change Catalysts
+
+- Coordinator changes
+- Quarterback changes
+- Offensive line upgrades/downgrades
+- Pace changes
+
+### Key Decision Rules
+
+- Prefer lesser talent in elite ecosystem
+- Fade best athlete in broken offense
+- Role compression kills even great players
+- System upgrades revive careers overnight
+
+### Critical Sections
+
+- Evaluation Hierarchy (detailed 6-layer assessment)
+- Ecosystem + Talent = Production Ceiling
+- Ecosystem Caps & Floors (high vs low ceiling systems)
+- Edge Cases (ecosystem distorts talent perception, mid-season changes)
+
+### TIBER Voice Highlight
+
+> “His talent didn’t vanish — the ecosystem collapsed around him. Production follows structure, not the name on the jersey.”
+
+-----
+
+## 📊 Theory Interaction Map
+
+### How Theories Work Together
+
+**Pressure + Signal**:
+
+- Pressure identifies breakout candidates
+- Signal confirms sustainability
+- Example: Pressure explains the role elevation. Signal confirms it holds for 3+ weeks.
+
+**Pressure + Entropy**:
+
+- Pressure creates breakouts
+- Entropy causes regression
+- Example: Young player has triple pressure alignment (breakout). Aging player loses pressure forces (regression).
+
+**Signal + Ecosystem**:
+
+- Ecosystem provides total opportunity
+- Signal confirms individual share
+- Example: Ecosystem says team passes 40 times/game. Signal says WR gets 25% targets = 10 targets/game.
+
+**Market Psychology + All Others**:
+
+- Other theories determine reality value
+- Market Psychology determines if price matches reality
+- Example: Pressure + Signal + Ecosystem say WR15. Market prices at WR25. Edge = buy.
+
+**Entropy + Ecosystem**:
+
+- Entropy causes player decay
+- Ecosystem can mask (elite QB makes old WR viable) or amplify (poor ecosystem accelerates decline)
+- Example: 31-year-old WR trades to elite offense. Ecosystem delays entropy 1-2 years.
+
+-----
+
+## 🔍 Non-Overlap Validation
+
+Each theory operates on a different axis. No redundancy.
+
+|Theory               |Focus                 |Question Answered                    |
+|---------------------|----------------------|-------------------------------------|
+|**Pressure**         |Forces causing change |Why is breakout/regression happening?|
+|**Signal**           |Pattern sustainability|Is this repeatable or random?        |
+|**Entropy**          |Aging trajectory      |When will decline occur?             |
+|**Market Psychology**|Pricing efficiency    |Is player under/overvalued?          |
+|**Ecosystem**        |Environmental context |Does system support production?      |
+
+**Example Showing Non-Overlap**:
+
+Player: 28-year-old RB on new team
+
+- **Pressure**: Lost structural pressure (committee now), lost external pressure (bad o-line) → regression predicted
+- **Signal**: Snap share dropped from 75% → 55% over 3 weeks → signal decay confirmed
+- **Entropy**: Age 28 RB = warning zone, snap share erosion = early warning signal → sell window
+- **Market Psychology**: Market still pricing as RB12 based on name recognition → overpriced, sell into lag
+- **Ecosystem**: New team has poor o-line, run-heavy but inefficient → low ceiling even if role improves
+
+**Conclusion**: All theories point to sell. Each provides unique lens.
+
+-----
+
+## 🎯 Use Case Matrix
+
+### For Breakout Identification
+
+1. **Start**: Pressure Theory (identify candidates with 2-3 forces)
+1. **Confirm**: Signal Theory (wait for 3-week confirmation)
+1. **Context**: Ecosystem Theory (validate system supports)
+1. **Timing**: Market Psychology (buy before market catches up)
+
+### For Regression Prediction
+
+1. **Start**: Entropy Theory (check age/decay signals)
+1. **Confirm**: Pressure Theory (pressure forces scattering?)
+1. **Validate**: Signal Theory (signal weakening?)
+1. **Exit**: Market Psychology (sell before market sees decline)
+
+### For Buy/Sell Decisions
+
+1. **Reality**: Pressure + Signal + Ecosystem → true value
+1. **Price**: Market Psychology → current valuation
+1. **Edge**: If Price < Reality → buy. If Price > Reality → sell.
+
+### For Weekly Start/Sit
+
+1. **Role**: Signal Theory (is usage sticky?)
+1. **Context**: Ecosystem Theory (is system favorable?)
+1. **Matchup**: (not covered in these modules, but apply situationally)
+
+-----
+
+## 💡 Integration Workflow
+
+### Step 1: Assess Player Reality
+
+- Pressure: What forces present? (Internal, Structural, External)
+- Signal: Is role/usage confirmed 3+ weeks?
+- Entropy: Age trajectory? Early warning signals?
+- Ecosystem: System quality? Role clarity?
+
+**Output**: Reality Value (expected production)
+
+### Step 2: Assess Market Price
+
+- Market Psychology: Current valuation (rankings, trade values)
+- Identify bias: Recency? Age? Narrative? FOMO?
+
+**Output**: Market Price (current cost)
+
+### Step 3: Calculate Edge
+
+```
+Edge = Reality Value - Market Price
+
+If Edge > 0: Buy (underpriced)
+If Edge < 0: Sell (overpriced)
+If Edge ≈ 0: Hold or skip (efficient)
+```
+
+### Step 4: Execute with Confidence
+
+- High edge (>10 spots): Aggressive
+- Medium edge (5-10 spots): Measured
+- Low edge (<5 spots): Optional (liquidity dependent)
+
+-----
+
+## 📝 Quick Reference Decision Trees
+
+### Is This Player Breaking Out?
+
+```
+1. Check Pressure Theory:
+   - 3 forces aligned? → Breakout likely
+   - 2 forces aligned? → Watch zone
+   - 1 force aligned? → Avoid
+
+2. Confirm with Signal Theory:
+   - Role sticky 3+ weeks? → Confirmed
+   - One-week spike? → Wait
+
+3. Validate with Ecosystem:
+   - System supports? → Upside unlocked
+   - System limits? → Cap expectations
+```
+
+### Should I Sell This Aging Player?
+
+```
+1. Check Entropy Theory:
+   - Age in decline zone? → Warning
+   - Snap share eroding? → Red flag
+   - Rookie drafted? → Exit signal
+
+2. Confirm with Signal Theory:
+   - Usage decaying? → Signal weakening
+   - Still sticky? → Hold temporarily
+
+3. Check Market Psychology:
+   - Still priced on reputation? → Sell now
+   - Already discounted? → Market caught up
+```
+
+### Is This Player Undervalued?
+
+```
+1. Calculate Reality Value:
+   - Pressure + Signal + Ecosystem → true value
+
+2. Check Market Price:
+   - Market Psychology → current cost
+
+3. Identify Bias:
+   - Recency? Age? Injury? Narrative?
+
+4. Execute:
+   - Edge exists? → Buy
+   - Efficient? → Skip
+```
+
+-----
+
+## 🚀 Implementation Checklist
+
+### For RAG System Integration
+
+- [ ] All 5 modules loaded into knowledge base
+- [ ] Modules tagged appropriately (deep_theory, river, teaching)
+- [ ] Cross-references between modules functional
+- [ ] Search optimized for decision rules and examples
+- [ ] Voice layering (Teaching primary, Tactical sparse, River rare) preserved
+- [ ] Non-overlap validation confirmed (no redundant concepts)
+
+### For TIBER Responses
+
+When user asks about:
+
+- **Breakouts**: → Trigger Pressure Theory + Signal Theory
+- **Aging/Decline**: → Trigger Entropy Theory
+- **Buy/Sell**: → Trigger Market Psychology + Reality modules
+- **System Fit**: → Trigger Ecosystem Theory
+- **Sustainability**: → Trigger Signal Theory
+
+### Quality Checks
+
+- [ ] Responses cite specific decision rules from modules
+- [ ] Teaching mode dominates (explain why, not just what)
+- [ ] Tactical mode used sparingly (specific actionable guidance)
+- [ ] River mode rare (philosophical, powerful, minimal)
+- [ ] No stat vomit (max 2 numbers, wrapped in context)
+- [ ] Examples from modules used to illustrate points
+
+-----
+
+## 📞 Module Maintenance
+
+### Update Frequency
+
+- **Annual**: Minor refinements based on rule changes, league evolution
+- **As Needed**: New edge cases, counter-examples
+- **Never**: Core concepts (pressure, signal, entropy, psychology, ecosystem are timeless)
+
+### Version Control
+
+- Current: v1.0 (November 2025)
+- Next Review: June 2026 (pre-season)
+
+### Feedback Loop
+
+- Track which modules TIBER references most
+- Identify gaps (do users ask questions modules don’t cover?)
+- Monitor response quality (are teachings effective?)
+
+-----
+
+## 🎓 Educational Value
+
+These modules serve three purposes:
+
+1. **For TIBER**: RAG-optimized knowledge retrieval and response generation
+1. **For Users**: Teaching framework that builds mental models
+1. **For Team**: Comprehensive reference for TIBER’s reasoning architecture
+
+**Philosophy**: Give users the frameworks, not just the answers. Teach pattern recognition, not memorization.
+
+-----
+
+## ✅ Quality Validation
+
+All modules validated for:
+
+- ✅ Clear definitions
+- ✅ Sharp decision criteria
+- ✅ Conceptual hierarchy
+- ✅ Non-overlap with other modules
+- ✅ Edge cases addressed
+- ✅ TIBER voice layering
+- ✅ Real-world examples
+- ✅ RAG-optimized formatting
+- ✅ Zero hallucination risk (factual, sourced reasoning)
+
+-----
+
+**END OF MASTER INDEX**
+
+All modules ready for RAG integration.  
+Let’s build a system that teaches, not just tells. 🎯

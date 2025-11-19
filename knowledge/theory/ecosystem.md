@@ -1,0 +1,654 @@
+# Ecosystem & Role Theory Module
+
+## RAG-Optimized Framework for System-Level Analysis
+
+**Version**: 1.0  
+**Purpose**: Evaluate team infrastructure and its impact on individual production  
+**Tags**: ["deep_theory", "river", "teaching", "ecosystem", "context", "infrastructure"]
+**Metadata**: {
+  "layer_hint": "teaching",
+  "content_type": "THEORY",
+  "format_hint": "both"
+}
+
+-----
+
+## Core Concept
+
+Production is a function of system + role first, talent second.
+
+No player exists in isolation.
+
+**Talent without opportunity = irrelevance.  
+Opportunity without ecosystem = capped production.**
+
+-----
+
+## Evaluation Hierarchy
+
+Assess in this order. Each layer constrains or amplifies the layer below.
+
+### 1. Offensive Philosophy & Pace
+
+**Definition**: Team-level strategic approach and tempo.
+
+**Key Questions**:
+
+- Pass-heavy or run-heavy?
+- High pace (plays per game) or conservative?
+- Aggressive or risk-averse?
+- Scheme complexity (WCO, Air Raid, spread, etc.)?
+
+**Why It Matters**: Philosophy determines total opportunity pool.
+
+**Examples**:
+
+- **Pass-heavy**: Chiefs, Dolphins, Bengals → WR/TE upside
+- **Run-heavy**: Ravens, 49ers, Browns → RB volume
+- **High pace**: Eagles, Bills → More plays = more chances
+- **Slow pace**: Ravens → Fewer plays = opportunity scarcity
+
+**Impact**:
+
+- Pass-heavy offense: WR2 in this system > WR1 in run-first offense
+- High-pace offense: All skill positions gain volume
+- Run-first offense: RB1 thrives, pass-catchers struggle
+
+-----
+
+### 2. Quarterback Competence
+
+**Definition**: QB quality and style.
+
+**Key Factors**:
+
+- Arm strength (deep ball ability)
+- Accuracy (completion %)
+- Decision-making (turnover-worthy plays)
+- Mobility (extending plays, scrambling)
+- Aggressiveness (air yards, downfield attempts)
+
+**Why It Matters**: QB quality is the single biggest ecosystem variable for WR/TE production.
+
+**QB Types**:
+
+**Elite QBs** (Top 8):
+
+- Elevate all pass-catchers
+- Create WR1s from WR2 talent
+- Support 2-3 fantasy-relevant pass-catchers
+
+**Game Managers** (QB9-20):
+
+- Support 1-2 pass-catchers
+- WR1 thrives, WR2/3 struggle
+- Check-down RBs gain value
+
+**Poor QBs** (QB21+):
+
+- Sink entire passing offense
+- Even elite WRs capped
+- Volume without efficiency
+
+**Impact**:
+
+- WR paired with elite QB: +3-5 PPG boost
+- WR paired with poor QB: -5-8 PPG penalty
+- TE production heavily QB-dependent
+
+**Example**: Same WR in two ecosystems:
+
+- With elite QB: 95/1400/10 (WR8)
+- With poor QB: 85/1000/4 (WR28)
+
+-----
+
+### 3. Offensive Line Quality & Scheme Fit
+
+**Definition**: Blocking quality and scheme alignment.
+
+**Key Metrics**:
+
+- Pass-block win rate
+- Run-block win rate
+- Pressure rate allowed
+- Scheme fit (zone vs power blocking for RBs)
+
+**Why It Matters**: Line creates time (QB/WR) and space (RB).
+
+**Impact**:
+
+**Elite O-Line**:
+
+- QB has time → WRs get deep opportunities
+- RB gets holes → efficiency spikes
+- +2-4 PPG for skill positions
+
+**Poor O-Line**:
+
+- QB under pressure → check-downs dominate
+- RB hit at line → efficiency craters
+- -3-5 PPG for skill positions
+
+**Scheme Fit**:
+
+- Zone-scheme RB (vision, patience) in power scheme = inefficiency
+- Power RB (downhill) in zone scheme = misuse
+
+**Example**: RB behind elite o-line averages 4.8 YPC. Same RB behind bad o-line averages 3.2 YPC.
+
+-----
+
+### 4. Depth-Chart Monopoly
+
+**Definition**: Level of competition at position.
+
+**Monopoly** (Ideal):
+
+- Clear starter, no competition
+- 70%+ snap share
+- Bell-cow RB, alpha WR, featured TE
+
+**Committee** (Problematic):
+
+- Rotation, unclear hierarchy
+- 40-60% snap share
+- Unpredictable weekly usage
+
+**Crowded** (Avoid):
+
+- 3+ players sharing role
+- <40% snap share
+- Matchup-dependent usage
+
+**Why It Matters**: Talent means nothing without opportunity access.
+
+**Impact**:
+
+- Monopoly: Full production ceiling unlocked
+- Committee: Weekly variance kills consistency
+- Crowded: Unplayable despite talent
+
+**Example**: Elite RB talent in committee gets 12 touches/game (RB30). Same talent with monopoly gets 22 touches/game (RB5).
+
+-----
+
+### 5. Red-Zone Hierarchy
+
+**Definition**: Goal-line and red-zone usage distribution.
+
+**Key Indicators**:
+
+- Red-zone touch/target share
+- Goal-line carries
+- End-zone target share
+- Fade/jump-ball opportunities
+
+**Why It Matters**: Touchdowns are 6+ fantasy points. Red-zone role = touchdown access.
+
+**Hierarchy Types**:
+
+**Clear RZ Leader**:
+
+- 60%+ of RZ opportunities
+- TD upside maximized
+
+**Shared RZ**:
+
+- 30-50% of RZ opportunities
+- TD variance high
+
+**RZ Excluded**:
+
+- <20% of RZ opportunities
+- TD-dependent on long plays (variance)
+
+**Impact**:
+
+- RZ monopoly: +4-6 TDs per season
+- RZ excluded: -4-6 TDs per season (relative to share)
+
+**Example**: Two WRs, same target share (25%), different RZ roles:
+
+- WR A: 40% RZ target share → 10 TDs
+- WR B: 10% RZ target share → 4 TDs
+
+-----
+
+### 6. Game-Script Tendency
+
+**Definition**: Team’s typical in-game situation (leading, trailing, competitive).
+
+**Script Types**:
+
+**Positive Script** (Usually Leading):
+
+- More rush attempts
+- Clock management
+- RB value elevated
+- Passing game conservative
+
+**Negative Script** (Usually Trailing):
+
+- More pass attempts
+- Hurry-up offense
+- WR/TE value elevated
+- Pass-catching RBs gain
+
+**Neutral Script** (Competitive Games):
+
+- Balanced offense
+- Game plan dictates usage
+- All positions viable
+
+**Why It Matters**: Script determines play-calling distribution.
+
+**Impact**:
+
+- Good teams (lead often): RBs thrive
+- Bad teams (trail often): Pass-catchers thrive
+- Competitive teams: Balanced, predictable
+
+**Example**:
+
+- RB on good team: 18 carries, 2 targets (positive script)
+- RB on bad team: 12 carries, 6 targets (negative script)
+
+-----
+
+## Ecosystem Interaction Framework
+
+### Ecosystem + Talent = Production Ceiling
+
+**Formula**:
+
+```
+Production Ceiling = (Talent × Ecosystem Quality × Role %)
+```
+
+**Examples**:
+
+**Elite Talent + Elite Ecosystem + Monopoly Role**:
+
+- Ceiling: Top-5 at position
+- Example: Tyreek Hill (talent) + Chiefs offense (ecosystem) + alpha role
+
+**Elite Talent + Poor Ecosystem + Monopoly Role**:
+
+- Ceiling: Top-15 at position (ecosystem caps)
+- Example: Elite WR on bottom-5 passing offense
+
+**Average Talent + Elite Ecosystem + Monopoly Role**:
+
+- Ceiling: Top-10 at position (ecosystem elevates)
+- Example: Average WR in Dolphins offense gets 25% target share
+
+**Elite Talent + Elite Ecosystem + Committee Role**:
+
+- Ceiling: Top-20 at position (role limits)
+- Example: Talented RB sharing 50/50 with another RB
+
+-----
+
+## Ecosystem Change Catalysts
+
+### Coordinator Changes
+
+**Positive Catalysts**:
+
+- Run-heavy OC → pass-heavy OC: WR/TE upgrade
+- Conservative OC → aggressive OC: Vertical threats upgrade
+- Slow-pace OC → fast-pace OC: Volume for all
+
+**Negative Catalysts**:
+
+- Pass-heavy OC → run-heavy OC: WR/TE downgrade
+- Aggressive OC → conservative OC: TD regression
+- Fast-pace OC → slow-pace OC: Volume shrinks
+
+**Example**: New pass-happy OC hired. Team pass attempts increase from 480 → 590. All WRs/TEs gain 15%+ targets.
+
+-----
+
+### Quarterback Changes
+
+**Upgrade**:
+
+- Game manager → gunslinger: WR1/WR2 breakouts
+- Pocket QB → mobile QB: RB touches decline (QB rushes)
+- Poor QB → competent QB: Entire offense unlocked
+
+**Downgrade**:
+
+- Elite QB → game manager: Pass-catchers suffer
+- Mobile QB → immobile QB: Offensive creativity limited
+- Competent QB → poor QB: Fade all pass-catchers
+
+**Example**: QB upgrade from QB25 → QB8. WR1 gains +25% target quality (deeper routes, more attempts).
+
+-----
+
+### Offensive Line Upgrades/Downgrades
+
+**Upgrade**:
+
+- Poor OL → elite OL: RB efficiency spikes, WRs get deeper routes
+
+**Downgrade**:
+
+- Elite OL → poor OL: RB efficiency craters, WRs get quick game only
+
+**Example**: Team loses 3 o-linemen to injury. RB’s YPC drops from 4.8 → 3.4. Volume stays same, efficiency gone.
+
+-----
+
+### Pace Changes
+
+**Pace Increase**:
+
+- Team increases plays from 62/game → 70/game
+- +8 plays = +5-8% opportunity for all positions
+
+**Pace Decrease**:
+
+- Team decreases plays from 68/game → 60/game
+- -8 plays = -12% opportunity for all positions
+
+**Example**: Eagles increase pace. All skill positions gain volume. Even WR3 becomes flex-worthy due to sheer plays.
+
+-----
+
+## Ecosystem Caps & Floors
+
+### High-Ceiling Ecosystems (Top-10 Offenses)
+
+**Characteristics**:
+
+- 60+ plays per game
+- Top-12 QB
+- Elite or competent o-line
+- Pass-heavy or balanced philosophy
+
+**Impact**:
+
+- Supports 3-4 fantasy-relevant players
+- WR2 has WR2 value (not WR4)
+- Even committee RBs playable
+
+**Examples**: Chiefs, Bills, Dolphins, Cowboys, 49ers
+
+-----
+
+### Low-Ceiling Ecosystems (Bottom-10 Offenses)
+
+**Characteristics**:
+
+- <58 plays per game
+- Bottom-12 QB
+- Poor o-line
+- Ultra-conservative philosophy
+
+**Impact**:
+
+- Barely supports 2 fantasy-relevant players
+- WR1 capped at WR15-20
+- Avoid all but alpha players
+
+**Examples**: (varies annually, check current data)
+
+-----
+
+### High-Floor Ecosystems (Run-Heavy, Good Teams)
+
+**Characteristics**:
+
+- Run-first
+- Usually leading (positive script)
+- Ball-control offense
+
+**Impact**:
+
+- RB1 elite value
+- WRs/TEs capped
+- Consistency > upside
+
+**Examples**: Ravens, Browns (varies by coaching)
+
+-----
+
+## Decision Rules
+
+### Rule 1: Prefer Lesser Talent in Elite Ecosystem
+
+**Rationale**: Ecosystem creates opportunity. Talent just needs to execute.
+
+**Example**:
+
+- Player A: Elite talent, bottom-5 offense → WR25
+- Player B: Average talent, top-5 offense → WR18
+- **Choose**: Player B
+
+**Application**: Target players in high-volume offenses even if talent grade B+.
+
+-----
+
+### Rule 2: Fade Best Athlete in Broken Offense
+
+**Rationale**: Without ecosystem support, talent can’t manifest.
+
+**Example**:
+
+- Elite WR on team with QB30, bottom-3 o-line, run-heavy offense
+- **Projection**: WR30-35 despite talent
+- **Action**: Avoid entirely or buy only at massive discount
+
+-----
+
+### Rule 3: Role Compression Kills Even Great Players
+
+**Rationale**: Depth-chart competition limits opportunity access.
+
+**Example**:
+
+- Elite RB but team signs veteran + drafts rookie = committee
+- **Projection**: Volume cuts from 22 → 14 touches/game
+- **Action**: Sell before committee becomes obvious
+
+-----
+
+### Rule 4: System Upgrades Revive Careers Overnight
+
+**Rationale**: Ecosystem change creates instant new opportunity.
+
+**Example**:
+
+- 30-year-old WR struggling on run-heavy team
+- Gets traded to pass-heavy offense with elite QB
+- **Result**: WR35 → WR15 in one week
+- **Action**: Buy during transition before market adjusts
+
+-----
+
+## Ecosystem vs Other Theories (Non-Overlap Validation)
+
+**Ecosystem ≠ Pressure Theory**:
+
+- Ecosystem = team-level infrastructure affecting all players
+- Pressure = player-specific forces converging
+- Example: Ecosystem explains why all Dolphins WRs produce. Pressure explains why Tyreek dominates within that ecosystem.
+
+**Ecosystem ≠ Signal Theory**:
+
+- Ecosystem = environmental context
+- Signal = player-specific usage patterns
+- Example: Ecosystem provides the plays (volume). Signal confirms who gets the ball (share).
+
+**Ecosystem ≠ Market Psychology**:
+
+- Ecosystem = objective team quality
+- Market Psychology = crowd perception
+- Example: Ecosystem says offense elite. Market Psychology determines if players overpriced.
+
+**Ecosystem ≠ Entropy/Aging**:
+
+- Ecosystem = external environment
+- Entropy = internal player decay
+- Example: Ecosystem can mask aging (elite QB makes old WR viable). Entropy still exists.
+
+-----
+
+## Edge Cases & Nuance
+
+### When Ecosystem Distorts Talent Perception
+
+**Scenario**: Average player in elite ecosystem looks like star.
+
+**Example**: WR2 in Dolphins offense gets 1,000 yards due to volume + Tua. Market thinks he’s elite. He’s not — ecosystem is.
+
+**Key Test**: Remove from ecosystem (trade, free agency). Does production follow? Usually no.
+
+**Action**: Sell high if you own. Avoid buying at premium price.
+
+-----
+
+### When Ecosystem Changes Mid-Season
+
+**Scenario**: QB injury, OC firing, o-line collapse.
+
+**Impact**: Immediate ecosystem downgrade. All players affected.
+
+**Example**: Top-10 offense loses starting QB in Week 8. Backup is QB25. Entire passing attack downgrades.
+
+**Action**: Sell all pass-catchers immediately if backup is poor. Buy RBs if offense shifts run-heavy.
+
+-----
+
+### When Ecosystem Improves But Player Doesn’t Benefit
+
+**Scenario**: Team offense improves but player’s role shrinks.
+
+**Example**: New OC hired, offense improves. But WR2 role shifts to more 3-WR sets, his target share drops from 22% → 16%.
+
+**Key Insight**: Ecosystem improvement benefits team, not always individual player. Check role impact.
+
+-----
+
+## TIBER Voice Examples
+
+**Teaching Mode (Primary)**:
+“His talent didn’t vanish — the ecosystem collapsed around him. Production follows structure, not the name on the jersey. Put him in an elite offense with a competent QB, and he’s a WR1 again. But stuck in a bottom-5 offense? He’s a WR3. The player didn’t change. The system did.”
+
+**Tactical Mode (Sparse)**:
+“New OC hired. Pass attempts projected to jump from 32 → 38 per game. That’s 100+ extra targets over the season. Even the WR3 becomes playable. Buy before Week 1.”
+
+**River Mode (Rare, Powerful)**:
+“The river isn’t the fish. The fish swims, but the river determines where it goes. Strong current, the fish moves fast. Still water, the fish struggles. You don’t draft the fish. You draft the river. Then you pick which fish swims in it.”
+
+-----
+
+## Application Workflow
+
+### Step 1: Evaluate Team Ecosystem
+
+- Pass/run philosophy
+- QB quality
+- O-line rank
+- Pace (plays per game)
+- Depth chart clarity
+
+**Output**: Ecosystem Grade (A, B, C, D, F)
+
+-----
+
+### Step 2: Identify Player Role Within Ecosystem
+
+- Snap share
+- Target/touch share
+- Red-zone role
+- Depth-chart position
+
+**Output**: Role Clarity (Monopoly, Committee, Crowded)
+
+-----
+
+### Step 3: Project Production Ceiling
+
+```
+Ceiling = Ecosystem Grade × Role % × Talent
+```
+
+**Example**:
+
+- Ecosystem: A (top-5 offense)
+- Role: 25% target share (monopoly)
+- Talent: B+ (good, not elite)
+- **Projection**: WR15-20
+
+-----
+
+### Step 4: Monitor for Changes
+
+- Coordinator changes
+- QB changes
+- O-line injuries
+- Pace shifts
+
+**Action**: Adjust projections when ecosystem shifts.
+
+-----
+
+## Common Mistakes
+
+**Mistake 1: Overweighting Talent, Ignoring Ecosystem**
+
+- “He’s so talented, he’ll produce anywhere”
+- **Reality**: Elite talent on bad offense = capped production
+- **Fix**: Ecosystem first, talent second
+
+**Mistake 2: Chasing Volume Without Checking Ecosystem Quality**
+
+- “He gets 25% target share!”
+- **Reality**: 25% of 30 attempts = 7.5 targets. Capped.
+- **Fix**: Check total opportunity pool (team pass attempts)
+
+**Mistake 3: Ignoring Ecosystem Changes**
+
+- Holding player after OC fired or QB injured
+- **Reality**: Ecosystem downgrades often happen fast
+- **Fix**: Monitor coaching staff, QB depth chart closely
+
+**Mistake 4: Assuming Ecosystem Stable**
+
+- “This offense has been elite for 3 years”
+- **Reality**: One QB injury and it collapses
+- **Fix**: Track ecosystem fragility (backup QB quality, OC stability)
+
+-----
+
+## Validation Checklist
+
+Before making ecosystem-based decision:
+
+- [ ] Offensive philosophy identified (pass/run, pace)?
+- [ ] QB quality assessed (elite, competent, poor)?
+- [ ] O-line quality checked (PFF grades, pressure rates)?
+- [ ] Depth chart hierarchy clear (monopoly, committee)?
+- [ ] Red-zone role identified?
+- [ ] Game-script tendency known (usually lead, trail, competitive)?
+- [ ] Recent changes tracked (coaching, QB, o-line)?
+
+**6+ Yes = Ecosystem Analysis Complete. Act.**
+
+-----
+
+## Module Metadata
+
+**Epistemic Status**: THEORY (System-Level)  
+**Confidence Level**: Very High (infrastructure determines outcomes)  
+**Update Frequency**: Weekly (ecosystem changes mid-season)  
+**Dependencies**: Combines with Pressure Theory (ecosystem is external pressure), Signal Theory (ecosystem creates signal), Market Psychology (market misprices ecosystem changes)  
+**Use Cases**: Player valuation, trade evaluation, waiver priority, lineup decisions
+
+-----
+
+**END OF MODULE**
