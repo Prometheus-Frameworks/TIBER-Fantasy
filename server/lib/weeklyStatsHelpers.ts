@@ -62,6 +62,9 @@ const VERB_REGEX = /\b(what|how|did|do|does|put\s+up|statline|stat\s+line|line|g
  * @example
  * detectWeeklyQuery("What did Ja'Marr Chase do Week 11?")
  * // => { isWeeklyQuery: true, week: 11, playerName: "Ja'Marr Chase" }
+ * 
+ * detectWeeklyQuery("what did jaylen warren do week 11?")
+ * // => { isWeeklyQuery: true, week: 11, playerName: "jaylen warren" }
  */
 export function detectWeeklyQuery(message: string): WeeklyQuery {
   const lower = message.toLowerCase();
@@ -75,10 +78,31 @@ export function detectWeeklyQuery(message: string): WeeklyQuery {
   // Check for stat-query verbs
   const hasVerb = VERB_REGEX.test(lower);
 
-  // Simple player name detection (capitalized words pattern)
-  // Looks for "FirstName LastName" pattern (e.g., "Ja'Marr Chase")
-  const playerMatch = message.match(/([A-Z][a-z]+(?:['\-]?[A-Z]?[a-z]+)*\s+[A-Z][a-z]+)/g) || [];
-  const playerName = playerMatch.length >= 1 ? playerMatch[0] : undefined;
+  // Case-insensitive player name detection
+  // Matches 2+ consecutive words (handles both "Ja'Marr Chase" and "jaylen warren")
+  // Excludes common question words and stat terms
+  const excludeWords = /^(what|how|did|do|does|week|wk|last|this|his|the|in|put|up|score|finish|game|log|stat|statline|line|performance)$/i;
+  
+  const words = message.match(/\b[a-z]+(?:['\-][a-z]+)?\b/gi) || [];
+  const candidateWords = words.filter(w => !excludeWords.test(w));
+  
+  // Look for 2-3 consecutive candidate words (first/last name or first/middle/last)
+  let playerName: string | undefined;
+  for (let i = 0; i < candidateWords.length - 1; i++) {
+    const twoWords = `${candidateWords[i]} ${candidateWords[i + 1]}`;
+    // Prefer longer match if available
+    if (i < candidateWords.length - 2) {
+      const threeWords = `${candidateWords[i]} ${candidateWords[i + 1]} ${candidateWords[i + 2]}`;
+      if (threeWords.length >= 6) {
+        playerName = threeWords;
+        break;
+      }
+    }
+    if (twoWords.length >= 4) {
+      playerName = twoWords;
+      break;
+    }
+  }
 
   const hasWeek = !!weekMatch || !!relMatch;
 
