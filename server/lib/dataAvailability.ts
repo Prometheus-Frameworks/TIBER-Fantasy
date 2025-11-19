@@ -15,7 +15,7 @@ export interface SeasonCapabilities {
  */
 export function getDataAvailability(season: number): SeasonCapabilities {
   return {
-    hasWeekly: season <= 2024,     // Full weekly box scores via weekly_stats
+    hasWeekly: season <= 2025,     // Full weekly box scores via weekly_stats (2025 Week 11+ ingested)
     hasSeasonLevel: season <= 2025, // Rankings + PPG from Sleeper
   };
 }
