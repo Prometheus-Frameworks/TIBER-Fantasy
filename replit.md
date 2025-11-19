@@ -59,6 +59,7 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
     - **TIBER UX & Epistemic Fixes**: Prevents citing non-existent stats for players without NFL data, manages data availability by season, enforces tactical layer for stat queries, and structures trade evaluation responses.
     - **TIBER Brain OS v1 Integration**: Brain OS document embedded into RAG with priority metadata, integrated into system prompt with 10 Commandments summary, voice guidance, and anti-stat-dump guardrail (max 2 metrics per answer). Foundation for all advice (process > prizes, youth → peak → age, etc.).
     - **Weekly Statline RAG v1**: Eliminates hallucinations for "What did X do Week Y?" queries by serving real NFLfastR game log data, with robust detection, retrieval, and formatting for player statlines.
+    - **Advanced Metrics Mixed Response System**: Three-tier data system (Tier 1: core stats always available, Tier 2: advanced metrics shown when requested with meaning tags, Tier 3: unavailable metrics explicitly refused). When users ask for "advanced data", system responds with: (1) metrics we have with plain-language tags (EPA → "strong efficiency"), (2) explicit refusal of unavailable metrics, (3) football interpretation summary. Balances transparency for knowledgeable users while preventing hallucinations.
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
