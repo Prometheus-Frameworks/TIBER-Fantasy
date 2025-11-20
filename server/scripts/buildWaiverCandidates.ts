@@ -256,23 +256,41 @@ export async function buildWaiverCandidates(options: WaiverBuilderOptions) {
     
     console.log(`   ✅ Fetched ${recentStats.length} stat records`);
     
-    // Fetch ownership data for the current week
+    // Fetch ownership data for the most recent week available in this season
+    // Note: Ownership represents "current status" not "specific week", so we use latest available
     const ownershipData = await db
       .select()
       .from(sleeperOwnership)
-      .where(
-        and(
-          eq(sleeperOwnership.season, season),
-          eq(sleeperOwnership.week, week)
-        )
-      );
+      .where(eq(sleeperOwnership.season, season))
+      .orderBy(desc(sleeperOwnership.week));
     
     console.log(`   ✅ Fetched ${ownershipData.length} ownership records`);
     
-    // Build ownership map
+    // CRITICAL: Validate ownership data quality for fail-closed behavior
+    const validOwnershipCount = ownershipData.filter(row => (row.ownershipPercentage || 0) > 0).length;
+    const ownershipDataQuality = ownershipData.length > 0 
+      ? (validOwnershipCount / ownershipData.length) * 100 
+      : 0;
+    
+    console.log(`   📊 Ownership data quality: ${validOwnershipCount}/${ownershipData.length} players have >0% ownership (${ownershipDataQuality.toFixed(1)}%)`);
+    
+    // FAIL CLOSED: If ownership data is all zeros (bad ingestion), abort
+    if (ownershipData.length > 0 && validOwnershipCount === 0) {
+      throw new Error(
+        `❌ FAIL CLOSED: All ${ownershipData.length} ownership records have 0% ownership. ` +
+        `This indicates ownership ingestion failed. ` +
+        `Run ingestSleeperOwnership.ts for ${season} Week ${week} first.`
+      );
+    }
+    
+    // Build ownership map (only include players with valid ownership data)
     const ownershipMap = new Map<string, number>();
     for (const row of ownershipData) {
-      ownershipMap.set(row.playerId, row.ownershipPercentage || 0);
+      const ownership = row.ownershipPercentage || 0;
+      // Only include players with real ownership data (> 0%)
+      if (ownership > 0) {
+        ownershipMap.set(row.playerId, ownership);
+      }
     }
     
     // Group stats by player
@@ -289,10 +307,19 @@ export async function buildWaiverCandidates(options: WaiverBuilderOptions) {
     
     // Convert Map to array for iteration (fixes TS downlevelIteration error)
     for (const [playerId, stats] of Array.from(playerStatsMap.entries())) {
-      const ownership = ownershipMap.get(playerId) || 0;
+      const ownership = ownershipMap.get(playerId);
       
-      // Filter: ownership < threshold
-      if (ownership >= ownershipThreshold) continue;
+      // CRITICAL: Skip players without valid ownership data (fail closed)
+      // If ownership is undefined, the player wasn't in the ownership map (0% or no data)
+      if (ownership === undefined) {
+        continue; // Skip - no valid ownership data
+      }
+      
+      // Filter: 0 < ownership < threshold (strict bounds)
+      // Rejects: ownership = 0 (no data) AND ownership >= 50 (too highly rostered)
+      if (ownership === 0 || ownership >= ownershipThreshold) {
+        continue;
+      }
       
       // Get most recent stat
       const latestStat = stats[stats.length - 1];
@@ -405,7 +432,7 @@ export async function buildWaiverCandidates(options: WaiverBuilderOptions) {
  */
 async function main() {
   const currentYear = 2025;
-  const currentWeek = 12; // TODO: Auto-detect current NFL week
+  const currentWeek = 11; // Most recent COMPLETED week (Week 12 hasn't happened yet)
   
   console.log('🚀 Waiver Candidates Builder');
   console.log('============================\n');

@@ -48,9 +48,10 @@ export async function ingestSleeperOwnership(options: OwnershipIngestOptions) {
         const playerOwnership = ownershipData[playerId];
         
         try {
-          // Calculate ownership percentage (roster_percent is 0-1, convert to 0-100)
+          // CRITICAL: roster_percent is already 0-100 from sleeperAPI (fixed field name bug)
+          // Round to 1 decimal place for storage
           const ownershipPercentage = playerOwnership.roster_percent 
-            ? Math.round(playerOwnership.roster_percent * 10000) / 100 
+            ? Math.round(playerOwnership.roster_percent * 10) / 10
             : 0;
 
           // Upsert ownership data
@@ -61,7 +62,7 @@ export async function ingestSleeperOwnership(options: OwnershipIngestOptions) {
               season,
               week: week || null,
               ownershipPercentage,
-              rosterCount: playerOwnership.ownership || 0,
+              rosterCount: null, // Sleeper API doesn't provide actual roster counts, only percentages
               totalLeagues: null, // Sleeper doesn't provide this directly
             })
             .onConflictDoUpdate({
@@ -72,7 +73,7 @@ export async function ingestSleeperOwnership(options: OwnershipIngestOptions) {
               ],
               set: {
                 ownershipPercentage,
-                rosterCount: playerOwnership.ownership || 0,
+                rosterCount: null, // Keep null - we only have percentages
                 lastUpdated: sql`NOW()`,
               },
             });

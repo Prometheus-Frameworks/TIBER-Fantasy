@@ -422,9 +422,21 @@ export class SleeperAPIService {
         throw new Error(`Sleeper research API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const rawData = await response.json();
       
-      // The API returns { player_id: { ownership: number, roster_percent: number } }
+      // CRITICAL: Sleeper API actually returns { player_id: { owned: number, started: number } }
+      // where owned/started are already percentages (0-100)
+      // Convert to our expected format: { ownership: number, roster_percent: number }
+      const data: Record<string, { ownership: number; roster_percent: number }> = {};
+      
+      for (const [playerId, playerData] of Object.entries(rawData)) {
+        const rawPlayer = playerData as any;
+        data[playerId] = {
+          ownership: rawPlayer.owned || 0,      // 'owned' is the roster percentage (0-100)
+          roster_percent: rawPlayer.owned || 0, // Use same value for roster_percent
+        };
+      }
+      
       console.log(`[Sleeper Ownership] Fetched ownership data for ${Object.keys(data).length} players`);
       
       return data;
