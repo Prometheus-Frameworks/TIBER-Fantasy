@@ -10,7 +10,7 @@ import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generat
 // Removed deprecated imports
 import { PlayerFilteringService } from "./playerFiltering";
 import { db } from "./infra/db";
-import { dynastyTradeHistory, players as playersTable, playerWeekFacts, chunks, chatSessions, chatMessages } from "@shared/schema";
+import { dynastyTradeHistory, players as playersTable, playerWeekFacts, chunks, chatSessions, chatMessages, waiverCandidates, sleeperOwnership } from "@shared/schema";
 import { eq, desc, and, sql, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 // Removed deprecated fantasy services
@@ -7689,6 +7689,197 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========================================
+  // WAIVER WISDOM ENDPOINTS
+  // ========================================
+
+  /**
+   * GET /api/waivers/recommendations
+   * Returns waiver wire recommendations based on ownership and interest scores
+   * 
+   * Query params:
+   * - season (default: current year)
+   * - week (default: current NFL week)
+   * - pos (optional: RB|WR|TE|QB)
+   * - tier (optional: S,A,B,C)
+   */
+  app.get('/api/waivers/recommendations', async (req: Request, res: Response) => {
+    try {
+      const season = req.query.season ? parseInt(req.query.season as string) : new Date().getFullYear();
+      const week = req.query.week ? parseInt(req.query.week as string) : 12; // TODO: Auto-detect current week
+      const position = req.query.pos as string | undefined;
+      const tierFilter = req.query.tier as string | undefined;
+      
+      console.log(`[Waiver Recommendations] Fetching for ${season} Week ${week}${position ? ` (${position})` : ''}${tierFilter ? ` Tier: ${tierFilter}` : ''}`);
+      
+      // Build query
+      let query = db
+        .select()
+        .from(waiverCandidates)
+        .where(
+          and(
+            eq(waiverCandidates.season, season),
+            eq(waiverCandidates.week, week)
+          )
+        )
+        .$dynamic();
+      
+      // Add position filter if specified
+      if (position) {
+        query = query.where(eq(waiverCandidates.position, position));
+      }
+      
+      // Add tier filter if specified
+      if (tierFilter) {
+        const tiers = tierFilter.split(',') as ('S' | 'A' | 'B' | 'C' | 'D')[];
+        query = query.where(sql`${waiverCandidates.waiverTier} IN (${sql.join(tiers.map(t => sql`${t}`), sql`, `)})`);
+      }
+      
+      // Execute query with ordering
+      const candidates = await query.orderBy(desc(waiverCandidates.interestScore));
+      
+      // Check if we have data
+      if (candidates.length === 0) {
+        return res.json({
+          success: true,
+          season,
+          week,
+          message: `No waiver candidates found for ${season} Week ${week}. Run the waiver builder script to generate recommendations.`,
+          data: [],
+        });
+      }
+      
+      // Format response
+      return res.json({
+        success: true,
+        season,
+        week,
+        count: candidates.length,
+        data: candidates.map(c => ({
+          playerName: c.playerName,
+          playerId: c.playerId,
+          team: c.team,
+          position: c.position,
+          ownershipPercentage: c.ownershipPercentage,
+          tier: c.waiverTier,
+          archetype: c.archetype,
+          summary: c.summary,
+          interestScore: c.interestScore,
+          recentPoints: c.recentPpg,
+          recentTrend: c.recentTrend,
+          faab: { min: c.faabMin, max: c.faabMax },
+        })),
+      });
+    } catch (error) {
+      console.error('[Waiver Recommendations] Error:', error);
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  /**
+   * GET /api/waivers/player
+   * Returns waiver analysis for a specific player
+   * 
+   * Query params:
+   * - player (required): Player name
+   * - season (default: current year)
+   * - week (default: current NFL week)
+   */
+  app.get('/api/waivers/player', async (req: Request, res: Response) => {
+    try {
+      const playerName = req.query.player as string;
+      const season = req.query.season ? parseInt(req.query.season as string) : new Date().getFullYear();
+      const week = req.query.week ? parseInt(req.query.week as string) : 12;
+      
+      if (!playerName) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required parameter: player',
+        });
+      }
+      
+      console.log(`[Waiver Player] Checking ${playerName} for ${season} Week ${week}`);
+      
+      // Search for player (case-insensitive partial match)
+      const candidate = await db
+        .select()
+        .from(waiverCandidates)
+        .where(
+          and(
+            eq(waiverCandidates.season, season),
+            eq(waiverCandidates.week, week),
+            sql`LOWER(${waiverCandidates.playerName}) LIKE LOWER(${`%${playerName}%`})`
+          )
+        )
+        .limit(1);
+      
+      if (candidate.length === 0) {
+        // Player not in waiver candidates - check if they exist but are too highly owned
+        const ownership = await db
+          .select()
+          .from(sleeperOwnership)
+          .where(
+            and(
+              eq(sleeperOwnership.season, season),
+              eq(sleeperOwnership.week, week),
+              sql`LOWER(${sleeperOwnership.playerId}) IN (
+                SELECT LOWER(player_id) FROM weekly_stats 
+                WHERE LOWER(player_name) LIKE LOWER(${`%${playerName}%`})
+              )`
+            )
+          )
+          .limit(1);
+        
+        if (ownership.length > 0 && (ownership[0].ownershipPercentage || 0) > 70) {
+          return res.json({
+            success: true,
+            isWaiverCandidate: false,
+            reason: 'Player is too highly owned (>70%) to be considered a waiver add',
+            ownershipPercentage: ownership[0].ownershipPercentage,
+          });
+        }
+        
+        return res.json({
+          success: true,
+          isWaiverCandidate: false,
+          reason: 'Player not found in waiver candidates for this week',
+        });
+      }
+      
+      const player = candidate[0];
+      
+      return res.json({
+        success: true,
+        isWaiverCandidate: true,
+        data: {
+          playerName: player.playerName,
+          playerId: player.playerId,
+          team: player.team,
+          position: player.position,
+          ownershipPercentage: player.ownershipPercentage,
+          tier: player.waiverTier,
+          archetype: player.archetype,
+          summary: player.summary,
+          interestScore: player.interestScore,
+          recentPoints: player.recentPpg,
+          recentTrend: player.recentTrend,
+          faab: { min: player.faabMin, max: player.faabMax },
+        },
+      });
+    } catch (error) {
+      console.error('[Waiver Player] Error:', error);
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  console.log('📊 Waiver Wisdom routes mounted at /api/waivers/*');
+
   const httpServer = createServer(app);
   return httpServer;
 }
@@ -7834,4 +8025,3 @@ function generateMockPowerRankings(ranking_type: string, season: number, week: n
     items: mockPlayers
   };
 }
-
