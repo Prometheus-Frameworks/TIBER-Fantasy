@@ -45,7 +45,7 @@ import { sleeperStrictSnapService } from './services/sleeperStrictSnapService';
 import { wrRatingsService } from './services/wrRatingsService';
 import { wrGameLogsService } from './services/wrGameLogsService';
 import { playerPoolService } from './playerPool';
-import { generateEmbedding, generateChatResponse } from './services/geminiEmbeddings';
+import { generateEmbedding, generateChatResponse, detectQueryMode } from './services/geminiEmbeddings';
 import { detectLayerWithIntents } from './services/river-detection';
 import { detectFormat } from './lib/format-detector';
 import { formatTradeResponse, handleConfessionResponse, formatStatsResponse, applyRookieGuard, applyRiverSnapback } from './lib/responsePostProcessors';
@@ -7511,11 +7511,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`📌 [RAG Chat] Pinned roster snapshot at top of context`);
       }
       
+      // WAIVER VORP PATCH v1.0: Detect query mode BEFORE pinning VORP
+      const queryMode = detectQueryMode(message);
+      console.log(`🧠 [VORP PATCH] Query mode: ${queryMode}`);
+      
       // Pin VORP data SECOND (objective stats for mentioned players)
+      // BUT: Skip VORP in waiver mode to prevent VORP-heavy responses
       if (vorpDataList.length > 0) {
-        const vorpSection = `**2025 Season Performance (PPR)**\n${vorpDataList.join('\n')}\n\n`;
-        pinnedContext.push(vorpSection);
-        console.log(`📌 [VORP] Pinned ${vorpDataList.length} player VORP data (2025 season)`);
+        if (queryMode === 'waivers') {
+          console.log(`🚨 [VORP PATCH] WAIVER MODE - Skipping VORP pin. Using Interest Score instead.`);
+          console.log(`   ℹ️  VORP data available but not prioritized: ${detectedPlayers.slice(0, 3).join(', ')}`);
+          // VORP data is calculated but NOT pinned in waiver mode
+          // The system prompt will guide TIBER to use Interest Score instead
+        } else {
+          // Trade/Start-Sit/Generic mode: Pin VORP normally
+          const vorpSection = `**2025 Season Performance (PPR)**\n${vorpDataList.join('\n')}\n\n`;
+          pinnedContext.push(vorpSection);
+          console.log(`📌 [VORP] Pinned ${vorpDataList.length} player VORP data (2025 season) - Mode: ${queryMode}`);
+        }
       }
       
       // Pin Top Performers THIRD (full season awareness - ALWAYS included)
