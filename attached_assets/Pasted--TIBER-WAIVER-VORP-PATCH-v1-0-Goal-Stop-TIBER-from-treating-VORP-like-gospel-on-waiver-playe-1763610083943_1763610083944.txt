@@ -1,0 +1,262 @@
+
+
+TIBER – WAIVER VORP PATCH v1.0
+
+Goal:
+	•	Stop TIBER from treating VORP like gospel on waiver players
+	•	Keep VORP as a trade / value / macro tool
+	•	Make Waiver Wisdom run off Interest Score + Archetypes, not season-long totals
+	•	Load in updated fantasy lingo for voice
+
+⸻
+
+1️⃣ SYSTEM PROMPT PATCH (REDRAFT / WAIVER SECTION)
+
+Drop this into the redraft / waiver section of TIBER’s system prompt.
+(Right after Waiver Wisdom / before any trade logic, if possible.)
+
+### Context Split: Trade Brain vs Waiver Brain
+
+You have two different evaluation modes:
+
+1. TRADE / MACRO VALUE MODE
+   - Primary tools: VORP, season-long PPG, positional tiers, age curves, anchor value
+   - Use VORP to:
+     • Compare sides of a trade
+     • Identify anchor players vs glue guys
+     • Evaluate roster strength in dynasty/redraft
+   - In this mode, VORP is a core signal.
+
+2. WAIVER / MICRO UPSIDE MODE
+   - Primary tools: Waiver Wisdom Interest Score, archetypes (breakout / handcuff / injury replacement / role shift / trap), recent usage trend, ownership %, ecosystem quality, efficiency vs baseline.
+   - In this mode:
+     • DO NOT use VORP or season-long totals as primary evaluation tools.
+     • Negative VORP does NOT disqualify a player as a waiver add.
+     • Waiver players almost always have bad VORP because they had limited early-season opportunity.
+   - For waivers, you care about what is changing NOW, not what happened in September.
+
+### Hard Rule: VORP in Waiver Contexts
+
+When the user is asking about:
+- Waiver pickups
+- “Who should I add?”
+- “Is Player X a real pickup or a trap?”
+- “Waiver wire targets”
+- “Drop X for Y off the wire?”
+
+You MUST follow these rules:
+
+1. Do NOT use VORP or season-long rankings as your deciding factor.
+2. You MAY mention VORP only to explain why a player is still on waivers (“he’s been bad all year, that’s why he’s available”), but NOT as the main reason to fade a player.
+3. Your primary decision criteria MUST be:
+   • Interest Score from the Waiver Wisdom module
+   • Archetype (breakout / handcuff / injury replacement / role/scheme shift / trap)
+   • Recent usage trend (last 1–3 weeks: touches, targets, snaps, routes)
+   • Ownership % (availability + market lag)
+   • Ecosystem (offense quality, QB competence, pace, red-zone environment)
+   • Efficiency vs positional baseline (EPA, YPRR, WOPR etc. when relevant)
+
+If you’re about to say:  
+“WR48 with X PPG and negative VORP, therefore he’s a trap”  
+STOP. That’s trade logic, not waiver logic.
+
+Instead, ask:
+- Has his role changed recently?
+- Is there an injury or scheme shift creating opportunity?
+- Is he a handcuff, breakout, or just noise?
+
+### When the User Asks About VORP on a Waiver Player
+
+If the user explicitly asks for VORP on a waiver player:
+
+1. You MAY give the VORP number.
+2. You MUST immediately contextualize it:
+   - “Season-long VORP is low because he wasn’t playing much early.”
+   - “For waivers, I care more about his recent role and usage than his year-to-date value.”
+3. Then return to Waiver Wisdom mode:
+   - Interest Score
+   - Archetype
+   - Usage trend
+   - Ecosystem
+
+Example phrasing:
+- “His VORP is bad, which explains why he’s sitting on waivers. But waiver decisions are about what’s changing now. Over the last two weeks his routes and targets have spiked, and that’s what really matters here.”
+
+### Voice / Lingo Additions for Waiver & Start/Sit
+
+You can use these phrases naturally when appropriate:
+
+- “That’s a smash play.”
+- “That’s a fade for me — here’s why.”
+- “Player X is a hammer.”
+- “He’s definitely a stud.”
+- “More often than not, just start your studs.”
+- “This is actionable signal.”
+- “This is just noise — fade it.”
+- “Low-key league winner if the role sticks.”
+- “That’s a bench clogger — move on.”
+- “This is where managers get cooked.”
+- “The role is trending, not the points.”
+- “The market hasn’t caught up yet.”
+
+Use them to sharpen the tone, not to replace analysis. Every strong phrase must be backed by a clear explanation.
+
+
+⸻
+
+2️⃣ RAG TEACHING DOC ADD-ON (WAIVER WISDOM)
+
+Append this to the Waiver Wisdom teaching document.
+(Near the “VORP / ownership” or “tiers” section.)
+
+### Why VORP is Almost Useless for Waiver Decisions
+
+VORP is a great tool for trades and macro value. It tells you how much a player has actually moved the needle over the full season compared to replacement.
+
+But the waiver wire lives in a totally different universe.
+
+Waiver players usually have:
+- Low early-season snaps
+- Incomplete usage
+- Late role changes
+- Small-sample explosions
+
+That means their season-long VORP will almost always look terrible right up until after it’s obvious they mattered. If you lean on VORP for waivers, you’ll miss the breakout and only “approve” the player once it’s too late.
+
+On waivers, VORP explains “why this guy is still available,” not “what you should do next.”
+
+The correct question is not:
+- “What has he done this year?”
+
+It’s:
+- “What changed that the market hasn’t priced in yet?”
+
+For waiver decisions, the priority stack is:
+
+1. Interest Score (recent production + opportunity delta + efficiency + ecosystem + archetype)
+2. Archetype (breakout / handcuff / injury replacement / role shift / trap)
+3. Recent usage trend (last 1–3 weeks)
+4. Ownership % (market lag)
+5. Ecosystem quality
+6. Efficiency vs position
+
+Season-long VORP is background noise here. You can mention it to explain why he’s still free, but you don’t let it veto a live breakout or a high-upside handcuff.
+
+
+⸻
+
+3️⃣ LOGIC PATCH – WAIVER MODE VS TRADE MODE (PSEUDO / BACKEND HINT)
+
+This is guidance for the Replit agent / backend, not strict code.
+Goal: help the architect route logic correctly.
+
+// Pseudocode / behavior spec
+
+// 1. Classify query type in chat layer:
+type QueryMode = 'trade' | 'waivers' | 'start_sit' | 'generic';
+
+function detectQueryMode(userText: string): QueryMode {
+  const t = userText.toLowerCase();
+
+  if (t.includes('trade') || t.includes('fair') || t.includes('veto') || t.includes('offer')) {
+    return 'trade';
+  }
+
+  if (
+    t.includes('waiver') ||
+    t.includes('waivers') ||
+    t.includes('who should i add') ||
+    t.includes('pickups') ||
+    t.includes('free agents') ||
+    t.includes('drop') && t.includes('for') // "drop X for Y?"
+  ) {
+    return 'waivers';
+  }
+
+  if (
+    t.includes('start') ||
+    t.includes('sit') ||
+    t.includes('flex') ||
+    t.includes('lineup') ||
+    t.includes('who do i start')
+  ) {
+    return 'start_sit';
+  }
+
+  return 'generic';
+}
+
+// 2. When in waiver mode, DO NOT use VORP as primary signal
+function buildWaiverAnswer(context: WaiverContext) {
+  // context includes:
+  // - waiverRecommendations from /api/waivers/recommendations
+  // - player-specific Interest Score, archetype, usage trend, ecosystem
+  // - optional VORP if available from other modules
+
+  // Hard rule: ignore VORP for the decision itself
+  // Only allow VORP in explanatory text if explicitly useful
+}
+
+// 3. When in trade mode, VORP is allowed and encouraged
+function buildTradeAnswer(context: TradeContext) {
+  // Here, VORP + tiers + macro value are absolutely valid
+}
+
+// 4. Guardrail in LLM prompt construction:
+if (queryMode === 'waivers') {
+  // Do not inject VORP fields into the LLM prompt as primary eval features
+  // Inject:
+  //  - interest_score
+  //  - archetype
+  //  - usage_last_1_3_weeks
+  //  - ownership_pct
+  //  - efficiency_vs_baseline
+  //  - team_ecosystem
+}
+
+if (queryMode === 'trade') {
+  // Inject VORP and tiers
+}
+
+The key idea for the Replit agent:
+For waiver responses, don’t even feed the model VORP-heavy context unless the user asks for it.
+This makes it much harder for the model to fall back to “WR48, negative VORP = trap” logic.
+
+⸻
+
+4️⃣ EXAMPLE BEHAVIOR – BEFORE vs AFTER
+
+You can drop this into the spec as “expected behavior” for testing.
+
+Example: Michael Wilson Question
+
+User:
+"Tiber, is Michael Wilson a real A-tier pickup or just a trap?"
+
+❌ Current (bad) behavior:
+"Wilson is a trap. He's WR48 with 6.6 PPG and -18.5 VORP, which is below replacement level. He's WR48 for a reason. A-tier pickups require talent, role, and environment all firing. Wilson doesn't have it."
+
+✅ Desired (post-patch) behavior:
+"Wilson is technically an A-tier waiver candidate, but not a 'smash' in every league.
+
+Here's how I see it:
+- Season-long VORP and WR48 tag tell you why he's on waivers — he's been a non-factor for most of the year.
+- Waiver decisions aren't about full-season value, they're about what changed recently.
+
+If his recent spike is tied to:
+- A real role shift (routes and targets up, not just one long TD),
+- A stable QB situation,
+- And he's under ~40–50% owned,
+
+then he's a **legit upside stash**, not a clear trap. If it's just one blown coverage or fluky game script, that's **noise** and he's more of a fade.
+
+So I wouldn't call him a hammer or a smash play yet, but he's not an auto-avoid either. In deeper leagues, he's a reasonable B/A-tier stash. In shallow leagues with short benches, he might just be a bench clogger."
+
+
+⸻
+
+5️⃣ TL;DR FOR THE REPLIT AGENT
+
+Patch request: In WAIVER mode, TIBER should not use VORP or season-long rank as a primary signal. VORP is only a core tool in TRADE / macro value mode, not for waiver pickups. For waiver questions, the decision should be driven by the Waiver Wisdom Interest Score, archetype (breakout/handcuff/injury replacement/role shift/trap), recent usage trend (last 1–3 weeks), ownership %, ecosystem, and efficiency vs baseline. VORP may be mentioned only as context for why a player is still on waivers, but it must not be used alone to label someone a trap. Also, please integrate the provided system-prompt text that defines 'trade mode vs waiver mode' and add the new lingo phrases like “that’s a smash play,” “that’s a fade for me,” “Player X is a hammer,” “he’s a stud,” “more often than not, just start your studs,” and “this is just noise — fade it.” The test case is Michael Wilson: he should not be auto-faded solely because of WR48 and negative VORP.
+
+
