@@ -6969,6 +6969,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return patterns.some(p => p.test(query));
   }
 
+  // Helper: Fetch waiver candidates with week lookback logic
+  // Tries weeks 11→10→9→8 to find most recent data
+  async function fetchWaiverCandidatesWithLookback(
+    season: number, 
+    position?: string,
+    maxCandidates: number = 15
+  ): Promise<{ week: number; candidates: any[] } | null> {
+    const weeksToTry = [11, 10, 9, 8]; // Most recent completed weeks
+    
+    for (const week of weeksToTry) {
+      try {
+        const whereConditions: any[] = [
+          eq(waiverCandidates.season, season),
+          eq(waiverCandidates.week, week)
+        ];
+        
+        // Add position filter if specified
+        if (position) {
+          whereConditions.push(eq(waiverCandidates.position, position));
+        }
+        
+        const candidates = await db
+          .select()
+          .from(waiverCandidates)
+          .where(and(...whereConditions))
+          .orderBy(desc(waiverCandidates.interestScore))
+          .limit(maxCandidates);
+        
+        if (candidates.length > 0) {
+          console.log(`📊 [Waiver Lookback] Found ${candidates.length} candidates for ${season} Week ${week}${position ? ` (${position})` : ''}`);
+          return { week, candidates };
+        }
+      } catch (error) {
+        console.warn(`⚠️  [Waiver Lookback] Error fetching week ${week}:`, error);
+      }
+    }
+    
+    console.log(`⚠️  [Waiver Lookback] No candidates found for weeks ${weeksToTry.join(', ')}`);
+    return null;
+  }
+
   // Helper: Detect pressure-related queries for Pressure Module boosting
   function detectsPressureQuery(userQuery: string): boolean {
     const q = userQuery.toLowerCase();
@@ -7528,6 +7569,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const vorpSection = `**2025 Season Performance (PPR)**\n${vorpDataList.join('\n')}\n\n`;
           pinnedContext.push(vorpSection);
           console.log(`📌 [VORP] Pinned ${vorpDataList.length} player VORP data (2025 season) - Mode: ${queryMode}`);
+        }
+      }
+      
+      // WAIVER MODE: Fetch and pin waiver candidates with Interest Scores
+      if (queryMode === 'waivers') {
+        try {
+          // Detect position from message (RB, WR, TE, QB)
+          const positionMatch = message.match(/\b(RB|WR|TE|QB)s?\b/i);
+          const position = positionMatch ? positionMatch[1].toUpperCase() : undefined;
+          
+          console.log(`🎯 [Waiver Wisdom] Fetching candidates${position ? ` for ${position}` : ''}...`);
+          
+          const waiverData = await fetchWaiverCandidatesWithLookback(2025, position, 15);
+          
+          if (waiverData) {
+            const { week, candidates } = waiverData;
+            
+            // Format waiver candidates for context
+            const waiverLines = candidates.map(c => {
+              const faabRange = c.faabMin === 0 && c.faabMax === 0 
+                ? 'FAAB: 0%' 
+                : `FAAB: ${c.faabMin}-${c.faabMax}%`;
+              
+              return `• **${c.playerName}** (${c.team} ${c.position}) - Tier ${c.waiverTier} ${c.archetype}\n  Interest Score: ${c.interestScore} | Recent: ${c.recentPpg} PPG (${c.recentTrend}) | Own: ${c.ownershipPercentage}% | ${faabRange}\n  ${c.summary}`;
+            });
+            
+            const waiverSection = `**📊 Waiver Wire Intelligence (2025 Week ${week})**\n\n${waiverLines.join('\n\n')}\n\n`;
+            pinnedContext.push(waiverSection);
+            console.log(`📌 [Waiver Wisdom] Pinned ${candidates.length} waiver candidates (Week ${week}${position ? `, ${position} only` : ''})`);
+          } else {
+            console.log(`⚠️  [Waiver Wisdom] No waiver candidates found - using general teaching only`);
+          }
+        } catch (error) {
+          console.error(`❌ [Waiver Wisdom] Error fetching candidates:`, error);
         }
       }
       
