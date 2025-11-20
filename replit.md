@@ -77,6 +77,7 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
         - **Fantasy Lingo Integration**: Natural use of phrases like "smash play", "fade", "hammer", "stud", "bench clogger", "the market hasn't caught up yet" in waiver mode responses
         - **Comprehensive Pattern Matching**: Detects FAAB questions ("How much FAAB for X?"), claim questions ("Is X worth a claim?"), stash/streamer language, and all common waiver wire vocabulary
         - **Verified Working**: Tested with FAAB queries, claim queries, and standard waiver questions. Mode detection logs confirm VORP skipping in waiver mode while maintaining normal behavior for trade/start-sit queries
+        - **Waiver Wisdom API Integration**: When waiver mode detected, automatically fetches waiver candidates from database and pins to context. Features week lookback logic (12→11→10→9→8), position filtering (RB/WR/TE/QB), and formats candidates with Interest Score, tier, archetype, FAAB range, recent PPG, and ownership percentage. TIBER cites specific waiver candidates instead of generic advice.
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
