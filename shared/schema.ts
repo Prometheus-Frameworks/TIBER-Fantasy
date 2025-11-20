@@ -95,6 +95,22 @@ export const tiberTrendEnum = pgEnum("tiber_trend", [
 ]);
 
 // ========================================
+// WAIVER WISDOM ENUMS
+// ========================================
+
+// Waiver tier enum
+export const waiverTierEnum = pgEnum("waiver_tier", ["S", "A", "B", "C", "D"]);
+
+// Waiver archetype enum
+export const waiverArchetypeEnum = pgEnum("waiver_archetype", [
+  "breakout",
+  "handcuff", 
+  "injury_replacement",
+  "role_shift",
+  "trap"
+]);
+
+// ========================================
 // BRONZE LAYER - RAW DATA STORAGE
 // ========================================
 
@@ -3451,6 +3467,51 @@ export type BuysSells = typeof buysSells.$inferSelect;
 export type InsertBuysSells = z.infer<typeof insertBuysSellsSchema>;
 
 // ========================================
+// WAIVER WISDOM SYSTEM TABLES
+// ========================================
+
+// Sleeper ownership table - Stores platform-wide ownership percentages
+export const sleeperOwnership = pgTable("sleeper_ownership", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week"),
+  ownershipPercentage: real("ownership_percentage"),
+  rosterCount: integer("roster_count"),
+  totalLeagues: integer("total_leagues"),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => ({
+  playerSeasonWeekIdx: uniqueIndex("sleeper_ownership_player_season_week_idx").on(table.playerId, table.season, table.week),
+  seasonWeekIdx: index("sleeper_ownership_season_week_idx").on(table.season, table.week),
+}));
+
+// Waiver candidates table - Computed waiver recommendations
+export const waiverCandidates = pgTable("waiver_candidates", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  playerId: text("player_id").notNull(),
+  playerName: text("player_name"),
+  position: text("position"),
+  team: text("team"),
+  ownershipPercentage: real("ownership_percentage"),
+  interestScore: real("interest_score").notNull(),
+  waiverTier: waiverTierEnum("waiver_tier").notNull(),
+  archetype: waiverArchetypeEnum("archetype").notNull(),
+  summary: text("summary"), // 1-2 sentence machine-generated note
+  faabMin: integer("faab_min"), // Suggested FAAB range (min %)
+  faabMax: integer("faab_max"), // Suggested FAAB range (max %)
+  recentPpg: real("recent_ppg"), // Last 3 weeks PPG
+  recentTrend: text("recent_trend"), // 'rising', 'stable', 'declining'
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  seasonWeekPlayerIdx: uniqueIndex("waiver_candidates_season_week_player_idx").on(table.season, table.week, table.playerId),
+  seasonWeekTierIdx: index("waiver_candidates_season_week_tier_idx").on(table.season, table.week, table.waiverTier),
+  positionIdx: index("waiver_candidates_position_idx").on(table.position),
+}));
+
+// ========================================
 // RAG SYSTEM TABLES
 // ========================================
 
@@ -3585,3 +3646,13 @@ export type ChatSession = typeof chatSessions.$inferSelect;
 export type InsertChatSession = z.infer<typeof insertChatSessionSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+
+// Waiver Wisdom Insert Schemas
+export const insertSleeperOwnershipSchema = createInsertSchema(sleeperOwnership).omit({ id: true, lastUpdated: true });
+export const insertWaiverCandidateSchema = createInsertSchema(waiverCandidates).omit({ id: true, createdAt: true, updatedAt: true });
+
+// Waiver Wisdom Types
+export type SleeperOwnership = typeof sleeperOwnership.$inferSelect;
+export type InsertSleeperOwnership = z.infer<typeof insertSleeperOwnershipSchema>;
+export type WaiverCandidate = typeof waiverCandidates.$inferSelect;
+export type InsertWaiverCandidate = z.infer<typeof insertWaiverCandidateSchema>;

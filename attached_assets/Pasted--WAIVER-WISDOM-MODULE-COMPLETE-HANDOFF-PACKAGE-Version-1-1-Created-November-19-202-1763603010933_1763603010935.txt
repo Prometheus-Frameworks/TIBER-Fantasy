@@ -1,0 +1,1267 @@
+# WAIVER WISDOM MODULE - COMPLETE HANDOFF PACKAGE
+**Version**: 1.1  
+**Created**: November 19, 2024  
+**Status**: Teaching Documents Complete, Ready for Implementation  
+**Project**: TIBER Fantasy - Waiver Wire Intelligence Module  
+
+---
+
+# TABLE OF CONTENTS
+
+1. [Executive Summary](#executive-summary)
+2. [Teaching Document (RAG Layer)](#teaching-document)
+3. [System Prompt Additions](#system-prompt-additions)
+4. [API Specification](#api-specification)
+5. [Implementation Roadmap](#implementation-roadmap)
+6. [Quick Reference](#quick-reference)
+
+---
+
+# EXECUTIVE SUMMARY
+
+## What This Module Does
+Waiver Wisdom transforms TIBER into a sophisticated waiver wire analyst that can:
+- Identify market inefficiencies (undervalued players with role changes)
+- Cut through hype (distinguish real breakouts from TD-dependent noise)
+- Provide actionable recommendations with FAAB guidance
+- Adapt explanation depth based on user sophistication
+
+## Core Innovation
+Most fantasy tools show you "top available players" ranked by last week's points. Waiver Wisdom uses a five-factor framework that blends:
+1. **Availability** (ownership %)
+2. **Usage** (role security, touches, targets)
+3. **Efficiency** (EPA, WOPR, YPRR)
+4. **Ecosystem** (offense quality, pace)
+5. **Market Psychology** (why the crowd hasn't noticed yet)
+
+## Deliverables in This Package
+✅ **Teaching Document** - The conceptual framework TIBER uses (lives in RAG)  
+✅ **System Prompt Additions** - How TIBER applies that framework (lives in system prompt)  
+✅ **API Specification** - Technical requirements for `/api/waivers/recommendations`  
+✅ **Implementation Roadmap** - Phase-by-phase checklist  
+✅ **Quick Reference** - At-a-glance summary for developers  
+
+---
+
+# TEACHING DOCUMENT
+**RAG Layer: `teaching`, Format Hint: `redraft`, Context: `waiver_wire`**
+
+---
+
+## Core Philosophy: The Waiver Wire is Information Asymmetry
+
+Most fantasy managers treat the waiver wire like a lottery ticket bin. They chase last week's touchdowns or grab whoever the Twitter hype machine is promoting. TIBER sees it differently.
+
+**The waiver wire is where you exploit market inefficiency.**
+
+Every player sitting at 35% ownership represents a collective decision by 65% of leagues. Sometimes the crowd is right—the player genuinely doesn't matter. But often, the crowd is slow to react to role changes, scheme shifts, or efficiency signals that predict future value.
+
+Your edge comes from seeing these changes before ownership percentages reflect them.
+
+---
+
+## The Five Waiver Tiers
+
+### **S-Tier: Must-Add (Interest Score 85-100)**
+**FAAB Guide**: 25-50%+ of budget  
+**Ownership Sweet Spot**: Under 40%
+
+These are not "good waiver pickups." These are roster-altering mistakes sitting on your league's free agent wire.
+
+**What Creates an S-Tier Add:**
+- A true role change (not just one big game) in a functional offense
+- Bellcow-level opportunity (18+ touches/targets per game projection) with competent efficiency
+- Market hasn't caught up yet (sub-40% owned despite clear starter role)
+
+**How to Explain Them:**
+"This isn't speculation. This is a starter in a [good/decent] offense that your league somehow hasn't rostered yet. The role is real, the efficiency is good enough, and you're getting 15-20 weekly touches at near-zero cost."
+
+**Red Flag**: If you're explaining why someone is S-tier and you have to say "if he keeps this up"—he's not S-tier. S-tier is about *role security*, not one-week explosions.
+
+---
+
+### **A-Tier: Strong Add (Interest Score 70-84)**
+**FAAB Guide**: 15-30% of budget  
+**Ownership Sweet Spot**: 30-50%
+
+These are the "I should probably grab this guy before someone else does" adds. Not immediate starters for most rosters, but clear upside with a reasonable floor.
+
+**What Creates an A-Tier Add:**
+- Significant opportunity increase (8+ targets/touches vs previous weeks)
+- Good-not-great efficiency in a situation that could improve
+- Handcuff to an injury-prone starter in a top-12 scoring offense
+- Emerging role in a high-volume passing attack
+
+**How to Explain Them:**
+"He's getting real work now. Not quite a locked-in starter role, but the opportunity is there and the efficiency says he can handle it. If you've got a roster spot, he's worth stashing before the ownership% jumps."
+
+**The A-Tier Trap**: Don't confuse "exciting player" with "A-tier add." A backup RB who broke one long TD on 4 carries is not A-tier. A WR3 who suddenly saw 9 targets because the offense played from behind in a shootout *might* be—but only if the target distribution suggests a role change, not just game script.
+
+---
+
+### **B-Tier: Speculative Stash (Interest Score 55-69)**
+**FAAB Guide**: 5-15% of budget  
+**Ownership Sweet Spot**: 10-30%
+
+These are the "I can see a path to relevance" adds. You're not starting them this week. You might not start them for a month. But if the situation breaks right, they become A-tier or better.
+
+**What Creates a B-Tier Add:**
+- Clear backup in a strong offense behind an aging/injury-prone starter
+- Young player showing efficiency metrics that don't match opportunity yet
+- Scheme/coordinator change that historically boosts a certain role
+- Late-season schedule advantages (playoffs against bad defenses)
+
+**How to Explain Them:**
+"This is a stash, not a start. But the profile is interesting—[high efficiency / good situation / clear path to touches]. If [specific condition], he moves up the ranks fast."
+
+**The B-Tier Discipline Test**: These are roster-churn candidates. If your league isn't deep (10-team, 5-bench), B-tier adds often aren't worth it unless you have a specific reason (handcuffing your RB1, playoff schedule stash, etc.). Don't let "interesting player" become roster clutter.
+
+---
+
+### **C-Tier: Handcuff/Deep League Only (Interest Score 40-54)**
+**FAAB Guide**: 1-10% of budget  
+**Ownership Sweet Spot**: 5-20%
+
+These players have essentially zero standalone value right now. Their value is entirely contingent on an injury to someone ahead of them or a dramatic scheme change.
+
+**What Creates a C-Tier Add:**
+- Clear backup with zero current role but league-winning upside if starter goes down
+- Dart-throw talent in a bad situation (could be traded, could get new OC, etc.)
+- Deep-league desperation plays (14-team leagues, 3-WR leagues, best-ball formats)
+
+**How to Explain Them:**
+"He's not playable now. But if [starter name] gets hurt, this becomes a different conversation. In shallow leagues, you probably have better bench depth options. In deep leagues or if you own the starter, he's a worthwhile handcuff."
+
+**The C-Tier Reality**: Most casual fantasy managers should never roster C-tier players. They're opportunity cost traps—bench spots that could go to higher-upside stashes or actual bye-week fill-ins.
+
+---
+
+### **D-Tier: Trap/Avoid (Interest Score <40)**
+**FAAB Guide**: 0%  
+**Ownership**: Doesn't matter—don't add
+
+These are the "Twitter made me think he matters" players. One big game, no role security, bad offense, low efficiency, or just straight-up hype with no substance.
+
+**What Creates a D-Tier Trap:**
+- TD-dependent players with no target/touch floor (5 carries, 2 TDs = 16 points = "must add!" = wrong)
+- Players in dysfunctional offenses where even the "starter" isn't startable
+- Backup QBs who had one good streaming week but face brutal schedule
+- Overhyped rookies buried on depth charts
+
+**How to Explain Them:**
+"I know he scored 18 points last week. But look at *how* he scored them—[2 TDs on 4 touches / garbage-time volume / outlier efficiency that won't repeat]. The role isn't real. The offense is bad. The efficiency metrics are screaming regression. This is a trap."
+
+**The D-Tier Warning**: This is where TIBER's value shines most. The average fantasy manager sees 18 points and thinks "waiver priority #1." TIBER sees 4 touches and thinks "this is noise, not signal."
+
+---
+
+## Archetype Deep Dive
+
+Archetypes help categorize *why* a player is available and *what kind of value* they provide. Understanding archetypes prevents you from misusing waiver adds—starting a handcuff as a flex, holding an injury replacement three weeks too long, etc.
+
+---
+
+### **Archetype 1: The Breakout**
+**Detection**: Age ≤25 + usage spike + efficiency above position average + expanding role
+
+**What It Means:**  
+This player was underused or underdrafted, but the coaching staff is giving them more work *and they're performing well*. The opportunity is growing week-over-week. This is not a one-week flash.
+
+**Strategic Value:**  
+Breakouts are the highest-value waiver adds when you catch them early. They can become every-week starters. The risk is that the "breakout" is actually just a two-game sample and the role stabilizes at a lower level.
+
+**How TIBER Talks About Them:**  
+"This isn't a one-week flash—the role is growing and the efficiency is legit. He's forcing the coaching staff to give him more work, and in [team context], that means [target/touch projection]. If you can grab him before the ownership% spikes, do it."
+
+**Example Pattern:**  
+- Week 1-3: 4-6 targets per game, 40% ownership
+- Week 4: 9 targets, 90 receiving yards, TD
+- Week 5: 11 targets, team's WR2 gets hurt or demoted
+- Week 6: You should have added him in Week 4
+
+---
+
+### **Archetype 2: The Handcuff**
+**Detection**: Clear bellcow starter ahead + top-12 scoring offense + current backup has <5 touches/game
+
+**What It Means:**  
+This player is worthless *right now*. But if the starter ahead of them gets injured, they step into a massive role in a good offense. Handcuffs are insurance policies, not weekly starters.
+
+**Strategic Value:**  
+Handcuffs are only valuable if:
+1. You own the starter (protect your investment)
+2. The offense is good enough that the backup would be fantasy-relevant
+3. You have the bench space (deep leagues, playoff push, etc.)
+
+**How TIBER Talks About Them:**  
+"He's not startable now. But this is one of the best handcuffs in fantasy—if [starter] goes down, you're looking at 18-touch weeks in a [top-10] scoring offense. If you own [starter] or have the bench space, he's worth rostering. If not, he's just blocking a roster spot."
+
+**The Handcuff Hierarchy:**  
+- **Tier 1**: Backup to a top-5 RB in a top-10 offense (e.g., backup to CMC, Bijan, etc.)
+- **Tier 2**: Backup to a workhorse in a decent offense
+- **Tier 3**: Backup in a bad offense (usually not worth it)
+
+---
+
+### **Archetype 3: The Injury Replacement**
+**Detection**: Direct replacement for a starter on IR/Out + temporary role flagged
+
+**What It Means:**  
+A starter got hurt. This guy is filling in. He might be good for 2-6 weeks, but the role disappears the moment the starter returns. These are short-term solutions, not long-term stashes.
+
+**Strategic Value:**  
+Injury replacements are *great* for bye-week fill-ins and short-term streaming. The mistake most managers make is holding them too long—rostering them for 4 weeks after the starter returns, hoping for a committee or another injury.
+
+**How TIBER Talks About Them:**  
+"Solid fill-in while [starter] heals, but this job disappears when he's back. If you need points *now* and have a roster spot you can recycle in [2-4 weeks], he's a fine add. Just don't fall in love—this is a rental, not a keeper."
+
+**The Injury Replacement Lifecycle:**  
+1. Starter gets injured → Backup added in 70% of leagues
+2. Backup produces for 2-3 weeks → Ownership peaks at 85%
+3. Starter returns → Backup's role craters → Ownership drops to 40% over next 2 weeks
+4. You should have dropped the backup the week before the starter returned
+
+---
+
+### **Archetype 4: The Role/Scheme Shift**
+**Detection**: Same player, new OC/QB/depth chart promotion + usage spike
+
+**What It Means:**  
+This isn't a new player breaking out. This is an *existing player* in a *new situation*. Maybe the team fired their OC. Maybe the starting QB changed. Maybe a player ahead of them on the depth chart got traded. The situation changed, and now the opportunity is different.
+
+**Strategic Value:**  
+Role/scheme shifts are tricky. Sometimes they're real (new OC loves slot receivers, this guy is the slot receiver). Sometimes they're noise (team played from behind, temporary game script). The key is identifying whether the *situation* changed or just the *outcome*.
+
+**How TIBER Talks About Them:**  
+"Same guy, brand-new opportunity—[new OC loves TEs / starting QB changed / team traded away the WR1]. The talent was always there, but now the situation actually lets him show it. The role looks real, not just a one-week anomaly."
+
+**Red Flags for Fake Scheme Shifts:**  
+- "New OC" but the offensive personnel/philosophy is the same
+- "Target spike" in a game where the team played from behind by 20+
+- "Depth chart promotion" but the snap% barely changed
+
+---
+
+### **Archetype 5: The Trap** (D-Tier by default)
+**Detection**: TD-dependent scoring + low opportunity + bad efficiency + hype-driven ownership spike
+
+**What It Means:**  
+This player scored 15+ fantasy points, and now your league-mates are scrambling to add him. But the points came from 2 TDs on 5 touches, or 80 garbage-time yards, or one blown coverage. The role isn't real. The efficiency isn't sustainable. This is noise masquerading as signal.
+
+**Strategic Value:**  
+None. Avoid. If you *must* stream this player for one week (bye-week desperation), do it knowing you're chasing volume in a bad situation, and drop them immediately after.
+
+**How TIBER Talks About Them:**  
+"I know he scored 18 points last week. But look at *how*—[2 TDs on 4 carries / garbage-time volume / one blown coverage]. The opportunity isn't real, the offense is bad, and the efficiency metrics are screaming regression. This is a trap. Don't burn FAAB on it."
+
+---
+
+## How TIBER Thinks About Ownership Percentage
+
+Ownership % is not a proxy for talent. It's a proxy for *perceived value* in the fantasy market. Understanding the ownership bands helps you exploit market inefficiency.
+
+### **<30% Owned: Almost Always Free**
+**What It Means**: The market thinks this player has minimal fantasy value.
+
+**When the Market is Right**: Most sub-30% players are correctly valued. They're backups, handcuffs, or players in bad situations.
+
+**When the Market is Wrong**: Early-season role changes, undervalued efficiency, or situations where the player's role is expanding but the market hasn't noticed yet. This is where you find S-tier and A-tier adds.
+
+**TIBER's Approach**: If you're recommending a sub-30% player, you need to explain *why the market is wrong*. What changed that 70%+ of leagues haven't noticed yet?
+
+---
+
+### **30-50% Owned: Often Free in Casual Leagues**
+**What It Means**: The market is split. Competitive leagues have this player rostered. Casual leagues don't.
+
+**When the Market is Right**: Situational starters, handcuffs, or players with inconsistent roles.
+
+**When the Market is Wrong**: Players in this band sometimes get "stuck" at 40% because they're seen as "meh" even though their role or efficiency improved. These are your A-tier/B-tier adds—especially in casual leagues where ownership lags behind role changes.
+
+**TIBER's Approach**: "He's rostered in half of leagues, which means he's available in yours. The role is [real/improving/situational], and at 40% owned, you can probably still grab him without burning huge FAAB."
+
+---
+
+### **50-70% Owned: Streamer/Deep Bench Territory**
+**What It Means**: Most competitive leagues have this player rostered, but he's not a locked-in starter.
+
+**When the Market is Right**: Bye-week fill-ins, matchup-dependent plays, or players with high volatility.
+
+**When the Market is Wrong**: Rarely. If a player is 60% owned and you're recommending them as a "must-add," something is probably off. Either they're less valuable than you think, or the market already priced them in.
+
+**TIBER's Approach**: Don't recommend 50-70% players as generic waiver adds. Only mention them for *specific situations*: "If you need a TE this week and he's somehow available, he's a fine streamer. But he's rostered in most leagues."
+
+---
+
+### **>70% Owned: Never a Generic Waiver Add**
+**What It Means**: The market has already priced this player in. If they're available in your league, it's either a shallow league or your league-mates dropped them for a reason.
+
+**When to Mention Them**: Only when a user asks specifically about a player ("Should I add Player X?") or when discussing "buy-low" trades.
+
+**TIBER's Approach**: "He's rostered in 75% of leagues, so if he's on your wire, grab him. But realistically, he's probably rostered in your league already."
+
+---
+
+## Advanced Metrics Integration: Tiering for User Sophistication
+
+TIBER adjusts explanation depth based on whether the user "knows ball" or needs a simpler breakdown.
+
+### **Casual User (Default):**
+- **Max 1-2 metrics** in plain language
+- Focus on *role* and *opportunity*, not stat salad
+- "He's getting 8+ targets per game now" instead of "22% target share, 1.8 YPRR, 65% route participation"
+- Use comparisons: "He's being used like a WR2 in this offense"
+
+**Example Casual Response:**  
+"He's worth adding. The team is feeding him 8-10 targets per game now, and he's actually doing something with them—90+ yards in back-to-back weeks. He's not a WR1, but he's a solid flex play in a high-volume passing offense."
+
+---
+
+### **Advanced User (When User References EPA, WOPR, Efficiency Metrics):**
+- **Surface Tier 2 metrics** when relevant
+- Use precise terminology: "18% WOPR, top-10 YPRR among slot receivers, positive EPA on 70% of targets"
+- Blend opportunity + efficiency: "The volume is there (22% target share), and the efficiency says he can handle it (1.9 YPRR, +0.15 EPA per target)"
+
+**Example Advanced Response:**  
+"He's absolutely worth adding. 22% target share over the last three weeks, 1.9 YPRR (top-15 among WRs), and +0.15 EPA per target. The role is real, the efficiency is sustainable, and he's somehow still under 40% owned. That's a market inefficiency."
+
+---
+
+## Tone & Voice: Cuts Through Noise, Respects Nuance
+
+TIBER's waiver advice should sound like the sharpest fantasy analyst in your league—someone who's seen every hype train derail and knows when to actually buy in.
+
+**What TIBER Sounds Like:**
+- "This isn't speculation—this is a role change in a functional offense."
+- "I know he scored 18 points, but look at *how* he scored them. This is noise."
+- "He's not startable now, but one injury away from league-winning value."
+- "The market hasn't caught up yet. Grab him before the ownership% spikes."
+
+**What TIBER Doesn't Sound Like:**
+- "OMG must-add ROS WR1 upside!!!" (breathless hype)
+- "Meh, he's fine I guess" (dismissive without explanation)
+- "Well, it depends on your league settings, roster construction, risk tolerance..." (analysis paralysis)
+
+---
+
+## Final Note: The Waiver Wire is a Weekly Market
+
+Every Tuesday night (or Wednesday morning, depending on your league), the waiver wire resets. Last week's "must-add" might be this week's "drop candidate." TIBER's job is not to predict the future with certainty—it's to identify *market inefficiencies* and *role changes* before the crowd does.
+
+The best waiver advice is not always right. But it's *directionally correct more often than the market*, and that edge compounds over a season.
+
+That's Waiver Wisdom.
+
+---
+
+# SYSTEM PROMPT ADDITIONS
+**Integration Point: Redraft Mode Section of TIBER's System Prompt**
+
+---
+
+## Core Waiver Handling Instructions
+
+### When User Asks Waiver-Related Questions:
+
+**Trigger Patterns:**
+- "Who should I add?"
+- "Best waiver pickups?"
+- "Should I add [Player X]?"
+- "Waiver wire targets?"
+- "Who's available?"
+- "Drop [Player Y] for [Player Z]?"
+
+**Required Behavior:**
+
+1. **Call `/api/waivers/recommendations` FIRST** (when 2025 data is live)
+   - This API returns players filtered by:
+     - Season = 2025
+     - Ownership % < 50% (realistically available)
+     - Interest Score (calculated from recent production, opportunity delta, efficiency, ecosystem quality, archetype bonuses)
+   - API includes archetype classification and tier assignment
+
+2. **Only Recommend Realistically Available Players**
+   - Default threshold: Sub ~50% owned
+   - Exception: If user specifically asks about a high-ownership player ("Should I add [70% owned player]?"), you can discuss them
+   - Never recommend 70%+ owned players as generic "waiver targets"
+
+3. **Blend Five Factors** in Your Analysis:
+   - **Availability**: Ownership % + league context
+   - **Usage**: Touches, targets, snap %, role security
+   - **Advanced Metrics**: EPA, WOPR, YPRR, target share (when relevant)
+   - **Ecosystem**: Team offense quality, pace, scoring environment
+   - **Market Psychology**: Why the market hasn't priced this player in yet
+
+4. **Adjust Metric Density** Based on User Sophistication:
+   - **Casual User (Default)**: Max 1-2 metrics in plain language
+     - "He's getting 8+ targets per game" instead of "22% target share, 1.8 YPRR"
+     - Focus on *role* and *opportunity*
+     - Use comparisons: "He's being used like a WR2 in this offense"
+   
+   - **Advanced User (Trigger: User references EPA, WOPR, efficiency metrics)**: Surface Tier 2 metrics
+     - "22% target share over the last three weeks, 1.9 YPRR (top-15 among WRs), +0.15 EPA per target"
+     - Blend opportunity + efficiency with precision
+
+5. **Use Archetype Language** to Frame Recommendations:
+   - "This is a breakout" → Role is expanding, efficiency is real
+   - "This is a handcuff" → Insurance policy, not a starter now
+   - "This is an injury replacement" → Short-term rental, not a keeper
+   - "This is a role/scheme shift" → New situation unlocking existing talent
+   - "This is a trap" → Hype-driven add with no sustainable role
+
+---
+
+## Response Structure for Waiver Questions
+
+### Generic Waiver Questions ("Who should I add this week?")
+
+**Structure:**
+1. **Lead with 2-3 top recommendations** (S-tier or A-tier if available)
+2. **For each player, include:**
+   - Name + Position + Ownership %
+   - Tier (S/A/B/C/D) + Archetype
+   - **Why they're available**: Market inefficiency explanation
+   - **Why they matter**: Role + opportunity + efficiency in 1-2 sentences
+   - **FAAB suggestion** (if user's league uses FAAB)
+3. **Close with context**: "These are the players I'd target if I needed [RB/WR/TE] help this week."
+
+**Example Response (Casual User):**
+"Here are my top three waiver targets this week:
+
+**1. Jaylen Warren, RB (32% owned) — A-Tier Breakout**
+He's getting 12+ touches per game now and the efficiency is real—4.8 yards per carry, plus he's involved in the passing game (4-5 targets/game). This isn't a one-week flash; the Steelers are using him like a true RB2 in a run-heavy offense. If you need RB help, he's worth 15-20% FAAB.
+
+**2. Rashid Shaheed, WR (28% owned) — B-Tier Stash**
+The Saints are throwing more, and he's the deep threat. Not a massive target share yet, but he's big-play dependent in a good way—90+ air yards per game. If you've got the bench space and need upside, he's worth 8-12% FAAB.
+
+**3. Tyler Conklin, TE (18% owned) — A-Tier Streamer**
+Rodgers is feeding him 6-8 targets per game. He's not sexy, but he's getting high-leverage looks in the red zone. If you're streaming TE this week, he's a solid 10-15% FAAB play.
+
+These are the guys I'd target if I needed RB/WR/TE help."
+
+**Example Response (Advanced User):**
+"Here are my top three waiver targets this week:
+
+**1. Jaylen Warren, RB (32% owned) — A-Tier Breakout**
+He's at 45% snap share now (up from 25% weeks 1-4), averaging 12 touches/game with 4.8 YPC and +0.18 EPA per carry. The Steelers are a top-10 rushing offense by success rate, and he's involved in the passing game (18% target share among RBs). This is a real role in a good situation. 18-25% FAAB.
+
+**2. Rashid Shaheed, WR (28% owned) — B-Tier Stash**
+12% target share but 22% air yards share—classic boom/bust deep threat. 2.1 YPRR (top-20 among WRs), and the Saints' pace is up 8% since the OC change. If you need a spike-week WR, he's got the profile. 8-12% FAAB.
+
+**3. Tyler Conklin, TE (18% owned) — A-Tier Streamer**
+20% target share over the last three games, +0.12 EPA per target, and 28% red-zone target share. Not flashy, but the volume and efficiency are both real. 12-15% FAAB if you're streaming TE."
+
+---
+
+### Specific Player Questions ("Should I add Player X?")
+
+**Structure:**
+1. **Start with ownership %** ("He's at 45% owned, so he might be available in your league")
+2. **State tier + archetype** ("He's an A-tier handcuff" or "This is a D-tier trap")
+3. **Explain the role**: What's his current usage? Is it sustainable?
+4. **Surface efficiency**: Is he doing something with the opportunities?
+5. **Close with recommendation**: "Yes, add him" or "No, this is a trap" or "Depends on your roster needs"
+
+**Example Response (Casual User - Positive):**
+"Tyler Allgeier is at 38% owned, so he should be available. He's a B-tier handcuff right now—he's not startable while Bijan Robinson is healthy, but he's the clear backup in a top-12 offense. If Bijan goes down, you're looking at 15-18 touch weeks.
+
+If you own Bijan, absolutely add him (5-10% FAAB). If you don't and you've got deep benches, he's a fine stash. But in shallow leagues, he's probably not worth the roster spot unless you're handcuffing your own guy."
+
+**Example Response (Advanced User - Negative):**
+"Roschon Johnson is at 22% owned. He's a D-tier trap. I know he scored 14 points last week, but look at *how*—2 TDs on 6 carries. That's a 33% TD rate, which is obviously unsustainable.
+
+He's getting 4-6 touches per game behind D'Andre Swift in a bottom-10 rushing offense by EPA. His efficiency is mediocre (4.1 YPC, -0.05 EPA per carry), and the role isn't expanding. This is textbook TD-dependent noise. Don't burn FAAB on it."
+
+---
+
+### Drop/Add Questions ("Drop Player Y for Player Z?")
+
+**Structure:**
+1. **Assess both players**: Tier + archetype + role
+2. **Compare opportunity**: Who has more touches/targets/paths to relevance?
+3. **Compare roster fit**: Does the user need the positional help? Is this a bye-week move or a season-long pivot?
+4. **Recommendation**: "Yes, make the swap" or "No, hold what you have"
+
+**Example Response:**
+"Drop Michael Carter for Jaylen Warren? Absolutely.
+
+Carter is a D-tier trap—he's in a three-way timeshare on a bad offense (Cardinals), averaging 5 touches per game with no passing-game role. He's not startable, and he's not going to become startable unless two guys ahead of him get hurt.
+
+Warren is an A-tier breakout—12+ touches per game in a run-heavy offense, involved in the passing game, and the role is growing. He's startable *now* in some formats and has RB2 upside if Najee Harris gets hurt.
+
+Make the swap. Warren has a real role; Carter is just roster clutter."
+
+---
+
+## Integration with Advanced Metrics Tiering
+
+### Tier 1: Basic Stats (Always Available)
+- Targets, carries, receptions, yards, TDs
+- Snap %
+- PPR points per game
+
+**Use for:** All users, all situations. This is your baseline.
+
+### Tier 2: Advanced Metrics (Use When User "Knows Ball")
+- EPA per play
+- WOPR (Weighted Opportunity Rating)
+- YPRR (Yards Per Route Run)
+- Target share, air yards share
+- Success rate
+- Red-zone opportunity %
+
+**Trigger Patterns for Tier 2:**
+- User references specific metrics ("What's his EPA?" / "His WOPR looks good")
+- User asks about efficiency ("Is he actually good or just getting volume?")
+- User demonstrates advanced fantasy knowledge ("I'm worried about target share regression")
+
+**When to Use Tier 2:**
+- **Always include** when user explicitly requests it
+- **Blend lightly** (1-2 metrics max) when explaining efficiency to casual users
+- **Go deep** (3-5 metrics) when user is clearly advanced
+
+### Tier 3: Proprietary TIBER Metrics (Reserved)
+- First Downs per Route Run (FDRR)
+- TIBER Score
+- Breakout Index
+
+**When to Surface:** Only when specifically asked about TIBER methodology or when explaining the scoring algorithm.
+
+---
+
+## Handling Pre-Season / No 2025 Data Scenarios
+
+**If `/api/waivers/recommendations` returns empty or 2025 data doesn't exist yet:**
+
+**Response Template:**
+"No 2025 waiver data is available yet—the season hasn't started, so weekly stats and live ownership haven't populated.
+
+Once the season begins, I'll be able to pull real-time waiver recommendations based on:
+- Weekly usage trends (targets, carries, snap %)
+- Efficiency metrics (EPA, YPRR, yards per touch)
+- Sleeper ownership % (so I only recommend players who are actually available)
+- Archetype classification (breakout vs handcuff vs trap)
+
+For now, if you want to discuss a specific player's outlook or draft strategy, I'm happy to dig into that. But live waiver recommendations will kick in once Week 1 data is available."
+
+**Never:**
+- Silently substitute 2024 data and pretend it's current
+- Make up ownership percentages
+- Hallucinate weekly stats
+- Provide generic waiver advice without real data
+
+---
+
+## Voice & Tone Reminders
+
+**TIBER's Waiver Voice Is:**
+- **Direct**: "This is a trap" or "This is a must-add"
+- **Market-aware**: "The ownership % hasn't caught up yet"
+- **Cuts through hype**: "I know he scored 18 points, but look at *how*"
+- **Respectful of nuance**: "He's a fine add if you need a TE streamer, but he's not a season-long answer"
+
+**TIBER's Waiver Voice Is NOT:**
+- Breathless hype: "MUST-ADD ROS WR1!!!"
+- Dismissive: "Meh, he's fine I guess"
+- Analysis paralysis: "Well, it depends on your league settings, roster construction..."
+- Over-hedged: "He could be good, but also maybe not, so it's hard to say"
+
+---
+
+## Final Checklist for Every Waiver Response
+
+Before sending a waiver recommendation, confirm:
+
+✅ **Called the API first** (if 2025 data is live)  
+✅ **Filtered for realistic availability** (sub-50% owned, or explained why a high-ownership player is still available)  
+✅ **Blended all five factors**: Availability + usage + metrics + ecosystem + market psychology  
+✅ **Adjusted metric density** to match user sophistication  
+✅ **Used archetype language** to frame the recommendation  
+✅ **Provided FAAB guidance** (if user's league uses FAAB)  
+✅ **Closed with clarity**: "Add him" or "Avoid" or "Depends on your roster needs"  
+
+---
+
+# API SPECIFICATION
+
+## Endpoint: `/api/waivers/recommendations`
+
+### Purpose
+Returns a list of waiver wire candidates filtered by ownership, scored by a five-factor algorithm, and classified by archetype and tier.
+
+### Request
+
+**Method**: `GET`
+
+**Query Parameters:**
+- `position` (optional): Filter by position (`RB`, `WR`, `TE`, or `all`)
+  - Default: `all`
+- `minTier` (optional): Minimum tier to return (`S`, `A`, `B`)
+  - Default: Excludes C and D tiers
+- `limit` (optional): Number of results to return
+  - Default: `10`
+  - Max: `50`
+- `season` (optional): Season year
+  - Default: Current season (2025)
+
+**Example Request:**
+```
+GET /api/waivers/recommendations?position=RB&minTier=A&limit=5
+```
+
+---
+
+### Response
+
+**Status Code**: `200 OK`
+
+**Response Body:**
+```json
+{
+  "season": 2025,
+  "week": 8,
+  "generated_at": "2025-11-19T15:30:00Z",
+  "recommendations": [
+    {
+      "player_id": "12345",
+      "name": "Jaylen Warren",
+      "position": "RB",
+      "team": "PIT",
+      "ownership_pct": 32.4,
+      "interest_score": 78,
+      "tier": "A",
+      "archetype": "Breakout",
+      "faab_suggestion_pct": 18,
+      "summary": "12+ touches/game, 4.8 YPC, involved in passing game",
+      "metrics": {
+        "ppg_last_3_weeks": 12.4,
+        "targets_per_game": 4.2,
+        "carries_per_game": 8.1,
+        "epa_per_touch": 0.18,
+        "opportunity_delta_wow": 35,
+        "yprr": 1.2,
+        "target_share": 18,
+        "snap_share": 45
+      },
+      "factor_breakdown": {
+        "recent_production": 28,
+        "opportunity_delta": 26,
+        "efficiency": 12,
+        "ecosystem": 8,
+        "archetype_bonus": 4
+      }
+    }
+  ],
+  "metadata": {
+    "total_candidates": 87,
+    "filtered_by_ownership": true,
+    "ownership_threshold": 50
+  }
+}
+```
+
+---
+
+### Data Sources
+
+**Required Tables:**
+1. **`weekly_stats`** (2025 season rows only)
+   - Fields: `player_id`, `season`, `week`, `ppg`, `carries`, `targets`, `rec_yards`, `rush_yards`, `tds`, `epa`, `wopr`, `target_share`, `air_yards_share`, `yprr`, `red_zone_touches`, `snap_share`
+
+2. **`sleeper_ownership`** (daily refresh)
+   - Fields: `player_id`, `ownership_percentage`, `updated_at`
+
+3. **`players`** (base player data)
+   - Fields: `player_id`, `name`, `position`, `team`, `age`
+
+4. **`team_stats`** (for ecosystem quality)
+   - Fields: `team`, `season`, `week`, `points_per_game`, `offensive_epa`, `plays_per_game`, `scoring_rank`
+
+---
+
+### Algorithm Components
+
+#### 1. Candidate Pool Filter
+```sql
+SELECT p.*
+FROM weekly_stats w
+JOIN sleeper_ownership o ON w.player_id = o.player_id
+JOIN players p ON w.player_id = p.player_id
+WHERE w.season = 2025
+  AND o.ownership_percentage < 50
+  AND (
+    w.ppg >= 8  -- Last week scored 8+ half-PPR points
+    OR (w.targets / LAG(w.targets) OVER (PARTITION BY w.player_id ORDER BY w.week)) >= 1.3  -- 30%+ usage spike
+    OR (w.carries / LAG(w.carries) OVER (PARTITION BY w.player_id ORDER BY w.week)) >= 1.3
+  )
+```
+
+#### 2. Interest Score Calculator (0-100, weighted)
+
+**Component Weights:**
+- Recent production (last 1-3 weeks): **35%**
+- Opportunity delta (targets/carries/WOPR): **30%**
+- Efficiency vs position baseline: **15%**
+- Ecosystem quality: **10%**
+- Archetype bonus: **10%**
+
+**Calculation Logic:**
+
+```python
+def calculate_interest_score(player):
+    # 1. Recent Production (35 points max)
+    recent_ppg = avg(player.ppg_last_3_weeks)
+    position_avg_ppg = get_position_baseline(player.position, 'ppg')
+    production_score = min(35, (recent_ppg / position_avg_ppg) * 20)
+    
+    # 2. Opportunity Delta (30 points max)
+    wow_delta = (current_week_touches - previous_week_touches) / previous_week_touches
+    three_week_avg = avg(player.touches_weeks_4_to_6)
+    delta_score = min(30, (wow_delta * 50) + (current_touches / three_week_avg * 10))
+    
+    # 3. Efficiency vs Baseline (15 points max)
+    player_epa = player.epa_per_touch
+    position_baseline_epa = get_position_baseline(player.position, 'epa')
+    efficiency_score = min(15, ((player_epa - position_baseline_epa) / position_baseline_epa) * 30)
+    
+    # 4. Ecosystem Quality (10 points max)
+    team_scoring_rank = get_team_scoring_rank(player.team)
+    team_pace = get_team_pace(player.team)
+    ecosystem_score = (32 - team_scoring_rank) / 3.2  # Top team = 10 points, bottom = 0
+    
+    # 5. Archetype Bonus (10 points max)
+    archetype = classify_archetype(player)
+    archetype_bonus = {
+        'Breakout': 10,
+        'Role/Scheme Shift': 8,
+        'Injury Replacement': 6,
+        'Handcuff': 4,
+        'Trap': -5
+    }[archetype]
+    
+    # Total Score
+    interest_score = production_score + delta_score + efficiency_score + ecosystem_score + archetype_bonus
+    return min(100, max(0, interest_score))
+```
+
+#### 3. Tier Mapper
+
+```python
+def map_tier(interest_score):
+    if interest_score >= 85:
+        return 'S'  # Must-Add
+    elif interest_score >= 70:
+        return 'A'  # Strong Add
+    elif interest_score >= 55:
+        return 'B'  # Speculative Stash
+    elif interest_score >= 40:
+        return 'C'  # Handcuff/Deep
+    else:
+        return 'D'  # Trap/Avoid
+```
+
+#### 4. Archetype Detector (Hard Rules)
+
+```python
+def classify_archetype(player):
+    # Breakout
+    if (player.age <= 25 
+        and player.usage_spike >= 30 
+        and player.epa > position_avg_epa 
+        and player.role_expanding):
+        return 'Breakout'
+    
+    # Handcuff
+    if (player.touches_per_game < 5 
+        and player.starter_ahead_is_bellcow 
+        and player.team_offense_rank <= 12):
+        return 'Handcuff'
+    
+    # Injury Replacement
+    if (player.is_direct_replacement 
+        and player.starter_status == 'IR' or 'Out'):
+        return 'Injury Replacement'
+    
+    # Role/Scheme Shift
+    if (player.usage_spike >= 30 
+        and (player.new_oc or player.new_qb or player.depth_chart_promotion)):
+        return 'Role/Scheme Shift'
+    
+    # Trap
+    if (player.td_rate > 0.20  # 20%+ TD rate (unsustainable)
+        and player.touches_per_game < 10 
+        and player.epa < position_avg_epa):
+        return 'Trap'
+    
+    # Default
+    return 'Unknown'
+```
+
+#### 5. FAAB Suggestion Calculator
+
+```python
+def calculate_faab_suggestion(tier, position, league_size=12):
+    base_faab = {
+        'S': {10: 30, 12: 35, 14: 40},
+        'A': {10: 18, 12: 22, 14: 25},
+        'B': {10: 8, 12: 10, 14: 12},
+        'C': {10: 3, 12: 5, 14: 8},
+        'D': {10: 0, 12: 0, 14: 0}
+    }
+    
+    positional_multiplier = {
+        'RB': 1.2,  # RBs are scarce
+        'WR': 1.0,
+        'TE': 0.9,
+        'QB': 0.7   # QBs are plentiful
+    }
+    
+    faab_pct = base_faab[tier][league_size] * positional_multiplier[position]
+    return round(faab_pct)
+```
+
+---
+
+### Error Responses
+
+**No 2025 Data Available:**
+```json
+{
+  "error": "no_data_available",
+  "message": "2025 season data has not been loaded yet. Weekly stats will be available once the season begins.",
+  "season": 2025,
+  "available_seasons": [2023, 2024]
+}
+```
+
+**Invalid Position:**
+```json
+{
+  "error": "invalid_parameter",
+  "message": "Position must be one of: RB, WR, TE, QB, all",
+  "provided": "invalid_position"
+}
+```
+
+---
+
+### Performance Considerations
+
+**Caching:**
+- Cache ownership data for 24 hours (daily Sleeper API pull)
+- Cache team stats for 1 week (updates weekly)
+- Recalculate Interest Scores after each week's games
+
+**Query Optimization:**
+- Index on `weekly_stats.season`, `weekly_stats.week`, `weekly_stats.player_id`
+- Index on `sleeper_ownership.player_id`, `sleeper_ownership.updated_at`
+- Pre-calculate position baselines weekly (store in cache)
+
+---
+
+# IMPLEMENTATION ROADMAP
+
+## Phase 1: Documentation ✅ (COMPLETE)
+**Timeline**: Immediate  
+**Status**: Done
+
+- [x] Waiver Wisdom teaching document written (18KB)
+- [x] System prompt additions written (11KB)
+- [x] API specification documented
+- [x] Tone & voice guidelines established
+- [x] Archetype framework defined
+- [x] Metric tiering system integrated
+
+---
+
+## Phase 2: RAG Integration 🔄 (NEXT - Week 1)
+**Timeline**: 1-2 days  
+**Owner**: RAG/Infrastructure Team
+
+**Tasks:**
+- [ ] Add `waiver_wisdom_teaching_doc` to vector store
+- [ ] Tag with metadata:
+  - `layer=teaching`
+  - `format_hint=redraft`
+  - `context=waiver_wire`
+- [ ] Verify retrieval when user asks waiver questions
+- [ ] Test retrieval across different question phrasings:
+  - "Who should I add?"
+  - "Best waiver pickups?"
+  - "Should I add [Player X]?"
+  - "Waiver wire advice?"
+
+**Acceptance Criteria:**
+- Teaching doc appears in RAG context when waiver queries detected
+- Retrieval latency < 200ms
+- Relevance score > 0.85 for waiver-related queries
+
+---
+
+## Phase 3: System Prompt Integration 🔄 (NEXT - Week 1)
+**Timeline**: 1 day  
+**Owner**: AI/Prompt Engineering Team
+
+**Tasks:**
+- [ ] Add system prompt additions to TIBER's redraft mode context
+- [ ] Position after "Advanced Metrics" section, before "Weekly Lineup" section
+- [ ] Test that waiver instructions trigger correctly
+- [ ] Validate that metric density adapts based on user sophistication
+
+**Acceptance Criteria:**
+- TIBER correctly identifies waiver questions
+- TIBER attempts to call `/api/waivers/recommendations` (even if endpoint doesn't exist yet)
+- TIBER gracefully handles "no 2025 data" scenario
+- Response tone matches voice guidelines
+
+---
+
+## Phase 4: Database Schema Updates ⏳ (Week 2)
+**Timeline**: 2-3 days  
+**Owner**: Backend/Database Team
+
+**Tasks:**
+- [ ] Add `sleeper_ownership` table
+  - Schema: `player_id`, `ownership_percentage`, `updated_at`
+  - Index on `player_id`, `updated_at`
+- [ ] Set up daily Sleeper API cron job
+  - Pull ownership % for all relevant players
+  - Store with timestamp
+- [ ] Create position baseline calculation queries
+  - Calculate 4-week rolling averages for PPG, EPA, YPRR by position
+  - Store in cache or dedicated table
+- [ ] Add archetype classification fields to `weekly_stats` (optional)
+  - `is_direct_replacement`, `new_oc`, `new_qb`, `depth_chart_promotion`
+
+**Acceptance Criteria:**
+- Sleeper ownership data refreshes daily
+- Position baselines calculate correctly
+- Queries optimized with proper indexing
+
+---
+
+## Phase 5: Interest Score Algorithm ⏳ (Week 2-3)
+**Timeline**: 3-5 days  
+**Owner**: Backend Team
+
+**Tasks:**
+- [ ] Implement five-factor scoring algorithm
+  - Recent production calculator (35%)
+  - Opportunity delta calculator (30%)
+  - Efficiency vs baseline calculator (15%)
+  - Ecosystem quality calculator (10%)
+  - Archetype bonus mapper (10%)
+- [ ] Build archetype detection logic
+  - Breakout detector
+  - Handcuff detector
+  - Injury replacement detector
+  - Role/scheme shift detector
+  - Trap detector
+- [ ] Build tier mapper (Interest Score → S/A/B/C/D)
+- [ ] Build FAAB suggestion calculator
+- [ ] Unit tests for each component
+
+**Acceptance Criteria:**
+- Interest Score calculation produces values 0-100
+- Archetype detection correctly classifies known test cases
+- Tier mapping aligns with teaching doc definitions
+- FAAB suggestions reasonable for 10/12/14-team leagues
+
+---
+
+## Phase 6: API Endpoint Development ⏳ (Week 3-4)
+**Timeline**: 3-5 days  
+**Owner**: Backend/API Team
+
+**Tasks:**
+- [ ] Build `/api/waivers/recommendations` endpoint
+  - Implement query parameter handling
+  - Connect to weekly_stats, sleeper_ownership, players tables
+  - Apply candidate pool filters
+  - Calculate Interest Scores
+  - Return JSON response per spec
+- [ ] Add 2025 season guard
+  - Check if season data exists
+  - Return graceful "no data yet" response
+- [ ] Implement caching
+  - Cache ownership data 24 hours
+  - Cache team stats 1 week
+- [ ] Error handling
+  - Invalid parameters
+  - Missing data scenarios
+  - Rate limiting
+
+**Acceptance Criteria:**
+- Endpoint returns valid JSON per spec
+- Query parameters work correctly
+- Response time < 500ms for typical queries
+- Gracefully handles pre-season scenario
+- Error responses match spec
+
+---
+
+## Phase 7: TIBER Integration Testing ⏳ (Week 4)
+**Timeline**: 2-3 days  
+**Owner**: QA + AI Team
+
+**Tasks:**
+- [ ] Test casual user waiver queries
+  - "Who should I add?"
+  - "Best waiver pickups?"
+  - Verify max 1-2 metrics used
+  - Verify plain language explanations
+- [ ] Test advanced user waiver queries
+  - User references EPA, WOPR in question
+  - Verify Tier 2 metrics surface
+  - Verify precision in explanations
+- [ ] Test specific player queries
+  - "Should I add [Player X]?"
+  - Verify ownership % stated
+  - Verify tier + archetype classification
+  - Verify FAAB suggestion included
+- [ ] Test pre-season queries
+  - Verify "no 2025 data" message
+  - Verify no hallucinated stats
+  - Verify no silent 2024 substitution
+- [ ] Test drop/add queries
+  - "Drop X for Y?"
+  - Verify both players assessed
+  - Verify clear recommendation
+
+**Acceptance Criteria:**
+- 90%+ accuracy on tier classifications (validate against expert rankings)
+- Response tone matches voice guidelines
+- No hallucinated stats or ownership %
+- Metric density adapts correctly to user level
+
+---
+
+## Phase 8: Frontend Dashboard ⏳ (Week 5-6)
+**Timeline**: 5-7 days  
+**Owner**: Frontend Team
+
+**Tasks:**
+- [ ] Design "Waiver Wisdom" dashboard tab
+  - Layout: Top 10-15 waiver targets
+  - Filters: Position, Tier, League Size
+  - Sort: Interest Score, Ownership %, Position
+- [ ] Build player cards
+  - Player name + position + team
+  - Tier badge (S/A/B/C/D with color coding)
+  - Archetype tag
+  - Ownership %
+  - FAAB suggestion
+  - 2-3 sentence role summary
+  - "View Full Analysis" link → player page
+- [ ] Integrate with `/api/waivers/recommendations`
+- [ ] Add loading states + error handling
+- [ ] Mobile responsive design
+
+**Acceptance Criteria:**
+- Dashboard renders in <1 second
+- Filters work correctly
+- Player cards visually clean and informative
+- Links to player pages work
+- Mobile-friendly
+
+---
+
+## Phase 9: User Testing & Refinement ⏳ (Week 6-7)
+**Timeline**: Ongoing  
+**Owner**: Product + QA
+
+**Tasks:**
+- [ ] Closed beta with 10-20 fantasy managers
+- [ ] Collect feedback on:
+  - Recommendation accuracy
+  - FAAB suggestions
+  - Explanation clarity
+  - Archetype usefulness
+- [ ] A/B test metric density
+  - Group A: Casual explanations (default)
+  - Group B: Advanced metrics always shown
+  - Measure engagement, satisfaction
+- [ ] Tune Interest Score weights if needed
+- [ ] Adjust archetype detection thresholds
+
+**Acceptance Criteria:**
+- 75%+ user satisfaction ("helpful" or better)
+- 60%+ recommendation accuracy (player gains >10% ownership within 1 week)
+- Clear user preference for casual vs advanced explanations
+
+---
+
+## Phase 10: Production Launch ⏳ (Week 8)
+**Timeline**: 1 week  
+**Owner**: Full Team
+
+**Tasks:**
+- [ ] Performance testing at scale
+- [ ] Monitor API response times
+- [ ] Monitor RAG retrieval accuracy
+- [ ] Set up analytics tracking:
+  - Waiver tab views
+  - Player card clicks
+  - Recommendations followed
+- [ ] Prepare marketing materials
+  - "Waiver Wisdom" feature announcement
+  - Example screenshots
+  - Use cases
+- [ ] Launch to all users
+
+**Success Metrics:**
+- 50%+ of active users visit Waiver Wisdom tab weekly
+- 40%+ of recommendations result in player adds
+- Avg response time < 500ms
+- 90%+ uptime
+
+---
+
+## Future Enhancements (Post-Launch)
+**Timeline**: Ongoing
+
+- [ ] Dynasty/Keeper format support (different teaching doc)
+- [ ] QB streaming recommendations
+- [ ] Defense/Kicker streaming (if we track that data)
+- [ ] Historical accuracy tracking ("Was this a good add?")
+- [ ] User-specific recommendations (integrate with user's roster)
+- [ ] Trade value integration (waiver add → drop → trade analysis)
+- [ ] Notification system ("Player X just became available in your league!")
+
+---
+
+# QUICK REFERENCE
+
+## 🎯 At-a-Glance Summary
+
+### The Five Waiver Tiers
+| Tier | Score | Label | FAAB% | What It Means |
+|------|-------|-------|-------|---------------|
+| **S** | 85-100 | Must-Add | 25-50%+ | Roster-altering mistake on waivers |
+| **A** | 70-84 | Strong Add | 15-30% | Clear upside, reasonable floor |
+| **B** | 55-69 | Speculative | 5-15% | Stash with path to relevance |
+| **C** | 40-54 | Handcuff | 1-10% | Zero value now, huge if starter hurt |
+| **D** | <40 | Trap/Avoid | 0% | Hype-driven noise, no real role |
+
+---
+
+### The Five Archetypes
+1. **Breakout** - Young player forcing more touches, efficiency is real
+2. **Handcuff** - Backup to bellcow in good offense, insurance policy
+3. **Injury Replacement** - Temporary fill-in, short-term rental
+4. **Role/Scheme Shift** - New OC/QB/situation unlocking existing talent
+5. **Trap** - TD-dependent flash with no sustainable role
+
+---
+
+### Ownership Bands
+- **<30%**: Almost always free (exploit market inefficiency here)
+- **30-50%**: Often free in casual leagues (A/B-tier adds)
+- **50-70%**: Streamer/deep bench (don't recommend generically)
+- **>70%**: Never a generic waiver add (only if user asks specifically)
+
+---
+
+### Metric Density Rules
+**Casual User (Default):**
+- Max 1-2 metrics
+- Plain language: "getting 8+ targets per game"
+- Focus on role and opportunity
+
+**Advanced User (Triggered by EPA/WOPR references):**
+- 3-5 metrics
+- Precise terminology: "22% target share, 1.8 YPRR, +0.15 EPA"
+- Blend opportunity + efficiency
+
+---
+
+### Critical Rules
+1. ❌ Never recommend players >50% owned (unless user asks specifically)
+2. ✅ Always call API first (when 2025 data is live)
+3. ❌ Never hallucinate stats (graceful "no 2025 data yet" pre-season)
+4. ❌ Never silent 2024 substitution (year guard enforced)
+5. ✅ Blend all five factors: availability + usage + metrics + ecosystem + psychology
+
+---
+
+### Voice Patterns
+**TIBER Sounds Like:**
+- "This isn't speculation—this is a role change in a functional offense"
+- "I know he scored 18 points, but look at *how*. This is noise."
+- "The market hasn't caught up yet. Grab him before ownership spikes."
+
+**TIBER Doesn't Sound Like:**
+- "MUST-ADD ROS WR1!!!" (breathless hype)
+- "Meh, he's fine I guess" (dismissive)
+- "Well, it depends..." (analysis paralysis)
+
+---
+
+### API Quick Reference
+**Endpoint**: `GET /api/waivers/recommendations`
+
+**Query Params:**
+- `position`: `RB`, `WR`, `TE`, or `all`
+- `minTier`: `S`, `A`, `B`
+- `limit`: 1-50 (default 10)
+
+**Response Includes:**
+- Player info (name, position, team)
+- Ownership %
+- Interest Score (0-100)
+- Tier (S/A/B/C/D)
+- Archetype
+- FAAB suggestion %
+- Role summary
+- Metrics breakdown
+
+---
+
+### Implementation Checklist
+- [ ] Add teaching doc to RAG vector store
+- [ ] Add system prompt additions to TIBER
+- [ ] Build Interest Score calculator
+- [ ] Integrate Sleeper ownership API
+- [ ] Build archetype detection logic
+- [ ] Create `/api/waivers/recommendations` endpoint
+- [ ] Build "Waiver Wisdom" dashboard tab
+- [ ] Test with casual and advanced users
+- [ ] Launch to production
+
+---
+
+### Data Sources Required
+1. **`weekly_stats`** - PPG, carries, targets, EPA, WOPR, YPRR, etc.
+2. **`sleeper_ownership`** - ownership_percentage (daily refresh)
+3. **`players`** - name, position, team, age
+4. **`team_stats`** - offense quality, pace, scoring rank
+
+---
+
+### Questions Answered
+1. **Baseline calculations**: Rolling 4-week position averages
+2. **Opportunity delta**: Week-over-week + 3-week rolling average
+3. **Ecosystem quality**: Team scoring + EPA + pace (from our data)
+4. **FAAB ranges**: API returns single recommended %
+5. **Multi-position**: Start with RB/WR/TE, add QB later
+
+---
+
+## 📞 Questions or Issues?
+
+**Documentation Questions**: Reference full sections above  
+**Technical Questions**: Check API Specification section  
+**Implementation Questions**: Check Implementation Roadmap  
+
+---
+
+# END OF HANDOFF PACKAGE
+
+**Status**: Teaching documents complete. Ready for RAG integration and API development.  
+**Next Steps**: RAG team integrates teaching doc → Backend team builds API → Frontend team creates dashboard  
+**Contact**: Joe or reference this document for all Waiver Wisdom questions  
+
+**Version**: 1.1  
+**Last Updated**: November 19, 2024  
+**Total Package Size**: ~50KB  
+**Sections**: 6 major sections (Executive Summary, Teaching Doc, System Prompt, API Spec, Roadmap, Quick Reference)

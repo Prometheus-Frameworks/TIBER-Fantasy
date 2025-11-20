@@ -1,0 +1,90 @@
+# WAIVER WISDOM MODULE SPEC v1.1  
+**Live Target: 2025 Season**  
+**2024 = test sandbox only**  
+All user-facing waiver recommendations must be based on 2025 weekly data + Sleeper ownership once 2025 rows exist. Until then, the system will gracefully return “No 2025 waiver data available yet — here’s what the engine will do when it’s live.” No silent 2024 masquerading.
+
+### 1. Data & Thresholds
+
+| Source                | Key Fields (2025)                                 | Ownership Bands (Sleeper) |
+|-----------------------|---------------------------------------------------|---------------------------|
+| weekly_stats          | PPG, carries, targets, rec yds, rush yds, TDs, EPA, WOPR, target_share, air_yards_share, YPRR, red-zone touches | < 30% → almost always free  <br>30-50% → often free in casual leagues  <br>50-70% → streamer / deep bench  <br>> 70% → never generic waiver add |
+| sleeper_ownership     | ownership_percentage (daily pull)                 |                           |
+
+### 2. Waiver Wisdom Algorithm
+
+1. Candidate Pool  
+   - ownership_percentage < 50%  
+   - AND (last week ≥ 8 half-PPR points OR usage spike ≥ 30% week-over-week)
+
+2. Interest Score (0–100) — weighted  
+   - Recent production (last 1-3 weeks) — 35%  
+   - Opportunity delta (targets/carries/WOPR) — 30%  
+   - Efficiency vs position baseline — 15%  
+   - Ecosystem quality (team scoring rank, pace) — 10%  
+   - Archetype bonus (handcuff, injury fill, etc.) — 10%
+
+3. Tier Mapping  
+   | Interest Score | Tier | Label             | FAAB Guide (12-team) |
+   |----------------|------|-------------------|----------------------|
+   | 85–100         | S    | Must-Add          | 25–50%+              |
+   | 70–84          | A    | Strong Add        | 15–30%               |
+   | 55–69          | B    | Speculative Stash | 5–15%                |
+   | 40–54          | C    | Handcuff / Deep   | 1–10%                |
+   | < 40           | D    | Trap / Avoid      | 0%                   |
+
+### 3. Archetype Classifier (Hard Rules)
+
+| Archetype            | Detection Logic                                                                 | Voice Line Example |
+|----------------------|---------------------------------------------------------------------------------|---------------------|
+| Breakout             | Age ≤ 25 + usage spike + EPA > position avg + role expansion                    | “This isn’t a one-week flash — the role is growing and the efficiency is legit.” |
+| Handcuff             | Clear bell-cow ahead + offense top-12 scoring + low current touches            | “Not a starter now, but one injury away from 18-touch weeks in a great offense.” |
+| Injury Replacement   | Direct replacement for IR/out starter + temporary role flagged                 | “Solid fill-in while the starter heals, but this job disappears when he’s back.” |
+| Role/Scheme Shift    | Same player, new OC/QB or depth-chart promotion                                 | “Same guy, brand-new opportunity — the scheme finally fits.” |
+| Trap / Mirage        | High points + low routes/snaps + garbage-time flag                             | “One big game on six touches in a blowout. Classic waiver trap — stay away.” |
+
+### 4. Backend Implementation (Grok Task)
+
+1. **sleeper_ownership** table + daily ingest script  
+2. **waiver_candidates** table (schema below)  
+3. **waiver_candidates_builder.ts** — cron daily @ 4 AM ET  
+   - Pulls last 3 weeks + ownership  
+   - Calculates interest_score + archetype + tier  
+   - Writes/updates row  
+4. Endpoints  
+   - `GET /api/waivers/recommendations` (filters: pos?, tier?, week=CURRENT)  
+   - `GET /api/waivers/player?player=Name` (single-player diagnosis)
+
+```ts
+// waiver_candidates schema
+id: serial pk
+season: int
+week: int
+player_id: text
+position: text
+ownership_percentage: decimal
+interest_score: decimal
+waiver_tier: 'S'|'A'|'B'|'C'|'D'
+archetype: text
+summary: text (1–2 sentence machine note)
+created_at / updated_at
+```
+
+### 5. Chat / RAG Behavior (Claude Task)
+
+**Detection Triggers** (exact phrases or strong intent)  
+- “waiver wire” / “waiver adds” / “who to pick up” / “best waivers” / “stash”
+
+**Response Rules**  
+- Always call `/api/waivers/recommendations` first  
+- Max 5 players returned  
+- Always lead with ownership % (“likely sitting on most waiver wires at X% rostered”)  
+- One-sentence archetype + one-sentence why  
+- Never recommend >70% owned as generic waiver add
+
+**Sample Output**  
+“Three names actually on most waiver wires right now (<50% rostered):  
+• Emmanuel Wilson (3%) – Tier C handcuff behind Jacobs in a top-5 scoring offense. Pure lottery ticket that hits RB1 if Jacobs misses time.  
+• Adonai Mitchell (28%) – Tier A breakout. Routes and targets both spiked last two weeks; the role is sticking.  
+• Cade Otton (41%) – Tier B injury fill. Starting TE out — he’s the direct replacement until further notice.”
+
+Ready for code drop — let me know when you want the full builder script + endpoint code. This thing is about to cook. ⚡🏈

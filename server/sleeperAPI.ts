@@ -41,6 +41,7 @@ interface SleeperTrendingPlayer {
 
 export class SleeperAPIService {
   private readonly BASE_URL = 'https://api.sleeper.app/v1';
+  private readonly RESEARCH_URL = 'https://api.sleeper.com'; // Research endpoint uses different base URL
   private playerCache: Map<string, SleeperPlayer> = new Map();
   private lastCacheUpdate = 0;
   private readonly CACHE_DURATION = 1000 * 60 * 60; // 1 hour
@@ -397,6 +398,39 @@ export class SleeperAPIService {
     } catch (error) {
       console.error('Error fetching user leagues:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get ownership/roster percentages from Sleeper research endpoint
+   * Returns platform-wide ownership data for all players
+   * 
+   * @param season - Year (e.g., 2025)
+   * @param seasonType - 'regular', 'post', 'pre', or 'off'
+   * @param week - Optional week number (1-18 for regular season)
+   * @returns Map of player_id to ownership data
+   */
+  async getOwnershipData(season: number, seasonType: string = 'regular', week?: number): Promise<Record<string, { ownership: number; roster_percent: number }>> {
+    try {
+      const weekParam = week ? `/${week}` : '';
+      const url = `${this.RESEARCH_URL}/players/nfl/research/${seasonType}/${season}${weekParam}`;
+      
+      console.log(`[Sleeper Ownership] Fetching from: ${url}`);
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Sleeper research API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // The API returns { player_id: { ownership: number, roster_percent: number } }
+      console.log(`[Sleeper Ownership] Fetched ownership data for ${Object.keys(data).length} players`);
+      
+      return data;
+    } catch (error) {
+      console.error('[Sleeper Ownership] Failed to fetch ownership data:', error);
+      return {};
     }
   }
 }
