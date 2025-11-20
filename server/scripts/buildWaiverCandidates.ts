@@ -12,7 +12,7 @@
  */
 
 import { db } from '../infra/db';
-import { waiverCandidates, sleeperOwnership, weeklyStats } from '@shared/schema';
+import { waiverCandidates, sleeperOwnership, weeklyStats, playerIdentityMap } from '@shared/schema';
 import { sql, and, eq, gte, lte, desc, isNotNull } from 'drizzle-orm';
 
 interface WaiverBuilderOptions {
@@ -283,7 +283,25 @@ export async function buildWaiverCandidates(options: WaiverBuilderOptions) {
       );
     }
     
-    // Build ownership map (only include players with valid ownership data)
+    // Fetch player identity mapping to resolve nfl_data_py_id → sleeper_id
+    const identityRecords = await db
+      .select()
+      .from(playerIdentityMap)
+      .where(isNotNull(playerIdentityMap.sleeperId));
+    
+    console.log(`   ✅ Fetched ${identityRecords.length} player identity mappings`);
+    
+    // Build ID resolution map: nfl_data_py_id → sleeper_id
+    const idResolutionMap = new Map<string, string>();
+    for (const record of identityRecords) {
+      if (record.nflDataPyId && record.sleeperId) {
+        idResolutionMap.set(record.nflDataPyId, record.sleeperId);
+      }
+    }
+    
+    console.log(`   🔗 Built ID resolution map with ${idResolutionMap.size} mappings`);
+    
+    // Build ownership map (keyed by Sleeper ID, only include players with valid ownership data)
     const ownershipMap = new Map<string, number>();
     for (const row of ownershipData) {
       const ownership = row.ownershipPercentage || 0;
@@ -307,7 +325,16 @@ export async function buildWaiverCandidates(options: WaiverBuilderOptions) {
     
     // Convert Map to array for iteration (fixes TS downlevelIteration error)
     for (const [playerId, stats] of Array.from(playerStatsMap.entries())) {
-      const ownership = ownershipMap.get(playerId);
+      // CRITICAL: Resolve nfl_data_py_id → sleeper_id before ownership lookup
+      const sleeperId = idResolutionMap.get(playerId);
+      
+      // Skip if player has no Sleeper ID mapping
+      if (!sleeperId) {
+        continue; // Can't match to ownership data
+      }
+      
+      // Look up ownership using resolved Sleeper ID
+      const ownership = ownershipMap.get(sleeperId);
       
       // CRITICAL: Skip players without valid ownership data (fail closed)
       // If ownership is undefined, the player wasn't in the ownership map (0% or no data)
