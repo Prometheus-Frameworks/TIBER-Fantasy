@@ -6970,13 +6970,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Helper: Fetch waiver candidates with week lookback logic
-  // Tries weeks 11→10→9→8 to find most recent data
+  // Tries current week → earlier weeks to find most recent data
+  // Week X data contains recommendations FOR Week X (based on Week X-1 stats)
   async function fetchWaiverCandidatesWithLookback(
     season: number, 
     position?: string,
     maxCandidates: number = 15
   ): Promise<{ week: number; candidates: any[] } | null> {
-    const weeksToTry = [11, 10, 9, 8]; // Most recent completed weeks
+    const weeksToTry = [12, 11, 10, 9, 8]; // Try current week first, then fall back
     
     for (const week of weeksToTry) {
       try {
