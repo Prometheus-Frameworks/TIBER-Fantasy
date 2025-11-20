@@ -45,6 +45,13 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 - **Enhanced Player Card Component**: Features TIBER trend charts, last 3 weeks summary, and ROS Matchup Calendar.
 - **Strategy Tab**: Redesigned for Start/Sit recommendations, Waiver Wire Targets based on TIBER, and SOS Rankings.
 - **Weekly Takes System**: Quick, punchy matchup insights with position-specific one-liners and concrete statistics.
+- **Waiver Wisdom Module**: Intelligent waiver wire recommendation system combining Sleeper ownership data (<50% threshold), recent usage patterns, trending signals, and archetype classification. Features:
+    - **Three-tier scoring** (S/A/B/C/D tiers) using weighted interest formula: 35% usage + 30% trending + 15% efficiency + 10% ecosystem + 10% archetype
+    - **Five archetype classifications**: Breakout Candidate, Streaming Option, Handcuff, Bench Stash, Injury Replacement
+    - **Week-over-week trending analysis**: Averages PPG changes across recent weeks for true momentum detection
+    - **FAAB suggestions**: Dynamic budget recommendations per tier (S-tier: 25-50%, A-tier: 15-30%, B-tier: 5-15%, C-tier: 1-10%, D-tier: 0%)
+    - **API endpoints**: `/api/waivers/recommendations` (filtered by position/tier) and `/api/waivers/player` (single player detail)
+    - **Data pipeline**: `ingestSleeperOwnership.ts` fetches ownership from Sleeper research endpoint, `buildWaiverCandidates.ts` generates recommendations
 - **League System**: Supports user-created fantasy leagues with context-aware AI interactions, integrating league settings, trades, and roster moves via vector-searchable context. Includes Sleeper league auto-sync.
 - **RAG Chat System**: Integrates Google Gemini AI for embeddings and chat generation, providing teaching-focused responses with context-aware personality (natural for greetings, Scout-GM for fantasy). Features:
     - **Anti-Hallucination**: Strict rules requiring data-backed claims, acknowledging data gaps.

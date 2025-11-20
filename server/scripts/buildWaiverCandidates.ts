@@ -47,39 +47,77 @@ interface PlayerStats {
 }
 
 /**
- * Calculate interest score for a player
+ * Calculate interest score for a player using weighted formula:
+ * 35% usage + 30% trending + 15% efficiency + 10% ecosystem + 10% archetype
  */
-function calculateInterestScore(player: PlayerStats): number {
+function calculateInterestScore(player: PlayerStats, archetype: 'breakout' | 'handcuff' | 'injury_replacement' | 'role_shift' | 'trap'): number {
   let score = 0;
   
-  // 1. Recent Production Score (35% weight, 0-35 points)
-  const productionScore = Math.min(35, (player.recentPpg / 20) * 35);
-  score += productionScore;
-  
-  // 2. Opportunity Delta Score (30% weight, 0-30 points)
-  // High usage (targets + carries) gets more points
+  // 1. Usage Score (35% weight, 0-35 points)
+  // Measures total opportunity (targets + carries)
   const totalOpportunity = player.recentTargets + player.recentCarries;
-  const opportunityScore = Math.min(30, (totalOpportunity / 20) * 30);
-  score += opportunityScore;
+  const usageScore = Math.min(35, (totalOpportunity / 20) * 35);
+  score += usageScore;
+  
+  // 2. Trending Score (30% weight, 0-30 points)
+  // Measures week-over-week growth across all recent weeks
+  const weeksPpg = player.weeksPpg;
+  let trendingScore = 15; // Neutral default
+  
+  if (weeksPpg.length >= 2) {
+    // Calculate week-over-week changes
+    const weekChanges: number[] = [];
+    for (let i = 1; i < weeksPpg.length; i++) {
+      const prev = weeksPpg[i - 1];
+      const curr = weeksPpg[i];
+      if (prev > 0) {
+        weekChanges.push((curr - prev) / prev); // % change
+      }
+    }
+    
+    // Average the week-over-week changes to get trend momentum
+    if (weekChanges.length > 0) {
+      const avgChange = weekChanges.reduce((sum, c) => sum + c, 0) / weekChanges.length;
+      
+      // Map average change to 0-30 points (proportional scaling)
+      // +50% avg growth = 30 points (strong uptrend)
+      // 0% avg growth = 15 points (flat)
+      // -50% avg decline = 0 points (strong downtrend)
+      trendingScore = 15 + (avgChange / 0.5) * 15;
+      trendingScore = Math.min(30, Math.max(0, trendingScore));
+    }
+  }
+  
+  score += trendingScore;
   
   // 3. Efficiency Score (15% weight, 0-15 points)
-  // EPA > 0 is above average
+  // EPA per play measures offensive efficiency
   if (player.epaPerPlay !== null) {
-    const efficiencyScore = player.epaPerPlay > 0 ? 15 : 7.5;
-    score += efficiencyScore;
+    // EPA > 0.1 = elite, EPA > 0 = above avg, EPA < 0 = below avg
+    if (player.epaPerPlay > 0.1) score += 15;
+    else if (player.epaPerPlay > 0) score += 10;
+    else score += 5;
   } else {
-    score += 7.5; // Neutral if no EPA data
+    score += 10; // Neutral if no EPA data
   }
   
   // 4. Ecosystem Score (10% weight, 0-10 points)
-  // Good offense gets bonus (placeholder - can enhance with team data)
-  const ecosystemScore = 5; // TODO: Integrate team offensive ranking
+  // Good offense provides higher fantasy ceiling
+  // TODO: Integrate team offensive EPA rankings when available
+  // For now: High-volume passing offenses get bonus
+  const ecosystemScore = player.recentRoutes > 20 ? 10 : 5;
   score += ecosystemScore;
   
   // 5. Archetype Bonus (10% weight, 0-10 points)
-  // Will be refined in archetype classification
-  const archetypeBonus = 5; // Placeholder
-  score += archetypeBonus;
+  // Directly tied to classified archetype
+  const archetypeWeights: Record<string, number> = {
+    breakout: 10,           // Full points - high upside
+    injury_replacement: 8,  // Strong short-term value
+    role_shift: 7,          // Emerging opportunity
+    trap: 3,               // Low trust - TD-dependent
+    handcuff: 2,           // Minimal current value
+  };
+  score += archetypeWeights[archetype] || 5;
   
   return Math.min(100, Math.max(0, Math.round(score)));
 }
@@ -151,6 +189,20 @@ function calculateTrend(weeksPpg: number[]): 'rising' | 'stable' | 'declining' {
   if (recent > previous * 1.25) return 'rising';
   if (recent < previous * 0.75) return 'declining';
   return 'stable';
+}
+
+/**
+ * Map archetype to human-readable label for display
+ */
+function getArchetypeLabel(archetype: 'breakout' | 'handcuff' | 'injury_replacement' | 'role_shift' | 'trap'): string {
+  const labels: Record<string, string> = {
+    breakout: 'Breakout Candidate',
+    handcuff: 'Handcuff',
+    injury_replacement: 'Injury Replacement',
+    role_shift: 'Streaming Option',
+    trap: 'Bench Stash',
+  };
+  return labels[archetype] || 'Bench Stash';
 }
 
 /**
@@ -274,10 +326,12 @@ export async function buildWaiverCandidates(options: WaiverBuilderOptions) {
         epaPerPlay: latestStat.epaPerPlay || null,
       };
       
-      // Calculate interest score, tier, archetype
-      const interestScore = calculateInterestScore(playerData);
-      const tier = calculateTier(interestScore);
+      // Calculate archetype first (needed for interest score)
       const archetype = classifyArchetype(playerData);
+      
+      // Calculate interest score using archetype
+      const interestScore = calculateInterestScore(playerData, archetype);
+      const tier = calculateTier(interestScore);
       const faab = calculateFaabRange(tier);
       const trend = calculateTrend(weeksPpg);
       const summary = generateSummary(playerData, tier, archetype);
@@ -292,7 +346,7 @@ export async function buildWaiverCandidates(options: WaiverBuilderOptions) {
         ownershipPercentage: ownership,
         interestScore,
         waiverTier: tier,
-        archetype,
+        archetype, // Raw enum value (breakout, handcuff, etc.)
         summary,
         faabMin: faab.min,
         faabMax: faab.max,
@@ -372,7 +426,5 @@ async function main() {
   }
 }
 
-// Run if called directly
-if (require.main === module) {
-  main();
-}
+// Run script
+main();
