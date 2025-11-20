@@ -49,7 +49,25 @@ export function detectQueryMode(userQuery: string): 'trade' | 'waivers' | 'start
     /\bworth.*add/i,
     /\bworth.*pickup/i,
     /\bwaiver.*target/i,
-    /\bon waivers\b/i
+    /\bon waivers\b/i,
+    // FAAB and bidding language
+    /\bfaab\b/i,
+    /\bhow much.*bid\b/i,
+    /\bhow much.*spend\b/i,
+    /\bblind bid\b/i,
+    /\bworth.*claim\b/i,
+    /\bworth.*bid\b/i,
+    /\bclaim\b.*\?/i, // "Should I claim X?"
+    // Stash and streaming language
+    /\bstash\b/i,
+    /\bstreamer\b/i,
+    /\bstream\b/i,
+    /\bbench.*stash\b/i,
+    // Free agency and add/drop combos
+    /\bavailable.*add\b/i,
+    /\bon the wire\b/i,
+    /\boff waivers\b/i,
+    /\bfree.*agent.*target/i
   ];
   
   if (waiverPatterns.some(pattern => pattern.test(q))) {
