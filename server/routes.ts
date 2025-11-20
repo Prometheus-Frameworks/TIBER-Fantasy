@@ -7712,31 +7712,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`[Waiver Recommendations] Fetching for ${season} Week ${week}${position ? ` (${position})` : ''}${tierFilter ? ` Tier: ${tierFilter}` : ''}`);
       
-      // Build query
-      let query = db
-        .select()
-        .from(waiverCandidates)
-        .where(
-          and(
-            eq(waiverCandidates.season, season),
-            eq(waiverCandidates.week, week)
-          )
-        )
-        .$dynamic();
+      // Build WHERE conditions
+      const whereConditions: any[] = [
+        eq(waiverCandidates.season, season),
+        eq(waiverCandidates.week, week)
+      ];
       
       // Add position filter if specified
       if (position) {
-        query = query.where(eq(waiverCandidates.position, position));
+        whereConditions.push(eq(waiverCandidates.position, position));
       }
       
       // Add tier filter if specified
       if (tierFilter) {
         const tiers = tierFilter.split(',') as ('S' | 'A' | 'B' | 'C' | 'D')[];
-        query = query.where(sql`${waiverCandidates.waiverTier} IN (${sql.join(tiers.map(t => sql`${t}`), sql`, `)})`);
+        whereConditions.push(sql`${waiverCandidates.waiverTier} IN (${sql.join(tiers.map(t => sql`${t}`), sql`, `)})`);
       }
       
-      // Execute query with ordering
-      const candidates = await query.orderBy(desc(waiverCandidates.interestScore));
+      // Execute query with all conditions
+      const candidates = await db
+        .select()
+        .from(waiverCandidates)
+        .where(and(...whereConditions))
+        .orderBy(desc(waiverCandidates.interestScore));
       
       // Check if we have data
       if (candidates.length === 0) {
