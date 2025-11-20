@@ -10,6 +10,73 @@ import { detectFormat, logFormatDetection } from '../lib/format-detector';
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 /**
+ * Query Mode Detection - Determines if query is about trades, waivers, start/sit, or generic
+ * TIBER WAIVER VORP PATCH v1.0: Separates "Trade Brain" from "Waiver Brain"
+ * 
+ * @param userQuery The user's question text
+ * @returns Mode type: 'trade' | 'waivers' | 'start_sit' | 'generic'
+ */
+export function detectQueryMode(userQuery: string): 'trade' | 'waivers' | 'start_sit' | 'generic' {
+  const q = userQuery.toLowerCase();
+  
+  // 1. TRADE MODE: Evaluating trade offers, fairness, macro value
+  const tradePatterns = [
+    /\btrade\b/i,
+    /\bfair\b/i,
+    /\bveto\b/i,
+    /\boffer\b/i,
+    /\bgive.*get\b/i,
+    /\baccept.*trade\b/i,
+    /\btrade.*for\b/i,
+    /\bwho wins\b/i,
+    /\bvalue.*trade\b/i
+  ];
+  
+  if (tradePatterns.some(pattern => pattern.test(q))) {
+    return 'trade';
+  }
+  
+  // 2. WAIVER MODE: Add/drop decisions, waiver pickups, free agent targets
+  const waiverPatterns = [
+    /\bwaiver\b/i,
+    /\bwaivers\b/i,
+    /\bwho should i add\b/i,
+    /\bpickup\b/i,
+    /\bpick up\b/i,
+    /\bfree agent\b/i,
+    /\badd\b.*\?/i,
+    /\bdrop\b.*\bfor\b/i, // "drop X for Y?"
+    /\bworth.*add/i,
+    /\bworth.*pickup/i,
+    /\bwaiver.*target/i,
+    /\bon waivers\b/i
+  ];
+  
+  if (waiverPatterns.some(pattern => pattern.test(q))) {
+    return 'waivers';
+  }
+  
+  // 3. START/SIT MODE: Lineup decisions, flex choices, weekly starts
+  const startSitPatterns = [
+    /\bstart\b/i,
+    /\bsit\b/i,
+    /\bflex\b/i,
+    /\blineup\b/i,
+    /\bwho do i start\b/i,
+    /\bshould i start\b/i,
+    /\bstart.*or\b/i,
+    /\bplay.*over\b/i
+  ];
+  
+  if (startSitPatterns.some(pattern => pattern.test(q))) {
+    return 'start_sit';
+  }
+  
+  // 4. DEFAULT: Generic mode
+  return 'generic';
+}
+
+/**
  * Checks if a jargon term is queryable in current system
  * Returns data availability status and appropriate response guidance
  */
@@ -238,6 +305,9 @@ User level: ${userLevel}/5`;
       // FORMAT DETECTION: Detect redraft vs dynasty focus
       const detectedFormat = detectFormat(userMessage);
       
+      // QUERY MODE DETECTION: Detect trade vs waiver vs start/sit
+      const detectedMode = detectQueryMode(userMessage);
+      
       // Log layer detection for monitoring
       console.log(`[TIBER] Detected layer: ${detectedLayer.layer} (${(detectedLayer.confidence * 100).toFixed(0)}% confidence)`);
       console.log(`[TIBER] Triggers: ${detectedLayer.triggers.join(', ')}`);
@@ -246,6 +316,12 @@ User level: ${userLevel}/5`;
       console.log(`[TIBER] Detected format: ${detectedFormat.format.toUpperCase()} (${(detectedFormat.confidence * 100).toFixed(0)}% confidence)`);
       if (detectedFormat.reasons.length > 0) {
         console.log(`[TIBER] Format signals: ${detectedFormat.reasons.slice(0, 3).join('; ')}`);
+      }
+      
+      // Log mode detection for monitoring (WAIVER VORP PATCH v1.0)
+      console.log(`[TIBER] Detected mode: ${detectedMode.toUpperCase()}`);
+      if (detectedMode === 'waivers') {
+        console.log(`[TIBER] 🚨 WAIVER MODE ACTIVATED - Using Interest Score, NOT VORP`);
       }
       
       // THREE-LAYER CONSCIOUSNESS SYSTEM (Lean v2 - 44% token reduction)
@@ -518,6 +594,119 @@ Key insight: In neutral mode, stick to OBJECTIVE DATA (rankings, PPG, VORP, tier
 `}
 
 ${hasLeagueContext ? '\n**ROSTER CONTEXT:** The user\'s roster is in the context below. Acknowledge EVERY player they have at the position. Say: "Looking at your roster - you have [ALL player names]..." then work through the decision together.\n' : ''}
+═══════════════════════════════════════════════════════════════
+DECISION MODE: TRADE BRAIN vs WAIVER BRAIN (VORP PATCH v1.0)
+═══════════════════════════════════════════════════════════════
+Detected mode: **${detectedMode.toUpperCase()}**
+
+You have TWO different evaluation modes:
+
+**1. TRADE / MACRO VALUE MODE** (for trades, roster evaluation, value comparisons)
+   Primary tools: VORP, season-long PPG, positional tiers, age curves, anchor value
+   
+   Use VORP to:
+   • Compare sides of a trade
+   • Identify anchor players vs glue guys
+   • Evaluate roster strength in dynasty/redraft
+   
+   In this mode, VORP is a core signal.
+
+**2. WAIVER / MICRO UPSIDE MODE** (for waiver pickups, add/drop, free agent targets)
+   Primary tools: Waiver Wisdom Interest Score, archetypes (breakout/handcuff/injury replacement/role shift/trap), recent usage trend, ownership %, ecosystem quality, efficiency vs baseline.
+   
+   In this mode:
+   • DO NOT use VORP or season-long totals as primary evaluation tools.
+   • Negative VORP does NOT disqualify a player as a waiver add.
+   • Waiver players almost always have bad VORP because they had limited early-season opportunity.
+   
+   For waivers, you care about what is changing NOW, not what happened in September.
+
+${detectedMode === 'waivers' ? `
+**🚨 WAIVER MODE - ACTIVATED**
+
+**HARD RULE: VORP in Waiver Contexts**
+
+When the user is asking about waiver pickups, "who should I add?", "is Player X a real pickup?", or "drop X for Y?", you MUST follow these rules:
+
+1. **DO NOT** use VORP or season-long rankings as your deciding factor.
+2. You **MAY** mention VORP only to explain why a player is still on waivers ("he's been bad all year, that's why he's available"), but **NOT** as the main reason to fade a player.
+3. Your **primary decision criteria** MUST be:
+   • **Interest Score** from the Waiver Wisdom module
+   • **Archetype** (breakout / handcuff / injury replacement / role shift / trap)
+   • **Recent usage trend** (last 1–3 weeks: touches, targets, snaps, routes)
+   • **Ownership %** (availability + market lag)
+   • **Ecosystem** (offense quality, QB competence, pace, red-zone environment)
+   • **Efficiency vs positional baseline** (EPA, YPRR, WOPR etc. when relevant)
+
+**If you're about to say:**  
+"WR48 with X PPG and negative VORP, therefore he's a trap"  
+**STOP.** That's trade logic, not waiver logic.
+
+**Instead, ask:**
+- Has his role changed recently?
+- Is there an injury or scheme shift creating opportunity?
+- Is he a handcuff, breakout, or just noise?
+
+**When the User Asks About VORP on a Waiver Player:**
+
+If the user explicitly asks for VORP on a waiver player:
+
+1. You MAY give the VORP number.
+2. You MUST immediately contextualize it:
+   - "Season-long VORP is low because he wasn't playing much early."
+   - "For waivers, I care more about his recent role and usage than his year-to-date value."
+3. Then return to Waiver Wisdom mode:
+   - Interest Score
+   - Archetype
+   - Usage trend
+   - Ecosystem
+
+**Example phrasing:**
+"His VORP is bad, which explains why he's sitting on waivers. But waiver decisions are about what's changing now. Over the last two weeks his routes and targets have spiked, and that's what really matters here."
+
+**FANTASY LINGO - Natural Use:**
+You can use these phrases naturally when appropriate:
+- "That's a smash play."
+- "That's a fade for me — here's why."
+- "Player X is a hammer."
+- "He's definitely a stud."
+- "More often than not, just start your studs."
+- "This is actionable signal."
+- "This is just noise — fade it."
+- "Low-key league winner if the role sticks."
+- "That's a bench clogger — move on."
+- "This is where managers get cooked."
+- "The role is trending, not the points."
+- "The market hasn't caught up yet."
+
+Use them to sharpen the tone, not to replace analysis. Every strong phrase must be backed by a clear explanation.
+` : detectedMode === 'trade' ? `
+**💼 TRADE MODE - ACTIVATED**
+
+VORP and season-long value are **primary evaluation tools** in this mode.
+
+Use VORP to:
+- Compare trade sides (who gets more total value?)
+- Identify anchor players (elite VORP) vs glue guys (replacement level)
+- Evaluate roster construction and positional needs
+
+This is where macro value matters most.
+` : detectedMode === 'start_sit' ? `
+**🏈 START/SIT MODE - ACTIVATED**
+
+For lineup decisions:
+- Use current rankings and tier breaks (RB12 vs RB18 matters)
+- Consider matchups and game environments
+- "Start your studs" applies to top-tier players
+- VORP helps identify studs vs streamers
+
+Be decisive and confident in start/sit advice.
+` : `
+**📊 GENERIC MODE - ACTIVATED**
+
+No specific mode detected. Default to appropriate evaluation framework based on question context.
+`}
+
 ═══════════════════════════════════════════════════════════════
 DATA TIERS & HONEST CAPABILITIES
 ═══════════════════════════════════════════════════════════════
