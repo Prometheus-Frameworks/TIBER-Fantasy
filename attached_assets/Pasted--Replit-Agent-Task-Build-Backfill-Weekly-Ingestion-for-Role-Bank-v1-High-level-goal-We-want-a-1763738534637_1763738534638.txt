@@ -1,0 +1,294 @@
+🧰 Replit Agent Task – Build & Backfill Weekly Ingestion for Role Bank v1
+
+High-level goal
+We want a reliable weekly ingestion pipeline that feeds weekly_stats and player_usage with full-season data (snaps, routes, targets, etc.) for 2024 and 2025.
+
+Right now, only Amon-Ra St. Brown weeks 10–11 (2024) and week 11 (2025) exist, and a lot of fields are null.
+
+Your job is to:
+
+Audit existing ingestion code.
+
+Design/implement a clean ingestion pipeline using our existing clients (fastR / nfl_data_py / anything already in the repo).
+
+Backfill full 2024 + current 2025.
+
+Verify everything using Amon-Ra as a test case.
+
+Do not invent new providers if we already have one. Reuse existing clients/modules where possible.
+
+1) Audit existing ingestion / data clients
+
+Search the repo for these patterns:
+
+nfl_data_py
+
+fastR / nflfastR
+
+weekly_stats
+
+player_usage
+
+ingestion, backfill, sync, cron
+
+Identify any modules that already fetch:
+
+weekly stats (fantasy, box score, usage)
+
+routes / snaps / targets
+
+Summarize what you find, including:
+
+file paths
+
+main functions (e.g. syncWeeklyStats, updateUsage, etc.)
+
+what tables they currently write into (weekly_stats, player_usage, others)
+
+Output something like:
+
+{
+  "ingestion_clients": [
+    {
+      "file": "server/data/nflDataClient.ts",
+      "description": "Fetches weekly stats from nfl_data_py",
+      "tables_written": ["weekly_stats"]
+    }
+  ],
+  "cron_jobs": [
+    {
+      "file": "server/cron/syncWeeklyStats.ts",
+      "description": "Weekly updater, but only current season"
+    }
+  ]
+}
+
+2) Map source fields → our schema for weekly role data
+
+We care about these fields for Role Bank v1:
+
+snaps
+
+routes / routes_run
+
+targets
+
+receptions
+
+receiving_yards
+
+receiving_tds
+
+carries
+
+red_zone_targets (if available)
+
+team_snaps (if available)
+
+fantasy_points_ppr
+
+season
+
+week
+
+player_id
+
+team
+
+And for player_usage:
+
+routes_outside
+
+routes_slot
+
+routes_inline
+
+snap_share_pct
+
+target_share_pct
+
+any positional/role fields that exist
+
+Your task here:
+
+Inspect the ingestion client(s) and find what the upstream provider actually returns (field names).
+
+Map those to:
+
+weekly_stats columns
+
+player_usage columns
+
+Document the mapping clearly, e.g.:
+
+{
+  "source_to_weekly_stats": {
+    "source.snaps": "weekly_stats.snaps",
+    "source.routes": "weekly_stats.routes",
+    "source.targets": "weekly_stats.targets",
+    "source.rec": "weekly_stats.rec",
+    "source.rec_yd": "weekly_stats.rec_yd",
+    "source.rec_td": "weekly_stats.rec_td",
+    "source.ppr": "weekly_stats.fantasy_points_ppr"
+  },
+  "source_to_player_usage": {
+    "source.routes_out": "player_usage.routes_outside",
+    "source.routes_slot": "player_usage.routes_slot",
+    "source.routes_inline": "player_usage.routes_inline",
+    "source.snap_share": "player_usage.snap_share_pct",
+    "source.target_share": "player_usage.target_share_pct"
+  }
+}
+
+
+If some fields don’t exist upstream, note that explicitly.
+
+3) Implement a weekly ingestion/backfill script
+
+Create (or update) a script like:
+
+server/scripts/backfillWeeklyUsage.ts
+or
+
+server/cron/weeklyUsageBackfill.ts
+
+Responsibilities:
+
+Take parameters like:
+
+seasonStart, seasonEnd
+
+optionally weeks or player_id for targeted runs (for testing)
+
+For each season in [2024, 2025] and each week:
+
+Fetch weekly data from our existing provider (fastR / nfl_data_py / etc.).
+
+Map it into our schema using the mapping defined above.
+
+Upsert into:
+
+weekly_stats
+
+player_usage
+based on player_id + season + week.
+
+Make sure:
+
+We don’t duplicate rows (use UPSERT / ON CONFLICT).
+
+Missing fields default to null or safe defaults (don’t crash).
+
+Errors are logged per season/week, not fatal to the whole batch.
+
+Show the full implementation of this script.
+
+4) Run a targeted backfill for Amon-Ra St. Brown (sanity test)
+
+Using the script above:
+
+Run a targeted backfill just for Amon-Ra:
+
+player_id = "00-0036963" (nfl_data_py / fastR ID that you already surfaced)
+
+season = 2024, all weeks
+
+season = 2025, all weeks so far
+
+After running it, query the DB for Amon-Ra:
+
+Use something like:
+
+SELECT 
+  ws.season,
+  ws.week,
+  ws.snaps,
+  ws.routes,
+  ws.targets,
+  ws.rec as receptions,
+  ws.rec_yd as receiving_yards,
+  ws.rec_td as receiving_tds,
+  ws.fantasy_points_ppr,
+  pu.routes_outside,
+  pu.routes_slot,
+  pu.routes_inline,
+  pu.snap_share_pct,
+  pu.target_share_pct
+FROM weekly_stats ws
+LEFT JOIN player_usage pu
+  ON ws.player_id = pu.player_id
+ AND ws.season = pu.season
+ AND ws.week = pu.week
+WHERE ws.player_id = '00-0036963'
+  AND ws.season IN (2024, 2025)
+ORDER BY ws.season, ws.week;
+
+
+Return:
+
+The query you used
+
+A JSON sample of the per-week data (a few 2024 weeks + a few 2025 weeks) so we can inspect:
+
+{
+  "player_id": "00-0036963",
+  "seasons": {
+    "2024": [
+      {
+        "week": 1,
+        "snaps": 68,
+        "routes": 41,
+        "targets": 11,
+        "snap_share_pct": 0.94,
+        "target_share_pct": 0.29,
+        "fantasy_points_ppr": 22.5
+      }
+    ]
+  }
+}
+
+5) Full backfill for 2024 + 2025
+
+Once the Amon-Ra test looks good:
+
+Run the backfill for all players:
+
+Seasons: 2024 and 2025
+
+Weeks: all weeks available
+
+Confirm:
+
+weekly_stats row counts look sane (no absurd gaps).
+
+player_usage populated for WRs in particular.
+
+snaps/routes/targets are non-null for the majority of active players.
+
+Return a brief summary, e.g.:
+
+{
+  "backfill": {
+    "2024": {
+      "weekly_stats_rows": 17000,
+      "player_usage_rows": 16000
+    },
+    "2025": {
+      "weekly_stats_rows": 9000,
+      "player_usage_rows": 8500
+    },
+    "notes": "Most active WRs and RBs have non-null snaps/targets/routes. Some fringe players remain sparse due to provider limitations."
+  }
+}
+
+6) Final deliverable
+
+In your final response, include:
+
+What ingestion client(s) we ended up using (file paths + functions).
+
+The backfill/ingestion script you created or modified (full code).
+
+The Amon-Ra per-week JSON sample after backfill.
+
+Any remaining limitations (e.g., no red-zone data, missing OL metrics, etc.).

@@ -1,0 +1,173 @@
+System / Goal for Tiber:
+You are the repo agent for the Tiber Fantasy project. Your job in this task is to audit the existing codebase and report what structures already exist for the following “banks,” and what’s missing:
+
+Talent Bank
+
+Role Bank
+
+Environment Bank
+
+Health Bank
+
+1️⃣ General Instructions
+
+Work only inside this repo.
+
+Don’t invent features — only report what actually exists in files.
+
+When you say something “exists,” include:
+
+file path(s)
+
+table / interface / type / function name(s)
+
+When something is missing or partial, say exactly what’s missing.
+
+2️⃣ What to look for per Bank
+🔹 A. TALENT BANK
+
+Goal: Anything that looks like “prospect priors” or long-term talent evaluation.
+
+Ask:
+
+Do we have DB tables or migrations for:
+
+prospect_priors, talent, prospect_grade, athleticism_score, etc?
+
+Do we have TypeScript types / interfaces representing:
+
+prospect/talent info (draft capital, athletic metrics, scouting grades)?
+
+Do we have modules or functions that compute:
+
+“talent score”, “prospect grade”, “archetype”, “tier”?
+
+Output for Talent Bank:
+
+talent_bank.tables_found = [...]
+
+talent_bank.types_found = [...]
+
+talent_bank.logic_found = [...]
+
+talent_bank.missing = [...] (e.g. “no unified talent_score anywhere”, “spread across 3 modules”, etc.)
+
+🔹 B. ROLE BANK
+
+Goal: Weekly role info (snaps, routes, target share, carry share, red zone, etc.)
+
+Ask:
+
+Do we have tables or views for:
+
+weekly snaps, routes, targets, carries, red zone usage?
+
+per-player-per-week usage rows?
+
+Do we have TS interfaces like:
+
+WeeklyUsage, PlayerWeekStats, SnapShare, RouteShare, etc?
+
+Do we have logic that:
+
+calculates “role score”, “usage tiers”, “cardio WR”, “takeover flags”, etc?
+
+Output for Role Bank:
+
+role_bank.tables_found = [...]
+
+role_bank.types_found = [...]
+
+role_bank.logic_found = [...]
+
+role_bank.missing = [...] (e.g. “no single role_score, just scattered usage fields”)
+
+🔹 C. ENVIRONMENT BANK
+
+Goal: Team context — offense strength, QB, OL, pace, EPA, pass rate, etc.
+
+Ask:
+
+Do we have tables for:
+
+team-level EPA, pass rate, plays per game, QB stats, OL grades?
+
+Any interfaces / types like:
+
+TeamStats, OffenseContext, QBEnv, etc?
+
+Any logic that:
+
+computes “offense score”, “team context score”, “environment tier”?
+
+Output for Environment Bank:
+
+environment_bank.tables_found = [...]
+
+environment_bank.types_found = [...]
+
+environment_bank.logic_found = [...]
+
+environment_bank.missing = [...]
+
+🔹 D. HEALTH BANK
+
+Goal: Injury history + current status.
+
+Ask:
+
+Do we have tables for:
+
+player status, injuries, games missed, IR/PUP, etc?
+
+Any types like:
+
+PlayerInjury, PlayerStatus, InjuryEvent?
+
+Any logic that:
+
+computes “injury risk”, “health score”, or tracks games missed?
+
+Output for Health Bank:
+
+health_bank.tables_found = [...]
+
+health_bank.types_found = [...]
+
+health_bank.logic_found = [...]
+
+health_bank.missing = [...]
+
+3️⃣ Output Format (important)
+
+Ask Replit-Tiber to respond in something like this structure (markdown or JSON, either is fine as long as it’s clear):
+
+{
+  "talent_bank": {
+    "tables_found": ["server/db/migrations/20251120_prospect_priors.ts"],
+    "types_found": [],
+    "logic_found": [],
+    "missing": [
+      "No unified talent_score field",
+      "No central TalentBank interface"
+    ]
+  },
+  "role_bank": {
+    "tables_found": [...],
+    "types_found": [...],
+    "logic_found": [...],
+    "missing": [...]
+  },
+  "environment_bank": {
+    "tables_found": [...],
+    "types_found": [...],
+    "logic_found": [...],
+    "missing": [...]
+  },
+  "health_bank": {
+    "tables_found": [...],
+    "types_found": [...],
+    "logic_found": [...],
+    "missing": [...]
+  }
+}

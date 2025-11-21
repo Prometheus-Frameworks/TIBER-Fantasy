@@ -1,0 +1,146 @@
+🧰 Replit Agent Task — Amon-Ra Role Data Pull
+
+Goal:
+Build a per-week dataset for Amon-Ra St. Brown for 2024 and 2025 using the existing database/tables. We’ll use this to prototype Role Bank v1.
+
+Important: Route data from free sources is usually unreliable or missing.
+First verify if we have any route-related fields; if not, fall back to snaps/targets/etc and tell me explicitly.
+
+1) Find Amon-Ra’s IDs
+
+Search the repo/schema for “Amon-Ra” or “St. Brown”.
+
+Return:
+
+internal player_id
+
+any Sleeper / GSIS / nflfastR IDs if present
+
+Format:
+
+{
+ "player_name": "Amon-Ra St. Brown",
+ "player_id": "...",
+ "other_ids": { "sleeper": "...", "gsis": "..." }
+}
+
+2) Identify weekly usage/stat tables
+
+From the DB / schema, list any tables that have per-player-per-week data, e.g.:
+
+playerWeekFacts
+
+playerUsageWeekly
+
+playerUsage
+
+weeklyStats
+
+For each table, list:
+
+name
+
+key columns: player_id, season, week
+
+any usage columns like: snaps, snap_share_pct, targets, target_share_pct, carries, red_zone_targets, slot_*, xPPR, etc.
+
+3) Check for route data explicitly
+
+Search for columns like: routes, routes_run, route_share_pct, route_participation, etc.
+
+Search in schema + any fastR ingestion modules.
+
+Answer clearly:
+
+Do we have route counts per week? (yes/no)
+
+Do we have any route % / participation fields? (yes/no)
+
+Output example:
+
+{
+ "routes_available": false,
+ "note": "No explicit routes_run / route_share_pct columns; will fall back to snaps/targets."
+}
+
+
+or the true equivalent if they do exist.
+
+4) Build a per-week Amon-Ra view for 2024 + 2025
+
+Using whatever tables you found, build a query (SQL or Drizzle) that returns one row per (season, week) for Amon-Ra with:
+
+season
+
+week
+
+team_id (or team name)
+
+snaps
+
+snap_share_pct (or compute if team snaps are available)
+
+targets
+
+target_share_pct (or compute if possible)
+
+carries
+
+red_zone_targets (if exists)
+
+fantasy_points (PPR if exists)
+
+any route-related fields if we actually have them
+
+Show the query you’d use, and also run it (if possible) and include a sample of the JSON result for a few weeks from 2024 and 2025.
+
+Example result shape:
+
+{
+ "player_id": "amonra_internal_id",
+ "seasons": {
+   "2024": [
+     {
+       "week": 1,
+       "team_id": "DET",
+       "snaps": 65,
+       "snap_share_pct": 0.94,
+       "targets": 11,
+       "target_share_pct": 0.30,
+       "carries": 0,
+       "red_zone_targets": 2,
+       "fantasy_points_ppr": 22.5
+     }
+   ],
+   "2025": [ /* same shape */ ]
+ }
+}
+
+5) Verify multi-season continuity
+
+How many weeks do we have for Amon-Ra in 2024?
+
+How many in 2025 so far?
+
+Any schema differences between seasons?
+
+Is prior season data (2024) still stored in the same structure as 2025?
+
+Output example:
+
+{
+ "2024_weeks": 17,
+ "2025_weeks": 3,
+ "schema_alignment": "consistent",
+ "notes": "All fields present both years except red_zone_targets, which only exists in weeklyStats."
+}
+
+6) Final summary
+
+In your final response, include:
+
+A short plain-English summary of what Amon-Ra role data we have and what’s missing (especially routes).
+
+The query you’d use to pull his weekly data.
+
+A small JSON sample of the actual results (a couple 2024 weeks + a couple 2025 weeks).
