@@ -111,6 +111,20 @@ export const waiverArchetypeEnum = pgEnum("waiver_archetype", [
 ]);
 
 // ========================================
+// ROLE BANK ENUMS
+// ========================================
+
+// WR Role tier enum for role bank classification
+export const wrRoleTierEnum = pgEnum("wr_role_tier", [
+  "ALPHA",
+  "CO_ALPHA",
+  "PRIMARY_SLOT",
+  "SECONDARY",
+  "ROTATIONAL",
+  "UNKNOWN"
+]);
+
+// ========================================
 // BRONZE LAYER - RAW DATA STORAGE
 // ========================================
 
@@ -3191,6 +3205,83 @@ export const playerUsageRelations = relations(playerUsage, ({ one }) => ({
 export type PlayerUsage = typeof playerUsage.$inferSelect;
 export type InsertPlayerUsage = z.infer<typeof insertPlayerUsageSchema>;
 export const insertPlayerUsageSchema = createInsertSchema(playerUsage).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+// ========================================
+// WR ROLE BANK - ANALYTICAL LAYER
+// ========================================
+
+// WR Role Bank - Season-level analytics computed from weekly_stats + player_usage
+export const wrRoleBank = pgTable("wr_role_bank", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id").notNull(),
+  sleeperId: text("sleeper_id"),
+  season: integer("season").notNull(),
+  
+  // Volume Metrics
+  gamesPlayed: integer("games_played").notNull(),
+  targetsPerGame: real("targets_per_game").notNull(),
+  targetShareAvg: real("target_share_avg"),
+  routesPerGame: real("routes_per_game"),
+  routeShareEst: real("route_share_est"),
+  
+  // Consistency Metrics
+  targetStdDev: real("target_std_dev"),
+  fantasyStdDev: real("fantasy_std_dev"),
+  
+  // Efficiency Metrics
+  pprPerTarget: real("ppr_per_target"),
+  
+  // Alignment Flavor (Estimates)
+  slotRouteShareEst: real("slot_route_share_est"),
+  outsideRouteShareEst: real("outside_route_share_est"),
+  
+  // Sub-scores (0-100)
+  volumeScore: integer("volume_score").notNull(),
+  consistencyScore: integer("consistency_score").notNull(),
+  highValueUsageScore: integer("high_value_usage_score").notNull(),
+  momentumScore: integer("momentum_score").notNull(),
+  
+  // Final Composite Score (0-100)
+  roleScore: integer("role_score").notNull(),
+  
+  // Role Classification
+  roleTier: wrRoleTierEnum("role_tier").notNull(),
+  
+  // Flags
+  cardioWrFlag: boolean("cardio_wr_flag").default(false).notNull(),
+  breakoutWatchFlag: boolean("breakout_watch_flag").default(false).notNull(),
+  fakeSpikeFlag: boolean("fake_spike_flag").default(false).notNull(),
+  
+  // Metadata
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint on player/season
+  uniquePlayerSeason: uniqueIndex("wr_role_bank_unique").on(table.playerId, table.season),
+  
+  // Performance indexes
+  playerIdx: index("wr_role_bank_player_idx").on(table.playerId),
+  seasonIdx: index("wr_role_bank_season_idx").on(table.season),
+  roleScoreIdx: index("wr_role_bank_role_score_idx").on(table.season, table.roleScore),
+  roleTierIdx: index("wr_role_bank_role_tier_idx").on(table.season, table.roleTier),
+}));
+
+// WR Role Bank Relations
+export const wrRoleBankRelations = relations(wrRoleBank, ({ one }) => ({
+  player: one(playerIdentityMap, {
+    fields: [wrRoleBank.playerId],
+    references: [playerIdentityMap.canonicalId],
+  }),
+}));
+
+// WR Role Bank Types and Insert Schemas
+export type WRRoleBank = typeof wrRoleBank.$inferSelect;
+export type InsertWRRoleBank = z.infer<typeof insertWRRoleBankSchema>;
+export const insertWRRoleBankSchema = createInsertSchema(wrRoleBank).omit({
   id: true,
   createdAt: true,
   updatedAt: true

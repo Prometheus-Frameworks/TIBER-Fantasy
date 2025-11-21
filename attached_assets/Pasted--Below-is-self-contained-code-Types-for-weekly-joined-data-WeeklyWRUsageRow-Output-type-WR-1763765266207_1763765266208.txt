@@ -1,0 +1,393 @@
+
+Below is self-contained code:
+	•	Types for weekly joined data (WeeklyWRUsageRow)
+	•	Output type (WRRoleBankSeasonRow)
+	•	Helper math utilities
+	•	Scaling functions
+	•	The main computeWRRoleBankSeasonRow function
+
+You can wire this up to your DB layer by feeding it the joined weekly_stats + player_usage rows for one WR & season.
+
+// server/services/roleBankService.ts
+
+// ---- Types ----
+
+export interface WeeklyWRUsageRow {
+  playerId: string;
+  season: number;
+  week: number;
+  team: string;
+
+  targets: number | null;
+  targetSharePct: number | null;        // 0–1 (if present)
+  routes: number | null;               // can be estimated from ingestion
+  fantasyPointsPpr: number | null;
+
+  routesSlot?: number | null;          // estimated slot routes
+  routesOutside?: number | null;       // estimated outside routes
+  routesInline?: number | null;        // optional, rarely used for WRs
+}
+
+export type WRRoleTier =
+  | 'ALPHA'
+  | 'CO_ALPHA'
+  | 'PRIMARY_SLOT'
+  | 'SECONDARY'
+  | 'ROTATIONAL'
+  | 'UNKNOWN';
+
+export interface WRRoleBankSeasonRow {
+  playerId: string;
+  season: number;
+
+  gamesPlayed: number;
+
+  // Volume
+  targetsPerGame: number;
+  targetShareAvg: number | null;       // 0–1
+  routesPerGame: number | null;        // estimated
+  routeShareEst: number | null;        // placeholder for future snap/dropback data
+
+  // Consistency
+  targetStdDev: number | null;
+  fantasyStdDev: number | null;
+
+  // High-value usage proxy
+  pprPerTarget: number | null;
+
+  // Alignment flavor (estimates)
+  slotRouteShareEst: number | null;    // 0–1
+  outsideRouteShareEst: number | null; // 0–1
+
+  // Sub-scores
+  volumeScore: number;         // 0–100
+  consistencyScore: number;    // 0–100
+  highValueUsageScore: number; // 0–100
+  momentumScore: number;       // 0–100
+
+  // Final composite
+  roleScore: number;           // 0–100
+
+  // Labels / flags
+  roleTier: WRRoleTier;
+  cardioWrFlag: boolean;
+  breakoutWatchFlag: boolean;
+  fakeSpikeFlag: boolean;
+}
+
+// ---- Utility helpers ----
+
+function mean(values: number[]): number | null {
+  if (!values.length) return null;
+  const sum = values.reduce((acc, v) => acc + v, 0);
+  return sum / values.length;
+}
+
+function stdDev(values: number[]): number | null {
+  if (values.length <= 1) return null;
+  const avg = mean(values);
+  if (avg === null) return null;
+  const variance =
+    values.reduce((acc, v) => acc + Math.pow(v - avg, 2), 0) / values.length;
+  return Math.sqrt(variance);
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+// ---- Scaling functions (0–100) ----
+
+// Targets per game → 0–100
+function scaleTargetsPerGame(tpg: number): number {
+  if (tpg >= 12) return 100;
+  if (tpg >= 10) return 90;
+  if (tpg >= 8) return 75;
+  if (tpg >= 6) return 55;
+  if (tpg >= 4) return 35;
+  if (tpg >= 2) return 20;
+  return 10;
+}
+
+// Target share average (0–1) → 0–100
+function scaleTargetShare(share: number): number {
+  if (share >= 0.30) return 100;
+  if (share >= 0.27) return 90;
+  if (share >= 0.24) return 80;
+  if (share >= 0.20) return 65;
+  if (share >= 0.15) return 45;
+  if (share >= 0.10) return 30;
+  return 15;
+}
+
+// Routes per game → 0–100
+function scaleRoutesPerGame(rpg: number): number {
+  if (rpg >= 40) return 100;
+  if (rpg >= 35) return 85;
+  if (rpg >= 30) return 70;
+  if (rpg >= 25) return 55;
+  if (rpg >= 20) return 40;
+  if (rpg >= 15) return 25;
+  return 15;
+}
+
+// Consistency: use std dev of targets; lower std dev = higher score
+function scaleConsistencyFromStdDev(std: number | null): number {
+  if (std === null) return 60; // neutral fallback
+  const capped = Math.min(std, 7); // anything beyond 7 is just "very volatile"
+  // Map 0 → 100, 7 → 40 linearly
+  const score = 100 - (capped / 7) * 60;
+  return clamp(score, 40, 100);
+}
+
+// Efficiency via PPR per target → 0–100
+function scalePprPerTarget(pprPerTarget: number | null): number {
+  if (pprPerTarget === null) return 50; // neutral
+  if (pprPerTarget >= 2.3) return 100;
+  if (pprPerTarget >= 2.0) return 85;
+  if (pprPerTarget >= 1.7) return 70;
+  if (pprPerTarget >= 1.4) return 55;
+  if (pprPerTarget >= 1.1) return 40;
+  return 30;
+}
+
+// Momentum based on delta in targets per game (last 3 vs season)
+function computeMomentumScore(
+  seasonTargetsPerGame: number | null,
+  recentTargetsPerGame: number | null
+): number {
+  if (
+    seasonTargetsPerGame === null ||
+    recentTargetsPerGame === null
+  ) {
+    return 60; // neutral
+  }
+  const delta = recentTargetsPerGame - seasonTargetsPerGame;
+
+  if (delta >= 3) return 95;
+  if (delta >= 1) return 80;
+  if (delta > -1) return 60;   // stable
+  if (delta > -3) return 45;
+  return 30;                   // usage dropping
+}
+
+// ---- Main computation ----
+
+export function computeWRRoleBankSeasonRow(
+  weeklyRows: WeeklyWRUsageRow[]
+): WRRoleBankSeasonRow | null {
+  if (!weeklyRows.length) return null;
+
+  // Assume all rows are same player/season; take from first.
+  const { playerId, season } = weeklyRows[0];
+
+  // Sort by week ascending for momentum signals.
+  const sorted = [...weeklyRows].sort((a, b) => a.week - b.week);
+
+  const validTargets = sorted
+    .map(r => r.targets ?? 0)
+    .filter(v => v > 0);
+  const validFantasy = sorted
+    .map(r => r.fantasyPointsPpr ?? 0)
+    .filter(v => v > 0);
+
+  const gamesPlayed = sorted.filter(
+    r => (r.targets ?? 0) > 0 || (r.fantasyPointsPpr ?? 0) > 0
+  ).length;
+
+  if (gamesPlayed === 0) {
+    // Player basically didn't register; return null or a low-confidence row
+    return null;
+  }
+
+  const totalTargets = validTargets.reduce((acc, v) => acc + v, 0);
+  const totalFantasy = validFantasy.reduce((acc, v) => acc + v, 0);
+
+  const targetsPerGame =
+    gamesPlayed > 0 ? totalTargets / gamesPlayed : 0;
+
+  const targetShareValues = sorted
+    .map(r => r.targetSharePct ?? null)
+    .filter((v): v is number => v !== null);
+  const targetShareAvg = mean(targetShareValues);
+
+  const routesValues = sorted
+    .map(r => r.routes ?? null)
+    .filter((v): v is number => v !== null);
+  const routesPerGame =
+    routesValues.length > 0 && gamesPlayed > 0
+      ? routesValues.reduce((acc, v) => acc + v, 0) / gamesPlayed
+      : null;
+
+  // Placeholder for future real route share (e.g., routes / team dropbacks)
+  const routeShareEst: number | null = null;
+
+  const targetStdDev = stdDev(validTargets);
+  const fantasyStdDev = stdDev(validFantasy);
+
+  const pprPerTarget =
+    totalTargets > 0 ? totalFantasy / totalTargets : null;
+
+  // Alignment estimates if we have route splits
+  const totalRoutesAll =
+    sorted.reduce((acc, r) => acc + (r.routes ?? 0), 0) || 0;
+  const totalSlotRoutes =
+    sorted.reduce((acc, r) => acc + (r.routesSlot ?? 0), 0) || 0;
+  const totalOutsideRoutes =
+    sorted.reduce((acc, r) => acc + (r.routesOutside ?? 0), 0) || 0;
+
+  const slotRouteShareEst =
+    totalRoutesAll > 0 ? totalSlotRoutes / totalRoutesAll : null;
+  const outsideRouteShareEst =
+    totalRoutesAll > 0 ? totalOutsideRoutes / totalRoutesAll : null;
+
+  // ---- Sub-scores ----
+
+  // Volume
+  const targetsScore = scaleTargetsPerGame(targetsPerGame);
+  const shareScore =
+    targetShareAvg != null
+      ? scaleTargetShare(targetShareAvg)
+      : targetsScore;
+  const routesScore =
+    routesPerGame != null
+      ? scaleRoutesPerGame(routesPerGame)
+      : targetsScore;
+
+  const volumeScore =
+    0.5 * targetsScore + 0.3 * shareScore + 0.2 * routesScore;
+
+  // Consistency
+  const consistencyScore = scaleConsistencyFromStdDev(targetStdDev);
+
+  // High-value usage
+  const highValueUsageScore = scalePprPerTarget(pprPerTarget);
+
+  // Momentum (use last 3 games vs season-long targets/g)
+  const last3 = sorted.slice(-3);
+  const last3Targets = last3
+    .map(r => r.targets ?? 0)
+    .filter(v => v > 0);
+  const recentTargetsPerGame =
+    last3Targets.length > 0
+      ? last3Targets.reduce((acc, v) => acc + v, 0) /
+        last3Targets.length
+      : null;
+
+  const momentumScore = computeMomentumScore(
+    targetsPerGame || null,
+    recentTargetsPerGame
+  );
+
+  // Final composite roleScore
+  const roleScore =
+    0.45 * volumeScore +
+    0.25 * consistencyScore +
+    0.20 * highValueUsageScore +
+    0.10 * momentumScore;
+
+  // ---- Role tier + flags ----
+
+  let roleTier: WRRoleTier = 'UNKNOWN';
+
+  const shareForTier = targetShareAvg ?? 0;
+  const volForTier = volumeScore;
+
+  if (volForTier >= 90 && shareForTier >= 0.27) {
+    roleTier = 'ALPHA';
+  } else if (volForTier >= 80 && shareForTier >= 0.22) {
+    roleTier = 'CO_ALPHA';
+  } else if (
+    slotRouteShareEst != null &&
+    slotRouteShareEst >= 0.60 &&
+    volForTier >= 70
+  ) {
+    roleTier = 'PRIMARY_SLOT';
+  } else if (volForTier >= 60) {
+    roleTier = 'SECONDARY';
+  } else if (volForTier >= 40) {
+    roleTier = 'ROTATIONAL';
+  }
+
+  // Cardio WR: lots of routes, few targets
+  const cardioWrFlag =
+    routesPerGame != null &&
+    routesPerGame >= 30 &&
+    targetsPerGame <= 5;
+
+  // Breakout watch: usage ramping but not yet full alpha
+  const breakoutWatchFlag =
+    roleTier !== 'ALPHA' &&
+    volumeScore < 85 &&
+    momentumScore >= 80;
+
+  // Fake spike: most recent week = huge fantasy game, but volume same as usual
+  let fakeSpikeFlag = false;
+  if (sorted.length >= 3) {
+    const lastWeek = sorted[sorted.length - 1];
+    const prev = sorted.slice(0, -1);
+    const prevFantasy = prev
+      .map(r => r.fantasyPointsPpr ?? 0)
+      .filter(v => v > 0);
+    const prevTargets = prev
+      .map(r => r.targets ?? 0)
+      .filter(v => v > 0);
+
+    const avgPrevFantasy = mean(prevFantasy);
+    const avgPrevTargets = mean(prevTargets);
+
+    if (
+      avgPrevFantasy !== null &&
+      avgPrevFantasy > 0 &&
+      avgPrevTargets !== null &&
+      lastWeek.fantasyPointsPpr != null &&
+      lastWeek.targets != null
+    ) {
+      const spike =
+        lastWeek.fantasyPointsPpr >= 2 * avgPrevFantasy;
+      const volumeSame =
+        Math.abs(lastWeek.targets - avgPrevTargets) <= 1;
+
+      fakeSpikeFlag = spike && volumeSame;
+    }
+  }
+
+  return {
+    playerId,
+    season,
+    gamesPlayed,
+
+    targetsPerGame,
+    targetShareAvg,
+    routesPerGame,
+    routeShareEst,
+
+    targetStdDev,
+    fantasyStdDev,
+
+    pprPerTarget,
+
+    slotRouteShareEst,
+    outsideRouteShareEst,
+
+    volumeScore: Math.round(volumeScore),
+    consistencyScore: Math.round(consistencyScore),
+    highValueUsageScore: Math.round(highValueUsageScore),
+    momentumScore: Math.round(momentumScore),
+
+    roleScore: Math.round(roleScore),
+
+    roleTier,
+    cardioWrFlag,
+    breakoutWatchFlag,
+    fakeSpikeFlag
+  };
+}
+
+How you’d actually use it with your DB join:
+	•	Run your weekly_stats + player_usage join per player + season,
+	•	Map each row into a WeeklyWRUsageRow,
+	•	Then:
+
+const roleRow = computeWRRoleBankSeasonRow(weeklyRowsForAmonRa2024);
+// upsert roleRow into a wr_role_bank table or attach it to composite facts
