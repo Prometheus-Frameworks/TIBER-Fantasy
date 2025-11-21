@@ -1,7 +1,7 @@
 # Tiber Fantasy
 
 ## Overview
-Tiber Fantasy is a free, open-source NFL fantasy football analytics dashboard providing real-time NFL data, Madden-style OVR player ratings, Defense vs Position matchups, and Strength of Schedule analytics using EPA metrics. The project's core purpose is to offer high-end fantasy football insights without paywalls, fostering meaningful conversations and better decision-making for fantasy players. It aims to develop a "Player Compass" for dynamic player evaluation, an "OTC Consensus" for community-driven rankings, and advanced AI insights via the TIBER Brain OS.
+Tiber Fantasy is a free, open-source NFL fantasy football analytics dashboard. It provides real-time NFL data, Madden-style OVR player ratings, Defense vs Position matchups, and Strength of Schedule analytics using EPA metrics. The project's core purpose is to offer high-end fantasy football insights without paywalls, empowering fantasy players with better decision-making tools. Future ambitions include a "Player Compass" for dynamic player evaluation, an "OTC Consensus" for community-driven rankings, and advanced AI insights via the TIBER Brain OS.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -40,62 +40,21 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 - **Defense vs Position (DvP) Matchup System**: Calculates fantasy points allowed by defenses against specific positions using NFLfastR data, featuring a 5-tier rating system.
 - **Data Integration & Sync**: Sleeper Sync, Canonical Player Pool, Roster Shift Listener, and Roster Sync.
 - **Live Data Processing**: Live Data Integration Pipeline with multi-source data capture and a Hot List Player Extraction System.
-- **TIBER (Tactical Index for Breakout Efficiency and Regression)**: Version 1.5, using First Downs per Route Run and real NFLfastR snap count data for player participation, 4-week trend analysis, and detailed player drawer.
-- **Player Search**: Functionality to search player game logs and statistics.
+- **TIBER (Tactical Index for Breakout Efficiency and Regression)**: Version 1.5, uses First Downs per Route Run and real NFLfastR snap count data for player participation, 4-week trend analysis, and detailed player drawer.
 - **Enhanced Player Card Component**: Features TIBER trend charts, last 3 weeks summary, and ROS Matchup Calendar.
 - **Strategy Tab**: Redesigned for Start/Sit recommendations, Waiver Wire Targets based on TIBER, and SOS Rankings.
 - **Weekly Takes System**: Quick, punchy matchup insights with position-specific one-liners and concrete statistics.
-- **Waiver Wisdom Module**: Intelligent waiver wire recommendation system combining Sleeper ownership data (<50% threshold), recent usage patterns, trending signals, and archetype classification. Features:
-    - **Three-tier scoring** (S/A/B/C/D tiers) using weighted interest formula: 35% usage + 30% trending + 15% efficiency + 10% ecosystem + 10% archetype
-    - **Five archetype classifications**: Breakout Candidate, Streaming Option, Handcuff, Bench Stash, Injury Replacement
-    - **Week-over-week trending analysis**: Averages PPG changes across recent weeks for true momentum detection
-    - **FAAB suggestions**: Dynamic budget recommendations per tier (S-tier: 25-50%, A-tier: 15-30%, B-tier: 5-15%, C-tier: 1-10%, D-tier: 0%)
-    - **API endpoints**: `/api/waivers/recommendations` (filtered by position/tier) and `/api/waivers/player` (single player detail)
-    - **Data pipeline**: `ingestSleeperOwnership.ts` fetches ownership from Sleeper research endpoint, `buildWaiverCandidates.ts` generates recommendations
-- **League System**: Supports user-created fantasy leagues with context-aware AI interactions, integrating league settings, trades, and roster moves via vector-searchable context. Includes Sleeper league auto-sync.
-- **RAG Chat System**: Integrates Google Gemini AI for embeddings and chat generation, providing teaching-focused responses with context-aware personality (natural for greetings, Scout-GM for fantasy). Features:
-    - **Anti-Hallucination**: Strict rules requiring data-backed claims, acknowledging data gaps.
-    - **League Context Integration**: Pre-fetches and prepends roster data.
-    - **VORP Integration**: Detects player mentions, calculates real-time VORP from 2025 Sleeper game logs, and provides objective performance data.
-    - **Top Performers Season Awareness**: Fetches and caches top 24 players at each position from 2025 Sleeper data.
-    - **Citation System**: Enforces citing provided VORP data.
-    - **Player Detection & Alias System**: Robust detection with support for ~80 common nicknames.
-    - **Hallucination Prevention**: Dual-layer protection against citing unavailable metrics.
-    - **Format Brain (Redraft vs Dynasty Detection)**: Dual-brain system detecting query format to adjust response depth and time horizon based on heuristic-based signal patterns.
-    - **Temporal-Precision Enforcement**: Dual-layer system ensuring responses cite only the requested year, with auto-regeneration for violations and support for explicit multi-year comparisons.
-    - **TIBER UX & Epistemic Fixes**: Prevents citing non-existent stats for players without NFL data, manages data availability by season, enforces tactical layer for stat queries, and structures trade evaluation responses.
-    - **TIBER Brain OS v1 Integration**: Brain OS document embedded into RAG with priority metadata, integrated into system prompt with 10 Commandments summary, voice guidance, and anti-stat-dump guardrail (max 2 metrics per answer). Foundation for all advice (process > prizes, youth → peak → age, etc.).
-    - **Weekly Statline RAG v1**: Eliminates hallucinations for "What did X do Week Y?" queries by serving real NFLfastR game log data, with robust detection, retrieval, and formatting for player statlines.
-    - **Advanced Metrics Mixed Response System**: Three-tier data system (Tier 1: core stats always available, Tier 2: advanced metrics shown when requested with meaning tags, Tier 3: unavailable metrics explicitly refused). When users ask for "advanced data", system responds with: (1) metrics we have with plain-language tags (EPA → "strong efficiency"), (2) explicit refusal of unavailable metrics, (3) football interpretation summary. Balances transparency for knowledgeable users while preventing hallucinations.
-    - **Deep Theory Modules (Teaching Layer)**: Five embedded conceptual frameworks (Pressure, Signal, Entropy, Psychology, Ecosystem) for answering "why" and "explain" questions. 142 chunks embedded with medium priority (DATA > THEORY > BRAIN OS). Theory modules provide conceptual frameworks, not player data—used for teaching breakout theory, signal detection, age curves, market psychology, and role context. Retrieved only when query contains conceptual triggers (why, explain, framework, trade logic, dynasty logic). No conflicts with Pressure Index v1, Weekly Statline RAG, format detection, or Brain OS.
-    - **TIBER WAIVER VORP PATCH v1.0**: Separates "Trade Brain" (uses VORP for trade evaluation) from "Waiver Brain" (uses Interest Score for waiver pickups). Features:
-        - **Query Mode Detection**: Automatically classifies queries as trade/waiver/start_sit/generic based on language patterns (FAAB, bid, claim, stash, streamer, pickup, add/drop, etc.)
-        - **Trade Brain Mode**: VORP pinned as primary context for trade evaluation, macro value comparisons, and roster construction decisions
-        - **Waiver Brain Mode**: VORP calculated but NOT pinned to context. System prompt guides TIBER to use Interest Score, archetype classification, recent usage trends, ownership %, ecosystem quality, and efficiency vs baseline instead
-        - **VORP Contextualization**: In waiver mode, VORP mentioned only as background context ("explains why he's available"), never as decision factor
-        - **Waiver Wisdom Teaching Document**: 10 embedded chunks explaining why VORP fails for waiver decisions, priority stack for waiver evaluation, market lag principle, and archetype-based decision framework
-        - **Fantasy Lingo Integration**: Natural use of phrases like "smash play", "fade", "hammer", "stud", "bench clogger", "the market hasn't caught up yet" in waiver mode responses
-        - **Comprehensive Pattern Matching**: Detects FAAB questions ("How much FAAB for X?"), claim questions ("Is X worth a claim?"), stash/streamer language, and all common waiver wire vocabulary
-        - **Verified Working**: Tested with FAAB queries, claim queries, and standard waiver questions. Mode detection logs confirm VORP skipping in waiver mode while maintaining normal behavior for trade/start-sit queries
-        - **Waiver Wisdom API Integration**: When waiver mode detected, automatically fetches waiver candidates from database and pins to context. Features week lookback logic (12→11→10→9→8), position filtering (RB/WR/TE/QB), and formats candidates with Interest Score, tier, archetype, FAAB range, recent PPG, and ownership percentage. TIBER cites specific waiver candidates instead of generic advice.
-
-## Data Ingestion Infrastructure
-**Weekly Usage Backfill System (2024-2025):**
-- **Primary Source**: NFLfastR Play-by-Play Parquet files from nflverse-data (comprehensive play-level data)
-- **Supplemental Source**: nfl_data_py weekly aggregated data (snap counts for 2024, unavailable for 2025)
-- **Coverage**: 5,198 player-week records (2024), 3,158 player-week records (2025) across 18 and 12 weeks respectively
-- **Metrics Captured**: Targets, receptions, yards, TDs, routes (estimated as targets × 2.0), fantasy points (std/half/ppr), target share %, route alignment splits (outside/slot/inline), carries (gap/zone)
-- **Tables Populated**: `weekly_stats` (production data) and `player_usage` (usage context)
-- **Scripts**: `server/scripts/backfillWeeklyUsage.py` (Python), `server/scripts/backfillWeeklyUsage.ts` (TypeScript wrapper)
-- **Player Identity**: Converts nfl_data_py_id → sleeper_id via `player_identity_map` for unified player resolution
-- **Known Limitations**: Routes estimated not actual, snap counts NULL for 2025, position inferred from play type (some RBs labeled as WR)
-- **Usage**: `python3 server/scripts/backfillWeeklyUsage.py <season> [week] [--player_id=<id>]`
+- **Waiver Wisdom Module**: Intelligent waiver wire recommendation system combining Sleeper ownership data (<50% threshold), recent usage patterns, trending signals, and archetype classification. Features a three-tier scoring system and dynamic FAAB suggestions.
+- **WR Role Bank v1.0**: Season-level analytical classification system for WR role evaluation using a four-dimension scoring model (volume, consistency, high-value usage, momentum) and a five-tier classification system.
+- **League System**: Supports user-created fantasy leagues with context-aware AI interactions, integrating league settings, trades, and roster moves via vector-searchable context, including Sleeper league auto-sync.
+- **RAG Chat System**: Integrates Google Gemini AI for embeddings and chat generation, providing teaching-focused responses with context-aware personality. Features include anti-hallucination rules, league context integration, VORP integration, player detection, format brain (Redraft vs Dynasty), temporal-precision enforcement, TIBER Brain OS integration (10 Commandments summary, voice guidance), Weekly Statline RAG, Advanced Metrics Mixed Response System, and Deep Theory Modules (Pressure, Signal, Entropy, Psychology, Ecosystem).
+- **TIBER WAIVER VORP PATCH v1.0**: Separates "Trade Brain" (uses VORP) from "Waiver Brain" (uses Interest Score) based on query mode detection, integrating Waiver Wisdom API for specific candidate recommendations.
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
 - **Sleeper API**: Player projections, game logs, ADP data, league sync, and current roster data.
 - **NFLfastR (nflverse)**: 2024-2025 play-by-play parquet files for comprehensive weekly usage backfills.
-- **NFL-Data-Py**: 2024 weekly statistics, depth charts, and snap count data (2025 aggregates unavailable).
+- **NFL-Data-Py**: 2024 weekly statistics, depth charts, and snap count data.
 - **R Server**: External API for OASIS (Offensive Architecture Scoring & Insight System) data.
 - **Axios**: HTTP requests.
 - **Zod**: Runtime type validation.
