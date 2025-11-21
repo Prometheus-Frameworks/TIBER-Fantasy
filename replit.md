@@ -79,11 +79,23 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
         - **Verified Working**: Tested with FAAB queries, claim queries, and standard waiver questions. Mode detection logs confirm VORP skipping in waiver mode while maintaining normal behavior for trade/start-sit queries
         - **Waiver Wisdom API Integration**: When waiver mode detected, automatically fetches waiver candidates from database and pins to context. Features week lookback logic (12→11→10→9→8), position filtering (RB/WR/TE/QB), and formats candidates with Interest Score, tier, archetype, FAAB range, recent PPG, and ownership percentage. TIBER cites specific waiver candidates instead of generic advice.
 
+## Data Ingestion Infrastructure
+**Weekly Usage Backfill System (2024-2025):**
+- **Primary Source**: NFLfastR Play-by-Play Parquet files from nflverse-data (comprehensive play-level data)
+- **Supplemental Source**: nfl_data_py weekly aggregated data (snap counts for 2024, unavailable for 2025)
+- **Coverage**: 5,198 player-week records (2024), 3,158 player-week records (2025) across 18 and 12 weeks respectively
+- **Metrics Captured**: Targets, receptions, yards, TDs, routes (estimated as targets × 2.0), fantasy points (std/half/ppr), target share %, route alignment splits (outside/slot/inline), carries (gap/zone)
+- **Tables Populated**: `weekly_stats` (production data) and `player_usage` (usage context)
+- **Scripts**: `server/scripts/backfillWeeklyUsage.py` (Python), `server/scripts/backfillWeeklyUsage.ts` (TypeScript wrapper)
+- **Player Identity**: Converts nfl_data_py_id → sleeper_id via `player_identity_map` for unified player resolution
+- **Known Limitations**: Routes estimated not actual, snap counts NULL for 2025, position inferred from play type (some RBs labeled as WR)
+- **Usage**: `python3 server/scripts/backfillWeeklyUsage.py <season> [week] [--player_id=<id>]`
+
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
 - **Sleeper API**: Player projections, game logs, ADP data, league sync, and current roster data.
-- **NFLfastR (nflverse)**: 2025 play-by-play data.
-- **NFL-Data-Py**: 2024 weekly statistics, depth charts, and 2025 snap count data.
+- **NFLfastR (nflverse)**: 2024-2025 play-by-play parquet files for comprehensive weekly usage backfills.
+- **NFL-Data-Py**: 2024 weekly statistics, depth charts, and snap count data (2025 aggregates unavailable).
 - **R Server**: External API for OASIS (Offensive Architecture Scoring & Insight System) data.
 - **Axios**: HTTP requests.
 - **Zod**: Runtime type validation.
