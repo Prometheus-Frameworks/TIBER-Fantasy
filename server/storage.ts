@@ -15,6 +15,8 @@ import {
   injuries,
   depthCharts,
   weeklyStats,
+  playerUsage,
+  wrRoleBank,
   type Team, 
   type Player, 
   type TeamPlayer, 
@@ -37,7 +39,7 @@ import {
   type InsertInjuryTracker
 } from "@shared/schema";
 import { db } from "./infra/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 // Note: sportsDataAPI import removed - not used in current implementation
 
 // UPH Types (inferred from new schema tables)
@@ -160,6 +162,16 @@ export interface IStorage {
   }): Promise<any[]>;
   getPlayerWeeklyStats(playerId: string, season: number): Promise<any[]>;
   getSeasonTotals(season: number, scoring?: 'std' | 'half' | 'ppr'): Promise<any[]>;
+  
+  // WR Role Bank operations
+  upsertWRRoleBank(roleRow: any): Promise<void>;
+  getWRRoleBank(filters: {
+    season?: number;
+    playerId?: string;
+    roleTier?: string;
+  }): Promise<any[]>;
+  getWRRoleBankByPlayer(playerId: string, season: number): Promise<any | null>;
+  getWeeklyUsageForRoleBank(playerId: string, season: number): Promise<any[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -801,6 +813,26 @@ export class MemStorage implements IStorage {
   }
   
   async getSeasonTotals(season: number, scoring?: 'std' | 'half' | 'ppr'): Promise<any[]> {
+    return [];
+  }
+  
+  async upsertWRRoleBank(roleRow: any): Promise<void> {
+    return;
+  }
+  
+  async getWRRoleBank(filters: {
+    season?: number;
+    playerId?: string;
+    roleTier?: string;
+  }): Promise<any[]> {
+    return [];
+  }
+  
+  async getWRRoleBankByPlayer(playerId: string, season: number): Promise<any | null> {
+    return null;
+  }
+  
+  async getWeeklyUsageForRoleBank(playerId: string, season: number): Promise<any[]> {
     return [];
   }
 }
@@ -1710,6 +1742,143 @@ export class DatabaseStorage implements IStorage {
     
     return Array.from(playerTotals.values())
       .sort((a, b) => b.total_fantasy_points - a.total_fantasy_points);
+  }
+  
+  async upsertWRRoleBank(roleRow: any): Promise<void> {
+    await db
+      .insert(wrRoleBank)
+      .values({
+        playerId: roleRow.playerId,
+        sleeperId: roleRow.sleeperId || null,
+        season: roleRow.season,
+        gamesPlayed: roleRow.gamesPlayed,
+        targetsPerGame: roleRow.targetsPerGame,
+        targetShareAvg: roleRow.targetShareAvg,
+        routesPerGame: roleRow.routesPerGame,
+        routeShareEst: roleRow.routeShareEst,
+        targetStdDev: roleRow.targetStdDev,
+        fantasyStdDev: roleRow.fantasyStdDev,
+        pprPerTarget: roleRow.pprPerTarget,
+        slotRouteShareEst: roleRow.slotRouteShareEst,
+        outsideRouteShareEst: roleRow.outsideRouteShareEst,
+        volumeScore: roleRow.volumeScore,
+        consistencyScore: roleRow.consistencyScore,
+        highValueUsageScore: roleRow.highValueUsageScore,
+        momentumScore: roleRow.momentumScore,
+        roleScore: roleRow.roleScore,
+        roleTier: roleRow.roleTier,
+        cardioWrFlag: roleRow.cardioWrFlag,
+        breakoutWatchFlag: roleRow.breakoutWatchFlag,
+        fakeSpikeFlag: roleRow.fakeSpikeFlag
+      })
+      .onConflictDoUpdate({
+        target: [wrRoleBank.playerId, wrRoleBank.season],
+        set: {
+          gamesPlayed: roleRow.gamesPlayed,
+          targetsPerGame: roleRow.targetsPerGame,
+          targetShareAvg: roleRow.targetShareAvg,
+          routesPerGame: roleRow.routesPerGame,
+          routeShareEst: roleRow.routeShareEst,
+          targetStdDev: roleRow.targetStdDev,
+          fantasyStdDev: roleRow.fantasyStdDev,
+          pprPerTarget: roleRow.pprPerTarget,
+          slotRouteShareEst: roleRow.slotRouteShareEst,
+          outsideRouteShareEst: roleRow.outsideRouteShareEst,
+          volumeScore: roleRow.volumeScore,
+          consistencyScore: roleRow.consistencyScore,
+          highValueUsageScore: roleRow.highValueUsageScore,
+          momentumScore: roleRow.momentumScore,
+          roleScore: roleRow.roleScore,
+          roleTier: roleRow.roleTier,
+          cardioWrFlag: roleRow.cardioWrFlag,
+          breakoutWatchFlag: roleRow.breakoutWatchFlag,
+          fakeSpikeFlag: roleRow.fakeSpikeFlag,
+          updatedAt: new Date()
+        }
+      });
+  }
+  
+  async getWRRoleBank(filters: {
+    season?: number;
+    playerId?: string;
+    roleTier?: string;
+  }): Promise<any[]> {
+    let query = db.select().from(wrRoleBank);
+    
+    const conditions = [];
+    
+    if (filters.season !== undefined) {
+      conditions.push(eq(wrRoleBank.season, filters.season));
+    }
+    
+    if (filters.playerId) {
+      conditions.push(eq(wrRoleBank.playerId, filters.playerId));
+    }
+    
+    if (filters.roleTier) {
+      conditions.push(eq(wrRoleBank.roleTier, filters.roleTier));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(desc(wrRoleBank.roleScore));
+  }
+  
+  async getWRRoleBankByPlayer(playerId: string, season: number): Promise<any | null> {
+    const results = await db
+      .select()
+      .from(wrRoleBank)
+      .where(and(
+        eq(wrRoleBank.playerId, playerId),
+        eq(wrRoleBank.season, season)
+      ))
+      .limit(1);
+    
+    return results.length > 0 ? results[0] : null;
+  }
+  
+  async getWeeklyUsageForRoleBank(playerId: string, season: number): Promise<any[]> {
+    const results = await db
+      .select({
+        playerId: weeklyStats.playerId,
+        season: weeklyStats.season,
+        week: weeklyStats.week,
+        team: weeklyStats.team,
+        targets: weeklyStats.targets,
+        targetSharePct: playerUsage.targetSharePct,
+        routes: weeklyStats.routes,
+        fantasyPointsPpr: weeklyStats.fantasyPointsPpr,
+        routesSlot: playerUsage.routesSlot,
+        routesOutside: playerUsage.routesOutside,
+        routesInline: playerUsage.routesInline
+      })
+      .from(weeklyStats)
+      .leftJoin(playerUsage, and(
+        eq(weeklyStats.playerId, playerUsage.playerId),
+        eq(weeklyStats.season, playerUsage.season),
+        eq(weeklyStats.week, playerUsage.week)
+      ))
+      .where(and(
+        eq(weeklyStats.playerId, playerId),
+        eq(weeklyStats.season, season)
+      ))
+      .orderBy(weeklyStats.week);
+    
+    return results.map(r => ({
+      playerId: r.playerId,
+      season: r.season,
+      week: r.week,
+      team: r.team,
+      targets: r.targets,
+      targetSharePct: r.targetSharePct ? r.targetSharePct / 100 : null,
+      routes: r.routes,
+      fantasyPointsPpr: r.fantasyPointsPpr,
+      routesSlot: r.routesSlot,
+      routesOutside: r.routesOutside,
+      routesInline: r.routesInline
+    }));
   }
 }
 
