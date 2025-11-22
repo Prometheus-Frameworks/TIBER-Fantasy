@@ -1,0 +1,337 @@
+You’ve already built WR/RB/TE Role Bank v1.0 (service layer, DB schemas, batch scripts, position fix).
+Now we need to expose it via proper APIs so the frontend (Rankings / Role Context) can consume it.
+
+✅ Goal
+
+Implement read-only Role Bank endpoints:
+
+List by position + season
+
+Detail by player + season
+
+(Optional) raw weekly usage for charts
+
+All using the existing Role Bank tables and services you already created.
+
+1️⃣ Create Unified Role Bank Routes
+
+Add a new router for Role Bank, instead of jamming more into routes.ts.
+
+Task:
+
+Create a new backend route file, for example:
+
+// server/routes/roleBankRoutes.ts (or similar)
+
+
+Wire it into your main Express app (where other routes are registered).
+
+2️⃣ Endpoint 1 – List: /api/role-bank/:position/:season
+
+Method: GET
+Purpose: Rankings / Role Context tables.
+
+Route signature:
+
+GET /api/role-bank/:position/:season
+
+
+Where:
+
+position ∈ WR | RB | TE (case-insensitive, normalize to uppercase internally)
+
+season = integer (e.g., 2024, 2025)
+
+Support query params:
+
+tier (optional, comma-separated): ALPHA,CO_ALPHA, ELITE_WORKHORSE, etc.
+
+minRoleScore (optional): number
+
+limit (optional): default 100
+
+offset (optional): default 0
+
+sortBy (optional): one of roleScore, targetsPerGame, opportunitiesPerGame, pprPerGame
+
+order (optional): asc | desc (default desc)
+
+2.1 Backend behavior
+
+Validate position and season.
+
+If invalid, return 400 with a clear error.
+
+Map position → correct Role Bank table + service:
+
+WR → wr_role_bank + getWRRoleBank(...)
+
+RB → rb_role_bank + getRBRoleBank(...)
+
+TE → te_role_bank + getTERoleBank(...)
+
+Each “get” call should:
+
+filter by season
+
+optionally filter by tier, minRoleScore
+
+apply limit + offset
+
+sort by sortBy where possible (fallback to roleScore desc)
+
+Join in identity info:
+
+player_identity_map (or whatever canonical) for full_name, position, team
+
+Prefer IDs: player_id (nfl_data_py_id), canonical_id, sleeper_id if available.
+
+2.2 Response shape
+
+Unify response shape across WR/RB/TE. Fields that don’t apply for a position can be null.
+
+Example:
+
+{
+  "season": 2025,
+  "position": "RB",
+  "count": 95,
+  "results": [
+    {
+      "playerId": "00-0033280",
+      "canonicalId": "christian-mccaffrey",
+      "sleeperId": "1234",
+      "playerName": "Christian McCaffrey",
+      "team": "SF",
+      "position": "RB",
+
+      "roleScore": 92,
+      "roleTier": "ELITE_WORKHORSE",
+
+      "gamesPlayed": 16,
+
+      "targetsPerGame": 6.1,
+      "carriesPerGame": 18.3,
+      "opportunitiesPerGame": 24.4,
+
+      "targetShareAvg": 0.17,
+      "routesPerGame": 28.5,
+
+      "pprPerTarget": 1.95,
+      "pprPerOpportunity": 1.32,
+
+      "volumeScore": 96,
+      "consistencyScore": 88,
+      "highValueUsageScore": 90,
+      "momentumScore": 75,
+
+      "flags": {
+        "cardioWr": false,
+        "pureRusher": false,
+        "passingDownBack": false,
+        "breakoutWatch": true,
+        "redZoneWeapon": null,
+        "cardioTE": null
+      }
+    }
+  ]
+}
+
+
+For WR:
+
+carriesPerGame, opportunitiesPerGame, pprPerOpportunity can be null.
+
+For TE:
+
+carriesPerGame / opportunitiesPerGame may be null.
+
+redZoneWeapon / cardioTE flags are more relevant.
+
+3️⃣ Endpoint 2 – Detail: /api/role-bank/:position/:playerId/:season
+
+Method: GET
+Purpose: Player Role Profile on player pages.
+
+Route:
+
+GET /api/role-bank/:position/:playerId/:season
+
+
+Where:
+
+position ∈ WR | RB | TE
+
+playerId = nfl_data_py_id or canonical player id used in Role Bank tables
+
+season = integer
+
+3.1 Backend behavior
+
+Validate input.
+
+Route based on position to the correct by-player method, e.g.:
+
+getWRRoleBankByPlayer(playerId, season)
+
+getRBRoleBankByPlayer(playerId, season)
+
+getTERoleBankByPlayer(playerId, season)
+
+Join identity (player_identity_map) for name/team/position.
+
+Return single-object response, including extra fields that the list view might not need (like std dev, red-zone per game, etc).
+
+3.2 Response shape
+
+Example (TE):
+
+{
+  "season": 2025,
+  "position": "TE",
+  "playerId": "00-0037744",
+  "canonicalId": "trey-mcbride",
+  "sleeperId": "9324",
+  "playerName": "Trey McBride",
+  "team": "ARI",
+
+  "roleScore": 88,
+  "roleTier": "ELITE_TE1",
+
+  "gamesPlayed": 17,
+
+  "targetsPerGame": 9.2,
+  "targetShareAvg": 0.26,
+  "routesPerGame": 36.2,
+
+  "pprPerTarget": 1.98,
+  "redZoneTargetsPerGame": 1.1,
+
+  "volumeScore": 90,
+  "consistencyScore": 82,
+  "highValueUsageScore": 88,
+  "momentumScore": 75,
+
+  "targetStdDev": 2.1,
+  "fantasyStdDev": 6.8,
+
+  "opportunitiesPerGame": null,
+  "carriesPerGame": null,
+  "pprPerOpportunity": null,
+
+  "slotRouteShareEst": null,
+  "outsideRouteShareEst": null,
+
+  "flags": {
+    "redZoneWeapon": true,
+    "cardioTE": false,
+    "cardioWr": false,
+    "pureRusher": false,
+    "passingDownBack": false,
+    "breakoutWatch": true
+  },
+
+  "meta": {
+    "computedAt": "2025-11-21T03:12:00Z",
+    "version": "role_bank_v1.0"
+  }
+}
+
+
+For WR/RB, adapt with their fields, keep the same keys.
+
+If no row exists (no Role Bank data), return 404 with a simple JSON error.
+
+4️⃣ Optional Endpoint 3 – Weekly Usage: /api/role-bank/:position/:playerId/:season/weekly-usage
+
+Method: GET
+Purpose: UI charts + debugging (trend lines, breakout detection).
+
+This can be implemented later, but if easy, wire now.
+
+Route:
+
+GET /api/role-bank/:position/:playerId/:season/weekly-usage
+
+
+Backend behavior:
+
+Fetch weekly rows from weekly_stats and/or player_usage for that player/season.
+
+Return a simple series array.
+
+Example:
+
+{
+  "playerId": "00-0033280",
+  "playerName": "Christian McCaffrey",
+  "position": "RB",
+  "team": "SF",
+  "season": 2025,
+  "weeks": [
+    {
+      "week": 1,
+      "targets": 6,
+      "carries": 19,
+      "opportunities": 25,
+      "fantasyPointsPpr": 24.3,
+      "targetSharePct": 0.16,
+      "routes": 27
+    },
+    {
+      "week": 2,
+      "targets": 8,
+      "carries": 17,
+      "opportunities": 25,
+      "fantasyPointsPpr": 29.1,
+      "targetSharePct": 0.18,
+      "routes": 30
+    }
+  ]
+}
+
+
+This route can reuse existing getWeeklyUsageForRoleBank(...) logic you already wrote.
+
+5️⃣ Integration Details
+
+Make sure the new roleBank routes are registered in the main Express app, e.g.:
+
+import { registerRoleBankRoutes } from './routes/roleBankRoutes';
+
+registerRoleBankRoutes(app);
+
+
+Use whatever error-handling / logging middleware you already have in routes.ts.
+
+Ensure all responses are JSON, with:
+
+{ "error": "message" }
+
+
+for any 4xx/5xx cases.
+
+6️⃣ Validation & Sanity Checks
+
+After wiring the endpoints:
+
+Hit:
+
+GET /api/role-bank/RB/2025
+GET /api/role-bank/WR/2025
+GET /api/role-bank/TE/2025
+
+
+Confirm:
+
+2025 CMC appears in RB list with ELITE_WORKHORSE tier.
+
+2025 Bijan, Gibbs, Kyren have sane tiers.
+
+2025 McBride / LaPorta / Kelce / Kincaid show correct tiers for TE.
+
+2025 Amon-Ra, Chase, Lamb, Nabers have ALPHA/CO_ALPHA/PRIMARY-level RoleScores.
+
+Hit player detail routes for those same players and confirm the shape is consistent with the list results.
+
+If any TE Role Bank rows are missing for LaPorta/Kincaid, re-run the TE batch script and verify again.
