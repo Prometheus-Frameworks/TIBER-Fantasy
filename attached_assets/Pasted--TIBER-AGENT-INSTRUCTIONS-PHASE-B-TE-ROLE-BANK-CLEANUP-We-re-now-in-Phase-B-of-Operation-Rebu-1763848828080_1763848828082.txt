@@ -1,0 +1,137 @@
+📦 TIBER AGENT INSTRUCTIONS — PHASE B (TE ROLE BANK CLEANUP)
+
+We’re now in Phase B of Operation Rebuild.
+Goal: make sure TE Role Bank v1.0 is fully populated and correct for 2024 & 2025, including missing players like LaPorta and Kincaid.
+
+1️⃣ Re-run TE Role Bank batch (full refresh)
+
+Locate the TE batch script you created earlier, something like:
+
+server/scripts/computeAllTERoleBank.ts
+(or equivalent name)
+
+Run it for both seasons with a full recompute (no skipping existing rows):
+
+2024
+
+2025
+
+If there is a “dry run / skip existing” mode, turn it off so we overwrite stale or partial data.
+
+Document the exact command(s) you used, for example:
+
+ts-node server/scripts/computeAllTERoleBank.ts --season 2024 --recompute
+ts-node server/scripts/computeAllTERoleBank.ts --season 2025 --recompute
+
+
+(or the equivalent npm/yarn commands if that’s how scripts are run in this project).
+
+2️⃣ Verify key TE players are present
+
+After the batch run, query the TE Role Bank table using the new Role Bank API:
+
+GET /api/role-bank/TE/2024
+
+GET /api/role-bank/TE/2025
+
+Specifically confirm that these players have Role Bank rows and sensible tiers:
+
+2024 / 2025 TEs to check:
+
+Sam LaPorta
+
+Trey McBride
+
+Travis Kelce
+
+Dalton Kincaid
+
+Mark Andrews
+
+George Kittle
+
+For each of these, return:
+
+{
+  "playerName": "Sam LaPorta",
+  "season": 2024,
+  "roleTier": "…",
+  "roleScore": …,
+  "targetsPerGame": …,
+  "gamesPlayed": …
+}
+
+
+We expect:
+
+LaPorta & McBride: ELITE_TE1 or STRONG_TE1
+
+Kelce: STRONG_TE1 or MID_TE1 depending on age curve
+
+Andrews / Kittle: STRONG_TE1 range
+
+Kincaid: MID_TE1 / HIGH_TE2
+
+If any of these players are still missing, investigate why:
+
+Is player_identity_map missing them?
+
+Is weekly_stats missing their rows?
+
+Is player_positions view excluding them?
+
+Return a short explanation for any TE who still fails to appear.
+
+3️⃣ Return TE tier distribution summary
+
+For each season (2024 & 2025), return a compact summary like:
+
+{
+  "te_2024": {
+    "candidates": 55,
+    "tiers": {
+      "ELITE_TE1": 2,
+      "STRONG_TE1": 6,
+      "MID_TE1": 12,
+      "HIGH_TE2": 18,
+      "STREAMER": 10,
+      "BLOCKING_TE": 7
+    },
+    "examples": {
+      "ELITE_TE1": ["Sam LaPorta (score X)", "Trey McBride (score Y)"],
+      "STRONG_TE1": ["Travis Kelce", "Mark Andrews", "George Kittle"],
+      "MID_TE1": ["Dalton Kincaid", "Dallas Goedert"]
+    }
+  },
+  "te_2025": {
+    "candidates": …,
+    "tiers": { … },
+    "examples": { … }
+  }
+}
+
+
+This is just for sanity — we want to see if the tier distribution feels reasonable.
+
+4️⃣ Confirm API health for TE routes
+
+Finally, confirm these calls all work without errors:
+
+GET /api/role-bank/TE/2024
+
+GET /api/role-bank/TE/2025
+
+GET /api/role-bank/TE/:playerId/2024 for LaPorta, McBride, Kelce, Kincaid
+
+GET /api/role-bank/TE/:playerId/2025 for the same players if they have 2025 data
+
+If any return 404 or 500, include:
+
+the exact URL
+
+the status code
+
+a short error snippet
+
+Return all of this as a JSON-style summary object plus any minimal logs you think are helpful.
+Don’t change any scoring logic — this phase is recompute + verify only.
