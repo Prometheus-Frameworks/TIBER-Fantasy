@@ -1,0 +1,171 @@
+You are now running OPERATION REBUILD (Mega Audit) for the TIBER Fantasy codebase.
+
+Goal:
+Separate **TIBER-CORE** (everything the chatbot + rankings actually use) from **TIBER-LEGACY** (old experiments, unused tables, dead pages).
+
+### STEP 1 – Global Dependency Map
+
+1. Scan the entire repo and build a dependency summary with:
+   - All backend services/modules
+   - All API routes and their handler files
+   - All frontend pages/components and which APIs they call
+   - All database tables (from shared/schema.ts or equivalent)
+
+2. For each service/route/component, indicate:
+   - `file_path`
+   - `type`: "service" | "route" | "frontend" | "script"
+   - `depends_on`: [other modules, tables, routes]
+
+Return a JSON summary like:
+
+{
+  "services": [...],
+  "routes": [...],
+  "frontend": [...],
+  "tables": [...]
+}
+
+You can truncate very long lists but keep counts and representative examples.
+
+---
+
+### STEP 2 – TIBER-CORE Trace (Chat + Player Search)
+
+Trace all files and modules involved when:
+
+A) A user opens the TIBER chat page and sends a message.
+B) A user searches for a player from the main search bar.
+C) A user hits any rankings/role-bank endpoints.
+
+For these flows, list:
+
+- All services used
+- All routes hit
+- All tables queried
+
+Return them in a section called `tiber_core_graph`, for example:
+
+{
+  "tiber_core_graph": {
+    "chat": {
+      "routes": [...],
+      "services": [...],
+      "tables": [...]
+    },
+    "player_search": { ... },
+    "rankings_role_bank": { ... }
+  }
+}
+
+---
+
+### STEP 3 – DB Usage Audit
+
+Using schema.ts (or equivalent), list ALL tables and mark:
+
+- `status`: "CORE" | "LEGACY" | "UNKNOWN"
+- `used_by`: [service/route names] if any
+- `notes`: brief reason (e.g. "only referenced by old EPA rankings", "used by roleBankService", etc.)
+
+Example:
+
+{
+  "tables_audit": [
+    {
+      "table": "weekly_stats",
+      "status": "CORE",
+      "used_by": ["roleBankService", "tiberChatPlayerContext"],
+      "notes": "Primary weekly usage + fantasy stats"
+    },
+    {
+      "table": "waiver_candidates",
+      "status": "LEGACY",
+      "used_by": [],
+      "notes": "No references in current code"
+    }
+  ]
+}
+
+---
+
+### STEP 4 – Frontend Page Audit
+
+List all user-facing pages/routes in the UI (sidebar and otherwise), and for each:
+
+- `route`: e.g. "/rankings", "/strategy", "/epa", "/matchups"
+- `sidebar_visible`: true/false
+- `apis_called`: [list of API paths]
+- `status`: "CORE" | "LEGACY" | "BROKEN" (BROKEN = calls non-existent or erroring endpoints)
+
+Example:
+
+{
+  "frontend_pages": [
+    {
+      "route": "/chat",
+      "sidebar_visible": true,
+      "apis_called": ["/api/chat", "/api/player/search"],
+      "status": "CORE"
+    },
+    {
+      "route": "/strategy",
+      "sidebar_visible": true,
+      "apis_called": [],
+      "status": "LEGACY"
+    }
+  ]
+}
+
+---
+
+### STEP 5 – RB/TE Role Bank Verification
+
+Now that RB and TE Role Banks are built and the position mapping fix is in, run both batch scripts again:
+
+- computeAllRBRoleBank.ts for 2024 and 2025
+- computeAllTERoleBank.ts for 2024 and 2025
+
+For each position + season, return:
+
+1. Counts per tier.
+2. Example players per tier.
+3. Full RoleBank rows for these test players:
+
+RB:
+- Christian McCaffrey
+- Bijan Robinson
+- Kyren Williams
+- Jahmyr Gibbs
+
+TE:
+- Sam LaPorta
+- Trey McBride
+- Travis Kelce
+- Dalton Kincaid
+
+Return in a section called `role_bank_rb_te_summary`.
+
+---
+
+### STEP 6 – Final Mega Audit Summary
+
+Finally, produce a concise summary object:
+
+{
+  "tiber_core": {
+    "services": [...],
+    "routes": [...],
+    "tables": [...],
+    "frontend_pages": [...]
+  },
+  "tiber_legacy": {
+    "services": [...],
+    "routes": [...],
+    "tables": [...],
+    "frontend_pages": [...]
+  },
+  "role_bank_rb_te_summary": { ... },
+  "notes": ["top 5 issues / risks you see"]
+}
+
+Focus on correctness and structure. Do NOT refactor code yet. This is a mapping & classification pass only.
