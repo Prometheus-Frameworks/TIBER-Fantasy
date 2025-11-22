@@ -41,7 +41,7 @@ import {
   type InsertInjuryTracker
 } from "@shared/schema";
 import { db } from "./infra/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 // Note: sportsDataAPI import removed - not used in current implementation
 
 // UPH Types (inferred from new schema tables)
@@ -2007,13 +2007,13 @@ export class DatabaseStorage implements IStorage {
         season: weeklyStats.season,
         week: weeklyStats.week,
         team: weeklyStats.team,
-        carries: weeklyStats.carries,
+        carries: weeklyStats.rushAtt,
         targets: weeklyStats.targets,
         targetSharePct: playerUsage.targetSharePct,
         routes: weeklyStats.routes,
         fantasyPointsPpr: weeklyStats.fantasyPointsPpr,
-        redZoneCarries: playerUsage.redZoneCarries,
-        redZoneTargets: playerUsage.redZoneTargets
+        redZoneCarries: sql<number>`null`.as('red_zone_carries'),
+        redZoneTargets: sql<number>`null`.as('red_zone_targets')
       })
       .from(weeklyStats)
       .leftJoin(playerUsage, and(
@@ -2032,13 +2032,13 @@ export class DatabaseStorage implements IStorage {
       season: r.season,
       week: r.week,
       team: r.team,
-      carries: r.carries,
-      targets: r.targets,
+      carries: r.carries ?? 0,
+      targets: r.targets ?? 0,
       targetSharePct: r.targetSharePct ? r.targetSharePct / 100 : null,
-      routes: r.routes,
-      fantasyPointsPpr: r.fantasyPointsPpr,
-      redZoneCarries: r.redZoneCarries,
-      redZoneTargets: r.redZoneTargets
+      routes: r.routes ?? 0,
+      fantasyPointsPpr: r.fantasyPointsPpr ?? 0,
+      redZoneCarries: r.redZoneCarries ?? 0,
+      redZoneTargets: r.redZoneTargets ?? 0
     }));
   }
   
@@ -2146,7 +2146,7 @@ export class DatabaseStorage implements IStorage {
         targetSharePct: playerUsage.targetSharePct,
         routes: weeklyStats.routes,
         fantasyPointsPpr: weeklyStats.fantasyPointsPpr,
-        redZoneTargets: playerUsage.redZoneTargets
+        redZoneTargets: sql<number>`null`.as('red_zone_targets')
       })
       .from(weeklyStats)
       .leftJoin(playerUsage, and(
@@ -2165,11 +2165,11 @@ export class DatabaseStorage implements IStorage {
       season: r.season,
       week: r.week,
       team: r.team,
-      targets: r.targets,
+      targets: r.targets ?? 0,
       targetSharePct: r.targetSharePct ? r.targetSharePct / 100 : null,
-      routes: r.routes,
-      fantasyPointsPpr: r.fantasyPointsPpr,
-      redZoneTargets: r.redZoneTargets
+      routes: r.routes ?? 0,
+      fantasyPointsPpr: r.fantasyPointsPpr ?? 0,
+      redZoneTargets: r.redZoneTargets ?? 0
     }));
   }
 }
