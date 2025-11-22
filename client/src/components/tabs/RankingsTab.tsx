@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
 import PlayerDetailDrawer from '@/components/PlayerDetailDrawer';
+import RoleBankRankings from '@/components/RoleBankRankings';
 
 interface TiberPlayer {
   name: string;
@@ -33,7 +34,10 @@ type Position = 'QB' | 'RB' | 'WR' | 'TE';
 // Available weeks for the 2025 season (weeks with completed games)
 const AVAILABLE_WEEKS = [1, 2, 3, 4, 5, 6, 7];
 
+type RankingView = 'tiber' | 'role-context';
+
 export default function RankingsTab() {
+  const [rankingView, setRankingView] = useState<RankingView>('tiber');
   const [selectedPosition, setSelectedPosition] = useState<Position | 'ALL'>('ALL');
   const [selectedWeek, setSelectedWeek] = useState<number>(7); // Default to latest week
   const [qbExpanded, setQbExpanded] = useState(true);
@@ -180,11 +184,44 @@ export default function RankingsTab() {
     <div className="space-y-6">
       {/* Header with crimson accent */}
       <div className="border-b border-red-500/20 pb-4">
-        <h2 className="text-2xl font-bold text-white tracking-wide">TIBER RANKINGS</h2>
+        <h2 className="text-2xl font-bold text-white tracking-wide">RANKINGS HUB</h2>
         <p className="text-gray-400 mt-1 text-sm tracking-wide">
-          All Positions • Week {data?.data?.week || selectedWeek} • 2025 Season
+          Multiple ranking systems for comprehensive player evaluation
         </p>
       </div>
+
+      {/* Sub-tab Switcher */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setRankingView('tiber')}
+          className={`px-6 py-2.5 rounded-lg font-medium transition-all tracking-wide ${
+            rankingView === 'tiber'
+              ? 'bg-gradient-to-r from-red-600/30 to-red-500/30 border border-red-500/50 text-white shadow-lg shadow-red-500/20'
+              : 'bg-[#0d0e11] text-gray-400 hover:text-gray-300 border border-gray-800/50 hover:border-gray-700'
+          }`}
+          data-testid="button-view-tiber"
+        >
+          TIBER Rankings
+        </button>
+        <button
+          onClick={() => setRankingView('role-context')}
+          className={`px-6 py-2.5 rounded-lg font-medium transition-all tracking-wide ${
+            rankingView === 'role-context'
+              ? 'bg-gradient-to-r from-blue-600/30 to-purple-600/30 border border-blue-500/50 text-white shadow-lg shadow-blue-500/20'
+              : 'bg-[#0d0e11] text-gray-400 hover:text-gray-300 border border-gray-800/50 hover:border-gray-700'
+          }`}
+          data-testid="button-view-role-context"
+        >
+          Role Context
+        </button>
+      </div>
+
+      {/* Conditional Rendering Based on View */}
+      {rankingView === 'role-context' ? (
+        <RoleBankRankings />
+      ) : (
+        <>
+      {/* Original TIBER Rankings Content */}
 
       {/* Week Selector - Tactical Style */}
       <div className="space-y-2">
@@ -258,6 +295,8 @@ export default function RankingsTab() {
           week={selectedWeek}
           season={2025}
         />
+      )}
+        </>
       )}
     </div>
   );

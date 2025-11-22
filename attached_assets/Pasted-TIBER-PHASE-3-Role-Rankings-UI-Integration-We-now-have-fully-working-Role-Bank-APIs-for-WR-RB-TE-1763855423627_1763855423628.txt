@@ -1,0 +1,177 @@
+TIBER – PHASE 3: Role Rankings UI Integration
+
+We now have fully working Role Bank APIs for WR/RB/TE and clean TE data.
+Goal: Build a Role Context Rankings UI that consumes these APIs.
+
+1️⃣ Add a Role Context section under Rankings
+
+Inspect the frontend routing (App.tsx / router / pages directory) and find the existing Rankings page.
+
+Inside Rankings, add a new sub-tab or section called “Role Context” alongside any existing content (EPA rankings, etc.).
+
+When Role Context is active, render a dedicated component, e.g.:
+
+// example name, adjust to your structure
+<RoleBankRankings />
+
+
+If the existing Rankings page is a mess, keep this self-contained and minimally invasive.
+
+2️⃣ Create <RoleBankRankings /> component
+
+New file, something like:
+
+src/components/RoleBankRankings.tsx
+
+
+This component should:
+
+Manage state:
+
+position: 'WR' | 'RB' | 'TE'
+
+season: 2024 | 2025
+
+tierFilter: string[] (optional)
+
+minRoleScore: number | null
+
+sortBy: 'roleScore' | 'targetsPerGame' | 'opportunitiesPerGame' | null
+
+order: 'asc' | 'desc'
+
+data: RoleBankRow[]
+
+loading / error
+
+On mount, default to:
+
+position = 'WR'
+
+season = 2025
+
+Whenever position, season, tierFilter, or minRoleScore changes:
+
+Call:
+
+GET /api/role-bank/:position/:season
+
+With query params:
+
+tier (comma-separated) if any
+
+minRoleScore if set
+
+limit=250
+
+sortBy=roleScore
+
+order=desc
+
+Render:
+
+Controls row (position + season + tier filter + min score)
+
+A table tailored to the position
+
+3️⃣ Table Layout per Position
+
+Use a shared table component if possible, but columns differ by position.
+
+Common columns (all):
+
+Player (name)
+
+Team
+
+Role Tier
+
+Role Score
+
+Games Played
+
+WR columns add:
+
+Targets/G
+
+TargetShareAvg (as %)
+
+PPR/G (if available)
+
+RB columns add:
+
+Opportunities/G
+
+Carries/G
+
+Targets/G
+
+PPR per Opportunity
+
+TE columns add:
+
+Targets/G
+
+PPR/G (if available)
+
+(If we have it: redZoneTargetsPerGame)
+
+For missing fields, show — instead of 0 or null.
+
+4️⃣ Wire up row click → player detail (basic version)
+
+Optional but recommended:
+
+When a user clicks a row, open a right-side panel or modal with more detail.
+
+Call:
+
+GET /api/role-bank/:position/:playerId/:season
+
+Show:
+
+Name, Team, Position, Season
+
+RoleScore, Tier, GamesPlayed
+
+Targets/G, Opps/G, etc. depending on position
+
+Flags (breakoutWatch, cardioWr, redZoneWeapon, etc.)
+
+You do not need charts yet. Just text + numbers is fine.
+
+5️⃣ Basic Styling Guidelines
+
+Match the existing site vibe (colors / typography).
+
+Keep it clean and readable:
+
+Sticky header for the controls row
+
+Scrollable table
+
+Column headers clickable for sorting (bonus if easy)
+
+If Rankings currently looks cluttered, this Role Context tab should feel simple and modern, even if surrounding stuff is legacy.
+
+6️⃣ Post-implementation sanity checks
+
+After wiring:
+
+Confirm the following calls work through the UI:
+
+WR 2025 list loads with Chase, Lamb, Nabers near the top.
+
+RB 2025 list shows Achane, Bijan, etc. correctly.
+
+TE 2025 shows McBride leading, LaPorta/Kelce/Kincaid in STRONG_TE1/MID_TE1.
+
+Confirm filters work:
+
+Filtering by tier only shows that tier.
+
+MinRoleScore adjusts results.
+
+Confirm switching position/season feels fast and doesn’t crash.
+
+Do not refactor legacy tabs yet. Just add Role Context cleanly on top.
