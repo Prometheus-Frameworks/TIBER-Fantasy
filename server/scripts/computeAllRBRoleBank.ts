@@ -30,12 +30,16 @@ async function getRBCandidates(season: number): Promise<RBCandidate[]> {
     .select({
       playerId: weeklyStats.playerId,
       playerName: weeklyStats.playerName,
-      position: weeklyStats.position,
+      position: sql<string>`pp.position`.as('position'),
       gamesPlayed: sql<number>`COUNT(DISTINCT ${weeklyStats.week})`.as('games_played')
     })
     .from(weeklyStats)
-    .where(sql`${weeklyStats.season} = ${season} AND ${weeklyStats.position} = 'RB'`)
-    .groupBy(weeklyStats.playerId, weeklyStats.playerName, weeklyStats.position)
+    .innerJoin(
+      sql`player_positions pp`,
+      sql`${weeklyStats.playerId} = pp.player_id`
+    )
+    .where(sql`${weeklyStats.season} = ${season} AND pp.position = 'RB'`)
+    .groupBy(weeklyStats.playerId, weeklyStats.playerName, sql`pp.position`)
     .having(sql`COUNT(DISTINCT ${weeklyStats.week}) >= 4`);
   
   console.log(`✅ [RB Role Bank] Found ${candidates.length} RB candidates with 4+ games played`);
