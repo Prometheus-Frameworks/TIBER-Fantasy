@@ -17,6 +17,8 @@ import {
   weeklyStats,
   playerUsage,
   wrRoleBank,
+  rbRoleBank,
+  teRoleBank,
   type Team, 
   type Player, 
   type TeamPlayer, 
@@ -172,6 +174,26 @@ export interface IStorage {
   }): Promise<any[]>;
   getWRRoleBankByPlayer(playerId: string, season: number): Promise<any | null>;
   getWeeklyUsageForRoleBank(playerId: string, season: number): Promise<any[]>;
+  
+  // RB Role Bank operations
+  upsertRBRoleBank(roleRow: any): Promise<void>;
+  getRBRoleBank(filters: {
+    season?: number;
+    playerId?: string;
+    roleTier?: string;
+  }): Promise<any[]>;
+  getRBRoleBankByPlayer(playerId: string, season: number): Promise<any | null>;
+  getWeeklyUsageForRBRoleBank(playerId: string, season: number): Promise<any[]>;
+  
+  // TE Role Bank operations
+  upsertTERoleBank(roleRow: any): Promise<void>;
+  getTERoleBank(filters: {
+    season?: number;
+    playerId?: string;
+    roleTier?: string;
+  }): Promise<any[]>;
+  getTERoleBankByPlayer(playerId: string, season: number): Promise<any | null>;
+  getWeeklyUsageForTERoleBank(playerId: string, season: number): Promise<any[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -1878,6 +1900,276 @@ export class DatabaseStorage implements IStorage {
       routesSlot: r.routesSlot,
       routesOutside: r.routesOutside,
       routesInline: r.routesInline
+    }));
+  }
+  
+  // ========== RB ROLE BANK OPERATIONS ==========
+  
+  async upsertRBRoleBank(roleRow: any): Promise<void> {
+    await db
+      .insert(rbRoleBank)
+      .values({
+        playerId: roleRow.playerId,
+        sleeperId: roleRow.sleeperId || null,
+        season: roleRow.season,
+        gamesPlayed: roleRow.gamesPlayed,
+        carriesPerGame: roleRow.carriesPerGame,
+        targetsPerGame: roleRow.targetsPerGame,
+        opportunitiesPerGame: roleRow.opportunitiesPerGame,
+        targetShareAvg: roleRow.targetShareAvg,
+        routesPerGame: roleRow.routesPerGame,
+        oppStdDev: roleRow.oppStdDev,
+        fantasyStdDev: roleRow.fantasyStdDev,
+        pprPerOpportunity: roleRow.pprPerOpportunity,
+        redZoneTouchesPerGame: roleRow.redZoneTouchesPerGame,
+        volumeScore: roleRow.volumeScore,
+        consistencyScore: roleRow.consistencyScore,
+        highValueUsageScore: roleRow.highValueUsageScore,
+        momentumScore: roleRow.momentumScore,
+        roleScore: roleRow.roleScore,
+        roleTier: roleRow.roleTier,
+        pureRusherFlag: roleRow.pureRusherFlag,
+        passingDownBackFlag: roleRow.passingDownBackFlag,
+        breakoutWatchFlag: roleRow.breakoutWatchFlag
+      })
+      .onConflictDoUpdate({
+        target: [rbRoleBank.playerId, rbRoleBank.season],
+        set: {
+          gamesPlayed: roleRow.gamesPlayed,
+          carriesPerGame: roleRow.carriesPerGame,
+          targetsPerGame: roleRow.targetsPerGame,
+          opportunitiesPerGame: roleRow.opportunitiesPerGame,
+          targetShareAvg: roleRow.targetShareAvg,
+          routesPerGame: roleRow.routesPerGame,
+          oppStdDev: roleRow.oppStdDev,
+          fantasyStdDev: roleRow.fantasyStdDev,
+          pprPerOpportunity: roleRow.pprPerOpportunity,
+          redZoneTouchesPerGame: roleRow.redZoneTouchesPerGame,
+          volumeScore: roleRow.volumeScore,
+          consistencyScore: roleRow.consistencyScore,
+          highValueUsageScore: roleRow.highValueUsageScore,
+          momentumScore: roleRow.momentumScore,
+          roleScore: roleRow.roleScore,
+          roleTier: roleRow.roleTier,
+          pureRusherFlag: roleRow.pureRusherFlag,
+          passingDownBackFlag: roleRow.passingDownBackFlag,
+          breakoutWatchFlag: roleRow.breakoutWatchFlag,
+          updatedAt: new Date()
+        }
+      });
+  }
+  
+  async getRBRoleBank(filters: {
+    season?: number;
+    playerId?: string;
+    roleTier?: string;
+  }): Promise<any[]> {
+    let query = db.select().from(rbRoleBank);
+    
+    const conditions = [];
+    
+    if (filters.season !== undefined) {
+      conditions.push(eq(rbRoleBank.season, filters.season));
+    }
+    
+    if (filters.playerId) {
+      conditions.push(eq(rbRoleBank.playerId, filters.playerId));
+    }
+    
+    if (filters.roleTier) {
+      conditions.push(eq(rbRoleBank.roleTier, filters.roleTier));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(desc(rbRoleBank.roleScore));
+  }
+  
+  async getRBRoleBankByPlayer(playerId: string, season: number): Promise<any | null> {
+    const results = await db
+      .select()
+      .from(rbRoleBank)
+      .where(and(
+        eq(rbRoleBank.playerId, playerId),
+        eq(rbRoleBank.season, season)
+      ))
+      .limit(1);
+    
+    return results.length > 0 ? results[0] : null;
+  }
+  
+  async getWeeklyUsageForRBRoleBank(playerId: string, season: number): Promise<any[]> {
+    const results = await db
+      .select({
+        playerId: weeklyStats.playerId,
+        season: weeklyStats.season,
+        week: weeklyStats.week,
+        team: weeklyStats.team,
+        carries: weeklyStats.carries,
+        targets: weeklyStats.targets,
+        targetSharePct: playerUsage.targetSharePct,
+        routes: weeklyStats.routes,
+        fantasyPointsPpr: weeklyStats.fantasyPointsPpr,
+        redZoneCarries: playerUsage.redZoneCarries,
+        redZoneTargets: playerUsage.redZoneTargets
+      })
+      .from(weeklyStats)
+      .leftJoin(playerUsage, and(
+        eq(weeklyStats.playerId, playerUsage.playerId),
+        eq(weeklyStats.season, playerUsage.season),
+        eq(weeklyStats.week, playerUsage.week)
+      ))
+      .where(and(
+        eq(weeklyStats.playerId, playerId),
+        eq(weeklyStats.season, season)
+      ))
+      .orderBy(weeklyStats.week);
+    
+    return results.map(r => ({
+      playerId: r.playerId,
+      season: r.season,
+      week: r.week,
+      team: r.team,
+      carries: r.carries,
+      targets: r.targets,
+      targetSharePct: r.targetSharePct ? r.targetSharePct / 100 : null,
+      routes: r.routes,
+      fantasyPointsPpr: r.fantasyPointsPpr,
+      redZoneCarries: r.redZoneCarries,
+      redZoneTargets: r.redZoneTargets
+    }));
+  }
+  
+  // ========== TE ROLE BANK OPERATIONS ==========
+  
+  async upsertTERoleBank(roleRow: any): Promise<void> {
+    await db
+      .insert(teRoleBank)
+      .values({
+        playerId: roleRow.playerId,
+        sleeperId: roleRow.sleeperId || null,
+        season: roleRow.season,
+        gamesPlayed: roleRow.gamesPlayed,
+        targetsPerGame: roleRow.targetsPerGame,
+        targetShareAvg: roleRow.targetShareAvg,
+        routesPerGame: roleRow.routesPerGame,
+        targetStdDev: roleRow.targetStdDev,
+        fantasyStdDev: roleRow.fantasyStdDev,
+        pprPerTarget: roleRow.pprPerTarget,
+        redZoneTargetsPerGame: roleRow.redZoneTargetsPerGame,
+        volumeScore: roleRow.volumeScore,
+        consistencyScore: roleRow.consistencyScore,
+        highValueUsageScore: roleRow.highValueUsageScore,
+        momentumScore: roleRow.momentumScore,
+        roleScore: roleRow.roleScore,
+        roleTier: roleRow.roleTier,
+        redZoneWeaponFlag: roleRow.redZoneWeaponFlag,
+        cardioTEFlag: roleRow.cardioTEFlag,
+        breakoutWatchFlag: roleRow.breakoutWatchFlag
+      })
+      .onConflictDoUpdate({
+        target: [teRoleBank.playerId, teRoleBank.season],
+        set: {
+          gamesPlayed: roleRow.gamesPlayed,
+          targetsPerGame: roleRow.targetsPerGame,
+          targetShareAvg: roleRow.targetShareAvg,
+          routesPerGame: roleRow.routesPerGame,
+          targetStdDev: roleRow.targetStdDev,
+          fantasyStdDev: roleRow.fantasyStdDev,
+          pprPerTarget: roleRow.pprPerTarget,
+          redZoneTargetsPerGame: roleRow.redZoneTargetsPerGame,
+          volumeScore: roleRow.volumeScore,
+          consistencyScore: roleRow.consistencyScore,
+          highValueUsageScore: roleRow.highValueUsageScore,
+          momentumScore: roleRow.momentumScore,
+          roleScore: roleRow.roleScore,
+          roleTier: roleRow.roleTier,
+          redZoneWeaponFlag: roleRow.redZoneWeaponFlag,
+          cardioTEFlag: roleRow.cardioTEFlag,
+          breakoutWatchFlag: roleRow.breakoutWatchFlag,
+          updatedAt: new Date()
+        }
+      });
+  }
+  
+  async getTERoleBank(filters: {
+    season?: number;
+    playerId?: string;
+    roleTier?: string;
+  }): Promise<any[]> {
+    let query = db.select().from(teRoleBank);
+    
+    const conditions = [];
+    
+    if (filters.season !== undefined) {
+      conditions.push(eq(teRoleBank.season, filters.season));
+    }
+    
+    if (filters.playerId) {
+      conditions.push(eq(teRoleBank.playerId, filters.playerId));
+    }
+    
+    if (filters.roleTier) {
+      conditions.push(eq(teRoleBank.roleTier, filters.roleTier));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(desc(teRoleBank.roleScore));
+  }
+  
+  async getTERoleBankByPlayer(playerId: string, season: number): Promise<any | null> {
+    const results = await db
+      .select()
+      .from(teRoleBank)
+      .where(and(
+        eq(teRoleBank.playerId, playerId),
+        eq(teRoleBank.season, season)
+      ))
+      .limit(1);
+    
+    return results.length > 0 ? results[0] : null;
+  }
+  
+  async getWeeklyUsageForTERoleBank(playerId: string, season: number): Promise<any[]> {
+    const results = await db
+      .select({
+        playerId: weeklyStats.playerId,
+        season: weeklyStats.season,
+        week: weeklyStats.week,
+        team: weeklyStats.team,
+        targets: weeklyStats.targets,
+        targetSharePct: playerUsage.targetSharePct,
+        routes: weeklyStats.routes,
+        fantasyPointsPpr: weeklyStats.fantasyPointsPpr,
+        redZoneTargets: playerUsage.redZoneTargets
+      })
+      .from(weeklyStats)
+      .leftJoin(playerUsage, and(
+        eq(weeklyStats.playerId, playerUsage.playerId),
+        eq(weeklyStats.season, playerUsage.season),
+        eq(weeklyStats.week, playerUsage.week)
+      ))
+      .where(and(
+        eq(weeklyStats.playerId, playerId),
+        eq(weeklyStats.season, season)
+      ))
+      .orderBy(weeklyStats.week);
+    
+    return results.map(r => ({
+      playerId: r.playerId,
+      season: r.season,
+      week: r.week,
+      team: r.team,
+      targets: r.targets,
+      targetSharePct: r.targetSharePct ? r.targetSharePct / 100 : null,
+      routes: r.routes,
+      fantasyPointsPpr: r.fantasyPointsPpr,
+      redZoneTargets: r.redZoneTargets
     }));
   }
 }
