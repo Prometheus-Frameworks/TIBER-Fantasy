@@ -1,0 +1,133 @@
+Tiber – let’s fix positions for RB/TE Role Bank
+
+We are NOT changing the Role Bank logic.
+We’re changing where we read position from so QBs don’t show up as RB and TEs don’t get lost as WR.
+
+1) Find the canonical player position source
+
+Search the repo/schema for a table that has true player identity, such as:
+
+players
+
+player_identity_map
+
+player_facts
+
+playerCompositeFacts
+
+or similar
+
+I want a table or view that has at least:
+
+player_id
+
+position (real primary position → QB / RB / WR / TE)
+
+optional: team, name, sleeper_id, etc.
+
+Return what you find in a JSON-style summary, e.g.:
+
+{
+  "canonical_position_table": "players",
+  "columns": ["player_id", "position", "full_name", "team"],
+  "row_examples": [
+    { "player_id": "00-0031234", "position": "QB", "full_name": "Patrick Mahomes" },
+    { "player_id": "00-0034567", "position": "TE", "full_name": "Travis Kelce" }
+  ]
+}
+
+
+If there are multiple candidates, pick the most reliable / most used identity table.
+
+2) Build a player_positions view
+
+Once you find the canonical source, create a view like:
+
+CREATE VIEW player_positions AS
+SELECT
+  p.player_id,
+  p.position
+FROM players p;  -- or whatever table you found
+
+
+If we already have something equivalent, just document it and reuse it.
+
+The goal is:
+anywhere we need a position, we join on player_positions instead of trusting weekly_stats.position.
+
+3) Fix RB & TE Role Bank candidate selection
+
+Update the RB + TE Role Bank scripts and any helper like getWeeklyUsageForRoleBank() so they:
+
+Join weekly_stats (and player_usage) to player_positions on player_id.
+
+Filter by:
+
+WHERE player_positions.position = 'RB'
+
+
+for RB batch
+
+and:
+
+WHERE player_positions.position = 'TE'
+
+
+for TE batch
+
+Do NOT use weekly_stats.position for filtering anymore.
+
+If needed, adapt the Drizzle/TypeScript queries to reflect this.
+
+4) Sanity checks with known players
+
+After wiring this:
+
+Confirm:
+
+Mahomes, Allen, Lamar, etc. are NOT included in RB candidates.
+
+Kelce, LaPorta, McBride, Kincaid do show up as TE candidates.
+
+Rerun:
+
+computeAllRBRoleBank.ts
+
+computeAllTERoleBank.ts
+
+Return a summary like:
+
+{
+  "rb_2024": {
+    "candidates": 60,
+    "example_tiers": {
+      "ELITE_WORKHORSE": ["Christian McCaffrey", "Bijan Robinson"],
+      "HIGH_END_RB1": ["Breece Hall"],
+      "ROTATIONAL_RB": ["Ty Chandler"]
+    }
+  },
+  "te_2024": {
+    "candidates": 35,
+    "example_tiers": {
+      "ELITE_TE1": ["Sam LaPorta"],
+      "STRONG_TE1": ["Trey McBride"],
+      "STREAMER": ["Cade Otton"]
+    }
+  }
+}
+
+
+Also include full Role Bank rows for test players:
+
+RB: CMC, Bijan, Kyren, Gibbs
+
+TE: Kelce, LaPorta, McBride, Kincaid
+
+5) Optional (do NOT do unless simple)
+
+If it’s easy, propose a one-time migration to correct weekly_stats.position using player_positions.
+If not, just leave it and rely on the join.
+
+End of instructions.
+Don’t touch WR Role Bank logic or RB/TE scoring formulas.
+Only fix candidate selection and position source, then rerun both batch scripts and report back.
