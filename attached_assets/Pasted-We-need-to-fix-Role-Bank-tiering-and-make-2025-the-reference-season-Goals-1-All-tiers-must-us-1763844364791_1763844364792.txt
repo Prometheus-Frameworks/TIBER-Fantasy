@@ -1,0 +1,86 @@
+We need to fix Role Bank tiering and make 2025 the reference season.
+
+Goals:
+1) All tiers must use roleScore instead of volumeScore.
+2) Seasons with tiny samples (e.g. 4 games) should not define tiers.
+3) 2025 roleScore distribution should anchor our thresholds going forward.
+
+### Step 1 – WR tiering fix
+
+In the WR Role Bank service (computeWRRoleBankSeasonRow):
+
+- Introduce a constant: const MIN_GAMES_FOR_TIER = 8;
+- Change the tier classification to use roleScore instead of volumeScore.
+- If gamesPlayed < MIN_GAMES_FOR_TIER, set roleTier = 'UNKNOWN'.
+- Otherwise, use these default thresholds for now:
+
+  ALPHA       ≥ 88
+  CO_ALPHA    ≥ 80
+  PRIMARY     ≥ 70
+  SECONDARY   ≥ 60
+  ROTATIONAL  ≥ 48
+  LIMITED     < 48
+
+Make sure volumeScore is no longer used for tier decisions.
+
+### Step 2 – RB tiering guard + thresholds
+
+In computeRBRoleBankSeasonRow:
+
+- Add const MIN_GAMES_FOR_TIER = 8;
+- If gamesPlayed < MIN_GAMES_FOR_TIER, roleTier = 'UNKNOWN'.
+- Otherwise, use these thresholds:
+
+  ELITE_WORKHORSE  ≥ 88
+  HIGH_END_RB1     ≥ 80
+  MID_RB1          ≥ 70
+  STRONG_RB2       ≥ 60
+  ROTATIONAL_RB    ≥ 48
+  LIMITED_USAGE    < 48
+
+Confirm that classification is based on roleScore, not volumeScore.
+
+### Step 3 – TE tiering guard + thresholds
+
+In computeTERoleBankSeasonRow:
+
+- Add const MIN_GAMES_FOR_TIER = 8;
+- If gamesPlayed < MIN_GAMES_FOR_TIER, roleTier = 'UNKNOWN'.
+- Otherwise, use:
+
+  ELITE_TE1   ≥ 88
+  STRONG_TE1  ≥ 78
+  MID_TE1     ≥ 66
+  HIGH_TE2    ≥ 54
+  STREAMER    ≥ 44
+  BLOCKING_TE < 44
+
+Again, classification must be based on roleScore.
+
+### Step 4 – 2025-based calibration (optional but preferred)
+
+Implement a small utility or script that:
+
+- For each position (WR, RB, TE), fetches all 2025 Role Bank rows with gamesPlayed >= 8.
+- Computes the roleScore distribution and reports percentile cutoffs for:
+  - Top ~6–8 players
+  - Next ~6–8
+  - Next ~10–12
+- Returns a summary so we can adjust the hardcoded thresholds above if needed.
+
+You do NOT need to make tier thresholds fully dynamic yet; just compute and log suggested values so the architect can review.
+
+### Step 5 – Re-run 2025 batches and report
+
+Re-run the Role Bank batch computation for 2025 only (WR/RB/TE) and return:
+
+- Tier counts per position for 2025.
+- Updated RoleScore + tier for:
+  - RB: Christian McCaffrey, Bijan Robinson, Jahmyr Gibbs, Kyren Williams
+  - TE: Sam LaPorta, Trey McBride, Travis Kelce, Dalton Kincaid
+  - WR: Amon-Ra St. Brown, CeeDee Lamb, Ja'Marr Chase, Malik Nabers
+
+We expect:
+- 2025 CMC to be ELITE_WORKHORSE.
+- McBride/LaPorta to live in ELITE_TE1 or STRONG_TE1.
+- Top WRs to show up as ALPHA/CO_ALPHA.
