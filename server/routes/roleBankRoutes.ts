@@ -88,13 +88,13 @@ function parseQueryArray(param: string | string[] | undefined): string[] | null 
 
 // Transform raw DB row + identity to unified list item
 function transformToListItem(roleRow: any, position: Position, identityRow: any | null): RoleBankListItem {
-  const playerName = identityRow?.fullName || identityRow?.full_name || null;
+  const playerName = identityRow?.fullName || null;
   const team = roleRow.team || identityRow?.team || null;
   
   return {
     playerId: roleRow.playerId,
-    canonicalId: identityRow?.canonicalId || identityRow?.canonical_id || null,
-    sleeperId: identityRow?.sleeperId || identityRow?.sleeper_id || null,
+    canonicalId: identityRow?.canonicalId || null,
+    sleeperId: identityRow?.sleeperId || null,
     playerName,
     team,
     position,
@@ -206,12 +206,9 @@ async function handleListRoleBank(req: Request, res: Response) {
         roleRow: roleTable,
         identity: {
           canonicalId: playerIdentityMap.canonicalId,
-          canonical_id: playerIdentityMap.canonicalId,
           sleeperId: playerIdentityMap.sleeperId,
-          sleeper_id: playerIdentityMap.sleeperId,
           fullName: playerIdentityMap.fullName,
-          full_name: playerIdentityMap.fullName,
-          team: playerIdentityMap.team,
+          team: playerIdentityMap.nflTeam,
         }
       })
       .from(roleTable)
@@ -239,12 +236,9 @@ async function handleListRoleBank(req: Request, res: Response) {
         roleRow: roleTable,
         identity: {
           canonicalId: playerIdentityMap.canonicalId,
-          canonical_id: playerIdentityMap.canonicalId,
           sleeperId: playerIdentityMap.sleeperId,
-          sleeper_id: playerIdentityMap.sleeperId,
           fullName: playerIdentityMap.fullName,
-          full_name: playerIdentityMap.fullName,
-          team: playerIdentityMap.team,
+          team: playerIdentityMap.nflTeam,
         }
       })
       .from(roleTable)
