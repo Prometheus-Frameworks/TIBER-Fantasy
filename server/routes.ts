@@ -71,6 +71,7 @@ import rookieRoutes from './routes/rookieRoutes';
 import playerIdentityRoutes from './routes/playerIdentityRoutes';
 import uphAdminRoutes from './routes/uphAdminRoutes';
 import gameLogRoutes from './routes/gameLogRoutes';
+import { registerRoleBankRoutes } from './routes/roleBankRoutes';
 import sosRouter from './modules/sos/sos.router';
 import { ratingsRouter } from './src/modules/ratings';
 import { buildStartSitRouter } from './routes/startSitRoutes';
@@ -3018,6 +3019,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // EPA Sanity Check System
   app.use('/api/sanity-check', epaSanityCheckRoutes);
   console.log('🔬 EPA Sanity Check routes mounted at /api/sanity-check/*');
+  
+  // Role Bank v1.0 - WR/RB/TE position-specific role classifications
+  registerRoleBankRoutes(app);
+  console.log('🎭 Role Bank v1.0 routes mounted at /api/role-bank/:position/:season');
   
   // Week Summary Debug Endpoint - Validate NFLfastR pipeline against Sleeper
   app.use('/api/debug', weekSummaryRouter);
