@@ -105,7 +105,7 @@ function TiberDashboard() {
         <div className="flex flex-col md:flex-row gap-6">
           {/* Sidebar Navigation */}
           <aside className="md:w-64 flex-shrink-0">
-            <div className="bg-[#141824] border border-gray-800 rounded-xl p-4 sticky top-24">
+            <div className="bg-[#141824] border border-gray-800 rounded-xl p-4 sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500">
               <nav className="space-y-1">
                 {tabs.map(tab => {
                   const Icon = tab.icon;
