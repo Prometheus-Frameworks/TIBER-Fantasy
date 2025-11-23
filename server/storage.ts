@@ -1824,6 +1824,8 @@ export class DatabaseStorage implements IStorage {
         highValueUsageScore: roleRow.highValueUsageScore,
         momentumScore: roleRow.momentumScore,
         roleScore: roleRow.roleScore,
+        pureRoleScore: roleRow.pureRoleScore || null,        // v2.0
+        efficiencyScore: roleRow.efficiencyScore || null,    // v2.0
         roleTier: roleRow.roleTier,
         cardioWrFlag: roleRow.cardioWrFlag,
         breakoutWatchFlag: roleRow.breakoutWatchFlag,
@@ -1849,6 +1851,8 @@ export class DatabaseStorage implements IStorage {
           highValueUsageScore: roleRow.highValueUsageScore,
           momentumScore: roleRow.momentumScore,
           roleScore: roleRow.roleScore,
+          pureRoleScore: roleRow.pureRoleScore || null,        // v2.0
+          efficiencyScore: roleRow.efficiencyScore || null,    // v2.0
           roleTier: roleRow.roleTier,
           cardioWrFlag: roleRow.cardioWrFlag,
           breakoutWatchFlag: roleRow.breakoutWatchFlag,

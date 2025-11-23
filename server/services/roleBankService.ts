@@ -441,11 +441,11 @@ export function computeWRRoleBankSeasonRow(
     highValueUsageScore: Math.round(highValueUsageScore),
     momentumScore: Math.round(momentumScore),
 
-    roleScore: Math.round(roleScore),
+    roleScore: roleScore,  // Already rounded in finalRoleScore
     
     // v2.0 debug scores
-    pureRoleScore: Math.round(pureRoleScore),
-    efficiencyScore: Math.round(efficiencyScore),
+    pureRoleScore: Math.round(pureRoleScore),  // v1.2 score (rounded for DB storage)
+    efficiencyScore: efficiencyScore,  // Already returns integer from helper
 
     roleTier,
     cardioWrFlag,
