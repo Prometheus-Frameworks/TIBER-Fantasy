@@ -4,7 +4,7 @@ import { X, TrendingUp, Award, Activity, Target, Zap } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 
-type Position = 'WR' | 'RB' | 'TE';
+type Position = 'WR' | 'RB' | 'TE' | 'QB';
 type Season = 2024 | 2025;
 
 interface RoleBankPlayer {
@@ -27,11 +27,27 @@ interface RoleBankPlayer {
   pprPerOpportunity: number | null;
   redZoneTargetsPerGame: number | null;
   redZoneTouchesPerGame: number | null;
+  // QB-specific metrics
+  dropbacksPerGame?: number | null;
+  rushAttemptsPerGame?: number | null;
+  redZoneDropbacksPerGame?: number | null;
+  redZoneRushesPerGame?: number | null;
+  epaPerPlay?: number | null;
+  cpoe?: number | null;
+  sackRate?: number | null;
+  passingAttempts?: number | null;
+  passingYards?: number | null;
+  passingTouchdowns?: number | null;
+  interceptions?: number | null;
+  rushingYards?: number | null;
+  rushingTouchdowns?: number | null;
   // Scores
   volumeScore: number;
   consistencyScore: number;
   highValueUsageScore: number;
   momentumScore: number;
+  efficiencyScore?: number;
+  rushingScore?: number;
   // Flags
   flags: {
     cardioWr?: boolean | null;
@@ -40,6 +56,9 @@ interface RoleBankPlayer {
     breakoutWatch?: boolean | null;
     redZoneWeapon?: boolean | null;
     cardioTE?: boolean | null;
+    konamiCode?: boolean | null;
+    systemQB?: boolean | null;
+    garbageTimeKing?: boolean | null;
   };
 }
 
@@ -73,6 +92,14 @@ const TIER_COLORS: Record<string, { bg: string; text: string; border: string }> 
   'HIGH_TE2': { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/50' },
   'STREAMER': { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/50' },
   'BLOCKING_TE': { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/50' },
+  
+  // QB Tiers
+  'ELITE_QB1': { bg: 'bg-purple-600/20', text: 'text-purple-400', border: 'border-purple-600/50' },
+  'STRONG_QB1': { bg: 'bg-pink-500/20', text: 'text-pink-400', border: 'border-pink-500/50' },
+  'MID_QB1': { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/50' },
+  'HIGH_QB2': { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/50' },
+  'STREAMING_QB': { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/50' },
+  'BENCH_QB': { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/50' },
 };
 
 export default function RoleBankRankings() {
@@ -130,7 +157,7 @@ export default function RoleBankRankings() {
         <div className="space-y-2">
           <label className="text-xs text-gray-500 uppercase tracking-wider font-medium">Position</label>
           <div className="flex gap-2">
-            {(['WR', 'RB', 'TE'] as Position[]).map(pos => (
+            {(['WR', 'RB', 'TE', 'QB'] as Position[]).map(pos => (
               <button
                 key={pos}
                 onClick={() => setPosition(pos)}
