@@ -19,6 +19,9 @@ import {
   wrRoleBank,
   rbRoleBank,
   teRoleBank,
+  qbRoleBank,
+  qbEpaReference,
+  qbContextMetrics,
   type Team, 
   type Player, 
   type TeamPlayer, 
@@ -194,6 +197,16 @@ export interface IStorage {
   }): Promise<any[]>;
   getTERoleBankByPlayer(playerId: string, season: number): Promise<any | null>;
   getWeeklyUsageForTERoleBank(playerId: string, season: number): Promise<any[]>;
+  
+  // QB Role Bank operations
+  upsertQBRoleBank(roleRow: any): Promise<void>;
+  getQBRoleBank(filters: {
+    season?: number;
+    playerId?: string;
+    alphaTier?: string;
+  }): Promise<any[]>;
+  getQBRoleBankByPlayer(playerId: string, season: number): Promise<any | null>;
+  getWeeklyUsageForQBRoleBank(playerId: string, season: number): Promise<any[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -855,6 +868,27 @@ export class MemStorage implements IStorage {
   }
   
   async getWeeklyUsageForRoleBank(playerId: string, season: number): Promise<any[]> {
+    return [];
+  }
+  
+  // QB Role Bank operations (stubs - not implemented in MemStorage)
+  async upsertQBRoleBank(roleRow: any): Promise<void> {
+    throw new Error('QB Role Bank not implemented in MemStorage');
+  }
+  
+  async getQBRoleBank(filters: {
+    season?: number;
+    playerId?: string;
+    alphaTier?: string;
+  }): Promise<any[]> {
+    return [];
+  }
+  
+  async getQBRoleBankByPlayer(playerId: string, season: number): Promise<any | null> {
+    return null;
+  }
+  
+  async getWeeklyUsageForQBRoleBank(playerId: string, season: number): Promise<any[]> {
     return [];
   }
 }
@@ -2197,6 +2231,206 @@ export class DatabaseStorage implements IStorage {
       routes: r.routes ?? 0,
       fantasyPointsPpr: r.fantasyPointsPpr ?? 0,
       redZoneTargets: r.redZoneTargets ?? 0
+    }));
+  }
+  
+  // ========== QB ROLE BANK OPERATIONS ==========
+  
+  async upsertQBRoleBank(roleRow: any): Promise<void> {
+    await db
+      .insert(qbRoleBank)
+      .values({
+        playerId: roleRow.playerId,
+        sleeperId: null,
+        season: roleRow.season,
+        gamesPlayed: roleRow.gamesPlayed,
+        dropbacksPerGame: roleRow.dropbacksPerGame,
+        redZoneDropbacksPerGame: roleRow.redZoneDropbacksPerGame,
+        passingAttempts: roleRow.passingAttempts,
+        passingYards: roleRow.passingYards,
+        passingTouchdowns: roleRow.passingTouchdowns,
+        interceptions: roleRow.interceptions,
+        rushAttemptsPerGame: roleRow.rushAttemptsPerGame,
+        redZoneRushesPerGame: roleRow.redZoneRushesPerGame,
+        rushingYards: roleRow.rushingYards,
+        rushingTouchdowns: roleRow.rushingTouchdowns,
+        epaPerPlay: roleRow.epaPerPlay,
+        cpoe: roleRow.cpoe,
+        sackRate: roleRow.sackRate,
+        completionPercentage: roleRow.completionPercentage,
+        yardsPerAttempt: roleRow.yardsPerAttempt,
+        volumeScore: roleRow.volumeScore,
+        rushingScore: roleRow.rushingScore,
+        efficiencyScore: roleRow.efficiencyScore,
+        momentumScore: roleRow.momentumScore,
+        alphaContextScore: roleRow.alphaContextScore,
+        alphaTier: roleRow.alphaTier,
+        konamiCodeFlag: roleRow.konamiCodeFlag,
+        systemQBFlag: roleRow.systemQBFlag,
+        garbageTimeKingFlag: roleRow.garbageTimeKingFlag
+      })
+      .onConflictDoUpdate({
+        target: [qbRoleBank.playerId, qbRoleBank.season],
+        set: {
+          gamesPlayed: roleRow.gamesPlayed,
+          dropbacksPerGame: roleRow.dropbacksPerGame,
+          redZoneDropbacksPerGame: roleRow.redZoneDropbacksPerGame,
+          passingAttempts: roleRow.passingAttempts,
+          passingYards: roleRow.passingYards,
+          passingTouchdowns: roleRow.passingTouchdowns,
+          interceptions: roleRow.interceptions,
+          rushAttemptsPerGame: roleRow.rushAttemptsPerGame,
+          redZoneRushesPerGame: roleRow.redZoneRushesPerGame,
+          rushingYards: roleRow.rushingYards,
+          rushingTouchdowns: roleRow.rushingTouchdowns,
+          epaPerPlay: roleRow.epaPerPlay,
+          cpoe: roleRow.cpoe,
+          sackRate: roleRow.sackRate,
+          completionPercentage: roleRow.completionPercentage,
+          yardsPerAttempt: roleRow.yardsPerAttempt,
+          volumeScore: roleRow.volumeScore,
+          rushingScore: roleRow.rushingScore,
+          efficiencyScore: roleRow.efficiencyScore,
+          momentumScore: roleRow.momentumScore,
+          alphaContextScore: roleRow.alphaContextScore,
+          alphaTier: roleRow.alphaTier,
+          konamiCodeFlag: roleRow.konamiCodeFlag,
+          systemQBFlag: roleRow.systemQBFlag,
+          garbageTimeKingFlag: roleRow.garbageTimeKingFlag,
+          updatedAt: new Date()
+        }
+      });
+  }
+  
+  async getQBRoleBank(filters: {
+    season?: number;
+    playerId?: string;
+    alphaTier?: string;
+  }): Promise<any[]> {
+    let query = db.select().from(qbRoleBank);
+    
+    const conditions = [];
+    
+    if (filters.season !== undefined) {
+      conditions.push(eq(qbRoleBank.season, filters.season));
+    }
+    
+    if (filters.playerId) {
+      conditions.push(eq(qbRoleBank.playerId, filters.playerId));
+    }
+    
+    if (filters.alphaTier) {
+      conditions.push(eq(qbRoleBank.alphaTier, filters.alphaTier));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(desc(qbRoleBank.alphaContextScore));
+  }
+  
+  async getQBRoleBankByPlayer(playerId: string, season: number): Promise<any | null> {
+    const results = await db
+      .select()
+      .from(qbRoleBank)
+      .where(and(
+        eq(qbRoleBank.playerId, playerId),
+        eq(qbRoleBank.season, season)
+      ))
+      .limit(1);
+    
+    return results.length > 0 ? results[0] : null;
+  }
+  
+  async getWeeklyUsageForQBRoleBank(playerId: string, season: number): Promise<any[]> {
+    const results = await db
+      .select({
+        playerId: weeklyStats.playerId,
+        season: weeklyStats.season,
+        week: weeklyStats.week,
+        team: weeklyStats.team,
+        
+        passingAttempts: qbContextMetrics.passAttempts,
+        completions: qbContextMetrics.completions,
+        passingYards: weeklyStats.passYd,
+        passingTouchdowns: weeklyStats.passTd,
+        interceptions: weeklyStats.int,
+        sacks: qbContextMetrics.sacks,
+        
+        rushAttempts: weeklyStats.rushAtt,
+        rushingYards: weeklyStats.rushYd,
+        rushingTouchdowns: weeklyStats.rushTd,
+        
+        fantasyPointsPpr: weeklyStats.fantasyPointsPpr,
+        
+        epaPerPlay: qbEpaReference.rawEpaPerPlay,
+        cpoe: qbContextMetrics.cpoe,
+        
+        redZoneDropbacks: sql<number>`
+          COALESCE((
+            SELECT COUNT(*)
+            FROM bronze_nflfastr_plays bp
+            WHERE bp.passer_id = ${weeklyStats.playerId}
+            AND bp.season = ${weeklyStats.season}
+            AND bp.week = ${weeklyStats.week}
+            AND bp.yardline_100 <= 20
+            AND (bp.pass = 1 OR bp.sack = 1)
+          ), 0)
+        `.as('red_zone_dropbacks'),
+        
+        redZoneRushes: sql<number>`
+          COALESCE((
+            SELECT COUNT(*)
+            FROM bronze_nflfastr_plays bp
+            WHERE bp.rusher_id = ${weeklyStats.playerId}
+            AND bp.season = ${weeklyStats.season}
+            AND bp.week = ${weeklyStats.week}
+            AND bp.yardline_100 <= 20
+            AND bp.rush = 1
+          ), 0)
+        `.as('red_zone_rushes')
+      })
+      .from(weeklyStats)
+      .leftJoin(qbEpaReference, and(
+        eq(weeklyStats.playerId, qbEpaReference.playerId),
+        eq(weeklyStats.season, qbEpaReference.season),
+        eq(weeklyStats.week, qbEpaReference.week)
+      ))
+      .leftJoin(qbContextMetrics, and(
+        eq(weeklyStats.playerId, qbContextMetrics.playerId),
+        eq(weeklyStats.season, qbContextMetrics.season),
+        eq(weeklyStats.week, qbContextMetrics.week)
+      ))
+      .where(and(
+        eq(weeklyStats.playerId, playerId),
+        eq(weeklyStats.season, season)
+      ))
+      .orderBy(weeklyStats.week);
+    
+    return results.map(r => ({
+      playerId: r.playerId,
+      season: r.season,
+      week: r.week,
+      team: r.team,
+      
+      dropbacks: (r.passingAttempts ?? 0) + (r.sacks ?? 0),
+      redZoneDropbacks: r.redZoneDropbacks ?? 0,
+      rushAttempts: r.rushAttempts ?? 0,
+      redZoneRushes: r.redZoneRushes ?? 0,
+      
+      epaPerPlay: r.epaPerPlay,
+      cpoe: r.cpoe,
+      sacks: r.sacks ?? 0,
+      
+      passingAttempts: r.passingAttempts ?? 0,
+      completions: r.completions ?? 0,
+      passingYards: r.passingYards ?? 0,
+      passingTouchdowns: r.passingTouchdowns ?? 0,
+      interceptions: r.interceptions ?? 0,
+      rushingYards: r.rushingYards ?? 0,
+      rushingTouchdowns: r.rushingTouchdowns ?? 0,
+      fantasyPointsPpr: r.fantasyPointsPpr ?? 0
     }));
   }
 }
