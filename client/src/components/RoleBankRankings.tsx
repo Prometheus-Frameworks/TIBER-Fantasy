@@ -189,7 +189,7 @@ export default function RoleBankRankings() {
                 }`}
                 data-testid={`button-season-${yr}`}
               >
-                {yr}
+                {formatNumber(yr, 0)}
               </button>
             ))}
           </div>
@@ -269,7 +269,7 @@ export default function RoleBankRankings() {
                       className="border-b border-gray-800/30 hover:bg-blue-500/5 cursor-pointer transition-colors"
                       data-testid={`role-bank-row-${idx}`}
                     >
-                      <td className="px-4 py-3 text-gray-500 font-medium">{idx + 1}</td>
+                      <td className="px-4 py-3 text-gray-500 font-medium">{formatNumber(idx + 1, 0)}</td>
                       <td className="px-4 py-3">
                         <div className="font-semibold text-white">{player.playerName}</div>
                       </td>
@@ -328,7 +328,7 @@ export default function RoleBankRankings() {
 
           {!isLoading && data?.results.length === 0 && (
             <div className="text-center py-12 text-gray-500">
-              No {position} data available for {season} season
+              No {position} data available for {formatNumber(season, 0)} season
             </div>
           )}
         </div>
@@ -351,7 +351,7 @@ export default function RoleBankRankings() {
                   <span>•</span>
                   <span>{selectedPlayer.position}</span>
                   <span>•</span>
-                  <span>{season} Season</span>
+                  <span>{formatNumber(season, 0)} Season</span>
                 </div>
               </DialogHeader>
 
