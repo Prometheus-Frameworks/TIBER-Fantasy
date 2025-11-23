@@ -43,6 +43,11 @@ export const EXTENDED_NAV_LINKS: NavLink[] = [
   { href: "/oasis", label: "OASIS", description: "Offensive system analysis" },
 ];
 
+// Admin navigation
+export const ADMIN_NAV_LINKS: NavLink[] = [
+  { href: "/admin/wr-rankings-sandbox", label: "WR Rankings Sandbox", description: "Test WR ranking algorithms" },
+];
+
 // Quick actions for converting hero buttons
 export const QUICK_ACTIONS: NavLink[] = [
   { href: "/player-compass", label: "Player Compass", description: "Context-aware guidance for dynasty decisions" },

@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Trophy, Menu, X, ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { NAV_LINKS } from "../config/nav";
+import { NAV_LINKS, ADMIN_NAV_LINKS } from "../config/nav";
 
 export default function Navigation() {
   const [location] = useLocation();
@@ -83,6 +83,34 @@ export default function Navigation() {
                 </Link>
               );
             })}
+            
+            {/* Admin Dropdown */}
+            <div className="relative group">
+              <button
+                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1 ${
+                  isDropdownActive(ADMIN_NAV_LINKS)
+                    ? "text-ink border-b-2 border-gold" 
+                    : "text-body hover:text-ink"
+                }`}
+              >
+                Admin
+                <ChevronDown className="h-3 w-3" />
+              </button>
+              
+              <div className="absolute top-full left-0 min-w-48 bg-white border border-line rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="py-1">
+                  {ADMIN_NAV_LINKS.map(item => (
+                    <Link
+                      key={item.href}
+                      href={item.href!}
+                      className="block px-4 py-2 text-sm text-body hover:text-ink hover:bg-gray-100 transition-colors"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
           </nav>
           
           {/* Mobile menu button */}
@@ -215,6 +243,35 @@ export default function Navigation() {
                 </Link>
               );
             })}
+            
+            {/* Admin Section */}
+            <div>
+              <div className="py-3 px-3 rounded-lg text-sm font-medium text-body">
+                <div className="font-medium">Admin</div>
+              </div>
+              <div className="ml-4 space-y-1">
+                {ADMIN_NAV_LINKS.map(item => {
+                  const active = isActive(item.href!);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href!}
+                      className={`block py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                        active 
+                          ? "text-white bg-ink" 
+                          : "text-body hover:text-ink bg-haze"
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <div className="font-medium">{item.label}</div>
+                      {item.description && (
+                        <div className="text-xs opacity-75 mt-0.5">{item.description}</div>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       )}
