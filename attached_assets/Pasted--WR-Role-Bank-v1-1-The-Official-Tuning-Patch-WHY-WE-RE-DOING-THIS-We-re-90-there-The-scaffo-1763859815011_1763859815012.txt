@@ -1,0 +1,218 @@
+🟦 WR Role Bank v1.1 — The Official Tuning Patch
+✅ WHY WE’RE DOING THIS
+
+We’re 90% there.
+The scaffolding is elite.
+But the weights need real-world tuning so WR roles reflect actual significance.
+
+These fixes will raise:
+
+Ja’Marr Chase
+
+Chris Olave
+
+Tyreek Hill
+
+Puka
+
+Pittman
+
+And flatten:
+
+Wan'Dale
+
+Shakir
+
+ROTATIONAL Gadget dudes
+
+While keeping the good signals (Egbuka, McMillan, Rice).
+
+🟨 PATCH 1: Increase Volume Weight (+10%)
+
+Targets/Game should dominate WR role reality.
+
+Before (v1.0):
+
+Volume weight = 45%
+
+After (v1.1):
+
+Volume weight = 55%
+
+This alone corrects:
+
+Chase too low
+
+Olave too low
+
+Jefferson too low
+
+Waddle too high
+
+Shakir too high
+
+Volume = the foundation of a WR.
+
+🟧 PATCH 2: Decrease Consistency Penalty (–10%)
+
+Consistency is punishing elite WRs who spike due to role.
+
+Before:
+
+Consistency weight = 25%
+
+After:
+
+Consistency weight = 15%
+
+This fixes:
+
+Chase
+
+Jefferson
+
+Deebo
+
+Tyreek
+
+Davante Adams
+
+Alphas have variance.
+That’s normal.
+
+🟥 PATCH 3: Add High Value Usage Module (+10%)
+
+This is the missing power signal.
+
+New field: highValueScore
+
+Ingredients:
+
+Deep targets (20+ yards)
+
+Intermediate targets (10–19 yards)
+
+Red zone targets
+
+End zone targets
+
+Formula:
+
+highValueScore = 
+  (deepTargets * 1.6) + 
+  (rzTargets * 1.8) + 
+  (endzoneTargets * 2.4)
+
+
+Then normalized on a 0–100 scale.
+
+This will bump:
+
+Chase
+
+Olave
+
+Pickens
+
+Egbuka
+
+McMillan
+
+Davante
+
+Tyreek
+
+And drop:
+
+Wan'Dale
+
+Shakir
+
+Screens-only dudes
+
+🟩 PATCH 4: Normalize Scoring League-Wide
+
+Right now, the distribution is too clustered.
+
+v1.1 will:
+
+Apply league-wide Z-score normalization
+
+Scale into 0–100 bucket
+
+Improve separation between tiers
+
+This gives us:
+
+Real "CO_ALPHA" spacing
+
+Distinct "Secondary" lines
+
+Cleaner "Rotational" cutoff
+
+🟦 PATCH 5: Add Tier Lock Thresholds
+
+This is the most important step for real-world alignment.
+
+New Tier Rules (v1.1)
+CO_ALPHA:
+- targets/game >= 9.5
+- target share >= 28%
+- highValueScore >= 65
+
+PRIMARY:
+- targets/game >= 8.0
+- target share >= 25%
+
+SECONDARY:
+- targets/game >= 6.0
+
+ROTATIONAL:
+- <6.0 tgt/g
+
+
+This will instantly fix:
+
+Chase
+
+Olave
+
+Jefferson
+
+Puka
+
+Pittman
+
+And also protect rightful SECONDARY guys.
+
+🟫 PATCH 6: Recompute & Validate Top 100 WRs
+
+Agent will:
+
+Re-run full 2024 WR batch
+
+Re-run full 2025 WR batch
+
+Compare pre/post tier changes
+
+Verify tier locks firing properly
+
+🟪 PATCH 7: UI Adjustments for v1.1
+
+Small but important:
+
+Add “High-Value Usage %” to WR tables
+
+Add “Depth Bias” indicator (short/med/deep mix)
+
+Update Tier colors to reflect new distribution
+
+🟣 READY FOR DEPLOYMENT
+
+This packet is perfectly structured for the agent.
+
+If you want me to generate the exact JSON or code diff for the agent to ingest, just say:
+
+“Prep the WR 1.1 patch for agent.”
+
+But since you said RUN WR 1.1, I’ll assume you want the full operational packet — everything above is the exact plan the agent should run.
