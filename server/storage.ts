@@ -2367,29 +2367,25 @@ export class DatabaseStorage implements IStorage {
         epaPerPlay: qbEpaReference.rawEpaPerPlay,
         cpoe: qbContextMetrics.cpoe,
         
-        redZoneDropbacks: sql<number>`
-          COALESCE((
-            SELECT COUNT(*)
-            FROM bronze_nflfastr_plays bp
-            WHERE bp.passer_id = ${weeklyStats.playerId}
-            AND bp.season = ${weeklyStats.season}
-            AND bp.week = ${weeklyStats.week}
-            AND bp.yardline_100 <= 20
-            AND (bp.pass = 1 OR bp.sack = 1)
-          ), 0)
-        `.as('red_zone_dropbacks'),
-        
-        redZoneRushes: sql<number>`
-          COALESCE((
-            SELECT COUNT(*)
-            FROM bronze_nflfastr_plays bp
-            WHERE bp.rusher_id = ${weeklyStats.playerId}
-            AND bp.season = ${weeklyStats.season}
-            AND bp.week = ${weeklyStats.week}
-            AND bp.yardline_100 <= 20
-            AND bp.rush = 1
-          ), 0)
-        `.as('red_zone_rushes')
+        redZoneDropbacks: sql<number>`(
+          SELECT COUNT(*)::integer 
+          FROM bronze_nflfastr_plays 
+          WHERE passer_player_id = ${playerId}
+          AND season = ${weeklyStats.season}
+          AND week = ${weeklyStats.week}
+          AND (raw_data->>'yardline_100')::numeric <= 20
+          AND play_type IN ('pass', 'run')
+          AND (passer_player_id IS NOT NULL OR incomplete_pass OR complete_pass OR interception)
+        )`.as('red_zone_dropbacks'),
+        redZoneRushes: sql<number>`(
+          SELECT COUNT(*)::integer 
+          FROM bronze_nflfastr_plays 
+          WHERE rusher_player_id = ${playerId}
+          AND season = ${weeklyStats.season}
+          AND week = ${weeklyStats.week}
+          AND (raw_data->>'yardline_100')::numeric <= 20
+          AND play_type = 'run'
+        )`.as('red_zone_rushes')
       })
       .from(weeklyStats)
       .leftJoin(qbEpaReference, and(
