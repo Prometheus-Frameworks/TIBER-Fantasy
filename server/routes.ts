@@ -6692,6 +6692,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/fantasy-rankings/WR/:season - Fantasy-focused WR rankings (uses WR Role Bank + fantasy PPG)
+  app.get('/api/fantasy-rankings/WR/:season', async (req: Request, res: Response) => {
+    try {
+      const { season } = req.params;
+      const { minScore, limit, offset } = req.query;
+      
+      const { getFantasyWRRankings } = await import('./services/fantasyWrRankingsService');
+      
+      const options: any = {};
+      if (minScore) options.minScore = parseInt(minScore as string);
+      if (limit) options.limit = parseInt(limit as string);
+      if (offset) options.offset = parseInt(offset as string);
+      
+      const rankings = await getFantasyWRRankings(parseInt(season), options);
+      
+      res.json({
+        success: true,
+        season: parseInt(season),
+        count: rankings.length,
+        data: rankings
+      });
+    } catch (error) {
+      console.error('❌ [Fantasy WR Rankings] Failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+
   // GET /api/role-bank/WR/:season - Get all WR role bank data with player enrichment
   // IMPORTANT: This must come BEFORE the generic /api/role-bank/:season route
   app.get('/api/role-bank/WR/:season', async (req: Request, res: Response) => {

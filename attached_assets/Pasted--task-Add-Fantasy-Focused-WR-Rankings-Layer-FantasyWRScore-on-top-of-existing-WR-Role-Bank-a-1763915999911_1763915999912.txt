@@ -1,0 +1,199 @@
+{
+"task": "Add Fantasy-Focused WR Rankings Layer (FantasyWRScore) on top of existing WR Role Bank, and expose it via API + UI toggle.",
+"constraints": [
+"DO NOT change the existing WR Role Bank computation logic (v2.0) – leave volumeScore, consistencyScore, highValueFinal, momentumScore, efficiencyScore, pureRoleScore, roleScore exactly as-is.",
+"Implement FantasyWRScore as an additional layer that uses existing WR Role Bank fields + weekly_stats fantasy points.",
+"Changes should be additive and safe: new DB view or query, new API endpoint, and a UI toggle in the WR rankings screen."
+],
+"data_sources": {
+"wr_role_bank": {
+"description": "Existing WR role context table. Already computed for 2024 and 2025.",
+"key_fields": [
+"player_id",
+"season",
+"games_played",
+"targets_per_game",
+"target_share_avg",
+"routes_per_game",
+"high_value_final",
+"momentum_score",
+"volume_score",
+"consistency_score",
+"efficiency_score",
+"role_score",
+"pure_role_score",
+"tier"
+]
+},
+"weekly_stats": {
+"description": "Per-player weekly fantasy and usage stats.",
+"key_fields": [
+"player_id",
+"season",
+"week",
+"fantasy_points_ppr",
+"targets",
+"rec",
+"rec_yd",
+"rec_td"
+]
+},
+"player_identity_map": {
+"description": "Canonical player identity mapping.",
+"key_fields": [
+"nfl_data_py_id",
+"canonical_id",
+"full_name",
+"team",
+"position"
+]
+}
+},
+"design": {
+"metrics": {
+"VolumeIndex": {
+"description": "How much the WR is used in the offense. Should strongly favor true volume hogs.",
+"inputs": [
+"targets_per_game (from wr_role_bank)",
+"target_share_avg (from wr_role_bank)",
+"routes_per_game (from wr_role_bank)"
+],
+"formula": "VolumeIndex = round(0.6 * targetsScore + 0.3 * shareScore + 0.1 * routesScore)",
+"notes": [
+"You may reuse existing scaling helpers from WR Role Bank if available (e.g. scaleTargetsPerGame, scaleTargetShare, scaleRoutesPerGame2025), or implement equivalent scaled 0-100 versions.",
+"Goal: CeeDee, ARSB, Chase, Puka, JSN, London should all have very strong VolumeIndex values relative to league."
+]
+},
+"PPGIndex": {
+"description": "Fantasy points per game index (PPR or half PPR) – reward guys who actually win weeks.",
+"inputs": [
+"fantasy_points_ppr summed and averaged over games from weekly_stats for WR position"
+],
+"aggregation": "For each player_id + season, compute fantasy_points_ppr_per_game = (sum of fantasy_points_ppr) / games_played_with_stats.",
+"scaling": {
+"description": "Map fantasy points per game to a 0–100 scale.",
+"pseudo": [
+"if ppg >= 22: 100",
+"else if ppg >= 19: 90",
+"else if ppg >= 16: 80",
+"else if ppg >= 13: 70",
+"else if ppg >= 10: 60",
+"else if ppg >= 7: 50",
+"else: 40"
+]
+}
+},
+"SpiceIndex": {
+"description": "Explosiveness / role flavor. Used as a tiebreaker, not the main driver.",
+"inputs": [
+"high_value_final (0-100, from wr_role_bank)",
+"momentum_score (0-100, from wr_role_bank)"
+],
+"formula": "SpiceIndex = round((high_value_final + momentum_score) / 2.0)",
+"notes": [
+"High deep targets, strong slot usage, and positive recent trend should show up here.",
+"This should NOT overpower volume or PPG – it’s seasoning."
+]
+},
+"FantasyWRScore": {
+"description": "Final fantasy-focused WR ranking score, combining volume, fantasy production, and spice.",
+"formula": "FantasyWRScore = round(0.6 * VolumeIndex + 0.3 * PPGIndex + 0.1 * SpiceIndex)",
+"notes": [
+"This is the score that should be used for the default fantasy WR rankings view.",
+"We expect top tier to be something like: JSN, CeeDee, ARSB, Chase, Puka, London, etc. depending on actual 2025 stats."
+]
+}
+}
+},
+"implementation_steps": [
+{
+"step": 1,
+"title": "Create Fantasy WR Scores DB View or Query Layer",
+"details": [
+"Create either a SQL VIEW (preferred) or a Drizzle query module that joins:",
+"- wr_role_bank (filtered to WR position via player_identity_map or existing view)",
+"- weekly_stats (aggregated to season-level fantasy_points_ppr_per_game per player)",
+"- player_identity_map (for player name + team for API/UI).",
+"For each WR + season, compute:",
+"- games_played (from wr_role_bank)",
+"- fantasy_points_ppr_per_game (from weekly_stats)",
+"- VolumeIndex (as defined above, 0–100).",
+"- PPGIndex (as defined above, 0–100).",
+"- SpiceIndex (as simple average of high_value_final and momentum_score, 0–100).",
+"- FantasyWRScore (0–100).",
+"Name the DB view something like fantasy_wr_scores or implement an equivalent server-side computed query in a dedicated service (e.g. fantasyWrRankingsService.ts)."
+]
+},
+{
+"step": 2,
+"title": "Add Backend API for Fantasy WR Rankings",
+"details": [
+"Add a new endpoint to the server routes, something like:",
+"GET /api/fantasy-rankings/WR/:season",
+"Query parameters:",
+"- season (required, e.g. 2025)",
+"- optional: minScore, limit, offset, orderBy (default: FantasyWRScore DESC).",
+"Response shape per row:",
+"{",
+" playerId,",
+" playerName,",
+" team,",
+" season,",
+" fantasyWRScore,",
+" volumeIndex,",
+" ppgIndex,",
+" spiceIndex,",
+" fantasyPointsPprPerGame,",
+" targetsPerGame,",
+" targetShareAvg,",
+" routesPerGame,",
+" pureRoleScore,",
+" roleScore,",
+" tier",
+"}",
+"Make sure only WRs are returned (filter position using player_identity_map or existing player_positions view)."
+]
+},
+{
+"step": 3,
+"title": "Integrate FantasyWRScore into Rankings UI as a Toggle",
+"details": [
+"In the existing Rankings / Role Context UI (where WR role context rankings live), add a view mode toggle for WRs:",
+"- Mode A: "Season Roles" → uses current Role Context endpoint (/api/role-bank/WR/:season).",
+"- Mode B: "Fantasy Rankings" → uses new /api/fantasy-rankings/WR/:season endpoint.",
+"Default behavior for WR tab:",
+"- Default to "Fantasy Rankings" mode (so first-time users see fantasy-relevant ordering).",
+"Fantasy Rankings table columns for WR:",
+"- Player, Team, Tier (from role bank tier), Fantasy Score (FantasyWRScore),",
+"- Fantasy PPG (fantasy_points_ppr_per_game),",
+"- Targets/G, Target Share, Routes/G,",
+"- VolumeIndex, PPGIndex, SpiceIndex (maybe in tooltip or expanded view).",
+"Season Roles mode remains exactly as-is, using the roleScore from WR Role Bank."
+]
+},
+{
+"step": 4,
+"title": "Validation & Sanity Checks",
+"details": [
+"After implementation, run the FantasyWRScore view for 2025 and confirm:",
+"- At least 100+ WRs are returned.",
+"- No null or NaN FantasyWRScore values.",
+"- Key players are ranked in a fantasy-sane order (not exact, but approximately):",
+" • Jaxon Smith-Njigba – top tier due to ~18+ PPG and massive volume.",
+" • CeeDee Lamb, Amon-Ra St. Brown, Ja'Marr Chase, Puka Nacua, Drake London – all inside the top cluster.",
+"- Deep-only guys without real volume shouldn’t outrank true target hogs who are smashing in fantasy.",
+"Also verify:",
+"- The existing WR Role Context view is unchanged and still works as before.",
+"- The UI toggle correctly switches between Fantasy Rankings and Season Roles without errors."
+]
+}
+],
+"acceptance_criteria": [
+"New FantasyWRScore is computed for all WRs with sufficient data in 2024 and 2025.",
+"GET /api/fantasy-rankings/WR/:season returns a sorted list of WRs with FantasyWRScore and the supporting indices.",
+"Rankings UI has a working toggle between Fantasy Rankings and Season Roles for WRs.",
+"Volume + fantasy PPG clearly drive the top of the Fantasy Rankings list (JSN, ARSB, Lamb, Chase, Puka, etc.).",
+"No changes were made to the core WR Role Bank calculation logic besides reading its fields.",
+"No runtime errors, and no NaN scores in the FantasyWRScore output."
+]
+}
