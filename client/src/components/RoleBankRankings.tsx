@@ -43,11 +43,11 @@ interface RoleBankPlayer {
   rushingTouchdowns?: number | null;
   // Scores
   volumeScore: number;
-  consistencyScore: number;
-  highValueUsageScore: number;
+  consistencyScore: number | null;
+  highValueUsageScore: number | null;
   momentumScore: number;
-  efficiencyScore?: number;
-  rushingScore?: number;
+  efficiencyScore?: number | null;
+  rushingScore?: number | null;
   // Flags
   flags: {
     cardioWr?: boolean | null;
@@ -378,14 +378,14 @@ export default function RoleBankRankings() {
                         <Activity className="w-4 h-4 text-green-400" />
                         <div className="text-xs text-gray-500 uppercase">Rushing</div>
                       </div>
-                      <div className="text-2xl font-bold text-white">{selectedPlayer.rushingScore}</div>
+                      <div className="text-2xl font-bold text-white">{selectedPlayer.rushingScore ?? '—'}</div>
                     </div>
                     <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
                       <div className="flex items-center justify-center gap-2 mb-1">
                         <Target className="w-4 h-4 text-orange-400" />
                         <div className="text-xs text-gray-500 uppercase">Efficiency</div>
                       </div>
-                      <div className="text-2xl font-bold text-white">{selectedPlayer.efficiencyScore}</div>
+                      <div className="text-2xl font-bold text-white">{selectedPlayer.efficiencyScore ?? '—'}</div>
                     </div>
                     <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
                       <div className="flex items-center justify-center gap-2 mb-1">
@@ -416,7 +416,7 @@ export default function RoleBankRankings() {
                         <Activity className="w-4 h-4 text-green-400" />
                         <div className="text-xs text-gray-500 uppercase">Consistency</div>
                       </div>
-                      <div className="text-2xl font-bold text-white">{selectedPlayer.consistencyScore}</div>
+                      <div className="text-2xl font-bold text-white">{selectedPlayer.consistencyScore ?? '—'}</div>
                     </div>
                     <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
                       <div className="flex items-center justify-center gap-2 mb-1">
