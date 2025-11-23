@@ -1,0 +1,85 @@
+Task: Backfill 2024 PBP + Repair EPA/CPOE Pipelines for QB Role Bank
+
+Goal:
+Make the QB Role Bank v1.0 fully functional for both 2024 and 2025 by:
+1) Backfilling 2024 play-by-play into bronze_nflfastr_plays
+2) Repairing the EPA/CPOE pipeline so qbEpaReference / qbContextMetrics (and related tables) are populated
+3) Recomputing QB Role Bank for 2024 + 2025 with real efficiency scores and valid alpha tiers
+
+PHASE 1 – Backfill 2024 NFLfastR PBP
+1. Find the existing code that loaded 2025 into bronze_nflfastr_plays:
+   - Likely in: server/scripts/, data ingestion utilities, or any “nflfastr”/“bronze” script
+   - Reuse the exact same pipeline, but point it at the 2024 season
+
+2. Implement 2024 ingest:
+   - Download 2024 pbp parquet/CSV from the same source used for 2025 (NFLfastR)
+   - Load into bronze_nflfastr_plays with the same schema as 2025
+   - Ensure we have at least: game_id, play_id, passer_player_id, rusher_player_id, pass_location, yards_gained, epa, cpoe (if available), pass result flags, etc.
+
+3. Validation queries:
+   - SELECT COUNT(*) FROM bronze_nflfastr_plays WHERE season = 2024;
+   - SELECT season, MIN(week), MAX(week) FROM bronze_nflfastr_plays GROUP BY season;
+   Expect: all 2024 weeks present (no crazy gaps).
+
+PHASE 2 – EPA/CPOE Pipeline Repair
+Objective:
+Populate EPA/CPOE per QB per season/week in:
+- qbEpaReference
+- qbContextMetrics
+- any qb_* tables that the existing EPA infra expects
+
+1. Locate EPA-related code:
+   - Search for: “qbEpaReference”, “qbContextMetrics”, “epaProcessor”, “CPOE”, “EPA”
+   - Likely files:
+     - server/services/epaProcessor.(ts|py)
+     - server/scripts/*epa*.ts or .py
+     - any calibration tools (calibrateEpaWeights.py, etc.)
+
+2. Implement per-QB EPA/CPOE aggregation:
+   Using bronze_nflfastr_plays, compute:
+   - EPA per dropback
+   - EPA per pass
+   - Success rate
+   - CPOE (if not provided, you can leave it neutral for now or derive from completion probability fields if available)
+   Aggregate at:
+   - season + player level
+   - AND (if pipeline expects it) season + week + player level
+
+   Store these in qbEpaReference / qbContextMetrics (or the appropriate QB EPA tables already defined in the schema).
+
+3. Wire EPA/CPOE into QB Role Bank:
+   - In the QB Role Bank service (where the 4-pillar score is calculated), replace the “flat 50 efficiency” logic with values sourced from qbEpaReference/qbContextMetrics.
+   - Efficiency pillar should be based on:
+     - epa_per_dropback (primary)
+     - cpoe (secondary, if available)
+     - optionally sack rate / turnover-worthy plays if already modeled
+
+4. Validation:
+   - Pick 3–5 QBs from 2025 (Mahomes, Lamar, Allen, Stroud, Jayden Daniels):
+     - SELECT their EPA/CPOE values from qbEpaReference/qbContextMetrics
+     - Confirm they are non-null and numerically reasonable (no crazy outliers like 9999).
+
+PHASE 3 – Recompute QB Role Bank (2024 + 2025)
+1. Re-run the batch script:
+   - tsx server/scripts/computeAllQBRoleBank.ts 2024
+   - tsx server/scripts/computeAllQBRoleBank.ts 2025
+
+2. Expected behavior:
+   - 2024 now uses real PBP + EPA/CPOE (no longer all BENCH_QB)
+   - 2025 efficiency pillar no longer flat 50, true alpha tiers emerge
+
+3. Return this summary back to me:
+   - Tier distribution for 2024 and 2025:
+     - Count and avg score for each: ELITE_QB1, STRONG_QB1, MID_QB1, HIGH_QB2, STREAMING_QB, BENCH_QB
+   - Specific rows for:
+     - Patrick Mahomes
+     - Josh Allen
+     - Lamar Jackson
+     - CJ Stroud
+     - Jayden Daniels
+   For each: season, games, dropbacks/g, rush att/g, epa_per_db, efficiencyScore, final roleScore, tier, and KonamiCode/SystemQB flags.
+
+Guardrails:
+- Do NOT delete or alter any existing non-QB role bank tables.
+- Do NOT hardcode any QB tiers by name; everything must come from the data.
+- If EPA/CPOE is missing for a given QB/season, default efficiencyScore to 50 ONLY for that row, and log a warning so we know where data gaps are.
