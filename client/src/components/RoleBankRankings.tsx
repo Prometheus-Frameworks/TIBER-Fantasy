@@ -357,36 +357,76 @@ export default function RoleBankRankings() {
 
               <div className="space-y-6 mt-4">
                 {/* Role Score Breakdown */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      <Award className="w-4 h-4 text-purple-400" />
-                      <div className="text-xs text-gray-500 uppercase">Role Score</div>
+                {position === 'QB' ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <Award className="w-4 h-4 text-purple-400" />
+                        <div className="text-xs text-gray-500 uppercase">Role Score</div>
+                      </div>
+                      <div className="text-2xl font-bold text-white">{selectedPlayer.roleScore}</div>
                     </div>
-                    <div className="text-2xl font-bold text-white">{selectedPlayer.roleScore}</div>
-                  </div>
-                  <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      <TrendingUp className="w-4 h-4 text-blue-400" />
-                      <div className="text-xs text-gray-500 uppercase">Volume</div>
+                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <TrendingUp className="w-4 h-4 text-blue-400" />
+                        <div className="text-xs text-gray-500 uppercase">Volume</div>
+                      </div>
+                      <div className="text-2xl font-bold text-white">{selectedPlayer.volumeScore}</div>
                     </div>
-                    <div className="text-2xl font-bold text-white">{selectedPlayer.volumeScore}</div>
-                  </div>
-                  <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      <Activity className="w-4 h-4 text-green-400" />
-                      <div className="text-xs text-gray-500 uppercase">Consistency</div>
+                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <Activity className="w-4 h-4 text-green-400" />
+                        <div className="text-xs text-gray-500 uppercase">Rushing</div>
+                      </div>
+                      <div className="text-2xl font-bold text-white">{selectedPlayer.rushingScore}</div>
                     </div>
-                    <div className="text-2xl font-bold text-white">{selectedPlayer.consistencyScore}</div>
-                  </div>
-                  <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      <Zap className="w-4 h-4 text-yellow-400" />
-                      <div className="text-xs text-gray-500 uppercase">Momentum</div>
+                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <Target className="w-4 h-4 text-orange-400" />
+                        <div className="text-xs text-gray-500 uppercase">Efficiency</div>
+                      </div>
+                      <div className="text-2xl font-bold text-white">{selectedPlayer.efficiencyScore}</div>
                     </div>
-                    <div className="text-2xl font-bold text-white">{selectedPlayer.momentumScore}</div>
+                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <Zap className="w-4 h-4 text-yellow-400" />
+                        <div className="text-xs text-gray-500 uppercase">Momentum</div>
+                      </div>
+                      <div className="text-2xl font-bold text-white">{selectedPlayer.momentumScore}</div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <Award className="w-4 h-4 text-purple-400" />
+                        <div className="text-xs text-gray-500 uppercase">Role Score</div>
+                      </div>
+                      <div className="text-2xl font-bold text-white">{selectedPlayer.roleScore}</div>
+                    </div>
+                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <TrendingUp className="w-4 h-4 text-blue-400" />
+                        <div className="text-xs text-gray-500 uppercase">Volume</div>
+                      </div>
+                      <div className="text-2xl font-bold text-white">{selectedPlayer.volumeScore}</div>
+                    </div>
+                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <Activity className="w-4 h-4 text-green-400" />
+                        <div className="text-xs text-gray-500 uppercase">Consistency</div>
+                      </div>
+                      <div className="text-2xl font-bold text-white">{selectedPlayer.consistencyScore}</div>
+                    </div>
+                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <Zap className="w-4 h-4 text-yellow-400" />
+                        <div className="text-xs text-gray-500 uppercase">Momentum</div>
+                      </div>
+                      <div className="text-2xl font-bold text-white">{selectedPlayer.momentumScore}</div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Stats Grid */}
                 <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4">
@@ -396,47 +436,125 @@ export default function RoleBankRankings() {
                       <span className="text-gray-500">Games Played</span>
                       <span className="text-white font-medium">{selectedPlayer.gamesPlayed}</span>
                     </div>
-                    {selectedPlayer.targetsPerGame !== null && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Targets/Game</span>
-                        <span className="text-white font-medium">{formatNumber(selectedPlayer.targetsPerGame)}</span>
-                      </div>
+                    
+                    {/* QB-specific stats */}
+                    {position === 'QB' && (
+                      <>
+                        {selectedPlayer.dropbacksPerGame !== undefined && selectedPlayer.dropbacksPerGame !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Dropbacks/Game</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.dropbacksPerGame, 1)}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.rushAttemptsPerGame !== undefined && selectedPlayer.rushAttemptsPerGame !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Rush Att/Game</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.rushAttemptsPerGame, 1)}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.passingAttempts !== undefined && selectedPlayer.passingAttempts !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Pass Attempts</span>
+                            <span className="text-white font-medium">{selectedPlayer.passingAttempts}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.passingYards !== undefined && selectedPlayer.passingYards !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Pass Yards</span>
+                            <span className="text-white font-medium">{selectedPlayer.passingYards}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.passingTouchdowns !== undefined && selectedPlayer.passingTouchdowns !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Pass TDs</span>
+                            <span className="text-white font-medium">{selectedPlayer.passingTouchdowns}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.interceptions !== undefined && selectedPlayer.interceptions !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">INTs</span>
+                            <span className="text-white font-medium">{selectedPlayer.interceptions}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.rushingYards !== undefined && selectedPlayer.rushingYards !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Rush Yards</span>
+                            <span className="text-white font-medium">{selectedPlayer.rushingYards}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.rushingTouchdowns !== undefined && selectedPlayer.rushingTouchdowns !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Rush TDs</span>
+                            <span className="text-white font-medium">{selectedPlayer.rushingTouchdowns}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.epaPerPlay !== undefined && selectedPlayer.epaPerPlay !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">EPA per Play</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.epaPerPlay, 3)}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.cpoe !== undefined && selectedPlayer.cpoe !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">CPOE</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.cpoe, 1)}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.sackRate !== undefined && selectedPlayer.sackRate !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Sack Rate</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.sackRate, 1)}%</span>
+                          </div>
+                        )}
+                      </>
                     )}
-                    {selectedPlayer.carriesPerGame !== null && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Carries/Game</span>
-                        <span className="text-white font-medium">{formatNumber(selectedPlayer.carriesPerGame)}</span>
-                      </div>
-                    )}
-                    {selectedPlayer.opportunitiesPerGame !== null && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Opportunities/Game</span>
-                        <span className="text-white font-medium">{formatNumber(selectedPlayer.opportunitiesPerGame)}</span>
-                      </div>
-                    )}
-                    {selectedPlayer.targetShareAvg !== null && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Target Share</span>
-                        <span className="text-white font-medium">{formatPercent(selectedPlayer.targetShareAvg)}</span>
-                      </div>
-                    )}
-                    {selectedPlayer.routesPerGame !== null && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Routes/Game</span>
-                        <span className="text-white font-medium">{formatNumber(selectedPlayer.routesPerGame)}</span>
-                      </div>
-                    )}
-                    {selectedPlayer.pprPerTarget !== null && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">PPR/Target</span>
-                        <span className="text-white font-medium">{formatNumber(selectedPlayer.pprPerTarget, 2)}</span>
-                      </div>
-                    )}
-                    {selectedPlayer.pprPerOpportunity !== null && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">PPR/Opportunity</span>
-                        <span className="text-white font-medium">{formatNumber(selectedPlayer.pprPerOpportunity, 2)}</span>
-                      </div>
+                    
+                    {/* WR/RB/TE stats */}
+                    {position !== 'QB' && (
+                      <>
+                        {selectedPlayer.targetsPerGame !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Targets/Game</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.targetsPerGame)}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.carriesPerGame !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Carries/Game</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.carriesPerGame)}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.opportunitiesPerGame !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Opportunities/Game</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.opportunitiesPerGame)}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.targetShareAvg !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Target Share</span>
+                            <span className="text-white font-medium">{formatPercent(selectedPlayer.targetShareAvg)}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.routesPerGame !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Routes/Game</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.routesPerGame)}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.pprPerTarget !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">PPR/Target</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.pprPerTarget, 2)}</span>
+                          </div>
+                        )}
+                        {selectedPlayer.pprPerOpportunity !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">PPR/Opportunity</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.pprPerOpportunity, 2)}</span>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -474,6 +592,21 @@ export default function RoleBankRankings() {
                       {selectedPlayer.flags.cardioTE && (
                         <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/50">
                           🏃 Cardio TE
+                        </Badge>
+                      )}
+                      {selectedPlayer.flags.konamiCode && (
+                        <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/50">
+                          🎮 Konami Code
+                        </Badge>
+                      )}
+                      {selectedPlayer.flags.systemQB && (
+                        <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50">
+                          ⚙️ System QB
+                        </Badge>
+                      )}
+                      {selectedPlayer.flags.garbageTimeKing && (
+                        <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/50">
+                          🗑️ Garbage Time King
                         </Badge>
                       )}
                     </div>

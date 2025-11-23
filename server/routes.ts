@@ -7127,7 +7127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/role-bank/QB/:season', async (req: Request, res: Response) => {
     try {
       const { season } = req.params;
-      const { alphaTier, limit = '100' } = req.query;
+      const { alphaTier, limit = '250', sortBy = 'alphaContextScore', order = 'desc' } = req.query;
       
       const filters: any = {
         season: parseInt(season)
@@ -7137,19 +7137,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
         filters.alphaTier = alphaTier;
       }
       
-      let results = await storage.getQBRoleBank(filters);
+      let rawResults = await storage.getQBRoleBank(filters);
+      
+      const enrichedResults = await Promise.all(
+        rawResults.map(async (r: any) => {
+          const playerInfo = await db
+            .select({
+              canonicalId: playerIdentityMap.canonicalId,
+              fullName: playerIdentityMap.fullName,
+              sleeperId: playerIdentityMap.sleeperId,
+              team: playerIdentityMap.team,
+              position: playerIdentityMap.position
+            })
+            .from(playerIdentityMap)
+            .where(eq(playerIdentityMap.nflDataPyId, r.playerId))
+            .limit(1);
+          
+          const pInfo = playerInfo[0] || {
+            canonicalId: r.playerId,
+            fullName: 'Unknown Player',
+            sleeperId: null,
+            team: null,
+            position: 'QB'
+          };
+          
+          return {
+            playerId: r.playerId,
+            canonicalId: pInfo.canonicalId,
+            sleeperId: pInfo.sleeperId,
+            playerName: pInfo.fullName,
+            team: pInfo.team,
+            position: pInfo.position as 'QB',
+            roleScore: r.alphaContextScore,
+            roleTier: r.alphaTier,
+            gamesPlayed: r.gamesPlayed,
+            targetsPerGame: null,
+            carriesPerGame: null,
+            opportunitiesPerGame: null,
+            targetShareAvg: null,
+            routesPerGame: null,
+            pprPerTarget: null,
+            pprPerOpportunity: null,
+            redZoneTargetsPerGame: null,
+            redZoneTouchesPerGame: null,
+            dropbacksPerGame: r.dropbacksPerGame,
+            rushAttemptsPerGame: r.rushAttemptsPerGame,
+            redZoneDropbacksPerGame: r.redZoneDropbacksPerGame,
+            redZoneRushesPerGame: r.redZoneRushesPerGame,
+            epaPerPlay: r.epaPerPlay,
+            cpoe: r.cpoe,
+            sackRate: r.sackRate,
+            passingAttempts: r.passingAttempts,
+            passingYards: r.passingYards,
+            passingTouchdowns: r.passingTouchdowns,
+            interceptions: r.interceptions,
+            rushingYards: r.rushingYards,
+            rushingTouchdowns: r.rushingTouchdowns,
+            volumeScore: r.volumeScore,
+            consistencyScore: null,
+            highValueUsageScore: null,
+            momentumScore: r.momentumScore,
+            efficiencyScore: r.efficiencyScore,
+            rushingScore: r.rushingScore,
+            flags: {
+              konamiCode: r.konamiCodeFlag,
+              systemQB: r.systemQBFlag,
+              garbageTimeKing: r.garbageTimeKingFlag
+            }
+          };
+        })
+      );
       
       const limitNum = parseInt(limit as string);
-      if (limitNum > 0) {
-        results = results.slice(0, limitNum);
-      }
+      const finalResults = limitNum > 0 ? enrichedResults.slice(0, limitNum) : enrichedResults;
       
       res.json({
         success: true,
         season: parseInt(season),
+        position: 'QB' as const,
         filters: filters.alphaTier ? { alphaTier: filters.alphaTier } : {},
-        count: results.length,
-        data: results
+        count: finalResults.length,
+        results: finalResults
       });
     } catch (error) {
       console.error('❌ [QB Role Bank Get] Failed:', error);
