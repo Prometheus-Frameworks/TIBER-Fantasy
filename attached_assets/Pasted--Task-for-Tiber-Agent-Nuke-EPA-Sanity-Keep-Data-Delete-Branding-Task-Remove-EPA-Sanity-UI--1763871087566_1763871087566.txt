@@ -1,0 +1,53 @@
+🔹 Task for Tiber Agent – Nuke EPA Sanity (Keep Data, Delete Branding)
+
+Task: Remove EPA Sanity UI + “Ben Baldwin” References (Preserve Data)
+
+I want to completely remove the EPA Sanity feature from the app, but DO NOT delete any underlying EPA data, tables, or processors. This is a UI/branding cleanup, not a data purge.
+
+Goals:
+	•	Remove the EPA Sanity page/tab from the sidebar and any navigation.
+	•	Remove any routes/endpoints that are ONLY used by the EPA Sanity page.
+	•	Scrub all mentions of “Ben Baldwin” from the codebase (UI labels, comments, docs, etc.).
+	•	Keep all EPA-related data tables and calculation services intact (EPA models, team EPA, player EPA, etc.).
+
+1. Frontend Cleanup
+	1.	Find and remove:
+	•	The sidebar/tab entry for “EPA Sanity”
+	•	Any React component specifically dedicated to the EPA Sanity page (e.g. EpaSanityTab, EpaSanityPage, etc.).
+	2.	Make sure that after removal, the sidebar renders cleanly with no broken imports.
+
+2. Backend Routes Cleanup
+	1.	In routes.ts (or wherever API routes live), find any endpoints that are clearly only used by the EPA Sanity page. Example patterns might include:
+	•	/api/epa-sanity/*
+	•	/api/epa/validation
+	•	anything explicitly referencing “sanity” or “Ben Baldwin”
+	2.	Remove those EPA Sanity–specific endpoints only if they are not used anywhere else in the app.
+	3.	Do not remove:
+	•	Core EPA calculation services
+	•	Team EPA endpoints
+	•	Any general-purpose EPA endpoints that Rankings or future Analytics might depend on.
+
+3. Scrub “Ben Baldwin” References
+	1.	Search the codebase (TS/TSX/MD/MDX/README/etc.) for:
+	•	"Ben Baldwin"
+	•	"Baldwin"
+	2.	For each occurrence:
+	•	If it’s UI text for the EPA Sanity feature → remove with the feature.
+	•	If it’s just text or a label → replace with a neutral description like "External EPA model reference" or remove entirely.
+	3.	Make sure there is no visible text in the UI and no obvious reference in docs/comments that names him directly.
+
+4. Safety Checks
+	1.	After changes:
+	•	App should build and run with no TypeScript or runtime errors.
+	•	Sidebar should no longer show “EPA Sanity”.
+	•	Any direct navigation to the EPA Sanity route should now 404 or no longer exist.
+	2.	Confirm that:
+	•	team EPA, player EPA, and any other EPA-related tables or services are still present in the codebase.
+
+5. Report Back
+
+When you’re done, please report back with:
+	•	Files modified (list)
+	•	Endpoints removed (if any)
+	•	Confirmation that no "Ben Baldwin" string exists anywhere in the repo
+	•	Confirmation that EPA tables / services are untouched.
