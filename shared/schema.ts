@@ -3283,6 +3283,10 @@ export const wrRoleBank = pgTable("wr_role_bank", {
   // Final Composite Score (0-100)
   roleScore: integer("role_score").notNull(),
   
+  // v2.0 Fantasy Efficiency Blend - Debug Scores
+  pureRoleScore: integer("pure_role_score"),           // v1.2 original score
+  efficiencyScore: integer("efficiency_score"),        // Fantasy efficiency component
+  
   // Role Classification
   roleTier: wrRoleTierEnum("role_tier").notNull(),
   

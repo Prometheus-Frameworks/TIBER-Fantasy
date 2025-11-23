@@ -60,6 +60,10 @@ export interface WRRoleBankSeasonRow {
 
   // Final composite
   roleScore: number;           // 0–100
+  
+  // v2.0 Fantasy Efficiency Blend - Debug Scores
+  pureRoleScore?: number;      // v1.2 original score
+  efficiencyScore?: number;    // Fantasy efficiency component
 
   // Labels / flags
   roleTier: WRRoleTier;
@@ -188,6 +192,22 @@ function computeMomentumScore(
   return 20;
 }
 
+// v2.0: Fantasy Efficiency Score - Pure PPR efficiency metric
+function getFantasyEfficiencyScore(
+  pprPerTarget: number | null,
+  gamesPlayed: number
+): number {
+  if (!pprPerTarget || gamesPlayed < 4) return 50;
+
+  if (pprPerTarget >= 2.40) return 100;
+  if (pprPerTarget >= 2.20) return 92;
+  if (pprPerTarget >= 2.00) return 84;
+  if (pprPerTarget >= 1.85) return 76;
+  if (pprPerTarget >= 1.70) return 68;
+  if (pprPerTarget >= 1.55) return 60;
+  return 50;
+}
+
 // ---- Main computation ----
 
 export function computeWRRoleBankSeasonRow(
@@ -310,11 +330,28 @@ export function computeWRRoleBankSeasonRow(
   );
 
   // v1.2: Updated weights - Volume 58%, Consistency 18%, High-Value 18% (12% deep + 6% slot), Momentum 6%
-  const roleScore =
+  const v12RoleScore =
     0.58 * volumeScore +
     0.18 * consistencyScore +
     0.18 * highValueUsageScore +
     0.06 * momentumScore;
+
+  // Save the original v1.2 score
+  const pureRoleScore = v12RoleScore;
+
+  // NEW v2.0: Fantasy efficiency component
+  const efficiencyScore = getFantasyEfficiencyScore(
+    pprPerTarget,
+    gamesPlayed
+  );
+
+  // FINAL v2.0 blended score (70% v1.2 + 30% efficiency)
+  const finalRoleScore = Math.round(
+    0.70 * pureRoleScore +
+    0.30 * efficiencyScore
+  );
+
+  const roleScore = finalRoleScore;
 
   // ---- Role tier + flags ----
 
@@ -405,6 +442,10 @@ export function computeWRRoleBankSeasonRow(
     momentumScore: Math.round(momentumScore),
 
     roleScore: Math.round(roleScore),
+    
+    // v2.0 debug scores
+    pureRoleScore: Math.round(pureRoleScore),
+    efficiencyScore: Math.round(efficiencyScore),
 
     roleTier,
     cardioWrFlag,
