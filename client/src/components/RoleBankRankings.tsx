@@ -9,13 +9,14 @@ type Season = 2024 | 2025;
 
 interface RoleBankPlayer {
   playerId: string;
-  canonicalId: string;
-  sleeperId: string;
+  canonicalId?: string;
+  sleeperId?: string;
   playerName: string;
   team: string | null;
-  position: Position;
+  position?: Position;
   roleScore: number;
-  roleTier: string;
+  roleTier?: string;
+  tier?: string;  // Fantasy rankings uses "tier" instead of "roleTier"
   gamesPlayed: number;
   // Position-specific metrics
   targetsPerGame: number | null;
@@ -27,6 +28,13 @@ interface RoleBankPlayer {
   pprPerOpportunity: number | null;
   redZoneTargetsPerGame: number | null;
   redZoneTouchesPerGame: number | null;
+  // Fantasy-specific scores (only present in fantasy rankings)
+  fantasyWRScore?: number;
+  volumeIndex?: number;
+  ppgIndex?: number;
+  spiceIndex?: number;
+  fantasyPointsPprPerGame?: number;
+  pureRoleScore?: number | null;
   // QB-specific metrics
   dropbacksPerGame?: number | null;
   rushAttemptsPerGame?: number | null;
@@ -107,13 +115,31 @@ export default function RoleBankRankings() {
   const [season, setSeason] = useState<Season>(2025);
   const [selectedPlayer, setSelectedPlayer] = useState<RoleBankPlayer | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  // View mode: "fantasy" (default for WR) or "season" (role context)
+  const [viewMode, setViewMode] = useState<'fantasy' | 'season'>(position === 'WR' ? 'fantasy' : 'season');
+
+  // Update view mode when position changes (WR defaults to fantasy, others to season)
+  const handlePositionChange = (newPosition: Position) => {
+    setPosition(newPosition);
+    setViewMode(newPosition === 'WR' ? 'fantasy' : 'season');
+  };
 
   const { data, isLoading } = useQuery<RoleBankResponse>({
-    queryKey: ['/api/role-bank', position, season],
+    queryKey: [viewMode === 'fantasy' ? '/api/fantasy-rankings' : '/api/role-bank', position, season, viewMode],
     queryFn: async () => {
-      const res = await fetch(`/api/role-bank/${position}/${season}?limit=250&sortBy=roleScore&order=desc`);
-      if (!res.ok) throw new Error('Failed to fetch Role Bank data');
-      return res.json();
+      const endpoint = viewMode === 'fantasy' && position === 'WR'
+        ? `/api/fantasy-rankings/${position}/${season}?limit=250`
+        : `/api/role-bank/${position}/${season}?limit=250&sortBy=roleScore&order=desc`;
+      const res = await fetch(endpoint);
+      if (!res.ok) throw new Error('Failed to fetch data');
+      const json = await res.json();
+      // Normalize response structure
+      return {
+        season: json.season,
+        position: position,
+        count: json.count,
+        results: json.data || json.results
+      };
     }
   });
 
@@ -152,7 +178,7 @@ export default function RoleBankRankings() {
       </div>
 
       {/* Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Position Selector */}
         <div className="space-y-2">
           <label className="text-xs text-gray-500 uppercase tracking-wider font-medium">Position</label>
@@ -160,7 +186,7 @@ export default function RoleBankRankings() {
             {(['WR', 'RB', 'TE', 'QB'] as Position[]).map(pos => (
               <button
                 key={pos}
-                onClick={() => setPosition(pos)}
+                onClick={() => handlePositionChange(pos)}
                 className={`px-6 py-2.5 rounded font-medium transition-all tracking-wide ${
                   position === pos
                     ? 'bg-gradient-to-r from-blue-600/30 to-purple-600/30 border border-blue-500/50 text-white shadow-lg shadow-blue-500/20'
@@ -194,6 +220,37 @@ export default function RoleBankRankings() {
             ))}
           </div>
         </div>
+
+        {/* View Mode Toggle (WR only) */}
+        {position === 'WR' && (
+          <div className="space-y-2">
+            <label className="text-xs text-gray-500 uppercase tracking-wider font-medium">View Mode</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setViewMode('fantasy')}
+                className={`px-4 py-2.5 rounded font-medium transition-all tracking-wide text-sm ${
+                  viewMode === 'fantasy'
+                    ? 'bg-gradient-to-r from-amber-600/30 to-orange-600/30 border border-amber-500/50 text-white shadow-lg shadow-amber-500/20'
+                    : 'bg-[#0d0e11] text-gray-400 hover:text-gray-300 border border-gray-800/50 hover:border-gray-700'
+                }`}
+                data-testid="button-view-fantasy"
+              >
+                Fantasy Rankings
+              </button>
+              <button
+                onClick={() => setViewMode('season')}
+                className={`px-4 py-2.5 rounded font-medium transition-all tracking-wide text-sm ${
+                  viewMode === 'season'
+                    ? 'bg-gradient-to-r from-amber-600/30 to-orange-600/30 border border-amber-500/50 text-white shadow-lg shadow-amber-500/20'
+                    : 'bg-[#0d0e11] text-gray-400 hover:text-gray-300 border border-gray-800/50 hover:border-gray-700'
+                }`}
+                data-testid="button-view-season"
+              >
+                Season Roles
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Results Count */}
@@ -218,7 +275,17 @@ export default function RoleBankRankings() {
                 <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">GP</th>
                 
                 {/* Position-specific columns */}
-                {position === 'WR' && (
+                {position === 'WR' && viewMode === 'fantasy' && (
+                  <>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Fantasy PPG</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Tgt/G</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Tgt Share</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Vol</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">PPG</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Spice</th>
+                  </>
+                )}
+                {position === 'WR' && viewMode === 'season' && (
                   <>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Tgt/G</th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Tgt Share</th>
@@ -261,7 +328,12 @@ export default function RoleBankRankings() {
                 ))
               ) : (
                 data?.results.map((player, idx) => {
-                  const tierStyle = getTierStyle(player.roleTier);
+                  const tierStyle = getTierStyle(player.roleTier || player.tier || 'UNKNOWN');
+                  const displayScore = viewMode === 'fantasy' && player.fantasyWRScore 
+                    ? player.fantasyWRScore 
+                    : player.roleScore;
+                  const displayTier = player.roleTier || player.tier || 'UNKNOWN';
+                  
                   return (
                     <tr
                       key={player.playerId}
@@ -280,16 +352,26 @@ export default function RoleBankRankings() {
                       </td>
                       <td className="px-4 py-3">
                         <span className={`px-2.5 py-1 rounded text-xs font-bold border ${tierStyle.bg} ${tierStyle.text} ${tierStyle.border}`}>
-                          {player.roleTier}
+                          {displayTier}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className="font-bold text-white">{formatNumber(player.roleScore, 0)}</span>
+                        <span className="font-bold text-white">{formatNumber(displayScore, 0)}</span>
                       </td>
                       <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.gamesPlayed, 0)}</td>
                       
                       {/* Position-specific data */}
-                      {position === 'WR' && (
+                      {position === 'WR' && viewMode === 'fantasy' && (
+                        <>
+                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.fantasyPointsPprPerGame)}</td>
+                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.targetsPerGame)}</td>
+                          <td className="px-4 py-3 text-center text-gray-300">{formatPercent(player.targetShareAvg)}</td>
+                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.volumeIndex, 0)}</td>
+                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.ppgIndex, 0)}</td>
+                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.spiceIndex, 0)}</td>
+                        </>
+                      )}
+                      {position === 'WR' && viewMode === 'season' && (
                         <>
                           <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.targetsPerGame)}</td>
                           <td className="px-4 py-3 text-center text-gray-300">{formatPercent(player.targetShareAvg)}</td>
