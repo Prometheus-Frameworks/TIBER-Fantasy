@@ -7,7 +7,6 @@ import MatchupsTab from '@/components/tabs/MatchupsTab';
 import StrategyTab from '@/components/tabs/StrategyTab';
 import MovesTab from '@/components/tabs/MovesTab';
 import LeaguesTab from '@/components/tabs/LeaguesTab';
-import EPASanityTab from '@/components/tabs/EPASanityTab';
 import EPARankingsTab from '@/components/tabs/EPARankingsTab';
 import QBStatsReviewTab from '@/components/tabs/QBStatsReviewTab';
 import WeeklyTakesTab from '@/components/tabs/WeeklyTakesTab';
@@ -23,7 +22,6 @@ const tabs = [
   { id: 'weekly-takes', label: 'Weekly Takes', icon: Lightbulb, component: WeeklyTakesTab },
   { id: 'moves', label: 'Moves', icon: Shuffle, component: MovesTab },
   { id: 'leagues', label: 'Leagues', icon: Users, component: LeaguesTab },
-  { id: 'epa-sanity', label: 'EPA Sanity', icon: FlaskConical, component: EPASanityTab },
 ];
 
 function TiberDashboard() {

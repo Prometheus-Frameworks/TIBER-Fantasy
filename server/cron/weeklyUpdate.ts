@@ -6,7 +6,6 @@
 import cron from 'node-cron';
 import { weeklyHotListETL } from '../etl/weeklyHotListUpdate';
 import { nightlyBuysSellsETL } from '../etl/nightlyBuysSellsUpdate';
-import { setupEPASanityCheckCron } from './epaSanityCheck';
 import { setupRBContextCheckCron } from './rbContextCheck';
 import { setupInjurySyncCron } from './injurySync';
 
@@ -113,7 +112,6 @@ export function setupAllCronJobs() {
   setupNightlyBuysSellsCron();
   setupWeeklyDataProcessing();
   setupInjurySyncCron();
-  setupEPASanityCheckCron();
   setupRBContextCheckCron();
   
   console.log('✅ All cron jobs initialized successfully');

@@ -64,7 +64,6 @@ import { nightlyProcessingRoutes } from './routes/nightlyProcessingRoutes';
 import etlRoutes from './routes/etlRoutes';
 import matchupRoutes from './routes/matchupRoutes';
 import strategyRoutes from './routes/strategyRoutes';
-import epaSanityCheckRoutes from './routes/epaSanityCheckRoutes';
 import playerComparisonRoutes from './routes/playerComparisonRoutes';
 import silverLayerRoutes from './routes/silverLayerRoutes';
 import rookieRoutes from './routes/rookieRoutes';
@@ -3015,10 +3014,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Reports
   app.use('/api/team-reports', teamReportsRoutes);
   console.log('🏈 Team Reports routes mounted at /api/team-reports/*');
-  
-  // EPA Sanity Check System
-  app.use('/api/sanity-check', epaSanityCheckRoutes);
-  console.log('🔬 EPA Sanity Check routes mounted at /api/sanity-check/*');
   
   // Role Bank v1.0 - WR/RB/TE position-specific role classifications
   registerRoleBankRoutes(app);
