@@ -6171,6 +6171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           playerId: weeklyStats.playerId,
           playerName: weeklyStats.playerName,
           team: weeklyStats.team,
+          position: weeklyStats.position,
           gamesPlayed: sql<number>`COUNT(DISTINCT ${weeklyStats.week})::int`,
           totalTargets: sql<number>`SUM(COALESCE(${weeklyStats.targets}, 0))::int`,
           totalFantasyPoints: sql<number>`SUM(COALESCE(${weeklyStats.fantasyPointsPpr}, 0))::real`,
@@ -6182,7 +6183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(weeklyStats.position, 'WR')
           )
         )
-        .groupBy(weeklyStats.playerId, weeklyStats.playerName, weeklyStats.team)
+        .groupBy(weeklyStats.playerId, weeklyStats.playerName, weeklyStats.team, weeklyStats.position)
         .having(sql`COUNT(DISTINCT ${weeklyStats.week}) >= 4`);
 
       // Calculate points per target and sort
