@@ -3256,6 +3256,8 @@ export const wrRoleBank = pgTable("wr_role_bank", {
   
   // Efficiency Metrics
   pprPerTarget: real("ppr_per_target"),
+  deepTargetsPerGame: real("deep_targets_per_game"),  // v1.1: 20+ air yards targets per game
+  deepTargetRate: real("deep_target_rate"),           // v1.1: deepTargets / totalTargets
   
   // Alignment Flavor (Estimates)
   slotRouteShareEst: real("slot_route_share_est"),

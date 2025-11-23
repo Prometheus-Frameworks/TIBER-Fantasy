@@ -1781,6 +1781,8 @@ export class DatabaseStorage implements IStorage {
         targetStdDev: roleRow.targetStdDev,
         fantasyStdDev: roleRow.fantasyStdDev,
         pprPerTarget: roleRow.pprPerTarget,
+        deepTargetsPerGame: roleRow.deepTargetsPerGame,     // v1.1
+        deepTargetRate: roleRow.deepTargetRate,             // v1.1
         slotRouteShareEst: roleRow.slotRouteShareEst,
         outsideRouteShareEst: roleRow.outsideRouteShareEst,
         volumeScore: roleRow.volumeScore,
@@ -1804,6 +1806,8 @@ export class DatabaseStorage implements IStorage {
           targetStdDev: roleRow.targetStdDev,
           fantasyStdDev: roleRow.fantasyStdDev,
           pprPerTarget: roleRow.pprPerTarget,
+          deepTargetsPerGame: roleRow.deepTargetsPerGame,     // v1.1
+          deepTargetRate: roleRow.deepTargetRate,             // v1.1
           slotRouteShareEst: roleRow.slotRouteShareEst,
           outsideRouteShareEst: roleRow.outsideRouteShareEst,
           volumeScore: roleRow.volumeScore,
@@ -1862,6 +1866,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getWeeklyUsageForRoleBank(playerId: string, season: number): Promise<any[]> {
+    // First get basic weekly stats
     const results = await db
       .select({
         playerId: weeklyStats.playerId,
@@ -1888,6 +1893,25 @@ export class DatabaseStorage implements IStorage {
       ))
       .orderBy(weeklyStats.week);
     
+    // Get deep target counts from play-by-play data
+    const deepTargetsQuery = await db.execute(sql`
+      SELECT 
+        week,
+        COUNT(*) FILTER (WHERE air_yards >= 20) as deep_targets_20_plus
+      FROM bronze_nflfastr_plays
+      WHERE receiver_player_id = ${playerId}
+        AND season = ${season}
+        AND play_type = 'pass'
+        AND (complete_pass = true OR incomplete_pass = true)
+      GROUP BY week
+    `);
+    
+    // Map deep targets by week
+    const deepTargetsByWeek = new Map<number, number>();
+    for (const row of deepTargetsQuery.rows as any[]) {
+      deepTargetsByWeek.set(row.week, row.deep_targets_20_plus || 0);
+    }
+    
     return results.map(r => ({
       playerId: r.playerId,
       season: r.season,
@@ -1899,7 +1923,8 @@ export class DatabaseStorage implements IStorage {
       fantasyPointsPpr: r.fantasyPointsPpr,
       routesSlot: r.routesSlot,
       routesOutside: r.routesOutside,
-      routesInline: r.routesInline
+      routesInline: r.routesInline,
+      deepTargets20Plus: deepTargetsByWeek.get(r.week) || 0
     }));
   }
   

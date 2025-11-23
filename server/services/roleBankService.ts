@@ -12,6 +12,7 @@ export interface WeeklyWRUsageRow {
   targetSharePct: number | null;        // 0–1 (if present)
   routes: number | null;               // can be estimated from ingestion
   fantasyPointsPpr: number | null;
+  deepTargets20Plus?: number | null;    // v1.1: deep targets (20+ air yards) from play-by-play
 
   routesSlot?: number | null;          // estimated slot routes
   routesOutside?: number | null;       // estimated outside routes
@@ -42,8 +43,10 @@ export interface WRRoleBankSeasonRow {
   targetStdDev: number | null;
   fantasyStdDev: number | null;
 
-  // High-value usage proxy
+  // High-value usage (v1.1: deep target rate)
   pprPerTarget: number | null;
+  deepTargetsPerGame: number | null;   // v1.1: 20+ air yards targets per game
+  deepTargetRate: number | null;       // v1.1: deepTargets / totalTargets
 
   // Alignment flavor (estimates)
   slotRouteShareEst: number | null;    // 0–1
@@ -140,6 +143,21 @@ function scalePprPerTarget(pprPerTarget: number | null): number {
   return 30;
 }
 
+// v1.1: Deep target rate (20+ air yards) → 0–100
+// This measures high-value usage objectively without needing RZ/EZ data
+function scaleDeepTargetRate(deepTargetRate: number | null, totalTargets: number): number {
+  if (deepTargetRate === null || totalTargets < 30) return 50; // Insufficient sample
+  
+  // Deep target rate thresholds (league-typical for WR1s)
+  if (deepTargetRate >= 0.30) return 100; // Elite deep threat (30%+ deep targets)
+  if (deepTargetRate >= 0.25) return 90;  // Strong deep role
+  if (deepTargetRate >= 0.20) return 75;  // Moderate deep role
+  if (deepTargetRate >= 0.15) return 60;  // Some deep usage
+  if (deepTargetRate >= 0.10) return 45;  // Limited deep role
+  if (deepTargetRate >= 0.05) return 30;  // Minimal deep usage
+  return 20; // Pure underneath/screen WR
+}
+
 // Momentum based on delta in targets per game (last 3 vs season)
 function computeMomentumScore(
   seasonTargetsPerGame: number | null,
@@ -213,6 +231,14 @@ export function computeWRRoleBankSeasonRow(
   const pprPerTarget =
     totalTargets > 0 ? totalFantasy / totalTargets : null;
 
+  // v1.1: Calculate deep target metrics
+  const validDeepTargets = sorted
+    .map(r => r.deepTargets20Plus ?? 0)
+    .filter(v => v >= 0);
+  const totalDeepTargets = validDeepTargets.reduce((acc, v) => acc + v, 0);
+  const deepTargetsPerGame = gamesPlayed > 0 ? totalDeepTargets / gamesPlayed : null;
+  const deepTargetRate = totalTargets > 0 ? totalDeepTargets / totalTargets : null;
+
   const totalRoutesAll =
     sorted.reduce((acc, r) => acc + (r.routes ?? 0), 0) || 0;
   const totalSlotRoutes =
@@ -242,7 +268,8 @@ export function computeWRRoleBankSeasonRow(
 
   const consistencyScore = scaleConsistencyFromStdDev(targetStdDev);
 
-  const highValueUsageScore = scalePprPerTarget(pprPerTarget);
+  // v1.1: Use deep target rate for high-value usage instead of PPR per target
+  const highValueUsageScore = scaleDeepTargetRate(deepTargetRate, totalTargets);
 
   const last3 = sorted.slice(-3);
   const last3Targets = last3
@@ -259,9 +286,10 @@ export function computeWRRoleBankSeasonRow(
     recentTargetsPerGame
   );
 
+  // v1.1: Updated weights - Volume 55%, Consistency 15%, High-Value 20%, Momentum 10%
   const roleScore =
-    0.45 * volumeScore +
-    0.25 * consistencyScore +
+    0.55 * volumeScore +
+    0.15 * consistencyScore +
     0.20 * highValueUsageScore +
     0.10 * momentumScore;
 
@@ -342,6 +370,8 @@ export function computeWRRoleBankSeasonRow(
     fantasyStdDev,
 
     pprPerTarget,
+    deepTargetsPerGame,     // v1.1
+    deepTargetRate,         // v1.1
 
     slotRouteShareEst,
     outsideRouteShareEst,
