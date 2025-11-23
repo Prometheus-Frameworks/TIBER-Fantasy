@@ -133,7 +133,7 @@ def calculate_weekly_stats(pbp, nfl_weekly, week, season, player_filter=None):
         # Better estimate: count of team's pass plays where player was on field
         team_pass_plays = receiving_plays.groupby('posteam')['pass_attempt'].sum().to_dict()
         
-        # For route alignment, estimate based on pass_location
+        # For route alignment, use pass_location to determine slot vs outside
         alignment_data = receiving_plays.groupby(['receiver_player_id', 'pass_location']).size().unstack(fill_value=0)
         
         for _, row in receiver_stats.iterrows():
@@ -165,10 +165,31 @@ def calculate_weekly_stats(pbp, nfl_weekly, week, season, player_filter=None):
             team_total_targets = receiver_stats[receiver_stats['team'] == team]['targets'].sum()
             target_share_pct = round((targets / team_total_targets * 100), 2) if team_total_targets > 0 else 0
             
-            # Estimate alignment (outside/slot) from pass_location if available
-            routes_outside = int(targets * 0.60)  # Conservative estimate
-            routes_slot = int(targets * 0.30)
-            routes_inline = int(targets * 0.10)
+            # Calculate slot alignment based on pass_location (Slot Alignment v1.0)
+            # Use 'middle' as proxy for slot routes, 'left'/'right' as outside routes
+            targets_middle = 0
+            targets_left = 0
+            targets_right = 0
+            
+            if player_id in alignment_data.index:
+                player_alignment = alignment_data.loc[player_id]
+                targets_middle = int(player_alignment.get('middle', 0))
+                targets_left = int(player_alignment.get('left', 0))
+                targets_right = int(player_alignment.get('right', 0))
+            
+            total_location_targets = targets_middle + targets_left + targets_right
+            
+            # Calculate slot share from pass location
+            if total_location_targets > 0:
+                slot_share_week = targets_middle / total_location_targets
+            else:
+                # Fallback to league average if no location data (~35% slot)
+                slot_share_week = 0.35
+            
+            # Apply slot share to routes to get alignment estimates
+            routes_slot = round(routes_estimate * slot_share_week)
+            routes_outside = routes_estimate - routes_slot
+            routes_inline = 0  # Not tracked separately in v1.0
             
             # Calculate fantasy points
             fantasy_ppr = receptions + (rec_yards * 0.1) + (rec_tds * 6)

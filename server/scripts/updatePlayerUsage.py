@@ -68,11 +68,9 @@ def calculate_week_usage(pbp, week, season):
         team_routes = pbp_week[pbp_week['pass_attempt'] == 1].groupby('posteam').size().to_dict()
         receiver_stats['routes_total'] = receiver_stats['team'].map(team_routes)
         
-        # Estimate alignment (65% outside, 35% slot for now)
-        receiver_stats['routes_outside'] = (receiver_stats['targets'] * 0.65).astype(int)
-        receiver_stats['routes_slot'] = (receiver_stats['targets'] * 0.35).astype(int)
-        receiver_stats['alignment_outside_pct'] = (receiver_stats['routes_outside'] / receiver_stats['routes_total'] * 100).round(2)
-        receiver_stats['alignment_slot_pct'] = (receiver_stats['routes_slot'] / receiver_stats['routes_total'] * 100).round(2)
+        # Calculate slot alignment based on pass_location (Slot Alignment v1.0)
+        # Use 'middle' as proxy for slot routes, 'left'/'right' as outside routes
+        alignment_data = targets.groupby(['receiver_player_id', 'pass_location']).size().unstack(fill_value=0)
         
         # Target share per team
         team_targets = receiver_stats.groupby('team')['targets'].sum().to_dict()
@@ -81,16 +79,51 @@ def calculate_week_usage(pbp, week, season):
         ).round(2)
         
         for _, row in receiver_stats.iterrows():
+            player_id = row['player_id']
+            targets_total = int(row['targets'])
+            routes_total = int(row['routes_total'])
+            
+            # Get pass location data for this player
+            targets_middle = 0
+            targets_left = 0
+            targets_right = 0
+            
+            if player_id in alignment_data.index:
+                player_alignment = alignment_data.loc[player_id]
+                targets_middle = int(player_alignment.get('middle', 0))
+                targets_left = int(player_alignment.get('left', 0))
+                targets_right = int(player_alignment.get('right', 0))
+            
+            total_location_targets = targets_middle + targets_left + targets_right
+            
+            # Calculate slot share from pass location
+            if total_location_targets > 0:
+                slot_share_week = targets_middle / total_location_targets
+            else:
+                # Fallback to league average if no location data (~35% slot)
+                slot_share_week = 0.35
+            
+            # Estimate routes using targets * 2.0 multiplier
+            routes_estimate = int(targets_total * 2.0)
+            
+            # Apply slot share to routes
+            routes_slot = round(routes_estimate * slot_share_week)
+            routes_outside = routes_estimate - routes_slot
+            
+            # Calculate alignment percentages
+            alignment_slot_pct = round((routes_slot / routes_total * 100), 2) if routes_total > 0 else 0
+            alignment_outside_pct = round((routes_outside / routes_total * 100), 2) if routes_total > 0 else 0
+            
             usage_records.append({
-                'player_id': row['player_id'],
+                'player_id': player_id,
                 'week': week,
                 'season': season,
-                'targets': int(row['targets']),
-                'routes_total': int(row['routes_total']),
-                'routes_outside': int(row['routes_outside']),
-                'routes_slot': int(row['routes_slot']),
-                'alignment_outside_pct': float(row['alignment_outside_pct']),
-                'alignment_slot_pct': float(row['alignment_slot_pct']),
+                'targets': targets_total,
+                'routes_total': routes_total,
+                'routes_outside': routes_outside,
+                'routes_slot': routes_slot,
+                'alignment_outside_pct': alignment_outside_pct,
+                'alignment_slot_pct': alignment_slot_pct,
                 'target_share_pct': float(row['target_share_pct']),
             })
     
