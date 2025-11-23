@@ -1926,7 +1926,7 @@ export class DatabaseStorage implements IStorage {
       routesSlot: r.routesSlot,
       routesOutside: r.routesOutside,
       routesInline: r.routesInline,
-      deepTargets20Plus: deepTargetsByWeek.get(r.week) || 0
+      deepTargets20Plus: deepTargetsByWeek.has(r.week) ? deepTargetsByWeek.get(r.week)! : null
     }));
   }
   

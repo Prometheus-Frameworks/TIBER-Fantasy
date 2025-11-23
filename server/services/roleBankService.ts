@@ -232,12 +232,23 @@ export function computeWRRoleBankSeasonRow(
     totalTargets > 0 ? totalFantasy / totalTargets : null;
 
   // v1.1: Calculate deep target metrics
-  const validDeepTargets = sorted
-    .map(r => r.deepTargets20Plus ?? 0)
-    .filter(v => v >= 0);
-  const totalDeepTargets = validDeepTargets.reduce((acc, v) => acc + v, 0);
+  // CRITICAL: Only include weeks that have play-by-play data (deepTargets20Plus exists)
+  // to avoid denominator mismatch when play-by-play data lags behind weekly stats
+  const weeksWithPlayByPlay = sorted.filter(r => 
+    r.deepTargets20Plus !== undefined && r.deepTargets20Plus !== null
+  );
+  
+  const totalDeepTargets = weeksWithPlayByPlay.reduce(
+    (acc, r) => acc + (r.deepTargets20Plus ?? 0), 0
+  );
+  const totalTargetsWithPlayByPlay = weeksWithPlayByPlay.reduce(
+    (acc, r) => acc + (r.targets ?? 0), 0
+  );
+  
   const deepTargetsPerGame = gamesPlayed > 0 ? totalDeepTargets / gamesPlayed : null;
-  const deepTargetRate = totalTargets > 0 ? totalDeepTargets / totalTargets : null;
+  const deepTargetRate = totalTargetsWithPlayByPlay > 0 
+    ? totalDeepTargets / totalTargetsWithPlayByPlay 
+    : null;
 
   const totalRoutesAll =
     sorted.reduce((acc, r) => acc + (r.routes ?? 0), 0) || 0;

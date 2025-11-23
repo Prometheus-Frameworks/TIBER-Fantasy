@@ -10,7 +10,7 @@ import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generat
 // Removed deprecated imports
 import { PlayerFilteringService } from "./playerFiltering";
 import { db } from "./infra/db";
-import { dynastyTradeHistory, players as playersTable, playerWeekFacts, chunks, chatSessions, chatMessages, waiverCandidates, sleeperOwnership } from "@shared/schema";
+import { dynastyTradeHistory, players as playersTable, playerWeekFacts, chunks, chatSessions, chatMessages, waiverCandidates, sleeperOwnership, playerIdentityMap } from "@shared/schema";
 import { eq, desc, and, sql, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 // Removed deprecated fantasy services
@@ -6757,6 +6757,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('❌ [Role Bank Get Player] Failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/role-bank/WR/:season - Get all WR role bank data with player enrichment
+  app.get('/api/role-bank/WR/:season', async (req: Request, res: Response) => {
+    try {
+      const { season } = req.params;
+      const { roleTier, limit = '250', sortBy = 'roleScore', order = 'desc' } = req.query;
+      
+      const filters: any = {
+        season: parseInt(season)
+      };
+      
+      if (roleTier) {
+        filters.roleTier = roleTier;
+      }
+      
+      let rawResults = await storage.getWRRoleBank(filters);
+      
+      const enrichedResults = await Promise.all(
+        rawResults.map(async (r: any) => {
+          // Debug: Log first result
+          if (rawResults.indexOf(r) === 0) {
+            console.log('[DEBUG] First raw result:', JSON.stringify({
+              playerId: r.playerId,
+              deepTargetsPerGame: r.deepTargetsPerGame,
+              deepTargetRate: r.deepTargetRate
+            }));
+          }
+          
+          const playerInfo = await db
+            .select({
+              canonicalId: playerIdentityMap.canonicalId,
+              fullName: playerIdentityMap.fullName,
+              sleeperId: playerIdentityMap.sleeperId,
+              team: playerIdentityMap.team,
+              position: playerIdentityMap.position
+            })
+            .from(playerIdentityMap)
+            .where(eq(playerIdentityMap.nflDataPyId, r.playerId))
+            .limit(1);
+          
+          const pInfo = playerInfo[0] || {
+            canonicalId: r.playerId,
+            fullName: 'Unknown Player',
+            sleeperId: null,
+            team: null,
+            position: 'WR'
+          };
+          
+          return {
+            playerId: r.playerId,
+            canonicalId: pInfo.canonicalId,
+            sleeperId: pInfo.sleeperId,
+            playerName: pInfo.fullName,
+            team: pInfo.team,
+            position: pInfo.position as 'WR',
+            roleScore: r.roleScore,
+            roleTier: r.roleTier,
+            gamesPlayed: r.gamesPlayed,
+            targetsPerGame: r.targetsPerGame,
+            carriesPerGame: null,
+            opportunitiesPerGame: null,
+            targetShareAvg: r.targetShareAvg,
+            routesPerGame: r.routesPerGame,
+            pprPerTarget: r.pprPerTarget,
+            pprPerOpportunity: null,
+            redZoneTargetsPerGame: null,
+            redZoneTouchesPerGame: null,
+            deepTargetsPerGame: r.deepTargetsPerGame,
+            deepTargetRate: r.deepTargetRate,
+            volumeScore: r.volumeScore,
+            consistencyScore: r.consistencyScore,
+            highValueUsageScore: r.highValueUsageScore,
+            momentumScore: r.momentumScore,
+            flags: {
+              cardioWr: r.cardioWrFlag,
+              breakoutWatch: r.breakoutWatchFlag
+            }
+          };
+        })
+      );
+      
+      const limitNum = parseInt(limit as string);
+      const finalResults = limitNum > 0 ? enrichedResults.slice(0, limitNum) : enrichedResults;
+      
+      res.json({
+        success: true,
+        season: parseInt(season),
+        position: 'WR' as const,
+        filters: filters.roleTier ? { roleTier: filters.roleTier } : {},
+        count: finalResults.length,
+        results: finalResults
+      });
+    } catch (error) {
+      console.error('❌ [WR Role Bank Get] Failed:', error);
       res.status(500).json({
         success: false,
         error: (error as Error).message || 'Unknown error'
