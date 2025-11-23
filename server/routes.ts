@@ -6157,6 +6157,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   /**
+   * GET /api/admin/wr-rankings-sandbox - WR Rankings Algorithm Test Sandbox
+   * Simple test page to experiment with ranking formulas
+   * Returns: Top 30 WRs from 2025 season with 4+ games, sorted by points/target
+   */
+  app.get('/api/admin/wr-rankings-sandbox', async (req: Request, res: Response) => {
+    try {
+      const { weeklyStats } = await import('@shared/schema');
+      
+      // Query 2025 WRs with 4+ games, aggregate targets and fantasy points
+      const results = await db
+        .select({
+          playerId: weeklyStats.playerId,
+          playerName: weeklyStats.playerName,
+          team: weeklyStats.team,
+          gamesPlayed: sql<number>`COUNT(DISTINCT ${weeklyStats.week})::int`,
+          totalTargets: sql<number>`SUM(COALESCE(${weeklyStats.targets}, 0))::int`,
+          totalFantasyPoints: sql<number>`SUM(COALESCE(${weeklyStats.fantasyPointsPpr}, 0))::real`,
+        })
+        .from(weeklyStats)
+        .where(
+          and(
+            eq(weeklyStats.season, 2025),
+            eq(weeklyStats.position, 'WR')
+          )
+        )
+        .groupBy(weeklyStats.playerId, weeklyStats.playerName, weeklyStats.team)
+        .having(sql`COUNT(DISTINCT ${weeklyStats.week}) >= 4`);
+
+      // Calculate points per target and sort
+      const ranked = results
+        .map(player => ({
+          playerId: player.playerId,
+          playerName: player.playerName,
+          team: player.team || 'FA',
+          gamesPlayed: player.gamesPlayed,
+          targets: player.totalTargets,
+          fantasyPoints: Math.round(player.totalFantasyPoints * 100) / 100,
+          pointsPerTarget: player.totalTargets > 0 
+            ? Math.round((player.totalFantasyPoints / player.totalTargets) * 100) / 100
+            : 0,
+        }))
+        .sort((a, b) => b.pointsPerTarget - a.pointsPerTarget)
+        .slice(0, 30);
+
+      res.json({
+        success: true,
+        season: 2025,
+        minGames: 4,
+        count: ranked.length,
+        data: ranked,
+      });
+
+    } catch (error) {
+      console.error('❌ [AdminAPI] WR Rankings Sandbox failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
+  /**
    * POST /api/admin/rag/seed-narratives - Seed TIBER narratives with embeddings
    */
   app.post('/api/admin/rag/seed-narratives', async (req: Request, res: Response) => {
