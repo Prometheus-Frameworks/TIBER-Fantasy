@@ -1909,7 +1909,9 @@ export class DatabaseStorage implements IStorage {
     // Map deep targets by week
     const deepTargetsByWeek = new Map<number, number>();
     for (const row of deepTargetsQuery.rows as any[]) {
-      deepTargetsByWeek.set(row.week, row.deep_targets_20_plus || 0);
+      const weekNum = Number(row.week);
+      const deepCount = Number(row.deep_targets_20_plus) || 0;
+      deepTargetsByWeek.set(weekNum, deepCount);
     }
     
     return results.map(r => ({
