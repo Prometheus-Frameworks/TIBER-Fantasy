@@ -199,7 +199,7 @@ export default function RoleBankRankings() {
       {/* Results Count */}
       {data && (
         <div className="flex items-center gap-2 text-sm text-gray-400">
-          <span className="font-medium">{data.count}</span>
+          <span className="font-medium">{formatNumber(data.count, 0)}</span>
           <span>{position} candidates with role classifications</span>
         </div>
       )}
@@ -284,9 +284,9 @@ export default function RoleBankRankings() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className="font-bold text-white">{player.roleScore}</span>
+                        <span className="font-bold text-white">{formatNumber(player.roleScore, 0)}</span>
                       </td>
-                      <td className="px-4 py-3 text-center text-gray-300">{player.gamesPlayed}</td>
+                      <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.gamesPlayed, 0)}</td>
                       
                       {/* Position-specific data */}
                       {position === 'WR' && (
@@ -316,7 +316,7 @@ export default function RoleBankRankings() {
                           <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.dropbacksPerGame)}</td>
                           <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.rushAttemptsPerGame)}</td>
                           <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.epaPerPlay, 3)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{player.efficiencyScore}</td>
+                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.efficiencyScore, 0)}</td>
                         </>
                       )}
                     </tr>
@@ -364,35 +364,35 @@ export default function RoleBankRankings() {
                         <Award className="w-4 h-4 text-purple-400" />
                         <div className="text-xs text-gray-500 uppercase">Role Score</div>
                       </div>
-                      <div className="text-2xl font-bold text-white">{selectedPlayer.roleScore}</div>
+                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.roleScore, 0)}</div>
                     </div>
                     <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
                       <div className="flex items-center justify-center gap-2 mb-1">
                         <TrendingUp className="w-4 h-4 text-blue-400" />
                         <div className="text-xs text-gray-500 uppercase">Volume</div>
                       </div>
-                      <div className="text-2xl font-bold text-white">{selectedPlayer.volumeScore}</div>
+                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.volumeScore, 0)}</div>
                     </div>
                     <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
                       <div className="flex items-center justify-center gap-2 mb-1">
                         <Activity className="w-4 h-4 text-green-400" />
                         <div className="text-xs text-gray-500 uppercase">Rushing</div>
                       </div>
-                      <div className="text-2xl font-bold text-white">{selectedPlayer.rushingScore ?? '—'}</div>
+                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.rushingScore, 0)}</div>
                     </div>
                     <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
                       <div className="flex items-center justify-center gap-2 mb-1">
                         <Target className="w-4 h-4 text-orange-400" />
                         <div className="text-xs text-gray-500 uppercase">Efficiency</div>
                       </div>
-                      <div className="text-2xl font-bold text-white">{selectedPlayer.efficiencyScore ?? '—'}</div>
+                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.efficiencyScore, 0)}</div>
                     </div>
                     <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
                       <div className="flex items-center justify-center gap-2 mb-1">
                         <Zap className="w-4 h-4 text-yellow-400" />
                         <div className="text-xs text-gray-500 uppercase">Momentum</div>
                       </div>
-                      <div className="text-2xl font-bold text-white">{selectedPlayer.momentumScore}</div>
+                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.momentumScore, 0)}</div>
                     </div>
                   </div>
                 ) : (
@@ -402,28 +402,28 @@ export default function RoleBankRankings() {
                         <Award className="w-4 h-4 text-purple-400" />
                         <div className="text-xs text-gray-500 uppercase">Role Score</div>
                       </div>
-                      <div className="text-2xl font-bold text-white">{selectedPlayer.roleScore}</div>
+                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.roleScore, 0)}</div>
                     </div>
                     <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
                       <div className="flex items-center justify-center gap-2 mb-1">
                         <TrendingUp className="w-4 h-4 text-blue-400" />
                         <div className="text-xs text-gray-500 uppercase">Volume</div>
                       </div>
-                      <div className="text-2xl font-bold text-white">{selectedPlayer.volumeScore}</div>
+                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.volumeScore, 0)}</div>
                     </div>
                     <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
                       <div className="flex items-center justify-center gap-2 mb-1">
                         <Activity className="w-4 h-4 text-green-400" />
                         <div className="text-xs text-gray-500 uppercase">Consistency</div>
                       </div>
-                      <div className="text-2xl font-bold text-white">{selectedPlayer.consistencyScore ?? '—'}</div>
+                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.consistencyScore, 0)}</div>
                     </div>
                     <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
                       <div className="flex items-center justify-center gap-2 mb-1">
                         <Zap className="w-4 h-4 text-yellow-400" />
                         <div className="text-xs text-gray-500 uppercase">Momentum</div>
                       </div>
-                      <div className="text-2xl font-bold text-white">{selectedPlayer.momentumScore}</div>
+                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.momentumScore, 0)}</div>
                     </div>
                   </div>
                 )}
@@ -434,7 +434,7 @@ export default function RoleBankRankings() {
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-500">Games Played</span>
-                      <span className="text-white font-medium">{selectedPlayer.gamesPlayed}</span>
+                      <span className="text-white font-medium">{formatNumber(selectedPlayer.gamesPlayed, 0)}</span>
                     </div>
                     
                     {/* QB-specific stats */}
@@ -455,37 +455,37 @@ export default function RoleBankRankings() {
                         {selectedPlayer.passingAttempts !== undefined && selectedPlayer.passingAttempts !== null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Pass Attempts</span>
-                            <span className="text-white font-medium">{selectedPlayer.passingAttempts}</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.passingAttempts, 0)}</span>
                           </div>
                         )}
                         {selectedPlayer.passingYards !== undefined && selectedPlayer.passingYards !== null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Pass Yards</span>
-                            <span className="text-white font-medium">{selectedPlayer.passingYards}</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.passingYards, 0)}</span>
                           </div>
                         )}
                         {selectedPlayer.passingTouchdowns !== undefined && selectedPlayer.passingTouchdowns !== null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Pass TDs</span>
-                            <span className="text-white font-medium">{selectedPlayer.passingTouchdowns}</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.passingTouchdowns, 0)}</span>
                           </div>
                         )}
                         {selectedPlayer.interceptions !== undefined && selectedPlayer.interceptions !== null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">INTs</span>
-                            <span className="text-white font-medium">{selectedPlayer.interceptions}</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.interceptions, 0)}</span>
                           </div>
                         )}
                         {selectedPlayer.rushingYards !== undefined && selectedPlayer.rushingYards !== null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Rush Yards</span>
-                            <span className="text-white font-medium">{selectedPlayer.rushingYards}</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.rushingYards, 0)}</span>
                           </div>
                         )}
                         {selectedPlayer.rushingTouchdowns !== undefined && selectedPlayer.rushingTouchdowns !== null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Rush TDs</span>
-                            <span className="text-white font-medium">{selectedPlayer.rushingTouchdowns}</span>
+                            <span className="text-white font-medium">{formatNumber(selectedPlayer.rushingTouchdowns, 0)}</span>
                           </div>
                         )}
                         {selectedPlayer.epaPerPlay !== undefined && selectedPlayer.epaPerPlay !== null && (
