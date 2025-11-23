@@ -280,7 +280,8 @@ export function computeWRRoleBankSeasonRow(
   const consistencyScore = scaleConsistencyFromStdDev(targetStdDev);
 
   // v1.1: Use deep target rate for high-value usage instead of PPR per target
-  const highValueUsageScore = scaleDeepTargetRate(deepTargetRate, totalTargets);
+  // Use totalTargetsWithPlayByPlay (not totalTargets) to ensure sample size aligns with deep target data
+  const highValueUsageScore = scaleDeepTargetRate(deepTargetRate, totalTargetsWithPlayByPlay);
 
   const last3 = sorted.slice(-3);
   const last3Targets = last3

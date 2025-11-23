@@ -40,6 +40,10 @@ interface RoleBankListItem {
   highValueUsageScore: number;
   momentumScore: number;
   
+  // v1.1: WR-specific deep target metrics (null for RB/TE)
+  deepTargetsPerGame: number | null;
+  deepTargetRate: number | null;
+  
   // Flags (position-specific, null if N/A)
   flags: {
     cardioWr: boolean | null;
@@ -118,6 +122,10 @@ function transformToListItem(roleRow: any, position: Position, identityRow: any 
     consistencyScore: roleRow.consistencyScore || 0,
     highValueUsageScore: roleRow.highValueUsageScore || 0,
     momentumScore: roleRow.momentumScore || 0,
+    
+    // v1.1: WR deep target fields
+    deepTargetsPerGame: position === 'WR' ? (roleRow.deepTargetsPerGame ?? null) : null,
+    deepTargetRate: position === 'WR' ? (roleRow.deepTargetRate ?? null) : null,
     
     flags: {
       cardioWr: roleRow.cardioWrFlag ?? null,

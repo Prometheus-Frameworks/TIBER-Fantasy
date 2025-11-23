@@ -6697,74 +6697,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/role-bank/:season - Get all WR role bank data for a season
-  app.get('/api/role-bank/:season', async (req: Request, res: Response) => {
-    try {
-      const { season } = req.params;
-      const { roleTier, limit = '100' } = req.query;
-      
-      const filters: any = {
-        season: parseInt(season)
-      };
-      
-      if (roleTier) {
-        filters.roleTier = roleTier;
-      }
-      
-      let results = await storage.getWRRoleBank(filters);
-      
-      const limitNum = parseInt(limit as string);
-      if (limitNum > 0) {
-        results = results.slice(0, limitNum);
-      }
-      
-      res.json({
-        success: true,
-        season: parseInt(season),
-        filters: filters.roleTier ? { roleTier: filters.roleTier } : {},
-        count: results.length,
-        data: results
-      });
-    } catch (error) {
-      console.error('❌ [Role Bank Get] Failed:', error);
-      res.status(500).json({
-        success: false,
-        error: (error as Error).message || 'Unknown error'
-      });
-    }
-  });
-
-  // GET /api/role-bank/player/:playerId/:season - Get role bank for a specific player/season
-  app.get('/api/role-bank/player/:playerId/:season', async (req: Request, res: Response) => {
-    try {
-      const { playerId, season } = req.params;
-      const seasonNum = parseInt(season);
-      
-      const roleData = await storage.getWRRoleBankByPlayer(playerId, seasonNum);
-      
-      if (!roleData) {
-        return res.status(404).json({
-          success: false,
-          error: `No role bank data found for player ${playerId} in season ${season}`
-        });
-      }
-      
-      res.json({
-        success: true,
-        playerId,
-        season: seasonNum,
-        data: roleData
-      });
-    } catch (error) {
-      console.error('❌ [Role Bank Get Player] Failed:', error);
-      res.status(500).json({
-        success: false,
-        error: (error as Error).message || 'Unknown error'
-      });
-    }
-  });
-
   // GET /api/role-bank/WR/:season - Get all WR role bank data with player enrichment
+  // IMPORTANT: This must come BEFORE the generic /api/role-bank/:season route
   app.get('/api/role-bank/WR/:season', async (req: Request, res: Response) => {
     try {
       const { season } = req.params;
@@ -6782,15 +6716,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const enrichedResults = await Promise.all(
         rawResults.map(async (r: any) => {
-          // Debug: Log first result
-          if (rawResults.indexOf(r) === 0) {
-            console.log('[DEBUG] First raw result:', JSON.stringify({
-              playerId: r.playerId,
-              deepTargetsPerGame: r.deepTargetsPerGame,
-              deepTargetRate: r.deepTargetRate
-            }));
-          }
-          
           const playerInfo = await db
             .select({
               canonicalId: playerIdentityMap.canonicalId,
@@ -6857,6 +6782,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('❌ [WR Role Bank Get] Failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/role-bank/:season - Get all WR role bank data for a season (DEPRECATED - use /WR/:season)
+  app.get('/api/role-bank/:season', async (req: Request, res: Response) => {
+    try {
+      const { season } = req.params;
+      const { roleTier, limit = '100' } = req.query;
+      
+      const filters: any = {
+        season: parseInt(season)
+      };
+      
+      if (roleTier) {
+        filters.roleTier = roleTier;
+      }
+      
+      let results = await storage.getWRRoleBank(filters);
+      
+      const limitNum = parseInt(limit as string);
+      if (limitNum > 0) {
+        results = results.slice(0, limitNum);
+      }
+      
+      res.json({
+        success: true,
+        season: parseInt(season),
+        filters: filters.roleTier ? { roleTier: filters.roleTier } : {},
+        count: results.length,
+        data: results
+      });
+    } catch (error) {
+      console.error('❌ [Role Bank Get] Failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/role-bank/player/:playerId/:season - Get role bank for a specific player/season
+  app.get('/api/role-bank/player/:playerId/:season', async (req: Request, res: Response) => {
+    try {
+      const { playerId, season } = req.params;
+      const seasonNum = parseInt(season);
+      
+      const roleData = await storage.getWRRoleBankByPlayer(playerId, seasonNum);
+      
+      if (!roleData) {
+        return res.status(404).json({
+          success: false,
+          error: `No role bank data found for player ${playerId} in season ${season}`
+        });
+      }
+      
+      res.json({
+        success: true,
+        playerId,
+        season: seasonNum,
+        data: roleData
+      });
+    } catch (error) {
+      console.error('❌ [Role Bank Get Player] Failed:', error);
       res.status(500).json({
         success: false,
         error: (error as Error).message || 'Unknown error'
