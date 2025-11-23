@@ -7078,6 +7078,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================================
+  // QB ROLE BANK ROUTES
+  // ========================================
+
+  // POST /api/role-bank/QB/compute/:playerId/:season - Compute QB role bank for a specific player/season
+  app.post('/api/role-bank/QB/compute/:playerId/:season', async (req: Request, res: Response) => {
+    try {
+      const { computeQBAlphaContextRow } = await import('./services/roleBankService');
+      const { playerId, season } = req.params;
+      const seasonNum = parseInt(season);
+      
+      const weeklyUsage = await storage.getWeeklyUsageForQBRoleBank(playerId, seasonNum);
+      
+      if (weeklyUsage.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: `No weekly usage data found for QB ${playerId} in season ${season}`
+        });
+      }
+      
+      const roleRow = computeQBAlphaContextRow(weeklyUsage);
+      
+      if (!roleRow) {
+        return res.status(400).json({
+          success: false,
+          error: 'Failed to compute QB role bank data (player may have no games played)'
+        });
+      }
+      
+      await storage.upsertQBRoleBank(roleRow);
+      
+      res.json({
+        success: true,
+        playerId,
+        season: seasonNum,
+        data: roleRow
+      });
+    } catch (error) {
+      console.error('❌ [QB Role Bank Compute] Failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/role-bank/QB/:season - Get all QB role bank data for a season
+  app.get('/api/role-bank/QB/:season', async (req: Request, res: Response) => {
+    try {
+      const { season } = req.params;
+      const { alphaTier, limit = '100' } = req.query;
+      
+      const filters: any = {
+        season: parseInt(season)
+      };
+      
+      if (alphaTier) {
+        filters.alphaTier = alphaTier;
+      }
+      
+      let results = await storage.getQBRoleBank(filters);
+      
+      const limitNum = parseInt(limit as string);
+      if (limitNum > 0) {
+        results = results.slice(0, limitNum);
+      }
+      
+      res.json({
+        success: true,
+        season: parseInt(season),
+        filters: filters.alphaTier ? { alphaTier: filters.alphaTier } : {},
+        count: results.length,
+        data: results
+      });
+    } catch (error) {
+      console.error('❌ [QB Role Bank Get] Failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/role-bank/QB/:playerId/:season - Get QB role bank for a specific player/season
+  app.get('/api/role-bank/QB/:playerId/:season', async (req: Request, res: Response) => {
+    try {
+      const { playerId, season } = req.params;
+      const seasonNum = parseInt(season);
+      
+      const roleData = await storage.getQBRoleBankByPlayer(playerId, seasonNum);
+      
+      if (!roleData) {
+        return res.status(404).json({
+          success: false,
+          error: `No QB role bank data found for player ${playerId} in season ${season}`
+        });
+      }
+      
+      res.json({
+        success: true,
+        playerId,
+        season: seasonNum,
+        data: roleData
+      });
+    } catch (error) {
+      console.error('❌ [QB Role Bank Get Player] Failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+
+  // ========================================
   // LEAGUE MANAGEMENT ROUTES
   // ========================================
 

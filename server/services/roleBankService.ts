@@ -895,3 +895,320 @@ export function computeTERoleBankSeasonRow(
     breakoutWatchFlag
   };
 }
+
+// ========== QB ROLE BANK (Alpha Context Bank) ==========
+
+export interface WeeklyQBUsageRow {
+  playerId: string;
+  season: number;
+  week: number;
+  team: string;
+
+  dropbacks: number | null;              // pass attempts + sacks
+  redZoneDropbacks: number | null;       // dropbacks in red zone
+  rushAttempts: number | null;
+  redZoneRushes: number | null;
+  
+  epaPerPlay: number | null;
+  cpoe: number | null;                   // Completion % over expected
+  sacks: number | null;
+  
+  passingAttempts: number | null;
+  completions: number | null;
+  passingYards: number | null;
+  passingTouchdowns: number | null;
+  interceptions: number | null;
+  rushingYards: number | null;
+  rushingTouchdowns: number | null;
+  fantasyPointsPpr: number | null;
+}
+
+export type QBAlphaTier =
+  | 'ELITE_QB1'
+  | 'STRONG_QB1'
+  | 'MID_QB1'
+  | 'HIGH_QB2'
+  | 'STREAMING_QB'
+  | 'BENCH_QB'
+  | 'UNKNOWN';
+
+export interface QBRoleBankSeasonRow {
+  playerId: string;
+  season: number;
+
+  gamesPlayed: number;
+
+  // Volume
+  dropbacksPerGame: number;
+  redZoneDropbacksPerGame: number | null;
+  passingAttempts: number;
+  passingYards: number;
+  passingTouchdowns: number;
+  interceptions: number;
+
+  // Rushing
+  rushAttemptsPerGame: number;
+  redZoneRushesPerGame: number | null;
+  rushingYards: number;
+  rushingTouchdowns: number;
+
+  // Efficiency
+  epaPerPlay: number | null;
+  cpoe: number | null;
+  sackRate: number | null;
+  completionPercentage: number | null;
+  yardsPerAttempt: number | null;
+
+  // Sub-scores
+  volumeScore: number;
+  rushingScore: number;
+  efficiencyScore: number;
+  momentumScore: number;
+
+  // Final
+  alphaContextScore: number;
+  alphaTier: QBAlphaTier;
+
+  // Flags
+  konamiCodeFlag: boolean;      // elite dual-threat (rush + pass)
+  systemQBFlag: boolean;         // high efficiency, low volume
+  garbageTimeKingFlag: boolean;  // momentum significantly below season avg
+}
+
+// ---- QB Scaling functions (0–100) ----
+
+function scaleDropbacksPerGame(dpg: number): number {
+  if (dpg >= 42) return 100;  // Josh Allen/Mahomes territory
+  if (dpg >= 38) return 90;
+  if (dpg >= 34) return 75;
+  if (dpg >= 30) return 55;
+  if (dpg >= 25) return 35;
+  return 20;
+}
+
+function scaleRedZoneDropbacks(rzdpg: number | null): number {
+  if (rzdpg === null) return 50;
+  if (rzdpg >= 2.5) return 100;
+  if (rzdpg >= 2.0) return 85;
+  if (rzdpg >= 1.5) return 70;
+  if (rzdpg >= 1.0) return 55;
+  if (rzdpg >= 0.5) return 40;
+  return 25;
+}
+
+function scaleQBRushAttemptsPerGame(rapg: number): number {
+  if (rapg >= 8) return 100;   // Lamar/Hurts elite rushing
+  if (rapg >= 6) return 85;
+  if (rapg >= 4) return 65;
+  if (rapg >= 2) return 40;
+  if (rapg >= 1) return 25;
+  return 10;
+}
+
+function scaleQBRedZoneRushes(rzrpg: number | null): number {
+  if (rzrpg === null) return 50;
+  if (rzrpg >= 1.5) return 100;
+  if (rzrpg >= 1.0) return 85;
+  if (rzrpg >= 0.7) return 70;
+  if (rzrpg >= 0.4) return 55;
+  return 35;
+}
+
+function scaleEPA(epa: number | null): number {
+  if (epa === null) return 50;
+  if (epa >= 0.25) return 100;  // Elite
+  if (epa >= 0.18) return 85;
+  if (epa >= 0.12) return 70;
+  if (epa >= 0.06) return 55;
+  if (epa >= 0.0) return 40;
+  return 25;
+}
+
+function scaleCPOE(cpoe: number | null): number {
+  if (cpoe === null) return 50;
+  if (cpoe >= 4.0) return 100;
+  if (cpoe >= 2.5) return 85;
+  if (cpoe >= 1.0) return 70;
+  if (cpoe >= -1.0) return 55;
+  if (cpoe >= -3.0) return 35;
+  return 20;
+}
+
+function scaleSackRate(sackRate: number | null): number {
+  if (sackRate === null) return 50;
+  // Lower is better for sack rate
+  if (sackRate <= 4.0) return 100;
+  if (sackRate <= 5.5) return 85;
+  if (sackRate <= 7.0) return 70;
+  if (sackRate <= 8.5) return 55;
+  if (sackRate <= 10.0) return 40;
+  return 25;
+}
+
+export function computeQBAlphaContextRow(
+  weeklyRows: WeeklyQBUsageRow[]
+): QBRoleBankSeasonRow | null {
+  if (!weeklyRows.length) return null;
+
+  const playerId = weeklyRows[0].playerId;
+  const season = weeklyRows[0].season;
+  const gamesPlayed = weeklyRows.length;
+
+  // Aggregate totals
+  let totalDropbacks = 0;
+  let totalRedZoneDropbacks = 0;
+  let totalRushAttempts = 0;
+  let totalRedZoneRushes = 0;
+  let totalPassingAttempts = 0;
+  let totalCompletions = 0;
+  let totalPassingYards = 0;
+  let totalPassingTDs = 0;
+  let totalInterceptions = 0;
+  let totalRushingYards = 0;
+  let totalRushingTDs = 0;
+  let totalSacks = 0;
+  let totalFantasy = 0;
+
+  const epaValues: number[] = [];
+  const cpoeValues: number[] = [];
+  const fantasyValues: number[] = [];
+
+  for (const w of weeklyRows) {
+    totalDropbacks += w.dropbacks ?? 0;
+    totalRedZoneDropbacks += w.redZoneDropbacks ?? 0;
+    totalRushAttempts += w.rushAttempts ?? 0;
+    totalRedZoneRushes += w.redZoneRushes ?? 0;
+    totalPassingAttempts += w.passingAttempts ?? 0;
+    totalCompletions += w.completions ?? 0;
+    totalPassingYards += w.passingYards ?? 0;
+    totalPassingTDs += w.passingTouchdowns ?? 0;
+    totalInterceptions += w.interceptions ?? 0;
+    totalRushingYards += w.rushingYards ?? 0;
+    totalRushingTDs += w.rushingTouchdowns ?? 0;
+    totalSacks += w.sacks ?? 0;
+    totalFantasy += w.fantasyPointsPpr ?? 0;
+
+    if (w.epaPerPlay !== null) epaValues.push(w.epaPerPlay);
+    if (w.cpoe !== null) cpoeValues.push(w.cpoe);
+    if (w.fantasyPointsPpr !== null) fantasyValues.push(w.fantasyPointsPpr);
+  }
+
+  // Per-game metrics
+  const dropbacksPerGame = totalDropbacks / gamesPlayed;
+  const redZoneDropbacksPerGame = totalRedZoneDropbacks / gamesPlayed;
+  const rushAttemptsPerGame = totalRushAttempts / gamesPlayed;
+  const redZoneRushesPerGame = totalRedZoneRushes / gamesPlayed;
+
+  // Efficiency metrics
+  const epaPerPlay = epaValues.length > 0 ? mean(epaValues) : null;
+  const cpoe = cpoeValues.length > 0 ? mean(cpoeValues) : null;
+  const sackRate = totalPassingAttempts > 0 
+    ? (totalSacks / (totalPassingAttempts + totalSacks)) * 100 
+    : null;
+  const completionPercentage = totalPassingAttempts > 0
+    ? (totalCompletions / totalPassingAttempts) * 100
+    : null;
+  const yardsPerAttempt = totalPassingAttempts > 0
+    ? totalPassingYards / totalPassingAttempts
+    : null;
+
+  // ========== VOLUME SCORE (40%) ==========
+  // Components: dropbacks per game (70%) + red zone dropbacks (30%)
+  const dropbackScore = scaleDropbacksPerGame(dropbacksPerGame);
+  const rzDropbackScore = scaleRedZoneDropbacks(redZoneDropbacksPerGame);
+  const volumeScore = 0.70 * dropbackScore + 0.30 * rzDropbackScore;
+
+  // ========== RUSHING SCORE (25%) ==========
+  // Components: rush attempts per game (70%) + red zone rushes (30%)
+  const rushAttemptsScore = scaleQBRushAttemptsPerGame(rushAttemptsPerGame);
+  const rzRushScore = scaleQBRedZoneRushes(redZoneRushesPerGame);
+  const rushingScore = 0.70 * rushAttemptsScore + 0.30 * rzRushScore;
+
+  // ========== EFFICIENCY SCORE (25%) ==========
+  // Components: EPA (40%) + CPOE (30%) + Sack Rate (30%)
+  const epaScore = scaleEPA(epaPerPlay);
+  const cpoeScore = scaleCPOE(cpoe);
+  const sackRateScore = scaleSackRate(sackRate);
+  const efficiencyScore = 0.40 * epaScore + 0.30 * cpoeScore + 0.30 * sackRateScore;
+
+  // ========== MOMENTUM SCORE (10%) ==========
+  // Last 3 games vs season average fantasy points
+  let momentumScore = 50;
+  if (gamesPlayed >= 4 && fantasyValues.length >= 4) {
+    const last3Games = fantasyValues.slice(-3);
+    const avgLast3 = mean(last3Games) ?? 0;
+    const avgSeason = mean(fantasyValues) ?? 0;
+
+    if (avgSeason > 0) {
+      const momentumRatio = avgLast3 / avgSeason;
+      if (momentumRatio >= 1.20) momentumScore = 100;
+      else if (momentumRatio >= 1.10) momentumScore = 85;
+      else if (momentumRatio >= 1.00) momentumScore = 70;
+      else if (momentumRatio >= 0.90) momentumScore = 55;
+      else if (momentumRatio >= 0.80) momentumScore = 40;
+      else momentumScore = 25;
+    }
+  }
+
+  // ========== FINAL ALPHA CONTEXT SCORE ==========
+  const alphaContextScore =
+    0.40 * volumeScore +
+    0.25 * rushingScore +
+    0.25 * efficiencyScore +
+    0.10 * momentumScore;
+
+  // ========== TIER ASSIGNMENT ==========
+  let alphaTier: QBAlphaTier;
+  if (alphaContextScore >= 82) alphaTier = 'ELITE_QB1';
+  else if (alphaContextScore >= 74) alphaTier = 'STRONG_QB1';
+  else if (alphaContextScore >= 66) alphaTier = 'MID_QB1';
+  else if (alphaContextScore >= 58) alphaTier = 'HIGH_QB2';
+  else if (alphaContextScore >= 50) alphaTier = 'STREAMING_QB';
+  else alphaTier = 'BENCH_QB';
+
+  // ========== FLAGS ==========
+  // Konami Code: elite dual-threat (rush score >= 80 AND volume score >= 75)
+  const konamiCodeFlag = rushingScore >= 80 && volumeScore >= 75;
+
+  // System QB: high efficiency but low volume (efficiency >= 75 AND volume < 65)
+  const systemQBFlag = efficiencyScore >= 75 && volumeScore < 65;
+
+  // Garbage Time King: momentum significantly below season avg (momentum < 40)
+  const garbageTimeKingFlag = momentumScore < 40;
+
+  return {
+    playerId,
+    season,
+    gamesPlayed,
+
+    dropbacksPerGame,
+    redZoneDropbacksPerGame,
+    passingAttempts: totalPassingAttempts,
+    passingYards: totalPassingYards,
+    passingTouchdowns: totalPassingTDs,
+    interceptions: totalInterceptions,
+
+    rushAttemptsPerGame,
+    redZoneRushesPerGame,
+    rushingYards: totalRushingYards,
+    rushingTouchdowns: totalRushingTDs,
+
+    epaPerPlay,
+    cpoe,
+    sackRate,
+    completionPercentage,
+    yardsPerAttempt,
+
+    volumeScore: Math.round(volumeScore),
+    rushingScore: Math.round(rushingScore),
+    efficiencyScore: Math.round(efficiencyScore),
+    momentumScore: Math.round(momentumScore),
+
+    alphaContextScore: Math.round(alphaContextScore),
+
+    alphaTier,
+    konamiCodeFlag,
+    systemQBFlag,
+    garbageTimeKingFlag
+  };
+}
