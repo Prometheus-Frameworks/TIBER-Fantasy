@@ -146,6 +146,17 @@ export const teRoleTierEnum = pgEnum("te_role_tier", [
   "UNKNOWN"
 ]);
 
+// QB Role tier enum for role bank classification
+export const qbRoleTierEnum = pgEnum("qb_role_tier", [
+  "ELITE_QB1",
+  "STRONG_QB1",
+  "MID_QB1",
+  "HIGH_QB2",
+  "STREAMING_QB",
+  "BENCH_QB",
+  "UNKNOWN"
+]);
+
 // ========================================
 // BRONZE LAYER - RAW DATA STORAGE
 // ========================================
@@ -3454,6 +3465,88 @@ export const teRoleBankRelations = relations(teRoleBank, ({ one }) => ({
 export type TERoleBank = typeof teRoleBank.$inferSelect;
 export type InsertTERoleBank = z.infer<typeof insertTERoleBankSchema>;
 export const insertTERoleBankSchema = createInsertSchema(teRoleBank).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+// ========================================
+// QB ROLE BANK - ANALYTICAL LAYER
+// ========================================
+
+// QB Role Bank - Season-level analytics computed from play-by-play + weekly stats
+export const qbRoleBank = pgTable("qb_role_bank", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id").notNull(),
+  sleeperId: text("sleeper_id"),
+  season: integer("season").notNull(),
+  
+  // Volume Metrics
+  gamesPlayed: integer("games_played").notNull(),
+  dropbacksPerGame: real("dropbacks_per_game").notNull(),
+  redZoneDropbacksPerGame: real("red_zone_dropbacks_per_game"),
+  passingAttempts: integer("passing_attempts").notNull(),
+  passingYards: integer("passing_yards").notNull(),
+  passingTouchdowns: integer("passing_touchdowns").notNull(),
+  interceptions: integer("interceptions").notNull(),
+  
+  // Rushing Metrics
+  rushAttemptsPerGame: real("rush_attempts_per_game").notNull(),
+  redZoneRushesPerGame: real("red_zone_rushes_per_game"),
+  rushingYards: integer("rushing_yards").notNull(),
+  rushingTouchdowns: integer("rushing_touchdowns").notNull(),
+  
+  // Efficiency Metrics
+  epaPerPlay: real("epa_per_play"),
+  cpoe: real("cpoe"),
+  sackRate: real("sack_rate"),
+  completionPercentage: real("completion_percentage"),
+  yardsPerAttempt: real("yards_per_attempt"),
+  
+  // Sub-scores (0-100)
+  volumeScore: integer("volume_score").notNull(),
+  rushingScore: integer("rushing_score").notNull(),
+  efficiencyScore: integer("efficiency_score").notNull(),
+  momentumScore: integer("momentum_score").notNull(),
+  
+  // Final Composite Score (0-100)
+  alphaContextScore: integer("alpha_context_score").notNull(),
+  
+  // Role Classification
+  alphaTier: qbRoleTierEnum("alpha_tier").notNull(),
+  
+  // Flags
+  konamiCodeFlag: boolean("konami_code_flag").default(false).notNull(),
+  systemQBFlag: boolean("system_qb_flag").default(false).notNull(),
+  garbageTimeKingFlag: boolean("garbage_time_king_flag").default(false).notNull(),
+  
+  // Metadata
+  version: text("version").default("1.0").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint on player/season
+  uniquePlayerSeason: uniqueIndex("qb_role_bank_unique").on(table.playerId, table.season),
+  
+  // Performance indexes
+  playerIdx: index("qb_role_bank_player_idx").on(table.playerId),
+  seasonIdx: index("qb_role_bank_season_idx").on(table.season),
+  alphaScoreIdx: index("qb_role_bank_alpha_score_idx").on(table.season, table.alphaContextScore),
+  alphaTierIdx: index("qb_role_bank_alpha_tier_idx").on(table.season, table.alphaTier),
+}));
+
+// QB Role Bank Relations
+export const qbRoleBankRelations = relations(qbRoleBank, ({ one }) => ({
+  player: one(playerIdentityMap, {
+    fields: [qbRoleBank.playerId],
+    references: [playerIdentityMap.canonicalId],
+  }),
+}));
+
+// QB Role Bank Types and Insert Schemas
+export type QBRoleBank = typeof qbRoleBank.$inferSelect;
+export type InsertQBRoleBank = z.infer<typeof insertQBRoleBankSchema>;
+export const insertQBRoleBankSchema = createInsertSchema(qbRoleBank).omit({
   id: true,
   createdAt: true,
   updatedAt: true
