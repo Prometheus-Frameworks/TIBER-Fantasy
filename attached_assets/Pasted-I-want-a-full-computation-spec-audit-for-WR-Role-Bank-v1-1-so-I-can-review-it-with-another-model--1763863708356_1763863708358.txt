@@ -1,0 +1,92 @@
+I want a full computation spec / audit for WR Role Bank v1.1 so I can review it with another model (Grok).
+
+Please generate a single markdown file at:
+/tmp/WR_ROLE_BANK_V1_1_AUDIT.md
+that clearly documents the following:
+
+Data Inputs (Source Tables & Fields)
+
+List every table and column used in the WR Role Bank v1.1 calculation, including:
+
+weekly_stats fields
+
+player_usage fields
+
+bronze_nflfastr_plays fields (for deep targets)
+
+any joins to player_identity_map or player_positions
+
+For each input, explain in 1 short sentence what it represents (e.g. “air_yards = depth of target in yards”).
+
+Feature Engineering Steps
+
+Show the exact formulas for:
+
+targetsPerGame
+
+targetSharePct
+
+routesPerGame (if used)
+
+deepTargets20Plus
+
+deepTargetsPerGame
+
+deepTargetRate
+
+any z-scores used (volumeZ, highValueZ, etc.)
+
+If any filtering is applied (e.g. “only weeks where deepTargets20Plus is not null”), write that out explicitly.
+
+Scoring Algorithm (WR Role Bank v1.1)
+
+Show the exact code/formulas you use to compute:
+
+volumeScore
+
+consistencyScore
+
+highValueUsageScore
+
+momentumScore
+
+final roleScore (with the 55/15/20/10 weights)
+
+Include any normalization steps (z-score, min/max scaling, etc.).
+
+Tier Logic
+
+Document exactly how CO_ALPHA, SECONDARY, ROTATIONAL, etc. are assigned in v1.1.
+
+If this uses z-score thresholds, list the thresholds.
+
+Sample Rows (For Debugging)
+
+For the following WRs, include a small table with ALL intermediate fields and the final roleScore + tier:
+
+CeeDee Lamb
+
+Amon-Ra St. Brown
+
+Ja’Marr Chase
+
+Puka Nacua
+
+Emeka Egbuka
+
+Tetairoa McMillan
+
+Wan’Dale Robinson
+
+This should show: targetsPerGame, targetShare, deepTargetRate, volumeScore, highValueUsageScore, final roleScore, and tier.
+
+Export Instructions
+
+When you’re done, just confirm:
+
+the file path (/tmp/WR_ROLE_BANK_V1_1_AUDIT.md)
+
+and the size/line count so I know it generated correctly.
+
+Do not change any logic in this step.
+This is purely an explainability / audit report so another model (Grok) can review the implementation and outputs.
