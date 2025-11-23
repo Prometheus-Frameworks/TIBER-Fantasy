@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Bell, Home, TrendingUp, Shield, Target, Shuffle, Users, FlaskConical, BarChart3, Eye, Lightbulb, Search, LineChart, Trophy } from 'lucide-react';
+import { User, Bell, Home, TrendingUp, Shield, Target, Shuffle, Users, FlaskConical, BarChart3, Eye, Lightbulb, Search, LineChart, Trophy, Settings } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import HomeTab from '@/components/tabs/HomeTab';
 import RankingsTab from '@/components/tabs/RankingsTab';
@@ -10,6 +10,7 @@ import LeaguesTab from '@/components/tabs/LeaguesTab';
 import EPARankingsTab from '@/components/tabs/EPARankingsTab';
 import QBStatsReviewTab from '@/components/tabs/QBStatsReviewTab';
 import WeeklyTakesTab from '@/components/tabs/WeeklyTakesTab';
+import AdminTab from '@/components/tabs/AdminTab';
 import PlayerSearchBar from '@/components/PlayerSearchBar';
 
 const tabs = [
@@ -22,6 +23,7 @@ const tabs = [
   { id: 'weekly-takes', label: 'Weekly Takes', icon: Lightbulb, component: WeeklyTakesTab },
   { id: 'moves', label: 'Moves', icon: Shuffle, component: MovesTab },
   { id: 'leagues', label: 'Leagues', icon: Users, component: LeaguesTab },
+  { id: 'admin', label: 'Admin', icon: Settings, component: AdminTab },
 ];
 
 function TiberDashboard() {
