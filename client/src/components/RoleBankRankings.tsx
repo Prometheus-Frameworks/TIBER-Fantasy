@@ -240,13 +240,21 @@ export default function RoleBankRankings() {
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">PPR/Tgt</th>
                   </>
                 )}
+                {position === 'QB' && (
+                  <>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">DB/G</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Rush Att/G</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">EPA/db</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Eff</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 [...Array(10)].map((_, idx) => (
                   <tr key={idx} className="border-b border-gray-800/30">
-                    <td colSpan={position === 'RB' ? 10 : 9} className="px-4 py-4">
+                    <td colSpan={position === 'RB' || position === 'QB' ? 10 : 9} className="px-4 py-4">
                       <div className="h-8 bg-gray-700/30 rounded animate-pulse"></div>
                     </td>
                   </tr>
@@ -301,6 +309,14 @@ export default function RoleBankRankings() {
                           <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.targetsPerGame)}</td>
                           <td className="px-4 py-3 text-center text-gray-300">{formatPercent(player.targetShareAvg)}</td>
                           <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.pprPerTarget, 2)}</td>
+                        </>
+                      )}
+                      {position === 'QB' && (
+                        <>
+                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.dropbacksPerGame)}</td>
+                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.rushAttemptsPerGame)}</td>
+                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.epaPerPlay, 3)}</td>
+                          <td className="px-4 py-3 text-center text-gray-300">{player.efficiencyScore}</td>
                         </>
                       )}
                     </tr>
