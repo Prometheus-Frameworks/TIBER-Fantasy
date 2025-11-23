@@ -8,7 +8,7 @@ interface QBStats {
   playerId: string;
   playerName: string;
   team: string;
-  baldwin: {
+  reference: {
     rawEpa: number;
     adjEpa: number;
     epaDiff: number;
@@ -88,13 +88,13 @@ function QBCard({ qb, rank }: { qb: QBStats; rank: number }) {
               <p className="text-sm text-gray-400">{qb.team}</p>
             </div>
           </div>
-          {qb.baldwin && (
+          {qb.reference && (
             <div className="text-right">
               <div className="text-2xl font-bold text-primary">
-                {qb.baldwin.adjEpa.toFixed(3)}
+                {qb.reference.adjEpa.toFixed(3)}
               </div>
               <div className="text-xs text-gray-300 flex items-center gap-1">
-                {getTrendIcon(qb.baldwin.epaDiff)}
+                {getTrendIcon(qb.reference.epaDiff)}
                 <span>EPA/play</span>
               </div>
             </div>
@@ -103,18 +103,18 @@ function QBCard({ qb, rank }: { qb: QBStats; rank: number }) {
       </CardHeader>
       
       <CardContent className="space-y-4">
-        {/* Baldwin Reference (Ground Truth) */}
-        {qb.baldwin && (
+        {/* External EPA Reference */}
+        {qb.reference && (
           <div className="space-y-2">
             <div className="flex items-center gap-2 mb-2">
               <Activity className="h-4 w-4 text-blue-500" />
-              <h4 className="text-sm font-semibold text-blue-500">Baldwin Reference</h4>
+              <h4 className="text-sm font-semibold text-blue-500">EPA Reference</h4>
             </div>
             <div className="grid grid-cols-2 gap-2 pl-6">
-              <StatRow label="Raw EPA" value={qb.baldwin.rawEpa.toFixed(3)} />
-              <StatRow label="Adj EPA" value={qb.baldwin.adjEpa.toFixed(3)} className="text-primary" />
-              <StatRow label="Adjustment" value={qb.baldwin.epaDiff.toFixed(3)} />
-              <StatRow label="Plays" value={qb.baldwin.numPlays} />
+              <StatRow label="Raw EPA" value={qb.reference.rawEpa.toFixed(3)} />
+              <StatRow label="Adj EPA" value={qb.reference.adjEpa.toFixed(3)} className="text-primary" />
+              <StatRow label="Adjustment" value={qb.reference.epaDiff.toFixed(3)} />
+              <StatRow label="Plays" value={qb.reference.numPlays} />
             </div>
           </div>
         )}
@@ -206,7 +206,7 @@ export default function QBStatsReviewTab() {
       <div className="space-y-2">
         <h1 className="text-3xl font-bold text-foreground" data-testid="header-title">QB Stats Review</h1>
         <p className="text-muted-foreground">
-          Eye-test all QB stats from NFLfastR - Context metrics, Baldwin reference, and Tiber adjustments
+          Eye-test all QB stats from NFLfastR - Context metrics, EPA reference data, and Tiber adjustments
         </p>
         {summary && (
           <div className="flex gap-3 pt-2">
@@ -235,7 +235,7 @@ export default function QBStatsReviewTab() {
           <Shield className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
           <p className="text-lg text-muted-foreground">No QB data available</p>
           <p className="text-sm text-muted-foreground mt-2">
-            Run the EPA Sanity Check calculations to populate this page
+            QB statistics are currently unavailable
           </p>
         </div>
       )}

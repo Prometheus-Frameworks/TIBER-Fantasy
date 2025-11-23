@@ -3460,10 +3460,10 @@ export const insertTERoleBankSchema = createInsertSchema(teRoleBank).omit({
 });
 
 // ========================================
-// EPA SANITY CHECK SYSTEM
+// EPA REFERENCE SYSTEM
 // ========================================
 
-// Ben Baldwin Reference Data - External benchmark for EPA validation
+// External EPA Reference Data - External benchmark for EPA validation
 export const qbEpaReference = pgTable("qb_epa_reference", {
   id: serial("id").primaryKey(),
   playerId: text("player_id"), // NFLfastR ID
@@ -3472,15 +3472,15 @@ export const qbEpaReference = pgTable("qb_epa_reference", {
   season: integer("season").notNull(),
   week: integer("week"), // null = season totals
   
-  // Ben Baldwin's data
+  // External reference data
   numPlays: integer("num_plays"), // n
   rawEpaPerPlay: real("raw_epa_per_play"), // Raw EPA/P
   adjEpaPerPlay: real("adj_epa_per_play"), // Adjusted EPA/P
   epaDiff: real("epa_diff"), // Diff (adjustment amount)
   
   // Metadata
-  source: text("source").default("ben_baldwin"), // Data source
-  dataDate: timestamp("data_date"), // When Ben published this
+  source: text("source").default("external_reference"), // Data source
+  dataDate: timestamp("data_date"), // Publication date
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   playerSeasonWeekIdx: index("qb_epa_ref_player_season_week_idx").on(table.playerId, table.season, table.week),
@@ -3550,9 +3550,9 @@ export const qbEpaAdjusted = pgTable("qb_epa_adjusted", {
   yacAdjustment: real("yac_adjustment"), // EPA adjustment for YAC
   defenseAdjustment: real("defense_adjustment"), // EPA adjustment for defenses faced
   
-  // Sanity check comparison
-  baldwinAdjEpa: real("baldwin_adj_epa"), // Ben's adjusted EPA for comparison
-  accuracyPct: real("accuracy_pct"), // How close we got to Ben's number
+  // External reference comparison
+  referenceAdjEpa: real("reference_adj_epa"), // External adjusted EPA for comparison
+  accuracyPct: real("accuracy_pct"), // Comparison accuracy
   
   // Confidence
   confidence: real("confidence").default(0.7), // How confident we are in our adjustment
@@ -3566,7 +3566,7 @@ export const qbEpaAdjusted = pgTable("qb_epa_adjusted", {
 }));
 
 // ========================================
-// RB EPA CONTEXT & SANITY CHECK
+// RB EPA CONTEXT SYSTEM
 // ========================================
 
 // RB Context Metrics - Calculated context factors from play-by-play

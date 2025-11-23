@@ -490,7 +490,7 @@ WHERE no_huddle = true -- Up-tempo offense
 ## References
 
 - **Data Source:** NFLfastR (https://github.com/nflverse/nflfastR)
-- **EPA Methodology:** Ben Baldwin's adjusted EPA
+- **EPA Methodology:** NFLfastR adjusted EPA metrics
 - **1D/RR Research:** Ryan Heath (The 33rd Team)
 - **Database:** `bronze_nflfastr_plays` table in PostgreSQL
 
