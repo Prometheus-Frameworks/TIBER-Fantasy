@@ -3683,19 +3683,19 @@ export const calibratedEpaWeights = pgTable("calibrated_epa_weights", {
   uniqueActiveSeasonPosition: unique("calibrated_weights_unique_active").on(table.season, table.position, table.isActive),
 }));
 
-// EPA Sanity Check Insert Schemas - QB
+// EPA Reference System Insert Schemas - QB
 export const insertQbEpaReferenceSchema = createInsertSchema(qbEpaReference).omit({ id: true, createdAt: true });
 export const insertQbContextMetricsSchema = createInsertSchema(qbContextMetrics).omit({ id: true, createdAt: true, calculatedAt: true });
 export const insertQbEpaAdjustedSchema = createInsertSchema(qbEpaAdjusted).omit({ id: true, createdAt: true, calculatedAt: true });
 
-// EPA Sanity Check Insert Schemas - RB
+// EPA Reference System Insert Schemas - RB
 export const insertRbContextMetricsSchema = createInsertSchema(rbContextMetrics).omit({ id: true, createdAt: true, calculatedAt: true });
 export const insertRbEpaAdjustedSchema = createInsertSchema(rbEpaAdjusted).omit({ id: true, createdAt: true, calculatedAt: true });
 
 // Calibrated EPA Weights Insert Schema
 export const insertCalibratedEpaWeightsSchema = createInsertSchema(calibratedEpaWeights).omit({ id: true, createdAt: true });
 
-// EPA Sanity Check Types - QB
+// EPA Reference System Types - QB
 export type QbEpaReference = typeof qbEpaReference.$inferSelect;
 export type InsertQbEpaReference = z.infer<typeof insertQbEpaReferenceSchema>;
 export type QbContextMetrics = typeof qbContextMetrics.$inferSelect;
@@ -3703,7 +3703,7 @@ export type InsertQbContextMetrics = z.infer<typeof insertQbContextMetricsSchema
 export type QbEpaAdjusted = typeof qbEpaAdjusted.$inferSelect;
 export type InsertQbEpaAdjusted = z.infer<typeof insertQbEpaAdjustedSchema>;
 
-// EPA Sanity Check Types - RB
+// EPA Reference System Types - RB
 export type RbContextMetrics = typeof rbContextMetrics.$inferSelect;
 export type InsertRbContextMetrics = z.infer<typeof insertRbContextMetricsSchema>;
 export type RbEpaAdjusted = typeof rbEpaAdjusted.$inferSelect;

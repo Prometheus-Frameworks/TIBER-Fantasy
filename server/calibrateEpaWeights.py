@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 EPA Weight Calibration Tool
-Uses linear regression to find optimal adjustment weights that minimize RMSE against Baldwin's reference
+Uses linear regression to find optimal adjustment weights that minimize RMSE against external reference data
 """
 
 import sys
@@ -11,13 +11,13 @@ from sklearn.linear_model import LinearRegression, RidgeCV
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import cross_val_score
 
-def calibrate_epa_weights(context_data: list, baldwin_data: list):
+def calibrate_epa_weights(context_data: list, reference_data: list):
     """
     Fit optimal EPA adjustment weights using linear regression
     
     Args:
         context_data: List of QB context metrics (drop rate, pressure rate, etc.)
-        baldwin_data: List of Baldwin's reference data with raw/adjusted EPA
+        reference_data: List of external reference data with raw/adjusted EPA
     
     Returns:
         Optimal weights and performance metrics
@@ -25,10 +25,10 @@ def calibrate_epa_weights(context_data: list, baldwin_data: list):
     
     # Build training dataset
     X = []  # Features: deviations from league average
-    y = []  # Target: Baldwin's implied adjustments (Adj EPA - Raw EPA)
+    y = []  # Target: External reference implied adjustments (Adj EPA - Raw EPA)
     qb_names = []
     
-    # Calculate league averages from Baldwin's QBs
+    # Calculate league averages from reference QBs
     total_attempts = sum(qb['pass_attempts'] for qb in context_data)
     
     league_avg_drop = sum(qb['drop_rate'] * qb['pass_attempts'] for qb in context_data) / total_attempts
@@ -44,11 +44,11 @@ def calibrate_epa_weights(context_data: list, baldwin_data: list):
     
     # Build feature matrix and target vector
     for context_qb in context_data:
-        # Find matching Baldwin QB
+        # Find matching External reference QB
         player_id = context_qb['player_id']
-        baldwin_qb = next((b for b in baldwin_data if b.get('player_id') == player_id), None)
+        reference_qb = next((b for b in reference_data if b.get('player_id') == player_id), None)
         
-        if not baldwin_qb:
+        if not reference_qb:
             continue
         
         # Calculate deviations from league average
@@ -59,11 +59,11 @@ def calibrate_epa_weights(context_data: list, baldwin_data: list):
         yac_dev = yac_per_play - league_avg_yac
         def_dev = context_qb['avg_def_epa_faced'] - league_avg_def
         
-        # Baldwin's implied adjustment (what we're trying to predict)
-        baldwin_adj = baldwin_qb['adj_epa_per_play'] - baldwin_qb['raw_epa_per_play']
+        # External reference's implied adjustment (what we're trying to predict)
+        reference_adj = reference_qb['adj_epa_per_play'] - reference_qb['raw_epa_per_play']
         
         X.append([drop_dev, pressure_dev, yac_dev, def_dev])
-        y.append(baldwin_adj)
+        y.append(reference_adj)
         qb_names.append(context_qb['player_name'])
     
     X = np.array(X)
@@ -111,7 +111,7 @@ def calibrate_epa_weights(context_data: list, baldwin_data: list):
     for i, name in enumerate(qb_names):
         per_qb_results.append({
             'qb_name': name,
-            'baldwin_adjustment': float(y[i]),
+            'reference_adjustment': float(y[i]),
             'predicted_ols': float(y_pred_ols[i]),
             'predicted_ridge': float(y_pred_ridge[i]),
             'error_ols': float(y[i] - y_pred_ols[i]),
@@ -163,14 +163,14 @@ def calibrate_epa_weights(context_data: list, baldwin_data: list):
 
 if __name__ == '__main__':
     try:
-        # Read input from stdin (context and Baldwin data passed from TypeScript)
+        # Read input from stdin (context and External reference data passed from TypeScript)
         input_data = json.loads(sys.stdin.read())
         
         context_data = input_data['context_data']
-        baldwin_data = input_data['baldwin_data']
+        reference_data = input_data['reference_data']
         
         # Run calibration
-        result = calibrate_epa_weights(context_data, baldwin_data)
+        result = calibrate_epa_weights(context_data, reference_data)
         
         # Output JSON result to stdout
         print(json.dumps(result))

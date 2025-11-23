@@ -139,7 +139,7 @@ def calculate_player_epa_metrics(season=2024):
 
 def calculate_qb_context_metrics(season=2024):
     """
-    Calculate QB context metrics - "luck" factors that Ben Baldwin adjusts for
+    Calculate QB context metrics - contextual factors that affect EPA
     
     Returns context data for: drops, pressure, YAC delta, defensive EPA faced
     """
