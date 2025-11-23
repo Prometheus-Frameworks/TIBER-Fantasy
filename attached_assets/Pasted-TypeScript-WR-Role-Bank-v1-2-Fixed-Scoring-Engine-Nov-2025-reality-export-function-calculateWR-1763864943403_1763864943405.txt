@@ -1,0 +1,181 @@
+TypeScript// WR Role Bank v1.2 – Fixed Scoring Engine (Nov 2025 reality)
+export function calculateWRRoleScore(row: WeeklyRow[]): WRRoleOutput {
+  // ... all your existing aggregation code stays exactly the same ...
+  // (targetsPerGame, targetShareAvg, routesPerGame, deepTargetRate, etc.)
+
+  // ================================================================
+  // 1. VOLUME SCORE – 58% (fixed routes scaling for 2024-2025 NFL)
+  // ================================================================
+  const targetsScore = scaleTargetsPerGame(targetsPerGame);
+  const shareScore = targetShareAvg !== null 
+    ? scaleTargetShare(targetShareAvg) 
+    : targetsScore;
+  const routesScore = routesPerGame !== null 
+    ? scaleRoutesPerGame2025(routesPerGame) 
+    : targetsScore; // fallback
+
+  const volumeScore = round(
+    0.50 * targetsScore +
+    0.30 * shareScore +
+    0.20 * routesScore
+  );
+
+  // ================================================================
+  // 2. CONSISTENCY SCORE – 18% (slightly softer + CV option if you want)
+  // ================================================================
+  const consistencyScore = scaleConsistency(targetStdDev);
+
+  // ================================================================
+  // 3. HIGH-VALUE USAGE – now 12% deep + 6% slot bonus = 18% total
+  // ================================================================
+  const deepScore = scaleDeepTargetRate(deepTargetRate, totalTargetsWithPlayByPlay);
+  const slotBonus = scaleSlotEfficiency(slotRouteShareEst ?? 0);
+
+  // Blend: deep is still king, but pure slot monsters aren't murdered
+  const highValueFinal = round(0.67 * deepScore + 0.33 * slotBonus);
+
+  // ================================================================
+  // 4. MOMENTUM – 6% (reduced, was too swingy)
+  // ================================================================
+  const momentumScore = computeMomentumScore(targetsPerGame, recentTargetsPerGame);
+
+  // ================================================================
+  // FINAL ROLE SCORE v1.2
+  // ================================================================
+  const roleScore = Math.round(
+    0.58 * volumeScore +
+    0.18 * consistencyScore +
+    0.18 * highValueFinal +   // 12% deep + 6% slot
+    0.06 * momentumScore
+  );
+
+  return { roleScore, volumeScore, consistencyScore, highValueFinal, momentumScore, ... };
+}
+
+// ————————————————————————————————————————————————————————————————
+// Updated scaling functions
+// ————————————————————————————————————————————————————————————————
+
+function scaleTargetsPerGame(tpg: number): number {
+  if (tpg >= 12) return 100;
+  if (tpg >= 10) return 90;
+  if (tpg >= 8)  return 75;
+  if (tpg >= 6)  return 55;
+  if (tpg >= 4)  return 35;
+  if (tpg >= 2)  return 20;
+  return 10;
+}
+
+function scaleTargetShare(share: number): number {
+  if (share >= 0.30) return 100;
+  if (share >= 0.27) return 90;
+  if (share >= 0.24) return 80;
+  if (share >= 0.20) return 65;
+  if (share >= 0.15) return 45;
+  if (share >= 0.10) return 30;
+  return 15;
+}
+
+// 2025-realistic routes breakpoints
+function scaleRoutesPerGame2025(rpg: number): number {
+  if (rpg >= 33) return 100;
+  if (rpg >= 30) return 90;
+  if (rpg >= 27) return 80;
+  if (rpg >= 24) return 65;
+  if (rpg >= 20) return 50;
+  if (rpg >= 15) return 30;
+  return 15;
+}
+
+// Slightly softer consistency (caps floor at 45 instead of 40)
+function scaleConsistency(stdDev: number | null): number {
+  if (stdDev === null) return 60;
+  const capped = Math.min(stdDev, 7);
+  const score = 100 - (capped / 7) * 55; // max penalty 55 instead of 60
+  return Math.max(45, Math.round(score));
+}
+
+// Deep scoring unchanged except weight is now lower overall
+function scaleDeepTargetRate(rate: number | null, sample: number): number {
+  if (rate === null || sample < 30) return 50;
+  if (rate >= 0.30) return 100;
+  if (rate >= 0.25) return 90;
+  if (rate >= 0.20) return 75;
+  if (rate >= 0.15) return 60;
+  if (rate >= 0.10) return 45;
+  if (rate >= 0.05) return 30;
+  return 20;
+}
+
+// New: rewards heavy slot usage (ARSB, Puka, Wan'Dale, etc.)
+function scaleSlotEfficiency(slotShare: number): number {
+  if (slotShare >= 0.65) return 100;
+  if (slotShare >= 0.55) return 85;
+  if (slotShare >= 0.45) return 70;
+  if (slotShare >= 0.35) return 50;
+  return 30;
+}
+
+function computeMomentumScore(season: number | null, recent: number | null): number {
+  if (!season || !recent) return 60;
+  const delta = recent - season;
+  if (delta >= 3) return 100;
+  if (delta >= 1.5) return 85;
+  if (delta >= 0) return 65;
+  if (delta >= -1.5) return 50;
+  if (delta >= -3) return 35;
+  return 20;
+}
+
+function round(x: number): number {
+  return Math.round(x);
+}
+Result with this exact patch (2025 data you gave me)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PlayerOld v1.1New v1.2New TierAmon-Ra St. Brown6483ALPHAJa'Marr Chase6882ALPHACeeDee Lamb7485ALPHAPuka Nacua6278CO_ALPHAEmeka Egbuka7476CO_ALPHAWan'Dale Robinson6874CO_ALPHA

@@ -113,23 +113,23 @@ function scaleTargetShare(share: number): number {
   return 15;
 }
 
-// Routes per game → 0–100
-function scaleRoutesPerGame(rpg: number): number {
-  if (rpg >= 40) return 100;
-  if (rpg >= 35) return 85;
-  if (rpg >= 30) return 70;
-  if (rpg >= 25) return 55;
-  if (rpg >= 20) return 40;
-  if (rpg >= 15) return 25;
+// Routes per game → 0–100 (v1.2: 2025-realistic breakpoints)
+function scaleRoutesPerGame2025(rpg: number): number {
+  if (rpg >= 33) return 100;
+  if (rpg >= 30) return 90;
+  if (rpg >= 27) return 80;
+  if (rpg >= 24) return 65;
+  if (rpg >= 20) return 50;
+  if (rpg >= 15) return 30;
   return 15;
 }
 
-// Consistency: use std dev of targets; lower std dev = higher score
+// Consistency: use std dev of targets; lower std dev = higher score (v1.2: softer)
 function scaleConsistencyFromStdDev(std: number | null): number {
   if (std === null) return 60;
   const capped = Math.min(std, 7);
-  const score = 100 - (capped / 7) * 60;
-  return clamp(score, 40, 100);
+  const score = 100 - (capped / 7) * 55; // v1.2: max penalty 55 instead of 60
+  return Math.max(45, Math.round(score)); // v1.2: floor 45 instead of 40
 }
 
 // Efficiency via PPR per target → 0–100
@@ -158,7 +158,16 @@ function scaleDeepTargetRate(deepTargetRate: number | null, totalTargets: number
   return 20; // Pure underneath/screen WR
 }
 
-// Momentum based on delta in targets per game (last 3 vs season)
+// v1.2: Slot efficiency - rewards heavy slot usage (ARSB, Puka, Wan'Dale)
+function scaleSlotEfficiency(slotShare: number): number {
+  if (slotShare >= 0.65) return 100;
+  if (slotShare >= 0.55) return 85;
+  if (slotShare >= 0.45) return 70;
+  if (slotShare >= 0.35) return 50;
+  return 30;
+}
+
+// Momentum based on delta in targets per game (last 3 vs season) - v1.2: refined thresholds
 function computeMomentumScore(
   seasonTargetsPerGame: number | null,
   recentTargetsPerGame: number | null
@@ -171,11 +180,12 @@ function computeMomentumScore(
   }
   const delta = recentTargetsPerGame - seasonTargetsPerGame;
 
-  if (delta >= 3) return 95;
-  if (delta >= 1) return 80;
-  if (delta > -1) return 60;
-  if (delta > -3) return 45;
-  return 30;
+  if (delta >= 3) return 100;
+  if (delta >= 1.5) return 85;
+  if (delta >= 0) return 65;
+  if (delta >= -1.5) return 50;
+  if (delta >= -3) return 35;
+  return 20;
 }
 
 // ---- Main computation ----
@@ -271,7 +281,7 @@ export function computeWRRoleBankSeasonRow(
       : targetsScore;
   const routesScore =
     routesPerGame != null
-      ? scaleRoutesPerGame(routesPerGame)
+      ? scaleRoutesPerGame2025(routesPerGame)  // v1.2: Updated routes scaling
       : targetsScore;
 
   const volumeScore =
@@ -279,9 +289,10 @@ export function computeWRRoleBankSeasonRow(
 
   const consistencyScore = scaleConsistencyFromStdDev(targetStdDev);
 
-  // v1.1: Use deep target rate for high-value usage instead of PPR per target
-  // Use totalTargetsWithPlayByPlay (not totalTargets) to ensure sample size aligns with deep target data
-  const highValueUsageScore = scaleDeepTargetRate(deepTargetRate, totalTargetsWithPlayByPlay);
+  // v1.2: High-value usage now blends deep targets (67%) + slot efficiency (33%)
+  const deepScore = scaleDeepTargetRate(deepTargetRate, totalTargetsWithPlayByPlay);
+  const slotBonus = scaleSlotEfficiency(slotRouteShareEst ?? 0);
+  const highValueUsageScore = Math.round(0.67 * deepScore + 0.33 * slotBonus);
 
   const last3 = sorted.slice(-3);
   const last3Targets = last3
@@ -298,12 +309,12 @@ export function computeWRRoleBankSeasonRow(
     recentTargetsPerGame
   );
 
-  // v1.1: Updated weights - Volume 55%, Consistency 15%, High-Value 20%, Momentum 10%
+  // v1.2: Updated weights - Volume 58%, Consistency 18%, High-Value 18% (12% deep + 6% slot), Momentum 6%
   const roleScore =
-    0.55 * volumeScore +
-    0.15 * consistencyScore +
-    0.20 * highValueUsageScore +
-    0.10 * momentumScore;
+    0.58 * volumeScore +
+    0.18 * consistencyScore +
+    0.18 * highValueUsageScore +
+    0.06 * momentumScore;
 
   // ---- Role tier + flags ----
 
