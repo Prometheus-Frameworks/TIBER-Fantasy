@@ -34,10 +34,10 @@ type Position = 'QB' | 'RB' | 'WR' | 'TE';
 // Available weeks for the 2025 season (weeks with completed games)
 const AVAILABLE_WEEKS = [1, 2, 3, 4, 5, 6, 7];
 
-type RankingView = 'tiber' | 'role-context';
+type RankingView = 'weekly' | 'roles';
 
 export default function RankingsTab() {
-  const [rankingView, setRankingView] = useState<RankingView>('tiber');
+  const [rankingView, setRankingView] = useState<RankingView>('weekly'); // Default to Weekly Trends
   const [selectedPosition, setSelectedPosition] = useState<Position | 'ALL'>('ALL');
   const [selectedWeek, setSelectedWeek] = useState<number>(7); // Default to latest week
   const [qbExpanded, setQbExpanded] = useState(true);
@@ -184,44 +184,65 @@ export default function RankingsTab() {
     <div className="space-y-6">
       {/* Header with crimson accent */}
       <div className="border-b border-red-500/20 pb-4">
-        <h2 className="text-2xl font-bold text-white tracking-wide">RANKINGS HUB</h2>
+        <h2 className="text-2xl font-bold text-white tracking-wide">RANKINGS</h2>
         <p className="text-gray-400 mt-1 text-sm tracking-wide">
-          Multiple ranking systems for comprehensive player evaluation
+          Use Weekly Trends to see who's hot right now. Use Season Roles to understand how players are being used.
         </p>
       </div>
 
-      {/* Sub-tab Switcher */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setRankingView('tiber')}
-          className={`px-6 py-2.5 rounded-lg font-medium transition-all tracking-wide ${
-            rankingView === 'tiber'
-              ? 'bg-gradient-to-r from-red-600/30 to-red-500/30 border border-red-500/50 text-white shadow-lg shadow-red-500/20'
-              : 'bg-[#0d0e11] text-gray-400 hover:text-gray-300 border border-gray-800/50 hover:border-gray-700'
-          }`}
-          data-testid="button-view-tiber"
-        >
-          TIBER Rankings
-        </button>
-        <button
-          onClick={() => setRankingView('role-context')}
-          className={`px-6 py-2.5 rounded-lg font-medium transition-all tracking-wide ${
-            rankingView === 'role-context'
-              ? 'bg-gradient-to-r from-blue-600/30 to-purple-600/30 border border-blue-500/50 text-white shadow-lg shadow-blue-500/20'
-              : 'bg-[#0d0e11] text-gray-400 hover:text-gray-300 border border-gray-800/50 hover:border-gray-700'
-          }`}
-          data-testid="button-view-role-context"
-        >
-          Role Context
-        </button>
+      {/* Mode Toggle */}
+      <div className="flex gap-3">
+        <div className="flex flex-col">
+          <button
+            onClick={() => setRankingView('weekly')}
+            className={`px-6 py-2.5 rounded-lg font-medium transition-all tracking-wide ${
+              rankingView === 'weekly'
+                ? 'bg-gradient-to-r from-red-600/30 to-red-500/30 border border-red-500/50 text-white shadow-lg shadow-red-500/20'
+                : 'bg-[#0d0e11] text-gray-400 hover:text-gray-300 border border-gray-800/50 hover:border-gray-700'
+            }`}
+            data-testid="button-view-weekly"
+          >
+            Weekly Trends
+          </button>
+          {rankingView === 'weekly' && (
+            <p className="text-xs text-gray-500 mt-1 px-2">
+              This week's performance-based fantasy rankings (0–100 TIBER score)
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col">
+          <button
+            onClick={() => setRankingView('roles')}
+            className={`px-6 py-2.5 rounded-lg font-medium transition-all tracking-wide ${
+              rankingView === 'roles'
+                ? 'bg-gradient-to-r from-blue-600/30 to-purple-600/30 border border-blue-500/50 text-white shadow-lg shadow-blue-500/20'
+                : 'bg-[#0d0e11] text-gray-400 hover:text-gray-300 border border-gray-800/50 hover:border-gray-700'
+            }`}
+            data-testid="button-view-roles"
+          >
+            Season Roles
+          </button>
+          {rankingView === 'roles' && (
+            <p className="text-xs text-gray-500 mt-1 px-2">
+              Season-long offensive role and usage profile based on Role Bank tiers
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Conditional Rendering Based on View */}
-      {rankingView === 'role-context' ? (
+      {rankingView === 'roles' ? (
         <RoleBankRankings />
       ) : (
         <>
       {/* Original TIBER Rankings Content */}
+
+      {/* Clarity Note */}
+      <div className="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-lg">
+        <p className="text-xs text-red-300 tracking-wide">
+          📈 <span className="font-semibold">Scores represent this week's performance (0–100), not season role.</span> TIBER measures recent trending efficiency based on First Downs per Route, snap counts, and 4-week momentum.
+        </p>
+      </div>
 
       {/* Week Selector - Tactical Style */}
       <div className="space-y-2">

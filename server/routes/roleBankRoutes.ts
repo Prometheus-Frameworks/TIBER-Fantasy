@@ -201,26 +201,15 @@ async function handleListRoleBank(req: Request, res: Response) {
     }
     
     // Build Drizzle query with joins for better performance
-    let query = db
-      .select({
-        roleRow: roleTable,
-        identity: {
-          canonicalId: playerIdentityMap.canonicalId,
-          sleeperId: playerIdentityMap.sleeperId,
-          fullName: playerIdentityMap.fullName,
-          team: playerIdentityMap.nflTeam,
-        }
-      })
-      .from(roleTable)
-      .leftJoin(
-        playerIdentityMap,
-        eq(roleTable.playerId, playerIdentityMap.nflDataPyId)
-      )
-      .where(eq(roleTable.season, season))
-      .$dynamic();
+    // CRITICAL: Use player_positions view to enforce position filtering
+    const playerPositionsView = sql`(SELECT player_id, position FROM player_positions)`;
     
     // Apply filters
-    const conditions: any[] = [eq(roleTable.season, season)];
+    const conditions: any[] = [
+      eq(roleTable.season, season),
+      // Enforce position filter via player_positions view
+      sql`${roleTable.playerId} IN (SELECT player_id FROM player_positions WHERE position = ${position})`
+    ];
     
     if (tierFilter && tierFilter.length > 0) {
       conditions.push(inArray(roleTable.roleTier, tierFilter));
@@ -230,8 +219,8 @@ async function handleListRoleBank(req: Request, res: Response) {
       conditions.push(gte(roleTable.roleScore, minRoleScore));
     }
     
-    // Rebuild query with conditions
-    query = db
+    // Build query with position enforcement
+    const query = db
       .select({
         roleRow: roleTable,
         identity: {
@@ -431,7 +420,7 @@ async function handleWeeklyUsage(req: Request, res: Response) {
       playerId,
       playerName: identity?.fullName || null,
       position,
-      team: identity?.team || null,
+      team: identity?.nflTeam || null,
       season,
       weeks
     });

@@ -117,6 +117,11 @@ export default function RoleBankRankings() {
         <p className="text-gray-400 mt-1 text-sm tracking-wide">
           Season-level analytical classification for {position} role evaluation
         </p>
+        <div className="mt-3 px-4 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+          <p className="text-xs text-blue-300 tracking-wide">
+            📊 <span className="font-semibold">Scores represent role strength (0–100), not fantasy points.</span> This measures how prominent a player's role is in their offense based on volume, consistency, and usage patterns.
+          </p>
+        </div>
       </div>
 
       {/* Controls */}

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { tiberService } from '../services/tiberService';
 import { db } from '../infra/db';
-import { tiberScores, playerIdentityMap, players, injuries, gameLogs } from '../../shared/schema';
+import { tiberScores, playerIdentityMap, players, injuries, gameLogs, seasonState } from '../../shared/schema';
 import { eq, and, desc, sql, ilike, inArray, isNotNull } from 'drizzle-orm';
 import { injurySyncService } from '../services/injurySyncService';
 
@@ -148,11 +148,48 @@ async function fetchGameLog(nflfastrId: string, week: number, season: number, mo
   }
 }
 
+// Helper: Get most recent completed week with actual TIBER data
+async function getMostRecentCompletedWeek(targetSeason: number): Promise<number> {
+  try {
+    // Find the most recent week that has TIBER score data
+    // This ensures we don't show empty data if current week is in progress
+    const latestWeekWithData = await db
+      .select({
+        week: tiberScores.week,
+      })
+      .from(tiberScores)
+      .where(eq(tiberScores.season, targetSeason))
+      .orderBy(desc(tiberScores.week))
+      .limit(1);
+    
+    if (latestWeekWithData.length > 0) {
+      console.log(`📊 [TIBER] Found data through Week ${latestWeekWithData[0].week}`);
+      return latestWeekWithData[0].week;
+    }
+    
+    // Fallback to Week 7 if no data exists
+    console.warn('[TIBER] No TIBER data found for season, using fallback Week 7');
+    return 7;
+  } catch (error) {
+    console.warn('[TIBER] Could not determine current week, using fallback Week 7');
+    return 7;
+  }
+}
+
 // Batch TIBER Rankings - Top WR/TE players with positional ranks
 router.get('/rankings', async (req, res) => {
   try {
-    const week = parseInt(req.query.week as string) || 8; // Default Week 8
     const season = parseInt(req.query.season as string) || 2025;
+    
+    // Auto-detect most recent completed week if not explicitly provided
+    let week: number;
+    if (req.query.week) {
+      week = parseInt(req.query.week as string);
+    } else {
+      week = await getMostRecentCompletedWeek(season);
+      console.log(`📊 [TIBER Rankings] Auto-detected most recent completed week: ${week}`);
+    }
+    
     const limit = parseInt(req.query.limit as string) || 150;
 
     console.log(`📊 [TIBER Rankings] Fetching top ${limit} WR/TE players for Week ${week}, ${season}`);

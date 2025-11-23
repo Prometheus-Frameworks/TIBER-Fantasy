@@ -1,0 +1,325 @@
+🟦 STEP 0 — Quick Context (for you, Tiber)
+
+Current state:
+
+Role Bank v1.0 (WR/RB/TE) is fully implemented and computed.
+
+Role Context UI is live and calling the Role Bank API.
+
+But /api/role-bank/WR/2025 is returning all positions (McBride, CMC, etc.) → position filtering bug.
+
+Rankings UI has two sub-tabs:
+
+“TIBER Rankings” → weekly performance scores (stuck on Week 7).
+
+“Role Context” → season-long role/tier view.
+
+Both use 0–100 style scores → confusing to users.
+
+We’re going to fix both the backend filter and the front-end interpretation.
+
+🟥 STEP 1 — Fix Role Bank API Position Filtering (Critical Bug)
+
+Goal: When calling /api/role-bank/WR/2025, only WRs are returned.
+Same for RB and TE.
+
+1.1 Inspect current Role Bank API implementation
+
+Locate the Role Bank route file you created earlier, e.g.:
+
+server/routes/roleBankRoutes.ts (or similar)
+
+Find the handler for:
+
+GET /api/role-bank/:position/:season
+
+
+and see:
+
+which table(s) it queries (wr_role_bank, rb_role_bank, te_role_bank)
+
+how it currently filters by position
+
+how it joins to player_identity_map or player_positions
+
+1.2 Enforce position filter via player_positions view
+
+We already have:
+
+CREATE VIEW player_positions AS
+SELECT
+  nfl_data_py_id AS player_id,
+  position
+FROM player_identity_map
+WHERE nfl_data_py_id IS NOT NULL
+  AND position IS NOT NULL;
+
+
+For any query that returns Role Bank rows for a position, enforce:
+
+INNER JOIN to player_positions
+
+WHERE position = requested position
+
+Example (pseudocode with Drizzle):
+
+const normalizedPosition = position.toUpperCase(); // "WR" | "RB" | "TE"
+
+const rows = await db
+  .select({
+    // role bank columns...
+  })
+  .from(roleBankTable) // e.g. wrRoleBank, rbRoleBank, teRoleBank
+  .innerJoin(playerPositions, eq(roleBankTable.playerId, playerPositions.playerId))
+  .where(
+    and(
+      eq(roleBankTable.season, season),
+      eq(playerPositions.position, normalizedPosition),
+      // plus any tier/minRoleScore filters
+    )
+  );
+
+
+Notes:
+
+Make sure roleBankTable.playerId matches the ID used in player_positions.player_id.
+
+Normalise position to uppercase.
+
+Don’t rely on implicit filters from the Role Bank table — always go through player_positions.
+
+1.3 Add sanity checks
+
+For each of these calls:
+
+GET /api/role-bank/WR/2025
+
+GET /api/role-bank/RB/2025
+
+GET /api/role-bank/TE/2025
+
+Return a sample of 10 players per position and log:
+
+{
+  "endpoint": "/api/role-bank/WR/2025",
+  "uniquePositionsSeen": ["WR"],
+  "samplePlayers": ["CeeDee Lamb", "Ja'Marr Chase", "Amon-Ra St. Brown"]
+}
+
+
+If any endpoint returns mixed positions, adjust the join/filter and re-test.
+
+Do NOT modify RoleScore logic, only filtering.
+
+🟦 STEP 2 — Unify Rankings UI into One View with Toggle
+
+Current problem: Two sub-tabs (“TIBER Rankings” and “Role Context”) both show 0–100 scores, but represent different concepts → confusing.
+
+Goal: In the Rankings tab, we want:
+
+One unified view with a mode toggle:
+
+Mode 1: Weekly Trends (TIBER’s weekly performance rankings)
+
+Mode 2: Season Roles (Role Context / Role Bank)
+
+2.1 Update Rankings Tab layout
+
+Find:
+
+client/src/components/tabs/RankingsTab.tsx (or equivalent).
+
+Currently:
+
+It has sub-tabs for “TIBER Rankings” and “Role Context” separately.
+
+Change this structure to:
+
+Single Rankings pane
+
+With an internal toggle:
+
+// Example structure:
+const [mode, setMode] = useState<'weekly' | 'roles'>('weekly');
+
+<ToggleGroup>
+  <Toggle value="weekly" onClick={() => setMode('weekly')}>
+    Weekly Trends
+  </Toggle>
+  <Toggle value="roles" onClick={() => setMode('roles')}>
+    Season Roles
+  </Toggle>
+</ToggleGroup>
+
+{mode === 'weekly' && <TiberWeeklyRankings />}
+{mode === 'roles' && <RoleBankRankings />}
+
+
+Where:
+
+<TiberWeeklyRankings /> is the existing TIBER weekly rankings component.
+
+<RoleBankRankings /> is the Role Context component you just built.
+
+2.2 Rename and relabel modes for clarity
+
+In the UI:
+
+“Weekly Trends” (this is TIBER’s weekly hot-list)
+
+“Season Roles” (this is Role Bank role context)
+
+Under each toggle, add a 1-line description:
+
+For Weekly Trends:
+
+“This week’s performance-based fantasy rankings (0–100 TIBER score).”
+
+For Season Roles:
+
+“Season-long offensive role and usage profile based on Role Bank tiers.”
+
+This solves the “two 0–100 scores but different meanings” confusion.
+
+🟥 STEP 3 — Fix TIBER Weekly Rankings Week Logic
+
+Right now, TIBER’s weekly rankings are frozen on Week 7.
+We need them to:
+
+auto-detect the current NFL week
+
+pull stats for that week
+
+display the chosen week clearly in the UI
+
+3.1 Find weekly TIBER scoring code path
+
+Locate:
+
+the backend service that computes weekly TIBER scores (e.g. tiberService, tiberWeeklyRankingsService, etc.)
+
+the API endpoint used by the frontend weekly rankings component.
+
+Look for:
+
+any hardcoded week values like week = 7
+
+any “current week” default logic that was temporarily fixed
+
+3.2 Implement current NFL week detection
+
+We want the system to:
+
+Determine the current season/year and week based on today’s date.
+
+Default Weekly Trends to that week.
+
+Allow overriding via query param if needed (?week=10).
+
+Options (pick one that fits existing code):
+
+Use an existing schedule / nfl_weeks table if you have one.
+
+Or implement a simple mapping function if schedule data already exists from NFLfastR.
+
+Whatever the method, the backend should:
+
+Have a single function like getCurrentNflWeek() that returns { season, week }.
+
+Use this function as default for TIBER rankings if no week is supplied.
+
+3.3 Update Weekly Rankings API
+
+Update the weekly rankings API to:
+
+accept optional week query param.
+
+if week is missing:
+
+call getCurrentNflWeek()
+
+include season and week in the API response:
+
+{
+  "season": 2025,
+  "week": 11,
+  "results": [...]
+}
+
+
+Frontend can then display:
+
+“Weekly Trends — Week 11, 2025”
+
+3.4 Frontend Weekly Trends component adjustments
+
+In the <TiberWeeklyRankings /> component:
+
+Show current season and week from the API response.
+
+Optionally add a dropdown to choose week if not too complex (can be v2).
+
+Make sure it no longer references hardcoded Week 7 anywhere.
+
+🟦 STEP 4 — UX Clarity (Small but Important)
+
+Add a bit of polish so first-time users immediately understand the difference:
+
+In Rankings tab:
+
+Make sure the page title clearly says “Rankings”.
+
+Under it, show a small text like:
+
+“Use Weekly Trends to see who’s hot right now.
+Use Season Roles to understand how players are being used.”
+
+For Role Context table (Season Roles):
+
+Somewhere near the top, add:
+
+“Scores represent role strength (0–100), not fantasy points.”
+
+For Weekly Trends:
+
+Add:
+
+“Scores represent performance this week (0–100), not season role.”
+
+Nothing fancy — just honest guidance.
+
+🟥 STEP 5 — Validation Checklist
+
+When you’re done:
+
+Call:
+
+GET /api/role-bank/WR/2025
+
+GET /api/role-bank/RB/2025
+
+GET /api/role-bank/TE/2025
+
+Confirm:
+
+Each only returns players of that position.
+
+Log unique positions per endpoint.
+
+In the UI:
+
+Open Rankings → Weekly Trends:
+
+Confirm week label shows current week.
+
+Confirm players match that week’s performances.
+
+Switch to Season Roles:
+
+Confirm WR view does not contain RB/TE.
+
+Confirm TE view has McBride, LaPorta, Kelce correctly.
+
+Confirm RB view has CMC, Bijan, Achane appropriately.
+
+Confirm there are no references anywhere to the old hardcoded Week 7.
