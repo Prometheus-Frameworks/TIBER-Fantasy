@@ -271,7 +271,9 @@ export default function RoleBankRankings() {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Player</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Team</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Tier</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Score</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  {position === 'WR' && viewMode === 'fantasy' ? 'Fantasy' : 'Score'}
+                </th>
                 <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">GP</th>
                 
                 {/* Position-specific columns */}
