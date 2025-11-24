@@ -6167,6 +6167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { weeklyStats, playerIdentityMap, wrRoleBank } = await import('@shared/schema');
       const { calculateWRAdvancedMetrics } = await import('./services/wrAdvancedMetricsService');
+      const { calculateWrAlphaScore } = await import('./services/wrAlphaEngine');
       
       // Import player_injuries table for IR status
       const { playerInjuries } = await import('@shared/schema');
@@ -6194,6 +6195,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           deepTargetRate: wrRoleBank.deepTargetRate,
           slotRouteShareEst: wrRoleBank.slotRouteShareEst,
           roleTier: wrRoleBank.roleTier,
+          // Additional fields for Alpha Engine
+          targetsPerGame: wrRoleBank.targetsPerGame,
+          targetShareAvg: wrRoleBank.targetShareAvg,
+          routesPerGame: wrRoleBank.routesPerGame,
+          pprPerTarget: wrRoleBank.pprPerTarget,
           // Injury status
           injuryStatus: playerInjuries.status,
           injuryType: playerInjuries.injuryType,
@@ -6235,6 +6241,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           wrRoleBank.deepTargetRate,
           wrRoleBank.slotRouteShareEst,
           wrRoleBank.roleTier,
+          wrRoleBank.targetsPerGame,
+          wrRoleBank.targetShareAvg,
+          wrRoleBank.routesPerGame,
+          wrRoleBank.pprPerTarget,
           playerInjuries.status,
           playerInjuries.injuryType
         )
@@ -6331,29 +6341,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      // Calculate max values for normalization
-      const maxTargets = Math.max(...processedPlayers.map(p => p.targets));
-      const maxFantasyPoints = Math.max(...processedPlayers.map(p => p.fantasyPoints));
-      const maxAdjEff = Math.max(...processedPlayers.map(p => p.adjustedEfficiency));
-
-      // Add alpha composite score (0-100)
+      // Add TIBER Alpha Engine scores (unified 4-pillar system)
       const ranked = processedPlayers
         .map(player => {
-          // Normalized indices (0-1)
-          const volumeIndex = maxTargets > 0 ? player.targets / maxTargets : 0;
-          const pointsIndex = maxFantasyPoints > 0 ? player.fantasyPoints / maxFantasyPoints : 0;
-          const efficiencyIndex = maxAdjEff > 0 ? player.adjustedEfficiency / maxAdjEff : 0;
+          // Prepare input for unified Alpha Engine
+          const fantasyPointsPerGame = player.gamesPlayed > 0 ? player.fantasyPoints / player.gamesPlayed : 0;
           
-          // Alpha composite score: 45% volume, 35% total points, 20% efficiency
-          const alphaScoreRaw = (0.45 * volumeIndex) + (0.35 * pointsIndex) + (0.20 * efficiencyIndex);
-          const alphaScore = Math.round(alphaScoreRaw * 100);
+          const alphaInput = {
+            gamesPlayed: player.gamesPlayed,
+            targetsPerGame: player.targetsPerGame ?? (player.gamesPlayed > 0 ? player.targets / player.gamesPlayed : 0),
+            totalTargets: player.targets,
+            targetShareAvg: player.targetShareAvg ?? null,
+            routesPerGame: player.routesPerGame ?? null,
+            fantasyPointsTotal: player.fantasyPoints,
+            fantasyPointsPerGame,
+            pprPerTarget: player.pprPerTarget ?? player.pointsPerTarget,
+            adjPprPerTarget: player.adjustedEfficiency,
+            consistencyScore: player.consistencyScore ?? null,
+            momentumScore: player.momentumScore ?? null,
+            deepTargetRate: player.deepTargetRate ?? null,
+            slotRouteShareEst: player.slotRouteShareEst ?? null,
+            pureRoleScore: player.pureRoleScore ?? null,
+          };
+          
+          // Calculate unified alpha score using 4-pillar engine
+          const alphaOutput = calculateWrAlphaScore(alphaInput);
           
           return {
             ...player,
-            volumeIndex: Math.round(volumeIndex * 100) / 100,
-            pointsIndex: Math.round(pointsIndex * 100) / 100,
-            efficiencyIndex: Math.round(efficiencyIndex * 100) / 100,
-            alphaScore,
+            // TIBER Alpha Engine (unified 50/25/15/10)
+            alphaScore: alphaOutput.alphaScore,
+            volumeIndex: alphaOutput.volumeIndex,
+            productionIndex: alphaOutput.productionIndex,
+            efficiencyIndex: alphaOutput.efficiencyIndex,
+            stabilityIndex: alphaOutput.stabilityIndex,
           };
         })
         // Sort by alpha score DESC, then by adjusted efficiency DESC (tie-breaker)
