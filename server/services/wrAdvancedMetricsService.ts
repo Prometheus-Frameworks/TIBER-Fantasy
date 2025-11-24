@@ -117,7 +117,8 @@ function clamp(value: number, min: number, max: number): number {
 
 export async function calculateWRAdvancedMetrics(
   season: number,
-  minGames: number = 4
+  minGames: number = 4,
+  momentumScoreMap?: Map<string, number>
 ): Promise<Map<string, WRAdvancedMetrics>> {
   
   // Step 1: Get weekly stats for all WRs
@@ -254,9 +255,17 @@ export async function calculateWRAdvancedMetrics(
     // 8. ENERGY INDEX (boom + role delta + efficiency trend + momentum)
     const boomIndex = scaleBoomRate(boomRate);
     const efficiencyTrendIndex = scaleEfficiencyTrend(efficiencyTrend);
-    // We'll fetch momentum from wr_role_bank later and blend here
-    // For now, use a placeholder
-    const energyIndex = Math.round(0.35 * boomIndex + 0.35 * roleDelta + 0.30 * efficiencyTrendIndex);
+    
+    // Blend momentum from role bank if available
+    const momentumScore = momentumScoreMap?.get(playerId) ?? 50; // Default 50 if not found
+    
+    // Final blend: 25% boom + 25% role delta + 25% efficiency trend + 25% momentum
+    const energyIndex = Math.round(
+      0.25 * boomIndex + 
+      0.25 * roleDelta + 
+      0.25 * efficiencyTrendIndex + 
+      0.25 * momentumScore
+    );
     
     results.set(playerId, {
       playerId,
