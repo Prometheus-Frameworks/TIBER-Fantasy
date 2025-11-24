@@ -6163,7 +6163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get('/api/admin/wr-rankings-sandbox', async (req: Request, res: Response) => {
     try {
-      const { weeklyStats, playerIdentityMap } = await import('@shared/schema');
+      const { weeklyStats, playerIdentityMap, wrRoleBank } = await import('@shared/schema');
       
       // Query 2025 WRs with 4+ games, aggregate targets and fantasy points
       // IMPORTANT: Join with player_identity_map for authoritative position data
@@ -6177,11 +6177,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gamesPlayed: sql<number>`COUNT(DISTINCT ${weeklyStats.week})::int`,
           totalTargets: sql<number>`SUM(COALESCE(${weeklyStats.targets}, 0))::int`,
           totalFantasyPoints: sql<number>`SUM(COALESCE(${weeklyStats.fantasyPointsPpr}, 0))::real`,
+          // WR Role Bank metrics
+          roleScore: wrRoleBank.roleScore,
+          pureRoleScore: wrRoleBank.pureRoleScore,
+          volumeScore: wrRoleBank.volumeScore,
+          consistencyScore: wrRoleBank.consistencyScore,
+          highValueUsageScore: wrRoleBank.highValueUsageScore,
+          momentumScore: wrRoleBank.momentumScore,
+          deepTargetRate: wrRoleBank.deepTargetRate,
+          slotRouteShareEst: wrRoleBank.slotRouteShareEst,
+          roleTier: wrRoleBank.roleTier,
         })
         .from(weeklyStats)
         .innerJoin(
           playerIdentityMap,
           eq(weeklyStats.playerId, playerIdentityMap.nflDataPyId)
+        )
+        .leftJoin(
+          wrRoleBank,
+          and(
+            eq(weeklyStats.playerId, wrRoleBank.playerId),
+            eq(wrRoleBank.season, 2025)
+          )
         )
         .where(
           and(
@@ -6189,7 +6206,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(playerIdentityMap.position, 'WR')  // Use authoritative position from player_identity_map
           )
         )
-        .groupBy(weeklyStats.playerId, weeklyStats.playerName, weeklyStats.team, playerIdentityMap.position)
+        .groupBy(
+          weeklyStats.playerId, 
+          weeklyStats.playerName, 
+          weeklyStats.team, 
+          playerIdentityMap.position,
+          wrRoleBank.roleScore,
+          wrRoleBank.pureRoleScore,
+          wrRoleBank.volumeScore,
+          wrRoleBank.consistencyScore,
+          wrRoleBank.highValueUsageScore,
+          wrRoleBank.momentumScore,
+          wrRoleBank.deepTargetRate,
+          wrRoleBank.slotRouteShareEst,
+          wrRoleBank.roleTier
+        )
         .having(sql`COUNT(DISTINCT ${weeklyStats.week}) >= 4 AND SUM(COALESCE(${weeklyStats.targets}, 0)) >= 15`);
 
       // Calculate volume-weighted efficiency metrics
@@ -6218,6 +6249,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsPerTarget: Math.round(pointsPerTarget * 100) / 100,
           samplePenalty: Math.round(samplePenalty * 100) / 100,
           adjustedEfficiency: Math.round(adjustedEfficiency * 100) / 100,
+          // WR Role Bank metrics (may be null if not in role bank)
+          roleScore: player.roleScore ?? null,
+          pureRoleScore: player.pureRoleScore ?? null,
+          volumeScore: player.volumeScore ?? null,
+          consistencyScore: player.consistencyScore ?? null,
+          highValueUsageScore: player.highValueUsageScore ?? null,
+          momentumScore: player.momentumScore ?? null,
+          deepTargetRate: player.deepTargetRate ? Math.round(player.deepTargetRate * 100) / 100 : null,
+          slotRouteShareEst: player.slotRouteShareEst ? Math.round(player.slotRouteShareEst * 100) / 100 : null,
+          roleTier: player.roleTier ?? null,
         };
       });
 
