@@ -143,6 +143,8 @@ export async function getFantasyWRRankings(
     .where(eq(wrRoleBank.season, season));
 
   // Step 2: Aggregate fantasy points per game from weekly_stats
+  // IMPORTANT: Join with player_identity_map to use authoritative position data
+  // (weekly_stats.position has incorrect data - RBs labeled as "WR")
   const fantasyStatsRaw = await db
     .select({
       playerId: weeklyStats.playerId,
@@ -150,10 +152,14 @@ export async function getFantasyWRRankings(
       gamesWithStats: sql<number>`COUNT(*) FILTER (WHERE ${weeklyStats.fantasyPointsPpr} > 0)`,
     })
     .from(weeklyStats)
+    .innerJoin(
+      playerIdentityMap,
+      eq(weeklyStats.playerId, playerIdentityMap.nflDataPyId)
+    )
     .where(
       and(
         eq(weeklyStats.season, season),
-        eq(weeklyStats.position, 'WR')
+        eq(playerIdentityMap.position, 'WR')  // Use authoritative position from player_identity_map
       )
     )
     .groupBy(weeklyStats.playerId);
