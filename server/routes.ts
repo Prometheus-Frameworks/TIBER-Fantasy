@@ -6183,10 +6183,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Calculate advanced metrics for all WRs (with momentum scores)
-      const advancedMetricsMap = await calculateWRAdvancedMetrics(2025, 4, momentumMap);
+      // Calculate advanced metrics for all WRs (with momentum scores) - lowered to 2 games minimum
+      const advancedMetricsMap = await calculateWRAdvancedMetrics(2025, 2, momentumMap);
       
-      // Query 2025 WRs with 4+ games, aggregate targets and fantasy points
+      // Import player_injuries table for IR status
+      const { playerInjuries } = await import('@shared/schema');
+      
+      // Query 2025 WRs with 2+ games, aggregate targets and fantasy points
       // IMPORTANT: Join with player_identity_map for authoritative position data
       // (weekly_stats.position has incorrect data - RBs labeled as "WR")
       const results = await db
@@ -6195,6 +6198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           playerName: weeklyStats.playerName,
           team: weeklyStats.team,
           position: playerIdentityMap.position,
+          canonicalId: playerIdentityMap.canonicalId,
           gamesPlayed: sql<number>`COUNT(DISTINCT ${weeklyStats.week})::int`,
           totalTargets: sql<number>`SUM(COALESCE(${weeklyStats.targets}, 0))::int`,
           totalFantasyPoints: sql<number>`SUM(COALESCE(${weeklyStats.fantasyPointsPpr}, 0))::real`,
@@ -6208,6 +6212,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           deepTargetRate: wrRoleBank.deepTargetRate,
           slotRouteShareEst: wrRoleBank.slotRouteShareEst,
           roleTier: wrRoleBank.roleTier,
+          // Injury status
+          injuryStatus: playerInjuries.status,
+          injuryType: playerInjuries.injuryType,
         })
         .from(weeklyStats)
         .innerJoin(
@@ -6221,6 +6228,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(wrRoleBank.season, 2025)
           )
         )
+        .leftJoin(
+          playerInjuries,
+          eq(playerIdentityMap.canonicalId, playerInjuries.playerId)
+        )
         .where(
           and(
             eq(weeklyStats.season, 2025),
@@ -6232,6 +6243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           weeklyStats.playerName, 
           weeklyStats.team, 
           playerIdentityMap.position,
+          playerIdentityMap.canonicalId,
           wrRoleBank.roleScore,
           wrRoleBank.pureRoleScore,
           wrRoleBank.volumeScore,
@@ -6240,9 +6252,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           wrRoleBank.momentumScore,
           wrRoleBank.deepTargetRate,
           wrRoleBank.slotRouteShareEst,
-          wrRoleBank.roleTier
+          wrRoleBank.roleTier,
+          playerInjuries.status,
+          playerInjuries.injuryType
         )
-        .having(sql`COUNT(DISTINCT ${weeklyStats.week}) >= 4 AND SUM(COALESCE(${weeklyStats.targets}, 0)) >= 15`);
+        .having(sql`COUNT(DISTINCT ${weeklyStats.week}) >= 2 AND SUM(COALESCE(${weeklyStats.targets}, 0)) >= 10`);
 
       // Calculate volume-weighted efficiency metrics and merge advanced metrics
       const processedPlayers = results.map(player => {
@@ -6273,6 +6287,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsPerTarget: Math.round(pointsPerTarget * 100) / 100,
           samplePenalty: Math.round(samplePenalty * 100) / 100,
           adjustedEfficiency: Math.round(adjustedEfficiency * 100) / 100,
+          // Injury status (IR/OUT badges)
+          injuryStatus: player.injuryStatus ?? null,
+          injuryType: player.injuryType ?? null,
           // WR Role Bank metrics (may be null if not in role bank)
           roleScore: player.roleScore ?? null,
           pureRoleScore: player.pureRoleScore ?? null,
