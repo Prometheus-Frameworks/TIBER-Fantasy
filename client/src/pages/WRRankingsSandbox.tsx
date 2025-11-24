@@ -101,12 +101,16 @@ export default function WRRankingsSandbox() {
     }
   };
 
-  // Apply filters and sort
+  // Apply filters and sort (WR filters only apply to WR position)
   const filteredData = data?.data.filter(player => {
-    // Filter: Only CO_ALPHA / SECONDARY
-    if (filterCoAlphaSecondary) {
-      if (player.roleTier !== 'CO_ALPHA' && player.roleTier !== 'SECONDARY') {
-        return false;
+    // WR-specific filters - skip if viewing RBs
+    if (position === 'WR') {
+      const wrPlayer = player as SandboxPlayer;
+      // Filter: Only CO_ALPHA / SECONDARY
+      if (filterCoAlphaSecondary) {
+        if (wrPlayer.roleTier !== 'CO_ALPHA' && wrPlayer.roleTier !== 'SECONDARY') {
+          return false;
+        }
       }
     }
     return true;
