@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpDown } from 'lucide-react';
 
-type SortField = 'playerName' | 'team' | 'gamesPlayed' | 'targets' | 'fantasyPoints' | 'pointsPerTarget' | 'samplePenalty' | 'adjustedEfficiency' | 'alphaScore';
+type SortField = 'playerName' | 'team' | 'gamesPlayed' | 'targets' | 'fantasyPoints' | 'pointsPerTarget' | 'samplePenalty' | 'adjustedEfficiency' | 'alphaScore' | 'roleScore' | 'deepTargetRate' | 'slotRouteShareEst';
 type SortOrder = 'asc' | 'desc';
+
+type RoleTier = 'ALPHA' | 'CO_ALPHA' | 'PRIMARY_SLOT' | 'SECONDARY' | 'ROTATIONAL' | 'UNKNOWN' | null;
 
 interface SandboxPlayer {
   playerId: string;
@@ -19,6 +21,16 @@ interface SandboxPlayer {
   pointsIndex: number;
   efficiencyIndex: number;
   alphaScore: number;
+  // WR Role Bank metrics
+  roleScore: number | null;
+  pureRoleScore: number | null;
+  volumeScore: number | null;
+  consistencyScore: number | null;
+  highValueUsageScore: number | null;
+  momentumScore: number | null;
+  deepTargetRate: number | null;
+  slotRouteShareEst: number | null;
+  roleTier: RoleTier;
 }
 
 interface SandboxResponse {
@@ -33,6 +45,11 @@ interface SandboxResponse {
 export default function WRRankingsSandbox() {
   const [sortField, setSortField] = useState<SortField>('alphaScore');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  
+  // Filter controls
+  const [filterCoAlphaSecondary, setFilterCoAlphaSecondary] = useState(false);
+  const [highlightDeepThreats, setHighlightDeepThreats] = useState(false);
+  const [highlightSlotHeavy, setHighlightSlotHeavy] = useState(false);
 
   const { data, isLoading } = useQuery<SandboxResponse>({
     queryKey: ['/api/admin/wr-rankings-sandbox'],
@@ -47,7 +64,18 @@ export default function WRRankingsSandbox() {
     }
   };
 
-  const sortedData = data?.data.slice().sort((a, b) => {
+  // Apply filters and sort
+  const filteredData = data?.data.filter(player => {
+    // Filter: Only CO_ALPHA / SECONDARY
+    if (filterCoAlphaSecondary) {
+      if (player.roleTier !== 'CO_ALPHA' && player.roleTier !== 'SECONDARY') {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  const sortedData = filteredData?.slice().sort((a, b) => {
     const aVal = a[sortField];
     const bVal = b[sortField];
     
@@ -57,10 +85,22 @@ export default function WRRankingsSandbox() {
         : bVal.localeCompare(aVal);
     }
     
+    // Handle null values (role bank fields may be null)
+    if (aVal === null && bVal === null) return 0;
+    if (aVal === null) return 1; // null goes to end
+    if (bVal === null) return -1; // null goes to end
+    
     return sortOrder === 'asc' 
       ? (aVal as number) - (bVal as number)
       : (bVal as number) - (aVal as number);
   });
+  
+  // Helper to check if player should be highlighted
+  const isDeepThreat = (player: SandboxPlayer) => 
+    highlightDeepThreats && player.deepTargetRate !== null && player.deepTargetRate >= 0.20;
+  
+  const isSlotHeavy = (player: SandboxPlayer) => 
+    highlightSlotHeavy && player.slotRouteShareEst !== null && player.slotRouteShareEst >= 0.45;
 
   const SortButton = ({ field, label }: { field: SortField; label: string }) => (
     <button
@@ -102,15 +142,54 @@ export default function WRRankingsSandbox() {
           </div>
         </div>
 
+        {/* Filter Controls */}
+        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-gray-300 mb-3">Filters & Highlights</h3>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={filterCoAlphaSecondary}
+                onChange={(e) => setFilterCoAlphaSecondary(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-2 focus:ring-blue-500"
+                data-testid="filter-co-alpha-secondary"
+              />
+              <span className="text-sm text-gray-300">Only show CO_ALPHA / SECONDARY</span>
+            </label>
+            
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={highlightDeepThreats}
+                onChange={(e) => setHighlightDeepThreats(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-2 focus:ring-orange-500"
+                data-testid="highlight-deep-threats"
+              />
+              <span className="text-sm text-gray-300">Highlight deep threats (≥20% deep target rate)</span>
+            </label>
+            
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={highlightSlotHeavy}
+                onChange={(e) => setHighlightSlotHeavy(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-cyan-500 focus:ring-2 focus:ring-cyan-500"
+                data-testid="highlight-slot-heavy"
+              />
+              <span className="text-sm text-gray-300">Highlight slot-heavy (≥45% slot share)</span>
+            </label>
+          </div>
+        </div>
+
         {/* Stats Summary */}
         {data && (
           <div className="flex items-center gap-4 text-sm text-gray-400">
-            <span className="font-medium text-white">{data.count}</span>
-            <span>WRs with {data.minGames}+ games & {data.minTargets || 15}+ targets</span>
+            <span className="font-medium text-white">{sortedData?.length || 0}</span>
+            <span>WRs shown (from {data.count} total)</span>
             <span className="text-gray-600">•</span>
             <span>Season: {data.season}</span>
             <span className="text-gray-600">•</span>
-            <span className="text-gray-500">Sorted by Alpha Score</span>
+            <span className="text-gray-500">Sorted by {sortField}</span>
           </div>
         )}
 
@@ -150,44 +229,86 @@ export default function WRRankingsSandbox() {
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
                     <SortButton field="alphaScore" label="Alpha Score" />
                   </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <SortButton field="roleScore" label="Role Score" />
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <SortButton field="deepTargetRate" label="Deep %" />
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <SortButton field="slotRouteShareEst" label="Slot %" />
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   [...Array(10)].map((_, idx) => (
                     <tr key={idx} className="border-b border-gray-800/30">
-                      <td colSpan={10} className="px-4 py-4">
+                      <td colSpan={13} className="px-4 py-4">
                         <div className="h-8 bg-gray-700/30 rounded animate-pulse"></div>
                       </td>
                     </tr>
                   ))
                 ) : (
-                  sortedData?.map((player, idx) => (
-                    <tr
-                      key={player.playerId}
-                      className="border-b border-gray-800/30 hover:bg-blue-500/5 transition-colors"
-                      data-testid={`sandbox-row-${idx}`}
-                    >
-                      <td className="px-4 py-3 text-gray-500 font-medium">{idx + 1}</td>
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-white">{player.playerName}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 bg-gray-800/70 text-gray-300 rounded text-xs font-medium">
-                          {player.team}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center text-gray-300">{player.gamesPlayed}</td>
-                      <td className="px-4 py-3 text-center text-gray-300">{player.targets}</td>
-                      <td className="px-4 py-3 text-center text-gray-300">{player.fantasyPoints.toFixed(1)}</td>
-                      <td className="px-4 py-3 text-center text-gray-400">{player.pointsPerTarget.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-center text-gray-400">{player.samplePenalty.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-center text-gray-400">{player.adjustedEfficiency.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="font-bold text-purple-400 text-base">{player.alphaScore}</span>
-                      </td>
-                    </tr>
-                  ))
+                  sortedData?.map((player, idx) => {
+                    const deepThreat = isDeepThreat(player);
+                    const slotHeavy = isSlotHeavy(player);
+                    const rowClassName = `border-b border-gray-800/30 hover:bg-blue-500/5 transition-colors ${
+                      deepThreat ? 'bg-orange-500/10' : slotHeavy ? 'bg-cyan-500/10' : ''
+                    }`;
+                    
+                    return (
+                      <tr
+                        key={player.playerId}
+                        className={rowClassName}
+                        data-testid={`sandbox-row-${idx}`}
+                      >
+                        <td className="px-4 py-3 text-gray-500 font-medium">{idx + 1}</td>
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-white">{player.playerName}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-1 bg-gray-800/70 text-gray-300 rounded text-xs font-medium">
+                            {player.team}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center text-gray-300">{player.gamesPlayed}</td>
+                        <td className="px-4 py-3 text-center text-gray-300">{player.targets}</td>
+                        <td className="px-4 py-3 text-center text-gray-300">{player.fantasyPoints.toFixed(1)}</td>
+                        <td className="px-4 py-3 text-center text-gray-400">{player.pointsPerTarget.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-center text-gray-400">{player.samplePenalty.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-center text-gray-400">{player.adjustedEfficiency.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="font-bold text-purple-400 text-base">{player.alphaScore}</span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {player.roleScore !== null ? (
+                            <span className="text-blue-300 font-medium">{player.roleScore}</span>
+                          ) : (
+                            <span className="text-gray-600 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {player.deepTargetRate !== null ? (
+                            <span className={deepThreat ? 'text-orange-400 font-bold' : 'text-gray-300'}>
+                              {(player.deepTargetRate * 100).toFixed(0)}%
+                            </span>
+                          ) : (
+                            <span className="text-gray-600 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {player.slotRouteShareEst !== null ? (
+                            <span className={slotHeavy ? 'text-cyan-400 font-bold' : 'text-gray-300'}>
+                              {(player.slotRouteShareEst * 100).toFixed(0)}%
+                            </span>
+                          ) : (
+                            <span className="text-gray-600 text-xs">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
