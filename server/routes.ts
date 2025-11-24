@@ -6168,29 +6168,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { weeklyStats, playerIdentityMap, wrRoleBank } = await import('@shared/schema');
       const { calculateWRAdvancedMetrics } = await import('./services/wrAdvancedMetricsService');
       
-      // First, fetch momentum scores from role bank to pass to advanced metrics
-      const momentumQuery = await db
-        .select({
-          playerId: wrRoleBank.playerId,
-          momentumScore: wrRoleBank.momentumScore
-        })
-        .from(wrRoleBank)
-        .where(eq(wrRoleBank.season, 2025));
-      
-      const momentumMap = new Map<string, number>();
-      for (const row of momentumQuery) {
-        if (row.momentumScore !== null) {
-          momentumMap.set(row.playerId, row.momentumScore);
-        }
-      }
-      
-      // Calculate advanced metrics for all WRs (with momentum scores) - lowered to 2 games minimum
-      const advancedMetricsMap = await calculateWRAdvancedMetrics(2025, 2, momentumMap);
-      
       // Import player_injuries table for IR status
       const { playerInjuries } = await import('@shared/schema');
       
-      // Query 2025 WRs with 2+ games, aggregate targets and fantasy points
+      // STEP 1: Query 2025 WRs with 2+ games/10+ targets to get qualified player list
       // IMPORTANT: Join with player_identity_map for authoritative position data
       // (weekly_stats.position has incorrect data - RBs labeled as "WR")
       const results = await db
@@ -6258,6 +6239,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           playerInjuries.injuryType
         )
         .having(sql`COUNT(DISTINCT ${weeklyStats.week}) >= 2 AND SUM(COALESCE(${weeklyStats.targets}, 0)) >= 10`);
+      
+      // STEP 2: Get momentum scores ONLY for qualified players (not all WRs)
+      const qualifiedPlayerIds = results.map(p => p.playerId);
+      const momentumMap = new Map<string, number>();
+      
+      if (qualifiedPlayerIds.length > 0) {
+        const { inArray } = await import('drizzle-orm');
+        const momentumQuery = await db
+          .select({
+            playerId: wrRoleBank.playerId,
+            momentumScore: wrRoleBank.momentumScore
+          })
+          .from(wrRoleBank)
+          .where(
+            and(
+              eq(wrRoleBank.season, 2025),
+              inArray(wrRoleBank.playerId, qualifiedPlayerIds)
+            )
+          );
+        
+        for (const row of momentumQuery) {
+          if (row.momentumScore !== null) {
+            momentumMap.set(row.playerId, row.momentumScore);
+          }
+        }
+      }
+      
+      // STEP 3: Calculate advanced metrics ONLY for qualified players
+      const advancedMetricsMap = await calculateWRAdvancedMetrics(2025, 2, momentumMap, qualifiedPlayerIds);
 
       // Calculate volume-weighted efficiency metrics and merge advanced metrics
       const processedPlayers = results.map(player => {
@@ -6358,10 +6368,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         season: 2025,
-        minGames: 4,
-        minTargets: 15,
+        minGames: 2,
+        minTargets: 10,
         count: ranked.length,
-        data: ranked,
+        players: ranked,
       });
 
     } catch (error) {

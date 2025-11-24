@@ -118,25 +118,43 @@ function clamp(value: number, min: number, max: number): number {
 export async function calculateWRAdvancedMetrics(
   season: number,
   minGames: number = 4,
-  momentumScoreMap?: Map<string, number>
+  momentumScoreMap?: Map<string, number>,
+  qualifiedPlayerIds?: string[]
 ): Promise<Map<string, WRAdvancedMetrics>> {
   
-  // Step 1: Get weekly stats for all WRs
-  const weeklyStatsQuery = await db.execute(sql`
-    SELECT 
-      ws.player_id,
-      ws.week,
-      ws.targets,
-      ws.routes,
-      ws.rec_yd,
-      ws.fantasy_points_ppr
-    FROM weekly_stats ws
-    INNER JOIN player_identity_map pim ON pim.nfl_data_py_id = ws.player_id
-    WHERE ws.season = ${season}
-      AND pim.position = 'WR'
-      AND ws.targets IS NOT NULL
-    ORDER BY ws.player_id, ws.week
-  `);
+  // Step 1: Get weekly stats for WRs (optionally filtered to qualified players only)
+  const weeklyStatsQuery = qualifiedPlayerIds && qualifiedPlayerIds.length > 0
+    ? await db.execute(sql`
+        SELECT 
+          ws.player_id,
+          ws.week,
+          ws.targets,
+          ws.routes,
+          ws.rec_yd,
+          ws.fantasy_points_ppr
+        FROM weekly_stats ws
+        INNER JOIN player_identity_map pim ON pim.nfl_data_py_id = ws.player_id
+        WHERE ws.season = ${season}
+          AND pim.position = 'WR'
+          AND ws.targets IS NOT NULL
+          AND ws.player_id = ANY(ARRAY[${sql.raw(qualifiedPlayerIds.map(id => `'${id}'`).join(','))}])
+        ORDER BY ws.player_id, ws.week
+      `)
+    : await db.execute(sql`
+        SELECT 
+          ws.player_id,
+          ws.week,
+          ws.targets,
+          ws.routes,
+          ws.rec_yd,
+          ws.fantasy_points_ppr
+        FROM weekly_stats ws
+        INNER JOIN player_identity_map pim ON pim.nfl_data_py_id = ws.player_id
+        WHERE ws.season = ${season}
+          AND pim.position = 'WR'
+          AND ws.targets IS NOT NULL
+        ORDER BY ws.player_id, ws.week
+      `);
   
   const weeklyData = weeklyStatsQuery.rows as {
     player_id: string;
@@ -147,19 +165,33 @@ export async function calculateWRAdvancedMetrics(
     fantasy_points_ppr: number;
   }[];
   
-  // Step 2: Get deep & red zone targets from bronze_nflfastr_plays
-  const playDataQuery = await db.execute(sql`
-    SELECT 
-      receiver_player_id as player_id,
-      COUNT(*) FILTER (WHERE air_yards >= 20) as deep_targets,
-      COUNT(*) FILTER (WHERE (raw_data->>'yardline_100')::numeric <= 20) as rz_targets,
-      COUNT(*) FILTER (WHERE (raw_data->>'yardline_100')::numeric <= 10 OR (raw_data->>'pass_touchdown')::numeric = 1) as ez_targets
-    FROM bronze_nflfastr_plays
-    WHERE season = ${season}
-      AND receiver_player_id IS NOT NULL
-      AND play_type = 'pass'
-    GROUP BY receiver_player_id
-  `);
+  // Step 2: Get deep & red zone targets from bronze_nflfastr_plays (optionally filtered)
+  const playDataQuery = qualifiedPlayerIds && qualifiedPlayerIds.length > 0
+    ? await db.execute(sql`
+        SELECT 
+          receiver_player_id as player_id,
+          COUNT(*) FILTER (WHERE air_yards >= 20) as deep_targets,
+          COUNT(*) FILTER (WHERE (raw_data->>'yardline_100')::numeric <= 20) as rz_targets,
+          COUNT(*) FILTER (WHERE (raw_data->>'yardline_100')::numeric <= 10 OR (raw_data->>'pass_touchdown')::numeric = 1) as ez_targets
+        FROM bronze_nflfastr_plays
+        WHERE season = ${season}
+          AND receiver_player_id IS NOT NULL
+          AND play_type = 'pass'
+          AND receiver_player_id = ANY(ARRAY[${sql.raw(qualifiedPlayerIds.map(id => `'${id}'`).join(','))}])
+        GROUP BY receiver_player_id
+      `)
+    : await db.execute(sql`
+        SELECT 
+          receiver_player_id as player_id,
+          COUNT(*) FILTER (WHERE air_yards >= 20) as deep_targets,
+          COUNT(*) FILTER (WHERE (raw_data->>'yardline_100')::numeric <= 20) as rz_targets,
+          COUNT(*) FILTER (WHERE (raw_data->>'yardline_100')::numeric <= 10 OR (raw_data->>'pass_touchdown')::numeric = 1) as ez_targets
+        FROM bronze_nflfastr_plays
+        WHERE season = ${season}
+          AND receiver_player_id IS NOT NULL
+          AND play_type = 'pass'
+        GROUP BY receiver_player_id
+      `);
   
   const playData = playDataQuery.rows as {
     player_id: string;
