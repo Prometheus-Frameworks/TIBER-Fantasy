@@ -6405,6 +6405,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   /**
+   * GET /api/admin/rb-rankings-sandbox - RB Rankings Algorithm Test Sandbox
+   * Returns: Top 30 RBs from 2025 season with 2+ games / 15+ carries
+   * Metrics: Total carries, total rushing yards, fantasy points per rush attempt
+   */
+  app.get('/api/admin/rb-rankings-sandbox', async (req: Request, res: Response) => {
+    try {
+      const { weeklyStats, playerIdentityMap } = await import('@shared/schema');
+      const { playerInjuries } = await import('@shared/schema');
+      
+      // STEP 1: Query 2025 RBs with 2+ games/15+ carries
+      const results = await db
+        .select({
+          playerId: weeklyStats.playerId,
+          playerName: weeklyStats.playerName,
+          team: weeklyStats.team,
+          position: playerIdentityMap.position,
+          canonicalId: playerIdentityMap.canonicalId,
+          gamesPlayed: sql<number>`COUNT(DISTINCT ${weeklyStats.week})::int`,
+          totalCarries: sql<number>`SUM(COALESCE(${weeklyStats.rushAttempt}, 0))::int`,
+          totalRushingYards: sql<number>`SUM(COALESCE(${weeklyStats.rushingYds}, 0))::int`,
+          totalFantasyPoints: sql<number>`SUM(COALESCE(${weeklyStats.fantasyPointsPpr}, 0))::real`,
+          // Injury status
+          injuryStatus: playerInjuries.status,
+          injuryType: playerInjuries.injuryType,
+        })
+        .from(weeklyStats)
+        .innerJoin(
+          playerIdentityMap,
+          eq(weeklyStats.playerId, playerIdentityMap.nflDataPyId)
+        )
+        .leftJoin(
+          playerInjuries,
+          eq(playerIdentityMap.canonicalId, playerInjuries.playerId)
+        )
+        .where(
+          and(
+            eq(weeklyStats.season, 2025),
+            eq(playerIdentityMap.position, 'RB')
+          )
+        )
+        .groupBy(
+          weeklyStats.playerId, 
+          weeklyStats.playerName, 
+          weeklyStats.team, 
+          playerIdentityMap.position,
+          playerIdentityMap.canonicalId,
+          playerInjuries.status,
+          playerInjuries.injuryType
+        );
+
+      // STEP 2: Filter for minimum qualifications (2+ games, 15+ carries)
+      const qualified = results.filter(r => r.gamesPlayed >= 2 && r.totalCarries >= 15);
+
+      // STEP 3: Calculate fantasy points per rush attempt
+      const processedPlayers = qualified.map(player => {
+        const fantasyPointsPerRushAttempt = player.totalCarries > 0 
+          ? player.totalFantasyPoints / player.totalCarries 
+          : 0;
+
+        return {
+          playerId: player.playerId,
+          playerName: player.playerName,
+          team: player.team,
+          gamesPlayed: player.gamesPlayed,
+          totalCarries: player.totalCarries,
+          totalRushingYards: player.totalRushingYards,
+          fantasyPoints: player.totalFantasyPoints,
+          fantasyPointsPerRushAttempt: Math.round(fantasyPointsPerRushAttempt * 100) / 100,
+          // Injury status (IR/OUT badges)
+          injuryStatus: player.injuryStatus ?? null,
+          injuryType: player.injuryType ?? null,
+        };
+      });
+
+      // STEP 4: Sort by total fantasy points DESC
+      const ranked = processedPlayers
+        .sort((a, b) => b.fantasyPoints - a.fantasyPoints)
+        .slice(0, 30);
+
+      res.json({
+        success: true,
+        season: 2025,
+        minGames: 2,
+        minCarries: 15,
+        count: ranked.length,
+        data: ranked,
+      });
+
+    } catch (error) {
+      console.error('❌ [AdminAPI] RB Rankings Sandbox failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
+  /**
    * POST /api/admin/rag/seed-narratives - Seed TIBER narratives with embeddings
    */
   app.post('/api/admin/rag/seed-narratives', async (req: Request, res: Response) => {
