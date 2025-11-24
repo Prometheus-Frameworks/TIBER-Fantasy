@@ -6423,8 +6423,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: playerIdentityMap.position,
           canonicalId: playerIdentityMap.canonicalId,
           gamesPlayed: sql<number>`COUNT(DISTINCT ${weeklyStats.week})::int`,
-          totalCarries: sql<number>`SUM(COALESCE(${weeklyStats.rushAttempt}, 0))::int`,
-          totalRushingYards: sql<number>`SUM(COALESCE(${weeklyStats.rushingYds}, 0))::int`,
+          totalCarries: sql<number>`SUM(COALESCE(${weeklyStats.rushAtt}, 0))::int`,
+          totalRushingYards: sql<number>`SUM(COALESCE(${weeklyStats.rushYd}, 0))::int`,
           totalFantasyPoints: sql<number>`SUM(COALESCE(${weeklyStats.fantasyPointsPpr}, 0))::real`,
           // Injury status
           injuryStatus: playerInjuries.status,

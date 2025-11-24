@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpDown } from 'lucide-react';
 
-type SortField = 'playerName' | 'team' | 'gamesPlayed' | 'targets' | 'fantasyPoints' | 'pointsPerTarget' | 'samplePenalty' | 'adjustedEfficiency' | 'alphaScore' | 'roleScore' | 'deepTargetRate' | 'slotRouteShareEst' | 'weightedTargetsPerGame' | 'boomRate' | 'bustRate' | 'talentIndex' | 'usageStabilityIndex' | 'roleDelta' | 'redZoneDomScore' | 'energyIndex';
+type Position = 'WR' | 'RB';
+type SortField = 'playerName' | 'team' | 'gamesPlayed' | 'targets' | 'totalCarries' | 'totalRushingYards' | 'fantasyPointsPerRushAttempt' | 'fantasyPoints' | 'pointsPerTarget' | 'samplePenalty' | 'adjustedEfficiency' | 'alphaScore' | 'roleScore' | 'deepTargetRate' | 'slotRouteShareEst' | 'weightedTargetsPerGame' | 'boomRate' | 'bustRate' | 'talentIndex' | 'usageStabilityIndex' | 'roleDelta' | 'redZoneDomScore' | 'energyIndex';
 type SortOrder = 'asc' | 'desc';
 
 type RoleTier = 'ALPHA' | 'CO_ALPHA' | 'PRIMARY_SLOT' | 'SECONDARY' | 'ROTATIONAL' | 'UNKNOWN' | null;
@@ -53,16 +54,32 @@ interface SandboxPlayer {
   efficiencyTrend: number | null;
 }
 
+// RB-specific player interface
+interface RBSandboxPlayer {
+  playerId: string;
+  playerName: string;
+  team: string;
+  gamesPlayed: number;
+  totalCarries: number;
+  totalRushingYards: number;
+  fantasyPoints: number;
+  fantasyPointsPerRushAttempt: number;
+  injuryStatus: string | null;
+  injuryType: string | null;
+}
+
 interface SandboxResponse {
   success: boolean;
   season: number;
   minGames: number;
   minTargets?: number;
+  minCarries?: number;
   count: number;
-  data: SandboxPlayer[];
+  data: SandboxPlayer[] | RBSandboxPlayer[];
 }
 
 export default function WRRankingsSandbox() {
+  const [position, setPosition] = useState<Position>('WR');
   const [sortField, setSortField] = useState<SortField>('alphaScore');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   
@@ -72,7 +89,7 @@ export default function WRRankingsSandbox() {
   const [highlightSlotHeavy, setHighlightSlotHeavy] = useState(false);
 
   const { data, isLoading } = useQuery<SandboxResponse>({
-    queryKey: ['/api/admin/wr-rankings-sandbox'],
+    queryKey: [position === 'WR' ? '/api/admin/wr-rankings-sandbox' : '/api/admin/rb-rankings-sandbox'],
   });
 
   const handleSort = (field: SortField) => {
@@ -137,75 +154,119 @@ export default function WRRankingsSandbox() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="border-b border-blue-500/20 pb-4">
-          <h1 className="text-3xl font-bold text-white tracking-wide">WR RANKINGS SANDBOX</h1>
-          <p className="text-gray-400 mt-2 text-sm">
-            Algorithm test page - 2025 season, minimum 2 games / 10 targets (includes IR players)
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-white tracking-wide">
+                {position} RANKINGS SANDBOX
+              </h1>
+              <p className="text-gray-400 mt-2 text-sm">
+                {position === 'WR' 
+                  ? 'Algorithm test page - 2025 season, minimum 2 games / 10 targets (includes IR players)'
+                  : 'Algorithm test page - 2025 season, minimum 2 games / 15 carries (includes IR players)'
+                }
+              </p>
+            </div>
+            {/* Position Toggle */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setPosition('WR');
+                  setSortField('alphaScore');
+                }}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                  position === 'WR'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+                }`}
+                data-testid="toggle-wr"
+              >
+                WR
+              </button>
+              <button
+                onClick={() => {
+                  setPosition('RB');
+                  setSortField('fantasyPoints');
+                }}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                  position === 'RB'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+                }`}
+                data-testid="toggle-rb"
+              >
+                RB
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Info Box */}
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 space-y-3">
-          <div>
-            <h3 className="text-sm font-semibold text-blue-300 mb-2">Alpha Composite Score (0-100)</h3>
-            <p className="text-xs text-gray-400 mb-1">
-              Blends volume, total fantasy points, and efficiency into a single diagnostic score:
-            </p>
-            <p className="text-xs text-gray-500">
-              <strong className="text-purple-300">Alpha Score</strong> = 45% Volume + 35% Total Points + 20% Efficiency
-            </p>
-          </div>
-          <div className="border-t border-blue-500/20 pt-2">
-            <p className="text-xs text-gray-500">
-              High-volume, high-scoring WRs (JSN, ARSB, Lamb, Puka, Chase) rank at the top. 
-              Low-volume spike guys can still rank well but won't eclipse true workhorse alphas.
-            </p>
-          </div>
-        </div>
+        {/* Info Box - WR only */}
+        {position === 'WR' && (
+          <>
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold text-blue-300 mb-2">Alpha Composite Score (0-100)</h3>
+                <p className="text-xs text-gray-400 mb-1">
+                  Blends volume, total fantasy points, and efficiency into a single diagnostic score:
+                </p>
+                <p className="text-xs text-gray-500">
+                  <strong className="text-purple-300">Alpha Score</strong> = 45% Volume + 35% Total Points + 20% Efficiency
+                </p>
+              </div>
+              <div className="border-t border-blue-500/20 pt-2">
+                <p className="text-xs text-gray-500">
+                  High-volume, high-scoring WRs (JSN, ARSB, Lamb, Puka, Chase) rank at the top. 
+                  Low-volume spike guys can still rank well but won't eclipse true workhorse alphas.
+                </p>
+              </div>
+            </div>
 
-        {/* Filter Controls */}
-        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-gray-300 mb-3">Filters & Highlights</h3>
-          <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filterCoAlphaSecondary}
-                onChange={(e) => setFilterCoAlphaSecondary(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-2 focus:ring-blue-500"
-                data-testid="filter-co-alpha-secondary"
-              />
-              <span className="text-sm text-gray-300">Only show CO_ALPHA / SECONDARY</span>
-            </label>
-            
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={highlightDeepThreats}
-                onChange={(e) => setHighlightDeepThreats(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-2 focus:ring-orange-500"
-                data-testid="highlight-deep-threats"
-              />
-              <span className="text-sm text-gray-300">Highlight deep threats (≥20% deep target rate)</span>
-            </label>
-            
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={highlightSlotHeavy}
-                onChange={(e) => setHighlightSlotHeavy(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-cyan-500 focus:ring-2 focus:ring-cyan-500"
-                data-testid="highlight-slot-heavy"
-              />
-              <span className="text-sm text-gray-300">Highlight slot-heavy (≥45% slot share)</span>
-            </label>
-          </div>
-        </div>
+            {/* Filter Controls */}
+            <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-gray-300 mb-3">Filters & Highlights</h3>
+              <div className="flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={filterCoAlphaSecondary}
+                    onChange={(e) => setFilterCoAlphaSecondary(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-2 focus:ring-blue-500"
+                    data-testid="filter-co-alpha-secondary"
+                  />
+                  <span className="text-sm text-gray-300">Only show CO_ALPHA / SECONDARY</span>
+                </label>
+                
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={highlightDeepThreats}
+                    onChange={(e) => setHighlightDeepThreats(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-2 focus:ring-orange-500"
+                    data-testid="highlight-deep-threats"
+                  />
+                  <span className="text-sm text-gray-300">Highlight deep threats (≥20% deep target rate)</span>
+                </label>
+                
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={highlightSlotHeavy}
+                    onChange={(e) => setHighlightSlotHeavy(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-cyan-500 focus:ring-2 focus:ring-cyan-500"
+                    data-testid="highlight-slot-heavy"
+                  />
+                  <span className="text-sm text-gray-300">Highlight slot-heavy (≥45% slot share)</span>
+                </label>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Stats Summary */}
         {data && (
           <div className="flex items-center gap-4 text-sm text-gray-400">
             <span className="font-medium text-white">{sortedData?.length || 0}</span>
-            <span>WRs shown (from {data.count} total)</span>
+            <span>{position}s shown (from {data.count} total)</span>
             <span className="text-gray-600">•</span>
             <span>Season: {data.season}</span>
             <span className="text-gray-600">•</span>
@@ -214,29 +275,117 @@ export default function WRRankingsSandbox() {
         )}
 
         {/* Table */}
-        <div className="bg-[#111217] border border-gray-800/50 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-[#0d0e11] border-b border-gray-800/50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    Rank
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="playerName" label="Player" />
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="team" label="Team" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="gamesPlayed" label="Games" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="targets" label="Targets" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="fantasyPoints" label="Fantasy Pts" />
-                  </th>
+        {position === 'RB' ? (
+          // RB Simple Table (Total Carries, Total Rush Yds, FP/Rush)
+          <div className="bg-[#111217] border border-gray-800/50 rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-[#0d0e11] border-b border-gray-800/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      Rank
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="playerName" label="Player" />
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="team" label="Team" />
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="gamesPlayed" label="Games" />
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="totalCarries" label="Total Carries" />
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="totalRushingYards" label="Total Rush Yds" />
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="fantasyPoints" label="Fantasy Pts" />
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="fantasyPointsPerRushAttempt" label="FP/Rush" />
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    [...Array(10)].map((_, idx) => (
+                      <tr key={idx} className="border-b border-gray-800/30">
+                        <td colSpan={8} className="px-4 py-4">
+                          <div className="h-8 bg-gray-700/30 rounded animate-pulse"></div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    sortedData?.map((player, idx) => {
+                      const rbPlayer = player as RBSandboxPlayer;
+                      return (
+                        <tr
+                          key={rbPlayer.playerId}
+                          className="border-b border-gray-800/30 hover:bg-green-500/5 transition-colors"
+                          data-testid={`sandbox-row-${idx}`}
+                        >
+                          <td className="px-4 py-3 text-gray-500 font-medium">{idx + 1}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-white">{rbPlayer.playerName}</span>
+                              {(rbPlayer.injuryStatus === 'IR' || rbPlayer.injuryStatus === 'OUT' || rbPlayer.injuryStatus === 'PUP') && (
+                                <span className="px-1.5 py-0.5 bg-red-600/80 text-white text-[10px] font-bold rounded uppercase tracking-wide">
+                                  {rbPlayer.injuryStatus}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="px-2 py-1 bg-gray-800/70 text-gray-300 rounded text-xs font-medium">
+                              {rbPlayer.team}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center text-gray-300">{rbPlayer.gamesPlayed}</td>
+                          <td className="px-4 py-3 text-center text-green-300 font-semibold">{rbPlayer.totalCarries}</td>
+                          <td className="px-4 py-3 text-center text-blue-300">{rbPlayer.totalRushingYards}</td>
+                          <td className="px-4 py-3 text-center text-gray-300">{rbPlayer.fantasyPoints.toFixed(1)}</td>
+                          <td className="px-4 py-3 text-center text-purple-300 font-bold">{rbPlayer.fantasyPointsPerRushAttempt}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+
+              {!isLoading && sortedData?.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  No data available
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          // WR Complex Table (all the advanced metrics)
+          <div className="bg-[#111217] border border-gray-800/50 rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-[#0d0e11] border-b border-gray-800/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      Rank
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="playerName" label="Player" />
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="team" label="Team" />
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="gamesPlayed" label="Games" />
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="targets" label="Targets" />
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="fantasyPoints" label="Fantasy Pts" />
+                    </th>
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
                     <SortButton field="pointsPerTarget" label="Pts/Tgt" />
                   </th>
@@ -433,6 +582,7 @@ export default function WRRankingsSandbox() {
             )}
           </div>
         </div>
+        )}
 
         {/* Future Evolution Notes */}
         <div className="bg-gray-800/20 border border-gray-700/50 rounded-lg p-4">
