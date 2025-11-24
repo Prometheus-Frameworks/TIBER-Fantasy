@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpDown } from 'lucide-react';
 
-type SortField = 'playerName' | 'team' | 'gamesPlayed' | 'targets' | 'fantasyPoints' | 'pointsPerTarget';
+type SortField = 'playerName' | 'team' | 'gamesPlayed' | 'targets' | 'fantasyPoints' | 'pointsPerTarget' | 'samplePenalty' | 'adjustedEfficiency';
 type SortOrder = 'asc' | 'desc';
 
 interface SandboxPlayer {
@@ -13,18 +13,21 @@ interface SandboxPlayer {
   targets: number;
   fantasyPoints: number;
   pointsPerTarget: number;
+  samplePenalty: number;
+  adjustedEfficiency: number;
 }
 
 interface SandboxResponse {
   success: boolean;
   season: number;
   minGames: number;
+  minTargets?: number;
   count: number;
   data: SandboxPlayer[];
 }
 
 export default function WRRankingsSandbox() {
-  const [sortField, setSortField] = useState<SortField>('pointsPerTarget');
+  const [sortField, setSortField] = useState<SortField>('adjustedEfficiency');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
   const { data, isLoading } = useQuery<SandboxResponse>({
@@ -78,10 +81,13 @@ export default function WRRankingsSandbox() {
 
         {/* Info Box */}
         <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-blue-300 mb-2">Current Formula: Points per Target</h3>
-          <p className="text-xs text-gray-400">
-            Simple efficiency metric: Total Fantasy Points PPR ÷ Total Targets. 
-            Higher = more efficient fantasy production per opportunity.
+          <h3 className="text-sm font-semibold text-blue-300 mb-2">Volume-Weighted Efficiency</h3>
+          <p className="text-xs text-gray-400 mb-2">
+            <strong className="text-blue-300">Adjusted Pts/Tgt</strong> = Points per Target × Sample Penalty (min 1, targets ÷ 50)
+          </p>
+          <p className="text-xs text-gray-500">
+            This formula prevents low-volume outliers from dominating rankings. 
+            WRs need both <span className="text-gray-300">efficiency</span> and <span className="text-gray-300">volume</span> to rank highly.
           </p>
         </div>
 
@@ -89,9 +95,11 @@ export default function WRRankingsSandbox() {
         {data && (
           <div className="flex items-center gap-4 text-sm text-gray-400">
             <span className="font-medium text-white">{data.count}</span>
-            <span>WRs with {data.minGames}+ games</span>
+            <span>WRs with {data.minGames}+ games & {data.minTargets || 15}+ targets</span>
             <span className="text-gray-600">•</span>
             <span>Season: {data.season}</span>
+            <span className="text-gray-600">•</span>
+            <span className="text-gray-500">Sorted by Adjusted Efficiency</span>
           </div>
         )}
 
@@ -122,13 +130,19 @@ export default function WRRankingsSandbox() {
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
                     <SortButton field="pointsPerTarget" label="Pts/Tgt" />
                   </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <SortButton field="samplePenalty" label="Sample" />
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <SortButton field="adjustedEfficiency" label="Adj Pts/Tgt" />
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   [...Array(10)].map((_, idx) => (
                     <tr key={idx} className="border-b border-gray-800/30">
-                      <td colSpan={7} className="px-4 py-4">
+                      <td colSpan={9} className="px-4 py-4">
                         <div className="h-8 bg-gray-700/30 rounded animate-pulse"></div>
                       </td>
                     </tr>
@@ -152,8 +166,10 @@ export default function WRRankingsSandbox() {
                       <td className="px-4 py-3 text-center text-gray-300">{player.gamesPlayed}</td>
                       <td className="px-4 py-3 text-center text-gray-300">{player.targets}</td>
                       <td className="px-4 py-3 text-center text-gray-300">{player.fantasyPoints.toFixed(1)}</td>
+                      <td className="px-4 py-3 text-center text-gray-400">{player.pointsPerTarget.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-center text-gray-400">{player.samplePenalty.toFixed(2)}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className="font-bold text-blue-400">{player.pointsPerTarget.toFixed(2)}</span>
+                        <span className="font-bold text-green-400">{player.adjustedEfficiency.toFixed(2)}</span>
                       </td>
                     </tr>
                   ))
