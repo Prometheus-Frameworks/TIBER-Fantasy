@@ -28,9 +28,14 @@ interface RoleBankPlayer {
   pprPerOpportunity: number | null;
   redZoneTargetsPerGame: number | null;
   redZoneTouchesPerGame: number | null;
-  // Fantasy-specific scores (only present in fantasy rankings)
-  fantasyWRScore?: number;
+  // TIBER Alpha Engine (unified ranking scores)
+  alphaScore?: number;
   volumeIndex?: number;
+  productionIndex?: number;
+  efficiencyIndex?: number;
+  stabilityIndex?: number;
+  // Legacy fantasy-specific scores (deprecated)
+  fantasyWRScore?: number;
   ppgIndex?: number;
   spiceIndex?: number;
   fantasyPointsPprPerGame?: number;
@@ -280,11 +285,10 @@ export default function RoleBankRankings() {
                 {position === 'WR' && viewMode === 'fantasy' && (
                   <>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Fantasy PPG</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Tgt/G</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Tgt Share</th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Vol</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">PPG</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Spice</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Prod</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Eff</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Stab</th>
                   </>
                 )}
                 {position === 'WR' && viewMode === 'season' && (
@@ -331,8 +335,8 @@ export default function RoleBankRankings() {
               ) : (
                 data?.results.map((player, idx) => {
                   const tierStyle = getTierStyle(player.roleTier || player.tier || 'UNKNOWN');
-                  const displayScore = viewMode === 'fantasy' && player.fantasyWRScore 
-                    ? player.fantasyWRScore 
+                  const displayScore = viewMode === 'fantasy' && player.alphaScore 
+                    ? player.alphaScore 
                     : player.roleScore;
                   const displayTier = player.roleTier || player.tier || 'UNKNOWN';
                   
@@ -366,11 +370,10 @@ export default function RoleBankRankings() {
                       {position === 'WR' && viewMode === 'fantasy' && (
                         <>
                           <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.fantasyPointsPprPerGame)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.targetsPerGame)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatPercent(player.targetShareAvg)}</td>
                           <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.volumeIndex, 0)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.ppgIndex, 0)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.spiceIndex, 0)}</td>
+                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.productionIndex, 0)}</td>
+                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.efficiencyIndex, 0)}</td>
+                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.stabilityIndex, 0)}</td>
                         </>
                       )}
                       {position === 'WR' && viewMode === 'season' && (
@@ -426,8 +429,8 @@ export default function RoleBankRankings() {
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold flex items-center gap-3">
                   {selectedPlayer.playerName}
-                  <Badge variant="outline" className={`${getTierStyle(selectedPlayer.roleTier).bg} ${getTierStyle(selectedPlayer.roleTier).text} border-none`}>
-                    {selectedPlayer.roleTier}
+                  <Badge variant="outline" className={`${getTierStyle(selectedPlayer.roleTier || selectedPlayer.tier || 'UNKNOWN').bg} ${getTierStyle(selectedPlayer.roleTier || selectedPlayer.tier || 'UNKNOWN').text} border-none`}>
+                    {selectedPlayer.roleTier || selectedPlayer.tier || 'UNKNOWN'}
                   </Badge>
                 </DialogTitle>
                 <div className="flex items-center gap-2 text-sm text-gray-400">
