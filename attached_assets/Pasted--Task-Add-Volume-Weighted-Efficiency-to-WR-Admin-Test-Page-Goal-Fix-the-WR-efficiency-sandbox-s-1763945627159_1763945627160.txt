@@ -1,0 +1,115 @@
+🧾 Task: Add Volume-Weighted Efficiency to WR Admin Test Page
+
+Goal:
+Fix the WR efficiency sandbox so it stops putting low-volume outliers at the top (6 targets, 3.0 pts/tgt, etc.).
+We want a volume-aware efficiency metric:
+
+Keep points_per_target for reference
+
+Add a sample-size penalty so real volume WRs rise to the top
+
+1️⃣ Backend Changes – Admin WR Efficiency Endpoint
+
+Find:
+The backend route / service that powers the admin WR test page you just showed me (the one returning: Rank, Player, Team, Games, Targets, Fantasy Pts, Pts/Tgt).
+
+Update that endpoint to:
+
+Add a sample-size penalty:
+
+// targets = total season targets for that WR
+const samplePenalty = Math.min(1, targets / 50);
+
+
+Compute adjusted efficiency:
+
+const pointsPerTarget = fantasyPoints / targets;
+const adjustedEfficiency = pointsPerTarget * samplePenalty;
+
+
+Add these fields to the JSON response for each WR:
+
+pointsPerTarget (already there, keep as-is)
+
+samplePenalty (0–1, based on total targets)
+
+adjustedEfficiency (pointsPerTarget * samplePenalty)
+
+Apply a minimum volume filter:
+
+Only include WRs with at least 15 targets in the admin list:
+
+WHERE total_targets >= 15
+
+
+(or the TypeScript/Drizzle equivalent in the query)
+
+Sort results by:
+
+ORDER BY adjustedEfficiency DESC, total_targets DESC
+
+
+So:
+
+High adjusted efficiency comes first
+
+Ties break toward more volume
+
+2️⃣ Frontend Changes – Admin Test Table
+
+Find:
+The React component that renders this WR sandbox table (Rank / Player / Team / Games / Targets / Fantasy Pts / Pts/Tgt).
+
+Update it to:
+
+Add two new columns:
+
+Sample Penalty (display as e.g. 0.84, 0.62)
+
+Adj Pts/Tgt (adjustedEfficiency, maybe 2 decimal places)
+
+Clarify the header / caption:
+
+Add a small note above the table:
+
+“Table sorted by Adjusted Points per Target (efficiency scaled by volume; min 15 targets).”
+
+Confirm:
+
+Table is visually sorted by Adj Pts/Tgt (not raw Pts/Tgt)
+
+Raw Pts/Tgt is still visible for comparison
+
+3️⃣ Validation Steps
+
+After implementing:
+
+Re-run the endpoint and confirm:
+
+No WR with <15 targets appears in the list
+
+Each row now has: pointsPerTarget, samplePenalty, adjustedEfficiency
+
+Manually spot-check a couple of rows:
+
+Example sanity check:
+
+WR A: 30 targets, 2.2 pts/tgt
+
+samplePenalty = 30/50 = 0.60
+
+adjustedEfficiency = 2.2 * 0.60 = 1.32
+
+WR B: 80 targets, 1.9 pts/tgt
+
+samplePenalty = min(1, 80/50) = 1
+
+adjustedEfficiency = 1.9 * 1 = 1.90
+
+Result: WR B should rank above WR A in the admin table.
+
+Confirm top of the table is now filled with:
+
+Guys who have both strong efficiency and real volume
+
+Not random 6-target outliers

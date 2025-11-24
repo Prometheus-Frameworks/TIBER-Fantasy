@@ -6158,8 +6158,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   /**
    * GET /api/admin/wr-rankings-sandbox - WR Rankings Algorithm Test Sandbox
-   * Simple test page to experiment with ranking formulas
-   * Returns: Top 30 WRs from 2025 season with 4+ games, sorted by points/target
+   * Volume-weighted efficiency ranking to prioritize WRs with both high efficiency AND real volume
+   * Returns: Top 30 WRs from 2025 season with 15+ targets, sorted by adjusted efficiency
    */
   app.get('/api/admin/wr-rankings-sandbox', async (req: Request, res: Response) => {
     try {
@@ -6190,28 +6190,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         )
         .groupBy(weeklyStats.playerId, weeklyStats.playerName, weeklyStats.team, playerIdentityMap.position)
-        .having(sql`COUNT(DISTINCT ${weeklyStats.week}) >= 4`);
+        .having(sql`COUNT(DISTINCT ${weeklyStats.week}) >= 4 AND SUM(COALESCE(${weeklyStats.targets}, 0)) >= 15`);
 
-      // Calculate points per target and sort
+      // Calculate volume-weighted efficiency metrics
       const ranked = results
-        .map(player => ({
-          playerId: player.playerId,
-          playerName: player.playerName,
-          team: player.team || 'FA',
-          gamesPlayed: player.gamesPlayed,
-          targets: player.totalTargets,
-          fantasyPoints: Math.round(player.totalFantasyPoints * 100) / 100,
-          pointsPerTarget: player.totalTargets > 0 
-            ? Math.round((player.totalFantasyPoints / player.totalTargets) * 100) / 100
-            : 0,
-        }))
-        .sort((a, b) => b.pointsPerTarget - a.pointsPerTarget)
+        .map(player => {
+          const targets = player.totalTargets;
+          const fantasyPoints = player.totalFantasyPoints;
+          
+          // Sample penalty: scale from 0 to 1 based on volume (50 targets = full weight)
+          const samplePenalty = Math.min(1, targets / 50);
+          
+          // Raw efficiency
+          const pointsPerTarget = targets > 0 
+            ? fantasyPoints / targets
+            : 0;
+          
+          // Volume-weighted efficiency
+          const adjustedEfficiency = pointsPerTarget * samplePenalty;
+          
+          return {
+            playerId: player.playerId,
+            playerName: player.playerName,
+            team: player.team || 'FA',
+            gamesPlayed: player.gamesPlayed,
+            targets: targets,
+            fantasyPoints: Math.round(fantasyPoints * 100) / 100,
+            pointsPerTarget: Math.round(pointsPerTarget * 100) / 100,
+            samplePenalty: Math.round(samplePenalty * 100) / 100,
+            adjustedEfficiency: Math.round(adjustedEfficiency * 100) / 100,
+          };
+        })
+        // Sort by adjusted efficiency DESC, then by total targets DESC (tie-breaker)
+        .sort((a, b) => {
+          if (b.adjustedEfficiency !== a.adjustedEfficiency) {
+            return b.adjustedEfficiency - a.adjustedEfficiency;
+          }
+          return b.targets - a.targets;
+        })
         .slice(0, 30);
 
       res.json({
         success: true,
         season: 2025,
         minGames: 4,
+        minTargets: 15,
         count: ranked.length,
         data: ranked,
       });
