@@ -6159,11 +6159,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /**
    * GET /api/admin/wr-rankings-sandbox - WR Rankings Algorithm Test Sandbox
    * Alpha composite score (0-100) blends volume (45%), total fantasy points (35%), and efficiency (20%)
+   * PLUS 8 advanced metrics: weighted volume, boom/bust, talent, stability, role delta, RZ dom, energy
    * Returns: Top 30 WRs from 2025 season with 15+ targets, sorted by alphaScore DESC
    */
   app.get('/api/admin/wr-rankings-sandbox', async (req: Request, res: Response) => {
     try {
       const { weeklyStats, playerIdentityMap, wrRoleBank } = await import('@shared/schema');
+      const { calculateWRAdvancedMetrics } = await import('./services/wrAdvancedMetricsService');
+      
+      // Calculate advanced metrics for all WRs
+      const advancedMetricsMap = await calculateWRAdvancedMetrics(2025, 4);
       
       // Query 2025 WRs with 4+ games, aggregate targets and fantasy points
       // IMPORTANT: Join with player_identity_map for authoritative position data
@@ -6223,7 +6228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
         .having(sql`COUNT(DISTINCT ${weeklyStats.week}) >= 4 AND SUM(COALESCE(${weeklyStats.targets}, 0)) >= 15`);
 
-      // Calculate volume-weighted efficiency metrics
+      // Calculate volume-weighted efficiency metrics and merge advanced metrics
       const processedPlayers = results.map(player => {
         const targets = player.totalTargets;
         const fantasyPoints = player.totalFantasyPoints;
@@ -6238,6 +6243,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Volume-weighted efficiency
         const adjustedEfficiency = pointsPerTarget * samplePenalty;
+        
+        // Get advanced metrics for this player
+        const advMetrics = advancedMetricsMap.get(player.playerId);
+        
+        // Blend momentum from role bank into energy index if available
+        const momentumScore = player.momentumScore ?? 50;
+        const enhancedEnergyIndex = advMetrics 
+          ? Math.round(0.25 * advMetrics.energyIndex * 0.7 + 0.3 * momentumScore) // Blend in momentum
+          : null;
         
         return {
           playerId: player.playerId,
@@ -6255,10 +6269,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           volumeScore: player.volumeScore ?? null,
           consistencyScore: player.consistencyScore ?? null,
           highValueUsageScore: player.highValueUsageScore ?? null,
-          momentumScore: player.momentumScore ?? null,
+          momentumScore: momentumScore,
           deepTargetRate: player.deepTargetRate ? Math.round(player.deepTargetRate * 100) / 100 : null,
           slotRouteShareEst: player.slotRouteShareEst ? Math.round(player.slotRouteShareEst * 100) / 100 : null,
           roleTier: player.roleTier ?? null,
+          // Advanced metrics (new)
+          weightedTargetsPerGame: advMetrics?.weightedTargetsPerGame ?? null,
+          weightedTargetsIndex: advMetrics?.weightedTargetsIndex ?? null,
+          boomRate: advMetrics?.boomRate ?? null,
+          bustRate: advMetrics?.bustRate ?? null,
+          talentIndex: advMetrics?.talentIndex ?? null,
+          yardsPerTarget: advMetrics?.yardsPerTarget ?? null,
+          yardsPerRoute: advMetrics?.yardsPerRoute ?? null,
+          usageStabilityIndex: advMetrics?.usageStabilityIndex ?? null,
+          roleDelta: advMetrics?.roleDelta ?? null,
+          recentTargetsPerGame: advMetrics?.recentTargetsPerGame ?? null,
+          seasonTargetsPerGame: advMetrics?.seasonTargetsPerGame ?? null,
+          redZoneDomScore: advMetrics?.redZoneDomScore ?? null,
+          redZoneTargetsPerGame: advMetrics?.redZoneTargetsPerGame ?? null,
+          endZoneTargetsPerGame: advMetrics?.endZoneTargetsPerGame ?? null,
+          energyIndex: enhancedEnergyIndex,
+          efficiencyTrend: advMetrics?.efficiencyTrend ?? null,
         };
       });
 
