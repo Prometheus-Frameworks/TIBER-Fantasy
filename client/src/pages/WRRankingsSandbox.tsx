@@ -521,8 +521,14 @@ export default function WRRankingsSandbox() {
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
                       <SortButton field="totalCarries" label="Total Carries" />
                     </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-cyan-400 uppercase tracking-wider">
+                      Carries/G
+                    </th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
                       <SortButton field="totalRushingYards" label="Total Rush Yds" />
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-amber-400 uppercase tracking-wider">
+                      Yds/Carry
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
                       <SortButton field="fantasyPoints" label="Fantasy Pts" />
@@ -539,7 +545,7 @@ export default function WRRankingsSandbox() {
                   {isLoading ? (
                     [...Array(10)].map((_, idx) => (
                       <tr key={idx} className="border-b border-gray-800/30">
-                        <td colSpan={9} className="px-4 py-4">
+                        <td colSpan={11} className="px-4 py-4">
                           <div className="h-8 bg-gray-700/30 rounded animate-pulse"></div>
                         </td>
                       </tr>
@@ -573,7 +579,9 @@ export default function WRRankingsSandbox() {
                           </td>
                           <td className="px-4 py-3 text-center text-gray-300">{rbPlayer.gamesPlayed}</td>
                           <td className="px-4 py-3 text-center text-green-300 font-semibold">{rbPlayer.totalCarries}</td>
+                          <td className="px-4 py-3 text-center text-cyan-300">{(rbPlayer.totalCarries / rbPlayer.gamesPlayed).toFixed(1)}</td>
                           <td className="px-4 py-3 text-center text-blue-300">{rbPlayer.totalRushingYards}</td>
+                          <td className="px-4 py-3 text-center text-amber-300">{(rbPlayer.totalRushingYards / rbPlayer.totalCarries).toFixed(1)}</td>
                           <td className="px-4 py-3 text-center text-gray-300">{rbPlayer.fantasyPoints.toFixed(1)}</td>
                           <td className="px-4 py-3 text-center text-purple-300 font-bold">{rbPlayer.fantasyPointsPerRushAttempt}</td>
                           <td className="px-4 py-3 text-center">
