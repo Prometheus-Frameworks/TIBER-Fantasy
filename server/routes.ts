@@ -7013,6 +7013,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             consistencyScore: r.consistencyScore,
             highValueUsageScore: r.highValueUsageScore,
             momentumScore: r.momentumScore,
+            // TIBER Alpha Engine scores (unified)
+            alphaScore: r.alphaScore ?? null,
+            volumeIndex: r.volumeIndex ?? null,
+            productionIndex: r.productionIndex ?? null,
+            efficiencyIndex: r.efficiencyIndex ?? null,
+            stabilityIndex: r.stabilityIndex ?? null,
             flags: {
               cardioWr: r.cardioWrFlag,
               breakoutWatch: r.breakoutWatchFlag
