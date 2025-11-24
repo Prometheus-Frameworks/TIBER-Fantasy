@@ -6426,6 +6426,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalCarries: sql<number>`SUM(COALESCE(${weeklyStats.rushAtt}, 0))::int`,
           totalRushingYards: sql<number>`SUM(COALESCE(${weeklyStats.rushYd}, 0))::int`,
           totalFantasyPoints: sql<number>`SUM(COALESCE(${weeklyStats.fantasyPointsPpr}, 0))::real`,
+          // Receiving metrics
+          totalTargets: sql<number>`SUM(COALESCE(${weeklyStats.targets}, 0))::int`,
+          totalReceptions: sql<number>`SUM(COALESCE(${weeklyStats.rec}, 0))::int`,
+          totalReceivingYards: sql<number>`SUM(COALESCE(${weeklyStats.recYd}, 0))::int`,
           // Injury status
           injuryStatus: playerInjuries.status,
           injuryType: playerInjuries.injuryType,
@@ -6458,7 +6462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // STEP 2: Filter for minimum qualifications (2+ games, 15+ carries)
       const qualified = results.filter(r => r.gamesPlayed >= 2 && r.totalCarries >= 15);
 
-      // STEP 3: Calculate fantasy points per rush attempt
+      // STEP 3: Calculate fantasy points per rush attempt and receiving metrics
       const processedPlayers = qualified.map(player => {
         const fantasyPointsPerRushAttempt = player.totalCarries > 0 
           ? player.totalFantasyPoints / player.totalCarries 
@@ -6473,6 +6477,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalRushingYards: player.totalRushingYards,
           fantasyPoints: player.totalFantasyPoints,
           fantasyPointsPerRushAttempt: Math.round(fantasyPointsPerRushAttempt * 100) / 100,
+          // Receiving metrics
+          totalTargets: player.totalTargets,
+          totalReceptions: player.totalReceptions,
+          totalReceivingYards: player.totalReceivingYards,
           // Injury status (IR/OUT badges)
           injuryStatus: player.injuryStatus ?? null,
           injuryType: player.injuryType ?? null,

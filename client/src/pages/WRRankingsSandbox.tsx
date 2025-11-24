@@ -67,6 +67,9 @@ interface RBSandboxPlayer {
   totalRushingYards: number;
   fantasyPoints: number;
   fantasyPointsPerRushAttempt: number;
+  totalTargets: number;
+  totalReceptions: number;
+  totalReceivingYards: number;
   customAlphaScore?: number;
   injuryStatus: string | null;
   injuryType: string | null;
@@ -98,10 +101,11 @@ export default function WRRankingsSandbox() {
   const [wrEffWeight, setWrEffWeight] = useState(15);
   const [wrStabWeight, setWrStabWeight] = useState(10);
 
-  // RB Weight sliders (default: equal thirds for carries, yards, fp/rush)
-  const [rbCarriesWeight, setRbCarriesWeight] = useState(40);
-  const [rbYardsWeight, setRbYardsWeight] = useState(35);
-  const [rbFpRushWeight, setRbFpRushWeight] = useState(25);
+  // RB Weight sliders (default: 35/30/20/15 for carries/yards/fp-rush/receiving)
+  const [rbCarriesWeight, setRbCarriesWeight] = useState(35);
+  const [rbYardsWeight, setRbYardsWeight] = useState(30);
+  const [rbFpRushWeight, setRbFpRushWeight] = useState(20);
+  const [rbReceivingWeight, setRbReceivingWeight] = useState(15);
 
   // Reset weights to defaults
   const resetWeights = () => {
@@ -111,9 +115,10 @@ export default function WRRankingsSandbox() {
       setWrEffWeight(15);
       setWrStabWeight(10);
     } else {
-      setRbCarriesWeight(40);
-      setRbYardsWeight(35);
-      setRbFpRushWeight(25);
+      setRbCarriesWeight(35);
+      setRbYardsWeight(30);
+      setRbFpRushWeight(20);
+      setRbReceivingWeight(15);
     }
   };
 
@@ -127,7 +132,7 @@ export default function WRRankingsSandbox() {
       position,
       weights: position === 'WR' 
         ? { vol: wrVolWeight, prod: wrProdWeight, eff: wrEffWeight, stab: wrStabWeight }
-        : { carries: rbCarriesWeight, yards: rbYardsWeight, fpRush: rbFpRushWeight },
+        : { carries: rbCarriesWeight, yards: rbYardsWeight, fpRush: rbFpRushWeight, receiving: rbReceivingWeight },
       savedAt: new Date().toISOString()
     };
     localStorage.setItem('adminSandboxFormulas', JSON.stringify(formulas));
@@ -149,6 +154,7 @@ export default function WRRankingsSandbox() {
       setRbCarriesWeight(formula.weights.carries);
       setRbYardsWeight(formula.weights.yards);
       setRbFpRushWeight(formula.weights.fpRush);
+      setRbReceivingWeight(formula.weights.receiving ?? 15);
     }
   };
 
@@ -196,28 +202,32 @@ export default function WRRankingsSandbox() {
       return { ...wrPlayer, customAlphaScore };
     } else {
       const rbPlayer = player as RBSandboxPlayer;
-      // For RB, we need to normalize carries, yards, and fp/rush across all players
+      // For RB, we need to normalize carries, yards, fp/rush, and receiving work across all players
       // First pass: find max values (we'll do this inline for simplicity)
       const allRBs = data.data as RBSandboxPlayer[];
       const maxCarries = Math.max(...allRBs.map(p => p.totalCarries));
       const maxYards = Math.max(...allRBs.map(p => p.totalRushingYards));
       const maxFpRush = Math.max(...allRBs.map(p => p.fantasyPointsPerRushAttempt));
+      const maxReceivingYards = Math.max(...allRBs.map(p => p.totalReceivingYards));
 
       // Normalize each metric to 0-100
       const carriesScore = (rbPlayer.totalCarries / maxCarries) * 100;
       const yardsScore = (rbPlayer.totalRushingYards / maxYards) * 100;
       const fpRushScore = (rbPlayer.fantasyPointsPerRushAttempt / maxFpRush) * 100;
+      const receivingScore = maxReceivingYards > 0 ? (rbPlayer.totalReceivingYards / maxReceivingYards) * 100 : 0;
 
       // Apply custom weights
-      const totalWeight = rbCarriesWeight + rbYardsWeight + rbFpRushWeight;
+      const totalWeight = rbCarriesWeight + rbYardsWeight + rbFpRushWeight + rbReceivingWeight;
       const normalizedCarries = rbCarriesWeight / totalWeight;
       const normalizedYards = rbYardsWeight / totalWeight;
       const normalizedFpRush = rbFpRushWeight / totalWeight;
+      const normalizedReceiving = rbReceivingWeight / totalWeight;
 
       const customAlphaScore = Math.round(
         carriesScore * normalizedCarries +
         yardsScore * normalizedYards +
-        fpRushScore * normalizedFpRush
+        fpRushScore * normalizedFpRush +
+        receivingScore * normalizedReceiving
       );
 
       return { ...rbPlayer, customAlphaScore };
@@ -339,7 +349,7 @@ export default function WRRankingsSandbox() {
               <p className="text-xs text-gray-400 mt-1">
                 Adjust the weights to test different ranking formulas (total: {position === 'WR' 
                   ? wrVolWeight + wrProdWeight + wrEffWeight + wrStabWeight 
-                  : rbCarriesWeight + rbYardsWeight + rbFpRushWeight}%)
+                  : rbCarriesWeight + rbYardsWeight + rbFpRushWeight + rbReceivingWeight}%)
               </p>
             </div>
             <div className="flex gap-2">
@@ -441,7 +451,7 @@ export default function WRRankingsSandbox() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <label className="text-sm text-purple-200 font-medium">Carries Weight</label>
@@ -487,6 +497,22 @@ export default function WRRankingsSandbox() {
                   step={5}
                   className="w-full"
                   data-testid="slider-rb-fprush"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm text-amber-200 font-medium">Receiving Work</label>
+                  <span className="text-sm text-amber-300 font-bold">{rbReceivingWeight}%</span>
+                </div>
+                <Slider
+                  value={[rbReceivingWeight]}
+                  onValueChange={(val) => setRbReceivingWeight(val[0])}
+                  min={0}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                  data-testid="slider-rb-receiving"
                 />
               </div>
             </div>
@@ -605,6 +631,18 @@ export default function WRRankingsSandbox() {
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
                       <SortButton field="fantasyPointsPerRushAttempt" label="FP/Rush" />
                     </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-green-400 uppercase tracking-wider">
+                      Targets
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                      Rec
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-cyan-400 uppercase tracking-wider">
+                      Rec Yds
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-amber-400 uppercase tracking-wider">
+                      Rec Yds/G
+                    </th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-purple-400 uppercase tracking-wider">
                       <button 
                         onClick={() => handleSort('customAlphaScore')}
@@ -621,7 +659,7 @@ export default function WRRankingsSandbox() {
                   {isLoading ? (
                     [...Array(10)].map((_, idx) => (
                       <tr key={idx} className="border-b border-gray-800/30">
-                        <td colSpan={11} className="px-4 py-4">
+                        <td colSpan={15} className="px-4 py-4">
                           <div className="h-8 bg-gray-700/30 rounded animate-pulse"></div>
                         </td>
                       </tr>
@@ -630,7 +668,7 @@ export default function WRRankingsSandbox() {
                     sortedData?.map((player, idx) => {
                       const rbPlayer = player as RBSandboxPlayer;
                       // Check if weights are custom
-                      const isCustomWeights = rbCarriesWeight !== 40 || rbYardsWeight !== 35 || rbFpRushWeight !== 25;
+                      const isCustomWeights = rbCarriesWeight !== 35 || rbYardsWeight !== 30 || rbFpRushWeight !== 20 || rbReceivingWeight !== 15;
                       return (
                         <tr
                           key={rbPlayer.playerId}
@@ -660,6 +698,10 @@ export default function WRRankingsSandbox() {
                           <td className="px-4 py-3 text-center text-amber-300">{(rbPlayer.totalRushingYards / rbPlayer.totalCarries).toFixed(1)}</td>
                           <td className="px-4 py-3 text-center text-gray-300">{rbPlayer.fantasyPoints.toFixed(1)}</td>
                           <td className="px-4 py-3 text-center text-purple-300 font-bold">{rbPlayer.fantasyPointsPerRushAttempt}</td>
+                          <td className="px-4 py-3 text-center text-green-300">{rbPlayer.totalTargets}</td>
+                          <td className="px-4 py-3 text-center text-blue-300">{rbPlayer.totalReceptions}</td>
+                          <td className="px-4 py-3 text-center text-cyan-300">{rbPlayer.totalReceivingYards}</td>
+                          <td className="px-4 py-3 text-center text-amber-300">{(rbPlayer.totalReceivingYards / rbPlayer.gamesPlayed).toFixed(1)}</td>
                           <td className="px-4 py-3 text-center">
                             <div className="flex flex-col items-center gap-0.5">
                               <span className="font-bold text-purple-400 text-base">{rbPlayer.customAlphaScore ?? 0}</span>
