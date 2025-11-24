@@ -14,11 +14,17 @@ export interface FantasyWRRankingRow {
   team: string | null;
   season: number;
   
-  // Fantasy-focused scores
-  fantasyWRScore: number;
-  volumeIndex: number;
-  ppgIndex: number;
-  spiceIndex: number;
+  // TIBER Alpha Engine (unified ranking score)
+  alphaScore: number | null;
+  volumeIndex: number | null;
+  productionIndex: number | null;
+  efficiencyIndex: number | null;
+  stabilityIndex: number | null;
+  
+  // Legacy Fantasy-focused scores (deprecated, kept for compatibility)
+  fantasyWRScore?: number;
+  ppgIndex?: number;
+  spiceIndex?: number;
   
   // Supporting metrics
   fantasyPointsPprPerGame: number;
@@ -124,7 +130,7 @@ export async function getFantasyWRRankings(
 ): Promise<FantasyWRRankingRow[]> {
   const { minScore, limit, offset } = options;
 
-  // Step 1: Get all WR Role Bank data for the season
+  // Step 1: Get all WR Role Bank data for the season (now includes Alpha Engine scores)
   const roleBank = await db
     .select({
       playerId: wrRoleBank.playerId,
@@ -138,6 +144,12 @@ export async function getFantasyWRRankings(
       pureRoleScore: wrRoleBank.pureRoleScore,
       roleScore: wrRoleBank.roleScore,
       tier: wrRoleBank.roleTier,
+      // TIBER Alpha Engine scores (unified)
+      alphaScore: wrRoleBank.alphaScore,
+      volumeIndex: wrRoleBank.volumeIndex,
+      productionIndex: wrRoleBank.productionIndex,
+      efficiencyIndex: wrRoleBank.efficiencyIndex,
+      stabilityIndex: wrRoleBank.stabilityIndex,
     })
     .from(wrRoleBank)
     .where(eq(wrRoleBank.season, season));
@@ -212,28 +224,15 @@ export async function getFantasyWRRankings(
     const totalFantasyPoints = fantasyStats.totalFantasyPoints || 0;
     const fantasyPointsPprPerGame = totalFantasyPoints / gamesPlayed;
 
-    // Compute indices
-    const volumeIndex = computeVolumeIndex(
-      rb.targetsPerGame,
-      rb.targetShareAvg,
-      rb.routesPerGame
-    );
+    // Use unified TIBER Alpha Engine scores from Role Bank (now canonical)
+    const alphaScore = rb.alphaScore ?? null;
+    const volumeIndex = rb.volumeIndex ?? null;
+    const productionIndex = rb.productionIndex ?? null;
+    const efficiencyIndex = rb.efficiencyIndex ?? null;
+    const stabilityIndex = rb.stabilityIndex ?? null;
 
-    const ppgIndex = computePPGIndex(fantasyPointsPprPerGame);
-
-    const spiceIndex = computeSpiceIndex(
-      rb.highValueUsageScore,
-      rb.momentumScore
-    );
-
-    const fantasyWRScore = computeFantasyWRScore(
-      volumeIndex,
-      ppgIndex,
-      spiceIndex
-    );
-
-    // Apply minScore filter if provided
-    if (minScore !== undefined && fantasyWRScore < minScore) {
+    // Apply minScore filter if provided (use alphaScore as primary filter)
+    if (minScore !== undefined && (alphaScore === null || alphaScore < minScore)) {
       continue;
     }
 
@@ -242,10 +241,12 @@ export async function getFantasyWRRankings(
       playerName: identity.playerName,
       team: identity.team,
       season: rb.season,
-      fantasyWRScore,
+      // TIBER Alpha Engine scores (unified - now primary ranking metric)
+      alphaScore,
       volumeIndex,
-      ppgIndex,
-      spiceIndex,
+      productionIndex,
+      efficiencyIndex,
+      stabilityIndex,
       fantasyPointsPprPerGame: Number(fantasyPointsPprPerGame.toFixed(2)),
       targetsPerGame: rb.targetsPerGame,
       targetShareAvg: rb.targetShareAvg,
@@ -257,8 +258,17 @@ export async function getFantasyWRRankings(
     });
   }
 
-  // Step 5: Sort by FantasyWRScore descending
-  results.sort((a, b) => b.fantasyWRScore - a.fantasyWRScore);
+  // Step 5: Sort by Alpha Score descending (unified TIBER ranking)
+  results.sort((a, b) => {
+    // Players with alphaScore come first, sorted by score
+    if (a.alphaScore !== null && b.alphaScore !== null) {
+      return b.alphaScore - a.alphaScore;
+    }
+    // Players without alphaScore go to the end
+    if (a.alphaScore === null) return 1;
+    if (b.alphaScore === null) return -1;
+    return 0;
+  });
 
   // Step 6: Apply pagination
   if (offset !== undefined || limit !== undefined) {
