@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowUpDown, RotateCcw } from 'lucide-react';
+import { ArrowUpDown, RotateCcw, Save, Download } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 
 type Position = 'WR' | 'RB';
@@ -116,6 +116,51 @@ export default function WRRankingsSandbox() {
       setRbFpRushWeight(25);
     }
   };
+
+  // Save formula to localStorage
+  const saveFormula = () => {
+    const formulaName = prompt('Enter a name for this formula:');
+    if (!formulaName) return;
+
+    const formulas = JSON.parse(localStorage.getItem('adminSandboxFormulas') || '{}');
+    formulas[formulaName] = {
+      position,
+      weights: position === 'WR' 
+        ? { vol: wrVolWeight, prod: wrProdWeight, eff: wrEffWeight, stab: wrStabWeight }
+        : { carries: rbCarriesWeight, yards: rbYardsWeight, fpRush: rbFpRushWeight },
+      savedAt: new Date().toISOString()
+    };
+    localStorage.setItem('adminSandboxFormulas', JSON.stringify(formulas));
+    alert(`Formula "${formulaName}" saved successfully!`);
+  };
+
+  // Load formula from localStorage
+  const loadFormula = (formulaName: string) => {
+    const formulas = JSON.parse(localStorage.getItem('adminSandboxFormulas') || '{}');
+    const formula = formulas[formulaName];
+    if (!formula) return;
+
+    if (formula.position === 'WR' && position === 'WR') {
+      setWrVolWeight(formula.weights.vol);
+      setWrProdWeight(formula.weights.prod);
+      setWrEffWeight(formula.weights.eff);
+      setWrStabWeight(formula.weights.stab);
+    } else if (formula.position === 'RB' && position === 'RB') {
+      setRbCarriesWeight(formula.weights.carries);
+      setRbYardsWeight(formula.weights.yards);
+      setRbFpRushWeight(formula.weights.fpRush);
+    }
+  };
+
+  // Get saved formulas for current position
+  const getSavedFormulas = () => {
+    const formulas = JSON.parse(localStorage.getItem('adminSandboxFormulas') || '{}');
+    return Object.entries(formulas)
+      .filter(([_, formula]: any) => formula.position === position)
+      .map(([name]) => name);
+  };
+
+  const savedFormulas = getSavedFormulas();
 
   const { data, isLoading } = useQuery<SandboxResponse>({
     queryKey: [position === 'WR' ? '/api/admin/wr-rankings-sandbox' : '/api/admin/rb-rankings-sandbox'],
@@ -295,14 +340,36 @@ export default function WRRankingsSandbox() {
                   : rbCarriesWeight + rbYardsWeight + rbFpRushWeight}%)
               </p>
             </div>
-            <button
-              onClick={resetWeights}
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-lg text-xs font-medium transition-colors"
-              data-testid="reset-weights"
-            >
-              <RotateCcw className="w-3 h-3" />
-              Reset
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={saveFormula}
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-600/50 hover:bg-green-600/70 text-white rounded-lg text-xs font-medium transition-colors"
+                data-testid="save-formula"
+              >
+                <Save className="w-3 h-3" />
+                Save
+              </button>
+              {savedFormulas.length > 0 && (
+                <select
+                  onChange={(e) => e.target.value && loadFormula(e.target.value)}
+                  className="px-3 py-1.5 bg-blue-600/50 hover:bg-blue-600/70 text-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                  data-testid="load-formula"
+                >
+                  <option value="">Load Formula...</option>
+                  {savedFormulas.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              )}
+              <button
+                onClick={resetWeights}
+                className="flex items-center gap-2 px-3 py-1.5 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-lg text-xs font-medium transition-colors"
+                data-testid="reset-weights"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Reset
+              </button>
+            </div>
           </div>
 
           {position === 'WR' ? (
