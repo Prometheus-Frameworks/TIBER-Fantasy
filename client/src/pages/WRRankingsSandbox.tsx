@@ -4,7 +4,7 @@ import { ArrowUpDown, RotateCcw, Save, Download } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 
 type Position = 'WR' | 'RB';
-type SortField = 'playerName' | 'team' | 'gamesPlayed' | 'targets' | 'totalCarries' | 'totalRushingYards' | 'fantasyPointsPerRushAttempt' | 'fantasyPoints' | 'pointsPerTarget' | 'samplePenalty' | 'adjustedEfficiency' | 'alphaScore' | 'roleScore' | 'deepTargetRate' | 'slotRouteShareEst' | 'weightedTargetsPerGame' | 'boomRate' | 'bustRate' | 'talentIndex' | 'usageStabilityIndex' | 'roleDelta' | 'redZoneDomScore' | 'energyIndex';
+type SortField = 'playerName' | 'team' | 'gamesPlayed' | 'targets' | 'totalCarries' | 'totalRushingYards' | 'fantasyPointsPerRushAttempt' | 'fantasyPoints' | 'pointsPerTarget' | 'samplePenalty' | 'adjustedEfficiency' | 'alphaScore' | 'customAlphaScore' | 'roleScore' | 'deepTargetRate' | 'slotRouteShareEst' | 'weightedTargetsPerGame' | 'boomRate' | 'bustRate' | 'talentIndex' | 'usageStabilityIndex' | 'roleDelta' | 'redZoneDomScore' | 'energyIndex';
 type SortOrder = 'asc' | 'desc';
 
 type RoleTier = 'ALPHA' | 'CO_ALPHA' | 'PRIMARY_SLOT' | 'SECONDARY' | 'ROTATIONAL' | 'UNKNOWN' | null;
@@ -84,7 +84,7 @@ interface SandboxResponse {
 
 export default function WRRankingsSandbox() {
   const [position, setPosition] = useState<Position>('WR');
-  const [sortField, setSortField] = useState<SortField>('alphaScore');
+  const [sortField, setSortField] = useState<SortField>('customAlphaScore');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   
   // Filter controls
@@ -298,7 +298,8 @@ export default function WRRankingsSandbox() {
               <button
                 onClick={() => {
                   setPosition('WR');
-                  setSortField('alphaScore');
+                  setSortField('customAlphaScore');
+                  setSortOrder('desc');
                 }}
                 className={`px-4 py-2 rounded-lg font-semibold transition-all ${
                   position === 'WR'
@@ -312,7 +313,8 @@ export default function WRRankingsSandbox() {
               <button
                 onClick={() => {
                   setPosition('RB');
-                  setSortField('fantasyPoints');
+                  setSortField('customAlphaScore');
+                  setSortOrder('desc');
                 }}
                 className={`px-4 py-2 rounded-lg font-semibold transition-all ${
                   position === 'RB'
@@ -604,7 +606,14 @@ export default function WRRankingsSandbox() {
                       <SortButton field="fantasyPointsPerRushAttempt" label="FP/Rush" />
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-purple-400 uppercase tracking-wider">
-                      Custom Score
+                      <button 
+                        onClick={() => handleSort('customAlphaScore')}
+                        className="flex items-center gap-1 hover:text-purple-300 transition-colors"
+                        data-testid="sort-customAlphaScore"
+                      >
+                        <span>Custom Score</span>
+                        <ArrowUpDown className="w-3 h-3" />
+                      </button>
                     </th>
                   </tr>
                 </thead>
@@ -707,8 +716,8 @@ export default function WRRankingsSandbox() {
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
                     <SortButton field="adjustedEfficiency" label="Adj Pts/Tgt" />
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="alphaScore" label="Alpha Score" />
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-purple-400 uppercase tracking-wider">
+                    <SortButton field="customAlphaScore" label="Custom Score" />
                   </th>
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
                     <SortButton field="roleScore" label="Role Score" />
