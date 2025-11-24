@@ -3288,11 +3288,11 @@ export const wrRoleBank = pgTable("wr_role_bank", {
   efficiencyScore: integer("efficiency_score"),        // Fantasy efficiency component
   
   // TIBER Alpha Engine (unified scoring system)
-  alphaScore: integer("alpha_score"),                  // Unified alpha score (0-100)
-  volumeIndex: integer("volume_index"),                // Volume pillar (0-100)
-  productionIndex: integer("production_index"),        // Production pillar (0-100)
-  efficiencyIndex: integer("efficiency_index"),        // Efficiency pillar (0-100)
-  stabilityIndex: integer("stability_index"),          // Stability pillar (0-100)
+  alphaScore: integer("alpha_score").notNull(),                  // Unified alpha score (0-100)
+  volumeIndex: integer("volume_index").notNull(),                // Volume pillar (0-100)
+  productionIndex: integer("production_index").notNull(),        // Production pillar (0-100)
+  efficiencyIndex: integer("efficiency_index").notNull(),        // Efficiency pillar (0-100)
+  stabilityIndex: integer("stability_index").notNull(),          // Stability pillar (0-100)
   
   // Role Classification
   roleTier: wrRoleTierEnum("role_tier").notNull(),

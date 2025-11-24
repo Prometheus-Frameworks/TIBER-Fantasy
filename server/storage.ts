@@ -1826,11 +1826,11 @@ export class DatabaseStorage implements IStorage {
         roleScore: roleRow.roleScore,
         pureRoleScore: roleRow.pureRoleScore || null,        // v2.0
         efficiencyScore: roleRow.efficiencyScore || null,    // v2.0
-        alphaScore: roleRow.alphaScore || null,              // TIBER Alpha Engine
-        volumeIndex: roleRow.volumeIndex || null,            // Alpha pillar
-        productionIndex: roleRow.productionIndex || null,    // Alpha pillar
-        efficiencyIndex: roleRow.efficiencyIndex || null,    // Alpha pillar
-        stabilityIndex: roleRow.stabilityIndex || null,      // Alpha pillar
+        alphaScore: roleRow.alphaScore,                      // TIBER Alpha Engine (required)
+        volumeIndex: roleRow.volumeIndex,                    // Alpha pillar (required)
+        productionIndex: roleRow.productionIndex,            // Alpha pillar (required)
+        efficiencyIndex: roleRow.efficiencyIndex,            // Alpha pillar (required)
+        stabilityIndex: roleRow.stabilityIndex,              // Alpha pillar (required)
         roleTier: roleRow.roleTier,
         cardioWrFlag: roleRow.cardioWrFlag,
         breakoutWatchFlag: roleRow.breakoutWatchFlag,
@@ -1858,11 +1858,11 @@ export class DatabaseStorage implements IStorage {
           roleScore: roleRow.roleScore,
           pureRoleScore: roleRow.pureRoleScore || null,        // v2.0
           efficiencyScore: roleRow.efficiencyScore || null,    // v2.0
-          alphaScore: roleRow.alphaScore || null,              // TIBER Alpha Engine
-          volumeIndex: roleRow.volumeIndex || null,            // Alpha pillar
-          productionIndex: roleRow.productionIndex || null,    // Alpha pillar
-          efficiencyIndex: roleRow.efficiencyIndex || null,    // Alpha pillar
-          stabilityIndex: roleRow.stabilityIndex || null,      // Alpha pillar
+          alphaScore: roleRow.alphaScore,                      // TIBER Alpha Engine (required)
+          volumeIndex: roleRow.volumeIndex,                    // Alpha pillar (required)
+          productionIndex: roleRow.productionIndex,            // Alpha pillar (required)
+          efficiencyIndex: roleRow.efficiencyIndex,            // Alpha pillar (required)
+          stabilityIndex: roleRow.stabilityIndex,              // Alpha pillar (required)
           roleTier: roleRow.roleTier,
           cardioWrFlag: roleRow.cardioWrFlag,
           breakoutWatchFlag: roleRow.breakoutWatchFlag,

@@ -68,11 +68,11 @@ export interface WRRoleBankSeasonRow {
   efficiencyScore?: number;    // Fantasy efficiency component
 
   // TIBER Alpha Engine (unified scoring system)
-  alphaScore?: number;         // Unified alpha score (0-100)
-  volumeIndex?: number;        // Volume pillar (0-100)
-  productionIndex?: number;    // Production pillar (0-100)
-  efficiencyIndex?: number;    // Efficiency pillar (0-100)
-  stabilityIndex?: number;     // Stability pillar (0-100)
+  alphaScore: number;          // Unified alpha score (0-100)
+  volumeIndex: number;         // Volume pillar (0-100)
+  productionIndex: number;     // Production pillar (0-100)
+  efficiencyIndex: number;     // Efficiency pillar (0-100)
+  stabilityIndex: number;      // Stability pillar (0-100)
 
   // Labels / flags
   roleTier: WRRoleTier;

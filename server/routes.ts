@@ -6987,6 +6987,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let rawResults = await storage.getWRRoleBank(filters);
       
+      // DEBUG: Check if alpha fields exist in raw results
+      if (rawResults.length > 0) {
+        console.log('[WR ROUTE] Has alphaScore?', 'alphaScore' in rawResults[0]);
+        console.log('[WR ROUTE] alphaScore value:', rawResults[0].alphaScore);
+        console.log('[WR ROUTE] All keys:', Object.keys(rawResults[0]));
+      }
+      
       const enrichedResults = await Promise.all(
         rawResults.map(async (r: any) => {
           const playerInfo = await db
@@ -7034,12 +7041,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             consistencyScore: r.consistencyScore,
             highValueUsageScore: r.highValueUsageScore,
             momentumScore: r.momentumScore,
-            // TIBER Alpha Engine scores (unified)
-            alphaScore: r.alphaScore ?? null,
-            volumeIndex: r.volumeIndex ?? null,
-            productionIndex: r.productionIndex ?? null,
-            efficiencyIndex: r.efficiencyIndex ?? null,
-            stabilityIndex: r.stabilityIndex ?? null,
+            // TIBER Alpha Engine scores (unified - required fields)
+            alphaScore: r.alphaScore,
+            volumeIndex: r.volumeIndex,
+            productionIndex: r.productionIndex,
+            efficiencyIndex: r.efficiencyIndex,
+            stabilityIndex: r.stabilityIndex,
             flags: {
               cardioWr: r.cardioWrFlag,
               breakoutWatch: r.breakoutWatchFlag
