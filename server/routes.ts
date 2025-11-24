@@ -6163,27 +6163,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get('/api/admin/wr-rankings-sandbox', async (req: Request, res: Response) => {
     try {
-      const { weeklyStats } = await import('@shared/schema');
+      const { weeklyStats, playerIdentityMap } = await import('@shared/schema');
       
       // Query 2025 WRs with 4+ games, aggregate targets and fantasy points
+      // IMPORTANT: Join with player_identity_map for authoritative position data
+      // (weekly_stats.position has incorrect data - RBs labeled as "WR")
       const results = await db
         .select({
           playerId: weeklyStats.playerId,
           playerName: weeklyStats.playerName,
           team: weeklyStats.team,
-          position: weeklyStats.position,
+          position: playerIdentityMap.position,
           gamesPlayed: sql<number>`COUNT(DISTINCT ${weeklyStats.week})::int`,
           totalTargets: sql<number>`SUM(COALESCE(${weeklyStats.targets}, 0))::int`,
           totalFantasyPoints: sql<number>`SUM(COALESCE(${weeklyStats.fantasyPointsPpr}, 0))::real`,
         })
         .from(weeklyStats)
+        .innerJoin(
+          playerIdentityMap,
+          eq(weeklyStats.playerId, playerIdentityMap.nflDataPyId)
+        )
         .where(
           and(
             eq(weeklyStats.season, 2025),
-            eq(weeklyStats.position, 'WR')
+            eq(playerIdentityMap.position, 'WR')  // Use authoritative position from player_identity_map
           )
         )
-        .groupBy(weeklyStats.playerId, weeklyStats.playerName, weeklyStats.team, weeklyStats.position)
+        .groupBy(weeklyStats.playerId, weeklyStats.playerName, weeklyStats.team, playerIdentityMap.position)
         .having(sql`COUNT(DISTINCT ${weeklyStats.week}) >= 4`);
 
       // Calculate points per target and sort
