@@ -40,6 +40,13 @@ interface RoleBankListItem {
   highValueUsageScore: number;
   momentumScore: number;
   
+  // TIBER Alpha Engine (unified scoring system)
+  alphaScore: number;
+  volumeIndex: number;
+  productionIndex: number;
+  efficiencyIndex: number;
+  stabilityIndex: number;
+  
   // v1.1: WR-specific deep target metrics (null for RB/TE)
   deepTargetsPerGame: number | null;
   deepTargetRate: number | null;
@@ -122,6 +129,13 @@ function transformToListItem(roleRow: any, position: Position, identityRow: any 
     consistencyScore: roleRow.consistencyScore || 0,
     highValueUsageScore: roleRow.highValueUsageScore || 0,
     momentumScore: roleRow.momentumScore || 0,
+    
+    // TIBER Alpha Engine scores (unified)
+    alphaScore: roleRow.alphaScore || 0,
+    volumeIndex: roleRow.volumeIndex || 0,
+    productionIndex: roleRow.productionIndex || 0,
+    efficiencyIndex: roleRow.efficiencyIndex || 0,
+    stabilityIndex: roleRow.stabilityIndex || 0,
     
     // v1.1: WR deep target fields
     deepTargetsPerGame: position === 'WR' ? (roleRow.deepTargetsPerGame ?? null) : null,

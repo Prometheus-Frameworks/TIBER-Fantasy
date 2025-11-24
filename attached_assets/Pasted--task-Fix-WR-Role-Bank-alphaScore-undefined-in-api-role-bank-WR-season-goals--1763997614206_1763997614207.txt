@@ -1,0 +1,48 @@
+{
+  "task": "Fix WR Role Bank alphaScore undefined in /api/role-bank/WR/:season",
+  "goals": [
+    "Ensure alphaScore from wr_role_bank is returned correctly by the enriched WR Role Bank endpoint",
+    "Remove any transformation/enrichment layers that drop fields, then re-introduce only what we absolutely need"
+  ],
+  "steps": [
+    {
+      "description": "Find the WR Role Bank HTTP handler",
+      "details": "Locate the route handler for GET /api/role-bank/WR/:season (likely in routes.ts or a dedicated roleBankRoutes file). Identify which service function it calls (e.g., getWRRoleBankForSeason or similar)."
+    },
+    {
+      "description": "Trace the data flow end-to-end",
+      "details": "Starting from the route handler, follow the call chain into the service layer (roleBankService.ts) and then into the Drizzle query or repository layer that fetches wr_role_bank rows. Confirm that alphaScore (or alpha_score) is present in the TypeScript type and the raw query result at each layer."
+    },
+    {
+      "description": "Create a minimal 'raw' WR Role Bank endpoint for debugging",
+      "details": "Temporarily add a debug endpoint: GET /api/debug/role-bank/WR/:season that directly returns the raw rows from wr_role_bank joined with player_identity_map (player name, team) WITHOUT any extra enrichment or mapping. This should select and return: player_id, season, roleScore, alphaScore, pureRoleScore, efficiencyScore, gamesPlayed, targetsPerGame, targetShareAvg, routesPerGame, deepTargetRate, slotRouteShareEst, plus player display fields."
+    },
+    {
+      "description": "Refactor the main WR Role Bank endpoint to use the same raw shape",
+      "details": "Update GET /api/role-bank/WR/:season to use the same underlying query as the debug endpoint. Avoid reconstructing objects via `map(row => ({ ... }))` unless absolutely necessary. If reconstruction is needed, explicitly include alphaScore in the returned object. Do NOT use a Zod schema or TS type that omits alphaScore."
+    },
+    {
+      "description": "Audit all mappings for accidental field loss",
+      "details": "Search for any code like `{ roleScore, ...rest }` or manual spreads that might be recreating objects. Ensure that alphaScore is explicitly preserved in all transformations. If there is a select() or pick() list for fields, add alphaScore to it."
+    },
+    {
+      "description": "Ensure TypeScript types and serializers include alphaScore",
+      "details": "Check any interfaces or types used by the WR Role Bank endpoint (e.g., WRRoleBankRow, WRRoleBankResponse). Add `alphaScore: number` where appropriate so it is not stripped by validation or serialization. If Zod schemas exist, extend them to include alphaScore."
+    },
+    {
+      "description": "Add logging at the route boundary",
+      "details": "In the WR Role Bank route handler, log the first 2–3 rows before sending the JSON response to confirm alphaScore is present: `console.log('WR RoleBank sample row', result[0])`. This should appear in the server logs when we hit /api/role-bank/WR/2025.",
+      "note": "Remove or comment out these logs after confirming the fix works."
+    },
+    {
+      "description": "Restart the dev server cleanly",
+      "details": "Stop the current tsx/dev process completely and restart it so hot-reload issues don’t mask the fix. Confirm that hitting /api/role-bank/WR/2025 now returns alphaScore as a non-null numeric field for all rows."
+    }
+  ],
+  "acceptance_criteria": [
+    "GET /api/role-bank/WR/2025 returns alphaScore as a number (not null, not undefined) for all rows.",
+    "The debug endpoint /api/debug/role-bank/WR/2025 (if still present) shows the same alphaScore values as a direct SQL query against wr_role_bank.",
+    "No existing fields are lost: roleScore, pureRoleScore, efficiencyScore, gamesPlayed, targetsPerGame, targetShareAvg, routesPerGame, deepTargetRate, slotRouteShareEst still appear as before.",
+    "No runtime errors or TypeScript type errors introduced."
+  ]
+}
