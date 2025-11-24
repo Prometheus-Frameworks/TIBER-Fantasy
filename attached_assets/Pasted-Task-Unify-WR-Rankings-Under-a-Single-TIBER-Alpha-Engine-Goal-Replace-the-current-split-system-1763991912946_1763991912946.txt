@@ -1,0 +1,368 @@
+Task: Unify WR Rankings Under a Single TIBER Alpha Engine
+
+Goal:
+Replace the current split system (Admin Alpha, Fantasy Rankings, Season Roles) with one unified WR Alpha Engine that produces a single core score (alphaScore) and exposes different "views" (Alpha vs Season Role context) off the same data.
+
+We want:
+- ONE canonical WR score: alphaScore (0–100)
+- Backed by four conceptual pillars:
+  - Volume (V)
+  - Production (P)
+  - Efficiency (E)
+  - Stability (S)
+- Season Roles stays as a context view (roleScore + sub-scores)
+- Fantasy Rankings UI for WR is replaced by Alpha as the primary ranking, not a separate scoring system
+- Admin sandbox continues to exist, but its AlphaScore must also come from this unified engine
+
+--------------------------------
+1) Create a Shared WR Alpha Engine
+--------------------------------
+
+Create a new module (or service) that centralizes WR alpha scoring:
+
+File (suggested):
+- server/services/wrAlphaEngine.ts
+
+Export a function like:
+
+- calculateWrAlphaScore(input: WrAlphaInput): WrAlphaOutput
+
+Where WrAlphaInput includes (you can reuse existing types/fields you already compute across Role Bank + Fantasy + Sandbox):
+
+Required inputs:
+- gamesPlayed
+- targetsPerGame
+- totalTargets
+- targetShareAvg
+- routesPerGame
+- fantasyPointsTotal
+- fantasyPointsPerGame
+- pprPerTarget
+- adjPprPerTarget (the "Adj Pts/Tgt" you already compute in the admin sandbox)
+- consistencyScore (or stdDevTargets if easier, but you already have a consistencyScore in Role Bank)
+- momentumScore (existing Role Bank field)
+- deepTargetRate
+- slotRouteShareEst
+- pureRoleScore (optional: keep this for debug, but Alpha should not depend on it directly anymore)
+
+WrAlphaOutput should include:
+- alphaScore (0–100 final)
+- volumeIndex (0–100)
+- productionIndex (0–100)
+- efficiencyIndex (0–100)
+- stabilityIndex (0–100)
+
+-------------------------
+2) Implement the Alpha Math
+-------------------------
+
+Inside wrAlphaEngine.ts, implement:
+
+A) Volume Index (V) – 0–100
+
+Use existing scaling helpers already in Role Bank (do NOT rewrite from scratch, just reuse):
+
+- scaleTargetsPerGame
+- scaleTargetShare
+- scaleRoutesPerGame2025
+
+Then:
+
+- volumeIndex = round(
+    0.50 * targetsScore +
+    0.30 * shareScore +
+    0.20 * routesScore
+  )
+
+Where:
+- targetsScore = scaleTargetsPerGame(targetsPerGame)
+- shareScore   = scaleTargetShare(targetShareAvg)
+- routesScore  = scaleRoutesPerGame2025(routesPerGame)
+
+B) Production Index (P) – 0–100
+
+We want BOTH PPG and total season points in here.
+
+Implement:
+
+- ppgIndex:
+  - >= 20 PPG → 100
+  - >= 18 PPG → 92
+  - >= 16 PPG → 84
+  - >= 14 PPG → 76
+  - >= 12 PPG → 68
+  - >= 10 PPG → 60
+  - >= 8  PPG → 52
+  - else      → 44
+
+- totalPointsIndex (use simple thresholds, we can refine later):
+  - >= 220 total points → 100
+  - >= 200 → 92
+  - >= 180 → 84
+  - >= 160 → 76
+  - >= 140 → 68
+  - >= 120 → 60
+  - >= 100 → 52
+  - else   → 44
+
+Then:
+
+- productionIndex = round(
+    0.60 * ppgIndex +
+    0.40 * totalPointsIndex
+  )
+
+C) Efficiency Index (E) – 0–100
+
+We already compute:
+- pprPerTarget
+- adjPprPerTarget (Adj Pts/Tgt in sandbox)
+
+Implement two scalers:
+
+- scaleAdjPprPerTarget(adjPpr):
+  - >= 2.40 → 100
+  - >= 2.20 → 92
+  - >= 2.00 → 84
+  - >= 1.85 → 76
+  - >= 1.70 → 68
+  - >= 1.55 → 60
+  - else    → 50
+
+- scalePprPerTarget(ppr):
+  - same thresholds, or slightly softer if you prefer, but you can reuse the above to keep it simple
+
+Then:
+
+- efficiencyIndex = round(
+    0.70 * scaleAdjPprPerTarget(adjPprPerTarget) +
+    0.30 * scalePprPerTarget(pprPerTarget)
+  )
+
+If adjPprPerTarget is null, fall back to pprPerTarget only.
+
+D) Stability Index (S) – 0–100
+
+We already have:
+- consistencyScore (0–100) from Role Bank
+- momentumScore (0–100) from Role Bank
+
+Define:
+
+- stabilityIndex = round(
+    0.60 * consistencyScore +
+    0.40 * momentumScore
+  )
+
+E) Final Alpha Score
+
+This is the unified brain:
+
+- alphaScore = round(
+    0.50 * volumeIndex +
+    0.25 * productionIndex +
+    0.15 * efficiencyIndex +
+    0.10 * stabilityIndex
+  )
+
+Return all four indices + alphaScore from calculateWrAlphaScore.
+
+--------------------------------------------
+3) Wire the Alpha Engine into Existing Systems
+--------------------------------------------
+
+A) Role Bank API (Season Roles)
+
+File:
+- server/services/roleBankService.ts (where WR Role Bank is implemented)
+- server/routes.ts (where /api/role-bank/WR/:season is wired)
+
+Changes:
+
+1. After you compute:
+   - gamesPlayed
+   - targetsPerGame
+   - totalTargets
+   - targetShareAvg
+   - routesPerGame
+   - pprPerTarget
+   - adjPprPerTarget (join from the same source you use in the sandbox, or recompute)
+   - consistencyScore
+   - momentumScore
+   - deepTargetRate
+   - slotRouteShareEst
+   - pureRoleScore (if still present)
+
+2. Call:
+   - const alpha = calculateWrAlphaScore(input);
+
+3. Include in WR Role Bank API response:
+   - alphaScore: alpha.alphaScore
+   - volumeIndex: alpha.volumeIndex
+   - productionIndex: alpha.productionIndex
+   - efficiencyIndex: alpha.efficiencyIndex
+   - stabilityIndex: alpha.stabilityIndex
+
+4. Keep existing Role Bank fields:
+   - roleScore (the old v2.0 score)
+   - volumeScore, consistencyScore, highValueScore, momentumScore
+   - deepTargetRate, slotRouteShareEst, etc.
+
+So Season Roles now exposes BOTH:
+- roleScore  (contextual role strength)
+- alphaScore (unified “who matters for fantasy” score)
+
+B) Admin Sandbox
+
+File:
+- server/services/wrAdvancedMetricsService.ts
+- server/routes.ts (/api/admin/wr-rankings-sandbox)
+
+Changes:
+
+1. Stop using any custom internal AlphaScore math here.
+2. Make the sandbox call calculateWrAlphaScore with the same inputs as above.
+3. Replace the old AlphaScore column with:
+   - alphaScore from the unified engine
+   - plus the four indices (volumeIndex, productionIndex, efficiencyIndex, stabilityIndex) if helpful for debugging.
+
+C) Fantasy Rankings Endpoint (WR)
+
+File:
+- server/services/fantasyWrRankingsService.ts
+- server/routes.ts (/api/fantasy-rankings/WR/:season)
+
+Changes:
+
+1. Remove the custom 60% volume / 30% PPG / 10% spice formula.
+2. Make this endpoint a thin wrapper around the Role Bank + Alpha Engine:
+
+   - Join WR Role Bank row + fantasy stats (PPG, total points, etc.)
+   - Call calculateWrAlphaScore
+   - Sort by alphaScore DESC
+   - Return:
+     - playerId, name, team
+     - alphaScore
+     - fantasyPointsPerGame
+     - targetsPerGame
+     - targetShareAvg
+     - roleScore (for context)
+     - volumeIndex, productionIndex, efficiencyIndex, stabilityIndex
+
+3. (Optional) Mark this endpoint as “legacy/future use” in comments if the frontend no longer calls it. Main thing: any internal “Fantasy Rankings” scoring logic must now rely on Alpha.
+
+--------------------------------
+4) Frontend: Rankings Tab (WR only)
+--------------------------------
+
+File(s) (names approximate):
+- client/src/components/tabs/RankingsTab.tsx
+- client/src/components/RoleBankRankings.tsx
+
+Goals:
+- WR uses Alpha as the primary view
+- Keep a simple toggle between:
+  - “TIBER Alpha”
+  - “Season Roles”
+- Remove the separate Fantasy Rankings WR view as its own "scoring identity" (we don’t need three competing rankings).
+
+Changes:
+
+A) For WR in Rankings:
+
+1. Default Mode:
+   - “TIBER Alpha” view
+2. Secondary Mode:
+   - “Season Roles” view
+
+B) TIBER Alpha View (WR)
+
+Use /api/role-bank/WR/:season, but display:
+
+Columns (suggested):
+- Rank
+- Player
+- Team
+- Tier (CO_ALPHA / SECONDARY / ROTATIONAL / etc. from Role Bank)
+- Alpha (alphaScore)
+- GP
+- Fantasy PPG
+- Targets/G
+- Target Share
+- Deep%
+- Slot%
+
+Sort:
+- Default sort by alphaScore DESC
+
+C) Season Roles View (WR)
+
+Same endpoint, different columns:
+
+- Rank
+- Player
+- Team
+- Tier
+- Role Score (roleScore)
+- Volume
+- Consistency
+- High-Value
+- Momentum
+- Targets/G
+- Target Share
+- Routes/G
+
+Sort:
+- Default sort by roleScore DESC
+
+D) Remove/Retire:
+
+- Do NOT show the old “Fantasy Rankings” WR tab as its own scoring system in the UI anymore.
+- If any WR view is still using /api/fantasy-rankings/WR/:season with its own internal scoring, switch it over to:
+  - /api/role-bank/WR/:season
+  - alphaScore fields
+  - And just sort client-side.
+
+--------------------------------
+5) Acceptance Criteria
+--------------------------------
+
+Backend:
+- /api/role-bank/WR/:season returns, for each WR:
+  - alphaScore (0–100)
+  - volumeIndex, productionIndex, efficiencyIndex, stabilityIndex
+  - roleScore, volumeScore, consistencyScore, highValueScore, momentumScore
+  - fantasyPointsPerGame, fantasyPointsTotal, pprPerTarget, adjPprPerTarget
+- /api/admin/wr-rankings-sandbox:
+  - AlphaScore column matches alphaScore from Role Bank for the same player/season
+  - Sandbox still shows all debug metrics (Targets, Fantasy Points, Pts/Tgt, Adj Pts/Tgt, Deep%, Slot%, etc.)
+- /api/fantasy-rankings/WR/:season:
+  - If still used, uses calculateWrAlphaScore internally and no longer maintains its own separate scoring formula.
+
+Frontend:
+- WR → Rankings tab:
+  - Default view = “TIBER Alpha”
+  - Secondary view = “Season Roles”
+- TIBER Alpha view:
+  - Clearly labeled alphaScore column (“Alpha” or “TIBER Alpha Score”)
+  - Sorted by alphaScore by default
+- Season Roles view:
+  - Clearly labeled “Role Score” column
+- No third, separate WR scoring mode that conflicts with Alpha.
+
+Sanity check (2025, eye test):
+- JSN, Chase, Amon-Ra, Puka, London, Olave, Pickens, etc. should all sit comfortably in the top cluster by AlphaScore.
+- Removing the old Fantasy formula should not break the UI; it should just be cleaner and simpler.
+
+--------------------------------
+6) Notes
+--------------------------------
+
+- Do NOT delete any of the existing Role Bank tables or data.
+- Do NOT remove the advanced metrics; just have them flow through this new Alpha Engine.
+- Make sure alphaScore is computed in exactly ONE place (wrAlphaEngine.ts) and reused everywhere.
+
+When done, please output a short summary:
+- Files changed
+- New helpers added
+- 2025 top 15 WRs by alphaScore (for quick visual inspection)
