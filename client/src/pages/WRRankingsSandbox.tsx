@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, RotateCcw } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 
 type Position = 'WR' | 'RB';
 type SortField = 'playerName' | 'team' | 'gamesPlayed' | 'targets' | 'totalCarries' | 'totalRushingYards' | 'fantasyPointsPerRushAttempt' | 'fantasyPoints' | 'pointsPerTarget' | 'samplePenalty' | 'adjustedEfficiency' | 'alphaScore' | 'roleScore' | 'deepTargetRate' | 'slotRouteShareEst' | 'weightedTargetsPerGame' | 'boomRate' | 'bustRate' | 'talentIndex' | 'usageStabilityIndex' | 'roleDelta' | 'redZoneDomScore' | 'energyIndex';
@@ -19,9 +20,11 @@ interface SandboxPlayer {
   samplePenalty: number;
   adjustedEfficiency: number;
   volumeIndex: number;
-  pointsIndex: number;
+  productionIndex: number;
   efficiencyIndex: number;
+  stabilityIndex: number;
   alphaScore: number;
+  customAlphaScore?: number;
   // Injury status (IR/OUT badges)
   injuryStatus: string | null;
   injuryType: string | null;
@@ -64,6 +67,7 @@ interface RBSandboxPlayer {
   totalRushingYards: number;
   fantasyPoints: number;
   fantasyPointsPerRushAttempt: number;
+  customAlphaScore?: number;
   injuryStatus: string | null;
   injuryType: string | null;
 }
@@ -88,6 +92,31 @@ export default function WRRankingsSandbox() {
   const [highlightDeepThreats, setHighlightDeepThreats] = useState(false);
   const [highlightSlotHeavy, setHighlightSlotHeavy] = useState(false);
 
+  // WR Weight sliders (default: 50/25/15/10)
+  const [wrVolWeight, setWrVolWeight] = useState(50);
+  const [wrProdWeight, setWrProdWeight] = useState(25);
+  const [wrEffWeight, setWrEffWeight] = useState(15);
+  const [wrStabWeight, setWrStabWeight] = useState(10);
+
+  // RB Weight sliders (default: equal thirds for carries, yards, fp/rush)
+  const [rbCarriesWeight, setRbCarriesWeight] = useState(40);
+  const [rbYardsWeight, setRbYardsWeight] = useState(35);
+  const [rbFpRushWeight, setRbFpRushWeight] = useState(25);
+
+  // Reset weights to defaults
+  const resetWeights = () => {
+    if (position === 'WR') {
+      setWrVolWeight(50);
+      setWrProdWeight(25);
+      setWrEffWeight(15);
+      setWrStabWeight(10);
+    } else {
+      setRbCarriesWeight(40);
+      setRbYardsWeight(35);
+      setRbFpRushWeight(25);
+    }
+  };
+
   const { data, isLoading } = useQuery<SandboxResponse>({
     queryKey: [position === 'WR' ? '/api/admin/wr-rankings-sandbox' : '/api/admin/rb-rankings-sandbox'],
   });
@@ -101,8 +130,57 @@ export default function WRRankingsSandbox() {
     }
   };
 
+  // Calculate custom alphaScore based on slider weights
+  const dataWithCustomScores = data?.data.map(player => {
+    if (position === 'WR') {
+      const wrPlayer = player as SandboxPlayer;
+      // Normalize weights to sum to 100
+      const totalWeight = wrVolWeight + wrProdWeight + wrEffWeight + wrStabWeight;
+      const normalizedVol = wrVolWeight / totalWeight;
+      const normalizedProd = wrProdWeight / totalWeight;
+      const normalizedEff = wrEffWeight / totalWeight;
+      const normalizedStab = wrStabWeight / totalWeight;
+
+      const customAlphaScore = Math.round(
+        wrPlayer.volumeIndex * normalizedVol +
+        wrPlayer.productionIndex * normalizedProd +
+        wrPlayer.efficiencyIndex * normalizedEff +
+        wrPlayer.stabilityIndex * normalizedStab
+      );
+
+      return { ...wrPlayer, customAlphaScore };
+    } else {
+      const rbPlayer = player as RBSandboxPlayer;
+      // For RB, we need to normalize carries, yards, and fp/rush across all players
+      // First pass: find max values (we'll do this inline for simplicity)
+      const allRBs = data.data as RBSandboxPlayer[];
+      const maxCarries = Math.max(...allRBs.map(p => p.totalCarries));
+      const maxYards = Math.max(...allRBs.map(p => p.totalRushingYards));
+      const maxFpRush = Math.max(...allRBs.map(p => p.fantasyPointsPerRushAttempt));
+
+      // Normalize each metric to 0-100
+      const carriesScore = (rbPlayer.totalCarries / maxCarries) * 100;
+      const yardsScore = (rbPlayer.totalRushingYards / maxYards) * 100;
+      const fpRushScore = (rbPlayer.fantasyPointsPerRushAttempt / maxFpRush) * 100;
+
+      // Apply custom weights
+      const totalWeight = rbCarriesWeight + rbYardsWeight + rbFpRushWeight;
+      const normalizedCarries = rbCarriesWeight / totalWeight;
+      const normalizedYards = rbYardsWeight / totalWeight;
+      const normalizedFpRush = rbFpRushWeight / totalWeight;
+
+      const customAlphaScore = Math.round(
+        carriesScore * normalizedCarries +
+        yardsScore * normalizedYards +
+        fpRushScore * normalizedFpRush
+      );
+
+      return { ...rbPlayer, customAlphaScore };
+    }
+  });
+
   // Apply filters and sort (WR filters only apply to WR position)
-  const filteredData = data?.data.filter(player => {
+  const filteredData = dataWithCustomScores?.filter(player => {
     // WR-specific filters - skip if viewing RBs
     if (position === 'WR') {
       const wrPlayer = player as SandboxPlayer;
@@ -202,6 +280,148 @@ export default function WRRankingsSandbox() {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Formula Weight Sliders */}
+        <div className="bg-gradient-to-br from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-lg p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-base font-bold text-purple-300">
+                {position === 'WR' ? '🎛️ WR Formula Weights' : '🎛️ RB Formula Weights'}
+              </h3>
+              <p className="text-xs text-gray-400 mt-1">
+                Adjust the weights to test different ranking formulas (total: {position === 'WR' 
+                  ? wrVolWeight + wrProdWeight + wrEffWeight + wrStabWeight 
+                  : rbCarriesWeight + rbYardsWeight + rbFpRushWeight}%)
+              </p>
+            </div>
+            <button
+              onClick={resetWeights}
+              className="flex items-center gap-2 px-3 py-1.5 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-lg text-xs font-medium transition-colors"
+              data-testid="reset-weights"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset
+            </button>
+          </div>
+
+          {position === 'WR' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm text-purple-200 font-medium">Volume</label>
+                  <span className="text-sm text-purple-300 font-bold">{wrVolWeight}%</span>
+                </div>
+                <Slider
+                  value={[wrVolWeight]}
+                  onValueChange={(val) => setWrVolWeight(val[0])}
+                  min={0}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                  data-testid="slider-wr-volume"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm text-blue-200 font-medium">Production</label>
+                  <span className="text-sm text-blue-300 font-bold">{wrProdWeight}%</span>
+                </div>
+                <Slider
+                  value={[wrProdWeight]}
+                  onValueChange={(val) => setWrProdWeight(val[0])}
+                  min={0}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                  data-testid="slider-wr-production"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm text-green-200 font-medium">Efficiency</label>
+                  <span className="text-sm text-green-300 font-bold">{wrEffWeight}%</span>
+                </div>
+                <Slider
+                  value={[wrEffWeight]}
+                  onValueChange={(val) => setWrEffWeight(val[0])}
+                  min={0}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                  data-testid="slider-wr-efficiency"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm text-orange-200 font-medium">Stability</label>
+                  <span className="text-sm text-orange-300 font-bold">{wrStabWeight}%</span>
+                </div>
+                <Slider
+                  value={[wrStabWeight]}
+                  onValueChange={(val) => setWrStabWeight(val[0])}
+                  min={0}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                  data-testid="slider-wr-stability"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm text-purple-200 font-medium">Carries Weight</label>
+                  <span className="text-sm text-purple-300 font-bold">{rbCarriesWeight}%</span>
+                </div>
+                <Slider
+                  value={[rbCarriesWeight]}
+                  onValueChange={(val) => setRbCarriesWeight(val[0])}
+                  min={0}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                  data-testid="slider-rb-carries"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm text-blue-200 font-medium">Yards Weight</label>
+                  <span className="text-sm text-blue-300 font-bold">{rbYardsWeight}%</span>
+                </div>
+                <Slider
+                  value={[rbYardsWeight]}
+                  onValueChange={(val) => setRbYardsWeight(val[0])}
+                  min={0}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                  data-testid="slider-rb-yards"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm text-green-200 font-medium">FP/Rush Weight</label>
+                  <span className="text-sm text-green-300 font-bold">{rbFpRushWeight}%</span>
+                </div>
+                <Slider
+                  value={[rbFpRushWeight]}
+                  onValueChange={(val) => setRbFpRushWeight(val[0])}
+                  min={0}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                  data-testid="slider-rb-fprush"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Info Box - WR only */}
@@ -310,13 +530,16 @@ export default function WRRankingsSandbox() {
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
                       <SortButton field="fantasyPointsPerRushAttempt" label="FP/Rush" />
                     </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-purple-400 uppercase tracking-wider">
+                      Custom Score
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
                     [...Array(10)].map((_, idx) => (
                       <tr key={idx} className="border-b border-gray-800/30">
-                        <td colSpan={8} className="px-4 py-4">
+                        <td colSpan={9} className="px-4 py-4">
                           <div className="h-8 bg-gray-700/30 rounded animate-pulse"></div>
                         </td>
                       </tr>
@@ -324,6 +547,8 @@ export default function WRRankingsSandbox() {
                   ) : (
                     sortedData?.map((player, idx) => {
                       const rbPlayer = player as RBSandboxPlayer;
+                      // Check if weights are custom
+                      const isCustomWeights = rbCarriesWeight !== 40 || rbYardsWeight !== 35 || rbFpRushWeight !== 25;
                       return (
                         <tr
                           key={rbPlayer.playerId}
@@ -351,6 +576,14 @@ export default function WRRankingsSandbox() {
                           <td className="px-4 py-3 text-center text-blue-300">{rbPlayer.totalRushingYards}</td>
                           <td className="px-4 py-3 text-center text-gray-300">{rbPlayer.fantasyPoints.toFixed(1)}</td>
                           <td className="px-4 py-3 text-center text-purple-300 font-bold">{rbPlayer.fantasyPointsPerRushAttempt}</td>
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex flex-col items-center gap-0.5">
+                              <span className="font-bold text-purple-400 text-base">{rbPlayer.customAlphaScore ?? 0}</span>
+                              {isCustomWeights && (
+                                <span className="text-[9px] text-purple-300/60 uppercase tracking-wide">custom</span>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       );
                     })
@@ -484,7 +717,12 @@ export default function WRRankingsSandbox() {
                         <td className="px-4 py-3 text-center text-gray-400">{player.samplePenalty.toFixed(2)}</td>
                         <td className="px-4 py-3 text-center text-gray-400">{player.adjustedEfficiency.toFixed(2)}</td>
                         <td className="px-4 py-3 text-center">
-                          <span className="font-bold text-purple-400 text-base">{player.alphaScore}</span>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="font-bold text-purple-400 text-base">{player.customAlphaScore ?? player.alphaScore}</span>
+                            {player.customAlphaScore && player.customAlphaScore !== player.alphaScore && (
+                              <span className="text-[9px] text-purple-300/60 uppercase tracking-wide">custom</span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-center">
                           {player.roleScore !== null ? (
