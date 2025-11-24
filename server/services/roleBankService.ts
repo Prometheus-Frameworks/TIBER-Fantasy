@@ -1,5 +1,7 @@
 // server/services/roleBankService.ts
 
+import { calculateWrAlphaScore, type WrAlphaInput } from './wrAlphaEngine';
+
 // ---- Types ----
 
 export interface WeeklyWRUsageRow {
@@ -64,6 +66,13 @@ export interface WRRoleBankSeasonRow {
   // v2.0 Fantasy Efficiency Blend - Debug Scores
   pureRoleScore?: number;      // v1.2 original score
   efficiencyScore?: number;    // Fantasy efficiency component
+
+  // TIBER Alpha Engine (unified scoring system)
+  alphaScore?: number;         // Unified alpha score (0-100)
+  volumeIndex?: number;        // Volume pillar (0-100)
+  productionIndex?: number;    // Production pillar (0-100)
+  efficiencyIndex?: number;    // Efficiency pillar (0-100)
+  stabilityIndex?: number;     // Stability pillar (0-100)
 
   // Labels / flags
   roleTier: WRRoleTier;
@@ -416,6 +425,34 @@ export function computeWRRoleBankSeasonRow(
     }
   }
 
+  // ---- TIBER Alpha Engine ----
+  // Calculate unified alpha score using the 4-pillar engine
+  
+  const fantasyPointsPerGame = gamesPlayed > 0 ? totalFantasy / gamesPlayed : 0;
+  
+  // Sample penalty for adjusted PPR/target (same as sandbox)
+  const samplePenalty = Math.min(1, totalTargets / 50);
+  const adjPprPerTarget = pprPerTarget !== null ? pprPerTarget * samplePenalty : null;
+  
+  const alphaInput: WrAlphaInput = {
+    gamesPlayed,
+    targetsPerGame,
+    totalTargets,
+    targetShareAvg,
+    routesPerGame,
+    fantasyPointsTotal: totalFantasy,
+    fantasyPointsPerGame,
+    pprPerTarget,
+    adjPprPerTarget,
+    consistencyScore: Math.round(consistencyScore),
+    momentumScore: Math.round(momentumScore),
+    deepTargetRate,
+    slotRouteShareEst,
+    pureRoleScore: Math.round(pureRoleScore)
+  };
+  
+  const alphaOutput = calculateWrAlphaScore(alphaInput);
+
   return {
     playerId,
     season,
@@ -446,6 +483,13 @@ export function computeWRRoleBankSeasonRow(
     // v2.0 debug scores
     pureRoleScore: Math.round(pureRoleScore),  // v1.2 score (rounded for DB storage)
     efficiencyScore: efficiencyScore,  // Already returns integer from helper
+
+    // TIBER Alpha Engine scores (unified)
+    alphaScore: alphaOutput.alphaScore,
+    volumeIndex: alphaOutput.volumeIndex,
+    productionIndex: alphaOutput.productionIndex,
+    efficiencyIndex: alphaOutput.efficiencyIndex,
+    stabilityIndex: alphaOutput.stabilityIndex,
 
     roleTier,
     cardioWrFlag,
