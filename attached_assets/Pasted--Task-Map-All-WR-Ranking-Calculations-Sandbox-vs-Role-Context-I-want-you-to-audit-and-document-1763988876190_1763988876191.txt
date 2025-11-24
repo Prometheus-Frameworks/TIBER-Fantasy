@@ -1,0 +1,132 @@
+🧠 Task: Map All WR Ranking Calculations (Sandbox vs Role Context)
+
+I want you to audit and document what’s powering WR rankings in two places:
+	1.	Admin Sandbox (/admin/wr-sandbox) – Alpha view
+	2.	Rankings tab → Season Roles + Fantasy Rankings for WR
+
+Don’t change any logic yet. I just want a clear map of what formulas and data sources each layer is using.
+
+⸻
+
+1️⃣ Admin Sandbox – Alpha Composite
+
+Goal: Find the exact code that powers the WR sandbox page and the Alpha Score there.
+
+Please:
+	1.	Locate:
+	•	Backend for the sandbox endpoint
+	•	Likely something like:
+	•	GET /api/admin/wr-sandbox
+	•	or a similar route in server/routes.ts
+	•	Service file that calculates the Alpha score (could be new or reused)
+	•	Frontend component for /admin/wr-sandbox (looks like it’s a dedicated admin/sandbox page)
+	2.	For the sandbox table, document for each of these columns:
+	•	Targets
+	•	Fantasy Pts (is this full PPR? half PPR? total season points?)
+	•	Pts/Tgt
+	•	Sample or Sample Penalty
+	•	Adj Pts/Tgt
+	•	Alpha Score
+	•	Role Score
+	•	Deep %
+	•	Slot %
+	3.	For Alpha Score specifically, I want the exact formula:
+	•	Input metrics used (e.g. targets, games, fantasy points, adjPtsPerTarget, anything else)
+	•	Weighting scheme (e.g. 45% volume / 35% fantasy / 20% efficiency, or whatever is in code now)
+	•	Any filters or thresholds applied (e.g. min games, min targets)
+	•	Where it’s implemented (file + function name)
+	4.	Save an audit file to:
+	•	/tmp/WR_ALPHA_SANDBOX_AUDIT.md
+	•	Include:
+	•	SQL / Drizzle query that backs the sandbox
+	•	The Alpha score formula, step-by-step
+	•	How Role Score in this sandbox is being fetched (from wr_role_bank.role_score or something else)
+
+⸻
+
+2️⃣ Rankings → WR → Season Roles
+
+This is the current production “Role Context” view.
+	1.	Verify which endpoint the Season Roles WR view calls:
+	•	Likely: GET /api/role-bank/WR/:season
+	2.	In the backend, locate the code that computes roleScore for WR:
+	•	This should be in the WR Role Bank v2.0 implementation
+	•	Probably in server/services/roleBankService.ts (or similar)
+	3.	For WR Role Bank v2.0, document:
+	•	All intermediate scores:
+	•	volumeScore (what goes into this: targetsPerGame, targetShareAvg, routesPerGame, and their weights)
+	•	consistencyScore
+	•	highValueFinal (deep targets + slot bonus)
+	•	momentumScore
+	•	efficiencyScore (PPR per target thresholds)
+	•	pureRoleScore (pre-blend)
+	•	Final formula for roleScore (v2.0) – the actual line of code that does the final weighted blend.
+	4.	Save a clear spec to:
+	•	/tmp/WR_ROLE_BANK_V2_AUDIT.md
+	•	Include:
+	•	Each sub-score formula (volume, consistency, high-value, momentum, efficiency)
+	•	The final roleScore formula
+	•	Any thresholds (min games, min targets)
+
+⸻
+
+3️⃣ Rankings → WR → Fantasy Rankings
+
+This is the Fantasy-focused public view.
+	1.	Confirm the endpoint powering Fantasy Rankings for WR:
+	•	Likely: GET /api/fantasy-rankings/WR/:season
+	2.	Find the service file that defines the fantasy WR score:
+	•	Probably: server/services/fantasyWrRankingsService.ts (or similar)
+	3.	Document the fantasy WR scoring model:
+	•	Exact formula for:
+	•	VolumeIndex
+	•	PPGIndex
+	•	SpiceIndex (how it’s derived; I remember it’s tied to Role Bank / pure role score)
+	•	Final Fantasy score formula (e.g. 0.60 * VolumeIndex + 0.30 * PPGIndex + 0.10 * SpiceIndex)
+	•	Any filters (min games, min targets, etc.)
+	4.	Save a spec to:
+	•	/tmp/FANTASY_WR_RANKINGS_AUDIT.md
+
+⸻
+
+4️⃣ Side-by-Side Comparison
+
+Once you’ve done 1–3:
+
+Create a single comparison doc:
+	•	Path: /tmp/WR_RANKING_SYSTEM_MAP.md
+	•	Include:
+
+	1.	A table with three rows and columns:
+	•	Layer: Sandbox / Alpha, Season Roles, Fantasy Rankings
+	•	Endpoint used
+	•	Service file & function name
+	•	Primary inputs (targets, PPG, PPR/target, deep rate, slot share, etc.)
+	•	Final formula (weight breakdown)
+	2.	A short paragraph per layer:
+	•	What it optimizes for (role clarity, fantasy production, experimentation)
+	•	What filters it applies (min games/targets)
+	•	Whether it’s user-facing or internal (admin only)
+
+⸻
+
+5️⃣ Do NOT Change Logic Yet
+
+This is an audit only.
+	•	Don’t change any formulas.
+	•	Don’t move Alpha into production yet.
+	•	Don’t rename tabs.
+
+Just map everything clearly so the architect (me) can decide how to merge / promote Alpha into the main Rankings later.
+
+⸻
+
+That’s the whole task.
+Once you’re done, report back with:
+	•	Confirmation that all four files were written:
+	•	/tmp/WR_ALPHA_SANDBOX_AUDIT.md
+	•	/tmp/WR_ROLE_BANK_V2_AUDIT.md
+	•	/tmp/FANTASY_WR_RANKINGS_AUDIT.md
+	•	/tmp/WR_RANKING_SYSTEM_MAP.md
+
+And a quick summary of any surprises you found.
