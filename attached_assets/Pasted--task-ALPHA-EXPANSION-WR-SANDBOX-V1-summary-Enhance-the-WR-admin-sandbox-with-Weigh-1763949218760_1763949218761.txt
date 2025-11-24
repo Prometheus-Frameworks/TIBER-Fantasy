@@ -1,0 +1,272 @@
+{
+  "task": "ALPHA_EXPANSION_WR_SANDBOX_V1",
+  "summary": "Enhance the WR admin sandbox with Weighted Volume, Boom/Bust, Talent, RoleDelta, RedZoneDominance, and Energy Index, then expose them in the /admin/wr-sandbox UI.",
+  "context": {
+    "current_state": {
+      "endpoint": "GET /api/admin/wr-sandbox/:season",
+      "ui": "client/src/components/admin/WrSandbox.tsx (or similarly named admin sandbox component)",
+      "metrics": [
+        "games",
+        "targets",
+        "fantasy_points_season",
+        "ppr_per_target",
+        "sample_penalty",
+        "adj_ppr_per_target",
+        "alpha_score",
+        "role_score",
+        "deep_target_rate",
+        "slot_route_share"
+      ],
+      "source_tables": [
+        "wr_role_bank",
+        "weekly_stats (or equivalent WR weekly usage table)",
+        "bronze_nflfastr_plays",
+        "player_identity_map"
+      ]
+    }
+  },
+  "goals": [
+    "Keep the existing AlphaScore pipeline intact.",
+    "Add new advanced metrics that make the sandbox a real WR lab.",
+    "Do NOT change the production Rankings UI yet (only the admin sandbox)."
+  ],
+  "backend_changes": [
+    {
+      "step": "Extend the admin WR sandbox backend response",
+      "details": {
+        "file_hints": [
+          "server/routes.ts (admin sandbox route)",
+          "server/services/adminWrSandboxService.ts or similar"
+        ],
+        "add_fields": [
+          "weightedTargetsPerGame",
+          "weightedTargetsIndex",
+          "boomRate",
+          "bustRate",
+          "talentIndex",
+          "usageStabilityIndex",
+          "roleDelta",
+          "redZoneDomScore",
+          "energyIndex"
+        ]
+      }
+    },
+    {
+      "step": "Define core helper calculations (TypeScript/Node)",
+      "details": {
+        "volume_and_weighted_targets": {
+          "source": "weekly_stats + bronze_nflfastr_plays",
+          "metrics_per_player_season": [
+            "targets_per_game = total_targets / games_played",
+            "deep_targets = count(play where air_yards >= 20 AND receiver_player_id = player)",
+            "rz_targets = count(play where yardline_100 <= 20 AND pass_attempt = 1 AND receiver_player_id = player)",
+            "deep_targets_per_game = deep_targets / games_played",
+            "rz_targets_per_game = rz_targets / games_played"
+          ],
+          "weighted_formula": "weighted_targets_per_game = targets_per_game + 0.75 * deep_targets_per_game + 1.25 * rz_targets_per_game",
+          "index_scaling": [
+            "if weighted_targets_per_game >= 15 -> 100",
+            "else if >= 13 -> 95",
+            "else if >= 11 -> 90",
+            "else if >= 9  -> 80",
+            "else if >= 7  -> 70",
+            "else if >= 5  -> 60",
+            "else if >= 3  -> 50",
+            "else -> 40"
+          ],
+          "output": "weightedTargetsIndex (0–100)"
+        },
+        "boom_bust_rates": {
+          "source": "weekly_stats or weekly fantasy aggregation",
+          "fantasy_ppr_per_week": "use standard PPR formula from weekly receiving stats if a fantasy table doesn’t exist",
+          "boom": "count_weeks(fantasy_ppr >= 18)",
+          "bust": "count_weeks(fantasy_ppr < 8)",
+          "games_for_rate": "weeks with non-null fantasy stats",
+          "boomRate": "boom / games_for_rate (0–1)",
+          "bustRate": "bust / games_for_rate (0–1)"
+        },
+        "talent_index": {
+          "source": "weekly_stats or receiving aggregates",
+          "metrics": [
+            "yards_per_target = total_rec_yards / total_targets",
+            "yards_per_route_run (yprr) = total_rec_yards / total_routes_run (from player_usage or equivalent)"
+          ],
+          "scaling_ypt": [
+            ">= 11 -> 100",
+            ">= 9  -> 90",
+            ">= 8  -> 80",
+            ">= 7  -> 70",
+            ">= 6  -> 60",
+            ">= 5  -> 50",
+            "else  -> 40"
+          ],
+          "scaling_yprr": [
+            ">= 2.8 -> 100",
+            ">= 2.4 -> 90",
+            ">= 2.0 -> 80",
+            ">= 1.8 -> 70",
+            ">= 1.6 -> 60",
+            ">= 1.4 -> 50",
+            "else   -> 40"
+          ],
+          "talent_index_formula": "talentIndex = round(0.5 * yptIndex + 0.5 * yprrIndex)"
+        },
+        "usage_stability_index": {
+          "source": "weekly usage (targets/routes/snap%)",
+          "per_week": [
+            "targets_wk",
+            "routes_wk",
+            "snap_share_wk (if available; otherwise omit from calc)"
+          ],
+          "variance_components": [
+            "std_targets = stddev(weekly_targets)",
+            "std_routes = stddev(weekly_routes)"
+          ],
+          "raw_stability": "raw = 100 - (std_targets * 5) - (std_routes * 2)",
+          "bounds": "usageStabilityIndex = clamp(round(raw), 40, 100)"
+        },
+        "role_delta": {
+          "source": "wr_role_bank + weekly usage",
+          "idea": "Capture how much a player’s opportunity has changed recently.",
+          "season_targets_per_game": "tpg_season = total_targets / games",
+          "recent_targets_per_game": "tpg_recent = avg_targets_over_last_3_weeks (only weeks with data; use last 2 or 1 if fewer games played)",
+          "delta": "delta_tpg = tpg_recent - tpg_season",
+          "scaling": [
+            "if delta_tpg >= 3   -> 100",
+            "if delta_tpg >= 2   -> 90",
+            "if delta_tpg >= 1   -> 80",
+            "if delta_tpg >= 0   -> 65",
+            "if delta_tpg >= -1  -> 50",
+            "if delta_tpg >= -2  -> 40",
+            "else                -> 30"
+          ],
+          "output": "roleDelta (0–100; think of it as ‘role momentum’)"
+        },
+        "red_zone_dominance": {
+          "source": "bronze_nflfastr_plays",
+          "rz_targets": "count passes to player where yardline_100 <= 20",
+          "ez_targets": "count passes to player where yardline_100 <= 10 OR pass_touchdown = 1",
+          "rz_per_game": "rz_targets / games",
+          "ez_per_game": "ez_targets / games",
+          "raw_dom": "raw = rz_per_game * 1.2 + ez_per_game * 2.5",
+          "scaling": [
+            "if raw >= 4.0 -> 100",
+            "if raw >= 3.0 -> 90",
+            "if raw >= 2.0 -> 80",
+            "if raw >= 1.5 -> 70",
+            "if raw >= 1.0 -> 60",
+            "if raw >= 0.5 -> 50",
+            "else          -> 40"
+          ],
+          "output": "redZoneDomScore (0–100)"
+        },
+        "energy_index": {
+          "inputs": [
+            "boomRate (0–1)",
+            "roleDelta (0–100)",
+            "efficiencyTrend (change in ppr_per_target last 3 weeks vs season)",
+            "momentumScore from wr_role_bank if available (else recomputed like before)"
+          ],
+          "efficiencyTrendScaling": [
+            "delta_ppt >= 0.40 -> 100",
+            ">= 0.25 -> 85",
+            ">= 0.10 -> 75",
+            ">= 0.00 -> 65",
+            ">= -0.10 -> 50",
+            ">= -0.25 -> 40",
+            "else     -> 30"
+          ],
+          "boomScaling": [
+            "boomRate >= 0.60 -> 100",
+            ">= 0.45 -> 85",
+            ">= 0.30 -> 70",
+            ">= 0.20 -> 60",
+            "else    -> 50"
+          ],
+          "formula": "energyIndex = round(0.25 * boomIndex + 0.25 * roleDelta + 0.25 * efficiencyTrendIndex + 0.25 * momentumScore)"
+        }
+      }
+    },
+    {
+      "step": "Wire new metrics into the admin WR sandbox endpoint",
+      "details": {
+        "behavior": [
+          "Keep the existing AlphaScore fields.",
+          "For each WR row in /api/admin/wr-sandbox/:season, compute and attach all new metrics.",
+          "Only include WRs with games >= 4 AND targets >= 15 (same filter as current sandbox)."
+        ]
+      }
+    }
+  ],
+  "frontend_changes": [
+    {
+      "step": "Update the Admin WR Sandbox Table",
+      "details": {
+        "file_hint": "client/src/components/admin/WrSandbox.tsx (or equivalent admin sandbox React component)",
+        "add_columns_after": "Alpha Score column",
+        "new_columns": [
+          {
+            "key": "weightedTargetsPerGame",
+            "label": "Wt Tgt/G",
+            "tooltip": "Weighted targets per game (targets + deep + RZ)."
+          },
+          {
+            "key": "boomRate",
+            "label": "Boom %",
+            "tooltip": "Percent of games with ≥18 fantasy points."
+          },
+          {
+            "key": "bustRate",
+            "label": "Bust %",
+            "tooltip": "Percent of games with <8 fantasy points."
+          },
+          {
+            "key": "talentIndex",
+            "label": "Talent",
+            "tooltip": "Blended index of yards per target and yards per route run."
+          },
+          {
+            "key": "usageStabilityIndex",
+            "label": "Stability",
+            "tooltip": "Lower weekly variance in targets/routes = higher stability."
+          },
+          {
+            "key": "roleDelta",
+            "label": "Role Δ",
+            "tooltip": "Recent usage shift vs season average (targets per game)."
+          },
+          {
+            "key": "redZoneDomScore",
+            "label": "RZ Dom",
+            "tooltip": "Red zone & end zone target dominance score."
+          },
+          {
+            "key": "energyIndex",
+            "label": "Energy",
+            "tooltip": "Combined boom, role change, efficiency trend, and momentum."
+          }
+        ],
+        "ui_extras": [
+          "Allow sorting by Energy, Boom%, and Weighted Targets.",
+          "Optional: lightly highlight rows with energyIndex >= 80 (subtle background) for quick visual pop."
+        ]
+      }
+    }
+  ],
+  "acceptance_criteria": [
+    "Admin route /api/admin/wr-sandbox/:season still returns all existing fields plus the new metrics.",
+    "No changes to public Rankings UI behavior.",
+    "All calculations handle missing data gracefully (no NaNs, nulls mapped to reasonable defaults).",
+    "On the admin WR sandbox page, I can sort by Alpha Score, Weighted Targets, Boom%, Energy, etc.",
+    "Spot checks for 2025:",
+    "• Jaxon Smith-Njigba: top-3 in Alpha Score, high WeightedTargetsIndex, high Boom%, high Energy.",
+    "• Ja'Marr Chase: elite volume + strong Energy, high RedZoneDomScore, high Boom%.",
+    "• Amon-Ra St. Brown: high Stability, high TalentIndex, strong WeightedTargetsIndex.",
+    "• Puka Nacua: high volume, strong TalentIndex, positive RoleΔ if recent games have been hot.",
+    "• George Pickens: high Boom%, lower Stability, strong Energy when hot streak is happening."
+  ],
+  "notes": [
+    "If any of these features are too expensive to compute at request time, feel free to cache per-season aggregates in a materialized view or temp table and reference that in the sandbox endpoint.",
+    "If first-read target data is not available, skip it from WeightedTargets and rely on targets + deep + red zone only."
+  ]
+}
