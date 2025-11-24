@@ -6160,7 +6160,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * GET /api/admin/wr-rankings-sandbox - WR Rankings Algorithm Test Sandbox
    * Alpha composite score (0-100) blends volume (45%), total fantasy points (35%), and efficiency (20%)
    * PLUS 8 advanced metrics: weighted volume, boom/bust, talent, stability, role delta, RZ dom, energy
-   * Returns: Top 30 WRs from 2025 season with 15+ targets, sorted by alphaScore DESC
+   * Returns: Top 30 WRs from 2025 season with 2+ games / 10+ targets, sorted by alphaScore DESC
+   * Includes IR/OUT players with red status badges
    */
   app.get('/api/admin/wr-rankings-sandbox', async (req: Request, res: Response) => {
     try {

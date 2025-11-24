@@ -21,6 +21,9 @@ interface SandboxPlayer {
   pointsIndex: number;
   efficiencyIndex: number;
   alphaScore: number;
+  // Injury status (IR/OUT badges)
+  injuryStatus: string | null;
+  injuryType: string | null;
   // WR Role Bank metrics
   roleScore: number | null;
   pureRoleScore: number | null;
@@ -136,7 +139,7 @@ export default function WRRankingsSandbox() {
         <div className="border-b border-blue-500/20 pb-4">
           <h1 className="text-3xl font-bold text-white tracking-wide">WR RANKINGS SANDBOX</h1>
           <p className="text-gray-400 mt-2 text-sm">
-            Algorithm test page - 2025 season, minimum 4 games played
+            Algorithm test page - 2025 season, minimum 2 games / 10 targets (includes IR players)
           </p>
         </div>
 
@@ -307,7 +310,14 @@ export default function WRRankingsSandbox() {
                       >
                         <td className="px-4 py-3 text-gray-500 font-medium">{idx + 1}</td>
                         <td className="px-4 py-3">
-                          <div className="font-semibold text-white">{player.playerName}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-white">{player.playerName}</span>
+                            {(player.injuryStatus === 'IR' || player.injuryStatus === 'OUT' || player.injuryStatus === 'PUP') && (
+                              <span className="px-1.5 py-0.5 bg-red-600/80 text-white text-[10px] font-bold rounded uppercase tracking-wide">
+                                {player.injuryStatus}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <span className="px-2 py-1 bg-gray-800/70 text-gray-300 rounded text-xs font-medium">
