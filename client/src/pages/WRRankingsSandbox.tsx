@@ -901,14 +901,21 @@ export default function WRRankingsSandbox() {
         </div>
         )}
 
-        {/* Future Evolution Notes */}
-        <div className="bg-gray-800/20 border border-gray-700/50 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-gray-300 mb-2">Next Steps</h3>
+        {/* Progress & Future Features */}
+        <div className="bg-gradient-to-br from-green-900/20 to-gray-900/20 border border-green-500/30 rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-green-300 mb-2">✅ Implemented Features</h3>
+          <ul className="text-xs text-gray-400 space-y-1 mb-3">
+            <li>✓ Interactive weight sliders to test custom formulas</li>
+            <li>✓ Real-time alphaScore recalculation</li>
+            <li>✓ Additional metrics: Carries/G, Yds/Carry for RBs</li>
+            <li>✓ Save & load custom formulas (localStorage)</li>
+          </ul>
+          <h3 className="text-sm font-semibold text-gray-300 mb-2 mt-4">🔮 Future Enhancements</h3>
           <ul className="text-xs text-gray-500 space-y-1">
-            <li>• Add weight sliders to adjust formula (e.g., 60% targets, 40% points)</li>
-            <li>• Compare multiple formulas side-by-side</li>
-            <li>• Add more metrics: target share, routes, red zone targets</li>
-            <li>• Export winning formula for other positions</li>
+            <li>• Compare multiple formulas side-by-side in split view</li>
+            <li>• Export formula as shareable JSON</li>
+            <li>• Apply winning formula to TE/QB positions</li>
+            <li>• A/B test formulas against expert consensus rankings</li>
           </ul>
         </div>
       </div>
