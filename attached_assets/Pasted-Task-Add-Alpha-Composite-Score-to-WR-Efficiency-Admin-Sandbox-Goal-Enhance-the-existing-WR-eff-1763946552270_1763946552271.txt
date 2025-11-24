@@ -1,0 +1,70 @@
+Task: Add Alpha Composite Score to WR Efficiency Admin Sandbox
+
+Goal:
+Enhance the existing WR efficiency admin test page by adding an "alphaScore" that blends volume, total fantasy points, and adjusted efficiency into a single 0–100 score. Do NOT touch the main public rankings – this is admin-only diagnostics.
+
+Backend Changes:
+
+1) In the backend endpoint powering the WR efficiency admin table (the one returning Games, Targets, FantasyPts, Pts/Tgt, Sample, AdjPtsPerTarget):
+
+- After you’ve computed:
+  - targets
+  - fantasyPoints
+  - adjustedEfficiency
+
+  First, compute three normalized indices across the result set:
+
+  - Let maxTargets = max(targets) among all WRs in the query
+  - Let maxFantasyPoints = max(fantasyPoints) among all WRs in the query
+  - Let maxAdjEff = max(adjustedEfficiency) among all WRs in the query
+
+  For each WR row, compute:
+
+  volumeIndex = targets / maxTargets
+  pointsIndex = fantasyPoints / maxFantasyPoints
+  efficiencyIndex = adjustedEfficiency / maxAdjEff
+
+  Then compute:
+
+  alphaScoreRaw =
+    0.45 * volumeIndex +
+    0.35 * pointsIndex +
+    0.20 * efficiencyIndex;
+
+  alphaScore = Math.round(alphaScoreRaw * 100);
+
+2) Add these fields to the JSON response per WR:
+
+  - volumeIndex
+  - pointsIndex
+  - efficiencyIndex
+  - alphaScore
+
+3) Change the default ORDER BY for this endpoint to:
+
+  - ORDER BY alphaScore DESC, adjustedEfficiency DESC
+
+  (We still want adjustedEfficiency to matter as the tie-breaker.)
+
+Frontend Changes:
+
+1) In the React component that renders the WR admin sandbox table:
+
+  - Add a new column: "Alpha Score (0–100)" that displays alphaScore.
+  - Keep the existing "Adj Pts/Tgt" column as-is.
+  - Optional but nice: show a small tag in the header like:
+    "Alpha Score blends volume, total fantasy points, and adjusted efficiency."
+
+2) Confirm that after this change:
+
+  - High-volume, high-scoring WRs (JSN, ARSB, Chase, Puka, Lamb, etc.) appear near the top.
+  - Low-volume spike guys (e.g. 30–40 targets) can still appear high, but won’t eclipse true workhorse alphas unless they are insanely efficient.
+
+Validation:
+
+After implementing:
+
+  - Log out the top 15 WRs with: Player, Targets, FantasyPts, AdjPtsPerTarget, alphaScore.
+  - Sanity-check that:
+      - Jaxon Smith-Njigba, Amon-Ra St. Brown, CeeDee Lamb, Puka Nacua, Ja'Marr Chase are all inside the top cluster.
+      - Jameson Williams is still ranked well (he’s playing great), but not clearly above every true alpha.

@@ -6158,8 +6158,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   /**
    * GET /api/admin/wr-rankings-sandbox - WR Rankings Algorithm Test Sandbox
-   * Volume-weighted efficiency ranking to prioritize WRs with both high efficiency AND real volume
-   * Returns: Top 30 WRs from 2025 season with 15+ targets, sorted by adjusted efficiency
+   * Alpha composite score (0-100) blends volume (45%), total fantasy points (35%), and efficiency (20%)
+   * Returns: Top 30 WRs from 2025 season with 15+ targets, sorted by alphaScore DESC
    */
   app.get('/api/admin/wr-rankings-sandbox', async (req: Request, res: Response) => {
     try {
@@ -6193,40 +6193,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .having(sql`COUNT(DISTINCT ${weeklyStats.week}) >= 4 AND SUM(COALESCE(${weeklyStats.targets}, 0)) >= 15`);
 
       // Calculate volume-weighted efficiency metrics
-      const ranked = results
+      const processedPlayers = results.map(player => {
+        const targets = player.totalTargets;
+        const fantasyPoints = player.totalFantasyPoints;
+        
+        // Sample penalty: scale from 0 to 1 based on volume (50 targets = full weight)
+        const samplePenalty = Math.min(1, targets / 50);
+        
+        // Raw efficiency
+        const pointsPerTarget = targets > 0 
+          ? fantasyPoints / targets
+          : 0;
+        
+        // Volume-weighted efficiency
+        const adjustedEfficiency = pointsPerTarget * samplePenalty;
+        
+        return {
+          playerId: player.playerId,
+          playerName: player.playerName,
+          team: player.team || 'FA',
+          gamesPlayed: player.gamesPlayed,
+          targets: targets,
+          fantasyPoints: Math.round(fantasyPoints * 100) / 100,
+          pointsPerTarget: Math.round(pointsPerTarget * 100) / 100,
+          samplePenalty: Math.round(samplePenalty * 100) / 100,
+          adjustedEfficiency: Math.round(adjustedEfficiency * 100) / 100,
+        };
+      });
+
+      // Calculate max values for normalization
+      const maxTargets = Math.max(...processedPlayers.map(p => p.targets));
+      const maxFantasyPoints = Math.max(...processedPlayers.map(p => p.fantasyPoints));
+      const maxAdjEff = Math.max(...processedPlayers.map(p => p.adjustedEfficiency));
+
+      // Add alpha composite score (0-100)
+      const ranked = processedPlayers
         .map(player => {
-          const targets = player.totalTargets;
-          const fantasyPoints = player.totalFantasyPoints;
+          // Normalized indices (0-1)
+          const volumeIndex = maxTargets > 0 ? player.targets / maxTargets : 0;
+          const pointsIndex = maxFantasyPoints > 0 ? player.fantasyPoints / maxFantasyPoints : 0;
+          const efficiencyIndex = maxAdjEff > 0 ? player.adjustedEfficiency / maxAdjEff : 0;
           
-          // Sample penalty: scale from 0 to 1 based on volume (50 targets = full weight)
-          const samplePenalty = Math.min(1, targets / 50);
-          
-          // Raw efficiency
-          const pointsPerTarget = targets > 0 
-            ? fantasyPoints / targets
-            : 0;
-          
-          // Volume-weighted efficiency
-          const adjustedEfficiency = pointsPerTarget * samplePenalty;
+          // Alpha composite score: 45% volume, 35% total points, 20% efficiency
+          const alphaScoreRaw = (0.45 * volumeIndex) + (0.35 * pointsIndex) + (0.20 * efficiencyIndex);
+          const alphaScore = Math.round(alphaScoreRaw * 100);
           
           return {
-            playerId: player.playerId,
-            playerName: player.playerName,
-            team: player.team || 'FA',
-            gamesPlayed: player.gamesPlayed,
-            targets: targets,
-            fantasyPoints: Math.round(fantasyPoints * 100) / 100,
-            pointsPerTarget: Math.round(pointsPerTarget * 100) / 100,
-            samplePenalty: Math.round(samplePenalty * 100) / 100,
-            adjustedEfficiency: Math.round(adjustedEfficiency * 100) / 100,
+            ...player,
+            volumeIndex: Math.round(volumeIndex * 100) / 100,
+            pointsIndex: Math.round(pointsIndex * 100) / 100,
+            efficiencyIndex: Math.round(efficiencyIndex * 100) / 100,
+            alphaScore,
           };
         })
-        // Sort by adjusted efficiency DESC, then by total targets DESC (tie-breaker)
+        // Sort by alpha score DESC, then by adjusted efficiency DESC (tie-breaker)
         .sort((a, b) => {
-          if (b.adjustedEfficiency !== a.adjustedEfficiency) {
-            return b.adjustedEfficiency - a.adjustedEfficiency;
+          if (b.alphaScore !== a.alphaScore) {
+            return b.alphaScore - a.alphaScore;
           }
-          return b.targets - a.targets;
+          return b.adjustedEfficiency - a.adjustedEfficiency;
         })
         .slice(0, 30);
 
