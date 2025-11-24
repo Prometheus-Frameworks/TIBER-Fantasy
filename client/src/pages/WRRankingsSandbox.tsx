@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpDown } from 'lucide-react';
 
-type SortField = 'playerName' | 'team' | 'gamesPlayed' | 'targets' | 'fantasyPoints' | 'pointsPerTarget' | 'samplePenalty' | 'adjustedEfficiency' | 'alphaScore' | 'roleScore' | 'deepTargetRate' | 'slotRouteShareEst';
+type SortField = 'playerName' | 'team' | 'gamesPlayed' | 'targets' | 'fantasyPoints' | 'pointsPerTarget' | 'samplePenalty' | 'adjustedEfficiency' | 'alphaScore' | 'roleScore' | 'deepTargetRate' | 'slotRouteShareEst' | 'weightedTargetsPerGame' | 'boomRate' | 'bustRate' | 'talentIndex' | 'usageStabilityIndex' | 'roleDelta' | 'redZoneDomScore' | 'energyIndex';
 type SortOrder = 'asc' | 'desc';
 
 type RoleTier = 'ALPHA' | 'CO_ALPHA' | 'PRIMARY_SLOT' | 'SECONDARY' | 'ROTATIONAL' | 'UNKNOWN' | null;
@@ -31,6 +31,23 @@ interface SandboxPlayer {
   deepTargetRate: number | null;
   slotRouteShareEst: number | null;
   roleTier: RoleTier;
+  // Advanced metrics (NEW)
+  weightedTargetsPerGame: number | null;
+  weightedTargetsIndex: number | null;
+  boomRate: number | null;
+  bustRate: number | null;
+  talentIndex: number | null;
+  yardsPerTarget: number | null;
+  yardsPerRoute: number | null;
+  usageStabilityIndex: number | null;
+  roleDelta: number | null;
+  recentTargetsPerGame: number | null;
+  seasonTargetsPerGame: number | null;
+  redZoneDomScore: number | null;
+  redZoneTargetsPerGame: number | null;
+  endZoneTargetsPerGame: number | null;
+  energyIndex: number | null;
+  efficiencyTrend: number | null;
 }
 
 interface SandboxResponse {
@@ -238,13 +255,37 @@ export default function WRRankingsSandbox() {
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
                     <SortButton field="slotRouteShareEst" label="Slot %" />
                   </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <SortButton field="weightedTargetsPerGame" label="Wt Tgt/G" />
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <SortButton field="boomRate" label="Boom %" />
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <SortButton field="bustRate" label="Bust %" />
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <SortButton field="talentIndex" label="Talent" />
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <SortButton field="usageStabilityIndex" label="Stability" />
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <SortButton field="roleDelta" label="Role Δ" />
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <SortButton field="redZoneDomScore" label="RZ Dom" />
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <SortButton field="energyIndex" label="Energy" />
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   [...Array(10)].map((_, idx) => (
                     <tr key={idx} className="border-b border-gray-800/30">
-                      <td colSpan={13} className="px-4 py-4">
+                      <td colSpan={21} className="px-4 py-4">
                         <div className="h-8 bg-gray-700/30 rounded animate-pulse"></div>
                       </td>
                     </tr>
@@ -253,8 +294,9 @@ export default function WRRankingsSandbox() {
                   sortedData?.map((player, idx) => {
                     const deepThreat = isDeepThreat(player);
                     const slotHeavy = isSlotHeavy(player);
+                    const highEnergy = (player.energyIndex ?? 0) >= 80;
                     const rowClassName = `border-b border-gray-800/30 hover:bg-blue-500/5 transition-colors ${
-                      deepThreat ? 'bg-orange-500/10' : slotHeavy ? 'bg-cyan-500/10' : ''
+                      deepThreat ? 'bg-orange-500/10' : slotHeavy ? 'bg-cyan-500/10' : highEnergy ? 'bg-green-500/5' : ''
                     }`;
                     
                     return (
@@ -301,6 +343,67 @@ export default function WRRankingsSandbox() {
                           {player.slotRouteShareEst !== null ? (
                             <span className={slotHeavy ? 'text-cyan-400 font-bold' : 'text-gray-300'}>
                               {(player.slotRouteShareEst * 100).toFixed(0)}%
+                            </span>
+                          ) : (
+                            <span className="text-gray-600 text-xs">-</span>
+                          )}
+                        </td>
+                        {/* Advanced Metrics (NEW) */}
+                        <td className="px-4 py-3 text-center">
+                          {player.weightedTargetsPerGame !== null ? (
+                            <span className="text-amber-300 font-medium">{player.weightedTargetsPerGame.toFixed(1)}</span>
+                          ) : (
+                            <span className="text-gray-600 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {player.boomRate !== null ? (
+                            <span className="text-green-300">{(player.boomRate * 100).toFixed(0)}%</span>
+                          ) : (
+                            <span className="text-gray-600 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {player.bustRate !== null ? (
+                            <span className="text-red-300">{(player.bustRate * 100).toFixed(0)}%</span>
+                          ) : (
+                            <span className="text-gray-600 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {player.talentIndex !== null ? (
+                            <span className="text-purple-300 font-medium">{player.talentIndex}</span>
+                          ) : (
+                            <span className="text-gray-600 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {player.usageStabilityIndex !== null ? (
+                            <span className="text-blue-300">{player.usageStabilityIndex}</span>
+                          ) : (
+                            <span className="text-gray-600 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {player.roleDelta !== null ? (
+                            <span className={player.roleDelta >= 80 ? 'text-green-400 font-bold' : player.roleDelta <= 50 ? 'text-red-400' : 'text-gray-300'}>
+                              {player.roleDelta}
+                            </span>
+                          ) : (
+                            <span className="text-gray-600 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {player.redZoneDomScore !== null ? (
+                            <span className="text-orange-300 font-medium">{player.redZoneDomScore}</span>
+                          ) : (
+                            <span className="text-gray-600 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {player.energyIndex !== null ? (
+                            <span className={highEnergy ? 'text-yellow-400 font-bold text-base' : 'text-gray-300'}>
+                              {player.energyIndex}
                             </span>
                           ) : (
                             <span className="text-gray-600 text-xs">-</span>
