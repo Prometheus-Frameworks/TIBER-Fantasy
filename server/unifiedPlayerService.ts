@@ -1,5 +1,5 @@
 import { sleeperAPI } from './sleeperAPI';
-import { wrRatingsService } from './services/wrRatingsService';
+// REMOVED: wrRatingsService (LEGACY_UNUSED) - use Role Bank for WR data
 import { getAllRBProjections } from './services/rbProjectionsService';
 import { calculateRBCompassDetailed } from './rbCompassCalculations';
 import { calculateRBPopulationStats } from './rbPopulationStats';
@@ -119,38 +119,8 @@ class UnifiedPlayerService {
         qbPlayer.dynasty_score = qbPlayer.proj_pts * 0.7; // QB positional adjustment
       });
 
-      // 4. Enhance with WR data from CSV ratings
-      const wrPlayers = wrRatingsService.getAllWRPlayers();
-      for (const wrPlayer of wrPlayers.slice(0, 80)) {
-        const playerId = `wr-${wrPlayer.player_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`;
-        
-        const existingPlayer = Array.from(players.values())
-          .find(p => p.name.toLowerCase() === wrPlayer.player_name.toLowerCase() || p.id === playerId);
-        
-        if (existingPlayer && existingPlayer.pos === 'WR') {
-          existingPlayer.proj_pts = wrPlayer.fantasy_points_per_game * 17 || existingPlayer.proj_pts;
-          existingPlayer.tier = wrPlayer.tier || existingPlayer.tier;
-          const compass = computeComponents(wrPlayer, 'wr');
-          existingPlayer.compass = compass;
-          existingPlayer.dynasty_score = compass.score;
-        } else {
-          // Add new WR player not in Sleeper data
-          const compass = computeComponents(wrPlayer, 'wr');
-          const newPlayer: UnifiedPlayer = {
-            id: playerId,
-            name: wrPlayer.player_name,
-            team: wrPlayer.team || 'FA',
-            pos: 'WR',
-            rank: globalRank++,
-            proj_pts: wrPlayer.fantasy_points_per_game * 17 || 250,
-            tier: wrPlayer.tier || 'Tier 3',
-            compass: compass,
-            dynasty_score: compass.score,
-            last_updated: timestamp
-          };
-          players.set(newPlayer.id, newPlayer);
-        }
-      }
+      // 4. WR data enhancement - wrRatingsService removed, WR data now comes from Role Bank
+      // WR players already loaded from Sleeper base data above
 
       // 5. Enhance with RB projections and compass data
       const rbProjections = getAllRBProjections();

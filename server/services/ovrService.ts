@@ -14,7 +14,7 @@ import fs from 'fs';
 import path from 'path';
 import { RankingsFusionService } from './rankingsFusionService';
 import { PlayerCompassService } from './playerCompassService';
-import { ratingsEngineService } from './ratingsEngineService';
+// REMOVED: ratingsEngineService (DEAD_ORPHAN) - ratings now handled by Role Bank
 import { oasisEnvironmentService } from './oasisEnvironmentService';
 import { scoreWeeklyOVR, type GameLogRow, type Position as SleeperPosition } from './sleeperOvrScorer';
 
@@ -80,7 +80,7 @@ export interface OVRResult {
 export class OVRService {
   private fusionService = new RankingsFusionService();
   private compassService = new PlayerCompassService();
-  private ratingsEngine = ratingsEngineService;
+  // REMOVED: ratingsEngine - ratings consolidated into Role Bank system
   private oasisService = oasisEnvironmentService;
   
   private cache = new Map<string, OVRResult>();
@@ -394,21 +394,8 @@ export class OVRService {
   private async gatherInputData(input: OVRInput, format: Format) {
     const inputData: any = {};
     
-    try {
-      // Get Ratings Engine score from existing data
-      const allRatings = await this.ratingsEngine.getAllRatings();
-      const ratingsResult = allRatings.find(r => 
-        r.player_id === input.player_id || 
-        r.player_name.toLowerCase() === input.name.toLowerCase()
-      );
-      
-      if (ratingsResult) {
-        inputData.ratings_engine_score = ratingsResult.overall_rating;
-        inputData.ratings_raw = ratingsResult;
-      }
-    } catch (error) {
-      console.warn(`[OVR] Failed to get ratings engine score for ${input.name}:`, error);
-    }
+    // NOTE: ratingsEngine removed - Role Bank system now provides position ratings
+    // Legacy ratings_engine_score will be omitted from results
     
     try {
       // For REDRAFT: Use SLEEPER-ONLY performance scoring
