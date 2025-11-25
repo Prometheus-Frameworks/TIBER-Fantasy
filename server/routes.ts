@@ -6430,6 +6430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalTargets: sql<number>`SUM(COALESCE(${weeklyStats.targets}, 0))::int`,
           totalReceptions: sql<number>`SUM(COALESCE(${weeklyStats.rec}, 0))::int`,
           totalReceivingYards: sql<number>`SUM(COALESCE(${weeklyStats.recYd}, 0))::int`,
+          totalReceivingTDs: sql<number>`SUM(COALESCE(${weeklyStats.recTd}, 0))::int`,
           // Injury status
           injuryStatus: playerInjuries.status,
           injuryType: playerInjuries.injuryType,
@@ -6462,10 +6463,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // STEP 2: Filter for minimum qualifications (2+ games, 15+ carries)
       const qualified = results.filter(r => r.gamesPlayed >= 2 && r.totalCarries >= 15);
 
-      // STEP 3: Calculate fantasy points per rush attempt and receiving metrics
+      // STEP 3: Calculate fantasy points per rush attempt, receiving metrics, and opportunity metrics
       const processedPlayers = qualified.map(player => {
         const fantasyPointsPerRushAttempt = player.totalCarries > 0 
           ? player.totalFantasyPoints / player.totalCarries 
+          : 0;
+
+        // Calculate receiving fantasy points (half-PPR): rec * 0.5 + recYd / 10 + recTD * 6
+        const receivingFantasyPoints = 
+          (player.totalReceptions * 0.5) + 
+          (player.totalReceivingYards / 10) + 
+          (player.totalReceivingTDs * 6);
+        
+        // Receiving fantasy per game
+        const receivingFantasyPerGame = player.gamesPlayed > 0 
+          ? receivingFantasyPoints / player.gamesPlayed 
+          : 0;
+
+        // Weighted Opportunities: carries + 1.5 * targets
+        const weightedOpportunities = player.totalCarries + (1.5 * player.totalTargets);
+        
+        // Weighted Opp per Game
+        const weightedOppPerGame = player.gamesPlayed > 0 
+          ? weightedOpportunities / player.gamesPlayed 
+          : 0;
+
+        // FP per Opportunity (guard against divide by zero)
+        const fpPerOpp = weightedOpportunities > 0 
+          ? player.totalFantasyPoints / weightedOpportunities 
           : 0;
 
         return {
@@ -6481,6 +6506,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalTargets: player.totalTargets,
           totalReceptions: player.totalReceptions,
           totalReceivingYards: player.totalReceivingYards,
+          totalReceivingTDs: player.totalReceivingTDs,
+          // Calculated receiving fantasy per game (for alpha score)
+          receivingFantasyPerGame: Math.round(receivingFantasyPerGame * 100) / 100,
+          // Opportunity metrics
+          weightedOppPerGame: Math.round(weightedOppPerGame * 100) / 100,
+          fpPerOpp: Math.round(fpPerOpp * 100) / 100,
           // Injury status (IR/OUT badges)
           injuryStatus: player.injuryStatus ?? null,
           injuryType: player.injuryType ?? null,
