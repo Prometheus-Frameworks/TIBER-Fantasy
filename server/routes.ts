@@ -6542,6 +6542,187 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   /**
+   * GET /api/admin/te-rankings-sandbox - TE Rankings Algorithm Test Sandbox
+   * Returns: TEs from 2025 season with 2+ games / 10+ targets
+   * Metrics: Receiving stats, routes, alignment %, blocking stickiness, SSI
+   */
+  app.get('/api/admin/te-rankings-sandbox', async (req: Request, res: Response) => {
+    try {
+      const { weeklyStats, playerIdentityMap, playerInjuries } = await import('@shared/schema');
+      
+      // STEP 1: Query 2025 TEs with receiving metrics
+      const results = await db
+        .select({
+          playerId: weeklyStats.playerId,
+          playerName: weeklyStats.playerName,
+          team: weeklyStats.team,
+          position: playerIdentityMap.position,
+          canonicalId: playerIdentityMap.canonicalId,
+          gamesPlayed: sql<number>`COUNT(DISTINCT ${weeklyStats.week})::int`,
+          // Receiving metrics
+          totalTargets: sql<number>`SUM(COALESCE(${weeklyStats.targets}, 0))::int`,
+          totalReceptions: sql<number>`SUM(COALESCE(${weeklyStats.rec}, 0))::int`,
+          totalReceivingYards: sql<number>`SUM(COALESCE(${weeklyStats.recYd}, 0))::int`,
+          totalReceivingTDs: sql<number>`SUM(COALESCE(${weeklyStats.recTd}, 0))::int`,
+          totalFantasyPointsPpr: sql<number>`SUM(COALESCE(${weeklyStats.fantasyPointsPpr}, 0))::real`,
+          // Usage metrics
+          totalSnaps: sql<number>`SUM(COALESCE(${weeklyStats.snaps}, 0))::int`,
+          totalRoutes: sql<number>`SUM(COALESCE(${weeklyStats.routes}, 0))::int`,
+          // Injury status
+          injuryStatus: playerInjuries.status,
+          injuryType: playerInjuries.injuryType,
+        })
+        .from(weeklyStats)
+        .innerJoin(
+          playerIdentityMap,
+          eq(weeklyStats.playerId, playerIdentityMap.nflDataPyId)
+        )
+        .leftJoin(
+          playerInjuries,
+          eq(playerIdentityMap.canonicalId, playerInjuries.playerId)
+        )
+        .where(
+          and(
+            eq(weeklyStats.season, 2025),
+            eq(playerIdentityMap.position, 'TE')
+          )
+        )
+        .groupBy(
+          weeklyStats.playerId, 
+          weeklyStats.playerName, 
+          weeklyStats.team, 
+          playerIdentityMap.position,
+          playerIdentityMap.canonicalId,
+          playerInjuries.status,
+          playerInjuries.injuryType
+        );
+
+      // STEP 2: Filter for minimum qualifications (2+ games, 10+ targets)
+      const qualified = results.filter(r => r.gamesPlayed >= 2 && r.totalTargets >= 10);
+
+      // Calculate max values for normalization across all TEs
+      const maxRoutes = Math.max(...qualified.map(p => p.totalRoutes || 1));
+      const maxSnaps = Math.max(...qualified.map(p => p.totalSnaps || 1));
+
+      // STEP 3: Calculate TE-specific metrics
+      const processedPlayers = qualified.map(player => {
+        const games = player.gamesPlayed;
+        
+        // Stage 1: Receiving metrics
+        const recYdsPerGame = games > 0 ? player.totalReceivingYards / games : 0;
+        
+        // FP/G (half-PPR): rec * 0.5 + recYd / 10 + recTD * 6
+        const halfPprFantasy = (player.totalReceptions * 0.5) + 
+                              (player.totalReceivingYards / 10) + 
+                              (player.totalReceivingTDs * 6);
+        const fpPerGame = games > 0 ? halfPprFantasy / games : 0;
+        
+        // FP/Target
+        const fpPerTarget = player.totalTargets > 0 
+          ? halfPprFantasy / player.totalTargets 
+          : 0;
+        
+        // Routes per game
+        const routesPerGame = games > 0 ? (player.totalRoutes || 0) / games : 0;
+        
+        // Route participation % (routes / max routes as proxy)
+        const routeParticipation = maxRoutes > 0 
+          ? (player.totalRoutes || 0) / maxRoutes 
+          : 0;
+        
+        // Targets per game
+        const targetsPerGame = games > 0 ? player.totalTargets / games : 0;
+
+        // Stage 2: Blocking & Stickiness (placeholders - no real data available)
+        // In future, these would come from PFF or similar sources
+        const passBlockGrade = null; // Placeholder
+        const runBlockGrade = null; // Placeholder
+        
+        // Blocking Stickiness Score (using fallback when grades unavailable)
+        // For now, use a proxy based on routes vs snaps ratio (lower = more blocking)
+        const routeSnapRatio = player.totalSnaps > 0 
+          ? (player.totalRoutes || 0) / player.totalSnaps 
+          : 0.7; // Default if no snap data
+        
+        // Proxy blocking score: inverse of route ratio (more blocking = higher score)
+        const blockingStickiness = Math.max(0, Math.min(1, 1 - routeSnapRatio + 0.3));
+        
+        // Alignment percentages (placeholders - would need alignment data)
+        // Using route/snap based estimates for now
+        const slotPct = routeSnapRatio > 0.6 ? 0.4 : 0.2; // Receiving TEs likely more slot
+        const inlinePct = 1 - slotPct - 0.1; // Most TEs inline
+        const widePct = 0.1; // Small wide alignment
+
+        // Snap Stickiness Index (SSI)
+        // ssi = (blockingStickiness * 0.6) + (inlinePct * 0.2) + (routeSnapProxy * 0.2)
+        const routeSnapProxy = Math.min(1, (player.totalRoutes || 0) / maxRoutes);
+        const snapStickinessIndex = 
+          (blockingStickiness * 0.6) + 
+          (inlinePct * 0.2) + 
+          (routeSnapProxy * 0.2);
+
+        return {
+          playerId: player.playerId,
+          playerName: player.playerName,
+          team: player.team,
+          gamesPlayed: games,
+          // Receiving metrics
+          totalTargets: player.totalTargets,
+          totalReceptions: player.totalReceptions,
+          totalReceivingYards: player.totalReceivingYards,
+          totalReceivingTDs: player.totalReceivingTDs,
+          fantasyPointsPpr: Math.round(player.totalFantasyPointsPpr * 100) / 100,
+          // Calculated receiving metrics
+          recYdsPerGame: Math.round(recYdsPerGame * 100) / 100,
+          fpPerGame: Math.round(fpPerGame * 100) / 100,
+          fpPerTarget: Math.round(fpPerTarget * 100) / 100,
+          targetsPerGame: Math.round(targetsPerGame * 100) / 100,
+          // Route metrics
+          totalRoutes: player.totalRoutes || 0,
+          routesPerGame: Math.round(routesPerGame * 100) / 100,
+          routeParticipation: Math.round(routeParticipation * 100) / 100,
+          // Snap metrics
+          totalSnaps: player.totalSnaps || 0,
+          // Alignment (placeholder estimates)
+          slotPct: Math.round(slotPct * 100) / 100,
+          inlinePct: Math.round(inlinePct * 100) / 100,
+          widePct: Math.round(widePct * 100) / 100,
+          // Blocking (placeholders)
+          passBlockGrade,
+          runBlockGrade,
+          blockingStickiness: Math.round(blockingStickiness * 100) / 100,
+          // Snap Stickiness Index
+          snapStickinessIndex: Math.round(snapStickinessIndex * 100) / 100,
+          // Injury status
+          injuryStatus: player.injuryStatus ?? null,
+          injuryType: player.injuryType ?? null,
+        };
+      });
+
+      // STEP 4: Sort by total fantasy points DESC
+      const ranked = processedPlayers
+        .sort((a, b) => b.fantasyPointsPpr - a.fantasyPointsPpr)
+        .slice(0, 40); // Return top 40 TEs
+
+      res.json({
+        success: true,
+        season: 2025,
+        minGames: 2,
+        minTargets: 10,
+        count: ranked.length,
+        data: ranked,
+      });
+
+    } catch (error) {
+      console.error('❌ [AdminAPI] TE Rankings Sandbox failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
+  /**
    * POST /api/admin/rag/seed-narratives - Seed TIBER narratives with embeddings
    */
   app.post('/api/admin/rag/seed-narratives', async (req: Request, res: Response) => {
