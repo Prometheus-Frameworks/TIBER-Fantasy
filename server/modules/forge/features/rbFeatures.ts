@@ -1,0 +1,301 @@
+/**
+ * FORGE v0.1 - RB Feature Builder
+ * 
+ * Builds position-specific features for Running Backs
+ * per the FORGE scoring specification.
+ * 
+ * RB Alpha Weights: 38% volume, 25% efficiency, 20% roleLeverage, 12% stability, 5% contextFit
+ */
+
+import { ForgeContext, ForgeFeatureBundle, MISSING_DATA_CAPS } from '../types';
+import { 
+  calculatePercentile, 
+  clamp,
+  calculateWeeklyStdDev,
+  calculateFloorBoomRates 
+} from '../utils/scoring';
+
+const RB_THRESHOLDS = {
+  TOUCHES_PER_GAME_GOOD: 18,
+  OPPORTUNITY_SHARE_GOOD: 0.70,
+  RZ_TOUCHES_PER_GAME_GOOD: 3,
+  GOAL_LINE_CARRIES_PER_GAME_GOOD: 1.5,
+  YPC_GOOD: 4.5,
+  YAC_PER_ATT_GOOD: 3.0,
+  MTF_PER_TOUCH_GOOD: 0.15,
+  EPA_PER_RUSH_GOOD: 0.10,
+  SUCCESS_RATE_GOOD: 0.45,
+  BACKFIELD_SHARE_GOOD: 0.75,
+  RECEIVING_WORK_RATE_GOOD: 0.60,
+  THIRD_DOWN_SNAP_PCT_GOOD: 0.50,
+  FLOOR_WEEK_THRESHOLD: 10,   // 10 PPR pts = floor week for RB
+  BOOM_WEEK_THRESHOLD: 20,    // 20 PPR pts = boom week for RB
+};
+
+export function buildRBFeatures(context: ForgeContext): ForgeFeatureBundle {
+  const gamesPlayed = context.seasonStats.gamesPlayed || 0;
+  const hasAdvancedStats = !!context.advancedMetrics?.epaPerRush || 
+                           !!context.advancedMetrics?.yardsAfterContact;
+  const hasSnapData = context.seasonStats.snapShare > 0 || !!context.roleMetrics?.backfieldTouchShare;
+  const hasDvPData = !!context.dvpData;
+  const hasEnvironmentData = !!context.teamEnvironment;
+  
+  const volumeFeatures = buildVolumeFeatures(context, gamesPlayed);
+  const efficiencyFeatures = buildEfficiencyFeatures(context, hasAdvancedStats);
+  const roleLeverageFeatures = buildRoleLeverageFeatures(context, hasSnapData);
+  const stabilityFeatures = buildStabilityFeatures(context, gamesPlayed);
+  const contextFitFeatures = buildContextFitFeatures(context, hasDvPData, hasEnvironmentData);
+  
+  if (gamesPlayed < 3) {
+    volumeFeatures.score = Math.min(volumeFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
+    efficiencyFeatures.score = Math.min(efficiencyFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
+    roleLeverageFeatures.score = Math.min(roleLeverageFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
+    stabilityFeatures.score = Math.min(stabilityFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
+  }
+  
+  return {
+    position: 'RB',
+    gamesPlayed,
+    volumeFeatures,
+    efficiencyFeatures,
+    roleLeverageFeatures,
+    stabilityFeatures,
+    contextFitFeatures,
+    dataQuality: {
+      hasAdvancedStats,
+      hasSnapData,
+      hasDvPData,
+      hasEnvironmentData,
+    },
+  };
+}
+
+function buildVolumeFeatures(
+  context: ForgeContext, 
+  gamesPlayed: number
+): ForgeFeatureBundle['volumeFeatures'] {
+  const gpSafe = Math.max(gamesPlayed, 1);
+  
+  const rushAttempts = context.seasonStats.rushAttempts ?? 0;
+  const targets = context.seasonStats.targets ?? 0;
+  const touches = rushAttempts + targets;
+  const touchesPerGame = touches / gpSafe;
+  
+  const opportunityShare = context.seasonStats.snapShare ?? 0;
+  
+  const rzCarries = context.seasonStats.redZoneCarries ?? 0;
+  const rzTargets = context.seasonStats.redZoneTargets ?? 0;
+  const rzTouchesPerGame = (rzCarries + rzTargets) / gpSafe;
+  
+  const goalLineCarriesPerGame = (rzCarries * 0.3) / gpSafe;
+  
+  const raw = {
+    touchesPerGame,
+    opportunityShare,
+    rzTouchesPerGame,
+    goalLineCarriesPerGame,
+  };
+  
+  const normalized = {
+    touchesPerGame: calculatePercentile(touchesPerGame, 0, RB_THRESHOLDS.TOUCHES_PER_GAME_GOOD * 1.3),
+    opportunityShare: calculatePercentile(opportunityShare, 0, RB_THRESHOLDS.OPPORTUNITY_SHARE_GOOD),
+    rzTouchesPerGame: calculatePercentile(rzTouchesPerGame, 0, RB_THRESHOLDS.RZ_TOUCHES_PER_GAME_GOOD * 1.5),
+    goalLineCarriesPerGame: calculatePercentile(goalLineCarriesPerGame, 0, RB_THRESHOLDS.GOAL_LINE_CARRIES_PER_GAME_GOOD * 1.5),
+  };
+  
+  const score = clamp(
+    normalized.touchesPerGame * 0.45 +
+    normalized.opportunityShare * 0.30 +
+    normalized.rzTouchesPerGame * 0.15 +
+    normalized.goalLineCarriesPerGame * 0.10,
+    0, 100
+  );
+  
+  return { raw, normalized, score };
+}
+
+function buildEfficiencyFeatures(
+  context: ForgeContext,
+  hasAdvancedStats: boolean
+): ForgeFeatureBundle['efficiencyFeatures'] {
+  const ypc = context.advancedMetrics?.yardsPerCarry ?? 
+    ((context.seasonStats.rushYards ?? 0) / Math.max(context.seasonStats.rushAttempts ?? 1, 1));
+  const yacPerAtt = context.advancedMetrics?.yardsAfterContact;
+  const mtfPerTouch = context.advancedMetrics?.missedTacklesForced;
+  const epaPerRush = context.advancedMetrics?.epaPerRush;
+  const successRate = context.advancedMetrics?.successRate;
+  
+  const raw = {
+    ypc,
+    yacPerAtt,
+    mtfPerTouch,
+    epaPerRush,
+    successRate,
+  };
+  
+  const yacMtfBlend = (yacPerAtt !== undefined && mtfPerTouch !== undefined)
+    ? (calculatePercentile(yacPerAtt, 1, RB_THRESHOLDS.YAC_PER_ATT_GOOD * 1.5) * 0.6 +
+       calculatePercentile(mtfPerTouch, 0, RB_THRESHOLDS.MTF_PER_TOUCH_GOOD * 1.5) * 0.4)
+    : ypc !== undefined 
+      ? calculatePercentile(ypc, 2, RB_THRESHOLDS.YPC_GOOD * 1.3) 
+      : 50;
+  
+  const normalized = {
+    yacMtfBlend,
+    epaWeighted: epaPerRush !== undefined
+      ? calculatePercentile(epaPerRush, -0.15, RB_THRESHOLDS.EPA_PER_RUSH_GOOD * 2)
+      : 50,
+    successRate: successRate !== undefined
+      ? calculatePercentile(successRate, 0.30, RB_THRESHOLDS.SUCCESS_RATE_GOOD * 1.3)
+      : 50,
+    ypc: calculatePercentile(ypc, 2, RB_THRESHOLDS.YPC_GOOD * 1.3),
+  };
+  
+  let score = clamp(
+    normalized.yacMtfBlend * 0.40 +
+    normalized.epaWeighted * 0.30 +
+    normalized.successRate * 0.20 +
+    normalized.ypc * 0.10,
+    0, 100
+  );
+  
+  const capped = !hasAdvancedStats;
+  if (capped) {
+    score = Math.min(score, MISSING_DATA_CAPS.NO_ADVANCED_STATS_EFFICIENCY);
+  }
+  
+  return { raw, normalized, score, capped };
+}
+
+function buildRoleLeverageFeatures(
+  context: ForgeContext,
+  hasSnapData: boolean
+): ForgeFeatureBundle['roleLeverageFeatures'] {
+  const backfieldShare = context.roleMetrics?.backfieldTouchShare;
+  const receivingWorkRate = context.roleMetrics?.receivingWorkRate;
+  const goalLineWorkRate = context.roleMetrics?.goalLineWorkRate;
+  const thirdDownSnapPct = context.roleMetrics?.thirdDownSnapPct;
+  
+  const raw = {
+    backfieldShare,
+    receivingWorkRate,
+    goalLineWorkRate,
+    thirdDownSnapPct,
+  };
+  
+  const normalized = {
+    backfieldShare: backfieldShare !== undefined
+      ? calculatePercentile(backfieldShare, 0.3, RB_THRESHOLDS.BACKFIELD_SHARE_GOOD)
+      : 50,
+    receivingWorkRate: receivingWorkRate !== undefined
+      ? calculatePercentile(receivingWorkRate, 0.1, RB_THRESHOLDS.RECEIVING_WORK_RATE_GOOD)
+      : 50,
+    goalLineWorkRate: goalLineWorkRate !== undefined
+      ? calculatePercentile(goalLineWorkRate, 0, 0.8)
+      : 50,
+    thirdDownSnapPct: thirdDownSnapPct !== undefined
+      ? calculatePercentile(thirdDownSnapPct, 0.1, RB_THRESHOLDS.THIRD_DOWN_SNAP_PCT_GOOD)
+      : 50,
+  };
+  
+  let score = clamp(
+    normalized.backfieldShare * 0.40 +
+    normalized.receivingWorkRate * 0.25 +
+    normalized.goalLineWorkRate * 0.20 +
+    normalized.thirdDownSnapPct * 0.15,
+    0, 100
+  );
+  
+  const capped = !hasSnapData;
+  if (capped) {
+    score = Math.min(score, MISSING_DATA_CAPS.NO_SNAP_DATA_ROLE);
+  }
+  
+  return { raw, normalized, score, capped };
+}
+
+function buildStabilityFeatures(
+  context: ForgeContext,
+  gamesPlayed: number
+): ForgeFeatureBundle['stabilityFeatures'] {
+  const weeklyPts = context.weeklyStats.map(w => w.fantasyPointsPpr);
+  
+  const weeklyPpgStdDev = calculateWeeklyStdDev(weeklyPts);
+  const { floorRate, boomRate } = calculateFloorBoomRates(
+    weeklyPts,
+    RB_THRESHOLDS.FLOOR_WEEK_THRESHOLD,
+    RB_THRESHOLDS.BOOM_WEEK_THRESHOLD
+  );
+  
+  const stdDevScore = weeklyPpgStdDev !== undefined
+    ? 100 - calculatePercentile(weeklyPpgStdDev, 0, 12)
+    : 50;
+  
+  const floorScore = calculatePercentile(floorRate, 0, 1);
+  const boomScore = calculatePercentile(boomRate, 0, 0.4);
+  
+  const injuryPenalty = context.injuryStatus?.gamesMissedLast2Years 
+    ? Math.min(20, context.injuryStatus.gamesMissedLast2Years * 2)
+    : 0;
+  
+  const score = clamp(
+    stdDevScore * 0.50 +
+    floorScore * 0.30 +
+    boomScore * 0.20 -
+    injuryPenalty,
+    0, 100
+  );
+  
+  return {
+    weeklyPpgStdDev,
+    floorWeekRate: floorRate,
+    boomWeekRate: boomRate,
+    score,
+  };
+}
+
+function buildContextFitFeatures(
+  context: ForgeContext,
+  hasDvPData: boolean,
+  hasEnvironmentData: boolean
+): ForgeFeatureBundle['contextFitFeatures'] {
+  const rushVolumePct = context.teamEnvironment?.proePct 
+    ? 100 - context.teamEnvironment.proePct 
+    : undefined;
+  const olGradePct = context.teamEnvironment?.olGradePct;
+  const dvpRank = context.dvpData?.rank;
+  
+  const raw = {
+    rushVolumePct,
+    olGradePct,
+    dvpRank,
+  };
+  
+  const isNeutral = !hasDvPData && !hasEnvironmentData;
+  
+  if (isNeutral) {
+    return {
+      raw,
+      normalized: { rushVolumePct: 50, olGradePct: 50, dvpRank: 50 },
+      score: 50,
+      isNeutral: true,
+    };
+  }
+  
+  const normalized = {
+    rushVolumePct: rushVolumePct ?? 50,
+    olGradePct: olGradePct ?? 50,
+    dvpRank: dvpRank !== undefined
+      ? calculatePercentile(33 - dvpRank, 0, 32)
+      : 50,
+  };
+  
+  const score = clamp(
+    normalized.rushVolumePct * 0.35 +
+    normalized.olGradePct * 0.35 +
+    normalized.dvpRank * 0.30,
+    0, 100
+  );
+  
+  return { raw, normalized, score, isNeutral: false };
+}

@@ -1,0 +1,350 @@
+You are my "Builder" model.
+
+We are implementing FORGE v0.1:
+
+FORGE = Football Oriented Recursive Grading Engine.
+
+Goal:
+Create a self-contained module under `server/modules/forge/` that:
+- Pulls context for a player (using existing services/DB tables)
+- Builds position-specific features for WR/RB/TE/QB
+- Converts them into:
+  - Alpha (0–100)
+  - volume / efficiency / roleLeverage / stability / contextFit (0–100 each)
+  - trajectory: 'rising' | 'flat' | 'declining'
+  - confidence (0–100)
+- Exposes a small programmatic API
+- Adds a preview HTTP route: `GET /api/forge/preview`
+
+FORGE v0.1 MUST be:
+- Read-only (no DB writes, no cron ownership, no ETL)
+- Defensive with missing data
+- Interpretable and deterministic
+- Not wired into OVR/Tiber yet (just a standalone module + preview route)
+
+---
+
+## 1. SCORING SPEC (LOCKED)
+
+This is the spec FORGE must follow.
+
+### WR Features + Scoring
+
+Volume – CORE
+- targets_per_game (season + L3 weighted) → good: 8+
+- target_share → good: 25%+
+- air_yards_share → good: 30%+
+- red_zone_targets_per_game → good: 1.5+
+
+Efficiency – CORE
+- yards_per_route_run (YPRR) → good: 2.0+
+- yards_per_target → good: 9.5+
+- catch_rate_over_expected (CPOE-based if available, else simple catch%) → good: +5%
+- EPA_per_target → good: 0.25+
+
+Role / Leverage – CORE
+- route_rate (routes_run / snap_count) → good: 90%+
+- slot_rate → good: 55%+ (or inverse for pure X)
+- red_zone_route_share → good: 30%+
+- deep_target_share (aDOT > 15) → bonus for big-play WRs
+
+Stability – CORE
+- weekly_fantasy_ppg_std_dev (lower = better)
+- floor_week_rate (% of weeks > 8 fantasy pts)
+- boom_week_rate (% of weeks > 20 fantasy pts)
+
+Context – CORE
+- team_pass_attempts_per_game
+- team_air_yards_per_game
+- defense_vs_wr_rank (DvP)
+- pace_of_play_rank
+
+Insulation – LATER (v0.2)
+- target_separation_from_next_wr
+- QB stability / accuracy grade
+
+WR Sub-Score Scaling (0–100) – percentile-based within WRs
+- volumeScore  = 40% targets_pg + 30% target_share + 20% air_yards_share + 10% rz_targets_pg
+- efficiencyScore = 40% YPRR + 25% EPA/target + 20% yds/target + 15% catch_rate_OE
+- roleLeverageScore = 40% route_rate + 30% archetype-adjusted slot_rate + 20% rz_route_share + 10% deep_share
+- stabilityScore = 100 – percentile_rank(std_dev_ppg) blended with floor/boom rates
+- contextFitScore = team pass volume percentile + DvP adjustment (worse defense = higher score)
+
+WR Alpha Weights:
+- 35% volume
+- 30% efficiency
+- 18% roleLeverage
+- 12% stability
+- 5% contextFit
+
+---
+
+### RB Features + Scoring
+
+Volume – CORE
+- touches_per_game (rush + rec)
+- opportunity_share (team rushes + targets)
+- red_zone_touches_per_game
+- goal_line_carries_per_game
+
+Efficiency – CORE
+- yards_per_carry
+- yards_after_contact_per_attempt
+- missed_tackles_forced_per_touch
+- EPA_per_rush + EPA_per_target weighted
+- success_rate (EPA > 0 %)
+
+Role / Leverage – CORE
+- backfield_touch_share
+- receiving_work_rate (targets / team RB targets)
+- goal_line_work_rate
+- third_down_snap_pct
+
+Stability – CORE
+- weekly_ppg_std_dev
+- floor_game_rate (% weeks > 10 pts)
+- injury_games_missed_last_2yr (penalty)
+
+Context – CORE
+- team_rush_attempts_per_game
+- offensive_line_run_block_win_rate
+- defense_vs_rb_rank (DvP)
+- positive_game_script_rate
+
+Insulation – BONUS
+- next_rb_on_depth_chart_quality (low = good insulation)
+
+RB Sub-Score Scaling – percentile-based
+- volumeScore = 45% touches_pg + 30% opp_share + 15% rz_touches + 10% goal_line
+- efficiencyScore = 40% (YAC/att + MTF/touch blend) + 30% EPA-weighted + 20% success_rate + 10% YPC
+- roleLeverageScore = 40% backfield_share + 25% receiving_work + 20% goal_line + 15% 3rd_down
+- stabilityScore similar to WR but RB thresholds
+- contextFitScore = rush volume + OL quality + DvP
+
+RB Alpha Weights:
+- 38% volume
+- 25% efficiency
+- 20% roleLeverage
+- 12% stability
+- 5% contextFit
+
+---
+
+### TE Features + Scoring
+
+Volume – CORE
+- targets_per_game
+- target_share (overall + among TEs)
+- red_zone_targets_per_game
+- end_zone_targets_per_game
+
+Efficiency – CORE
+- YPRR
+- yards_per_target
+- catch_rate_OE
+- EPA_per_target
+
+Role / Leverage – CORE
+- route_rate
+- slot_rate + inline_rate balance
+- red_zone_route_share
+- alpha archetype flags (move TE vs inline blocker)
+
+Stability – CORE
+- weekly_ppg_std_dev
+- floor/boom rates
+
+Context – CORE
+- team_pass_volume
+- defense_vs_te_rank
+- QB accuracy to TEs
+
+TE Sub-Score Scaling – percentile-based
+Same method as WR but with TE distributions (top-heavy).
+
+TE Alpha Weights:
+- 30% volume
+- 28% efficiency
+- 25% roleLeverage
+- 10% stability
+- 7% contextFit
+
+---
+
+### QB Features + Scoring
+
+Volume – CORE
+- pass_attempts_per_game
+- rush_attempts_per_game (bonus)
+- red_zone_pass_attempts_per_game
+
+Efficiency – CORE
+- EPA_per_play
+- CPOE
+- adjusted_yards_per_attempt (AY/A)
+- TD_rate – INT_rate differential
+- sack_rate (negative)
+
+Role / Leverage – CORE
+- designed_rush_share
+- goal-line_rush_share
+- (OPTIONAL BONUS) 4Q comeback rate
+
+Stability – CORE
+- weekly_ppg_std_dev
+- turnover_rate volatility
+
+Context – CORE
+- OL pass_block_win_rate
+- WR/TE room quality grade (from environment service)
+- team_pass_rate_over_expected
+- defense_vs_qb_rank
+
+QB Sub-Score Scaling – percentile-based
+- volumeScore: attempts + rush attempts
+- efficiencyScore: 45% EPA/play + 25% CPOE + 20% AY/A + 10% TD–INT diff
+- roleLeverageScore: rushing/goal-line contribution
+- stabilityScore: same pattern as others
+- contextFitScore: heavy weight on OL + weapons + scheme
+
+QB Alpha Weights:
+- 25% volume
+- 35% efficiency
+- 15% roleLeverage
+- 10% stability
+- 15% contextFit
+
+---
+
+### Trajectory & Confidence (All Positions v0.1)
+
+Trajectory:
+- Compute rolling weighted Alpha:
+  - 50% last 3 games
+  - 30% games 4–6
+  - 20% rest of season
+- delta = current_rolling_alpha – season_alpha_to_date
+- rising:     delta ≥ +6
+- flat:       -6 < delta < +6
+- declining:  delta ≤ -6
+
+Confidence (0–100):
+
+base = min(100, games_played_this_season × 8)
+
+adjustments:
+- <4 games played → -30
+- <6 games → -15
+- injury flag last 30 days → -20
+- std_dev of last 5 weeks > 1.8× position avg → -15
+- missing snap counts → -10
+- missing DvP data → -5
+
+Clamp final confidence: 20–100.
+
+---
+
+### Fallback / Missing Data Rules
+
+| Missing Data                  | Behavior                                                                 |
+|-------------------------------|--------------------------------------------------------------------------|
+| No EPA / advanced stats       | Use raw yards metrics; efficiencyScore capped at 80                      |
+| No snap counts / routes       | Assume league-average route_rate or 60% snap share; cap volume/role 75  |
+| No DvP                        | contextFitScore = 50 (neutral)                                           |
+| < 3 games played              | All sub-scores capped at 75, confidence ≤ 45, trajectory = "flat"       |
+| No red-zone data              | Use league-average for that player’s target-share tier                   |
+| No OL / pace data             | contextFitScore = 50 for QB/RB/TE                                        |
+| Missing YAC / MTF (RB)        | efficiencyScore from YPC + success rate only                             |
+
+v0.2+ ideas explicitly NOT to do:
+- ML weighting / clustering
+- Bayesian / Monte Carlo
+- game-script adjustment
+- target separation / DB vs WR matchup
+- weather/dome
+- detailed scheme tagging beyond basic pass/run rate
+
+FORGE v0.1 must stay:
+- percentile-driven
+- interpretable
+- transparent
+
+---
+
+## 2. ARCHITECTURE / SERVICE SHAPE (FROM GEMINI)
+
+Use this service pattern as the FORGE entry point (`forgeService.ts`):
+
+```ts
+import { 
+  ForgeScore, 
+  ForgeContext, 
+  ForgeFeatureBundle, 
+  WeekOrPreseason, 
+  PlayerPosition, 
+  IForgeService 
+} from './types';
+import { calculateAlphaScore } from './alphaEngine';
+import { fetchContext } from './context/contextFetcher'; // you will implement this
+import { buildWRFeatures } from './features/wrFeatures';
+import { buildRBFeatures } from './features/rbFeatures';
+// and later:
+import { buildTEFeatures } from './features/teFeatures';
+import { buildQBFeatures } from './features/qbFeatures';
+
+const featureBuilderMap = new Map<PlayerPosition, (context: ForgeContext) => ForgeFeatureBundle>([
+  ['WR', buildWRFeatures],
+  ['RB', buildRBFeatures],
+  ['TE', buildTEFeatures],
+  ['QB', buildQBFeatures],
+]);
+
+class ForgeService implements IForgeService {
+  private async scoreSinglePlayer(
+    playerId: string, 
+    season: number, 
+    asOfWeek: WeekOrPreseason
+  ): Promise<ForgeScore> {
+    console.log(`[FORGE] Fetching context for Player ${playerId} at week ${asOfWeek}`);
+    const context: ForgeContext = await fetchContext(playerId, season, asOfWeek);
+
+    const builder = featureBuilderMap.get(context.position);
+    if (!builder) {
+      throw new Error(`FORGE v0.1: Feature builder not found for position: ${context.position}`);
+    }
+
+    console.log(`[FORGE] Building features for ${context.position}...`);
+    const featureBundle: ForgeFeatureBundle = builder(context);
+
+    console.log(`[FORGE] Calculating Alpha Score...`);
+    const forgeScore: ForgeScore = calculateAlphaScore(context, featureBundle);
+    return forgeScore;
+  }
+
+  public async getForgeScoreForPlayer(
+    playerId: string, 
+    season: number, 
+    asOfWeek: WeekOrPreseason
+  ): Promise<ForgeScore> {
+    return this.scoreSinglePlayer(playerId, season, asOfWeek);
+  }
+
+  public async getForgeScoresForPlayers(
+    playerIds: string[], 
+    season: number, 
+    asOfWeek: WeekOrPreseason
+  ): Promise<ForgeScore[]> {
+    const scorePromises = playerIds.map(id => 
+      this.scoreSinglePlayer(id, season, asOfWeek)
+        .catch(error => {
+          console.error(`Error scoring player ${id}:`, error.message);
+          return null;
+        })
+    );
+
+    const results = await Promise.all(scorePromises);
+    return results.filter((score): score is ForgeScore => score !== null);
+  }
+}
+
+export const forgeService: IForgeService = new ForgeService();

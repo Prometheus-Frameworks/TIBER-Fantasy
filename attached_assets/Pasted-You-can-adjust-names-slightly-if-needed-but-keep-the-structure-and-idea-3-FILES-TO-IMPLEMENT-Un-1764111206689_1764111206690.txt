@@ -1,0 +1,170 @@
+You can adjust names slightly if needed, but keep the structure and idea.
+
+3. FILES TO IMPLEMENT
+
+Under server/modules/forge/ please implement:
+
+types.ts
+
+PlayerPosition = 'WR' | 'RB' | 'TE' | 'QB'
+
+WeekOrPreseason = number | 'preseason'
+
+ForgeSubScores (volume, efficiency, roleLeverage, stability, contextFit)
+
+ForgeScore (playerId, position, season, asOfWeek, alpha, sub-scores, trajectory, confidence)
+
+ForgeContext (raw data structure you need: identity, basic stats, snaps, rates, DvP, env, etc.)
+
+ForgeFeatureBundle (normalized numbers ready for scoring for a given player/position)
+
+IForgeService (getForgeScoreForPlayer, getForgeScoresForPlayers)
+
+context/contextFetcher.ts
+
+A function: fetchContext(playerId: string, season: number, asOfWeek: WeekOrPreseason): Promise<ForgeContext>
+
+It should:
+
+Resolve player identity & position
+
+Pull recent game logs, season aggregates, snaps/routes, DvP data, environment (pass rate, OL, WR room), market/risk info as needed
+
+It’s OK to pseudo-code some parts with TODO comments and placeholder fields if you don’t know exact table names.
+
+Handle missing data gracefully (e.g. null/undefined → rely on fallback rules in alphaEngine).
+
+features/wrFeatures.ts
+
+buildWRFeatures(context: ForgeContext): ForgeFeatureBundle
+
+Compute all WR-specific features and normalized inputs needed to compute the WR sub-scores per the spec.
+
+features/rbFeatures.ts
+
+buildRBFeatures(context: ForgeContext): ForgeFeatureBundle
+
+features/teFeatures.ts
+
+buildTEFeatures(context: ForgeContext): ForgeFeatureBundle
+
+features/qbFeatures.ts
+
+buildQBFeatures(context: ForgeContext): ForgeFeatureBundle
+
+You may have:
+
+Either one unified ForgeFeatureBundle with optional fields, or
+
+A discriminated union keyed by position.
+For v0.1, a single simple interface with clearly named numeric fields is fine as long as alphaEngine knows how to interpret them based on position.
+
+alphaEngine.ts
+
+Export calculateAlphaScore(context: ForgeContext, features: ForgeFeatureBundle): ForgeScore
+
+Inside, implement:
+
+Sub-score calculation per position (volume, efficiency, roleLeverage, stability, contextFit)
+
+Alpha = weighted sum per position using the weights from the spec
+
+Trajectory calculation as specified
+
+Confidence calculation as specified
+
+Apply fallback / caps from the spec (capping sub-scores, confidence ranges)
+
+Ensure final alpha and sub-scores are 0–100 and clamped.
+
+You may choose to split trajectory/confidence logic into helper functions (trajectory.ts, confidence.ts) if you want, but not required.
+
+forgeService.ts
+
+Implement as shown in the Gemini snippet above, with all four positions wired in.
+
+Use the forgeService singleton export.
+
+routes.ts
+
+Export a function registerForgeRoutes(app: Express.Application) OR an Express Router as default export.
+
+Implement: GET /api/forge/preview
+
+Query params:
+
+position (WR|RB|TE|QB, required)
+
+season (number, optional, default current season e.g. 2025)
+
+limit (number, optional, default 50)
+
+For now, you can:
+
+Query a small sample of players for that position from the players table, or
+
+If that’s complex, accept an optional playerIds query param (comma-separated) and sample a fixed fallback array if not provided (with TODO comments).
+
+For each player, call forgeService.getForgeScoreForPlayer(...)
+
+Return: JSON array of ForgeScore objects.
+
+Add reasonable logging and error handling, but keep it simple.
+
+index.ts
+
+Re-export forgeService
+
+Re-export any types if needed
+
+Re-export registerForgeRoutes or the router from routes.ts
+
+4. IMPORTANT CONSTRAINTS
+
+TypeScript only.
+
+No side-effectful writes.
+
+No assumption of perfect schema names: when you’re unsure, add // TODO: wire to actual table/field name and shape the function/signature cleanly.
+
+Handle missing data exactly per spec: use neutral 50 values and caps when appropriate.
+
+Make all math clear and well-commented so another dev can read and adjust weights later.
+
+Do NOT wire FORGE into other services yet. It should only be reachable via:
+
+forgeService for internal usage
+
+/api/forge/preview route for manual testing.
+
+5. OUTPUT FORMAT
+
+Please respond with:
+
+A short outline of the files you’re creating
+
+Then the full contents of each file, in this order:
+
+types.ts
+
+context/contextFetcher.ts
+
+features/wrFeatures.ts
+
+features/rbFeatures.ts
+
+features/teFeatures.ts
+
+features/qbFeatures.ts
+
+alphaEngine.ts
+
+forgeService.ts
+
+routes.ts
+
+index.ts
+
+Comment clearly where you’re making assumptions or leaving TODOs for integration.
+
+Once I paste these files into server/modules/forge/ and mount the preview routes in my main routes.ts, FORGE v0.1 should compile and be ready for testing.

@@ -1,0 +1,55 @@
+You are my "Builder" model. The architecture for a new module called FORGE (Football Oriented Recursive Grading Engine) has already been designed.
+
+I will paste in:
+- The feature + scoring spec (from another model)
+- The module/file layout and types (from another model)
+
+Your job:
+- Implement FORGE v0.1 as a self-contained module under `server/modules/forge/`
+- Implement:
+  - context gathering functions
+  - feature builders for WR, RB, TE, QB
+  - alpha scoring (sub-scores + overall alpha)
+  - trajectory + confidence logic
+- Add a preview route: GET /api/forge/preview
+
+Constraints:
+- TypeScript
+- Node + Express
+- Use existing services when possible:
+  - PlayerIdentityService
+  - sleeperSnapService
+  - gameLogs / playerSeason tables via Drizzle
+  - defenseVsPositionStats
+  - oasisEnvironmentService
+  - marketEngine
+  - riskEngine
+- FORGE must be **read-only** in v0.1: no mutating DB, no cron, no ETL.
+- FORGE should expose a small public API, e.g.:
+  - getForgeScoreForPlayer(...)
+  - getForgeScoresForPlayers(...)
+
+Scope for v0.1:
+- Get it compiling.
+- Handle missing data gracefully.
+- Be explicit and conservative with defaults.
+- Do NOT wire FORGE into OVR/Tiber yet; just implement the module and the preview endpoint.
+
+Process:
+1) Read the spec + architecture carefully.
+2) Sketch the implementation plan.
+3) Write the TypeScript code for:
+   - types.ts
+   - context.ts
+   - features/wr.ts, features/rb.ts, features/te.ts, features/qb.ts
+   - alphaEngine.ts
+   - index.ts or forgeService.ts
+   - routes.ts (preview route)
+4) Assume I will copy-paste the files into my repo and then hook up the route in `server/routes.ts`.
+
+Please include:
+- Full file contents where possible
+- Clear comments explaining any assumptions
+- TODO markers where deeper data dependencies exist (e.g. if you need a field that might not exist exactly under that name)
+
+I’ll handle environment variables and exact Drizzle imports. Focus on structure, types, and logic.
