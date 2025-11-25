@@ -1,0 +1,205 @@
+📤 TE SANDBOX V1 — Full Replit Agent Instruction Packet
+
+(Same format as RB Phase 2 — but cleaner, tighter, TE-specific)
+
+You are building the NEW TE Admin Sandbox for the TIBER Fantasy platform.
+
+DO NOT:
+- Do not copy RB or WR math directly.
+- Do not create new backend tables.
+- Do not touch RB/WR systems.
+- Do not merge TE into global rankings yet.
+
+Your goal is to build a brand new TE Sandbox that mirrors the RB/WR sandboxes in structure:
+- table view
+- sliders
+- custom TE alpha score
+- presets
+- split-view comparison
+- export/import
+- candidate formula snapshot
+- Role Bank v2 payload hooks
+
+This is TE Sandbox V1.
+
+==================================================
+TE SANDBOX — Stage 1 (Receiving + Usage Metrics)
+==================================================
+
+Create a new page/component: TE Rankings Sandbox
+
+Load TE data from the same source the WR/RB sandbox uses:
+- playerId
+- team
+- games
+- targets
+- receptions
+- receiving yards
+- receiving TDs
+- routes run
+- alignment breakdown (slot %, inline %, wide %) IF AVAILABLE
+
+Required calculated metrics:
+1. Rec Yds/G = recYds / games
+2. FP/G (half-PPR): 
+   fpPerGame = (rec * 0.5 + recYds / 10 + recTD * 6) / games
+3. FP/Target = fantasyPoints / targets
+4. Route Participation % (if available): routes / teamRoutes
+5. Slot % — directly from data
+6. Inline % — from data
+7. Wide % — from data
+
+These form the receiving profile.
+
+==================================================
+TE SANDBOX — Stage 2 (Blocking + Stickiness)
+==================================================
+
+Add TE blocking metrics:
+- passBlockGrade (0-100)
+- runBlockGrade (0-100)
+If missing, create placeholders but do not break UI.
+
+Calculate:
+
+Blocking Stickiness Score (0–1):
+normalize both grades to 0–1:
+  pbNorm = passBlockGrade / 100
+  rbNorm = runBlockGrade / 100
+
+blockingStickiness = pbNorm * 0.6 + rbNorm * 0.4
+
+Snap Stickiness Index (SSI):
+ssi = 
+  (blockingStickiness * 0.6)
+  + (inlinePct * 0.2)
+  + (routesRun / totalSnaps) * 0.2
+
+If totalSnaps not available, treat routesRun as proxy:
+routeSnapProxy = min(1, routesRun / maxRoutesAmongTEs)
+and substitute that.
+
+==================================================
+TE CUSTOM ALPHA SCORE
+==================================================
+
+Create a TE alpha score based on four pillars:
+
+1. Receiving Volume — 40%
+   - targets
+   - routes run
+   - slot% (optional weight boost)
+2. Production — 25%
+   - fpPerGame
+3. Efficiency — 20%
+   - fpPerTarget
+   - yardsPerRoute (if available; fallback to recYds/game)
+4. Snap Stickiness — 15%
+   - ssi ( snap stickiness index )
+
+Each pillar should be normalized and combined with slider weights.
+
+Add TE sliders:
+- Receiving Volume Weight
+- Production Weight
+- Efficiency Weight
+- Stickiness Weight
+Total = 100%
+
+==================================================
+TE PRESETS
+==================================================
+
+Built-in presets:
+- Default TE (40/25/20/15)
+- Volume Hunter (50/20/20/10)
+- Red Zone Threat (35/35/15/15)
+- Grinder/Field Time (25/20/15/40) — for Barner/Mayer type TEs
+
+Add:
+- Save custom preset
+- Delete custom preset
+- Last-used preset persists in localStorage
+
+==================================================
+TE SPLIT-VIEW COMPARISON
+==================================================
+
+Exact same as RB split view:
+- Two dropdowns
+- Both sides show:
+  - targets, rec, yards, recYds/g
+  - fp/g, fp/target
+  - routes run
+  - slot/inline/wide %
+  - blockingStickiness
+  - ssi
+  - TE alpha score
+- Green/red highlight which player wins each metric
+
+==================================================
+EXPORT / IMPORT FORMULA (JSON)
+==================================================
+
+Same structure as RB:
+{
+  "version": "te-alpha-sandbox-v1",
+  "weights": {
+    "volume": 0.40,
+    "production": 0.25,
+    "efficiency": 0.20,
+    "stickiness": 0.15
+  }
+}
+
+Add:
+- Export button
+- Import with validation + normalization
+
+==================================================
+CANDIDATE FORMULA SNAPSHOT
+==================================================
+
+Add a button: “Mark Candidate”
+- Save label + timestamp + TE weights
+- Store in localStorage under “tiber_te_candidate_formulas”
+- Show them as clickable chips
+
+==================================================
+ROLE BANK v2 HOOKS
+==================================================
+
+Create:
+buildTeAlphaExport(teRow):
+{
+  playerId,
+  playerName,
+  team,
+  alphaScore,
+  targets,
+  rec,
+  recYds,
+  fpPerGame,
+  fpPerTarget,
+  routesRun,
+  slotPct,
+  inlinePct,
+  widePct,
+  blockingStickiness,
+  snapStickinessIndex
+}
+
+Add a “Preview Payload” button that logs top 50 TEs by alpha.
+
+==================================================
+GENERAL
+==================================================
+
+Follow project UI patterns.
+Use TypeScript.
+Keep everything local to TE sandbox.
+No backend integration yet.
+No breaking changes to WR/RB sandboxes.
+
+When completed:
+Output a summary of all changes in a comment block at top of new TE sandbox file.
