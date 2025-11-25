@@ -73,15 +73,11 @@ import gameLogRoutes from './routes/gameLogRoutes';
 import { registerRoleBankRoutes } from './routes/roleBankRoutes';
 import sosRouter from './modules/sos/sos.router';
 import { ratingsRouter } from './src/modules/ratings';
-import { buildStartSitRouter } from './routes/startSitRoutes';
-import { startSitAgent } from './modules/startSit/startSitAgent';
 import rankingsV3Router from './routes/rankingsV3';
 import ovrRouter from './routes/ovrRoutes';
 import tiberRouter from './routes/tiberRoutes';
-import { registerEnhancedRankingsRoutes } from './routes/enhancedRankingsRoutes';
 import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
 import attributesRoutes from './routes/attributesRoutes';
-import pythonRookieRoutes from './routes/pythonRookieRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
 import buysSellsRoutes from './routes/buysSellsRoutes';
 import consensusRoutes from './consensus';
@@ -108,7 +104,6 @@ import path from 'path';
 import { getCurrentWeek, getWeekInfo, isRisersFallersDataAvailable, getBestRisersFallersWeek, debugWeekDetection } from '../shared/weekDetection';
 import { createRagRouter, initRagOnBoot } from './routes/ragRoutes';
 import tiberMemoryRoutes from './routes/tiberMemoryRoutes';
-import rookieRisersRoutes from './routes/rookieRisersRoutes';
 import { registerPowerProcessingRoutes } from './routes/powerProcessing';
 import weeklyTakesRoutes from './routes/weeklyTakesRoutes';
 import playerComparePilotRoutes from './routes/playerComparePilotRoutes';
@@ -2599,24 +2594,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount Power Processing routes (Grok's Enhancement) 
   registerPowerProcessingRoutes(app);
 
-  // Mount Enhanced Rankings (unified Power + Player Rankings with SOS)
-  registerEnhancedRankingsRoutes(app);
-  console.log('📊 Enhanced Rankings system mounted at /api/enhanced-rankings/*');
-
-  // Mount Rookie Risers routes
-  app.use('/api/rookie-risers', rookieRisersRoutes);
-  
-  // Mount Rookie Risers Comprehensive API
-  const rookieRisersAPI = await import('./routes/rookieRisersAPI');
-  app.use('/api/rookie-risers', rookieRisersAPI.default);
-  
-  // Mount Rookie Risers Test Routes (Grok's Verification)
-  const rookieRisersTest = await import('./routes/rookieRisersTest');
-  app.use('/api/rookie-risers', rookieRisersTest.default);
-  
   // Mount Debug Calculation Routes
   const debugCalculation = await import('./routes/debug-calculation');
-  app.use('/api/rookie-risers', debugCalculation.default);
+  app.use('/api/debug', debugCalculation.default);
   
   // OTC Consensus routes
   // OTC Consensus Command Router v1 - dedicated update endpoint
@@ -2989,10 +2969,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rookie system routes
   app.use('/api/rookies', rookieRoutes);
   app.use('/api/rookie-evaluation', rookieEvaluationRoutes);
-  app.use('/api/python-rookie', pythonRookieRoutes);
   app.use('/api/redraft', redraftWeeklyRoutes);
   app.use('/api/sos', sosRouter);
-  app.use('/api/start-sit', buildStartSitRouter(startSitAgent));
   app.use('/api/buys-sells', buysSellsRoutes);
   app.use('/api/matchup', matchupRoutes);
   app.use('/api/strategy', strategyRoutes);
@@ -5716,10 +5694,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // FPG System Health Check
   app.get('/api/power/fpg/health', handleHealthCheck);
-
-  // 2024 Stats routes
-  const { default: stats2024Routes } = await import('./routes/stats2024Routes');
-  app.use('/api/stats/2024', stats2024Routes);
 
   // Leaders endpoints for weekly performances and defense analysis
   app.get('/api/leaders/weekly', async (req: Request, res: Response) => {
