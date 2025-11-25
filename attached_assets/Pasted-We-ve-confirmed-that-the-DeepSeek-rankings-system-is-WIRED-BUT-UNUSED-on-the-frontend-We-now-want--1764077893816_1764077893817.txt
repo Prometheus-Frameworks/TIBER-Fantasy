@@ -1,0 +1,190 @@
+We’ve confirmed that the DeepSeek rankings system is WIRED_BUT_UNUSED on the frontend.
+
+We now want to remove the entire DeepSeek rankings surface and its dedicated plumbing, while keeping anything genuinely reusable for the future.
+
+This is a delete + cleanup task.
+
+1) Delete Frontend DeepSeek Artifacts
+
+Delete these files from the client:
+
+client/src/hooks/useDeepseekV3.ts
+
+client/src/components/RankingsV3Table.tsx
+
+These are not imported anywhere and are safe to remove.
+
+After deletion:
+
+Remove any leftover DeepSeek-related exports or barrel imports (if they exist in any index.ts/index.tsx files).
+
+Confirm there are no references to useDeepseekV3 or RankingsV3Table anywhere in client/.
+
+2) Delete Backend DeepSeek Rankings Routes
+
+Delete the main DeepSeek rankings router:
+
+server/routes/rankingsV3.ts
+
+Then update server/routes.ts:
+
+Remove the import:
+
+import rankingsV3Router from './routes/rankingsV3';
+
+
+Remove the mount:
+
+app.use('/api', rankingsV3Router);
+
+
+Confirm there are no remaining references to rankingsV3Router or /api/rankings/deepseek/* anywhere in the repo.
+
+3) Audit and Clean DeepSeek-Specific Services
+
+Now audit the following backend services that were reported as supporting DeepSeek rankings:
+
+server/services/deepseekV3Service.ts
+
+server/services/deepseekV3.1Service.ts
+
+server/services/rankingsFusionService.ts
+
+server/services/sleeperDataNormalizationService.ts
+
+server/services/marketEngine.ts
+
+server/services/riskEngine.ts
+
+server/services/bulletproofCombiner.ts
+
+server/src/modules/ratings/compute.ts
+
+Any DeepSeek-related QA files under server/qa/
+
+For each of these files:
+
+Search the entire repo for imports of that file.
+
+If a file is only imported by rankingsV3.ts (which you just deleted), and nowhere else:
+
+Delete that service file as well.
+
+If a file is imported by other active modules (e.g. used by OVR, Compass, sandboxes, or anything not being deleted):
+
+Do NOT delete it.
+
+Just leave it as a reusable shared utility.
+
+The goal is:
+
+Remove DeepSeek-specific plumbing that is now orphaned.
+
+Keep any utility that has broader use in the system.
+
+4) Clean Up Orphaned Imports and Types
+
+After deleting the route and any services that are now unused:
+
+Run the project’s TypeScript build / type-check (or the repo’s usual build command).
+
+Fix any compile errors caused by:
+
+Missing imports from deleted services
+
+Types or functions referenced from removed files
+
+For any remaining DeepSeek references (e.g. strings like "deepseek", "v3.1", "Fusion") that now point to nothing:
+
+Remove those references or refactor the code so there are no broken imports or dead constants.
+
+5) Preserve Non-DeepSeek Intelligence Systems
+
+Do NOT modify or delete any of the following:
+
+ovrRoutes.ts
+
+compassQbRoute.ts, compassRbRoute.ts, compassWrRoute.ts, compassTeRoute.ts
+
+Any of the sandbox-related pages:
+
+QBRankingsSandbox.tsx
+
+WRRankingsSandbox.tsx
+
+RB/TE sandbox components
+
+Any TIBER-specific routes:
+
+tiberRoutes.ts
+
+tiberDataRoutes.ts
+
+tiberMemoryRoutes.ts
+
+analyticsRoutes.ts
+
+redraftWeeklyRoutes.ts
+
+strategyRoutes.ts
+
+matchupRoutes.ts
+
+weeklyTakesRoutes.ts
+
+We are only removing the old DeepSeek rankings implementation, not the current TIBER / Compass / Sandbox / OVR systems.
+
+6) Final Verification
+
+After all deletions and cleanup:
+
+Confirm the app builds and starts without errors.
+
+Confirm there are no remaining HTTP endpoints under:
+
+/api/rankings/deepseek/*
+
+Confirm there are no remaining imports or references to:
+
+useDeepseekV3
+
+RankingsV3Table
+
+rankingsV3Router
+
+deepseekV3Service
+
+deepseekV3.1Service
+
+rankingsFusionService (unless still in use elsewhere)
+
+Confirm all existing core features still function:
+
+OVR tab
+
+Tiber Dashboard tabs
+
+Analytics/leaders pages
+
+Sandboxes (WR/RB/TE/QB)
+
+7) Report Back
+
+When finished, please provide a summary:
+
+List of all files deleted
+
+List of imports removed from server/routes.ts
+
+List of additional services deleted (if any)
+
+Confirmation that:
+
+The build passes
+
+The server runs
+
+No /api/rankings/deepseek/* URLs are exposed anymore
+
+That’s all for this pass.
+We’re intentionally removing the DeepSeek rankings system entirely while keeping any generic utilities that are still used by the rest of the app.

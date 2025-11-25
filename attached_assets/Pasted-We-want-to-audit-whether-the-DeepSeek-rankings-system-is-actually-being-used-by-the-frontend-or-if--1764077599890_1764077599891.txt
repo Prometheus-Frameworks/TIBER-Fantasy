@@ -1,0 +1,139 @@
+We want to audit whether the DeepSeek rankings system is actually being used by the frontend, or if it’s effectively dead.
+
+This is an audit only task.
+Do NOT delete or modify anything yet.
+
+1) Backend Side – rankingsV3 Routes
+
+Focus file:
+
+server/routes/rankingsV3.ts
+
+Confirm and document:
+
+All endpoints it exposes, including:
+
+GET /api/rankings/deepseek/v3
+
+GET /api/rankings/deepseek/v3.1
+
+GET /api/rankings/deepseek/v3.2
+
+Any /health, /audit, /debug variants
+
+How it’s mounted in server/routes.ts
+
+e.g. app.use('/api', rankingsV3Router);
+
+Any other backend code that imports or calls functions from rankingsV3 or its services.
+
+Return a short summary of the backend setup.
+
+2) Frontend Side – Where Is “DeepSeek” Used?
+
+Search the entire client/ directory for anything related to DeepSeek:
+
+Search terms (case-insensitive):
+
+deepseek
+
+"/api/rankings/deepseek
+
+v3.1
+
+v3.2
+
+useDeepseekV3
+
+For each match, report:
+
+File path
+
+How it is used:
+
+Is it an imported hook?
+
+A direct fetch/axios call?
+
+A tab definition or config entry?
+
+A type/interface only?
+
+Specifically, inspect:
+
+client/src/hooks/useDeepseekV3.ts (if it exists)
+
+What endpoints does it call?
+
+Is this hook used anywhere?
+
+client/src/pages/TiberDashboard.tsx
+
+client/src/pages/LeadersPage.tsx
+
+Any pages/components with names like:
+
+Rankings
+
+Deepseek
+
+Fusion
+
+Quadrant
+
+For each frontend match, indicate whether the DeepSeek data is:
+
+Rendered in the UI (tables, lists, cards, etc.)
+
+Or only defined but never actually used.
+
+3) Determine Usage Status
+
+Based on your findings, classify the DeepSeek rankings system as one of:
+
+CORE_ACTIVE
+
+Actively powering one or more visible UI surfaces (pages, tabs, cards, etc.)
+
+PARTIALLY_ACTIVE
+
+Hook or API is wired up and fetches data, but only used in a limited or experimental way.
+
+WIRED_BUT_UNUSED
+
+Hook exists and calls the API, but nothing actually uses the hook’s output for rendering.
+
+DEAD
+
+No frontend calls at all, no real usage.
+
+For each classification, give a one–sentence justification.
+
+4) Output Format
+
+Return the results in structured markdown like this:
+
+## Backend – rankingsV3.ts
+- Endpoints:
+  - GET /api/rankings/deepseek/v3 → ...
+  - ...
+- Mounted: (show how in server/routes.ts)
+- Other backend usages: (if any)
+
+## Frontend – DeepSeek Usage
+
+### client/src/hooks/useDeepseekV3.ts
+- Calls: (list endpoints)
+- Used by: (list files or "no usages found")
+
+### Other Matches
+- client/src/pages/____.tsx – describes usage
+- client/src/components/____.tsx – describes usage
+
+## Classification
+- Status: DEAD / WIRED_BUT_UNUSED / PARTIALLY_ACTIVE / CORE_ACTIVE
+- Justification: (one sentence)
+
+
+Do not modify or delete any code in this pass.
+This is strictly usage detection so we can decide whether to remove or refactor DeepSeek later.

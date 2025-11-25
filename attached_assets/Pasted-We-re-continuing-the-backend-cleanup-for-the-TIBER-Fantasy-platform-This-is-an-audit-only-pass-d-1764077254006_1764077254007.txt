@@ -1,0 +1,162 @@
+We’re continuing the backend cleanup for the TIBER Fantasy platform.
+
+This is an audit-only pass — do NOT delete anything yet.
+Just map, classify, and surface issues exactly like the last audit.
+
+TARGET FILES TO AUDIT
+
+Please audit the following backend routes:
+
+Analytics Layer
+
+server/routes/analyticsRoutes.ts
+
+Any inline /api/hot-list/* handlers in server/routes.ts
+(these replaced hotListLive.ts)
+
+Redraft Layer
+
+server/routes/redraftRoutes.ts
+
+server/routes/redraftWeeklyRoutes.ts
+
+Ranking/ETL Overlaps
+
+server/routes/rankingsV3.ts
+
+server/routes/ovrRoutes.ts
+
+server/routes/bronzeLayerRoutes.ts
+
+server/routes/silverLayerRoutes.ts
+
+server/routes/goldLayerRoutes.ts
+
+Any other ETL-related or analytics-related route modules mounted under /api/* that interact with:
+
+weekly stats
+
+projections
+
+logs
+
+usage
+
+advanced metrics
+
+WHAT TO DOCUMENT (for each file)
+
+For each of the files above, please provide:
+
+1. File Path
+2. Routes Defined
+
+List each route with method + path, e.g.:
+
+GET /api/analytics/trends
+POST /api/redraft/week/update
+
+3. What Each Route Returns
+
+(High-level description only)
+
+4. Imports / Dependencies
+
+Especially note if they rely on:
+
+Silver Layer
+
+Gold Layer
+
+EPA
+
+Sleeper
+
+Old ETL modules
+
+Local mocks
+
+5. Where They Are Mounted
+
+Find their mount blocks inside server/routes.ts.
+
+6. Frontend Usage (search client/)
+
+Mark each endpoint as:
+
+USED_BY_FRONTEND (list the file)
+
+NOT_USED
+
+UNKNOWN (if ambiguous)
+
+7. Classification
+
+Assign one of the following:
+
+CORE_ACTIVE
+
+LEGACY_BUT_USED
+
+LEGACY_UNUSED
+
+DEAD/TEST_ONLY
+
+INLINE_DUPLICATE (for /hot-list/* inline implementations)
+
+8. Overlaps / Redundancy
+
+Compare across analytics, redraft, rankings, bronze/silver/gold layers.
+
+Example overlap flags:
+
+“redraftWeeklyRoutes duplicates season stats logic in silverLayerRoutes”
+
+“analyticsRoutes has hot-list logic already present inline in routes.ts”
+
+“rankingsV3 and ovrRoutes overlap with enhancedRankingsRoutes (now removed)”
+
+“ETL layers provide similar data; some routes are redundant”
+
+OUTPUT FORMAT
+
+Return a structured markdown report with this template:
+
+## analyticsRoutes.ts
+- Path:
+- Routes:
+- Returns:
+- Imports:
+- Mounted:
+- Frontend usage:
+- Classification:
+- Notes:
+
+## Inline Hot-List (routes.ts)
+...
+
+## redraftRoutes.ts
+...
+
+## redraftWeeklyRoutes.ts
+...
+
+## rankingsV3.ts
+...
+
+## ovrRoutes.ts
+...
+
+## bronzeLayerRoutes.ts
+...
+
+## silverLayerRoutes.ts
+...
+
+## goldLayerRoutes.ts
+...
+
+NOTHING SHOULD BE DELETED YET
+
+This is strictly an audit pass.
+After the report, we’ll decide which ones get removed, merged, or rebuilt.
