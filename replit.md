@@ -55,6 +55,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **League System**: Supports user-created fantasy leagues with context-aware AI interactions, integrating league settings, trades, and roster moves via Sleeper league auto-sync.
 - **RAG Chat System**: Integrates Google Gemini AI for embeddings and chat generation, providing teaching-focused responses with context-aware personality, anti-hallucination rules, and various specialized modules.
 - **TIBER WAIVER VORP PATCH**: Separates "Trade Brain" (VORP) from "Waiver Brain" (Interest Score) based on query mode detection, integrating Waiver Wisdom API.
+- **FORGE v0.1 (Football-Oriented Recursive Grading Engine)**: Self-contained, read-only scoring module providing unified alpha scores (0-100) for WR/RB/TE/QB positions. Features position-specific weighted sub-scores (volume, efficiency, roleLeverage, stability, contextFit), trajectory tracking (rising/flat/declining), and confidence scoring (0-100). Integrates with PlayerIdentityService, Sleeper snap service, game logs, and environment services. API: `/api/forge/preview`, `/api/forge/score/:playerId`, `/api/forge/health`. Module location: `server/modules/forge/`.
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
