@@ -65,7 +65,6 @@ import etlRoutes from './routes/etlRoutes';
 import matchupRoutes from './routes/matchupRoutes';
 import strategyRoutes from './routes/strategyRoutes';
 import playerComparisonRoutes from './routes/playerComparisonRoutes';
-import silverLayerRoutes from './routes/silverLayerRoutes';
 import rookieRoutes from './routes/rookieRoutes';
 import playerIdentityRoutes from './routes/playerIdentityRoutes';
 import uphAdminRoutes from './routes/uphAdminRoutes';
@@ -3239,7 +3238,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   app.use('/api/nightly', nightlyProcessingRoutes);
   app.use('/api/etl', etlRoutes);
-  app.use('/api/silver', silverLayerRoutes);
   app.use('/api/player-identity', playerIdentityRoutes);
 
   // Enhanced player data merging with deterministic ID mapping
