@@ -13,6 +13,7 @@ import LeadersPage from "@/pages/LeadersPage";
 import TeamReportsPage from "@/pages/TeamReportsPage";
 import RagStatus from "@/pages/RagStatus";
 import WRRankingsSandbox from "@/pages/WRRankingsSandbox";
+import QBRankingsSandbox from "@/pages/QBRankingsSandbox";
 import NotFound from "@/pages/not-found";
 
 // Custom hook to reactively track URL search params (wouter only tracks pathname)
@@ -79,6 +80,9 @@ function Router() {
       
       {/* Admin: WR Rankings Sandbox */}
       <Route path="/admin/wr-rankings-sandbox" component={WRRankingsSandbox} />
+      
+      {/* Admin: QB Rankings Sandbox */}
+      <Route path="/admin/qb-rankings-sandbox" component={QBRankingsSandbox} />
       
       {/* 404 Catch-all */}
       <Route component={NotFound} />
