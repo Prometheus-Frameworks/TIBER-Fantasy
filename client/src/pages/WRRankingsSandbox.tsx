@@ -33,6 +33,40 @@ interface CandidateFormula {
   weights: { carries: number; rushYds: number; fpPerRush: number; receivingWork: number };
 }
 
+// TE Preset Types
+interface TEPreset {
+  id: string;
+  label: string;
+  weights: { volume: number; production: number; efficiency: number; stickiness: number };
+  description?: string;
+  isBuiltIn?: boolean;
+}
+
+interface TEFormulaExport {
+  version: string;
+  weights: { volume: number; production: number; efficiency: number; stickiness: number };
+}
+
+interface TECandidateFormula {
+  id: string;
+  createdAt: string;
+  weights: { volume: number; production: number; efficiency: number; stickiness: number };
+}
+
+// Built-in TE Presets
+const BUILT_IN_TE_PRESETS: TEPreset[] = [
+  { id: 'default', label: 'Default TE', weights: { volume: 40, production: 25, efficiency: 20, stickiness: 15 }, description: 'Balanced approach', isBuiltIn: true },
+  { id: 'volume-hunter', label: 'Volume Hunter', weights: { volume: 50, production: 20, efficiency: 20, stickiness: 10 }, description: 'Target hog TEs', isBuiltIn: true },
+  { id: 'red-zone', label: 'Red Zone Threat', weights: { volume: 35, production: 35, efficiency: 15, stickiness: 15 }, description: 'TD-focused TEs', isBuiltIn: true },
+  { id: 'grinder', label: 'Grinder/Field Time', weights: { volume: 25, production: 20, efficiency: 15, stickiness: 40 }, description: 'Barner/Mayer type blocking TEs', isBuiltIn: true },
+];
+
+// TE LocalStorage Keys
+const TE_WEIGHTS_KEY = 'tiber_te_sandbox_weights_v1';
+const TE_LAST_PRESET_KEY = 'tiber_te_sandbox_last_preset';
+const TE_USER_PRESETS_KEY = 'tiber_te_sandbox_user_presets';
+const TE_CANDIDATE_FORMULAS_KEY = 'tiber_te_candidate_formulas';
+
 // Built-in RB Presets
 const BUILT_IN_RB_PRESETS: RBPreset[] = [
   { id: 'default', label: 'Default RB', weights: { carries: 35, rushYds: 30, fpPerRush: 20, receivingWork: 15 }, description: 'Balanced approach', isBuiltIn: true },
@@ -47,8 +81,8 @@ const RB_LAST_PRESET_KEY = 'tiber_rb_sandbox_last_preset';
 const RB_USER_PRESETS_KEY = 'tiber_rb_sandbox_user_presets';
 const RB_CANDIDATE_FORMULAS_KEY = 'tiber_rb_candidate_formulas';
 
-type Position = 'WR' | 'RB';
-type SortField = 'playerName' | 'team' | 'gamesPlayed' | 'targets' | 'totalCarries' | 'totalRushingYards' | 'fantasyPointsPerRushAttempt' | 'fantasyPoints' | 'pointsPerTarget' | 'samplePenalty' | 'adjustedEfficiency' | 'alphaScore' | 'customAlphaScore' | 'roleScore' | 'deepTargetRate' | 'slotRouteShareEst' | 'weightedTargetsPerGame' | 'boomRate' | 'bustRate' | 'talentIndex' | 'usageStabilityIndex' | 'roleDelta' | 'redZoneDomScore' | 'energyIndex';
+type Position = 'WR' | 'RB' | 'TE';
+type SortField = 'playerName' | 'team' | 'gamesPlayed' | 'targets' | 'totalCarries' | 'totalRushingYards' | 'fantasyPointsPerRushAttempt' | 'fantasyPoints' | 'pointsPerTarget' | 'samplePenalty' | 'adjustedEfficiency' | 'alphaScore' | 'customAlphaScore' | 'roleScore' | 'deepTargetRate' | 'slotRouteShareEst' | 'weightedTargetsPerGame' | 'boomRate' | 'bustRate' | 'talentIndex' | 'usageStabilityIndex' | 'roleDelta' | 'redZoneDomScore' | 'energyIndex' | 'fpPerGame' | 'fpPerTarget' | 'routesPerGame' | 'blockingStickiness' | 'snapStickinessIndex';
 type SortOrder = 'asc' | 'desc';
 
 type RoleTier = 'ALPHA' | 'CO_ALPHA' | 'PRIMARY_SLOT' | 'SECONDARY' | 'ROTATIONAL' | 'UNKNOWN' | null;
@@ -123,6 +157,46 @@ interface RBSandboxPlayer {
   injuryType: string | null;
 }
 
+// TE-specific player interface
+interface TESandboxPlayer {
+  playerId: string;
+  playerName: string;
+  team: string;
+  gamesPlayed: number;
+  // Receiving metrics
+  totalTargets: number;
+  totalReceptions: number;
+  totalReceivingYards: number;
+  totalReceivingTDs: number;
+  fantasyPointsPpr: number;
+  // Calculated receiving metrics
+  recYdsPerGame: number;
+  fpPerGame: number;
+  fpPerTarget: number;
+  targetsPerGame: number;
+  // Route metrics
+  totalRoutes: number;
+  routesPerGame: number;
+  routeParticipation: number;
+  // Snap metrics
+  totalSnaps: number;
+  // Alignment
+  slotPct: number;
+  inlinePct: number;
+  widePct: number;
+  // Blocking (placeholders)
+  passBlockGrade: number | null;
+  runBlockGrade: number | null;
+  blockingStickiness: number;
+  // Snap Stickiness Index
+  snapStickinessIndex: number;
+  // Custom alpha
+  customAlphaScore?: number;
+  // Injury status
+  injuryStatus: string | null;
+  injuryType: string | null;
+}
+
 interface SandboxResponse {
   success: boolean;
   season: number;
@@ -130,7 +204,7 @@ interface SandboxResponse {
   minTargets?: number;
   minCarries?: number;
   count: number;
-  data: SandboxPlayer[] | RBSandboxPlayer[];
+  data: SandboxPlayer[] | RBSandboxPlayer[] | TESandboxPlayer[];
 }
 
 export default function WRRankingsSandbox() {
@@ -174,6 +248,32 @@ export default function WRRankingsSandbox() {
   // RB Phase 2: Candidate Formula State
   const [showCandidateModal, setShowCandidateModal] = useState(false);
   const [candidateLabel, setCandidateLabel] = useState('');
+
+  // TE Weight sliders (default: 40/25/20/15 for volume/production/efficiency/stickiness)
+  const [teVolumeWeight, setTeVolumeWeight] = useState(40);
+  const [teProductionWeight, setTeProductionWeight] = useState(25);
+  const [teEfficiencyWeight, setTeEfficiencyWeight] = useState(20);
+  const [teStickinessWeight, setTeStickinessWeight] = useState(15);
+
+  // TE Phase 2: Preset & Persistence State
+  const [teActivePreset, setTeActivePreset] = useState<string>('default');
+  const [teUserPresets, setTeUserPresets] = useState<TEPreset[]>([]);
+  const [teCandidateFormulas, setTeCandidateFormulas] = useState<TECandidateFormula[]>([]);
+
+  // TE Phase 2: Split-View Comparison State
+  const [teCompareMode, setTeCompareMode] = useState(false);
+  const [tePlayerA, setTePlayerA] = useState<string | null>(null);
+  const [tePlayerB, setTePlayerB] = useState<string | null>(null);
+
+  // TE Phase 2: Export/Import Modal State
+  const [showTeExportModal, setShowTeExportModal] = useState(false);
+  const [showTeImportModal, setShowTeImportModal] = useState(false);
+  const [teImportJson, setTeImportJson] = useState('');
+  const [teImportError, setTeImportError] = useState<string | null>(null);
+
+  // TE Phase 2: Candidate Formula State
+  const [showTeCandidateModal, setShowTeCandidateModal] = useState(false);
+  const [teCandidateLabel, setTeCandidateLabel] = useState('');
 
   // Load RB weights and presets from localStorage on mount
   useEffect(() => {
@@ -389,6 +489,225 @@ export default function WRRankingsSandbox() {
     console.log('[TIBER RB Role Bank v2] Preview Payload (Top 50):', rbData);
   };
 
+  // ==============================================
+  // TE PHASE 2: HOOKS & HELPER FUNCTIONS
+  // ==============================================
+
+  // Load TE weights and presets from localStorage on mount
+  useEffect(() => {
+    // Load TE user presets
+    const savedTePresets = localStorage.getItem(TE_USER_PRESETS_KEY);
+    if (savedTePresets) {
+      try {
+        setTeUserPresets(JSON.parse(savedTePresets));
+      } catch (e) { console.error('Failed to parse TE user presets'); }
+    }
+
+    // Load TE candidate formulas
+    const savedTeCandidates = localStorage.getItem(TE_CANDIDATE_FORMULAS_KEY);
+    if (savedTeCandidates) {
+      try {
+        setTeCandidateFormulas(JSON.parse(savedTeCandidates));
+      } catch (e) { console.error('Failed to parse TE candidate formulas'); }
+    }
+
+    // Load last TE preset or saved weights
+    const lastTePreset = localStorage.getItem(TE_LAST_PRESET_KEY);
+    const savedTeWeights = localStorage.getItem(TE_WEIGHTS_KEY);
+
+    if (lastTePreset) {
+      setTeActivePreset(lastTePreset);
+      const allTePresets = [...BUILT_IN_TE_PRESETS, ...(savedTePresets ? JSON.parse(savedTePresets) : [])];
+      const preset = allTePresets.find((p: TEPreset) => p.id === lastTePreset);
+      if (preset) {
+        setTeVolumeWeight(preset.weights.volume);
+        setTeProductionWeight(preset.weights.production);
+        setTeEfficiencyWeight(preset.weights.efficiency);
+        setTeStickinessWeight(preset.weights.stickiness);
+      }
+    } else if (savedTeWeights) {
+      try {
+        const weights = JSON.parse(savedTeWeights);
+        setTeVolumeWeight(weights.volume ?? 40);
+        setTeProductionWeight(weights.production ?? 25);
+        setTeEfficiencyWeight(weights.efficiency ?? 20);
+        setTeStickinessWeight(weights.stickiness ?? 15);
+      } catch (e) { console.error('Failed to parse TE saved weights'); }
+    }
+  }, []);
+
+  // Persist TE weights to localStorage when they change
+  useEffect(() => {
+    if (position === 'TE') {
+      localStorage.setItem(TE_WEIGHTS_KEY, JSON.stringify({
+        volume: teVolumeWeight,
+        production: teProductionWeight,
+        efficiency: teEfficiencyWeight,
+        stickiness: teStickinessWeight
+      }));
+    }
+  }, [position, teVolumeWeight, teProductionWeight, teEfficiencyWeight, teStickinessWeight]);
+
+  // Get all TE presets (built-in + user)
+  const allTePresets = useMemo(() => [...BUILT_IN_TE_PRESETS, ...teUserPresets], [teUserPresets]);
+
+  // Apply TE preset weights
+  const applyTePreset = (presetId: string) => {
+    const preset = allTePresets.find(p => p.id === presetId);
+    if (preset) {
+      setTeVolumeWeight(preset.weights.volume);
+      setTeProductionWeight(preset.weights.production);
+      setTeEfficiencyWeight(preset.weights.efficiency);
+      setTeStickinessWeight(preset.weights.stickiness);
+      setTeActivePreset(presetId);
+      localStorage.setItem(TE_LAST_PRESET_KEY, presetId);
+    }
+  };
+
+  // Save current TE weights as user preset
+  const saveAsTePreset = () => {
+    const presetName = prompt('Enter a name for this TE preset:');
+    if (!presetName) return;
+
+    const newPreset: TEPreset = {
+      id: `user-${Date.now()}`,
+      label: presetName,
+      weights: { volume: teVolumeWeight, production: teProductionWeight, efficiency: teEfficiencyWeight, stickiness: teStickinessWeight },
+      isBuiltIn: false
+    };
+
+    const updatedPresets = [...teUserPresets, newPreset];
+    setTeUserPresets(updatedPresets);
+    localStorage.setItem(TE_USER_PRESETS_KEY, JSON.stringify(updatedPresets));
+    setTeActivePreset(newPreset.id);
+    localStorage.setItem(TE_LAST_PRESET_KEY, newPreset.id);
+  };
+
+  // Delete TE user preset
+  const deleteTePreset = (presetId: string) => {
+    const updatedPresets = teUserPresets.filter(p => p.id !== presetId);
+    setTeUserPresets(updatedPresets);
+    localStorage.setItem(TE_USER_PRESETS_KEY, JSON.stringify(updatedPresets));
+    if (teActivePreset === presetId) {
+      applyTePreset('default');
+    }
+  };
+
+  // Export TE formula to JSON
+  const exportTeFormula = (): TEFormulaExport => ({
+    version: 'te-alpha-sandbox-v1',
+    weights: {
+      volume: teVolumeWeight / 100,
+      production: teProductionWeight / 100,
+      efficiency: teEfficiencyWeight / 100,
+      stickiness: teStickinessWeight / 100
+    }
+  });
+
+  // Copy TE formula JSON to clipboard
+  const copyTeFormulaToClipboard = () => {
+    navigator.clipboard.writeText(JSON.stringify(exportTeFormula(), null, 2));
+  };
+
+  // Download TE formula as JSON file
+  const downloadTeFormula = () => {
+    const blob = new Blob([JSON.stringify(exportTeFormula(), null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `te-formula-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Import TE formula from JSON
+  const importTeFormula = () => {
+    setTeImportError(null);
+    try {
+      const parsed = JSON.parse(teImportJson);
+      if (!parsed.weights || 
+          typeof parsed.weights.volume !== 'number' ||
+          typeof parsed.weights.production !== 'number' ||
+          typeof parsed.weights.efficiency !== 'number' ||
+          typeof parsed.weights.stickiness !== 'number') {
+        setTeImportError('Invalid format: Must include weights for volume, production, efficiency, and stickiness');
+        return;
+      }
+
+      // Normalize to sum to 1.0 if needed
+      const sum = parsed.weights.volume + parsed.weights.production + parsed.weights.efficiency + parsed.weights.stickiness;
+      const factor = sum > 0 ? (1 / sum) : 1;
+
+      setTeVolumeWeight(Math.round(parsed.weights.volume * factor * 100));
+      setTeProductionWeight(Math.round(parsed.weights.production * factor * 100));
+      setTeEfficiencyWeight(Math.round(parsed.weights.efficiency * factor * 100));
+      setTeStickinessWeight(Math.round(parsed.weights.stickiness * factor * 100));
+      setShowTeImportModal(false);
+      setTeImportJson('');
+      setTeActivePreset('custom');
+    } catch (e) {
+      setTeImportError('Invalid JSON format');
+    }
+  };
+
+  // Mark current TE formula as candidate
+  const markAsTeCandidateFormula = () => {
+    if (!teCandidateLabel.trim()) return;
+
+    const newCandidate: TECandidateFormula = {
+      id: teCandidateLabel.trim(),
+      createdAt: new Date().toISOString(),
+      weights: { volume: teVolumeWeight, production: teProductionWeight, efficiency: teEfficiencyWeight, stickiness: teStickinessWeight }
+    };
+
+    console.log('[TIBER TE Alpha] Candidate Formula Saved:', newCandidate);
+
+    const updatedCandidates = [...teCandidateFormulas, newCandidate];
+    setTeCandidateFormulas(updatedCandidates);
+    localStorage.setItem(TE_CANDIDATE_FORMULAS_KEY, JSON.stringify(updatedCandidates));
+    setShowTeCandidateModal(false);
+    setTeCandidateLabel('');
+  };
+
+  // Load TE candidate formula
+  const loadTeCandidateFormula = (candidate: TECandidateFormula) => {
+    setTeVolumeWeight(candidate.weights.volume);
+    setTeProductionWeight(candidate.weights.production);
+    setTeEfficiencyWeight(candidate.weights.efficiency);
+    setTeStickinessWeight(candidate.weights.stickiness);
+    setTeActivePreset('candidate');
+  };
+
+  // Build TE Alpha Export (Role Bank v2 Integration Hook)
+  const buildTeAlphaExport = (player: TESandboxPlayer) => ({
+    playerId: player.playerId,
+    playerName: player.playerName,
+    team: player.team,
+    alphaScore: player.customAlphaScore ?? 0,
+    targets: player.totalTargets,
+    rec: player.totalReceptions,
+    recYds: player.totalReceivingYards,
+    fpPerGame: player.fpPerGame,
+    fpPerTarget: player.fpPerTarget,
+    routesRun: player.totalRoutes,
+    slotPct: player.slotPct,
+    inlinePct: player.inlinePct,
+    widePct: player.widePct,
+    blockingStickiness: player.blockingStickiness,
+    snapStickinessIndex: player.snapStickinessIndex
+  });
+
+  // Preview TE Role Bank Payload (top 40 TEs by alphaScore)
+  const previewTeRoleBankPayload = () => {
+    if (!data?.data || position !== 'TE') return;
+    const teData = (data.data as TESandboxPlayer[])
+      .slice()
+      .sort((a, b) => (b.customAlphaScore ?? 0) - (a.customAlphaScore ?? 0))
+      .slice(0, 40)
+      .map(buildTeAlphaExport);
+    console.log('[TIBER TE Role Bank v2] Preview Payload (Top 40):', teData);
+  };
+
   // Reset weights to defaults
   const resetWeights = () => {
     if (position === 'WR') {
@@ -396,11 +715,16 @@ export default function WRRankingsSandbox() {
       setWrProdWeight(25);
       setWrEffWeight(15);
       setWrStabWeight(10);
-    } else {
+    } else if (position === 'RB') {
       setRbCarriesWeight(35);
       setRbYardsWeight(30);
       setRbFpRushWeight(20);
       setRbReceivingWeight(15);
+    } else if (position === 'TE') {
+      setTeVolumeWeight(40);
+      setTeProductionWeight(25);
+      setTeEfficiencyWeight(20);
+      setTeStickinessWeight(15);
     }
   };
 
@@ -451,7 +775,13 @@ export default function WRRankingsSandbox() {
   const savedFormulas = getSavedFormulas();
 
   const { data, isLoading } = useQuery<SandboxResponse>({
-    queryKey: [position === 'WR' ? '/api/admin/wr-rankings-sandbox' : '/api/admin/rb-rankings-sandbox'],
+    queryKey: [
+      position === 'WR' 
+        ? '/api/admin/wr-rankings-sandbox' 
+        : position === 'RB' 
+          ? '/api/admin/rb-rankings-sandbox' 
+          : '/api/admin/te-rankings-sandbox'
+    ],
   });
 
   const handleSort = (field: SortField) => {
@@ -482,7 +812,7 @@ export default function WRRankingsSandbox() {
       );
 
       return { ...wrPlayer, customAlphaScore };
-    } else {
+    } else if (position === 'RB') {
       const rbPlayer = player as RBSandboxPlayer;
       // For RB, we need to normalize carries, yards, fp/rush, and receiving work across all players
       // First pass: find max values (we'll do this inline for simplicity)
@@ -515,6 +845,49 @@ export default function WRRankingsSandbox() {
       );
 
       return { ...rbPlayer, customAlphaScore };
+    } else {
+      // TE Alpha Score Calculation
+      const tePlayer = player as TESandboxPlayer;
+      const allTEs = (data?.data ?? []) as TESandboxPlayer[];
+      
+      // Find max values for normalization
+      const maxTargets = Math.max(...allTEs.map(p => p.totalTargets), 1);
+      const maxRoutes = Math.max(...allTEs.map(p => p.totalRoutes), 1);
+      const maxFpPerGame = Math.max(...allTEs.map(p => p.fpPerGame), 1);
+      const maxFpPerTarget = Math.max(...allTEs.map(p => p.fpPerTarget), 1);
+      const maxSSI = Math.max(...allTEs.map(p => p.snapStickinessIndex), 1);
+
+      // Pillar 1: Volume (40% default) - targets + routes + slot% boost
+      const volumeScore = (
+        (tePlayer.totalTargets / maxTargets) * 0.5 +
+        (tePlayer.totalRoutes / maxRoutes) * 0.35 +
+        (tePlayer.slotPct * 0.15) // Slot bonus (more receiving role)
+      ) * 100;
+
+      // Pillar 2: Production (25% default) - fpPerGame
+      const productionScore = (tePlayer.fpPerGame / maxFpPerGame) * 100;
+
+      // Pillar 3: Efficiency (20% default) - fpPerTarget
+      const efficiencyScore = (tePlayer.fpPerTarget / maxFpPerTarget) * 100;
+
+      // Pillar 4: Snap Stickiness (15% default) - SSI
+      const stickinessScore = (tePlayer.snapStickinessIndex / maxSSI) * 100;
+
+      // Apply custom weights
+      const totalWeight = teVolumeWeight + teProductionWeight + teEfficiencyWeight + teStickinessWeight;
+      const normalizedVolume = teVolumeWeight / totalWeight;
+      const normalizedProd = teProductionWeight / totalWeight;
+      const normalizedEff = teEfficiencyWeight / totalWeight;
+      const normalizedStick = teStickinessWeight / totalWeight;
+
+      const customAlphaScore = Math.round(
+        volumeScore * normalizedVolume +
+        productionScore * normalizedProd +
+        efficiencyScore * normalizedEff +
+        stickinessScore * normalizedStick
+      );
+
+      return { ...tePlayer, customAlphaScore };
     }
   });
 
@@ -619,6 +992,21 @@ export default function WRRankingsSandbox() {
               >
                 RB
               </button>
+              <button
+                onClick={() => {
+                  setPosition('TE');
+                  setSortField('customAlphaScore');
+                  setSortOrder('desc');
+                }}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                  position === 'TE'
+                    ? 'bg-amber-600 text-white'
+                    : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+                }`}
+                data-testid="toggle-te"
+              >
+                TE
+              </button>
             </div>
           </div>
         </div>
@@ -628,12 +1016,16 @@ export default function WRRankingsSandbox() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-base font-bold text-purple-300">
-                {position === 'WR' ? '🎛️ WR Formula Weights' : '🎛️ RB Formula Weights'}
+                {position === 'WR' ? '🎛️ WR Formula Weights' : position === 'RB' ? '🎛️ RB Formula Weights' : '🎛️ TE Formula Weights'}
               </h3>
               <p className="text-xs text-gray-400 mt-1">
-                Adjust the weights to test different ranking formulas (total: {position === 'WR' 
-                  ? wrVolWeight + wrProdWeight + wrEffWeight + wrStabWeight 
-                  : rbCarriesWeight + rbYardsWeight + rbFpRushWeight + rbReceivingWeight}%)
+                Adjust the weights to test different ranking formulas (total: {
+                  position === 'WR' 
+                    ? wrVolWeight + wrProdWeight + wrEffWeight + wrStabWeight 
+                    : position === 'RB' 
+                      ? rbCarriesWeight + rbYardsWeight + rbFpRushWeight + rbReceivingWeight
+                      : teVolumeWeight + teProductionWeight + teEfficiencyWeight + teStickinessWeight
+                }%)
               </p>
             </div>
             <div className="flex gap-2">
@@ -797,6 +1189,79 @@ export default function WRRankingsSandbox() {
                   step={5}
                   className="w-full"
                   data-testid="slider-rb-receiving"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* TE Sliders */}
+          {position === 'TE' && (
+            <div className="grid grid-cols-4 gap-4">
+              {/* Volume Weight (40% default) */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-amber-200 font-medium">Volume</span>
+                  <span className="text-sm text-amber-400 font-bold">{teVolumeWeight}%</span>
+                </div>
+                <Slider
+                  value={[teVolumeWeight]}
+                  min={0}
+                  max={100}
+                  step={5}
+                  onValueChange={([val]) => setTeVolumeWeight(val)}
+                  className="w-full"
+                  data-testid="slider-te-volume"
+                />
+              </div>
+
+              {/* Production Weight (25% default) */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-amber-200 font-medium">Production</span>
+                  <span className="text-sm text-amber-400 font-bold">{teProductionWeight}%</span>
+                </div>
+                <Slider
+                  value={[teProductionWeight]}
+                  min={0}
+                  max={100}
+                  step={5}
+                  onValueChange={([val]) => setTeProductionWeight(val)}
+                  className="w-full"
+                  data-testid="slider-te-production"
+                />
+              </div>
+
+              {/* Efficiency Weight (20% default) */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-amber-200 font-medium">Efficiency</span>
+                  <span className="text-sm text-amber-400 font-bold">{teEfficiencyWeight}%</span>
+                </div>
+                <Slider
+                  value={[teEfficiencyWeight]}
+                  min={0}
+                  max={100}
+                  step={5}
+                  onValueChange={([val]) => setTeEfficiencyWeight(val)}
+                  className="w-full"
+                  data-testid="slider-te-efficiency"
+                />
+              </div>
+
+              {/* Stickiness Weight (15% default) */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-amber-200 font-medium">Stickiness</span>
+                  <span className="text-sm text-amber-400 font-bold">{teStickinessWeight}%</span>
+                </div>
+                <Slider
+                  value={[teStickinessWeight]}
+                  min={0}
+                  max={100}
+                  step={5}
+                  onValueChange={([val]) => setTeStickinessWeight(val)}
+                  className="w-full"
+                  data-testid="slider-te-stickiness"
                 />
               </div>
             </div>
@@ -1019,6 +1484,331 @@ export default function WRRankingsSandbox() {
           </div>
         )}
 
+        {/* TE Phase 2: Presets, Export/Import, Compare, Candidate */}
+        {position === 'TE' && (
+          <div className="space-y-4">
+            {/* Presets & Advanced Controls */}
+            <div className="bg-gradient-to-br from-amber-900/20 to-orange-900/20 border border-amber-500/30 rounded-lg p-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                {/* Preset Dropdown */}
+                <div className="flex items-center gap-3">
+                  <label className="text-sm text-amber-300 font-medium">Preset:</label>
+                  <select
+                    value={teActivePreset}
+                    onChange={(e) => applyTePreset(e.target.value)}
+                    className="px-3 py-1.5 bg-gray-800 border border-gray-700 text-white rounded-lg text-sm cursor-pointer"
+                    data-testid="te-preset-select"
+                  >
+                    <option value="">Custom</option>
+                    {BUILT_IN_TE_PRESETS.map(p => (
+                      <option key={p.id} value={p.id}>{p.label}</option>
+                    ))}
+                    {teUserPresets.map(p => (
+                      <option key={p.id} value={p.id}>[User] {p.label}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={saveAsTePreset}
+                    className="px-2 py-1.5 bg-amber-600/50 hover:bg-amber-600/70 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
+                    data-testid="te-save-preset"
+                  >
+                    <Save className="w-3 h-3" />
+                    Save as Preset
+                  </button>
+                  {teUserPresets.find(p => p.id === teActivePreset) && (
+                    <button
+                      onClick={() => deleteTePreset(teActivePreset)}
+                      className="px-2 py-1.5 bg-red-600/50 hover:bg-red-600/70 text-white rounded-lg text-xs font-medium transition-colors"
+                      data-testid="te-delete-preset"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Export/Import/Compare/Candidate */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowTeExportModal(true)}
+                    className="px-3 py-1.5 bg-blue-600/50 hover:bg-blue-600/70 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                    data-testid="te-export-formula"
+                  >
+                    <Download className="w-3 h-3" />
+                    Export
+                  </button>
+                  <button
+                    onClick={() => setShowTeImportModal(true)}
+                    className="px-3 py-1.5 bg-blue-600/50 hover:bg-blue-600/70 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                    data-testid="te-import-formula"
+                  >
+                    <Upload className="w-3 h-3" />
+                    Import
+                  </button>
+                  <button
+                    onClick={() => setTeCompareMode(!teCompareMode)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                      teCompareMode ? 'bg-purple-600 text-white' : 'bg-purple-600/50 hover:bg-purple-600/70 text-white'
+                    }`}
+                    data-testid="te-compare-toggle"
+                  >
+                    <Users className="w-3 h-3" />
+                    Compare
+                  </button>
+                  <button
+                    onClick={() => setShowTeCandidateModal(true)}
+                    className="px-3 py-1.5 bg-amber-600/50 hover:bg-amber-600/70 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                    data-testid="te-mark-candidate"
+                  >
+                    <GitBranch className="w-3 h-3" />
+                    Mark Candidate
+                  </button>
+                  <button
+                    onClick={previewTeRoleBankPayload}
+                    className="px-3 py-1.5 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                    data-testid="te-preview-payload"
+                  >
+                    <Eye className="w-3 h-3" />
+                    Preview Payload
+                  </button>
+                </div>
+              </div>
+
+              {/* Candidate Formulas List */}
+              {teCandidateFormulas.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-amber-500/20">
+                  <h4 className="text-xs font-semibold text-amber-400 mb-2">Saved Candidate Formulas</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {teCandidateFormulas.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => loadTeCandidateFormula(c)}
+                        className="px-2 py-1 bg-amber-800/30 hover:bg-amber-800/50 text-amber-300 rounded text-xs transition-colors"
+                        data-testid={`te-candidate-${c.id}`}
+                      >
+                        {c.id} ({new Date(c.createdAt).toLocaleDateString()})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Split-View Comparison */}
+            {teCompareMode && (
+              <div className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 border border-purple-500/30 rounded-lg p-4">
+                <h3 className="text-sm font-bold text-purple-300 mb-4">Side-by-Side Comparison</h3>
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Player A */}
+                  <div className="space-y-3">
+                    <select
+                      value={tePlayerA || ''}
+                      onChange={(e) => setTePlayerA(e.target.value || null)}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 text-white rounded-lg text-sm"
+                      data-testid="te-compare-player-a"
+                    >
+                      <option value="">Select Player A</option>
+                      {(dataWithCustomScores as TESandboxPlayer[])?.map(p => (
+                        <option key={p.playerId} value={p.playerId}>{p.playerName} ({p.team})</option>
+                      ))}
+                    </select>
+                    {tePlayerA && (() => {
+                      const playerA = (dataWithCustomScores as TESandboxPlayer[])?.find(p => p.playerId === tePlayerA);
+                      const playerB = tePlayerB ? (dataWithCustomScores as TESandboxPlayer[])?.find(p => p.playerId === tePlayerB) : null;
+                      if (!playerA) return null;
+                      const compareVal = (a: number, b: number | undefined) => {
+                        if (b === undefined) return '';
+                        return a > b ? 'text-green-400 font-bold' : a < b ? 'text-red-400' : '';
+                      };
+                      return (
+                        <div className="bg-gray-800/50 rounded-lg p-3 space-y-2 text-sm">
+                          <div className="font-semibold text-white">{playerA.playerName} <span className="text-gray-500">({playerA.team})</span></div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                            <div className="text-gray-400">Games</div><div className={compareVal(playerA.gamesPlayed, playerB?.gamesPlayed)}>{playerA.gamesPlayed}</div>
+                            <div className="text-gray-400">Targets</div><div className={compareVal(playerA.totalTargets, playerB?.totalTargets)}>{playerA.totalTargets}</div>
+                            <div className="text-gray-400">Targets/G</div><div className={compareVal(playerA.targetsPerGame, playerB?.targetsPerGame)}>{playerA.targetsPerGame.toFixed(1)}</div>
+                            <div className="text-gray-400">Rec</div><div className={compareVal(playerA.totalReceptions, playerB?.totalReceptions)}>{playerA.totalReceptions}</div>
+                            <div className="text-gray-400">Rec Yds</div><div className={compareVal(playerA.totalReceivingYards, playerB?.totalReceivingYards)}>{playerA.totalReceivingYards}</div>
+                            <div className="text-gray-400">FP/Game</div><div className={compareVal(playerA.fpPerGame, playerB?.fpPerGame)}>{playerA.fpPerGame.toFixed(1)}</div>
+                            <div className="text-gray-400">FP/Target</div><div className={compareVal(playerA.fpPerTarget, playerB?.fpPerTarget)}>{playerA.fpPerTarget.toFixed(2)}</div>
+                            <div className="text-gray-400">Routes</div><div className={compareVal(playerA.totalRoutes, playerB?.totalRoutes)}>{playerA.totalRoutes}</div>
+                            <div className="text-gray-400">Slot%</div><div className={compareVal(playerA.slotPct, playerB?.slotPct)}>{(playerA.slotPct * 100).toFixed(0)}%</div>
+                            <div className="text-gray-400">Inline%</div><div className={compareVal(playerA.inlinePct, playerB?.inlinePct)}>{(playerA.inlinePct * 100).toFixed(0)}%</div>
+                            <div className="text-gray-400">Snap Stickiness</div><div className={compareVal(playerA.snapStickinessIndex, playerB?.snapStickinessIndex)}>{playerA.snapStickinessIndex.toFixed(1)}</div>
+                            <div className="text-purple-400 font-medium">Alpha Score</div><div className={`font-bold ${compareVal(playerA.customAlphaScore ?? 0, playerB?.customAlphaScore)}`}>{playerA.customAlphaScore ?? 0}</div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Player B */}
+                  <div className="space-y-3">
+                    <select
+                      value={tePlayerB || ''}
+                      onChange={(e) => setTePlayerB(e.target.value || null)}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 text-white rounded-lg text-sm"
+                      data-testid="te-compare-player-b"
+                    >
+                      <option value="">Select Player B</option>
+                      {(dataWithCustomScores as TESandboxPlayer[])?.map(p => (
+                        <option key={p.playerId} value={p.playerId}>{p.playerName} ({p.team})</option>
+                      ))}
+                    </select>
+                    {tePlayerB && (() => {
+                      const playerB = (dataWithCustomScores as TESandboxPlayer[])?.find(p => p.playerId === tePlayerB);
+                      const playerA = tePlayerA ? (dataWithCustomScores as TESandboxPlayer[])?.find(p => p.playerId === tePlayerA) : null;
+                      if (!playerB) return null;
+                      const compareVal = (b: number, a: number | undefined) => {
+                        if (a === undefined) return '';
+                        return b > a ? 'text-green-400 font-bold' : b < a ? 'text-red-400' : '';
+                      };
+                      return (
+                        <div className="bg-gray-800/50 rounded-lg p-3 space-y-2 text-sm">
+                          <div className="font-semibold text-white">{playerB.playerName} <span className="text-gray-500">({playerB.team})</span></div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                            <div className="text-gray-400">Games</div><div className={compareVal(playerB.gamesPlayed, playerA?.gamesPlayed)}>{playerB.gamesPlayed}</div>
+                            <div className="text-gray-400">Targets</div><div className={compareVal(playerB.totalTargets, playerA?.totalTargets)}>{playerB.totalTargets}</div>
+                            <div className="text-gray-400">Targets/G</div><div className={compareVal(playerB.targetsPerGame, playerA?.targetsPerGame)}>{playerB.targetsPerGame.toFixed(1)}</div>
+                            <div className="text-gray-400">Rec</div><div className={compareVal(playerB.totalReceptions, playerA?.totalReceptions)}>{playerB.totalReceptions}</div>
+                            <div className="text-gray-400">Rec Yds</div><div className={compareVal(playerB.totalReceivingYards, playerA?.totalReceivingYards)}>{playerB.totalReceivingYards}</div>
+                            <div className="text-gray-400">FP/Game</div><div className={compareVal(playerB.fpPerGame, playerA?.fpPerGame)}>{playerB.fpPerGame.toFixed(1)}</div>
+                            <div className="text-gray-400">FP/Target</div><div className={compareVal(playerB.fpPerTarget, playerA?.fpPerTarget)}>{playerB.fpPerTarget.toFixed(2)}</div>
+                            <div className="text-gray-400">Routes</div><div className={compareVal(playerB.totalRoutes, playerA?.totalRoutes)}>{playerB.totalRoutes}</div>
+                            <div className="text-gray-400">Slot%</div><div className={compareVal(playerB.slotPct, playerA?.slotPct)}>{(playerB.slotPct * 100).toFixed(0)}%</div>
+                            <div className="text-gray-400">Inline%</div><div className={compareVal(playerB.inlinePct, playerA?.inlinePct)}>{(playerB.inlinePct * 100).toFixed(0)}%</div>
+                            <div className="text-gray-400">Snap Stickiness</div><div className={compareVal(playerB.snapStickinessIndex, playerA?.snapStickinessIndex)}>{playerB.snapStickinessIndex.toFixed(1)}</div>
+                            <div className="text-purple-400 font-medium">Alpha Score</div><div className={`font-bold ${compareVal(playerB.customAlphaScore ?? 0, playerA?.customAlphaScore)}`}>{playerB.customAlphaScore ?? 0}</div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TE Export Formula Modal */}
+        {showTeExportModal && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-lg w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white">Export TE Formula JSON</h3>
+                <button onClick={() => setShowTeExportModal(false)} className="text-gray-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <pre className="bg-gray-800 p-4 rounded-lg text-sm text-amber-300 overflow-x-auto mb-4">
+                {JSON.stringify(exportTeFormula(), null, 2)}
+              </pre>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { copyTeFormulaToClipboard(); setShowTeExportModal(false); }}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                  data-testid="te-copy-formula"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copy to Clipboard
+                </button>
+                <button
+                  onClick={() => { downloadTeFormula(); setShowTeExportModal(false); }}
+                  className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                  data-testid="te-download-formula"
+                >
+                  <Download className="w-4 h-4" />
+                  Download File
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TE Import Formula Modal */}
+        {showTeImportModal && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-lg w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white">Import TE Formula JSON</h3>
+                <button onClick={() => { setShowTeImportModal(false); setTeImportJson(''); setTeImportError(null); }} className="text-gray-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <textarea
+                value={teImportJson}
+                onChange={(e) => setTeImportJson(e.target.value)}
+                placeholder='Paste JSON here, e.g., {"version":"te-alpha-sandbox-v1","weights":{"volume":40,...}}'
+                className="w-full h-40 px-3 py-2 bg-gray-800 border border-gray-700 text-white rounded-lg text-sm font-mono"
+                data-testid="te-import-json-input"
+              />
+              {teImportError && (
+                <p className="mt-2 text-sm text-red-400">{teImportError}</p>
+              )}
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={() => { setShowTeImportModal(false); setTeImportJson(''); setTeImportError(null); }}
+                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={importTeFormula}
+                  className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                  data-testid="te-apply-import"
+                >
+                  <Upload className="w-4 h-4" />
+                  Apply Formula
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TE Candidate Formula Modal */}
+        {showTeCandidateModal && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white">Mark as TE Candidate Formula</h3>
+                <button onClick={() => { setShowTeCandidateModal(false); setTeCandidateLabel(''); }} className="text-gray-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <input
+                type="text"
+                value={teCandidateLabel}
+                onChange={(e) => setTeCandidateLabel(e.target.value)}
+                placeholder="e.g., te-alpha-v0.1"
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 text-white rounded-lg text-sm mb-4"
+                data-testid="te-candidate-label-input"
+              />
+              <div className="bg-gray-800 p-3 rounded-lg mb-4">
+                <p className="text-xs text-gray-400">Current Weights:</p>
+                <p className="text-sm text-white mt-1">
+                  Volume: {teVolumeWeight}% | Production: {teProductionWeight}% | Efficiency: {teEfficiencyWeight}% | Stickiness: {teStickinessWeight}%
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowTeCandidateModal(false); setTeCandidateLabel(''); }}
+                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={markAsTeCandidateFormula}
+                  disabled={!teCandidateLabel.trim()}
+                  className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-600 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                  data-testid="te-save-candidate"
+                >
+                  <GitBranch className="w-4 h-4" />
+                  Save Candidate
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Export Formula Modal */}
         {showExportModal && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
@@ -1214,7 +2004,136 @@ export default function WRRankingsSandbox() {
         )}
 
         {/* Table */}
-        {position === 'RB' ? (
+        {position === 'TE' ? (
+          // TE Table (Targets, Rec, Routes, Slot%, FP/G, FP/Tgt, Stickiness)
+          <div className="bg-[#111217] border border-gray-800/50 rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-[#0d0e11] border-b border-gray-800/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      Rank
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="playerName" label="Player" />
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="team" label="Team" />
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="gamesPlayed" label="Games" />
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-green-400 uppercase tracking-wider">
+                      Targets
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-cyan-400 uppercase tracking-wider">
+                      Tgt/G
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                      Rec
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-amber-400 uppercase tracking-wider">
+                      Rec Yds
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-pink-400 uppercase tracking-wider">
+                      FP/G
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-orange-400 uppercase tracking-wider">
+                      FP/Tgt
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-teal-400 uppercase tracking-wider">
+                      Routes
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-indigo-400 uppercase tracking-wider">
+                      Slot%
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-yellow-400 uppercase tracking-wider">
+                      Inline%
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+                      Snap Stickiness
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-purple-400 uppercase tracking-wider">
+                      <button 
+                        onClick={() => handleSort('customAlphaScore')}
+                        className="flex items-center gap-1 hover:text-purple-300 transition-colors"
+                        data-testid="te-sort-customAlphaScore"
+                      >
+                        <span>Custom Score</span>
+                        <ArrowUpDown className="w-3 h-3" />
+                      </button>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    [...Array(10)].map((_, idx) => (
+                      <tr key={idx} className="border-b border-gray-800/30">
+                        <td colSpan={15} className="px-4 py-4">
+                          <div className="h-8 bg-gray-700/30 rounded animate-pulse"></div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    sortedData?.map((player, idx) => {
+                      const tePlayer = player as TESandboxPlayer;
+                      const isCustomWeights = teVolumeWeight !== 40 || teProductionWeight !== 25 || teEfficiencyWeight !== 20 || teStickinessWeight !== 15;
+                      return (
+                        <tr
+                          key={tePlayer.playerId}
+                          className="border-b border-gray-800/30 hover:bg-amber-500/5 transition-colors"
+                          data-testid={`te-sandbox-row-${idx}`}
+                        >
+                          <td className="px-4 py-3 text-gray-500 font-medium">{idx + 1}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-white">{tePlayer.playerName}</span>
+                              {(tePlayer.injuryStatus === 'IR' || tePlayer.injuryStatus === 'OUT' || tePlayer.injuryStatus === 'PUP') && (
+                                <span className="px-1.5 py-0.5 bg-red-600/80 text-white text-[10px] font-bold rounded uppercase tracking-wide">
+                                  {tePlayer.injuryStatus}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="px-2 py-1 bg-gray-800/70 text-gray-300 rounded text-xs font-medium">
+                              {tePlayer.team}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center text-gray-300">{tePlayer.gamesPlayed}</td>
+                          <td className="px-4 py-3 text-center text-green-300 font-semibold">{tePlayer.totalTargets}</td>
+                          <td className="px-4 py-3 text-center text-cyan-300">{tePlayer.targetsPerGame.toFixed(1)}</td>
+                          <td className="px-4 py-3 text-center text-blue-300">{tePlayer.totalReceptions}</td>
+                          <td className="px-4 py-3 text-center text-amber-300">{tePlayer.totalReceivingYards}</td>
+                          <td className="px-4 py-3 text-center text-pink-300 font-medium">{tePlayer.fpPerGame.toFixed(1)}</td>
+                          <td className="px-4 py-3 text-center text-orange-300">{tePlayer.fpPerTarget.toFixed(2)}</td>
+                          <td className="px-4 py-3 text-center text-teal-300">{tePlayer.totalRoutes}</td>
+                          <td className="px-4 py-3 text-center text-indigo-300">{(tePlayer.slotPct * 100).toFixed(0)}%</td>
+                          <td className="px-4 py-3 text-center text-yellow-300">{(tePlayer.inlinePct * 100).toFixed(0)}%</td>
+                          <td className="px-4 py-3 text-center text-emerald-300 font-medium">{tePlayer.snapStickinessIndex.toFixed(1)}</td>
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex flex-col items-center gap-0.5">
+                              <span className="font-bold text-purple-400 text-base">{tePlayer.customAlphaScore ?? 0}</span>
+                              {isCustomWeights && (
+                                <span className="text-[9px] text-purple-300/60 uppercase tracking-wide">custom</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+
+              {!isLoading && sortedData?.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  No data available
+                </div>
+              )}
+            </div>
+          </div>
+        ) : position === 'RB' ? (
           // RB Simple Table (Total Carries, Total Rush Yds, FP/Rush)
           <div className="bg-[#111217] border border-gray-800/50 rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
