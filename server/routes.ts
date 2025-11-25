@@ -35,12 +35,12 @@ import { depthChartService } from './services/depthChartService';
 import { verify2024GameLogs } from './api/verify-2024-game-logs';
 import { parseFullGameLogs } from './api/parse-full-game-logs';
 import { exportPositionalGameLogs } from './api/export-positional-game-logs';
-import { snapPercentageService } from './services/snapPercentageService';
-import { testSnapPercentages } from './api/test-snap-percentages';
-import { generateWRSnapData } from './api/generate-wr-snap-data';
+// SNAP SERVICES: Consolidated into canonical sleeperSnapService
 import { sleeperSnapService } from './services/sleeperSnapService';
 import { sleeperSnapPipeline } from './services/sleeperSnapPipeline';
-import { sleeperWeeklySnapService } from './services/sleeperWeeklySnapService';
+import { testSnapPercentages } from './api/test-snap-percentages';
+import { generateWRSnapData } from './api/generate-wr-snap-data';
+// REMOVED: sleeperWeeklySnapService, snapPercentageService (consolidated into sleeperSnapService)
 // REMOVED: sleeperStrictSnapService and wrRatingsService (LEGACY_UNUSED)
 import { wrGameLogsService } from './services/wrGameLogsService';
 import { playerPoolService } from './playerPool';
@@ -1782,7 +1782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('🔍 Verifying Sleeper API snap percentage fields...');
       
-      const verification = await sleeperWeeklySnapService.verifySleeperSnapFields();
+      const verification = await sleeperSnapService.verifySleeperSnapFields();
       
       res.json({
         success: true,
@@ -1813,7 +1813,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('🚀 Collecting WR snap percentages from Sleeper weekly stats...');
       
-      const wrSnapData = await sleeperWeeklySnapService.collectWRSnapPercentages();
+      const wrSnapData = await sleeperSnapService.collectWRSnapPercentages();
       
       res.json({
         success: true,
@@ -1846,7 +1846,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`🎯 Getting snap data for player: ${playerName}`);
       
-      const playerData = await sleeperWeeklySnapService.getPlayerSnapData(playerName);
+      const playerData = await sleeperSnapService.getPlayerSnapData(playerName);
       
       if (playerData) {
         res.json({
@@ -1894,7 +1894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('🏈 Fetching snap percentages for top 50 WRs...');
       
-      const snapData = await snapPercentageService.getTop50WRSnapPercentages();
+      const snapData = await sleeperSnapService.getTop50WRSnapPercentages();
       
       console.log(`✅ Snap Percentages API: Returning ${snapData.length} WRs with weekly snap data`);
       res.json({

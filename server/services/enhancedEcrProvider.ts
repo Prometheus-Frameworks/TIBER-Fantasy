@@ -1,16 +1,19 @@
-/*
-  ENHANCED ECR PROVIDER — Production-Ready Solution
-  ------------------------------------------------
-  Problem: FantasyPros blocks direct API access.
-  Solution: Bring-Your-Own-ECR with:
-   1) **CSV Download Support** - Manual or automated CSV from FantasyPros "Download CSV" button
-   2) **Remote URL Fallback** - Fetch from your own hosted CSV (S3/GitHub etc)
-   3) **Multi-Format Support** - Weekly, ROS (Rest of Season), Dynasty rankings
-   4) **Market Integration** - Sleeper ADP and start% data
-   5) **Feature Building** - Complete PlayerFeatureVector construction
-
-  Integration: This replaces the basic ECR loader with production-ready solution
-*/
+/**
+ * CANONICAL ECR PROVIDER (temporary until FORGE replaces ECR)
+ * 
+ * ENHANCED ECR PROVIDER — Production-Ready Solution
+ * ------------------------------------------------
+ * Problem: FantasyPros blocks direct API access.
+ * Solution: Bring-Your-Own-ECR with:
+ *  1) **CSV Download Support** - Manual or automated CSV from FantasyPros "Download CSV" button
+ *  2) **Remote URL Fallback** - Fetch from your own hosted CSV (S3/GitHub etc)
+ *  3) **Multi-Format Support** - Weekly, ROS (Rest of Season), Dynasty rankings
+ *  4) **Market Integration** - Sleeper ADP and start% data
+ *  5) **Feature Building** - Complete PlayerFeatureVector construction
+ *
+ * All ECR-related routes should use this service.
+ * ECR support files: ecrLoader.ts (admin upload), ecrService.ts (static comparison data)
+ */
 
 import * as fs from "fs";
 import * as path from "path";
