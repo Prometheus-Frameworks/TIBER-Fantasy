@@ -26,7 +26,7 @@ const BUILT_IN_QB_PRESETS: QBPreset[] = [
   { id: 'default', label: 'Balanced QB', weights: { volume: 25, production: 25, efficiency: 35, context: 15 }, description: 'Default weights', isBuiltIn: true },
   { id: 'deep-ball', label: 'Deep Ball Hunter', weights: { volume: 20, production: 25, efficiency: 45, context: 10 }, description: 'Prioritize efficiency & deep accuracy', isBuiltIn: true },
   { id: 'game-manager', label: 'Game Manager', weights: { volume: 30, production: 20, efficiency: 40, context: 10 }, description: 'Volume + efficiency focus', isBuiltIn: true },
-  { id: 'dual-threat', label: 'Dual Threat', weights: { volume: 20, production: 40, efficiency: 30, context: 10 }, description: 'Rushing value prioritized', isBuiltIn: true },
+  { id: 'dual-threat', label: 'Dual Threat', weights: { volume: 20, production: 35, efficiency: 30, context: 15 }, description: 'Rushing value prioritized', isBuiltIn: true },
   { id: 'pure-efficiency', label: 'Pure Efficiency', weights: { volume: 15, production: 20, efficiency: 55, context: 10 }, description: 'Maximum EPA/CPOE weight', isBuiltIn: true },
 ];
 
@@ -277,12 +277,24 @@ export default function QBRankingsSandbox() {
     const totalWeight = volumeWeight + productionWeight + efficiencyWeight + contextWeight;
     if (totalWeight === 0) return 0;
     
-    return (
+    // Base weighted score from 4 pillars
+    let baseScore = (
       (player.volumeIndex * volumeWeight / totalWeight) +
       (player.productionIndex * productionWeight / totalWeight) +
       (player.efficiencyIndex * efficiencyWeight / totalWeight) +
       (player.contextIndex * contextWeight / totalWeight)
     );
+    
+    // Konami boost for high rushing QBs (Hurts, Allen, Jackson, Daniels, Fields, Dart)
+    // 10% boost for 6+ rush FP/G, 5% boost for 4-6 rush FP/G
+    let konamiBoostFactor = 1.0;
+    if (player.rushFpPerGame >= 6) {
+      konamiBoostFactor = 1.10;
+    } else if (player.rushFpPerGame >= 4) {
+      konamiBoostFactor = 1.05;
+    }
+    
+    return baseScore * konamiBoostFactor;
   };
 
   const processedData = useMemo(() => {

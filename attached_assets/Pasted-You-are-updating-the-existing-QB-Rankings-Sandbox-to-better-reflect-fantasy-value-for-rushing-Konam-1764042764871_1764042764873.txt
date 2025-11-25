@@ -1,0 +1,140 @@
+You are updating the existing QB Rankings Sandbox to better reflect fantasy value for rushing (Konami/QB run threats) and to fix a context pillar display issue.
+
+DO NOT:
+- Do not change the 4-pillar structure (Volume, Production, Efficiency, Context).
+- Do not change the alphaScore formula shape (weighted sum of 4 pillars).
+- Do not remove or rename existing presets.
+- Do not modify non-QB sandboxes.
+
+You MAY:
+- Adjust the internal formula for the Production pillar.
+- Adjust the default weights for the "Dual Threat" preset.
+- Add a small Konami boost factor based on Rush FP/G.
+- Fix the Context column so it displays the true per-player contextIndex.
+- Tighten archetype classification rules to correctly tag Dual Threat QBs.
+
+==================================================
+TASK 1 – Boost rushing inside Production pillar
+==================================================
+
+Current Production pillar uses a mix of:
+- fantasyPointsPerGame
+- passing TDs per game
+- rushing fantasy points per game
+- red zone TDs per game
+
+Update the productionIndex calculation to:
+
+  fpPerGameNorm      = normalize(fpPerGame)
+  passTDsPerGameNorm = normalize(passTDsPerGame)
+  rushFpPerGameNorm  = normalize(rushFpPerGame)
+  rzTDsPerGameNorm   = normalize(rzTDsPerGame)
+
+  productionIndex =
+      0.45 * fpPerGameNorm
+    + 0.30 * rushFpPerGameNorm
+    + 0.15 * passTDsPerGameNorm
+    + 0.10 * rzTDsPerGameNorm
+
+Normalize each component 0–1 across the QB sample (same season) before weighting. Rush FP/G should now have a substantial impact on this pillar.
+
+==================================================
+TASK 2 – Adjust "Dual Threat" preset weights
+==================================================
+
+Keep the default "Balanced QB" preset as-is.
+
+Update the "Dual Threat" preset weights to:
+
+- Volume:     20
+- Production: 35
+- Efficiency: 30
+- Context:    15
+
+Ensure:
+- The preset still sums to 100%.
+- When "Dual Threat" is selected, these weights are applied to alphaScore.
+
+==================================================
+TASK 3 – Optional Konami boost for high rushing QBs
+==================================================
+
+Add an optional Konami boost that is always ON for now (no toggle needed yet, but code it so it could be toggled later).
+
+After computing alphaScore from the 4 pillars, apply:
+
+  konamiBoostFactor = 1.0
+
+  if rushFpPerGame >= 6:
+      konamiBoostFactor = 1.10
+  elif rushFpPerGame >= 4:
+      konamiBoostFactor = 1.05
+
+  alphaScore = alphaScore * konamiBoostFactor
+
+This is a soft 5–10% boost for true rushing threats only (e.g., Hurts, Allen, Fields, Daniels, Dart, Lamar). Do not apply any boost for low-rush FP QBs.
+
+==================================================
+TASK 4 – Fix Context pillar display
+==================================================
+
+Currently the "Ctx" column in the QB table appears to be constant (e.g. 73.8) for all QBs.
+
+Fix this so that:
+
+- Each row displays the actual per-player contextIndex (0–100 scale).
+- contextIndex should be computed using the existing formula that combines:
+  - olinePassBlockGrade
+  - wrRoomYPRR
+  - schemePace
+  - situationNeutralEPA
+
+Verify:
+- contextIndex differs between QBs (e.g. "O-line Victim" vs high-support environments).
+- The "Context" column is no longer a constant value.
+
+==================================================
+TASK 5 – Tighten archetype classification for Dual Threat QBs
+==================================================
+
+Update the archetype logic to ensure high-rushing QBs are correctly tagged as "DUAL THREAT".
+
+Suggested rules (you can tune thresholds based on the actual data):
+
+- If rushFpPerGame >= 5 OR designedRushShare is above a reasonable threshold:
+    archetype = "DUAL THREAT"
+- Else if rushFpPerGame <= 1 and scrambleRate is low:
+    archetype = "POCKET"
+- Else:
+    keep existing classification for GAME MANAGER / DEVELOPING / etc.
+
+Make sure QBs like:
+- Jalen Hurts
+- Josh Allen
+- Lamar Jackson
+- Jayden Daniels
+- Justin Fields
+- Jaxson Dart
+
+are classified as "DUAL THREAT" where their usage supports it.
+
+==================================================
+TASK 6 – Validation
+==================================================
+
+After changes:
+
+- Verify the API still returns 34 QBs successfully (HTTP 200).
+- Confirm alphaScore changes when:
+  - Production weights change
+  - Konami boost is applied (inspect high-rush QBs vs low-rush).
+- Check that:
+  - Jayden Daniels / Fields / Dart / Hurts move up relative to pure pocket guys under the default and "Dual Threat" presets.
+  - Context column shows diverse values, especially for QBs tagged "O-line Victim".
+- Keep all export/import and candidate formula features working as before.
+
+Add a brief note in replit.md describing:
+- The new Production weighting,
+- The Konami boost behavior,
+- The contextIndex display fix,
+- The updated archetype rules.

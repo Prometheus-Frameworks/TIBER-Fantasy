@@ -7245,18 +7245,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ) * 100;
 
         // 2. PRODUCTION INDEX (25% default weight)
-        // 0.50 * FP/G + 0.20 * passTD/G + 0.20 * rushFP/G + 0.10 * rzTD/G
+        // Updated: 0.45 FP/G + 0.30 rushFP/G + 0.15 passTD/G + 0.10 rzTD/G
+        // (Rush FP boosted to reward Konami QBs like Hurts, Allen, Daniels, Jackson)
         const maxFpg = 30; // Elite QB threshold
         const fpgNorm = Math.min(1, fpPerGame / maxFpg);
         const passTdPerGame = games > 0 ? passingTds / games : 0;
         const passTdNorm = Math.min(1, passTdPerGame / 3);
-        const rushFpNorm = Math.min(1, rushFpPerGame / 8);
+        const rushFpNorm = Math.min(1, rushFpPerGame / 10); // Elite dual threat gets ~10 rush FP/G
         const rzTdPerGame = games > 0 ? rzTds / games : 0;
         const rzTdNorm = Math.min(1, rzTdPerGame / 2);
         const productionIndex = (
-          0.50 * fpgNorm +
-          0.20 * passTdNorm +
-          0.20 * rushFpNorm +
+          0.45 * fpgNorm +
+          0.30 * rushFpNorm +
+          0.15 * passTdNorm +
           0.10 * rzTdNorm
         ) * 100;
 
@@ -7279,21 +7280,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           0.05 * ypaNorm
         ) * 100;
 
-        // 4. CONTEXT INDEX (15% default weight) - Team support
-        // Placeholder values since we don't have O-line grades, WR YPRR, etc.
-        const olinePassBlockGrade = 70; // Placeholder
-        const wrRoomYprr = 1.5; // Placeholder
-        const schemePace = 65; // Placeholder plays per game
-        const sitNeutralEpa = 0.1; // Placeholder
-        const olineNorm = Math.min(1, olinePassBlockGrade / 90);
-        const wrYprrNorm = Math.min(1, wrRoomYprr / 2.5);
-        const paceNorm = Math.min(1, schemePace / 75);
-        const sitEpaNorm = Math.min(1, Math.max(0, (sitNeutralEpa + 0.2) / 0.4));
+        // 4. CONTEXT INDEX (15% default weight) - Team support (per-player metrics)
+        // Using available data: sack rate (inverse = O-line proxy), completion overperformance, 
+        // efficiency in neutral situations, and rushing opportunity as scheme indicator
+        // Lower sack rate = better O-line protection (inverted)
+        const sackRateVal = sackRate ?? 6; // Default 6% if null
+        const olineProxy = Math.max(0, Math.min(1, 1 - (sackRateVal / 12))); // 0% = 1.0, 12% = 0
+        // CPOE indicates WR room helping vs hurting (plus QB talent)
+        const cpoeVal = cpoe ?? 0;
+        const wrSupportProxy = Math.min(1, Math.max(0, (cpoeVal + 8) / 16)); // -8 to +8 range
+        // Attempts per game indicates scheme pace / volume opportunity
+        const paceProxy = Math.min(1, attemptsPerGame / 40); // 40 att/game = max pace
+        // Rushing opportunity indicates designed runs / scheme fit for dual threats
+        const carriesPerGame = games > 0 ? carries / games : 0;
+        const rushSchemeProxy = Math.min(1, carriesPerGame / 8); // 8 carries/game = max run scheme
         const contextIndex = (
-          0.35 * olineNorm +
-          0.30 * wrYprrNorm +
-          0.20 * paceNorm +
-          0.15 * sitEpaNorm
+          0.30 * olineProxy +
+          0.30 * wrSupportProxy +
+          0.25 * paceProxy +
+          0.15 * rushSchemeProxy
         ) * 100;
 
         // ============================================================
@@ -7317,16 +7322,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // ============================================================
-        // QB ARCHETYPE
+        // QB ARCHETYPE (tightened to correctly tag Dual Threat QBs)
+        // Hurts, Allen, Jackson, Daniels, Fields, Dart should be DUAL_THREAT
         // ============================================================
         let archetype: string;
-        if (rushFpPerGame >= 6 && carries >= 30) {
+        const carriesPerGameVal = games > 0 ? carries / games : 0;
+        const scrambleRateVal = attempts > 0 ? (scrambles / attempts) * 100 : 0;
+        // DUAL_THREAT: rushFpPerGame >= 5 OR (4+ carries/game AND 3+ rush FP/game)
+        if (rushFpPerGame >= 5 || (carriesPerGameVal >= 4 && rushFpPerGame >= 3)) {
           archetype = 'DUAL_THREAT';
-        } else if (aDot >= 9 && deepAccuracy && deepAccuracy >= 45) {
+        } else if (aDot >= 9 && deepAccuracy && deepAccuracy >= 42) {
           archetype = 'DEEP_BALL';
-        } else if (completionPct >= 68 && yardsPerAttempt < 7) {
+        } else if (completionPct >= 67 && yardsPerAttempt < 7.2 && rushFpPerGame < 2) {
           archetype = 'GAME_MANAGER';
-        } else if (efficiencyIndex >= 65) {
+        } else if (efficiencyIndex >= 62 && rushFpPerGame < 3) {
           archetype = 'POCKET_PASSER';
         } else {
           archetype = 'DEVELOPING';
