@@ -1,0 +1,188 @@
+We’ve completed an audit of the ELT-style routes in the TIBER Fantasy backend.
+
+Now we want to remove the old Bronze/Silver/Gold route layers and the unused inline hot-list routes, while keeping all active features intact.
+
+This is a delete + cleanup task.
+
+1) Delete Bronze/Silver/Gold Route Files
+
+Delete the following files from server/routes/:
+
+server/routes/bronzeLayerRoutes.ts
+
+server/routes/silverLayerRoutes.ts
+
+server/routes/goldLayerRoutes.ts
+
+These were classified as:
+
+bronzeLayerRoutes.ts → DEAD/TEST_ONLY, not mounted
+
+goldLayerRoutes.ts → DEAD/TEST_ONLY, not mounted
+
+silverLayerRoutes.ts → LEGACY_UNUSED, admin-only, no frontend usage
+
+After deletion, confirm these files no longer exist in the repo.
+
+2) Remove Their Imports and Mounts in server/routes.ts
+
+Open server/routes.ts and:
+
+Remove any imports for the deleted route files, such as:
+
+import bronzeLayerRoutes from './routes/bronzeLayerRoutes';
+import silverLayerRoutes from './routes/silverLayerRoutes';
+import goldLayerRoutes from './routes/goldLayerRoutes';
+
+
+Remove any mounts/registrations, including (but not limited to):
+
+app.use('/api/bronze', bronzeLayerRoutes);
+app.use('/api/silver', silverLayerRoutes);
+app.use('/api/gold', goldLayerRoutes);
+
+
+Confirm there are no remaining references to these routers (bronzeLayerRoutes, silverLayerRoutes, goldLayerRoutes) anywhere in server/routes.ts or the rest of the codebase.
+
+3) Delete Inline Hot-List Routes in server/routes.ts
+
+In server/routes.ts, locate the inline hot-list handler block around lines 3892–4134 (previous audit range), which defines routes like:
+
+GET /api/players/hot-list
+
+GET /api/players/hot-list/health
+
+POST /api/players/hot-list/mode/live
+
+GET /api/players/hot-list/sources
+
+POST /api/players/hot-list/refresh
+
+This block:
+
+Implements a “hot list” API
+
+Is NOT used by the frontend
+
+Conceptually overlaps with TIBER breakout logic
+
+Do the following:
+
+Delete the entire block of route handlers related to /api/players/hot-list*.
+
+Remove any imports that were only used by these routes, such as:
+
+hotListService
+
+LiveDataProcessor
+
+DataCaptureService
+
+Any sample/hardcoded data utilities used only for hot-list
+
+Confirm there are no remaining references to /api/players/hot-list anywhere in the repo.
+
+4) Preserve Active Data/Analytics Systems
+
+Do NOT modify or delete any of the following:
+
+server/routes/analyticsRoutes.ts
+
+server/routes/redraftWeeklyRoutes.ts
+
+server/routes/ovrRoutes.ts
+
+server/routes/strategyRoutes.ts
+
+server/routes/matchupRoutes.ts
+
+server/routes/weeklyTakesRoutes.ts
+
+Any Compass routes (e.g. compassQbRoute.ts, compassWrRoute.ts, etc.)
+
+Any sandbox pages/routes (WR/RB/TE/QB sandboxes)
+
+Any TIBER routes: tiberRoutes.ts, tiberDataRoutes.ts, tiberMemoryRoutes.ts
+
+We are only removing the legacy ELT route layer (Bronze/Silver/Gold) and the unused hot-list block.
+All active analytics, rankings, sandboxes, and strategy systems must stay intact.
+
+Also do not touch any ETL services that are still imported by active modules. Only delete services if they become unused (see next step).
+
+5) Optional: Clean Up Any Now-Orphaned ELT Services
+
+After deleting the routes and hot-list block:
+
+Search for any services that were used only by Bronze/Silver/Gold or the /api/players/hot-list routes (e.g. bronzeLayerService, silverLayerService, goldLayerService, or hot-list specific services).
+
+If a service is no longer imported anywhere in the codebase after this route deletion:
+
+You may delete that service file as well.
+
+If a service is still imported by active modules (e.g. core analytics, projections, or TIBER logic):
+
+Leave the service in place.
+
+If you remove any such service files, ensure that:
+
+All imports referring to them are also removed
+
+The app still builds and runs cleanly
+
+6) Run Build / Type-Check and Fix Fallout
+
+After all deletions and cleanup:
+
+Run the project’s usual build / type-check command.
+
+Fix any errors related to:
+
+Missing imports from deleted route files
+
+Missing services that you removed
+
+Unused imports that can now be safely deleted
+
+Goal: zero TypeScript/compile errors, and no runtime crashes.
+
+7) Final Verification Checklist
+
+Confirm the following:
+
+bronzeLayerRoutes.ts, silverLayerRoutes.ts, and goldLayerRoutes.ts are fully deleted.
+
+The inline hot-list routes under /api/players/hot-list* no longer exist in server/routes.ts.
+
+There are no imports or app.use(...) calls for these routes in server/routes.ts.
+
+The app starts successfully on port 5000 (or the usual configured port).
+
+Existing core features still work as expected:
+
+OVR ratings
+
+TIBER Dashboard tabs
+
+Analytics/Leaders pages
+
+Redraft weekly stats views
+
+Strategy tab
+
+Matchup ROS endpoints
+
+Weekly Takes tab
+
+8) Report Back
+
+When finished, please provide a summary including:
+
+List of files deleted
+
+List of import/mount lines removed from server/routes.ts
+
+Any additional service files deleted (if applicable)
+
+Confirmation that the app builds and runs successfully
+
+Confirmation that no /api/bronze/*, /api/silver/*, /api/gold/*, or /api/players/hot-list* endpoints exist anymore
