@@ -1,0 +1,324 @@
+You are upgrading the existing TE Rankings Sandbox (TE Sandbox V1) to TE Sandbox Phase 2.
+
+DO NOT:
+- Do not change RB or WR sandboxes.
+- Do not replace the existing TE alpha pillars, only refine their internals.
+- Do not create new database tables; you may JOIN existing ones.
+- Do not break the existing TE endpoint contract (only extend it).
+
+Your goals:
+1. Make Snap Stickiness actually meaningful using real pass/run blocking data and snaps.
+2. Add Red Zone / TD gravity to improve the Production pillar.
+3. Add TE role archetypes (Big Slot / Inline / Hybrid / H-back).
+4. Optionally add Volatility (floor/ceiling) and context flags for partial-season players.
+5. Wire all new metrics into the TE Sandbox without breaking existing behavior.
+
+==================================================
+TASK 0 – Discover Blocking & Snap Data
+==================================================
+
+First, search the codebase and database schema for any existing TE/O-line/blocking-related fields.
+
+You are looking for TE-level or player-level metrics such as:
+- totalSnaps, offensiveSnaps, passBlockSnaps, runBlockSnaps
+- passBlockGrade, runBlockGrade (e.g., PFF or internal grades, 0–100)
+- pressuresAllowed, sacksAllowed, hitsAllowed
+- blocking alignment (inline snaps vs slot snaps)
+
+If there are existing views or tables for:
+- PFF OL grades
+- blocking grades by player
+- pass protection metrics by position
+
+…you may JOIN them into the TE sandbox query by playerId and season.
+
+If certain fields do NOT exist, you must implement graceful fallbacks (see later tasks). Do NOT crash the endpoint when data is missing.
+
+Update the /api/admin/te-rankings-sandbox endpoint to return the new fields needed for Phase 2.
+
+==================================================
+TASK 1 – Snap Stickiness 2.0
+==================================================
+
+Goal: make Snap Stickiness actually separate archetypes, not sit between 0.5–0.7 for everyone.
+
+Inputs to use (where available):
+- totalSnaps (per season)
+- routesRun
+- passBlockSnaps
+- runBlockSnaps
+- passBlockGrade (0–100)
+- runBlockGrade (0–100)
+- slotPct, inlinePct (already present)
+
+Add to backend response:
+- totalSnaps
+- passBlockSnaps, runBlockSnaps
+- passBlockGrade, runBlockGrade
+
+Implement:
+
+1) Normalize blocking grades:
+
+If passBlockGrade/runBlockGrade exist:
+  pbNorm = clamp(passBlockGrade / 100, 0, 1)
+  rbNorm = clamp(runBlockGrade / 100, 0, 1)
+
+Else if only snaps exist:
+  - Use passBlockSnaps and runBlockSnaps as a proxy for trust:
+    pbNorm = min(1, passBlockSnaps / maxPassBlockSnapsAmongTEs)
+    rbNorm = min(1, runBlockSnaps / maxRunBlockSnapsAmongTEs)
+
+Else:
+  - default pbNorm = rbNorm = 0.5
+
+2) Compute Blocking Stickiness:
+
+blockingStickiness = (pbNorm * 0.6) + (rbNorm * 0.4)
+
+3) Compute Snap Rate and Routes/Snap:
+
+snapRate = totalSnaps / maxSnapsAmongTEs   // normalized 0–1
+routesPerSnap = routesRun / max(1, totalSnaps)
+routesPerSnapNorm = clamp(routesPerSnap / maxRoutesPerSnapObserved, 0, 1)
+
+4) Rebuild Snap Stickiness Index (ssi):
+
+ssi = 
+  (blockingStickiness * 0.5)
+  + (snapRate * 0.3)
+  + (routesPerSnapNorm * 0.2)
+
+- If totalSnaps is missing, use routesRun as a proxy:
+  - treat totalSnaps ≈ routesRun / 0.7 (or similar assumption) and mark with a fallback flag if needed.
+- If any component missing, degrade gracefully and reweight the others.
+
+Update the TE sandbox backend to:
+- Return blockingStickiness and snapStickinessIndex (ssi).
+Update the UI to:
+- Use the new ssi value in place of the old placeholder stickiness metric.
+
+==================================================
+TASK 2 – Red Zone / TD Gravity Module
+==================================================
+
+Goal: make the Production pillar smarter by recognizing scoring role.
+
+Search for any existing fields:
+- redZoneTargets (inside 20)
+- tenZoneTargets (inside 10)
+- endZoneTargets
+- touchdowns (already present for TE receiving)
+- play-level data that can be aggregated by player & season
+
+If a play-by-play table exists:
+- You may aggregate TE RZ / EZ targets from it by playerId and season.
+- Keep this logic in a reusable helper/query module if possible.
+
+Add to TE sandbox response (per TE):
+- redZoneTargets
+- endZoneTargets
+- rzTargetsPerGame
+- tdCount (receiving TDs; if not already present, derive from fantasy points)
+- optional: rzFantasyPoints (if cheap to compute)
+
+Compute a TD/RZ role score (tdRoleScore) as:
+
+normalize rzTargetsPerGame, endZoneTargets/game to 0–1:
+  rzNorm = rzTargetsPerGame / maxRzTargetsPerGame
+  ezNorm = ezTargetsPerGame / maxEzTargetsPerGame
+
+optionally compute expectedTDs = (rzTargets * leagueAvgTdPerRzTarget) and compare to actual TDs:
+
+  tdOverExp = actualTDs - expectedTDs
+
+Normalize tdOverExp to 0–1 (can be -1 to 1 initially, clamp to [0,1] after mapping).
+
+Then:
+
+tdRoleScore = 
+  (rzNorm * 0.45)
+  + (ezNorm * 0.45)
+  + (normalizedTdOverExp * 0.10)
+
+If no RZ/EZ data available:
+- fallback: tdRoleScore = normalize(actualTDs per game).
+
+Integrate into Production pillar:
+
+Previously Production used:
+- fpPerGame alone.
+
+Now redefine Production index as:
+
+productionIndex =
+  (fpPerGameNorm * 0.6)
+  + (tdRoleScore * 0.4)
+
+Where fpPerGameNorm is fpPerGame / maxFpPerGame among TEs (clamped 0–1).
+
+Do NOT change the global pillar weights (Volume 40, Prod 25, Eff 20, Stick 15). Just make Production internally richer via tdRoleScore.
+
+Update UI:
+- Add columns for RZ Tgt/G and maybe TDs.
+- Optionally show tdRoleScore in a tooltip or in the split-view comparison.
+
+==================================================
+TASK 3 – TE Role Archetypes
+==================================================
+
+Goal: classify TEs by alignment and usage using slot% / inline% / routes.
+
+Using slotPct, inlinePct, routesRun (and optionally snapStickinessIndex), derive a simple role string:
+
+Rules (tune thresholds based on actual distributions):
+
+- Big Slot:
+  - slotPct >= 55%
+  - inlinePct <= 35%
+
+- Inline Grinder:
+  - inlinePct >= 55%
+  - slotPct <= 35%
+
+- Hybrid Alpha:
+  - slotPct between ~35–65%
+  - inlinePct between ~35–65%
+  - and routesRun above median for TEs
+
+- H-back / Gadget:
+  - low totalSnaps and routesRun
+  - moderate slot/inline but overall usage below some snap threshold
+
+Implement a helper like:
+
+function getTeArchetype(row): "BIG_SLOT" | "INLINE" | "HYBRID" | "H_BACK"
+
+Add:
+- archetype field to backend response.
+- "Role" column in TE sandbox table, mapping enums to human labels:
+  - Big Slot
+  - Inline Grinder
+  - Hybrid
+  - H-back
+
+Optional:
+- Add a simple filter dropdown: All Roles | Big Slot | Inline | Hybrid | H-back
+  to filter the TE list client-side.
+
+==================================================
+TASK 4 – Volatility & Context Flags (Optional but Preferred)
+==================================================
+
+If weekly TE fantasy data is available by player/week:
+
+1) Compute:
+- weeklyFantasyPoints[] array per TE
+- floor = 20th percentile
+- ceiling = 80th percentile
+- volatility = (ceiling - floor) / maxCeilingRange
+
+Normalize volatility to 0–1.
+
+Expose:
+- floorFp
+- ceilingFp
+- volatilityScore
+
+Render in UI as:
+- optional columns: Floor FP, Ceiling FP, Volatility
+OR just use them in split-view comparison.
+
+Do NOT integrate volatility into alpha yet; keep it as an informational lens.
+
+2) Context flags:
+
+- gamesPlayed = row.games
+- availabilityPct = gamesPlayed / maxGamesInSeason
+
+Simple flags:
+- if gamesPlayed <= 4 and fpPerGame is high:
+  - contextTag = "Small sample – per-game stud"
+- if injuryStatus is IR/OUT/PUP and gamesPlayed < full season:
+  - contextTag = "Injury-impacted season"
+
+Expose:
+- contextTag as a string field from backend.
+Show as a small badge in the TE name column.
+
+==================================================
+TASK 5 – Wire New Metrics into TE Alpha & UI
+==================================================
+
+1) Alpha logic:
+- Volume pillar: keep using targets, routes, maybe lightly include slot/inline for volumeIndex.
+- Production pillar: now uses fpPerGameNorm and tdRoleScore.
+- Efficiency pillar: keep fpPerTarget and yards/route or recYds/g.
+- Stickiness pillar: now uses the new snapStickinessIndex.
+
+DO NOT change the exposed sliders or top-level weights:
+- Volume 40%
+- Production 25%
+- Efficiency 20%
+- Stickiness 15%
+
+Just ensure:
+- each pillar’s internal index is updated to use the new components (snapStickiness 2.0, tdRoleScore, etc.).
+
+2) UI:
+- Add new columns where useful:
+  - RZ Tgt/G
+  - TDs
+  - Role (archetype)
+  - optionally Floor/Ceiling if computed
+- Include:
+  - blockingStickiness
+  - snapStickinessIndex
+in the split-view comparison card.
+
+3) Role Bank v2 export:
+Update buildTeAlphaExport(teRow) to include:
+
+{
+  playerId,
+  playerName,
+  team,
+  alphaScore,
+  targets,
+  rec,
+  recYds,
+  fpPerGame,
+  fpPerTarget,
+  routesRun,
+  slotPct,
+  inlinePct,
+  widePct,
+  blockingStickiness,
+  snapStickinessIndex,
+  redZoneTargets,
+  endZoneTargets,
+  tdRoleScore,
+  archetype,
+  floorFp,        // if available
+  ceilingFp,      // if available
+  volatilityScore,// if available
+  contextTag      // if available
+}
+
+Ensure Preview Payload button still works and logs top 40–50 TEs with these fields.
+
+==================================================
+GENERAL NOTES
+==================================================
+
+- Work incrementally: keep TE endpoint and UI working at all times.
+- Handle missing data gracefully: do NOT crash when RZ, blocking, or snap fields are absent.
+- Keep TypeScript types up to date for the enriched TE row.
+- Do not touch external ranking engines. This is still sandbox-only.
+
+After finishing:
+- Add a brief comment block at the top of the TE sandbox file summarizing:
+  - Snap Stickiness 2.0
+  - TD/RZ Production upgrade
+  - Archetypes
+  - Any volatility/context fields added.

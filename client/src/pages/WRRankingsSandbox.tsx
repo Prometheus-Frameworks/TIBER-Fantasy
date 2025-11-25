@@ -157,7 +157,7 @@ interface RBSandboxPlayer {
   injuryType: string | null;
 }
 
-// TE-specific player interface
+// TE-specific player interface (Phase 2 - Enhanced)
 interface TESandboxPlayer {
   playerId: string;
   playerName: string;
@@ -180,16 +180,36 @@ interface TESandboxPlayer {
   routeParticipation: number;
   // Snap metrics
   totalSnaps: number;
-  // Alignment
+  // Alignment (Phase 2 - real data)
   slotPct: number;
   inlinePct: number;
   widePct: number;
-  // Blocking (placeholders)
+  routesSlot: number;
+  routesInline: number;
+  routesOutside: number;
+  // Blocking (proxy metrics)
   passBlockGrade: number | null;
   runBlockGrade: number | null;
   blockingStickiness: number;
-  // Snap Stickiness Index
+  // Snap Stickiness Index 2.0
   snapStickinessIndex: number;
+  // Red Zone / TD Gravity (Phase 2)
+  rzTargets: number;
+  tenZoneTargets: number;
+  goalLineTargets: number;
+  rzTargetsPerGame: number;
+  tdRoleScore: number;
+  // Production index (Phase 2)
+  productionIndex: number;
+  // TE Archetype (Phase 2)
+  archetype: 'BIG_SLOT' | 'INLINE' | 'HYBRID' | 'H_BACK';
+  archetypeLabel: string;
+  // Volatility (Phase 2)
+  floorFp: number;
+  ceilingFp: number;
+  volatilityScore: number;
+  // Context flag (Phase 2)
+  contextTag: string | null;
   // Custom alpha
   customAlphaScore?: number;
   // Injury status
@@ -678,23 +698,50 @@ export default function WRRankingsSandbox() {
     setTeActivePreset('candidate');
   };
 
-  // Build TE Alpha Export (Role Bank v2 Integration Hook)
+  // Build TE Alpha Export (Role Bank v2 Integration Hook) - Phase 2 Enhanced
   const buildTeAlphaExport = (player: TESandboxPlayer) => ({
     playerId: player.playerId,
     playerName: player.playerName,
     team: player.team,
     alphaScore: player.customAlphaScore ?? 0,
+    // Core Receiving
     targets: player.totalTargets,
     rec: player.totalReceptions,
     recYds: player.totalReceivingYards,
     fpPerGame: player.fpPerGame,
     fpPerTarget: player.fpPerTarget,
+    // Route Usage
     routesRun: player.totalRoutes,
+    routesPerGame: player.routesPerGame,
+    routeParticipation: player.routeParticipation,
+    // Alignment (Phase 2 - real data)
     slotPct: player.slotPct,
     inlinePct: player.inlinePct,
     widePct: player.widePct,
+    routesSlot: player.routesSlot,
+    routesInline: player.routesInline,
+    routesOutside: player.routesOutside,
+    // Snap Stickiness 2.0
     blockingStickiness: player.blockingStickiness,
-    snapStickinessIndex: player.snapStickinessIndex
+    snapStickinessIndex: player.snapStickinessIndex,
+    totalSnaps: player.totalSnaps,
+    // Red Zone / TD Gravity (Phase 2)
+    rzTargets: player.rzTargets,
+    tenZoneTargets: player.tenZoneTargets,
+    goalLineTargets: player.goalLineTargets,
+    rzTargetsPerGame: player.rzTargetsPerGame,
+    tdRoleScore: player.tdRoleScore,
+    // Production Index (Phase 2)
+    productionIndex: player.productionIndex,
+    // TE Archetype (Phase 2)
+    archetype: player.archetype,
+    archetypeLabel: player.archetypeLabel,
+    // Volatility (Phase 2)
+    floorFp: player.floorFp,
+    ceilingFp: player.ceilingFp,
+    volatilityScore: player.volatilityScore,
+    // Context (Phase 2)
+    contextTag: player.contextTag
   });
 
   // Preview TE Role Bank Payload (top 40 TEs by alphaScore)
@@ -846,7 +893,7 @@ export default function WRRankingsSandbox() {
 
       return { ...rbPlayer, customAlphaScore };
     } else {
-      // TE Alpha Score Calculation
+      // TE Alpha Score Calculation (Phase 2 Enhanced)
       const tePlayer = player as TESandboxPlayer;
       const allTEs = (data?.data ?? []) as TESandboxPlayer[];
       
@@ -856,6 +903,8 @@ export default function WRRankingsSandbox() {
       const maxFpPerGame = Math.max(...allTEs.map(p => p.fpPerGame), 1);
       const maxFpPerTarget = Math.max(...allTEs.map(p => p.fpPerTarget), 1);
       const maxSSI = Math.max(...allTEs.map(p => p.snapStickinessIndex), 1);
+      const maxTdRoleScore = Math.max(...allTEs.map(p => p.tdRoleScore ?? 0), 0.01);
+      const maxRzTargetsPerGame = Math.max(...allTEs.map(p => p.rzTargetsPerGame ?? 0), 0.01);
 
       // Pillar 1: Volume (40% default) - targets + routes + slot% boost
       const volumeScore = (
@@ -864,13 +913,23 @@ export default function WRRankingsSandbox() {
         (tePlayer.slotPct * 0.15) // Slot bonus (more receiving role)
       ) * 100;
 
-      // Pillar 2: Production (25% default) - fpPerGame
-      const productionScore = (tePlayer.fpPerGame / maxFpPerGame) * 100;
+      // Pillar 2: Production (25% default) - NOW USES productionIndex with tdRoleScore
+      // productionIndex = fpPerGameNorm * 0.6 + tdRoleScore * 0.4
+      const fpPerGameNorm = tePlayer.fpPerGame / maxFpPerGame;
+      const tdRoleNorm = (tePlayer.tdRoleScore ?? 0) / maxTdRoleScore;
+      const productionScore = (
+        (fpPerGameNorm * 0.6) + 
+        (tdRoleNorm * 0.4)
+      ) * 100;
 
-      // Pillar 3: Efficiency (20% default) - fpPerTarget
-      const efficiencyScore = (tePlayer.fpPerTarget / maxFpPerTarget) * 100;
+      // Pillar 3: Efficiency (20% default) - fpPerTarget + RZ gravity boost
+      const rzGravityBoost = Math.min((tePlayer.rzTargetsPerGame ?? 0) / maxRzTargetsPerGame, 1) * 0.2;
+      const efficiencyScore = (
+        (tePlayer.fpPerTarget / maxFpPerTarget) * 0.8 +
+        rzGravityBoost
+      ) * 100;
 
-      // Pillar 4: Snap Stickiness (15% default) - SSI
+      // Pillar 4: Snap Stickiness 2.0 (15% default) - SSI enhanced
       const stickinessScore = (tePlayer.snapStickinessIndex / maxSSI) * 100;
 
       // Apply custom weights
@@ -2005,61 +2064,64 @@ export default function WRRankingsSandbox() {
 
         {/* Table */}
         {position === 'TE' ? (
-          // TE Table (Targets, Rec, Routes, Slot%, FP/G, FP/Tgt, Stickiness)
+          // TE Table Phase 2 (Enhanced with Archetype, RZ Targets, TD Role, Volatility)
           <div className="bg-[#111217] border border-gray-800/50 rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-[#0d0e11] border-b border-gray-800/50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                       Rank
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                       <SortButton field="playerName" label="Player" />
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                       <SortButton field="team" label="Team" />
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      <SortButton field="gamesPlayed" label="Games" />
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <SortButton field="gamesPlayed" label="G" />
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-green-400 uppercase tracking-wider">
-                      Targets
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-lime-400 uppercase tracking-wider" title="TE Role Archetype (Phase 2)">
+                      Type
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-cyan-400 uppercase tracking-wider">
-                      Tgt/G
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-green-400 uppercase tracking-wider">
+                      Tgts
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-blue-400 uppercase tracking-wider">
-                      Rec
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-red-400 uppercase tracking-wider" title="Red Zone Targets (Phase 2)">
+                      RZ
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-amber-400 uppercase tracking-wider">
-                      Rec Yds
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-amber-400 uppercase tracking-wider" title="Total Receiving TDs">
+                      TDs
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-pink-400 uppercase tracking-wider">
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-pink-400 uppercase tracking-wider" title="TD Role Score (Phase 2)">
+                      TD Role
+                    </th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-cyan-400 uppercase tracking-wider">
                       FP/G
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-orange-400 uppercase tracking-wider">
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-orange-400 uppercase tracking-wider">
                       FP/Tgt
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-teal-400 uppercase tracking-wider">
-                      Routes
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-indigo-400 uppercase tracking-wider" title="Slot% / Inline%">
+                      Align
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-indigo-400 uppercase tracking-wider">
-                      Slot%
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-emerald-400 uppercase tracking-wider" title="Snap Stickiness Index 2.0">
+                      SSI
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-yellow-400 uppercase tracking-wider">
-                      Inline%
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-yellow-400 uppercase tracking-wider" title="Floor/Ceiling (P20/P80)">
+                      Range
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-                      Snap Stickiness
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider" title="Context Tag (Phase 2)">
+                      Context
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-purple-400 uppercase tracking-wider">
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-purple-400 uppercase tracking-wider">
                       <button 
                         onClick={() => handleSort('customAlphaScore')}
                         className="flex items-center gap-1 hover:text-purple-300 transition-colors"
                         data-testid="te-sort-customAlphaScore"
                       >
-                        <span>Custom Score</span>
+                        <span>Alpha</span>
                         <ArrowUpDown className="w-3 h-3" />
                       </button>
                     </th>
@@ -2069,7 +2131,7 @@ export default function WRRankingsSandbox() {
                   {isLoading ? (
                     [...Array(10)].map((_, idx) => (
                       <tr key={idx} className="border-b border-gray-800/30">
-                        <td colSpan={15} className="px-4 py-4">
+                        <td colSpan={16} className="px-4 py-4">
                           <div className="h-8 bg-gray-700/30 rounded animate-pulse"></div>
                         </td>
                       </tr>
@@ -2078,14 +2140,20 @@ export default function WRRankingsSandbox() {
                     sortedData?.map((player, idx) => {
                       const tePlayer = player as TESandboxPlayer;
                       const isCustomWeights = teVolumeWeight !== 40 || teProductionWeight !== 25 || teEfficiencyWeight !== 20 || teStickinessWeight !== 15;
+                      const archetypeColors: Record<string, string> = {
+                        'BIG_SLOT': 'bg-indigo-600/40 text-indigo-200',
+                        'INLINE': 'bg-amber-600/40 text-amber-200',
+                        'HYBRID': 'bg-cyan-600/40 text-cyan-200',
+                        'H_BACK': 'bg-gray-600/40 text-gray-300',
+                      };
                       return (
                         <tr
                           key={tePlayer.playerId}
                           className="border-b border-gray-800/30 hover:bg-amber-500/5 transition-colors"
                           data-testid={`te-sandbox-row-${idx}`}
                         >
-                          <td className="px-4 py-3 text-gray-500 font-medium">{idx + 1}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-3 text-gray-500 font-medium">{idx + 1}</td>
+                          <td className="px-3 py-3">
                             <div className="flex items-center gap-2">
                               <span className="font-semibold text-white">{tePlayer.playerName}</span>
                               {(tePlayer.injuryStatus === 'IR' || tePlayer.injuryStatus === 'OUT' || tePlayer.injuryStatus === 'PUP') && (
@@ -2095,23 +2163,44 @@ export default function WRRankingsSandbox() {
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-3">
                             <span className="px-2 py-1 bg-gray-800/70 text-gray-300 rounded text-xs font-medium">
                               {tePlayer.team}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center text-gray-300">{tePlayer.gamesPlayed}</td>
-                          <td className="px-4 py-3 text-center text-green-300 font-semibold">{tePlayer.totalTargets}</td>
-                          <td className="px-4 py-3 text-center text-cyan-300">{tePlayer.targetsPerGame.toFixed(1)}</td>
-                          <td className="px-4 py-3 text-center text-blue-300">{tePlayer.totalReceptions}</td>
-                          <td className="px-4 py-3 text-center text-amber-300">{tePlayer.totalReceivingYards}</td>
-                          <td className="px-4 py-3 text-center text-pink-300 font-medium">{tePlayer.fpPerGame.toFixed(1)}</td>
-                          <td className="px-4 py-3 text-center text-orange-300">{tePlayer.fpPerTarget.toFixed(2)}</td>
-                          <td className="px-4 py-3 text-center text-teal-300">{tePlayer.totalRoutes}</td>
-                          <td className="px-4 py-3 text-center text-indigo-300">{(tePlayer.slotPct * 100).toFixed(0)}%</td>
-                          <td className="px-4 py-3 text-center text-yellow-300">{(tePlayer.inlinePct * 100).toFixed(0)}%</td>
-                          <td className="px-4 py-3 text-center text-emerald-300 font-medium">{tePlayer.snapStickinessIndex.toFixed(1)}</td>
-                          <td className="px-4 py-3 text-center">
+                          <td className="px-3 py-3 text-center text-gray-300">{tePlayer.gamesPlayed}</td>
+                          <td className="px-3 py-3 text-center">
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${archetypeColors[tePlayer.archetype] || 'bg-gray-600/40 text-gray-300'}`}>
+                              {tePlayer.archetype === 'BIG_SLOT' ? 'Slot' : 
+                               tePlayer.archetype === 'INLINE' ? 'Inline' :
+                               tePlayer.archetype === 'H_BACK' ? 'H-back' : 'Hybrid'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-center text-green-300 font-semibold">{tePlayer.totalTargets}</td>
+                          <td className="px-3 py-3 text-center text-red-300 font-medium">{tePlayer.rzTargets ?? 0}</td>
+                          <td className="px-3 py-3 text-center text-amber-300 font-bold">{tePlayer.totalReceivingTDs}</td>
+                          <td className="px-3 py-3 text-center">
+                            <span className={`font-semibold ${(tePlayer.tdRoleScore ?? 0) >= 0.5 ? 'text-pink-400' : (tePlayer.tdRoleScore ?? 0) >= 0.3 ? 'text-pink-300' : 'text-gray-400'}`}>
+                              {((tePlayer.tdRoleScore ?? 0) * 100).toFixed(0)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-center text-cyan-300 font-medium">{tePlayer.fpPerGame.toFixed(1)}</td>
+                          <td className="px-3 py-3 text-center text-orange-300">{tePlayer.fpPerTarget.toFixed(2)}</td>
+                          <td className="px-3 py-3 text-center text-indigo-300 text-xs">
+                            {(tePlayer.slotPct * 100).toFixed(0)}/{(tePlayer.inlinePct * 100).toFixed(0)}
+                          </td>
+                          <td className="px-3 py-3 text-center text-emerald-300 font-medium">{tePlayer.snapStickinessIndex.toFixed(0)}</td>
+                          <td className="px-3 py-3 text-center text-yellow-300 text-xs">
+                            {tePlayer.floorFp?.toFixed(1) ?? '–'}/{tePlayer.ceilingFp?.toFixed(1) ?? '–'}
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            {tePlayer.contextTag ? (
+                              <span className="text-[10px] text-gray-400 italic">{tePlayer.contextTag.split(' – ')[0]}</span>
+                            ) : (
+                              <span className="text-gray-600">–</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-center">
                             <div className="flex flex-col items-center gap-0.5">
                               <span className="font-bold text-purple-400 text-base">{tePlayer.customAlphaScore ?? 0}</span>
                               {isCustomWeights && (
