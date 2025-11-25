@@ -1,34 +1,12 @@
 /**
- * Automated weekly cron job for Hot List updates and nightly data processing
+ * Automated weekly cron jobs for nightly data processing
  * Runs every Tuesday at 2 AM ET (after MNF stats are finalized)
- * Also includes nightly Buys/Sells computation
+ * Includes nightly Buys/Sells computation
  */
 import cron from 'node-cron';
-import { weeklyHotListETL } from '../etl/weeklyHotListUpdate';
 import { nightlyBuysSellsETL } from '../etl/nightlyBuysSellsUpdate';
 import { setupRBContextCheckCron } from './rbContextCheck';
 import { setupInjurySyncCron } from './injurySync';
-
-export function setupWeeklyHotListCron() {
-  console.log('📅 Setting up weekly Hot List cron job...');
-
-  // Run every Tuesday at 2 AM ET (after Monday Night Football stats finalized)
-  cron.schedule('0 2 * * 2', async () => {
-    const currentWeek = getCurrentNFLWeek();
-    console.log(`🔄 Weekly Hot List cron triggered for Week ${currentWeek}`);
-    
-    try {
-      await weeklyHotListETL.updateHotListFromLiveData(currentWeek);
-      console.log(`✅ Weekly Hot List update completed for Week ${currentWeek}`);
-    } catch (error) {
-      console.error(`❌ Weekly Hot List cron failed:`, error);
-    }
-  }, {
-    timezone: "America/New_York"
-  });
-
-  console.log('✅ Weekly Hot List cron job active');
-}
 
 /**
  * Setup nightly Buys/Sells computation cron job
@@ -108,7 +86,6 @@ export function setupWeeklyDataProcessing() {
 export function setupAllCronJobs() {
   console.log('🕒 Initializing all cron jobs...');
   
-  setupWeeklyHotListCron();
   setupNightlyBuysSellsCron();
   setupWeeklyDataProcessing();
   setupInjurySyncCron();
