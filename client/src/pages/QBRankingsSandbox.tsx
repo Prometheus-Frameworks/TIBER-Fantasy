@@ -28,7 +28,17 @@ const BUILT_IN_QB_PRESETS: QBPreset[] = [
   { id: 'game-manager', label: 'Game Manager', weights: { volume: 30, production: 20, efficiency: 40, context: 10 }, description: 'Volume + efficiency focus', isBuiltIn: true },
   { id: 'dual-threat', label: 'Dual Threat', weights: { volume: 20, production: 35, efficiency: 30, context: 15 }, description: 'Rushing value prioritized', isBuiltIn: true },
   { id: 'pure-efficiency', label: 'Pure Efficiency', weights: { volume: 15, production: 20, efficiency: 55, context: 10 }, description: 'Maximum EPA/CPOE weight', isBuiltIn: true },
+  { id: 'qb_fantasy_lens_v1', label: 'Fantasy Lens v1', weights: { volume: 20, production: 40, efficiency: 25, context: 15 }, description: 'Fantasy-first, Konami emphasized', isBuiltIn: true },
+  { id: 'qb_realball_lens_v1', label: 'Real Ball Lens v1', weights: { volume: 20, production: 20, efficiency: 40, context: 20 }, description: 'Real QB quality, efficiency + context', isBuiltIn: true },
 ];
+
+type KonamiMode = 'default' | 'fantasy' | 'realball';
+
+const getKonamiMode = (presetId: string): KonamiMode => {
+  if (presetId === 'qb_fantasy_lens_v1') return 'fantasy';
+  if (presetId === 'qb_realball_lens_v1') return 'realball';
+  return 'default';
+};
 
 const QB_WEIGHTS_KEY = 'tiber_qb_sandbox_weights_v1';
 const QB_LAST_PRESET_KEY = 'tiber_qb_sandbox_last_preset';
@@ -285,13 +295,27 @@ export default function QBRankingsSandbox() {
       (player.contextIndex * contextWeight / totalWeight)
     );
     
-    // Konami boost for high rushing QBs (Hurts, Allen, Jackson, Daniels, Fields, Dart)
-    // 10% boost for 6+ rush FP/G, 5% boost for 4-6 rush FP/G
+    // Lens-aware Konami boost for high rushing QBs
+    const konamiMode = getKonamiMode(activePreset);
     let konamiBoostFactor = 1.0;
-    if (player.rushFpPerGame >= 6) {
-      konamiBoostFactor = 1.10;
-    } else if (player.rushFpPerGame >= 4) {
-      konamiBoostFactor = 1.05;
+    
+    if (konamiMode === 'fantasy') {
+      // Fantasy Lens: Stronger Konami boost (1.12 / 1.06)
+      if (player.rushFpPerGame >= 6) {
+        konamiBoostFactor = 1.12;
+      } else if (player.rushFpPerGame >= 4) {
+        konamiBoostFactor = 1.06;
+      }
+    } else if (konamiMode === 'realball') {
+      // Real Ball Lens: No Konami boost
+      konamiBoostFactor = 1.0;
+    } else {
+      // Default mode: Standard Konami boost (1.10 / 1.05)
+      if (player.rushFpPerGame >= 6) {
+        konamiBoostFactor = 1.10;
+      } else if (player.rushFpPerGame >= 4) {
+        konamiBoostFactor = 1.05;
+      }
     }
     
     return baseScore * konamiBoostFactor;
@@ -326,7 +350,7 @@ export default function QBRankingsSandbox() {
     });
 
     return players;
-  }, [sandboxData?.data, sortField, sortOrder, volumeWeight, productionWeight, efficiencyWeight, contextWeight, filterArchetype]);
+  }, [sandboxData?.data, sortField, sortOrder, volumeWeight, productionWeight, efficiencyWeight, contextWeight, filterArchetype, activePreset]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -423,10 +447,23 @@ export default function QBRankingsSandbox() {
 
         <div className="grid grid-cols-12 gap-6 mb-6">
           <div className="col-span-12 lg:col-span-4 bg-[#141824] rounded-lg p-4 border border-slate-700/50">
-            <h3 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
               <Zap className="w-4 h-4 text-amber-400" />
               Weight Sliders
             </h3>
+            
+            {activePreset === 'qb_fantasy_lens_v1' && (
+              <div className="mb-3 px-2 py-1.5 bg-purple-500/15 border border-purple-500/30 rounded text-xs text-purple-300 flex items-center gap-2">
+                <Zap className="w-3 h-3" />
+                Fantasy Lens v1 (Konami emphasized)
+              </div>
+            )}
+            {activePreset === 'qb_realball_lens_v1' && (
+              <div className="mb-3 px-2 py-1.5 bg-blue-500/15 border border-blue-500/30 rounded text-xs text-blue-300 flex items-center gap-2">
+                <Shield className="w-3 h-3" />
+                Real Ball Lens v1 (efficiency + context)
+              </div>
+            )}
             
             <div className="space-y-4">
               <div>
