@@ -186,7 +186,7 @@ export default function WRRankingsSandbox() {
   };
 
   // Calculate custom alphaScore based on slider weights
-  const dataWithCustomScores = data?.data.map(player => {
+  const dataWithCustomScores = data?.data?.map(player => {
     if (position === 'WR') {
       const wrPlayer = player as SandboxPlayer;
       // Normalize weights to sum to 100
@@ -208,7 +208,7 @@ export default function WRRankingsSandbox() {
       const rbPlayer = player as RBSandboxPlayer;
       // For RB, we need to normalize carries, yards, fp/rush, and receiving work across all players
       // First pass: find max values (we'll do this inline for simplicity)
-      const allRBs = data.data as RBSandboxPlayer[];
+      const allRBs = (data?.data ?? []) as RBSandboxPlayer[];
       const maxCarries = Math.max(...allRBs.map(p => p.totalCarries));
       const maxYards = Math.max(...allRBs.map(p => p.totalRushingYards));
       const maxFpRush = Math.max(...allRBs.map(p => p.fantasyPointsPerRushAttempt));
