@@ -73,7 +73,6 @@ import gameLogRoutes from './routes/gameLogRoutes';
 import { registerRoleBankRoutes } from './routes/roleBankRoutes';
 import sosRouter from './modules/sos/sos.router';
 import { ratingsRouter } from './src/modules/ratings';
-import rankingsV3Router from './routes/rankingsV3';
 import ovrRouter from './routes/ovrRoutes';
 import tiberRouter from './routes/tiberRoutes';
 import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
@@ -715,10 +714,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ===== DEEPSEEK RATINGS SYSTEM =====
-  // Mount the new DeepSeek ratings router
+  // ===== RATINGS SYSTEM =====
   app.use('/api/ratings', ratingsRouter);
-  app.use('/api', rankingsV3Router);
   
   // ===== PLAYER ATTRIBUTES SYSTEM =====
   // Mount the player attributes router
