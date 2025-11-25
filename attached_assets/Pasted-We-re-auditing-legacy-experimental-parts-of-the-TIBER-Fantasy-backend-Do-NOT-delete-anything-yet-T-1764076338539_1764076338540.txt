@@ -1,0 +1,166 @@
+We’re auditing legacy/experimental parts of the TIBER Fantasy backend.
+Do NOT delete anything yet. This pass is for classification and reporting only.
+
+Focus on these targets:
+
+enhancedRankingsRoutes.ts
+
+hotListLive.ts
+
+Rookie risers modules:
+
+rookieRisersRoutes.ts
+
+rookieRisersAPI.ts
+
+rookieRisersTest.ts
+
+pythonRookieRoutes.ts
+
+Strategy / start-sit / matchup experiments:
+
+strategyRoutes.ts
+
+startSitRoutes.ts
+
+matchupRoutes.ts
+
+weeklyTakesRoutes.ts
+
+stats2024Routes.ts
+
+Assume they all live under server/routes/ unless you find otherwise.
+
+1) For each of those files, document:
+
+For every file listed above, tell me:
+
+File Path
+
+All routes defined (method + path, e.g. GET /api/rankings/enhanced, POST /api/strategy/submit)
+
+What each route returns (high level: e.g. “enhanced 0–100 alpha scores”, “2024 weekly stats”, “hot list live feed”, etc.)
+
+Direct imports (services/modules it depends on)
+
+Where it is wired into the app
+
+Check server/routes.ts for how it’s mounted.
+
+Note the base path (e.g. /api/rankings, /api/rookies, /api/matchups).
+
+2) Check if these routes are actually used by the frontend
+
+Search the client/ directory for calls to these routes or obvious variants:
+
+Any fetch, axios, or API helper usage that hits:
+
+/api/rankings/enhanced or similar
+
+/api/hot-list, /api/hotlist, /api/hot-list-live
+
+/api/rookie-risers, /api/rookies/risers, anything containing "rookie-riser"
+
+/api/strategy, /api/start-sit, /api/matchup, /api/matchups
+
+/api/stats/2024, /api/2024/stats, "stats2024"
+
+Also search by file name references in the client code if applicable (e.g. hotListLive, enhancedRankings).
+
+For each route in the audited files, mark:
+
+Used by frontend: yes/no
+
+If yes, list:
+
+The client file(s) that call it (e.g. client/src/pages/AnalyticsPage.tsx, TiberDashboard.tsx, etc.)
+
+A short description of how it’s used in the UI (e.g. “feeds a table of enhanced rankings”, “feeds a matchup tool card”, etc.)
+
+3) Classify each file
+
+For each of the files, assign one of these labels:
+
+CORE_ACTIVE
+
+Used by the frontend and clearly part of the current product vision.
+
+LEGACY_BUT_USED
+
+Used somewhere in the frontend, but looks like old/experimental behavior that overlaps with newer systems (e.g. rankings v1 vs rankings v3).
+
+LEGACY_UNUSED
+
+Wired in backend but no frontend calls, or only test/dev tools.
+
+DEAD/TEST_ONLY
+
+Only used by debug scripts, test routes, or not referenced at all.
+
+Add a one–sentence justification per file, e.g.:
+
+enhancedRankingsRoutes.ts → LEGACY_BUT_USED – still feeds a small table on AnalyticsPage but duplicates v3 rankings logic.
+
+hotListLive.ts → LEGACY_UNUSED – routes are mounted but there are no references in client/.
+
+4) Surface any obvious overlaps or redundancy
+
+If you notice obvious duplication, call it out. Examples:
+
+enhancedRankingsRoutes.ts vs rankingsV3.ts
+
+strategyRoutes.ts / startSitRoutes.ts vs newer start/sit engines
+
+stats2024Routes.ts vs any newer stats aggregation you find in silverLayerRoutes.ts / goldLayerRoutes.ts
+
+Just a brief note like:
+
+“stats2024Routes.ts appears redundant with stats2024Routes or silverLayerRoutes because both expose 2024 player stats from the same tables.”
+
+5) Output format
+
+Return a clear, structured report in this format:
+
+## enhancedRankingsRoutes.ts
+- Path: server/routes/enhancedRankingsRoutes.ts
+- Routes:
+  - GET /api/____ → returns ______
+  - ...
+- Frontend usage:
+  - Used in: client/src/pages/____.tsx (describe briefly)
+- Classification: LEGACY_BUT_USED
+- Notes: (duplication/overlap, anything weird)
+
+## hotListLive.ts
+...
+
+## rookieRisersRoutes.ts
+...
+
+## rookieRisersAPI.ts
+...
+
+## rookieRisersTest.ts
+...
+
+## pythonRookieRoutes.ts
+...
+
+## strategyRoutes.ts
+...
+
+## startSitRoutes.ts
+...
+
+## matchupRoutes.ts
+...
+
+## weeklyTakesRoutes.ts
+...
+
+## stats2024Routes.ts
+...
+
+
+That’s it for this pass — no deletions, no refactors yet.
+Just map what’s live, what’s legacy, and what’s dead.

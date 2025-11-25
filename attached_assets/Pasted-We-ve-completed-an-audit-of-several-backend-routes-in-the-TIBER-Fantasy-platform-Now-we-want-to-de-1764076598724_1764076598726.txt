@@ -1,0 +1,171 @@
+We’ve completed an audit of several backend routes in the TIBER Fantasy platform.
+
+Now we want to delete the legacy/unused files and unmount them cleanly from server/routes.ts.
+
+Please do the following exactly:
+
+1) Delete These Route Files
+
+Delete the following files from server/routes/:
+
+server/routes/enhancedRankingsRoutes.ts
+
+server/routes/hotListLive.ts
+
+server/routes/rookieRisersRoutes.ts
+
+server/routes/rookieRisersAPI.ts
+
+server/routes/rookieRisersTest.ts
+
+server/routes/pythonRookieRoutes.ts
+
+server/routes/startSitRoutes.ts
+
+server/routes/stats2024Routes.ts
+
+These have all been classified as LEGACY_UNUSED or DEAD/TEST_ONLY and have no active frontend usage.
+
+2) Clean Up server/routes.ts (Unmount & Remove Imports)
+
+Open server/routes.ts and:
+
+Remove any imports for the deleted files above.
+
+Search for:
+
+enhancedRankingsRoutes
+
+registerEnhancedRankingsRoutes
+
+hotListLive
+
+rookieRisersRoutes
+
+rookieRisersAPI
+
+rookieRisersTest
+
+pythonRookieRoutes
+
+registerPythonRookieRoutes
+
+startSitRoutes
+
+registerStartSitRoutes
+
+stats2024Routes
+
+any similar naming patterns
+
+Delete those import lines if they refer to the deleted files.
+
+Remove their registrations/mounts inside the main app/router setup.
+
+Search for function calls or blocks that register them, such as:
+
+registerEnhancedRankingsRoutes(app)
+
+app.use('/api/enhanced-rankings', ...)
+
+registerRookieRisersRoutes(app)
+
+registerRookieRisersAPI(app)
+
+registerRookieRisersTestRoutes(app)
+
+registerPythonRookieRoutes(app)
+
+registerStartSitRoutes(app, ...)
+
+registerStats2024Routes(app)
+
+any explicit app.get('/api/rookie-risers... or app.use('/api/rookie-risers'...) that belong to these files
+
+Remove all such lines/blocks related to the deleted files.
+
+Ensure no remaining references to these routes exist:
+
+No leftover type imports
+
+No commented-out “TODO” references that import or call these route modules
+
+3) Important – Do NOT Touch These Files
+
+Do NOT modify or delete the following, they are CORE_ACTIVE:
+
+server/routes/strategyRoutes.ts
+
+server/routes/matchupRoutes.ts
+
+server/routes/weeklyTakesRoutes.ts
+
+Also do not remove:
+
+Any /api/strategy/* endpoints (these power the Strategy tab)
+
+Any /api/matchup/* endpoints (these power ROS matchup calendar)
+
+Any /api/weekly-takes endpoint (this powers Weekly Takes tab)
+
+Any /api/start-sit/quick endpoint if it lives elsewhere — this may still be used by StartSitQuick on the frontend
+
+We are only removing the legacy startSitRoutes.ts file and its wiring, not the active Strategy or Matchup systems.
+
+4) Run Build / Type Check & Fix Fallout
+
+After making the deletions and cleanup:
+
+Run the project’s build / type-check command (e.g. npm run build or whatever is standard in this repo).
+
+Fix any compile errors related to:
+
+Missing imports from the deleted files
+
+Types or helpers that are now unused or can be safely removed
+
+If any type-only imports from the deleted modules are still referenced, either:
+
+Replace them with equivalent types already defined elsewhere, or
+
+Inline minimal types locally in the still-active modules, if needed.
+
+5) Final Verification Checklist
+
+Confirm all of the following:
+
+The deleted files no longer exist in server/routes/.
+
+server/routes.ts has:
+
+No imports from the deleted files
+
+No registration/mount calls for them
+
+App compiles and runs without errors.
+
+Strategy, Matchup, and Weekly Takes features still work:
+
+/api/strategy/start-sit
+
+/api/strategy/targets
+
+/api/matchup/ros/:canonicalId
+
+/api/weekly-takes
+
+/api/start-sit/quick (if present)
+
+6) Report Back
+
+When done, please provide a summary:
+
+List of files deleted
+
+List of import lines removed from server/routes.ts
+
+List of registration/mount lines removed from server/routes.ts
+
+Confirmation that build/type-check passes
+
+Confirmation that Strategy, Matchup, Weekly Takes, and any /api/start-sit/quick endpoints still respond as expected
