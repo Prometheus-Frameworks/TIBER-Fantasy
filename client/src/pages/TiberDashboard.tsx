@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Bell, Home, TrendingUp, Shield, Target, Shuffle, Users, FlaskConical, BarChart3, Eye, Lightbulb, Search, LineChart, Trophy, Settings } from 'lucide-react';
+import { User, Bell, Home, TrendingUp, Shield, Target, Shuffle, Users, Lightbulb, Search, LineChart, Trophy, Settings } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import HomeTab from '@/components/tabs/HomeTab';
 import RankingsTab from '@/components/tabs/RankingsTab';
@@ -7,8 +7,6 @@ import MatchupsTab from '@/components/tabs/MatchupsTab';
 import StrategyTab from '@/components/tabs/StrategyTab';
 import MovesTab from '@/components/tabs/MovesTab';
 import LeaguesTab from '@/components/tabs/LeaguesTab';
-import EPARankingsTab from '@/components/tabs/EPARankingsTab';
-import QBStatsReviewTab from '@/components/tabs/QBStatsReviewTab';
 import WeeklyTakesTab from '@/components/tabs/WeeklyTakesTab';
 import AdminTab from '@/components/tabs/AdminTab';
 import PlayerSearchBar from '@/components/PlayerSearchBar';
@@ -16,8 +14,6 @@ import PlayerSearchBar from '@/components/PlayerSearchBar';
 const tabs = [
   { id: 'home', label: 'Home', icon: Home, component: HomeTab },
   { id: 'rankings', label: 'Rankings', icon: TrendingUp, component: RankingsTab },
-  { id: 'epa-rankings', label: 'EPA Rankings', icon: BarChart3, component: EPARankingsTab },
-  { id: 'qb-stats', label: 'QB Stats', icon: Eye, component: QBStatsReviewTab },
   { id: 'matchups', label: 'Matchups', icon: Shield, component: MatchupsTab },
   { id: 'strategy', label: 'Strategy', icon: Target, component: StrategyTab },
   { id: 'weekly-takes', label: 'Weekly Takes', icon: Lightbulb, component: WeeklyTakesTab },
