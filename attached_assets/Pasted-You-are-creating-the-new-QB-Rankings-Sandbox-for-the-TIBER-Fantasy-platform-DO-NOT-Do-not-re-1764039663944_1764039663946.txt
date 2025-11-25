@@ -1,0 +1,348 @@
+You are creating the new QB Rankings Sandbox for the TIBER Fantasy platform.
+
+DO NOT:
+- Do not reuse WR/RB/TE logic directly.
+- Do not touch global rankings or Role Bank systems.
+- Do not modify existing endpoints.
+- Do not invent new metrics—use real data or graceful fallbacks.
+
+Create a NEW endpoint and a NEW UI page:
+  /api/admin/qb-rankings-sandbox
+  QBRankingsSandbox.tsx (or similar)
+
+This QB Sandbox must mirror WR/RB/TE sandboxes:
+- adjustable weight sliders
+- custom QB alpha score
+- presets
+- split-view comparison
+- export/import JSON
+- candidate formula save/load
+- Role Bank v2 export hook
+- volatility & context tags
+- team context injection
+
+==================================================
+🔥 PART 1 — DATA INGESTION (Backend)
+==================================================
+
+The QB endpoint must return at minimum (per QB, per season):
+
+Basic Passing:
+- games
+- attempts
+- completions
+- yards
+- TDs
+- INTs
+- sacks
+- sackYards
+- airYards (if available)
+- aDOT (calculate as airYards / attempts)
+- completionPct
+- yardsPerAttempt
+
+Advanced Passing:
+- EPA/play
+- successRate
+- ANY/A (adjusted net yards per attempt)
+- CPOE (completion % over expected)
+- adjCompPct (clean pocket comp%)
+- pressureToSackRate
+- pressuredCompPct
+- deepAccuracy (20+ yard throws)
+- intermediateAccuracy
+- shortAccuracy
+
+Rushing:
+- carries
+- rushYards
+- rushTDs
+- designedRushShare (designed runs / total plays)
+- scrambleRate
+- rushFPperGame (fantasy rushing)
+
+Fantasy:
+- FP/G
+- FP/Dropback
+- Pass FP/G
+- Rush FP/G
+- Total Points
+
+Red Zone:
+- rzAttempts
+- rzTDs
+- rzINTs
+- ezThrows (end zone attempts)
+- rzCompletionPct
+- rzEPA
+
+Team Context:
+- olinePassBlockGrade
+- wrRoomYPRR (avg)
+- schemePace (plays per game)
+- neutralPassRate
+- situationNeutralEPA
+
+Volatility:
+- weeklyPoints[]
+- floor
+- ceiling
+- volatilityScore = (ceiling - floor) normalized 0–1
+
+Context Tags:
+- “Injury-impacted”
+- “Small sample”
+- “Volatile but elite ceiling”
+- “Game Manager”
+- “Dual Threat Engine”
+- etc.
+
+==================================================
+🔥 PART 2 — INTERNAL QB INDICES
+==================================================
+
+Compute each internal pillar index normalized 0–1.
+
+1) **Volume Index**
+Use:
+- attempts
+- dropbacks
+- pace
+- neutralPassRate
+- airYards
+
+Weights inside the volume pillar:
+volumeIndex =
+  0.35 * normalize(attempts)
+  + 0.25 * normalize(dropbacks)
+  + 0.20 * normalize(airYards)
+  + 0.20 * normalize(neutralPassRate)
+
+2) **Production Index**
+Use:
+- FP/G
+- Pass TDs/game
+- RushFP/G
+- rzTDs normalized
+
+productionIndex =
+  0.50 * normalize(fpPerGame)
+  + 0.20 * normalize(passTDsPerGame)
+  + 0.20 * normalize(rushFpPerGame)
+  + 0.10 * normalize(rzTDsPerGame)
+
+3) **Efficiency Index**
+This is the most important QB pillar.
+
+Use:
+- EPA/play
+- ANY/A
+- CPOE
+- adjCompPct
+- deepAccuracy
+- pressuredCompPct
+- YPA
+
+efficiencyIndex =
+   0.30 * normalize(epaPerPlay)
+ + 0.20 * normalize(ANYA)
+ + 0.15 * normalize(CPOE)
+ + 0.10 * normalize(adjCompPct)
+ + 0.10 * normalize(deepAccuracy)
+ + 0.10 * normalize(pressuredCompPct)
+ + 0.05 * normalize(yardsPerAttempt)
+
+4) **Context Index**
+Team support score.
+
+Use:
+- olinePassBlockGrade
+- wrRoomYPRR
+- schemePace
+- situationNeutralEPA
+
+contextIndex =
+   0.35 * normalize(olinePassBlockGrade)
+ + 0.30 * normalize(wrRoomYPRR)
+ + 0.20 * normalize(schemePace)
+ + 0.15 * normalize(sitNeutralEPA)
+
+==================================================
+🔥 PART 3 — CUSTOM QB ALPHA SCORE
+==================================================
+
+Expose 4 sliders:
+
+1. Volume Weight
+2. Production Weight
+3. Efficiency Weight
+4. Context Weight
+
+Sliders default:
+- Volume: 25%
+- Production: 25%
+- Efficiency: 35%
+- Context: 15%
+
+Alpha Score:
+alphaScore =
+  volW   * volumeIndex +
+  prodW  * productionIndex +
+  effW   * efficiencyIndex +
+  ctxW   * contextIndex
+
+==================================================
+🔥 PART 4 — PRESETS
+==================================================
+
+Built-in presets:
+- Default QB (25/25/35/15)
+- Deep Ball Hunter (20/20/45/15) — rewards deep accuracy + EPA
+- Game Manager Lens (30/30/20/20)
+- Dual Threat Lens (20/35/35/10)
+- Pure Efficiency (10/20/60/10)
+
+Add:
+- save preset
+- load preset
+- delete preset
+- persist last-used preset in localStorage
+
+==================================================
+🔥 PART 5 — SPLIT VIEW (Comparison Mode)
+==================================================
+
+Two dropdowns → Player A, Player B.
+
+Show side-by-side:
+- volume metrics
+- production metrics
+- efficiency metrics
+- context metrics
+- rushing metrics
+- red zone
+- volatility
+- context tags
+- alpha score
+- highlight winner per metric
+
+==================================================
+🔥 PART 6 — EXPORT/IMPORT JSON
+==================================================
+
+Same as other sandboxes:
+
+{
+  "version": "qb-alpha-v1",
+  "weights": {
+    "volume": 0.25,
+    "production": 0.25,
+    "efficiency": 0.35,
+    "context": 0.15
+  }
+}
+
+Import with validation + normalization.
+
+==================================================
+🔥 PART 7 — CANDIDATE FORMULA SNAPSHOT
+==================================================
+
+Button: “Mark Candidate Formula”
+
+Save in localStorage:
+- label
+- timestamp
+- weights
+
+Used for future QB Alpha Engine merge.
+
+==================================================
+🔥 PART 8 — ROLE BANK v2 EXPORT
+==================================================
+
+buildQbAlphaExport(row):
+
+{
+  playerId,
+  playerName,
+  team,
+  games,
+  alphaScore,
+  volumeIndex,
+  productionIndex,
+  efficiencyIndex,
+  contextIndex,
+
+  attempts,
+  dropbacks,
+  yards,
+  TDs,
+  INTs,
+  sacks,
+  CPOE,
+  EPA/play,
+  ANY/A,
+  deepAccuracy,
+  pressuredCompPct,
+
+  rushYards,
+  rushTDs,
+  rushFpPerGame,
+
+  rzAttempts,
+  rzTDs,
+  rzEPA,
+
+  olinePassBlockGrade,
+  wrRoomYPRR,
+  schemePace,
+  situationNeutralEPA,
+
+  volatilityScore,
+  contextTag
+}
+
+Preview Payload button should log top 32 QBs.
+
+==================================================
+🔥 PART 9 — UI REQUIREMENTS
+==================================================
+
+Columns:
+
+Rank | Player | Team | G  
+Attempts | Comp% | Yards | TD | INT | YPA | aDOT  
+EPA/play | ANY/A | CPOE | adjCompPct | deepAcc  
+Dropbacks | Sacks | P2S Rate  
+Rush Yds | Rush TD | Rush FP/G  
+RZ Att | RZ TD | RZ EPA  
+OL Grade | WR YPRR | Scheme Pace  
+Floor / Ceiling | Volatility  
+Context Tag  
+Alpha Score  
+
+Filters:
+- Show only “Dual Threat QBs”
+- Show only “Pocket Passers”
+- Show only “Elite Efficiency”
+- Show only “Top 15”
+
+Context Tags (auto):
+- Small Sample
+- Volatile Elite
+- Reliable QB1
+- Scheme Merchant
+- O-line Victim
+- Dual Threat Weapon
+
+==================================================
+IMPLEMENTATION NOTES
+==================================================
+
+- Handle missing data gracefully.
+- Normalize metrics against the season maximum only.
+- Keep the QB endpoint lightweight—don’t do heavy join logic inline; use helper functions.
+- This sandbox is FRONTEND ONLY. Do not merge into production rankings until directed.
+
+At end, output a summary block at top of file.

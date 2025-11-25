@@ -6969,6 +6969,489 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   /**
+   * ============================================================
+   * QB SANDBOX v1.0 – QB Rankings Algorithm with 4 Pillars
+   * ============================================================
+   * 
+   * PILLARS:
+   * 1. Volume Index (25%) – attempts, dropbacks, air yards
+   * 2. Production Index (25%) – FP/G, TDs, rushing fantasy
+   * 3. Efficiency Index (35%) – EPA, CPOE, YPA, deep accuracy
+   * 4. Context Index (15%) – team support metrics
+   * 
+   * GET /api/admin/qb-rankings-sandbox
+   * Returns: QBs from 2025 season with 100+ pass attempts
+   * ============================================================
+   */
+  app.get('/api/admin/qb-rankings-sandbox', async (req: Request, res: Response) => {
+    try {
+      const { bronzeNflfastrPlays, qbContextMetrics, qbEpaReference } = await import('@shared/schema');
+      
+      // ============================================================
+      // STEP 1: Query base QB passing metrics from bronze_nflfastr_plays
+      // ============================================================
+      const passingResults = await db
+        .select({
+          passerId: bronzeNflfastrPlays.passerPlayerId,
+          playerName: bronzeNflfastrPlays.passerPlayerName,
+          team: bronzeNflfastrPlays.posteam,
+          attempts: sql<number>`COUNT(*)::int`,
+          completions: sql<number>`SUM(CASE WHEN ${bronzeNflfastrPlays.completePass} = true THEN 1 ELSE 0 END)::int`,
+          passingYards: sql<number>`SUM(${bronzeNflfastrPlays.yardsGained})::int`,
+          passingTds: sql<number>`SUM(CASE WHEN ${bronzeNflfastrPlays.touchdown} = true THEN 1 ELSE 0 END)::int`,
+          interceptions: sql<number>`SUM(CASE WHEN ${bronzeNflfastrPlays.interception} = true THEN 1 ELSE 0 END)::int`,
+          totalAirYards: sql<number>`SUM(COALESCE(${bronzeNflfastrPlays.airYards}, 0))::int`,
+          avgEpa: sql<number>`AVG(${bronzeNflfastrPlays.epa}::numeric)::real`,
+          deepAttempts: sql<number>`SUM(CASE WHEN ${bronzeNflfastrPlays.airYards} >= 20 THEN 1 ELSE 0 END)::int`,
+          deepCompletions: sql<number>`SUM(CASE WHEN ${bronzeNflfastrPlays.airYards} >= 20 AND ${bronzeNflfastrPlays.completePass} = true THEN 1 ELSE 0 END)::int`,
+          shortAttempts: sql<number>`SUM(CASE WHEN ${bronzeNflfastrPlays.airYards} < 10 THEN 1 ELSE 0 END)::int`,
+          shortCompletions: sql<number>`SUM(CASE WHEN ${bronzeNflfastrPlays.airYards} < 10 AND ${bronzeNflfastrPlays.completePass} = true THEN 1 ELSE 0 END)::int`,
+          intermediateAttempts: sql<number>`SUM(CASE WHEN ${bronzeNflfastrPlays.airYards} >= 10 AND ${bronzeNflfastrPlays.airYards} < 20 THEN 1 ELSE 0 END)::int`,
+          intermediateCompletions: sql<number>`SUM(CASE WHEN ${bronzeNflfastrPlays.airYards} >= 10 AND ${bronzeNflfastrPlays.airYards} < 20 AND ${bronzeNflfastrPlays.completePass} = true THEN 1 ELSE 0 END)::int`,
+          rzAttempts: sql<number>`SUM(CASE WHEN (${bronzeNflfastrPlays.rawData}->>'yardline_100')::numeric <= 20 THEN 1 ELSE 0 END)::int`,
+          rzTds: sql<number>`SUM(CASE WHEN (${bronzeNflfastrPlays.rawData}->>'yardline_100')::numeric <= 20 AND ${bronzeNflfastrPlays.touchdown} = true THEN 1 ELSE 0 END)::int`,
+          rzInts: sql<number>`SUM(CASE WHEN (${bronzeNflfastrPlays.rawData}->>'yardline_100')::numeric <= 20 AND ${bronzeNflfastrPlays.interception} = true THEN 1 ELSE 0 END)::int`,
+          ezAttempts: sql<number>`SUM(CASE WHEN (${bronzeNflfastrPlays.rawData}->>'yardline_100')::numeric <= 10 THEN 1 ELSE 0 END)::int`,
+          weeks: sql<number>`COUNT(DISTINCT ${bronzeNflfastrPlays.week})::int`,
+        })
+        .from(bronzeNflfastrPlays)
+        .where(
+          and(
+            eq(bronzeNflfastrPlays.season, 2025),
+            eq(bronzeNflfastrPlays.playType, 'pass'),
+            isNotNull(bronzeNflfastrPlays.passerPlayerName),
+            sql`${bronzeNflfastrPlays.passerPlayerName} != ''`
+          )
+        )
+        .groupBy(
+          bronzeNflfastrPlays.passerPlayerId,
+          bronzeNflfastrPlays.passerPlayerName,
+          bronzeNflfastrPlays.posteam
+        )
+        .having(sql`COUNT(*) >= 100`);
+
+      // ============================================================
+      // STEP 2: Query rushing metrics for QBs from bronze_nflfastrPlays
+      // ============================================================
+      const rushingResults = await db
+        .select({
+          rusherId: bronzeNflfastrPlays.rusherPlayerId,
+          carries: sql<number>`COUNT(*)::int`,
+          rushYards: sql<number>`SUM(${bronzeNflfastrPlays.yardsGained})::int`,
+          rushTds: sql<number>`SUM(CASE WHEN ${bronzeNflfastrPlays.touchdown} = true THEN 1 ELSE 0 END)::int`,
+          rushEpa: sql<number>`AVG(${bronzeNflfastrPlays.epa}::numeric)::real`,
+          designedRuns: sql<number>`SUM(CASE WHEN ${bronzeNflfastrPlays.playType} = 'run' THEN 1 ELSE 0 END)::int`,
+          scrambles: sql<number>`SUM(CASE WHEN (${bronzeNflfastrPlays.rawData}->>'qb_scramble')::text = '1' THEN 1 ELSE 0 END)::int`,
+          rzRushes: sql<number>`SUM(CASE WHEN (${bronzeNflfastrPlays.rawData}->>'yardline_100')::numeric <= 20 THEN 1 ELSE 0 END)::int`,
+          rzRushTds: sql<number>`SUM(CASE WHEN (${bronzeNflfastrPlays.rawData}->>'yardline_100')::numeric <= 20 AND ${bronzeNflfastrPlays.touchdown} = true THEN 1 ELSE 0 END)::int`,
+        })
+        .from(bronzeNflfastrPlays)
+        .where(
+          and(
+            eq(bronzeNflfastrPlays.season, 2025),
+            eq(bronzeNflfastrPlays.playType, 'run'),
+            isNotNull(bronzeNflfastrPlays.rusherPlayerId)
+          )
+        )
+        .groupBy(bronzeNflfastrPlays.rusherPlayerId);
+
+      const rushingMap = new Map(rushingResults.map(r => [r.rusherId, r]));
+
+      // ============================================================
+      // STEP 3: Get CPOE and context metrics from qb_context_metrics
+      // ============================================================
+      const contextResults = await db
+        .select({
+          playerId: qbContextMetrics.playerId,
+          avgCpoe: sql<number>`AVG(${qbContextMetrics.cpoe})::real`,
+          totalSacks: sql<number>`SUM(COALESCE(${qbContextMetrics.sacks}, 0))::int`,
+          avgPressureRate: sql<number>`AVG(COALESCE(${qbContextMetrics.pressureRate}, 0))::real`,
+          avgDropRate: sql<number>`AVG(COALESCE(${qbContextMetrics.dropRate}, 0))::real`,
+          avgCompletionPct: sql<number>`AVG(COALESCE(${qbContextMetrics.completionPct}, 0))::real`,
+        })
+        .from(qbContextMetrics)
+        .where(eq(qbContextMetrics.season, 2025))
+        .groupBy(qbContextMetrics.playerId);
+
+      const contextMap = new Map(contextResults.map(c => [c.playerId, c]));
+
+      // ============================================================
+      // STEP 4: Get EPA reference data
+      // ============================================================
+      const epaResults = await db
+        .select({
+          playerId: qbEpaReference.playerId,
+          avgAdjEpa: sql<number>`AVG(${qbEpaReference.adjEpaPerPlay})::real`,
+          totalPlays: sql<number>`SUM(${qbEpaReference.numPlays})::int`,
+        })
+        .from(qbEpaReference)
+        .where(eq(qbEpaReference.season, 2025))
+        .groupBy(qbEpaReference.playerId);
+
+      const epaMap = new Map(epaResults.map(e => [e.playerId, e]));
+
+      // ============================================================
+      // STEP 5: Query weekly fantasy data for volatility
+      // ============================================================
+      const weeklyFantasy = await db
+        .select({
+          passerId: bronzeNflfastrPlays.passerPlayerId,
+          week: bronzeNflfastrPlays.week,
+          weeklyYards: sql<number>`SUM(${bronzeNflfastrPlays.yardsGained})::int`,
+          weeklyTds: sql<number>`SUM(CASE WHEN ${bronzeNflfastrPlays.touchdown} = true THEN 1 ELSE 0 END)::int`,
+          weeklyInts: sql<number>`SUM(CASE WHEN ${bronzeNflfastrPlays.interception} = true THEN 1 ELSE 0 END)::int`,
+        })
+        .from(bronzeNflfastrPlays)
+        .where(
+          and(
+            eq(bronzeNflfastrPlays.season, 2025),
+            eq(bronzeNflfastrPlays.playType, 'pass'),
+            isNotNull(bronzeNflfastrPlays.passerPlayerName)
+          )
+        )
+        .groupBy(bronzeNflfastrPlays.passerPlayerId, bronzeNflfastrPlays.week);
+
+      // Group weekly data by player for volatility
+      const weeklyByPlayer = new Map<string, Array<{yards: number, tds: number, ints: number}>>();
+      for (const row of weeklyFantasy) {
+        if (!row.passerId) continue;
+        if (!weeklyByPlayer.has(row.passerId)) {
+          weeklyByPlayer.set(row.passerId, []);
+        }
+        weeklyByPlayer.get(row.passerId)!.push({
+          yards: row.weeklyYards || 0,
+          tds: row.weeklyTds || 0,
+          ints: row.weeklyInts || 0,
+        });
+      }
+
+      // ============================================================
+      // STEP 6: Calculate season max values for normalization
+      // ============================================================
+      const maxAttempts = Math.max(...passingResults.map(p => p.attempts || 1), 1);
+      const maxYards = Math.max(...passingResults.map(p => p.passingYards || 1), 1);
+      const maxAirYards = Math.max(...passingResults.map(p => p.totalAirYards || 1), 1);
+      const maxTds = Math.max(...passingResults.map(p => p.passingTds || 1), 1);
+      const maxEpa = Math.max(...passingResults.map(p => Math.abs(p.avgEpa || 0)), 0.01);
+
+      // ============================================================
+      // STEP 7: Process each QB and calculate indices
+      // ============================================================
+      const processedQBs = passingResults.map(qb => {
+        const passerId = qb.passerId || '';
+        const games = qb.weeks || 1;
+        const rushing = rushingMap.get(passerId);
+        const context = contextMap.get(passerId);
+        const epaRef = epaMap.get(passerId);
+        const weeklyData = weeklyByPlayer.get(passerId) || [];
+
+        // Basic passing metrics
+        const attempts = qb.attempts || 0;
+        const completions = qb.completions || 0;
+        const passingYards = qb.passingYards || 0;
+        const passingTds = qb.passingTds || 0;
+        const interceptions = qb.interceptions || 0;
+        const totalAirYards = qb.totalAirYards || 0;
+        const avgEpa = qb.avgEpa || 0;
+
+        // Calculated metrics
+        const completionPct = attempts > 0 ? (completions / attempts) * 100 : 0;
+        const yardsPerAttempt = attempts > 0 ? passingYards / attempts : 0;
+        const aDot = attempts > 0 ? totalAirYards / attempts : 0;
+        const tdRate = attempts > 0 ? (passingTds / attempts) * 100 : 0;
+        const intRate = attempts > 0 ? (interceptions / attempts) * 100 : 0;
+
+        // Deep/short/intermediate accuracy
+        const deepAccuracy = qb.deepAttempts > 0 
+          ? (qb.deepCompletions / qb.deepAttempts) * 100 
+          : null;
+        const shortAccuracy = qb.shortAttempts > 0 
+          ? (qb.shortCompletions / qb.shortAttempts) * 100 
+          : null;
+        const intermediateAccuracy = qb.intermediateAttempts > 0 
+          ? (qb.intermediateCompletions / qb.intermediateAttempts) * 100 
+          : null;
+
+        // Red zone metrics
+        const rzAttempts = qb.rzAttempts || 0;
+        const rzTds = qb.rzTds || 0;
+        const rzInts = qb.rzInts || 0;
+        const ezAttempts = qb.ezAttempts || 0;
+        const rzCompletionPct = rzAttempts > 0 ? 50 : 0; // Placeholder
+
+        // Rushing metrics
+        const carries = rushing?.carries || 0;
+        const rushYards = rushing?.rushYards || 0;
+        const rushTds = rushing?.rushTds || 0;
+        const rushEpa = rushing?.rushEpa || 0;
+        const scrambles = rushing?.scrambles || 0;
+        const rzRushes = rushing?.rzRushes || 0;
+
+        // Fantasy points calculation (4pt passing TD, 6pt rush TD)
+        const passingFp = (passingYards * 0.04) + (passingTds * 4) - (interceptions * 2);
+        const rushingFp = (rushYards * 0.1) + (rushTds * 6);
+        const totalFp = passingFp + rushingFp;
+        const fpPerGame = games > 0 ? totalFp / games : 0;
+        const passFpPerGame = games > 0 ? passingFp / games : 0;
+        const rushFpPerGame = games > 0 ? rushingFp / games : 0;
+        const attemptsPerGame = games > 0 ? attempts / games : 0;
+
+        // Context metrics (from qb_context_metrics)
+        const cpoe = context?.avgCpoe ?? null;
+        const sacks = context?.totalSacks ?? 0;
+        const pressureRate = context?.avgPressureRate ?? null;
+        const sackRate = attempts > 0 ? (sacks / (attempts + sacks)) * 100 : null;
+
+        // Adjusted EPA from reference table
+        const adjEpaPerPlay = epaRef?.avgAdjEpa ?? avgEpa;
+
+        // ANY/A = (Yards + 20×TD - 45×INT - Sack Yards) / (Attempts + Sacks)
+        const sackYards = sacks * 7; // Estimate 7 yards per sack
+        const anyA = (attempts + sacks) > 0 
+          ? (passingYards + 20*passingTds - 45*interceptions - sackYards) / (attempts + sacks)
+          : 0;
+
+        // Volatility calculation
+        let floorFp = 0;
+        let ceilingFp = 0;
+        let volatilityScore = 0;
+        if (weeklyData.length > 0) {
+          const weeklyFpArr = weeklyData.map(w => 
+            (w.yards * 0.04) + (w.tds * 4) - (w.ints * 2) + (rushFpPerGame)
+          );
+          weeklyFpArr.sort((a, b) => a - b);
+          floorFp = weeklyFpArr[Math.floor(weeklyFpArr.length * 0.25)] || 0;
+          ceilingFp = weeklyFpArr[Math.floor(weeklyFpArr.length * 0.75)] || 0;
+          if (ceilingFp > 0) {
+            volatilityScore = Math.min(1, (ceilingFp - floorFp) / ceilingFp);
+          }
+        }
+
+        // ============================================================
+        // CALCULATE 4 PILLAR INDICES (0-100)
+        // ============================================================
+
+        // 1. VOLUME INDEX (25% default weight)
+        // 0.35 * attempts + 0.25 * dropbacks + 0.20 * airYards + 0.20 * neutralPassRate
+        const attemptsNorm = Math.min(1, attempts / maxAttempts);
+        const dropbacksNorm = Math.min(1, (attempts + sacks) / (maxAttempts * 1.1));
+        const airYardsNorm = Math.min(1, totalAirYards / maxAirYards);
+        const neutralPassRate = 0.55; // Placeholder - would come from team context
+        const volumeIndex = (
+          0.35 * attemptsNorm +
+          0.25 * dropbacksNorm +
+          0.20 * airYardsNorm +
+          0.20 * neutralPassRate
+        ) * 100;
+
+        // 2. PRODUCTION INDEX (25% default weight)
+        // 0.50 * FP/G + 0.20 * passTD/G + 0.20 * rushFP/G + 0.10 * rzTD/G
+        const maxFpg = 30; // Elite QB threshold
+        const fpgNorm = Math.min(1, fpPerGame / maxFpg);
+        const passTdPerGame = games > 0 ? passingTds / games : 0;
+        const passTdNorm = Math.min(1, passTdPerGame / 3);
+        const rushFpNorm = Math.min(1, rushFpPerGame / 8);
+        const rzTdPerGame = games > 0 ? rzTds / games : 0;
+        const rzTdNorm = Math.min(1, rzTdPerGame / 2);
+        const productionIndex = (
+          0.50 * fpgNorm +
+          0.20 * passTdNorm +
+          0.20 * rushFpNorm +
+          0.10 * rzTdNorm
+        ) * 100;
+
+        // 3. EFFICIENCY INDEX (35% default weight) - MOST IMPORTANT
+        // 0.30 * EPA + 0.20 * ANY/A + 0.15 * CPOE + 0.10 * adjCompPct + 0.10 * deepAcc + 0.10 * pressuredCompPct + 0.05 * YPA
+        const epaNorm = Math.min(1, Math.max(0, (avgEpa + 0.3) / 0.6));
+        const anyaNorm = Math.min(1, Math.max(0, anyA / 10));
+        const cpoeNorm = cpoe !== null ? Math.min(1, Math.max(0, (cpoe + 10) / 20)) : 0.5;
+        const compPctNorm = Math.min(1, completionPct / 75);
+        const deepAccNorm = deepAccuracy !== null ? Math.min(1, deepAccuracy / 50) : 0.5;
+        const pressuredCompPct = 0.5; // Placeholder
+        const ypaNorm = Math.min(1, yardsPerAttempt / 10);
+        const efficiencyIndex = (
+          0.30 * epaNorm +
+          0.20 * anyaNorm +
+          0.15 * cpoeNorm +
+          0.10 * compPctNorm +
+          0.10 * deepAccNorm +
+          0.10 * pressuredCompPct +
+          0.05 * ypaNorm
+        ) * 100;
+
+        // 4. CONTEXT INDEX (15% default weight) - Team support
+        // Placeholder values since we don't have O-line grades, WR YPRR, etc.
+        const olinePassBlockGrade = 70; // Placeholder
+        const wrRoomYprr = 1.5; // Placeholder
+        const schemePace = 65; // Placeholder plays per game
+        const sitNeutralEpa = 0.1; // Placeholder
+        const olineNorm = Math.min(1, olinePassBlockGrade / 90);
+        const wrYprrNorm = Math.min(1, wrRoomYprr / 2.5);
+        const paceNorm = Math.min(1, schemePace / 75);
+        const sitEpaNorm = Math.min(1, Math.max(0, (sitNeutralEpa + 0.2) / 0.4));
+        const contextIndex = (
+          0.35 * olineNorm +
+          0.30 * wrYprrNorm +
+          0.20 * paceNorm +
+          0.15 * sitEpaNorm
+        ) * 100;
+
+        // ============================================================
+        // CONTEXT TAGS
+        // ============================================================
+        let contextTag: string | null = null;
+        if (games < 4) {
+          contextTag = 'Small Sample';
+        } else if (rushFpPerGame >= 5 && rushYards >= 200) {
+          contextTag = 'Dual Threat Weapon';
+        } else if (efficiencyIndex >= 70 && volumeIndex < 50) {
+          contextTag = 'Game Manager';
+        } else if (volatilityScore >= 0.6 && ceilingFp >= 25) {
+          contextTag = 'Volatile Elite';
+        } else if (efficiencyIndex >= 60 && volatilityScore < 0.3) {
+          contextTag = 'Reliable QB1';
+        } else if (sackRate && sackRate >= 8) {
+          contextTag = 'O-line Victim';
+        } else if (contextIndex >= 75 && efficiencyIndex >= 55) {
+          contextTag = 'Scheme Merchant';
+        }
+
+        // ============================================================
+        // QB ARCHETYPE
+        // ============================================================
+        let archetype: string;
+        if (rushFpPerGame >= 6 && carries >= 30) {
+          archetype = 'DUAL_THREAT';
+        } else if (aDot >= 9 && deepAccuracy && deepAccuracy >= 45) {
+          archetype = 'DEEP_BALL';
+        } else if (completionPct >= 68 && yardsPerAttempt < 7) {
+          archetype = 'GAME_MANAGER';
+        } else if (efficiencyIndex >= 65) {
+          archetype = 'POCKET_PASSER';
+        } else {
+          archetype = 'DEVELOPING';
+        }
+
+        return {
+          playerId: passerId,
+          playerName: qb.playerName || 'Unknown',
+          team: qb.team || 'UNK',
+          games,
+
+          // Basic passing
+          attempts,
+          completions,
+          passingYards,
+          passingTds,
+          interceptions,
+          sacks,
+          sackYards,
+          totalAirYards,
+
+          // Calculated passing
+          completionPct: Math.round(completionPct * 100) / 100,
+          yardsPerAttempt: Math.round(yardsPerAttempt * 100) / 100,
+          aDot: Math.round(aDot * 100) / 100,
+          tdRate: Math.round(tdRate * 100) / 100,
+          intRate: Math.round(intRate * 100) / 100,
+
+          // Advanced passing
+          avgEpa: Math.round(avgEpa * 1000) / 1000,
+          adjEpaPerPlay: Math.round(adjEpaPerPlay * 1000) / 1000,
+          anyA: Math.round(anyA * 100) / 100,
+          cpoe: cpoe !== null ? Math.round(cpoe * 100) / 100 : null,
+          successRate: null, // Would need play-by-play success calculation
+          deepAccuracy: deepAccuracy !== null ? Math.round(deepAccuracy * 10) / 10 : null,
+          intermediateAccuracy: intermediateAccuracy !== null ? Math.round(intermediateAccuracy * 10) / 10 : null,
+          shortAccuracy: shortAccuracy !== null ? Math.round(shortAccuracy * 10) / 10 : null,
+          pressuredCompPct: null, // Would need pressure data
+          pressureToSackRate: pressureRate !== null ? Math.round(pressureRate * 100) / 100 : null,
+
+          // Rushing
+          carries,
+          rushYards,
+          rushTds,
+          rushEpa: Math.round(rushEpa * 1000) / 1000,
+          scrambles,
+          designedRushShare: null, // Would need play type breakdown
+          scrambleRate: attempts > 0 ? Math.round((scrambles / attempts) * 10000) / 100 : null,
+          rushFpPerGame: Math.round(rushFpPerGame * 100) / 100,
+
+          // Fantasy
+          totalFantasyPoints: Math.round(totalFp * 100) / 100,
+          fpPerGame: Math.round(fpPerGame * 100) / 100,
+          passFpPerGame: Math.round(passFpPerGame * 100) / 100,
+          fpPerDropback: (attempts + sacks) > 0 
+            ? Math.round((totalFp / (attempts + sacks)) * 100) / 100 
+            : 0,
+
+          // Red zone
+          rzAttempts,
+          rzTds,
+          rzInts,
+          ezAttempts,
+          rzCompletionPct,
+          rzRushes,
+          rzEpa: null, // Would need RZ-specific EPA
+
+          // Team context (placeholders)
+          olinePassBlockGrade: null,
+          wrRoomYprr: null,
+          schemePace: null,
+          neutralPassRate: null,
+          sitNeutralEpa: null,
+
+          // Volatility
+          weeklyGames: weeklyData.length,
+          floorFp: Math.round(floorFp * 10) / 10,
+          ceilingFp: Math.round(ceilingFp * 10) / 10,
+          volatilityScore: Math.round(volatilityScore * 100) / 100,
+
+          // Pillar indices (0-100)
+          volumeIndex: Math.round(volumeIndex * 100) / 100,
+          productionIndex: Math.round(productionIndex * 100) / 100,
+          efficiencyIndex: Math.round(efficiencyIndex * 100) / 100,
+          contextIndex: Math.round(contextIndex * 100) / 100,
+
+          // Labels
+          archetype,
+          archetypeLabel: archetype === 'DUAL_THREAT' ? 'Dual Threat' :
+                         archetype === 'DEEP_BALL' ? 'Deep Ball Hunter' :
+                         archetype === 'GAME_MANAGER' ? 'Game Manager' :
+                         archetype === 'POCKET_PASSER' ? 'Pocket Passer' : 'Developing',
+          contextTag,
+
+          // Sack metrics
+          sackRate: sackRate !== null ? Math.round(sackRate * 100) / 100 : null,
+        };
+      });
+
+      // ============================================================
+      // STEP 8: Sort by fantasy points and return
+      // ============================================================
+      const ranked = processedQBs
+        .sort((a, b) => b.totalFantasyPoints - a.totalFantasyPoints)
+        .slice(0, 40);
+
+      res.json({
+        success: true,
+        season: 2025,
+        minAttempts: 100,
+        count: ranked.length,
+        version: 'qb-sandbox-v1',
+        data: ranked,
+      });
+
+    } catch (error) {
+      console.error('❌ [AdminAPI] QB Rankings Sandbox failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
+  /**
    * POST /api/admin/rag/seed-narratives - Seed TIBER narratives with embeddings
    */
   app.post('/api/admin/rag/seed-narratives', async (req: Request, res: Response) => {
