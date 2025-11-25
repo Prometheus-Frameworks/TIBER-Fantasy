@@ -1,0 +1,224 @@
+STAGE 2 CONSOLIDATION (A0 FINAL)
+
+We have completed Stage 1 cleanup.
+Now we are executing Stage 2, which focuses on consolidating duplicate services across three groups:
+
+Snap services
+
+Player identity services
+
+ECR services
+
+Follow the instructions carefully.
+Do NOT modify or delete anything outside the scope described.
+
+✅ 1) SNAP SERVICES — Canonicalization
+
+We have four active snap-related services:
+
+server/services/snapCountService.ts
+
+server/services/sleeperSnapService.ts
+
+server/services/sleeperWeeklySnapService.ts
+
+server/services/snapPercentageService.ts
+
+snapCounts.ts is already removed from Stage 1.
+
+1A — Canonical Snap Service
+
+Make sleeperSnapService.ts the canonical snap service.
+Add a header comment:
+
+// CANONICAL SNAP SERVICE
+// Consolidated from sleeperSnapService, sleeperWeeklySnapService, snapPercentageService.
+// All snap-related routes should use this service.
+
+1B — Merge Logic
+
+Move relevant logic from:
+
+sleeperWeeklySnapService.ts
+
+snapPercentageService.ts
+
+into the canonical snap service.
+
+This includes:
+
+weekly snap percentages
+
+player-level snap trends
+
+any logic used by routes (you will detect via imports)
+
+1C — Keep ETL Script
+
+Do NOT delete snapCountService.ts.
+It stays as an ETL-only ingestion script (used by Bronze layer).
+
+1D — Delete Redundant Snap Services
+
+After merging their logic and removing all imports:
+
+Delete sleeperWeeklySnapService.ts
+
+Delete snapPercentageService.ts
+
+Ensure all routes that previously used these files now use the canonical snap service.
+
+🔵 2) PLAYER IDENTITY — Canonicalization
+
+We have three identity-related services:
+
+server/services/PlayerIdentityService.ts
+
+server/services/PlayerMappingService.ts
+
+server/services/playerAliases.ts
+
+2A — Keep Canonical Identity Resolver
+
+PlayerIdentityService.ts is the canonical and should be kept.
+
+2B — Delete Dead Mapping Service
+
+Delete:
+
+PlayerMappingService.ts (0 importers, dead code)
+
+2C — Keep Aliases as Helper
+
+Keep playerAliases.ts, but restrict it:
+
+It should only be imported by:
+
+PlayerIdentityService.ts
+
+chat/RAG routes if needed
+
+If it is imported elsewhere, refactor those files to use PlayerIdentityService.ts instead.
+
+Optional but ideal:
+
+Make PlayerIdentityService.ts import playerAliases.ts internally.
+
+🟡 3) ECR SERVICES — Consolidation (Not Full Removal)
+
+We eventually plan to remove all ECR, but NOT in this pass.
+This pass is only consolidation + simplification.
+
+Current ECR files:
+
+server/services/ecrService.ts
+
+server/services/ecrLoader.ts
+
+server/services/enhancedEcrProvider.ts
+
+server/services/ecrPipelineService.ts
+
+3A — Keep Canonical Provider
+
+Keep:
+
+enhancedEcrProvider.ts
+Mark it as:
+
+// CANONICAL ECR PROVIDER (temporary until FORGE replaces ECR)
+
+3B — Keep Admin Loader
+
+Keep:
+
+ecrLoader.ts
+
+3C — Merge Legacy Logic
+
+Move any necessary static comparison logic from:
+
+ecrService.ts
+
+into the canonical provider IF required by /api/ecr/* routes or the prediction engine.
+
+Do not change external behavior of any ECR routes.
+
+3D — Delete Sanity-Check Utility
+
+Delete:
+
+ecrPipelineService.ts
+(only used for sanity checks, safe to remove)
+
+✔️ 4) Final Verification
+
+After all merges and deletions:
+
+Run build & type-check
+
+Fix any errors involving:
+
+missing imports
+
+unused variables
+
+snapped dependency chains
+
+updated return types
+
+Verify these APIs work exactly as before:
+
+/api/ovr/*
+
+/api/tiber/*
+
+/api/strategy/*
+
+/api/matchup/*
+
+/api/analytics/*
+
+/api/ecr/* (behavior unchanged)
+
+All sandbox frontends (WR / RB / TE / QB)
+
+Final Summary Required
+
+Provide:
+
+List of deleted files
+
+List of files consolidated/merged
+
+Which service is now canonical for:
+
+snap data
+
+player identity
+
+ECR
+
+Any leftover TODOs before FORGE
+
+Confirmation app starts and core endpoints operate normally
+
+⛔️ 5) Do NOT Touch (FORGE handles later)
+
+Do NOT modify:
+
+rankingsFusionService.ts
+
+predictionEngine.ts
+
+roleBankService.ts
+
+UPHCoordinator.ts
+
+IntelligentScheduler.ts
+
+Any ETL files (Bronze/Silver/Gold) other than snap/identity cleanup above
+
+These will be replaced or rewritten when FORGE is installed.
+
+Execute Stage 2 exactly as described, then report back.

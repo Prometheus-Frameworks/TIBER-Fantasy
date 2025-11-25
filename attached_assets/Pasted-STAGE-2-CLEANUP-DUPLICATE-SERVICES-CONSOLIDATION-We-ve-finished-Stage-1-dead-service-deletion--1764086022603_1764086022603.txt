@@ -1,0 +1,251 @@
+STAGE 2 CLEANUP (DUPLICATE SERVICES CONSOLIDATION)
+
+We’ve finished Stage 1 (dead service deletion).
+Now we want to consolidate duplicate service groups so that each responsibility has a single canonical implementation.
+
+This is refactor + light deletion, not a full rewrite.
+
+Please work in three groups:
+
+1) SNAP SERVICES CONSOLIDATION
+
+Duplicate set (from your audit):
+
+server/services/snapCountService.ts
+
+server/services/sleeperSnapService.ts
+
+server/services/sleeperWeeklySnapService.ts
+
+server/services/snapPercentageService.ts
+
+(server/services/snapCounts.ts already deleted in Stage 1)
+
+1A. Audit & Report
+
+For each of the remaining snap-related services:
+
+List:
+
+which files import it
+
+which routes depend on it (if any)
+
+what data shape it returns (example response interfaces)
+
+any comments that describe intent (weekly vs season, % vs raw counts, etc.)
+
+1B. Choose a Canonical Snap Service
+
+Based on current usage and routes:
+
+Pick one canonical snap engine (likely sleeperSnapService.ts or snapCountService.ts).
+
+The canonical service should:
+
+fetch snaps from Sleeper (or whatever is actually wired)
+
+provide normalized output we can reuse
+
+be clearly named and documented
+
+Rename/comment if needed to reflect that it is now the primary snap service.
+
+1C. Refactor Callers
+
+For any callers using non-canonical snap services:
+
+Rewire them to use the canonical snap service instead.
+
+Keep logic identical from the caller’s perspective (don’t change behavior, just move shared logic into the canonical place).
+
+1D. Delete Obsolete Snap Services
+
+Once all active usages are migrated:
+
+Delete any snap services that are no longer imported anywhere.
+
+Clean up imports and fix build/type-check errors if they appear.
+
+2) PLAYER IDENTITY CONSOLIDATION
+
+Duplicate set (from your audit):
+
+server/services/PlayerIdentityService.ts
+
+server/services/PlayerMappingService.ts
+
+server/services/playerAliases.ts
+
+These are all involved in “who is this player actually?” resolution.
+
+2A. Audit & Report
+
+For each identity-related service:
+
+List:
+
+which files import it
+
+what functions it exports (e.g. resolvePlayer, getCanonicalId, etc.)
+
+what data source(s) it uses (DB tables, aliases, external IDs)
+
+whether it is used in core APIs (TIBER, OVR, matchup, projections, sandboxes)
+
+2B. Design a Single Identity Resolver
+
+We want one canonical identity resolver service, for example:
+
+PlayerIdentityService.ts as the main entry point
+
+It should:
+
+Handle canonical IDs
+
+Handle aliases / nickname mapping
+
+Handle mapping from external IDs (Sleeper, NFLfastR, etc.)
+
+Expose a clean set of functions like:
+
+resolveCanonicalPlayerId(...)
+
+resolveFromSleeperId(...)
+
+resolveFromNameSearch(...)
+
+You don’t need to fully redesign everything — just make one service clearly the main one, and fold duplicate functionality into it where straightforward.
+
+2C. Refactor Callers
+
+Update any uses of PlayerMappingService and playerAliases to instead call the canonical identity resolver.
+
+Keep behavior equivalent where possible.
+
+2D. Delete or Demote Redundant Identity Services
+
+If any identity service becomes completely unused:
+
+Delete the file.
+
+If a file is only used as a static data helper (like alias tables), keep it but make sure it’s imported only by the canonical resolver, not all over the codebase.
+
+3) ECR SERVICES SIMPLIFICATION (NO NUKE YET)
+
+⚠️ IMPORTANT:
+We eventually intend to remove external ECR dependency entirely (“we are the new consensus now”), but not in this pass. This pass is only:
+
+Consolidation
+
+Simplification
+
+Making ECR easier to remove later
+
+Duplicate ECR set (from your audit):
+
+server/services/ecrService.ts
+
+server/services/ecrLoader.ts
+
+server/services/enhancedEcrProvider.ts
+
+server/services/ecrPipelineService.ts
+
+3A. Audit & Report
+
+For each ECR-related service:
+
+List:
+
+which routes or services import it
+
+what functions it exposes
+
+what external data it fetches (if any)
+
+whether it’s still powering a live feature (e.g. /api/ecr/*)
+
+3B. Choose a Single Canonical ECR Provider
+
+For now (until we fully replace ECR with FORGE/TIBER consensus):
+
+Pick one service as the canonical ECR provider — ideally the simplest one powering current routes (probably enhancedEcrProvider.ts or ecrLoader.ts).
+
+The canonical ECR service should:
+
+be the only one used by routes
+
+have clearly named methods
+
+be documented as temporary until FORGE replaces it
+
+3C. Refactor / Remove Redundant ECR Services
+
+For any ECR service that is not used after consolidation:
+
+Delete the file.
+
+For any ECR logic duplicated between files:
+
+Move shared logic into the canonical ECR provider.
+
+Update routes so they depend only on the canonical provider.
+
+Do not change the external behavior of /api/ecr/* endpoints in this pass — just simplify under the hood.
+
+4) DO NOT TOUCH (FORGE WILL HANDLE LATER)
+
+In this Stage 2 pass, do not modify or delete:
+
+rankingsFusionService.ts
+
+predictionEngine.ts
+
+roleBankService.ts
+
+UPHCoordinator.ts
+
+IntelligentScheduler.ts
+
+Any Bronze/Silver/Gold services still wired to ETL or admin routes
+
+These will be replaced or refactored when FORGE (Football Oriented Recursive Grading Engine) is introduced.
+
+5) FINAL VERIFICATION
+
+After all refactors and deletions:
+
+Run build / type-check.
+
+Confirm the following still work:
+
+OVR routes
+
+TIBER routes
+
+Strategy/start-sit
+
+Matchup endpoints (including ROS)
+
+Analytics & Leaders
+
+Sandboxes (WR/RB/TE/QB)
+
+Any /api/ecr/* endpoints that existed before
+
+Provide a final summary:
+
+Which services became canonical for:
+
+snap logic
+
+player identity
+
+ECR
+
+Which files were deleted
+
+Which routes were updated
+
+Any TODOs you recommend before we start FORGE planning
