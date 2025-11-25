@@ -1,0 +1,105 @@
+We’re doing a small cleanup on the TIBER Fantasy codebase.
+
+Goal:
+Delete the old QB EPA Rankings and QB Stats Review widgets (front-end + back-end) because they’re legacy and the new QBRankingsSandbox.tsx fully replaces them.
+
+FRONTEND TASKS
+
+Search the entire client/ tree for these exact text strings:
+
+"QB EPA Rankings"
+
+"No EPA data available. Run the EPA calculation first."
+
+"QB Stats Review"
+
+"No QB data available"
+
+"QB statistics are currently unavailable"
+
+Identify the React components that render those headers/empty-state messages.
+They are likely used inside AnalyticsPage.tsx, TiberDashboard.tsx, or a shared component file.
+
+Do the following:
+
+Remove those components entirely if they are dedicated UI blocks just for these QB EPA/QB Stats views.
+
+If they’re inline sections inside a larger page, delete the entire JSX block that renders those cards/sections.
+
+Remove any associated imports that become unused.
+
+Make sure there is no remaining link/button/nav item that points to those views.
+
+Confirm that:
+
+QBRankingsSandbox.tsx is untouched.
+
+No front-end code is still trying to call “QB EPA Rankings” or “QB Stats Review” endpoints.
+
+BACKEND TASKS
+
+The backend uses server/routes.ts as a main router plus additional routers in server/routes/.
+
+Search server/ for any routes or functions clearly dedicated to the old QB EPA / QB stats views:
+
+Likely patterns:
+
+"qb-epa"
+
+"qb_epa"
+
+"qb-epa-rankings"
+
+"qb-stats-review"
+
+"qb_stats_review"
+
+Or route descriptions mentioning “QB EPA” or “QB Stats Review”
+
+For any endpoints that exist solely to feed those deleted front-end widgets, do the following:
+
+Remove the route handler from server/routes.ts or from the relevant file in server/routes/.
+
+Remove any service/module imports that are now unused (e.g. EPA calculation helpers, old QB stats loaders if nothing else uses them).
+
+If an EPA calculation module is shared with other active features, keep the shared pieces but delete anything that’s only used by the old widgets.
+
+Important:
+
+Do NOT remove any endpoints used by QBRankingsSandbox.tsx.
+
+If a route is used both by the sandbox and the old widgets, only remove the wiring that’s exclusively tied to the old components and keep whatever the sandbox actually calls.
+
+After removal:
+
+Run TypeScript build / tests or the project’s standard check command.
+
+Fix any compilation issues related to missing imports or types.
+
+Ensure no /api/* endpoint exists that is only for those dead QB EPA / QB stats views.
+
+ACCEPTANCE CRITERIA
+
+There is no UI anywhere in the app that shows:
+
+“QB EPA Rankings”
+
+“No EPA data available. Run the EPA calculation first.”
+
+“QB Stats Review”
+
+“No QB data available”
+
+Navigation and dashboards have no dead links or blank QB cards.
+
+QBRankingsSandbox.tsx remains the primary QB evaluation UI and still works.
+
+The server routes file(s) contain no endpoints whose sole purpose was feeding these old views.
+
+Please summarize:
+
+Which components/files you removed or modified.
+
+Which backend routes were removed or cleaned up.
+
+Any shared utilities that were kept because they’re used elsewhere.
