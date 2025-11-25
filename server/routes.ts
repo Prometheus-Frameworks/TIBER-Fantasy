@@ -26,7 +26,7 @@ import { registerWeeklyProjectionsCheckRoutes } from './api/check-weekly-project
 import { registerRealDataValidationRoutes } from './api/test-real-data-validation';
 import { registerTest2024ProjectionsRoutes } from './api/test-2024-projections';
 import { testNFLStatsDirect } from './api/test-nfl-stats-direct';
-import { fetchGrokProjections } from './services/grokProjectionsService';
+// REMOVED: grokProjectionsService (DEAD_ORPHAN)
 import { cleanVorpRankings } from './clean-vorp-endpoint';
 import { getSleeperProjections } from './services/sleeperProjectionsService';
 import { calculateVORP } from './vorpCalculator';
@@ -41,8 +41,7 @@ import { generateWRSnapData } from './api/generate-wr-snap-data';
 import { sleeperSnapService } from './services/sleeperSnapService';
 import { sleeperSnapPipeline } from './services/sleeperSnapPipeline';
 import { sleeperWeeklySnapService } from './services/sleeperWeeklySnapService';
-import { sleeperStrictSnapService } from './services/sleeperStrictSnapService';
-import { wrRatingsService } from './services/wrRatingsService';
+// REMOVED: sleeperStrictSnapService and wrRatingsService (LEGACY_UNUSED)
 import { wrGameLogsService } from './services/wrGameLogsService';
 import { playerPoolService } from './playerPool';
 import { generateEmbedding, generateChatResponse, detectQueryMode } from './services/geminiEmbeddings';
@@ -308,23 +307,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Import services for health checks
       const { sleeperSyncService } = await import('./services/sleeperSyncService');
       const { logsProjectionsService } = await import('./services/logsProjectionsService');
-      const { ratingsEngineService } = await import('./services/ratingsEngineService');
 
       // Perform health checks
       const [
         sleeperStatus,
-        dataStats,
-        ratingsStats
+        dataStats
       ] = await Promise.all([
         sleeperSyncService.getSyncStatus(),
-        logsProjectionsService.getDataSummary(),
-        ratingsEngineService.getRatingsSummary()
+        logsProjectionsService.getDataSummary()
       ]);
 
       const healthStatus = {
         status: 'healthy',
         timestamp: new Date().toISOString(),
-        version: 'v1.0.3',
+        version: 'v1.0.4',
         services: {
           sleeper_sync: {
             status: sleeperStatus.cache_exists ? 'ok' : 'degraded',
@@ -338,12 +334,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             projections: dataStats.projections_count,
             season_stats: dataStats.season_stats_count,
             last_updated: dataStats.last_updated
-          },
-          ratings_engine: {
-            status: ratingsStats.total_players > 0 ? 'ok' : 'empty',
-            total_players: ratingsStats.total_players,
-            by_position: ratingsStats.by_position,
-            by_tier: ratingsStats.by_tier
           },
           legacy: {
             redraft: 'ok',
@@ -757,30 +747,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   */
 
+  // DEPRECATED: ratingsEngineService removed - use OVR system instead
   app.get('/api/ratings/player/:playerId', async (req: Request, res: Response) => {
-    try {
-      const { ratingsEngineService } = await import('./services/ratingsEngineService');
-      const { playerId } = req.params;
-      
-      const rating = await ratingsEngineService.getPlayerRating(playerId);
-      
-      if (!rating) {
-        return res.status(404).json({
-          ok: false,
-          error: 'Player rating not found'
-        });
-      }
-      
-      res.json({
-        ok: true,
-        data: rating
-      });
-    } catch (error) {
-      res.status(500).json({
-        ok: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
+    res.status(410).json({
+      ok: false,
+      error: 'This endpoint has been deprecated. Use /api/ovr/:position/:playerName instead.',
+      migration: 'OVR system provides Madden-style 1-99 ratings'
+    });
   });
   
   // ✅ TIBER COMMAND: MainPlayerSystem.json generation with live depth charts
@@ -822,107 +795,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // TIBER: Export positional game log samples
   app.get('/api/tiber/export-positional-game-logs', exportPositionalGameLogs);
 
-  // Legacy Unified Compass Rankings with Algorithm Selection - DEPRECATED
+  // DEPRECATED: Legacy Compass - use Role Bank system instead
   app.get('/api/compass-legacy-algorithm/:position', async (req, res) => {
-    try {
-      const position = req.params.position.toLowerCase();
-      const algorithm = (req.query.algorithm as string) || 'default';
-      const source = (req.query.source as string) || 'csv';
-      
-      if (!['wr', 'rb', 'qb', 'te'].includes(position)) {
-        return res.status(400).json({ error: 'Invalid position. Use wr, rb, qb, or te' });
-      }
-      
-      console.log(`🧭 Generating ${position.toUpperCase()} compass rankings with ${algorithm} algorithm`);
-      
-      let rankings: any[];
-      
-      if (position === 'wr') {
-        const { wrRatingsService } = await import('./services/wrRatingsService');
-        const wrData = wrRatingsService.getAllWRPlayers();
-        
-        if (algorithm === 'enhanced') {
-          const { calculateEnhancedWRCompass } = await import('./compassCalculations');
-          rankings = wrData.map((player: any) => {
-            const compass = calculateEnhancedWRCompass(player);
-            return { 
-              ...player, 
-              compass,
-              dynastyScore: compass.score,
-              methodology: 'Enhanced with team context and draft capital'
-            };
-          });
-        } else if (algorithm === 'prometheus') {
-          // Prometheus methodology with compass framework
-          const { computeComponents } = await import('./compassCalculations');
-          rankings = wrData.map((player: any) => {
-            const compass = computeComponents(player, 'wr');
-            const prometheusScore = (compass.north * 0.35) + (compass.east * 0.30) + (compass.south * 0.20) + (compass.west * 0.15);
-            return { 
-              ...player, 
-              compass,
-              dynastyScore: prometheusScore,
-              methodology: 'Prometheus weighting with compass components'
-            };
-          });
-        } else {
-          const { computeComponents } = await import('./compassCalculations');
-          rankings = wrData.map((player: any) => {
-            const compass = computeComponents(player, 'wr');
-            return { 
-              ...player, 
-              compass,
-              dynastyScore: compass.score,
-              methodology: 'Standard compass equal weighting'
-            };
-          });
-        }
-      } else if (position === 'rb') {
-        // RB compass integration using existing system
-        const { computeComponents } = await import('./compassCalculations');
-        const rbSampleData: any[] = []; // Will integrate with actual RB data source
-        rankings = rbSampleData.map((player: any) => {
-          const compass = computeComponents(player, 'rb');
-          return { ...player, compass, dynastyScore: compass.score };
-        });
-      } else if (position === 'te') {
-        // TE compass integration using new TE system
-        const { teCompassDataAdapter } = await import('./teCompassDataAdapter');
-        const { calculateTECompass } = await import('./teCompassCalculations');
-        const teData = await teCompassDataAdapter.getAllTEPlayers();
-        rankings = teData.map((player: any) => {
-          const compass = calculateTECompass(player);
-          return { 
-            ...player, 
-            compass,
-            dynastyScore: compass.score,
-            methodology: 'TE Compass 4-directional equal weighting'
-          };
-        });
-      } else {
-        // QB expansion ready for future implementation
-        rankings = [];
-      }
-      
-      res.json({
-        position: position.toUpperCase(),
-        algorithm,
-        source,
-        rankings: rankings.sort((a, b) => (b.dynastyScore || 0) - (a.dynastyScore || 0)).slice(0, 50),
-        metadata: {
-          methodology: 'Compass 4-directional scoring',
-          weights: algorithm === 'prometheus' ? 
-            { north: '35%', east: '30%', south: '20%', west: '15%' } :
-            { north: '25%', east: '25%', south: '25%', west: '25%' },
-          totalPlayers: rankings.length,
-          lastUpdated: new Date().toISOString()
-        }
-      });
-      
-    } catch (error) {
-      console.error('Legacy compass deprecated:', error);
-      res.status(410).json({ error: 'Legacy compass route deprecated - use live Sleeper API routes' });
-    }
+    res.status(410).json({ 
+      error: 'Legacy compass route deprecated',
+      migration: 'Use /api/role-bank/:position/:season for position rankings'
+    });
   });
 
   // TIBER: Direct Sleeper API test
@@ -1095,59 +973,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 📊 GROK PROJECTIONS ENDPOINT: 2025 NFL Projections 
+  // DEPRECATED: Grok Projections - use Sleeper projections instead
   app.get('/api/grok-projections', async (req, res) => {
-    try {
-      console.log('📊 GROK: Fetching 2025 projections');
-      
-      // Parse query parameters
-      const leagueFormat = req.query.league_format as string || 'ppr';
-      const position = req.query.position as string;
-      const mode = req.query.mode as string || 'dynasty';
-      const source = req.query.source as string || 'season';
-      const leagueId = req.query.league_id as string;
-      const week = parseInt(req.query.week as string);
-      
-      // Convert format strings to match expected LeagueSettings type
-      const formatMap = (format: string) => {
-        if (format === 'half_ppr') return 'half-ppr' as const;
-        return format as 'ppr' | 'standard' | 'half-ppr';
-      };
-      
-      const settings = {
-        mode: mode as 'dynasty' | 'redraft',
-        league_format: formatMap(leagueFormat),
-        format: formatMap(leagueFormat),
-        num_teams: 12,
-        is_superflex: true,
-        position_filter: position
-      };
-      
-      // Fetch projections using Grok service
-      const projections = await fetchGrokProjections(settings, 'season', leagueId, week);
-      
-      // Filter by position if specified
-      let filteredProjections = projections;
-      if (position && position !== 'all') {
-        filteredProjections = projections.filter(p => p.position === position.toUpperCase());
-      }
-      
-      // Sort by projected points (highest first)
-      filteredProjections.sort((a, b) => b.projected_fpts - a.projected_fpts);
-      
-      console.log(`✅ GROK: Returning ${filteredProjections.length} players`);
-      
-      return res.json({
-        players: filteredProjections.slice(0, 500), // Top 500 players
-        total: filteredProjections.length,
-        source: 'GROK_2025',
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error) {
-      console.error('❌ GROK API error:', error);
-      return res.status(500).json({ error: 'Failed to fetch Grok projections' });
-    }
+    res.status(410).json({ 
+      error: 'Grok projections endpoint deprecated',
+      migration: 'Use /api/sleeper/projections for player projections'
+    });
   });
 
   // 🎯 DATABASE-DRIVEN RANKINGS FROM NFLFASTR 2025 DATA
@@ -2047,77 +1878,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 🚨 PROMETHEUS COMPLIANCE ENDPOINTS - Strict Sleeper API Snap Extraction
-
-  // Strict snap percentage extraction (NO inference, NO substitution)
+  // DEPRECATED: Prometheus compliance endpoints removed (sleeperStrictSnapService)
   app.post('/api/snap/extract-strict', async (req: Request, res: Response) => {
-    try {
-      console.log('🚨 PROMETHEUS COMPLIANCE: Strict snap extraction initiated');
-      
-      const extractionResult = await sleeperStrictSnapService.extractSnapPercentagesStrict();
-      
-      res.json({
-        success: extractionResult.extraction_status === 'SUCCESS',
-        extraction_result: extractionResult,
-        prometheus_compliance: true,
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error) {
-      console.error('❌ Strict extraction error:', error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        prometheus_compliance: false
-      });
-    }
+    res.status(410).json({ error: 'Endpoint deprecated', migration: 'Use /api/snap-percentages/wr' });
   });
-
-  // Get available fields from Sleeper API
   app.get('/api/snap/available-fields', async (req: Request, res: Response) => {
-    try {
-      const week = parseInt(req.query.week as string) || 10;
-      
-      console.log(`📋 Getting available fields from Week ${week}...`);
-      
-      const fieldsInfo = await sleeperStrictSnapService.getAvailableFields(week);
-      
-      res.json({
-        success: fieldsInfo.success,
-        week: week,
-        fields_info: fieldsInfo,
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error) {
-      console.error('❌ Error getting available fields:', error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
+    res.status(410).json({ error: 'Endpoint deprecated', migration: 'Use /api/snap-percentages/wr' });
   });
-
-  // Generate compliance report
   app.get('/api/snap/compliance-report', async (req: Request, res: Response) => {
-    try {
-      console.log('📋 Generating Prometheus compliance report...');
-      
-      const complianceReport = await sleeperStrictSnapService.generateComplianceReport();
-      
-      res.json({
-        success: true,
-        compliance_report: complianceReport,
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error) {
-      console.error('❌ Error generating compliance report:', error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
+    res.status(410).json({ error: 'Endpoint deprecated', migration: 'Use /api/snap-percentages/wr' });
   });
 
   // 🏈 SNAP PERCENTAGE API - Top 50 WRs Weekly Snap Data (Weeks 1-17)
@@ -2346,87 +2115,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 📊 WR 2024 RATINGS API - CSV-based WR player data endpoints
-
-  // Get all WR rankings (for /rankings page)
+  // DEPRECATED: WR 2024 Ratings API - use Role Bank instead
   app.get('/api/wr-ratings/rankings', async (req: Request, res: Response) => {
-    try {
-      console.log('📊 Getting WR rankings from CSV data...');
-      
-      const rankingsData = wrRatingsService.getRankingsData();
-      
-      res.json({
-        success: true,
-        count: rankingsData.length,
-        data: rankingsData,
-        source: 'wr_ratings.csv',
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error) {
-      console.error('❌ Error getting WR rankings:', error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
+    res.status(410).json({ error: 'Endpoint deprecated', migration: 'Use /api/role-bank/wr/2025' });
   });
-
-  // Get specific WR player profile (for /player/:id page)
   app.get('/api/wr-ratings/player/:playerName', async (req: Request, res: Response) => {
-    try {
-      const playerName = req.params.playerName;
-      console.log(`🎯 Getting WR player profile: ${playerName}`);
-      
-      const playerProfile = wrRatingsService.getPlayerProfile(playerName);
-      
-      if (playerProfile) {
-        res.json({
-          success: true,
-          player_found: true,
-          data: playerProfile,
-          source: 'wr_ratings.csv',
-          timestamp: new Date().toISOString()
-        });
-      } else {
-        res.status(404).json({
-          success: false,
-          player_found: false,
-          search_term: playerName,
-          message: 'Player not found in WR ratings data'
-        });
-      }
-      
-    } catch (error) {
-      console.error(`❌ Error getting WR player profile for ${req.params.playerName}:`, error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
+    res.status(410).json({ error: 'Endpoint deprecated', migration: 'Use /api/role-bank/wr/2025' });
   });
-
-  // Get WR stats overview
   app.get('/api/wr-ratings/stats', async (req: Request, res: Response) => {
-    try {
-      console.log('📈 Getting WR stats overview...');
-      
-      const statsOverview = wrRatingsService.getStatsOverview();
-      
-      res.json({
-        success: true,
-        data: statsOverview,
-        source: 'wr_ratings.csv',
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error) {
-      console.error('❌ Error getting WR stats overview:', error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
+    res.status(410).json({ error: 'Endpoint deprecated', migration: 'Use /api/role-bank/wr/2025' });
   });
 
   // 🏈 WR ADDITIONAL GAME LOGS API - Fetch WRs not in top 50 dataset
@@ -3589,94 +3286,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Missing VORP endpoint - Lamar's request
+  // DEPRECATED: VORP endpoint - use Role Bank for position rankings
   app.get('/api/analytics/vorp', async (req, res) => {
-    try {
-      const season = req.query.season || '2025';
-      const pos = req.query.pos as string;
-      
-      console.log(`📊 [VORP] Fetching VORP data for season=${season}, pos=${pos}`);
-      
-      // Get WR data from CSV (already loaded)  
-      const wrData = wrRatingsService.getAllWRPlayers();
-      
-      // Simple VORP calculation using our WR data
-      const vorpData = wrData.map((player: any, index: number) => ({
-        id: `wr-${index}`,
-        name: player.player_name,
-        team: player.team,
-        pos: 'WR',
-        age: player.age || 25,
-        vorp: player.adjusted_rating || 0,
-        tier: player.adjusted_rating >= 90 ? 'S' : 
-              player.adjusted_rating >= 80 ? 'A' : 
-              player.adjusted_rating >= 70 ? 'B' : 
-              player.adjusted_rating >= 60 ? 'C' : 'D'
-      }))
-      .filter((player: any) => !pos || player.pos === pos)
-      .sort((a: any, b: any) => b.vorp - a.vorp);
-
-      res.json(vorpData);
-    } catch (error) {
-      console.error('❌ [VORP] Error:', error);
-      res.status(500).json({ error: 'Failed to fetch VORP data' });
-    }
+    res.status(410).json({ error: 'Endpoint deprecated', migration: 'Use /api/role-bank/:position/:season' });
   });
 
-  // Missing WR endpoint - Lamar's request  
+  // DEPRECATED: WR endpoint - use Role Bank instead
   app.get('/api/wr', async (req, res) => {
-    try {
-      const search = req.query.search as string;
-      const team = req.query.team as string;
-      const limit = parseInt(req.query.limit as string) || 50;
-      
-      console.log(`🏈 [WR] Fetching WR data, search=${search}, team=${team}`);
-      
-      let wrData = wrRatingsService.getAllWRPlayers();
-      
-      // Search filter with normalization
-      if (search) {
-        const norm = (s: string = '') => s.normalize().toLowerCase().trim();
-        const query = norm(search);
-        
-        wrData = wrData.filter((player: any) => {
-          const matches = (p: any, q: string) =>
-            norm(p.player_name).includes(q) || 
-            norm(p.team).includes(q) || 
-            norm(p.position).includes(q);
-          return matches(player, query);
-        });
-      }
-      
-      // Team filter
-      if (team) {
-        wrData = wrData.filter((player: any) => 
-          player.team.toLowerCase() === team.toLowerCase()
-        );
-      }
-      
-      // Format response with compass data
-      const response = wrData.slice(0, limit).map((player: any) => ({
-        id: `wr-${player.player_name.replace(/\s+/g, '-').toLowerCase()}`,
-        name: player.player_name,
-        team: player.team,
-        pos: 'WR',
-        compass: {
-          north: Math.min(100, (player.targets_per_game || 0) * 12),
-          east: Math.min(100, (player.target_share || 0) * 5),
-          south: Math.max(0, 100 - (player.age || 25) * 3),
-          west: Math.min(100, player.adjusted_rating || 0)
-        },
-        alias: player.player_name,
-        age: player.age,
-        adp: Math.floor(Math.random() * 200) + 1 // Placeholder ADP
-      }));
-
-      res.json(response);
-    } catch (error) {
-      console.error('❌ [WR] Error:', error);
-      res.status(500).json({ error: 'Failed to fetch WR data' });
-    }
+    res.status(410).json({ error: 'Endpoint deprecated', migration: 'Use /api/role-bank/wr/2025' });
   });
 
   // UNIFIED CANONICAL PLAYER POOL API
@@ -3999,31 +3616,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Missing usage leaders endpoint - Lamar's request
+  // DEPRECATED: Usage leaders endpoint - use TIBER system instead
   app.get('/api/usage-leaders', async (req, res) => {
-    try {
-      console.log('📈 [USAGE] Fetching usage leaders');
-      
-      // Generate usage leaders from WR data
-      const wrData = wrRatingsService.getAllWRPlayers();
-      const leaders = wrData
-        .filter((player: any) => player.targets && player.targets > 40) // Lower threshold for CSV data
-        .map((player: any) => ({
-          player_name: player.player_name,
-          position: 'WR',
-          team: player.team,
-          target_share: Math.round((player.targets / 17) * 100) / 100, // Est targets per game
-          snap_percentage: Math.min(100, Math.round(Math.random() * 40) + 60), // Estimate
-          usage_score: player.adjusted_rating || 0
-        }))
-        .sort((a: any, b: any) => b.target_share - a.target_share)
-        .slice(0, 20);
-
-      res.json({ ok: true, data: leaders, meta: { rows: leaders.length, ts: Date.now() } });
-    } catch (error) {
-      console.error('❌ [USAGE] Error:', error);
-      res.status(500).json({ error: 'Failed to fetch usage leaders' });
-    }
+    res.status(410).json({ error: 'Endpoint deprecated', migration: 'Use /api/tiber/:position for usage data' });
   });
 
   // Intelligence feed endpoint - Preseason scouting reports
@@ -4623,59 +4218,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ===== SNAP COUNTS KNOWLEDGE SYSTEM =====
+  // DEPRECATED: Snap Counts Knowledge System - use TIBER snap data instead
   app.get('/api/snap-counts/claim/:pos/:pp', async (req: Request, res: Response) => {
-    try {
-      const { snapCountsService } = await import('./services/snapCounts');
-      const { pos, pp } = req.params;
-      const snapDeltaPp = parseInt(pp);
-      
-      if (isNaN(snapDeltaPp)) {
-        return res.status(400).json({ error: 'Invalid snap percentage' });
-      }
-      
-      const claim = await snapCountsService.getClaim(pos.toUpperCase(), snapDeltaPp);
-      res.json({ claim, pos: pos.toUpperCase(), snap_delta_pp: snapDeltaPp });
-    } catch (error) {
-      console.error('❌ Snap count claim error:', error);
-      res.status(500).json({ error: 'Failed to fetch snap count claim' });
-    }
+    res.status(410).json({ error: 'Endpoint deprecated', migration: 'Use /api/tiber/:position for snap data' });
   });
-
   app.get('/api/snap-counts/examples/:label', async (req: Request, res: Response) => {
-    try {
-      const { snapCountsService } = await import('./services/snapCounts');
-      const { label } = req.params;
-      const showAll = req.query.all === 'true';
-      
-      if (label !== 'HIT' && label !== 'MISS') {
-        return res.status(400).json({ error: 'Label must be HIT or MISS' });
-      }
-      
-      const examples = showAll 
-        ? await snapCountsService.getAllExamples(label as "HIT" | "MISS")
-        : await snapCountsService.getExamples(label as "HIT" | "MISS");
-        
-      res.json({ examples, label, total: examples.length });
-    } catch (error) {
-      console.error('❌ Snap count examples error:', error);
-      res.status(500).json({ error: 'Failed to fetch snap count examples' });
-    }
+    res.status(410).json({ error: 'Endpoint deprecated', migration: 'Use /api/tiber/:position for snap data' });
   });
-
   app.get('/api/snap-counts/health', async (req: Request, res: Response) => {
-    try {
-      const { snapCountsService } = await import('./services/snapCounts');
-      const health = await snapCountsService.healthCheck();
-      res.json(health);
-    } catch (error) {
-      console.error('❌ Snap count health check error:', error);
-      res.status(500).json({ 
-        status: 'unhealthy', 
-        message: 'Health check failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
+    res.status(410).json({ error: 'Endpoint deprecated', migration: 'Use /api/tiber/:position for snap data' });
   });
 
   // ===== OVR ENGINE ENDPOINTS =====
