@@ -4,14 +4,14 @@ export default function LeaguesTab() {
   return (
     <ComingSoon
       title="League Management"
-      description="Connect your leagues, track rosters, and get personalized insights based on your actual team."
+      description="League sync is in early prototype mode. Features may be incomplete or unstable while we rebuild the engine behind it with FORGE-powered analytics."
       features={[
-        'Sleeper league sync',
-        'Multi-league dashboard',
-        'Roster analysis & gaps',
+        'Sleeper league auto-sync (beta)',
+        'Multi-league roster dashboard',
+        'Team value comparison tools',
         'Personalized trade targets',
-        'League-specific rankings',
-        'Waiver wire priorities'
+        'League-context rankings',
+        'Roster gap analysis'
       ]}
     />
   );

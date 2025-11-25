@@ -53,6 +53,7 @@ interface StartSitResponse {
     startHighConfidence: number;
     sitRecommendations: number;
   };
+  message?: string;
 }
 
 interface WaiverTarget {
@@ -171,10 +172,23 @@ export default function StrategyTab() {
 
   return (
     <div className="space-y-6">
+      {/* Evolution Banner */}
+      <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg p-4" data-testid="strategy-evolution-banner">
+        <div className="flex items-start gap-3">
+          <div className="text-2xl">🔮</div>
+          <div>
+            <h3 className="font-semibold text-blue-400">The Strategy Hub is Evolving</h3>
+            <p className="text-sm text-gray-400 mt-1">
+              This space will host fantasy philosophy, roster-building frameworks, and game theory concepts – powered by FORGE analytics. Dynamic strategy tools are under reconstruction.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Week 7 Strategy Guide</h2>
+          <h2 className="text-2xl font-bold text-white">Week 7 Strategy Guide</h2>
           <p className="text-gray-400 mt-1">Start/Sit Decisions, Waiver Targets & Matchup Intelligence</p>
         </div>
       </div>
@@ -313,10 +327,14 @@ export default function StrategyTab() {
               </div>
             </>
           ) : (
-            <div className="text-center py-12 text-gray-400">
-              <AlertTriangle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>No start/sit recommendations available</p>
-              <p className="text-sm mt-2">Try selecting a different position</p>
+            <div className="bg-[#1e2330] border border-gray-700 rounded-lg p-8 text-center" data-testid="startsit-empty-state">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500/20 to-blue-600/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-green-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Start/Sit Tools Under Reconstruction</h3>
+              <p className="text-gray-400 max-w-md mx-auto">
+                Dynamic start/sit recommendations are being rebuilt with FORGE-powered matchup intelligence and will return in a future update.
+              </p>
             </div>
           )}
         </>
@@ -359,9 +377,14 @@ export default function StrategyTab() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-400">
-              <Target className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>No waiver targets available</p>
+            <div className="bg-[#1e2330] border border-gray-700 rounded-lg p-8 text-center" data-testid="waivers-empty-state">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-pink-600/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Target className="w-8 h-8 text-purple-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Waiver Tools Under Reconstruction</h3>
+              <p className="text-gray-400 max-w-md mx-auto">
+                Waiver wire targets are being rebuilt with FORGE-powered breakout detection and usage trend analysis.
+              </p>
             </div>
           )}
         </>
@@ -461,10 +484,14 @@ export default function StrategyTab() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-400">
-              <Shield className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>No SOS data available for this position</p>
-              <p className="text-sm mt-2">Try selecting a different position or view</p>
+            <div className="bg-[#1e2330] border border-gray-700 rounded-lg p-8 text-center" data-testid="sos-empty-state">
+              <div className="w-16 h-16 bg-gradient-to-br from-orange-500/20 to-red-600/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-8 h-8 text-orange-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">SOS Rankings Under Reconstruction</h3>
+              <p className="text-gray-400 max-w-md mx-auto">
+                Strength of Schedule rankings are being rebuilt with FORGE-powered defensive projections and EPA-based matchup analysis.
+              </p>
             </div>
           )}
         </>

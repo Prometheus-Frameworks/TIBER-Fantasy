@@ -1,0 +1,200 @@
+FRONTEND “B CLEANUP” (MATCHUPS / STRATEGY / TAKES / MOVES / LEAGUES)
+
+Goal:
+Clean up the TIBER Dashboard feature tabs so everything is honest, stable, and visually readable, even while the deeper FORGE work is pending.
+
+Scope: frontend only (React/TSX).
+Do not delete any of these features; we’re stabilizing and re-labeling them, not ripping them out.
+
+Focus on the following areas:
+
+Matchups (Defense vs Position)
+
+Strategy Guide
+
+Weekly Takes
+
+Trade & Move Analyzer
+
+League Management / Leagues
+
+1) Matchups (Defense vs Position)
+
+This is the “Defense vs Position Matchups” view showing N/A for EPA, fantasy points, sample size, etc.
+
+Tasks:
+
+Locate the component(s) powering this view (likely under client/src/components/tabs or similar).
+
+If the backend returns no data for the selected week:
+
+Do not show fake-looking N/A cards that look like bugs.
+
+Instead, show a clean “empty state”:
+
+Icon + text like:
+
+“Matchup data isn’t available yet. This view will be powered by the upcoming FORGE engine.”
+
+Keep the tab & layout; just make the empty state intentional and visually clear.
+
+Make sure the component handles missing/empty data gracefully:
+
+No console errors
+
+No infinite spinners
+
+No crashing if response arrays are empty or undefined
+
+Do not try to “fake” matchup data. This tab is being reserved for FORGE.
+
+2) Strategy Guide
+
+This is the “Week X Strategy Guide” page with Start/Sit, Waiver Targets, SOS Rankings tabs. Right now it’s effectively empty (“No games scheduled for week X”).
+
+We want to redefine it as a future “Fantasy Philosophy / Strategy Hub”, not a broken tool.
+
+Tasks:
+
+Locate the Strategy tab/page component.
+
+Keep the overall layout and tabs, but:
+
+Add a clear banner or section at the top saying something like:
+
+“The Strategy Hub is evolving. This space will host fantasy philosophy, roster-building frameworks, and game theory concepts – not just more generic start/sit tools.”
+
+For Start/Sit / Waiver / SOS:
+
+If the APIs currently return no data, keep the UI but:
+
+Replace generic error / “no games scheduled” messaging with a more intentional placeholder:
+
+“Dynamic strategy tools are under reconstruction and will return in a future update.”
+
+Ensure no failing/broken requests cause console noise or UI glitches.
+
+Do not delete the components or routes – just make the current state honest & stable.
+
+3) Weekly Takes
+
+This one actually has sample data (e.g., P. Nacua / McBride takes), but the text color is hard to read.
+
+Tasks:
+
+Find the Weekly Takes component (cards grouped by position).
+
+Improve readability:
+
+Increase contrast for body text and bullet text.
+
+Ensure links / bold player names are clearly legible on the dark background.
+
+You can tweak Tailwind classes (font weight, text color, etc.) to achieve a clean, readable look.
+
+Preserve existing sample data and structure.
+
+Make sure the component handles “no takes available” gracefully for any position (no ugly layout gaps).
+
+No logic changes needed here beyond defensive coding and styling. This tab is a keeper.
+
+4) Trade & Move Analyzer (“Moves” Page)
+
+This page currently reads like a fully built feature but the backend logic has been mostly superseded by new trade systems we’re planning.
+
+We want to keep the page as a shell but be honest about its status.
+
+Tasks:
+
+Locate the Trade & Move Analyzer component/page.
+
+Update the hero text + planned features section to make it clear this is a work-in-progress trade engine, for example:
+
+Title can stay “Trade & Move Analyzer” (or similar).
+
+Subtext should say something like:
+
+“This page will host the FORGE-powered trade engine: consolidation penalties, future value curves, and true dynasty leverage analysis. The current version is in preview and major upgrades are coming.”
+
+Buttons / CTAs:
+
+If any buttons currently trigger old/fragile trade endpoints:
+
+Either disable them with a tooltip like “Temporarily disabled during system rebuild”
+
+Or ensure they safely call endpoints that return a graceful “under construction” response.
+
+Ensure there are no runtime errors if data is missing or endpoints return 4xx/5xx.
+
+Do not remove the page – just make it safe and honest until the new trade engine is implemented.
+
+5) League Management (“Leagues” Page)
+
+This is a flagship feature (Sleeper league sync, multi-league dashboard, team value, etc.). We want to keep it prominent, but it may be partially wired or unstable.
+
+Tasks:
+
+Locate the League Management / Leagues component.
+
+Add a small status banner near the top, something like:
+
+“League sync is in early prototype mode. Features may be incomplete or unstable while we rebuild the engine behind it.”
+
+Audit current behavior:
+
+If it automatically fires heavy sync calls on load, make sure:
+
+Errors are caught and surfaced as friendly messages
+
+The UI doesn’t hang or show blank content if sync fails
+
+If some planned features don’t exist yet (team value charts, league value comparisons, etc.), label them as “Coming soon” rather than leaving empty sections.
+
+Don’t remove any working league sync logic – just guard it with good error handling and honest copy.
+
+6) General Frontend Hygiene for These Areas
+
+For all five sections above:
+
+Ensure no console errors occur when:
+
+APIs return empty arrays
+
+APIs 404/410/500
+
+There is no data for the selected week/season
+
+Prefer:
+
+Clear, intentional empty states
+
+“Coming soon / Rebuilding with FORGE” style messaging
+
+Stable layout even when data is missing
+
+Don’t invent fake data.
+If data isn’t there, we acknowledge it and make it look clean.
+
+7) Final Report
+
+When done, please summarize:
+
+Files/components you modified
+
+Any API calls you guarded or disabled
+
+Exact empty-state / banner messages you ended up using
+
+Confirmation that:
+
+Matchups tab loads with a clean empty state (not N/A spam)
+
+Strategy tab is stable and clearly “under reconstruction”
+
+Weekly Takes is readable
+
+Trade & Move Analyzer doesn’t hit broken endpoints and is labeled correctly
+
+League Management loads without crashes and explains its prototype status
+
+Do not implement FORGE itself here – this is a cleanup and honesty pass only.

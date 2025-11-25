@@ -35,10 +35,10 @@ function TakesList({ takes, position }: { takes: WeeklyTake[]; position: string 
     <ul className="space-y-2">
       {takes.map((take, idx) => (
         <li key={idx} className="flex items-start gap-2" data-testid={`take-${position.toLowerCase()}-${idx}`}>
-          <span className="text-primary mt-0.5">•</span>
+          <span className="text-blue-400 mt-0.5">•</span>
           <div className="flex-1">
-            <strong className="font-semibold text-white dark:text-white">{take.player}</strong>
-            <span className="text-gray-100 dark:text-gray-300"> - {take.insight}</span>
+            <strong className="font-bold text-white">{take.player}</strong>
+            <span className="text-white/90"> - {take.insight}</span>
           </div>
         </li>
       ))}

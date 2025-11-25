@@ -4,14 +4,14 @@ export default function MovesTab() {
   return (
     <ComingSoon
       title="Trade & Move Analyzer"
-      description="Evaluate trades, waiver pickups, and roster moves with AI-powered analysis and real-time value calculations."
+      description="This page will host the FORGE-powered trade engine: consolidation penalties, future value curves, and true dynasty leverage analysis. The current version is in preview and major upgrades are coming."
       features={[
-        'Trade evaluation & fairness scoring',
-        'Multi-team trade scenarios',
-        'Waiver wire recommendations',
-        'Drop/Add suggestions',
-        'Buy-low / Sell-high targets',
-        'Dynasty future value projection'
+        'FORGE-powered trade evaluation',
+        'Consolidation penalty modeling',
+        'Dynasty future value curves',
+        'Multi-asset trade scenarios',
+        'Buy-low / Sell-high detection',
+        'League-context trade intelligence'
       ]}
     />
   );

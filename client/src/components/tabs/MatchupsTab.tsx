@@ -101,6 +101,16 @@ export default function MatchupsTab() {
             </div>
           ))}
         </div>
+      ) : dvpData.length === 0 ? (
+        <div className="bg-[#1e2330] border border-gray-700 rounded-lg p-8 text-center" data-testid="dvp-empty-state">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl">🛡️</span>
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">Matchup Data Coming Soon</h3>
+          <p className="text-gray-400 max-w-md mx-auto">
+            Matchup data for this season isn't available yet. This view will be powered by the FORGE engine with real-time defensive splits and EPA-based matchup ratings.
+          </p>
+        </div>
       ) : (
         <div className="grid gap-4">
           {dvpData.slice(0, 10).map((def, idx) => (
