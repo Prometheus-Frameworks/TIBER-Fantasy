@@ -722,7 +722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/attributes', attributesRoutes);
   
   // ===== LEGACY RATINGS ENGINE (DEPRECATED) =====
-  // Legacy ratings endpoint - disabled in favor of DeepSeek methodology
+  // Legacy ratings endpoint - disabled (using ratingsRouter above)
   /*
   app.get('/api/ratings', async (req: Request, res: Response) => {
     try {
@@ -3343,8 +3343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // UPH Admin API - Comprehensive orchestration management
   app.use('/api/admin/uph', uphAdminRoutes);
 
-  // DeepSeek ratings router now mounted at /api/ratings (see line 385)
-  // app.use('/api/tiber-ratings', ratingsRouter); // Moved to /api/ratings
+  // Ratings router mounted at /api/ratings above
 
   // OASIS Local R Server Routes - Using integrated nflfastR system
   const { oasisRServerClient } = await import('./oasisRServerClient');
