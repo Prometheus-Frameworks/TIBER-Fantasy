@@ -1,7 +1,51 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowUpDown, RotateCcw, Save, Download } from 'lucide-react';
+import { ArrowUpDown, RotateCcw, Save, Download, Upload, Copy, X, GitBranch, Eye, Users } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
+
+// ============================================================
+// RB SANDBOX PHASE 2 FEATURES
+// - Split-View Comparison Mode (Task 1)
+// - Export/Import Formula JSON (Task 2)
+// - Save/Load Custom Weight Presets (Task 3)
+// - Persistence & Stability (Task 4)
+// - Candidate Formula Snapshot (Task 5)
+// - Role Bank v2 Integration Hooks (Task 6)
+// ============================================================
+
+// RB Preset Types
+interface RBPreset {
+  id: string;
+  label: string;
+  weights: { carries: number; rushYds: number; fpPerRush: number; receivingWork: number };
+  description?: string;
+  isBuiltIn?: boolean;
+}
+
+interface RBFormulaExport {
+  version: string;
+  weights: { carries: number; rushYds: number; fpPerRush: number; receivingWork: number };
+}
+
+interface CandidateFormula {
+  id: string;
+  createdAt: string;
+  weights: { carries: number; rushYds: number; fpPerRush: number; receivingWork: number };
+}
+
+// Built-in RB Presets
+const BUILT_IN_RB_PRESETS: RBPreset[] = [
+  { id: 'default', label: 'Default RB', weights: { carries: 35, rushYds: 30, fpPerRush: 20, receivingWork: 15 }, description: 'Balanced approach', isBuiltIn: true },
+  { id: 'dual-threat', label: 'Dual Threat Heavy', weights: { carries: 25, rushYds: 25, fpPerRush: 20, receivingWork: 30 }, description: 'Boost receiving backs', isBuiltIn: true },
+  { id: 'efficiency', label: 'Efficiency Hunter', weights: { carries: 20, rushYds: 25, fpPerRush: 40, receivingWork: 15 }, description: 'Prioritize FP/Rush efficiency', isBuiltIn: true },
+  { id: 'workhorse', label: 'Workhorse Volume', weights: { carries: 45, rushYds: 35, fpPerRush: 10, receivingWork: 10 }, description: 'Pure volume play', isBuiltIn: true },
+];
+
+// LocalStorage Keys
+const RB_WEIGHTS_KEY = 'tiber_rb_sandbox_weights_v1';
+const RB_LAST_PRESET_KEY = 'tiber_rb_sandbox_last_preset';
+const RB_USER_PRESETS_KEY = 'tiber_rb_sandbox_user_presets';
+const RB_CANDIDATE_FORMULAS_KEY = 'tiber_rb_candidate_formulas';
 
 type Position = 'WR' | 'RB';
 type SortField = 'playerName' | 'team' | 'gamesPlayed' | 'targets' | 'totalCarries' | 'totalRushingYards' | 'fantasyPointsPerRushAttempt' | 'fantasyPoints' | 'pointsPerTarget' | 'samplePenalty' | 'adjustedEfficiency' | 'alphaScore' | 'customAlphaScore' | 'roleScore' | 'deepTargetRate' | 'slotRouteShareEst' | 'weightedTargetsPerGame' | 'boomRate' | 'bustRate' | 'talentIndex' | 'usageStabilityIndex' | 'roleDelta' | 'redZoneDomScore' | 'energyIndex';
@@ -110,6 +154,240 @@ export default function WRRankingsSandbox() {
   const [rbYardsWeight, setRbYardsWeight] = useState(30);
   const [rbFpRushWeight, setRbFpRushWeight] = useState(20);
   const [rbReceivingWeight, setRbReceivingWeight] = useState(15);
+
+  // RB Phase 2: Preset & Persistence State
+  const [rbActivePreset, setRbActivePreset] = useState<string>('default');
+  const [rbUserPresets, setRbUserPresets] = useState<RBPreset[]>([]);
+  const [rbCandidateFormulas, setRbCandidateFormulas] = useState<CandidateFormula[]>([]);
+
+  // RB Phase 2: Split-View Comparison State
+  const [rbCompareMode, setRbCompareMode] = useState(false);
+  const [rbPlayerA, setRbPlayerA] = useState<string | null>(null);
+  const [rbPlayerB, setRbPlayerB] = useState<string | null>(null);
+
+  // RB Phase 2: Export/Import Modal State
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importJson, setImportJson] = useState('');
+  const [importError, setImportError] = useState<string | null>(null);
+
+  // RB Phase 2: Candidate Formula State
+  const [showCandidateModal, setShowCandidateModal] = useState(false);
+  const [candidateLabel, setCandidateLabel] = useState('');
+
+  // Load RB weights and presets from localStorage on mount
+  useEffect(() => {
+    // Load user presets
+    const savedUserPresets = localStorage.getItem(RB_USER_PRESETS_KEY);
+    if (savedUserPresets) {
+      try {
+        setRbUserPresets(JSON.parse(savedUserPresets));
+      } catch (e) { console.error('Failed to parse user presets'); }
+    }
+
+    // Load candidate formulas
+    const savedCandidates = localStorage.getItem(RB_CANDIDATE_FORMULAS_KEY);
+    if (savedCandidates) {
+      try {
+        setRbCandidateFormulas(JSON.parse(savedCandidates));
+      } catch (e) { console.error('Failed to parse candidate formulas'); }
+    }
+
+    // Load last preset or saved weights
+    const lastPreset = localStorage.getItem(RB_LAST_PRESET_KEY);
+    const savedWeights = localStorage.getItem(RB_WEIGHTS_KEY);
+
+    if (lastPreset) {
+      setRbActivePreset(lastPreset);
+      // Apply preset weights
+      const allPresets = [...BUILT_IN_RB_PRESETS, ...(savedUserPresets ? JSON.parse(savedUserPresets) : [])];
+      const preset = allPresets.find((p: RBPreset) => p.id === lastPreset);
+      if (preset) {
+        setRbCarriesWeight(preset.weights.carries);
+        setRbYardsWeight(preset.weights.rushYds);
+        setRbFpRushWeight(preset.weights.fpPerRush);
+        setRbReceivingWeight(preset.weights.receivingWork);
+      }
+    } else if (savedWeights) {
+      try {
+        const weights = JSON.parse(savedWeights);
+        setRbCarriesWeight(weights.carries ?? 35);
+        setRbYardsWeight(weights.rushYds ?? 30);
+        setRbFpRushWeight(weights.fpPerRush ?? 20);
+        setRbReceivingWeight(weights.receivingWork ?? 15);
+      } catch (e) { console.error('Failed to parse saved weights'); }
+    }
+  }, []);
+
+  // Persist RB weights to localStorage when they change
+  useEffect(() => {
+    if (position === 'RB') {
+      localStorage.setItem(RB_WEIGHTS_KEY, JSON.stringify({
+        carries: rbCarriesWeight,
+        rushYds: rbYardsWeight,
+        fpPerRush: rbFpRushWeight,
+        receivingWork: rbReceivingWeight
+      }));
+    }
+  }, [position, rbCarriesWeight, rbYardsWeight, rbFpRushWeight, rbReceivingWeight]);
+
+  // Get all RB presets (built-in + user)
+  const allRbPresets = useMemo(() => [...BUILT_IN_RB_PRESETS, ...rbUserPresets], [rbUserPresets]);
+
+  // Apply preset weights
+  const applyRbPreset = (presetId: string) => {
+    const preset = allRbPresets.find(p => p.id === presetId);
+    if (preset) {
+      setRbCarriesWeight(preset.weights.carries);
+      setRbYardsWeight(preset.weights.rushYds);
+      setRbFpRushWeight(preset.weights.fpPerRush);
+      setRbReceivingWeight(preset.weights.receivingWork);
+      setRbActivePreset(presetId);
+      localStorage.setItem(RB_LAST_PRESET_KEY, presetId);
+    }
+  };
+
+  // Save current weights as user preset
+  const saveAsRbPreset = () => {
+    const presetName = prompt('Enter a name for this preset:');
+    if (!presetName) return;
+
+    const newPreset: RBPreset = {
+      id: `user-${Date.now()}`,
+      label: presetName,
+      weights: { carries: rbCarriesWeight, rushYds: rbYardsWeight, fpPerRush: rbFpRushWeight, receivingWork: rbReceivingWeight },
+      isBuiltIn: false
+    };
+
+    const updatedPresets = [...rbUserPresets, newPreset];
+    setRbUserPresets(updatedPresets);
+    localStorage.setItem(RB_USER_PRESETS_KEY, JSON.stringify(updatedPresets));
+    setRbActivePreset(newPreset.id);
+    localStorage.setItem(RB_LAST_PRESET_KEY, newPreset.id);
+  };
+
+  // Delete user preset
+  const deleteRbPreset = (presetId: string) => {
+    const updatedPresets = rbUserPresets.filter(p => p.id !== presetId);
+    setRbUserPresets(updatedPresets);
+    localStorage.setItem(RB_USER_PRESETS_KEY, JSON.stringify(updatedPresets));
+    if (rbActivePreset === presetId) {
+      applyRbPreset('default');
+    }
+  };
+
+  // Export formula to JSON
+  const exportRbFormula = (): RBFormulaExport => ({
+    version: 'rb-alpha-sandbox-v1',
+    weights: {
+      carries: rbCarriesWeight / 100,
+      rushYds: rbYardsWeight / 100,
+      fpPerRush: rbFpRushWeight / 100,
+      receivingWork: rbReceivingWeight / 100
+    }
+  });
+
+  // Copy formula JSON to clipboard
+  const copyFormulaToClipboard = () => {
+    navigator.clipboard.writeText(JSON.stringify(exportRbFormula(), null, 2));
+  };
+
+  // Download formula as JSON file
+  const downloadFormula = () => {
+    const blob = new Blob([JSON.stringify(exportRbFormula(), null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rb-formula-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Import formula from JSON
+  const importRbFormula = () => {
+    setImportError(null);
+    try {
+      const parsed = JSON.parse(importJson);
+      if (!parsed.weights || 
+          typeof parsed.weights.carries !== 'number' ||
+          typeof parsed.weights.rushYds !== 'number' ||
+          typeof parsed.weights.fpPerRush !== 'number' ||
+          typeof parsed.weights.receivingWork !== 'number') {
+        setImportError('Invalid format: Must include weights for carries, rushYds, fpPerRush, and receivingWork');
+        return;
+      }
+
+      // Normalize to sum to 1.0 if needed
+      const sum = parsed.weights.carries + parsed.weights.rushYds + parsed.weights.fpPerRush + parsed.weights.receivingWork;
+      const factor = sum > 0 ? (1 / sum) : 1;
+
+      setRbCarriesWeight(Math.round(parsed.weights.carries * factor * 100));
+      setRbYardsWeight(Math.round(parsed.weights.rushYds * factor * 100));
+      setRbFpRushWeight(Math.round(parsed.weights.fpPerRush * factor * 100));
+      setRbReceivingWeight(Math.round(parsed.weights.receivingWork * factor * 100));
+      setShowImportModal(false);
+      setImportJson('');
+      setRbActivePreset('custom');
+    } catch (e) {
+      setImportError('Invalid JSON format');
+    }
+  };
+
+  // Mark current formula as candidate
+  const markAsCandidateFormula = () => {
+    if (!candidateLabel.trim()) return;
+
+    const newCandidate: CandidateFormula = {
+      id: candidateLabel.trim(),
+      createdAt: new Date().toISOString(),
+      weights: { carries: rbCarriesWeight, rushYds: rbYardsWeight, fpPerRush: rbFpRushWeight, receivingWork: rbReceivingWeight }
+    };
+
+    console.log('[TIBER RB Alpha] Candidate Formula Saved:', newCandidate);
+
+    const updatedCandidates = [...rbCandidateFormulas, newCandidate];
+    setRbCandidateFormulas(updatedCandidates);
+    localStorage.setItem(RB_CANDIDATE_FORMULAS_KEY, JSON.stringify(updatedCandidates));
+    setShowCandidateModal(false);
+    setCandidateLabel('');
+  };
+
+  // Load candidate formula
+  const loadCandidateFormula = (candidate: CandidateFormula) => {
+    setRbCarriesWeight(candidate.weights.carries);
+    setRbYardsWeight(candidate.weights.rushYds);
+    setRbFpRushWeight(candidate.weights.fpPerRush);
+    setRbReceivingWeight(candidate.weights.receivingWork);
+    setRbActivePreset('candidate');
+  };
+
+  // Task 6: Build RB Alpha Export (Role Bank v2 Integration Hook)
+  const buildRbAlphaExport = (player: RBSandboxPlayer) => ({
+    playerId: player.playerId,
+    playerName: player.playerName,
+    team: player.team,
+    alphaScore: player.customAlphaScore ?? 0,
+    games: player.gamesPlayed,
+    carries: player.totalCarries,
+    rushYds: player.totalRushingYards,
+    targets: player.totalTargets,
+    rec: player.totalReceptions,
+    recYds: player.totalReceivingYards,
+    recFpPerGame: player.receivingFantasyPerGame,
+    wtdOppPerGame: player.weightedOppPerGame,
+    fpPerOpp: player.fpPerOpp
+  });
+
+  // Preview Role Bank Payload (top 50 RBs by alphaScore)
+  const previewRoleBankPayload = () => {
+    if (!data?.data || position !== 'RB') return;
+    const rbData = (data.data as RBSandboxPlayer[])
+      .slice()
+      .sort((a, b) => (b.customAlphaScore ?? 0) - (a.customAlphaScore ?? 0))
+      .slice(0, 50)
+      .map(buildRbAlphaExport);
+    console.log('[TIBER RB Role Bank v2] Preview Payload (Top 50):', rbData);
+  };
 
   // Reset weights to defaults
   const resetWeights = () => {
@@ -524,6 +802,342 @@ export default function WRRankingsSandbox() {
             </div>
           )}
         </div>
+
+        {/* RB Phase 2: Presets, Export/Import, Compare, Candidate */}
+        {position === 'RB' && (
+          <div className="space-y-4">
+            {/* Presets & Advanced Controls */}
+            <div className="bg-gradient-to-br from-green-900/20 to-teal-900/20 border border-green-500/30 rounded-lg p-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                {/* Preset Dropdown */}
+                <div className="flex items-center gap-3">
+                  <label className="text-sm text-green-300 font-medium">Preset:</label>
+                  <select
+                    value={rbActivePreset}
+                    onChange={(e) => applyRbPreset(e.target.value)}
+                    className="px-3 py-1.5 bg-gray-800 border border-gray-700 text-white rounded-lg text-sm cursor-pointer"
+                    data-testid="rb-preset-select"
+                  >
+                    <optgroup label="Built-in">
+                      {BUILT_IN_RB_PRESETS.map(p => (
+                        <option key={p.id} value={p.id}>{p.label}</option>
+                      ))}
+                    </optgroup>
+                    {rbUserPresets.length > 0 && (
+                      <optgroup label="Custom">
+                        {rbUserPresets.map(p => (
+                          <option key={p.id} value={p.id}>{p.label}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                  <button
+                    onClick={saveAsRbPreset}
+                    className="px-3 py-1.5 bg-green-600/50 hover:bg-green-600/70 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                    data-testid="rb-save-preset"
+                  >
+                    <Save className="w-3 h-3" />
+                    Save as Preset
+                  </button>
+                  {rbUserPresets.find(p => p.id === rbActivePreset) && (
+                    <button
+                      onClick={() => deleteRbPreset(rbActivePreset)}
+                      className="px-2 py-1.5 bg-red-600/50 hover:bg-red-600/70 text-white rounded-lg text-xs font-medium transition-colors"
+                      data-testid="rb-delete-preset"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Export/Import/Compare/Candidate */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowExportModal(true)}
+                    className="px-3 py-1.5 bg-blue-600/50 hover:bg-blue-600/70 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                    data-testid="rb-export-formula"
+                  >
+                    <Download className="w-3 h-3" />
+                    Export
+                  </button>
+                  <button
+                    onClick={() => setShowImportModal(true)}
+                    className="px-3 py-1.5 bg-blue-600/50 hover:bg-blue-600/70 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                    data-testid="rb-import-formula"
+                  >
+                    <Upload className="w-3 h-3" />
+                    Import
+                  </button>
+                  <button
+                    onClick={() => setRbCompareMode(!rbCompareMode)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                      rbCompareMode ? 'bg-purple-600 text-white' : 'bg-purple-600/50 hover:bg-purple-600/70 text-white'
+                    }`}
+                    data-testid="rb-compare-toggle"
+                  >
+                    <Users className="w-3 h-3" />
+                    Compare
+                  </button>
+                  <button
+                    onClick={() => setShowCandidateModal(true)}
+                    className="px-3 py-1.5 bg-amber-600/50 hover:bg-amber-600/70 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                    data-testid="rb-mark-candidate"
+                  >
+                    <GitBranch className="w-3 h-3" />
+                    Mark Candidate
+                  </button>
+                  <button
+                    onClick={previewRoleBankPayload}
+                    className="px-3 py-1.5 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                    data-testid="rb-preview-payload"
+                  >
+                    <Eye className="w-3 h-3" />
+                    Preview Payload
+                  </button>
+                </div>
+              </div>
+
+              {/* Candidate Formulas List */}
+              {rbCandidateFormulas.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-green-500/20">
+                  <h4 className="text-xs font-semibold text-green-400 mb-2">Saved Candidate Formulas</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {rbCandidateFormulas.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => loadCandidateFormula(c)}
+                        className="px-2 py-1 bg-amber-800/30 hover:bg-amber-800/50 text-amber-300 rounded text-xs transition-colors"
+                        data-testid={`candidate-${c.id}`}
+                      >
+                        {c.id} ({new Date(c.createdAt).toLocaleDateString()})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Split-View Comparison */}
+            {rbCompareMode && (
+              <div className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 border border-purple-500/30 rounded-lg p-4">
+                <h3 className="text-sm font-bold text-purple-300 mb-4">Side-by-Side Comparison</h3>
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Player A */}
+                  <div className="space-y-3">
+                    <select
+                      value={rbPlayerA || ''}
+                      onChange={(e) => setRbPlayerA(e.target.value || null)}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 text-white rounded-lg text-sm"
+                      data-testid="compare-player-a"
+                    >
+                      <option value="">Select Player A</option>
+                      {(dataWithCustomScores as RBSandboxPlayer[])?.map(p => (
+                        <option key={p.playerId} value={p.playerId}>{p.playerName} ({p.team})</option>
+                      ))}
+                    </select>
+                    {rbPlayerA && (() => {
+                      const playerA = (dataWithCustomScores as RBSandboxPlayer[])?.find(p => p.playerId === rbPlayerA);
+                      const playerB = rbPlayerB ? (dataWithCustomScores as RBSandboxPlayer[])?.find(p => p.playerId === rbPlayerB) : null;
+                      if (!playerA) return null;
+                      const compareVal = (a: number, b: number | undefined) => {
+                        if (b === undefined) return '';
+                        return a > b ? 'text-green-400 font-bold' : a < b ? 'text-red-400' : '';
+                      };
+                      return (
+                        <div className="bg-gray-800/50 rounded-lg p-3 space-y-2 text-sm">
+                          <div className="font-semibold text-white">{playerA.playerName} <span className="text-gray-500">({playerA.team})</span></div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                            <div className="text-gray-400">Games</div><div className={compareVal(playerA.gamesPlayed, playerB?.gamesPlayed)}>{playerA.gamesPlayed}</div>
+                            <div className="text-gray-400">Carries</div><div className={compareVal(playerA.totalCarries, playerB?.totalCarries)}>{playerA.totalCarries}</div>
+                            <div className="text-gray-400">Carries/G</div><div className={compareVal(playerA.totalCarries / playerA.gamesPlayed, playerB ? playerB.totalCarries / playerB.gamesPlayed : undefined)}>{(playerA.totalCarries / playerA.gamesPlayed).toFixed(1)}</div>
+                            <div className="text-gray-400">Rush Yds</div><div className={compareVal(playerA.totalRushingYards, playerB?.totalRushingYards)}>{playerA.totalRushingYards}</div>
+                            <div className="text-gray-400">Yds/Carry</div><div className={compareVal(playerA.totalRushingYards / playerA.totalCarries, playerB ? playerB.totalRushingYards / playerB.totalCarries : undefined)}>{(playerA.totalRushingYards / playerA.totalCarries).toFixed(1)}</div>
+                            <div className="text-gray-400">Fantasy Pts</div><div className={compareVal(playerA.fantasyPoints, playerB?.fantasyPoints)}>{playerA.fantasyPoints.toFixed(1)}</div>
+                            <div className="text-gray-400">FP/Rush</div><div className={compareVal(playerA.fantasyPointsPerRushAttempt, playerB?.fantasyPointsPerRushAttempt)}>{playerA.fantasyPointsPerRushAttempt}</div>
+                            <div className="text-gray-400">Targets</div><div className={compareVal(playerA.totalTargets, playerB?.totalTargets)}>{playerA.totalTargets}</div>
+                            <div className="text-gray-400">Rec</div><div className={compareVal(playerA.totalReceptions, playerB?.totalReceptions)}>{playerA.totalReceptions}</div>
+                            <div className="text-gray-400">Rec Yds</div><div className={compareVal(playerA.totalReceivingYards, playerB?.totalReceivingYards)}>{playerA.totalReceivingYards}</div>
+                            <div className="text-gray-400">Rec Yds/G</div><div className={compareVal(playerA.totalReceivingYards / playerA.gamesPlayed, playerB ? playerB.totalReceivingYards / playerB.gamesPlayed : undefined)}>{(playerA.totalReceivingYards / playerA.gamesPlayed).toFixed(1)}</div>
+                            <div className="text-gray-400">Rec FP/G</div><div className={compareVal(playerA.receivingFantasyPerGame, playerB?.receivingFantasyPerGame)}>{playerA.receivingFantasyPerGame}</div>
+                            <div className="text-gray-400">Wtd Opp/G</div><div className={compareVal(playerA.weightedOppPerGame, playerB?.weightedOppPerGame)}>{playerA.weightedOppPerGame}</div>
+                            <div className="text-gray-400">FP/Opp</div><div className={compareVal(playerA.fpPerOpp, playerB?.fpPerOpp)}>{playerA.fpPerOpp}</div>
+                            <div className="text-purple-400 font-medium">Alpha Score</div><div className={`font-bold ${compareVal(playerA.customAlphaScore ?? 0, playerB?.customAlphaScore)}`}>{playerA.customAlphaScore ?? 0}</div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Player B */}
+                  <div className="space-y-3">
+                    <select
+                      value={rbPlayerB || ''}
+                      onChange={(e) => setRbPlayerB(e.target.value || null)}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 text-white rounded-lg text-sm"
+                      data-testid="compare-player-b"
+                    >
+                      <option value="">Select Player B</option>
+                      {(dataWithCustomScores as RBSandboxPlayer[])?.map(p => (
+                        <option key={p.playerId} value={p.playerId}>{p.playerName} ({p.team})</option>
+                      ))}
+                    </select>
+                    {rbPlayerB && (() => {
+                      const playerB = (dataWithCustomScores as RBSandboxPlayer[])?.find(p => p.playerId === rbPlayerB);
+                      const playerA = rbPlayerA ? (dataWithCustomScores as RBSandboxPlayer[])?.find(p => p.playerId === rbPlayerA) : null;
+                      if (!playerB) return null;
+                      const compareVal = (b: number, a: number | undefined) => {
+                        if (a === undefined) return '';
+                        return b > a ? 'text-green-400 font-bold' : b < a ? 'text-red-400' : '';
+                      };
+                      return (
+                        <div className="bg-gray-800/50 rounded-lg p-3 space-y-2 text-sm">
+                          <div className="font-semibold text-white">{playerB.playerName} <span className="text-gray-500">({playerB.team})</span></div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                            <div className="text-gray-400">Games</div><div className={compareVal(playerB.gamesPlayed, playerA?.gamesPlayed)}>{playerB.gamesPlayed}</div>
+                            <div className="text-gray-400">Carries</div><div className={compareVal(playerB.totalCarries, playerA?.totalCarries)}>{playerB.totalCarries}</div>
+                            <div className="text-gray-400">Carries/G</div><div className={compareVal(playerB.totalCarries / playerB.gamesPlayed, playerA ? playerA.totalCarries / playerA.gamesPlayed : undefined)}>{(playerB.totalCarries / playerB.gamesPlayed).toFixed(1)}</div>
+                            <div className="text-gray-400">Rush Yds</div><div className={compareVal(playerB.totalRushingYards, playerA?.totalRushingYards)}>{playerB.totalRushingYards}</div>
+                            <div className="text-gray-400">Yds/Carry</div><div className={compareVal(playerB.totalRushingYards / playerB.totalCarries, playerA ? playerA.totalRushingYards / playerA.totalCarries : undefined)}>{(playerB.totalRushingYards / playerB.totalCarries).toFixed(1)}</div>
+                            <div className="text-gray-400">Fantasy Pts</div><div className={compareVal(playerB.fantasyPoints, playerA?.fantasyPoints)}>{playerB.fantasyPoints.toFixed(1)}</div>
+                            <div className="text-gray-400">FP/Rush</div><div className={compareVal(playerB.fantasyPointsPerRushAttempt, playerA?.fantasyPointsPerRushAttempt)}>{playerB.fantasyPointsPerRushAttempt}</div>
+                            <div className="text-gray-400">Targets</div><div className={compareVal(playerB.totalTargets, playerA?.totalTargets)}>{playerB.totalTargets}</div>
+                            <div className="text-gray-400">Rec</div><div className={compareVal(playerB.totalReceptions, playerA?.totalReceptions)}>{playerB.totalReceptions}</div>
+                            <div className="text-gray-400">Rec Yds</div><div className={compareVal(playerB.totalReceivingYards, playerA?.totalReceivingYards)}>{playerB.totalReceivingYards}</div>
+                            <div className="text-gray-400">Rec Yds/G</div><div className={compareVal(playerB.totalReceivingYards / playerB.gamesPlayed, playerA ? playerA.totalReceivingYards / playerA.gamesPlayed : undefined)}>{(playerB.totalReceivingYards / playerB.gamesPlayed).toFixed(1)}</div>
+                            <div className="text-gray-400">Rec FP/G</div><div className={compareVal(playerB.receivingFantasyPerGame, playerA?.receivingFantasyPerGame)}>{playerB.receivingFantasyPerGame}</div>
+                            <div className="text-gray-400">Wtd Opp/G</div><div className={compareVal(playerB.weightedOppPerGame, playerA?.weightedOppPerGame)}>{playerB.weightedOppPerGame}</div>
+                            <div className="text-gray-400">FP/Opp</div><div className={compareVal(playerB.fpPerOpp, playerA?.fpPerOpp)}>{playerB.fpPerOpp}</div>
+                            <div className="text-purple-400 font-medium">Alpha Score</div><div className={`font-bold ${compareVal(playerB.customAlphaScore ?? 0, playerA?.customAlphaScore)}`}>{playerB.customAlphaScore ?? 0}</div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Export Formula Modal */}
+        {showExportModal && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-lg w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white">Export Formula JSON</h3>
+                <button onClick={() => setShowExportModal(false)} className="text-gray-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <pre className="bg-gray-800 p-4 rounded-lg text-sm text-green-300 overflow-x-auto mb-4">
+                {JSON.stringify(exportRbFormula(), null, 2)}
+              </pre>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { copyFormulaToClipboard(); setShowExportModal(false); }}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                  data-testid="copy-formula"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copy to Clipboard
+                </button>
+                <button
+                  onClick={() => { downloadFormula(); setShowExportModal(false); }}
+                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                  data-testid="download-formula"
+                >
+                  <Download className="w-4 h-4" />
+                  Download File
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Import Formula Modal */}
+        {showImportModal && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-lg w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white">Import Formula JSON</h3>
+                <button onClick={() => { setShowImportModal(false); setImportJson(''); setImportError(null); }} className="text-gray-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <textarea
+                value={importJson}
+                onChange={(e) => setImportJson(e.target.value)}
+                placeholder='Paste JSON here, e.g., {"version":"rb-alpha-sandbox-v1","weights":{"carries":0.35,...}}'
+                className="w-full h-40 px-3 py-2 bg-gray-800 border border-gray-700 text-white rounded-lg text-sm font-mono"
+                data-testid="import-json-input"
+              />
+              {importError && (
+                <p className="mt-2 text-sm text-red-400">{importError}</p>
+              )}
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={() => { setShowImportModal(false); setImportJson(''); setImportError(null); }}
+                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={importRbFormula}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                  data-testid="apply-import"
+                >
+                  <Upload className="w-4 h-4" />
+                  Apply Formula
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Candidate Formula Modal */}
+        {showCandidateModal && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white">Mark as Candidate Formula</h3>
+                <button onClick={() => { setShowCandidateModal(false); setCandidateLabel(''); }} className="text-gray-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <input
+                type="text"
+                value={candidateLabel}
+                onChange={(e) => setCandidateLabel(e.target.value)}
+                placeholder="e.g., rb-alpha-v0.4"
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 text-white rounded-lg text-sm mb-4"
+                data-testid="candidate-label-input"
+              />
+              <div className="bg-gray-800 p-3 rounded-lg mb-4">
+                <p className="text-xs text-gray-400">Current Weights:</p>
+                <p className="text-sm text-white mt-1">
+                  Carries: {rbCarriesWeight}% | Yards: {rbYardsWeight}% | FP/Rush: {rbFpRushWeight}% | Receiving: {rbReceivingWeight}%
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowCandidateModal(false); setCandidateLabel(''); }}
+                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={markAsCandidateFormula}
+                  disabled={!candidateLabel.trim()}
+                  className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-600 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                  data-testid="save-candidate"
+                >
+                  <GitBranch className="w-4 h-4" />
+                  Save Candidate
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Info Box - WR only */}
         {position === 'WR' && (

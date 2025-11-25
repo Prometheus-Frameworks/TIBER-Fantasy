@@ -1,0 +1,278 @@
+You are updating the existing RB Admin Sandbox for the TIBER Fantasy project.
+
+DO NOT:
+- Do not change any of the current metric calculations.
+- Do not change the database schema.
+- Do not change the current RB custom alpha formula logic, other than wiring it into new features.
+- Do not touch WR systems or global ranking engines.
+
+You are ONLY adding Phase 2 features around the existing RB sandbox.
+
+Context (current RB sandbox state)
+- Metrics already available per RB:
+  - Games
+  - Carries, Carries/G
+  - Rushing yards, Yds/Carry
+  - Fantasy points, FP/Rush
+  - Targets, Receptions
+  - Receiving yards, Rec Yds/G
+  - Rec FP/G = (rec * 0.5 + recYds / 10 + recTD * 6) / games
+  - Wtd Opp/G = (carries + 1.5 * targets) / games
+  - FP/Opp = fantasyPts / (carries + 1.5 * targets)
+- The custom RB Alpha Score is built from 4 pillars:
+  - Carries (35%)
+  - Rushing Yards (30%)
+  - FP/Rush (20%)
+  - Receiving Work (15%, using Rec FP/G as the receiving pillar)
+
+Keep all of this intact.
+
+==================================================
+TASK 1 – Split-View Comparison Mode
+==================================================
+
+Goal: Allow comparing two RBs side-by-side within the RB Sandbox UI.
+
+Requirements:
+1. Add a split-view toggle or layout in the RB sandbox page.
+   - When split-view is enabled, the screen shows:
+     - Left panel: Player A
+     - Right panel: Player B
+
+2. Player selection:
+   - Add two dropdowns or search inputs:
+     - "Compare: Player A"
+     - "Compare: Player B"
+   - They should filter from the same RB dataset used in the table.
+   - When user selects a player, load their metrics into the corresponding panel.
+
+3. Display for each side:
+   - Show:
+     - Player name, team
+     - All key metrics:
+       - Games, Carries, Carries/G
+       - Rush Yds, Yds/Carry
+       - Fantasy Pts, FP/Rush
+       - Targets, Receptions, Rec Yds, Rec Yds/G
+       - Rec FP/G, Wtd Opp/G, FP/Opp
+       - Current Custom Alpha Score
+   - Present them in a compact table or “card” style.
+   - Ensure both sides show the same metric order for easy comparison.
+
+4. Visual comparison:
+   - For each metric, highlight which player is better:
+     - e.g., bold or subtle background highlight where A > B, and vice versa.
+   - Do NOT add crazy colors; keep it clean and readable.
+
+5. Technical:
+   - Implement this in the same React/TypeScript page that currently renders the RB sandbox table.
+   - Keep state management simple and local to the sandbox page (no global state unless already used).
+
+==================================================
+TASK 2 – Export / Import Formula JSON
+==================================================
+
+Goal: Allow saving and reloading custom slider configurations via JSON.
+
+Current context:
+- The RB sandbox already has sliders for the 4 pillars:
+  - Carries weight
+  - Rush Yds weight
+  - FP/Rush weight
+  - Receiving Work weight
+- These should always sum to 100% (or 1.0 depending on implementation). Preserve existing behavior.
+
+Requirements:
+1. Add an "Export Formula" button:
+   - When clicked, produce a JSON object representing the current slider configuration, e.g.:
+
+     {
+       "version": "rb-alpha-sandbox-v1",
+       "weights": {
+         "carries": 0.35,
+         "rushYds": 0.30,
+         "fpPerRush": 0.20,
+         "receivingWork": 0.15
+       }
+     }
+
+   - Either:
+     - Trigger a file download (formula-<timestamp>.json), or
+     - Show the JSON in a modal with a copy-to-clipboard button.
+   - Choose the simplest clean implementation.
+
+2. Add an "Import Formula" control:
+   - Allow user to either:
+     - Paste JSON into a text area, OR
+     - Upload a small JSON file.
+   - Validate JSON structure:
+     - Must include "weights" and keys for all 4 pillars.
+     - If invalid, show a clear error message and do nothing.
+   - On success:
+     - Apply imported weights to the sliders.
+     - Recalculate the Custom Alpha Score using the new weights.
+     - Persist like normal (see Task 4).
+
+3. Do not allow importing partial configs:
+   - All 4 weights must be present.
+   - You may normalize to sum 1.0 if slightly off due to rounding.
+
+==================================================
+TASK 3 – Save / Load Custom Weight Presets
+==================================================
+
+Goal: Allow users to quickly switch between named weight profiles.
+
+Requirements:
+1. Define a local preset model:
+   - Each preset has:
+     - id (string)
+     - label (string, human readable)
+     - weights (same structure as export/import)
+     - optional description
+
+2. Built-in presets (hard-coded):
+   - "Default RB" – current default values (35/30/20/15)
+   - "Dual Threat Heavy" – boost receiving weight, slightly reduce carries
+   - "Efficiency Hunter" – boost FP/Rush and FP/Opp-related effect via that pillar
+   - "Workhorse Volume" – boost carries and rush yards
+
+   Exact weights can be reasonable defaults; just make sure they all sum to 1.0.
+
+3. UI:
+   - Add a dropdown or segmented control for presets: "Preset:"
+   - Options:
+     - Built-in presets
+     - Any user-saved presets (see next point)
+
+4. User-created presets:
+   - Add a "Save Current as Preset" button:
+     - User enters a name.
+     - Current slider values are saved to a preset list.
+     - Stored either in localStorage or similar client-side persistence.
+   - Add a way to delete custom presets.
+   - User presets should appear after the built-in ones in the dropdown.
+
+5. Behavior:
+   - Selecting a preset:
+     - Applies its weights immediately to the sliders.
+     - Triggers recomputation of alpha scores.
+   - On page load:
+     - Use "Default RB" unless a last-used preset is already stored.
+
+==================================================
+TASK 4 – Persistence & Stability
+==================================================
+
+Goal: Make the sandbox feel professional and stable.
+
+Requirements:
+1. Slider persistence:
+   - Slider values should persist across page refreshes.
+   - Use localStorage (or existing persistence pattern in this project).
+   - Key name should be specific, e.g., "tiber_rb_sandbox_weights_v1".
+
+2. Last-used preset:
+   - Also persist which preset was last used, if any.
+   - On load, apply that preset and its slider values.
+
+3. Sorting stability:
+   - If the RB table allows sorting by column:
+     - Preserve the selected sort column and order when sliders change.
+     - Ensure recomputing alpha does NOT reset the sorting or scroll position unnecessarily.
+
+4. Performance:
+   - Recomputing alpha and re-rendering should be performant even with the full RB list.
+   - If needed, memoize derived data.
+
+==================================================
+TASK 5 – Candidate Formula Snapshot (Future RB Alpha Engine)
+==================================================
+
+Goal: Prepare for later promotion of this sandbox formula into the official RB Alpha Engine.
+
+Requirements:
+1. Add a "Mark as Candidate Formula" button:
+   - When clicked, capture:
+     - Current weights
+     - A user-provided label (e.g., "rb-alpha-v0.4")
+     - Timestamp
+   - For now, you can:
+     - Log this clearly in the console, and/or
+     - Store candidate formulas in localStorage under a separate key, e.g., "tiber_rb_candidate_formulas".
+
+2. Data structure example:
+
+   {
+     "id": "rb-alpha-v0.4",
+     "createdAt": "2025-11-24T00:00:00Z",
+     "weights": {
+       "carries": 0.35,
+       "rushYds": 0.30,
+       "fpPerRush": 0.20,
+       "receivingWork": 0.15
+     }
+   }
+
+3. UI:
+   - Optional small list of saved candidate formulas with:
+     - label
+     - createdAt
+     - a "Load" action that applies their weights like a preset.
+
+We will later plug these candidate formulas into the true backend Rankings engine; for now it is sufficient that the sandbox can store and recall them reliably.
+
+==================================================
+TASK 6 – Role Bank v2 Integration Hooks (NO full integration yet)
+==================================================
+
+Goal: Prepare for future integration without changing current behavior.
+
+Requirements:
+1. Add a small abstraction layer for the RB alpha score output:
+   - e.g., a function like `buildRbAlphaExport(row)` that returns a clean object:
+
+     {
+       playerId,
+       playerName,
+       team,
+       alphaScore,
+       games,
+       carries,
+       rushYds,
+       targets,
+       rec,
+       recYds,
+       recFpPerGame,
+       wtdOppPerGame,
+       fpPerOpp
+     }
+
+2. For now:
+   - This function can just be used inside the sandbox.
+   - Also:
+     - Expose a "Preview Role Bank Payload" debug button that:
+       - Gathers the top N RBs (e.g., top 50 by alphaScore)
+       - Logs the payload array to the console.
+
+3. Do NOT call any real Role Bank endpoint yet.
+   - This is just preparing a clean, reusable format so future integration is simple.
+
+==================================================
+GENERAL IMPLEMENTATION NOTES
+==================================================
+
+- Use TypeScript and follow existing coding style in the project.
+- Keep the UI minimal and in line with the current sandbox aesthetic.
+- Do not introduce heavy new dependencies; use existing UI libs already in the project.
+- After changes:
+  - Ensure lint passes.
+  - Ensure RB sandbox still loads, sliders function, alpha scores change as expected.
+  - Manually smoke test:
+    - Default sliders
+    - One custom preset
+    - Export → Import round trip
+    - Split-view comparison
+    - Persistence after refresh.
+
+When all tasks are complete, summarize what you changed in comments at the top of the RB sandbox file or in a short README update for the sandbox module.
