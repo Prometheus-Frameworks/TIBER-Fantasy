@@ -70,6 +70,10 @@ interface RBSandboxPlayer {
   totalTargets: number;
   totalReceptions: number;
   totalReceivingYards: number;
+  totalReceivingTDs: number;
+  receivingFantasyPerGame: number;
+  weightedOppPerGame: number;
+  fpPerOpp: number;
   customAlphaScore?: number;
   injuryStatus: string | null;
   injuryType: string | null;
@@ -208,13 +212,15 @@ export default function WRRankingsSandbox() {
       const maxCarries = Math.max(...allRBs.map(p => p.totalCarries));
       const maxYards = Math.max(...allRBs.map(p => p.totalRushingYards));
       const maxFpRush = Math.max(...allRBs.map(p => p.fantasyPointsPerRushAttempt));
-      const maxReceivingYards = Math.max(...allRBs.map(p => p.totalReceivingYards));
+      // Use receivingFantasyPerGame instead of raw receivingYards for the 15% Receiving Work weight
+      const maxRecFpg = Math.max(...allRBs.map(p => p.receivingFantasyPerGame));
 
       // Normalize each metric to 0-100
       const carriesScore = (rbPlayer.totalCarries / maxCarries) * 100;
       const yardsScore = (rbPlayer.totalRushingYards / maxYards) * 100;
       const fpRushScore = (rbPlayer.fantasyPointsPerRushAttempt / maxFpRush) * 100;
-      const receivingScore = maxReceivingYards > 0 ? (rbPlayer.totalReceivingYards / maxReceivingYards) * 100 : 0;
+      // Receiving Work now uses receivingFantasyPerGame (half-PPR: rec*0.5 + recYd/10 + recTD*6)
+      const receivingScore = maxRecFpg > 0 ? (rbPlayer.receivingFantasyPerGame / maxRecFpg) * 100 : 0;
 
       // Apply custom weights
       const totalWeight = rbCarriesWeight + rbYardsWeight + rbFpRushWeight + rbReceivingWeight;
@@ -643,6 +649,15 @@ export default function WRRankingsSandbox() {
                     <th className="px-4 py-3 text-center text-xs font-semibold text-amber-400 uppercase tracking-wider">
                       Rec Yds/G
                     </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-pink-400 uppercase tracking-wider">
+                      Rec FP/G
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-orange-400 uppercase tracking-wider">
+                      Wtd Opp/G
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-teal-400 uppercase tracking-wider">
+                      FP/Opp
+                    </th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-purple-400 uppercase tracking-wider">
                       <button 
                         onClick={() => handleSort('customAlphaScore')}
@@ -659,7 +674,7 @@ export default function WRRankingsSandbox() {
                   {isLoading ? (
                     [...Array(10)].map((_, idx) => (
                       <tr key={idx} className="border-b border-gray-800/30">
-                        <td colSpan={15} className="px-4 py-4">
+                        <td colSpan={18} className="px-4 py-4">
                           <div className="h-8 bg-gray-700/30 rounded animate-pulse"></div>
                         </td>
                       </tr>
@@ -702,6 +717,9 @@ export default function WRRankingsSandbox() {
                           <td className="px-4 py-3 text-center text-blue-300">{rbPlayer.totalReceptions}</td>
                           <td className="px-4 py-3 text-center text-cyan-300">{rbPlayer.totalReceivingYards}</td>
                           <td className="px-4 py-3 text-center text-amber-300">{(rbPlayer.totalReceivingYards / rbPlayer.gamesPlayed).toFixed(1)}</td>
+                          <td className="px-4 py-3 text-center text-pink-300 font-medium">{rbPlayer.receivingFantasyPerGame}</td>
+                          <td className="px-4 py-3 text-center text-orange-300 font-medium">{rbPlayer.weightedOppPerGame}</td>
+                          <td className="px-4 py-3 text-center text-teal-300 font-medium">{rbPlayer.fpPerOpp}</td>
                           <td className="px-4 py-3 text-center">
                             <div className="flex flex-col items-center gap-0.5">
                               <span className="font-bold text-purple-400 text-base">{rbPlayer.customAlphaScore ?? 0}</span>
