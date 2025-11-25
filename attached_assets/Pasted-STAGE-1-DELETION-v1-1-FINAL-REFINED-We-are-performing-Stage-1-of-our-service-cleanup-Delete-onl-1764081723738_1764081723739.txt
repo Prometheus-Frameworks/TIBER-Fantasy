@@ -1,0 +1,137 @@
+STAGE 1 DELETION v1.1 (FINAL, REFINED)
+
+We are performing Stage 1 of our service cleanup.
+Delete only the files classified as LEGACY_UNUSED or DEAD_ORPHAN.
+
+⚠️ Note: grokProjectionsService.ts is imported in routes.ts and routes-clean.ts.
+Remove those imports before deletion.
+
+✅ 1. Delete the following LEGACY_UNUSED services
+
+These files are confirmed unused (exported but never imported):
+
+server/services/wrAdvancedStatsService.ts
+
+server/services/rbAdvancedStatsService.ts
+
+server/services/teAdvancedStatsService.ts
+
+server/services/qbAdvancedStatsService.ts
+
+server/services/SchedulerMigration.ts
+
+server/services/evaluation/evaluationModules.ts
+
+server/services/evaluation/teEvaluationService.ts
+
+server/services/evaluation/BatchFantasyEvaluator.ts
+
+server/services/trade/verdictSystem.ts
+
+server/services/trade/rbValueDeRisker.ts
+
+server/services/sleeperStrictSnapService.ts
+
+💀 2. Delete the following DEAD_ORPHAN services
+
+These files have no imports or used exports:
+
+server/services/oasisApiService.ts
+
+server/adapters/NFLDataPyAdapter.ts
+
+server/services/ratingsEngineService.ts
+
+server/services/snapCounts.ts
+
+server/services/compassCacheService.ts
+
+server/services/wrRatingsService.ts
+
+⚠️ Special Handling — grokProjectionsService.ts
+
+Imported at:
+
+server/routes.ts
+
+server/routes-clean.ts
+
+Remove these import lines before deleting the file:
+
+import { fetchGrokProjections } from './services/grokProjectionsService';
+
+
+After removing imports, delete:
+
+server/services/grokProjectionsService.ts
+
+🧹 3. Clean up any stray references
+
+Search for references to deleted services. If any exist:
+
+Remove the import
+
+Remove or adjust any calling code
+
+Ensure no leftover variables break builds
+
+🛠️ 4. Build / Type-Check after deletion
+
+Run the project’s build / type-check flow.
+Fix errors caused by:
+
+Import paths pointing to deleted files
+
+Unused variables
+
+Missing types
+
+⛔️ 5. DO NOT TOUCH these in Stage 1
+
+These stay untouched:
+
+rankingsFusionService.ts
+
+predictionEngine.ts
+
+roleBankService.ts
+
+UPHCoordinator.ts
+
+IntelligentScheduler.ts
+
+Any ECR-related services
+
+Any Player Identity services
+
+Any Snap services except snapCounts.ts
+
+These will be handled when FORGE is installed.
+
+🔍 6. Final Report
+
+When finished, provide:
+
+List of files deleted
+
+List of import lines cleaned
+
+Any additional references removed
+
+Success of build/type-check
+
+Confirmation core features still run:
+
+OVR
+
+TIBER
+
+Matchup Engine
+
+Weekly Takes
+
+Strategy
+
+Sandboxes
+
+Analytics

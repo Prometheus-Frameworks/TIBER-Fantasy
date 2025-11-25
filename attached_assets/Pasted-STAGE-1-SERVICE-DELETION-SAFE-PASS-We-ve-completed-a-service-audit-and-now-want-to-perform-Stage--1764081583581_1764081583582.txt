@@ -1,0 +1,157 @@
+STAGE 1 SERVICE DELETION (SAFE PASS)
+
+We’ve completed a service audit and now want to perform Stage 1 deletions:
+only services classified as LEGACY_UNUSED or DEAD_ORPHAN.
+
+These files are not imported anywhere and are safe to remove.
+
+1) Delete the following LEGACY_UNUSED services
+
+Please delete these files:
+
+server/services/wrAdvancedStatsService.ts
+
+server/services/rbAdvancedStatsService.ts
+
+server/services/teAdvancedStatsService.ts
+
+server/services/qbAdvancedStatsService.ts
+
+server/services/SchedulerMigration.ts
+
+server/services/evaluation/evaluationModules.ts
+
+server/services/evaluation/teEvaluationService.ts
+
+server/services/evaluation/BatchFantasyEvaluator.ts
+
+server/services/trade/verdictSystem.ts
+
+server/services/trade/rbValueDeRisker.ts
+
+server/services/sleeperStrictSnapService.ts
+
+These were identified as exported but never imported anywhere.
+
+2) Delete the following DEAD_ORPHAN services
+
+Please delete these files as well:
+
+server/services/oasisApiService.ts
+
+server/adapters/NFLDataPyAdapter.ts
+
+server/services/ratingsEngineService.ts
+
+server/services/snapCounts.ts
+
+server/services/compassCacheService.ts
+
+server/services/wrRatingsService.ts
+
+server/services/grokProjectionsService.ts
+
+These have no imports and no used exports in the codebase.
+
+3) Clean up any leftover references (if present)
+
+Even though the audit indicates these files are unused, please:
+
+Scan the repo for any references to:
+
+wrAdvancedStatsService
+
+rbAdvancedStatsService
+
+teAdvancedStatsService
+
+qbAdvancedStatsService
+
+SchedulerMigration
+
+evaluationModules
+
+teEvaluationService
+
+BatchFantasyEvaluator
+
+verdictSystem
+
+rbValueDeRisker
+
+sleeperStrictSnapService
+
+oasisApiService
+
+NFLDataPyAdapter
+
+ratingsEngineService
+
+snapCounts
+
+compassCacheService
+
+wrRatingsService
+
+grokProjectionsService
+
+If any imports or references still exist:
+
+Remove those import lines
+
+Remove or adjust any code that referenced these services
+
+Goal: after deletion, no references remain anywhere in the repo.
+
+4) Build / Type-Check and Fix Fallout
+
+After deletions and reference cleanup:
+
+Run the project’s usual build / type-check command.
+
+Fix any errors caused by:
+
+Stray imports pointing to deleted files
+
+Now-unused variables or parameters
+
+The goal is zero build errors and a clean TypeScript state.
+
+5) DO NOT TOUCH (for now)
+
+Do NOT modify or delete any of the following in this pass:
+
+rankingsFusionService.ts
+
+predictionEngine.ts
+
+roleBankService.ts
+
+UPHCoordinator.ts
+
+IntelligentScheduler.ts
+
+Any ECR-related services (ecrService.ts, ecrLoader.ts, enhancedEcrProvider.ts, ecrPipelineService.ts)
+
+Any snap services other than snapCounts.ts
+
+Any player identity services (PlayerIdentityService.ts, PlayerMappingService.ts, playerAliases.ts)
+
+These will be refactored or removed later when we introduce FORGE (Football Oriented Recursive Grading Engine).
+
+ECR-specific logic will be consolidated or removed in a future pass — we intend to phase out external “expert consensus” and rely on our own grading engine.
+
+6) Final Verification Summary
+
+When finished, please provide a short summary:
+
+List of files successfully deleted
+
+Any additional references you had to clean up
+
+Confirmation that the app builds and runs successfully
+
+Confirmation that core features (OVR, TIBER, sandboxes, analytics, strategy, matchup, weekly takes) still work
+
+This is Stage 1 of the service cleanup only.
+No refactors yet — just deletion of confirmed-unused services.
