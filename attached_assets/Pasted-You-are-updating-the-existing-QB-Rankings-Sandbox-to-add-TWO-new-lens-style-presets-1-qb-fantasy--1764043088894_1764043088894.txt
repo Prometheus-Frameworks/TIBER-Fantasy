@@ -1,0 +1,170 @@
+You are updating the existing QB Rankings Sandbox to add TWO new lens-style presets:
+
+1) qb_fantasy_lens_v1  – Fantasy-focused, Konami turned up, context lighter
+2) qb_realball_lens_v1 – Real QB play, efficiency + context cranked, rushing treated as bonus
+
+Do NOT:
+- Do not change the 4-pillar structure (Volume, Production, Efficiency, Context).
+- Do not remove or rename existing presets (Balanced, Deep Ball Hunter, Game Manager, Dual Threat, Pure Efficiency).
+- Do not change the base alphaScore formula (weighted sum of the 4 pillar indices).
+- Do not break export/import JSON or candidate formula saving.
+
+You MAY:
+- Add new presets to the preset list.
+- Associate special behavior with those presets for how Konami boost is applied.
+- Optionally slightly tweak internal Production weighting ONLY for those two lenses if done cleanly and safely.
+
+==================================================
+TASK 1 – Add two new presets
+==================================================
+
+Extend the presets list to include:
+
+1) "Fantasy Lens v1" (id: qb_fantasy_lens_v1)
+   - Intent: Fantasy-first view, Konami QBs emphasized, context slightly lighter.
+   - Default weights:
+        Volume:     20
+        Production: 40
+        Efficiency: 25
+        Context:    15
+
+2) "Real Ball Lens v1" (id: qb_realball_lens_v1)
+   - Intent: Real QB quality, efficiency + context prioritized, rushing treated as a bonus only.
+   - Default weights:
+        Volume:     20
+        Production: 20
+        Efficiency: 40
+        Context:    20
+
+Implementation details:
+- These must appear alongside the existing presets in the dropdown.
+- When a preset is selected, the sliders should update to these values.
+- Save/load/export/import logic should treat them like any other preset (no special case needed for JSON shape).
+
+==================================================
+TASK 2 – Konami behavior per lens
+==================================================
+
+Currently there is a global Konami boost applied after alphaScore is computed, something like:
+
+  konamiBoostFactor = 1.0
+  if rushFpPerGame >= 6: konamiBoostFactor = 1.10
+  elif rushFpPerGame >= 4: konamiBoostFactor = 1.05
+
+  alphaScore *= konamiBoostFactor
+
+You must make Konami behavior **lens-aware** while keeping backward compatibility.
+
+Add a simple mode flag (for example: konamiMode) that can be:
+- "default"
+- "fantasy"
+- "realball"
+
+Rules:
+
+1) For all existing presets (Balanced, Deep Ball Hunter, Game Manager, Dual Threat, Pure Efficiency):
+   - konamiMode = "default"
+   - Keep the current boost (1.10 / 1.05 thresholds).
+
+2) For "Fantasy Lens v1" (qb_fantasy_lens_v1):
+   - konamiMode = "fantasy"
+   - Make the Konami boost slightly stronger:
+
+      if rushFpPerGame >= 6:
+          konamiBoostFactor = 1.12
+      elif rushFpPerGame >= 4:
+          konamiBoostFactor = 1.06
+      else:
+          konamiBoostFactor = 1.0
+
+3) For "Real Ball Lens v1" (qb_realball_lens_v1):
+   - konamiMode = "realball"
+   - Disable the Konami boost entirely:
+
+      konamiBoostFactor = 1.0  // no rushing multiplier for this lens
+
+Implementation approach:
+- Store the currently selected preset ID in component state.
+- Derive konamiMode from that ID.
+- Apply the correct Konami behavior in the alphaScore calculation branch.
+
+==================================================
+TASK 3 – Optional subtle tweak to Production per lens
+==================================================
+
+If the productionIndex is currently using the fantasy-weighted formula:
+
+  productionIndex =
+      0.45 * fpPerGameNorm
+    + 0.30 * rushFpPerGameNorm
+    + 0.15 * passTDsPerGameNorm
+    + 0.10 * rzTDsPerGameNorm
+
+You may (OPTIONALLY) introduce a lens-aware internal weighting WITHOUT changing the external slider UI.
+
+Approach (only if you can do this cleanly):
+
+- Keep the external pillar weights as-is (Volume/Prod/Eff/Context sliders).
+- Inside productionIndex, let the weighting depend on the lens:
+
+  If preset is qb_fantasy_lens_v1:
+      // rushing more important
+      productionIndex =
+          0.40 * fpPerGameNorm
+        + 0.35 * rushFpPerGameNorm
+        + 0.15 * passTDsPerGameNorm
+        + 0.10 * rzTDsPerGameNorm
+
+  If preset is qb_realball_lens_v1:
+      // passing stability more important, rushing demoted
+      productionIndex =
+          0.50 * fpPerGameNorm
+        + 0.10 * rushFpPerGameNorm
+        + 0.25 * passTDsPerGameNorm
+        + 0.15 * rzTDsPerGameNorm
+
+  Else:
+      // for all other presets, keep the existing shared formula
+
+If this is too invasive for the current code structure, you may skip this step and only rely on the preset weights + Konami behavior. Do not create a mess of conditionals; keep the function clean.
+
+==================================================
+TASK 4 – UI Indicators (light touch)
+==================================================
+
+Add a subtle visual indication of which lens is active:
+
+- When qb_fantasy_lens_v1 is selected:
+    - Show a small chip or label near the sliders: "Fantasy Lens v1 (Konami emphasized)".
+
+- When qb_realball_lens_v1 is selected:
+    - Show a small chip or label: "Real Ball Lens v1 (efficiency + context)".
+
+Do NOT clutter the UI; a single small label or helper text line is enough.
+
+==================================================
+TASK 5 – Validation
+==================================================
+
+After implementing:
+
+1) Confirm:
+   - Preset dropdown includes both new lenses.
+   - Selecting either adjusts slider weights correctly.
+   - Alpha scores change appropriately when switching between lenses.
+
+2) Data behavior expectations:
+   - Under qb_fantasy_lens_v1:
+     - High-rush QBs (Hurts, Lamar, Fields, Dart, Jayden Daniels) rise relative to pocket passers with similar FP/G.
+   - Under qb_realball_lens_v1:
+     - True efficiency+context QBs (Mahomes, Maye, Dak, Stafford, Stroud if efficiency improves, etc.) dominate.
+     - Fields / Dart / Daniels are still helped by their fantasy output but no longer over-inflated by Konami.
+
+3) Ensure:
+   - Context column still shows correct, varied contextIndex values.
+   - Export/import JSON and candidate formula saving still function exactly as before (weights only; lens behavior is implicit in preset ID and internal logic).
+
+Update replit.md with a short section:
+- documenting qb_fantasy_lens_v1 and qb_realball_lens_v1,
+- their intended use,
+- and how Konami behavior differs between them.
