@@ -1,0 +1,190 @@
+TASK: Integrate FORGE into WR Rankings UI (non-destructive, keep sandbox intact)
+
+High-Level Goal
+
+Expose FORGE WR alpha scores as an extra column on the main WR Rankings page, by consuming the existing FORGE batch API.
+
+Do not remove or break the existing WR Admin/Sandbox page.
+
+Do not overwrite core ranking logic.
+
+This is a read-only integration: WR Rankings reads from FORGE, FORGE does not depend on WR Rankings.
+
+Existing Context (assumptions you should verify in the codebase)
+
+There is a WR rankings sandbox page, something like:
+
+client/src/pages/WRRankingsSandbox.tsx
+
+There is now a “real” WR rankings page:
+
+client/src/pages/WRRankings.tsx
+
+Route wired to something like /rankings/wr
+
+FORGE is already implemented:
+
+Server module: server/modules/forge/*
+
+REST endpoints mounted at /api/forge/*
+
+Specifically: GET /api/forge/batch supports position=WR&limit=...
+
+Client has FORGE types + API client:
+
+client/src/types/forge.ts (includes ForgeScore, ForgeBatchResponse, etc.)
+
+client/src/api/forge.ts (includes fetchForgeBatch(params) and createForgeSnapshot())
+
+If names differ slightly, adapt to the actual paths/types in the project.
+
+Requirements
+1) Preserve the Admin/Sandbox WR Rankings
+
+Do not delete, rename, or heavily refactor the existing WR sandbox/admin page.
+
+Any file with Sandbox in the name, or any route under /dev/*, must remain intact and functional.
+
+If the current user-facing WR rankings route still directly uses the sandbox component, that’s OK. You may wrap it or compose additional logic around it, but keep the sandbox logic itself intact and reusable.
+
+2) Add FORGE WR data fetching to the “real” WR Rankings page
+
+Target: the main user-facing WR rankings page, e.g.:
+
+client/src/pages/WRRankings.tsx
+
+Goal: This page should:
+
+Fetch WR rankings as it already does (no behavior changes).
+
+Additionally fetch FORGE scores for WRs via GET /api/forge/batch?position=WR.
+
+Join the results by playerId and expose FORGE alpha to the table as a new column.
+
+Implementation outline:
+
+Import FORGE client + types:
+
+import { fetchForgeBatch } from '../api/forge';
+import type { ForgeScore } from '../types/forge';
+
+
+When the component loads, issue a separate request to FORGE:
+
+const [forgeByPlayerId, setForgeByPlayerId] = useState<Record<string, ForgeScore>>({});
+const [forgeLoading, setForgeLoading] = useState(false);
+const [forgeError, setForgeError] = useState<string | null>(null);
+
+useEffect(() => {
+  const loadForge = async () => {
+    try {
+      setForgeLoading(true);
+      setForgeError(null);
+      const res = await fetchForgeBatch({ position: 'WR', limit: 500 });
+      const map: Record<string, ForgeScore> = {};
+      for (const s of res.scores) {
+        map[s.playerId] = s;
+      }
+      setForgeByPlayerId(map);
+    } catch (err: any) {
+      setForgeError(err.message ?? 'Failed to load FORGE WR scores');
+    } finally {
+      setForgeLoading(false);
+    }
+  };
+
+  loadForge();
+}, []);
+
+
+Extend the row model used by the WR rankings table to include optional FORGE data, something like:
+
+interface WrRow {
+  // existing fields...
+  playerId: string;
+  playerName: string;
+  team: string;
+  // existing alpha / scores...
+
+  forgeAlpha?: number;
+  forgeConfidence?: number;
+}
+
+
+When building or mapping rows for the table, enrich them with FORGE info:
+
+const rows: WrRow[] = baseRows.map((row) => {
+  const forge = forgeByPlayerId[row.playerId];
+  return {
+    ...row,
+    forgeAlpha: forge?.alpha,
+    forgeConfidence: forge?.confidence,
+  };
+});
+
+3) Add a FORGE column to the WR Rankings table
+
+In the main WR rankings table (on the user-facing page, not the dev sandbox), add a new column:
+
+Header: FORGE α (or FORGE if space is tight).
+
+Values: row.forgeAlpha rounded to 1 decimal place.
+
+Fallback: show '-' if no FORGE score is present for that player.
+
+Example cell rendering (pseudo/React):
+
+<td>
+  {row.forgeAlpha != null
+    ? row.forgeAlpha.toFixed(1)
+    : forgeLoading
+      ? '…'
+      : '-'}
+</td>
+
+
+Optionally, you can style the cell based on the value (e.g., higher alpha looks “hotter”), but do not change sorting behavior yet unless it’s trivial. For now, the WR rankings should continue to sort by the existing custom alpha logic.
+
+4) Keep sandbox behavior unchanged
+
+The sandbox/admin WR page should continue to work exactly as it did before this task.
+
+If you need to share logic between the sandbox and the new WR rankings page, factor out small utility hooks or pure functions (e.g. useWrRankingsData()), but:
+
+Don’t strip sandbox-specific controls.
+
+Don’t remove or rename the sandbox route.
+
+Acceptance Criteria
+
+/rankings/wr (or the equivalent main WR rankings route):
+
+Loads and displays WR rankings exactly as before.
+
+Shows a new FORGE column for each row (alpha 0–100).
+
+Does not crash or break when FORGE returns fewer players than the WR rankings list (missing data is handled gracefully with '-').
+
+FORGE integration:
+
+Uses the existing fetchForgeBatch({ position: 'WR', limit }) client function.
+
+Does not add new endpoints or change existing FORGE server behavior.
+
+Sandbox:
+
+Any page/file with Sandbox in the name still compiles and renders.
+
+Dev/admin views under /dev/* remain functional.
+
+No circular dependencies:
+
+WR Rankings imports from FORGE client/types.
+
+FORGE modules do not import from WR rankings or any UI.
+
+If you need to adjust file paths or component names, keep the architecture intact:
+
+WR Rankings → reads from FORGE
+
+FORGE → remains UI-agnostic and independent
