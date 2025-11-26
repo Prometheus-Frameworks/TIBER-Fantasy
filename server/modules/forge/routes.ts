@@ -13,6 +13,7 @@ import { PlayerPosition } from './types';
 import { db } from '../../infra/db';
 import { playerIdentityMap } from '@shared/schema';
 import { eq, and, isNotNull, sql } from 'drizzle-orm';
+import { createForgeSnapshot } from './forgeSnapshot';
 
 const router = Router();
 
@@ -229,6 +230,45 @@ router.get('/batch', async (req: Request, res: Response) => {
       success: false,
       error: 'FORGE_BATCH_FAILED',
     });
+  }
+});
+
+/**
+ * POST /api/forge/snapshot
+ * 
+ * Dev-only: trigger a snapshot export as JSON file on the server.
+ * Creates a timestamped JSON file in data/forge/ directory.
+ * 
+ * Request body (all optional):
+ * - position: WR | RB | TE | QB | ALL (defaults to ALL)
+ * - limit: number (defaults to 500)
+ * - season: number (defaults to 2024)
+ * - week: number (defaults to 17)
+ */
+router.post('/snapshot', async (req: Request, res: Response) => {
+  try {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'FORGE_SNAPSHOT_DISABLED_IN_PROD' });
+    }
+
+    const { position, limit, season, week } = req.body ?? {};
+
+    console.log(`[FORGE/Routes] Snapshot request: position=${position ?? 'ALL'}, limit=${limit ?? 500}`);
+
+    const result = await createForgeSnapshot({
+      position,
+      limit,
+      season,
+      week,
+    });
+
+    return res.json({
+      success: true,
+      snapshot: result,
+    });
+  } catch (error) {
+    console.error('[FORGE] /api/forge/snapshot error:', error);
+    return res.status(500).json({ error: 'FORGE_SNAPSHOT_FAILED' });
   }
 });
 

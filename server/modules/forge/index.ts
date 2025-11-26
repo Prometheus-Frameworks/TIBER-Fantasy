@@ -43,6 +43,9 @@ export { ALPHA_WEIGHTS, TRAJECTORY_THRESHOLDS, CONFIDENCE_CONFIG, MISSING_DATA_C
 export { registerForgeRoutes } from './routes';
 export { default as forgeRouter } from './routes';
 
+export { createForgeSnapshot } from './forgeSnapshot';
+export type { ForgeSnapshotOptions, ForgeSnapshotMeta } from './forgeSnapshot';
+
 export { calculateAlphaScore } from './alphaEngine';
 
 export { fetchContext } from './context/contextFetcher';

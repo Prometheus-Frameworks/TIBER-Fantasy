@@ -1,0 +1,115 @@
+1️⃣ Forge snapshot utility
+
+File: server/modules/forge/forgeSnapshot.ts
+
+// server/modules/forge/forgeSnapshot.ts
+
+import fs from 'fs';
+import path from 'path';
+import { getForgeBatch } from './forgeGateway';
+import type { ForgePosition, ForgeScore } from './types';
+
+export interface ForgeSnapshotOptions {
+  season?: number;
+  week?: number;
+  position?: ForgePosition | 'ALL';
+  limit?: number;
+}
+
+export interface ForgeSnapshotMeta {
+  season: number;
+  week: number;
+  position: ForgePosition | 'ALL';
+  limit: number;
+  count: number;
+  scoredAt: string;
+  filePath: string;
+}
+
+export async function createForgeSnapshot(
+  opts: ForgeSnapshotOptions = {}
+): Promise<ForgeSnapshotMeta> {
+  const season = opts.season ?? 2024;
+  const week = opts.week ?? 17;
+  const position = opts.position ?? 'ALL';
+  const limit = opts.limit ?? 500;
+
+  const { scores, meta } = await getForgeBatch({
+    season,
+    week,
+    position: position === 'ALL' ? undefined : position,
+    limit,
+  });
+
+  const snapshotDir = path.join(process.cwd(), 'data', 'forge');
+  if (!fs.existsSync(snapshotDir)) {
+    fs.mkdirSync(snapshotDir, { recursive: true });
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = `forge_${season}_w${week}_${position.toLowerCase()}_${timestamp}.json`;
+  const filePath = path.join(snapshotDir, filename);
+
+  const payload = {
+    meta: {
+      ...meta,
+      position,
+      limit,
+      count: scores.length,
+      snapshotGeneratedAt: new Date().toISOString(),
+    },
+    scores: scores as ForgeScore[],
+  };
+
+  fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), 'utf8');
+
+  return {
+    season,
+    week,
+    position,
+    limit,
+    count: scores.length,
+    scoredAt: meta.scoredAt,
+    filePath,
+  };
+}
+
+2️⃣ Dev-only snapshot endpoint
+
+File: extend server/modules/forge/routes.ts
+
+Add this below your other routes:
+
+import { createForgeSnapshot } from './forgeSnapshot';
+
+// ...
+
+// Dev-only: trigger a snapshot export as JSON file on the server.
+router.post('/api/forge/snapshot', async (req, res) => {
+  try {
+    // Optional: lock behind env flag
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'FORGE_SNAPSHOT_DISABLED_IN_PROD' });
+    }
+
+    const { position, limit, season, week } = req.body ?? {};
+
+    const result = await createForgeSnapshot({
+      position,
+      limit,
+      season,
+      week,
+    });
+
+    res.json({
+      success: true,
+      snapshot: result,
+    });
+  } catch (error) {
+    console.error('[FORGE] /api/forge/snapshot error:', error);
+    res.status(500).json({ error: 'FORGE_SNAPSHOT_FAILED' });
+  }
+});
+
+
+Make sure your Express app has JSON body parsing (app.use(express.json())), which you almost certainly already do.
