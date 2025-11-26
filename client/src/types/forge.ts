@@ -62,6 +62,20 @@ export interface ForgePreviewResponse {
   error?: string;
 }
 
+export interface ForgeBatchResponse {
+  success: boolean;
+  meta: {
+    position: ForgePosition | 'ALL';
+    limit: number;
+    season: number;
+    week: number;
+    count: number;
+    scoredAt: string;
+  };
+  scores: ForgeScore[];
+  error?: string;
+}
+
 export interface ForgeSingleScoreResponse {
   success: boolean;
   score?: ForgeScore;

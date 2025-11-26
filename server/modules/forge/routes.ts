@@ -166,6 +166,73 @@ router.get('/health', (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/forge/batch
+ * 
+ * Batch scoring endpoint for internal + external consumers
+ * 
+ * Query params:
+ * - position (optional): WR | RB | TE | QB (defaults to all WR if not specified)
+ * - limit (optional): number, 1-500, defaults to 100
+ * - season (optional): number, defaults to 2024
+ * - week (optional): number, defaults to 17
+ */
+router.get('/batch', async (req: Request, res: Response) => {
+  try {
+    const { position, limit, season, week } = req.query;
+
+    const normalizedPosition =
+      typeof position === 'string' && ['QB', 'RB', 'WR', 'TE'].includes(position.toUpperCase())
+        ? (position.toUpperCase() as PlayerPosition)
+        : undefined;
+
+    const normalizedLimit =
+      typeof limit === 'string' && !Number.isNaN(Number(limit))
+        ? Math.max(1, Math.min(Number(limit), 500))
+        : 100;
+
+    const normalizedSeason = 
+      typeof season === 'string' && !Number.isNaN(Number(season))
+        ? Number(season)
+        : 2024;
+
+    const normalizedWeek =
+      typeof week === 'string' && !Number.isNaN(Number(week))
+        ? Number(week)
+        : 17;
+
+    console.log(`[FORGE/Routes] Batch request: position=${normalizedPosition ?? 'ALL'}, limit=${normalizedLimit}, season=${normalizedSeason}, week=${normalizedWeek}`);
+
+    const scores = await forgeService.getForgeScoresBatch({
+      position: normalizedPosition,
+      limit: normalizedLimit,
+      season: normalizedSeason,
+      asOfWeek: normalizedWeek,
+    });
+
+    const sortedScores = scores.sort((a, b) => b.alpha - a.alpha);
+
+    return res.json({
+      success: true,
+      scores: sortedScores,
+      meta: {
+        position: normalizedPosition ?? 'ALL',
+        limit: normalizedLimit,
+        season: normalizedSeason,
+        week: normalizedWeek,
+        count: sortedScores.length,
+        scoredAt: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('[FORGE/Routes] Batch error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'FORGE_BATCH_FAILED',
+    });
+  }
+});
+
+/**
  * Fetch player IDs for a position from the identity map
  */
 async function fetchPlayerIdsForPosition(

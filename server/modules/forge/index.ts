@@ -18,6 +18,7 @@
  */
 
 export { forgeService } from './forgeService';
+export type { ForgeBatchQuery } from './forgeService';
 export type { IForgeService } from './types';
 
 export type {

@@ -7,6 +7,7 @@
  * Public API:
  * - getForgeScoreForPlayer(playerId, season, asOfWeek)
  * - getForgeScoresForPlayers(playerIds, season, asOfWeek)
+ * - getForgeScoresBatch(query) - batch scoring with position/limit filters
  */
 
 import { 
@@ -15,8 +16,23 @@ import {
   ForgeFeatureBundle, 
   WeekOrPreseason, 
   PlayerPosition, 
-  IForgeService 
+  IForgeService,
+  ForgePosition,
 } from './types';
+import { db } from '../../infra/db';
+import { playerIdentityMap } from '@shared/schema';
+import { eq, and, isNotNull } from 'drizzle-orm';
+
+/**
+ * Query parameters for batch scoring
+ */
+export interface ForgeBatchQuery {
+  position?: ForgePosition;
+  limit?: number;
+  season?: number;
+  asOfWeek?: WeekOrPreseason;
+}
+
 import { calculateAlphaScore } from './alphaEngine';
 import { fetchContext } from './context/contextFetcher';
 import { buildWRFeatures } from './features/wrFeatures';
@@ -94,8 +110,70 @@ class ForgeService implements IForgeService {
     
     return successfulScores;
   }
+
+  /**
+   * Batch scoring with position/limit filters
+   * Used by /api/forge/batch endpoint
+   */
+  public async getForgeScoresBatch(query: ForgeBatchQuery): Promise<ForgeScore[]> {
+    const { 
+      position, 
+      limit = 100, 
+      season = 2024, 
+      asOfWeek = 17 
+    } = query;
+
+    console.log(`[FORGE] Batch request: position=${position ?? 'ALL'}, limit=${limit}`);
+
+    const playerIds = await this.fetchPlayerIdsForBatch(position, limit);
+
+    if (playerIds.length === 0) {
+      console.log('[FORGE] No players found for batch query');
+      return [];
+    }
+
+    return this.getForgeScoresForPlayers(playerIds, season, asOfWeek);
+  }
+
+  /**
+   * Fetch player IDs from identity map based on position/limit
+   * If no position specified, fetches all skill positions (QB, RB, WR, TE)
+   */
+  private async fetchPlayerIdsForBatch(
+    position: ForgePosition | undefined,
+    limit: number
+  ): Promise<string[]> {
+    try {
+      const skillPositions: ForgePosition[] = ['QB', 'RB', 'WR', 'TE'];
+      const targetPositions = position ? [position] : skillPositions;
+      
+      const allPlayerIds: string[] = [];
+      const perPositionLimit = position ? limit : Math.ceil(limit / 4);
+
+      for (const pos of targetPositions) {
+        const players = await db
+          .select({ canonicalId: playerIdentityMap.canonicalId })
+          .from(playerIdentityMap)
+          .where(
+            and(
+              eq(playerIdentityMap.isActive, true),
+              isNotNull(playerIdentityMap.nflTeam),
+              eq(playerIdentityMap.position, pos)
+            )
+          )
+          .limit(perPositionLimit);
+
+        allPlayerIds.push(...players.map(p => p.canonicalId));
+      }
+
+      return allPlayerIds.slice(0, limit);
+    } catch (error) {
+      console.error('[FORGE] Error fetching players for batch:', error);
+      return [];
+    }
+  }
 }
 
-export const forgeService: IForgeService = new ForgeService();
+export const forgeService = new ForgeService();
 
 export default forgeService;

@@ -1,0 +1,108 @@
+Perfect. Types are synced, so next move is /api/forge/batch.
+
+1️⃣ Patch server/modules/forge/routes.ts
+
+Add the batch route alongside preview, score/:playerId, health.
+(Do not delete anything, just insert this.)
+
+// server/modules/forge/routes.ts
+import { Router } from 'express';
+import { forgeService } from './forgeService';
+import { ForgePosition } from './types';
+
+const router = Router();
+
+// ...existing routes:
+// router.get('/api/forge/health', ...)
+// router.get('/api/forge/preview', ...)
+// router.get('/api/forge/score/:playerId', ...)
+
+// NEW: batch endpoint – internal + external consumers
+router.get('/api/forge/batch', async (req, res) => {
+  try {
+    const { position, limit } = req.query;
+
+    const normalizedPosition =
+      typeof position === 'string' && ['QB', 'RB', 'WR', 'TE'].includes(position)
+        ? (position as ForgePosition)
+        : undefined;
+
+    const normalizedLimit =
+      typeof limit === 'string' && !Number.isNaN(Number(limit))
+        ? Math.max(1, Math.min(Number(limit), 500))
+        : 100;
+
+    const scores = await forgeService.getForgeScoresForPlayers({
+      position: normalizedPosition,
+      limit: normalizedLimit,
+    });
+
+    res.json({
+      scores,
+      meta: {
+        position: normalizedPosition ?? 'ALL',
+        limit: normalizedLimit,
+        count: scores.length,
+      },
+    });
+  } catch (error) {
+    console.error('[FORGE] /api/forge/batch error:', error);
+    res.status(500).json({ error: 'FORGE_BATCH_FAILED' });
+  }
+});
+
+export default router;
+
+
+If your router is mounted like:
+
+// server/routes/index.ts
+import forgeRoutes from '../modules/forge/routes';
+
+app.use(forgeRoutes);
+
+
+you don’t need to touch anything else – /api/forge/batch will auto-mount.
+
+2️⃣ Ensure forgeService.getForgeScoresForPlayers accepts filters
+
+If Opus already gave you this signature, you’re good.
+If not, here’s a safe shape that matches the route above and stays Promethean / read-only:
+
+// server/modules/forge/forgeService.ts
+import { ForgePosition, ForgeScore } from './types';
+// import whatever data access layer you already use
+
+export interface ForgeBatchQuery {
+  position?: ForgePosition;
+  limit?: number;
+}
+
+async function getForgeScoresForPlayers(query: ForgeBatchQuery): Promise<ForgeScore[]> {
+  const { position, limit = 100 } = query;
+
+  // Example sketch – plug your real data source in here
+  const players = await playerRepository.getPlayers({
+    position,
+    limit,
+  });
+
+  const scores: ForgeScore[] = [];
+
+  for (const player of players) {
+    const score = await getForgeScoreForPlayer(player.playerId);
+    if (score) {
+      scores.push(score);
+    }
+  }
+
+  return scores;
+}
+
+export const forgeService = {
+  getForgeScoreForPlayer,
+  getForgeScoresForPlayers,
+};
+
+
+If getForgeScoresForPlayers already exists, just confirm it takes { position?, limit? } and returns ForgeScore[]. No need to change anything else.
