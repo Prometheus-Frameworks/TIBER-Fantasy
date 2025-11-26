@@ -13,6 +13,7 @@ import LeadersPage from "@/pages/LeadersPage";
 import TeamReportsPage from "@/pages/TeamReportsPage";
 import RagStatus from "@/pages/RagStatus";
 import WRRankingsSandbox from "@/pages/WRRankingsSandbox";
+import WRRankings from "@/pages/WRRankings";
 import QBRankingsSandbox from "@/pages/QBRankingsSandbox";
 import ForgeLab from "@/pages/ForgeLab";
 import NotFound from "@/pages/not-found";
@@ -78,6 +79,9 @@ function Router() {
       
       {/* Admin: RAG Status */}
       <Route path="/admin/rag-status" component={RagStatus} />
+      
+      {/* User-facing WR Rankings with FORGE */}
+      <Route path="/rankings/wr" component={WRRankings} />
       
       {/* Admin: WR Rankings Sandbox */}
       <Route path="/admin/wr-rankings-sandbox" component={WRRankingsSandbox} />
