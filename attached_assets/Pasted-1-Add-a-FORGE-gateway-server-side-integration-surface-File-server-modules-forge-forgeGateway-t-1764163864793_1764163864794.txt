@@ -1,0 +1,136 @@
+1️⃣ Add a FORGE gateway (server-side integration surface)
+
+File: server/modules/forge/forgeGateway.ts
+
+This is what OVR, TIBER, Strategy, Weekly Takes, Matchups will import instead of reaching directly into service internals.
+
+// server/modules/forge/forgeGateway.ts
+
+import { forgeService } from './forgeService';
+import type { ForgePosition, ForgeScore } from './types';
+
+export interface ForgeBatchQuery {
+  position?: ForgePosition;
+  limit?: number;
+  season?: number;
+  week?: number;
+}
+
+export interface ForgeBatchResult {
+  scores: ForgeScore[];
+  meta: {
+    position: ForgePosition | 'ALL';
+    limit: number;
+    season: number;
+    week: number;
+    count: number;
+    scoredAt: string;
+  };
+}
+
+/**
+ * Canonical server-side way to get a batch of FORGE scores.
+ * Internal modules (OVR, TIBER, Strategy, etc.) should use this
+ * instead of hitting the HTTP endpoint.
+ */
+export async function getForgeBatch(query: ForgeBatchQuery): Promise<ForgeBatchResult> {
+  const {
+    position,
+    limit = 100,
+    season = 2024,
+    week = 17,
+  } = query;
+
+  const internalResult = await forgeService.getForgeScoresBatch({
+    position,
+    limit,
+    season,
+    week,
+  });
+
+  // Assuming forgeService.getForgeScoresBatch already returns:
+  // { success, scores, meta }
+  // If the shape differs, adjust this mapping once here, not in every consumer.
+  return {
+    scores: internalResult.scores,
+    meta: internalResult.meta,
+  };
+}
+
+/**
+ * Get a single player's FORGE score snapshot for a given season/week.
+ */
+export async function getForgeScoreForPlayer(
+  playerId: string,
+  options?: { season?: number; week?: number }
+): Promise<ForgeScore | null> {
+  const { season = 2024, week = 17 } = options ?? {};
+
+  // You can either:
+  // 1) call a dedicated forgeService.getForgeScoreForPlayerWithContext(...)
+  // 2) or grab from batch if that's how v0.1 is structured.
+  const batch = await getForgeBatch({
+    season,
+    week,
+    limit: 500, // safe default; can tune later
+  });
+
+  const found = batch.scores.find((s) => s.playerId === playerId);
+  return found ?? null;
+}
+
+
+Then in server/modules/forge/index.ts make sure you export these:
+
+// server/modules/forge/index.ts
+export * from './types';
+export * from './forgeGateway';
+// (keep existing exports: forgeService, ForgeBatchQuery, etc.)
+
+
+Now every other module only needs:
+
+import { getForgeBatch, getForgeScoreForPlayer } from '../forge';
+
+2️⃣ (Optional stub) OVR adapter ready for later
+
+We don’t wire it yet, just drop a tiny adapter so future-you isn’t reinventing the shape.
+
+File: server/modules/ovr/ovrForgeAdapter.ts
+
+// server/modules/ovr/ovrForgeAdapter.ts
+
+import type { ForgePosition, ForgeScore } from '../forge';
+import { getForgeBatch, getForgeScoreForPlayer } from '../forge';
+
+export interface OvrForgeContext {
+  season: number;
+  week: number;
+  position?: ForgePosition;
+}
+
+export async function getOvrForgeSnapshot(
+  ctx: OvrForgeContext,
+  limit: number = 100
+): Promise<ForgeScore[]> {
+  const { season, week, position } = ctx;
+
+  const batch = await getForgeBatch({
+    season,
+    week,
+    position,
+    limit,
+  });
+
+  return batch.scores;
+}
+
+export async function getOvrForgeScoreForPlayer(
+  playerId: string,
+  ctx: OvrForgeContext
+): Promise<ForgeScore | null> {
+  return getForgeScoreForPlayer(playerId, {
+    season: ctx.season,
+    week: ctx.week,
+  });
+}
