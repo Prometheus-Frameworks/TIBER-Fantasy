@@ -257,7 +257,7 @@ export default function ForgeLab() {
                   value={inspectId}
                   onChange={(e) => setInspectId(e.target.value)}
                   placeholder="e.g. ja-marr-chase"
-                  className="w-[200px] bg-[#1a1f2e] border-gray-700"
+                  className="w-[200px] bg-[#1a1f2e] border-gray-700 text-white placeholder:text-gray-400"
                   data-testid="input-inspect-id"
                 />
               </div>
@@ -265,7 +265,7 @@ export default function ForgeLab() {
                 onClick={handleInspect}
                 disabled={inspecting || !inspectId.trim()}
                 variant="secondary"
-                className="bg-[#1a1f2e] hover:bg-[#252b3d] border border-gray-600"
+                className="bg-[#1a1f2e] hover:bg-[#252b3d] border border-gray-600 text-white disabled:text-gray-500"
                 data-testid="button-inspect"
               >
                 {inspecting ? 'Inspecting…' : 'Inspect Player'}
