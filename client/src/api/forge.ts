@@ -23,3 +23,46 @@ export async function fetchForgeBatch(params: ForgeBatchParams = {}): Promise<Fo
   }
   return res.json() as Promise<ForgeBatchResponse>;
 }
+
+export interface ForgeSnapshotRequest {
+  position?: ForgePosition | 'ALL';
+  limit?: number;
+  season?: number;
+  week?: number;
+}
+
+export interface ForgeSnapshotResponse {
+  success: boolean;
+  snapshot: {
+    season: number;
+    week: number;
+    position: ForgePosition | 'ALL';
+    limit: number;
+    count: number;
+    scoredAt?: string;
+    filePath: string;
+  };
+}
+
+export async function createForgeSnapshot(
+  params: ForgeSnapshotRequest
+): Promise<ForgeSnapshotResponse> {
+  const res = await fetch('/api/forge/snapshot', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      position: params.position && params.position !== 'ALL' ? params.position : undefined,
+      limit: params.limit,
+      season: params.season,
+      week: params.week,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`FORGE snapshot request failed: ${res.status}`);
+  }
+
+  return res.json() as Promise<ForgeSnapshotResponse>;
+}

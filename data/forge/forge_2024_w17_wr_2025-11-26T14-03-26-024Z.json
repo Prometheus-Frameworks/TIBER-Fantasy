@@ -1,0 +1,1363 @@
+{
+  "meta": {
+    "position": "WR",
+    "limit": 50,
+    "season": 2024,
+    "week": 17,
+    "count": 50,
+    "scoredAt": "2025-11-26T14:03:26.024Z",
+    "snapshotGeneratedAt": "2025-11-26T14:03:26.024Z"
+  },
+  "scores": [
+    {
+      "playerId": "deon-cain",
+      "playerName": "Deon Cain",
+      "position": "WR",
+      "nflTeam": "BUF",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 31.2,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 72.6
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.696Z"
+    },
+    {
+      "playerId": "curtis-samuel",
+      "playerName": "Curtis Samuel",
+      "position": "WR",
+      "nflTeam": "BUF",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 31.2,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 72.6
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.816Z"
+    },
+    {
+      "playerId": "keenan-allen",
+      "playerName": "Keenan Allen",
+      "position": "WR",
+      "nflTeam": "LAC",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 30.6,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 60.9
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.780Z"
+    },
+    {
+      "playerId": "mike-williams",
+      "playerName": "Mike Williams",
+      "position": "WR",
+      "nflTeam": "LAC",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 30.6,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 60.9
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.757Z"
+    },
+    {
+      "playerId": "juju-smith-schuster",
+      "playerName": "JuJu Smith-Schuster",
+      "position": "WR",
+      "nflTeam": "KC",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 30.5,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 59.7
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.769Z"
+    },
+    {
+      "playerId": "cedrick-wilson-jr",
+      "playerName": "Cedrick Wilson Jr.",
+      "position": "WR",
+      "nflTeam": "MIA",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 30.4,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 58.2
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.684Z"
+    },
+    {
+      "playerId": "brandin-cooks",
+      "playerName": "Brandin Cooks",
+      "position": "WR",
+      "nflTeam": "NO",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 30.3,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 56.1
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.743Z"
+    },
+    {
+      "playerId": "davante-adams",
+      "playerName": "Davante Adams",
+      "position": "WR",
+      "nflTeam": "LA",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 30,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 50
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": false,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.742Z"
+    },
+    {
+      "playerId": "ja-marr-chase",
+      "playerName": "Ja'Marr Chase",
+      "position": "WR",
+      "nflTeam": "CIN",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.679Z"
+    },
+    {
+      "playerId": "ceedee-lamb",
+      "playerName": "CeeDee Lamb",
+      "position": "WR",
+      "nflTeam": "DAL",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.712Z"
+    },
+    {
+      "playerId": "robert-woods",
+      "playerName": "Robert Woods",
+      "position": "WR",
+      "nflTeam": "PIT",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.725Z"
+    },
+    {
+      "playerId": "amari-cooper",
+      "playerName": "Amari Cooper",
+      "position": "WR",
+      "nflTeam": "LV",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.783Z"
+    },
+    {
+      "playerId": "deandre-hopkins",
+      "playerName": "DeAndre Hopkins",
+      "position": "WR",
+      "nflTeam": "BAL",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.714Z"
+    },
+    {
+      "playerId": "adam-thielen",
+      "playerName": "Adam Thielen",
+      "position": "WR",
+      "nflTeam": "MIN",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.778Z"
+    },
+    {
+      "playerId": "mike-evans",
+      "playerName": "Mike Evans",
+      "position": "WR",
+      "nflTeam": "TB",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.744Z"
+    },
+    {
+      "playerId": "phillip-dorsett",
+      "playerName": "Phillip Dorsett",
+      "position": "WR",
+      "nflTeam": "LV",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.754Z"
+    },
+    {
+      "playerId": "tyler-lockett",
+      "playerName": "Tyler Lockett",
+      "position": "WR",
+      "nflTeam": "TEN",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.853Z"
+    },
+    {
+      "playerId": "stefon-diggs",
+      "playerName": "Stefon Diggs",
+      "position": "WR",
+      "nflTeam": "NE",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.841Z"
+    },
+    {
+      "playerId": "deandre-carter",
+      "playerName": "DeAndre Carter",
+      "position": "WR",
+      "nflTeam": "CLE",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.816Z"
+    },
+    {
+      "playerId": "laquon-treadwell",
+      "playerName": "Laquon Treadwell",
+      "position": "WR",
+      "nflTeam": "IND",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.830Z"
+    },
+    {
+      "playerId": "sterling-shepard",
+      "playerName": "Sterling Shepard",
+      "position": "WR",
+      "nflTeam": "TB",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.799Z"
+    },
+    {
+      "playerId": "kalif-raymond",
+      "playerName": "Kalif Raymond",
+      "position": "WR",
+      "nflTeam": "DET",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.790Z"
+    },
+    {
+      "playerId": "chris-godwin-jr",
+      "playerName": "Chris Godwin Jr.",
+      "position": "WR",
+      "nflTeam": "TB",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.848Z"
+    },
+    {
+      "playerId": "river-cracraft",
+      "playerName": "River Cracraft",
+      "position": "WR",
+      "nflTeam": "WAS",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.826Z"
+    },
+    {
+      "playerId": "anthony-miller",
+      "playerName": "Anthony Miller",
+      "position": "WR",
+      "nflTeam": "BAL",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.700Z"
+    },
+    {
+      "playerId": "cooper-kupp",
+      "playerName": "Cooper Kupp",
+      "position": "WR",
+      "nflTeam": "SEA",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.708Z"
+    },
+    {
+      "playerId": "zay-jones",
+      "playerName": "Zay Jones",
+      "position": "WR",
+      "nflTeam": "ARI",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.871Z"
+    },
+    {
+      "playerId": "josh-reynolds",
+      "playerName": "Josh Reynolds",
+      "position": "WR",
+      "nflTeam": "NYJ",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.850Z"
+    },
+    {
+      "playerId": "mack-hollins",
+      "playerName": "Mack Hollins",
+      "position": "WR",
+      "nflTeam": "NE",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.861Z"
+    },
+    {
+      "playerId": "jamal-agnew",
+      "playerName": "Jamal Agnew",
+      "position": "WR",
+      "nflTeam": "ATL",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.884Z"
+    },
+    {
+      "playerId": "trent-taylor",
+      "playerName": "Trent Taylor",
+      "position": "WR",
+      "nflTeam": "SF",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.888Z"
+    },
+    {
+      "playerId": "noah-brown",
+      "playerName": "Noah Brown",
+      "position": "WR",
+      "nflTeam": "WAS",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.898Z"
+    },
+    {
+      "playerId": "david-moore",
+      "playerName": "David Moore",
+      "position": "WR",
+      "nflTeam": "CAR",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.904Z"
+    },
+    {
+      "playerId": "tim-patrick",
+      "playerName": "Tim Patrick",
+      "position": "WR",
+      "nflTeam": "JAX",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.915Z"
+    },
+    {
+      "playerId": "kendrick-bourne",
+      "playerName": "Kendrick Bourne",
+      "position": "WR",
+      "nflTeam": "SF",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.918Z"
+    },
+    {
+      "playerId": "courtland-sutton",
+      "playerName": "Courtland Sutton",
+      "position": "WR",
+      "nflTeam": "DEN",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.923Z"
+    },
+    {
+      "playerId": "marquez-valdes-scantling",
+      "playerName": "Marquez Valdes-Scantling",
+      "position": "WR",
+      "nflTeam": "SF",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.924Z"
+    },
+    {
+      "playerId": "ray-ray-mccloud",
+      "playerName": "Ray-Ray McCloud",
+      "position": "WR",
+      "nflTeam": "ATL",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.932Z"
+    },
+    {
+      "playerId": "russell-gage",
+      "playerName": "Russell Gage",
+      "position": "WR",
+      "nflTeam": "SF",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.943Z"
+    },
+    {
+      "playerId": "braxton-berrios",
+      "playerName": "Braxton Berrios",
+      "position": "WR",
+      "nflTeam": "HOU",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.954Z"
+    },
+    {
+      "playerId": "keith-kirkwood",
+      "playerName": "Keith Kirkwood",
+      "position": "WR",
+      "nflTeam": "BAL",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.960Z"
+    },
+    {
+      "playerId": "trent-sherfield",
+      "playerName": "Trent Sherfield",
+      "position": "WR",
+      "nflTeam": "DEN",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.969Z"
+    },
+    {
+      "playerId": "justin-watson",
+      "playerName": "Justin Watson",
+      "position": "WR",
+      "nflTeam": "HOU",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.978Z"
+    },
+    {
+      "playerId": "michael-gallup",
+      "playerName": "Michael Gallup",
+      "position": "WR",
+      "nflTeam": "WAS",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.988Z"
+    },
+    {
+      "playerId": "steven-sims",
+      "playerName": "Steven Sims",
+      "position": "WR",
+      "nflTeam": "SEA",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.990Z"
+    },
+    {
+      "playerId": "mecole-hardman",
+      "playerName": "Mecole Hardman",
+      "position": "WR",
+      "nflTeam": "GB",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.994Z"
+    },
+    {
+      "playerId": "diontae-johnson",
+      "playerName": "Diontae Johnson",
+      "position": "WR",
+      "nflTeam": "CLE",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:25.995Z"
+    },
+    {
+      "playerId": "scott-miller",
+      "playerName": "Scott Miller",
+      "position": "WR",
+      "nflTeam": "PIT",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:26.002Z"
+    },
+    {
+      "playerId": "trenton-irwin",
+      "playerName": "Trenton Irwin",
+      "position": "WR",
+      "nflTeam": "JAX",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:26.015Z"
+    },
+    {
+      "playerId": "malik-taylor",
+      "playerName": "Malik Taylor",
+      "position": "WR",
+      "nflTeam": "DET",
+      "season": 2024,
+      "asOfWeek": 17,
+      "alpha": 29.9,
+      "subScores": {
+        "volume": 10,
+        "efficiency": 32.5,
+        "roleLeverage": 50,
+        "stability": 44,
+        "contextFit": 46.5
+      },
+      "trajectory": "flat",
+      "confidence": 20,
+      "gamesPlayed": 0,
+      "dataQuality": {
+        "hasAdvancedStats": false,
+        "hasSnapData": false,
+        "hasDvPData": false,
+        "hasEnvironmentData": true,
+        "cappedDueToMissingData": true
+      },
+      "scoredAt": "2025-11-26T14:03:26.024Z"
+    }
+  ]
+}

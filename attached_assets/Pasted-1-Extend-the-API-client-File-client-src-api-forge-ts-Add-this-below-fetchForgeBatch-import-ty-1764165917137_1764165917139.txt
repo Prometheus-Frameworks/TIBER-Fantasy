@@ -1,0 +1,148 @@
+1️⃣ Extend the API client
+
+File: client/src/api/forge.ts
+
+Add this below fetchForgeBatch:
+
+import type { ForgePosition } from '../types/forge';
+
+export interface ForgeSnapshotRequest {
+  position?: ForgePosition | 'ALL';
+  limit?: number;
+  season?: number;
+  week?: number;
+}
+
+export interface ForgeSnapshotResponse {
+  success: boolean;
+  snapshot: {
+    season: number;
+    week: number;
+    position: ForgePosition | 'ALL';
+    limit: number;
+    count: number;
+    scoredAt?: string;
+    filePath: string;
+  };
+}
+
+export async function createForgeSnapshot(
+  params: ForgeSnapshotRequest
+): Promise<ForgeSnapshotResponse> {
+  const res = await fetch('/api/forge/snapshot', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      position: params.position && params.position !== 'ALL' ? params.position : undefined,
+      limit: params.limit,
+      season: params.season,
+      week: params.week,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`FORGE snapshot request failed: ${res.status}`);
+  }
+
+  return res.json() as Promise<ForgeSnapshotResponse>;
+}
+
+
+(If you already declared these types in client/src/types/forge.ts, just import them instead.)
+
+2️⃣ Add “Export Snapshot” to FORGE Lab
+
+File: client/src/pages/ForgeLab.tsx
+
+You already have state for position/limit/season/week + load().
+We’ll add:
+
+exporting + snapshotInfo state
+
+a second button that calls createForgeSnapshot
+
+a small message showing where the file was written
+
+a) New imports + state
+
+At the top:
+
+import { fetchForgeBatch, createForgeSnapshot } from '../api/forge';
+
+
+Inside the component, near your other state:
+
+const [exporting, setExporting] = useState(false);
+const [snapshotInfo, setSnapshotInfo] = useState<null | {
+  filePath: string;
+  count: number;
+  position: string;
+  season: number;
+  week: number;
+}>(null);
+
+b) Add the handler
+
+Still inside ForgeLab:
+
+const handleExportSnapshot = async () => {
+  try {
+    setExporting(true);
+    setError(null);
+    setSnapshotInfo(null);
+
+    const res = await createForgeSnapshot({
+      position,
+      limit,
+      season,
+      week,
+    });
+
+    if (res.success) {
+      const s = res.snapshot;
+      setSnapshotInfo({
+        filePath: s.filePath,
+        count: s.count,
+        position: s.position,
+        season: s.season,
+        week: s.week,
+      });
+    }
+  } catch (err: any) {
+    console.error(err);
+    setError(err.message ?? 'Failed to create FORGE snapshot');
+  } finally {
+    setExporting(false);
+  }
+};
+
+c) Add the button next to Refresh
+
+In the controls row where you have the Refresh button, add:
+
+<button onClick={load} disabled={loading || exporting}>
+  {loading ? 'Loading…' : 'Refresh'}
+</button>
+
+<button
+  onClick={handleExportSnapshot}
+  disabled={exporting || loading}
+  style={{ marginLeft: '0.5rem' }}
+>
+  {exporting ? 'Exporting…' : 'Export Snapshot'}
+</button>
+
+3️⃣ Show snapshot info below the controls
+
+Under the error/meta section:
+
+{snapshotInfo && (
+  <div style={{ fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+    Snapshot created for {snapshotInfo.position} – season {snapshotInfo.season}, week{' '}
+    {snapshotInfo.week}, players: {snapshotInfo.count}
+    <br />
+    <code>{snapshotInfo.filePath}</code>
+  </div>
+)}

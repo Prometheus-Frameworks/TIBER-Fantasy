@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, RefreshCw, Beaker, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Beaker, TrendingUp, TrendingDown, Minus, Download } from 'lucide-react';
 import type { ForgePosition, ForgeScore } from '../types/forge';
-import { fetchForgeBatch } from '../api/forge';
+import { fetchForgeBatch, createForgeSnapshot } from '../api/forge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -57,6 +57,14 @@ export default function ForgeLab() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastMeta, setLastMeta] = useState<any>(null);
+  const [exporting, setExporting] = useState(false);
+  const [snapshotInfo, setSnapshotInfo] = useState<null | {
+    filePath: string;
+    count: number;
+    position: string;
+    season: number;
+    week: number;
+  }>(null);
 
   const load = async () => {
     try {
@@ -70,6 +78,37 @@ export default function ForgeLab() {
       setError(err.message ?? 'Failed to load FORGE scores');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportSnapshot = async () => {
+    try {
+      setExporting(true);
+      setError(null);
+      setSnapshotInfo(null);
+
+      const res = await createForgeSnapshot({
+        position,
+        limit,
+        season,
+        week,
+      });
+
+      if (res.success) {
+        const s = res.snapshot;
+        setSnapshotInfo({
+          filePath: s.filePath,
+          count: s.count,
+          position: s.position,
+          season: s.season,
+          week: s.week,
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message ?? 'Failed to create FORGE snapshot');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -162,12 +201,23 @@ export default function ForgeLab() {
 
               <Button 
                 onClick={load} 
-                disabled={loading}
+                disabled={loading || exporting}
                 className="bg-purple-600 hover:bg-purple-700"
                 data-testid="button-refresh"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 {loading ? 'Loading…' : 'Refresh'}
+              </Button>
+
+              <Button
+                onClick={handleExportSnapshot}
+                disabled={exporting || loading}
+                variant="outline"
+                className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                data-testid="button-export-snapshot"
+              >
+                <Download className={`h-4 w-4 mr-2 ${exporting ? 'animate-pulse' : ''}`} />
+                {exporting ? 'Exporting…' : 'Export Snapshot'}
               </Button>
             </div>
 
@@ -183,6 +233,19 @@ export default function ForgeLab() {
                 Position: <span className="text-white">{lastMeta.position}</span> · 
                 Season: <span className="text-white">{lastMeta.season}</span> · 
                 Week: <span className="text-white">{lastMeta.week}</span>
+              </div>
+            )}
+
+            {snapshotInfo && (
+              <div className="mt-3 p-3 bg-green-900/20 border border-green-700/50 rounded text-sm" data-testid="snapshot-info">
+                <div className="text-green-300">
+                  Snapshot created for <span className="font-medium">{snapshotInfo.position}</span> — 
+                  Season {snapshotInfo.season}, Week {snapshotInfo.week}, 
+                  Players: <span className="font-medium">{snapshotInfo.count}</span>
+                </div>
+                <code className="mt-1 block text-xs text-gray-400 bg-[#1a1f2e] p-2 rounded overflow-x-auto">
+                  {snapshotInfo.filePath}
+                </code>
               </div>
             )}
           </CardContent>
