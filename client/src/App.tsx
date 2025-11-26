@@ -14,6 +14,7 @@ import TeamReportsPage from "@/pages/TeamReportsPage";
 import RagStatus from "@/pages/RagStatus";
 import WRRankingsSandbox from "@/pages/WRRankingsSandbox";
 import QBRankingsSandbox from "@/pages/QBRankingsSandbox";
+import ForgeLab from "@/pages/ForgeLab";
 import NotFound from "@/pages/not-found";
 
 // Custom hook to reactively track URL search params (wouter only tracks pathname)
@@ -83,6 +84,9 @@ function Router() {
       
       {/* Admin: QB Rankings Sandbox */}
       <Route path="/admin/qb-rankings-sandbox" component={QBRankingsSandbox} />
+      
+      {/* Dev: FORGE Lab */}
+      <Route path="/dev/forge" component={ForgeLab} />
       
       {/* 404 Catch-all */}
       <Route component={NotFound} />

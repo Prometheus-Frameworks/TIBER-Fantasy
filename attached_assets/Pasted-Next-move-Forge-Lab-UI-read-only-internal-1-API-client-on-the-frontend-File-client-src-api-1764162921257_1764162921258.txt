@@ -1,0 +1,287 @@
+Next move: Forge Lab UI (read-only, internal).
+
+1️⃣ API client on the frontend
+
+File: client/src/api/forge.ts
+
+// client/src/api/forge.ts
+import type { ForgePosition, ForgeScore } from '../types/forge';
+
+export interface ForgeBatchResponse {
+  success: boolean;
+  scores: ForgeScore[];
+  meta: {
+    position: ForgePosition | 'ALL';
+    limit: number;
+    season: number;
+    week: number;
+    count: number;
+    scoredAt: string;
+  };
+}
+
+export interface ForgeBatchParams {
+  position?: ForgePosition | 'ALL';
+  limit?: number;
+  season?: number;
+  week?: number;
+}
+
+export async function fetchForgeBatch(params: ForgeBatchParams = {}): Promise<ForgeBatchResponse> {
+  const url = new URL('/api/forge/batch', window.location.origin);
+
+  if (params.position && params.position !== 'ALL') {
+    url.searchParams.set('position', params.position);
+  }
+  if (params.limit) url.searchParams.set('limit', String(params.limit));
+  if (params.season) url.searchParams.set('season', String(params.season));
+  if (params.week) url.searchParams.set('week', String(params.week));
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    throw new Error(`FORGE batch request failed: ${res.status}`);
+  }
+  return res.json() as Promise<ForgeBatchResponse>;
+}
+
+
+If you already defined ForgeBatchResponse in client/src/types/forge.ts, just import it instead of redefining.
+
+2️⃣ Forge Lab page
+
+File: client/src/pages/ForgeLab.tsx
+(adjust path/name if your router expects something else)
+
+// client/src/pages/ForgeLab.tsx
+import React, { useEffect, useState } from 'react';
+import type { ForgePosition, ForgeScore } from '../types/forge';
+import { fetchForgeBatch } from '../api/forge';
+
+const POSITIONS: (ForgePosition | 'ALL')[] = ['ALL', 'QB', 'RB', 'WR', 'TE'];
+
+export const ForgeLab: React.FC = () => {
+  const [position, setPosition] = useState<ForgePosition | 'ALL'>('WR');
+  const [limit, setLimit] = useState<number>(25);
+  const [season, setSeason] = useState<number>(2024);
+  const [week, setWeek] = useState<number>(17);
+
+  const [scores, setScores] = useState<ForgeScore[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastMeta, setLastMeta] = useState<any>(null);
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetchForgeBatch({ position, limit, season, week });
+      setScores(res.scores);
+      setLastMeta(res.meta);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message ?? 'Failed to load FORGE scores');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Initial load
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div style={{ padding: '1.5rem' }}>
+      <h1>FORGE Lab v0.1</h1>
+      <p style={{ marginBottom: '1rem' }}>
+        Read-only view of FORGE alpha scores. No ML. No magic. Just feature bundles.
+      </p>
+
+      <div
+        style={{
+          display: 'flex',
+          gap: '1rem',
+          flexWrap: 'wrap',
+          marginBottom: '1rem',
+          alignItems: 'flex-end',
+        }}
+      >
+        <div>
+          <label>
+            Position
+            <select
+              value={position}
+              onChange={(e) => setPosition(e.target.value as ForgePosition | 'ALL')}
+              style={{ marginLeft: '0.5rem' }}
+            >
+              {POSITIONS.map((pos) => (
+                <option key={pos} value={pos}>
+                  {pos}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div>
+          <label>
+            Limit
+            <input
+              type="number"
+              value={limit}
+              min={1}
+              max={500}
+              onChange={(e) => setLimit(Number(e.target.value) || 1)}
+              style={{ marginLeft: '0.5rem', width: '4rem' }}
+            />
+          </label>
+        </div>
+
+        <div>
+          <label>
+            Season
+            <input
+              type="number"
+              value={season}
+              onChange={(e) => setSeason(Number(e.target.value) || season)}
+              style={{ marginLeft: '0.5rem', width: '5rem' }}
+            />
+          </label>
+        </div>
+
+        <div>
+          <label>
+            Week
+            <input
+              type="number"
+              value={week}
+              onChange={(e) => setWeek(Number(e.target.value) || week)}
+              style={{ marginLeft: '0.5rem', width: '4rem' }}
+            />
+          </label>
+        </div>
+
+        <button onClick={load} disabled={loading}>
+          {loading ? 'Loading…' : 'Refresh'}
+        </button>
+      </div>
+
+      {error && (
+        <div style={{ color: 'red', marginBottom: '1rem' }}>
+          Error: {error}
+        </div>
+      )}
+
+      {lastMeta && (
+        <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+          Showing {lastMeta.count} scores · position: {lastMeta.position} · limit:{' '}
+          {lastMeta.limit} · season: {lastMeta.season} · week: {lastMeta.week}
+        </div>
+      )}
+
+      <div style={{ overflowX: 'auto', maxHeight: '70vh' }}>
+        <table
+          style={{
+            borderCollapse: 'collapse',
+            width: '100%',
+            fontSize: '0.9rem',
+          }}
+        >
+          <thead>
+            <tr>
+              <th style={{ borderBottom: '1px solid #ccc', padding: '0.5rem' }}>Player</th>
+              <th style={{ borderBottom: '1px solid #ccc', padding: '0.5rem' }}>Pos</th>
+              <th style={{ borderBottom: '1px solid #ccc', padding: '0.5rem' }}>Team</th>
+              <th style={{ borderBottom: '1px solid #ccc', padding: '0.5rem' }}>Alpha</th>
+              <th style={{ borderBottom: '1px solid #ccc', padding: '0.5rem' }}>Traj</th>
+              <th style={{ borderBottom: '1px solid #ccc', padding: '0.5rem' }}>Conf</th>
+              <th style={{ borderBottom: '1px solid #ccc', padding: '0.5rem' }}>Vol</th>
+              <th style={{ borderBottom: '1px solid #ccc', padding: '0.5rem' }}>Eff</th>
+              <th style={{ borderBottom: '1px solid #ccc', padding: '0.5rem' }}>Role</th>
+              <th style={{ borderBottom: '1px solid #ccc', padding: '0.5rem' }}>Stab</th>
+              <th style={{ borderBottom: '1px solid #ccc', padding: '0.5rem' }}>Ctx</th>
+              <th style={{ borderBottom: '1px solid #ccc', padding: '0.5rem' }}>Games</th>
+              <th style={{ borderBottom: '1px solid #ccc', padding: '0.5rem' }}>Capped?</th>
+            </tr>
+          </thead>
+          <tbody>
+            {scores.map((s) => (
+              <tr key={`${s.playerId}-${s.season}-${s.asOfWeek ?? ''}`}>
+                <td style={{ borderBottom: '1px solid #eee', padding: '0.4rem' }}>
+                  {s.playerName ?? s.playerId}
+                </td>
+                <td style={{ borderBottom: '1px solid #eee', padding: '0.4rem' }}>
+                  {s.position}
+                </td>
+                <td style={{ borderBottom: '1px solid #eee', padding: '0.4rem' }}>
+                  {s.nflTeam ?? '-'}
+                </td>
+                <td style={{ borderBottom: '1px solid #eee', padding: '0.4rem' }}>
+                  {s.alpha.toFixed(1)}
+                </td>
+                <td style={{ borderBottom: '1px solid #eee', padding: '0.4rem' }}>
+                  {s.trajectory}
+                </td>
+                <td style={{ borderBottom: '1px solid #eee', padding: '0.4rem' }}>
+                  {s.confidence}
+                </td>
+                <td style={{ borderBottom: '1px solid #eee', padding: '0.4rem' }}>
+                  {s.subScores.volume}
+                </td>
+                <td style={{ borderBottom: '1px solid #eee', padding: '0.4rem' }}>
+                  {s.subScores.efficiency}
+                </td>
+                <td style={{ borderBottom: '1px solid #eee', padding: '0.4rem' }}>
+                  {s.subScores.roleLeverage}
+                </td>
+                <td style={{ borderBottom: '1px solid #eee', padding: '0.4rem' }}>
+                  {s.subScores.stability}
+                </td>
+                <td style={{ borderBottom: '1px solid #eee', padding: '0.4rem' }}>
+                  {s.subScores.contextFit}
+                </td>
+                <td style={{ borderBottom: '1px solid #eee', padding: '0.4rem' }}>
+                  {s.gamesPlayed ?? 0}
+                </td>
+                <td style={{ borderBottom: '1px solid #eee', padding: '0.4rem' }}>
+                  {s.dataQuality?.cappedDueToMissingData ? 'yes' : 'no'}
+                </td>
+              </tr>
+            ))}
+
+            {scores.length === 0 && !loading && (
+              <tr>
+                <td colSpan={13} style={{ padding: '0.75rem', textAlign: 'center' }}>
+                  No scores returned.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export default ForgeLab;
+
+
+If your ForgeScore type doesn’t include playerName, nflTeam, asOfWeek, or dataQuality, either:
+
+Add them to the shared type, or
+
+Strip those accesses here (but your curl output says they exist, so better to align the type).
+
+3️⃣ Mount this page in your router
+
+Wherever you define routes (e.g. client/src/App.tsx or client/src/routes.tsx):
+
+// example snippet
+import ForgeLab from './pages/ForgeLab';
+
+// inside your <Routes>:
+<Route path="/dev/forge" element={<ForgeLab />} />
+
+
+Once that’s in, hitting http://localhost:3000/dev/forge (or whatever your client port is) should give you a live FORGE control room.
