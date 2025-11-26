@@ -175,7 +175,7 @@ export default function ForgeLab() {
                   value={position} 
                   onValueChange={(v) => setPosition(v as ForgePosition | 'ALL')}
                 >
-                  <SelectTrigger className="w-[120px] bg-[#1a1f2e] border-gray-700" data-testid="select-position">
+                  <SelectTrigger className="w-[120px] bg-[#1a1f2e] border-gray-700 text-white" data-testid="select-position">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-[#1a1f2e] border-gray-700">
@@ -239,8 +239,7 @@ export default function ForgeLab() {
               <Button
                 onClick={handleExportSnapshot}
                 disabled={exporting || loading}
-                variant="outline"
-                className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 data-testid="button-export-snapshot"
               >
                 <Download className={`h-4 w-4 mr-2 ${exporting ? 'animate-pulse' : ''}`} />
