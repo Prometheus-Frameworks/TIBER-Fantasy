@@ -197,7 +197,7 @@ export default function ForgeLab() {
                   min={1}
                   max={500}
                   onChange={(e) => setLimit(Number(e.target.value) || 1)}
-                  className="w-[80px] bg-[#1a1f2e] border-gray-700"
+                  className="w-[80px] bg-[#1a1f2e] border-gray-700 text-white"
                   data-testid="input-limit"
                 />
               </div>
@@ -209,7 +209,7 @@ export default function ForgeLab() {
                   type="number"
                   value={season}
                   onChange={(e) => setSeason(Number(e.target.value) || season)}
-                  className="w-[90px] bg-[#1a1f2e] border-gray-700"
+                  className="w-[90px] bg-[#1a1f2e] border-gray-700 text-white"
                   data-testid="input-season"
                 />
               </div>
@@ -221,7 +221,7 @@ export default function ForgeLab() {
                   type="number"
                   value={week}
                   onChange={(e) => setWeek(Number(e.target.value) || week)}
-                  className="w-[70px] bg-[#1a1f2e] border-gray-700"
+                  className="w-[70px] bg-[#1a1f2e] border-gray-700 text-white"
                   data-testid="input-week"
                 />
               </div>
