@@ -1,0 +1,100 @@
+Create the canonical shared FORGE types that both server + client will consume.
+
+These types must:
+
+Match the server ForgeScore shape exactly
+
+Be readable by every module (OVR, TIBER, Strategy, Weekly Takes)
+
+Be safe for the frontend
+
+Stay future-proof
+
+Have no implementation, just types
+
+✅ Step 1 — Create shared file
+
+Location:
+
+client/src/types/forge.ts
+
+
+Here is the exact file — production-ready:
+
+// client/src/types/forge.ts
+
+export type ForgePosition = 'QB' | 'RB' | 'WR' | 'TE';
+
+export type ForgeTrajectory = 'rising' | 'flat' | 'declining';
+
+export interface ForgeSubScores {
+  volume: number;        // 0-100
+  efficiency: number;    // 0-100
+  roleLeverage: number;  // 0-100
+  stability: number;     // 0-100
+  contextFit: number;    // 0-100
+}
+
+export interface ForgeScore {
+  playerId: string;
+  position: ForgePosition;
+  alpha: number;         // 0-100 overall score
+  trajectory: ForgeTrajectory;
+  confidence: number;    // 0-100 confidence rating
+  dataQuality: number;   // 0-100 data integrity rating
+  subScores: ForgeSubScores;
+  season: number;
+}
+
+✅ Step 2 — Mirror on the server
+
+Now add the server equivalent so TypeScript never drifts.
+
+Location:
+
+server/modules/forge/types.ts
+
+
+Drop this in (overwrite or merge cleanly; safe either way):
+
+// server/modules/forge/types.ts
+
+export type ForgePosition = 'QB' | 'RB' | 'WR' | 'TE';
+
+export type ForgeTrajectory = 'rising' | 'flat' | 'declining';
+
+export interface ForgeSubScores {
+  volume: number;        // 0-100
+  efficiency: number;    // 0-100
+  roleLeverage: number;  // 0-100
+  stability: number;     // 0-100
+  contextFit: number;    // 0-100
+}
+
+export interface ForgeScore {
+  playerId: string;
+  position: ForgePosition;
+  alpha: number;         // 0-100
+  trajectory: ForgeTrajectory;
+  confidence: number;    // 0-100
+  dataQuality: number;   // 0-100
+  subScores: ForgeSubScores;
+  season: number;
+}
+
+❗ Step 3 — Important: unify feature bundle types
+
+We also need the base type that all features return.
+
+Add this directly under the above:
+
+export interface ForgeFeatureBundle {
+  volume: number;
+  efficiency: number;
+  roleLeverage: number;
+  stability: number;
+  contextFit: number;
+}
+
+
+This ensures every feature builder returns the same normalized shape.

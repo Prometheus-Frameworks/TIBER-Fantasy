@@ -25,10 +25,13 @@ export type {
   ForgeSubScores,
   ForgeContext,
   ForgeFeatureBundle,
+  ForgeFeatureBundleBase,
   PlayerPosition,
   WeekOrPreseason,
   Trajectory,
   AlphaWeights,
+  ForgePosition,
+  ForgeTrajectory,
 } from './types';
 
 export { ALPHA_WEIGHTS, TRAJECTORY_THRESHOLDS, CONFIDENCE_CONFIG, MISSING_DATA_CAPS } from './types';

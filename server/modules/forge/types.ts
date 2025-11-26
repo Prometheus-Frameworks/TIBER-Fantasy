@@ -4,6 +4,9 @@
  * 
  * Core type definitions for the FORGE scoring system.
  * All scores are 0-100 unless otherwise noted.
+ * 
+ * Client-facing type aliases are exported at the bottom
+ * to ensure server/client type parity.
  */
 
 export type PlayerPosition = 'WR' | 'RB' | 'TE' | 'QB';
@@ -11,6 +14,10 @@ export type PlayerPosition = 'WR' | 'RB' | 'TE' | 'QB';
 export type WeekOrPreseason = number | 'preseason';
 
 export type Trajectory = 'rising' | 'flat' | 'declining';
+
+export type ForgePosition = PlayerPosition;
+
+export type ForgeTrajectory = Trajectory;
 
 /**
  * FORGE Sub-Scores (0-100 each)
@@ -310,3 +317,15 @@ export const MISSING_DATA_CAPS = {
   LESS_THAN_3_GAMES: 75,
   LESS_THAN_3_GAMES_CONFIDENCE: 45,
 } as const;
+
+/**
+ * Simplified feature bundle base type for client parity
+ * This is the normalized output shape from all feature builders
+ */
+export interface ForgeFeatureBundleBase {
+  volume: number;
+  efficiency: number;
+  roleLeverage: number;
+  stability: number;
+  contextFit: number;
+}
