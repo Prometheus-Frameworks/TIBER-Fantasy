@@ -18,8 +18,11 @@
  */
 
 export { forgeService } from './forgeService';
-export type { ForgeBatchQuery } from './forgeService';
+export type { ForgeBatchQuery as ForgeServiceBatchQuery } from './forgeService';
 export type { IForgeService } from './types';
+
+export { getForgeBatch, getForgeScoreForPlayer } from './forgeGateway';
+export type { ForgeBatchQuery, ForgeBatchResult } from './forgeGateway';
 
 export type {
   ForgeScore,
