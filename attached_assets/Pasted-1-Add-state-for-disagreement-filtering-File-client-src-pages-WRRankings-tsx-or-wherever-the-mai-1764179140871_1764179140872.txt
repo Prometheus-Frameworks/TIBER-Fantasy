@@ -1,0 +1,91 @@
+1️⃣ Add state for disagreement filtering
+
+File: client/src/pages/WRRankings.tsx (or wherever the main WR Rankings component lives)
+
+Near your other useState calls:
+
+const [minDisagreement, setMinDisagreement] = useState<number>(10); // 10 points by default
+const [onlyDisagreements, setOnlyDisagreements] = useState<boolean>(false);
+
+2️⃣ Filter rows based on |Δ| before rendering
+
+Where you’re building the final rows array for the table (after joining sandbox + FORGE), add a filtered version.
+
+Example:
+
+// rows: WrRow[] already built with sandboxAlpha, forgeAlpha, delta (forge - sandbox)
+
+const filteredRows = onlyDisagreements
+  ? rows.filter((row) => {
+      if (row.forgeAlpha == null || row.sandboxAlpha == null) return false;
+      return Math.abs(row.delta ?? (row.forgeAlpha - row.sandboxAlpha)) >= minDisagreement;
+    })
+  : rows;
+
+
+Then use filteredRows in your table instead of rows:
+
+{filteredRows.map((row) => (
+  // render row
+))}
+
+3️⃣ Add the UI controls above the table
+
+In the WR Rankings page, wherever your filters (search, etc.) live, add a small disagreement panel.
+
+Something like:
+
+<div
+  style={{
+    display: 'flex',
+    gap: '1rem',
+    alignItems: 'center',
+    marginBottom: '0.75rem',
+    flexWrap: 'wrap',
+  }}
+>
+  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+    <input
+      type="checkbox"
+      checked={onlyDisagreements}
+      onChange={(e) => setOnlyDisagreements(e.target.checked)}
+    />
+    <span>Show only big disagreements</span>
+  </label>
+
+  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+    Min |Δ| 
+    <input
+      type="number"
+      value={minDisagreement}
+      min={1}
+      max={100}
+      onChange={(e) => {
+        const v = Number(e.target.value);
+        setMinDisagreement(Number.isNaN(v) ? 0 : v);
+      }}
+      style={{ width: '4rem' }}
+    />
+  </label>
+</div>
+
+
+Behavior:
+
+Checkbox off → table shows everyone (current behavior).
+
+Checkbox on → table only shows players where |FORGE − Sandbox| ≥ minDisagreement.
+
+Default threshold 10 is a nice “is this meaningfully different?” line.
+
+4️⃣ Quick mental test before you even see it
+
+Once you’re on the laptop, sanity check like this:
+
+Go to /rankings/wr.
+
+Turn “Show only big disagreements” on.
+
+Set Min |Δ| to something like 5 or 10.
+
+Table should shrink to just the weirdos where you and FORGE don’t see eye to eye.

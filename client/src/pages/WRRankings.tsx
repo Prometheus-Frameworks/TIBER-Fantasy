@@ -52,6 +52,8 @@ export default function WRRankings() {
   const [sortField, setSortField] = useState<SortField>('alphaScore');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [searchQuery, setSearchQuery] = useState('');
+  const [minDisagreement, setMinDisagreement] = useState<number>(10);
+  const [onlyDisagreements, setOnlyDisagreements] = useState<boolean>(false);
   
   const [forgeByPlayerId, setForgeByPlayerId] = useState<Record<string, ForgeScore>>({});
   const [forgeLoading, setForgeLoading] = useState(false);
@@ -110,10 +112,18 @@ export default function WRRankings() {
     
     if (searchQuery.trim()) {
       const needle = searchQuery.toLowerCase();
-      filtered = rows.filter(r => 
+      filtered = filtered.filter(r => 
         r.playerName.toLowerCase().includes(needle) ||
         r.team.toLowerCase().includes(needle)
       );
+    }
+
+    if (onlyDisagreements) {
+      filtered = filtered.filter(r => {
+        if (r.forgeAlpha == null) return false;
+        const delta = Math.abs(r.forgeAlpha - r.alphaScore);
+        return delta >= minDisagreement;
+      });
     }
 
     return filtered.slice().sort((a, b) => {
@@ -130,7 +140,7 @@ export default function WRRankings() {
       const bNum = typeof bVal === 'number' ? bVal : 0;
       return sortOrder === 'asc' ? aNum - bNum : bNum - aNum;
     });
-  }, [rows, searchQuery, sortField, sortOrder]);
+  }, [rows, searchQuery, sortField, sortOrder, onlyDisagreements, minDisagreement]);
 
   const SortHeader = ({ field, label }: { field: SortField; label: string }) => (
     <th
@@ -223,7 +233,7 @@ export default function WRRankings() {
           </div>
         </div>
 
-        <div className="mb-4">
+        <div className="mb-4 flex flex-wrap items-center gap-4">
           <input
             type="text"
             placeholder="Search by name or team..."
@@ -232,6 +242,35 @@ export default function WRRankings() {
             className="w-full max-w-md px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
             data-testid="search-input"
           />
+          
+          <div className="flex items-center gap-4 px-4 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={onlyDisagreements}
+                onChange={(e) => setOnlyDisagreements(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+                data-testid="checkbox-disagreements"
+              />
+              <span className="text-sm text-slate-300">Show only big disagreements</span>
+            </label>
+
+            <label className="flex items-center gap-2">
+              <span className="text-sm text-slate-400">Min |Δ|</span>
+              <input
+                type="number"
+                value={minDisagreement}
+                min={1}
+                max={100}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setMinDisagreement(Number.isNaN(v) ? 0 : v);
+                }}
+                className="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+                data-testid="input-min-delta"
+              />
+            </label>
+          </div>
         </div>
 
         <div className="bg-[#141824] rounded-lg border border-slate-700 overflow-hidden">
