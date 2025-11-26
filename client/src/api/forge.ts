@@ -1,4 +1,4 @@
-import type { ForgePosition, ForgeBatchResponse } from '../types/forge';
+import type { ForgePosition, ForgeBatchResponse, ForgeScore } from '../types/forge';
 
 export interface ForgeBatchParams {
   position?: ForgePosition | 'ALL';
@@ -65,4 +65,23 @@ export async function createForgeSnapshot(
   }
 
   return res.json() as Promise<ForgeSnapshotResponse>;
+}
+
+export interface ForgeSingleScoreResponse {
+  success: boolean;
+  score: ForgeScore | null;
+}
+
+export async function fetchForgeScore(playerId: string): Promise<ForgeSingleScoreResponse> {
+  const trimmed = playerId.trim();
+  if (!trimmed) {
+    throw new Error('Player ID is required');
+  }
+
+  const res = await fetch(`/api/forge/score/${encodeURIComponent(trimmed)}`);
+  if (!res.ok) {
+    throw new Error(`FORGE single score request failed: ${res.status}`);
+  }
+
+  return res.json() as Promise<ForgeSingleScoreResponse>;
 }

@@ -1,0 +1,131 @@
+1️⃣ Add single-player API client
+
+File: client/src/api/forge.ts
+
+Add this next to fetchForgeBatch / createForgeSnapshot:
+
+import type { ForgeScore } from '../types/forge';
+
+export interface ForgeSingleScoreResponse {
+  success: boolean;
+  score: ForgeScore | null;
+}
+
+export async function fetchForgeScore(playerId: string): Promise<ForgeSingleScoreResponse> {
+  const trimmed = playerId.trim();
+  if (!trimmed) {
+    throw new Error('Player ID is required');
+  }
+
+  const res = await fetch(`/api/forge/score/${encodeURIComponent(trimmed)}`);
+  if (!res.ok) {
+    throw new Error(`FORGE single score request failed: ${res.status}`);
+  }
+
+  return res.json() as Promise<ForgeSingleScoreResponse>;
+}
+
+
+If ForgeSingleScoreResponse already exists in client/src/types/forge.ts, just import it instead of re-declaring.
+
+2️⃣ Add a “Player Inspect” panel to FORGE Lab
+
+File: client/src/pages/ForgeLab.tsx
+
+a) Bring in the new client + some state
+
+At the top:
+
+import { fetchForgeBatch, createForgeSnapshot, fetchForgeScore } from '../api/forge';
+
+
+Inside the component, with your other useState:
+
+const [inspectId, setInspectId] = useState('');
+const [inspectResult, setInspectResult] = useState<ForgeScore | null>(null);
+const [inspecting, setInspecting] = useState(false);
+
+b) Add the inspect handler
+
+Still inside ForgeLab:
+
+const handleInspect = async () => {
+  const id = inspectId.trim();
+  if (!id) return;
+
+  try {
+    setInspecting(true);
+    setError(null);
+    setInspectResult(null);
+
+    const res = await fetchForgeScore(id);
+    if (res.success) {
+      setInspectResult(res.score);
+    } else {
+      setInspectResult(null);
+    }
+  } catch (err: any) {
+    console.error(err);
+    setError(err.message ?? 'Failed to fetch FORGE score for player');
+    setInspectResult(null);
+  } finally {
+    setInspecting(false);
+  }
+};
+
+c) Add the UI controls (playerId input + button)
+
+In your controls area (where position/limit/season/week + buttons live), add a small block, e.g. under the first row or in the same row if there’s space:
+
+<div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+  <label>
+    Player ID
+    <input
+      type="text"
+      value={inspectId}
+      onChange={(e) => setInspectId(e.target.value)}
+      placeholder="e.g. ja-marr-chase"
+      style={{ marginLeft: '0.5rem', minWidth: '10rem' }}
+    />
+  </label>
+  <button onClick={handleInspect} disabled={inspecting || !inspectId.trim()}>
+    {inspecting ? 'Inspecting…' : 'Inspect Player'}
+  </button>
+</div>
+
+d) Show the inspect result
+
+Below your meta/snapshot info, before the main table, render a small card if inspectResult is set:
+
+{inspectResult && (
+  <div
+    style={{
+      marginBottom: '1rem',
+      padding: '0.75rem',
+      borderRadius: '4px',
+      border: '1px solid #4b5563',
+      background: '#020617',
+    }}
+  >
+    <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
+      Inspect: {inspectResult.playerName ?? inspectResult.playerId} ({inspectResult.position})
+    </div>
+    <div style={{ fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+      Team: {inspectResult.nflTeam ?? '-'} · Season {inspectResult.season} · Week{' '}
+      {inspectResult.asOfWeek ?? '—'}
+    </div>
+    <div style={{ fontSize: '0.9rem' }}>
+      Alpha: {inspectResult.alpha.toFixed(1)} · Trajectory: {inspectResult.trajectory} ·
+      Confidence: {inspectResult.confidence} · Games: {inspectResult.gamesPlayed ?? 0}
+      <br />
+      Vol: {inspectResult.subScores.volume} · Eff: {inspectResult.subScores.efficiency} · Role:{' '}
+      {inspectResult.subScores.roleLeverage} · Stab: {inspectResult.subScores.stability} · Ctx:{' '}
+      {inspectResult.subScores.contextFit}
+      <br />
+      Capped: {inspectResult.dataQuality?.cappedDueToMissingData ? 'yes' : 'no'}
+    </div>
+  </div>
+)}
+
+
+(Adjust colors to match your existing dark theme — you already have that wired.)

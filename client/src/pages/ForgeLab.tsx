@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { ArrowLeft, RefreshCw, Beaker, TrendingUp, TrendingDown, Minus, Download } from 'lucide-react';
 import type { ForgePosition, ForgeScore } from '../types/forge';
-import { fetchForgeBatch, createForgeSnapshot } from '../api/forge';
+import { fetchForgeBatch, createForgeSnapshot, fetchForgeScore } from '../api/forge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -65,6 +65,9 @@ export default function ForgeLab() {
     season: number;
     week: number;
   }>(null);
+  const [inspectId, setInspectId] = useState('');
+  const [inspectResult, setInspectResult] = useState<ForgeScore | null>(null);
+  const [inspecting, setInspecting] = useState(false);
 
   const load = async () => {
     try {
@@ -109,6 +112,30 @@ export default function ForgeLab() {
       setError(err.message ?? 'Failed to create FORGE snapshot');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleInspect = async () => {
+    const id = inspectId.trim();
+    if (!id) return;
+
+    try {
+      setInspecting(true);
+      setError(null);
+      setInspectResult(null);
+
+      const res = await fetchForgeScore(id);
+      if (res.success) {
+        setInspectResult(res.score);
+      } else {
+        setInspectResult(null);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message ?? 'Failed to fetch FORGE score for player');
+      setInspectResult(null);
+    } finally {
+      setInspecting(false);
     }
   };
 
@@ -221,6 +248,30 @@ export default function ForgeLab() {
               </Button>
             </div>
 
+            <div className="flex flex-wrap gap-4 items-end mt-4 pt-4 border-t border-gray-700">
+              <div className="space-y-2">
+                <Label htmlFor="inspectId" className="text-gray-300">Player ID</Label>
+                <Input
+                  id="inspectId"
+                  type="text"
+                  value={inspectId}
+                  onChange={(e) => setInspectId(e.target.value)}
+                  placeholder="e.g. ja-marr-chase"
+                  className="w-[200px] bg-[#1a1f2e] border-gray-700"
+                  data-testid="input-inspect-id"
+                />
+              </div>
+              <Button
+                onClick={handleInspect}
+                disabled={inspecting || !inspectId.trim()}
+                variant="secondary"
+                className="bg-[#1a1f2e] hover:bg-[#252b3d] border border-gray-600"
+                data-testid="button-inspect"
+              >
+                {inspecting ? 'Inspecting…' : 'Inspect Player'}
+              </Button>
+            </div>
+
             {error && (
               <div className="mt-4 p-3 bg-red-900/30 border border-red-700 rounded text-red-300" data-testid="error-message">
                 Error: {error}
@@ -246,6 +297,72 @@ export default function ForgeLab() {
                 <code className="mt-1 block text-xs text-gray-400 bg-[#1a1f2e] p-2 rounded overflow-x-auto">
                   {snapshotInfo.filePath}
                 </code>
+              </div>
+            )}
+
+            {inspectResult && (
+              <div className="mt-4 p-4 bg-[#020617] border border-gray-600 rounded-lg" data-testid="inspect-result">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-semibold text-white text-lg">
+                    {inspectResult.playerName ?? inspectResult.playerId}
+                  </span>
+                  <Badge variant="outline" className="border-gray-600 text-gray-300">
+                    {inspectResult.position}
+                  </Badge>
+                  <span className="text-gray-400">·</span>
+                  <span className="text-gray-400">{inspectResult.nflTeam ?? '-'}</span>
+                </div>
+                <div className="text-sm text-gray-400 mb-3">
+                  Season {inspectResult.season} · Week {inspectResult.asOfWeek ?? '—'}
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                  <div className="bg-[#1a1f2e] p-2 rounded">
+                    <div className="text-gray-500 text-xs">Alpha</div>
+                    <div className="font-mono text-white text-lg">{inspectResult.alpha.toFixed(1)}</div>
+                  </div>
+                  <div className="bg-[#1a1f2e] p-2 rounded">
+                    <div className="text-gray-500 text-xs">Trajectory</div>
+                    <div className="flex items-center gap-1">
+                      <TrajectoryIcon trajectory={inspectResult.trajectory} />
+                      <span className="text-white">{inspectResult.trajectory}</span>
+                    </div>
+                  </div>
+                  <div className="bg-[#1a1f2e] p-2 rounded">
+                    <div className="text-gray-500 text-xs">Confidence</div>
+                    <ConfidenceBadge confidence={inspectResult.confidence} />
+                  </div>
+                  <div className="bg-[#1a1f2e] p-2 rounded">
+                    <div className="text-gray-500 text-xs">Games</div>
+                    <div className="font-mono text-white">{inspectResult.gamesPlayed ?? 0}</div>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-5 gap-2 text-sm">
+                  <div className="bg-[#1a1f2e] p-2 rounded text-center">
+                    <div className="text-gray-500 text-xs">Vol</div>
+                    <div className="font-mono text-gray-300">{inspectResult.subScores.volume}</div>
+                  </div>
+                  <div className="bg-[#1a1f2e] p-2 rounded text-center">
+                    <div className="text-gray-500 text-xs">Eff</div>
+                    <div className="font-mono text-gray-300">{inspectResult.subScores.efficiency}</div>
+                  </div>
+                  <div className="bg-[#1a1f2e] p-2 rounded text-center">
+                    <div className="text-gray-500 text-xs">Role</div>
+                    <div className="font-mono text-gray-300">{inspectResult.subScores.roleLeverage}</div>
+                  </div>
+                  <div className="bg-[#1a1f2e] p-2 rounded text-center">
+                    <div className="text-gray-500 text-xs">Stab</div>
+                    <div className="font-mono text-gray-300">{inspectResult.subScores.stability}</div>
+                  </div>
+                  <div className="bg-[#1a1f2e] p-2 rounded text-center">
+                    <div className="text-gray-500 text-xs">Ctx</div>
+                    <div className="font-mono text-gray-300">{inspectResult.subScores.contextFit}</div>
+                  </div>
+                </div>
+                {inspectResult.dataQuality?.cappedDueToMissingData && (
+                  <div className="mt-3 text-xs text-yellow-400">
+                    ⚠ Score capped due to missing data
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
