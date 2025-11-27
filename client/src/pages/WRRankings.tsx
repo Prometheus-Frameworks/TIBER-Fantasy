@@ -60,7 +60,8 @@ export default function WRRankings() {
   const [forgeError, setForgeError] = useState<string | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery<SandboxResponse>({
-    queryKey: ['/api/admin/wr-rankings-sandbox'],
+    queryKey: ['/api/admin/wr-rankings-sandbox', { season: 2024 }],
+    queryFn: () => fetch('/api/admin/wr-rankings-sandbox?season=2024').then(res => res.json()),
   });
 
   useEffect(() => {
