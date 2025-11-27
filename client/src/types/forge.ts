@@ -37,7 +37,8 @@ export interface ForgeScore {
   season: number;
   asOfWeek: number | 'preseason';
   
-  alpha: number;              // 0-100 overall score
+  alpha: number;              // 0-100 overall calibrated score
+  rawAlpha?: number;          // 0-100 pre-calibration engine score (for debugging)
   subScores: ForgeSubScores;
   trajectory: ForgeTrajectory;
   confidence: number;         // 0-100 confidence rating

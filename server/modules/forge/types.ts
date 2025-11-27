@@ -42,7 +42,8 @@ export interface ForgeScore {
   season: number;
   asOfWeek: WeekOrPreseason;
   
-  alpha: number;              // Final composite score (0-100)
+  alpha: number;              // Final calibrated score (0-100)
+  rawAlpha?: number;          // Pre-calibration engine score (for debugging)
   subScores: ForgeSubScores;
   trajectory: Trajectory;
   confidence: number;         // 0-100, how reliable this score is
@@ -329,3 +330,49 @@ export interface ForgeFeatureBundleBase {
   stability: number;
   contextFit: number;
 }
+
+/**
+ * Alpha Calibration Configuration
+ * 
+ * Used to remap raw engine scores to a more intuitive 0-100 scale.
+ * The calibration is a linear monotonic transformation based on observed 
+ * distribution percentiles from the 2025 season data.
+ * 
+ * For WR 2025 week 10 observed stats:
+ * - min: 29.9, max: 51.1, p10: 29.9, p90: 43
+ * - Top WRs (Chase, JSN, Amon-Ra) cluster around 48-51
+ * 
+ * Calibration maps:
+ * - Raw floor (~30) → 25 (low/no-data tier)
+ * - Raw ceiling (~52) → 90 (elite tier)
+ * 
+ * This spreads the compressed 30-52 raw range across a 25-90 calibrated range.
+ */
+export interface AlphaCalibrationConfig {
+  rawFloor: number;       // Raw score floor (observed minimum for valid data)
+  rawCeiling: number;     // Raw score ceiling (observed elite scores)
+  calibratedFloor: number; // Target calibrated floor
+  calibratedCeiling: number; // Target calibrated ceiling
+  clampMin: number;       // Final output minimum
+  clampMax: number;       // Final output maximum
+}
+
+/**
+ * Position-specific calibration configs
+ * 
+ * WR is calibrated based on 2025 season week 10 distribution.
+ * Other positions use pass-through (no calibration) until data is analyzed.
+ */
+export const ALPHA_CALIBRATION: Record<PlayerPosition, AlphaCalibrationConfig | null> = {
+  WR: {
+    rawFloor: 30,           // No-data floor
+    rawCeiling: 52,         // Elite WR raw score
+    calibratedFloor: 25,    // Calibrated no-data tier
+    calibratedCeiling: 90,  // Calibrated elite tier
+    clampMin: 0,
+    clampMax: 100,
+  },
+  RB: null, // Pass-through (no calibration yet)
+  TE: null, // Pass-through (no calibration yet)
+  QB: null, // Pass-through (no calibration yet)
+};

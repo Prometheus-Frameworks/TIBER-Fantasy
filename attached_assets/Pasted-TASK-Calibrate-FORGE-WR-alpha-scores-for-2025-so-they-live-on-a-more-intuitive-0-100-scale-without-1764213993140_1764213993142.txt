@@ -1,0 +1,186 @@
+TASK: Calibrate FORGE WR alpha scores for 2025 so they live on a more intuitive 0–100 scale (without changing the underlying logic).
+
+Current issue
+
+Sandbox α for WRs: lives in a nice 60–85 band for top players.
+
+FORGE α for WRs (season 2025, week 10): mostly ~30–50, even for studs.
+
+Example (from /rankings/wr):
+
+D. London: Sandbox 85, FORGE ~47.4
+
+J. Chase: Sandbox 82, FORGE ~50.2
+
+A. St. Brown: Sandbox 81, FORGE ~48.2
+
+Δ is therefore automatically ~-30 to -40 for elite guys, which makes it look like FORGE “hates” everyone.
+
+We do not want to change the feature math (volume/efficiency/role/stability/context).
+We do want to rescale the output monotonically so it compares sanely against Sandbox.
+
+Step 1 – Inspect the current WR 2025 alpha distribution
+
+Create a small dev helper (or reuse an internal script) that:
+
+Calls the Forge service or gateway directly for 2025 WRs, e.g.:
+
+const scores = await getForgeBatch({
+  position: 'WR',
+  season: 2025,
+  week: 10,
+  limit: 500,
+});
+
+
+From these scores, compute and log for WR, season 2025:
+
+minAlpha
+
+maxAlpha
+
+median
+
+p10 (10th percentile)
+
+p90 (90th percentile)
+
+Log them clearly, something like:
+
+[FORGE WR 2025] alpha stats: min=.. max=.. median=.. p10=.. p90=..
+
+
+This is just to understand how compressed the current scale is.
+
+Step 2 – Add a calibration layer in alphaEngine.ts
+
+In alphaEngine.ts (or wherever the final alpha is produced):
+
+Keep computing raw alpha exactly as you do today:
+
+const rawAlpha = computeRawAlpha(featureBundle, weights); // existing logic
+
+
+Add a position-specific calibration function, e.g.:
+
+function calibrateAlpha(position: ForgePosition, rawAlpha: number): number {
+  switch (position) {
+    case 'WR':
+      return calibrateWrAlpha(rawAlpha);
+    case 'RB':
+    case 'TE':
+    case 'QB':
+    default:
+      return rawAlpha; // untouched for now
+  }
+}
+
+
+Implement calibrateWrAlpha as a monotonic linear remap based on the distribution from Step 1.
+
+Example target (adjust numbers based on what you measure):
+
+Map p10 → 30
+
+Map p90 → 85
+
+Clamp to 0–100
+
+Something like:
+
+const WR_P10 = 35; // replace with actual observed p10
+const WR_P90 = 55; // replace with actual observed p90
+
+function calibrateWrAlpha(raw: number): number {
+  const span = WR_P90 - WR_P10 || 1;
+  const normalized = (raw - WR_P10) / span; // 0 at p10, 1 at p90
+  const scaled = 30 + normalized * (85 - 30); // 30–85 band
+  return Math.min(100, Math.max(0, scaled));
+}
+
+
+Players below p10 will drift toward <30.
+
+Players above p90 will drift toward >85 (up to 100).
+
+Everyone in between gets spread out more meaningfully.
+
+Use this calibrated alpha as the public alpha:
+
+const rawAlpha = computeRawAlpha(...);
+const alpha = calibrateAlpha(position, rawAlpha);
+
+
+(Optional but nice): return both in the ForgeScore:
+
+alpha → calibrated (used by UI)
+
+rawAlpha → original engine value (for future debugging)
+
+Update ForgeScore type on both server and client if you decide to expose rawAlpha.
+
+Step 3 – Wire the calibration into the ForgeScore response
+
+Ensure that:
+
+In forgeService.ts / alphaEngine.ts, the ForgeScore objects sent to:
+
+/api/forge/batch
+
+/api/forge/preview
+
+/api/forge/score/:playerId
+
+carry the calibrated alpha value.
+
+No change is needed to the UI on /rankings/wr – it should just display the new alpha field.
+
+Do not change:
+
+Feature extraction
+
+Bundle weights
+
+Trajectory/confidence calculation
+
+Any backend API contracts besides adding an optional rawAlpha field if desired.
+
+This is strictly a scale calibration.
+
+Step 4 – Verify on WR Rankings (2025, week 10)
+
+After calibration:
+
+Refresh /rankings/wr (season=2025).
+
+Expected behavior:
+
+True WR1s (London, Chase, Lamb, Amon-Ra, Puka, etc.) should land roughly in a 70–90 band.
+
+Solid starters in the 50–70 band.
+
+Dusty / fringe guys in the <40 band.
+
+Δ should shrink for obvious studs:
+
+Sandbox 85 vs FORGE ~80 → small negative Δ (healthy disagreement or near-agreement).
+
+Sandbox 65 vs FORGE ~45 → bigger Δ (real disagreement).
+
+The “Show only big disagreements” filter should now surface interesting edges, not “every top-10 WR.”
+
+Confirm that:
+
+/dev/forge still returns the same players and ordering – only the alpha scale changed.
+
+No runtime errors on existing consumers of ForgeScore.
+
+Step 5 – Document the calibration
+
+In replit.md or the Forge docs, add a short note:
+
+WR alpha is now calibrated via a linear mapping of raw engine scores, using p10/p90 of the 2025 distribution.
+
+Logic is monotonic, interpretable, and does not alter underlying feature weights.
+
+That’s the task.

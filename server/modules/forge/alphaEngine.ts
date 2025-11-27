@@ -14,7 +14,9 @@ import {
   ForgeFeatureBundle, 
   ForgeSubScores,
   Trajectory,
+  PlayerPosition,
   ALPHA_WEIGHTS,
+  ALPHA_CALIBRATION,
   TRAJECTORY_THRESHOLDS,
   CONFIDENCE_CONFIG,
   MISSING_DATA_CAPS,
@@ -31,7 +33,10 @@ export function calculateAlphaScore(
   console.log(`[FORGE/AlphaEngine] Calculating alpha for ${context.playerName} (${context.position})`);
   
   const subScores = calculateSubScores(features);
-  const alpha = calculateWeightedAlpha(subScores, context.position);
+  const rawAlpha = calculateWeightedAlpha(subScores, context.position);
+  
+  const calibratedAlpha = calibrateAlpha(context.position, rawAlpha);
+  
   const trajectory = calculateTrajectory(context);
   const confidence = calculateConfidence(context, features);
   
@@ -49,7 +54,8 @@ export function calculateAlphaScore(
     season: context.season,
     asOfWeek: context.asOfWeek,
     
-    alpha: roundTo(alpha, 1),
+    alpha: roundTo(calibratedAlpha, 1),
+    rawAlpha: roundTo(rawAlpha, 1),
     subScores: {
       volume: roundTo(subScores.volume, 1),
       efficiency: roundTo(subScores.efficiency, 1),
@@ -104,6 +110,37 @@ function calculateWeightedAlpha(
     subScores.contextFit * weights.contextFit;
   
   return clamp(alpha, 0, 100);
+}
+
+/**
+ * Calibrate raw alpha score to a more intuitive 0-100 scale
+ * 
+ * Uses position-specific linear remapping based on observed distribution.
+ * The calibration is monotonic: higher raw scores always produce higher calibrated scores.
+ * 
+ * Formula: calibrated = floor + ((raw - rawFloor) / (rawCeiling - rawFloor)) * (ceiling - floor)
+ * Then clamped to [clampMin, clampMax]
+ */
+function calibrateAlpha(position: PlayerPosition, rawAlpha: number): number {
+  const config = ALPHA_CALIBRATION[position];
+  
+  if (!config) {
+    return rawAlpha;
+  }
+  
+  const { rawFloor, rawCeiling, calibratedFloor, calibratedCeiling, clampMin, clampMax } = config;
+  
+  const rawSpan = rawCeiling - rawFloor;
+  if (rawSpan <= 0) {
+    return rawAlpha;
+  }
+  
+  const normalized = (rawAlpha - rawFloor) / rawSpan;
+  
+  const calibratedSpan = calibratedCeiling - calibratedFloor;
+  const scaled = calibratedFloor + normalized * calibratedSpan;
+  
+  return clamp(scaled, clampMin, clampMax);
 }
 
 /**
