@@ -5666,7 +5666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         success: true,
-        season: 2025,
+        season,
         minGames: 2,
         minTargets: 10,
         count: ranked.length,
