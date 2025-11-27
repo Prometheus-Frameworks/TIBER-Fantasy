@@ -1,0 +1,227 @@
+TASK: Restore 2025 WR data for /api/admin/wr-rankings-sandbox so WR Rankings + FORGE are aligned on the same season
+
+Context
+
+Right now, /api/admin/wr-rankings-sandbox:
+
+Accepts a ?season= query param.
+
+Defaults to 2024 (we patched it).
+
+Returns real 2024 WR rows (confirmed working).
+
+The WR Rankings UI at /rankings/wr is explicitly requesting season=2024.
+
+Previously (earlier this week), the sandbox was working for 2025, which means:
+
+Either 2025 data was backfilled into this schema in another environment/branch.
+
+Or there is an alternate ingestion pipeline for 2025 that we haven’t wired yet here.
+
+The user’s goal now is very clear:
+
+I want WR sandbox + FORGE to both operate on 2025 season data, not 2024, so disagreements are meaningful for 2025 signals.
+
+You already found:
+
+weekly_stats, player_identity_map, wr_role_bank are the core tables.
+
+Scripts exist for 2024:
+
+python server/scripts/backfillWeeklyUsage.py 2024
+
+python server/scripts/populatePlayerIdentityFromUsage.py
+
+npx tsx server/scripts/computeAllWRRoleBank.ts 2024
+
+You previously claimed NFLfastR doesn’t have 2025 data yet. That must be validated by actually running code, not just by assumption.
+
+Step 1 – Verify whether 2025 data currently exists in the DB
+
+In the current Replit environment, check the DB directly (however you normally do it: SQL client, ORM, or scripts):
+
+For each table:
+
+weekly_stats
+
+player_identity_map
+
+wr_role_bank
+
+Check row counts for season 2025:
+
+Example (pseudo-SQL):
+
+SELECT COUNT(*) FROM weekly_stats WHERE season = 2025;
+SELECT COUNT(*) FROM wr_role_bank WHERE season = 2025;
+SELECT COUNT(*) FROM player_identity_map WHERE season = 2025;
+
+
+In your reply, report:
+
+Exact counts per table for season = 2025.
+
+Exact counts per table for season = 2024 (for comparison).
+
+This tells us if 2025 was ever populated in this DB.
+
+Step 2 – Actually attempt 2025 backfill with existing scripts
+
+Do not rely on docs/assumptions like “NFLfastR doesn’t support 2025 yet.”
+Instead, actually run the scripts with 2025 and capture what happens.
+
+From project root:
+
+# 1) Try weekly stats for 2025
+python server/scripts/backfillWeeklyUsage.py 2025
+
+# 2) Rebuild identity map (if needed)
+python server/scripts/populatePlayerIdentityFromUsage.py
+
+# 3) Try WR Role Bank for 2025
+npx tsx server/scripts/computeAllWRRoleBank.ts 2025
+
+
+If any of these fail:
+
+Capture:
+
+Full error stack
+
+Whether the error comes from nflfastR/nfl-data-py, network, or our code.
+
+In your response, explain:
+
+Which commands succeeded and how many rows they wrote for season = 2025.
+
+Which commands failed and why.
+
+Step 3 – Search for any alternate 2025 ingestion pipeline
+
+Since the user says that WR sandbox was working for 2025 earlier this week, look for:
+
+Any scripts or code paths that:
+
+Mention 2025 directly.
+
+Use Sleeper, projections, or other data sources for current-season stats.
+
+Likely locations:
+
+server/scripts/
+
+data/ or imports/ folders
+
+package.json scripts with names like:
+
+backfill:2025
+
+backfill:current
+
+sync:season
+
+Also search for:
+
+2025 in the repo
+
+backfillCurrentSeason
+
+etl2025
+
+current_season
+
+Goal: if there is a custom 2025 pipeline used before, we want to either re-run it or port it into this environment.
+
+Document any such scripts and how they’re meant to be run.
+
+Step 4 – Align WR sandbox + WR Rankings to 2025 once data exists
+
+If you successfully populate 2025 data into the 3 key tables:
+
+weekly_stats
+
+player_identity_map
+
+wr_role_bank
+
+Then:
+
+Update the default season in /api/admin/wr-rankings-sandbox from 2024 → 2025:
+
+From:
+
+const season =
+  req.query.season && !Number.isNaN(Number(req.query.season))
+    ? Number(req.query.season)
+    : 2024;
+
+
+To:
+
+const season =
+  req.query.season && !Number.isNaN(Number(req.query.season))
+    ? Number(req.query.season)
+    : 2025;
+
+
+(Keep the query param override behavior intact.)
+
+In the WR Rankings UI (/rankings/wr), change the call from:
+
+/api/admin/wr-rankings-sandbox?season=2024
+
+
+to:
+
+/api/admin/wr-rankings-sandbox?season=2025
+
+
+Do not touch any FORGE logic.
+FORGE already supports season+week via its API/gateway; once the WR sandbox is on 2025, Joe can configure FORGE calls to use 2025 as well.
+
+Step 5 – If 2025 truly cannot be backfilled, be explicit
+
+If after actually running the scripts and examining the errors you conclude that:
+
+nflfastR/nfl_data_py genuinely does not support 2025 yet in this environment, and
+
+there is no alternate 2025 ingestion pipeline in the repo,
+
+then:
+
+State that plainly.
+
+Confirm:
+
+weekly_stats has 0 rows for season 2025 even after attempting backfill.
+
+Same for wr_role_bank and player_identity_map.
+
+Suggest a fallback approach (e.g., using projections or dummy data), but do not implement it without being asked.
+
+The user needs an honest picture of whether 2025 is technically ingestible right now or if we’re limited by upstream data.
+
+Acceptance Criteria
+
+You’re done when you can show one of these two outcomes:
+
+✅ Ideal Outcome (what we want):
+
+2025 backfills succeed.
+
+weekly_stats, player_identity_map, wr_role_bank all have non-zero counts for season = 2025.
+
+/api/admin/wr-rankings-sandbox?season=2025 returns real WR rows.
+
+/rankings/wr uses season=2025 and displays sandbox α + FORGE α + Δ for 2025.
+
+⚠️ Fallback Outcome (only if absolutely unavoidable):
+
+You have actually tried the 2025 backfill commands and documented their failures.
+
+You have searched for any alternate 2025 ingestion scripts and found none or explained why they don’t work.
+
+You clearly explain to the user that 2025 cannot be populated with current dependencies in this environment, and that 2024 is the latest usable full season.
+
+Do not just say “nflfastR doesn’t support 2025” without evidence.
+We want real attempts + logs.

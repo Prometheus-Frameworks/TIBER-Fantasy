@@ -5445,10 +5445,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Import player_injuries table for IR status
       const { playerInjuries } = await import('@shared/schema');
       
-      // Parse season from query param, default to 2024 (NFLfastR data available)
+      // Parse season from query param, default to 2025 (current season)
       const season = req.query.season && !Number.isNaN(Number(req.query.season))
         ? Number(req.query.season)
-        : 2024;
+        : 2025;
       
       // STEP 1: Query WRs with 2+ games/10+ targets to get qualified player list
       // IMPORTANT: Join with player_identity_map for authoritative position data

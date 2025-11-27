@@ -46,7 +46,8 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **Weekly Takes System**: Quick, punchy matchup insights with position-specific one-liners and concrete statistics.
 - **Waiver Wisdom Module**: Intelligent waiver wire recommendation system combining Sleeper ownership data (<50% threshold), recent usage patterns, trending signals, and archetype classification.
 - **WR Role Bank**: Season-level analytical classification system for WR role evaluation using a Fantasy Efficiency Blend and a four-dimension scoring model. Includes a five-tier classification system.
-- **WR Admin Sandbox**: Experimental admin dashboard for testing new WR ranking formulas, featuring an Alpha Composite Score and 8 advanced analytical metrics with IR status integration.
+- **WR Admin Sandbox**: Experimental admin dashboard for testing new WR ranking formulas, featuring an Alpha Composite Score and 8 advanced analytical metrics with IR status integration. Default season: 2025.
+- **WR Rankings Page**: User-facing rankings at `/rankings/wr` displaying Sandbox α vs FORGE α side-by-side with disagreement filter. Uses 2025 season data.
 - **RB Role Bank**: Season-level analytical classification system for RB role evaluation using a four-dimension scoring model and a seven-tier classification system, with position-specific metrics and binary flags.
 - **TE Role Bank**: Season-level analytical classification system for TE role evaluation using a four-dimension scoring model and a seven-tier classification system, with position-specific metrics and binary flags.
 - **TE Admin Sandbox (Phase 2)**: Experimental admin dashboard for TE alpha scoring featuring a 4-pillar model with enhanced Snap Stickiness, real alignment data, TD Role Score, TE Archetypes, and volatility metrics.
