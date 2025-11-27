@@ -1,0 +1,241 @@
+1️⃣ Make Sure rawAlpha Is Actually Exposed on All Endpoints
+
+We don’t just want the type existing — we want it leaking all the way through the stack.
+
+You said: “Updated ForgeScore type to include rawAlpha & updated client types.”
+Next step: ensure every endpoint returns both:
+
+/api/forge/batch
+
+/api/forge/preview
+
+/api/forge/score/:playerId
+
+Server-side shape (example)
+
+In your shared types (probably types.ts or forgeTypes.ts):
+
+export interface ForgeScore {
+  playerId: string;
+  position: 'WR' | 'RB' | 'TE' | 'QB';
+  rawAlpha: number;     // engine output pre-calibration
+  alpha: number;        // calibrated value
+  // ...whatever else you already have:
+  games: number;
+  team?: string;
+  season: number;
+  week?: number;
+}
+
+In alpha engine / scoring function
+
+Wherever you currently build scores:
+
+export function buildForgeScore(input: SomeInput): ForgeScore {
+  const rawAlpha = computeRawAlpha(input); // existing function
+  const alpha = calibrateAlpha(rawAlpha, input.position); // your new v0.2
+
+  return {
+    playerId: input.playerId,
+    position: input.position,
+    rawAlpha,
+    alpha,
+    games: input.games,
+    team: input.team,
+    season: input.season,
+    week: input.week,
+  };
+}
+
+/api/forge/batch
+
+Ensure it returns rawAlpha and alpha:
+
+app.get('/api/forge/batch', async (req, res) => {
+  const { position, season, week } = req.query;
+
+  const scores = await forgeService.getBatch({
+    position: position as string,
+    season: Number(season),
+    week: week ? Number(week) : undefined,
+  });
+
+  // scores should already be ForgeScore[]
+  res.json({ scores });
+});
+
+/api/forge/preview
+
+Same idea:
+
+app.post('/api/forge/preview', async (req, res) => {
+  const { playerId, position, season, week } = req.body;
+
+  const score = await forgeService.preview({
+    playerId,
+    position,
+    season,
+    week,
+  });
+
+  res.json({ score }); // includes rawAlpha + alpha
+});
+
+/api/forge/score/:playerId
+app.get('/api/forge/score/:playerId', async (req, res) => {
+  const { playerId } = req.params;
+  const { position, season, week } = req.query;
+
+  const score = await forgeService.getSingle({
+    playerId,
+    position: position as string,
+    season: Number(season),
+    week: week ? Number(week) : undefined,
+  });
+
+  if (!score) {
+    return res.status(404).json({ error: 'Score not found' });
+  }
+
+  res.json({ score }); // includes rawAlpha + alpha
+});
+
+
+Frontend can ignore rawAlpha by default; it just needs to be there.
+
+2️⃣ Calibration Config Scaffolding for All Positions
+
+You said you added ALPHA_CALIBRATION with WR-specific mapping.
+We want to make sure the structure is ready for RB/TE/QB so adding them later is painless.
+
+In types.ts (or wherever ALPHA_CALIBRATION lives):
+
+export type Position = 'WR' | 'RB' | 'TE' | 'QB';
+
+export interface CalibrationParams {
+  p10: number;    // 10th percentile of rawAlpha for that position
+  p90: number;    // 90th percentile
+  outMin: number; // output min on the calibrated scale
+  outMax: number; // output max
+}
+
+export const ALPHA_CALIBRATION: Partial<Record<Position, CalibrationParams>> = {
+  WR: {
+    p10: /* your actual WR p10 here */,
+    p90: /* your actual WR p90 here */,
+    outMin: 25,
+    outMax: 90,
+  },
+  RB: undefined,
+  TE: undefined,
+  QB: undefined,
+};
+
+
+In alphaEngine.ts, your calibrateAlpha should be position-aware:
+
+import { ALPHA_CALIBRATION, CalibrationParams, Position } from './types';
+
+export function calibrateAlpha(raw: number, position: Position): number {
+  const config = ALPHA_CALIBRATION[position];
+
+  // If no calibration for that position yet, just return raw
+  if (!config) return raw;
+
+  const { p10, p90, outMin, outMax } = config;
+
+  if (p90 === p10) return raw; // safety guard
+
+  const clamped = Math.min(Math.max(raw, p10), p90);
+  const t = (clamped - p10) / (p90 - p10);
+
+  const mapped = outMin + t * (outMax - outMin);
+
+  // Optionally extend mapping beyond p10/p90 bounds
+  return mapped;
+}
+
+
+That’s the scaffolding done. WR is real, RB/TE/QB are “plug values in later.”
+
+3️⃣ Build /rankings/rb Page (Clone WR Flow)
+
+You already have WR working beautifully. Do not reinvent that. Just shamelessly copy yourself.
+
+Assume the WR file is something like WRRankings.tsx. The fastest path:
+
+Duplicate the file:
+
+WRRankings.tsx → RBRankings.tsx
+
+Change:
+
+All labels “WR” → “RB”
+
+API calls to use RB endpoints
+
+Columns to be RB-appropriate
+
+Example of the API layer in RB rankings
+
+Where WR version does:
+
+const fetchForgeBatch = async () => {
+  const res = await fetch('/api/forge/batch?position=WR&season=2025&week=10');
+  const data = await res.json();
+  return data.scores as ForgeScore[];
+};
+
+const fetchSandboxWR = async () => {
+  const res = await fetch('/api/sandbox/wr?season=2025');
+  const data = await res.json();
+  return data.players; // whatever your WR sandbox returns
+};
+
+
+RB version:
+
+const fetchForgeBatchRB = async () => {
+  const res = await fetch('/api/forge/batch?position=RB&season=2025&week=10');
+  const data = await res.json();
+  return data.scores as ForgeScore[];
+};
+
+const fetchSandboxRB = async () => {
+  const res = await fetch('/api/sandbox/rb?season=2025');
+  const data = await res.json();
+  return data.players;
+};
+
+
+Then wire the table the same:
+
+Columns:
+
+Player
+
+Team
+
+Games
+
+Sandbox α (RB sandbox rating)
+
+FORGE α (calibrated)
+
+Δ (FORGE α − Sandbox α)
+
+Trajectory arrow
+
+Add the “show big disagreements only” toggle using the same logic as WR:
+
+e.g. Math.abs(delta) >= 8 or whatever you used for WR.
+
+RB page doesn’t need to be perfect now — just working with:
+
+Real FORGE RB scores
+
+Real RB sandbox α
+
+Δ and filter to eyeball calibration quality
+
+Once live, RB becomes your second calibration target.

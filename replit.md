@@ -56,8 +56,42 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **League System**: Supports user-created fantasy leagues with context-aware AI interactions, integrating league settings, trades, and roster moves via Sleeper league auto-sync.
 - **RAG Chat System**: Integrates Google Gemini AI for embeddings and chat generation, providing teaching-focused responses with context-aware personality, anti-hallucination rules, and various specialized modules.
 - **TIBER WAIVER VORP PATCH**: Separates "Trade Brain" (VORP) from "Waiver Brain" (Interest Score) based on query mode detection, integrating Waiver Wisdom API.
-- **FORGE v0.1 (Football-Oriented Recursive Grading Engine)**: Self-contained, read-only scoring module providing unified alpha scores (0-100) for WR/RB/TE/QB positions. Features position-specific weighted sub-scores (volume, efficiency, roleLeverage, stability, contextFit), trajectory tracking (rising/flat/declining), and confidence scoring (0-100). Integrates with PlayerIdentityService, Sleeper snap service, game logs, and environment services. API: `/api/forge/preview`, `/api/forge/score/:playerId`, `/api/forge/batch`, `/api/forge/health`. Module location: `server/modules/forge/`.
-  - **Alpha Calibration (v0.1.1)**: WR alpha scores are calibrated via a linear monotonic mapping of raw engine scores to an intuitive 0-100 scale. Based on 2025 season week 10 distribution (raw range ~30-52), calibration maps: raw floor (30) → calibrated 25, raw ceiling (52) → calibrated 90. This spreads top WRs into the 70-90 band (matching Sandbox scale) while preserving ranking order. The underlying feature weights (volume, efficiency, role, stability, context) are unchanged. Response includes both `alpha` (calibrated) and `rawAlpha` (pre-calibration) for debugging. Config: `ALPHA_CALIBRATION` in `server/modules/forge/types.ts`.
+- **FORGE v0.2 (Football-Oriented Recursive Grading Engine)**: Self-contained, read-only scoring module providing unified alpha scores (0-100) for WR/RB/TE/QB positions. Features position-specific weighted sub-scores (volume, efficiency, roleLeverage, stability, contextFit), trajectory tracking (rising/flat/declining), and confidence scoring (0-100). Integrates with PlayerIdentityService, Sleeper snap service, game logs, and environment services. API: `/api/forge/preview`, `/api/forge/score/:playerId`, `/api/forge/batch`, `/api/forge/health`. Module location: `server/modules/forge/`.
+
+### FORGE v0.2 — WR Calibration Layer
+
+**What Changed:**
+- Introduced a position-aware calibration layer for WR in `alphaEngine.ts`
+- Raw engine scores (`rawAlpha`) were previously compressed (~30–52)
+- Calibrated scores now map to an intuitive range (~25–90) for 2025 WRs
+- Top WRs (e.g. JSN, Chase, Puka, Amon-Ra, London) now sit in the high 70s–80s
+- Δ between Sandbox α and FORGE α is now typically in the -10 to +6 range instead of systemic -30s
+
+**Why We Keep `rawAlpha`:**
+- `rawAlpha` = pure engine score, directly from FORGE's feature stack
+- `alpha` (calibrated) = UI-facing score for rankings and surface-level display
+- Sandbox α = human/tuning layer based on scouting and sliders
+
+We need all three:
+- Sandbox α → human intent
+- `rawAlpha` → engine truth
+- `alpha` → stable, user-friendly scale
+
+**Data Flow:**
+1. Features (usage, efficiency, context, penalties, etc.)
+2. Engine computes `rawAlpha`
+3. `calibrateAlpha(rawAlpha, position)` produces `alpha` using `ALPHA_CALIBRATION`
+4. API returns **both**: `rawAlpha` and `alpha`
+
+**Future Calibration Plan:**
+- WR is fully calibrated in v0.2
+- `ALPHA_CALIBRATION` is position-aware:
+  - WR has real `{ p10, p90, outMin, outMax }`
+  - RB/TE/QB entries exist but are not yet tuned
+- Next steps:
+  - Build `/rankings/rb` panel mirroring WR
+  - Derive RB `p10/p90` from 2025 data
+  - Repeat process for TE and QB once those sandboxes are stable
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
