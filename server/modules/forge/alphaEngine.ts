@@ -118,8 +118,8 @@ function calculateWeightedAlpha(
  * Uses position-specific linear remapping based on observed distribution.
  * The calibration is monotonic: higher raw scores always produce higher calibrated scores.
  * 
- * Formula: calibrated = floor + ((raw - rawFloor) / (rawCeiling - rawFloor)) * (ceiling - floor)
- * Then clamped to [clampMin, clampMax]
+ * Formula: calibrated = outMin + ((raw - p10) / (p90 - p10)) * (outMax - outMin)
+ * Then clamped to [0, 100]
  */
 function calibrateAlpha(position: PlayerPosition, rawAlpha: number): number {
   const config = ALPHA_CALIBRATION[position];
@@ -128,19 +128,17 @@ function calibrateAlpha(position: PlayerPosition, rawAlpha: number): number {
     return rawAlpha;
   }
   
-  const { rawFloor, rawCeiling, calibratedFloor, calibratedCeiling, clampMin, clampMax } = config;
+  const { p10, p90, outMin, outMax } = config;
   
-  const rawSpan = rawCeiling - rawFloor;
-  if (rawSpan <= 0) {
+  if (p90 === p10) {
     return rawAlpha;
   }
   
-  const normalized = (rawAlpha - rawFloor) / rawSpan;
+  const clamped = Math.min(Math.max(rawAlpha, p10), p90);
+  const t = (clamped - p10) / (p90 - p10);
+  const mapped = outMin + t * (outMax - outMin);
   
-  const calibratedSpan = calibratedCeiling - calibratedFloor;
-  const scaled = calibratedFloor + normalized * calibratedSpan;
-  
-  return clamp(scaled, clampMin, clampMax);
+  return clamp(mapped, 0, 100);
 }
 
 /**

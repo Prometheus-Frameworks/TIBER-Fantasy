@@ -273,6 +273,100 @@ router.post('/snapshot', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/forge/debug/distribution
+ * 
+ * Returns rawAlpha distribution stats for a position (dev-only).
+ * Use this to derive p10/p90 for ALPHA_CALIBRATION config.
+ * 
+ * Query params:
+ * - position (required): WR | RB | TE | QB
+ * - season (optional): number, defaults to 2025
+ * - week (optional): number, defaults to 10
+ */
+router.get('/debug/distribution', async (req: Request, res: Response) => {
+  try {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'FORGE_DEBUG_DISABLED_IN_PROD' });
+    }
+
+    const position = (req.query.position as string)?.toUpperCase() as PlayerPosition;
+    const season = parseInt(req.query.season as string) || 2025;
+    const week = parseInt(req.query.week as string) || 10;
+
+    if (!position || !['WR', 'RB', 'TE', 'QB'].includes(position)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or missing position. Must be WR, RB, TE, or QB.',
+      });
+    }
+
+    console.log(`[FORGE/Debug] Distribution request: position=${position}, season=${season}, week=${week}`);
+
+    const playerIds = await fetchPlayerIdsForPosition(position, 500);
+    const scores = await forgeService.getForgeScoresForPlayers(playerIds, season, week);
+
+    const rawAlphas = scores
+      .map(s => s.rawAlpha)
+      .filter((v): v is number => v != null && !isNaN(v))
+      .sort((a, b) => a - b);
+
+    if (rawAlphas.length === 0) {
+      return res.json({
+        success: true,
+        position,
+        season,
+        week,
+        count: 0,
+        distribution: null,
+        message: 'No scores found for this position/season/week',
+      });
+    }
+
+    const count = rawAlphas.length;
+    const min = rawAlphas[0];
+    const max = rawAlphas[count - 1];
+    const p10Idx = Math.floor(count * 0.1);
+    const p25Idx = Math.floor(count * 0.25);
+    const p50Idx = Math.floor(count * 0.5);
+    const p75Idx = Math.floor(count * 0.75);
+    const p90Idx = Math.floor(count * 0.9);
+
+    const distribution = {
+      count,
+      min: Math.round(min * 10) / 10,
+      p10: Math.round(rawAlphas[p10Idx] * 10) / 10,
+      p25: Math.round(rawAlphas[p25Idx] * 10) / 10,
+      p50: Math.round(rawAlphas[p50Idx] * 10) / 10,
+      p75: Math.round(rawAlphas[p75Idx] * 10) / 10,
+      p90: Math.round(rawAlphas[p90Idx] * 10) / 10,
+      max: Math.round(max * 10) / 10,
+    };
+
+    console.log(`[FORGE/Debug] ${position} ${season}w${week} rawAlpha: min=${distribution.min} p10=${distribution.p10} p50=${distribution.p50} p90=${distribution.p90} max=${distribution.max}`);
+
+    return res.json({
+      success: true,
+      position,
+      season,
+      week,
+      distribution,
+      calibrationSuggestion: {
+        p10: distribution.p10,
+        p90: distribution.p90,
+        outMin: 25,
+        outMax: 90,
+      },
+    });
+  } catch (error) {
+    console.error('[FORGE/Debug] Distribution error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
  * Fetch player IDs for a position from the identity map
  */
 async function fetchPlayerIdsForPosition(

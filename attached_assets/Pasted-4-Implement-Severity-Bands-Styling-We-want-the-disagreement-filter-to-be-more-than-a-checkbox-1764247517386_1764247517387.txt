@@ -1,0 +1,124 @@
+4️⃣ Implement Δ Severity Bands + Styling
+
+We want the disagreement filter to be more than a checkbox — we want tiers of disagreement.
+
+Ask the agent:
+
+Add severity bands based on delta = forgeAlpha - sandboxAlpha:
+
+function getDeltaSeverity(delta: number) {
+  const abs = Math.abs(delta);
+  if (abs >= 15) return 'major';
+  if (abs >= 8) return 'moderate';
+  if (abs >= 4) return 'minor';
+  return 'none';
+}
+
+
+Use getDeltaSeverity on both WR and RB rankings.
+
+In the table UI:
+
+minor → subtle tint
+
+moderate → stronger tint
+
+major → strong highlight (this is “review me now”)
+
+“Show big disagreements only” toggle:
+
+Filter to moderate + major (abs(Δ) ≥ 8).
+
+This gives us a stable visual language for disagreements before we even touch RB calibration.
+
+5️⃣ Handle Missing FORGE Scores Gracefully
+
+We already saw cases like Odunze / MHJ / McConkey with FORGE α = -.
+
+Tell the agent:
+
+On the rankings pages (WR and RB), if a player has:
+
+Sandbox row but no FORGE score, show:
+
+FORGE α → —
+
+Δ → —
+
+Make sure the “show big disagreements” filter doesn’t hide these; they should stay visible as “no engine score yet”, not vanish.
+
+Optional: add a small pill or tooltip:
+
+Missing FORGE data or No 2025 engine score
+
+This keeps the UX honest and prevents confusion when rookies / partial season guys pop in.
+
+6️⃣ Add a Simple Calibration Debug Endpoint / Log
+
+We’ll need p10/p90 for RB/TE/QB soon. Have the agent set up the plumbing now.
+
+Ask it to:
+
+Create a small internal function that computes percentiles for rawAlpha per position from 2025 data:
+
+async function getRawAlphaDistribution(position: Position, season: number) {
+  const scores = await forgeRepo.getRawAlphaValues(position, season);
+  // compute p10, p50, p90, min, max
+  return { min, p10, p50, p90, max };
+}
+
+
+Option A (simpler): log to server console when /api/forge/batch is called with a debug flag:
+
+If query has debug=true, print:
+
+[FORGE DEBUG] WR 2025 rawAlpha: min=X p10=Y p50=Z p90=A max=B
+
+
+Option B (if you want an endpoint):
+
+// GET /api/forge/debug/distribution?position=WR&season=2025
+
+
+We don’t need a UI for this. Just want future-you to be able to quickly pull fresh p10/p90 and plug them into ALPHA_CALIBRATION for other positions.
+
+7️⃣ Wire /rankings/rb Into Nav + Routing
+
+Agent should not just create the component and forget it.
+
+Ask it to:
+
+Add RB Rankings to:
+
+The router (e.g. /rankings/rb)
+
+The sidebar / nav menu next to WR Rankings.
+
+Reuse the same layout shell as WR Rankings:
+
+Same header style
+
+Same filters at the top if present (season/week toggles, etc.)
+
+The goal: WR and RB rankings feel like a matched pair, not some hidden dev-only page.
+
+8️⃣ Add rawAlpha to Dev View (Hidden Behind a Toggle)
+
+We don’t want users seeing rawAlpha, but we do want you and Tiber to have an easy way to inspect it.
+
+Ask the agent:
+
+Add a small dev-only toggle at the top of WR/RB rankings, something like Show rawAlpha (dev).
+
+When enabled:
+
+Show an extra column: rawAlpha
+
+Or show it in a tooltip when hovering over FORGE α.
+
+Implementation idea:
+
+const [showRawAlpha, setShowRawAlpha] = useState(false);
+
+
+Then conditionally render the column/cell.

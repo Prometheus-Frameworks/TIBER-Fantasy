@@ -338,41 +338,35 @@ export interface ForgeFeatureBundleBase {
  * The calibration is a linear monotonic transformation based on observed 
  * distribution percentiles from the 2025 season data.
  * 
- * For WR 2025 week 10 observed stats:
- * - min: 29.9, max: 51.1, p10: 29.9, p90: 43
- * - Top WRs (Chase, JSN, Amon-Ra) cluster around 48-51
- * 
- * Calibration maps:
- * - Raw floor (~30) → 25 (low/no-data tier)
- * - Raw ceiling (~52) → 90 (elite tier)
- * 
- * This spreads the compressed 30-52 raw range across a 25-90 calibrated range.
+ * p10/p90 are observed from running `/api/forge/debug/distribution?position=X`
+ * outMin/outMax define the target calibrated output range.
  */
-export interface AlphaCalibrationConfig {
-  rawFloor: number;       // Raw score floor (observed minimum for valid data)
-  rawCeiling: number;     // Raw score ceiling (observed elite scores)
-  calibratedFloor: number; // Target calibrated floor
-  calibratedCeiling: number; // Target calibrated ceiling
-  clampMin: number;       // Final output minimum
-  clampMax: number;       // Final output maximum
+export interface CalibrationParams {
+  p10: number;    // 10th percentile of rawAlpha for that position
+  p90: number;    // 90th percentile of rawAlpha for that position
+  outMin: number; // Output min on the calibrated scale
+  outMax: number; // Output max on the calibrated scale
 }
 
 /**
  * Position-specific calibration configs
  * 
- * WR is calibrated based on 2025 season week 10 distribution.
- * Other positions use pass-through (no calibration) until data is analyzed.
+ * WR is calibrated based on 2025 season week 10 distribution:
+ * - Observed: min=29.9, p10=29.9, p90=43, max=51.1
+ * - Top WRs (Chase, JSN, Amon-Ra) cluster around 48-51
+ * - Calibration maps p10(30)→25, p90(52)→90
+ * 
+ * RB/TE/QB: undefined (pass-through) until data is analyzed.
+ * Run `/api/forge/debug/distribution?position=RB&season=2025` to get p10/p90.
  */
-export const ALPHA_CALIBRATION: Record<PlayerPosition, AlphaCalibrationConfig | null> = {
+export const ALPHA_CALIBRATION: Partial<Record<PlayerPosition, CalibrationParams>> = {
   WR: {
-    rawFloor: 30,           // No-data floor
-    rawCeiling: 52,         // Elite WR raw score
-    calibratedFloor: 25,    // Calibrated no-data tier
-    calibratedCeiling: 90,  // Calibrated elite tier
-    clampMin: 0,
-    clampMax: 100,
+    p10: 30,      // WR 2025 observed p10 rawAlpha
+    p90: 52,      // WR 2025 observed p90 rawAlpha (elite tier)
+    outMin: 25,   // Calibrated floor for low-data players
+    outMax: 90,   // Calibrated ceiling for elite players
   },
-  RB: null, // Pass-through (no calibration yet)
-  TE: null, // Pass-through (no calibration yet)
-  QB: null, // Pass-through (no calibration yet)
+  RB: undefined,  // Pass-through (plug p10/p90 after RB distribution analysis)
+  TE: undefined,  // Pass-through
+  QB: undefined,  // Pass-through
 };

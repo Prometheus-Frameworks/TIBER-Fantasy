@@ -1,0 +1,138 @@
+9️⃣ Extract Shared Rankings Layout (WR/RB → future TE/QB)
+
+Right now WRRankings.tsx is the template. RB will copy it. Cool for now, but if we don’t abstract, TE/QB will be pain.
+
+Ask the agent to:
+
+Create a reusable component, something like:
+
+// client/src/components/ForgeRankingsTable.tsx
+interface ForgeRankingsTableProps {
+  position: 'WR' | 'RB' | 'TE' | 'QB';
+  rows: ForgeRow[]; // includes sandboxAlpha, forgeAlpha, delta, etc.
+  showRawAlpha: boolean;
+  onToggleShowRawAlpha?: () => void;
+}
+
+
+Move all shared table logic there:
+
+Δ rendering
+
+severity badge/colors
+
+“show big disagreements only” filter
+
+optional rawAlpha column
+
+WR and RB pages then become thin wrappers:
+
+Handle fetching
+
+Pass rows + flags into <ForgeRankingsTable />
+
+This makes TE/QB rankings later basically plug-and-play.
+
+🔟 Add Season/Week Controls Instead of Hardcoding 2025 / 10
+
+We can stick to 2025 week 10 as default, but it shouldn’t be baked into the code forever.
+
+Ask the agent to:
+
+Add simple controls at the top of WR/RB rankings:
+
+Season select (for now maybe just [2025] but wired for more)
+
+Week select (1–18, plus “Full season” option if we support it later)
+
+Store these in local state:
+
+const [season, setSeason] = useState(2025);
+const [week, setWeek] = useState<number | null>(10);
+
+
+Use these values when calling:
+
+/api/forge/batch?position=WR&season=...&week=...
+
+/api/sandbox/wr?season=...&week=... (if your sandbox supports weekwise later)
+
+Even if right now you only ever use 2025/10, wiring it once prevents “hardcoded season hell” later.
+
+1️⃣1️⃣ Add a Tiny Smoke Test Layer Around FORGE
+
+Very light, but massively useful so future changes don’t silently break calibration.
+
+Ask the agent to add at least one test file like:
+
+// server/tests/forgeCalibration.test.ts
+import request from 'supertest';
+import app from '../app';
+
+describe('FORGE WR calibration', () => {
+  it('returns both rawAlpha and alpha and keeps alpha in expected range', async () => {
+    const res = await request(app)
+      .get('/api/forge/batch')
+      .query({ position: 'WR', season: 2025, week: 10 });
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.scores)).toBe(true);
+
+    for (const s of res.body.scores) {
+      expect(typeof s.rawAlpha).toBe('number');
+      expect(typeof s.alpha).toBe('number');
+      // alpha should be on the calibrated 0–100-ish band
+      expect(s.alpha).toBeGreaterThanOrEqual(0);
+      expect(s.alpha).toBeLessThanOrEqual(100);
+    }
+  });
+});
+
+
+Not about perfection — just guarantees:
+
+endpoints don’t drop rawAlpha
+
+alpha is numeric and sane
+
+1️⃣2️⃣ Simple “Export View” Button for Content
+
+This is more for Future Joe making threads.
+
+Ask the agent to:
+
+Add a small button on WR/RB rankings:
+Export current view as JSON
+
+On click:
+
+Take the current rows (after filters)
+
+JSON.stringify them
+
+Show in a modal or copy to clipboard
+
+This gives you plug-and-play data to:
+
+Paste into X threads
+
+Compare before/after calibration snapshots
+
+Share with Lucas / others without digging into DB
+
+Low effort, high payoff.
+
+1️⃣3️⃣ Dev Flag for RawAlpha / Debug UI
+
+You already want a dev toggle for rawAlpha. Let’s make it environment-aware so it never leaks in prod by accident.
+
+Ask agent to:
+
+Only show the Show rawAlpha (dev) toggle when:
+
+const isDev = process.env.NODE_ENV !== 'production';
+
+
+Or gate it behind something like:
+
+const devMode = import.meta.env.VITE_DEV_MODE === 'true';
