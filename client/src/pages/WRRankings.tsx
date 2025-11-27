@@ -31,12 +31,9 @@ interface WRSandboxPlayer {
 
 interface SandboxResponse {
   success: boolean;
-  data: WRSandboxPlayer[];
-  meta?: {
-    season: number;
-    week: number;
-    playerCount: number;
-  };
+  players: WRSandboxPlayer[];
+  season: number;
+  count: number;
 }
 
 interface WRRow extends WRSandboxPlayer {
@@ -95,9 +92,9 @@ export default function WRRankings() {
   };
 
   const rows: WRRow[] = useMemo(() => {
-    if (!data?.data) return [];
+    if (!data?.players) return [];
     
-    return data.data.map((player) => {
+    return data.players.map((player) => {
       const forge = forgeByPlayerId[player.playerId];
       return {
         ...player,
