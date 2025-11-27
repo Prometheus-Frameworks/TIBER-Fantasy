@@ -1,0 +1,171 @@
+TASK: WR Rankings page shows sandbox α but FORGE α is always '-', even though FORGE Lab loads ~396 WRs
+
+Context
+
+/rankings/wr:
+
+Sandbox α is populated (2025 season).
+
+FORGE columns (FORGE A, Δ) show - for every player.
+
+/dev/forge:
+
+GET /api/forge/batch?position=WR returns ~396 WR scores (so FORGE is working).
+
+Therefore, the WR Rankings page either:
+
+isn’t actually receiving FORGE data, or
+
+is joining on the wrong key between sandbox rows and ForgeScore rows.
+
+Your job is to make FORGE α and Δ show up correctly on /rankings/wr again.
+
+Do not change FORGE core logic or sandbox scoring. This is a wiring fix.
+
+Step 1 – Confirm WR Rankings is still calling fetchForgeBatch and getting data
+
+File to inspect: client/src/pages/WRRankings.tsx (or equivalent main WR rankings page).
+
+Find where fetchForgeBatch is imported and called.
+
+Check:
+
+What params are passed (position, limit, season, week).
+
+Whether the call is actually awaited and res.scores is stored.
+
+Add a quick dev-only log (you can remove it afterward) to confirm:
+
+console.log('[WRRankings] FORGE batch length:', res.scores.length);
+
+
+Run the app and confirm in DevTools console:
+
+Does res.scores.length come back as ~396 (as in /dev/forge)?
+
+Or is it 0 / undefined?
+
+If it’s 0:
+
+We’re calling batch incorrectly (wrong params, e.g. bad season/week).
+
+Fix the call to match what /dev/forge uses (at minimum position: 'WR', limit reasonable, and whatever default season/week FORGE uses if needed).
+
+If it’s ~396:
+
+Then the problem is the join, not the fetch.
+
+Step 2 – Compare join keys between sandbox rows and ForgeScore
+
+Still in WRRankings.tsx:
+
+Identify the row type you’re using, something like:
+
+interface WrRow {
+  playerId: string;
+  // ...
+  forgeAlpha?: number;
+}
+
+
+Find where you build the forgeByPlayerId map, e.g.:
+
+const map: Record<string, ForgeScore> = {};
+res.scores.forEach((s) => {
+  map[s.playerId] = s;
+});
+setForgeByPlayerId(map);
+
+
+Log a few keys from both sides:
+
+console.log('[WRRankings] example sandbox IDs:', sandboxRows.slice(0, 5).map(r => r.playerId));
+console.log('[WRRankings] example FORGE IDs:', res.scores.slice(0, 5).map(s => s.playerId));
+
+
+Check for patterns:
+
+If sandbox IDs look like drake-london, ja-marr-chase and FORGE IDs look the same → join is fine, bug is elsewhere.
+
+If sandbox IDs are something else (nflDataPyId, numeric ID, or different casing), you need to join on the correct common key.
+
+If there’s a mismatch, fix the join by using the common canonical ID. For example, if both objects include canonicalId or nflDataPyId, build the map on that:
+
+const map: Record<string, ForgeScore> = {};
+res.scores.forEach((s) => {
+  const key = s.playerId ?? s.canonicalId ?? s.nflDataPyId;
+  if (key) map[key] = s;
+});
+
+// later, when enriching rows:
+const key = row.playerId ?? row.canonicalId ?? row.nflDataPyId;
+const forge = key ? forgeByPlayerId[key] : undefined;
+
+
+The key point: whatever field the WR sandbox exposes as playerId must match what you use as the key for ForgeScore. If they differ, normalize both to the same ID.
+
+Step 3 – Ensure FORGE α & Δ are actually rendered when a ForgeScore exists
+
+Once you’ve confirmed:
+
+forgeByPlayerId has entries, and
+
+forgeByPlayerId[row.playerId] is non-undefined for at least some rows,
+
+make sure the cell render logic isn’t hiding them.
+
+In the column definition / <td> for FORGE A:
+
+const forge = forgeByPlayerId[row.playerId];
+
+<td>
+  {forge
+    ? forge.alpha.toFixed(1)
+    : forgeLoading
+      ? '…'
+      : '-'}
+</td>
+
+
+And for Δ:
+
+const delta =
+  forge && row.sandboxAlpha != null
+    ? forge.alpha - row.sandboxAlpha
+    : null;
+
+<td>
+  {delta != null ? delta.toFixed(1) : '-'}
+</td>
+
+
+Make sure you’re not accidentally checking the wrong property (e.g. row.forgeAlpha before you’ve assigned it).
+
+Step 4 – Final sanity checks
+
+You’re done when:
+
+Console log shows:
+
+[WRRankings] FORGE batch length: (around 300–400)
+
+
+On /rankings/wr:
+
+FORGE A shows real numbers for at least the top WRs (London, JSN, Chase, Puka, etc.).
+
+Δ column shows positive/negative differences where sandbox α ≠ FORGE α.
+
+The “Show only big disagreements” filter still works based on Δ.
+
+/dev/forge remains unchanged and continues to show ~396 WR scores.
+
+Don’t touch:
+
+FORGE backend logic
+
+WR sandbox scoring logic
+
+Other positions’ sandboxes
+
+This is strictly a client-side wiring + ID matching fix for WR Rankings.

@@ -7,6 +7,7 @@ import type { ForgeScore } from '../types/forge';
 
 interface WRSandboxPlayer {
   playerId: string;
+  canonicalId: string;
   playerName: string;
   team: string;
   gamesPlayed: number;
@@ -95,7 +96,8 @@ export default function WRRankings() {
     if (!data?.players) return [];
     
     return data.players.map((player) => {
-      const forge = forgeByPlayerId[player.playerId];
+      // Join on canonicalId since FORGE uses slug-based IDs
+      const forge = forgeByPlayerId[player.canonicalId];
       return {
         ...player,
         forgeAlpha: forge?.alpha,

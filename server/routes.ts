@@ -5578,6 +5578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return {
           playerId: player.playerId,
+          canonicalId: player.canonicalId,
           playerName: player.playerName,
           team: player.team || 'FA',
           gamesPlayed: player.gamesPlayed,
