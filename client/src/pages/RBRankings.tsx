@@ -8,6 +8,7 @@ import type { ForgeScore } from '../types/forge';
 
 interface RBSandboxPlayer {
   playerId: string;
+  canonicalId: string | null;
   playerName: string;
   team: string;
   gamesPlayed: number;
@@ -75,12 +76,13 @@ export default function RBRankings() {
     if (!data?.data) return [];
     
     return data.data.map((player) => {
-      const forge = forgeByPlayerId[player.playerId];
+      const forgeKey = player.canonicalId ?? player.playerId;
+      const forge = forgeByPlayerId[forgeKey];
       const sandboxAlpha = Math.min(100, Math.round((player.fantasyPoints / Math.max(player.gamesPlayed, 1)) * 5));
       
       return {
         playerId: player.playerId,
-        canonicalId: player.playerId,
+        canonicalId: forgeKey,
         playerName: player.playerName,
         team: player.team,
         gamesPlayed: player.gamesPlayed,

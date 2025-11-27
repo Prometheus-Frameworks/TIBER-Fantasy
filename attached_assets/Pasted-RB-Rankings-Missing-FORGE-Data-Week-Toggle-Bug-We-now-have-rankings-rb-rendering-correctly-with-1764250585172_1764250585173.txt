@@ -1,0 +1,72 @@
+RB Rankings: Missing FORGE Data + Week Toggle Bug
+
+We now have /rankings/rb rendering correctly with sandbox α, but all Forge fields are null:
+
+{
+  "rank": 1,
+  "playerName": "C.McCaffrey",
+  "team": "SF",
+  "gamesPlayed": 11,
+  "sandboxAlpha": 100,
+  "forgeAlpha": null,
+  "forgeRawAlpha": null,
+  "delta": null,
+  "trajectory": null
+}
+
+
+Tasks:
+
+Wire RB FORGE data into the rankings table
+
+Confirm the backend returns RB scores from:
+
+GET /api/forge/batch?position=RB&season=2025&week=10
+
+Mirror the WR pipeline:
+
+RB sandbox endpoint should expose the same canonical ID used by FORGE (e.g. slug or canonicalId), just like WR:
+
+If WR sandbox already returns canonicalId, do the same for RB.
+
+On the RB rankings component:
+
+Build a map of Forge scores by canonical ID.
+
+Join sandbox rows to Forge rows using that ID.
+
+For players with no Forge score:
+
+Keep forgeAlpha = null / show — in the UI.
+
+They must not be hidden by the “big disagreements only” filter.
+
+Fix Week Toggle: currently changing week shows the same data
+
+Right now, switching from week 4 → week 9 yields the same RB rankings.
+
+Need to verify:
+
+The season and week state values are actually being used in:
+
+fetchForgeBatchRB → should call /api/forge/batch?position=RB&season=${season}&week=${week}
+
+(If supported) fetchSandboxRB → /api/sandbox/rb?season=${season}&week=${week}
+
+The useEffect (or equivalent) that triggers data fetch includes [season, week] in its dependency array so it re-runs when the toggle changes.
+
+The backend forge service is not ignoring the week parameter for RB:
+
+Confirm RB Forge logic uses season and week to filter weekly_stats (similar to WR).
+
+Goal:
+
+Changing the week on RB rankings should actually change the Forge scores (and, if applicable, sandbox stats), not just re-render the same data.
+
+Verify RB Forge is actually computing scores
+
+Add a temporary log or debug check in the Forge service:
+
+When position=RB, season=2025, week=10, log how many scores are produced.
+
+We expect non-zero RB Forge scores for 2025; if count is 0, fix the underlying query/filters.
