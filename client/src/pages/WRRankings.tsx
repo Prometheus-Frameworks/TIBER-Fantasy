@@ -67,7 +67,7 @@ export default function WRRankings() {
       try {
         setForgeLoading(true);
         setForgeError(null);
-        const res = await fetchForgeBatch({ position: 'WR', limit: 500 });
+        const res = await fetchForgeBatch({ position: 'WR', limit: 500, season: 2025, week: 10 });
         const map: Record<string, ForgeScore> = {};
         for (const s of res.scores) {
           map[s.playerId] = s;

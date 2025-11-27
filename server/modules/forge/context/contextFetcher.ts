@@ -15,9 +15,10 @@ import {
   defenseVsPositionStats,
   playerSeason2024,
   playerAdvanced2024,
-  playerIdentityMap
+  playerIdentityMap,
+  weeklyStats
 } from '@shared/schema';
-import { eq, and, desc, sql, lte } from 'drizzle-orm';
+import { eq, and, desc, sql, lte, sum, count } from 'drizzle-orm';
 
 const playerIdentityService = PlayerIdentityService.getInstance();
 const oasisEnvironmentService = new OasisEnvironmentService();
@@ -104,7 +105,8 @@ async function fetchPlayerIdentity(playerId: string) {
 }
 
 /**
- * Fetch season-level stats from playerSeasonFacts or playerSeason2024
+ * Fetch season-level stats from playerSeasonFacts, weeklyStats, or playerSeason2024
+ * For 2025+, prefers weeklyStats if it has more games (since playerSeasonFacts may be stale)
  */
 async function fetchSeasonStats(
   canonicalId: string, 
@@ -112,6 +114,14 @@ async function fetchSeasonStats(
   asOfWeek: number
 ): Promise<ForgeContext['seasonStats']> {
   try {
+    // For 2025+, check weeklyStats first since playerSeasonFacts may be stale
+    if (season >= 2025) {
+      const weeklyResult = await fetchFromWeeklyStats(canonicalId, season, asOfWeek);
+      if (weeklyResult && weeklyResult.gamesPlayed > 0) {
+        return weeklyResult;
+      }
+    }
+    
     const facts = await db
       .select()
       .from(playerSeasonFacts)
@@ -150,37 +160,46 @@ async function fetchSeasonStats(
       };
     }
     
-    const player2024 = await db
-      .select()
-      .from(playerSeason2024)
-      .where(eq(playerSeason2024.playerId, canonicalId))
-      .limit(1);
+    // Fallback: try weeklyStats aggregation for older seasons too
+    const weeklyResult = await fetchFromWeeklyStats(canonicalId, season, asOfWeek);
+    if (weeklyResult && weeklyResult.gamesPlayed > 0) {
+      return weeklyResult;
+    }
     
-    if (player2024[0]) {
-      const p = player2024[0];
-      return {
-        gamesPlayed: p.games ?? 0,
-        gamesStarted: p.games ?? 0,
-        snapCount: 0,
-        snapShare: 0,
-        fantasyPointsPpr: p.fptsPpr ?? 0,
-        fantasyPointsHalfPpr: (p.fptsPpr ?? 0) * 0.5 + (p.fpts ?? 0) * 0.5,
-        targets: p.targets ?? undefined,
-        receptions: p.receptions ?? undefined,
-        receivingYards: p.recYards ?? undefined,
-        receivingTds: p.recTds ?? undefined,
-        rushAttempts: p.rushAtt ?? undefined,
-        rushYards: p.rushYards ?? undefined,
-        rushTds: p.rushTds ?? undefined,
-        passingAttempts: p.att ?? undefined,
-        passingYards: p.passYards ?? undefined,
-        passingTds: p.passTds ?? undefined,
-        interceptions: p.int ?? undefined,
-        targetShare: p.targetShare ?? undefined,
-        airYards: undefined,
-        redZoneTargets: undefined,
-        redZoneCarries: undefined,
-      };
+    // Final fallback: playerSeason2024 for 2024 data only
+    if (season === 2024) {
+      const player2024 = await db
+        .select()
+        .from(playerSeason2024)
+        .where(eq(playerSeason2024.playerId, canonicalId))
+        .limit(1);
+      
+      if (player2024[0]) {
+        const p = player2024[0];
+        return {
+          gamesPlayed: p.games ?? 0,
+          gamesStarted: p.games ?? 0,
+          snapCount: 0,
+          snapShare: 0,
+          fantasyPointsPpr: p.fptsPpr ?? 0,
+          fantasyPointsHalfPpr: (p.fptsPpr ?? 0) * 0.5 + (p.fpts ?? 0) * 0.5,
+          targets: p.targets ?? undefined,
+          receptions: p.receptions ?? undefined,
+          receivingYards: p.recYards ?? undefined,
+          receivingTds: p.recTds ?? undefined,
+          rushAttempts: p.rushAtt ?? undefined,
+          rushYards: p.rushYards ?? undefined,
+          rushTds: p.rushTds ?? undefined,
+          passingAttempts: p.att ?? undefined,
+          passingYards: p.passYards ?? undefined,
+          passingTds: p.passTds ?? undefined,
+          interceptions: p.int ?? undefined,
+          targetShare: p.targetShare ?? undefined,
+          airYards: undefined,
+          redZoneTargets: undefined,
+          redZoneCarries: undefined,
+        };
+      }
     }
     
     return {
@@ -201,6 +220,96 @@ async function fetchSeasonStats(
       fantasyPointsPpr: 0,
       fantasyPointsHalfPpr: 0,
     };
+  }
+}
+
+/**
+ * Get nfl_data_py_id (GSIS format) for a canonical player ID from identity map
+ */
+async function getNflDataPyIdForCanonical(canonicalId: string): Promise<string | null> {
+  try {
+    const identity = await db
+      .select({ nflDataPyId: playerIdentityMap.nflDataPyId })
+      .from(playerIdentityMap)
+      .where(eq(playerIdentityMap.canonicalId, canonicalId))
+      .limit(1);
+    
+    return identity[0]?.nflDataPyId ?? null;
+  } catch (error) {
+    console.error(`[FORGE/Context] Error fetching nflDataPyId for ${canonicalId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Fetch and aggregate season stats from weeklyStats table
+ */
+async function fetchFromWeeklyStats(
+  canonicalId: string,
+  season: number,
+  asOfWeek: number
+): Promise<ForgeContext['seasonStats'] | null> {
+  try {
+    const nflDataPyId = await getNflDataPyIdForCanonical(canonicalId);
+    if (!nflDataPyId) return null;
+    
+    const weekCondition = asOfWeek > 0 
+      ? lte(weeklyStats.week, asOfWeek)
+      : sql`1=1`;
+    
+    const aggregated = await db
+      .select({
+        gamesPlayed: count(weeklyStats.week),
+        totalSnaps: sum(weeklyStats.snaps),
+        totalFpPpr: sum(weeklyStats.fantasyPointsPpr),
+        totalFpHalf: sum(weeklyStats.fantasyPointsHalf),
+        totalTargets: sum(weeklyStats.targets),
+        totalReceptions: sum(weeklyStats.rec),
+        totalRecYards: sum(weeklyStats.recYd),
+        totalRecTds: sum(weeklyStats.recTd),
+        totalRushAtt: sum(weeklyStats.rushAtt),
+        totalRushYards: sum(weeklyStats.rushYd),
+        totalRushTds: sum(weeklyStats.rushTd),
+        totalPassYards: sum(weeklyStats.passYd),
+        totalPassTds: sum(weeklyStats.passTd),
+        totalInt: sum(weeklyStats.int),
+      })
+      .from(weeklyStats)
+      .where(
+        and(
+          eq(weeklyStats.playerId, nflDataPyId),
+          eq(weeklyStats.season, season),
+          weekCondition
+        )
+      );
+    
+    if (aggregated[0] && Number(aggregated[0].gamesPlayed) > 0) {
+      const a = aggregated[0];
+      console.log(`[FORGE/Context] Using weeklyStats for ${canonicalId}: ${a.gamesPlayed} games, ${a.totalFpPpr} FP`);
+      return {
+        gamesPlayed: Number(a.gamesPlayed) ?? 0,
+        gamesStarted: Number(a.gamesPlayed) ?? 0,
+        snapCount: Number(a.totalSnaps) ?? 0,
+        snapShare: 0,
+        fantasyPointsPpr: Number(a.totalFpPpr) ?? 0,
+        fantasyPointsHalfPpr: Number(a.totalFpHalf) ?? (Number(a.totalFpPpr) ?? 0) * 0.75,
+        targets: Number(a.totalTargets) ?? undefined,
+        receptions: Number(a.totalReceptions) ?? undefined,
+        receivingYards: Number(a.totalRecYards) ?? undefined,
+        receivingTds: Number(a.totalRecTds) ?? undefined,
+        rushAttempts: Number(a.totalRushAtt) ?? undefined,
+        rushYards: Number(a.totalRushYards) ?? undefined,
+        rushTds: Number(a.totalRushTds) ?? undefined,
+        passingYards: Number(a.totalPassYards) ?? undefined,
+        passingTds: Number(a.totalPassTds) ?? undefined,
+        interceptions: Number(a.totalInt) ?? undefined,
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`[FORGE/Context] Error fetching from weeklyStats:`, error);
+    return null;
   }
 }
 
