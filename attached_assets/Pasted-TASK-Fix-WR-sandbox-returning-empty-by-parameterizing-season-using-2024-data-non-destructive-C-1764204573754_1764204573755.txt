@@ -1,0 +1,179 @@
+TASK: Fix WR sandbox returning empty by parameterizing season + using 2024 data (non-destructive)
+
+Current Problem
+
+Endpoint: /api/admin/wr-rankings-sandbox
+
+Implementation: server/routes.ts around line 5439
+
+It currently:
+
+Hardcodes season = 2025
+
+Requires 2+ games and 10+ targets
+
+Relies on data in:
+
+weekly_stats
+
+player_identity_map
+
+wr_role_bank
+
+In this Replit environment:
+
+2025 data is not populated in those tables
+
+2024 backfill scripts do exist:
+
+python server/scripts/backfillWeeklyUsage.py 2024
+
+python server/scripts/populatePlayerIdentityFromUsage.py
+
+npx tsx server/scripts/computeAllWRRoleBank.ts 2024
+
+Result: WR sandbox returns [], while FORGE still loads ~396 WRs from its own data sources.
+
+Goal
+
+Parameterize season in the WR sandbox endpoint instead of hardcoding 2025.
+
+Default to 2024 for now so we can use the existing backfill scripts.
+
+Update the WR Rankings page (/rankings/wr) to explicitly request season=2024.
+
+Keep everything else unchanged:
+
+Do not modify WR sandbox logic (joins, filters, role bank usage).
+
+Do not touch RB/TE/QB endpoints.
+
+Do not modify any FORGE modules.
+
+Step 1 – Make /api/admin/wr-rankings-sandbox accept a season query param
+
+In server/routes.ts at the /api/admin/wr-rankings-sandbox handler:
+
+Find the code that sets season (currently hardcoded to 2025), something like:
+
+const season = 2025;
+
+
+Replace it with:
+
+const season =
+  req.query.season && !Number.isNaN(Number(req.query.season))
+    ? Number(req.query.season)
+    : 2024; // default to 2024 for now
+
+
+Make sure the database query for the sandbox uses this season variable everywhere instead of 2025.
+
+Important:
+
+Do not change other filters (e.g., games played, targets, position = 'WR').
+
+Do not refactor query logic, only swap the season source.
+
+Step 2 – Document & confirm the backfill commands for 2024
+
+We already know the commands from your earlier scan, but I want them explicitly confirmed and runnable:
+
+From the project root, these should populate 2024 data:
+
+# 1) Weekly stats backfill (2024)
+python server/scripts/backfillWeeklyUsage.py 2024
+
+# 2) Player identity map
+python server/scripts/populatePlayerIdentityFromUsage.py
+
+# 3) WR Role Bank for 2024
+npx tsx server/scripts/computeAllWRRoleBank.ts 2024
+
+
+Tasks:
+
+Verify each command runs without crashing.
+
+If needed, note any required env vars (e.g., DATABASE_URL) but do not hardcode secrets.
+
+After they run, confirm that weekly_stats, player_identity_map, and wr_role_bank have non-empty rows for season = 2024.
+
+Step 3 – Verify the sandbox endpoint returns data for 2024
+
+After running the backfills and season patch:
+
+Run:
+
+curl -s "http://localhost:5000/api/admin/wr-rankings-sandbox?season=2024" | head -80
+
+
+Expected:
+
+Non-empty JSON array of WR rows.
+
+Includes all the fields the WR sandbox UI expects (playerId, team, usage, alpha inputs, etc.).
+
+Do not change the response shape.
+
+Step 4 – Update WR Rankings page to call the sandbox with season=2024
+
+In the client WR Rankings page:
+
+File: client/src/pages/WRRankings.tsx (or the main WR rankings React page)
+
+Find where it calls /api/admin/wr-rankings-sandbox via fetch/axios.
+
+Change that call so it includes season=2024 in the URL, for example:
+
+const url = new URL('/api/admin/wr-rankings-sandbox', window.location.origin);
+url.searchParams.set('season', '2024');
+
+
+or just:
+
+fetch('/api/admin/wr-rankings-sandbox?season=2024');
+
+
+Do not alter any FORGE calls on this page:
+
+Keep fetchForgeBatch({ position: 'WR', limit: ... }) untouched.
+
+Keep the joining logic (Sandbox α vs FORGE α vs Δ) as-is.
+
+Step 5 – Final checks
+
+You’re done when:
+
+curl -s "http://localhost:5000/api/admin/wr-rankings-sandbox?season=2024" | head -80
+shows real WR rows (not []).
+
+Visiting /rankings/wr:
+
+Shows a non-empty table of WR players.
+
+Displays:
+
+Sandbox α
+
+FORGE α
+
+Δ column
+
+Still behaves read-only (no admin controls).
+
+No changes were made to:
+
+FORGE server modules
+
+RB/TE/QB sandbox/admin endpoints
+
+Core WR sandbox scoring logic (only the season source).
+
+If you need to adjust exact file paths or variable names, keep the architecture invariant:
+
+WR sandbox endpoint is now season-parameterized with a default of 2024.
+
+WR rankings page explicitly requests season=2024.
+
+Data is supplied via the existing 2024 backfill scripts.

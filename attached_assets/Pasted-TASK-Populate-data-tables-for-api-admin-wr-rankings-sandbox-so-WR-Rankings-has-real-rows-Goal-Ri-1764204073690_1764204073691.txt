@@ -1,0 +1,192 @@
+TASK: Populate data tables for /api/admin/wr-rankings-sandbox so WR Rankings has real rows
+
+Goal
+
+Right now:
+
+GET /api/forge/batch?position=WR → returns ~396 players (works)
+
+GET /api/admin/wr-rankings-sandbox → returns an empty list (0 players)
+
+The WR Rankings page at /rankings/wr depends on /api/admin/wr-rankings-sandbox as its primary data source. I need you to:
+
+Identify exactly which DB tables the sandbox endpoint reads from.
+
+Find any backfill / ETL scripts that populate those tables.
+
+Give me runnable commands (for Replit) to populate them for a given season/week (e.g. 2024, week 17).
+
+If no backfill exists, create a minimal backfill script that pulls existing weekly data (nfl-data-py / Sleeper / existing tables) and seeds enough rows for the sandbox to return meaningful WR data.
+
+Step 1 – Locate the sandbox endpoint + its queries
+
+Find the implementation of:
+
+/api/admin/wr-rankings-sandbox
+
+
+It will probably live somewhere like:
+
+server/modules/admin/wrRankingsSandbox.ts
+
+or server/routes/admin/wrRankingsSandbox.ts
+
+or similar.
+
+In that handler, identify the exact tables / views it queries.
+I expect to see references to something like:
+
+weeklyStats
+
+wrRoleBank
+
+playerIdentityMap
+
+any play-by-play–based tables (deep targets, red zone targets, etc.)
+
+Document for me (in your response):
+
+File path of the handler
+
+The tables/views it uses
+
+How it joins them (by player_id, gsis_id, etc.)
+
+Do not change the endpoint logic yet — just map the dependencies.
+
+Step 2 – Find the existing backfill / ETL for those tables
+
+Search the codebase for where those tables are written, not read.
+
+Specifically:
+
+weeklyStats
+
+wrRoleBank
+
+playerIdentityMap
+
+deep / red zone target tables if used
+
+Look for:
+
+scripts/ or etl/ or jobs/ directories
+
+files mentioning:
+
+backfill
+
+ingest
+
+nfl_data_py
+
+sleeper
+
+weekly_stats
+
+wr_role
+
+any package.json scripts like:
+
+"scripts": {
+  "backfill:weekly": "...",
+  "etl:wr-role-bank": "..."
+}
+
+
+Your output should include:
+
+File paths of any backfill/ingest scripts you find
+
+The language (TypeScript/Node vs Python)
+
+The expected way to run them (e.g. pnpm ts-node scripts/backfillWeeklyStats.ts 2024, python scripts/backfill_weekly_stats.py --season 2024)
+
+Step 3 – Propose concrete commands for Replit
+
+Based on what you find in Step 2, I need exact commands I can run in the Replit shell to populate 2024 data, at least up to week 17.
+
+Example of the format I want (fill in with real ones):
+
+# 1) Backfill weekly stats for 2024
+pnpm ts-node scripts/backfillWeeklyStats.ts 2024
+
+# 2) Build WR role bank
+pnpm ts-node scripts/buildWrRoleBank.ts 2024
+
+# 3) Refresh player identity map
+pnpm ts-node scripts/syncPlayerIdentityMap.ts
+
+
+Also note any env vars needed:
+
+e.g. NFL_DATA_API_KEY, DATABASE_URL, etc.
+
+Step 4 – If no backfill exists, build a minimal one
+
+If you do not find any proper backfill scripts for these tables:
+
+Create a new script in a sensible location, for example:
+
+server/scripts/backfillWrSandbox.ts (TypeScript)
+or
+
+scripts/backfill_wr_sandbox.py (Python) if the project already uses Python + nfl-data-py.
+
+This script should, at minimum:
+
+Use existing data sources already in the project (e.g. nfl-data-py, Sleeper, or any weekly_stats type table if it exists).
+
+Insert enough rows into:
+
+weeklyStats
+
+wrRoleBank
+
+playerIdentityMap (or ensure identity is synced)
+
+Target one season initially (2024) to keep runtime safe.
+
+Be idempotent (safe to run multiple times).
+
+Add a package.json script or clear Replit command to run it.
+For example:
+
+"scripts": {
+  "backfill:wr-sandbox": "ts-node server/scripts/backfillWrSandbox.ts 2024"
+}
+
+
+After running it, GET /api/admin/wr-rankings-sandbox should return a non-empty JSON list of WR rows.
+
+Acceptance Criteria
+
+You’re done when:
+
+You can run one or more commands in Replit that:
+
+Populate the necessary DB tables
+
+Do not crash
+
+Log some basic “X rows inserted/updated” info
+
+After running those commands:
+
+curl -s "http://localhost:5000/api/admin/wr-rankings-sandbox" | head -80
+returns real WR data, not [].
+
+The WR Rankings page at /rankings/wr:
+
+Shows actual rows (not “0 of 0 players”)
+
+Still shows FORGE α + Sandbox α + Δ columns working as before
+
+No changes were made to:
+
+/api/forge/*
+
+/admin/wr-rankings-sandbox logic
+aside from possibly improving data access/joins.
+
+Do not refactor the WR sandbox endpoint or UI; we only want to feed it with data.
