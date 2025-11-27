@@ -32,11 +32,11 @@ def download_roster_data(season):
         print(f"❌ Error downloading roster: {e}", file=sys.stderr)
         return None
 
-def populate_players():
+def populate_players(season=2024):
     """Populate player_identity_map from roster data"""
     
-    # Download 2025 rosters
-    rosters = download_roster_data(2025)
+    # Download rosters for the specified season
+    rosters = download_roster_data(season)
     if rosters is None:
         return
     
@@ -101,4 +101,8 @@ def populate_players():
         conn.close()
 
 if __name__ == "__main__":
-    populate_players()
+    import argparse
+    parser = argparse.ArgumentParser(description='Populate player identity map from roster data')
+    parser.add_argument('season', type=int, nargs='?', default=2024, help='NFL season year (default: 2024)')
+    args = parser.parse_args()
+    populate_players(args.season)
