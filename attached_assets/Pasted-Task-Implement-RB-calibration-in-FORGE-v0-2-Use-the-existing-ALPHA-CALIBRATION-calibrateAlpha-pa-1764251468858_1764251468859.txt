@@ -1,0 +1,131 @@
+Task: Implement RB calibration in FORGE v0.2
+
+Use the existing ALPHA_CALIBRATION + calibrateAlpha pattern we use for WR.
+
+Right now, RB forgeAlpha = rawAlpha, in a tight band (~36–53), with huge negative deltas vs Sandbox.
+
+Goal: spread RB calibrated scores onto an intuitive 0–100-ish scale, similar to WR:
+
+Elite RBs (CMC, JT, Bijan, Gibbs, Achane) → roughly 75–95
+
+Strong RB1/2s (Cook, Jacobs, Barkley, Etienne, Breece) → 60–80
+
+Solid but flawed / committee backs → 45–65
+
+Steps to implement:
+
+Use the RB rawAlpha distribution to get real p10/p90:
+
+Either via the debug helper we discussed
+(e.g. /api/forge/debug/distribution?position=RB&season=2025)
+or by computing in the forge service:
+
+min, p10, p50, p90, max across all 2025 RB rawAlpha values.
+
+Set ALPHA_CALIBRATION.RB accordingly in the shared config, e.g.:
+
+ALPHA_CALIBRATION.RB = {
+  p10: <RB_p10>,
+  p90: <RB_p90>,
+  outMin: 30,   // lower visual bound
+  outMax: 90,   // upper visual bound
+};
+
+
+Tune outMin/outMax so the top RBs land in that 80–95 zone similar to elite WRs.
+
+Make sure calibrateAlpha(raw, 'RB') is actually called in the forge pipeline:
+
+Anywhere we currently set:
+
+score.rawAlpha = raw;
+score.alpha = raw;
+
+
+change to:
+
+score.rawAlpha = raw;
+score.alpha = calibrateAlpha(raw, 'RB');
+
+
+After implementing, sanity check:
+
+Pull GET /api/forge/batch?position=RB&season=2025&week=10
+
+Confirm:
+
+rawAlpha remains in the 36–53 band
+
+alpha is now spread ~30–90+
+
+Δ for CMC/JT/Bijan/Gibbs/Achane is no longer -50+ but more like -15 to +10.
+
+2️⃣ Call out the export / week toggle mismatch
+
+Your exports for week 6 and week 10 are literally the same file. Agent claims:
+
+“CMC at week 4: 45.9, at week 10: 46.6”
+
+But your JSON shows 45.4 for both 6 and 10. So something’s lying — either:
+
+The UI display is correct and the export feature is stale, or
+
+The agent tested via some other path (Postman/curl) that’s not wired to your export button.
+
+You can be blunt here:
+
+Task: Fix RB Export Week Binding
+
+I exported RB Rankings JSON for week 6 and week 10 and they are identical (same forgeAlpha, same deltas).
+
+You said CMC changes from 45.9 (week 4) to 46.6 (week 10), but my export shows 45.4 for both 6 and 10.
+
+Please:
+
+Verify that the export function on /rankings/rb:
+
+Uses the same season and week state as the table.
+
+Either:
+
+Exports the already-fetched in-memory rows currently displayed, or
+
+Calls the same API with the active season/week.
+
+Ensure that when I change the week toggle:
+
+The table refetches using the new week.
+
+The export reflects that exact data (no default params, no stale cache).
+
+Add a small debug log or label (temporary is fine):
+
+e.g. “Exporting RB rankings for season=2025, week=6” so we can visually confirm.
+
+3️⃣ How we’ll know RB is actually “fixed”
+
+What I’ll expect to see after the agent’s next pass:
+
+Forge RB calibrated like WR:
+
+forgeRawAlpha in the tight 36–53 band
+
+forgeAlpha fanned out (e.g. CMC closer to 80–90, mid guys in 55–75)
+
+Δ no longer giant systemic -40/-50s — more like (-15 to +10) with a few strong disagreements.
+
+Week toggle + export:
+
+Exporting week 4 vs week 10 gives different JSON.
+
+The top names stay the same, but values subtly shift with week.
+
+Once that’s in, then we can actually start reading RB disagreements the way we did WR:
+
+Is FORGE lower than you on Kyren because of explosiveness / insulation?
+
+Is it too low on Breece because of TD luck / offensive environment?
+
+Is it pumped on weird guys like Dowdle / Harvey?
+
+Right now, all it’s saying is “I live in the 40s,” which we already beat out of WR.

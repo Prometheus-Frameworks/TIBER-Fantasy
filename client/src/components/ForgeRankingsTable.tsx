@@ -159,20 +159,31 @@ export default function ForgeRankingsTable({
   }, [rows, searchQuery, sortField, sortOrder, onlyDisagreements, minDisagreement, showMissingForge]);
 
   const handleExport = () => {
-    const exportData = filteredAndSortedRows.map((r, idx) => ({
-      rank: idx + 1,
-      playerName: r.playerName,
-      team: r.team,
-      gamesPlayed: r.gamesPlayed,
-      sandboxAlpha: r.sandboxAlpha,
-      forgeAlpha: r.forgeAlpha ?? null,
-      forgeRawAlpha: r.forgeRawAlpha ?? null,
-      delta: r.forgeAlpha != null ? Math.round((r.forgeAlpha - r.sandboxAlpha) * 10) / 10 : null,
-      trajectory: r.forgeTrajectory ?? null,
-    }));
-    const json = JSON.stringify(exportData, null, 2);
+    const exportPayload = {
+      meta: {
+        position,
+        season,
+        week: week ?? 'full',
+        exportedAt: new Date().toISOString(),
+        count: filteredAndSortedRows.length,
+      },
+      data: filteredAndSortedRows.map((r, idx) => ({
+        rank: idx + 1,
+        playerName: r.playerName,
+        team: r.team,
+        gamesPlayed: r.gamesPlayed,
+        sandboxAlpha: r.sandboxAlpha,
+        forgeAlpha: r.forgeAlpha ?? null,
+        forgeRawAlpha: r.forgeRawAlpha ?? null,
+        delta: r.forgeAlpha != null ? Math.round((r.forgeAlpha - r.sandboxAlpha) * 10) / 10 : null,
+        trajectory: r.forgeTrajectory ?? null,
+      })),
+    };
+    const json = JSON.stringify(exportPayload, null, 2);
     navigator.clipboard.writeText(json).then(() => {
-      alert(`Copied ${exportData.length} ${position} rankings to clipboard!`);
+      const weekLabel = week ?? 'Full Season';
+      console.log(`[FORGE Export] Exporting ${position} rankings for season=${season}, week=${weekLabel}`);
+      alert(`Copied ${exportPayload.data.length} ${position} rankings to clipboard!\n\nSeason: ${season}, Week: ${weekLabel}`);
     });
   };
 

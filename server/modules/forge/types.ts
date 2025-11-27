@@ -356,8 +356,16 @@ export interface CalibrationParams {
  * - Top WRs (Chase, JSN, Amon-Ra) cluster around 48-51
  * - Calibration maps p10(30)→25, p90(52)→90
  * 
- * RB/TE/QB: undefined (pass-through) until data is analyzed.
- * Run `/api/forge/debug/distribution?position=RB&season=2025` to get p10/p90.
+ * RB calibrated based on 2025 season week 10 distribution:
+ * - Observed: min=23.8, p10=23.9, p50=24.6, p90=42.6, max=53
+ * - Elite RBs (CMC, JT, Bijan) cluster around 46-53 rawAlpha
+ * - Calibration maps p10(24)→25, p90(48)→90
+ * - Elite RBs (rawAlpha ~46-53) → calibrated 80-95
+ * - Strong RB1/2s (rawAlpha ~36-45) → calibrated 60-80
+ * - Committee/depth backs (rawAlpha ~24-35) → calibrated 25-55
+ * 
+ * TE/QB: undefined (pass-through) until data is analyzed.
+ * Run `/api/forge/debug/distribution?position=TE&season=2025` to get p10/p90.
  */
 export const ALPHA_CALIBRATION: Partial<Record<PlayerPosition, CalibrationParams>> = {
   WR: {
@@ -366,7 +374,12 @@ export const ALPHA_CALIBRATION: Partial<Record<PlayerPosition, CalibrationParams
     outMin: 25,   // Calibrated floor for low-data players
     outMax: 90,   // Calibrated ceiling for elite players
   },
-  RB: undefined,  // Pass-through (plug p10/p90 after RB distribution analysis)
+  RB: {
+    p10: 24,      // RB 2025 observed p10 rawAlpha (tight cluster of low-usage backs)
+    p90: 48,      // RB 2025 target p90 (between observed p90=42.6 and max=53)
+    outMin: 25,   // Calibrated floor for depth/committee backs
+    outMax: 90,   // Calibrated ceiling for elite RBs
+  },
   TE: undefined,  // Pass-through
   QB: undefined,  // Pass-through
 };
