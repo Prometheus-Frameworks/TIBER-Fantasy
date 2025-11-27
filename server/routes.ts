@@ -5445,7 +5445,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Import player_injuries table for IR status
       const { playerInjuries } = await import('@shared/schema');
       
-      // STEP 1: Query 2025 WRs with 2+ games/10+ targets to get qualified player list
+      // Parse season from query param, default to 2024 (NFLfastR data available)
+      const season = req.query.season && !Number.isNaN(Number(req.query.season))
+        ? Number(req.query.season)
+        : 2024;
+      
+      // STEP 1: Query WRs with 2+ games/10+ targets to get qualified player list
       // IMPORTANT: Join with player_identity_map for authoritative position data
       // (weekly_stats.position has incorrect data - RBs labeled as "WR")
       const results = await db
@@ -5486,7 +5491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           wrRoleBank,
           and(
             eq(weeklyStats.playerId, wrRoleBank.playerId),
-            eq(wrRoleBank.season, 2025)
+            eq(wrRoleBank.season, season)
           )
         )
         .leftJoin(
@@ -5495,7 +5500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
         .where(
           and(
-            eq(weeklyStats.season, 2025),
+            eq(weeklyStats.season, season),
             eq(playerIdentityMap.position, 'WR')  // Use authoritative position from player_identity_map
           )
         )
@@ -5537,7 +5542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .from(wrRoleBank)
           .where(
             and(
-              eq(wrRoleBank.season, 2025),
+              eq(wrRoleBank.season, season),
               inArray(wrRoleBank.playerId, qualifiedPlayerIds)
             )
           );
@@ -5550,7 +5555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // STEP 3: Calculate advanced metrics ONLY for qualified players
-      const advancedMetricsMap = await calculateWRAdvancedMetrics(2025, 2, momentumMap, qualifiedPlayerIds);
+      const advancedMetricsMap = await calculateWRAdvancedMetrics(season, 2, momentumMap, qualifiedPlayerIds);
 
       // Calculate volume-weighted efficiency metrics and merge advanced metrics
       const processedPlayers = results.map(player => {
