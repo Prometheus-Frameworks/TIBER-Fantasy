@@ -84,7 +84,8 @@ export default function RBFormulaWeightsPanel({
       {!isCollapsed && (
         <div className="p-4 pt-0 space-y-4">
           <p className="text-xs text-slate-500 border-l-2 border-green-500/50 pl-3">
-            These weights power <span className="text-green-400">Sandbox α</span>. FORGE uses its own engine with similar categories but independent calibration.
+            These weights describe how we think about RBs (volume, efficiency, role leverage, stability, context). 
+            <span className="text-purple-400">FORGE</span> uses a more complex internal formula, but this panel shows the philosophy behind it.
           </p>
 
           <div className="flex flex-wrap gap-2">

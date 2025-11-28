@@ -139,27 +139,38 @@ export default function ForgeTransparencyPanel({ position }: ForgeTransparencyPa
           <div className="border-t border-slate-700 pt-4 space-y-4">
             <div className="flex items-center gap-2">
               <GitBranch className="h-4 w-4 text-slate-400" />
-              <h4 className="text-sm font-medium text-slate-300">Ranking Flow</h4>
+              <h4 className="text-sm font-medium text-slate-300">How FORGE α Works</h4>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
-                <div className="text-sm font-medium text-blue-400 mb-1">Sandbox α</div>
-                <p className="text-xs text-slate-500">
-                  Uses the formula weights from the sliders above. Adjustable in real-time to explore different ranking philosophies.
-                </p>
+            <div className="bg-purple-900/20 rounded-lg p-4 border border-purple-700/50">
+              <div className="text-sm font-medium text-purple-400 mb-2">Displayed Rankings = FORGE α (Calibrated)</div>
+              <p className="text-xs text-slate-400 mb-3">
+                The rankings shown above are powered by the FORGE engine, our production scoring system. 
+                FORGE processes raw player data through position-specific feature extraction, then calibrates 
+                scores to a 0-100 scale for intuitive comparison.
+              </p>
+              <div className="flex flex-wrap gap-3 text-xs">
+                <div className="bg-slate-800/50 px-2 py-1 rounded text-slate-400">
+                  1. Feature extraction from play-by-play data
+                </div>
+                <div className="bg-slate-800/50 px-2 py-1 rounded text-slate-400">
+                  2. Position-specific weighting
+                </div>
+                <div className="bg-slate-800/50 px-2 py-1 rounded text-slate-400">
+                  3. Percentile calibration (p10→25, p90→90)
+                </div>
               </div>
+            </div>
 
-              <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
-                <div className="text-sm font-medium text-purple-400 mb-1">FORGE α</div>
-                <p className="text-xs text-slate-500">
-                  Computed from raw engine features → rawAlpha → calibrated alpha using position-specific percentile mapping.
-                </p>
+            <div className="bg-slate-800/30 rounded-lg p-3 border border-slate-700/50">
+              <div className="text-xs text-slate-500">
+                <span className="text-slate-400 font-medium">Note:</span> The Sandbox model is our internal tuning environment 
+                used during development. Sandbox scores may differ from what's displayed and are not shown to users.
               </div>
             </div>
 
             <div className="text-xs text-slate-600 text-center">
-              Engine: FORGE v0.2 ({position} calibrated) • Calibration: p10→25, p90→90
+              Engine: FORGE v0.2 ({position} calibrated) • Last updated: 2025 Season
             </div>
           </div>
         </div>
