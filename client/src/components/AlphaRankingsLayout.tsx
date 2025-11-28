@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'wouter';
+import { Link } from 'wouter';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 
 type Position = 'WR' | 'RB' | 'TE' | 'QB';
@@ -9,13 +9,6 @@ interface AlphaRankingsLayoutProps {
   onRefresh?: () => void;
   isRefreshing?: boolean;
 }
-
-const POSITION_LABELS: Record<Position, string> = {
-  WR: 'Wide Receivers',
-  RB: 'Running Backs', 
-  TE: 'Tight Ends',
-  QB: 'Quarterbacks',
-};
 
 const POSITION_ROUTES: Record<Position, string> = {
   WR: '/rankings/wr',
@@ -30,7 +23,6 @@ export default function AlphaRankingsLayout({
   onRefresh,
   isRefreshing = false,
 }: AlphaRankingsLayoutProps) {
-  const [location] = useLocation();
   
   return (
     <div className="min-h-screen bg-[#0a0e1a] text-white p-6">
