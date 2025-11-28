@@ -1,0 +1,298 @@
+🔧 Agent Task: Promote FORGE WR/RB to Main Rankings UI (Keep Existing Look)
+
+Goal:
+Rework the Rankings UI so WR/RB FORGE + Sandbox rankings become the primary experience, while keeping the current color scheme and general vibe unchanged. Move the old “Role Context Rankings” into its own advanced/secondary view.
+
+1. Do NOT Change Global Styling
+
+Do not modify:
+
+Tailwind config
+
+Theme tokens
+
+Global colors, fonts, or background styles
+
+Reuse existing classes/components:
+
+Card shells, header styles, dark backgrounds, accent colors
+
+Any new UI elements (tabs, tooltips, labels) should:
+
+Use existing button / tab styles where possible
+
+Or minimal utility classes consistent with current design (no new color hexes)
+
+2. Rankings Routing Restructure
+
+Current assumption:
+
+We have:
+
+WRRankings.tsx (WR Sandbox vs FORGE rankings)
+
+RBRankings.tsx (RB Sandbox vs FORGE rankings)
+
+A “Role Context Rankings” view currently under /rankings or similar.
+
+Change:
+
+Create a main Rankings entry point:
+
+Route: GET /rankings → should render the WR rankings view by default, inside a position tab layout.
+
+Keep /rankings/wr and /rankings/rb routes, but they should use the same shared layout (see next section).
+
+Move Role Context Rankings to its own route:
+
+New route: /rankings/role-context
+
+Update navigation menu:
+
+Main nav: “Rankings”
+
+Under an advanced/secondary section: “Role Context Rankings”
+
+No logic changes to role-context itself, just relocate it so it’s clearly a secondary/advanced view.
+
+3. Create a Shared Rankings Layout with Position Tabs
+
+Create a shared layout component, for example:
+
+// client/src/components/AlphaRankingsLayout.tsx
+interface AlphaRankingsLayoutProps {
+  position: 'WR' | 'RB' | 'TE' | 'QB';
+  children: React.ReactNode;
+}
+
+
+Responsibilities:
+
+Render the page header, reusing current style:
+
+Title line: e.g. WR RANKINGS
+
+Subtitle: 2025 season • minimum X games / usage criteria
+
+Render position tabs at the top-right (reusing existing tab/button styles):
+
+Tabs: WR, RB, TE, QB
+
+Clicking a tab routes to:
+
+/rankings/wr
+
+/rankings/rb
+
+/rankings/te (placeholder page)
+
+/rankings/qb (placeholder page)
+
+Highlight the active tab based on position.
+
+Wrap existing WR/RB rankings pages in this layout:
+
+// WR rankings page
+<AlphaRankingsLayout position="WR">
+  {/* WR-specific content (sliders + table + transparency panel) */}
+</AlphaRankingsLayout>
+
+// RB rankings page
+<AlphaRankingsLayout position="RB">
+  {/* RB-specific content */}
+</AlphaRankingsLayout>
+
+4. Module Structure for WR/RB Rankings Pages
+
+Each position page (WR and RB) should have three stacked modules, in this order:
+
+Formula Weights Panel (Sliders)
+
+Dual Rankings Table (Sandbox vs FORGE)
+
+Algorithm Transparency Panel
+
+Re-use existing pieces; don’t design new visuals.
+
+4.1. Formula Weights Panel (Sliders)
+
+Extract the existing WR slider UI from the current WR Rankings Sandbox page into a reusable component:
+
+// client/src/components/WRFormulaWeightsPanel.tsx
+interface WRFormulaWeightsPanelProps {
+  // props/hooks as needed; it can internally manage state + save/reset as it already does
+}
+
+
+Use the same card styling, layout, and colors as in the attached screenshot.
+
+Place this component at the top of /rankings/wr.
+
+For RB:
+
+If an RB sandbox with sliders already exists, create a similar component:
+
+// client/src/components/RBFormulaWeightsPanel.tsx
+
+
+If not, it’s acceptable to:
+
+Either reuse the WR component but with RB labels,
+
+Or skip RB sliders for now and show only the WR sliders on WR page.
+
+Add a small explanatory line under the title:
+
+“These weights power Sandbox α. FORGE uses its own engine and ignores these sliders.”
+
+Use existing text styles; no new fonts or colors.
+
+4.2. Dual Rankings Table (Sandbox vs FORGE)
+
+Both WR and RB rankings tables should share behavior and structure. If not already extracted, create a reusable component:
+
+// client/src/components/ForgeRankingsTable.tsx
+interface ForgeRankingsRow {
+  rank: number;
+  playerName: string;
+  team: string;
+  gamesPlayed: number;
+  sandboxAlpha: number | null;
+  forgeAlpha: number | null;
+  delta: number | null;
+  trajectory: string | null;
+  // optional: rawAlpha if we want dev toggles
+}
+
+interface ForgeRankingsTableProps {
+  position: 'WR' | 'RB';
+  rows: ForgeRankingsRow[];
+}
+
+
+Behavior:
+
+Columns (for both WR and RB):
+
+Rank
+
+Player
+
+Team
+
+Games
+
+Sandbox α
+
+FORGE α
+
+Δ (FORGE − Sandbox, with existing color-coded severity)
+
+Trajectory (existing arrows / labels)
+
+Keep the existing “Show big disagreements only” filter:
+
+Use current delta severity function if present, otherwise implement:
+
+function getDeltaSeverity(delta: number) {
+  const abs = Math.abs(delta);
+  if (abs >= 15) return 'major';
+  if (abs >= 8) return 'moderate';
+  if (abs >= 4) return 'minor';
+  return 'none';
+}
+
+
+The “big disagreements” filter should show rows where abs(delta) >= 8.
+
+Missing FORGE data:
+
+If forgeAlpha or delta is null, display — in the cell.
+
+These rows must not be hidden by the disagreement filter.
+
+Reuse the existing table styling (cards, headers, row colors).
+
+4.3. Algorithm Transparency Panel (Per Position)
+
+At the bottom of each WR/RB rankings page, add a simple panel explaining what powers the rankings.
+
+Create a component like:
+
+// client/src/components/ForgeTransparencyPanel.tsx
+interface ForgeTransparencyPanelProps {
+  position: 'WR' | 'RB' | 'TE' | 'QB';
+}
+
+
+Display (text-only, using current typography/colors):
+
+Data Sources for that position:
+
+Example for WR/RB:
+
+nflfastR weekly_stats
+
+Sleeper player data
+
+any internal tables (usage, depth chart, context features)
+
+Ranking flow:
+
+Sandbox α:
+
+“Uses the formula weights from the sliders above (volume, efficiency, production, stability).”
+
+FORGE α:
+
+“Computed from raw engine features → rawAlpha → calibrated alpha using position-specific calibration.”
+
+Engine version note:
+
+Example: “Engine: FORGE v0.2 (WR/RB calibrated)”
+
+Use existing info/secondary card styling; no new visuals or colors.
+
+5. Dev/Debug: Keep Existing rawAlpha + Export Features
+
+Ensure WR and RB rankings still support:
+
+rawAlpha in the API responses
+
+The Export JSON button including meta { position, season, week, count }
+
+If a dev-only toggle for rawAlpha (column/tooltip) already exists, keep it:
+
+Guard it behind NODE_ENV !== 'production' or existing dev flag.
+
+Don’t change its styling.
+
+6. Final Sanity Checklist
+
+After implementing:
+
+/rankings:
+
+Shows WR rankings with:
+
+Sliders
+
+Dual table (Sandbox vs FORGE)
+
+Transparency panel
+
+Position tabs at the top to switch WR/RB/TE/QB
+
+/rankings/rb:
+
+Same layout as WR, but with RB data and RB sliders (if available).
+
+/rankings/role-context:
+
+Old Role Context Rankings view, reachable from navigation as an advanced/secondary tool.
+
+Visuals:
+
+All cards, backgrounds, and colors match the existing theme.
+
+No new color scheme introduced.
