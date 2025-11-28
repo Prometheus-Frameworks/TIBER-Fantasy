@@ -14,6 +14,8 @@ import { db } from '../../infra/db';
 import { playerIdentityMap } from '@shared/schema';
 import { eq, and, isNotNull, sql } from 'drizzle-orm';
 import { createForgeSnapshot } from './forgeSnapshot';
+import { computeFPRForPlayer } from './fibonacciPatternResonance';
+import { PlayerIdentityService } from '../../services/PlayerIdentityService';
 
 const router = Router();
 
@@ -362,6 +364,80 @@ router.get('/debug/distribution', async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * GET /api/forge/fpr/:playerId
+ * 
+ * Compute Fibonacci Pattern Resonance for a player's usage history.
+ * Analyzes week-over-week usage patterns to detect growth, decay, or stability.
+ * 
+ * Path params:
+ * - playerId: canonical player ID or sleeper ID
+ * 
+ * Query params:
+ * - position (optional): WR | RB | TE | QB - defaults to player's position from identity
+ * - season (optional): number, defaults to 2025
+ */
+router.get('/fpr/:playerId', async (req: Request, res: Response) => {
+  try {
+    const { playerId } = req.params;
+    const positionParam = req.query.position as string | undefined;
+    const season = parseInt(req.query.season as string) || 2025;
+
+    if (!playerId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing playerId parameter',
+      });
+    }
+
+    const playerIdentityService = PlayerIdentityService.getInstance();
+    const identity = await playerIdentityService.getByAnyId(playerId);
+
+    if (!identity) {
+      return res.status(404).json({
+        success: false,
+        error: `Player not found: ${playerId}`,
+      });
+    }
+
+    const position = (positionParam?.toUpperCase() || identity.position) as PlayerPosition;
+    
+    if (!['WR', 'RB', 'TE', 'QB'].includes(position)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid position: ${position}. Must be WR, RB, TE, or QB.`,
+      });
+    }
+
+    const sleeperId = identity.externalIds?.sleeper || identity.canonicalId;
+
+    console.log(`[FORGE/FPR] Computing FPR for ${identity.fullName} (${position}), sleeperId=${sleeperId}, season=${season}`);
+
+    const result = await computeFPRForPlayer(sleeperId, position, season);
+
+    return res.json({
+      success: true,
+      meta: {
+        playerId: identity.canonicalId,
+        playerName: identity.fullName,
+        position,
+        team: identity.nflTeam,
+        season,
+        inputDataPoints: result.inputData.length,
+      },
+      fpr: result.fpr,
+      inputData: result.inputData,
+    });
+
+  } catch (error) {
+    console.error('[FORGE/FPR] Error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'FPR calculation failed',
     });
   }
 });
