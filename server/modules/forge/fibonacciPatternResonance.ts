@@ -182,7 +182,7 @@ export async function getUsageHistoryForPlayer(
         and(
           eq(gameLogs.sleeperId, sleeperId),
           eq(gameLogs.season, season),
-          eq(gameLogs.seasonType, 'regular')
+          eq(gameLogs.seasonType, 'REG')
         )
       )
       .orderBy(gameLogs.week);

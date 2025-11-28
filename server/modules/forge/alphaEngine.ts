@@ -15,6 +15,7 @@ import {
   ForgeSubScores,
   Trajectory,
   PlayerPosition,
+  FPRData,
   ALPHA_WEIGHTS,
   ALPHA_CALIBRATION,
   TRAJECTORY_THRESHOLDS,
@@ -22,6 +23,7 @@ import {
   MISSING_DATA_CAPS,
 } from './types';
 import { clamp, roundTo } from './utils/scoring';
+import { computeFPR, FPROutput } from './fibonacciPatternResonance';
 
 /**
  * Calculate the complete FORGE score for a player
@@ -39,6 +41,8 @@ export function calculateAlphaScore(
   
   const trajectory = calculateTrajectory(context);
   const confidence = calculateConfidence(context, features);
+  
+  const fpr = calculateFPR(context);
   
   const cappedDueToMissingData = 
     features.efficiencyFeatures.capped ||
@@ -67,6 +71,8 @@ export function calculateAlphaScore(
     confidence: roundTo(confidence, 0),
     
     gamesPlayed: features.gamesPlayed,
+    
+    fpr,
     
     dataQuality: {
       hasAdvancedStats: features.dataQuality.hasAdvancedStats,
@@ -271,6 +277,56 @@ function getPositionAvgStdDev(position: ForgeContext['position']): number {
   };
   
   return avgStdDevs[position] ?? 6.0;
+}
+
+/**
+ * Calculate Fibonacci Pattern Resonance from weekly usage data
+ * 
+ * Uses context.weeklyStats to extract position-appropriate usage metric:
+ * - WR/TE: targets
+ * - RB: rushAttempts + targets
+ * - QB: based on fantasy points (proxy for pass attempts)
+ * 
+ * Returns undefined only if there's not enough data points.
+ * Even low-score or NOISE patterns are returned as they contain valuable
+ * volatility and confidence information.
+ */
+function calculateFPR(context: ForgeContext): FPRData | undefined {
+  const weeklyStats = context.weeklyStats;
+  
+  if (!weeklyStats || weeklyStats.length < 2) {
+    return undefined;
+  }
+  
+  const sortedByWeek = [...weeklyStats].sort((a, b) => a.week - b.week);
+  
+  const usageHistory: number[] = sortedByWeek.map(week => {
+    switch (context.position) {
+      case 'WR':
+      case 'TE':
+        return week.targets ?? 0;
+      case 'RB':
+        return (week.rushAttempts ?? 0) + (week.targets ?? 0);
+      case 'QB':
+        return week.fantasyPointsPpr;
+      default:
+        return week.targets ?? 0;
+    }
+  });
+  
+  if (usageHistory.length < 2) {
+    return undefined;
+  }
+  
+  const fprOutput: FPROutput = computeFPR(usageHistory);
+  
+  return {
+    score: fprOutput.score,
+    pattern: fprOutput.pattern as FPRData['pattern'],
+    band: fprOutput.band as FPRData['band'],
+    forgeConfidenceModifier: fprOutput.forgeConfidenceModifier,
+    forgeVolatilityIndex: fprOutput.forgeVolatilityIndex,
+  };
 }
 
 export default calculateAlphaScore;
