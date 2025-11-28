@@ -72,7 +72,7 @@ export default function HomeTab() {
             No paywalls. No limits.
           </p>
           <div className="flex flex-wrap gap-4">
-            <Link href="?tab=rankings">
+            <Link href="/?tab=rankings">
               <Button
                 size="lg"
                 className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
@@ -82,7 +82,7 @@ export default function HomeTab() {
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
-            <Link href="?tab=matchups">
+            <Link href="/?tab=matchups">
               <Button
                 size="lg"
                 variant="outline"
