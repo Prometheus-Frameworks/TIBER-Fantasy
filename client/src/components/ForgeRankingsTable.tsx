@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ArrowUpDown, Download, Eye, EyeOff } from 'lucide-react';
+import { ArrowUpDown, Download, Eye, EyeOff, Wrench } from 'lucide-react';
 import type { ForgeScore } from '../types/forge';
 
 export type DeltaSeverity = 'major' | 'moderate' | 'minor' | 'none';
@@ -30,6 +30,7 @@ interface ForgeRankingsTableProps {
   week: number | null;
   onSeasonChange?: (season: number) => void;
   onWeekChange?: (week: number | null) => void;
+  showDevMode?: boolean;
 }
 
 export function getDeltaSeverity(delta: number): DeltaSeverity {
@@ -73,11 +74,17 @@ function getTrajectoryIcon(trajectory?: string): string {
   return '→';
 }
 
+function getTrajectoryLabel(trajectory?: string): string {
+  if (trajectory === 'rising') return 'Rising';
+  if (trajectory === 'declining') return 'Declining';
+  return 'Stable';
+}
+
 type SortField = 'playerName' | 'team' | 'sandboxAlpha' | 'forgeAlpha' | 'gamesPlayed' | 'delta';
 type SortOrder = 'asc' | 'desc';
 
-const isDev = typeof window !== 'undefined' && 
-  (import.meta.env.DEV || import.meta.env.VITE_DEV_MODE === 'true');
+const isDevEnvironment = typeof window !== 'undefined' && 
+  (import.meta.env.DEV || import.meta.env.VITE_SHOW_SANDBOX === 'true');
 
 export default function ForgeRankingsTable({
   position,
@@ -90,8 +97,11 @@ export default function ForgeRankingsTable({
   week,
   onSeasonChange,
   onWeekChange,
+  showDevMode,
 }: ForgeRankingsTableProps) {
-  const [sortField, setSortField] = useState<SortField>('sandboxAlpha');
+  const isDev = showDevMode ?? isDevEnvironment;
+  
+  const [sortField, setSortField] = useState<SortField>('forgeAlpha');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [searchQuery, setSearchQuery] = useState('');
   const [minDisagreement, setMinDisagreement] = useState<number>(8);
@@ -119,7 +129,7 @@ export default function ForgeRankingsTable({
       );
     }
 
-    if (onlyDisagreements) {
+    if (isDev && onlyDisagreements) {
       filtered = filtered.filter(r => {
         if (r.forgeAlpha == null) return showMissingForge;
         const delta = Math.abs(r.forgeAlpha - r.sandboxAlpha);
@@ -141,6 +151,9 @@ export default function ForgeRankingsTable({
       } else if (sortField === 'forgeAlpha') {
         aVal = a.forgeAlpha ?? -999;
         bVal = b.forgeAlpha ?? -999;
+      } else if (sortField === 'sandboxAlpha') {
+        aVal = a.sandboxAlpha ?? 0;
+        bVal = b.sandboxAlpha ?? 0;
       } else {
         aVal = a[sortField] ?? 0;
         bVal = b[sortField] ?? 0;
@@ -156,7 +169,7 @@ export default function ForgeRankingsTable({
       const bNum = typeof bVal === 'number' ? bVal : 0;
       return sortOrder === 'asc' ? aNum - bNum : bNum - aNum;
     });
-  }, [rows, searchQuery, sortField, sortOrder, onlyDisagreements, minDisagreement, showMissingForge]);
+  }, [rows, searchQuery, sortField, sortOrder, onlyDisagreements, minDisagreement, showMissingForge, isDev]);
 
   const handleExport = () => {
     const exportPayload = {
@@ -172,11 +185,13 @@ export default function ForgeRankingsTable({
         playerName: r.playerName,
         team: r.team,
         gamesPlayed: r.gamesPlayed,
-        sandboxAlpha: r.sandboxAlpha,
         forgeAlpha: r.forgeAlpha ?? null,
-        forgeRawAlpha: r.forgeRawAlpha ?? null,
-        delta: r.forgeAlpha != null ? Math.round((r.forgeAlpha - r.sandboxAlpha) * 10) / 10 : null,
         trajectory: r.forgeTrajectory ?? null,
+        ...(isDev ? {
+          sandboxAlpha: r.sandboxAlpha,
+          forgeRawAlpha: r.forgeRawAlpha ?? null,
+          delta: r.forgeAlpha != null ? Math.round((r.forgeAlpha - r.sandboxAlpha) * 10) / 10 : null,
+        } : {}),
       })),
     };
     const json = JSON.stringify(exportPayload, null, 2);
@@ -255,46 +270,51 @@ export default function ForgeRankingsTable({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 px-4 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={onlyDisagreements}
-            onChange={(e) => setOnlyDisagreements(e.target.checked)}
-            className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-            data-testid="checkbox-disagreements"
-          />
-          <span className="text-sm text-slate-300">Show only disagreements (|Δ| ≥ {minDisagreement})</span>
-        </label>
+      {isDev && (
+        <div className="flex flex-wrap items-center gap-4 px-4 py-2 bg-amber-900/20 rounded-lg border border-amber-700/50">
+          <div className="flex items-center gap-2 text-amber-400">
+            <Wrench className="h-4 w-4" />
+            <span className="text-xs font-medium">Dev Mode</span>
+          </div>
+          
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={onlyDisagreements}
+              onChange={(e) => setOnlyDisagreements(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+              data-testid="checkbox-disagreements"
+            />
+            <span className="text-sm text-slate-300">Show only disagreements (|Δ| ≥ {minDisagreement})</span>
+          </label>
 
-        <label className="flex items-center gap-2">
-          <span className="text-sm text-slate-400">Min |Δ|</span>
-          <input
-            type="number"
-            value={minDisagreement}
-            min={1}
-            max={50}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setMinDisagreement(Number.isNaN(v) ? 8 : v);
-            }}
-            className="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
-            data-testid="input-min-delta"
-          />
-        </label>
+          <label className="flex items-center gap-2">
+            <span className="text-sm text-slate-400">Min |Δ|</span>
+            <input
+              type="number"
+              value={minDisagreement}
+              min={1}
+              max={50}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setMinDisagreement(Number.isNaN(v) ? 8 : v);
+              }}
+              className="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+              data-testid="input-min-delta"
+            />
+          </label>
 
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showMissingForge}
-            onChange={(e) => setShowMissingForge(e.target.checked)}
-            className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-            data-testid="checkbox-show-missing"
-          />
-          <span className="text-sm text-slate-300">Show missing FORGE</span>
-        </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showMissingForge}
+              onChange={(e) => setShowMissingForge(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+              data-testid="checkbox-show-missing"
+            />
+            <span className="text-sm text-slate-300">Show missing FORGE</span>
+          </label>
 
-        {isDev && (
           <label className="flex items-center gap-2 cursor-pointer border-l border-slate-600 pl-4">
             <button
               onClick={() => setShowRawAlpha(!showRawAlpha)}
@@ -302,10 +322,23 @@ export default function ForgeRankingsTable({
               data-testid="toggle-raw-alpha"
             >
               {showRawAlpha ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-              rawAlpha (dev)
+              rawAlpha
             </button>
           </label>
-        )}
+        </div>
+      )}
+
+      <div className="flex items-center gap-4">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showMissingForge}
+            onChange={(e) => setShowMissingForge(e.target.checked)}
+            className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+            data-testid="checkbox-show-missing-public"
+          />
+          <span className="text-sm text-slate-300">Include players missing FORGE data</span>
+        </label>
 
         <button
           onClick={handleExport}
@@ -341,14 +374,21 @@ export default function ForgeRankingsTable({
                     {col.label}
                   </th>
                 ))}
-                <SortHeader field="sandboxAlpha" label="Sandbox α" />
                 <SortHeader field="forgeAlpha" label="FORGE α" />
-                {showRawAlpha && (
-                  <th className="px-3 py-2 text-left text-xs font-medium text-purple-400 uppercase tracking-wider">
-                    rawAlpha
-                  </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
+                  Trend
+                </th>
+                {isDev && (
+                  <>
+                    <SortHeader field="sandboxAlpha" label="Sandbox α" />
+                    {showRawAlpha && (
+                      <th className="px-3 py-2 text-left text-xs font-medium text-purple-400 uppercase tracking-wider">
+                        rawAlpha
+                      </th>
+                    )}
+                    <SortHeader field="delta" label="Δ" />
+                  </>
                 )}
-                <SortHeader field="delta" label="Δ" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/50">
@@ -357,8 +397,8 @@ export default function ForgeRankingsTable({
                   ? row.forgeAlpha - row.sandboxAlpha
                   : null;
                 const deltaDisplay = delta != null ? delta.toFixed(1) : null;
-                const severity = delta != null ? getDeltaSeverity(delta) : 'none';
-                const severityStyles = getDeltaSeverityStyles(severity);
+                const severity = isDev && delta != null ? getDeltaSeverity(delta) : 'none';
+                const severityStyles = isDev ? getDeltaSeverityStyles(severity) : '';
 
                 return (
                   <tr
@@ -394,15 +434,9 @@ export default function ForgeRankingsTable({
                       </td>
                     ))}
                     <td className="px-3 py-2">
-                      <span className={`text-sm font-mono font-semibold ${getAlphaColor(row.sandboxAlpha)}`} data-testid={`sandbox-alpha-${row.playerId}`}>
-                        {row.sandboxAlpha.toFixed(1)}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
                       {row.forgeAlpha != null ? (
                         <span className={`text-sm font-mono font-semibold ${getAlphaColor(row.forgeAlpha)}`} data-testid={`forge-alpha-${row.playerId}`}>
                           {row.forgeAlpha.toFixed(1)}
-                          <span className="ml-1 text-xs text-slate-500">{getTrajectoryIcon(row.forgeTrajectory)}</span>
                         </span>
                       ) : forgeLoading ? (
                         <span className="text-sm text-slate-500">…</span>
@@ -410,25 +444,43 @@ export default function ForgeRankingsTable({
                         <span className="text-sm text-slate-500" data-testid={`forge-alpha-missing-${row.playerId}`}>—</span>
                       )}
                     </td>
-                    {showRawAlpha && (
-                      <td className="px-3 py-2">
-                        <span className="text-sm font-mono text-purple-400">
-                          {row.forgeRawAlpha != null ? row.forgeRawAlpha.toFixed(1) : '—'}
-                        </span>
-                      </td>
-                    )}
                     <td className="px-3 py-2">
-                      {deltaDisplay != null ? (
-                        <span
-                          className={`text-sm font-mono ${getDeltaColor(delta!)}`}
-                          data-testid={`delta-${row.playerId}`}
-                        >
-                          {delta! > 0 ? '+' : ''}{deltaDisplay}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-slate-500">—</span>
-                      )}
+                      <span className={`text-xs px-2 py-0.5 rounded ${
+                        row.forgeTrajectory === 'rising' ? 'bg-green-900/40 text-green-400' :
+                        row.forgeTrajectory === 'declining' ? 'bg-red-900/40 text-red-400' :
+                        'bg-slate-700/50 text-slate-400'
+                      }`}>
+                        {getTrajectoryIcon(row.forgeTrajectory)} {getTrajectoryLabel(row.forgeTrajectory)}
+                      </span>
                     </td>
+                    {isDev && (
+                      <>
+                        <td className="px-3 py-2">
+                          <span className={`text-sm font-mono font-semibold ${getAlphaColor(row.sandboxAlpha)}`} data-testid={`sandbox-alpha-${row.playerId}`}>
+                            {row.sandboxAlpha.toFixed(1)}
+                          </span>
+                        </td>
+                        {showRawAlpha && (
+                          <td className="px-3 py-2">
+                            <span className="text-sm font-mono text-purple-400">
+                              {row.forgeRawAlpha != null ? row.forgeRawAlpha.toFixed(1) : '—'}
+                            </span>
+                          </td>
+                        )}
+                        <td className="px-3 py-2">
+                          {deltaDisplay != null ? (
+                            <span
+                              className={`text-sm font-mono ${getDeltaColor(delta!)}`}
+                              data-testid={`delta-${row.playerId}`}
+                            >
+                              {delta! > 0 ? '+' : ''}{deltaDisplay}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-slate-500">—</span>
+                          )}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 );
               })}
@@ -445,7 +497,7 @@ export default function ForgeRankingsTable({
       </div>
 
       <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-        <h3 className="text-sm font-medium text-slate-300 mb-2">Legend</h3>
+        <h3 className="text-sm font-medium text-slate-300 mb-2">FORGE α Legend</h3>
         <div className="flex flex-wrap gap-4 text-xs text-slate-400">
           <div><span className="text-green-400 font-bold">80+</span> Elite</div>
           <div><span className="text-emerald-400 font-bold">60-79</span> Strong</div>
@@ -453,18 +505,16 @@ export default function ForgeRankingsTable({
           <div><span className="text-orange-400 font-bold">20-39</span> Below Avg</div>
           <div><span className="text-red-400 font-bold">&lt;20</span> Poor</div>
           <div className="border-l border-slate-600 pl-4">
-            <span className="mr-2">↗ Rising</span>
-            <span className="mr-2">→ Flat</span>
-            <span>↘ Declining</span>
+            <span className="text-green-400 mr-2">↗ Rising</span>
+            <span className="text-slate-400 mr-2">→ Stable</span>
+            <span className="text-red-400">↘ Declining</span>
           </div>
-          <div className="border-l border-slate-600 pl-4">
-            <span className="text-green-400">+Δ</span> = FORGE rates higher |
-            <span className="text-red-400 ml-1">-Δ</span> = FORGE rates lower
-          </div>
-          <div className="border-l border-slate-600 pl-4">
-            <span className="inline-block px-1.5 py-0.5 bg-amber-500/20 border border-amber-500/50 rounded text-amber-400">Major (≥15)</span>
-            <span className="inline-block px-1.5 py-0.5 bg-orange-500/15 border border-orange-500/40 rounded text-orange-400 ml-2">Moderate (≥8)</span>
-          </div>
+          {isDev && (
+            <div className="border-l border-slate-600 pl-4">
+              <span className="text-green-400">+Δ</span> = FORGE &gt; Sandbox |
+              <span className="text-red-400 ml-1">-Δ</span> = FORGE &lt; Sandbox
+            </div>
+          )}
         </div>
       </div>
     </div>
