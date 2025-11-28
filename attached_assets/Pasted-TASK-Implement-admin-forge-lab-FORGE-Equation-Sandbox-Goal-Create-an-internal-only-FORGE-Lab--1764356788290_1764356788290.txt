@@ -1,0 +1,95 @@
+TASK: Implement /admin/forge-lab (FORGE Equation Sandbox)
+
+Goal:
+Create an internal-only “FORGE Lab” UI where I can adjust sliders for equation variables, see the full step-by-step breakdown, and export the exact inputs/outputs as JSON for documentation and future module wiring.
+
+1. Route & Layout
+	•	Add a new route: /admin/forge-lab
+	•	Use the existing admin layout + theme (no new colors, reuse buttons, cards, typography)
+	•	Page title: FORGE Lab (Admin Sandbox)
+
+2. Equation Registry
+
+Create a small “equation registry” in a shared file, e.g.:
+
+client/src/forgeLab/equations.ts
+
+Each equation should define:
+
+export type ForgeLabInputDef = {
+  key: string;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  defaultValue: number;
+};
+
+export type ForgeLabEquation = {
+  id: string;           // "TD_ENVIRONMENT_BOOST"
+  name: string;         // "TD Environment Boost"
+  description: string;  // short human-readable summary
+  inputs: ForgeLabInputDef[];
+  compute: (inputs: Record<string, number>) => {
+    outputs: Record<string, number>;
+    steps: string[]; // human-readable steps
+  };
+};
+
+Implement at least one equation to start:
+
+TD_ENVIRONMENT_BOOST with inputs:
+	•	p_OL, p_QB, p_Tgt, p_Sep, p_Catch
+	•	mu_league, sigma_league
+	•	k, gamma
+	•	TD_alpha
+
+The compute function should:
+	•	Calculate:
+	•	p_success
+	•	z
+	•	E
+	•	TD_alpha_star
+	•	Return:
+	•	outputs:
+	•	{ p_success, z, E, TD_alpha_star }
+	•	steps:
+	•	Array of strings describing the calculation step-by-step
+	•	Example:
+	•	"p_success = p_OL * p_QB * p_Tgt * p_Sep * p_Catch = 0.0614"
+	•	"z = (p_success - mu_league) / sigma_league = 0.7617"
+	•	"E = tanh(k * z) = 0.488"
+	•	"TD_alpha* = TD_alpha * (1 + gamma * E) = 82.5"
+
+3. UI Components
+
+Create a main component:
+
+client/src/pages/admin/ForgeLabPage.tsx
+
+Structure:
+	•	Top:
+	•	Equation selector <Select> bound to the registry
+	•	Left column:
+	•	For the selected equation, render all inputs as:
+	•	Slider + number input (two-way bound)
+	•	Right column:
+	•	Output card showing key outputs (final scores)
+	•	Steps card listing each step from steps[]
+	•	JSON card:
+
+{
+  "inputs": { ... },
+  "derived": { ... }
+}
+
+With a “Copy JSON” button.
+
+4. Future Hook (Not required now, just leave TODO)
+	•	Add a TODO comment for “player-linked mode”:
+	•	Later we’ll add:
+	•	player dropdown
+	•	auto-fetch of input defaults from FORGE context APIs
+
+No CSS theme changes.
+Reuse existing card/stack components and typography tokens.
