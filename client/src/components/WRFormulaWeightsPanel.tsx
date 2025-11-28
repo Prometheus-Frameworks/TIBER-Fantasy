@@ -1,0 +1,192 @@
+import { useState, useEffect } from 'react';
+import { Slider } from '@/components/ui/slider';
+import { RotateCcw, Save, ChevronDown, ChevronUp } from 'lucide-react';
+
+interface WRWeights {
+  volume: number;
+  production: number;
+  efficiency: number;
+  stability: number;
+}
+
+interface WRFormulaWeightsPanelProps {
+  weights: WRWeights;
+  onWeightsChange: (weights: WRWeights) => void;
+  defaultCollapsed?: boolean;
+}
+
+const DEFAULT_WR_WEIGHTS: WRWeights = {
+  volume: 50,
+  production: 25,
+  efficiency: 15,
+  stability: 10,
+};
+
+const WR_PRESETS = [
+  { id: 'default', label: 'Balanced', weights: { volume: 50, production: 25, efficiency: 15, stability: 10 } },
+  { id: 'volume', label: 'Target Hog', weights: { volume: 60, production: 20, efficiency: 10, stability: 10 } },
+  { id: 'efficiency', label: 'Efficiency Hunter', weights: { volume: 30, production: 25, efficiency: 35, stability: 10 } },
+  { id: 'stable', label: 'Floor Player', weights: { volume: 40, production: 25, efficiency: 15, stability: 20 } },
+];
+
+export default function WRFormulaWeightsPanel({
+  weights,
+  onWeightsChange,
+  defaultCollapsed = false,
+}: WRFormulaWeightsPanelProps) {
+  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
+  const [activePreset, setActivePreset] = useState<string>('default');
+
+  const totalWeight = weights.volume + weights.production + weights.efficiency + weights.stability;
+  const isValidTotal = totalWeight === 100;
+
+  const handleSliderChange = (field: keyof WRWeights, value: number[]) => {
+    onWeightsChange({ ...weights, [field]: value[0] });
+    setActivePreset('custom');
+  };
+
+  const applyPreset = (presetId: string) => {
+    const preset = WR_PRESETS.find(p => p.id === presetId);
+    if (preset) {
+      onWeightsChange(preset.weights);
+      setActivePreset(presetId);
+    }
+  };
+
+  const resetToDefaults = () => {
+    onWeightsChange(DEFAULT_WR_WEIGHTS);
+    setActivePreset('default');
+  };
+
+  return (
+    <div className="bg-[#141824] border border-slate-700 rounded-xl mb-6">
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="w-full flex items-center justify-between p-4 hover:bg-slate-800/30 transition-colors rounded-t-xl"
+        data-testid="toggle-weights-panel"
+      >
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold text-white">Sandbox Formula Weights</h3>
+          <span className="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded">
+            {isValidTotal ? 'Valid (100%)' : `⚠️ ${totalWeight}%`}
+          </span>
+        </div>
+        {isCollapsed ? (
+          <ChevronDown className="h-5 w-5 text-slate-400" />
+        ) : (
+          <ChevronUp className="h-5 w-5 text-slate-400" />
+        )}
+      </button>
+
+      {!isCollapsed && (
+        <div className="p-4 pt-0 space-y-4">
+          <p className="text-xs text-slate-500 border-l-2 border-blue-500/50 pl-3">
+            These weights power <span className="text-blue-400">Sandbox α</span>. FORGE uses its own engine and ignores these sliders.
+          </p>
+
+          <div className="flex flex-wrap gap-2">
+            {WR_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => applyPreset(preset.id)}
+                className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
+                  activePreset === preset.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+                data-testid={`preset-${preset.id}`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-slate-300">Volume</label>
+                <span className="text-sm font-mono text-blue-400">{weights.volume}%</span>
+              </div>
+              <Slider
+                value={[weights.volume]}
+                onValueChange={(v) => handleSliderChange('volume', v)}
+                min={0}
+                max={100}
+                step={5}
+                className="w-full"
+                data-testid="slider-volume"
+              />
+              <p className="text-xs text-slate-500">Targets, target share, air yards</p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-slate-300">Production</label>
+                <span className="text-sm font-mono text-green-400">{weights.production}%</span>
+              </div>
+              <Slider
+                value={[weights.production]}
+                onValueChange={(v) => handleSliderChange('production', v)}
+                min={0}
+                max={100}
+                step={5}
+                className="w-full"
+                data-testid="slider-production"
+              />
+              <p className="text-xs text-slate-500">Fantasy points, TDs, yards</p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-slate-300">Efficiency</label>
+                <span className="text-sm font-mono text-yellow-400">{weights.efficiency}%</span>
+              </div>
+              <Slider
+                value={[weights.efficiency]}
+                onValueChange={(v) => handleSliderChange('efficiency', v)}
+                min={0}
+                max={100}
+                step={5}
+                className="w-full"
+                data-testid="slider-efficiency"
+              />
+              <p className="text-xs text-slate-500">Points per target, yards per route</p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-slate-300">Stability</label>
+                <span className="text-sm font-mono text-purple-400">{weights.stability}%</span>
+              </div>
+              <Slider
+                value={[weights.stability]}
+                onValueChange={(v) => handleSliderChange('stability', v)}
+                min={0}
+                max={100}
+                step={5}
+                className="w-full"
+                data-testid="slider-stability"
+              />
+              <p className="text-xs text-slate-500">Week-to-week consistency, floor</p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-slate-700">
+            <div className="text-xs text-slate-500">
+              Total: <span className={isValidTotal ? 'text-green-400' : 'text-red-400'}>{totalWeight}%</span>
+              {!isValidTotal && ' (should equal 100%)'}
+            </div>
+            <button
+              onClick={resetToDefaults}
+              className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-sm text-slate-300 transition-colors"
+              data-testid="reset-weights"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Reset
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

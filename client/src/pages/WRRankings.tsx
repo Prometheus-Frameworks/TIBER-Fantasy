@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
-import { Link } from 'wouter';
 import { fetchForgeBatch } from '../api/forge';
+import AlphaRankingsLayout from '../components/AlphaRankingsLayout';
+import WRFormulaWeightsPanel from '../components/WRFormulaWeightsPanel';
 import ForgeRankingsTable, { ForgeRow } from '../components/ForgeRankingsTable';
+import ForgeTransparencyPanel from '../components/ForgeTransparencyPanel';
 import type { ForgeScore } from '../types/forge';
 
 interface WRSandboxPlayer {
@@ -38,9 +39,24 @@ interface SandboxResponse {
   count: number;
 }
 
+interface WRWeights {
+  volume: number;
+  production: number;
+  efficiency: number;
+  stability: number;
+}
+
+const DEFAULT_WEIGHTS: WRWeights = {
+  volume: 50,
+  production: 25,
+  efficiency: 15,
+  stability: 10,
+};
+
 export default function WRRankings() {
   const [season, setSeason] = useState(2025);
   const [week, setWeek] = useState<number | null>(10);
+  const [weights, setWeights] = useState<WRWeights>(DEFAULT_WEIGHTS);
   
   const [forgeByPlayerId, setForgeByPlayerId] = useState<Record<string, ForgeScore>>({});
   const [forgeLoading, setForgeLoading] = useState(false);
@@ -80,15 +96,26 @@ export default function WRRankings() {
   const rows: ForgeRow[] = useMemo(() => {
     if (!data?.players) return [];
     
+    const totalWeight = weights.volume + weights.production + weights.efficiency + weights.stability;
+    const normalize = totalWeight > 0 ? 100 / totalWeight : 1;
+    
     return data.players.map((player) => {
       const forge = forgeByPlayerId[player.canonicalId];
+      
+      const customAlpha = (
+        (player.volumeIndex * weights.volume +
+         player.productionIndex * weights.production +
+         player.efficiencyIndex * weights.efficiency +
+         player.stabilityIndex * weights.stability) * normalize / 100
+      );
+      
       return {
         playerId: player.playerId,
         canonicalId: player.canonicalId,
         playerName: player.playerName,
         team: player.team,
         gamesPlayed: player.gamesPlayed,
-        sandboxAlpha: player.alphaScore,
+        sandboxAlpha: Math.round(customAlpha * 10) / 10,
         forgeAlpha: forge?.alpha,
         forgeRawAlpha: forge?.rawAlpha,
         forgeConfidence: forge?.confidence,
@@ -100,62 +127,47 @@ export default function WRRankings() {
         },
       };
     });
-  }, [data, forgeByPlayerId]);
+  }, [data, forgeByPlayerId, weights]);
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0a0e1a] text-white p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-red-900/30 border border-red-500 rounded-lg p-4">
-            <p className="text-red-400">Failed to load WR rankings data</p>
-          </div>
+      <AlphaRankingsLayout position="WR">
+        <div className="bg-red-900/30 border border-red-500 rounded-lg p-4">
+          <p className="text-red-400">Failed to load WR rankings data</p>
         </div>
-      </div>
+      </AlphaRankingsLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a] text-white p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-slate-400 hover:text-white transition-colors" data-testid="back-link">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-white" data-testid="page-title">WR Rankings</h1>
-              <p className="text-sm text-slate-400">Sandbox Alpha vs FORGE Alpha comparison</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => refetch()}
-              className="flex items-center gap-2 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors"
-              data-testid="refresh-button"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </button>
-          </div>
-        </div>
+    <AlphaRankingsLayout 
+      position="WR" 
+      onRefresh={() => refetch()}
+      isRefreshing={isLoading}
+    >
+      <WRFormulaWeightsPanel
+        weights={weights}
+        onWeightsChange={setWeights}
+        defaultCollapsed={true}
+      />
 
-        <ForgeRankingsTable
-          position="WR"
-          rows={rows}
-          isLoading={isLoading}
-          forgeLoading={forgeLoading}
-          forgeError={forgeError}
-          season={season}
-          week={week}
-          onSeasonChange={setSeason}
-          onWeekChange={setWeek}
-          extraColumnDefs={[
-            { key: 'targets', label: 'Tgt' },
-            { key: 'fp', label: 'FP', format: (v) => v?.toFixed(1) ?? '—' },
-          ]}
-        />
-      </div>
-    </div>
+      <ForgeRankingsTable
+        position="WR"
+        rows={rows}
+        isLoading={isLoading}
+        forgeLoading={forgeLoading}
+        forgeError={forgeError}
+        season={season}
+        week={week}
+        onSeasonChange={setSeason}
+        onWeekChange={setWeek}
+        extraColumnDefs={[
+          { key: 'targets', label: 'Tgt' },
+          { key: 'fp', label: 'FP', format: (v) => v?.toFixed(1) ?? '—' },
+        ]}
+      />
+
+      <ForgeTransparencyPanel position="WR" />
+    </AlphaRankingsLayout>
   );
 }

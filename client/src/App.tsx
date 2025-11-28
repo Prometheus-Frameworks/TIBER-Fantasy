@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, useLocation, Redirect } from "wouter";
 import { useEffect, useState } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -15,6 +15,9 @@ import RagStatus from "@/pages/RagStatus";
 import WRRankingsSandbox from "@/pages/WRRankingsSandbox";
 import WRRankings from "@/pages/WRRankings";
 import RBRankings from "@/pages/RBRankings";
+import TERankings from "@/pages/TERankings";
+import QBRankings from "@/pages/QBRankings";
+import RoleContextRankings from "@/pages/RoleContextRankings";
 import QBRankingsSandbox from "@/pages/QBRankingsSandbox";
 import ForgeLab from "@/pages/ForgeLab";
 import NotFound from "@/pages/not-found";
@@ -81,9 +84,19 @@ function Router() {
       {/* Admin: RAG Status */}
       <Route path="/admin/rag-status" component={RagStatus} />
       
+      {/* Rankings entry point - defaults to WR */}
+      <Route path="/rankings">
+        {() => <Redirect to="/rankings/wr" />}
+      </Route>
+      
       {/* User-facing Rankings with FORGE */}
       <Route path="/rankings/wr" component={WRRankings} />
       <Route path="/rankings/rb" component={RBRankings} />
+      <Route path="/rankings/te" component={TERankings} />
+      <Route path="/rankings/qb" component={QBRankings} />
+      
+      {/* Advanced: Role Context Rankings */}
+      <Route path="/rankings/role-context" component={RoleContextRankings} />
       
       {/* Admin: WR Rankings Sandbox */}
       <Route path="/admin/wr-rankings-sandbox" component={WRRankingsSandbox} />
