@@ -1,0 +1,292 @@
+import { Request, Response } from 'express';
+
+/**
+ * ----------------------------------------------------------------------------
+ * 1. TYPES & INTERFACES
+ * ----------------------------------------------------------------------------
+ */
+
+export type PatternType = 'FIB_GROWTH' | 'FIB_DECAY' | 'FIB_STABLE' | 'UNDEFINED';
+export type ResonanceBand = 'HIGH_RESONANCE' | 'MEDIUM' | 'LOW' | 'NOISE';
+
+export interface FPROutput {
+  /**
+   * 0-100 score indicating how closely the input fits the detected pattern.
+   * Higher is better.
+   */
+  score: number;
+  
+  /**
+   * The identified pattern category.
+   */
+  pattern: PatternType;
+  
+  /**
+   * Qualitative bucket for the score.
+   */
+  band: ResonanceBand;
+  
+  /**
+   * The ideal ratio the algorithm matched against (1.618, 0.618, or 1.0).
+   */
+  bestTargetRatio: number;
+  
+  /**
+   * The raw median normalized deviation from the target.
+   */
+  medianDeviation: number;
+  
+  /**
+   * The week-over-week ratios calculated from the input history.
+   */
+  inputRatios: number[];
+  
+  /**
+   * FORGE CONTEXT: Multiplier (0.0 - 1.0) representing system confidence.
+   * Use this to weight the impact of this player's data in broader models.
+   */
+  forgeConfidenceModifier: number;
+  
+  /**
+   * FORGE CONTEXT: Index (0.0 - ~0.8) representing expected volatility.
+   * Growth/Decay patterns imply higher volatility than Stability.
+   */
+  forgeVolatilityIndex: number;
+}
+
+/**
+ * ----------------------------------------------------------------------------
+ * 2. CONSTANTS & CONFIGURATION
+ * ----------------------------------------------------------------------------
+ */
+
+const PHI = (1 + Math.sqrt(5)) / 2; // ~1.618
+const INV_PHI = 1 / PHI;            // ~0.618
+const STABLE = 1.0;                 // 1.0
+
+// Maps PatternType to their mathematical ideal ratios
+const TARGETS: Record<Exclude<PatternType, 'UNDEFINED'>, number> = {
+  FIB_GROWTH: PHI,
+  FIB_DECAY: INV_PHI,
+  FIB_STABLE: STABLE,
+};
+
+// Cap deviation to prevent the exp function from outputting negligible scores for massive outliers
+const MAX_DEV_FOR_SCORE = 1.0; 
+
+// Coefficient for score decay. 
+// -4 is aggressive (0.25 deviation = ~36 score). 
+// -3 would be smoother. Keeping -4 per spec.
+const SCORE_DECAY_COEFF = -4; 
+
+/**
+ * ----------------------------------------------------------------------------
+ * 3. CORE LOGIC ENGINE
+ * ----------------------------------------------------------------------------
+ */
+
+/**
+ * Computes the Fibonacci Pattern Resonance for a given usage history.
+ * @param usageHistory Array of usage metrics (e.g., [10, 16, 26, 42]) sorted chronologically.
+ */
+export function computeFPR(usageHistory: number[]): FPROutput {
+  // 1. Validation
+  if (!usageHistory || usageHistory.length < 2) {
+    return generateNoiseOutput();
+  }
+
+  // 2. Calculate Ratios
+  const ratios: number[] = [];
+
+  for (let i = 1; i < usageHistory.length; i++) {
+    const prev = usageHistory[i - 1];
+    const curr = usageHistory[i];
+
+    // Special handling for Zero values
+    if (prev === 0) {
+      if (curr === 0) {
+        // 0 -> 0 is perfect stability
+        ratios.push(1.0);
+      } else {
+        // 0 -> X is infinite growth mathematically. 
+        // We cap this at 2.0 to represent "Strong Growth" without breaking the math.
+        ratios.push(2.0); 
+      }
+    } else {
+      ratios.push(curr / prev);
+    }
+  }
+
+  // If we couldn't generate enough ratios (shouldn't happen given length check, but safe)
+  if (ratios.length === 0) {
+    return generateNoiseOutput();
+  }
+
+  // 3. Find Best Pattern Match
+  let bestPattern: PatternType = 'UNDEFINED';
+  let bestTarget = 0;
+  let lowestDeviation = Number.POSITIVE_INFINITY;
+
+  (Object.entries(TARGETS) as [Exclude<PatternType, 'UNDEFINED'>, number][]).forEach(
+    ([pattern, target]) => {
+      // Normalized Deviation: |(Actual - Target) / Target|
+      const deviations = ratios.map((r) => Math.abs((r - target) / target));
+      const medianDev = median(deviations);
+
+      if (medianDev < lowestDeviation) {
+        lowestDeviation = medianDev;
+        bestPattern = pattern;
+        bestTarget = target;
+      }
+    },
+  );
+
+  if (bestPattern === 'UNDEFINED') {
+    return generateNoiseOutput();
+  }
+
+  // 4. Scoring (0-100)
+  // Score = 100 * e^(-4 * deviation)
+  const clippedDev = Math.max(0, Math.min(MAX_DEV_FOR_SCORE, lowestDeviation));
+  const scoreRaw = 100 * Math.exp(SCORE_DECAY_COEFF * clippedDev);
+  const score = Math.round(Math.max(0, Math.min(100, scoreRaw)) * 100) / 100;
+
+  // 5. Bucketing
+  const band = bucketScore(score);
+
+  // 6. FORGE Context Modifiers
+  // Confidence is directly proportional to the score (0.0 - 1.0)
+  const forgeConfidenceModifier = parseFloat((score / 100).toFixed(3));
+
+  // Volatility depends on the pattern nature.
+  // Stability is low volatility, Growth/Decay are high volatility.
+  let forgeVolatilityIndex: number;
+
+  if (bestPattern === 'FIB_STABLE') {
+    // If it's stable, volatility is low, but increases as confidence decreases (noise)
+    forgeVolatilityIndex = parseFloat((0.1 * (1 - forgeConfidenceModifier)).toFixed(3));
+  } else {
+    // If it's growing/decaying, it is inherently volatile.
+    // We scale volatility with confidence (we are confident it is volatile).
+    forgeVolatilityIndex = parseFloat((0.8 * forgeConfidenceModifier).toFixed(3));
+  }
+
+  return {
+    score,
+    pattern: bestPattern,
+    band,
+    bestTargetRatio: bestTarget,
+    medianDeviation: parseFloat(lowestDeviation.toFixed(4)),
+    inputRatios: ratios.map((r) => parseFloat(r.toFixed(3))),
+    forgeConfidenceModifier,
+    forgeVolatilityIndex,
+  };
+}
+
+/**
+ * ----------------------------------------------------------------------------
+ * 4. HELPER FUNCTIONS
+ * ----------------------------------------------------------------------------
+ */
+
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  
+  if (sorted.length % 2 === 0) {
+    return (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+  return sorted[mid];
+}
+
+function bucketScore(score: number): ResonanceBand {
+  if (score >= 85) return 'HIGH_RESONANCE';
+  if (score >= 60) return 'MEDIUM';
+  if (score >= 30) return 'LOW';
+  return 'NOISE';
+}
+
+function generateNoiseOutput(): FPROutput {
+  return {
+    score: 0,
+    pattern: 'UNDEFINED',
+    band: 'NOISE',
+    bestTargetRatio: 0,
+    medianDeviation: 0,
+    inputRatios: [],
+    forgeConfidenceModifier: 0,
+    forgeVolatilityIndex: 0,
+  };
+}
+
+/**
+ * ----------------------------------------------------------------------------
+ * 5. DATA ACCESS (MOCK)
+ * Replace this with your actual usageFetcher / DB calls.
+ * ----------------------------------------------------------------------------
+ */
+async function getUsageHistoryForPlayer(
+  playerId: string, 
+  position: string, 
+  season: number
+): Promise<number[]> {
+  // MOCK DATA GENERATOR FOR DEBUGGING
+  const mockDb: Record<string, number[]> = {
+    'grower': [10, 16, 26, 42],       // ~1.618
+    'decayer': [100, 62, 38, 24],     // ~0.618
+    'stable': [50, 51, 49, 50],       // ~1.0
+    'noise': [10, 50, 5, 100]         // Chaos
+  };
+  
+  return Promise.resolve(mockDb[playerId] || [0, 0, 0]);
+}
+
+/**
+ * ----------------------------------------------------------------------------
+ * 6. API HANDLER (Express)
+ * ----------------------------------------------------------------------------
+ */
+
+export async function getForgeFpr(req: Request, res: Response) {
+  try {
+    const { playerId } = req.params;
+    const { position, season } = req.query;
+
+    // 1. Fetch Data
+    const usage = await getUsageHistoryForPlayer(
+      playerId,
+      String(position || 'WR'),
+      Number(season || 2024)
+    );
+
+    if (!usage || usage.length < 2) {
+      return res.status(404).json({ 
+        error: 'Not enough usage data to calculate FPR.',
+        playerId 
+      });
+    }
+
+    // 2. Compute FPR
+    const fpr = computeFPR(usage);
+
+    // 3. (Optional) Inject into FORGE Context Layer here
+    // forgeContext.set(playerId, 'fpr', fpr);
+
+    // 4. Return Debug Response
+    return res.json({
+      meta: {
+        playerId,
+        position,
+        season,
+        inputData: usage
+      },
+      fpr
+    });
+
+  } catch (error) {
+    console.error('FPR Calculation Error:', error);
+    return res.status(500).json({ error: 'Internal Server Error during FPR calculation' });
+  }
+}
+
