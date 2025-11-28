@@ -32,6 +32,21 @@ export interface ForgeSubScores {
 }
 
 /**
+ * FPR (Fibonacci Pattern Resonance) types
+ * Used for pattern-based volatility and confidence analysis
+ */
+export type FPRPatternType = 'FIB_GROWTH' | 'FIB_DECAY' | 'FIB_STABLE' | 'UNDEFINED';
+export type FPRResonanceBand = 'HIGH_RESONANCE' | 'MEDIUM' | 'LOW' | 'NOISE';
+
+export interface FPRData {
+  score: number;
+  pattern: FPRPatternType;
+  band: FPRResonanceBand;
+  forgeConfidenceModifier: number;
+  forgeVolatilityIndex: number;
+}
+
+/**
  * The complete FORGE score output for a player
  */
 export interface ForgeScore {
@@ -49,6 +64,8 @@ export interface ForgeScore {
   confidence: number;         // 0-100, how reliable this score is
   
   gamesPlayed: number;        // Games played this season (for context)
+  
+  fpr?: FPRData;              // Fibonacci Pattern Resonance data
   
   dataQuality: {
     hasAdvancedStats: boolean;
