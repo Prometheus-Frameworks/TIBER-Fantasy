@@ -11,7 +11,7 @@ import { Router, Request, Response } from 'express';
 import { forgeService } from './forgeService';
 import { PlayerPosition } from './types';
 import { db } from '../../infra/db';
-import { playerIdentityMap } from '@shared/schema';
+import { playerIdentityMap, gameLogs } from '@shared/schema';
 import { eq, and, isNotNull, sql } from 'drizzle-orm';
 import { createForgeSnapshot } from './forgeSnapshot';
 import { computeFPRForPlayer } from './fibonacciPatternResonance';
@@ -606,36 +606,35 @@ async function fetchPlayerWRCoreData(
     const sleeperId = identity.externalIds?.sleeper;
     if (!sleeperId) return null;
     
-    // Get game logs for the season
-    const gameLogs = await db
+    // Get game logs for the season (REG = Regular season)
+    const playerGameLogs = await db
       .select()
-      .from(require('@shared/schema').sleeperPlayerGameLogs)
+      .from(gameLogs)
       .where(
         and(
-          eq(require('@shared/schema').sleeperPlayerGameLogs.sleeperId, sleeperId),
-          eq(require('@shared/schema').sleeperPlayerGameLogs.season, season),
-          eq(require('@shared/schema').sleeperPlayerGameLogs.seasonType, 'REG')
+          eq(gameLogs.sleeperId, sleeperId),
+          eq(gameLogs.season, season),
+          eq(gameLogs.seasonType, 'REG')
         )
       );
     
-    if (gameLogs.length === 0) return null;
+    if (playerGameLogs.length === 0) return null;
     
     // Filter by week if specified - 'full' aggregates all weeks, specific week filters up to that week
     const logs = week === 'full' 
-      ? gameLogs 
-      : gameLogs.filter(g => g.week <= week);
+      ? playerGameLogs 
+      : playerGameLogs.filter(g => g.week <= week);
     
     if (logs.length === 0) return null;
     
-    // Aggregate stats across all matching logs
+    // Aggregate stats across all matching logs - use typed column names from schema
     const totals = logs.reduce((acc, log) => {
-      const stats = log.stats as Record<string, number> || {};
       return {
-        targets: acc.targets + (stats.rec_tgt || 0),
-        receptions: acc.receptions + (stats.rec || 0),
-        recYards: acc.recYards + (stats.rec_yd || 0),
-        yac: acc.yac + (stats.rec_yac || 0),
-        firstDowns: acc.firstDowns + (stats.rec_fd || 0),
+        targets: acc.targets + (log.targets || 0),
+        receptions: acc.receptions + (log.receptions || 0),
+        recYards: acc.recYards + (log.recYards || 0),
+        yac: acc.yac + 0, // YAC not available in gameLogs schema - will estimate
+        firstDowns: acc.firstDowns + 0, // First downs not available - will estimate
         games: acc.games + 1,
       };
     }, { targets: 0, receptions: 0, recYards: 0, yac: 0, firstDowns: 0, games: 0 });
@@ -650,18 +649,21 @@ async function fetchPlayerWRCoreData(
     // Target Share = targets / team pass attempts (estimated)
     const TS = totals.targets / teamPassAtt;
     
-    // YPRR - estimate as yards per target * catch rate (approximation)
-    const catchRate = totals.targets > 0 ? totals.receptions / totals.targets : 0;
+    // YPRR - estimate as yards per target (approximation)
     const yardsPerTarget = totals.targets > 0 ? totals.recYards / totals.targets : 0;
-    const YPRR = yardsPerTarget * 0.9; // Rough conversion factor
+    const YPRR = yardsPerTarget * 0.75; // Rough conversion factor (yards per target to YPRR)
     
-    // First Downs per Route Run - estimate as FD per target
-    const FD_RR = totals.targets > 0 ? totals.firstDowns / totals.targets : 0;
+    // First Downs per Route Run - estimate using receptions and yards (FD not in schema)
+    // Estimate: approximately 1 first down per 12 yards
+    const estimatedFirstDowns = totals.recYards / 12;
+    const FD_RR = totals.targets > 0 ? estimatedFirstDowns / totals.targets : 0;
     
-    // YAC per reception
-    const YAC = totals.receptions > 0 ? totals.yac / totals.receptions : 0;
+    // YAC per reception - estimate as 35% of yards per reception (league avg)
+    const yardsPerRec = totals.receptions > 0 ? totals.recYards / totals.receptions : 0;
+    const YAC = yardsPerRec * 0.35;
     
     // Contested Catch Rate - use catch rate as proxy (no contested data available)
+    const catchRate = totals.targets > 0 ? totals.receptions / totals.targets : 0;
     const CC = catchRate;
     
     // Validate all values are valid numbers
