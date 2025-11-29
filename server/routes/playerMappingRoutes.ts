@@ -74,16 +74,17 @@ router.get('/search', async (req: Request, res: Response) => {
 
 /**
  * GET /api/players/:playerId/advanced
- * Get advanced stats for a player
+ * Get advanced stats for a player (WR or RB)
  * 
  * Query params:
  *   season - season year (optional, default 2025)
  *   scope - 'season' or 'weekly' (optional, default 'season')
+ *   position - 'WR' or 'RB' (optional, auto-detected if not provided)
  */
 router.get('/:playerId/advanced', async (req: Request, res: Response) => {
   try {
     const { playerId } = req.params;
-    const { season, scope } = req.query;
+    const { season, scope, position } = req.query;
     
     const seasonResult = parseIntParam(season, 2025, 'season');
     if (seasonResult.error) {
@@ -92,12 +93,59 @@ router.get('/:playerId/advanced', async (req: Request, res: Response) => {
     const seasonNum = seasonResult.value;
     const scopeType = scope === 'weekly' ? 'weekly' : 'season';
     
-    if (scopeType === 'weekly') {
-      const weeklyStats = await playerAdvancedService.getWRWeeklyStats(playerId, seasonNum);
+    let playerPosition = typeof position === 'string' ? position.toUpperCase() : null;
+    
+    if (!playerPosition || !['WR', 'RB'].includes(playerPosition)) {
+      const identityPosition = await playerAdvancedService.getPlayerPosition(playerId);
       
-      if (!weeklyStats.length) {
+      if (identityPosition && ['WR', 'RB'].includes(identityPosition)) {
+        playerPosition = identityPosition;
+      } else {
+        const rbStats = await playerAdvancedService.getRBSeasonStats(playerId, seasonNum);
+        const wrStats = await playerAdvancedService.getWRSeasonStats(playerId, seasonNum);
+        
+        if (rbStats) {
+          playerPosition = 'RB';
+        } else if (wrStats) {
+          playerPosition = 'WR';
+        } else {
+          return res.status(404).json({ 
+            error: 'Player not found or no advanced data available',
+            playerId,
+            season: seasonNum,
+            hint: 'Currently only WR and RB positions are supported',
+          });
+        }
+      }
+    }
+    
+    if (playerPosition === 'RB') {
+      if (scopeType === 'weekly') {
+        const weeklyStats = await playerAdvancedService.getRBWeeklyStats(playerId, seasonNum);
+        
+        if (!weeklyStats.length) {
+          return res.status(404).json({ 
+            error: 'RB not found or no weekly data available',
+            playerId,
+            season: seasonNum,
+          });
+        }
+        
+        return res.json({
+          success: true,
+          playerId,
+          position: 'RB',
+          season: seasonNum,
+          scope: 'weekly',
+          weeks: weeklyStats,
+        });
+      }
+      
+      const seasonStats = await playerAdvancedService.getRBSeasonStats(playerId, seasonNum);
+      
+      if (!seasonStats) {
         return res.status(404).json({ 
-          error: 'Player not found or no weekly data available',
+          error: 'RB not found or no season data available',
           playerId,
           season: seasonNum,
         });
@@ -106,6 +154,28 @@ router.get('/:playerId/advanced', async (req: Request, res: Response) => {
       return res.json({
         success: true,
         playerId,
+        position: 'RB',
+        season: seasonNum,
+        scope: 'season',
+        profile: seasonStats,
+      });
+    }
+    
+    if (scopeType === 'weekly') {
+      const weeklyStats = await playerAdvancedService.getWRWeeklyStats(playerId, seasonNum);
+      
+      if (!weeklyStats.length) {
+        return res.status(404).json({ 
+          error: 'WR not found or no weekly data available',
+          playerId,
+          season: seasonNum,
+        });
+      }
+      
+      return res.json({
+        success: true,
+        playerId,
+        position: 'WR',
         season: seasonNum,
         scope: 'weekly',
         weeks: weeklyStats,
@@ -116,7 +186,7 @@ router.get('/:playerId/advanced', async (req: Request, res: Response) => {
     
     if (!seasonStats) {
       return res.status(404).json({ 
-        error: 'Player not found or no season data available',
+        error: 'WR not found or no season data available',
         playerId,
         season: seasonNum,
       });
@@ -125,6 +195,7 @@ router.get('/:playerId/advanced', async (req: Request, res: Response) => {
     res.json({
       success: true,
       playerId,
+      position: 'WR',
       season: seasonNum,
       scope: 'season',
       profile: seasonStats,
@@ -219,6 +290,72 @@ metricsRouter.get('/wr', async (req: Request, res: Response) => {
  */
 export const forgeLabRouter = Router();
 
+/**
+ * GET /api/metrics/rb
+ * RB metric leaderboard
+ * 
+ * Query params:
+ *   metric - RB metric to rank by (required)
+ *   season - season year (optional, default 2025)
+ *   min_carries - minimum carries filter (optional, default 50)
+ *   limit - max results (optional, default 25)
+ */
+metricsRouter.get('/rb', async (req: Request, res: Response) => {
+  try {
+    const { metric, season, min_carries, limit } = req.query;
+    
+    if (!metric || typeof metric !== 'string') {
+      return res.status(400).json({ 
+        error: 'Query parameter "metric" required',
+        validMetrics: [
+          'carries', 'rush_yards', 'yards_per_carry', 'explosive_rush_rate',
+          'rush_success_rate', 'rush_epa_per_att', 'rush_fd_rate',
+          'carry_share', 'target_share', 'targets', 'receptions', 'rec_yards',
+          'yards_per_target', 'catch_rate', 'yac_per_rec',
+          'total_tds', 'rush_tds', 'rec_tds', 'goal_line_carries', 'redzone_carries',
+          'total_yards', 'total_opportunities', 'carries_per_game', 'targets_per_game', 'yards_per_game'
+        ],
+      });
+    }
+    
+    const seasonResult = parseIntParam(season, 2025, 'season');
+    if (seasonResult.error) {
+      return res.status(400).json({ error: seasonResult.error });
+    }
+    
+    const minCarriesResult = parseIntParam(min_carries, 50, 'min_carries');
+    if (minCarriesResult.error) {
+      return res.status(400).json({ error: minCarriesResult.error });
+    }
+    
+    const limitResult = parseIntParam(limit, 25, 'limit');
+    if (limitResult.error) {
+      return res.status(400).json({ error: limitResult.error });
+    }
+    
+    const leaderboard = await playerAdvancedService.getRBMetricLeaderboard(metric, {
+      season: seasonResult.value,
+      minCarries: minCarriesResult.value,
+      limit: Math.min(limitResult.value, 100),
+    });
+    
+    res.json({
+      success: true,
+      metric,
+      season: seasonResult.value,
+      minCarries: minCarriesResult.value,
+      count: leaderboard.length,
+      leaderboard,
+    });
+  } catch (error: any) {
+    console.error('[Metrics] RB leaderboard error:', error);
+    if (error.message?.includes('Invalid metric')) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to get RB leaderboard' });
+  }
+});
+
 forgeLabRouter.post('/wr-match', async (req: Request, res: Response) => {
   try {
     const { inputs, season, min_routes, limit } = req.body;
@@ -293,6 +430,94 @@ forgeLabRouter.post('/wr-match', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('[ForgeLab] WR match error:', error);
     res.status(500).json({ error: 'Failed to find matching WRs' });
+  }
+});
+
+/**
+ * POST /api/forge/lab/rb-match
+ * Find RBs matching a formula profile
+ * 
+ * Body:
+ *   weights - { volume, efficiency, receiving, explosive, scoring } dimension weights
+ *   targetProfile - { carryShare, rushSuccessRate, explosiveRushRate, yardsPerCarry, targetsPerGame, catchRate, goalLineCarriesPerGame }
+ *   season - season year (optional, default 2025)
+ *   min_carries - minimum carries filter (optional, default 50)
+ *   limit - max results (optional, default 10)
+ */
+forgeLabRouter.post('/rb-match', async (req: Request, res: Response) => {
+  try {
+    const { weights, targetProfile, season, min_carries, limit } = req.body;
+    
+    if (!weights && !targetProfile) {
+      return res.status(400).json({ 
+        error: 'Request body must include "weights" and/or "targetProfile"',
+        example: {
+          weights: { volume: 0.25, efficiency: 0.30, receiving: 0.15, explosive: 0.15, scoring: 0.15 },
+          targetProfile: {
+            carryShare: 0.55,
+            rushSuccessRate: 0.45,
+            explosiveRushRate: 0.12,
+            yardsPerCarry: 4.8,
+            targetsPerGame: 3.5,
+            catchRate: 0.80,
+            goalLineCarriesPerGame: 0.6
+          },
+          season: 2025,
+          min_carries: 50,
+          limit: 10,
+        },
+      });
+    }
+    
+    const parsedSeason = typeof season === 'number' ? season : 2025;
+    const parsedMinCarries = typeof min_carries === 'number' ? min_carries : 50;
+    const parsedLimit = typeof limit === 'number' ? Math.min(limit, 50) : 10;
+    
+    if (parsedSeason < 2020 || parsedSeason > 2030) {
+      return res.status(400).json({ error: 'season must be between 2020 and 2030' });
+    }
+    if (parsedMinCarries < 1 || parsedMinCarries > 500) {
+      return res.status(400).json({ error: 'min_carries must be between 1 and 500' });
+    }
+    
+    const matches = await playerAdvancedService.findMatchingRBs(
+      weights || {},
+      targetProfile || {},
+      {
+        season: parsedSeason,
+        minCarries: parsedMinCarries,
+        limit: parsedLimit,
+      }
+    );
+    
+    res.json({
+      success: true,
+      meta: {
+        season: parsedSeason,
+        minCarries: parsedMinCarries,
+        weights: {
+          volume: weights?.volume ?? 0.25,
+          efficiency: weights?.efficiency ?? 0.30,
+          receiving: weights?.receiving ?? 0.15,
+          explosive: weights?.explosive ?? 0.15,
+          scoring: weights?.scoring ?? 0.15,
+        },
+        targetProfile: {
+          carryShare: targetProfile?.carryShare ?? 0.50,
+          rushSuccessRate: targetProfile?.rushSuccessRate ?? 0.45,
+          explosiveRushRate: targetProfile?.explosiveRushRate ?? 0.12,
+          yardsPerCarry: targetProfile?.yardsPerCarry ?? 4.5,
+          targetsPerGame: targetProfile?.targetsPerGame ?? 3.0,
+          catchRate: targetProfile?.catchRate ?? 0.75,
+          goalLineCarriesPerGame: targetProfile?.goalLineCarriesPerGame ?? 0.5,
+        },
+        matchCount: matches.length,
+      },
+      matches,
+    });
+  } catch (error) {
+    console.error('[ForgeLab] RB match error:', error);
+    res.status(500).json({ error: 'Failed to find matching RBs' });
   }
 });
 

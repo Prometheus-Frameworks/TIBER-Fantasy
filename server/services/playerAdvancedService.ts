@@ -184,6 +184,24 @@ export class PlayerAdvancedService {
   }
 
   /**
+   * Get player position by canonical_id
+   */
+  async getPlayerPosition(playerId: string): Promise<string | null> {
+    const result = await db.execute(sql`
+      SELECT position
+      FROM player_identity_map
+      WHERE canonical_id = ${playerId}
+      LIMIT 1
+    `);
+    
+    if (!result.rows.length) {
+      return null;
+    }
+    
+    return (result.rows[0] as any).position;
+  }
+
+  /**
    * Search players by name with optional position filter
    */
   async searchPlayers(
