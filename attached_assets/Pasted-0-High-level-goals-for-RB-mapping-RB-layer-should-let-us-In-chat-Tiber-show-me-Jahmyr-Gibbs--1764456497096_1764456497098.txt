@@ -1,0 +1,356 @@
+0. High-level goals for RB mapping
+
+RB layer should let us:
+
+In chat:
+
+“Tiber, show me Jahmyr Gibbs’ advanced data and what Forge thinks.”
+
+In Forge Lab (Admin):
+
+Use sliders (YAC, explosive rate, target share, etc.)
+
+Hit “Match Players” → get 3–10 RBs that fit that profile.
+
+In future modules:
+
+Rank RBs by single metrics (explosive_rush_rate, goal_line_share, etc.)
+
+Plug RB traits into FORGE Alpha and environment/matchup modules.
+
+Think: one canonical RB brain feeding everything.
+
+1. Data + ID Mapping
+1.1 Source tables
+
+Use exactly what we already rely on for WRs, just filtered to RB:
+
+player_identity_map (or whatever we’re using to map Sleeper ↔ canonical ↔ nflfastR ids)
+
+nflfastr_weekly_2025 (or equivalent weekly stats table)
+
+forge_rb_alpha / forge_alpha (where RB raw/calibrated alpha lives now)
+
+Goal: make sure each fantasy-relevant RB has:
+
+canonical_id (used by FORGE)
+
+sleeper_id
+
+full_name
+
+position = 'RB'
+
+team
+
+If any RBs are missing from player_identity_map, backfill those in this pass.
+
+2. RB Advanced Bank – Schema
+
+Create a season-level view/table for RBs, similar spirit to WR bank.
+
+Table / view name (pick what fits repo style):
+
+CREATE TABLE IF NOT EXISTS rb_advanced_2025 (
+  canonical_id              TEXT PRIMARY KEY,
+  full_name                 TEXT NOT NULL,
+  team                      TEXT NOT NULL,
+  position                  TEXT NOT NULL DEFAULT 'RB',
+
+  -- Volume / role
+  games_played              INT NOT NULL,
+  snaps                     INT NOT NULL,
+  snap_share                NUMERIC(5,3),      -- 0–1
+  carries                   INT NOT NULL,
+  carry_share               NUMERIC(5,3),      -- share of team RB carries
+  routes_run                INT NOT NULL,
+  route_rate                NUMERIC(5,3),      -- routes / team dropbacks
+  targets                   INT NOT NULL,
+  target_share              NUMERIC(5,3),
+
+  -- Rushing efficiency
+  rush_yards                INT,
+  yards_per_carry           NUMERIC(5,2),
+  yards_after_contact_per_att NUMERIC(5,2),
+  explosive_rush_rate       NUMERIC(5,3),      -- % of carries ≥ 10 yards
+  rush_success_rate         NUMERIC(5,3),      -- success% from EPA success
+  rush_epa_per_att          NUMERIC(6,3),
+
+  -- Receiving profile
+  receptions                INT,
+  rec_yards                 INT,
+  yards_per_target          NUMERIC(5,2),
+  yprr                      NUMERIC(5,2),
+
+  -- Scoring / high-value usage
+  total_tds                 INT,
+  goal_line_carries         INT,               -- inside 5
+  redzone_carries           INT,               -- inside 20
+  redzone_targets           INT,
+
+  -- Ball security
+  fumbles                   INT,
+
+  -- Forge integration
+  forge_raw_alpha           NUMERIC(5,2),
+  forge_alpha               NUMERIC(5,2),
+
+  updated_at                TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+
+If you prefer a materialized view, same columns, built from aggregates; the important part is the shape.
+
+3. ETL / Aggregation Logic
+
+Create a small RB aggregation job (Node/TS script or DB migration) that:
+
+Filters RBs
+From nflfastr_weekly_2025 (or your weekly table):
+
+position = 'RB'
+
+group by gsis_id / canonical_id
+
+Aggregates season-to-date (up to current week):
+
+Pseudocode in SQL:
+
+INSERT INTO rb_advanced_2025 (...)
+SELECT
+  pim.canonical_id,
+  pim.full_name,
+  w.team,
+  'RB' as position,
+
+  COUNT(DISTINCT w.week)                       AS games_played,
+  SUM(w.offensive_snaps)                       AS snaps,
+  AVG(w.snap_share)                            AS snap_share,
+  SUM(w.rush_attempts)                         AS carries,
+  AVG(w.carry_share)                           AS carry_share,
+  SUM(w.routes_run)                            AS routes_run,
+  AVG(w.route_rate)                            AS route_rate,
+  SUM(w.targets)                               AS targets,
+  AVG(w.target_share)                          AS target_share,
+
+  SUM(w.rushing_yards)                         AS rush_yards,
+  (SUM(w.rushing_yards)::NUMERIC / NULLIF(SUM(w.rush_attempts),0)) AS yards_per_carry,
+  AVG(w.yards_after_contact_per_att)           AS yards_after_contact_per_att,
+  AVG(w.explosive_rush_rate)                   AS explosive_rush_rate,
+  AVG(w.rush_success_rate)                     AS rush_success_rate,
+  AVG(w.rush_epa_per_att)                      AS rush_epa_per_att,
+
+  SUM(w.receptions)                            AS receptions,
+  SUM(w.receiving_yards)                       AS rec_yards,
+  (SUM(w.receiving_yards)::NUMERIC / NULLIF(SUM(w.targets),0)) AS yards_per_target,
+  AVG(w.yprr)                                  AS yprr,
+
+  SUM(w.total_tds)                             AS total_tds,
+  SUM(w.goal_line_carries)                     AS goal_line_carries,
+  SUM(w.redzone_carries)                       AS redzone_carries,
+  SUM(w.redzone_targets)                       AS redzone_targets,
+
+  fa.raw_alpha                                 AS forge_raw_alpha,
+  fa.calibrated_alpha                          AS forge_alpha,
+
+  NOW()                                        AS updated_at
+FROM nflfastr_weekly_2025 w
+JOIN player_identity_map pim
+  ON w.gsis_id = pim.nflfastr_id
+LEFT JOIN forge_rb_alpha fa
+  ON fa.canonical_id = pim.canonical_id
+WHERE w.season = 2025
+  AND w.week <= 12 -- or param
+GROUP BY pim.canonical_id, pim.full_name, w.team, fa.raw_alpha, fa.calibrated_alpha
+ON CONFLICT (canonical_id) DO UPDATE
+SET ...;
+
+
+Adjust column names to match what you actually have; above is a blueprint.
+
+Key: tie everything to canonical_id so WR/RB/TE/QB banks all speak same player language.
+
+4. RB Advanced API Endpoints
+
+Mirror the WR endpoints so Tiber can treat them uniformly.
+
+4.1 Single-player advanced endpoint
+// GET /api/players/:playerId/advanced/rb?season=2025
+// or unified: /api/players/:playerId/advanced?position=RB
+
+interface RBAdvancedResponse {
+  meta: {
+    playerId: string;           // canonical_id
+    sleeperId?: string;
+    season: number;
+    position: 'RB';
+    team: string;
+  };
+  metrics: {
+    // role / volume
+    gamesPlayed: number;
+    snapShare: number;
+    carryShare: number;
+    carriesPerGame: number;
+    routesPerGame: number;
+    targetsPerGame: number;
+
+    // rushing
+    yardsPerCarry: number;
+    yardsAfterContactPerAtt: number;
+    explosiveRushRate: number;
+    rushSuccessRate: number;
+    rushEpaPerAtt: number;
+
+    // receiving
+    yardsPerTarget: number;
+    yprr: number;
+
+    // scoring
+    tds: number;
+    goalLineCarries: number;
+    redzoneCarries: number;
+    redzoneTargets: number;
+
+    // forge
+    forgeAlpha: number | null;
+    forgeRawAlpha: number | null;
+  };
+}
+
+
+SQL backing it is just a SELECT * FROM rb_advanced_2025 WHERE canonical_id = $1.
+
+4.2 RB metric leaderboard
+
+For stuff like: “show me the top RBs by explosive rush rate”.
+
+// GET /api/metrics/rb?metric=explosiveRushRate&min_carries=80&limit=20
+
+interface RBMetricRow {
+  canonicalId: string;
+  name: string;
+  team: string;
+  metricValue: number;
+  carries: number;
+  forgeAlpha: number | null;
+}
+
+
+Map metric param to actual column names in a whitelist, e.g.:
+
+const METRIC_COLUMN_MAP = {
+  explosiveRushRate: 'explosive_rush_rate',
+  rushSuccessRate: 'rush_success_rate',
+  yardsAfterContact: 'yards_after_contact_per_att',
+  goalLineShare: 'goal_line_carries',
+  routesPerGame: '(routes_run::numeric / games_played)',
+  targetsPerGame: '(targets::numeric / games_played)'
+};
+
+5. Forge Lab: RB “Player Match by Formula”
+
+Once RB bank is live, wire a match endpoint similar to WR Forge Lab:
+
+5.1 Endpoint
+// POST /api/forge-lab/rb/match
+
+interface RBMatchRequest {
+  season: number;                // default 2025
+  minCarries?: number;           // e.g. 50
+  minRoutes?: number;            // e.g. 80
+  weights: {
+    volume: number;              // carries + snaps
+    efficiency: number;          // YPC, rush_success_rate, rush_epa_per_att
+    receiving: number;           // targets, yprr
+    explosive: number;           // explosive_rush_rate, yac_per_att
+    scoring: number;             // goal_line_carries, redzone_touches
+  };
+  targetProfile: {
+    // normalized 0–1 or raw; just keep consistent with how WR lab does it
+    carryShare?: number;
+    snapShare?: number;
+    rushSuccessRate?: number;
+    explosiveRushRate?: number;
+    yardsAfterContactPerAtt?: number;
+    targetsPerGame?: number;
+    yprr?: number;
+    goalLineCarriesPerGame?: number;
+  };
+  topN?: number;                 // default 10
+}
+
+interface RBMatchResultRow {
+  canonicalId: string;
+  name: string;
+  team: string;
+  similarityScore: number;       // 0–100
+  forgeAlpha: number | null;
+  coreStats: {
+    carryShare: number;
+    snapShare: number;
+    rushSuccessRate: number;
+    explosiveRushRate: number;
+    yprr: number;
+    goalLineCarriesPerGame: number;
+  };
+}
+
+interface RBMatchResponse {
+  meta: { season: number; count: number; };
+  matches: RBMatchResultRow[];
+}
+
+5.2 Matching logic (simple v0)
+
+Normalize the core stats to 0–1 inside the query or in TS
+
+Compute a weighted Euclidean distance vs targetProfile
+
+Convert to similarity score: 100 * exp(-k * distance).
+
+Doesn’t need to be fancy; we just need consistent, not perfect.
+
+6. Tiber Research Prompt – RB Add-ons
+
+Everything we wrote for WR still stands. For RB, add to the “when user asks for advanced data” section:
+
+Look for synonyms: “advanced data”, “underlying numbers”, “usage”, “role”, “efficiency” for RBs.
+
+Pull from the RB advanced endpoint.
+
+Emphasize:
+
+Role: snap share, carry share, routes, targets
+
+Efficiency: success rate, EPA, explosive rushes, YAC
+
+Scoring: goal-line + red zone
+
+Tiber’s RB explanation tiers should lean into:
+
+Workhorse Alpha: high snaps, high carry share, goal-line work, usable targets
+
+Committee Efficient: high efficiency, lower volume, maybe one injury away
+
+Satellite / Receiving back: low carries, high routes/targets
+
+Dust: low volume, low efficiency, no scoring role
+
+7. Quick sanity tests for the agent
+
+Once implemented, you can hit these:
+
+GET /api/players/search?q=Jahmyr Gibbs → returns canonical id
+
+GET /api/players/<gibbs-id>/advanced/rb?season=2025
+
+Check snapShare, carryShare, targetsPerGame look believable.
+
+GET /api/metrics/rb?metric=explosiveRushRate&min_carries=80
+
+Confirm guys like Achane, Breece, etc. are near the top.
+
+POST /api/forge-lab/rb/match
+
+Plug an “alpha hog” profile and make sure it returns the expected names.
