@@ -703,6 +703,164 @@ async function fetchPlayerIdsForPosition(
   }
 }
 
+// ========================================
+// DEBUG ENDPOINTS - Environment & Matchup
+// ========================================
+
+import { getTeamEnvironment, getAllTeamEnvironments } from './environmentService';
+import { getMatchupContext, getDefenseMatchups } from './matchupService';
+import { refreshForgeContext } from './envMatchupRefresh';
+
+/**
+ * GET /api/forge/env
+ * 
+ * Debug endpoint to inspect team environment scores.
+ * 
+ * Query params:
+ * - season (optional): number, defaults to 2025
+ * - week (optional): number, defaults to 10
+ * - team (optional): team abbreviation, defaults to 'KC'
+ */
+router.get('/env', async (req: Request, res: Response) => {
+  try {
+    const season = parseInt(req.query.season as string) || 2025;
+    const week = parseInt(req.query.week as string) || 10;
+    const team = (req.query.team as string)?.toUpperCase() || 'KC';
+
+    console.log(`[FORGE/Debug] Environment request: season=${season}, week=${week}, team=${team}`);
+
+    const env = await getTeamEnvironment(season, week, team);
+
+    return res.json({
+      meta: { season, week, team },
+      env,
+      _debug: {
+        hasData: env !== null,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    console.error('[FORGE/Debug] env endpoint error:', err);
+    return res.status(500).json({ error: 'env debug failed' });
+  }
+});
+
+/**
+ * GET /api/forge/env/all
+ * 
+ * Get all team environment scores for a given week.
+ * Useful for seeing the full distribution.
+ */
+router.get('/env/all', async (req: Request, res: Response) => {
+  try {
+    const season = parseInt(req.query.season as string) || 2025;
+    const week = parseInt(req.query.week as string) || 10;
+
+    const envs = await getAllTeamEnvironments(season, week);
+
+    return res.json({
+      meta: { season, week },
+      count: envs.length,
+      environments: envs.sort((a, b) => b.envScore100 - a.envScore100),
+    });
+  } catch (err) {
+    console.error('[FORGE/Debug] env/all endpoint error:', err);
+    return res.status(500).json({ error: 'env/all debug failed' });
+  }
+});
+
+/**
+ * GET /api/forge/matchup
+ * 
+ * Debug endpoint to inspect position-specific matchup scores.
+ * 
+ * Query params:
+ * - season (optional): number, defaults to 2025
+ * - week (optional): number, defaults to 10
+ * - offense (optional): offense team abbreviation, defaults to 'KC'
+ * - defense (optional): defense team abbreviation, defaults to 'LV'
+ * - position (optional): WR | RB | TE | QB, defaults to 'WR'
+ */
+router.get('/matchup', async (req: Request, res: Response) => {
+  try {
+    const season = parseInt(req.query.season as string) || 2025;
+    const week = parseInt(req.query.week as string) || 10;
+    const offense = (req.query.offense as string)?.toUpperCase() || 'KC';
+    const defense = (req.query.defense as string)?.toUpperCase() || 'LV';
+    const position = ((req.query.position as string)?.toUpperCase() || 'WR') as PlayerPosition;
+
+    if (!['WR', 'RB', 'TE', 'QB'].includes(position)) {
+      return res.status(400).json({ error: 'Invalid position. Must be WR, RB, TE, or QB.' });
+    }
+
+    console.log(`[FORGE/Debug] Matchup request: season=${season}, week=${week}, offense=${offense}, defense=${defense}, position=${position}`);
+
+    const matchup = await getMatchupContext(season, week, offense, defense, position);
+
+    return res.json({
+      meta: { season, week, offense, defense, position },
+      matchup,
+      _debug: {
+        hasData: matchup.matchupScore100 !== 50 || matchup.metrics !== undefined,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    console.error('[FORGE/Debug] matchup endpoint error:', err);
+    return res.status(500).json({ error: 'matchup debug failed' });
+  }
+});
+
+/**
+ * GET /api/forge/matchup/defense
+ * 
+ * Get all position matchup scores for a specific defense.
+ */
+router.get('/matchup/defense', async (req: Request, res: Response) => {
+  try {
+    const season = parseInt(req.query.season as string) || 2025;
+    const week = parseInt(req.query.week as string) || 10;
+    const defense = (req.query.defense as string)?.toUpperCase() || 'LV';
+
+    const matchups = await getDefenseMatchups(season, week, defense);
+
+    return res.json({
+      meta: { season, week, defense },
+      matchups,
+    });
+  } catch (err) {
+    console.error('[FORGE/Debug] matchup/defense endpoint error:', err);
+    return res.status(500).json({ error: 'matchup/defense debug failed' });
+  }
+});
+
+/**
+ * POST /api/forge/admin/refresh
+ * 
+ * Refresh environment and matchup context tables for a given week.
+ * This populates forge_team_environment and forge_team_matchup_context.
+ */
+router.post('/admin/refresh', async (req: Request, res: Response) => {
+  try {
+    const season = parseInt(req.body.season as string) || parseInt(req.query.season as string) || 2025;
+    const week = parseInt(req.body.week as string) || parseInt(req.query.week as string) || 10;
+
+    console.log(`[FORGE/Admin] Refresh request: season=${season}, week=${week}`);
+
+    const result = await refreshForgeContext(season, week);
+
+    return res.json({
+      success: true,
+      meta: { season, week },
+      result,
+      message: `Refreshed ${result.environments} environments and ${result.matchups} matchup contexts`,
+    });
+  } catch (err) {
+    console.error('[FORGE/Admin] refresh endpoint error:', err);
+    return res.status(500).json({ success: false, error: 'Refresh failed' });
+  }
+});
+
 export function registerForgeRoutes(app: any): void {
   app.use('/api/forge', router);
   console.log('🔥 FORGE v0.1 routes mounted at /api/forge/*');

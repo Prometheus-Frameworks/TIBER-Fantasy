@@ -4023,3 +4023,103 @@ export type SleeperOwnership = typeof sleeperOwnership.$inferSelect;
 export type InsertSleeperOwnership = z.infer<typeof insertSleeperOwnershipSchema>;
 export type WaiverCandidate = typeof waiverCandidates.$inferSelect;
 export type InsertWaiverCandidate = z.infer<typeof insertWaiverCandidateSchema>;
+
+// ========================================
+// FORGE TEAM ENVIRONMENT + MATCHUP CONTEXT
+// ========================================
+
+/**
+ * Team Environment Score Table
+ * One row per (season, week, team)
+ * 
+ * Data Sources:
+ * - team_offensive_context: cpoe, pass_epa, pressure_rate_allowed
+ * - bronze_nflfastr_plays: raw_data.qb_dropback, raw_data.sack, raw_data.score_differential
+ * - Aggregated from PBP for: neutral_pass_rate, sack_rate, red zone metrics
+ * 
+ * env_score_100 formula (0-100, 50 = league average):
+ *   0.25 * norm(qb_cpoe) 
+ * + 0.25 * norm(qb_epa_per_dropback)
+ * + 0.20 * (1 - norm(pressure_rate_allowed))
+ * + 0.15 * norm(neutral_pass_rate + proe)
+ * + 0.15 * norm(ppg + rz_possessions_per_game)
+ */
+export const forgeTeamEnvironment = pgTable("forge_team_environment", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  team: text("team").notNull(),
+  
+  // Core metrics
+  qbCpoe: real("qb_cpoe"),
+  qbEpaPerDropback: real("qb_epa_per_dropback"),
+  neutralPassRate: real("neutral_pass_rate"),
+  proe: real("proe"),
+  pressureRateAllowed: real("pressure_rate_allowed"),
+  sackRateAllowed: real("sack_rate_allowed"),
+  ppg: real("ppg"),
+  rzPossessionsPerGame: real("rz_possessions_per_game"),
+  rzPassRate: real("rz_pass_rate"),
+  
+  // Composite scores
+  envScoreRaw: real("env_score_raw"),      // 0-1 raw score
+  envScore100: integer("env_score_100"),   // 0-100 scaled score (50 = league avg)
+  
+  // Metadata
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => ({
+  uniqueSeasonWeekTeam: unique("forge_env_unique").on(table.season, table.week, table.team),
+  seasonWeekIdx: index("forge_env_season_week_idx").on(table.season, table.week),
+  teamIdx: index("forge_env_team_idx").on(table.team),
+}));
+
+/**
+ * Team Matchup Context Score Table
+ * One row per (season, week, defense_team, position)
+ * 
+ * Data Sources:
+ * - team_defensive_context: pass_epa_allowed, rush_epa_allowed, pressure_rate_generated
+ * - bronze_nflfastr_plays: explosive plays (20+ yards), YAC allowed
+ * - silver_player_weekly_stats: fantasy points allowed by position
+ * 
+ * matchup_score_100 formula varies by position (0-100, 50 = neutral):
+ * 
+ * WR: 0.30*pass_epa + 0.20*explosive_pass + 0.20*yac + 0.15*(1-pressure) + 0.15*fpts_allowed
+ * RB: 0.40*rush_epa + 0.25*fpts_allowed + 0.20*(1-pressure) + 0.15*explosive_rush
+ * TE: 0.35*pass_epa + 0.30*fpts_allowed + 0.20*yac + 0.15*(1-pressure)
+ */
+export const forgeTeamMatchupContext = pgTable("forge_team_matchup_context", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  defenseTeam: text("defense_team").notNull(),
+  position: text("position").notNull(),  // 'WR' | 'RB' | 'TE' | 'QB'
+  
+  // Defensive metrics
+  defPassEpaPerAttempt: real("def_pass_epa_per_attempt"),
+  defRushEpaPerRush: real("def_rush_epa_per_rush"),
+  defPressureRate: real("def_pressure_rate"),
+  defYacPerCompletion: real("def_yac_per_completion"),
+  defExplosivePassRateAllowed: real("def_explosive_pass_rate_allowed"),
+  defExplosiveRushRateAllowed: real("def_explosive_rush_rate_allowed"),
+  fantasyPtsAllowedPerGame: real("fantasy_pts_allowed_per_game"),
+  
+  // Composite scores
+  matchupScoreRaw: real("matchup_score_raw"),     // 0-1 raw score
+  matchupScore100: integer("matchup_score_100"), // 0-100 scaled score (50 = neutral)
+  
+  // Metadata
+  sampleSize: integer("sample_size"),           // Number of games in calculation
+  lastUpdated: timestamp("last_updated").defaultNow(),
+}, (table) => ({
+  uniqueSeasonWeekDefPos: unique("forge_matchup_unique").on(table.season, table.week, table.defenseTeam, table.position),
+  seasonWeekIdx: index("forge_matchup_season_week_idx").on(table.season, table.week),
+  defenseTeamIdx: index("forge_matchup_def_team_idx").on(table.defenseTeam),
+  positionIdx: index("forge_matchup_position_idx").on(table.position),
+}));
+
+// FORGE Environment + Matchup Types
+export type ForgeTeamEnvironment = typeof forgeTeamEnvironment.$inferSelect;
+export type InsertForgeTeamEnvironment = typeof forgeTeamEnvironment.$inferInsert;
+export type ForgeTeamMatchupContext = typeof forgeTeamMatchupContext.$inferSelect;
+export type InsertForgeTeamMatchupContext = typeof forgeTeamMatchupContext.$inferInsert;

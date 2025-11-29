@@ -400,3 +400,66 @@ export const ALPHA_CALIBRATION: Partial<Record<PlayerPosition, CalibrationParams
   TE: undefined,  // Pass-through
   QB: undefined,  // Pass-through
 };
+
+// ========================================
+// FORGE TEAM ENVIRONMENT + MATCHUP CONTEXT
+// ========================================
+
+/**
+ * Team Environment types for fantasy-relevance scoring
+ */
+export interface TeamEnvironment {
+  season: number;
+  week: number;
+  team: string;
+  envScore100: number;  // 0-100, 50 = league average
+  
+  // Optional raw metrics for debugging
+  metrics?: {
+    qbCpoe?: number;
+    qbEpaPerDropback?: number;
+    neutralPassRate?: number;
+    proe?: number;
+    pressureRateAllowed?: number;
+    sackRateAllowed?: number;
+    ppg?: number;
+    rzPossessionsPerGame?: number;
+  };
+}
+
+/**
+ * Matchup Context types for position-specific defensive matchups
+ */
+export interface MatchupContext {
+  season: number;
+  week: number;
+  offenseTeam: string;
+  defenseTeam: string;
+  position: PlayerPosition;
+  matchupScore100: number;  // 0-100, 50 = neutral matchup
+  
+  // Optional raw metrics for debugging
+  metrics?: {
+    defPassEpaPerAttempt?: number;
+    defRushEpaPerRush?: number;
+    defPressureRate?: number;
+    defYacPerCompletion?: number;
+    defExplosivePassRateAllowed?: number;
+    defExplosiveRushRateAllowed?: number;
+    fantasyPtsAllowedPerGame?: number;
+  };
+}
+
+/**
+ * FORGE Modifier Weights
+ * Controls how strongly env/matchup affect rawAlpha
+ */
+export interface ForgeModifierWeights {
+  w_env: number;   // Environment weight (0-1)
+  w_mu: number;    // Matchup weight (0-1)
+}
+
+export const DEFAULT_FORGE_MODIFIER_WEIGHTS: ForgeModifierWeights = {
+  w_env: 0.40,  // ±40% at extreme env scores
+  w_mu: 0.25,   // ±25% at extreme matchup scores
+};

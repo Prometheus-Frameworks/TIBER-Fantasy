@@ -16,6 +16,8 @@ import {
   Trajectory,
   PlayerPosition,
   FPRData,
+  TeamEnvironment,
+  MatchupContext,
   ALPHA_WEIGHTS,
   ALPHA_CALIBRATION,
   TRAJECTORY_THRESHOLDS,
@@ -24,20 +26,56 @@ import {
 } from './types';
 import { clamp, roundTo } from './utils/scoring';
 import { computeFPR, FPROutput } from './fibonacciPatternResonance';
+import { applyForgeModifiers } from './forgeAlphaModifiers';
+
+/**
+ * Optional modifiers for alpha calculation
+ */
+export interface AlphaModifierContext {
+  env?: TeamEnvironment | null;
+  matchup?: MatchupContext | null;
+}
 
 /**
  * Calculate the complete FORGE score for a player
+ * 
+ * The scoring pipeline is:
+ *   rawAlpha → envAdjustedAlpha → matchupAdjustedAlpha → calibratedAlpha
+ * 
+ * @param context - Player context data
+ * @param features - Computed feature bundle
+ * @param modifiers - Optional environment/matchup modifiers
  */
 export function calculateAlphaScore(
   context: ForgeContext,
-  features: ForgeFeatureBundle
+  features: ForgeFeatureBundle,
+  modifiers?: AlphaModifierContext
 ): ForgeScore {
   console.log(`[FORGE/AlphaEngine] Calculating alpha for ${context.playerName} (${context.position})`);
   
   const subScores = calculateSubScores(features);
   const rawAlpha = calculateWeightedAlpha(subScores, context.position);
   
-  const calibratedAlpha = calibrateAlpha(context.position, rawAlpha);
+  // Apply environment and matchup modifiers (v0.1)
+  // If modifiers are provided, adjust rawAlpha before calibration
+  let modifiedAlpha = rawAlpha;
+  if (modifiers) {
+    try {
+      modifiedAlpha = applyForgeModifiers(
+        rawAlpha,
+        modifiers.env ?? null,
+        modifiers.matchup ?? null
+      );
+      if (modifiers.env || modifiers.matchup) {
+        console.log(`[FORGE/AlphaEngine] Applied modifiers: raw=${rawAlpha.toFixed(1)} → modified=${modifiedAlpha.toFixed(1)}`);
+      }
+    } catch (err) {
+      console.error(`[FORGE/AlphaEngine] Modifier application failed, using rawAlpha:`, err);
+      modifiedAlpha = rawAlpha;
+    }
+  }
+  
+  const calibratedAlpha = calibrateAlpha(context.position, modifiedAlpha);
   
   const trajectory = calculateTrajectory(context);
   const confidence = calculateConfidence(context, features);
