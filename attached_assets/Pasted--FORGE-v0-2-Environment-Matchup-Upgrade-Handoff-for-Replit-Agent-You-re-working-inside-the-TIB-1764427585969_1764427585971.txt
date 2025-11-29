@@ -1,0 +1,336 @@
+🧠 FORGE v0.2 Environment + Matchup Upgrade
+
+Handoff for Replit Agent
+
+You’re working inside the TIBER / FORGE fantasy platform.
+FORGE v0.1 already exists with:
+
+envScore (team environment) and matchupScore (defensive matchup)
+
+Min–max normalization over the last 6 weeks
+
+Integration into the alpha pipeline as:
+
+rawAlpha
+  → envAdjustedAlpha = rawAlpha * (1 + w_env * (envScore/50 - 1))
+  → matchupAdjustedAlpha = envAdjustedAlpha * (1 + w_mu * (matchupScore/50 - 1))
+  → calibratedAlpha
+
+
+WR and RB rankings are already wired to use these adjusted scores.
+
+🎯 Objective
+
+Upgrade FORGE to v0.2 based on a design review (Gemini 3) by:
+
+Replacing brittle min–max normalization with a robust scaler + sigmoid for all env/matchup metrics.
+
+Tightening envScore to be more process-based and less redundant.
+
+Upgrading WR matchupScore to use better process metrics and a pressure_rate_delta mismatch term.
+
+Keeping existing APIs and types intact (env_score_100, matchup_score_100 etc.), so the frontend doesn’t break.
+
+Adding a small debug surface so we can inspect components.
+
+Do not touch:
+
+WR/RB WR_Core / WR_Alpha / RB lab equations.
+
+Alpha calibration mapping (25–90 band) logic.
+
+Existing /rankings/* table shapes.
+
+1️⃣ Locate Current Modules
+
+Use ripgrep to find the current implementation:
+
+Team environment view / service:
+
+Search for: team_environment, env_score_100, or envScore
+
+Matchup context view / service:
+
+Search for: team_matchup_context, matchup_score_100, or matchupScore
+
+Alpha adjustment:
+
+Search for: applyForgeModifiers, w_env, w_mu, or envAdjustedAlpha
+
+We’re going to upgrade the internals of env/matchup calculation, not rename them.
+
+2️⃣ Implement Robust Normalization Utility (SQL-level)
+
+Right now normalization is probably min–max. Replace that with Robust Scaling + Sigmoid for each raw metric used in env/matchup formulas.
+
+2.1 Concept
+
+For any metric x (like qb_cpoe, epa_per_dropback_allowed, etc.):
+
+Compute median and IQR per week+season across all teams:
+
+median_x = percentile_cont(0.5) WITHIN GROUP (ORDER BY x)
+          OVER (PARTITION BY season, week);
+
+p75_x    = percentile_cont(0.75) WITHIN GROUP (ORDER BY x)
+          OVER (PARTITION BY season, week);
+
+p25_x    = percentile_cont(0.25) WITHIN GROUP (ORDER BY x)
+          OVER (PARTITION BY season, week);
+
+iqr_x    = NULLIF(p75_x - p25_x, 0);
+
+
+Compute robust standardized value:
+
+x_robust = CASE 
+  WHEN iqr_x IS NULL THEN 0
+  ELSE (x - median_x) / iqr_x
+END;
+
+
+Map to 0–100 with a logistic (sigmoid):
+
+-- k controls steepness, use k = 0.8 per spec
+score_x = 100.0 / (1.0 + EXP(-0.8 * x_robust));
+
+
+Optionally clamp:
+
+score_x_clamped = LEAST(100.0, GREATEST(0.0, score_x));
+
+2.2 Implementation
+
+Create a SQL helper pattern you can reuse in the team_environment and team_matchup_context views.
+
+For every raw metric we use in env/matchup formulas:
+
+Replace min–max normalization with this robust+sigmoid logic.
+
+Keep field naming clean, e.g.:
+
+qb_cpoe_score           -- 0–100
+qb_epa_db_score         -- 0–100
+pressure_allowed_score  -- 0–100
+...
+
+
+We still build the final env_score_100 / matchup_score_100 from these.
+
+3️⃣ Upgrade envScore Formula (v0.2)
+
+Move envScore away from redundant QB measures and pure results like PPG, into process:
+
+We want envScore to roughly follow:
+
+0.20 × QB efficiency (EPA/play)
+
+0.20 × OL pass protection
+
+0.20 × tempo (faster offenses favor volume)
+
+0.20 × red-zone efficiency
+
+0.20 × PROE (aggressiveness)
+
+3.1 Raw Metrics (use what you already have, or closest equivalents)
+
+In team_environment or its backing query, derive:
+
+qb_epa_per_play
+
+ol_pass_block_proxy
+
+If you don’t have true PBWR, approximate with existing:
+
+1 - pressure_rate_allowed or
+
+something like 1 - sack_rate_allowed
+
+neutral_pace_sec_per_snap (first half, score diff ≤10; if not present, use best proxy)
+
+rz_efficiency = TDs per red-zone trip (offense only)
+
+proe = pass rate over expected (you likely already have)
+
+3.2 Turn Each into Robust Scores
+
+For each of those raw values, add robust+sigmoid scores:
+
+qb_epa_score
+ol_pass_block_score
+tempo_score            -- computed on inverse sec/snap (faster = higher raw)
+rz_eff_score
+proe_score
+
+3.3 New envScore
+
+Inside team_environment:
+
+env_score_raw =
+    0.20 * qb_epa_score / 100.0
+  + 0.20 * ol_pass_block_score / 100.0
+  + 0.20 * tempo_score / 100.0
+  + 0.20 * rz_eff_score / 100.0
+  + 0.20 * proe_score / 100.0;
+
+env_score_100 = ROUND(env_score_raw * 100.0)::int;
+
+
+Keep the column name env_score_100 the same.
+
+We’re just changing how it’s computed.
+
+4️⃣ Upgrade WR Matchup Formula (v0.2)
+
+We want position-specific defensive weakness with an actual trench mismatch term.
+
+4.1 Raw Metrics Needed
+
+Per (season, week, defense_team) for WR:
+
+pass_epa_allowed_per_dropback
+
+explosive_pass_rate_allowed (EPA or 20+ yard pass rate)
+
+def_coverage_quality_proxy
+
+If you don’t have PFF coverage grade, use:
+
+negative of def_pass_success_rate (more successful passes against = worse coverage)
+
+or yards_per_attempt_allowed
+
+def_pressure_rate
+
+Offensive OL proxy for the opposing offense (from team_environment):
+
+For now, we don’t have full offense/defense pairing here, so:
+
+Still add def_pressure_rate_delta as:
+
+pressure_rate_delta = def_pressure_rate; -- placeholder
+
+
+But structure the schema so later we can replace with:
+def_pressure_rate - offense_ol_pass_block_rate.
+
+If you can join offensive OL proxy for the specific offense in that game/week, even better. If not, keep pressure_rate_delta = def_pressure_rate for now.
+
+4.2 Robust Scores
+
+Add robust+sigmoid scores:
+
+pass_epa_allowed_score
+explosive_pass_score
+coverage_softness_score
+pressure_delta_score
+
+
+Where coverage_softness_score is “worse coverage = higher score”.
+
+4.3 New matchup_score_100 for WR
+
+In the WR branch of team_matchup_context:
+
+matchup_score_raw_wr =
+    0.30 * pass_epa_allowed_score     / 100.0
+  + 0.25 * explosive_pass_score       / 100.0
+  + 0.25 * coverage_softness_score    / 100.0
+  + 0.20 * (1.0 - pressure_delta_score / 100.0);  -- more pressure = tougher matchup
+
+matchup_score_100 = ROUND(matchup_score_raw_wr * 100.0)::int;
+
+
+Keep the column name matchup_score_100 the same.
+
+For non-WR positions, keep existing formulas for now (RB/TE/QB untouched).
+
+5️⃣ Keep Integration the Same (for Now)
+
+Do not change the overall alpha pipeline yet.
+
+applyForgeModifiers should still:
+
+envNorm = env.envScore100 / 50 - 1;
+muNorm  = matchup.matchupScore100 / 50 - 1;
+
+adjusted = rawAlpha
+  * (1 + w_env * envNorm)
+  * (1 + w_mu  * muNorm);
+
+
+We’re trusting that robust normalization + better env/matchup scores will already improve behavior. We can tune w_env / w_mu later if needed.
+
+6️⃣ Add Small Debug Endpoints
+
+Add two debug endpoints to make this inspectable from the UI or Postman.
+
+6.1 /api/forge/env-debug
+
+GET /api/forge/env-debug?team=KC&season=2025&week=10
+
+Returns:
+
+{
+  "meta": { "team": "KC", "season": 2025, "week": 10 },
+  "components": {
+    "qb_epa_raw": -0.02,
+    "qb_epa_score": 61.3,
+    "ol_pass_block_raw": 0.68,
+    "ol_pass_block_score": 72.1,
+    "tempo_raw": 25.8,
+    "tempo_score": 65.0,
+    "rz_eff_raw": 0.64,
+    "rz_eff_score": 69.8,
+    "proe_raw": 0.07,
+    "proe_score": 74.2
+  },
+  "env_score_100": 71
+}
+
+6.2 /api/forge/matchup-debug
+
+GET /api/forge/matchup-debug?defense=NYJ&position=WR&season=2025&week=10
+
+Returns:
+
+{
+  "meta": { "defense": "NYJ", "position": "WR", "season": 2025, "week": 10 },
+  "components": {
+    "pass_epa_allowed_raw": 0.18,
+    "pass_epa_allowed_score": 40.5,
+    "explosive_pass_raw": 0.07,
+    "explosive_pass_score": 45.2,
+    "coverage_softness_raw": -0.09,
+    "coverage_softness_score": 35.1,
+    "pressure_delta_raw": 0.34,
+    "pressure_delta_score": 70.3
+  },
+  "matchup_score_100": 41
+}
+
+
+These are read-only debug helpers. No impact on main UI.
+
+7️⃣ Success Criteria
+
+✅ team_environment still exposes env_score_100 (0–100), but now:
+
+Uses robust scaling + sigmoid on process metrics.
+
+✅ team_matchup_context still exposes matchup_score_100 (0–100), but WR branch:
+
+Uses process-based pass defense metrics.
+
+Includes a pressure_rate_delta-based term (even if approximated for now).
+
+✅ No changes required in frontend: envScore100 and matchupScore100 still work as before.
+
+✅ Debug endpoints respond and show component breakdown.
+
+✅ WR/RB rankings still load, but environment/matchup-driven movement feels:
+
+Less random / spiky.
+
+More aligned with “good/bad offense” and “good/bad matchup” intuitions.
