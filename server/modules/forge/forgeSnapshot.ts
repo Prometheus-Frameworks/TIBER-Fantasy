@@ -23,7 +23,7 @@ export interface ForgeSnapshotMeta {
 export async function createForgeSnapshot(
   opts: ForgeSnapshotOptions = {}
 ): Promise<ForgeSnapshotMeta> {
-  const season = opts.season ?? 2024;
+  const season = opts.season ?? 2025;
   const week = opts.week ?? 17;
   const position = opts.position ?? 'ALL';
   const limit = opts.limit ?? 500;

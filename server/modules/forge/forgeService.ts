@@ -119,7 +119,7 @@ class ForgeService implements IForgeService {
     const { 
       position, 
       limit = 100, 
-      season = 2024, 
+      season = 2025, 
       asOfWeek = 17 
     } = query;
 

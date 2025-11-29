@@ -29,7 +29,7 @@ export async function getForgeBatch(query: ForgeBatchQuery): Promise<ForgeBatchR
   const {
     position,
     limit = 100,
-    season = 2024,
+    season = 2025,
     week = 17,
   } = query;
 
@@ -62,7 +62,7 @@ export async function getForgeScoreForPlayer(
   playerId: string,
   options?: { season?: number; week?: number }
 ): Promise<ForgeScore | null> {
-  const { season = 2024, week = 17 } = options ?? {};
+  const { season = 2025, week = 17 } = options ?? {};
 
   try {
     const score = await forgeService.getForgeScoreForPlayer(playerId, season, week);

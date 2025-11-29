@@ -47,7 +47,7 @@ const FALLBACK_PLAYERS: Record<PlayerPosition, string[]> = {
  * 
  * Query params:
  * - position (required): WR | RB | TE | QB
- * - season (optional): number, defaults to 2024
+ * - season (optional): number, defaults to 2025
  * - week (optional): number, defaults to 17
  * - limit (optional): number, defaults to 50
  * - playerIds (optional): comma-separated canonical IDs
@@ -55,7 +55,7 @@ const FALLBACK_PLAYERS: Record<PlayerPosition, string[]> = {
 router.get('/preview', async (req: Request, res: Response) => {
   try {
     const position = (req.query.position as string)?.toUpperCase() as PlayerPosition;
-    const season = parseInt(req.query.season as string) || 2024;
+    const season = parseInt(req.query.season as string) || 2025;
     const week = parseInt(req.query.week as string) || 17;
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
     const playerIdsParam = req.query.playerIds as string;
@@ -119,13 +119,13 @@ router.get('/preview', async (req: Request, res: Response) => {
  * - playerId (required): canonical player ID
  * 
  * Query params:
- * - season (optional): number, defaults to 2024
+ * - season (optional): number, defaults to 2025
  * - week (optional): number, defaults to 17
  */
 router.get('/score/:playerId', async (req: Request, res: Response) => {
   try {
     const { playerId } = req.params;
-    const season = parseInt(req.query.season as string) || 2024;
+    const season = parseInt(req.query.season as string) || 2025;
     const week = parseInt(req.query.week as string) || 17;
     
     if (!playerId) {
@@ -176,7 +176,7 @@ router.get('/health', (req: Request, res: Response) => {
  * Query params:
  * - position (optional): WR | RB | TE | QB (defaults to all WR if not specified)
  * - limit (optional): number, 1-500, defaults to 100
- * - season (optional): number, defaults to 2024
+ * - season (optional): number, defaults to 2025
  * - week (optional): number, defaults to 17
  */
 router.get('/batch', async (req: Request, res: Response) => {
@@ -196,7 +196,7 @@ router.get('/batch', async (req: Request, res: Response) => {
     const normalizedSeason = 
       typeof season === 'string' && !Number.isNaN(Number(season))
         ? Number(season)
-        : 2024;
+        : 2025;
 
     const normalizedWeek =
       typeof week === 'string' && !Number.isNaN(Number(week))
@@ -244,7 +244,7 @@ router.get('/batch', async (req: Request, res: Response) => {
  * Request body (all optional):
  * - position: WR | RB | TE | QB | ALL (defaults to ALL)
  * - limit: number (defaults to 500)
- * - season: number (defaults to 2024)
+ * - season: number (defaults to 2025)
  * - week: number (defaults to 17)
  */
 router.post('/snapshot', async (req: Request, res: Response) => {
@@ -842,13 +842,13 @@ router.get('/matchup/defense', async (req: Request, res: Response) => {
  * 
  * Query params:
  * - team: team abbreviation (required)
- * - season (optional): defaults to 2024
- * - week (optional): defaults to 4
+ * - season (optional): defaults to 2025
+ * - week (optional): defaults to 10
  */
 router.get('/env-debug', async (req: Request, res: Response) => {
   try {
-    const season = parseInt(req.query.season as string) || 2024;
-    const week = parseInt(req.query.week as string) || 4;
+    const season = parseInt(req.query.season as string) || 2025;
+    const week = parseInt(req.query.week as string) || 10;
     const team = (req.query.team as string)?.toUpperCase() || 'KC';
 
     const debug = await getEnvDebug(season, week, team);
@@ -881,13 +881,13 @@ router.get('/env-debug', async (req: Request, res: Response) => {
  * Query params:
  * - defense: defense team abbreviation (required)
  * - position: WR | RB | TE (defaults to WR)
- * - season (optional): defaults to 2024
- * - week (optional): defaults to 4
+ * - season (optional): defaults to 2025
+ * - week (optional): defaults to 10
  */
 router.get('/matchup-debug', async (req: Request, res: Response) => {
   try {
-    const season = parseInt(req.query.season as string) || 2024;
-    const week = parseInt(req.query.week as string) || 4;
+    const season = parseInt(req.query.season as string) || 2025;
+    const week = parseInt(req.query.week as string) || 10;
     const defense = (req.query.defense as string)?.toUpperCase() || 'NYJ';
     const position = ((req.query.position as string)?.toUpperCase() || 'WR') as PlayerPosition;
 
