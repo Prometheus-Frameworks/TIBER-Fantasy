@@ -1,0 +1,88 @@
+Task: Build FORGE Matchups UI (Season + Weekly)
+
+Goal: Add a new /matchups section that exposes the existing FORGE environment + matchup scores in a simple, interactive way. Keep the current color scheme and styling – no new visual theme, just new layouts.
+
+1) New Routes / Structure
+	•	Add /matchups with two tabs:
+	•	Season View → /matchups/season
+	•	Weekly Matchups → /matchups/week
+	•	Default /matchups to Season View.
+
+2) Season View (All-season “in a vacuum”)
+	•	Controls:
+	•	Season selector (default 2025).
+	•	Table: one row per team for the selected season.
+	•	Columns:
+	•	Rank
+	•	Team
+	•	Env Score (0–100) → env_score_100
+	•	Pass EPA (small number or band)
+	•	Rush EPA (small number or band)
+	•	Style Tag ("Pass-leaning" | "Balanced" | "Run-heavy", based on PROE / rush rate).
+	•	Backend:
+	•	Add GET /api/forge/env-season?season=2025
+	•	It can be implemented as an aggregate over team_offensive_context (avg env_score_100 and EPA metrics over all weeks <= current week).
+	•	Response per row:
+
+{
+  "season": 2025,
+  "team": "KC",
+  "envScore100": 58,
+  "passEpaPerPlay": 0.185,
+  "rushEpaPerPlay": 0.058,
+  "styleTag": "Pass-leaning"
+}
+
+
+
+3) Weekly Matchups View
+	•	Controls:
+	•	Week selector (default current week, e.g. 12).
+	•	Position selector: WR | RB | TE | QB (v0.1 = WR + RB working, TE/QB can show “coming soon”).
+	•	Layout:
+	•	One card per game for that week.
+	•	Card header: "{OFF}@{DEF} – Week {week}" (e.g. KC @ BAL – Week 12).
+	•	Inside the card, two columns:
+	•	Left: OffenseTeam vs DefenseTeam (for selected position)
+	•	Right: DefenseTeam’s offense vs OffenseTeam’s defense (mirrored).
+	•	Each column shows:
+	•	Off Env Score (env_score_100 for that offense).
+	•	Matchup Score (matchup_score_100 for that offense vs that defense at that position).
+	•	Band label based on score:
+	•	≥ 75: Smash (strong green)
+	•	60–74: Good (light green)
+	•	45–59: Neutral (grey)
+	•	30–44: Tough (light red)
+	•	< 30: Stay Away (red)
+	•	Backend:
+	•	Add GET /api/forge/matchups?season=2025&week=12&position=WR
+	•	This endpoint should:
+	•	Join schedule + team_offensive_context + team_defensive_context.
+	•	For each game, return data for both offenses.
+	•	Suggested response shape:
+
+[
+  {
+    "season": 2025,
+    "week": 12,
+    "gameId": "KC@BAL-2025-12",
+    "offenseTeam": "KC",
+    "defenseTeam": "BAL",
+    "position": "WR",
+    "offenseEnvScore100": 58,
+    "offenseMatchupScore100": 73,
+    "offenseBand": "Smash",
+    "defenseEnvScore100": 51,
+    "defenseMatchupScore100": 42,
+    "defenseBand": "Tough"
+  }
+  // ...one object per offense per game
+]
+
+
+	•	If it’s easier, you can return two entries per game (one per offense) and we’ll group by gameId on the frontend.
+
+4) Styling / Theme
+	•	Reuse existing fonts, table components, and color tokens from the Rankings pages.
+	•	Use existing success/danger/neutral colors for the matchup bands (green/grey/red) so it feels native.
+	•	No new global layout changes – /matchups should sit alongside /rankings in the nav.
