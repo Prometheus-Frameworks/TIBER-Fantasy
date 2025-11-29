@@ -443,6 +443,240 @@ router.get('/fpr/:playerId', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/forge/lab/wr-core/matches
+ * 
+ * Find WR players closest to the user's Lab slider configuration.
+ * Uses WR Core Alpha formula: Chain (55% FD + 45% TS), Explosive (60% YPRR + 40% YAC), WinSkill (CC)
+ * 
+ * Request body:
+ * - inputs: { TS, YPRR, FD_RR, YAC, CC } - the slider values from Lab
+ * - season (optional): number, defaults to 2025
+ * - week (optional): number | 'full' - specific week or full season aggregate
+ * - limit (optional): number, defaults to 5
+ */
+router.post('/lab/wr-core/matches', async (req: Request, res: Response) => {
+  try {
+    const { inputs, season = 2025, week = 'full', limit = 5 } = req.body;
+    
+    if (!inputs || typeof inputs !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing inputs object with TS, YPRR, FD_RR, YAC, CC',
+      });
+    }
+    
+    const { TS, YPRR, FD_RR, YAC, CC } = inputs;
+    
+    if ([TS, YPRR, FD_RR, YAC, CC].some(v => v === undefined || typeof v !== 'number')) {
+      return res.status(400).json({
+        success: false,
+        error: 'All inputs (TS, YPRR, FD_RR, YAC, CC) must be numbers',
+      });
+    }
+    
+    console.log(`[FORGE/Lab] WR Core matches request: season=${season}, week=${week}, inputs=`, inputs);
+    
+    // Calculate user's subscores using WR Core Alpha formula
+    const userSubscores = computeWRCoreSubscores(inputs);
+    
+    // Fetch WR players and their stats
+    const playerIds = await fetchPlayerIdsForPosition('WR', 100);
+    const scores = await forgeService.getForgeScoresForPlayers(playerIds, season, week === 'full' ? 17 : week);
+    
+    // For each player, estimate their WR Core Alpha subscores from FORGE context
+    const playerMatches = await Promise.all(
+      scores.map(async (score) => {
+        try {
+          const playerData = await fetchPlayerWRCoreData(score.playerId, season, week);
+          if (!playerData) return null;
+          
+          const playerSubscores = computeWRCoreSubscores(playerData);
+          const similarity = computeSimilarity(userSubscores, playerSubscores);
+          
+          return {
+            playerId: score.playerId,
+            playerName: score.playerName,
+            team: score.nflTeam || '',
+            WR_Alpha: parseFloat(playerSubscores.WR_Alpha.toFixed(2)),
+            Chain: parseFloat(playerSubscores.Chain.toFixed(4)),
+            Explosive: parseFloat(playerSubscores.Explosive.toFixed(4)),
+            WinSkill: parseFloat(playerSubscores.WinSkill.toFixed(4)),
+            similarity: parseFloat(similarity.toFixed(4)),
+            rawInputs: playerData,
+          };
+        } catch (e) {
+          return null;
+        }
+      })
+    );
+    
+    // Filter nulls, sort by similarity, take top N
+    const topMatches = playerMatches
+      .filter((m): m is NonNullable<typeof m> => m !== null)
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, Math.min(limit, 10));
+    
+    return res.json({
+      success: true,
+      meta: {
+        season,
+        week,
+        userInputs: inputs,
+        userSubscores: {
+          Chain: parseFloat(userSubscores.Chain.toFixed(4)),
+          Explosive: parseFloat(userSubscores.Explosive.toFixed(4)),
+          WinSkill: parseFloat(userSubscores.WinSkill.toFixed(4)),
+          WR_Alpha: parseFloat(userSubscores.WR_Alpha.toFixed(2)),
+        },
+        matchCount: topMatches.length,
+      },
+      matches: topMatches.map((m, idx) => ({
+        rank: idx + 1,
+        ...m,
+      })),
+    });
+    
+  } catch (error) {
+    console.error('[FORGE/Lab] WR Core matches error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Match calculation failed',
+    });
+  }
+});
+
+/**
+ * Compute WR Core Alpha subscores from raw inputs
+ */
+function computeWRCoreSubscores(inputs: { TS: number; YPRR: number; FD_RR: number; YAC: number; CC: number }) {
+  const { TS, YPRR, FD_RR, YAC, CC } = inputs;
+  
+  // Normalize inputs
+  const TS_norm = Math.min(TS / 0.30, 1);
+  const YPRR_norm = Math.min(YPRR / 2.70, 1);
+  const FD_norm = Math.min(FD_RR / 0.12, 1);
+  const YAC_norm = Math.min(YAC / 6.00, 1);
+  const CC_norm = CC;
+  
+  // Compute subscores
+  const Chain = 0.55 * FD_norm + 0.45 * TS_norm;
+  const Explosive = 0.60 * YPRR_norm + 0.40 * YAC_norm;
+  const WinSkill = CC_norm;
+  
+  // Final alpha
+  const WR_Core = 0.40 * Chain + 0.40 * Explosive + 0.20 * WinSkill;
+  const WR_Alpha = 25 + 65 * WR_Core;
+  
+  return { Chain, Explosive, WinSkill, WR_Alpha };
+}
+
+/**
+ * Compute similarity between user subscores and player subscores (0-1)
+ * Uses weighted Euclidean distance converted to similarity
+ */
+function computeSimilarity(
+  user: { Chain: number; Explosive: number; WinSkill: number },
+  player: { Chain: number; Explosive: number; WinSkill: number }
+): number {
+  // Weight the subscores (same as WR Core blend)
+  const weights = { Chain: 0.40, Explosive: 0.40, WinSkill: 0.20 };
+  
+  const diffChain = (user.Chain - player.Chain) ** 2 * weights.Chain;
+  const diffExplosive = (user.Explosive - player.Explosive) ** 2 * weights.Explosive;
+  const diffWinSkill = (user.WinSkill - player.WinSkill) ** 2 * weights.WinSkill;
+  
+  const distance = Math.sqrt(diffChain + diffExplosive + diffWinSkill);
+  
+  // Convert distance to similarity (max distance ~1, so similarity = 1 - distance)
+  return Math.max(0, 1 - distance);
+}
+
+/**
+ * Fetch player's WR Core data from game logs and identity
+ */
+async function fetchPlayerWRCoreData(
+  playerId: string, 
+  season: number, 
+  week: number | 'full'
+): Promise<{ TS: number; YPRR: number; FD_RR: number; YAC: number; CC: number } | null> {
+  try {
+    const identity = await PlayerIdentityService.getInstance().getByAnyId(playerId);
+    if (!identity || identity.position !== 'WR') return null;
+    
+    const sleeperId = identity.externalIds?.sleeper;
+    if (!sleeperId) return null;
+    
+    // Get game logs for the season
+    const gameLogs = await db
+      .select()
+      .from(require('@shared/schema').sleeperPlayerGameLogs)
+      .where(
+        and(
+          eq(require('@shared/schema').sleeperPlayerGameLogs.sleeperId, sleeperId),
+          eq(require('@shared/schema').sleeperPlayerGameLogs.season, season),
+          eq(require('@shared/schema').sleeperPlayerGameLogs.seasonType, 'REG')
+        )
+      );
+    
+    if (gameLogs.length === 0) return null;
+    
+    // Filter by week if specified - 'full' aggregates all weeks, specific week filters up to that week
+    const logs = week === 'full' 
+      ? gameLogs 
+      : gameLogs.filter(g => g.week <= week);
+    
+    if (logs.length === 0) return null;
+    
+    // Aggregate stats across all matching logs
+    const totals = logs.reduce((acc, log) => {
+      const stats = log.stats as Record<string, number> || {};
+      return {
+        targets: acc.targets + (stats.rec_tgt || 0),
+        receptions: acc.receptions + (stats.rec || 0),
+        recYards: acc.recYards + (stats.rec_yd || 0),
+        yac: acc.yac + (stats.rec_yac || 0),
+        firstDowns: acc.firstDowns + (stats.rec_fd || 0),
+        games: acc.games + 1,
+      };
+    }, { targets: 0, receptions: 0, recYards: 0, yac: 0, firstDowns: 0, games: 0 });
+    
+    // Require minimum data to compute valid metrics
+    if (totals.targets < 5 || totals.games < 1) return null;
+    
+    // Estimate metrics (use reasonable approximations for missing data)
+    const gamesPlayed = totals.games || 1;
+    const teamPassAtt = gamesPlayed * 35; // League avg ~35 pass attempts per game
+    
+    // Target Share = targets / team pass attempts (estimated)
+    const TS = totals.targets / teamPassAtt;
+    
+    // YPRR - estimate as yards per target * catch rate (approximation)
+    const catchRate = totals.targets > 0 ? totals.receptions / totals.targets : 0;
+    const yardsPerTarget = totals.targets > 0 ? totals.recYards / totals.targets : 0;
+    const YPRR = yardsPerTarget * 0.9; // Rough conversion factor
+    
+    // First Downs per Route Run - estimate as FD per target
+    const FD_RR = totals.targets > 0 ? totals.firstDowns / totals.targets : 0;
+    
+    // YAC per reception
+    const YAC = totals.receptions > 0 ? totals.yac / totals.receptions : 0;
+    
+    // Contested Catch Rate - use catch rate as proxy (no contested data available)
+    const CC = catchRate;
+    
+    // Validate all values are valid numbers
+    if ([TS, YPRR, FD_RR, YAC, CC].some(v => isNaN(v) || !isFinite(v))) {
+      return null;
+    }
+    
+    return { TS, YPRR, FD_RR, YAC, CC };
+  } catch (e) {
+    console.error(`[FORGE/Lab] Error fetching WR core data for ${playerId}:`, e);
+    return null;
+  }
+}
+
+/**
  * Fetch player IDs for a position from the identity map
  */
 async function fetchPlayerIdsForPosition(

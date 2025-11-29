@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, Copy, Check, FlaskConical, Save, FolderOpen, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Copy, Check, FlaskConical, Save, FolderOpen, Trash2, X, Search, Users, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
@@ -9,7 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 import { FORGE_LAB_EQUATIONS, getEquationById, type ForgeLabEquation, type ForgeLabInputDef } from '../forgeLab/equations';
 
 type ForgeLabPreset = {
@@ -195,6 +197,204 @@ function JsonExportCard({
         <pre className="bg-[#0a0e1a] rounded-lg p-4 border border-gray-800 text-xs text-gray-300 overflow-x-auto">
           {jsonString}
         </pre>
+      </CardContent>
+    </Card>
+  );
+}
+
+type PlayerMatch = {
+  rank: number;
+  playerId: string;
+  playerName: string;
+  team: string;
+  WR_Alpha: number;
+  Chain: number;
+  Explosive: number;
+  WinSkill: number;
+  similarity: number;
+};
+
+type PlayerMatchesResponse = {
+  success: boolean;
+  meta: {
+    season: number;
+    week: string | number;
+    matchCount: number;
+  };
+  matches: PlayerMatch[];
+  error?: string;
+};
+
+function PlayerMatchesCard({
+  inputs,
+}: {
+  inputs: Record<string, number>;
+}) {
+  const { toast } = useToast();
+  const [season, setSeason] = useState('2025');
+  const [week, setWeek] = useState('full');
+  const [loading, setLoading] = useState(false);
+  const [matches, setMatches] = useState<PlayerMatch[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const handleFindMatches = useCallback(async () => {
+    setLoading(true);
+    setHasSearched(true);
+    try {
+      const res = await apiRequest('POST', '/api/forge/lab/wr-core/matches', {
+        inputs: {
+          TS: inputs.TS,
+          YPRR: inputs.YPRR,
+          FD_RR: inputs.FD_RR,
+          YAC: inputs.YAC,
+          CC: inputs.CC,
+        },
+        season: parseInt(season),
+        week: week === 'full' ? 'full' : parseInt(week),
+        limit: 5,
+      });
+      
+      const response: PlayerMatchesResponse = await res.json();
+      
+      if (response.success && response.matches) {
+        setMatches(response.matches);
+        toast({
+          title: 'Matches found',
+          description: `Found ${response.matches.length} closest player matches`,
+        });
+      } else {
+        toast({
+          title: 'No matches',
+          description: response.error || 'No matching players found',
+          variant: 'destructive',
+        });
+        setMatches([]);
+      }
+    } catch (err) {
+      console.error('Error finding matches:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to find player matches',
+        variant: 'destructive',
+      });
+      setMatches([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [inputs, season, week, toast]);
+
+  return (
+    <Card className="bg-[#141824] border-gray-800">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg text-white flex items-center gap-2">
+          <Users className="h-5 w-5 text-cyan-400" />
+          <span>Closest Player Matches</span>
+        </CardTitle>
+        <CardDescription className="text-gray-400">
+          Find real players whose profiles match your slider configuration
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="space-y-1">
+            <Label className="text-xs text-gray-400">Season</Label>
+            <Select value={season} onValueChange={setSeason}>
+              <SelectTrigger className="w-24 bg-[#0a0e1a] border-gray-700 text-white" data-testid="select-season">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-[#141824] border-gray-700">
+                <SelectItem value="2025">2025</SelectItem>
+                <SelectItem value="2024">2024</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-gray-400">Week</Label>
+            <Select value={week} onValueChange={setWeek}>
+              <SelectTrigger className="w-32 bg-[#0a0e1a] border-gray-700 text-white" data-testid="select-week">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-[#141824] border-gray-700">
+                <SelectItem value="full">Full Season</SelectItem>
+                {[...Array(17)].map((_, i) => (
+                  <SelectItem key={i + 1} value={String(i + 1)}>Week {i + 1}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            onClick={handleFindMatches}
+            disabled={loading}
+            className="bg-cyan-600 hover:bg-cyan-700 text-white"
+            data-testid="button-find-matches"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Search className="h-4 w-4 mr-2" />
+            )}
+            Find Matches
+          </Button>
+        </div>
+
+        {hasSearched && (
+          <div className="mt-4">
+            {matches.length > 0 ? (
+              <div className="overflow-x-auto" data-testid="matches-table-container">
+                <table className="w-full text-sm" data-testid="matches-table">
+                  <thead>
+                    <tr className="border-b border-gray-700">
+                      <th className="text-left py-2 px-2 text-gray-400 font-medium" data-testid="header-rank">#</th>
+                      <th className="text-left py-2 px-2 text-gray-400 font-medium" data-testid="header-player">Player</th>
+                      <th className="text-center py-2 px-2 text-gray-400 font-medium" data-testid="header-alpha">WR_α</th>
+                      <th className="text-center py-2 px-2 text-gray-400 font-medium" data-testid="header-chain">Chain</th>
+                      <th className="text-center py-2 px-2 text-gray-400 font-medium" data-testid="header-explosive">Expl</th>
+                      <th className="text-center py-2 px-2 text-gray-400 font-medium" data-testid="header-winskill">Win</th>
+                      <th className="text-center py-2 px-2 text-gray-400 font-medium" data-testid="header-match">Match</th>
+                    </tr>
+                  </thead>
+                  <tbody data-testid="matches-tbody">
+                    {matches.map((match) => (
+                      <tr 
+                        key={match.playerId} 
+                        className="border-b border-gray-800 hover:bg-[#0a0e1a]/50"
+                        data-testid={`match-row-${match.rank}`}
+                      >
+                        <td className="py-2 px-2 text-gray-500 font-mono" data-testid={`cell-rank-${match.rank}`}>{match.rank}</td>
+                        <td className="py-2 px-2" data-testid={`cell-player-${match.rank}`}>
+                          <div className="text-white font-medium" data-testid={`text-player-name-${match.rank}`}>{match.playerName}</div>
+                          <div className="text-xs text-gray-500" data-testid={`text-player-team-${match.rank}`}>{match.team}</div>
+                        </td>
+                        <td className="py-2 px-2 text-center" data-testid={`cell-alpha-${match.rank}`}>
+                          <span className="font-mono text-cyan-400">{match.WR_Alpha.toFixed(1)}</span>
+                        </td>
+                        <td className="py-2 px-2 text-center font-mono text-gray-300" data-testid={`cell-chain-${match.rank}`}>{match.Chain.toFixed(2)}</td>
+                        <td className="py-2 px-2 text-center font-mono text-gray-300" data-testid={`cell-explosive-${match.rank}`}>{match.Explosive.toFixed(2)}</td>
+                        <td className="py-2 px-2 text-center font-mono text-gray-300" data-testid={`cell-winskill-${match.rank}`}>{match.WinSkill.toFixed(2)}</td>
+                        <td className="py-2 px-2" data-testid={`cell-similarity-${match.rank}`}>
+                          <div className="flex items-center gap-2">
+                            <Progress 
+                              value={match.similarity * 100} 
+                              className="h-2 w-16 bg-gray-700"
+                              data-testid={`progress-similarity-${match.rank}`}
+                            />
+                            <span className="text-xs font-mono text-emerald-400" data-testid={`text-similarity-${match.rank}`}>
+                              {(match.similarity * 100).toFixed(0)}%
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-6 text-gray-500">
+                {loading ? 'Searching...' : 'No matches found. Try adjusting the sliders.'}
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -459,6 +659,9 @@ export default function ForgeLabEquationSandbox() {
 
             <div className="space-y-6">
               <OutputCard outputs={computeResult.outputs} />
+              {selectedEquationId === 'WR_CORE_ALPHA' && (
+                <PlayerMatchesCard inputs={inputValues} />
+              )}
               <StepsCard steps={computeResult.steps} />
               <JsonExportCard inputs={inputValues} outputs={computeResult.outputs} />
             </div>
