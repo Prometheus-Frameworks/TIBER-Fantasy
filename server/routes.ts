@@ -108,6 +108,7 @@ import analyticsRoutes from './routes/analyticsRoutes';
 import teamReportsRoutes from './routes/teamReportsRoutes';
 import weekSummaryRouter from './routes/debug/week-summary';
 import { registerForgeRoutes } from './modules/forge';
+import adminForgeRouter from './routes/adminForge';
 import { monitoringService } from './services/MonitoringService';
 import { adminService } from './services/AdminService';
 import { requireAdminAuth } from './middleware/adminAuth';
@@ -9102,6 +9103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log('📊 Waiver Wisdom routes mounted at /api/waivers/*');
 
   registerForgeRoutes(app);
+  app.use(adminForgeRouter);
 
   const httpServer = createServer(app);
   return httpServer;
