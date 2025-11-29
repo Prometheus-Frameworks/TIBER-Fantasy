@@ -438,7 +438,7 @@ export default function ChatHomepage() {
               </Link>
             </li>
             <li>
-              <Link href="/?tab=matchups">
+              <Link href="/matchups">
                 <button
                   data-testid="nav-matchups"
                   className="w-full text-left px-3 py-2 rounded hover:bg-gray-700/50 text-gray-300 transition-colors"

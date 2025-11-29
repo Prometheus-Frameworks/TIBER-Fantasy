@@ -82,7 +82,7 @@ export default function HomeTab() {
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
-            <Link href="/?tab=matchups">
+            <Link href="/matchups">
               <Button
                 size="lg"
                 variant="outline"
