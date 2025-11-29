@@ -22,6 +22,8 @@ import QBRankingsSandbox from "@/pages/QBRankingsSandbox";
 import ForgeLab from "@/pages/ForgeLab";
 import ForgeLabEquationSandbox from "@/pages/ForgeLabEquationSandbox";
 import MatchupsPage from "@/pages/MatchupsPage";
+import ForgeHub from "@/pages/admin/ForgeHub";
+import PlayerMappingTest from "@/pages/admin/PlayerMappingTest";
 import NotFound from "@/pages/not-found";
 
 // Custom hook to reactively track URL search params (wouter only tracks pathname)
@@ -116,6 +118,15 @@ function Router() {
       
       {/* Admin: FORGE Lab Equation Sandbox */}
       <Route path="/admin/forge-lab" component={ForgeLabEquationSandbox} />
+      
+      {/* Admin: FORGE Hub - Central control room */}
+      <Route path="/admin/forge-hub" component={ForgeHub} />
+      <Route path="/admin">
+        {() => <Redirect to="/admin/forge-hub" />}
+      </Route>
+      
+      {/* Admin: Player Mapping Test */}
+      <Route path="/admin/player-mapping-test" component={PlayerMappingTest} />
       
       {/* 404 Catch-all */}
       <Route component={NotFound} />

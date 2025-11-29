@@ -493,10 +493,10 @@ export default function ForgeLabEquationSandbox() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <Link href="/dev/forge">
+            <Link href="/admin/forge-hub">
               <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" data-testid="button-back">
                 <ArrowLeft className="h-4 w-4 mr-1" />
-                Back
+                Back to Hub
               </Button>
             </Link>
             <div className="flex items-center gap-2">
