@@ -1,0 +1,143 @@
+✅ FORGE Lab Card — WR Core Alpha Formula (WR Alpha v0.1)
+
+TYPE: labCard
+ROUTE: /forge/lab/wr-core
+ALIAS: "WR Alpha Sandbox"
+STYLE MATCH: identical dark theme / neon accent (no cosmetic changes)
+
+🧠 1. Equation Summary for Agent
+
+Raw Inputs:
+
+TS (target share 0–1)
+
+YPRR
+
+FD_RR (first downs per route)
+
+YAC
+
+CC (contested catch win rate 0–1)
+
+Normalize values:
+
+TS_norm   = min(TS    / 0.30 , 1)
+YPRR_norm = min(YPRR  / 2.70 , 1)
+FD_norm   = min(FD_RR / 0.12 , 1)
+YAC_norm  = min(YAC   / 6.00 , 1)
+CC_norm   = CC
+
+
+Subscores:
+
+Chain     = 0.55 * FD_norm + 0.45 * TS_norm
+Explosive = 0.60 * YPRR_norm + 0.40 * YAC_norm
+WinSkill  = CC_norm
+
+
+Combine:
+
+WR_Core = 0.40 * Chain + 0.40 * Explosive + 0.20 * WinSkill
+
+
+Final Alpha Scale Mapping:
+
+WR_Alpha = 25 + 65 * WR_Core
+
+🧪 2. Full LAB CARD SPEC (Copy This to Agent)
+CREATE_LAB_CARD {
+  id: "wr_core_alpha",
+  title: "WR Alpha Core Formula",
+  description: "Interactive WR ranking formula based on separation, efficiency, contested ability, and chain moving.",
+  route: "/forge/lab/wr-core",
+  inputs: [
+    { key: "TS", label: "Target Share", min: 0, max: 0.40, step: 0.005, default: 0.22 },
+    { key: "YPRR", label: "Yards Per Route Run", min: 0, max: 3.5, step: 0.05, default: 2.1 },
+    { key: "FD_RR", label: "1D per Route Run", min: 0, max: 0.20, step: 0.002, default: 0.08 },
+    { key: "YAC", label: "YAC per Reception", min: 0, max: 10, step: 0.1, default: 4.5 },
+    { key: "CC", label: "Contested Catch Win Rate", min: 0, max: 1, step: 0.02, default: 0.52 }
+  ],
+  derived: [
+    { key: "TS_norm" },
+    { key: "YPRR_norm" },
+    { key: "FD_norm" },
+    { key: "YAC_norm" },
+    { key: "CC_norm" },
+    { key: "Chain" },
+    { key: "Explosive" },
+    { key: "WinSkill" },
+    { key: "WR_Core" },
+    { key: "WR_Alpha" }
+  ],
+  compute: (I) => {
+    const TS_norm   = Math.min(I.TS / 0.30, 1);
+    const YPRR_norm = Math.min(I.YPRR / 2.70, 1);
+    const FD_norm   = Math.min(I.FD_RR / 0.12, 1);
+    const YAC_norm  = Math.min(I.YAC / 6.00, 1);
+    const CC_norm   = I.CC;
+
+    const Chain     = 0.55 * FD_norm + 0.45 * TS_norm;
+    const Explosive = 0.60 * YPRR_norm + 0.40 * YAC_norm;
+    const WinSkill  = CC_norm;
+
+    const WR_Core   = 0.40 * Chain + 0.40 * Explosive + 0.20 * WinSkill;
+    const WR_Alpha  = 25 + 65 * WR_Core;
+
+    return {
+      TS_norm: round4(TS_norm),
+      YPRR_norm: round4(YPRR_norm),
+      FD_norm: round4(FD_norm),
+      YAC_norm: round4(YAC_norm),
+      CC_norm: round4(CC_norm),
+      Chain: round4(Chain),
+      Explosive: round4(Explosive),
+      WinSkill: round4(WinSkill),
+      WR_Core: round4(WR_Core),
+      WR_Alpha: round2(WR_Alpha)
+    };
+  },
+  ui: {
+    sections: [
+      { title: "Normalized Metrics", keys: ["TS_norm","YPRR_norm","FD_norm","YAC_norm","CC_norm"]},
+      { title: "Subscores", keys: ["Chain","Explosive","WinSkill"]},
+      { title: "WR Core Score", keys: ["WR_Core"]},
+      { title: "Final WR Alpha", keys: ["WR_Alpha"] }
+    ]
+  }
+}
+
+🧾 3. What this will look like in the UI
+
+Sliders:
+
+Target share
+
+YPRR
+
+First-downs per route
+
+YAC
+
+Contested catch win rate
+
+Automatic calculations:
+
+All normalized values
+
+Chain score
+
+Explosive score
+
+WinSkill (contested catch factor)
+
+Final WR Core
+
+Final WR Alpha (25–90 scale)
+
+Extras:
+
+Step-by-step math breakdown (like TD card)
+
+Copy JSON button
+
+“Send to FORGE” button (optional)
