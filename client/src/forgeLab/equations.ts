@@ -588,7 +588,80 @@ const RB_WORKLOAD_SUSTAINABILITY: ForgeLabEquation = {
   },
 };
 
+const WR_CORE_ALPHA: ForgeLabEquation = {
+  id: 'WR_CORE_ALPHA',
+  name: 'WR Core Alpha Formula',
+  description: 'Interactive WR ranking formula based on separation, efficiency, contested ability, and chain moving. Outputs WR Alpha on 25-90 scale.',
+  inputs: [
+    { key: 'TS', label: 'Target Share', min: 0, max: 0.40, step: 0.005, defaultValue: 0.22 },
+    { key: 'YPRR', label: 'Yards Per Route Run', min: 0, max: 3.5, step: 0.05, defaultValue: 2.1 },
+    { key: 'FD_RR', label: '1D per Route Run', min: 0, max: 0.20, step: 0.002, defaultValue: 0.08 },
+    { key: 'YAC', label: 'YAC per Reception', min: 0, max: 10, step: 0.1, defaultValue: 4.5 },
+    { key: 'CC', label: 'Contested Catch Win Rate', min: 0, max: 1, step: 0.02, defaultValue: 0.52 },
+  ],
+  compute: (inputs: Record<string, number>) => {
+    const { TS, YPRR, FD_RR, YAC, CC } = inputs;
+
+    const TS_norm = Math.min(TS / 0.30, 1);
+    const YPRR_norm = Math.min(YPRR / 2.70, 1);
+    const FD_norm = Math.min(FD_RR / 0.12, 1);
+    const YAC_norm = Math.min(YAC / 6.00, 1);
+    const CC_norm = CC;
+
+    const Chain = 0.55 * FD_norm + 0.45 * TS_norm;
+    const Explosive = 0.60 * YPRR_norm + 0.40 * YAC_norm;
+    const WinSkill = CC_norm;
+
+    const WR_Core = 0.40 * Chain + 0.40 * Explosive + 0.20 * WinSkill;
+    const WR_Alpha = 25 + 65 * WR_Core;
+
+    const steps = [
+      `━━━ STEP 1: Normalize Raw Inputs ━━━`,
+      `TS_norm   = min(${TS.toFixed(3)} / 0.30, 1) = ${TS_norm.toFixed(4)}`,
+      `YPRR_norm = min(${YPRR.toFixed(2)} / 2.70, 1) = ${YPRR_norm.toFixed(4)}`,
+      `FD_norm   = min(${FD_RR.toFixed(3)} / 0.12, 1) = ${FD_norm.toFixed(4)}`,
+      `YAC_norm  = min(${YAC.toFixed(2)} / 6.00, 1) = ${YAC_norm.toFixed(4)}`,
+      `CC_norm   = ${CC.toFixed(2)} (pass-through)`,
+      ``,
+      `━━━ STEP 2: Calculate Subscores ━━━`,
+      `Chain = 0.55 × FD_norm + 0.45 × TS_norm`,
+      `Chain = 0.55 × ${FD_norm.toFixed(4)} + 0.45 × ${TS_norm.toFixed(4)} = ${Chain.toFixed(4)}`,
+      ``,
+      `Explosive = 0.60 × YPRR_norm + 0.40 × YAC_norm`,
+      `Explosive = 0.60 × ${YPRR_norm.toFixed(4)} + 0.40 × ${YAC_norm.toFixed(4)} = ${Explosive.toFixed(4)}`,
+      ``,
+      `WinSkill = CC_norm = ${WinSkill.toFixed(4)}`,
+      ``,
+      `━━━ STEP 3: Combine into WR Core ━━━`,
+      `WR_Core = 0.40 × Chain + 0.40 × Explosive + 0.20 × WinSkill`,
+      `WR_Core = 0.40 × ${Chain.toFixed(4)} + 0.40 × ${Explosive.toFixed(4)} + 0.20 × ${WinSkill.toFixed(4)}`,
+      `WR_Core = ${WR_Core.toFixed(4)}`,
+      ``,
+      `━━━ STEP 4: Scale to WR Alpha (25-90) ━━━`,
+      `WR_Alpha = 25 + 65 × WR_Core`,
+      `WR_Alpha = 25 + 65 × ${WR_Core.toFixed(4)} = ${WR_Alpha.toFixed(2)}`,
+    ];
+
+    return {
+      outputs: {
+        TS_norm: parseFloat(TS_norm.toFixed(4)),
+        YPRR_norm: parseFloat(YPRR_norm.toFixed(4)),
+        FD_norm: parseFloat(FD_norm.toFixed(4)),
+        YAC_norm: parseFloat(YAC_norm.toFixed(4)),
+        CC_norm: parseFloat(CC_norm.toFixed(4)),
+        Chain: parseFloat(Chain.toFixed(4)),
+        Explosive: parseFloat(Explosive.toFixed(4)),
+        WinSkill: parseFloat(WinSkill.toFixed(4)),
+        WR_Core: parseFloat(WR_Core.toFixed(4)),
+        WR_Alpha: parseFloat(WR_Alpha.toFixed(2)),
+      },
+      steps,
+    };
+  },
+};
+
 export const FORGE_LAB_EQUATIONS: ForgeLabEquation[] = [
+  WR_CORE_ALPHA,
   TD_ENVIRONMENT_BOOST,
   EPA_SUCCESS_BLEND,
   YAC_OVER_EXPECTED,
