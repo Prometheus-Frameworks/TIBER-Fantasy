@@ -1,0 +1,43 @@
+Task: Install Player Mapping System v1.0 (WR-first)
+
+Goals
+	1.	When I query a WR by name (e.g. “George Pickens”) the backend can return a full advanced stat profile for 2025 (TS, YPRR, FD_RR, YAC, etc.) plus FORGE Alpha & context.
+	2.	Forge Admin Lab can call an endpoint to find players that match a WR formula profile (based on WR_Core/WR_Alpha inputs).
+	3.	I can hit a metric endpoint to get leaderboards for a single metric (e.g. fd_rr) sorted best → worst with filters.
+
+Requirements
+	•	Reuse existing Postgres + NFLfastR 2025 data already wired into FORGE.
+	•	Do NOT change existing color/UX styling; just add endpoints and any required views/tables.
+	•	Identity must be unified: Sleeper IDs ↔ GSIS ↔ internal player_id.
+
+Steps
+	1.	Create/verify player_identity_map table that connects:
+	•	player_id (internal key)
+	•	sleeper_id
+	•	gsis_id
+	•	full_name, position, team, canonical_slug
+	2.	Build wr_advanced_stats_2025 materialized view that aggregates weekly WR stats into advanced metrics:
+	•	target_share, air_yards_share, yprr, fd_rr (first downs per route run), yac_per_rec, slot_route_rate, redzone_targets, epa_per_target, success_rate
+	•	Join to player_identity_map and existing FORGE Alpha snapshot to include forge_alpha, env_score_100, matchup_score_100.
+	3.	Build a season-level view wr_advanced_season_2025 that aggregates per player for 2025 (sums and averages as appropriate).
+	4.	Add endpoints:
+	•	GET /api/players/search?q=&position=WR&limit= → returns basic identity rows from player_identity_map.
+	•	GET /api/players/:playerId/advanced?season=2025&scope=season|weekly
+	•	For scope=season use wr_advanced_season_2025.
+	•	For scope=weekly return array of week rows from wr_advanced_stats_2025.
+	•	GET /api/metrics/wr?metric=fd_rr&season=2025&min_routes=&limit=
+	•	Validate metric is one of: yprr, fd_rr, target_share, air_yards_share, yac_per_rec, etc.
+	•	Apply filters and return sorted list.
+	•	POST /api/forge/lab/wr-match
+	•	Input: JSON with WR formula weights + filters (season, min_routes, limit).
+	•	Compute WR_Core/WR_Alpha on the fly using the same formula as Forge Lab, using fields from wr_advanced_season_2025.
+	•	Return top N matching players with wr_core, wr_alpha, and identity info.
+	5.	Wire a small internal helper service playerAdvancedService so the chat/gateway can call it easily later.
+
+Acceptance Criteria
+	•	GET /api/players/search?q=pickens&position=WR returns George Pickens with a valid playerId.
+	•	GET /api/players/<pickensId>/advanced?season=2025&scope=season returns a rich JSON profile with TS/YPRR/FD_RR/etc.
+	•	GET /api/metrics/wr?metric=fd_rr&season=2025&min_routes=150&limit=10 returns 10 WRs sorted by 1D/RR descending.
+	•	POST /api/forge/lab/wr-match returns at least 10 players when using reasonable weights and min_routes filter.
+
+Please keep all styling and frontend visuals unchanged for now; this is a backend-only install.
