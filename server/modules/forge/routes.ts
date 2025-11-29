@@ -919,6 +919,243 @@ router.get('/matchup-debug', async (req: Request, res: Response) => {
   }
 });
 
+// ========================================
+// PUBLIC MATCHUPS UI ENDPOINTS
+// ========================================
+
+/**
+ * Get matchup band label based on score
+ */
+function getMatchupBand(score: number): string {
+  if (score >= 75) return 'Smash';
+  if (score >= 60) return 'Good';
+  if (score >= 45) return 'Neutral';
+  if (score >= 30) return 'Tough';
+  return 'Stay Away';
+}
+
+/**
+ * Get style tag based on pass/rush EPA ratio
+ */
+function getStyleTag(passEpa: number | null, rushEpa: number | null): string {
+  if (passEpa === null || rushEpa === null) return 'Balanced';
+  const ratio = passEpa / Math.max(0.01, Math.abs(rushEpa) + Math.abs(passEpa));
+  if (ratio >= 0.6) return 'Pass-leaning';
+  if (ratio <= 0.4) return 'Run-heavy';
+  return 'Balanced';
+}
+
+/**
+ * GET /api/forge/env-season
+ * 
+ * Season-level environment scores per team.
+ * Aggregates data across all weeks for the selected season.
+ * 
+ * Query params:
+ * - season (optional): defaults to 2025
+ */
+router.get('/env-season', async (req: Request, res: Response) => {
+  try {
+    const season = parseInt(req.query.season as string) || 2025;
+
+    console.log(`[FORGE/UI] env-season request: season=${season}`);
+
+    const results = await db.execute(sql`
+      WITH latest_week AS (
+        SELECT MAX(week) as max_week FROM team_offensive_context WHERE season = ${season}
+      ),
+      env_data AS (
+        SELECT 
+          o.team,
+          o.pass_epa,
+          o.rush_epa,
+          o.run_success_rate,
+          COALESCE(e.env_score_100, 50) as env_score_100
+        FROM team_offensive_context o
+        LEFT JOIN forge_team_environment e 
+          ON o.season = e.season AND o.week = e.week AND o.team = e.team
+        WHERE o.season = ${season} 
+          AND o.week = (SELECT max_week FROM latest_week)
+      )
+      SELECT 
+        team,
+        env_score_100,
+        pass_epa,
+        rush_epa
+      FROM env_data
+      ORDER BY env_score_100 DESC
+    `);
+
+    const teams = (results.rows as any[]).map((row, idx) => ({
+      rank: idx + 1,
+      season,
+      team: row.team,
+      envScore100: Math.round(row.env_score_100 || 50),
+      passEpaPerPlay: row.pass_epa ? parseFloat(row.pass_epa.toFixed(3)) : 0,
+      rushEpaPerPlay: row.rush_epa ? parseFloat(row.rush_epa.toFixed(3)) : 0,
+      styleTag: getStyleTag(row.pass_epa, row.rush_epa),
+    }));
+
+    return res.json({
+      meta: { season, count: teams.length },
+      teams,
+    });
+  } catch (err) {
+    console.error('[FORGE/UI] env-season endpoint error:', err);
+    return res.status(500).json({ error: 'env-season failed' });
+  }
+});
+
+/**
+ * GET /api/forge/matchups
+ * 
+ * Weekly matchup cards for the UI.
+ * Returns game-by-game matchup data with environment and matchup scores.
+ * 
+ * Query params:
+ * - season (optional): defaults to 2025
+ * - week (optional): defaults to 12
+ * - position (optional): WR | RB | TE, defaults to WR
+ */
+router.get('/matchups', async (req: Request, res: Response) => {
+  try {
+    const season = parseInt(req.query.season as string) || 2025;
+    const week = parseInt(req.query.week as string) || 12;
+    const position = ((req.query.position as string)?.toUpperCase() || 'WR') as PlayerPosition;
+
+    if (!['WR', 'RB', 'TE'].includes(position)) {
+      return res.status(400).json({ error: 'Invalid position. Must be WR, RB, or TE.' });
+    }
+
+    console.log(`[FORGE/UI] matchups request: season=${season}, week=${week}, position=${position}`);
+
+    // Get unique games from PBP data
+    const gamesResult = await db.execute(sql`
+      SELECT DISTINCT 
+        LEAST(posteam, defteam) as team_a,
+        GREATEST(posteam, defteam) as team_b
+      FROM bronze_nflfastr_plays
+      WHERE season = ${season} 
+        AND week = ${week}
+        AND posteam IS NOT NULL 
+        AND defteam IS NOT NULL
+      ORDER BY team_a
+    `);
+
+    const games = gamesResult.rows as { team_a: string; team_b: string }[];
+
+    // Get all environment scores for the week
+    const envResult = await db.execute(sql`
+      SELECT team, env_score_100 
+      FROM forge_team_environment 
+      WHERE season = ${season} AND week = ${week}
+    `);
+    const envMap = new Map<string, number>();
+    for (const row of envResult.rows as any[]) {
+      envMap.set(row.team, row.env_score_100 || 50);
+    }
+
+    // Get all matchup scores for the week and position
+    const matchupResult = await db.execute(sql`
+      SELECT defense_team, matchup_score_100
+      FROM forge_team_matchup_context
+      WHERE season = ${season} AND week = ${week} AND position = ${position}
+    `);
+    const matchupMap = new Map<string, number>();
+    for (const row of matchupResult.rows as any[]) {
+      matchupMap.set(row.defense_team, row.matchup_score_100 || 50);
+    }
+
+    // Build matchup cards - one entry per offense per game
+    // Each game has exactly 2 entries: away offense (isHome=false) and home offense (isHome=true)
+    const matchups: any[] = [];
+
+    for (const game of games) {
+      // Alphabetically sorted, so team_a is always "away" and team_b is "home"
+      const gameId = `${game.team_a}@${game.team_b}-${season}-${week}`;
+      
+      // Away team (team_a) on offense vs Home team (team_b) defense
+      const awayEnv = envMap.get(game.team_a) || 50;
+      const awayVsHomeDef = matchupMap.get(game.team_b) || 50; // Away offense faces Home's defense
+      
+      // Home team (team_b) on offense vs Away team (team_a) defense  
+      const homeEnv = envMap.get(game.team_b) || 50;
+      const homeVsAwayDef = matchupMap.get(game.team_a) || 50; // Home offense faces Away's defense
+
+      // Away offense entry (isHome=false)
+      matchups.push({
+        season,
+        week,
+        gameId,
+        isHome: false,
+        offenseTeam: game.team_a,
+        defenseTeam: game.team_b,
+        position,
+        offenseEnvScore100: Math.round(awayEnv),
+        offenseMatchupScore100: Math.round(awayVsHomeDef),
+        offenseBand: getMatchupBand(awayVsHomeDef),
+      });
+
+      // Home offense entry (isHome=true)
+      matchups.push({
+        season,
+        week,
+        gameId,
+        isHome: true,
+        offenseTeam: game.team_b,
+        defenseTeam: game.team_a,
+        position,
+        offenseEnvScore100: Math.round(homeEnv),
+        offenseMatchupScore100: Math.round(homeVsAwayDef),
+        offenseBand: getMatchupBand(homeVsAwayDef),
+      });
+    }
+
+    // Sort by gameId then isHome (away first, home second) for deterministic ordering
+    matchups.sort((a, b) => {
+      if (a.gameId !== b.gameId) return a.gameId.localeCompare(b.gameId);
+      return a.isHome ? 1 : -1;
+    });
+
+    return res.json({
+      meta: { season, week, position, gameCount: games.length },
+      matchups,
+    });
+  } catch (err) {
+    console.error('[FORGE/UI] matchups endpoint error:', err);
+    return res.status(500).json({ error: 'matchups failed' });
+  }
+});
+
+/**
+ * GET /api/forge/weeks
+ * 
+ * Get available weeks with data for a season.
+ */
+router.get('/weeks', async (req: Request, res: Response) => {
+  try {
+    const season = parseInt(req.query.season as string) || 2025;
+
+    const result = await db.execute(sql`
+      SELECT DISTINCT week 
+      FROM bronze_nflfastr_plays 
+      WHERE season = ${season}
+      ORDER BY week DESC
+    `);
+
+    const weeks = (result.rows as any[]).map(r => r.week);
+
+    return res.json({
+      season,
+      weeks,
+      currentWeek: weeks[0] || 12,
+    });
+  } catch (err) {
+    console.error('[FORGE/UI] weeks endpoint error:', err);
+    return res.status(500).json({ error: 'weeks failed' });
+  }
+});
+
 /**
  * POST /api/forge/admin/refresh
  * 

@@ -21,6 +21,7 @@ import RoleContextRankings from "@/pages/RoleContextRankings";
 import QBRankingsSandbox from "@/pages/QBRankingsSandbox";
 import ForgeLab from "@/pages/ForgeLab";
 import ForgeLabEquationSandbox from "@/pages/ForgeLabEquationSandbox";
+import MatchupsPage from "@/pages/MatchupsPage";
 import NotFound from "@/pages/not-found";
 
 // Custom hook to reactively track URL search params (wouter only tracks pathname)
@@ -98,6 +99,11 @@ function Router() {
       
       {/* Advanced: Role Context Rankings */}
       <Route path="/rankings/role-context" component={RoleContextRankings} />
+      
+      {/* FORGE Matchups */}
+      <Route path="/matchups" component={MatchupsPage} />
+      <Route path="/matchups/season" component={MatchupsPage} />
+      <Route path="/matchups/week" component={MatchupsPage} />
       
       {/* Admin: WR Rankings Sandbox */}
       <Route path="/admin/wr-rankings-sandbox" component={WRRankingsSandbox} />

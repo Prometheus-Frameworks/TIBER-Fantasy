@@ -24,7 +24,8 @@ export const NAV_LINKS: NavLink[] = [
       { href: "/research", label: "Depth Charts & Intel", description: "Roster analysis and intelligence feeds" },
       { href: "/leaders", label: "Leaders", description: "2024 NFL player stats and leaderboards" },
       { href: "/snap-counts", label: "Snap Counts", description: "Evidence-based snap count analysis" },
-      { href: "/sos", label: "SOS", description: "Strength of Schedule matchup analysis" }
+      { href: "/sos", label: "SOS", description: "Strength of Schedule matchup analysis" },
+      { href: "/matchups", label: "FORGE Matchups", description: "Environment & matchup scoring by team" }
     ]
   },
   { href: "/about", label: "About", description: "Learn about On The Clock and Tiber" },
