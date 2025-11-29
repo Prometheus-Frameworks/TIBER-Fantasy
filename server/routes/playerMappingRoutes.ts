@@ -521,4 +521,153 @@ forgeLabRouter.post('/rb-match', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/admin/player-mapping/search
+ * Admin endpoint for player mapping sanity testing
+ * Returns detailed player identity and advanced stats
+ * 
+ * Query params:
+ *   query - player name fragment (required)
+ *   position - filter by position (optional: WR, RB, TE, QB)
+ *   limit - max results (optional, default 10, max 50)
+ */
+export const adminPlayerMappingRouter = Router();
+
+adminPlayerMappingRouter.get('/search', async (req: Request, res: Response) => {
+  try {
+    const { query, position, limit } = req.query;
+    
+    if (!query || typeof query !== 'string' || query.trim().length < 2) {
+      return res.json({
+        meta: { query: query || '', count: 0 },
+        data: [],
+      });
+    }
+    
+    const limitResult = parseIntParam(limit, 10, 'limit');
+    if (limitResult.error) {
+      return res.status(400).json({ error: limitResult.error });
+    }
+    const parsedLimit = Math.min(Math.max(limitResult.value, 1), 50);
+    
+    const positionFilter = typeof position === 'string' && ['WR', 'RB', 'TE', 'QB'].includes(position.toUpperCase())
+      ? position.toUpperCase()
+      : undefined;
+    
+    const searchResults = await playerAdvancedService.searchPlayers(query.trim(), {
+      position: positionFilter,
+      limit: parsedLimit,
+    });
+    
+    const enrichedPlayers = await Promise.all(
+      searchResults.map(async (player) => {
+        let usage: Record<string, unknown> = {};
+        let efficiency: Record<string, unknown> = {};
+        let finishing: Record<string, unknown> = {};
+        let meta: Record<string, unknown> = {
+          gamesPlayed: 0,
+          lastUpdated: new Date().toISOString(),
+        };
+        
+        try {
+          if (player.position === 'WR') {
+            const wrStats = await playerAdvancedService.getWRSeasonStats(player.playerId, 2025);
+            if (wrStats) {
+              usage = {
+                targets: wrStats.targets,
+                receptions: wrStats.receptions,
+                targetShare: wrStats.targetShare,
+                airYards: wrStats.airYards,
+                airYardsShare: wrStats.airYardsShare,
+              };
+              efficiency = {
+                yprrEst: wrStats.yprrEst,
+                epaPerTarget: wrStats.epaPerTarget,
+                successRate: wrStats.successRate,
+                fdPerTarget: wrStats.fdPerTarget,
+                catchRate: wrStats.catchRate,
+                yacPerRec: wrStats.yacPerRec,
+              };
+              finishing = {
+                tds: wrStats.tds,
+                firstDowns: wrStats.firstDowns,
+                recYards: wrStats.recYards,
+              };
+              meta = {
+                gamesPlayed: wrStats.gamesPlayed,
+                lastUpdated: new Date().toISOString(),
+              };
+            }
+          } else if (player.position === 'RB') {
+            const rbStats = await playerAdvancedService.getRBSeasonStats(player.playerId, 2025);
+            if (rbStats) {
+              usage = {
+                carries: rbStats.carries,
+                carryShare: rbStats.carryShare,
+                targets: rbStats.targets,
+                targetShare: rbStats.targetShare,
+                carriesPerGame: rbStats.carriesPerGame,
+                targetsPerGame: rbStats.targetsPerGame,
+              };
+              efficiency = {
+                yardsPerCarry: rbStats.yardsPerCarry,
+                rushSuccessRate: rbStats.rushSuccessRate,
+                rushEpaPerAtt: rbStats.rushEpaPerAtt,
+                explosiveRushRate: rbStats.explosiveRushRate,
+                catchRate: rbStats.catchRate,
+                yacPerRec: rbStats.yacPerRec,
+              };
+              finishing = {
+                totalTds: rbStats.totalTds,
+                rushTds: rbStats.rushTds,
+                recTds: rbStats.recTds,
+                goalLineCarries: rbStats.goalLineCarries,
+                redzoneCarries: rbStats.redzoneCarries,
+              };
+              meta = {
+                gamesPlayed: rbStats.gamesPlayed,
+                totalYards: rbStats.totalYards,
+                lastUpdated: new Date().toISOString(),
+              };
+            }
+          }
+        } catch (err) {
+          console.warn(`[AdminPlayerMapping] Failed to enrich stats for ${player.playerId}:`, err);
+        }
+        
+        return {
+          playerId: player.playerId,
+          displayName: player.fullName,
+          sleeperId: player.sleeperId || null,
+          nflfastrGsisId: null,
+          position: player.position,
+          team: player.team,
+          season: 2025,
+          usage,
+          efficiency,
+          finishing,
+          meta,
+        };
+      })
+    );
+    
+    res.json({
+      meta: {
+        query: query.trim(),
+        position: positionFilter || 'ALL',
+        limit: parsedLimit,
+        count: enrichedPlayers.length,
+      },
+      data: enrichedPlayers,
+    });
+  } catch (error) {
+    console.error('[AdminPlayerMapping] Search error:', error);
+    res.status(500).json({ 
+      meta: { query: req.query.query || '', count: 0 },
+      data: [],
+      error: 'Failed to search players',
+    });
+  }
+});
+
 export default router;

@@ -1,0 +1,277 @@
+🧱 Task: Admin Hub + Player Mapping Sanity Page
+0. Context / Intent
+
+We now have:
+
+/admin/forge-lab for equation testing
+
+WR & RB player mapping layers wired into FORGE
+
+Env + matchup context v0.2 live for 2025
+
+Next step: give Architect Joe:
+
+A single admin hub page with links to all internal tools (so you’re not remembering URLs like a psychopath).
+
+A Player Mapping Sanity Test page where you can type a player name and see exactly what the mapping layer thinks they are (IDs, team, position, advanced data fields, etc).
+
+Keep all styling consistent with current FORGE/ADMIN UI. Reuse existing layout, colors, typography. No new theme experiments.
+
+1) Admin Hub Page (/admin/forge-hub)
+🔹 Goal
+
+A simple internal page listing all the admin/testing tools as links/buttons, so Joe can bounce between:
+
+FORGE Lab
+
+Player mapping tester
+
+Env/matchup debug views
+
+Any future admin-only tools
+
+Think of it as the FORGE Control Room.
+
+🔹 Frontend
+
+New page component:
+
+client/src/pages/admin/FORGEHub.tsx (or follow your existing admin folder structure)
+
+Behavior:
+
+Uses the same admin layout / shell as /admin/forge-lab (whatever component you currently use there).
+
+Render a grid or list of cards – no new styling system, reuse your Card, Button, Link components.
+
+Suggested sections & links:
+
+FORGE Lab
+
+/admin/forge-lab
+
+Player Mapping Tools
+
+/admin/player-mapping-test (new page in this task)
+
+Context Debug
+
+/api/forge/env-debug?team=KC (open in new tab)
+
+/api/forge/matchup-debug?defense=NYJ&position=WR
+
+Rankings (FORGE Alpha)
+
+/rankings/wr
+
+/rankings/rb
+
+/rankings/te (coming soon, mark as WIP)
+
+/rankings/qb (coming soon, mark as WIP)
+
+Routing:
+
+Add a route so:
+
+/admin → redirects to /admin/forge-hub (optional but nice)
+
+/admin/forge-hub → this new page
+
+Nav Integration:
+
+If you have an internal nav/sidebar:
+
+Add “FORGE Admin Hub” under an “Admin” or “Internal” section.
+
+Hide in production if you have any NODE_ENV / ADMIN_MODE checks.
+
+2) Player Mapping Sanity Page (/admin/player-mapping-test)
+🔹 Goal
+
+A debug + research tool:
+
+Input: player name (and optional position filter)
+
+Output: what FORGE thinks that player is:
+
+IDs (sleeper_id, nflfastr id / canonical_id)
+
+team, position, season
+
+key advanced metrics (YPRR, target share, EPA, etc)
+
+Also: supports multiple results, so you can test fuzzy matching (“Williams”, “Smith”, etc.)
+
+This page should sit alongside FORGE Lab as a core admin research tool.
+
+🔹 Backend – New Endpoint
+
+New route (Express):
+
+GET /api/admin/player-mapping/search
+
+Query params:
+
+query (string, required) – name fragment like "george pickens" or "Pickens".
+
+position (optional) – 'WR' | 'RB' | 'TE' | 'QB'.
+
+limit (optional, default 10, max 50).
+
+Expected behavior:
+
+Fuzzy match player name using the existing mapping layer you just built for WR/RB (and soon TE/QB).
+
+Join on the advanced stats views/tables created by the mapping agents.
+
+Return a small clean JSON object per player.
+
+Suggested response shape:
+
+{
+  "meta": {
+    "query": "george pickens",
+    "position": "WR",
+    "limit": 10,
+    "count": 1
+  },
+  "data": [
+    {
+      "playerId": "george-pickens",
+      "displayName": "George Pickens",
+      "sleeperId": "8473",
+      "nflfastrGsisId": "00-0037065",
+      "position": "WR",
+      "team": "PIT",
+      "season": 2025,
+
+      // core advanced fields (example names, align to actual schema)
+      "usage": {
+        "routesRun": 347,
+        "targets": 101,
+        "targetShare": 0.27,
+        "slotRate": 0.18,
+        "aDOT": 14.2
+      },
+      "efficiency": {
+        "yprr": 2.45,
+        "epaPerTarget": 0.21,
+        "successRate": 0.53,
+        "firstDownRate": 0.40
+      },
+      "finishing": {
+        "tds": 9,
+        "redZoneTargets": 15,
+        "endZoneTargets": 9
+      },
+      "meta": {
+        "gamesPlayed": 11,
+        "lastUpdated": "2025-11-28T22:15:00Z"
+      }
+    }
+  ]
+}
+
+
+Important for the agent:
+
+Reuse the same mapping logic you used for WR/RB builds (Sleeper → canonical → fastR).
+
+If there’s already a unified player mapping view (e.g. forge_player_profiles), use that. If not, create a simple player_search_view that unions WR/RB (and later TE/QB).
+
+Use a case-insensitive partial match: WHERE unaccent(full_name) ILIKE '%' || unaccent($1) || '%'.
+
+If no players found, return:
+
+{
+  "meta": { "query": "foo", "count": 0 },
+  "data": []
+}
+
+
+HTTP 200 is fine; no need for 404 here.
+
+🔹 Frontend – /admin/player-mapping-test
+
+New page component:
+
+client/src/pages/admin/PlayerMappingTest.tsx
+
+Features:
+
+Search Controls
+
+Text input: “Player name (e.g. George Pickens)”
+
+Dropdown: Position (All, WR, RB, TE, QB)
+
+Optional: limit slider (default 10)
+
+Button: “Search”
+
+On Submit
+
+Call GET /api/admin/player-mapping/search?query=...&position=...&limit=...
+
+Show loading state
+
+Show error message if request fails
+
+Results Table
+
+Columns (top-level):
+
+Name
+
+Team
+
+Pos
+
+Season
+
+Sleeper ID
+
+fastR ID / canonical ID
+
+Key stat snapshot: YPRR, Target Share, EPA/Tgt, TD, Routes
+
+Row expansion (accordion / details panel) to show full JSON block:
+
+Usage, Efficiency, Finishing, Meta
+
+Reuse existing table + card components:
+
+No new color scheme
+
+Match FORGE Lab/Admin look
+
+Quality-of-life
+
+Show meta.count and meta.query above results:
+
+Found 3 players for "williams" (WR, limit 10)
+
+“Copy JSON” button for a selected player (same style as Forge Lab’s JSON export button).
+
+3) Integration Notes
+
+Ask Tiber/Replit agent to:
+
+Wire routes in frontend router:
+
+/admin/forge-hub
+
+/admin/player-mapping-test
+
+Add link from:
+
+/admin/forge-lab → “Back to Admin Hub”
+
+Admin nav/sidebar → “FORGE Admin Hub” → “Player Mapping Test”
+
+Protect endpoints (optional but recommended):
+
+If you already have admin-only checks (API key, NODE_ENV !== 'production', etc.), apply them to:
+
+/api/admin/player-mapping/search
