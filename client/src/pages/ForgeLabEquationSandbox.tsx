@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, Copy, Check, FlaskConical } from 'lucide-react';
+import { ArrowLeft, Copy, Check, FlaskConical, Save, FolderOpen, Trash2, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
@@ -8,8 +8,39 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { FORGE_LAB_EQUATIONS, getEquationById, type ForgeLabEquation, type ForgeLabInputDef } from '../forgeLab/equations';
+
+type ForgeLabPreset = {
+  id: string;
+  title: string;
+  equationId: string;
+  inputs: Record<string, number>;
+  savedAt: string;
+};
+
+const PRESETS_STORAGE_KEY = 'forge_lab_presets';
+
+function loadPresets(): ForgeLabPreset[] {
+  try {
+    const raw = localStorage.getItem(PRESETS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch {
+    return [];
+  }
+}
+
+function savePresets(presets: ForgeLabPreset[]) {
+  localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(presets));
+}
+
+function generateId(): string {
+  return `preset_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
 
 function InputSlider({
   def,
@@ -170,6 +201,7 @@ function JsonExportCard({
 }
 
 export default function ForgeLabEquationSandbox() {
+  const { toast } = useToast();
   const [selectedEquationId, setSelectedEquationId] = useState<string>(FORGE_LAB_EQUATIONS[0]?.id ?? '');
   const selectedEquation = useMemo(() => getEquationById(selectedEquationId), [selectedEquationId]);
 
@@ -181,6 +213,18 @@ export default function ForgeLabEquationSandbox() {
       return acc;
     }, {} as Record<string, number>);
   });
+
+  const [presets, setPresets] = useState<ForgeLabPreset[]>([]);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [presetName, setPresetName] = useState('');
+
+  useEffect(() => {
+    setPresets(loadPresets());
+  }, []);
+
+  const presetsForCurrentEquation = useMemo(() => {
+    return presets.filter(p => p.equationId === selectedEquationId);
+  }, [presets, selectedEquationId]);
 
   const handleEquationChange = useCallback((eqId: string) => {
     setSelectedEquationId(eqId);
@@ -197,6 +241,47 @@ export default function ForgeLabEquationSandbox() {
   const handleInputChange = useCallback((key: string, val: number) => {
     setInputValues((prev) => ({ ...prev, [key]: val }));
   }, []);
+
+  const handleSavePreset = useCallback(() => {
+    if (!presetName.trim()) {
+      toast({ title: 'Name required', description: 'Please enter a name for the preset', variant: 'destructive' });
+      return;
+    }
+    const duplicate = presetsForCurrentEquation.find(p => p.title.toLowerCase() === presetName.trim().toLowerCase());
+    if (duplicate) {
+      toast({ title: 'Duplicate name', description: 'A preset with this name already exists for this equation', variant: 'destructive' });
+      return;
+    }
+    const newPreset: ForgeLabPreset = {
+      id: generateId(),
+      title: presetName.trim(),
+      equationId: selectedEquationId,
+      inputs: { ...inputValues },
+      savedAt: new Date().toISOString(),
+    };
+    const updatedPresets = [...presets, newPreset];
+    savePresets(updatedPresets);
+    setPresets(updatedPresets);
+    setPresetName('');
+    setSaveDialogOpen(false);
+    toast({ title: 'Preset saved', description: `"${newPreset.title}" saved successfully` });
+  }, [presetName, presetsForCurrentEquation, selectedEquationId, inputValues, presets, toast]);
+
+  const handleLoadPreset = useCallback((presetId: string) => {
+    const preset = presets.find(p => p.id === presetId);
+    if (preset) {
+      setInputValues(preset.inputs);
+      toast({ title: 'Preset loaded', description: `"${preset.title}" loaded` });
+    }
+  }, [presets, toast]);
+
+  const handleDeletePreset = useCallback((presetId: string) => {
+    const preset = presets.find(p => p.id === presetId);
+    const updatedPresets = presets.filter(p => p.id !== presetId);
+    savePresets(updatedPresets);
+    setPresets(updatedPresets);
+    toast({ title: 'Preset deleted', description: preset ? `"${preset.title}" deleted` : 'Preset deleted' });
+  }, [presets, toast]);
 
   const computeResult = useMemo(() => {
     if (!selectedEquation) return { outputs: {}, steps: [] };
@@ -253,14 +338,113 @@ export default function ForgeLabEquationSandbox() {
             <div className="space-y-6">
               <Card className="bg-[#141824] border-gray-800">
                 <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Badge className="bg-orange-600 text-white">Inputs</Badge>
-                  </CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Adjust the input parameters using sliders or direct input
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-white flex items-center gap-2">
+                        <Badge className="bg-orange-600 text-white">Inputs</Badge>
+                      </CardTitle>
+                      <CardDescription className="text-gray-400 mt-1">
+                        Adjust the input parameters using sliders or direct input
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-purple-600 text-purple-400 hover:bg-purple-600/20"
+                            data-testid="button-save-preset"
+                          >
+                            <Save className="h-4 w-4 mr-1" />
+                            Save Preset
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="bg-[#141824] border-gray-700">
+                          <DialogHeader>
+                            <DialogTitle className="text-white">Save Preset</DialogTitle>
+                            <DialogDescription className="text-gray-400">
+                              Give this configuration a name so you can load it later.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="py-4">
+                            <Label className="text-gray-300">Preset Name</Label>
+                            <Input
+                              value={presetName}
+                              onChange={(e) => setPresetName(e.target.value)}
+                              placeholder="e.g., Ja'Marr Chase Baseline"
+                              className="mt-2 bg-[#1a1f2e] border-gray-700 text-white"
+                              data-testid="input-preset-name"
+                              onKeyDown={(e) => e.key === 'Enter' && handleSavePreset()}
+                            />
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              variant="ghost"
+                              onClick={() => { setSaveDialogOpen(false); setPresetName(''); }}
+                              className="text-gray-400"
+                              data-testid="button-cancel-save"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              onClick={handleSavePreset}
+                              className="bg-purple-600 hover:bg-purple-700"
+                              data-testid="button-confirm-save"
+                            >
+                              Save Preset
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {presetsForCurrentEquation.length > 0 && (
+                    <div className="bg-[#0a0e1a] rounded-lg p-4 border border-gray-800">
+                      <div className="flex items-center gap-2 mb-3">
+                        <FolderOpen className="h-4 w-4 text-blue-400" />
+                        <span className="text-sm font-medium text-gray-300">Saved Presets</span>
+                        <Badge className="bg-blue-600/30 text-blue-300 text-xs">{presetsForCurrentEquation.length}</Badge>
+                      </div>
+                      <div className="space-y-2">
+                        {presetsForCurrentEquation.map((preset) => (
+                          <div
+                            key={preset.id}
+                            className="flex items-center justify-between bg-[#141824] rounded px-3 py-2 border border-gray-700 group"
+                          >
+                            <div className="flex-1">
+                              <span className="text-sm text-white">{preset.title}</span>
+                              <span className="text-xs text-gray-500 ml-2">
+                                {new Date(preset.savedAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleLoadPreset(preset.id)}
+                                className="h-7 px-2 text-blue-400 hover:text-blue-300 hover:bg-blue-600/20"
+                                data-testid={`button-load-preset-${preset.id}`}
+                              >
+                                Load
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeletePreset(preset.id)}
+                                className="h-7 px-2 text-red-400 hover:text-red-300 hover:bg-red-600/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                                data-testid={`button-delete-preset-${preset.id}`}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {selectedEquation.inputs.map((inputDef) => (
                     <InputSlider
                       key={inputDef.key}
