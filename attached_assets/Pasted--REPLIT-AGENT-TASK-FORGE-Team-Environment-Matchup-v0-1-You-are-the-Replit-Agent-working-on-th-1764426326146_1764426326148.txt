@@ -1,0 +1,468 @@
+🔧 REPLIT AGENT TASK — FORGE Team Environment + Matchup v0.1
+
+You are the Replit Agent working on the Tiber / FORGE backend.
+
+We’re adding two new modifiers that plug into the existing FORGE Alpha pipeline:
+
+Team Environment Profile v0.1 – how good an offense is for fantasy
+
+Matchup Context v0.1 – how easy/hard a defense is for a given position
+
+Both are purely NFLfastR-based for now.
+
+0. Codebase Context
+
+Backend: Node/Express + Postgres (already wired for NFLfastR data + FORGE Alpha).
+
+We already have:
+
+rawAlpha computation per player
+
+calibration step that maps pre-calibrated alpha into a [25–90]-ish band
+
+WR/RB rankings pages using /api/forge/batch etc.
+
+Your job: add data + services + endpoints + integration hooks, without breaking existing calibration or UI.
+
+1️⃣ Data Discovery (NFLfastR tables)
+
+Goal: Map the design spec to what actually exists in our DB.
+
+Scan the schema for our NFLfastR data (table names will vary). Look for things like:
+
+Likely tables:
+
+weekly/team stats (per team, per week)
+
+play-by-play (pbp)
+
+possibly pre-aggregated team tables
+
+Identify or confirm we have the following pbp/weekly fields (name variants okay as long as semantics match):
+
+We need, per team/week:
+
+posteam, defteam, week, season
+
+play_type IN ('pass','run')
+
+epa, success
+
+qb_dropback, sack
+
+yards_after_catch, air_yards
+
+team points (from drives or existing team_stats)
+
+red-zone info (drives ending inside 20, etc.)
+
+And for defense vs position:
+
+fantasy points allowed by position (WR/RB/TE/QB)
+→ can be computed from roster/weekly stats by grouping on position, team, opponent, week.
+
+In comments or a short summary at the top of the new module, note which tables/columns you use for:
+
+team environment metrics
+
+matchup context metrics
+
+So I can read the code and see the mapping clearly.
+
+2️⃣ Database Layer — Materialized Views
+
+Implement two materialized views (or the closest thing consistent with the project’s migration system):
+
+2.1 team_environment view
+
+One row per (season, week, team).
+
+Target shape:
+
+CREATE MATERIALIZED VIEW team_environment AS
+SELECT
+  season,
+  week,
+  posteam AS team,
+
+  -- core metrics (you decide exact formulas/aliases based on actual schema)
+  qb_cpoe,                   -- QB accuracy proxy
+  qb_epa_per_dropback,       -- efficiency per dropback
+  neutral_pass_rate,         -- neutral script pass rate
+  proe,                      -- pass rate over expected
+  pressure_rate_allowed,     -- pressures / dropbacks
+  sack_rate_allowed,         -- sacks / dropbacks
+  points_per_game AS ppg,
+  rz_possessions_per_game,
+  rz_pass_rate,
+
+  -- final normalized environment score, [0-100]
+  env_score_raw,
+  (env_score_raw * 100)::int AS env_score_100
+FROM (
+  -- implement aggregation here
+) t;
+
+
+Implementation expectations:
+
+qb_cpoe and qb_epa_per_dropback
+
+Use available CPOE/EPA columns or derive EPA/dropback from pbp.
+
+neutral_pass_rate
+
+1st half, score diff ≤ 10, pass plays / (pass + run).
+
+proe
+
+If you have an NFLfastR-style pass_oe / pass rate over expected, use it.
+
+Otherwise, you can approximate or leave 0 for v0.1.
+
+pressure_rate_allowed / sack_rate_allowed
+
+On offensive snaps: pressures or sacks / dropbacks.
+
+ppg, rz_possessions_per_game, rz_pass_rate
+
+Can be aggregated from drives or team stats:
+
+red-zone drive = drive that runs at least one play inside the 20.
+
+env_score_raw formula (0–1):
+
+Implement this in SQL or in a helper function that reads raw columns and writes env_score_raw into the view:
+
+// each norm(...) ∈ [0,1] based on league min-max over a rolling window
+envScore =
+  0.25 * norm(qb_cpoe)
++ 0.25 * norm(qb_epa_per_dropback)
++ 0.20 * (1 - norm(pressure_rate_allowed))
++ 0.15 * norm(neutral_pass_rate + proe)
++ 0.15 * norm(ppg + rz_possessions_per_game);
+
+
+Use min-max normalization over the season up to that week (if rolling 6-week window is too heavy, seasonal up-to-week is acceptable v0.1).
+
+Store env_score_raw in [0,1], env_score_100 as [0,100].
+
+If implementing min-max in SQL is messy, it’s fine to:
+
+store raw stats in the view, and
+
+compute env_score_raw in TypeScript using a league-wide scan per week
+(but v0.1 target is to have env_score_100 ready in the view).
+
+2.2 team_matchup_context view
+
+One row per (season, week, defense_team, position).
+
+Shape:
+
+CREATE MATERIALIZED VIEW team_matchup_context AS
+SELECT
+  season,
+  week,
+  defteam AS defense_team,
+  position,   -- 'WR' | 'RB' | 'TE'
+
+  def_pass_epa_per_attempt,
+  def_rush_epa_per_rush,
+  def_pressure_rate,
+  def_yac_per_completion,
+  def_explosive_pass_rate_allowed,
+  def_explosive_rush_rate_allowed,
+  fantasy_pts_allowed_per_game,
+
+  matchup_score_raw,
+  (matchup_score_raw * 100)::int AS matchup_score_100
+FROM (
+  -- aggregation here
+) t;
+
+
+You’ll need:
+
+For each defensive team + position:
+
+EPA allowed (pass vs run)
+
+explosive plays allowed (20+ yard passes/rushes)
+
+YAC allowed per completion
+
+pressure rate
+
+fantasy points allowed per game to that position
+
+We only deeply care about WR/RB/TE for v0.1. QB can default to 50 or reuse pass metrics later.
+
+matchupScore formulas (0–1):
+
+For WR:
+
+matchupScore_WR =
+  0.30 * norm(pass_epa_allowed_per_attempt)
++ 0.20 * norm(explosive_pass_rate_allowed)
++ 0.20 * norm(yac_allowed_per_completion)
++ 0.15 * (1 - norm(def_pressure_rate))
++ 0.15 * norm(fantasy_pts_allowed_to_wr_per_game);
+
+
+For RB:
+
+matchupScore_RB =
+  0.40 * norm(rush_epa_allowed_per_rush)
++ 0.25 * norm(fantasy_pts_allowed_to_rb_per_game)
++ 0.20 * (1 - norm(def_pressure_rate))
++ 0.15 * norm(explosive_rush_rate_allowed);
+
+
+For TE (v0.1, keep it simple):
+
+matchupScore_TE =
+  0.35 * norm(pass_epa_allowed_per_attempt)
++ 0.30 * norm(fantasy_pts_allowed_to_te_per_game)
++ 0.20 * norm(yac_allowed_per_completion)
++ 0.15 * (1 - norm(def_pressure_rate));
+
+
+Again, norm(...) is min-max over league for that week or season-to-date.
+
+If a team doesn’t have enough samples, fallback safely to league average (≈50).
+
+3️⃣ Service Layer
+
+Create/extend a service module for these two concepts.
+
+3.1 Types
+// types/envMatchup.ts
+export type Position = 'WR' | 'RB' | 'TE' | 'QB';
+
+export interface TeamEnvironment {
+  season: number;
+  week: number;
+  team: string;
+  envScore100: number; // 0-100
+}
+
+export interface MatchupContext {
+  season: number;
+  week: number;
+  offenseTeam: string;
+  defenseTeam: string;
+  position: Position;
+  matchupScore100: number; // 0-100
+}
+
+3.2 Environment service
+// services/environmentService.ts
+import { Pool } from 'pg';
+import { TeamEnvironment } from './types/envMatchup';
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+export async function getTeamEnvironment(
+  season: number,
+  week: number,
+  team: string,
+): Promise<TeamEnvironment | null> {
+  const res = await pool.query(
+    `
+    SELECT season,
+           week,
+           team,
+           env_score_100 AS "envScore100"
+    FROM team_environment
+    WHERE season = $1 AND week = $2 AND team = $3
+    `,
+    [season, week, team],
+  );
+
+  if (res.rowCount === 0) return null;
+  return res.rows[0];
+}
+
+3.3 Matchup service
+// services/matchupService.ts
+import { MatchupContext, Position } from './types/envMatchup';
+import { Pool } from 'pg';
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+export async function getMatchupContext(
+  season: number,
+  week: number,
+  offenseTeam: string,
+  defenseTeam: string,
+  position: Position,
+): Promise<MatchupContext> {
+  const res = await pool.query(
+    `
+    SELECT season,
+           week,
+           defense_team AS "defenseTeam",
+           position,
+           matchup_score_100 AS "matchupScore100"
+    FROM team_matchup_context
+    WHERE season = $1
+      AND week   = $2
+      AND defense_team = $3
+      AND position = $4
+    `,
+    [season, week, defenseTeam, position],
+  );
+
+  const row = res.rows[0];
+
+  return {
+    season,
+    week,
+    offenseTeam,
+    defenseTeam,
+    position,
+    matchupScore100: row?.matchupScore100 ?? 50, // fallback league avg
+  };
+}
+
+4️⃣ Integration into FORGE Alpha (Backend Only, No UI Changes)
+
+We want a modulation step between rawAlpha and calibration:
+
+rawAlpha
+  → envAdjustedAlpha
+  → matchupAdjustedAlpha
+  → calibratedAlpha
+
+4.1 Add a small helper
+// services/forgeAlphaModifiers.ts
+import { TeamEnvironment, MatchupContext } from './types/envMatchup';
+
+export interface ForgeModifierWeights {
+  w_env: number;
+  w_mu: number;
+}
+
+export const DEFAULT_FORGE_WEIGHTS: ForgeModifierWeights = {
+  w_env: 0.40,
+  w_mu: 0.25,
+};
+
+export function applyForgeModifiers(
+  rawAlpha: number,
+  env: TeamEnvironment | null,
+  matchup: MatchupContext | null,
+  weights: ForgeModifierWeights = DEFAULT_FORGE_WEIGHTS,
+): number {
+  let adjusted = rawAlpha;
+
+  if (env) {
+    const envNorm = env.envScore100 / 50 - 1; // ~[-1, +1]
+    adjusted *= 1 + weights.w_env * envNorm;
+  }
+
+  if (matchup) {
+    const muNorm = matchup.matchupScore100 / 50 - 1;
+    adjusted *= 1 + weights.w_mu * muNorm;
+  }
+
+  // safety
+  if (!Number.isFinite(adjusted) || adjusted < 0) adjusted = 0;
+
+  return adjusted;
+}
+
+4.2 Use it in the Forge pipeline
+
+Wherever we currently do something like:
+
+const rawAlpha = computeRawAlpha(playerContext);
+const alpha = calibrateAlpha(rawAlpha, position);
+
+
+Update to:
+
+// pseudo-code in alpha engine:
+const rawAlpha = computeRawAlpha(playerContext);
+
+const env = await getTeamEnvironment(season, week, team);
+const matchup = await getMatchupContext(season, week, offenseTeam, defenseTeam, position);
+
+const envMatchupAdjusted = applyForgeModifiers(rawAlpha, env, matchup);
+
+const alpha = calibrateAlpha(envMatchupAdjusted, position);
+
+
+Important:
+
+Wrap env/matchup fetching in try/catch and default to rawAlpha if anything fails.
+
+Do not change calibration logic or frontend styles.
+
+5️⃣ Debug / Inspection Endpoints
+
+Add two debug endpoints so we can inspect outputs without touching the UI:
+
+5.1 /api/forge/env
+// routes/forgeEnvDebug.ts (or inside existing forge routes)
+app.get('/api/forge/env', async (req, res) => {
+  try {
+    const season = Number(req.query.season ?? 2025);
+    const week   = Number(req.query.week ?? 10);
+    const team   = String(req.query.team ?? 'KC');
+
+    const env = await getTeamEnvironment(season, week, team);
+
+    return res.json({
+      meta: { season, week, team },
+      env,
+    });
+  } catch (err) {
+    console.error('FORGE env debug error', err);
+    return res.status(500).json({ error: 'env debug failed' });
+  }
+});
+
+5.2 /api/forge/matchup
+app.get('/api/forge/matchup', async (req, res) => {
+  try {
+    const season   = Number(req.query.season ?? 2025);
+    const week     = Number(req.query.week ?? 10);
+    const offense  = String(req.query.offense ?? 'KC');
+    const defense  = String(req.query.defense ?? 'LV');
+    const position = String(req.query.position ?? 'WR') as 'WR' | 'RB' | 'TE' | 'QB';
+
+    const mu = await getMatchupContext(season, week, offense, defense, position);
+
+    return res.json({
+      meta: { season, week, offense, defense, position },
+      matchup: mu,
+    });
+  } catch (err) {
+    console.error('FORGE matchup debug error', err);
+    return res.status(500).json({ error: 'matchup debug failed' });
+  }
+});
+
+6️⃣ Acceptance Checklist
+
+I’ll consider this task done when:
+
+ team_environment materialized view exists and populates for 2025 season.
+
+ team_matchup_context materialized view exists and has rows for at least WR/RB/TE.
+
+ env_score_100 and matchup_score_100 follow the rough 0–100 distribution with league average ≈ 50.
+
+ getTeamEnvironment and getMatchupContext services are implemented and used in the Forge alpha pipeline.
+
+ applyForgeModifiers is applied between rawAlpha and calibrateAlpha, with safe fallbacks.
+
+ Debug endpoints:
+
+GET /api/forge/env?season=2025&week=10&team=KC returns a structured env score.
+
+GET /api/forge/matchup?season=2025&week=10&offense=KC&defense=LV&position=WR returns a structured matchup score.
+
+ No changes to existing UI cosmetics or WR/RB rankings pages styling.
