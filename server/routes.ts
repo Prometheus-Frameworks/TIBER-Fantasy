@@ -109,6 +109,7 @@ import teamReportsRoutes from './routes/teamReportsRoutes';
 import weekSummaryRouter from './routes/debug/week-summary';
 import { registerForgeRoutes } from './modules/forge';
 import adminForgeRouter from './routes/adminForge';
+import playerMappingRoutes, { metricsRouter, forgeLabRouter } from './routes/playerMappingRoutes';
 import { monitoringService } from './services/MonitoringService';
 import { adminService } from './services/AdminService';
 import { requireAdminAuth } from './middleware/adminAuth';
@@ -2687,6 +2688,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Reports
   app.use('/api/team-reports', teamReportsRoutes);
   console.log('🏈 Team Reports routes mounted at /api/team-reports/*');
+  
+  // Player Mapping System v1.0 - Search, Advanced Stats, Metrics, Matching
+  app.use('/api/players', playerMappingRoutes);
+  app.use('/api/metrics', metricsRouter);
+  app.use('/api/forge/lab', forgeLabRouter);
+  console.log('🗺️ Player Mapping v1.0 routes mounted at /api/players/*, /api/metrics/wr, /api/forge/lab/wr-match');
   
   // Role Bank v1.0 - WR/RB/TE position-specific role classifications
   registerRoleBankRoutes(app);
