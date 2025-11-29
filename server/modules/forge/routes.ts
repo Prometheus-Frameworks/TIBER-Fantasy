@@ -843,12 +843,12 @@ router.get('/matchup/defense', async (req: Request, res: Response) => {
  * Query params:
  * - team: team abbreviation (required)
  * - season (optional): defaults to 2025
- * - week (optional): defaults to 10
+ * - week (optional): defaults to 12 (most recently completed week)
  */
 router.get('/env-debug', async (req: Request, res: Response) => {
   try {
     const season = parseInt(req.query.season as string) || 2025;
-    const week = parseInt(req.query.week as string) || 10;
+    const week = parseInt(req.query.week as string) || 12;
     const team = (req.query.team as string)?.toUpperCase() || 'KC';
 
     const debug = await getEnvDebug(season, week, team);
@@ -882,12 +882,12 @@ router.get('/env-debug', async (req: Request, res: Response) => {
  * - defense: defense team abbreviation (required)
  * - position: WR | RB | TE (defaults to WR)
  * - season (optional): defaults to 2025
- * - week (optional): defaults to 10
+ * - week (optional): defaults to 12 (most recently completed week)
  */
 router.get('/matchup-debug', async (req: Request, res: Response) => {
   try {
     const season = parseInt(req.query.season as string) || 2025;
-    const week = parseInt(req.query.week as string) || 10;
+    const week = parseInt(req.query.week as string) || 12;
     const defense = (req.query.defense as string)?.toUpperCase() || 'NYJ';
     const position = ((req.query.position as string)?.toUpperCase() || 'WR') as PlayerPosition;
 
