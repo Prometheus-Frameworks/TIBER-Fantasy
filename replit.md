@@ -44,6 +44,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **Weekly Takes System**: Quick, punchy matchup insights with position-specific one-liners and concrete statistics.
 - **Role Banks (WR, RB, TE, QB)**: Season-level analytical classification systems for position-specific role evaluation, using multi-dimensional scoring models and tier classifications. Includes Admin Sandboxes for experimental alpha scoring and archetype classification.
 - **FORGE v0.2 (Football-Oriented Recursive Grading Engine)**: Self-contained, read-only scoring module providing unified alpha scores (0-100) for WR/RB/TE/QB positions. Features position-specific weighted sub-scores, trajectory tracking, and confidence scoring. Integrates Offensive Environment Modifier (EnvScore) and Weekly Matchup Context Modifier (MatchupScore) into player rankings.
+- **Admin API Lexicon**: Developer tool at `/admin/api-lexicon` for browsing and testing Forge/Tiber API endpoints. Features searchable endpoint registry, tag filtering, sample parameters, live response previews with important field highlighting, and cURL command generation. Registry maintained at `server/infra/apiRegistry.ts`.
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
