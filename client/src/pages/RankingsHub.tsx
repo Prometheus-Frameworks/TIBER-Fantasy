@@ -142,6 +142,7 @@ export default function RankingsHub() {
     <th 
       className="px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors"
       onClick={() => handleSort(field)}
+      data-testid={`sort-${field}`}
     >
       <div className="flex items-center gap-1">
         {label}
@@ -159,7 +160,7 @@ export default function RankingsHub() {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" data-testid="link-home">
                 <Home className="h-4 w-4 mr-2" />
                 TIBER
               </Button>
@@ -175,6 +176,7 @@ export default function RankingsHub() {
             onClick={() => refetch()}
             disabled={isLoading}
             className="border-gray-700 text-gray-300 hover:text-white"
+            data-testid="button-refresh"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
@@ -217,7 +219,7 @@ export default function RankingsHub() {
         ) : (
           <div className="bg-[#141824] border border-gray-800 rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full" data-testid="rankings-table">
                 <thead className="bg-[#0a0e1a]">
                   <tr>
                     <th className="px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider w-12">
