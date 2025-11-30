@@ -272,6 +272,114 @@ export async function getForgePlayerContext(
           redzoneCarries: Number(rb.redzone_carries) || 0,
         };
       }
+    } else if (position === 'QB') {
+      const qbResult = await db.execute(sql`
+        SELECT 
+          games_played,
+          attempts,
+          completions,
+          completion_pct,
+          pass_yards,
+          pass_tds,
+          ints,
+          yards_per_attempt,
+          air_yards,
+          air_yards_per_attempt,
+          epa_per_attempt,
+          success_rate,
+          rush_attempts,
+          rush_yards,
+          rush_tds,
+          yards_per_carry,
+          rush_epa_per_att
+        FROM forge_player_advanced_qb
+        WHERE player_id = ${playerId} AND season = ${season}
+        LIMIT 1
+      `);
+
+      if (qbResult.rows.length) {
+        const qb = qbResult.rows[0] as any;
+        gamesPlayed = Number(qb.games_played) || 0;
+
+        usage = {
+          attempts: Number(qb.attempts) || 0,
+          completions: Number(qb.completions) || 0,
+          rushAttempts: Number(qb.rush_attempts) || 0,
+          airYards: Number(qb.air_yards) || 0,
+        };
+
+        efficiency = {
+          completionPct: Number(qb.completion_pct) || 0,
+          yardsPerAttempt: Number(qb.yards_per_attempt) || 0,
+          airYardsPerAttempt: Number(qb.air_yards_per_attempt) || 0,
+          epaPerAttempt: Number(qb.epa_per_attempt) || 0,
+          successRate: Number(qb.success_rate) || 0,
+          yardsPerCarry: Number(qb.yards_per_carry) || 0,
+          rushEpaPerAtt: Number(qb.rush_epa_per_att) || 0,
+        };
+
+        finishing = {
+          passYards: Number(qb.pass_yards) || 0,
+          passTds: Number(qb.pass_tds) || 0,
+          ints: Number(qb.ints) || 0,
+          rushYards: Number(qb.rush_yards) || 0,
+          rushTds: Number(qb.rush_tds) || 0,
+        };
+      }
+    } else if (position === 'TE') {
+      const teResult = await db.execute(sql`
+        SELECT 
+          games_played,
+          targets,
+          receptions,
+          rec_yards,
+          first_downs,
+          tds,
+          air_yards,
+          yac,
+          target_share,
+          air_yards_share,
+          yards_per_target,
+          yards_per_reception,
+          fd_per_target,
+          catch_rate,
+          yac_per_rec,
+          epa_per_target,
+          success_rate
+        FROM forge_player_advanced_te
+        WHERE player_id = ${playerId} AND season = ${season}
+        LIMIT 1
+      `);
+
+      if (teResult.rows.length) {
+        const te = teResult.rows[0] as any;
+        gamesPlayed = Number(te.games_played) || 0;
+
+        usage = {
+          targets: Number(te.targets) || 0,
+          receptions: Number(te.receptions) || 0,
+          airYards: Number(te.air_yards) || 0,
+          targetShare: Number(te.target_share) || 0,
+          airYardsShare: Number(te.air_yards_share) || 0,
+        };
+
+        efficiency = {
+          epaPerTarget: Number(te.epa_per_target) || 0,
+          successRate: Number(te.success_rate) || 0,
+          fdPerTarget: Number(te.fd_per_target) || 0,
+          catchRate: Number(te.catch_rate) || 0,
+          yacPerRec: Number(te.yac_per_rec) || 0,
+          yardsPerTarget: Number(te.yards_per_target) || 0,
+          yardsPerReception: Number(te.yards_per_reception) || 0,
+        };
+
+        finishing = {
+          tds: Number(te.tds) || 0,
+          firstDowns: Number(te.first_downs) || 0,
+          recYards: Number(te.rec_yards) || 0,
+          yac: Number(te.yac) || 0,
+        };
+      }
     }
 
     return {
