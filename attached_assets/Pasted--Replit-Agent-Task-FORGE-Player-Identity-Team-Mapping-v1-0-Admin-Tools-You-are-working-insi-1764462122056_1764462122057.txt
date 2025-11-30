@@ -1,0 +1,405 @@
+🧪 Replit Agent Task — FORGE Player Identity & Team Mapping v1.0 + Admin Tools
+
+You are working inside my existing FORGE / Tiber fantasy backend and admin frontend.
+
+Stack (already running):
+
+Backend: Node + Express + TypeScript
+
+DB: Postgres (FORGE tables + NFLfastR 2025 data already present)
+
+Frontend: React/TypeScript admin panel under /admin
+
+We already have:
+
+FORGE Alpha rankings for WR/RB
+
+2025 NFLfastR play-by-play and weekly data in Postgres
+
+A WR “advanced player mapping” style endpoint that returns usage/efficiency/finishing blocks (e.g. George Pickens stats for 2025)
+
+Goal:
+Implement FORGE Player Identity & Team Mapping v1.0 and connect it to admin research pages so I can:
+
+Ask FORGE/Tiber for a player by canonical ID or name
+
+See their correct 2025 team (roster driven, not stale labels)
+
+See their advanced WR/RB stats in a “research terminal”
+
+Use an admin “player mapping sanity check” page to debug mapping issues
+
+Please keep all existing styling / color scheme. Do not introduce new visual themes.
+
+1) Backend: Player Identity + Current Team Mapping
+1.1 Create / Update player_identity_map table
+
+If something similar already exists, extend it. Otherwise create:
+
+CREATE TABLE IF NOT EXISTS player_identity_map (
+  player_id         TEXT PRIMARY KEY,  -- canonical slug: 'george-pickens'
+  display_name      TEXT NOT NULL,
+  sleeper_id        TEXT,
+  nflfastr_gsis_id  TEXT,             -- nullable until backfill
+  position          TEXT NOT NULL CHECK (position IN ('QB','RB','WR','TE')),
+  created_at        TIMESTAMPTZ DEFAULT now(),
+  updated_at        TIMESTAMPTZ DEFAULT now()
+);
+
+
+Add/update a trigger to auto-update updated_at on UPDATE (if you already have a generic trigger, re-use it; otherwise create a small update_updated_at_column() function and trigger).
+
+1.2 Create forge_player_current_team materialized view
+
+Goal: for each player_id, give me the current 2025 team based on NFLfastR roster/weekly data (not legacy fields).
+
+Assume a roster/weekly table like nflfastr_weekly_roster with:
+
+season
+
+week
+
+gsis_id (or similar player id)
+
+full_name
+
+team
+
+Implement a materialized view similar to:
+
+DROP MATERIALIZED VIEW IF EXISTS forge_player_current_team;
+
+CREATE MATERIALIZED VIEW forge_player_current_team AS
+WITH latest_week AS (
+  SELECT
+    gsis_id AS nflfastr_gsis_id,
+    MAX(week) AS week
+  FROM nflfastr_weekly_roster
+  WHERE season = 2025
+    AND gsis_id IS NOT NULL
+  GROUP BY gsis_id
+)
+SELECT
+  im.player_id,
+  im.display_name,
+  im.position,
+  r.team AS current_team,
+  r.season,
+  lw.week AS last_seen_week
+FROM player_identity_map im
+JOIN latest_week lw ON lw.nflfastr_gsis_id = im.nflfastr_gsis_id
+JOIN nflfastr_weekly_roster r
+  ON r.gsis_id = lw.nflfastr_gsis_id
+  AND r.week = lw.week
+  AND r.season = 2025;
+
+
+If you want, you can add a temporary fallback branch for players with nflfastr_gsis_id IS NULL using a name-based join on full_name, but make sure it’s clearly commented as a bridge until proper backfill.
+
+Add indexes:
+
+CREATE UNIQUE INDEX IF NOT EXISTS forge_player_current_team_player_id_idx 
+  ON forge_player_current_team (player_id);
+
+1.3 Backfill nflfastr_gsis_id (one-time script)
+
+Create a one-time SQL migration / script that:
+
+Looks at player_identity_map rows where nflfastr_gsis_id is NULL
+
+Joins into nflfastr_weekly_roster (season 2025) using:
+
+sleeper_id match if available
+
+else display_name vs full_name
+
+Sets nflfastr_gsis_id for those players
+
+Logs how many rows are matched/updated, doesn’t overwrite non-null nflfastr_gsis_id
+
+You can follow this rough structure:
+
+-- Pseudocode structure, feel free to adjust to your exact schema
+DO $$
+DECLARE
+  updated_count INT := 0;
+BEGIN
+  WITH candidates AS (
+    SELECT DISTINCT ON (im.player_id)
+      im.player_id,
+      r.gsis_id
+    FROM player_identity_map im
+    JOIN nflfastr_weekly_roster r ON (
+      (im.sleeper_id IS NOT NULL AND im.sleeper_id = r.sleeper_id)
+      OR LOWER(im.display_name) = LOWER(r.full_name)
+    )
+    WHERE im.nflfastr_gsis_id IS NULL
+      AND r.gsis_id IS NOT NULL
+      AND r.season = 2025
+    ORDER BY im.player_id
+  )
+  UPDATE player_identity_map im
+  SET nflfastr_gsis_id = c.gsis_id,
+      updated_at = now()
+  FROM candidates c
+  WHERE im.player_id = c.player_id
+    AND im.nflfastr_gsis_id IS NULL;
+
+  GET DIAGNOSTICS updated_count = ROW_COUNT;
+  RAISE NOTICE 'Backfilled % nflfastr_gsis_id values', updated_count;
+END $$;
+
+1.4 New DB helper: getForgePlayerContext
+
+Create src/db/forgePlayerContext.ts (or similar) with a strongly typed helper:
+
+Input: playerId: string, season: number = 2025
+
+Output shape:
+
+export interface ForgePlayerContext {
+  meta: { playerId: string; season: number };
+  identity: {
+    displayName: string;
+    position: string;
+    sleeperId: string | null;
+    nflfastrGsisId: string | null;
+  };
+  team: {
+    currentTeam: string | null;
+    lastSeenWeek: number | null;
+  };
+  usage: Record<string, any>;
+  efficiency: Record<string, any>;
+  finishing: Record<string, any>;
+  metaStats: {
+    gamesPlayed: number;
+    lastUpdated: string;
+  };
+}
+
+
+Implementation details:
+
+Join:
+
+player_identity_map im
+
+forge_player_current_team ct (on player_id + season)
+
+existing advanced stats view you already use for WR mapping (e.g. forge_player_advanced_wr), joined on player_id + season
+
+Return at least:
+
+identity block (name, position, sleeperId, nflfastrGsisId)
+
+team block (current_team, last_seen_week)
+
+usage, efficiency, finishing, games_played, last_updated from the advanced view if present; otherwise empty objects / defaults
+
+If your advanced view is not WR-only, feel free to call it something generic, just keep the shape consistent.
+
+1.5 Express route: GET /api/forge/player-context/:playerId
+
+In your existing forge routes file:
+
+Add:
+
+router.get('/player-context/:playerId', async (req, res) => {
+  const { playerId } = req.params;
+  const season = parseInt(req.query.season as string, 10) || 2025;
+  try {
+    const ctx = await getForgePlayerContext(playerId, season);
+    if (!ctx) return res.status(404).json({ error: 'Player not found' });
+    res.json(ctx);
+  } catch (err) {
+    console.error('player-context error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+1.6 Search endpoint: GET /api/forge/search-players
+
+Add a lightweight search endpoint for the admin pages:
+
+Input: ?query=<string>
+
+Logic:
+
+Search player_identity_map with ILIKE on display_name and player_id
+
+LEFT JOIN forge_player_current_team to include current_team
+
+Output array shape:
+
+{
+  playerId: string;
+  displayName: string;
+  position: string;
+  currentTeam: string | null;
+}
+
+2) Frontend: Admin Mapping + Research Pages
+
+We already have an /admin area and an /admin/forge-hub. Don’t introduce new theme elements; reuse existing card/grid styles and color scheme.
+
+2.1 API client (src/api/forge.ts)
+
+Add:
+
+export type PlayerContextResponse = {
+  meta: { playerId: string; season: number };
+  identity: {
+    displayName: string;
+    position: string;
+    sleeperId: string | null;
+    nflfastrGsisId: string | null;
+  };
+  team: { currentTeam: string | null; lastSeenWeek: number | null };
+  usage?: Record<string, any>;
+  efficiency?: Record<string, any>;
+  finishing?: Record<string, any>;
+  metaStats?: { gamesPlayed?: number; lastUpdated?: string };
+};
+
+export type PlayerSearchResult = {
+  playerId: string;
+  displayName: string;
+  position: string;
+  currentTeam: string | null;
+};
+
+const API_BASE = '/api/forge';
+
+export async function searchPlayers(query: string): Promise<PlayerSearchResult[]> {
+  if (!query.trim()) return [];
+  const res = await fetch(`${API_BASE}/search-players?query=${encodeURIComponent(query)}`);
+  if (!res.ok) throw new Error('Search failed');
+  return res.json();
+}
+
+export async function fetchPlayerContext(playerId: string, season = 2025): Promise<PlayerContextResponse> {
+  const res = await fetch(`${API_BASE}/player-context/${playerId}?season=${season}`);
+  if (!res.ok) throw new Error(`Player not found: ${playerId}`);
+  return res.json();
+}
+
+2.2 Update /admin/forge-hub with two new cards
+
+Add two cards that link to:
+
+/admin/player-mapping
+
+/admin/player-research
+
+Use the same card structure as existing admin cards (bg-gray-800, border-gray-700, purple hover border, etc.).
+
+2.3 /admin/player-mapping page
+
+Create src/pages/admin/PlayerMapping.tsx:
+
+Search bar
+
+On submit → call searchPlayers(query)
+
+Render a table of results (Name, ID, Team)
+
+Clicking a row → fetchPlayerContext(playerId) and show detail panel on the right
+
+Detail panel:
+
+Canonical ID
+
+Position
+
+Sleeper ID
+
+GSIS ID (show “missing” in red if null)
+
+Current Team
+
+Last Seen Week
+
+Optional warning if GSIS ID is missing
+
+Layout:
+
+Use a 2-column grid (lg:grid-cols-2) with results on the left and detail on the right
+
+Match existing admin styling
+
+2.4 /admin/player-research page
+
+Create src/pages/admin/PlayerResearch.tsx:
+
+Search bar at top (reuse searchPlayers)
+
+Show clickable chips or a list of results
+
+On selecting a player → fetchPlayerContext
+
+Layout:
+
+Left column: identity card
+
+Name, position, team, season, gamesPlayed, lastSeenWeek
+
+Right column: three small stat tables:
+
+Usage (targets, targetShare, airYards etc.)
+
+Efficiency (yprrEst, epaPerTarget, successRate, etc.)
+
+Finishing (tds, firstDowns, recYards)
+
+At the bottom: collapsible <details> with raw JSON (JSON.stringify(player, null, 2))
+
+Keep everything on dark backgrounds, borders, and small typography consistent with the rest of the admin.
+
+3) Wiring & Testing
+
+Migrations
+
+Add migrations for:
+
+player_identity_map
+
+forge_player_current_team
+
+backfill script
+
+Run them against the existing DB.
+
+Weekly refresh
+
+Ensure the existing NFLfastR weekly ingestion job also runs:
+
+REFRESH MATERIALIZED VIEW CONCURRENTLY forge_player_current_team;
+
+Smoke tests (you can note these in comments)
+
+GET /api/forge/player-context/george-pickens?season=2025
+
+Should return correct 2025 currentTeam (e.g. DAL if that’s how data is loaded)
+
+GET /api/forge/search-players?query=pickens
+
+Should return a row with playerId = 'george-pickens'
+
+/admin/player-mapping
+
+Type "George Pickens" → see result → click row → detail shows current team and IDs
+
+/admin/player-research
+
+Same search → view advanced stats tables
+
+Non-breaking requirement
+
+Do not break existing FORGE Alpha endpoints.
+
+The new features should be additive. If any legacy endpoint used a stale team column, prefer the roster-driven currentTeam going forward, but keep legacy fields if they’re needed elsewhere.
+
+That’s the full job.
+
+Please implement all of this, wiring it into the existing project structure, reusing existing helpers where possible, and keeping styling consistent with the current admin UI.
