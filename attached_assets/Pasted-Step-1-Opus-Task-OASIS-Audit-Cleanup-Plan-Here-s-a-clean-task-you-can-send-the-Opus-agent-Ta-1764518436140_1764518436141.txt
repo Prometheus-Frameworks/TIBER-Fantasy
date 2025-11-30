@@ -1,0 +1,87 @@
+Step 1 – Opus Task: OASIS Audit + Cleanup Plan
+
+Here’s a clean task you can send the Opus agent:
+
+Task Title: Audit and Deprecation Plan for All OASIS References
+
+Goal
+Go through the entire codebase and:
+	1.	Identify every reference to OASIS (modules, env vars, API clients, comments, docs).
+	2.	Classify each reference as:
+	•	LEGACY_UNUSED (dead code, placeholders, commented-out plans)
+	•	INTEGRATION_STUB (wired up but not actually used in production flows)
+	•	ACTIVE_DEPENDENCY (part of a live ranking or context pipeline)
+	3.	Produce a summary report and a safe deprecation plan so we can fully remove or rename OASIS later and replace it with our own SoS/Context module.
+
+What to do
+	1.	Code search pass
+	•	Search for OASIS, oasis, Oasis, etc. in:
+	•	server code
+	•	shared utils
+	•	frontend
+	•	config / env templates
+	•	docs (README, replit.md, etc.)
+	2.	For each hit, record:
+	•	file path
+	•	brief description of what it does (e.g. “planned external OASIS API client”, “placeholder field in PlayerContext”, “old type definition”)
+	•	classification: LEGACY_UNUSED, INTEGRATION_STUB, or ACTIVE_DEPENDENCY
+	3.	If there is any external OASIS API client (like hitting someone else’s endpoint):
+	•	Flag it very clearly.
+	•	Confirm whether it is used in:
+	•	rankings
+	•	player context
+	•	admin tools
+	4.	Build a Deprecation Plan:
+	•	For LEGACY_UNUSED: propose direct deletion candidates.
+	•	For INTEGRATION_STUB: suggest turning them into generic “FORGE SoS / Team Context” placeholders or removing them if they just create confusion.
+	•	For ACTIVE_DEPENDENCY:
+	•	Describe exactly how OASIS is used (which endpoints / modules).
+	•	Suggest the minimal interface we need to replicate internally (e.g. “per-team offensive context score”, “per-position schedule difficulty index”, etc.).
+	5.	Update replit.md with a short Status: OASIS section:
+	•	Explain that:
+	•	OASIS was originally an external idea/prototype.
+	•	The goal is to replace it with our own internally derived FORGE SoS / context module.
+	•	No external OASIS dependency should remain in core flows once we’re done.
+
+Do NOT:
+	•	Do not implement a new SoS engine in this task.
+	•	Do not pull in any new external OASIS APIs or code.
+	•	Don’t rename things blindly — just map and classify for now.
+
+Deliverables
+	•	A short Markdown-style report (can be appended to replit.md or a new docs/oasis_audit.md) with:
+	•	List of all OASIS references
+	•	Their classification
+	•	Proposed deprecation/replacement steps
+	•	A couple of TODO comments in code where OASIS is still actively wired, pointing to:
+// TODO: replace OASIS with internal FORGE SoS module
+
+That gets us a clean map of where the ghost of OASIS still sits.
+
+⸻
+
+Step 2 – Conceptual: What OASIS Becomes For Us
+
+Mentally, we do this rename:
+	•	Old: OASIS = external guy’s branded engine
+	•	New: FORGE SoS / Context Index = our internal, math-driven:
+	•	Team offensive environment
+	•	Defensive matchup difficulty by position
+	•	Schedule difficulty (past + future)
+	•	Trend-aware context (e.g. “offense heating up / cooling down”)
+
+Basically: what you wanted OASIS to be is exactly what our Strength of Schedule + Env + Matchup + FPR stack will become.
+
+We’re not copying.
+We’re riffing on the same general idea in our own language, our own math, and our own ecosystem.
+
+⸻
+
+Step 3 – After the Audit
+
+Once Opus gives us the OASIS audit report, our moves are:
+	1.	Delete dead OASIS junk (LEGACY_UNUSED).
+	2.	For any active OASIS-shaped fields, we’ll:
+	•	Replace the name with neutral stuff like forge_team_context, forge_schedule_index, etc.
+	•	Then design our own SoS v1 module that fills those holes.
+	3.	Retire the word OASIS from the codebase entirely out of respect + clarity.

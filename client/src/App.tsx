@@ -26,6 +26,7 @@ import ForgeHub from "@/pages/admin/ForgeHub";
 import PlayerMappingTest from "@/pages/admin/PlayerMappingTest";
 import PlayerMapping from "@/pages/admin/PlayerMapping";
 import PlayerResearch from "@/pages/admin/PlayerResearch";
+import ApiLexicon from "@/pages/admin/ApiLexicon";
 import NotFound from "@/pages/not-found";
 
 // Custom hook to reactively track URL search params (wouter only tracks pathname)
@@ -135,6 +136,9 @@ function Router() {
       
       {/* Admin: Player Research */}
       <Route path="/admin/player-research" component={PlayerResearch} />
+      
+      {/* Admin: API Lexicon - Forge/Tiber endpoint reference */}
+      <Route path="/admin/api-lexicon" component={ApiLexicon} />
       
       {/* 404 Catch-all */}
       <Route component={NotFound} />

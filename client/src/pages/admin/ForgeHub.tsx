@@ -9,7 +9,8 @@ import {
   TrendingUp,
   Shield,
   Settings,
-  Database
+  Database,
+  BookOpen
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -179,6 +180,21 @@ const ADMIN_TOOLS: { section: string; tools: AdminTool[] }[] = [
         href: '/admin/rag-status',
         icon: Database,
         iconColor: 'text-gray-400',
+      },
+    ],
+  },
+  {
+    section: 'Developer Tools',
+    tools: [
+      {
+        id: 'api-lexicon',
+        title: 'API Lexicon',
+        description: 'Browse and test Forge/Tiber API endpoints with live examples',
+        href: '/admin/api-lexicon',
+        icon: BookOpen,
+        iconColor: 'text-amber-400',
+        badge: 'New',
+        badgeColor: 'bg-amber-600',
       },
     ],
   },
