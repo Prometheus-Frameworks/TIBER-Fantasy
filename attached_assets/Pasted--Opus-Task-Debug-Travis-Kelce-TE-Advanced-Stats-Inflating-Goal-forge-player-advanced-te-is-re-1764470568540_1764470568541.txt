@@ -1,0 +1,162 @@
+🧠 Opus Task – “Debug Travis Kelce TE Advanced Stats Inflating”
+
+Goal
+forge_player_advanced_te is returning absurdly high totals for Travis Kelce (151 targets, 1360 rec yards, 10 TDs) despite our season only being through Week 12 of 2025. We need to find why and fix the aggregation so TE season stats reflect a single season, no duplicate rows.
+
+Step 1 – Inspect raw weekly stats for Kelce
+
+Run this:
+
+-- 1) Raw weekly stats for Kelce in 2025
+SELECT
+  season,
+  week,
+  targets,
+  receptions,
+  receiving_yards,
+  receiving_tds
+FROM nflfastr_weekly_stats
+WHERE gsis_id = '<KELCE_GSIS_ID>'
+ORDER BY season, week;
+
+
+Confirm:
+
+Which seasons are present (should be 2025 only for our purposes).
+
+The week-by-week targets / yards / TDs totals.
+
+Manually sum them to see what a realistic 2025 total looks like (should be much lower than 151/1360/10 right now).
+
+If this query alone already shows 151 targets / 1360 yards / 10 TDs in 2025, that means Kelce actually did that in the data (unlikely but then we accept it).
+If it shows something smaller (like 80 targets, 700 yards), then the advanced view is double-counting or cross-season aggregating.
+
+Step 2 – Inspect forge_player_advanced_te definition
+
+Get the current definition:
+
+SELECT definition
+FROM pg_matviews
+WHERE matviewname = 'forge_player_advanced_te';
+
+
+Or just open the migration / SQL file that created it.
+
+Look for:
+
+Any missing WHERE clause on season
+
+Any JOIN to another table that could multiply rows
+
+Grouping that includes extra fields (e.g. grouping by week but then aggregating on top of that)
+
+We want a structure more like:
+
+CREATE MATERIALIZED VIEW forge_player_advanced_te AS
+WITH base AS (
+  SELECT
+    pim.player_id,
+    ws.season,
+    ws.week,
+    ws.targets,
+    ws.receptions,
+    ws.receiving_yards,
+    ws.receiving_tds,
+    ws.air_yards,
+    ws.yac,
+    ws.first_downs
+  FROM player_identity_map pim
+  JOIN nflfastr_weekly_stats ws
+    ON pim.nflfastr_gsis_id = ws.gsis_id
+  -- ideally filter to season = 2025 here, or keep multi-season but always GROUP BY season
+),
+totals AS (
+  SELECT
+    player_id,
+    season,
+    COUNT(DISTINCT week)        AS games_played,
+    SUM(targets)                AS targets,
+    SUM(receptions)             AS receptions,
+    SUM(receiving_yards)        AS rec_yards,
+    SUM(receiving_tds)          AS rec_tds,
+    AVG(NULLIF(targets, 0))     AS avg_targets_per_game, -- optional
+    SUM(air_yards)              AS air_yards,
+    SUM(yac)                    AS yac,
+    SUM(first_downs)            AS first_downs
+  FROM base
+  GROUP BY player_id, season
+)
+SELECT *
+FROM totals;
+
+
+Key rules:
+
+Only aggregate over base once.
+
+base should be (player_id, season, week, stats…) — no joins that replicate rows.
+
+totals should group by (player_id, season) only.
+
+Step 3 – Fix the MV if needed
+
+If you find:
+
+no season filter
+
+joins to routes/pbp tables without pre-aggregation
+
+grouping that includes extra keys
+
+→ rewrite forge_player_advanced_te so it:
+
+Starts from a clean weekly base (one row per player/season/week).
+
+Aggregates once to get season totals.
+
+Uses season as a core grouping key to avoid cross-season aggregation.
+
+Then:
+
+DROP MATERIALIZED VIEW IF EXISTS forge_player_advanced_te;
+-- recreate with the corrected definition
+CREATE MATERIALIZED VIEW forge_player_advanced_te AS
+-- [use corrected query logic here]
+;
+
+REFRESH MATERIALIZED VIEW forge_player_advanced_te;
+
+Step 4 – Re-test Kelce & another TE
+
+After refresh:
+
+Query the MV row directly:
+
+SELECT *
+FROM forge_player_advanced_te
+WHERE player_id = '<TRAVIS_KELCE_PLAYER_ID>'
+  AND season = 2025;
+
+
+Call the API:
+
+GET /api/forge/player-context/<TRAVIS_KELCE_PLAYER_ID>?season=2025
+
+
+Confirm:
+
+targets, yards, TDs now match the raw 2025 weekly totals.
+
+the numbers are in a believable range for a TE through Week 12.
+
+the Forge Lab AdvancedStatsPanel shows the corrected values.
+
+Optionally test another TE (like Trey McBride) to make sure this isn’t just special-cased to Kelce.
+
+Acceptance Criteria
+
+Travis Kelce’s 2025 TE advanced stats (targets, yards, TDs) in forge_player_advanced_te match the sum of his per-week stats for that season from nflfastr_weekly_stats.
+
+No obvious “space alien” stats unless they’re actually real.
+
+/admin/forge-lab shows sane values for TE advanced stats across multiple players.
