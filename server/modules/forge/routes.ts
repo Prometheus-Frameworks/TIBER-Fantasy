@@ -23,8 +23,70 @@ import {
   getAllTeamSoSByPosition,
   getTeamWeeklySoS 
 } from './sosService';
+import { applySosMultiplier } from './helpers/sosMultiplier';
+import { ForgeScore } from './types';
 
 const router = Router();
+
+/**
+ * Extended ForgeScore with SoS enrichment
+ */
+interface ForgeScoreWithSoS extends ForgeScore {
+  alphaBase: number;       // Pre-SoS alpha (what was 'alpha')
+  sosRos: number;          // RoS SoS (0-100, higher = easier)
+  sosNext3: number;        // Next 3 weeks SoS
+  sosPlayoffs: number;     // Weeks 15-17 SoS
+  sosNorm: number;         // Normalized SoS (0-1)
+  sosMultiplier: number;   // SoS multiplier (0.90-1.10)
+}
+
+/**
+ * Enrich a ForgeScore with SoS data
+ * - alphaBase = original alpha
+ * - alpha = SoS-adjusted alpha
+ * - Adds sosRos, sosNext3, sosPlayoffs, sosNorm, sosMultiplier
+ */
+async function enrichWithSoS(score: ForgeScore, season: number): Promise<ForgeScoreWithSoS> {
+  const baseAlpha = score.alpha;
+  
+  // Get SoS for this player
+  const sos = await getPlayerSoS(score.playerId, season);
+  const ros = sos?.sos?.ros ?? 50;
+  const next3 = sos?.sos?.next3 ?? 50;
+  const playoffs = sos?.sos?.playoffs ?? 50;
+  
+  // Apply SoS multiplier
+  const { norm, multiplier, finalAlpha } = applySosMultiplier(baseAlpha, ros);
+  
+  return {
+    ...score,
+    alpha: Math.round(finalAlpha * 10) / 10,  // SoS-adjusted alpha
+    alphaBase: baseAlpha,                      // Original pre-SoS alpha
+    sosRos: ros,
+    sosNext3: next3,
+    sosPlayoffs: playoffs,
+    sosNorm: Math.round(norm * 1000) / 1000,
+    sosMultiplier: Math.round(multiplier * 1000) / 1000,
+  };
+}
+
+/**
+ * Batch enrich multiple scores with SoS data (parallel)
+ */
+async function enrichScoresWithSoS(scores: ForgeScore[], season: number): Promise<ForgeScoreWithSoS[]> {
+  const enriched = await Promise.all(
+    scores.map(score => enrichWithSoS(score, season).catch(() => ({
+      ...score,
+      alphaBase: score.alpha,
+      sosRos: 50,
+      sosNext3: 50,
+      sosPlayoffs: 50,
+      sosNorm: 0.5,
+      sosMultiplier: 1.0,
+    } as ForgeScoreWithSoS)))
+  );
+  return enriched;
+}
 
 const FALLBACK_PLAYERS: Record<PlayerPosition, string[]> = {
   WR: [
@@ -93,7 +155,11 @@ router.get('/preview', async (req: Request, res: Response) => {
     
     const scores = await forgeService.getForgeScoresForPlayers(playerIds, season, week);
     
-    const sortedScores = scores.sort((a, b) => b.alpha - a.alpha);
+    // Enrich scores with SoS data
+    const enrichedScores = await enrichScoresWithSoS(scores, season);
+    
+    // Sort by SoS-adjusted alpha (higher first)
+    const sortedScores = enrichedScores.sort((a, b) => b.alpha - a.alpha);
     
     return res.json({
       success: true,
@@ -103,6 +169,7 @@ router.get('/preview', async (req: Request, res: Response) => {
         week,
         requestedCount: playerIds.length,
         returnedCount: sortedScores.length,
+        sosIntegrated: true,
         scoredAt: new Date().toISOString(),
       },
       scores: sortedScores,
@@ -146,9 +213,12 @@ router.get('/score/:playerId', async (req: Request, res: Response) => {
     
     const score = await forgeService.getForgeScoreForPlayer(playerId, season, week);
     
+    // Enrich with SoS data
+    const enrichedScore = await enrichWithSoS(score, season);
+    
     return res.json({
       success: true,
-      score,
+      score: enrichedScore,
     });
     
   } catch (error) {
@@ -219,7 +289,11 @@ router.get('/batch', async (req: Request, res: Response) => {
       asOfWeek: normalizedWeek,
     });
 
-    const sortedScores = scores.sort((a, b) => b.alpha - a.alpha);
+    // Enrich scores with SoS data
+    const enrichedScores = await enrichScoresWithSoS(scores, normalizedSeason);
+
+    // Sort by SoS-adjusted alpha (higher first)
+    const sortedScores = enrichedScores.sort((a, b) => b.alpha - a.alpha);
 
     return res.json({
       success: true,
@@ -230,6 +304,7 @@ router.get('/batch', async (req: Request, res: Response) => {
         season: normalizedSeason,
         week: normalizedWeek,
         count: sortedScores.length,
+        sosIntegrated: true,
         scoredAt: new Date().toISOString(),
       },
     });
