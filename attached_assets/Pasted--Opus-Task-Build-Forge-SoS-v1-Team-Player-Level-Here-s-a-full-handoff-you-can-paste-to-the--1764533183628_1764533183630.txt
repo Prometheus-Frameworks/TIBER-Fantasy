@@ -1,0 +1,279 @@
+🔧 Opus Task – Build Forge SoS v1 (Team + Player Level)
+
+Here’s a full handoff you can paste to the Replit agent:
+
+Task Title:
+Implement Forge Strength of Schedule v1 (Team + Player) using internal env/matchup data
+
+Goal
+Create a first-version Strength of Schedule (SoS) engine that:
+
+Uses only internal FORGE data (no OASIS, no external APIs).
+
+Works per team + position (QB/RB/WR/TE).
+
+Can be queried at team level and player level.
+
+Is registered in the new API Lexicon for easy discovery.
+
+1) Data Model – SoS Materialized View
+
+Create a Postgres materialized view that summarizes schedule difficulty by team + position for a given season.
+
+Proposed name:
+forge_team_position_sos
+
+Suggested columns:
+
+season INT
+
+team_code TEXT -- offense team (e.g. DAL, KC)
+
+position TEXT -- 'QB' | 'RB' | 'WR' | 'TE'
+
+data_through_week INT -- global max completed week (e.g. 12)
+
+remaining_weeks INT -- number of remaining scheduled weeks included
+
+sos_ros_100 NUMERIC(5,2) -- average matchup_score_100 over all remaining weeks
+
+sos_next3_100 NUMERIC(5,2) -- average of next 3 weeks starting at data_through_week+1 (or fewer if season near end)
+
+sos_playoffs_100 NUMERIC(5,2)-- average weeks 15–17 if they exist for this team, else NULL
+
+created_at TIMESTAMPTZ DEFAULT NOW()
+
+Logic:
+
+Use the existing tables:
+
+forge_team_matchup_context
+
+Contains defense_team, position, matchup_score_100, season, week
+
+Note: this expresses “how friendly is this defense vs this position”
+
+schedule (or whatever schedule table exists; use the one already syncing opponents)
+
+Contains: season, week, home_team, away_team
+
+You’ve already used this for env/matchup lookup in WR/RB/TE/QB sandboxes
+
+Algorithm (SQL-ish):
+
+Determine data_through_week for the season:
+
+Global max completed week from the same logic used in forge_player_fantasy_summary (e.g. 12).
+
+Build a derived table team_future_matchups:
+
+For each offensive team_code and future week > data_through_week:
+
+Join schedule on either home_team = team_code or away_team = team_code
+
+Determine opponent_team:
+
+If home_team = team_code → opponent_team = away_team
+
+Else → opponent_team = home_team
+
+For each (team_code, position, future_week):
+
+Join forge_team_matchup_context on:
+
+defense_team = opponent_team
+
+position = position
+
+season = season
+
+week = future_week
+
+Extract matchup_score_100 as weekly_sos_score_100.
+
+Aggregate:
+
+sos_ros_100:
+
+AVG of weekly_sos_score_100 across all future weeks for that team + position.
+
+sos_next3_100:
+
+AVG of weekly_sos_score_100 for weeks [data_through_week+1, data_through_week+3] (or whatever exists).
+
+sos_playoffs_100:
+
+AVG of weekly_sos_score_100 where week IN (15,16,17) for that team + position, if any rows exist.
+
+remaining_weeks:
+
+COUNT of future weeks where we had a valid matchup_score_100.
+
+Notes:
+
+If a team has no remaining schedule (late season), set:
+
+remaining_weeks = 0
+
+All SoS fields can be NULL or 50 (neutral) – pick a consistent policy and document it.
+
+If matchup data missing for some weeks, ignore those weeks in AVG but still count remaining_weeks based on schedule rows we have matchups for.
+
+Make sure the MV is refreshable and can be tied into your weekly recompute flow later.
+
+2) Team-Level SoS API
+
+Add a new route for team/position SoS:
+
+GET /api/forge/sos/team-position
+
+Query params:
+
+season (required, number, e.g. 2025)
+
+team (required, team code like 'DAL')
+
+position (required, 'QB' | 'RB' | 'WR' | 'TE')
+
+Response shape (example):
+
+{
+  "meta": {
+    "season": 2025,
+    "team": "DAL",
+    "position": "WR",
+    "dataThroughWeek": 12,
+    "remainingWeeks": 6
+  },
+  "sos": {
+    "ros": 67.4,
+    "next3": 72.1,
+    "playoffs": 61.0
+  }
+}
+
+
+Implementation:
+
+Simple SELECT from forge_team_position_sos
+
+Validate params (team code exists, position is valid)
+
+Return 404 if no row exists.
+
+3) Player-Level SoS API
+
+Add another route that resolves SoS for an individual player:
+
+GET /api/forge/sos/player/:playerId
+
+Query params:
+
+season (required, e.g. 2025)
+
+Logic:
+
+Use the existing player context machinery:
+
+forge_player_current_team MV
+
+player_identity_map
+
+getForgePlayerContext (or similar service) if convenient
+
+Steps:
+
+Resolve playerId to:
+
+position
+
+current_team (team_code)
+
+Use those to query forge_team_position_sos for that (season, team_code, position).
+
+Response shape:
+
+{
+  "meta": {
+    "season": 2025,
+    "playerId": "george-pickens",
+    "displayName": "George Pickens",
+    "position": "WR",
+    "team": "DAL",
+    "dataThroughWeek": 12
+  },
+  "sos": {
+    "ros": 63.5,
+    "next3": 70.2,
+    "playoffs": 58.9
+  }
+}
+
+
+If:
+
+Player has no current team → return 404 with a clear error.
+
+Team-position SoS row is missing → return sos fields as null and a message.
+
+4) API Lexicon Registration
+
+Update the new API Registry so both endpoints show up in /admin/api-lexicon:
+
+Add two entries with keys like:
+
+forge_sos_team_position
+
+forge_sos_player
+
+Each should include:
+
+method: GET
+
+path
+
+description: short but clear
+
+tags: e.g. ['forge', 'sos', 'schedule', 'team'], ['forge', 'sos', 'player']
+
+sampleParams:
+
+For team: { season: 2025, team: 'DAL', position: 'WR' }
+
+For player: path { playerId: 'george-pickens' }, query { season: 2025 }
+
+importantFields: e.g. ['sos.ros', 'sos.next3', 'sos.playoffs']
+
+This way /admin/api-lexicon can show live examples for both.
+
+5) Optional: Admin SoS Debug Page (If Time)
+
+If you have capacity, add a simple admin page:
+
+Route: /admin/sos-debug
+
+Features:
+
+Dropdowns:
+
+Season (default 2025)
+
+Position (QB/RB/WR/TE)
+
+Team (list of team codes)
+
+Calls /api/forge/sos/team-position and shows:
+
+RoS / Next 3 / Playoffs scores
+
+Maybe a little “EASY / NEUTRAL / HARD” label based on 0–100 bands.
+
+If this feels too big for this task, leave it as a TODO in replit.md.
+
+6) Non-Goals
+
+Don’t modify envScore or matchupScore math.
+
+Don’t touch OASIS files beyond what Phase 1 already removed.
+
+Don’t wire this into rankings or Tiber voice yet – this is just the core SoS engine and APIs.

@@ -17,6 +17,12 @@ import { createForgeSnapshot } from './forgeSnapshot';
 import { computeFPRForPlayer } from './fibonacciPatternResonance';
 import { PlayerIdentityService } from '../../services/PlayerIdentityService';
 import { getForgePlayerContext, searchForgePlayersSimple } from './forgePlayerContext';
+import { 
+  getTeamPositionSoS, 
+  getPlayerSoS, 
+  getAllTeamSoSByPosition,
+  getTeamWeeklySoS 
+} from './sosService';
 
 const router = Router();
 
@@ -1211,6 +1217,174 @@ router.get('/search-players', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[FORGE/Search] Error:', err);
     return res.status(500).json({ error: 'Search failed' });
+  }
+});
+
+// =============================================
+// FORGE Strength of Schedule (SoS) Endpoints
+// =============================================
+
+/**
+ * GET /api/forge/sos/team-position
+ * 
+ * Get team + position SoS data.
+ * 
+ * Query params:
+ * - season (required): number, e.g. 2025
+ * - team (required): team code, e.g. 'DAL'
+ * - position (required): 'QB' | 'RB' | 'WR' | 'TE'
+ * - includeWeekly (optional): boolean, include weekly matchup breakdown
+ */
+router.get('/sos/team-position', async (req: Request, res: Response) => {
+  try {
+    const season = parseInt(req.query.season as string);
+    const team = (req.query.team as string)?.toUpperCase();
+    const position = (req.query.position as string)?.toUpperCase();
+    const includeWeekly = req.query.includeWeekly === 'true';
+
+    if (!season || isNaN(season)) {
+      return res.status(400).json({ 
+        error: 'Missing or invalid season parameter',
+        example: '?season=2025&team=DAL&position=WR'
+      });
+    }
+
+    if (!team) {
+      return res.status(400).json({ 
+        error: 'Missing team parameter',
+        example: '?season=2025&team=DAL&position=WR'
+      });
+    }
+
+    if (!position || !['QB', 'RB', 'WR', 'TE'].includes(position)) {
+      return res.status(400).json({ 
+        error: 'Invalid or missing position. Must be QB, RB, WR, or TE.',
+        example: '?season=2025&team=DAL&position=WR'
+      });
+    }
+
+    console.log(`[FORGE/SoS] Team-Position request: season=${season}, team=${team}, position=${position}`);
+
+    const result = includeWeekly 
+      ? await getTeamWeeklySoS(team, position, season)
+      : await getTeamPositionSoS(team, position, season);
+
+    if (!result) {
+      return res.status(404).json({ 
+        error: `No SoS data found for ${team} ${position} in ${season}`,
+        hint: 'Team code may not exist in schedule or matchup context tables'
+      });
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error('[FORGE/SoS] Team-Position error:', err);
+    return res.status(500).json({ error: 'Failed to calculate team-position SoS' });
+  }
+});
+
+/**
+ * GET /api/forge/sos/player/:playerId
+ * 
+ * Get player-level SoS data.
+ * Resolves player to team + position, then returns SoS for that combination.
+ * 
+ * Path params:
+ * - playerId (required): canonical player ID
+ * 
+ * Query params:
+ * - season (required): number, e.g. 2025
+ */
+router.get('/sos/player/:playerId', async (req: Request, res: Response) => {
+  try {
+    const playerId = req.params.playerId;
+    const season = parseInt(req.query.season as string);
+
+    if (!playerId) {
+      return res.status(400).json({ error: 'Missing playerId path parameter' });
+    }
+
+    if (!season || isNaN(season)) {
+      return res.status(400).json({ 
+        error: 'Missing or invalid season query parameter',
+        example: `/api/forge/sos/player/${playerId}?season=2025`
+      });
+    }
+
+    console.log(`[FORGE/SoS] Player request: playerId=${playerId}, season=${season}`);
+
+    const result = await getPlayerSoS(playerId, season);
+
+    if (!result) {
+      return res.status(404).json({ 
+        error: `Player not found: ${playerId}`,
+        hint: 'Ensure playerId matches canonical_id in player_identity_map'
+      });
+    }
+
+    if (result.meta.remainingWeeks === 0 && !result.meta.team) {
+      return res.status(404).json({
+        error: `Player ${playerId} has no current team`,
+        meta: result.meta,
+        hint: 'Player may be a free agent or retired'
+      });
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error('[FORGE/SoS] Player error:', err);
+    return res.status(500).json({ error: 'Failed to calculate player SoS' });
+  }
+});
+
+/**
+ * GET /api/forge/sos/rankings
+ * 
+ * Get SoS rankings for all teams by position.
+ * Returns teams sorted by RoS SoS (easiest schedule first).
+ * 
+ * Query params:
+ * - season (required): number, e.g. 2025
+ * - position (required): 'QB' | 'RB' | 'WR' | 'TE'
+ */
+router.get('/sos/rankings', async (req: Request, res: Response) => {
+  try {
+    const season = parseInt(req.query.season as string);
+    const position = (req.query.position as string)?.toUpperCase();
+
+    if (!season || isNaN(season)) {
+      return res.status(400).json({ 
+        error: 'Missing or invalid season parameter',
+        example: '?season=2025&position=WR'
+      });
+    }
+
+    if (!position || !['QB', 'RB', 'WR', 'TE'].includes(position)) {
+      return res.status(400).json({ 
+        error: 'Invalid or missing position. Must be QB, RB, WR, or TE.',
+        example: '?season=2025&position=WR'
+      });
+    }
+
+    console.log(`[FORGE/SoS] Rankings request: season=${season}, position=${position}`);
+
+    const rankings = await getAllTeamSoSByPosition(position, season);
+
+    return res.json({
+      meta: {
+        season,
+        position,
+        teamsCount: rankings.length,
+        generatedAt: new Date().toISOString(),
+      },
+      rankings: rankings.map((r, i) => ({
+        rank: i + 1,
+        ...r,
+      })),
+    });
+  } catch (err) {
+    console.error('[FORGE/SoS] Rankings error:', err);
+    return res.status(500).json({ error: 'Failed to get SoS rankings' });
   }
 });
 
