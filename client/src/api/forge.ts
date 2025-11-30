@@ -89,10 +89,13 @@ export async function fetchForgeScore(playerId: string): Promise<ForgeSingleScor
 export type ForgeFantasySummary = {
   gamesPlayed: number | null;
   lastWeekPlayed: number | null;
+  dataThroughWeek: number | null;
   totalPpr: number | null;
   totalHalfPpr: number | null;
+  totalStd: number | null;
   lastWeekPpr: number | null;
   lastWeekHalfPpr: number | null;
+  lastWeekStd: number | null;
   pprRankPos: number | null;
   halfPprRankPos: number | null;
 };

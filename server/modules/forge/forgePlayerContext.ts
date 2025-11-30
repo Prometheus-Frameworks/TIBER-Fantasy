@@ -15,10 +15,13 @@ import { sql } from 'drizzle-orm';
 export interface ForgeFantasySummary {
   gamesPlayed: number | null;
   lastWeekPlayed: number | null;
+  dataThroughWeek: number | null;
   totalPpr: number | null;
   totalHalfPpr: number | null;
+  totalStd: number | null;
   lastWeekPpr: number | null;
   lastWeekHalfPpr: number | null;
+  lastWeekStd: number | null;
   pprRankPos: number | null;
   halfPprRankPos: number | null;
 }
@@ -93,10 +96,13 @@ export async function getForgePlayerContext(
       SELECT 
         games_played,
         last_week_played,
+        data_through_week,
         total_ppr,
         total_half_ppr,
+        total_std,
         last_week_ppr,
         last_week_half_ppr,
+        last_week_std,
         ppr_pos_rank,
         half_ppr_pos_rank
       FROM forge_player_fantasy_summary
@@ -107,10 +113,13 @@ export async function getForgePlayerContext(
     let fantasy: ForgeFantasySummary = {
       gamesPlayed: null,
       lastWeekPlayed: null,
+      dataThroughWeek: null,
       totalPpr: null,
       totalHalfPpr: null,
+      totalStd: null,
       lastWeekPpr: null,
       lastWeekHalfPpr: null,
+      lastWeekStd: null,
       pprRankPos: null,
       halfPprRankPos: null,
     };
@@ -120,10 +129,13 @@ export async function getForgePlayerContext(
       fantasy = {
         gamesPlayed: fs.games_played ? Number(fs.games_played) : null,
         lastWeekPlayed: fs.last_week_played ? Number(fs.last_week_played) : null,
+        dataThroughWeek: fs.data_through_week ? Number(fs.data_through_week) : null,
         totalPpr: fs.total_ppr ? Number(fs.total_ppr) : null,
         totalHalfPpr: fs.total_half_ppr ? Number(fs.total_half_ppr) : null,
+        totalStd: fs.total_std ? Number(fs.total_std) : null,
         lastWeekPpr: fs.last_week_ppr ? Number(fs.last_week_ppr) : null,
         lastWeekHalfPpr: fs.last_week_half_ppr ? Number(fs.last_week_half_ppr) : null,
+        lastWeekStd: fs.last_week_std ? Number(fs.last_week_std) : null,
         pprRankPos: fs.ppr_pos_rank ? Number(fs.ppr_pos_rank) : null,
         halfPprRankPos: fs.half_ppr_pos_rank ? Number(fs.half_ppr_pos_rank) : null,
       };
