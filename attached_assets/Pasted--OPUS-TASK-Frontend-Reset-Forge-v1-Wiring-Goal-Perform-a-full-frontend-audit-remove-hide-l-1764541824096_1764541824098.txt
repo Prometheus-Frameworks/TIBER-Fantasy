@@ -1,0 +1,264 @@
+🧰 OPUS TASK: Frontend Reset & Forge v1 Wiring
+🎯 Goal
+
+Perform a full frontend audit, remove/hide legacy UI that isn’t wired to Forge, and rebuild a minimal, stable v1 interface that:
+
+Shows TIBER chat as the home view.
+
+Exposes Rankings backed by real Forge endpoints.
+
+Exposes a Schedule section for SoS.
+
+Leaves everything else either under /admin or “coming soon”.
+
+1) Audit & Kill: Find All Forge/Legacy Frontend Usage
+
+Step 1 – Search the frontend codebase for:
+
+/api/forge
+
+/api/oasis
+
+/sos/dashboard
+
+SOSBarChart, SOSTable, or any SoS-related components
+
+Old ranking components (e.g. WrRankingsPage, RbRankingsPage, etc.)
+
+Document:
+
+Which pages/routes actually work end-to-end.
+
+Which ones call endpoints that no longer exist or return mismatched shapes.
+
+Step 2 – Mark legacy views
+
+Anything that:
+
+Relies on old OASIS data,
+
+Uses mock data,
+
+Or is half-broken / not aligned with the new Forge pipeline,
+
+→ Either:
+
+Move under /admin/legacy-* or
+
+Remove from the nav and route config entirely.
+
+Do not delete code yet unless it’s trivial; hiding/removing from routes is enough for this pass.
+
+2) Sidebar Navigation – New Structure
+
+Update the main sidebar navigation (e.g. Sidebar.tsx / nav config) to:
+
+TIBER
+Rankings
+Schedule
+Leagues
+
+
+Rules:
+
+TIBER: routes to the existing chat page (current homepage).
+
+Rankings: routes to /rankings (we’ll build a hub).
+
+Schedule: routes to /schedule.
+
+Leagues: existing Sleeper league list.
+
+Hide/remove from nav:
+
+Legacy “Strategy” item (and any other unused top-level items).
+
+Legacy “Matchups” tab if it’s not backed by real Forge data; if you keep it, make sure it works.
+
+3) Rankings: Rebuild with Real Forge Data
+
+Create a Rankings hub and 4 position views.
+
+3.1 Route & Hub Page
+
+New route: /rankings
+
+Hub component: RankingsPage.tsx
+
+The hub can be super simple:
+
+Tabs or buttons for QB | RB | WR | TE
+
+Each tab loads a ForgeRankingsTable for that position.
+
+3.2 Rankings Data
+
+Use the Forge rankings endpoints documented in the Lexicon, e.g.:
+
+GET /api/forge/rankings/qb
+
+GET /api/forge/rankings/rb
+
+GET /api/forge/rankings/wr
+
+GET /api/forge/rankings/te
+
+Confirm from Lexicon the exact paths and response fields.
+
+Expected row shape (align types accordingly):
+
+Each player row should at least have:
+
+playerId
+
+name
+
+team
+
+position
+
+alphaBase
+
+alpha (SoS-adjusted final)
+
+envScore (if available)
+
+matchupScore (if available)
+
+sosRos
+
+sosMultiplier
+
+Define a shared TypeScript interface in something like client/src/types/forge.ts.
+
+3.3 ForgeRankingsTable
+
+Rebuild ForgeRankingsTable to only rely on the confirmed fields above.
+
+Columns:
+
+Player (name + team)
+
+Alpha (use row.alpha)
+
+Env (if present)
+
+Matchup (if present)
+
+SoS (RoS):
+
+Show badge or score based on sosRos / sosMultiplier.
+
+Tooltip: alphaBase → alpha and multiplier.
+
+No extra derived fields for now. Keep it lean and stable.
+
+4) Schedule Page: /schedule with Initial Tabs
+
+Create SchedulePage.tsx and hook /schedule to it.
+
+For now, implement two tabs only:
+
+Player SoS
+
+Team SoS
+
+(We can add Impact later once everything else is stable.)
+
+4.1 Player SoS Tab
+
+Component: PlayerSosView.tsx
+
+Controls:
+
+Position dropdown: QB | RB | WR | TE
+
+On load:
+
+Call the same Forge rankings endpoint as Rankings for that position.
+
+Table columns:
+
+Player / Team
+
+alpha (final)
+
+sosRos
+
+sosMultiplier
+
+sosNext3
+
+sosPlayoffs
+
+Sorting:
+
+Default by alpha descending.
+
+Make SoS columns sortable as a bonus.
+
+4.2 Team SoS Tab
+
+Component: TeamSosView.tsx
+
+Use GET /api/forge/sos/team-position and/or /api/forge/sos/rankings.
+
+Show:
+
+A grid of teams vs positions with SoS for the currently selected window:
+
+RoS / Next 3 / Playoffs toggle.
+
+Basic table layout is fine; no fancy charts needed in this pass.
+
+5) Admin / Legacy Content
+
+Move anything that’s clearly dev-only or legacy into /admin/*.
+
+Examples:
+
+Old SoS dashboard (/sos/dashboard)
+
+Legacy Strategy widgets that used pre-Forge data
+
+Raw API Lexicon browser (if not meant for users)
+
+Ensure these:
+
+Don’t appear in the main nav.
+
+Still function if you navigate directly (for your own debugging).
+
+6) Final QA Checklist
+
+Before completing this task, verify:
+
+No broken routes
+
+/ (chat), /rankings, /schedule, and /leagues all load without runtime errors.
+
+Rankings
+
+Each position renders a table with real data.
+
+Main score uses alpha.
+
+SoS column reflects sosRos / sosMultiplier.
+
+No undefined / NaN values.
+
+Schedule
+
+Player SoS tab loads data for each position.
+
+Team SoS tab loads and displays team+position SoS.
+
+Console
+
+No red errors in browser dev tools on any of the main pages.
+
+Types
+
+TypeScript builds cleanly with the updated Forge types and components.
+
+Once that’s done, we’ve got a clean, honest v1 frontend that actually reflects Forge instead of LARPing as a finished app.
