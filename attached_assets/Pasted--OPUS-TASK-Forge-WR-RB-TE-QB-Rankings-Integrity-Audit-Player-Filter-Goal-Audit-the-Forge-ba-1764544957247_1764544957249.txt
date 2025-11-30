@@ -1,0 +1,209 @@
+🧰 OPUS TASK: Forge WR/RB/TE/QB Rankings Integrity Audit & Player Filter
+🎯 Goal
+
+Audit the Forge batch rankings pipeline and fix the player selection & sorting so that rankings surfaces:
+
+Only relevant, active players for the 2025 season.
+
+Correct, interpretable fields (alpha, gp, team, SoS badge).
+
+No duplicates / ghost players / 0 GP randos at the top.
+
+This applies to the unified endpoint:
+
+GET /api/forge/batch?position=WR|RB|TE|QB&limit=100
+
+1) Add a Debug View for Forge Batch Internals (server-side only)
+
+In the backend, in the Forge module where /api/forge/batch is implemented:
+
+Create a temporary debug function or log (no need to expose it via HTTP) that, for each position, prints the raw player rows feeding into alpha, including:
+
+player_id
+
+name
+
+team_id / team
+
+position
+
+games_played (GP for 2025)
+
+routes_run, targets, snaps (if available)
+
+status from player_status (ACTIVE / OUT / IR / FA / etc.)
+
+is_on_current_roster or similar flag
+
+alphaBase
+
+alpha (final)
+
+sosRos
+
+sosMultiplier
+
+We want to be able to see:
+
+Why Anthony Miller, Deon Cain, Tim Jones, etc. are even in the WR batch result set.
+
+What their inputs look like (GP, snaps, etc.).
+
+2) Define Minimum Eligibility Rules for Rankings
+
+Implement explicit filters in the Forge batch query for each position.
+
+As a first pass, apply global rules like:
+
+Must have status in ('ACTIVE', 'QUESTIONABLE', 'DOUBTFUL')
+
+Exclude: 'OUT', 'IR', 'PUP', 'SUSPENDED', 'NA', 'FA', etc. from top-level display.
+
+Must have either:
+
+games_played >= 1 OR
+
+snaps >= X or routes_run >= Y (if the schema supports this).
+
+Must be associated with a current 2025 team (not null, not FA pool).
+
+We can tune X/Y later, but we need some gate.
+
+Apply this filter before sorting and limiting to top N.
+
+3) Fix Sorting Logic for Batch Rankings
+
+Inspect the ORDER BY logic used in /api/forge/batch:
+
+Confirm the results are sorted by final alpha (alpha), descending.
+
+Make sure we are not accidentally sorting by:
+
+alphaBase
+
+a legacy score
+
+name
+
+player_id
+
+or a composite without usage weighting.
+
+If needed, explicitly enforce:
+
+ORDER BY alpha DESC, games_played DESC, name ASC
+
+
+or its TypeScript/ORM equivalent.
+
+4) Handle Players With No Real 2025 Data
+
+For players that technically pass a status check but have no meaningful 2025 stats, we should:
+
+Either:
+
+Give them an alpha of 0 or very low, and let them naturally fall below relevant players, or
+
+Explicitly exclude them from the main batch rankings (but they can exist in other contexts like player search).
+
+Concretely:
+
+If games_played = 0 AND routes_run and targets are near 0:
+
+Exclude from /api/forge/batch results, or
+
+Mark them with eligible_for_rankings = false and filter them out.
+
+5) Dedupe / Clean Up Identity Issues (e.g. Chris Godwin vs Chris Godwin Jr.)
+
+Inspect examples like:
+
+Chris Godwin Jr. and Chris Godwin both appearing for the same team (TB).
+
+We need to:
+
+Confirm if these represent:
+
+The same player with duplicate entries, or
+
+A real “Sr/Jr” scenario vs data import weirdness.
+
+In the rankings response:
+
+Ensure one canonical row per real NFL player.
+
+If there are duplicate identity rows, prefer:
+
+The one with real 2025 stats and correct player_id.
+
+If necessary, add a post-processing step to batch results:
+
+Group by canonical ID (your current player_identity_map / canonical ID).
+
+For each group, keep the row with:
+
+Highest GP
+
+Or most recent season data.
+
+6) Verify Fields for UI (RankingsHub expectations)
+
+Ensure the Forge batch response for each position row contains:
+
+playerId
+
+name
+
+team
+
+position
+
+alphaBase
+
+alpha (final SoS-adjusted)
+
+sosRos
+
+sosMultiplier
+
+gamesPlayed (or gp – just be consistent)
+
+(optional) trend if it’s actually calculated; otherwise, don’t send dummy values.
+
+If trend is not implemented yet, either:
+
+Don’t include it, or
+
+Explicitly set it to null and let the UI render “–” instead of always →.
+
+7) Validation Checklist
+
+Once changes are made:
+
+Call /api/forge/batch?position=WR&limit=30 from the Lexicon.
+
+Confirm:
+
+The top 30 WRs are actual fantasy-relevant players.
+
+No obviously dead/retired/0 GP guys in the top list.
+
+Players with gamesPlayed = 0 are either:
+
+Absent from the batch results, or
+
+Sitting at the bottom with very low alpha.
+
+Do the same for RB / TE / QB.
+
+Confirm no duplicate identity rows (like double Godwins) for the same real-life player.
+
+Confirm the frontend RankingsHub now shows:
+
+Real names at the top (JJ, Chase, Lamb, etc. when all data is in).
+
+Correct team labels.
+
+SoS badges matching the SoS fields.
+
+No missing fields or “undefined” anywhere in the table.

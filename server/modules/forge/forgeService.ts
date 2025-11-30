@@ -20,8 +20,8 @@ import {
   ForgePosition,
 } from './types';
 import { db } from '../../infra/db';
-import { playerIdentityMap } from '@shared/schema';
-import { eq, and, isNotNull } from 'drizzle-orm';
+import { playerIdentityMap, weeklyStats } from '@shared/schema';
+import { eq, and, isNotNull, sql, desc, gte } from 'drizzle-orm';
 
 /**
  * Query parameters for batch scoring
@@ -114,6 +114,11 @@ class ForgeService implements IForgeService {
   /**
    * Batch scoring with position/limit filters
    * Used by /api/forge/batch endpoint
+   * 
+   * ELIGIBILITY (v0.2):
+   * - Only includes players with actual 2025 game activity
+   * - Ordered by total fantasy points before scoring
+   * - Deduplicates identity variations (e.g., "Chris Godwin" vs "Chris Godwin Jr.")
    */
   public async getForgeScoresBatch(query: ForgeBatchQuery): Promise<ForgeScore[]> {
     const { 
@@ -123,12 +128,13 @@ class ForgeService implements IForgeService {
       asOfWeek = 17 
     } = query;
 
-    console.log(`[FORGE] Batch request: position=${position ?? 'ALL'}, limit=${limit}`);
+    console.log(`[FORGE] Batch request: position=${position ?? 'ALL'}, limit=${limit}, season=${season}`);
 
-    const playerIds = await this.fetchPlayerIdsForBatch(position, limit);
+    // Fetch only eligible players with 2025 activity
+    const playerIds = await this.fetchPlayerIdsForBatch(position, limit, season);
 
     if (playerIds.length === 0) {
-      console.log('[FORGE] No players found for batch query');
+      console.log('[FORGE] No eligible players found for batch query');
       return [];
     }
 
@@ -137,11 +143,16 @@ class ForgeService implements IForgeService {
 
   /**
    * Fetch player IDs from identity map based on position/limit
-   * If no position specified, fetches all skill positions (QB, RB, WR, TE)
+   * ELIGIBILITY RULES (as of v0.2):
+   * 1. Must have at least 1 game played in 2025 (from weekly_stats)
+   * 2. Must be on an active NFL team (not FA)
+   * 3. Ordered by total fantasy points (PPR) to get most relevant players first
+   * 4. Deduplication: If multiple canonical IDs map to same sleeper_id, prefer the one with more data
    */
   private async fetchPlayerIdsForBatch(
     position: ForgePosition | undefined,
-    limit: number
+    limit: number,
+    season: number = 2025
   ): Promise<string[]> {
     try {
       const skillPositions: ForgePosition[] = ['QB', 'RB', 'WR', 'TE'];
@@ -149,28 +160,117 @@ class ForgeService implements IForgeService {
       
       const allPlayerIds: string[] = [];
       const perPositionLimit = position ? limit : Math.ceil(limit / 4);
+      
+      // Track seen players to avoid duplicates across identity variations
+      const seenPlayerNames = new Set<string>();
 
       for (const pos of targetPositions) {
-        const players = await db
-          .select({ canonicalId: playerIdentityMap.canonicalId })
-          .from(playerIdentityMap)
-          .where(
-            and(
-              eq(playerIdentityMap.isActive, true),
-              isNotNull(playerIdentityMap.nflTeam),
-              eq(playerIdentityMap.position, pos)
-            )
+        // Query: Join identity map with weekly_stats to get only players with 2025 activity
+        // Group by canonical_id, sum fantasy points, filter by games >= 1
+        const playersWithActivity = await db.execute<{
+          canonical_id: string;
+          full_name: string;
+          nfl_team: string;
+          games_played: number;
+          total_fpts: number;
+        }>(sql`
+          SELECT 
+            p.canonical_id,
+            p.full_name,
+            p.nfl_team,
+            COUNT(DISTINCT w.week) as games_played,
+            COALESCE(SUM(w.fantasy_points_ppr), 0) as total_fpts
+          FROM player_identity_map p
+          INNER JOIN weekly_stats w ON (
+            w.player_id = p.sleeper_id 
+            OR w.player_id = p.nfl_data_py_id
+            OR w.player_id = p.canonical_id
           )
-          .limit(perPositionLimit);
+          WHERE p.position = ${pos}
+            AND p.is_active = true
+            AND p.nfl_team IS NOT NULL
+            AND w.season = ${season}
+            AND w.fantasy_points_ppr > 0
+          GROUP BY p.canonical_id, p.full_name, p.nfl_team
+          HAVING COUNT(DISTINCT w.week) >= 1
+          ORDER BY total_fpts DESC
+          LIMIT ${perPositionLimit * 2}
+        `);
 
-        allPlayerIds.push(...players.map(p => p.canonicalId));
+        // Deduplicate by normalized player name (handles "Chris Godwin" vs "Chris Godwin Jr.")
+        for (const player of playersWithActivity.rows) {
+          const normalizedName = this.normalizePlayerName(player.full_name);
+          
+          if (!seenPlayerNames.has(normalizedName)) {
+            seenPlayerNames.add(normalizedName);
+            allPlayerIds.push(player.canonical_id);
+            
+            if (allPlayerIds.length >= limit) break;
+          }
+        }
+        
+        if (allPlayerIds.length >= limit) break;
+      }
+
+      console.log(`[FORGE] Found ${allPlayerIds.length} eligible players for batch (position=${position ?? 'ALL'}, season=${season})`);
+      
+      // Debug: Log first 5 players
+      if (allPlayerIds.length > 0) {
+        console.log(`[FORGE] Top 5 eligible: ${allPlayerIds.slice(0, 5).join(', ')}`);
       }
 
       return allPlayerIds.slice(0, limit);
     } catch (error) {
       console.error('[FORGE] Error fetching players for batch:', error);
-      return [];
+      // Fallback to legacy query if new approach fails
+      return this.fetchPlayerIdsForBatchLegacy(position, limit);
     }
+  }
+
+  /**
+   * Normalize player name for deduplication
+   * Handles: "Chris Godwin Jr." -> "chris godwin", "Ja'Marr Chase" -> "jamarr chase"
+   */
+  private normalizePlayerName(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/\s+(jr\.?|sr\.?|ii|iii|iv|v)$/i, '') // Remove suffix
+      .replace(/[^a-z\s]/g, '') // Remove special chars
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Legacy fallback: Original simple query without activity filtering
+   */
+  private async fetchPlayerIdsForBatchLegacy(
+    position: ForgePosition | undefined,
+    limit: number
+  ): Promise<string[]> {
+    console.log('[FORGE] Using legacy player fetch (fallback)');
+    const skillPositions: ForgePosition[] = ['QB', 'RB', 'WR', 'TE'];
+    const targetPositions = position ? [position] : skillPositions;
+    
+    const allPlayerIds: string[] = [];
+    const perPositionLimit = position ? limit : Math.ceil(limit / 4);
+
+    for (const pos of targetPositions) {
+      const players = await db
+        .select({ canonicalId: playerIdentityMap.canonicalId })
+        .from(playerIdentityMap)
+        .where(
+          and(
+            eq(playerIdentityMap.isActive, true),
+            isNotNull(playerIdentityMap.nflTeam),
+            eq(playerIdentityMap.position, pos)
+          )
+        )
+        .limit(perPositionLimit);
+
+      allPlayerIds.push(...players.map(p => p.canonicalId));
+    }
+
+    return allPlayerIds.slice(0, limit);
   }
 }
 

@@ -292,8 +292,17 @@ router.get('/batch', async (req: Request, res: Response) => {
     // Enrich scores with SoS data
     const enrichedScores = await enrichScoresWithSoS(scores, normalizedSeason);
 
-    // Sort by SoS-adjusted alpha (higher first)
-    const sortedScores = enrichedScores.sort((a, b) => b.alpha - a.alpha);
+    // Sort by: alpha DESC, gamesPlayed DESC, playerName ASC (for stability)
+    const sortedScores = enrichedScores.sort((a, b) => {
+      // Primary: alpha score (higher first)
+      if (b.alpha !== a.alpha) return b.alpha - a.alpha;
+      // Secondary: games played (more games = more reliable)
+      const aGP = a.gamesPlayed ?? 0;
+      const bGP = b.gamesPlayed ?? 0;
+      if (bGP !== aGP) return bGP - aGP;
+      // Tertiary: alphabetical by name (for consistent ordering)
+      return (a.playerName ?? '').localeCompare(b.playerName ?? '');
+    });
 
     return res.json({
       success: true,
@@ -305,6 +314,7 @@ router.get('/batch', async (req: Request, res: Response) => {
         week: normalizedWeek,
         count: sortedScores.length,
         sosIntegrated: true,
+        eligibilityRules: 'v0.2: gamesPlayed >= 1, deduped by normalized name',
         scoredAt: new Date().toISOString(),
       },
     });
