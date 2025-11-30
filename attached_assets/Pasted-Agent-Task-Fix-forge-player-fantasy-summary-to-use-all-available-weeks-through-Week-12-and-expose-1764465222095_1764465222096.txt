@@ -1,0 +1,174 @@
+Agent Task: Fix forge_player_fantasy_summary to use all available weeks (through Week 12) and expose dataThroughWeek in player-context
+
+High-Level Goal
+Right now, forge_player_fantasy_summary and the fantasy block in /api/forge/player-context/:playerId are only reflecting fantasy data through around Week 9–10, even though nflfastr_weekly_stats is loaded through at least Week 12 for 2025.
+
+Fix the summary view so it uses all available weeks in nflfastr_weekly_stats (no hidden cutoffs), and add a dataThroughWeek field so the API can report what week the fantasy totals are current through.
+
+Step 1 – Confirm max week in the raw stats
+
+Run this query to confirm what the actual latest week is in the weekly stats table:
+
+SELECT season, MAX(week) AS max_week
+FROM nflfastr_weekly_stats
+WHERE season = 2025
+GROUP BY season;
+
+
+We expect max_week to be at least 12.
+
+Do not change anything here; this is just a sanity check.
+
+Step 2 – Redefine forge_player_fantasy_summary to use all weeks
+
+Drop and recreate the forge_player_fantasy_summary materialized view with a clean, explicit definition that does not filter out later weeks. Reuse our existing fantasy points columns (PPR, half-PPR, standard) that are already in nflfastr_weekly_stats.
+
+Use a structure like this (adapt names to match the current schema if needed, but keep the logic):
+
+DROP MATERIALIZED VIEW IF EXISTS forge_player_fantasy_summary;
+
+CREATE MATERIALIZED VIEW forge_player_fantasy_summary AS
+WITH base AS (
+  SELECT
+    pim.player_id,
+    pim.position,
+    ws.season,
+    ws.week,
+    ws.fantasy_points_ppr      AS fp_ppr,
+    ws.fantasy_points_half_ppr AS fp_half,
+    ws.fantasy_points_standard AS fp_std
+  FROM player_identity_map pim
+  JOIN nflfastr_weekly_stats ws
+    ON pim.nflfastr_gsis_id = ws.gsis_id
+  -- no week filters here; use all available data for the season
+),
+totals AS (
+  SELECT
+    player_id,
+    position,
+    season,
+    COUNT(DISTINCT week) AS games_played,
+    MAX(week)            AS last_week_played,
+    MAX(week)            AS data_through_week,
+    SUM(fp_ppr)          AS total_ppr,
+    SUM(fp_half)         AS total_half_ppr,
+    SUM(fp_std)          AS total_std
+  FROM base
+  GROUP BY player_id, position, season
+),
+last_week_points AS (
+  SELECT
+    b.player_id,
+    b.season,
+    SUM(CASE WHEN b.week = t.last_week_played THEN b.fp_ppr  ELSE 0 END) AS last_week_ppr,
+    SUM(CASE WHEN b.week = t.last_week_played THEN b.fp_half ELSE 0 END) AS last_week_half_ppr,
+    SUM(CASE WHEN b.week = t.last_week_played THEN b.fp_std  ELSE 0 END) AS last_week_std
+  FROM base b
+  JOIN totals t
+    ON t.player_id = b.player_id
+   AND t.season    = b.season
+  GROUP BY b.player_id, b.season
+),
+ranked AS (
+  SELECT
+    t.*,
+    RANK() OVER (
+      PARTITION BY t.season, t.position
+      ORDER BY t.total_ppr DESC
+    ) AS ppr_pos_rank,
+    RANK() OVER (
+      PARTITION BY t.season, t.position
+      ORDER BY t.total_half_ppr DESC
+    ) AS half_ppr_pos_rank
+  FROM totals t
+)
+SELECT
+  r.player_id,
+  r.position,
+  r.season,
+  r.games_played,
+  r.last_week_played,
+  r.data_through_week,
+  r.total_ppr,
+  r.total_half_ppr,
+  r.total_std,
+  lw.last_week_ppr,
+  lw.last_week_half_ppr,
+  lw.last_week_std,
+  r.ppr_pos_rank,
+  r.half_ppr_pos_rank
+FROM ranked r
+JOIN last_week_points lw
+  ON r.player_id = lw.player_id
+ AND r.season    = lw.season;
+
+
+Then:
+
+REFRESH MATERIALIZED VIEW CONCURRENTLY forge_player_fantasy_summary;
+
+
+(If CONCURRENTLY isn’t allowed in this environment, use a normal refresh but keep downtime minimal.)
+
+Step 3 – Wire dataThroughWeek into getForgePlayerContext
+
+Update the server-side getForgePlayerContext function (or equivalent) to:
+
+Keep using forge_player_fantasy_summary for the fantasy block.
+
+Add a new field dataThroughWeek to the fantasy object, populated from the data_through_week column.
+
+Example shape for the fantasy block (TypeScript type, adapt to the existing type):
+
+fantasy: {
+  gamesPlayed: number | null;
+  lastWeekPlayed: number | null;
+  dataThroughWeek: number | null;
+  totalPpr: number | null;
+  totalHalfPpr: number | null;
+  totalStd: number | null;
+  lastWeekPpr: number | null;
+  lastWeekHalfPpr: number | null;
+  lastWeekStd: number | null;
+  pprRankPos: number | null;
+  halfPprRankPos: number | null;
+};
+
+
+Make sure /api/forge/player-context/:playerId now returns this new dataThroughWeek field inside fantasy.
+
+Do not remove existing fields from the response; only extend.
+
+Step 4 – Sanity tests for George Pickens and Jahmyr Gibbs
+
+After refreshing the view and updating the API, verify with these two players:
+
+george-pickens (WR, DAL, season 2025)
+
+jahmyr-gibbs (RB, DET, season 2025)
+
+For each:
+
+Call /api/forge/player-context/:playerId?season=2025 and confirm:
+
+team.currentTeam is correct (DAL / DET).
+
+team.lastSeenWeek reflects the latest week we have in stats.
+
+fantasy.lastWeekPlayed matches the true max(week) for that player in nflfastr_weekly_stats (should be up to Week 12 based on current ingest).
+
+fantasy.dataThroughWeek matches the global MAX(week) for the season (again, 12 right now).
+
+fantasy.totalPpr and pprRankPos look consistent with what we’d expect for that usage.
+
+If you see any discrepancies (e.g., lastWeekPlayed still stuck at Week 9/10 while nflfastr_weekly_stats shows Week 12 for that player), fix the view definition accordingly and re-refresh.
+
+Acceptance Criteria
+
+forge_player_fantasy_summary uses all available weeks for the season (no hidden cutoffs).
+
+forge_player_fantasy_summary.last_week_played and data_through_week reflect the real MAX(week) per player/season.
+
+/api/forge/player-context/:playerId includes fantasy.dataThroughWeek.
+
+For Pickens and Gibbs in 2025, lastWeekPlayed and their fantasy totals/ranks reflect data through Week 12.
