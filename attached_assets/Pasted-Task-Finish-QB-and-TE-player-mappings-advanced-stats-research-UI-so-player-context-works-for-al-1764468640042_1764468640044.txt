@@ -1,0 +1,217 @@
+Task: Finish QB and TE player mappings (advanced stats + research UI) so player-context works for all positions
+
+We’ve already completed:
+
+player_identity_map with GSIS IDs for all skill positions (QB/RB/WR/TE)
+
+forge_player_current_team MV (team + last_seen_week)
+
+forge_player_fantasy_summary MV (PPR/half-PPR/standard totals + ranks)
+
+WR/RB advanced stats + /admin/player-research views
+
+Now I want v1.0 support for QB and TE in the same style as WR/RB.
+
+1) Create forge_player_advanced_qb (QB advanced stats MV)
+
+Create a materialized view for QB season-level advanced stats, keyed by (player_id, season).
+
+Use player_identity_map + nflfastr_weekly_stats (and any existing passing/rushing fields we already use).
+
+At minimum, for each QB:
+
+player_id
+
+season
+
+games_played
+
+attempts (pass attempts)
+
+completions
+
+completion_pct
+
+pass_yards
+
+pass_tds
+
+ints
+
+yards_per_attempt
+
+air_yards / air_yards_per_attempt (if available in our schema; if not, skip)
+
+sacks (if available)
+
+rush_attempts
+
+rush_yards
+
+rush_tds
+
+total_ppr / total_half_ppr / total_std (join to forge_player_fantasy_summary if that’s easier than recomputing)
+
+This view should mirror the style of our WR/RB advanced view: one row per (player_id, season) with pre-aggregated metrics the API can read directly.
+
+2) Create forge_player_advanced_te (TE advanced stats MV)
+
+Create a materialized view for TE season-level advanced stats, similar in spirit to WR.
+
+Use player_identity_map + nflfastr_weekly_stats (and any existing route/target tables we used for WR).
+
+For each TE:
+
+player_id
+
+season
+
+games_played
+
+targets
+
+receptions
+
+rec_yards
+
+rec_tds
+
+yards_per_reception
+
+yards_per_target
+
+catch_rate
+
+yac / yac_per_rec (if available)
+
+first_downs (receiving first downs)
+
+total_ppr / total_half_ppr / total_std (again, join forge_player_fantasy_summary if convenient)
+
+If we already have a WR advanced view using a pbp-derived table for YPRR / 1D/RR, feel free to reuse that logic for TEs where data exists; otherwise, stick to target/reception-based metrics for v1.0.
+
+3) Extend getForgePlayerContext to support QB & TE
+
+Update the server-side getForgePlayerContext function (or equivalent) so that:
+
+It reads identity.position to decide which advanced view to use:
+
+QB → query forge_player_advanced_qb
+
+RB → existing RB advanced view
+
+WR → existing WR advanced view
+
+TE → new forge_player_advanced_te
+
+It fills the usage, efficiency, and finishing blocks in a position-appropriate way.
+
+Recommended mapping (v1):
+
+For QB:
+
+usage:
+
+attempts, completions, games_played
+
+rush_attempts, rush_yards
+
+efficiency:
+
+completion_pct
+
+yards_per_attempt
+
+maybe pass_tds / attempt
+
+ints
+
+finishing:
+
+pass_tds
+
+rush_tds
+
+total_ppr / total_half_ppr
+
+ppr_pos_rank (join to forge_player_fantasy_summary)
+
+For TE:
+
+usage:
+
+targets, receptions, games_played
+
+efficiency:
+
+yards_per_target
+
+yards_per_reception
+
+catch_rate
+
+yac_per_rec (if available)
+
+finishing:
+
+rec_tds
+
+rec_yards
+
+total_ppr / total_half_ppr
+
+ppr_pos_rank
+
+Make sure /api/forge/player-context/:playerId returns a consistent shape across positions (the keys exist), but it’s fine if some fields are null or unused depending on position.
+
+4) Update /admin/player-research to support QB & TE views
+
+On /admin/player-research:
+
+When a player is selected, use identity.position from the player-context response to decide which column layout to render.
+
+For each position, adjust the Usage, Efficiency, and Finishing tables:
+
+QB: show passing + rushing usage and efficiency (as defined above).
+
+RB: keep current layout.
+
+WR: keep current layout.
+
+TE: show TE-oriented receiving columns (targets, receptions, rec yards, yards/target, catch rate, TDs, etc.).
+
+No fancy design changes needed – just reuse existing table components and populate with the correct fields based on position.
+
+5) Verification
+
+After implementing:
+
+Pick at least one player for each position (QB/RB/WR/TE) that you know exists in our data:
+
+Example: a 2025 starting QB, a known TE1, plus the George Pickens / Jahmyr Gibbs tests we’ve already used.
+
+For each:
+
+Confirm /api/forge/player-context/:playerId?season=2025 returns:
+
+identity.position correct
+
+team.currentTeam and team.lastSeenWeek populated
+
+fantasy block populated with totals and ranks
+
+usage, efficiency, finishing fields non-null and appropriate for that position
+
+Confirm /admin/player-research:
+
+Lets you search and select that player
+
+Shows position-appropriate tables and values for usage/efficiency/finishing
+
+Acceptance criteria:
+
+player-context works meaningfully for QB, RB, WR, TE.
+
+/admin/player-research can deep-dive all four positions with position-aware column layouts.
+
+We do NOT break the existing WR/RB implementations while adding QB/TE.
