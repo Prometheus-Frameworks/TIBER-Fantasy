@@ -295,6 +295,40 @@ export const API_REGISTRY: ApiEndpointDescriptor[] = [
 
   // === Schedule & SOS Endpoints ===
   {
+    key: 'forge_sos_team_position',
+    method: 'GET',
+    path: '/api/forge/sos/team-position',
+    description: 'Get Strength of Schedule for a team + position combo. Returns RoS, Next 3 weeks, and playoff SoS (0-100 scale, higher = easier). Uses internal FORGE matchup data.',
+    tags: ['forge', 'sos', 'schedule', 'team'],
+    sampleParams: {
+      query: { season: 2025, team: 'DAL', position: 'WR' }
+    },
+    importantFields: ['meta.team', 'meta.position', 'meta.dataThroughWeek', 'sos.ros', 'sos.next3', 'sos.playoffs']
+  },
+  {
+    key: 'forge_sos_player',
+    method: 'GET',
+    path: '/api/forge/sos/player/:playerId',
+    description: 'Get Strength of Schedule for a player. Resolves player to team + position, then returns SoS data. Scale 0-100 (higher = easier).',
+    tags: ['forge', 'sos', 'player', 'schedule'],
+    sampleParams: {
+      path: { playerId: 'george-pickens' },
+      query: { season: 2025 }
+    },
+    importantFields: ['meta.playerId', 'meta.displayName', 'meta.team', 'sos.ros', 'sos.next3', 'sos.playoffs']
+  },
+  {
+    key: 'forge_sos_rankings',
+    method: 'GET',
+    path: '/api/forge/sos/rankings',
+    description: 'Get SoS rankings for all teams by position. Returns teams sorted by easiest remaining schedule first. Useful for trade/waiver decisions.',
+    tags: ['forge', 'sos', 'rankings', 'schedule'],
+    sampleParams: {
+      query: { season: 2025, position: 'WR' }
+    },
+    importantFields: ['meta.teamsCount', 'rankings', 'rank', 'sos.ros', 'sos.next3']
+  },
+  {
     key: 'schedule_week',
     method: 'GET',
     path: '/api/schedule/:season/:week',
