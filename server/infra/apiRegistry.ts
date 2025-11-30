@@ -27,35 +27,35 @@ export const API_REGISTRY: ApiEndpointDescriptor[] = [
     key: 'forge_preview',
     method: 'GET',
     path: '/api/forge/preview',
-    description: 'Preview FORGE alpha scores for players by position. Returns calibrated alpha (25-90 scale), trajectory, and confidence. Primary endpoint for ranking previews.',
-    tags: ['forge', 'rankings', 'alpha', 'core'],
+    description: 'Preview FORGE alpha scores for players by position. Returns SoS-adjusted alpha (alphaScore), pre-SoS alpha (alphaBase), and SoS metrics. SoS values are 0-100 where higher = easier schedule. sosMultiplier ranges from 0.90-1.10.',
+    tags: ['forge', 'rankings', 'alpha', 'sos', 'core'],
     sampleParams: {
       query: { position: 'WR', season: 2025, limit: 20 }
     },
-    importantFields: ['alpha', 'rawAlpha', 'trajectory', 'confidence', 'position', 'playerId']
+    importantFields: ['alpha', 'alphaBase', 'sosRos', 'sosNext3', 'sosPlayoffs', 'sosMultiplier', 'trajectory', 'confidence']
   },
   {
     key: 'forge_score_player',
     method: 'GET',
     path: '/api/forge/score/:playerId',
-    description: 'Get FORGE alpha score for a specific player by canonical ID. Returns full scoring breakdown with all sub-components.',
-    tags: ['forge', 'player', 'alpha', 'core'],
+    description: 'Get FORGE alpha score for a specific player. Now includes SoS-adjusted alpha. alphaBase is the original Forge alpha before Strength of Schedule is applied. SoS metrics (sosRos, sosNext3, sosPlayoffs) are 0-100 where higher = easier.',
+    tags: ['forge', 'player', 'alpha', 'sos', 'core'],
     sampleParams: {
-      path: { playerId: 'george-pickens' },
+      path: { playerId: 'ceedee-lamb' },
       query: { season: 2025 }
     },
-    importantFields: ['alpha', 'rawAlpha', 'confidence', 'trajectory', 'subScores']
+    importantFields: ['alpha', 'alphaBase', 'sosRos', 'sosNext3', 'sosPlayoffs', 'sosNorm', 'sosMultiplier', 'subScores']
   },
   {
     key: 'forge_batch',
     method: 'GET',
     path: '/api/forge/batch',
-    description: 'Batch scoring endpoint for multiple players. Supports position filtering and limit. Returns sorted by alpha descending.',
-    tags: ['forge', 'rankings', 'batch', 'core'],
+    description: 'Batch scoring endpoint for multiple players with SoS integration. Returns SoS-adjusted alphaScore and SoS debug fields. Sorted by adjusted alpha descending.',
+    tags: ['forge', 'rankings', 'batch', 'sos', 'core'],
     sampleParams: {
       query: { position: 'WR', limit: 100, season: 2025 }
     },
-    importantFields: ['alpha', 'playerId', 'position', 'meta.count']
+    importantFields: ['alpha', 'alphaBase', 'sosRos', 'sosMultiplier', 'playerId', 'meta.sosIntegrated']
   },
   {
     key: 'forge_health',
