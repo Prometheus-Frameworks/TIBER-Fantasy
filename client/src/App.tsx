@@ -22,6 +22,7 @@ import QBRankingsSandbox from "@/pages/QBRankingsSandbox";
 import ForgeLab from "@/pages/ForgeLab";
 import ForgeLabEquationSandbox from "@/pages/ForgeLabEquationSandbox";
 import MatchupsPage from "@/pages/MatchupsPage";
+import SchedulePage from "@/pages/SchedulePage";
 import ForgeHub from "@/pages/admin/ForgeHub";
 import PlayerMappingTest from "@/pages/admin/PlayerMappingTest";
 import PlayerMapping from "@/pages/admin/PlayerMapping";
@@ -104,6 +105,9 @@ function Router() {
       
       {/* Advanced: Role Context Rankings */}
       <Route path="/rankings/role-context" component={RoleContextRankings} />
+      
+      {/* Schedule / SoS */}
+      <Route path="/schedule" component={SchedulePage} />
       
       {/* FORGE Matchups */}
       <Route path="/matchups" component={MatchupsPage} />

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { ArrowUpDown, Download, Eye, EyeOff, Wrench } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ForgeScore } from '../types/forge';
 
 export type DeltaSeverity = 'major' | 'moderate' | 'minor' | 'none';
@@ -13,6 +14,7 @@ export interface ForgeRow {
   sandboxAlpha: number;
   forgeAlpha?: number;
   forgeRawAlpha?: number;
+  forgeAlphaBase?: number;
   forgeConfidence?: number;
   forgeTrajectory?: string;
   injuryStatus?: string | null;
@@ -22,6 +24,10 @@ export interface ForgeRow {
   forgeMatchupScore?: number | null;
   forgeMatchupMultiplier?: number | null;
   forgeOpponent?: string | null;
+  sosRos?: number | null;
+  sosNext3?: number | null;
+  sosPlayoffs?: number | null;
+  sosMultiplier?: number | null;
 }
 
 interface ForgeRankingsTableProps {
@@ -103,7 +109,16 @@ function getMatchupLabel(score: number | null | undefined): { label: string; col
   return { label: 'Shadow', color: 'text-red-400', icon: '⛔' };
 }
 
-type SortField = 'playerName' | 'team' | 'sandboxAlpha' | 'forgeAlpha' | 'gamesPlayed' | 'delta';
+function getSosBadge(multiplier: number | null | undefined): { label: string; color: string; bg: string } {
+  if (multiplier == null) return { label: '—', color: 'text-slate-500', bg: 'bg-slate-700/30' };
+  if (multiplier >= 1.06) return { label: '++', color: 'text-green-400', bg: 'bg-green-900/40' };
+  if (multiplier >= 1.03) return { label: '+', color: 'text-emerald-400', bg: 'bg-emerald-900/30' };
+  if (multiplier >= 0.98) return { label: '=', color: 'text-slate-400', bg: 'bg-slate-700/50' };
+  if (multiplier >= 0.95) return { label: '-', color: 'text-orange-400', bg: 'bg-orange-900/30' };
+  return { label: '--', color: 'text-red-400', bg: 'bg-red-900/40' };
+}
+
+type SortField = 'playerName' | 'team' | 'sandboxAlpha' | 'forgeAlpha' | 'gamesPlayed' | 'delta' | 'sosRos';
 type SortOrder = 'asc' | 'desc';
 
 const isDevEnvironment = typeof window !== 'undefined' && 
@@ -177,6 +192,9 @@ export default function ForgeRankingsTable({
       } else if (sortField === 'sandboxAlpha') {
         aVal = a.sandboxAlpha ?? 0;
         bVal = b.sandboxAlpha ?? 0;
+      } else if (sortField === 'sosRos') {
+        aVal = a.sosRos ?? -999;
+        bVal = b.sosRos ?? -999;
       } else {
         aVal = a[sortField] ?? 0;
         bVal = b[sortField] ?? 0;
@@ -407,6 +425,7 @@ export default function ForgeRankingsTable({
                 <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider" title="Weekly Matchup vs Defense">
                   Matchup
                 </th>
+                <SortHeader field="sosRos" label="SoS" />
                 {isDev && (
                   <>
                     <SortHeader field="sandboxAlpha" label="Sandbox α" />
@@ -514,6 +533,39 @@ export default function ForgeRankingsTable({
                         );
                       })()}
                     </td>
+                    <td className="px-3 py-2">
+                      {(() => {
+                        const sosBadge = getSosBadge(row.sosMultiplier);
+                        return row.sosRos != null ? (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <span 
+                                className={`text-xs font-bold px-2 py-1 rounded ${sosBadge.bg} ${sosBadge.color}`}
+                                data-testid={`sos-${row.playerId}`}
+                              >
+                                {sosBadge.label}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-slate-800 border-slate-600">
+                              <div className="text-xs space-y-1">
+                                <div className="font-semibold text-white">Strength of Schedule</div>
+                                <div>RoS: <span className="text-blue-400">{row.sosRos?.toFixed(1)}</span></div>
+                                <div>Next 3: <span className="text-blue-400">{row.sosNext3?.toFixed(1) ?? '—'}</span></div>
+                                <div>Playoffs: <span className="text-blue-400">{row.sosPlayoffs?.toFixed(1) ?? '—'}</span></div>
+                                <div>Multiplier: <span className="text-blue-400">{row.sosMultiplier?.toFixed(3)}</span></div>
+                                {row.forgeAlphaBase != null && (
+                                  <div className="border-t border-slate-600 pt-1 mt-1">
+                                    Alpha: {row.forgeAlphaBase?.toFixed(1)} → {row.forgeAlpha?.toFixed(1)}
+                                  </div>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <span className="text-xs text-slate-500">—</span>
+                        );
+                      })()}
+                    </td>
                     {isDev && (
                       <>
                         <td className="px-3 py-2">
@@ -569,6 +621,11 @@ export default function ForgeRankingsTable({
             <span className="text-green-400 mr-2">↗ Rising</span>
             <span className="text-slate-400 mr-2">→ Stable</span>
             <span className="text-red-400">↘ Declining</span>
+          </div>
+          <div className="border-l border-slate-600 pl-4">
+            SoS: <span className="text-green-400 font-bold">++</span>/<span className="text-emerald-400 font-bold">+</span> Easy |
+            <span className="text-slate-400 font-bold ml-1">=</span> Neutral |
+            <span className="text-orange-400 font-bold ml-1">-</span>/<span className="text-red-400 font-bold">--</span> Hard
           </div>
           {isDev && (
             <div className="border-l border-slate-600 pl-4">

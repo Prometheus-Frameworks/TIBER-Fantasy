@@ -1,0 +1,418 @@
+🧰 OPUS TASK: Build Schedule / SoS UI + Wire SoS Into Rankings Tables
+🎯 High-Level Goal
+
+Add a new “Schedule” section in the left sidebar (top-level nav, just under Rankings).
+
+Create a /schedule page with three tabs:
+
+Player SoS – player-level ROS/Next3/Playoffs + multiplier
+
+Team SoS Grid – team-by-position schedule view
+
+SoS Impact – “winners & traps” lists (players helped/hurt most by schedule)
+
+Wire the new SoS fields already returned from the rankings APIs into the Rankings tables:
+
+Show a compact SoS (RoS) column
+
+Keep alphaBase only in tooltips/details, not as a separate visible column
+
+Back-end SoS endpoints already exist and are documented in the API Lexicon:
+
+GET /api/forge/sos/team-position
+
+GET /api/forge/sos/player/:playerId
+
+GET /api/forge/sos/rankings
+
+Position rankings endpoints now return:
+
+alphaBase
+
+alpha (SoS-adjusted)
+
+sosRos, sosNext3, sosPlayoffs
+
+sosMultiplier
+
+1) Sidebar: Add “Schedule” Nav Item
+
+Files to update (names approximate):
+
+Sidebar / navigation config, e.g.:
+
+client/src/layout/Sidebar.tsx
+
+or client/src/config/navigation.ts
+
+Requirements
+
+Add a new top-level item “Schedule” right under “Rankings”:
+
+Current:
+
+Rankings
+Matchups
+Strategy
+Leagues
+
+
+Target:
+
+Rankings
+Schedule     ← NEW
+Matchups
+Strategy
+Leagues
+
+
+The item should route to:
+
+/schedule
+
+Use the same styling/components as the existing nav items for consistency.
+
+2) New Route: /schedule Page with Tabs
+
+Create a new page component to host all SoS-related views.
+
+File (new):
+
+client/src/pages/SchedulePage.tsx (or equivalent route file)
+
+Layout
+
+Use the existing tab system if one exists (e.g. shared Tabs component). Otherwise, a simple internal state tab switch is fine.
+
+Tabs:
+
+Player SoS
+
+Team SoS
+
+Impact
+
+Example structure:
+
+const SchedulePage: React.FC = () => {
+  const [tab, setTab] = useState<'players' | 'teams' | 'impact'>('players');
+
+  return (
+    <PageLayout title="Schedule / Strength of Schedule">
+      <Tabs value={tab} onChange={setTab}>
+        <Tab value="players" label="Player SoS" />
+        <Tab value="teams" label="Team SoS" />
+        <Tab value="impact" label="Impact" />
+      </Tabs>
+
+      {tab === 'players' && <PlayerSosView />}
+      {tab === 'teams' && <TeamSosView />}
+      {tab === 'impact' && <SosImpactView />}
+    </PageLayout>
+  );
+};
+
+
+Wire /schedule to this page in the app’s router.
+
+3) Tab 1 – Player SoS View
+
+Component (new): PlayerSosView.tsx
+
+Data Source
+
+Use existing Forge rankings endpoints per position (they now include SoS fields):
+
+e.g. /api/forge/rankings/qb
+
+/api/forge/rankings/rb
+
+/api/forge/rankings/wr
+
+/api/forge/rankings/te
+
+(Use whatever the actual ranking endpoints are; the key is they already contain alpha, alphaBase, sosRos, sosNext3, sosPlayoffs, sosMultiplier.)
+
+Controls
+
+At the top of the view:
+
+Position dropdown: QB | RB | WR | TE
+
+Optional:
+
+Team filter
+
+Toggle: Only boosted (sosMultiplier > 1.03)
+
+Toggle: Only penalized (sosMultiplier < 0.97)
+
+Table columns
+
+For the selected position, show a table with:
+
+Player
+
+Team
+
+alpha (current SoS-adjusted FORGE score)
+
+SoS (RoS) – 0–100 score
+
+Multiplier – e.g. 1.04
+
+Next 3 – 0–100
+
+Playoffs – 0–100
+
+Example row:
+
+CeeDee Lamb | DAL | α 90.1 | SoS RoS 50.6 | x1.00 | Next3 41.0 | Playoffs 48.3
+
+
+Sorting:
+
+Default sort by alpha descending.
+
+Allow sorting by SoS columns too.
+
+This is the primary player-level SoS exploration view.
+
+4) Tab 2 – Team SoS Grid View
+
+Component (new): TeamSosView.tsx
+
+Data Source
+
+Use GET /api/forge/sos/team-position
+
+This endpoint should support querying SoS for team+position combinations.
+
+Optionally use GET /api/forge/sos/rankings to get overall SoS ranking by team.
+
+UI
+
+Controls:
+
+Window selector: RoS | Next 3 | Playoffs
+
+This decides which SoS metric to display in the grid.
+
+Main content: grid/table of teams vs positions, e.g.:
+
+Team	QB SoS	RB SoS	WR SoS	TE SoS
+DAL	52	54.4	50.6	49
+KC	56	48.6	60	53
+NYJ	45	47	42	44
+
+Numbers are the SoS score (0–100, higher = easier).
+
+Cells can be color-coded lightly based on value (green = easier, red = harder).
+
+Interaction:
+
+Clicking a cell (e.g. DAL WR SoS) should:
+
+Navigate to the relevant Rankings page filtered to that team/position, if such filtering exists.
+
+If not, for now it can just highlight or show a tooltip summary.
+
+5) Tab 3 – SoS Impact View (Winners & Traps)
+
+Component (new): SosImpactView.tsx
+
+Data Source
+
+Again, use position rankings endpoints with SoS fields.
+
+For each position, you’ll have for each player:
+
+alphaBase
+
+alpha
+
+sosMultiplier
+
+sosRos
+
+Compute impact:
+
+Impact value = alpha - alphaBase
+
+Positive = schedule boost
+
+Negative = schedule penalty
+
+UI Layout
+
+Two sections (can be two tables stacked or tabs within this view):
+
+Schedule Winners
+
+Top N players (e.g. 20) with highest positive impact (alpha - alphaBase).
+
+Schedule Traps
+
+Top N players with most negative impact.
+
+Each row:
+
+Player
+
+Team
+
+Pos
+
+alphaBase → alpha (e.g. 78.9 → 82.1)
+
+sosRos
+
+sosMultiplier
+
+Optional controls:
+
+Position filter dropdown (All | QB | RB | WR | TE)
+
+Slider or selector for “minimum alphaBase” (to filter out backups/scrubs).
+
+This view is meant to be content-ready and extremely readable.
+
+6) Rankings Tables – Add SoS Column
+
+File(s):
+
+client/src/components/ForgeRankingsTable.tsx
+
+Any specific position wrappers that feed into this table.
+
+Existing Situation
+
+API already returns:
+
+alphaBase
+
+alpha (SoS-adjusted)
+
+sosRos
+
+sosMultiplier
+
+sosNext3, sosPlayoffs
+
+The table currently shows alpha (or alphaScore) plus EnvScore/MatchupScore columns.
+
+SoS is not yet rendered.
+
+Requirements
+
+Continue rendering the main score column using alpha (SoS-adjusted).
+
+Do not revert to alphaBase.
+
+Add a new column labeled SoS (RoS) with compact display:
+
+Show either the SoS score or a small badge with implied difficulty.
+
+Recommended implementation (clean + informative):
+
+Cell shows:
+
+A badge: ++, +, =, -, -- based on sosMultiplier, e.g.:
+
+>= 1.06 → ++
+
+1.03–1.05 → +
+
+0.98–1.02 → =
+
+0.95–0.97 → -
+
+<= 0.94 → --
+
+Tooltip (hover):
+
+SoS (RoS): 55.0
+Multiplier: 1.04
+Alpha: 78.9 → 82.1
+
+
+Do not add alphaBase as its own visible column in the main table.
+
+It should live only in tooltips or in the new Schedule/Impact views.
+
+Ensure the column is sortable:
+
+Sorting by sosRos or sosMultiplier is acceptable.
+
+7) Legacy SoS UI
+
+There are existing legacy SoS widgets:
+
+Strategy tab: SOSBarChart, SOSTable
+
+/sos/dashboard/: weekly & RoS SoS widgets
+
+For this task:
+
+Do not delete them yet.
+
+It’s fine if both systems coexist temporarily.
+
+If any of them are clearly redundant with the new /schedule views, you may:
+
+Update their copy to indicate they are “legacy weekly team matchup SoS”,
+OR
+
+Hide them behind a feature flag / admin toggle if an easy switch already exists.
+
+Main goal is to ensure the new /schedule section is the primary SoS experience going forward.
+
+8) Validation Checklist
+
+Before marking complete:
+
+Navigation
+
+Sidebar shows: Rankings → Schedule → Matchups → Strategy → Leagues.
+
+Clicking Schedule routes to /schedule.
+
+Player SoS Tab
+
+Loads players for at least one position (e.g. WR).
+
+Shows SoS RoS, Next3, Playoffs, Multiplier, Alpha and Team.
+
+Sorting by alpha and SoS works.
+
+Team SoS Tab
+
+Shows grid of all 32 teams with SoS per position.
+
+Window selector switches between RoS / Next3 / Playoffs values.
+
+Cells update accordingly.
+
+Impact Tab
+
+“Winners” list: players where alpha > alphaBase, sorted by impact descending.
+
+“Traps” list: alpha < alphaBase, sorted descending by negative impact.
+
+Position filter works if implemented.
+
+Rankings Tables
+
+Each rankings page shows:
+
+Alpha column (SoS-adjusted value).
+
+New SoS (RoS) column with badge and tooltip.
+
+Tooltips reflect actual numbers from API:
+
+alphaBase, alpha, sosRos, sosMultiplier.
+
+Sorting by SoS does not break pagination or layout.
+
+If all of the above checks pass, the SoS UI integration is complete and ready for real users.

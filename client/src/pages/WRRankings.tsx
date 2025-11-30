@@ -124,6 +124,7 @@ export default function WRRankings() {
         gamesPlayed: player.gamesPlayed,
         sandboxAlpha: Math.round(customAlpha * 10) / 10,
         forgeAlpha: player.alphaScore ?? forge?.alpha,
+        forgeAlphaBase: forge?.alphaBase,
         forgeRawAlpha: player.forge_alpha_base ?? forge?.rawAlpha,
         forgeConfidence: forge?.confidence,
         forgeTrajectory: forge?.trajectory,
@@ -132,6 +133,10 @@ export default function WRRankings() {
         forgeMatchupScore: player.forge_matchup_score_100,
         forgeMatchupMultiplier: player.forge_matchup_multiplier,
         forgeOpponent: player.forge_opponent,
+        sosRos: forge?.sosRos,
+        sosNext3: forge?.sosNext3,
+        sosPlayoffs: forge?.sosPlayoffs,
+        sosMultiplier: forge?.sosMultiplier,
         injuryStatus: player.injuryStatus,
         extraColumns: {
           targets: player.targets,

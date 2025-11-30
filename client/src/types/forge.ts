@@ -37,11 +37,17 @@ export interface ForgeScore {
   season: number;
   asOfWeek: number | 'preseason';
   
-  alpha: number;              // 0-100 overall calibrated score
+  alpha: number;              // 0-100 overall calibrated score (SoS-adjusted)
+  alphaBase?: number;         // 0-100 pre-SoS alpha score
   rawAlpha?: number;          // 0-100 pre-calibration engine score (for debugging)
   subScores: ForgeSubScores;
   trajectory: ForgeTrajectory;
   confidence: number;         // 0-100 confidence rating
+  
+  sosRos?: number;            // 0-100 Rest of Season SoS (higher = easier)
+  sosNext3?: number;          // 0-100 Next 3 weeks SoS
+  sosPlayoffs?: number;       // 0-100 Playoffs SoS (weeks 15-17)
+  sosMultiplier?: number;     // 0.90-1.10 applied multiplier
   
   gamesPlayed: number;
   dataQuality: ForgeDataQuality;
