@@ -1,0 +1,220 @@
+Task: Correct fantasy scoring in forge_player_fantasy_summary (PPR / half-PPR / standard)
+
+Problem
+The forge_player_fantasy_summary MV currently reports total_ppr values that match standard fantasy scoring (yards + TDs) and do not include PPR reception bonuses.
+Example: george-pickens shows 161.4 “PPR” points, but in Sleeper (PPR) he has 237.2 points and 73 receptions – our total is missing roughly the full reception bonus.
+
+We need to fix this so:
+
+total_std = standard fantasy
+
+total_half_ppr = standard + 0.5 * receptions
+
+total_ppr = standard + 1.0 * receptions
+
+and similarly for last-week fields.
+
+Step 1 – Confirm base stat fields
+
+In nflfastr_weekly_stats, identify the raw fields we should use for fantasy formulas:
+
+At minimum:
+
+rushing_yards
+
+rushing_tds
+
+receiving_yards
+
+receiving_tds
+
+receptions
+
+(optionally: fumbles_lost, two_pt_conversions, etc.)
+
+If NFLfastR already includes fantasy_points_ppr, fantasy_points_half_ppr, and fantasy_points correctly, we can reuse them.
+But based on current behavior, our view is likely using the wrong columns, so assume we need to compute these ourselves unless you can prove otherwise.
+
+Step 2 – Redefine forge_player_fantasy_summary with explicit formulas
+
+Drop and recreate forge_player_fantasy_summary so that:
+
+Standard fantasy (non-PPR) is computed explicitly.
+
+Half-PPR and full PPR add 0.5 and 1.0 per reception on top of standard.
+
+Last-week values use the exact same formulas, filtered to the player’s last week played.
+
+Existing fields (games_played, last_week_played, data_through_week, ranks) are preserved.
+
+You can use a structure like:
+
+DROP MATERIALIZED VIEW IF EXISTS forge_player_fantasy_summary;
+
+CREATE MATERIALIZED VIEW forge_player_fantasy_summary AS
+WITH base AS (
+  SELECT
+    pim.player_id,
+    pim.position,
+    ws.season,
+    ws.week,
+    ws.rushing_yards,
+    ws.rushing_tds,
+    ws.receiving_yards,
+    ws.receiving_tds,
+    ws.receptions,
+    ws.fumbles_lost,
+    ws.two_pt_conversions
+  FROM player_identity_map pim
+  JOIN nflfastr_weekly_stats ws
+    ON pim.nflfastr_gsis_id = ws.gsis_id
+),
+scored AS (
+  SELECT
+    player_id,
+    position,
+    season,
+    week,
+
+    -- standard fantasy scoring (non-PPR)
+    (
+      (COALESCE(rushing_yards, 0)   / 10.0) +
+      (COALESCE(receiving_yards, 0) / 10.0) +
+      (COALESCE(rushing_tds, 0)     * 6.0) +
+      (COALESCE(receiving_tds, 0)   * 6.0) +
+      (COALESCE(two_pt_conversions, 0) * 2.0) +
+      (COALESCE(fumbles_lost, 0)    * -2.0)
+    ) AS fp_std,
+
+    -- half-PPR and full PPR extend standard
+    (
+      (COALESCE(rushing_yards, 0)   / 10.0) +
+      (COALESCE(receiving_yards, 0) / 10.0) +
+      (COALESCE(rushing_tds, 0)     * 6.0) +
+      (COALESCE(receiving_tds, 0)   * 6.0) +
+      (COALESCE(two_pt_conversions, 0) * 2.0) +
+      (COALESCE(fumbles_lost, 0)    * -2.0) +
+      (COALESCE(receptions, 0)      * 0.5)
+    ) AS fp_half,
+
+    (
+      (COALESCE(rushing_yards, 0)   / 10.0) +
+      (COALESCE(receiving_yards, 0) / 10.0) +
+      (COALESCE(rushing_tds, 0)     * 6.0) +
+      (COALESCE(receiving_tds, 0)   * 6.0) +
+      (COALESCE(two_pt_conversions, 0) * 2.0) +
+      (COALESCE(fumbles_lost, 0)    * -2.0) +
+      (COALESCE(receptions, 0)      * 1.0)
+    ) AS fp_ppr
+  FROM base
+),
+totals AS (
+  SELECT
+    player_id,
+    position,
+    season,
+    COUNT(DISTINCT week) AS games_played,
+    MAX(week)            AS last_week_played,
+    MAX(week)            AS data_through_week,
+    SUM(fp_std)          AS total_std,
+    SUM(fp_half)         AS total_half_ppr,
+    SUM(fp_ppr)          AS total_ppr
+  FROM scored
+  GROUP BY player_id, position, season
+),
+last_week_points AS (
+  SELECT
+    s.player_id,
+    s.season,
+    SUM(CASE WHEN s.week = t.last_week_played THEN s.fp_std  ELSE 0 END) AS last_week_std,
+    SUM(CASE WHEN s.week = t.last_week_played THEN s.fp_half ELSE 0 END) AS last_week_half_ppr,
+    SUM(CASE WHEN s.week = t.last_week_played THEN s.fp_ppr  ELSE 0 END) AS last_week_ppr
+  FROM scored s
+  JOIN totals t
+    ON t.player_id = s.player_id
+   AND t.season    = s.season
+  GROUP BY s.player_id, s.season
+),
+ranked AS (
+  SELECT
+    t.*,
+    RANK() OVER (
+      PARTITION BY t.season, t.position
+      ORDER BY t.total_ppr DESC
+    ) AS ppr_pos_rank,
+    RANK() OVER (
+      PARTITION BY t.season, t.position
+      ORDER BY t.total_half_ppr DESC
+    ) AS half_ppr_pos_rank
+  FROM totals t
+)
+SELECT
+  r.player_id,
+  r.position,
+  r.season,
+  r.games_played,
+  r.last_week_played,
+  r.data_through_week,
+  r.total_std,
+  r.total_half_ppr,
+  r.total_ppr,
+  lw.last_week_std,
+  lw.last_week_half_ppr,
+  lw.last_week_ppr,
+  r.ppr_pos_rank,
+  r.half_ppr_pos_rank
+FROM ranked r
+JOIN last_week_points lw
+  ON r.player_id = lw.player_id
+ AND r.season    = lw.season;
+
+
+Then:
+
+REFRESH MATERIALIZED VIEW forge_player_fantasy_summary;
+
+
+(Use CONCURRENTLY if supported.)
+
+Step 3 – Keep API shape, just fix values
+
+The /api/forge/player-context/:playerId fantasy block is already extended with:
+
+totalPpr, totalHalfPpr, totalStd
+
+lastWeekPpr, lastWeekHalfPpr, lastWeekStd
+
+pprRankPos, halfPprRankPos
+
+dataThroughWeek, lastWeekPlayed
+
+Do not change the API structure.
+Just ensure the data now comes from the corrected MV columns.
+
+Step 4 – Verify against Sleeper for George Pickens
+
+Use george-pickens (2025) as the main validation:
+
+Query raw weekly stats for his GSIS id from nflfastr_weekly_stats and print:
+
+week, rushing_yards, receiving_yards, rushing_tds, receiving_tds, receptions, fumbles_lost, two_pt_conversions
+
+Manually recompute:
+
+standard, half-PPR, PPR per week and sum it.
+
+Compare:
+
+our totalPpr vs manual sum,
+
+and then vs Sleeper’s 237.2 PPR and 200.7 half-PPR.
+
+Adjust formulas if needed (e.g., if Sleeper includes small bonuses we’re intentionally not modeling, we’re fine being off by a couple points, but not by 70+ points).
+
+Acceptance criteria:
+
+Pickens’ totalPpr in our system is within a couple points of Sleeper’s 237.2.
+
+totalHalfPpr is within a couple points of 200.7.
+
+Ranks move closer to WR2 (exact match if our underlying league rules match Sleeper defaults).
