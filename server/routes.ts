@@ -73,6 +73,7 @@ import sosRouter from './modules/sos/sos.router';
 import { ratingsRouter } from './src/modules/ratings';
 import ovrRouter from './routes/ovrRoutes';
 import tiberRouter from './routes/tiberRoutes';
+import { API_REGISTRY, getEndpointByKey, getAllTags } from './infra/apiRegistry';
 import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
 import attributesRoutes from './routes/attributesRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
@@ -7367,6 +7368,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error) {
       console.error('❌ [RAG Search] Failed to search:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
+  // ========================================
+  // ADMIN API LEXICON
+  // ========================================
+
+  /**
+   * GET /api/admin/api-lexicon
+   * Returns the full API registry for the Admin API Lexicon page.
+   */
+  app.get('/api/admin/api-lexicon', async (req: Request, res: Response) => {
+    try {
+      const tags = getAllTags();
+      res.json({
+        success: true,
+        endpoints: API_REGISTRY,
+        tags,
+        count: API_REGISTRY.length,
+      });
+    } catch (error) {
+      console.error('[Admin Lexicon] Error fetching registry:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error',
+      });
+    }
+  });
+
+  /**
+   * GET /api/admin/api-lexicon/:key
+   * Returns a specific endpoint descriptor with optional live example.
+   */
+  app.get('/api/admin/api-lexicon/:key', async (req: Request, res: Response) => {
+    try {
+      const { key } = req.params;
+      const descriptor = getEndpointByKey(key);
+
+      if (!descriptor) {
+        return res.status(404).json({
+          success: false,
+          error: `Endpoint with key "${key}" not found`,
+        });
+      }
+
+      let liveExample: any = null;
+
+      // Only attempt live call for GET endpoints with sampleParams
+      if (descriptor.method === 'GET' && descriptor.sampleParams) {
+        try {
+          // Build the URL with sample params
+          let url = descriptor.path;
+          
+          // Replace path params
+          if (descriptor.sampleParams.path) {
+            for (const [param, value] of Object.entries(descriptor.sampleParams.path)) {
+              url = url.replace(`:${param}`, value);
+            }
+          }
+          
+          // Build query string
+          if (descriptor.sampleParams.query) {
+            const queryParams = new URLSearchParams();
+            for (const [param, value] of Object.entries(descriptor.sampleParams.query)) {
+              queryParams.append(param, String(value));
+            }
+            const queryString = queryParams.toString();
+            if (queryString) {
+              url = `${url}?${queryString}`;
+            }
+          }
+
+          // Make internal request to our own server
+          const protocol = req.protocol;
+          const host = req.get('host');
+          const fullUrl = `${protocol}://${host}${url}`;
+          
+          console.log(`[Admin Lexicon] Fetching live example: ${fullUrl}`);
+          
+          const response = await axios.get(fullUrl, {
+            timeout: 10000,
+            headers: {
+              'Accept': 'application/json',
+            },
+          });
+          
+          liveExample = response.data;
+        } catch (fetchError: any) {
+          console.warn(`[Admin Lexicon] Live example fetch failed for ${key}:`, fetchError.message);
+          liveExample = null;
+        }
+      }
+
+      res.json({
+        success: true,
+        descriptor,
+        liveExample,
+        importantFields: descriptor.importantFields || [],
+      });
+    } catch (error) {
+      console.error('[Admin Lexicon] Error fetching endpoint:', error);
       res.status(500).json({
         success: false,
         error: (error as Error).message || 'Unknown error',
