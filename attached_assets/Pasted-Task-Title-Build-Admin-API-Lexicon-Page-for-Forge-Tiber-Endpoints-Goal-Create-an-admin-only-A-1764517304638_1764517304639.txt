@@ -1,0 +1,144 @@
+Task Title:
+Build Admin API Lexicon Page for Forge/Tiber Endpoints
+
+⸻
+
+Goal
+
+Create an admin-only “API Lexicon” that lists our key Forge/Tiber API endpoints and lets me inspect their responses for development:
+	•	New backend registry describing endpoints
+	•	New API route to expose that registry
+	•	New admin page at /admin/api-lexicon to browse + inspect
+
+This is for internal use only (admin area).
+
+⸻
+
+1) Backend: API Registry
+
+Create a file like:
+server/infra/apiRegistry.ts
+
+In it, define a TypeScript interface and a registry array:
+
+export type HttpMethod = 'GET' | 'POST';
+
+export interface ApiEndpointDescriptor {
+  key: string;            // 'forge_player_context'
+  method: HttpMethod;     // 'GET'
+  path: string;           // '/api/forge/player-context/:playerId'
+  description: string;    // human-readable summary
+  tags: string[];         // ['forge', 'player', 'context']
+  sampleParams?: {
+    path?: Record<string, string>;
+    query?: Record<string, string | number | boolean>;
+    body?: any;
+  };
+  importantFields?: string[]; // list of key fields to highlight in UI
+}
+
+Populate the registry with at least the main Forge endpoints we already have in production, like (examples, adjust to real paths):
+	•	/api/forge/player-context/:playerId
+	•	/api/forge/search-players
+	•	/api/forge/env-debug
+	•	/api/forge/matchup-debug
+	•	/api/forge/wr-sandbox (or main WR rankings endpoint)
+	•	/api/forge/rb-sandbox
+	•	/api/forge/te-sandbox
+	•	/api/forge/qb-sandbox
+	•	Any other rankings routes currently powering /rankings/*
+
+Each descriptor should have:
+	•	description clear enough that Future Joe instantly understands it
+	•	tags like ['rankings', 'wr'], ['context', 'env'], etc.
+	•	sampleParams filled in with realistic path/query for one test case
+	•	e.g. playerId: 'george-pickens', season: 2025
+	•	importantFields listing the fields most useful for downstream features (e.g. ['forgeAlphaFinal','envScore100','matchupScore100'])
+
+⸻
+
+2) Backend: Admin Lexicon API
+
+Add a new admin-only Express route, e.g.:
+	•	GET /api/admin/api-lexicon
+	•	Returns the full registry array.
+	•	GET /api/admin/api-lexicon/:key
+	•	Looks up the descriptor by key
+	•	Optionally:
+	•	If sampleParams is defined, performs a live call to that endpoint using those params
+	•	Returns:
+
+{
+  "descriptor": { ... },
+  "liveExample": { ... } // JSON from actual endpoint, or null if call fails
+}
+
+
+
+Implementation details:
+	•	Create a small helper that, given a descriptor, builds the actual URL with sample path/query params and makes a server-side fetch to our own API.
+	•	If live example fails (timeout, etc.), don’t crash; just return liveExample: null.
+
+Make sure these admin routes are protected the same way as the rest of /api/admin/*.
+
+⸻
+
+3) Frontend: /admin/api-lexicon Page
+
+Create a new admin page, likely under the existing FORGE hub or as its own route:
+	•	Route: /admin/api-lexicon
+
+UI behavior:
+	1.	Top section:
+	•	Search bar (filters by key, path, or tags)
+	•	Tag filters (optional, if easy)
+	2.	Main list:
+	•	Table or list of endpoints:
+	•	Key
+	•	Method
+	•	Path
+	•	Tags
+	•	A “View” button
+	3.	Detail panel (when you click an endpoint):
+	•	Show:
+	•	key
+	•	method
+	•	path
+	•	description
+	•	tag chips
+	•	sample params (pretty-printed)
+	•	“Open endpoint in new tab” link (build path with sample params)
+	•	“Copy sample curl” or “Copy fetch snippet” button (optional but nice)
+	4.	Response preview:
+	•	Call GET /api/admin/api-lexicon/:key
+	•	If liveExample is present, render it in a JSON viewer:
+	•	Pretty-printed
+	•	Highlight importantFields visually (e.g., bold keys or badges)
+	•	If liveExample is null, show “No live example available.”
+
+Keep styling consistent with existing admin pages (FORGE Lab, player mapping, etc.).
+
+⸻
+
+4) Non-Goals
+	•	Do not auto-discover endpoints from Express; registry can be static for now.
+	•	Do not include sensitive/non-admin endpoints here.
+	•	No need for pagination; the list will be small.
+
+⸻
+
+5) Dev Notes
+
+This is mainly for developer/admin UX:
+	•	Keep code strongly typed
+	•	Make it easy to add new endpoints to the registry in the future
+	•	Make the UI fast, simple, and not over-designed
+
+⸻
+
+Once this is done, I’ll be able to:
+	•	Quickly see which fields are available for things like Strength of Schedule
+	•	Send Lamar live JSON from specific endpoints and say, “Use these fields”
+	•	Avoid guessing or digging through backend code every time we build a new module
+
+⸻
