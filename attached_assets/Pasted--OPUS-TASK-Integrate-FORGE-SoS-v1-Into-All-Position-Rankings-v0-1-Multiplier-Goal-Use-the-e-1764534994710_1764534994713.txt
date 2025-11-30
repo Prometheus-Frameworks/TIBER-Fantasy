@@ -1,0 +1,345 @@
+🧰 OPUS TASK: Integrate FORGE SoS v1 Into All Position Rankings (v0.1 Multiplier)
+🎯 Goal
+
+Use the existing FORGE SoS v1 engine to lightly adjust all four positional FORGE alpha scores (QB/RB/WR/TE) via a small Strength of Schedule multiplier.
+
+SoS impact should be subtle (max ±10%).
+
+Existing alpha logic stays intact; SoS is a post-processing modifier.
+
+Frontend continues to read the same alphaScore/forgeAlpha field as before, but now it includes SoS.
+
+We also expose alphaBase + SoS debug fields in the API response for admin tools.
+
+1) Create Shared SoS Multiplier Helper
+
+File (new): server/modules/forge/helpers/sosMultiplier.ts
+
+Add:
+
+// server/modules/forge/helpers/sosMultiplier.ts
+
+/**
+ * Apply a mild Strength of Schedule multiplier to a base alpha score.
+ *
+ * @param baseAlpha - The alpha score computed from talent/env/matchup (pre-SoS).
+ * @param sosValue - RoS SoS value (0–100, higher = easier).
+ *
+ * Returns:
+ *  - norm: normalized SoS 0–1
+ *  - multiplier: 0.90–1.10
+ *  - finalAlpha: baseAlpha * multiplier
+ */
+export function applySosMultiplier(baseAlpha: number, sosValue: number) {
+  if (!Number.isFinite(baseAlpha)) {
+    throw new Error(`applySosMultiplier: invalid baseAlpha: ${baseAlpha}`);
+  }
+
+  // Safety clamp SoS to [0,100], default to 50 (neutral) if undefined/null.
+  const raw = sosValue ?? 50;
+  const clamped = Math.max(0, Math.min(100, raw));
+  const norm = clamped / 100; // 0 (brutal) → 1 (cake)
+
+  // 0.90 at norm=0, 1.00 at norm=0.5, 1.10 at norm=1
+  const multiplier = 0.90 + norm * 0.20;
+  const finalAlpha = baseAlpha * multiplier;
+
+  return { norm, multiplier, finalAlpha };
+}
+
+2) Use Player SoS Endpoint in Forge Modules
+
+We already have:
+
+GET /api/forge/sos/player/:playerId
+
+SoS metrics: ros (0–100), next3, playoffs
+
+Assume there is a service function in server/modules/forge/sosService.ts that can be imported server-side, or add one if needed:
+
+In server/modules/forge/sosService.ts
+
+Add/export a simple fetch method usable by other Forge modules:
+
+// server/modules/forge/sosService.ts
+
+export interface PlayerSos {
+  ros: number;       // 0–100, higher = easier
+  next3: number;     // 0–100
+  playoffs: number;  // 0–100
+}
+
+export async function getPlayerSos(playerId: string): Promise<PlayerSos | null> {
+  // If a server-side internal function already exists, just export it.
+  // Otherwise, wire this into whatever internal SoS calculation logic
+  // the /api/forge/sos/player/:playerId route is using.
+
+  // Pseudocode (replace with existing internal call):
+  // return await computePlayerSos(playerId);
+
+  throw new Error('getPlayerSos(playerId) not implemented');
+}
+
+
+❗️Important:
+Do not call the HTTP endpoint from the server. Use the same internal SoS logic that powers /api/forge/sos/player/:playerId. If an internal function already exists, just re-export it here instead of re-implementing.
+
+Implement getPlayerSos based on the existing SoS core logic in sosService.ts.
+
+3) Patch All Four Position Pipelines to Use SoS
+Core Rule
+
+Use RoS SoS (ros) for the multiplier.
+
+Default to 50 if SoS is missing, so we don’t distort alpha.
+
+We want this pattern in each ranking pipeline:
+
+Compute baseAlpha exactly as it is now.
+
+Fetch SoS via getPlayerSos(playerId).
+
+Apply applySosMultiplier(baseAlpha, sos.ros).
+
+Return:
+
+alphaBase (pre-SoS)
+
+alphaScore (or forgeAlpha) updated to SoS-adjusted value
+
+SoS debug fields: sosRos, sosNext3, sosPlayoffs, sosMultiplier
+
+Below are example patches; adapt them to real function names but keep the structure identical.
+
+3.1 WR Rankings Integration
+
+Find the WR Forge ranking builder in something like:
+
+server/modules/forge/wrService.ts
+
+or server/modules/forge/positions/wr.ts
+
+Wherever alphaScore / forgeAlpha is computed for WRs, wrap it:
+
+import { applySosMultiplier } from './helpers/sosMultiplier';
+import { getPlayerSos } from './sosService';
+
+// Inside the WR ranking construction logic:
+async function buildWrForgeRow(wr: SomeWrType) {
+  // 1) Existing base alpha logic
+  const baseAlpha = computeWrForgeAlpha(wr); // existing function, unchanged
+
+  // 2) Get SoS (RoS)
+  const sos = await getPlayerSos(wr.playerId);
+  const ros = sos?.ros ?? 50;
+  const next3 = sos?.next3 ?? 50;
+  const playoffs = sos?.playoffs ?? 50;
+
+  // 3) Apply multiplier
+  const { norm, multiplier, finalAlpha } = applySosMultiplier(baseAlpha, ros);
+
+  // 4) Build response row (add fields without breaking existing consumers)
+  return {
+    ...existingFieldsForWrRow,
+    alphaBase: baseAlpha,           // new: pre-SoS alpha
+    alphaScore: finalAlpha,         // existing field: now SoS-adjusted
+    sosRos: ros,                    // new
+    sosNext3: next3,                // new
+    sosPlayoffs: playoffs,          // new
+    sosNorm: norm,                  // new (0–1)
+    sosMultiplier: multiplier       // new (0.90–1.10)
+  };
+}
+
+
+❗️Important:
+Do not change the field name the frontend currently uses for display (likely alphaScore or forgeAlpha). Just change the value to finalAlpha while adding alphaBase.
+
+3.2 RB Rankings Integration
+
+Same pattern in the RB rankings module (e.g. rbService.ts):
+
+import { applySosMultiplier } from './helpers/sosMultiplier';
+import { getPlayerSos } from './sosService';
+
+async function buildRbForgeRow(rb: SomeRbType) {
+  const baseAlpha = computeRbForgeAlpha(rb); // existing logic
+
+  const sos = await getPlayerSos(rb.playerId);
+  const ros = sos?.ros ?? 50;
+  const next3 = sos?.next3 ?? 50;
+  const playoffs = sos?.playoffs ?? 50;
+
+  const { norm, multiplier, finalAlpha } = applySosMultiplier(baseAlpha, ros);
+
+  return {
+    ...existingFieldsForRbRow,
+    alphaBase: baseAlpha,
+    alphaScore: finalAlpha,
+    sosRos: ros,
+    sosNext3: next3,
+    sosPlayoffs: playoffs,
+    sosNorm: norm,
+    sosMultiplier: multiplier
+  };
+}
+
+3.3 TE Rankings Integration
+
+Same idea for TE:
+
+import { applySosMultiplier } from './helpers/sosMultiplier';
+import { getPlayerSos } from './sosService';
+
+async function buildTeForgeRow(te: SomeTeType) {
+  const baseAlpha = computeTeForgeAlpha(te); // existing env+matchup logic
+
+  const sos = await getPlayerSos(te.playerId);
+  const ros = sos?.ros ?? 50;
+  const next3 = sos?.next3 ?? 50;
+  const playoffs = sos?.playoffs ?? 50;
+
+  const { norm, multiplier, finalAlpha } = applySosMultiplier(baseAlpha, ros);
+
+  return {
+    ...existingFieldsForTeRow,
+    alphaBase: baseAlpha,
+    alphaScore: finalAlpha,
+    sosRos: ros,
+    sosNext3: next3,
+    sosPlayoffs: playoffs,
+    sosNorm: norm,
+    sosMultiplier: multiplier
+  };
+}
+
+3.4 QB Rankings Integration
+
+And for QB (currently env-only):
+
+import { applySosMultiplier } from './helpers/sosMultiplier';
+import { getPlayerSos } from './sosService';
+
+async function buildQbForgeRow(qb: SomeQbType) {
+  const baseAlpha = computeQbForgeAlpha(qb); // existing env-only Forge alpha
+
+  const sos = await getPlayerSos(qb.playerId);
+  const ros = sos?.ros ?? 50;
+  const next3 = sos?.next3 ?? 50;
+  const playoffs = sos?.playoffs ?? 50;
+
+  const { norm, multiplier, finalAlpha } = applySosMultiplier(baseAlpha, ros);
+
+  return {
+    ...existingFieldsForQbRow,
+    alphaBase: baseAlpha,
+    alphaScore: finalAlpha,
+    sosRos: ros,
+    sosNext3: next3,
+    sosPlayoffs: playoffs,
+    sosNorm: norm,
+    sosMultiplier: multiplier
+  };
+}
+
+4) API Lexicon Updates
+
+File: server/infra/apiRegistry.ts
+(or wherever the /admin/api-lexicon config lives)
+
+For each rankings endpoint affected (WR/RB/TE/QB Forge rankings):
+
+Update the sample response schema to include the new fields:
+
+alphaBase (number)
+
+alphaScore (number, now SoS-adjusted)
+
+sosRos (number, 0–100)
+
+sosNext3 (number, 0–100)
+
+sosPlayoffs (number, 0–100)
+
+sosNorm (number, 0–1)
+
+sosMultiplier (number, 0.90–1.10)
+
+Example snippet for a single row in the sample JSON:
+
+{
+  "playerId": "cee_dee_lamb",
+  "name": "CeeDee Lamb",
+  "team": "DAL",
+  "position": "WR",
+  "alphaBase": 86.0,
+  "alphaScore": 89.3,
+  "sosRos": 50.6,
+  "sosNext3": 41.0,
+  "sosPlayoffs": 48.3,
+  "sosNorm": 0.506,
+  "sosMultiplier": 1.013
+}
+
+
+Add short description to the Lexicon entry for each rankings endpoint:
+
+“Now includes SoS-adjusted alphaScore. alphaBase is the original Forge alpha before Strength of Schedule is applied. SoS metrics (sosRos, sosNext3, sosPlayoffs) are 0–100 where higher = easier.”
+
+5) Validation Checklist (Do This Before Marking Complete)
+
+Build / Typecheck
+
+npm test / npm run build (or project equivalent) passes.
+
+No circular import issues from adding sosService/sosMultiplier.
+
+Lexicon Live Tests
+
+From /admin/api-lexicon, hit:
+
+WR rankings
+
+RB rankings
+
+TE rankings
+
+QB rankings
+
+Confirm each row now has:
+
+alphaBase
+
+alphaScore (changed from previous values)
+
+SoS fields.
+
+Spot-check known players
+
+CeeDee Lamb (DAL WR):
+
+alphaScore should be slightly below/around alphaBase due to harder Next 3 / neutral RoS.
+
+KC RB starter:
+
+alphaScore should be slightly below neutral (RoS ~48.6).
+
+Top 5 easy RB teams (CLE/NE/WAS/MIN/DAL):
+
+Their lead RBs should show:
+
+sosRos in the mid–high 50s.
+
+sosMultiplier slightly above 1.0.
+
+alphaScore just modestly higher than alphaBase (no wild jumps).
+
+Multiplier bounds
+
+Confirm across all rankings:
+
+sosMultiplier never < 0.90
+
+sosMultiplier never > 1.10
+
+If all of the above checks out, the SoS v0.1 integration is complete and safe.

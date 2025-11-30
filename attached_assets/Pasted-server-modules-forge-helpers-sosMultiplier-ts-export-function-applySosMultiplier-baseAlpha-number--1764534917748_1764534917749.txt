@@ -1,0 +1,113 @@
+server/modules/forge/helpers/sosMultiplier.ts
+export function applySosMultiplier(baseAlpha: number, sosValue: number) {
+  // sosValue should be 0–100 from the new endpoints
+  const norm = Math.max(0, Math.min(100, sosValue)) / 100;
+  const multiplier = 0.90 + norm * 0.20; // 0.90 → 1.10 band
+  const finalAlpha = baseAlpha * multiplier;
+
+  return { norm, multiplier, finalAlpha };
+}
+
+Integration patch (example: WR pipeline)
+
+Put this immediately after you calculate base alpha:
+
+import { applySosMultiplier } from '../helpers/sosMultiplier';
+import { getPlayerSos } from '../sos/sosService'; // Or whatever the agent named it
+
+async function buildWrForgeAlpha(playerId: string, baseAlpha: number) {
+  const sos = await getPlayerSos(playerId);
+  const rosSos = sos?.ros ?? 50; // safety default
+
+  const { norm, multiplier, finalAlpha } =
+    applySosMultiplier(baseAlpha, rosSos);
+
+  return {
+    alphaBase: baseAlpha,
+    sosRos: rosSos,
+    sosNorm: norm,
+    sosMultiplier: multiplier,
+    alphaFinal: finalAlpha
+  };
+}
+
+
+Opus can clone this pattern for RB / TE / QB in under 3 minutes.
+
+🧪 4. TESTING CHECKLIST — DO THIS AFTER PATCH GOES IN
+
+Hit these players via rankings endpoints:
+
+WR
+
+CeeDee Lamb
+
+Expect: baseAlpha slightly nudged down (Next 3 hard → ros ~ neutral)
+
+Garrett Wilson
+
+Expect: small upgrade relative to DAL WR if NYJ ros is easier
+
+Justin Jefferson
+
+Good “control sample” because MIN RB was soft but WR might not be.
+
+RB
+
+Tony Pollard
+
+Alvin Kamara
+
+Aaron Jones
+
+If the multiplier is correct:
+
+DAL RB should get a small nudge upward
+
+GB RB should not be nuked
+
+CLE RBs should get a noticeable positional advantage, not absurd numbers
+
+QB
+
+This is where we make sure we didn't accidentally over-inflate:
+
+Mahomes: Expect slight upward pressure
+
+Dak: Slight neutral/down depending on DAL QB SoS
+
+Zach Wilson or NYJ QB: Should not inexplicably jump
+
+If anything looks weird:
+→ It’s a scaling bug (easy fix).
+
+🧭 5. /admin/sos-debug ROUTE — OPTIONAL BUT HIGHLY RECOMMENDED
+
+This is the fastest way to catch subtle issues.
+
+Opus can make it in 15 minutes.
+
+Functionality:
+
+Select Team
+
+Select Position
+
+Table shows:
+
+baseAlpha
+
+sosRos
+
+multiplier
+
+alphaFinal
+
+next3 + playoff SoS
+
+If even one team looks like:
+
+multiplier > 1.15
+
+multiplier < 0.85
+→ Red flag. Fix scaling.
