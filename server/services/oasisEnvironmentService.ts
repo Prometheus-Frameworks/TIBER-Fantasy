@@ -2,6 +2,10 @@
  * OASIS Environment Service
  * Centralized team environment data management with caching and normalization
  * Provides normalized team environment metrics for Player Compass and Rankings Fusion
+ * 
+ * TODO: Replace OASIS with internal FORGE SoS module
+ * See: docs/oasis_audit.md for migration plan
+ * Target: Migrate to forgeEnvironmentService using forge_team_env_context table
  */
 
 interface OasisRawData {

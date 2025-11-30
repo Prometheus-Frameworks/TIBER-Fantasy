@@ -1,5 +1,9 @@
 // src/data/providers/oasis.ts
 // Pull team/position matchup from your OASIS service
+//
+// TODO: Replace OASIS with internal FORGE SoS module
+// See: docs/oasis_audit.md for migration plan
+// Target: Rename to forge.ts and use /api/forge/matchup endpoint
 
 import { cacheKey, getCache, setCache } from "../cache";
 import { NFLTeam, OasisMatchup } from "../interfaces";

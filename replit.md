@@ -46,12 +46,28 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **FORGE v0.2 (Football-Oriented Recursive Grading Engine)**: Self-contained, read-only scoring module providing unified alpha scores (0-100) for WR/RB/TE/QB positions. Features position-specific weighted sub-scores, trajectory tracking, and confidence scoring. Integrates Offensive Environment Modifier (EnvScore) and Weekly Matchup Context Modifier (MatchupScore) into player rankings.
 - **Admin API Lexicon**: Developer tool at `/admin/api-lexicon` for browsing and testing Forge/Tiber API endpoints. Features searchable endpoint registry, tag filtering, sample parameters, live response previews with important field highlighting, and cURL command generation. Registry maintained at `server/infra/apiRegistry.ts`.
 
+## OASIS Status (Deprecated)
+
+**Status:** DEPRECATING - Being replaced by internal FORGE SoS/Context module
+
+OASIS (Offensive Architecture Scoring & Insight System) was originally conceived as an external API integration for team offensive environment data. Audit findings:
+- No external OASIS API is actually called - all data is internally-generated baseline values
+- OASIS endpoints (`/api/oasis/*`) serve hardcoded fallback data
+- FORGE already provides equivalent functionality via `forge_team_env_context` and `forge_team_matchup_context` tables
+
+**Migration Plan:**
+1. Delete unused OASIS files (oasisRServerClient.ts, otc-power module)
+2. Rename OASIS services/types to FORGE naming
+3. Migrate active dependencies to use existing FORGE env/matchup infrastructure
+4. Retire OASIS naming from codebase
+
+See `docs/oasis_audit.md` for full deprecation plan.
+
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
 - **Sleeper API**: Player projections, game logs, ADP data, league sync, and current roster data.
 - **NFLfastR (nflverse)**: Play-by-play parquet files, and NFL schedule data.
 - **NFL-Data-Py**: Weekly statistics, depth charts, and snap count data.
-- **R Server**: External API for OASIS (Offensive Architecture Scoring & Insight System) data.
 - **Axios**: HTTP requests.
 - **Zod**: Runtime type validation.
 - **Recharts**: Charting and data visualization.

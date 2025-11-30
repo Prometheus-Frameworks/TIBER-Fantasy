@@ -1,5 +1,9 @@
 // Enhanced Player Compass Service - Dynasty vs Redraft Separation with OASIS Integration
 // Tiber's in-house ratings engine with format-specific evaluations and team environment data
+//
+// TODO: Replace OASIS with internal FORGE SoS module
+// See: docs/oasis_audit.md for migration plan
+// Target: Replace oasisEnvironmentService with forgeEnvironmentService
 
 import { oasisEnvironmentService, type TeamEnvironment } from './oasisEnvironmentService';
 

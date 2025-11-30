@@ -1,3 +1,7 @@
+// TODO: Replace OASIS with internal FORGE SoS module
+// See: docs/oasis_audit.md for migration plan
+// Target: Merge into sos.service.ts using forge_team_env_context and forge_team_matchup_context
+
 import { oasisEnvironmentService } from '../../services/oasisEnvironmentService';
 import type { Position, WeeklySOS, ROSItem } from './sos.types';
 import { db } from '../../infra/db';
@@ -9,6 +13,8 @@ import { eq, and } from 'drizzle-orm';
  * 
  * Projects early season (2025) SOS using OASIS team environment data
  * when historical DVP data is not yet available.
+ * 
+ * DEPRECATED: This service is scheduled for migration to internal FORGE SoS module.
  */
 
 export interface OasisDefensiveProjection {
