@@ -310,6 +310,7 @@ export async function getPlayerSoS(
 /**
  * Get SoS rankings for all teams by position (OPTIMIZED batch version)
  * Returns teams sorted by RoS SoS (easiest schedule first)
+ * Always includes all 32 teams, even those with no remaining games
  */
 export async function getAllTeamSoSByPosition(
   position: string,
@@ -317,6 +318,14 @@ export async function getAllTeamSoSByPosition(
 ): Promise<TeamPositionSoS[]> {
   try {
     const dataThroughWeek = await getDataThroughWeek(season);
+    
+    // First, get all 32 teams from schedule
+    const allTeamsResult = await db.execute(sql`
+      SELECT DISTINCT home as team FROM schedule WHERE season = ${season}
+      UNION
+      SELECT DISTINCT away as team FROM schedule WHERE season = ${season}
+    `);
+    const allTeams = new Set((allTeamsResult.rows as any[]).map(r => r.team));
     
     // Batch fetch: All future matchups for all teams
     const allMatchupsResult = await db.execute(sql`
@@ -364,14 +373,15 @@ export async function getAllTeamSoSByPosition(
       seasonAvgMap.set(row.defense_team, Number(row.avg_score));
     });
     
-    // Group by team and calculate SoS
+    // Initialize all teams with empty matchups (ensures all 32 appear in results)
     const teamData = new Map<string, { matchups: { week: number; opponent: string; score: number | null }[] }>();
+    allTeams.forEach(team => {
+      teamData.set(team, { matchups: [] });
+    });
     
+    // Populate matchup data
     (allMatchupsResult.rows as any[]).forEach(row => {
       const team = row.offense_team;
-      if (!teamData.has(team)) {
-        teamData.set(team, { matchups: [] });
-      }
       
       let score = row.matchup_score_100 !== null ? Number(row.matchup_score_100) : null;
       if (score === null) {
@@ -389,8 +399,10 @@ export async function getAllTeamSoSByPosition(
     const results: TeamPositionSoS[] = [];
     
     teamData.forEach((data, team) => {
+      // remainingWeeks = total scheduled games (not just those with scores)
+      const totalScheduledGames = data.matchups.length;
+      
       const allScores = data.matchups.map(m => m.score);
-      const validScores = allScores.filter((s): s is number => s !== null);
       
       const next3Scores = data.matchups.slice(0, 3).map(m => m.score);
       const playoffScores = data.matchups
@@ -403,7 +415,7 @@ export async function getAllTeamSoSByPosition(
           team,
           position,
           dataThroughWeek,
-          remainingWeeks: validScores.length,
+          remainingWeeks: totalScheduledGames,
         },
         sos: {
           ros: calculateAverage(allScores),
