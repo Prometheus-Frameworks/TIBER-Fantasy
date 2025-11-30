@@ -85,3 +85,38 @@ export async function fetchForgeScore(playerId: string): Promise<ForgeSingleScor
 
   return res.json() as Promise<ForgeSingleScoreResponse>;
 }
+
+export type PlayerContextResponse = {
+  meta: { playerId: string; season: number };
+  identity: {
+    displayName: string;
+    position: string;
+    sleeperId: string | null;
+    nflfastrGsisId: string | null;
+  };
+  team: { currentTeam: string | null; lastSeenWeek: number | null };
+  usage?: Record<string, any>;
+  efficiency?: Record<string, any>;
+  finishing?: Record<string, any>;
+  metaStats?: { gamesPlayed?: number; lastUpdated?: string };
+};
+
+export type PlayerSearchResult = {
+  playerId: string;
+  displayName: string;
+  position: string;
+  currentTeam: string | null;
+};
+
+export async function searchPlayers(query: string): Promise<PlayerSearchResult[]> {
+  if (!query.trim() || query.trim().length < 2) return [];
+  const res = await fetch(`/api/forge/search-players?query=${encodeURIComponent(query)}`);
+  if (!res.ok) throw new Error('Search failed');
+  return res.json();
+}
+
+export async function fetchPlayerContext(playerId: string, season = 2025): Promise<PlayerContextResponse> {
+  const res = await fetch(`/api/forge/player-context/${playerId}?season=${season}`);
+  if (!res.ok) throw new Error(`Player not found: ${playerId}`);
+  return res.json();
+}
