@@ -427,46 +427,26 @@ export default function ChatHomepage() {
             </li>
 
             <li className="mt-4 pt-4 border-t border-gray-700">
-              <Link href="/?tab=rankings">
+              <Link href="/rankings">
                 <button
                   data-testid="nav-rankings"
-                  className="w-full text-left px-3 py-2 rounded hover:bg-gray-700/50 text-gray-300 transition-colors"
+                  className="w-full text-left px-3 py-2 rounded hover:bg-gray-700/50 text-gray-300 transition-colors flex items-center gap-2"
                   onClick={() => setSidebarOpen(false)}
                 >
+                  <span className="text-lg">📊</span>
                   Rankings
                 </button>
               </Link>
             </li>
             <li>
-              <Link href="/matchups">
+              <Link href="/schedule">
                 <button
-                  data-testid="nav-matchups"
-                  className="w-full text-left px-3 py-2 rounded hover:bg-gray-700/50 text-gray-300 transition-colors"
+                  data-testid="nav-schedule"
+                  className="w-full text-left px-3 py-2 rounded hover:bg-gray-700/50 text-gray-300 transition-colors flex items-center gap-2"
                   onClick={() => setSidebarOpen(false)}
                 >
-                  Matchups
-                </button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/?tab=strategy">
-                <button
-                  data-testid="nav-strategy"
-                  className="w-full text-left px-3 py-2 rounded hover:bg-gray-700/50 text-gray-300 transition-colors"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  Strategy
-                </button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/?tab=leagues">
-                <button
-                  data-testid="nav-leagues"
-                  className="w-full text-left px-3 py-2 rounded hover:bg-gray-700/50 text-gray-300 transition-colors"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  Leagues
+                  <span className="text-lg">📅</span>
+                  Schedule
                 </button>
               </Link>
             </li>

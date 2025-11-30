@@ -3,57 +3,31 @@ export interface NavLink {
   label: string;
   description?: string;
   dropdown?: NavLink[];
+  icon?: string;
 }
 
+// Main navigation - Forge v1 minimal structure
 export const NAV_LINKS: NavLink[] = [
-  { href: "/", label: "Home", description: "Fantasy football tools overview" },
-  { href: "/tiber-dashboard", label: "🔥 Tiber Dashboard", description: "Power Rankings, DvP Matchups & Weekly Insights" },
-  { href: "/news", label: "News + Updates", description: "Recent NFL news with fantasy impact" },
-  { href: "/redraft", label: "Redraft", description: "Seasonal league tools" },
-  { href: "/dynasty", label: "Dynasty", description: "Long-term strategy" },
-  { href: "/player-rankings", label: "Player Rankings", description: "Our rankings vs market consensus with comparison differences" },
-  { href: "/schedule", label: "Schedule", description: "Strength of Schedule analysis and player impact" },
-  { href: "/power-rankings", label: "Power Rankings", description: "Tiber's comprehensive weekly rankings" },
-  { href: "/risers-and-fallers", label: "Risers & Fallers", description: "Week 1 fantasy stock movers and performance analysis" },
-  { href: "/start-sit", label: "Start/Sit Calculator", description: "AI-powered lineup decisions with detailed reasoning" },
-  { href: "/advice", label: "Trade Advice", description: "AI-powered buy/sell recommendations with supporting evidence" },
-  { href: "/sleeper-connect", label: "Sync", description: "Connect your leagues" },
-  { 
-    label: "Research & Analysis", 
-    description: "Advanced analytical tools",
-    dropdown: [
-      { href: "/research", label: "Depth Charts & Intel", description: "Roster analysis and intelligence feeds" },
-      { href: "/leaders", label: "Leaders", description: "2024 NFL player stats and leaderboards" },
-      { href: "/snap-counts", label: "Snap Counts", description: "Evidence-based snap count analysis" },
-      { href: "/sos", label: "SOS", description: "Strength of Schedule matchup analysis" },
-      { href: "/matchups", label: "FORGE Matchups", description: "Environment & matchup scoring by team" }
-    ]
-  },
-  { href: "/about", label: "About", description: "Learn about On The Clock and Tiber" },
-  { href: "/articles", label: "Articles", description: "Strategy and insights" },
+  { href: "/", label: "TIBER", description: "AI-powered fantasy football assistant" },
+  { href: "/rankings", label: "Rankings", description: "FORGE-powered player rankings by position" },
+  { href: "/schedule", label: "Schedule", description: "Strength of Schedule analysis" },
+  { href: "/leagues", label: "Leagues", description: "Your connected leagues" },
 ];
 
-// Extended navigation for secondary features
-export const EXTENDED_NAV_LINKS: NavLink[] = [
-  { href: "/consensus-transparency", label: "Consensus Transparency", description: "How consensus works" },
-  { href: "/experts/architect-j", label: "Architect J", description: "Founder rankings" },
-  // Demo routes hidden in production via SHOW_INTERNAL_DEMOS flag
-  { href: "/analytics", label: "Analytics", description: "Advanced player analysis" },
-  { href: "/weekly-data", label: "Weekly Data", description: "Game logs and stats" },
-  { href: "/trade-analyzer-new", label: "Trade Analyzer", description: "Evaluate trades" },
-  { href: "/waivers", label: "Waivers", description: "Waiver wire targets" },
-  { href: "/oasis", label: "OASIS", description: "Offensive system analysis" },
-];
-
-// Admin navigation
+// Admin navigation - dev tools
 export const ADMIN_NAV_LINKS: NavLink[] = [
-  { href: "/admin/wr-rankings-sandbox", label: "WR Rankings Sandbox", description: "Test WR ranking algorithms" },
+  { href: "/admin/forge-hub", label: "FORGE Hub", description: "Central control room" },
+  { href: "/admin/api-lexicon", label: "API Lexicon", description: "Endpoint reference" },
+  { href: "/admin/wr-rankings-sandbox", label: "WR Sandbox", description: "WR ranking experiments" },
+  { href: "/admin/qb-rankings-sandbox", label: "QB Sandbox", description: "QB ranking experiments" },
+  { href: "/admin/player-mapping", label: "Player Mapping", description: "Identity resolution tools" },
+  { href: "/admin/player-research", label: "Player Research", description: "Deep player analysis" },
 ];
 
-// Quick actions for converting hero buttons
-export const QUICK_ACTIONS: NavLink[] = [
-  { href: "/player-compass", label: "Player Compass", description: "Context-aware guidance for dynasty decisions" },
-  { href: "/rookie-evaluator", label: "2025 Rookies", description: "Evaluate incoming rookie class" },
-  { href: "/draft-room", label: "Draft Room", description: "Prep and dominate your draft" },
-  { href: "/dashboard", label: "Dashboard", description: "Personal league management" },
+// Legacy - kept for reference but not exposed in nav
+export const LEGACY_NAV_LINKS: NavLink[] = [
+  { href: "/matchups", label: "Matchups", description: "FORGE Matchups (legacy)" },
+  { href: "/leaders", label: "Leaders", description: "2024 stats leaderboards" },
+  { href: "/analytics", label: "Analytics", description: "Advanced analysis" },
+  { href: "/compare", label: "Compare", description: "Player comparison" },
 ];
