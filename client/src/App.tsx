@@ -12,6 +12,7 @@ import ForgeHub from "@/pages/admin/ForgeHub";
 import PlayerMapping from "@/pages/admin/PlayerMapping";
 import PlayerResearch from "@/pages/admin/PlayerResearch";
 import ApiLexicon from "@/pages/admin/ApiLexicon";
+import ForgeLab from "@/pages/ForgeLab";
 import WRRankingsSandbox from "@/pages/WRRankingsSandbox";
 import QBRankingsSandbox from "@/pages/QBRankingsSandbox";
 import NotFound from "@/pages/not-found";
@@ -42,6 +43,9 @@ function Router() {
       
       {/* Admin: API Lexicon - Forge/Tiber endpoint reference */}
       <Route path="/admin/api-lexicon" component={ApiLexicon} />
+      
+      {/* Admin: FORGE Lab - Interactive scoring sandbox */}
+      <Route path="/admin/forge-lab" component={ForgeLab} />
       
       {/* Admin: Ranking Sandboxes */}
       <Route path="/admin/wr-rankings-sandbox" component={WRRankingsSandbox} />
