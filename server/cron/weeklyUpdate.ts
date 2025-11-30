@@ -7,6 +7,7 @@ import cron from 'node-cron';
 import { nightlyBuysSellsETL } from '../etl/nightlyBuysSellsUpdate';
 import { setupRBContextCheckCron } from './rbContextCheck';
 import { setupInjurySyncCron } from './injurySync';
+import { setupScheduleSyncCron } from './scheduleSync';
 
 /**
  * Setup nightly Buys/Sells computation cron job
@@ -86,6 +87,7 @@ export function setupWeeklyDataProcessing() {
 export function setupAllCronJobs() {
   console.log('🕒 Initializing all cron jobs...');
   
+  setupScheduleSyncCron(); // Schedule sync first (1 AM ET)
   setupNightlyBuysSellsCron();
   setupWeeklyDataProcessing();
   setupInjurySyncCron();

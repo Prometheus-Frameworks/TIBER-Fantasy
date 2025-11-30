@@ -158,10 +158,29 @@ We need all three:
   - Derive RB `p10/p90` from 2025 data
   - Repeat process for TE and QB once those sandboxes are stable
 
+### NFL Schedule Sync Infrastructure
+
+**Bulletproof Schedule Data:**
+- Source: NFLverse via `nfl_data_py.import_schedules()`
+- Storage: PostgreSQL `schedule` table with unique constraint on (season, week, home, away)
+- Sync Script: `scripts/sync_schedule.py` - pulls from NFLverse, upserts to database
+- API Endpoint: `POST /api/schedule/sync` - triggers manual sync
+- GET Endpoint: `GET /api/schedule/:season/:week` - retrieves week schedule
+- Cron Job: Tuesdays @ 1 AM ET via `setupScheduleSyncCron()` in `server/cron/scheduleSync.ts`
+
+**Usage:**
+```bash
+# Sync full season from NFLverse
+python scripts/sync_schedule.py --season 2025 --verify
+
+# API trigger
+curl -X POST http://localhost:5000/api/schedule/sync -d '{"season": 2025}'
+```
+
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
 - **Sleeper API**: Player projections, game logs, ADP data, league sync, and current roster data.
-- **NFLfastR (nflverse)**: Play-by-play parquet files for weekly usage backfills.
+- **NFLfastR (nflverse)**: Play-by-play parquet files for weekly usage backfills, and **NFL schedule data** via `import_schedules()`.
 - **NFL-Data-Py**: Weekly statistics, depth charts, and snap count data.
 - **R Server**: External API for OASIS (Offensive Architecture Scoring & Insight System) data.
 - **Axios**: HTTP requests.

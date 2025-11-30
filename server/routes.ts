@@ -10,7 +10,7 @@ import { optimizeLineup, calculateConfidence, analyzeTradeOpportunities, generat
 // Removed deprecated imports
 import { PlayerFilteringService } from "./playerFiltering";
 import { db } from "./infra/db";
-import { dynastyTradeHistory, players as playersTable, playerWeekFacts, chunks, chatSessions, chatMessages, waiverCandidates, sleeperOwnership, playerIdentityMap } from "@shared/schema";
+import { dynastyTradeHistory, players as playersTable, playerWeekFacts, chunks, chatSessions, chatMessages, waiverCandidates, sleeperOwnership, playerIdentityMap, schedule } from "@shared/schema";
 import { eq, desc, and, sql, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 // Removed deprecated fantasy services
@@ -7453,6 +7453,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('❌ [Weekly Sync] Sync failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+
+  // POST /api/schedule/sync - Sync NFL schedule from NFLverse
+  app.post('/api/schedule/sync', async (req: Request, res: Response) => {
+    try {
+      const { season = 2025 } = req.body;
+      const { syncScheduleFromNFLverse } = await import('./cron/scheduleSync');
+      
+      console.log(`📅 [Schedule Sync] Triggering sync for season ${season}...`);
+      
+      const result = await syncScheduleFromNFLverse(season);
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          season,
+          gamesSync: result.gamesSync,
+          duration: result.duration,
+          message: `Successfully synced ${result.gamesSync} games for season ${season}`
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: result.error,
+          message: 'Schedule sync failed'
+        });
+      }
+    } catch (error) {
+      console.error('❌ [Schedule Sync] Failed:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/schedule/:season/:week - Get schedule for specific week
+  app.get('/api/schedule/:season/:week', async (req: Request, res: Response) => {
+    try {
+      const season = parseInt(req.params.season);
+      const week = parseInt(req.params.week);
+      
+      const games = await db.select().from(schedule)
+        .where(and(eq(schedule.season, season), eq(schedule.week, week)))
+        .orderBy(schedule.home);
+      
+      res.json({
+        success: true,
+        season,
+        week,
+        games: games.map(g => ({
+          home: g.home,
+          away: g.away,
+          homeScore: g.homeScore,
+          awayScore: g.awayScore,
+          result: g.result
+        })),
+        count: games.length
+      });
+    } catch (error) {
+      console.error('❌ [Schedule] Failed to fetch:', error);
       res.status(500).json({
         success: false,
         error: (error as Error).message || 'Unknown error'
