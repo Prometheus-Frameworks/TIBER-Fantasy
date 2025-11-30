@@ -23,6 +23,11 @@ interface RBSandboxPlayer {
   receivingFantasyPerGame: number;
   weightedOppPerGame: number;
   fpPerOpp: number;
+  alphaScore: number;
+  forge_alpha_base: number;
+  forge_alpha_env: number;
+  forge_env_multiplier: number;
+  forge_env_score_100: number | null;
   injuryStatus: string | null;
   injuryType: string | null;
 }
@@ -127,10 +132,12 @@ export default function RBRankings() {
         team: player.team,
         gamesPlayed: player.gamesPlayed,
         sandboxAlpha: Math.round(sandboxAlpha * 10) / 10,
-        forgeAlpha: forge?.alpha,
-        forgeRawAlpha: forge?.rawAlpha,
+        forgeAlpha: player.alphaScore ?? forge?.alpha,
+        forgeRawAlpha: player.forge_alpha_base ?? forge?.rawAlpha,
         forgeConfidence: forge?.confidence,
         forgeTrajectory: forge?.trajectory,
+        forgeEnvScore: player.forge_env_score_100,
+        forgeEnvMultiplier: player.forge_env_multiplier,
         injuryStatus: player.injuryStatus,
         extraColumns: {
           carries: player.totalCarries,

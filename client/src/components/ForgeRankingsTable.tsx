@@ -17,6 +17,8 @@ export interface ForgeRow {
   forgeTrajectory?: string;
   injuryStatus?: string | null;
   extraColumns?: Record<string, number | string | null>;
+  forgeEnvScore?: number | null;
+  forgeEnvMultiplier?: number | null;
 }
 
 interface ForgeRankingsTableProps {
@@ -78,6 +80,15 @@ function getTrajectoryLabel(trajectory?: string): string {
   if (trajectory === 'rising') return 'Rising';
   if (trajectory === 'declining') return 'Declining';
   return 'Stable';
+}
+
+function getEnvLabel(score: number | null | undefined): { label: string; color: string; icon: string } {
+  if (score == null) return { label: 'N/A', color: 'text-slate-500', icon: '' };
+  if (score >= 60) return { label: 'Elite', color: 'text-green-400', icon: '🔥' };
+  if (score >= 55) return { label: 'Good', color: 'text-emerald-400', icon: '↑' };
+  if (score >= 45) return { label: 'Avg', color: 'text-slate-400', icon: '' };
+  if (score >= 40) return { label: 'Below', color: 'text-orange-400', icon: '↓' };
+  return { label: 'Poor', color: 'text-red-400', icon: '⚠' };
 }
 
 type SortField = 'playerName' | 'team' | 'sandboxAlpha' | 'forgeAlpha' | 'gamesPlayed' | 'delta';
@@ -378,6 +389,9 @@ export default function ForgeRankingsTable({
                 <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                   Trend
                 </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider" title="Offensive Environment Score">
+                  Env
+                </th>
                 {isDev && (
                   <>
                     <SortHeader field="sandboxAlpha" label="Sandbox α" />
@@ -452,6 +466,20 @@ export default function ForgeRankingsTable({
                       }`}>
                         {getTrajectoryIcon(row.forgeTrajectory)} {getTrajectoryLabel(row.forgeTrajectory)}
                       </span>
+                    </td>
+                    <td className="px-3 py-2">
+                      {(() => {
+                        const env = getEnvLabel(row.forgeEnvScore);
+                        return (
+                          <span 
+                            className={`text-xs ${env.color}`}
+                            title={`Offensive Environment: ${row.forgeEnvScore ?? 'N/A'}`}
+                          >
+                            {env.icon && <span className="mr-0.5">{env.icon}</span>}
+                            {row.forgeEnvScore != null ? row.forgeEnvScore : '—'}
+                          </span>
+                        );
+                      })()}
                     </td>
                     {isDev && (
                       <>
