@@ -5566,6 +5566,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // STEP 3: Calculate advanced metrics ONLY for qualified players
       const advancedMetricsMap = await calculateWRAdvancedMetrics(season, 2, momentumMap, qualifiedPlayerIds);
+      
+      // STEP 3.5: Fetch team environment scores for env-adjusted alpha
+      const { forgeTeamEnvironment } = await import('@shared/schema');
+      const { applyForgeEnvModifier } = await import('./modules/forge/contextModifiers');
+      
+      // Get latest week's environment scores
+      const latestWeekResult = await db.execute(sql`
+        SELECT MAX(week) as latest_week FROM forge_team_environment WHERE season = ${season}
+      `);
+      const latestEnvWeek = (latestWeekResult.rows[0] as any)?.latest_week || 12;
+      
+      const envScores = await db
+        .select({
+          team: forgeTeamEnvironment.team,
+          envScore100: forgeTeamEnvironment.envScore100,
+        })
+        .from(forgeTeamEnvironment)
+        .where(
+          and(
+            eq(forgeTeamEnvironment.season, season),
+            eq(forgeTeamEnvironment.week, latestEnvWeek)
+          )
+        );
+      
+      const envMap = new Map<string, number>();
+      for (const row of envScores) {
+        if (row.team && row.envScore100 !== null) {
+          envMap.set(row.team, row.envScore100);
+        }
+      }
 
       // Calculate volume-weighted efficiency metrics and merge advanced metrics
       const processedPlayers = results.map(player => {
@@ -5656,10 +5686,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Calculate unified alpha score using 4-pillar engine
           const alphaOutput = calculateWrAlphaScore(alphaInput);
           
+          // Apply environment modifier to base alpha
+          const teamEnvScore = envMap.get(player.team) ?? null;
+          const envResult = applyForgeEnvModifier({
+            rawAlpha: alphaOutput.alphaScore,
+            envScore: teamEnvScore,
+            wEnv: 0.15,
+          });
+          
           return {
             ...player,
             // TIBER Alpha Engine (unified 50/25/15/10)
-            alphaScore: alphaOutput.alphaScore,
+            alphaScore: envResult.envAdjustedAlpha,  // Final env-adjusted alpha
+            forge_alpha_base: envResult.baseAlpha,
+            forge_alpha_env: envResult.envAdjustedAlpha,
+            forge_env_multiplier: envResult.envMultiplier,
+            forge_env_score_100: teamEnvScore,
             volumeIndex: alphaOutput.volumeIndex,
             productionIndex: alphaOutput.productionIndex,
             efficiencyIndex: alphaOutput.efficiencyIndex,
@@ -5678,6 +5720,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         season,
+        envWeek: latestEnvWeek,
         minGames: 2,
         minTargets: 10,
         count: ranked.length,

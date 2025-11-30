@@ -1,0 +1,253 @@
+🧠 Replit Opus Agent Task — Integrate EnvScore into FORGE Alpha (WR & RB)
+
+Goal
+Use the existing offensive environment score (0–100) as a gentle modifier on rawAlpha for WR and RB.
+We want:
+
+forge_alpha_base → original calibrated alpha
+
+forge_alpha_env → env-adjusted alpha
+
+forge_alpha → final value (for now: same as env-adjusted, matchup to be added later)
+
+A safe, clamped multiplier (no crazy swings)
+
+We already have:
+
+team_offensive_context (or similar table) with env_score_100 per offense.
+
+Working FORGE pipelines for WR and RB that compute rawAlpha and final forge_alpha.
+
+/api/forge/rankings/wr and /api/forge/rankings/rb returning those.
+
+Use whatever table currently powers /api/forge/env-debug?team=KC.
+
+1) Add env modifier helper
+
+Create a helper in the FORGE module (e.g. server/modules/forge/contextModifiers.ts):
+
+export type ForgeEnvInputs = {
+  rawAlpha: number;           // calibrated alpha, typically 25–90
+  envScore: number | null;    // 0–100, offense environment
+  wEnv?: number;              // default 0.15
+};
+
+export type ForgeEnvOutput = {
+  baseAlpha: number;
+  envAdjustedAlpha: number;
+  envMultiplier: number;
+};
+
+export function applyForgeEnvModifier({
+  rawAlpha,
+  envScore,
+  wEnv = 0.15,
+}: ForgeEnvInputs): ForgeEnvOutput {
+  const baseAlpha = rawAlpha;
+
+  const safeScore = (score: number | null | undefined): number => {
+    if (score == null || Number.isNaN(score)) return 50; // neutral env
+    return Math.max(0, Math.min(100, score));
+  };
+
+  const env = safeScore(envScore);
+
+  // score in [0,100] → factor around 1.0
+  // factor = 1 + wEnv * (env/50 - 1)
+  const envFactor = 1 + wEnv * (env / 50 - 1);
+
+  let envAdjusted = baseAlpha * envFactor;
+
+  // Clamp to sane FORGE band
+  const clamp = (v: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, v));
+
+  envAdjusted = clamp(envAdjusted, 25, 90);
+
+  return {
+    baseAlpha,
+    envAdjustedAlpha: envAdjusted,
+    envMultiplier: envFactor,
+  };
+}
+
+
+Notes:
+
+envScore = 50 → neutral (factor ≈ 1.0).
+
+envScore = 80 with wEnv = 0.15 → small buff, a few alpha points.
+
+envScore = 20 → small nerf, not a nuke.
+
+2) Join offensive envScore into WR & RB ranking queries
+
+Wherever you currently build the WR and RB FORGE ranking datasets (e.g. in forgeWrRankings.ts / forgeRbRankings.ts):
+
+Join the WR/RB player rows to team_offensive_context by:
+
+season
+
+offense_team (or whatever field represents the player’s current offensive team)
+
+Select env_score_100 (or equivalent) as a column in the ranking row, e.g. env_score_100.
+
+Example SQL sketch (adapt names to actual schema):
+
+SELECT
+  p.player_id,
+  p.display_name,
+  p.position,
+  p.team,
+  f.raw_alpha,
+  toc.env_score_100
+FROM forge_player_alpha_wr f
+JOIN player_identity_map p
+  ON p.player_id = f.player_id
+LEFT JOIN team_offensive_context toc
+  ON toc.team = f.team
+ AND toc.season = f.season;
+
+
+Do the same for RB pipeline.
+
+The important part is: each WR/RB row has raw_alpha and env_score_100 available in code.
+
+3) Apply env modifier in WR pipeline
+
+In the WR FORGE pipeline, wherever you currently build the final row (before sending to the API), use applyForgeEnvModifier.
+
+Example:
+
+import { applyForgeEnvModifier } from './contextModifiers';
+
+function buildWrForgeRow(row: any): WrForgeRow {
+  const rawAlpha = Number(row.raw_alpha);
+  const envScore = row.env_score_100 != null ? Number(row.env_score_100) : null;
+
+  const env = applyForgeEnvModifier({
+    rawAlpha,
+    envScore,
+    wEnv: 0.15,
+  });
+
+  return {
+    ...row,
+    forge_alpha_base: env.baseAlpha,
+    forge_alpha_env: env.envAdjustedAlpha,
+    forge_env_multiplier: env.envMultiplier,
+    forge_env_score_100: envScore,
+    // For now, final alpha = env-adjusted (matchup to be added later)
+    forge_alpha: env.envAdjustedAlpha,
+  };
+}
+
+
+Make sure the type/interface for WrForgeRow is updated to include:
+
+forge_alpha_base
+
+forge_alpha_env
+
+forge_env_multiplier
+
+forge_env_score_100
+
+forge_alpha (final)
+
+4) Apply env modifier in RB pipeline
+
+Mirror the same logic for RB rankings:
+
+function buildRbForgeRow(row: any): RbForgeRow {
+  const rawAlpha = Number(row.raw_alpha);
+  const envScore = row.env_score_100 != null ? Number(row.env_score_100) : null;
+
+  const env = applyForgeEnvModifier({
+    rawAlpha,
+    envScore,
+    wEnv: 0.15,
+  });
+
+  return {
+    ...row,
+    forge_alpha_base: env.baseAlpha,
+    forge_alpha_env: env.envAdjustedAlpha,
+    forge_env_multiplier: env.envMultiplier,
+    forge_env_score_100: envScore,
+    forge_alpha: env.envAdjustedAlpha,
+  };
+}
+
+
+Again, update the RB row type accordingly.
+
+5) API responses: expose base vs env vs final
+
+For both:
+
+/api/forge/rankings/wr
+
+/api/forge/rankings/rb
+
+Make sure the returned JSON now includes:
+
+forge_alpha (final, env-adjusted)
+
+forge_alpha_base (pre-env)
+
+forge_alpha_env (same as final for now)
+
+forge_env_multiplier
+
+forge_env_score_100
+
+Do not remove any existing fields; just extend.
+
+6) Frontend: show context-adjusted FORGE α as the main score
+
+On the frontend WR and RB rankings pages:
+
+Use forge_alpha (context-adjusted) as the main FORGE α column.
+
+Optionally (if it’s already wired), keep Sandbox α and/or forge_alpha_base for comparison in a secondary or debug column, but only forge_alpha should be treated as the official FORGE number.
+
+No fancy UI changes required right now — just adjust which field is considered “FORGE Alpha” in the table.
+
+7) Quick sanity checks
+
+After changes, do a quick sanity pass:
+
+Log or inspect a few WRs/RBs from:
+
+strong offensive environments (e.g. KC, SF, DAL-type teams)
+
+weak offenses (bottom 5 in envScore)
+
+Confirm:
+
+forge_env_score_100 matches the values returned by /api/forge/env-debug?team=...
+
+forge_alpha_base ≈ old forge_alpha values
+
+forge_alpha (new final) is only a little bit higher/lower (2–5 points swing max)
+
+No one jumps from 40 → 85 or 85 → 40 purely from env.
+
+Hit the WR/RB rankings routes and ensure:
+
+Tables render
+
+No undefined / NaN issues
+
+New fields appear in network responses.
+
+Acceptance Criteria
+
+WR and RB rankings now use envScore_100 to gently modify rawAlpha.
+
+forge_alpha_base and forge_alpha are both present; forge_alpha is env-adjusted.
+
+No extreme swings; all values still live in the calibrated 25–90 band.
+
+Frontend WR/RB rankings show the env-adjusted forge_alpha as the official FORGE alpha score.
