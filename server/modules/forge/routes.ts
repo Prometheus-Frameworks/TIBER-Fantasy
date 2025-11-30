@@ -16,6 +16,7 @@ import { eq, and, isNotNull, sql } from 'drizzle-orm';
 import { createForgeSnapshot } from './forgeSnapshot';
 import { computeFPRForPlayer } from './fibonacciPatternResonance';
 import { PlayerIdentityService } from '../../services/PlayerIdentityService';
+import { getForgePlayerContext, searchForgePlayersSimple } from './forgePlayerContext';
 
 const router = Router();
 
@@ -1155,6 +1156,61 @@ router.get('/weeks', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[FORGE/UI] weeks endpoint error:', err);
     return res.status(500).json({ error: 'weeks failed' });
+  }
+});
+
+/**
+ * GET /api/forge/player-context/:playerId
+ * 
+ * Get complete FORGE player context including identity, team, and advanced stats.
+ */
+router.get('/player-context/:playerId', async (req: Request, res: Response) => {
+  try {
+    const { playerId } = req.params;
+    const season = parseInt(req.query.season as string) || 2025;
+
+    if (!playerId) {
+      return res.status(400).json({ error: 'Missing playerId parameter' });
+    }
+
+    console.log(`[FORGE/PlayerContext] Request: playerId=${playerId}, season=${season}`);
+
+    const ctx = await getForgePlayerContext(playerId, season);
+
+    if (!ctx) {
+      return res.status(404).json({ error: `Player not found: ${playerId}` });
+    }
+
+    return res.json(ctx);
+  } catch (err) {
+    console.error('[FORGE/PlayerContext] Error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/forge/search-players
+ * 
+ * Search players by name for admin pages.
+ * Returns identity + current team from roster.
+ */
+router.get('/search-players', async (req: Request, res: Response) => {
+  try {
+    const query = (req.query.query as string) || '';
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+
+    if (!query || query.trim().length < 2) {
+      return res.json([]);
+    }
+
+    console.log(`[FORGE/Search] Query: "${query}", limit=${limit}`);
+
+    const results = await searchForgePlayersSimple(query, limit);
+
+    return res.json(results);
+  } catch (err) {
+    console.error('[FORGE/Search] Error:', err);
+    return res.status(500).json({ error: 'Search failed' });
   }
 });
 
