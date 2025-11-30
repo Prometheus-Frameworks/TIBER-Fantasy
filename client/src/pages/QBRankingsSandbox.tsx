@@ -45,7 +45,7 @@ const QB_LAST_PRESET_KEY = 'tiber_qb_sandbox_last_preset';
 const QB_USER_PRESETS_KEY = 'tiber_qb_sandbox_user_presets';
 const QB_CANDIDATE_FORMULAS_KEY = 'tiber_qb_candidate_formulas';
 
-type SortField = 'playerName' | 'team' | 'games' | 'attempts' | 'completionPct' | 'passingYards' | 'passingTds' | 'avgEpa' | 'cpoe' | 'anyA' | 'rushYards' | 'rushTds' | 'totalFantasyPoints' | 'fpPerGame' | 'volumeIndex' | 'productionIndex' | 'efficiencyIndex' | 'contextIndex' | 'customAlphaScore' | 'sackRate' | 'deepAccuracy' | 'rushFpPerGame';
+type SortField = 'playerName' | 'team' | 'games' | 'attempts' | 'completionPct' | 'passingYards' | 'passingTds' | 'avgEpa' | 'cpoe' | 'anyA' | 'rushYards' | 'rushTds' | 'totalFantasyPoints' | 'fpPerGame' | 'volumeIndex' | 'productionIndex' | 'efficiencyIndex' | 'contextIndex' | 'customAlphaScore' | 'alphaScore' | 'sackRate' | 'deepAccuracy' | 'rushFpPerGame';
 type SortOrder = 'asc' | 'desc';
 
 interface QBSandboxPlayer {
@@ -99,11 +99,22 @@ interface QBSandboxPlayer {
   contextTag: string | null;
   sackRate: number | null;
   customAlphaScore?: number;
+  // FORGE Alpha fields (v1.1 - Env only, no matchup yet)
+  alphaScore?: number;
+  forge_alpha_base?: number;
+  forge_alpha_env?: number;
+  forge_env_score_100?: number | null;
+  forge_env_multiplier?: number;
+  forge_matchup_score_100?: number | null;  // Not used for QB yet
+  forge_matchup_multiplier?: number | null;
+  forge_opponent?: string | null;
 }
 
 interface SandboxResponse {
   success: boolean;
   season: number;
+  envWeek?: number;
+  matchupsAvailable?: boolean;
   minAttempts: number;
   count: number;
   version: string;
@@ -111,7 +122,7 @@ interface SandboxResponse {
 }
 
 export default function QBRankingsSandbox() {
-  const [sortField, setSortField] = useState<SortField>('customAlphaScore');
+  const [sortField, setSortField] = useState<SortField>('alphaScore');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   
   const [volumeWeight, setVolumeWeight] = useState(25);
@@ -800,9 +811,12 @@ export default function QBRankingsSandbox() {
                     Team
                   </th>
                   <th className="px-3 py-2 text-center text-xs font-medium text-slate-400">Arch</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-sky-400" title="Team Offensive Environment">
+                    Env
+                  </th>
                   <th 
                     className="px-3 py-2 text-right text-xs font-medium text-amber-400 cursor-pointer hover:text-amber-300"
-                    onClick={() => handleSort('customAlphaScore')}
+                    onClick={() => handleSort('alphaScore')}
                   >
                     <div className="flex items-center justify-end gap-1">Alpha <ArrowUpDown className="w-3 h-3" /></div>
                   </th>
@@ -909,7 +923,25 @@ export default function QBRankingsSandbox() {
                       <td className="px-3 py-2 font-medium text-white">{player.playerName}</td>
                       <td className="px-3 py-2 text-slate-400">{player.team}</td>
                       <td className="px-3 py-2 text-center">{getArchetypeBadge(player.archetype)}</td>
-                      <td className="px-3 py-2 text-right font-semibold text-amber-400">{formatNumber(player.customAlphaScore)}</td>
+                      <td className="px-3 py-2 text-center">
+                        {player.forge_env_score_100 != null ? (
+                          <span 
+                            className={`font-medium ${
+                              player.forge_env_score_100 >= 60 ? 'text-green-400' :
+                              player.forge_env_score_100 >= 55 ? 'text-emerald-400' :
+                              player.forge_env_score_100 >= 45 ? 'text-sky-300' :
+                              player.forge_env_score_100 >= 40 ? 'text-orange-400' :
+                              'text-red-400'
+                            }`}
+                            title={`Env: ${player.forge_env_score_100} (${player.forge_env_multiplier?.toFixed(3)}x)`}
+                          >
+                            {player.forge_env_score_100}
+                          </span>
+                        ) : (
+                          <span className="text-slate-600">–</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right font-semibold text-amber-400">{formatNumber(player.alphaScore ?? player.customAlphaScore)}</td>
                       <td className="px-3 py-2 text-right text-slate-300">{player.games}</td>
                       <td className="px-3 py-2 text-right text-green-400">{formatNumber(player.fpPerGame)}</td>
                       <td className={`px-3 py-2 text-right ${player.avgEpa >= 0.15 ? 'text-green-400' : player.avgEpa >= 0 ? 'text-slate-300' : 'text-red-400'}`}>

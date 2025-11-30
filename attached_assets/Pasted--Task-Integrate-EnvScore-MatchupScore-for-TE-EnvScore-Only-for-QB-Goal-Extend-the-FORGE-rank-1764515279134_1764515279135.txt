@@ -1,0 +1,182 @@
+🧩 Task: Integrate EnvScore + MatchupScore for TE, EnvScore Only for QB
+
+Goal
+
+Extend the FORGE ranking pipeline so that:
+
+TE sandbox uses both:
+
+forge_team_environment.env_score_100
+
+forge_team_matchup_context.matchup_score_100 with position = 'TE'
+
+QB sandbox uses:
+
+forge_team_environment.env_score_100 (env only for now)
+
+QB matchup rows are not implemented in this task – that’s a separate module.
+
+Context (What’s Already There)
+
+forge_team_environment exists and returns a 0–100 env score per team.
+
+forge_team_matchup_context exists and already has rows for:
+
+position IN ('WR','RB','TE')
+
+WR and RB sandboxes already:
+
+join in envScore
+
+apply applyForgeEnvModifier (wEnv ≈ 0.40)
+
+surface forgeEnvScore and forgeEnvMultiplier to the frontend
+
+We want to mirror that pattern for TE and partially for QB.
+
+1) TE: Env + Matchup Integration
+
+Backend
+
+Locate the TE sandbox handler and pipeline (whatever is powering the TE rankings sandbox endpoint – likely the sibling to the WR/RB sandbox endpoints).
+
+For each TE row, fetch:
+
+Offense team → from existing TE context / stats source
+
+Opponent team for the current week → from schedule table (same logic WR/RB use)
+
+EnvScore:
+
+env_score_100 from forge_team_environment for the player’s offense team
+
+MatchupScore:
+
+matchup_score_100 from forge_team_matchup_context
+
+Filter by:
+
+defense_team = opponent_team
+
+position = 'TE'
+
+Use the existing env/matchup modifier helpers if they already exist (something like applyForgeEnvModifier / applyForgeMatchupModifier):
+
+Base: forge_alpha_base (or whatever the pre-modifier alpha is called)
+
+Env-adjusted:
+
+envAdjusted = applyForgeEnvModifier(forge_alpha_base, envScore_100, wEnv = 0.40)
+
+
+Matchup-adjusted:
+
+finalAlpha = applyForgeMatchupModifier(envAdjusted, matchupScore_100, wMatchup = 0.25)
+
+
+If you don’t have applyForgeMatchupModifier yet, mirror the same pattern as env (using (score/50 - 1) style logic and clamping to avoid multiplier explosion).
+
+Extend the TE sandbox API response to include (per player):
+
+forge_alpha_base (pre-modifier)
+
+forge_env_score_100
+
+forge_env_multiplier
+
+forge_matchup_score_100
+
+forge_matchup_multiplier
+
+forge_alpha_final (env + matchup adjusted)
+
+Frontend
+
+Update the TE rankings frontend (whatever file powers /rankings/te or the TE sandbox page) to:
+
+Accept the new fields in the row interface
+
+Display at least:
+
+Final FORGE α (env + matchup) as the primary score
+
+Env column (like WR/RB already have)
+
+(Optional) Matchup column if the WR/RB table already supports it
+
+Make sure TE rows don’t crash the table if some TE matchups are missing. If a matchup row is missing:
+
+Default matchupScore_100 to 50
+
+Default matchupMultiplier to 1.0
+
+Still apply env as normal
+
+2) QB: EnvScore Integration Only (No Matchup Yet)
+
+Backend
+
+Locate the QB sandbox handler (the one used for QB FORGE alpha rankings).
+
+For each QB row, fetch:
+
+Offense team
+
+EnvScore from forge_team_environment via env_score_100
+
+Apply only the env modifier for now:
+
+envAdjusted = applyForgeEnvModifier(forge_alpha_base, envScore_100, wEnv = 0.40);
+
+
+Extend the QB sandbox API response with:
+
+forge_alpha_base
+
+forge_env_score_100
+
+forge_env_multiplier
+
+forge_alpha_final (env-adjusted only)
+
+Do NOT attempt to join or reference forge_team_matchup_context for QBs in this task.
+
+Frontend
+
+Update the QB rankings frontend (e.g. /rankings/qb when it’s hooked up) to:
+
+Show FORGE α (env-adjusted) as primary
+
+Add an Env column consistent with WR/RB/TE
+
+If the QB table shares a generic rankings component with WR/RB/TE, update the typings so QBs can omit matchup fields without errors (or keep them undefined).
+
+3) Sanity Checks
+
+For a few known test players (you can pick any TE/QB with clear offensive context):
+
+Confirm forge_env_score_100 matches the team env from forge_team_environment
+
+Confirm multipliers are sane:
+
+Env multipliers should usually be in a ~0.90–1.10 band, not wild (no 1.5x nonsense).
+
+Confirm TE final alpha changes when you tweak env/matchup values (you can temporarily hard-code for testing if needed).
+
+Ensure no breaking changes to existing WR/RB env integration.
+
+4) Non-Goals (Important)
+
+Do not try to build QB matchup rows in forge_team_matchup_context in this task.
+
+Do not change the underlying envScore v0.2 math.
+
+Do not change WR/RB behavior except where shared helpers are reused.
+
+Once this is done, we’ll:
+
+Treat TE as fully context-aware (env + matchup)
+
+Treat QB as env-aware-only
+
+Come back later with a dedicated QB Matchup Module spec to extend forge_team_matchup_context for QBs.

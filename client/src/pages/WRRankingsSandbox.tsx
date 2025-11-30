@@ -215,6 +215,18 @@ interface TESandboxPlayer {
   // Injury status
   injuryStatus: string | null;
   injuryType: string | null;
+  // FORGE Alpha fields (v0.2.2 - Env + Matchup)
+  alphaScore?: number;
+  forge_alpha_base?: number;
+  forge_alpha_env?: number;
+  forge_env_score_100?: number | null;
+  forge_env_multiplier?: number;
+  forge_matchup_score_100?: number | null;
+  forge_matchup_multiplier?: number;
+  forge_opponent?: string | null;
+  volumeIndex?: number;
+  efficiencyIndex?: number;
+  stabilityIndex?: number;
 }
 
 interface SandboxResponse {
@@ -1054,7 +1066,7 @@ export default function WRRankingsSandbox() {
               <button
                 onClick={() => {
                   setPosition('TE');
-                  setSortField('customAlphaScore');
+                  setSortField('alphaScore');
                   setSortOrder('desc');
                 }}
                 className={`px-4 py-2 rounded-lg font-semibold transition-all ${
@@ -2115,11 +2127,17 @@ export default function WRRankingsSandbox() {
                     <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider" title="Context Tag (Phase 2)">
                       Context
                     </th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-sky-400 uppercase tracking-wider" title="Team Offensive Environment (v0.2.1)">
+                      Env
+                    </th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-rose-400 uppercase tracking-wider" title="Matchup vs Opponent Defense (v0.2.2)">
+                      Matchup
+                    </th>
                     <th className="px-3 py-3 text-center text-xs font-semibold text-purple-400 uppercase tracking-wider">
                       <button 
-                        onClick={() => handleSort('customAlphaScore')}
+                        onClick={() => handleSort('alphaScore')}
                         className="flex items-center gap-1 hover:text-purple-300 transition-colors"
-                        data-testid="te-sort-customAlphaScore"
+                        data-testid="te-sort-alphaScore"
                       >
                         <span>Alpha</span>
                         <ArrowUpDown className="w-3 h-3" />
@@ -2201,8 +2219,47 @@ export default function WRRankingsSandbox() {
                             )}
                           </td>
                           <td className="px-3 py-3 text-center">
+                            {tePlayer.forge_env_score_100 != null ? (
+                              <span 
+                                className={`font-medium ${
+                                  tePlayer.forge_env_score_100 >= 60 ? 'text-green-400' :
+                                  tePlayer.forge_env_score_100 >= 55 ? 'text-emerald-400' :
+                                  tePlayer.forge_env_score_100 >= 45 ? 'text-sky-300' :
+                                  tePlayer.forge_env_score_100 >= 40 ? 'text-orange-400' :
+                                  'text-red-400'
+                                }`}
+                                title={`Env: ${tePlayer.forge_env_score_100} (${tePlayer.forge_env_multiplier?.toFixed(3)}x)`}
+                              >
+                                {tePlayer.forge_env_score_100}
+                              </span>
+                            ) : (
+                              <span className="text-gray-600">–</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            {tePlayer.forge_matchup_score_100 != null && tePlayer.forge_opponent ? (
+                              <div className="flex flex-col items-center gap-0.5">
+                                <span 
+                                  className={`text-xs font-medium ${
+                                    tePlayer.forge_matchup_score_100 >= 70 ? 'text-green-400' :
+                                    tePlayer.forge_matchup_score_100 >= 55 ? 'text-emerald-400' :
+                                    tePlayer.forge_matchup_score_100 >= 45 ? 'text-rose-300' :
+                                    tePlayer.forge_matchup_score_100 >= 30 ? 'text-orange-400' :
+                                    'text-red-400'
+                                  }`}
+                                  title={`vs ${tePlayer.forge_opponent}: ${tePlayer.forge_matchup_score_100} (${tePlayer.forge_matchup_multiplier?.toFixed(3)}x)`}
+                                >
+                                  {tePlayer.forge_opponent}
+                                </span>
+                                <span className="text-[10px] text-gray-500">{tePlayer.forge_matchup_score_100}</span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-600">–</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-center">
                             <div className="flex flex-col items-center gap-0.5">
-                              <span className="font-bold text-purple-400 text-base">{tePlayer.customAlphaScore ?? 0}</span>
+                              <span className="font-bold text-purple-400 text-base">{tePlayer.alphaScore?.toFixed(1) ?? tePlayer.customAlphaScore ?? 0}</span>
                               {isCustomWeights && (
                                 <span className="text-[9px] text-purple-300/60 uppercase tracking-wide">custom</span>
                               )}

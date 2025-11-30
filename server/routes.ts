@@ -6190,6 +6190,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // ============================================================
+      // STEP 4.5: Fetch env scores, matchup scores, and schedule
+      // ============================================================
+      const { forgeTeamEnvironment, forgeTeamMatchupContext } = await import('@shared/schema');
+      const { applyForgeEnvModifier, applyForgeMatchupModifier } = await import('./modules/forge/contextModifiers');
+      
+      // Get latest week's environment scores
+      const latestWeekResult = await db.execute(sql`
+        SELECT MAX(week) as latest_week FROM forge_team_environment WHERE season = 2025
+      `);
+      const latestEnvWeek = (latestWeekResult.rows[0] as any)?.latest_week || 12;
+      
+      // Fetch env scores
+      const envScores = await db
+        .select({
+          team: forgeTeamEnvironment.team,
+          envScore100: forgeTeamEnvironment.envScore100,
+        })
+        .from(forgeTeamEnvironment)
+        .where(
+          and(
+            eq(forgeTeamEnvironment.season, 2025),
+            eq(forgeTeamEnvironment.week, latestEnvWeek)
+          )
+        );
+      
+      const envMap = new Map<string, number>();
+      for (const row of envScores) {
+        if (row.team && row.envScore100 !== null) {
+          envMap.set(row.team, row.envScore100);
+        }
+      }
+      
+      // Fetch TE matchup scores (keyed by defense team)
+      const matchupScores = await db
+        .select({
+          defenseTeam: forgeTeamMatchupContext.defenseTeam,
+          matchupScore100: forgeTeamMatchupContext.matchupScore100,
+        })
+        .from(forgeTeamMatchupContext)
+        .where(
+          and(
+            eq(forgeTeamMatchupContext.season, 2025),
+            eq(forgeTeamMatchupContext.week, latestEnvWeek),
+            eq(forgeTeamMatchupContext.position, 'TE')
+          )
+        );
+      
+      // Map: defense_team -> matchup_score_100 (higher = easier matchup for TEs)
+      const matchupMap = new Map<string, number>();
+      for (const row of matchupScores) {
+        if (row.defenseTeam && row.matchupScore100 !== null) {
+          matchupMap.set(row.defenseTeam, row.matchupScore100);
+        }
+      }
+      
+      // Get opponent data from schedule
+      const scheduleResult = await db.execute(sql`
+        SELECT home, away FROM schedule 
+        WHERE season = 2025 AND week = ${latestEnvWeek}
+      `);
+      
+      // Build team -> opponent map
+      const opponentMap = new Map<string, string>();
+      for (const row of scheduleResult.rows as any[]) {
+        if (row.home && row.away) {
+          opponentMap.set(row.home, row.away);
+          opponentMap.set(row.away, row.home);
+        }
+      }
+
+      // ============================================================
       // STEP 5: Filter for minimum qualifications
       // ============================================================
       const qualified = baseResults.filter(r => r.gamesPlayed >= 2 && r.totalTargets >= 10);
@@ -6449,19 +6520,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Injury status
           injuryStatus: player.injuryStatus ?? null,
           injuryType: player.injuryType ?? null,
+          // Store for alpha calculation
+          _team: player.team,
+          _fpPerGame: fpPerGame,
+          _productionIndex: productionIndex,
+          _snapStickinessIndex: snapStickinessIndex,
+          _tdRoleScore: tdRoleScore,
+          _targetsPerGame: targetsPerGame,
         };
       });
 
       // ============================================================
-      // STEP 8: Sort by fantasy points and return top 40
+      // STEP 8: Calculate TE Alpha with Env + Matchup modifiers
       // ============================================================
-      const ranked = processedPlayers
-        .sort((a, b) => b.fantasyPointsPpr - a.fantasyPointsPpr)
+      const ranked = processedPlayers.map(player => {
+        // TE Alpha Score Calculation (similar to WR 4-pillar but adapted for TE)
+        // Volume: targets/game, routes/game - normalized to 0-100
+        const volumeIndex = Math.min(100, (
+          (Math.min(1, player._targetsPerGame / 8) * 0.5) +  // 8 tgt/game = max volume
+          (Math.min(1, player.routesPerGame / 25) * 0.5)     // 25 routes/game = max
+        ) * 100);
+        
+        // Production: already calculated productionIndex (0-1) → scale to 100
+        const productionIndexScaled = player._productionIndex * 100;
+        
+        // Efficiency: fpPerTarget normalized
+        const efficiencyIndex = Math.min(100, (player.fpPerTarget / 2.0) * 100);  // 2.0 ppr/target = elite TE
+        
+        // Stability: snapStickiness and lower volatility
+        const stabilityIndex = Math.min(100, (
+          player._snapStickinessIndex * 0.6 +
+          (1 - player.volatilityScore) * 0.4
+        ) * 100);
+        
+        // Combined base alpha (50/25/15/10 weights like WR)
+        const rawAlpha = (
+          volumeIndex * 0.50 +
+          productionIndexScaled * 0.25 +
+          efficiencyIndex * 0.15 +
+          stabilityIndex * 0.10
+        );
+        
+        // Calibrate to 25-90 range
+        const calibratedAlpha = Math.max(25, Math.min(90, rawAlpha * 0.85 + 10));
+        
+        // Apply environment modifier (wEnv=0.40)
+        const teamEnvScore = envMap.get(player._team || '') ?? null;
+        const envResult = applyForgeEnvModifier({
+          rawAlpha: calibratedAlpha,
+          envScore: teamEnvScore,
+          wEnv: 0.40,
+        });
+        
+        // Apply matchup modifier (wMatchup=0.25)
+        const opponent = opponentMap.get(player._team || '') ?? null;
+        const matchupScore = opponent ? (matchupMap.get(opponent) ?? null) : null;
+        const matchupResult = applyForgeMatchupModifier({
+          alphaAfterEnv: envResult.envAdjustedAlpha,
+          matchupScore,
+          wMatchup: 0.25,
+        });
+        
+        // Remove internal fields and add FORGE alpha fields
+        const { _team, _fpPerGame, _productionIndex, _snapStickinessIndex, _tdRoleScore, _targetsPerGame, ...cleanPlayer } = player;
+        
+        return {
+          ...cleanPlayer,
+          // FORGE Alpha fields
+          alphaScore: matchupResult.finalAlpha,
+          forge_alpha_base: Math.round(calibratedAlpha * 100) / 100,
+          forge_alpha_env: envResult.envAdjustedAlpha,
+          forge_env_score_100: teamEnvScore,
+          forge_env_multiplier: envResult.envMultiplier,
+          forge_matchup_score_100: matchupScore,
+          forge_matchup_multiplier: matchupResult.matchupMultiplier,
+          forge_opponent: opponent,
+          // Pillar indices (for transparency)
+          volumeIndex: Math.round(volumeIndex * 100) / 100,
+          efficiencyIndex: Math.round(efficiencyIndex * 100) / 100,
+          stabilityIndex: Math.round(stabilityIndex * 100) / 100,
+        };
+      })
+        .sort((a, b) => b.alphaScore - a.alphaScore)
         .slice(0, 40);
 
       res.json({
         success: true,
         season: 2025,
+        envWeek: latestEnvWeek,
+        matchupWeek: latestEnvWeek,
+        matchupsAvailable: opponentMap.size > 0,
         minGames: 2,
         minTargets: 10,
         count: ranked.length,
@@ -6633,6 +6781,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tds: row.weeklyTds || 0,
           ints: row.weeklyInts || 0,
         });
+      }
+
+      // ============================================================
+      // STEP 5.5: Fetch env scores for QB (env-only, no matchup yet)
+      // ============================================================
+      const { forgeTeamEnvironment } = await import('@shared/schema');
+      const { applyForgeEnvModifier } = await import('./modules/forge/contextModifiers');
+      
+      // Get latest week's environment scores
+      const latestWeekResult = await db.execute(sql`
+        SELECT MAX(week) as latest_week FROM forge_team_environment WHERE season = 2025
+      `);
+      const latestEnvWeek = (latestWeekResult.rows[0] as any)?.latest_week || 12;
+      
+      // Fetch env scores
+      const envScores = await db
+        .select({
+          team: forgeTeamEnvironment.team,
+          envScore100: forgeTeamEnvironment.envScore100,
+        })
+        .from(forgeTeamEnvironment)
+        .where(
+          and(
+            eq(forgeTeamEnvironment.season, 2025),
+            eq(forgeTeamEnvironment.week, latestEnvWeek)
+          )
+        );
+      
+      const envMap = new Map<string, number>();
+      for (const row of envScores) {
+        if (row.team && row.envScore100 !== null) {
+          envMap.set(row.team, row.envScore100);
+        }
       }
 
       // ============================================================
@@ -6942,22 +7123,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Sack metrics
           sackRate: sackRate !== null ? Math.round(sackRate * 100) / 100 : null,
+          // Store team for env calculation
+          _team: qb.team,
+          _volumeIndex: volumeIndex,
+          _productionIndex: productionIndex,
+          _efficiencyIndex: efficiencyIndex,
+          _contextIndex: contextIndex,
         };
       });
 
       // ============================================================
-      // STEP 8: Sort by fantasy points and return
+      // STEP 8: Calculate QB Alpha with Env modifier (no matchup yet)
       // ============================================================
-      const ranked = processedQBs
-        .sort((a, b) => b.totalFantasyPoints - a.totalFantasyPoints)
+      const ranked = processedQBs.map(qb => {
+        // QB Alpha Score Calculation (25/25/35/15 weights as per pillar spec)
+        const rawAlpha = (
+          qb._volumeIndex * 0.25 +
+          qb._productionIndex * 0.25 +
+          qb._efficiencyIndex * 0.35 +
+          qb._contextIndex * 0.15
+        );
+        
+        // Calibrate to 25-90 range
+        const calibratedAlpha = Math.max(25, Math.min(90, rawAlpha * 0.85 + 10));
+        
+        // Apply environment modifier (wEnv=0.40) - env only, no matchup for QB
+        const teamEnvScore = envMap.get(qb._team || '') ?? null;
+        const envResult = applyForgeEnvModifier({
+          rawAlpha: calibratedAlpha,
+          envScore: teamEnvScore,
+          wEnv: 0.40,
+        });
+        
+        // Remove internal fields and add FORGE alpha fields
+        const { _team, _volumeIndex, _productionIndex, _efficiencyIndex, _contextIndex, ...cleanQb } = qb;
+        
+        return {
+          ...cleanQb,
+          // FORGE Alpha fields (env-only for QB)
+          alphaScore: envResult.envAdjustedAlpha,  // env-adjusted only (no matchup)
+          forge_alpha_base: Math.round(calibratedAlpha * 100) / 100,
+          forge_alpha_env: envResult.envAdjustedAlpha,
+          forge_env_score_100: teamEnvScore,
+          forge_env_multiplier: envResult.envMultiplier,
+          // No matchup fields for QB (yet)
+          forge_matchup_score_100: null,
+          forge_matchup_multiplier: null,
+          forge_opponent: null,
+        };
+      })
+        .sort((a, b) => b.alphaScore - a.alphaScore)
         .slice(0, 40);
 
       res.json({
         success: true,
         season: 2025,
+        envWeek: latestEnvWeek,
+        matchupsAvailable: false,  // QB matchups not implemented yet
         minAttempts: 100,
         count: ranked.length,
-        version: 'qb-sandbox-v1',
+        version: 'qb-sandbox-v1.1',  // v1.1 = env modifier added
         data: ranked,
       });
 
