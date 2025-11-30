@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, RefreshCw, Beaker, TrendingUp, TrendingDown, Minus, Download, Trophy } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Beaker, TrendingUp, TrendingDown, Minus, Download, Trophy, Target, Zap, BarChart3 } from 'lucide-react';
 import type { ForgePosition, ForgeScore } from '../types/forge';
 import { fetchForgeBatch, createForgeSnapshot, fetchForgeScore, fetchPlayerContext, type PlayerContextResponse } from '../api/forge';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,213 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
   else colorClass = 'text-red-400';
 
   return <span className={`font-mono ${colorClass}`}>{confidence}</span>;
+}
+
+function StatBox({ label, value, format = 'default' }: { label: string; value: any; format?: 'default' | 'pct' | 'decimal' }) {
+  let displayValue = '-';
+  if (value != null && value !== undefined) {
+    if (format === 'pct') {
+      displayValue = `${(Number(value) * 100).toFixed(1)}%`;
+    } else if (format === 'decimal') {
+      displayValue = Number(value).toFixed(2);
+    } else {
+      displayValue = String(value);
+    }
+  }
+  return (
+    <div className="bg-[#1a1f2e] p-2 rounded text-center">
+      <div className="text-gray-500 text-xs">{label}</div>
+      <div className="font-mono text-white">{displayValue}</div>
+    </div>
+  );
+}
+
+function AdvancedStatsPanel({ context }: { context: PlayerContextResponse }) {
+  const { identity, usage = {}, efficiency = {}, finishing = {}, metaStats = { gamesPlayed: 0, lastUpdated: '' } } = context;
+  const pos = identity.position;
+  const hasStats = Object.keys(usage).length > 0 || Object.keys(efficiency).length > 0 || Object.keys(finishing).length > 0;
+
+  if (!hasStats) return null;
+
+  return (
+    <div className="mt-4 p-4 bg-[#020617] border border-gray-600 rounded-lg" data-testid="advanced-stats-panel">
+      <div className="flex items-center gap-2 mb-3">
+        <BarChart3 className="h-5 w-5 text-blue-400" />
+        <span className="font-semibold text-white">Advanced Stats</span>
+        <span className="text-xs text-gray-500">{metaStats.gamesPlayed} games</span>
+      </div>
+
+      {pos === 'QB' && (
+        <>
+          <div className="mb-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="h-4 w-4 text-purple-400" />
+              <span className="text-sm text-gray-400">Usage</span>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              <StatBox label="Attempts" value={usage.attempts} />
+              <StatBox label="Completions" value={usage.completions} />
+              <StatBox label="Rush Att" value={usage.rushAttempts} />
+              <StatBox label="Air Yards" value={usage.airYards} />
+            </div>
+          </div>
+          <div className="mb-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="h-4 w-4 text-yellow-400" />
+              <span className="text-sm text-gray-400">Efficiency</span>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              <StatBox label="Comp %" value={efficiency.completionPct} format="pct" />
+              <StatBox label="Y/Att" value={efficiency.yardsPerAttempt} format="decimal" />
+              <StatBox label="EPA/Att" value={efficiency.epaPerAttempt} format="decimal" />
+              <StatBox label="Success %" value={efficiency.successRate} format="pct" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Trophy className="h-4 w-4 text-green-400" />
+              <span className="text-sm text-gray-400">Production</span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              <StatBox label="Pass Yds" value={finishing.passYards} />
+              <StatBox label="Pass TDs" value={finishing.passTds} />
+              <StatBox label="INTs" value={finishing.ints} />
+              <StatBox label="Rush Yds" value={finishing.rushYards} />
+              <StatBox label="Rush TDs" value={finishing.rushTds} />
+            </div>
+          </div>
+        </>
+      )}
+
+      {pos === 'RB' && (
+        <>
+          <div className="mb-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="h-4 w-4 text-purple-400" />
+              <span className="text-sm text-gray-400">Usage</span>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              <StatBox label="Carries" value={usage.carries} />
+              <StatBox label="Targets" value={usage.targets} />
+              <StatBox label="Carry Share" value={usage.carryShare} format="pct" />
+              <StatBox label="Tgt Share" value={usage.targetShare} format="pct" />
+            </div>
+          </div>
+          <div className="mb-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="h-4 w-4 text-yellow-400" />
+              <span className="text-sm text-gray-400">Efficiency</span>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              <StatBox label="Y/Carry" value={efficiency.yardsPerCarry} format="decimal" />
+              <StatBox label="Rush Succ%" value={efficiency.rushSuccessRate} format="pct" />
+              <StatBox label="Catch %" value={efficiency.catchRate} format="pct" />
+              <StatBox label="YAC/Rec" value={efficiency.yacPerRec} format="decimal" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Trophy className="h-4 w-4 text-green-400" />
+              <span className="text-sm text-gray-400">Production</span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              <StatBox label="Rush Yds" value={finishing.rushYards} />
+              <StatBox label="Rec Yds" value={finishing.recYards} />
+              <StatBox label="Total TDs" value={finishing.totalTds} />
+              <StatBox label="GL Carries" value={finishing.goalLineCarries} />
+              <StatBox label="RZ Carries" value={finishing.redzoneCarries} />
+            </div>
+          </div>
+        </>
+      )}
+
+      {pos === 'WR' && (
+        <>
+          <div className="mb-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="h-4 w-4 text-purple-400" />
+              <span className="text-sm text-gray-400">Usage</span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              <StatBox label="Targets" value={usage.targets} />
+              <StatBox label="Rec" value={usage.receptions} />
+              <StatBox label="Air Yds" value={usage.airYards} />
+              <StatBox label="Tgt Share" value={usage.targetShare} format="pct" />
+              <StatBox label="AY Share" value={usage.airYardsShare} format="pct" />
+            </div>
+          </div>
+          <div className="mb-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="h-4 w-4 text-yellow-400" />
+              <span className="text-sm text-gray-400">Efficiency</span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              <StatBox label="Catch %" value={efficiency.catchRate} format="pct" />
+              <StatBox label="Y/Tgt" value={efficiency.yardsPerTarget} format="decimal" />
+              <StatBox label="EPA/Tgt" value={efficiency.epaPerTarget} format="decimal" />
+              <StatBox label="YAC/Rec" value={efficiency.yacPerRec} format="decimal" />
+              <StatBox label="YPRR" value={efficiency.yprrEst} format="decimal" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Trophy className="h-4 w-4 text-green-400" />
+              <span className="text-sm text-gray-400">Production</span>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              <StatBox label="Rec Yds" value={finishing.recYards} />
+              <StatBox label="TDs" value={finishing.tds} />
+              <StatBox label="1st Downs" value={finishing.firstDowns} />
+              <StatBox label="YAC" value={finishing.yac} />
+            </div>
+          </div>
+        </>
+      )}
+
+      {pos === 'TE' && (
+        <>
+          <div className="mb-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="h-4 w-4 text-purple-400" />
+              <span className="text-sm text-gray-400">Usage</span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              <StatBox label="Targets" value={usage.targets} />
+              <StatBox label="Rec" value={usage.receptions} />
+              <StatBox label="Air Yds" value={usage.airYards} />
+              <StatBox label="Tgt Share" value={usage.targetShare} format="pct" />
+              <StatBox label="AY Share" value={usage.airYardsShare} format="pct" />
+            </div>
+          </div>
+          <div className="mb-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="h-4 w-4 text-yellow-400" />
+              <span className="text-sm text-gray-400">Efficiency</span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              <StatBox label="Catch %" value={efficiency.catchRate} format="pct" />
+              <StatBox label="Y/Tgt" value={efficiency.yardsPerTarget} format="decimal" />
+              <StatBox label="EPA/Tgt" value={efficiency.epaPerTarget} format="decimal" />
+              <StatBox label="YAC/Rec" value={efficiency.yacPerRec} format="decimal" />
+              <StatBox label="Y/Rec" value={efficiency.yardsPerReception} format="decimal" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Trophy className="h-4 w-4 text-green-400" />
+              <span className="text-sm text-gray-400">Production</span>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              <StatBox label="Rec Yds" value={finishing.recYards} />
+              <StatBox label="TDs" value={finishing.tds} />
+              <StatBox label="1st Downs" value={finishing.firstDowns} />
+              <StatBox label="YAC" value={finishing.yac} />
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 export default function ForgeLab() {
@@ -439,6 +646,8 @@ export default function ForgeLab() {
                 </div>
               </div>
             )}
+
+            {playerContext && <AdvancedStatsPanel context={playerContext} />}
           </CardContent>
         </Card>
 
