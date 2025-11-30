@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, RefreshCw, Beaker, TrendingUp, TrendingDown, Minus, Download } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Beaker, TrendingUp, TrendingDown, Minus, Download, Trophy } from 'lucide-react';
 import type { ForgePosition, ForgeScore } from '../types/forge';
-import { fetchForgeBatch, createForgeSnapshot, fetchForgeScore } from '../api/forge';
+import { fetchForgeBatch, createForgeSnapshot, fetchForgeScore, fetchPlayerContext, type PlayerContextResponse } from '../api/forge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -68,6 +68,7 @@ export default function ForgeLab() {
   const [inspectId, setInspectId] = useState('');
   const [inspectResult, setInspectResult] = useState<ForgeScore | null>(null);
   const [inspecting, setInspecting] = useState(false);
+  const [playerContext, setPlayerContext] = useState<PlayerContextResponse | null>(null);
 
   const load = async () => {
     try {
@@ -123,17 +124,29 @@ export default function ForgeLab() {
       setInspecting(true);
       setError(null);
       setInspectResult(null);
+      setPlayerContext(null);
 
-      const res = await fetchForgeScore(id);
-      if (res.success) {
-        setInspectResult(res.score);
-      } else {
-        setInspectResult(null);
+      const [scoreRes, contextRes] = await Promise.allSettled([
+        fetchForgeScore(id),
+        fetchPlayerContext(id, 2025)
+      ]);
+
+      if (scoreRes.status === 'fulfilled' && scoreRes.value.success) {
+        setInspectResult(scoreRes.value.score);
+      }
+      
+      if (contextRes.status === 'fulfilled') {
+        setPlayerContext(contextRes.value);
+      }
+
+      if (scoreRes.status === 'rejected' && contextRes.status === 'rejected') {
+        setError('Failed to fetch player data');
       }
     } catch (err: any) {
       console.error(err);
       setError(err.message ?? 'Failed to fetch FORGE score for player');
       setInspectResult(null);
+      setPlayerContext(null);
     } finally {
       setInspecting(false);
     }
@@ -362,6 +375,68 @@ export default function ForgeLab() {
                     ⚠ Score capped due to missing data
                   </div>
                 )}
+              </div>
+            )}
+
+            {playerContext?.fantasy && (
+              <div className="mt-4 p-4 bg-[#020617] border border-gray-600 rounded-lg" data-testid="fantasy-summary">
+                <div className="flex items-center gap-2 mb-3">
+                  <Trophy className="h-5 w-5 text-yellow-400" />
+                  <span className="font-semibold text-white">Fantasy Summary</span>
+                </div>
+                
+                <div className="text-sm text-gray-300 mb-4 bg-[#1a1f2e] p-3 rounded" data-testid="fantasy-summary-text">
+                  Through Week {playerContext.fantasy.dataThroughWeek ?? '?'}, {playerContext.identity.displayName} is {playerContext.identity.position}{playerContext.fantasy.pprRankPos} in PPR with {playerContext.fantasy.totalPpr?.toFixed(1) ?? '?'} points over {playerContext.fantasy.gamesPlayed ?? '?'} games.
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                  <div className="bg-[#1a1f2e] p-2 rounded">
+                    <div className="text-gray-500 text-xs">Games</div>
+                    <div className="font-mono text-white">{playerContext.fantasy.gamesPlayed ?? '-'}</div>
+                  </div>
+                  <div className="bg-[#1a1f2e] p-2 rounded">
+                    <div className="text-gray-500 text-xs">Last Played</div>
+                    <div className="font-mono text-white">Week {playerContext.fantasy.lastWeekPlayed ?? '-'}</div>
+                  </div>
+                  <div className="bg-[#1a1f2e] p-2 rounded">
+                    <div className="text-gray-500 text-xs">Data Through</div>
+                    <div className="font-mono text-white">Week {playerContext.fantasy.dataThroughWeek ?? '-'}</div>
+                  </div>
+                  <div className="bg-[#1a1f2e] p-2 rounded">
+                    <div className="text-gray-500 text-xs">PPR Rank</div>
+                    <div className="font-mono text-white">{playerContext.identity.position}{playerContext.fantasy.pprRankPos ?? '-'}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 mt-3 text-sm">
+                  <div className="bg-[#1a1f2e] p-2 rounded text-center">
+                    <div className="text-gray-500 text-xs">Total PPR</div>
+                    <div className="font-mono text-green-400 text-lg">{playerContext.fantasy.totalPpr?.toFixed(1) ?? '-'}</div>
+                  </div>
+                  <div className="bg-[#1a1f2e] p-2 rounded text-center">
+                    <div className="text-gray-500 text-xs">Total Half-PPR</div>
+                    <div className="font-mono text-blue-400 text-lg">{playerContext.fantasy.totalHalfPpr?.toFixed(1) ?? '-'}</div>
+                  </div>
+                  <div className="bg-[#1a1f2e] p-2 rounded text-center">
+                    <div className="text-gray-500 text-xs">Total Standard</div>
+                    <div className="font-mono text-gray-300 text-lg">{playerContext.fantasy.totalStd?.toFixed(1) ?? '-'}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 mt-3 text-sm">
+                  <div className="bg-[#1a1f2e] p-2 rounded text-center">
+                    <div className="text-gray-500 text-xs">Last Week PPR</div>
+                    <div className="font-mono text-green-400">{playerContext.fantasy.lastWeekPpr?.toFixed(1) ?? '-'}</div>
+                  </div>
+                  <div className="bg-[#1a1f2e] p-2 rounded text-center">
+                    <div className="text-gray-500 text-xs">Last Week Half</div>
+                    <div className="font-mono text-blue-400">{playerContext.fantasy.lastWeekHalfPpr?.toFixed(1) ?? '-'}</div>
+                  </div>
+                  <div className="bg-[#1a1f2e] p-2 rounded text-center">
+                    <div className="text-gray-500 text-xs">Last Week Std</div>
+                    <div className="font-mono text-gray-300">{playerContext.fantasy.lastWeekStd?.toFixed(1) ?? '-'}</div>
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
