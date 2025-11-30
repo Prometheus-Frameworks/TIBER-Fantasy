@@ -1,0 +1,234 @@
+🧠 Replit Opus Agent Task — Add MatchupScore Modifier on Top of Env for WR/RB
+
+Goal
+We already apply an EnvScore-based multiplier to rawAlpha for WR and RB in the sandbox endpoints.
+Now we want to layer in a MatchupScore-based multiplier for the specific defensive opponent, per position, to get a final context alpha.
+
+Final structure per player-row:
+
+forge_alpha_base — original calibrated alpha (no context)
+
+forge_alpha_env — env-adjusted alpha
+
+forge_alpha — env + matchup adjusted alpha (final)
+
+forge_env_score_100, forge_env_multiplier
+
+forge_matchup_score_100, forge_matchup_multiplier
+
+1) Confirm matchup source
+
+Use the same data powering /api/forge/matchup-debug?defense=NYJ&position=WR:
+
+There should already be a table or view like forge_team_matchup_context or similar, with:
+
+season
+
+defense_team
+
+position (e.g. 'WR', 'RB')
+
+matchup_score_100 (0–100)
+
+We’ll join that into the WR/RB sandbox queries using:
+
+season
+
+the defense team they’re facing that week
+
+position
+
+If we don’t have per-week opponents wired yet and only have season-level matchup scores per defense/position, that’s fine for v0 — just use season-level matchup for now.
+
+2) Extend contextModifiers with matchup helper
+
+In contextModifiers.ts, add:
+
+export type ForgeMatchupInputs = {
+  alphaAfterEnv: number;        // already env-adjusted alpha
+  matchupScore: number | null;  // 0–100, defense vs position
+  wMatchup?: number;            // default 0.25
+};
+
+export type ForgeMatchupOutput = {
+  envAdjustedAlpha: number;
+  finalAlpha: number;
+  matchupMultiplier: number;
+};
+
+export function applyForgeMatchupModifier({
+  alphaAfterEnv,
+  matchupScore,
+  wMatchup = 0.25,
+}: ForgeMatchupInputs): ForgeMatchupOutput {
+  const safeScore = (score: number | null | undefined): number => {
+    if (score == null || Number.isNaN(score)) return 50; // neutral
+    return Math.max(0, Math.min(100, score));
+  };
+
+  const mu = safeScore(matchupScore);
+
+  // matchupScore [0,100] → factor around 1.0
+  const muFactor = 1 + wMatchup * (mu / 50 - 1);
+
+  const clamp = (v: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, v));
+
+  const envAdjustedAlpha = clamp(alphaAfterEnv, 25, 90);
+  let finalAlpha = envAdjustedAlpha * muFactor;
+  finalAlpha = clamp(finalAlpha, 25, 90);
+
+  return {
+    envAdjustedAlpha,
+    finalAlpha,
+    matchupMultiplier: muFactor,
+  };
+}
+
+3) Join matchupScore into WR sandbox pipeline
+
+In the WR sandbox backend code:
+
+You already have env_score_100 and apply applyForgeEnvModifier.
+
+Now join in the defense’s matchup score for WR:
+
+From the underlying query that builds the sandbox data, join something like:
+
+LEFT JOIN forge_team_matchup_context mt
+  ON mt.season = <season>
+ AND mt.defense_team = <opponent_team>
+ AND mt.position = 'WR';
+
+
+Select mt.matchup_score_100 as matchup_score_100.
+
+If the sandbox isn’t yet opponent-aware and only has offense team, you can temporarily:
+
+hardcode a sample opponent for testing, OR
+
+skip the join for WR until opponents are wired
+
+…but the ideal is to use the actual weekly opponent from the same source that powers the rankings.
+
+4) Apply env + matchup in WR sandbox builder
+
+In the WR sandbox row builder:
+
+import {
+  applyForgeEnvModifier,
+  applyForgeMatchupModifier,
+} from './contextModifiers';
+
+function buildWrSandboxRow(row: any): WrSandboxRow {
+  const rawAlpha = Number(row.raw_alpha);
+  const envScore = row.env_score_100 != null ? Number(row.env_score_100) : null;
+  const matchupScore = row.matchup_score_100 != null ? Number(row.matchup_score_100) : null;
+
+  const env = applyForgeEnvModifier({
+    rawAlpha,
+    envScore,
+    wEnv: 0.40, // keep current sandbox setting
+  });
+
+  const mu = applyForgeMatchupModifier({
+    alphaAfterEnv: env.envAdjustedAlpha,
+    matchupScore,
+    wMatchup: 0.25,
+  });
+
+  return {
+    ...row,
+    forge_alpha_base: env.baseAlpha,
+    forge_alpha_env: env.envAdjustedAlpha,
+    forge_env_score_100: envScore,
+    forge_env_multiplier: env.envMultiplier,
+    forge_matchup_score_100: matchupScore,
+    forge_matchup_multiplier: mu.matchupMultiplier,
+    // final alpha with env + matchup
+    alphaScore: mu.finalAlpha,
+  };
+}
+
+
+So right now in sandbox:
+
+alphaScore = env + matchup adjusted
+
+forge_alpha_base = original
+
+forge_alpha_env = env-only step
+
+5) Mirror the same for RB sandbox
+
+Exactly the same pattern, but with:
+
+position = 'RB' in the matchup join
+
+RB-specific sandbox source data
+
+Make sure RB sandbox rows include:
+
+forge_env_score_100, forge_env_multiplier
+
+forge_matchup_score_100, forge_matchup_multiplier
+
+alphaScore as final output
+
+6) API & frontend
+
+Ensure both WR and RB sandbox endpoints now return:
+
+forge_alpha_base
+
+forge_alpha_env
+
+forge_env_score_100
+
+forge_env_multiplier
+
+forge_matchup_score_100
+
+forge_matchup_multiplier
+
+alphaScore (final, env+matchup)
+
+Update the sandbox table component to:
+
+Still show alphaScore as the main “Alpha” column.
+
+Optionally expose env & matchup columns with tooltips or secondary columns for debugging.
+
+No visual over-design, just data.
+
+7) Sanity checks
+
+Once implemented:
+
+For a WR in a great offense vs easy pass D:
+
+EnvScore high, MatchupScore high → alphaScore slightly above env-only version.
+
+For a WR in a great offense vs elite pass D:
+
+EnvScore high, MatchupScore low → env lifts a bit, matchup drags back down.
+
+For a WR in a bad offense vs soft pass D:
+
+EnvScore low, MatchupScore high → env nerfs, matchup partially rescues.
+
+Confirm that:
+
+All final alphas stay in 25–90.
+
+No insane jumps from matchup alone.
+
+Acceptance Criteria
+
+WR & RB sandbox endpoints apply both env and matchup modifiers.
+
+alphaScore = context alpha (env + matchup).
+
+All intermediate fields (base, env-only, env/matchup scores, multipliers) are available for debug.
+
+No crazy swings; modifiers feel like small nudges, not total rewrites of the rankings.

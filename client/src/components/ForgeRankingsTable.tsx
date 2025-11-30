@@ -19,6 +19,9 @@ export interface ForgeRow {
   extraColumns?: Record<string, number | string | null>;
   forgeEnvScore?: number | null;
   forgeEnvMultiplier?: number | null;
+  forgeMatchupScore?: number | null;
+  forgeMatchupMultiplier?: number | null;
+  forgeOpponent?: string | null;
 }
 
 interface ForgeRankingsTableProps {
@@ -89,6 +92,15 @@ function getEnvLabel(score: number | null | undefined): { label: string; color: 
   if (score >= 45) return { label: 'Avg', color: 'text-slate-400', icon: '' };
   if (score >= 40) return { label: 'Below', color: 'text-orange-400', icon: '↓' };
   return { label: 'Poor', color: 'text-red-400', icon: '⚠' };
+}
+
+function getMatchupLabel(score: number | null | undefined): { label: string; color: string; icon: string } {
+  if (score == null) return { label: 'N/A', color: 'text-slate-500', icon: '' };
+  if (score >= 70) return { label: 'Smash', color: 'text-green-400', icon: '🎯' };
+  if (score >= 55) return { label: 'Good', color: 'text-emerald-400', icon: '↑' };
+  if (score >= 45) return { label: 'Neutral', color: 'text-slate-400', icon: '' };
+  if (score >= 30) return { label: 'Tough', color: 'text-orange-400', icon: '↓' };
+  return { label: 'Shadow', color: 'text-red-400', icon: '⛔' };
 }
 
 type SortField = 'playerName' | 'team' | 'sandboxAlpha' | 'forgeAlpha' | 'gamesPlayed' | 'delta';
@@ -392,6 +404,9 @@ export default function ForgeRankingsTable({
                 <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider" title="Offensive Environment Score">
                   Env
                 </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider" title="Weekly Matchup vs Defense">
+                  Matchup
+                </th>
                 {isDev && (
                   <>
                     <SortHeader field="sandboxAlpha" label="Sandbox α" />
@@ -477,6 +492,24 @@ export default function ForgeRankingsTable({
                           >
                             {env.icon && <span className="mr-0.5">{env.icon}</span>}
                             {row.forgeEnvScore != null ? row.forgeEnvScore : '—'}
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-3 py-2">
+                      {(() => {
+                        const matchup = getMatchupLabel(row.forgeMatchupScore);
+                        return (
+                          <span 
+                            className={`text-xs ${matchup.color}`}
+                            title={`Matchup vs ${row.forgeOpponent ?? 'TBD'}: ${row.forgeMatchupScore ?? 'N/A'}`}
+                          >
+                            {matchup.icon && <span className="mr-0.5">{matchup.icon}</span>}
+                            {row.forgeOpponent ? (
+                              <span>{row.forgeOpponent} ({row.forgeMatchupScore ?? '—'})</span>
+                            ) : (
+                              <span>—</span>
+                            )}
                           </span>
                         );
                       })()}

@@ -96,6 +96,42 @@ envAdjustedAlpha = baseAlpha * envFactor (clamped to [25, 90])
 - New "Env" column in ForgeRankingsTable showing team environment score
 - Color-coded: Elite (60+, green), Good (55+, emerald), Avg (45+), Below (40+), Poor (<40)
 
+### FORGE v0.2.2 — MatchupScore Modifier
+
+**Weekly Matchup Context Modifier:**
+- Layered matchup modifier on top of EnvScore for WR and RB rankings
+- Data source: `forge_team_matchup_context` table with position-specific `matchup_score_100` (0-100 scale, 50=neutral)
+- Weight: `wMatchup = 0.25` allows ±25% swings at score extremes
+
+**Formula:**
+```
+matchupFactor = 1 + 0.25 * (matchupScore/50 - 1)
+finalAlpha = envAdjustedAlpha * matchupFactor (clamped to [25, 90])
+```
+
+**Full Alpha Pipeline:**
+1. Base alpha (raw engine score)
+2. Env-adjusted alpha (wEnv=0.40)
+3. Matchup-adjusted alpha (wMatchup=0.25)
+4. Final alpha (clamped to [25, 90])
+
+**Examples (Week 12, 2025):**
+- P.Nacua (LA vs CIN): Base 80 → Env 87.68 → Matchup 75 (1.125x) → Final 90
+- G.Pickens (DAL vs WAS): Base 81 → Env 85.54 → Matchup 70 (1.10x) → Final 90
+- JSN (SEA vs ARI): Base 82 → Env 84.62 → Matchup 52 (1.01x) → Final 85.47
+
+**API Response Fields:**
+- `alphaScore`: Final context-adjusted alpha (env + matchup)
+- `forge_alpha_base`: Pre-environment base alpha
+- `forge_alpha_env`: Post-environment adjusted alpha
+- `forge_matchup_score_100`: Opponent's defensive matchup score (0-100)
+- `forge_matchup_multiplier`: Matchup factor (1.0 = neutral)
+- `forge_opponent`: Current week opponent team code
+
+**Frontend:**
+- New "Matchup" column in ForgeRankingsTable showing opponent and matchup score
+- Color-coded: Smash (70+, green), Good (55+, emerald), Neutral (45+), Tough (30+), Shadow (<30, red)
+
 **Why We Keep `rawAlpha`:**
 - `rawAlpha` = pure engine score, directly from FORGE's feature stack
 - `alpha` (calibrated) = UI-facing score for rankings and surface-level display

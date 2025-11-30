@@ -5568,8 +5568,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const advancedMetricsMap = await calculateWRAdvancedMetrics(season, 2, momentumMap, qualifiedPlayerIds);
       
       // STEP 3.5: Fetch team environment scores for env-adjusted alpha
-      const { forgeTeamEnvironment } = await import('@shared/schema');
-      const { applyForgeEnvModifier } = await import('./modules/forge/contextModifiers');
+      const { forgeTeamEnvironment, forgeTeamMatchupContext } = await import('@shared/schema');
+      const { applyForgeEnvModifier, applyForgeMatchupModifier } = await import('./modules/forge/contextModifiers');
       
       // Get latest week's environment scores
       const latestWeekResult = await db.execute(sql`
@@ -5594,6 +5594,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const row of envScores) {
         if (row.team && row.envScore100 !== null) {
           envMap.set(row.team, row.envScore100);
+        }
+      }
+      
+      // STEP 3.6: Fetch matchup scores for WR position (keyed by defense team)
+      const matchupScores = await db
+        .select({
+          defenseTeam: forgeTeamMatchupContext.defenseTeam,
+          matchupScore100: forgeTeamMatchupContext.matchupScore100,
+        })
+        .from(forgeTeamMatchupContext)
+        .where(
+          and(
+            eq(forgeTeamMatchupContext.season, season),
+            eq(forgeTeamMatchupContext.week, latestEnvWeek),
+            eq(forgeTeamMatchupContext.position, 'WR')
+          )
+        );
+      
+      // Map: defense_team -> matchup_score_100 (higher = easier matchup for WRs)
+      const matchupMap = new Map<string, number>();
+      for (const row of matchupScores) {
+        if (row.defenseTeam && row.matchupScore100 !== null) {
+          matchupMap.set(row.defenseTeam, row.matchupScore100);
+        }
+      }
+      
+      // STEP 3.7: Get opponent data from schedule (if available)
+      // For v0, we attempt to get opponent but use neutral (50) if unknown
+      const scheduleResult = await db.execute(sql`
+        SELECT home, away FROM schedule 
+        WHERE season = ${season} AND week = ${latestEnvWeek}
+      `);
+      
+      // Build team -> opponent map
+      const opponentMap = new Map<string, string>();
+      for (const row of scheduleResult.rows as any[]) {
+        if (row.home && row.away) {
+          opponentMap.set(row.home, row.away);
+          opponentMap.set(row.away, row.home);
         }
       }
 
@@ -5694,14 +5733,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             wEnv: 0.40,
           });
           
+          // Apply matchup modifier on top of env-adjusted alpha (wMatchup=0.25)
+          // Get opponent from schedule, then lookup their defensive matchup score
+          const opponent = opponentMap.get(player.team) ?? null;
+          const matchupScore = opponent ? (matchupMap.get(opponent) ?? null) : null;
+          const matchupResult = applyForgeMatchupModifier({
+            alphaAfterEnv: envResult.envAdjustedAlpha,
+            matchupScore,
+            wMatchup: 0.25,
+          });
+          
           return {
             ...player,
             // TIBER Alpha Engine (unified 50/25/15/10)
-            alphaScore: envResult.envAdjustedAlpha,  // Final env-adjusted alpha
+            alphaScore: matchupResult.finalAlpha,  // Final: env + matchup adjusted alpha
             forge_alpha_base: envResult.baseAlpha,
             forge_alpha_env: envResult.envAdjustedAlpha,
             forge_env_multiplier: envResult.envMultiplier,
             forge_env_score_100: teamEnvScore,
+            forge_matchup_score_100: matchupScore,
+            forge_matchup_multiplier: matchupResult.matchupMultiplier,
+            forge_opponent: opponent,
             volumeIndex: alphaOutput.volumeIndex,
             productionIndex: alphaOutput.productionIndex,
             efficiencyIndex: alphaOutput.efficiencyIndex,
@@ -5721,6 +5773,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         season,
         envWeek: latestEnvWeek,
+        matchupWeek: latestEnvWeek,
+        matchupsAvailable: opponentMap.size > 0,
         minGames: 2,
         minTargets: 10,
         count: ranked.length,
@@ -5796,8 +5850,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const qualified = results.filter(r => r.gamesPlayed >= 2 && r.totalCarries >= 15);
       
       // STEP 2.5: Fetch team environment scores for env-adjusted alpha
-      const { forgeTeamEnvironment } = await import('@shared/schema');
-      const { applyForgeEnvModifier } = await import('./modules/forge/contextModifiers');
+      const { forgeTeamEnvironment, forgeTeamMatchupContext } = await import('@shared/schema');
+      const { applyForgeEnvModifier, applyForgeMatchupModifier } = await import('./modules/forge/contextModifiers');
       
       const latestWeekResult = await db.execute(sql`
         SELECT MAX(week) as latest_week FROM forge_team_environment WHERE season = 2025
@@ -5821,6 +5875,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const row of envScores) {
         if (row.team && row.envScore100 !== null) {
           envMap.set(row.team, row.envScore100);
+        }
+      }
+      
+      // STEP 2.6: Fetch matchup scores for RB position (keyed by defense team)
+      const matchupScores = await db
+        .select({
+          defenseTeam: forgeTeamMatchupContext.defenseTeam,
+          matchupScore100: forgeTeamMatchupContext.matchupScore100,
+        })
+        .from(forgeTeamMatchupContext)
+        .where(
+          and(
+            eq(forgeTeamMatchupContext.season, 2025),
+            eq(forgeTeamMatchupContext.week, latestEnvWeek),
+            eq(forgeTeamMatchupContext.position, 'RB')
+          )
+        );
+      
+      // Map: defense_team -> matchup_score_100 (higher = easier matchup for RBs)
+      const matchupMap = new Map<string, number>();
+      for (const row of matchupScores) {
+        if (row.defenseTeam && row.matchupScore100 !== null) {
+          matchupMap.set(row.defenseTeam, row.matchupScore100);
+        }
+      }
+      
+      // STEP 2.7: Get opponent data from schedule (if available)
+      const scheduleResult = await db.execute(sql`
+        SELECT home, away FROM schedule 
+        WHERE season = 2025 AND week = ${latestEnvWeek}
+      `);
+      
+      // Build team -> opponent map
+      const opponentMap = new Map<string, string>();
+      for (const row of scheduleResult.rows as any[]) {
+        if (row.home && row.away) {
+          opponentMap.set(row.home, row.away);
+          opponentMap.set(row.away, row.home);
         }
       }
 
@@ -5885,6 +5977,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           wEnv: 0.40,
         });
         
+        // Apply matchup modifier on top of env-adjusted alpha (wMatchup=0.25)
+        const opponent = opponentMap.get(player.team ?? '') ?? null;
+        const matchupScore = opponent ? (matchupMap.get(opponent) ?? null) : null;
+        const matchupResult = applyForgeMatchupModifier({
+          alphaAfterEnv: envResult.envAdjustedAlpha,
+          matchupScore,
+          wMatchup: 0.25,
+        });
+        
         return {
           playerId: player.playerId,
           canonicalId: player.canonicalId ?? null,
@@ -5905,12 +6006,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Opportunity metrics
           weightedOppPerGame: Math.round(weightedOppPerGame * 100) / 100,
           fpPerOpp: Math.round(fpPerOpp * 100) / 100,
-          // Alpha Score with pillars
-          alphaScore: Math.round(envResult.envAdjustedAlpha * 100) / 100,
+          // Alpha Score with pillars (env + matchup adjusted)
+          alphaScore: Math.round(matchupResult.finalAlpha * 100) / 100,
           forge_alpha_base: Math.round(envResult.baseAlpha * 100) / 100,
           forge_alpha_env: Math.round(envResult.envAdjustedAlpha * 100) / 100,
           forge_env_multiplier: envResult.envMultiplier,
           forge_env_score_100: teamEnvScore,
+          forge_matchup_score_100: matchupScore,
+          forge_matchup_multiplier: matchupResult.matchupMultiplier,
+          forge_opponent: opponent,
           volumeIndex: Math.round(volumeIndex * 100) / 100,
           productionIndex: Math.round(productionIndex * 100) / 100,
           efficiencyIndex: Math.round(efficiencyIndex * 100) / 100,
@@ -5930,6 +6034,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         season: 2025,
         envWeek: latestEnvWeek,
+        matchupWeek: latestEnvWeek,
+        matchupsAvailable: opponentMap.size > 0,
         minGames: 2,
         minCarries: 15,
         count: ranked.length,

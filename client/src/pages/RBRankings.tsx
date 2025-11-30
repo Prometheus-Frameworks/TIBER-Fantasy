@@ -28,6 +28,9 @@ interface RBSandboxPlayer {
   forge_alpha_env: number;
   forge_env_multiplier: number;
   forge_env_score_100: number | null;
+  forge_matchup_score_100: number | null;
+  forge_matchup_multiplier: number;
+  forge_opponent: string | null;
   injuryStatus: string | null;
   injuryType: string | null;
 }
@@ -138,6 +141,9 @@ export default function RBRankings() {
         forgeTrajectory: forge?.trajectory,
         forgeEnvScore: player.forge_env_score_100,
         forgeEnvMultiplier: player.forge_env_multiplier,
+        forgeMatchupScore: player.forge_matchup_score_100,
+        forgeMatchupMultiplier: player.forge_matchup_multiplier,
+        forgeOpponent: player.forge_opponent,
         injuryStatus: player.injuryStatus,
         extraColumns: {
           carries: player.totalCarries,

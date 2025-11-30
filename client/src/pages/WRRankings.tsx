@@ -23,6 +23,13 @@ interface WRSandboxPlayer {
   efficiencyIndex: number;
   stabilityIndex: number;
   alphaScore: number;
+  forge_alpha_base: number;
+  forge_alpha_env: number;
+  forge_env_multiplier: number;
+  forge_env_score_100: number | null;
+  forge_matchup_score_100: number | null;
+  forge_matchup_multiplier: number;
+  forge_opponent: string | null;
   injuryStatus: string | null;
   injuryType: string | null;
   roleScore: number | null;
@@ -116,10 +123,15 @@ export default function WRRankings() {
         team: player.team,
         gamesPlayed: player.gamesPlayed,
         sandboxAlpha: Math.round(customAlpha * 10) / 10,
-        forgeAlpha: forge?.alpha,
-        forgeRawAlpha: forge?.rawAlpha,
+        forgeAlpha: player.alphaScore ?? forge?.alpha,
+        forgeRawAlpha: player.forge_alpha_base ?? forge?.rawAlpha,
         forgeConfidence: forge?.confidence,
         forgeTrajectory: forge?.trajectory,
+        forgeEnvScore: player.forge_env_score_100,
+        forgeEnvMultiplier: player.forge_env_multiplier,
+        forgeMatchupScore: player.forge_matchup_score_100,
+        forgeMatchupMultiplier: player.forge_matchup_multiplier,
+        forgeOpponent: player.forge_opponent,
         injuryStatus: player.injuryStatus,
         extraColumns: {
           targets: player.targets,
