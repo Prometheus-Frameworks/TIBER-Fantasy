@@ -84,19 +84,18 @@ OASIS (Offensive Architecture Scoring & Insight System) was originally conceived
 
 ## Deprecation Plan
 
-### Phase 1: Delete LEGACY_UNUSED (Safe, No Dependencies)
+### Phase 1: Delete LEGACY_UNUSED ✅ COMPLETED (November 30, 2025)
 
-```bash
-# Delete unused files
-rm public/oasis.html
-rm server/oasisRServerClient.ts
-rm -rf otc-power/  # Entire OTC Power module is unused
-```
+**Files Deleted:**
+- `public/oasis.html` - Static HTML placeholder
+- `server/oasisRServerClient.ts` - Dead R server integration
+- `otc-power/` - Entire unused OTC Power module (including `src/data/sources/oasis.ts`)
 
-Update documentation:
-- `AUDIT.md` - Remove OASIS references
-- `CHANGELOG.md` - Add deprecation entry
-- `replit.md` - Update OASIS status section
+**Routes Updated:**
+- `server/routes.ts` - Removed dead imports, inlined baseline data for `/api/oasis/*` endpoints
+- `/api/power/fpg/*` routes now return 410 deprecation notices
+
+**No Breaking Changes:** All OASIS endpoints still work using inline baseline data.
 
 ### Phase 2: Rename INTEGRATION_STUB → FORGE
 

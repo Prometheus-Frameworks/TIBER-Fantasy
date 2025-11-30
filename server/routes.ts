@@ -3052,10 +3052,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Ratings router mounted at /api/ratings above
 
-  // OASIS Local R Server Routes - Using integrated nflfastR system
-  const { oasisRServerClient } = await import('./oasisRServerClient');
+  // OASIS Routes - Baseline data (Phase 1 cleanup: removed dead R server/otc-power imports)
   const oasisCache = new Map();
   const OASIS_TTL_MS = 5 * 60 * 1000; // 5 minutes
+  
+  // Baseline environment scores
+  const BASELINE_ENV_SCORES: Record<string, number> = {
+    'BUF': 95, 'KC': 94, 'SF': 93, 'MIA': 92, 'DAL': 91, 'BAL': 90,
+    'PHI': 88, 'DET': 87, 'CIN': 86, 'LAC': 85, 'MIN': 84, 'HOU': 83,
+    'TB': 82, 'ATL': 81, 'LAR': 80, 'GB': 79, 'SEA': 78, 'IND': 77,
+    'JAX': 76, 'NO': 75, 'ARI': 74, 'NYJ': 73, 'PIT': 72, 'CLE': 71,
+    'WAS': 70, 'CHI': 68, 'DEN': 67, 'TEN': 66, 'LV': 65, 'NE': 64,
+    'CAR': 63, 'NYG': 62
+  };
+  
+  // Baseline pace data (plays per game)
+  const BASELINE_PACE: Record<string, number> = {
+    'MIA': 72.5, 'BUF': 69.8, 'NO': 68.9, 'PHI': 68.2, 'BAL': 67.1,
+    'KC': 66.8, 'DAL': 66.5, 'DET': 66.1, 'LAC': 65.8, 'CIN': 65.5,
+    'SF': 65.2, 'MIN': 64.9, 'HOU': 64.6, 'ATL': 64.3, 'TB': 64.0,
+    'CHI': 63.7, 'NE': 63.2, 'WAS': 63.0, 'LAR': 62.8, 'GB': 62.5,
+    'IND': 62.2, 'JAX': 62.0, 'SEA': 61.8, 'ARI': 61.5, 'NYJ': 61.2,
+    'DEN': 61.0, 'CLE': 60.8, 'PIT': 60.5, 'LV': 60.2, 'TEN': 59.9,
+    'CAR': 59.5, 'NYG': 59.2
+  };
 
   // OASIS Environment/Team data endpoint
   app.get('/api/oasis/environment', async (req, res) => {
@@ -3068,53 +3088,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(hit.data);
     }
 
-    try {
-      // Use existing baseline OASIS data (from your OASIS source file) + live data integration
-      const { fetchTeamEnvIndex } = await import('../otc-power/src/data/sources/oasis');
-      
-      // Try to get live team environment data, fallback to baseline
-      let envScores;
-      try {
-        envScores = await fetchTeamEnvIndex(Number(season), Number(week));
-      } catch (error) {
-        console.log(`🔄 [OASIS] Using baseline environment scores for Week ${week}`);
-        // Use your pre-built baseline environment scores
-        envScores = {
-          'BUF': 95, 'KC': 94, 'SF': 93, 'MIA': 92, 'DAL': 91, 'BAL': 90,
-          'PHI': 88, 'DET': 87, 'CIN': 86, 'LAC': 85, 'MIN': 84, 'HOU': 83,
-          'TB': 82, 'ATL': 81, 'LAR': 80, 'GB': 79, 'SEA': 78, 'IND': 77,
-          'JAX': 76, 'NO': 75, 'ARI': 74, 'NYJ': 73, 'PIT': 72, 'CLE': 71,
-          'WAS': 70, 'CHI': 68, 'DEN': 67, 'TEN': 66, 'LV': 65, 'NE': 64,
-          'CAR': 63, 'NYG': 62
-        };
-      }
-      
-      // Transform to OASIS format with your sophisticated baseline + live data
-      const teams = Object.entries(envScores).map(([team, envScore]) => ({
-        team,
-        environment_score: envScore,
-        pace: team === 'MIA' ? 72.5 : team === 'BUF' ? 69.8 : team === 'NO' ? 68.9 : 65,
-        proe: team === 'BUF' ? 0.08 : team === 'LAC' ? 0.06 : team === 'KC' ? 0.05 : 0.01,
-        ol_grade: Math.round(envScore * 0.8), // Correlated with environment score
-        qb_stability: Math.round(envScore * 0.85), // QB stability affects environment
-        red_zone_efficiency: (envScore - 50) / 100, // Convert to EPA-like scale
-        scoring_environment: envScore
-      }));
+    // Use inline baseline environment scores
+    const teams = Object.entries(BASELINE_ENV_SCORES).map(([team, envScore]) => ({
+      team,
+      environment_score: envScore,
+      pace: BASELINE_PACE[team] || 65,
+      proe: team === 'BUF' ? 0.08 : team === 'LAC' ? 0.06 : team === 'KC' ? 0.05 : 0.01,
+      ol_grade: Math.round(envScore * 0.8),
+      qb_stability: Math.round(envScore * 0.85),
+      red_zone_efficiency: (envScore - 50) / 100,
+      scoring_environment: envScore
+    }));
 
-      const result = { teams };
-      oasisCache.set(cacheKey, { ts: now, data: result });
-      
-      console.log(`✅ [OASIS] Served environment data for ${teams.length} teams (Season ${season}, Week ${week}) - Using baseline + live integration`);
-      return res.json(result);
-      
-    } catch (error) {
-      console.error('❌ [OASIS] Local R server error:', error);
-      return res.status(500).json({
-        error: "OASIS local server unavailable",
-        detail: String(error),
-        fallback: "Using baseline environment scores"
-      });
-    }
+    const result = { teams };
+    oasisCache.set(cacheKey, { ts: now, data: result });
+    
+    console.log(`✅ [OASIS] Served environment data for ${teams.length} teams (Season ${season}, Week ${week}) - Using baseline`);
+    return res.json(result);
   });
 
   // OASIS Pace data endpoint
@@ -3128,39 +3118,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(hit.data);
     }
 
-    try {
-      // Use your existing pace data from OASIS source
-      const { fetchTeamPace } = await import('../otc-power/src/data/sources/oasis');
-      
-      let paceData;
-      try {
-        paceData = await fetchTeamPace(Number(season), Number(week));
-      } catch (error) {
-        // Use baseline pace data
-        paceData = {
-          'MIA': 72.5, 'BUF': 69.8, 'NO': 68.9, 'PHI': 68.2, 'BAL': 67.1,
-          'KC': 66.8, 'DAL': 66.5, 'DET': 66.1, 'LAC': 65.8, 'CIN': 65.5,
-          'SF': 65.2, 'MIN': 64.9, 'HOU': 64.6, 'ATL': 64.3, 'TB': 64.0
-        };
-      }
-      
-      // Transform to array format
-      const result = Object.entries(paceData).map(([team, pace]) => ({
-        team,
-        pace
-      }));
+    // Use inline baseline pace data
+    const result = Object.entries(BASELINE_PACE).map(([team, pace]) => ({
+      team,
+      pace
+    }));
 
-      oasisCache.set(cacheKey, { ts: now, data: result });
-      console.log(`✅ [OASIS] Served pace data for ${result.length} teams`);
-      return res.json(result);
-      
-    } catch (error) {
-      console.error('❌ [OASIS] Pace data error:', error);
-      return res.status(500).json({
-        error: "OASIS pace data unavailable",
-        detail: String(error)
-      });
-    }
+    oasisCache.set(cacheKey, { ts: now, data: result });
+    console.log(`✅ [OASIS] Served pace data for ${result.length} teams`);
+    return res.json(result);
   });
 
   // OASIS Teams endpoint (main endpoint)
@@ -4990,20 +4956,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ===== FPG-CENTRIC POWER RANKINGS =====
-  // Phase E: Production FPG-centric scoring with real rushing upside
+  // Phase 1 cleanup: otc-power module removed (LEGACY_UNUSED)
+  // These endpoints now return deprecation notices - use FORGE rankings instead
   
-  // Import FPG power rankings handlers
-  const { handlePowerRankingsRequest, handlePlayerAnalysisRequest, handleHealthCheck } = 
-    await import('../otc-power/src/api/powerRankings');
+  app.get('/api/power/fpg/rankings', (_req, res) => {
+    res.status(410).json({
+      error: 'FPG Power Rankings deprecated',
+      message: 'This endpoint has been removed. Use /api/forge/rankings instead.',
+      migration: 'See docs/oasis_audit.md for details'
+    });
+  });
   
-  // FPG Power Rankings - New production system with real rushing metrics
-  app.get('/api/power/fpg/rankings', handlePowerRankingsRequest);
+  app.get('/api/power/fpg/player/:player_id', (_req, res) => {
+    res.status(410).json({
+      error: 'FPG Player Analysis deprecated',
+      message: 'This endpoint has been removed. Use /api/forge/player/:id instead.',
+      migration: 'See docs/oasis_audit.md for details'
+    });
+  });
   
-  // Individual Player FPG Analysis
-  app.get('/api/power/fpg/player/:player_id', handlePlayerAnalysisRequest);
-  
-  // FPG System Health Check
-  app.get('/api/power/fpg/health', handleHealthCheck);
+  app.get('/api/power/fpg/health', (_req, res) => {
+    res.json({
+      status: 'deprecated',
+      message: 'FPG Power module has been removed. Use FORGE rankings.',
+      timestamp: new Date().toISOString()
+    });
+  });
 
   // Leaders endpoints for weekly performances and defense analysis
   app.get('/api/leaders/weekly', async (req: Request, res: Response) => {
