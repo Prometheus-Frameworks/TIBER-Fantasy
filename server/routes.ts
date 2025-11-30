@@ -5686,12 +5686,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Calculate unified alpha score using 4-pillar engine
           const alphaOutput = calculateWrAlphaScore(alphaInput);
           
-          // Apply environment modifier to base alpha
+          // Apply environment modifier to base alpha (wEnv=0.40 allows ±40% swings)
           const teamEnvScore = envMap.get(player.team) ?? null;
           const envResult = applyForgeEnvModifier({
             rawAlpha: alphaOutput.alphaScore,
             envScore: teamEnvScore,
-            wEnv: 0.15,
+            wEnv: 0.40,
           });
           
           return {
@@ -5877,12 +5877,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (0.20 * efficiencyIndex) + 
           (0.10 * receivingIndex);
         
-        // Apply environment modifier
+        // Apply environment modifier (wEnv=0.40 allows ±40% swings)
         const teamEnvScore = envMap.get(player.team ?? '') ?? null;
         const envResult = applyForgeEnvModifier({
           rawAlpha: baseAlphaScore,
           envScore: teamEnvScore,
-          wEnv: 0.15,
+          wEnv: 0.40,
         });
         
         return {

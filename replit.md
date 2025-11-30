@@ -67,6 +67,35 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - Top WRs (e.g. JSN, Chase, Puka, Amon-Ra, London) now sit in the high 70s–80s
 - Δ between Sandbox α and FORGE α is now typically in the -10 to +6 range instead of systemic -30s
 
+### FORGE v0.2.1 — EnvScore Integration
+
+**Offensive Environment Modifier:**
+- Integrated team offensive environment scores (EnvScore) into WR and RB rankings
+- Data source: `forge_team_environment` table with `env_score_100` (0-100 scale, 50=neutral)
+- Weight: `wEnv = 0.40` allows ±40% swings at score extremes
+
+**Formula:**
+```
+envFactor = 1 + 0.40 * (envScore/50 - 1)
+envAdjustedAlpha = baseAlpha * envFactor (clamped to [25, 90])
+```
+
+**Examples (Week 12, 2025):**
+- LA Rams (envScore=62): +9.6% boost (P.Nacua 80 → 87.68)
+- ATL Falcons (envScore=50): 0% change (neutral environment)
+- SF 49ers (envScore=51): +0.8% minimal boost
+
+**API Response Fields:**
+- `alphaScore`: Final env-adjusted alpha (primary ranking score)
+- `forge_alpha_base`: Pre-environment base alpha
+- `forge_alpha_env`: Post-environment adjusted alpha
+- `forge_env_multiplier`: Environment factor (1.0 = neutral)
+- `forge_env_score_100`: Team's offensive environment score
+
+**Frontend:**
+- New "Env" column in ForgeRankingsTable showing team environment score
+- Color-coded: Elite (60+, green), Good (55+, emerald), Avg (45+), Below (40+), Poor (<40)
+
 **Why We Keep `rawAlpha`:**
 - `rawAlpha` = pure engine score, directly from FORGE's feature stack
 - `alpha` (calibrated) = UI-facing score for rankings and surface-level display
