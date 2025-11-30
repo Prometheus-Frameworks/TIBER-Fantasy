@@ -86,6 +86,17 @@ export async function fetchForgeScore(playerId: string): Promise<ForgeSingleScor
   return res.json() as Promise<ForgeSingleScoreResponse>;
 }
 
+export type ForgeFantasySummary = {
+  gamesPlayed: number | null;
+  lastWeekPlayed: number | null;
+  totalPpr: number | null;
+  totalHalfPpr: number | null;
+  lastWeekPpr: number | null;
+  lastWeekHalfPpr: number | null;
+  pprRankPos: number | null;
+  halfPprRankPos: number | null;
+};
+
 export type PlayerContextResponse = {
   meta: { playerId: string; season: number };
   identity: {
@@ -98,6 +109,7 @@ export type PlayerContextResponse = {
   usage?: Record<string, any>;
   efficiency?: Record<string, any>;
   finishing?: Record<string, any>;
+  fantasy?: ForgeFantasySummary;
   metaStats?: { gamesPlayed?: number; lastUpdated?: string };
 };
 
