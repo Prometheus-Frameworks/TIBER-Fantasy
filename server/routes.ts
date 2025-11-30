@@ -5794,6 +5794,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // STEP 2: Filter for minimum qualifications (2+ games, 15+ carries)
       const qualified = results.filter(r => r.gamesPlayed >= 2 && r.totalCarries >= 15);
+      
+      // STEP 2.5: Fetch team environment scores for env-adjusted alpha
+      const { forgeTeamEnvironment } = await import('@shared/schema');
+      const { applyForgeEnvModifier } = await import('./modules/forge/contextModifiers');
+      
+      const latestWeekResult = await db.execute(sql`
+        SELECT MAX(week) as latest_week FROM forge_team_environment WHERE season = 2025
+      `);
+      const latestEnvWeek = (latestWeekResult.rows[0] as any)?.latest_week || 12;
+      
+      const envScores = await db
+        .select({
+          team: forgeTeamEnvironment.team,
+          envScore100: forgeTeamEnvironment.envScore100,
+        })
+        .from(forgeTeamEnvironment)
+        .where(
+          and(
+            eq(forgeTeamEnvironment.season, 2025),
+            eq(forgeTeamEnvironment.week, latestEnvWeek)
+          )
+        );
+      
+      const envMap = new Map<string, number>();
+      for (const row of envScores) {
+        if (row.team && row.envScore100 !== null) {
+          envMap.set(row.team, row.envScore100);
+        }
+      }
 
       // STEP 3: Calculate fantasy points per rush attempt, receiving metrics, and opportunity metrics
       const processedPlayers = qualified.map(player => {
@@ -5825,6 +5854,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? player.totalFantasyPoints / weightedOpportunities 
           : 0;
 
+        // RB Alpha Score calculation (simplified 4-pillar: Volume 40%, Production 30%, Efficiency 20%, Receiving 10%)
+        const fpPerGame = player.gamesPlayed > 0 ? player.totalFantasyPoints / player.gamesPlayed : 0;
+        
+        // Volume Index (weighted opportunities per game, scaled 0-100)
+        // Elite bellcow: 25+ opp/game → 100, Average: 15 → 60, Low: 10 → 40
+        const volumeIndex = Math.min(100, (weightedOppPerGame / 25) * 100);
+        
+        // Production Index (FP/G scaled, elite RB1: 18+ FP/G → 100)
+        const productionIndex = Math.min(100, (fpPerGame / 18) * 100);
+        
+        // Efficiency Index (FP per opportunity, elite: 1.0+ → 100)
+        const efficiencyIndex = Math.min(100, (fpPerOpp / 1.0) * 100);
+        
+        // Receiving Index (receiving FP/G, elite: 5+ → 100)
+        const receivingIndex = Math.min(100, (receivingFantasyPerGame / 5) * 100);
+        
+        // Base Alpha Score (40% volume, 30% production, 20% efficiency, 10% receiving)
+        const baseAlphaScore = 
+          (0.40 * volumeIndex) + 
+          (0.30 * productionIndex) + 
+          (0.20 * efficiencyIndex) + 
+          (0.10 * receivingIndex);
+        
+        // Apply environment modifier
+        const teamEnvScore = envMap.get(player.team ?? '') ?? null;
+        const envResult = applyForgeEnvModifier({
+          rawAlpha: baseAlphaScore,
+          envScore: teamEnvScore,
+          wEnv: 0.15,
+        });
+        
         return {
           playerId: player.playerId,
           canonicalId: player.canonicalId ?? null,
@@ -5845,20 +5905,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Opportunity metrics
           weightedOppPerGame: Math.round(weightedOppPerGame * 100) / 100,
           fpPerOpp: Math.round(fpPerOpp * 100) / 100,
+          // Alpha Score with pillars
+          alphaScore: Math.round(envResult.envAdjustedAlpha * 100) / 100,
+          forge_alpha_base: Math.round(envResult.baseAlpha * 100) / 100,
+          forge_alpha_env: Math.round(envResult.envAdjustedAlpha * 100) / 100,
+          forge_env_multiplier: envResult.envMultiplier,
+          forge_env_score_100: teamEnvScore,
+          volumeIndex: Math.round(volumeIndex * 100) / 100,
+          productionIndex: Math.round(productionIndex * 100) / 100,
+          efficiencyIndex: Math.round(efficiencyIndex * 100) / 100,
+          receivingIndex: Math.round(receivingIndex * 100) / 100,
           // Injury status (IR/OUT badges)
           injuryStatus: player.injuryStatus ?? null,
           injuryType: player.injuryType ?? null,
         };
       });
 
-      // STEP 4: Sort by total fantasy points DESC
+      // STEP 4: Sort by alpha score DESC (was by total fantasy points)
       const ranked = processedPlayers
-        .sort((a, b) => b.fantasyPoints - a.fantasyPoints)
+        .sort((a, b) => b.alphaScore - a.alphaScore)
         .slice(0, 30);
 
       res.json({
         success: true,
         season: 2025,
+        envWeek: latestEnvWeek,
         minGames: 2,
         minCarries: 15,
         count: ranked.length,
