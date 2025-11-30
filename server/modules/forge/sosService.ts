@@ -308,7 +308,7 @@ export async function getPlayerSoS(
 }
 
 /**
- * Get SoS rankings for all teams by position
+ * Get SoS rankings for all teams by position (OPTIMIZED batch version)
  * Returns teams sorted by RoS SoS (easiest schedule first)
  */
 export async function getAllTeamSoSByPosition(
@@ -316,21 +316,102 @@ export async function getAllTeamSoSByPosition(
   season: number = 2025
 ): Promise<TeamPositionSoS[]> {
   try {
-    const teamsResult = await db.execute(sql`
-      SELECT DISTINCT home as team FROM schedule WHERE season = ${season}
-      UNION
-      SELECT DISTINCT away as team FROM schedule WHERE season = ${season}
+    const dataThroughWeek = await getDataThroughWeek(season);
+    
+    // Batch fetch: All future matchups for all teams
+    const allMatchupsResult = await db.execute(sql`
+      WITH team_matchups AS (
+        SELECT 
+          CASE WHEN home = t.team THEN home ELSE away END as offense_team,
+          CASE WHEN home = t.team THEN away ELSE home END as opponent,
+          s.week
+        FROM schedule s
+        CROSS JOIN (
+          SELECT DISTINCT home as team FROM schedule WHERE season = ${season}
+          UNION
+          SELECT DISTINCT away as team FROM schedule WHERE season = ${season}
+        ) t
+        WHERE s.season = ${season}
+          AND s.week > ${dataThroughWeek}
+          AND (s.home = t.team OR s.away = t.team)
+      )
+      SELECT 
+        tm.offense_team,
+        tm.opponent,
+        tm.week,
+        mc.matchup_score_100
+      FROM team_matchups tm
+      LEFT JOIN forge_team_matchup_context mc 
+        ON mc.defense_team = tm.opponent
+        AND mc.position = ${position}
+        AND mc.season = ${season}
+        AND mc.week = tm.week
+      ORDER BY tm.offense_team, tm.week
     `);
     
-    const teams = (teamsResult.rows as any[]).map(r => r.team);
+    // Get season-average fallback scores for all teams
+    const seasonAvgResult = await db.execute(sql`
+      SELECT 
+        defense_team,
+        AVG(matchup_score_100)::numeric(5,2) as avg_score
+      FROM forge_team_matchup_context
+      WHERE position = ${position} AND season = ${season}
+      GROUP BY defense_team
+    `);
+    
+    const seasonAvgMap = new Map<string, number>();
+    (seasonAvgResult.rows as any[]).forEach(row => {
+      seasonAvgMap.set(row.defense_team, Number(row.avg_score));
+    });
+    
+    // Group by team and calculate SoS
+    const teamData = new Map<string, { matchups: { week: number; opponent: string; score: number | null }[] }>();
+    
+    (allMatchupsResult.rows as any[]).forEach(row => {
+      const team = row.offense_team;
+      if (!teamData.has(team)) {
+        teamData.set(team, { matchups: [] });
+      }
+      
+      let score = row.matchup_score_100 !== null ? Number(row.matchup_score_100) : null;
+      if (score === null) {
+        score = seasonAvgMap.get(row.opponent) ?? null;
+      }
+      
+      teamData.get(team)!.matchups.push({
+        week: Number(row.week),
+        opponent: row.opponent,
+        score,
+      });
+    });
+    
+    // Calculate SoS for each team
     const results: TeamPositionSoS[] = [];
     
-    for (const team of teams) {
-      const teamSoS = await getTeamPositionSoS(team, position, season);
-      if (teamSoS) {
-        results.push(teamSoS);
-      }
-    }
+    teamData.forEach((data, team) => {
+      const allScores = data.matchups.map(m => m.score);
+      const validScores = allScores.filter((s): s is number => s !== null);
+      
+      const next3Scores = data.matchups.slice(0, 3).map(m => m.score);
+      const playoffScores = data.matchups
+        .filter(m => m.week >= 15 && m.week <= 17)
+        .map(m => m.score);
+      
+      results.push({
+        meta: {
+          season,
+          team,
+          position,
+          dataThroughWeek,
+          remainingWeeks: validScores.length,
+        },
+        sos: {
+          ros: calculateAverage(allScores),
+          next3: calculateAverage(next3Scores),
+          playoffs: calculateAverage(playoffScores),
+        },
+      });
+    });
     
     return results.sort((a, b) => {
       const aScore = a.sos.ros ?? 50;
