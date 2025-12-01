@@ -933,15 +933,24 @@ router.get('/health', (req, res) => {
 
 // ========================================
 // TIBER CONVERSATION MEMORY SYSTEM v0.1
+// + ForgeContext v0 Integration
 // ========================================
 
 import { TiberMemoryManager } from '../services/tiberMemoryManager';
 import { buildTiberPrompt } from '../services/tiberPromptBuilder';
 import { generateChatResponse } from '../services/geminiEmbeddings';
+import { loadForgeContext, ForgeContext } from '../services/forgeContextLoader';
 
 router.post('/chat', async (req, res) => {
   try {
-    const { message, leagueId, conversationId: existingConversationId } = req.body;
+    const { 
+      message, 
+      leagueId, 
+      conversationId: existingConversationId,
+      forgePlayerId,
+      forgePosition,
+      forgeTeamId,
+    } = req.body;
     
     const userId = (req as any).user?.id ?? "anon";
 
@@ -959,12 +968,29 @@ router.post('/chat', async (req, res) => {
       leagueId
     );
 
+    // Load ForgeContext if hints are provided
+    let forgeContext: ForgeContext | undefined = undefined;
+    if (forgePlayerId || forgePosition || forgeTeamId) {
+      try {
+        forgeContext = await loadForgeContext({
+          playerId: forgePlayerId,
+          position: forgePosition,
+          teamId: forgeTeamId,
+          rankingsLimit: 10,
+        });
+        console.log(`[Tiber/Chat] ForgeContext loaded: player=${forgePlayerId || 'none'}, position=${forgePosition || 'none'}`);
+      } catch (error) {
+        console.error('[Tiber/Chat] Failed to load ForgeContext:', error);
+      }
+    }
+
     await TiberMemoryManager.appendMessage(conversationId, "USER", message);
 
     const prompt = buildTiberPrompt({
       userMessage: message,
       recentMessages: context.recentMessages,
       memory: context.memorySummaries,
+      forgeContext,
     });
 
     const tiberReply = await generateChatResponse(message, [prompt]);
