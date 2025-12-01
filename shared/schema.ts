@@ -1968,6 +1968,61 @@ export type TiberMemory = typeof tiberMemory.$inferSelect;
 export type InsertTiberMemory = z.infer<typeof insertTiberMemorySchema>;
 
 // ========================================
+// TIBER CONVERSATION MEMORY SYSTEM v0.1
+// ========================================
+
+// Tiber Conversations - Conversation threads
+export const tiberConversations = pgTable("tiber_conversations", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull(),
+  leagueId: text("league_id"),
+  title: text("title"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Tiber Messages - Messages within conversations  
+export const tiberMessages = pgTable("tiber_messages", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  conversationId: text("conversation_id")
+    .notNull()
+    .references(() => tiberConversations.id, { onDelete: "cascade" }),
+  sender: text("sender").notNull(), // 'USER' or 'TIBER'
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Tiber Memory Snapshots - Scoped memory summaries
+export const tiberMemorySnapshots = pgTable("tiber_memory_snapshots", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull(),
+  leagueId: text("league_id"),
+  scope: text("scope").notNull(), // 'GLOBAL' | 'LEAGUE' | 'SESSION'
+  summary: text("summary"),
+  factsJson: jsonb("facts_json"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Tiber Conversation Relations
+export const tiberMessagesRelations = relations(tiberMessages, ({ one }) => ({
+  conversation: one(tiberConversations, {
+    fields: [tiberMessages.conversationId],
+    references: [tiberConversations.id],
+  }),
+}));
+
+export const tiberConversationsRelations = relations(tiberConversations, ({ many }) => ({
+  messages: many(tiberMessages),
+}));
+
+// Types for Tiber Conversation System
+export type TiberConversation = typeof tiberConversations.$inferSelect;
+export type InsertTiberConversation = typeof tiberConversations.$inferInsert;
+export type TiberMessage = typeof tiberMessages.$inferSelect;
+export type InsertTiberMessage = typeof tiberMessages.$inferInsert;
+export type TiberMemorySnapshot = typeof tiberMemorySnapshots.$inferSelect;
+export type InsertTiberMemorySnapshot = typeof tiberMemorySnapshots.$inferInsert;
+
+// ========================================
 // ROOKIE RISERS SYSTEM TABLES
 // ========================================
 

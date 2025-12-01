@@ -1,0 +1,300 @@
+
+Here are the four file modifications/creations you need to implement Tiber Memory v0.
+1. Database Schema
+Add this to shared/schema.ts (or your equivalent schema definition file).
+// shared/schema.ts
+import { pgTable, text, timestamp, jsonb, uuid } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+
+// 1. Tiber Conversations
+export const tiberConversations = pgTable("tiber_conversations", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull(),
+  leagueId: text("league_id"),
+  title: text("title"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// 2. Tiber Messages
+export const tiberMessages = pgTable("tiber_messages", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  conversationId: text("conversation_id")
+    .notNull()
+    .references(() => tiberConversations.id, { onDelete: "cascade" }),
+  sender: text("sender", { enum: ["USER", "TIBER"] }).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// 3. Tiber Memory Snapshots
+export const tiberMemorySnapshots = pgTable("tiber_memory_snapshots", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull(),
+  leagueId: text("league_id"),
+  scope: text("scope", { enum: ["GLOBAL", "LEAGUE", "SESSION"] }).notNull(),
+  summary: text("summary"),
+  factsJson: jsonb("facts_json"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Relations (Optional but recommended)
+export const tiberMessagesRelations = relations(tiberMessages, ({ one }) => ({
+  conversation: one(tiberConversations, {
+    fields: [tiberMessages.conversationId],
+    references: [tiberConversations.id],
+  }),
+}));
+
+export const tiberConversationsRelations = relations(tiberConversations, ({ many }) => ({
+  messages: many(tiberMessages),
+}));
+
+2. Tiber Memory Manager Service
+Create server/services/tiberMemoryManager.ts.
+// server/services/tiberMemoryManager.ts
+import { db } from "../db"; // Adjust import to your db instance location
+import { tiberConversations, tiberMessages, tiberMemorySnapshots } from "@shared/schema";
+import { eq, and, desc, or, isNull } from "drizzle-orm";
+
+export type Sender = "USER" | "TIBER";
+
+export interface TiberMessage {
+  sender: Sender;
+  content: string;
+  createdAt: Date;
+}
+
+export interface TiberContext {
+  conversationId: string;
+  recentMessages: TiberMessage[];
+  memorySummaries: {
+    global?: string;
+    league?: string;
+    session?: string;
+    facts?: Record<string, any>;
+  };
+}
+
+export const TiberMemoryManager = {
+  async getOrCreateConversation(userId: string, leagueId?: string): Promise<string> {
+    // v0: Always create a new conversation for now, or you could add logic to find the last active one.
+    // We strictly follow the spec: create new row.
+    const [conversation] = await db
+      .insert(tiberConversations)
+      .values({
+        userId,
+        leagueId: leagueId || null,
+        title: "New Conversation", // Can be updated later by an AI summarizer
+      })
+      .returning({ id: tiberConversations.id });
+
+    return conversation.id;
+  },
+
+  async appendMessage(conversationId: string, sender: Sender, content: string): Promise<void> {
+    await db.insert(tiberMessages).values({
+      conversationId,
+      sender,
+      content,
+    });
+  },
+
+  async getRecentMessages(conversationId: string, limit = 10): Promise<TiberMessage[]> {
+    const rows = await db
+      .select()
+      .from(tiberMessages)
+      .where(eq(tiberMessages.conversationId, conversationId))
+      .orderBy(desc(tiberMessages.createdAt)) // Get newest first
+      .limit(limit);
+
+    // Reverse to return chronological order (oldest -> newest)
+    return rows.reverse().map((r) => ({
+      sender: r.sender as Sender,
+      content: r.content,
+      createdAt: r.createdAt,
+    }));
+  },
+
+  async getMemorySnapshots(userId: string, leagueId?: string) {
+    // Fetch recent snapshots for this user, optionally filtering by league
+    // This query grabs snapshots where (user matches) AND (league matches OR league is null)
+    const rows = await db
+      .select()
+      .from(tiberMemorySnapshots)
+      .where(
+        and(
+          eq(tiberMemorySnapshots.userId, userId),
+          or(
+            eq(tiberMemorySnapshots.leagueId, leagueId ?? ""), 
+            isNull(tiberMemorySnapshots.leagueId)
+          )
+        )
+      )
+      .orderBy(desc(tiberMemorySnapshots.createdAt))
+      .limit(10);
+
+    const result: TiberContext["memorySummaries"] = {};
+
+    // Basic logic: take the most recent entry for each scope
+    for (const r of rows) {
+      if (r.scope === "GLOBAL" && !result.global) result.global = r.summary ?? undefined;
+      if (r.scope === "LEAGUE" && !result.league) result.league = r.summary ?? undefined;
+      if (r.scope === "SESSION" && !result.session) result.session = r.summary ?? undefined;
+      
+      // Merge facts (naive merge for v0)
+      if (r.factsJson && !result.facts) {
+        result.facts = r.factsJson as Record<string, any>;
+      }
+    }
+
+    return result;
+  },
+
+  async buildContext(userId: string, conversationId: string, leagueId?: string): Promise<TiberContext> {
+    const [recentMessages, memorySummaries] = await Promise.all([
+      this.getRecentMessages(conversationId),
+      this.getMemorySnapshots(userId, leagueId),
+    ]);
+
+    return {
+      conversationId,
+      recentMessages,
+      memorySummaries,
+    };
+  },
+};
+
+3. Tiber Prompt Builder
+Create server/services/tiberPromptBuilder.ts.
+// server/services/tiberPromptBuilder.ts
+import { TiberMessage } from "./tiberMemoryManager";
+
+export interface TiberMemorySummary {
+  global?: string;
+  league?: string;
+  session?: string;
+  facts?: Record<string, any>;
+}
+
+export interface BuildTiberPromptOptions {
+  userMessage: string;
+  recentMessages: TiberMessage[];
+  memory: TiberMemorySummary;
+}
+
+export function buildTiberPrompt(opts: BuildTiberPromptOptions): string {
+  const { userMessage, recentMessages, memory } = opts;
+
+  // 1. Identity Block
+  const identityBlock = `You are Tiber, an analytical, non-pandering fantasy football intelligence system.
+
+Core behavior:
+- You ground all answers in data and context, never vibes or hype.
+- You explain your reasoning step by step in plain language.
+- You never act like an infallible guru; you empower the user to decide.
+- You are transparent about uncertainty, volatility, and missing data.
+- You avoid manipulation, fear-mongering, and overconfident claims.`;
+
+  // 2. Memory Block
+  const memoryBlock = `
+Known user context:
+- Global: ${memory.global ?? "n/a"}
+- League: ${memory.league ?? "n/a"}
+- Session: ${memory.session ?? "n/a"}
+- Facts: ${memory.facts ? JSON.stringify(memory.facts) : "n/a"}
+`.trim();
+
+  // 3. Conversation History
+  // recentMessages is already chronological (Oldest -> Newest)
+  const historyBlock = recentMessages.length > 0 
+    ? recentMessages
+        .map((m) => `${m.sender === "USER" ? "User" : "Tiber"}: ${m.content}`)
+        .join("\n")
+    : "No recent history.";
+
+  // 4. Final Assembly
+  return `
+${identityBlock}
+
+${memoryBlock}
+
+Recent conversation:
+${historyBlock}
+
+Current user message:
+User: ${userMessage}
+
+Now respond as Tiber:
+- Ground your answer in data and context above when useful.
+- Explain your reasoning.
+- Do not overstate certainty.
+- Empower the user to make their own decision.
+`.trim();
+}
+
+4. Route Refactor
+Update your existing route file (e.g., server/routes.ts or server/routes/tiber.ts).
+// server/routes/tiber.ts (Example)
+import { Router } from "express";
+import { TiberMemoryManager } from "../services/tiberMemoryManager";
+import { buildTiberPrompt } from "../services/tiberPromptBuilder";
+// Import your existing Gemini client wrapper
+import { callGeminiTiber } from "../services/gemini"; 
+
+const router = Router();
+
+router.post("/api/tiber/chat", async (req, res) => {
+  try {
+    const { message, leagueId, conversationId: existingConversationId } = req.body;
+    
+    // Auth context (Adapting to your specific auth middleware)
+    // @ts-ignore - Assuming req.user is populated by middleware
+    const userId = req.user?.id ?? "anon";
+
+    if (!message) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    // 1) Get or create conversation
+    // If client sends an ID, use it. Otherwise create new.
+    const conversationId = existingConversationId 
+      ? existingConversationId 
+      : await TiberMemoryManager.getOrCreateConversation(userId, leagueId);
+
+    // 2) Build context (History + Memory Snapshots)
+    const context = await TiberMemoryManager.buildContext(
+      userId, 
+      conversationId, 
+      leagueId
+    );
+
+    // 3) Persist USER message
+    await TiberMemoryManager.appendMessage(conversationId, "USER", message);
+
+    // 4) Build Prompt
+    const prompt = buildTiberPrompt({
+      userMessage: message,
+      recentMessages: context.recentMessages,
+      memory: context.memorySummaries,
+    });
+
+    // 5) Call Gemini
+    // Assuming callGeminiTiber returns a string
+    const tiberReply = await callGeminiTiber(prompt);
+
+    // 6) Persist TIBER reply
+    await TiberMemoryManager.appendMessage(conversationId, "TIBER", tiberReply);
+
+    // 7) Return response
+    res.json({
+      conversationId,
+      reply: tiberReply,
+    });
+
+  } catch (error) {
+    console.error("Tiber chat error:", error);
+    res.status(500).json({ error: "Tiber chat failed to respond." });
+  }
+});
+
+export default router;
