@@ -8,6 +8,7 @@
 import { forgeService } from '../modules/forge/forgeService';
 import { getPlayerSoS } from '../modules/forge/sosService';
 import type { ForgeScore, PlayerPosition } from '../modules/forge/types';
+import type { TrimmedForgeContext } from './tiberPromptBuilder';
 
 // ========================================
 // ForgeContext Types
@@ -226,4 +227,45 @@ async function loadRankingsSnapshot(
     position,
     players: players.slice(0, limit),
   };
+}
+
+// ========================================
+// ForgeContext Trimmer (for Tiber Voice v1)
+// ========================================
+
+/**
+ * Trims the full ForgeContext down to only the fields Tiber needs.
+ * This reduces prompt size and focuses Tiber on essential Tier-0 data.
+ */
+export function trimForgeContext(raw: ForgeContext | undefined): TrimmedForgeContext | undefined {
+  if (!raw) return undefined;
+  if (!raw.player && !raw.rankingsSnapshot) return undefined;
+
+  const result: TrimmedForgeContext = {};
+
+  if (raw.player) {
+    result.player = {
+      id: raw.player.id,
+      name: raw.player.name,
+      team: raw.player.team,
+      position: raw.player.position,
+    };
+    result.alpha = {
+      alpha: raw.player.alpha,
+      alphaBase: raw.player.alphaBase,
+    };
+    result.subscores = raw.player.subscores;
+    result.sos = {
+      ros: raw.player.sosRos,
+      next3: raw.player.sosNext3,
+      playoffs: raw.player.sosPlayoffs,
+      multiplier: raw.player.sosMultiplier,
+    };
+    result.env = {
+      envScore: raw.player.envScore,
+      matchupScore: raw.player.matchupScore,
+    };
+  }
+
+  return result;
 }

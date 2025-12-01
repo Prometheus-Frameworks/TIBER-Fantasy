@@ -1,0 +1,235 @@
+📦 REPLIT AGENT TASK – TIBER VOICE v1 INTEGRATION (FULL PATCH)
+
+Goal: Replace the current Tiber prompt system with Tiber Voice v1 — a Gemini-optimized reasoning and grounding architecture — and ensure all Forge data is properly trimmed and injected as Tier-0 truth.
+
+✅ 1. FILES TO CREATE/UPDATE
+
+Update or create the following:
+
+server/services/tiberPromptBuilder.ts
+server/services/forgeContextLoader.ts
+server/routes/tiberRoutes.ts  (or wherever /api/tiber/chat is defined)
+
+
+No other files should be touched.
+
+✅ 2. TIBER_SYSTEM_INSTRUCTIONS (replace existing system prompt)
+
+Overwrite any current system prompt with the following:
+
+export const TIBER_SYSTEM_INSTRUCTIONS = `
+### SYSTEM IDENTITY: TIBER
+You are Tiber, the cognitive engine for the TIBER Fantasy system. You are an analytical tool designed to process "Forge" data—a proprietary advanced metric suite.
+
+### THE PRIME DIRECTIVE: TRUTH HIERARCHY
+You must weigh information in this strict order. Never let a lower tier override a higher tier.
+
+1. **TIER 0 (THE LAW):** The provided 'Forge' metrics (Alpha, AlphaBase, Subscores, Environment Scores, Matchup Score, SoS: RoS/Next3/Playoffs, SoS Multiplier). This is your absolute reality.
+2. **TIER 1 (THE CONTEXT):** Role changes, injuries, utilization trends, coaching signals.
+3. **TIER 2 (THE NOISE):** General football wisdom, narratives, 'vibes'.
+
+### REASONING PIPELINE
+Before answering, run this internal checklist:
+1. **Check the Alpha:** AlphaBase = underlying ability. Alpha = current form.
+2. **Check the Subscores:** Volume is king. Efficiency is skill. Stability = reliability.
+3. **Check the Environment:** O-Line, QB, team dynamics.
+4. **Apply the Matchup & Schedule:** Only after everything above.
+
+### REASONING HEURISTICS
+- **Volume Law:** High volume + low efficiency = buy. Low volume + high efficiency = sell.
+- **Stability Principle:** H2H → stability. Tournaments → ceiling.
+- **Anchor Rule:** One bad week ≠ collapse if AlphaBase stays high.
+- **Skeptic's Razor:** If metrics say “bad,” assume it’s bad — even if training data says otherwise.
+
+### STYLE GUIDE
+- Bottom Line Up Front: Answer in the first sentence.
+- No fluff or preamble.
+- No invented stats. If a metric isn’t in FORGE data, say “Unavailable.”
+- Tone: Direct, sharp, analytical.
+- Acknowledge uncertainty explicitly when data is unclear.
+
+### FORBIDDEN BEHAVIORS
+- No hallucinated metrics.
+- No invented injuries.
+- No generic fantasy advice.
+- No “I hope this helps.”
+`;
+
+✅ 3. FORGECONTEXT TRIMMER (add to forgeContextLoader.ts)
+
+We only want a trimmed set of fields sent into Tiber.
+Add this helper inside forgeContextLoader.ts:
+
+export function trimForgeContext(raw) {
+  if (!raw) return null;
+
+  return {
+    player: {
+      id: raw.player?.id,
+      name: raw.player?.name,
+      team: raw.player?.team,
+      position: raw.player?.position,
+    },
+    alpha: {
+      alpha: raw.alpha,
+      alphaBase: raw.alphaBase,
+    },
+    subscores: raw.subscores,
+    sos: {
+      ros: raw.sosRos,
+      next3: raw.sosNext3,
+      playoffs: raw.sosPlayoffs,
+      multiplier: raw.sosMultiplier,
+    },
+    env: {
+      envScore: raw.envScore,
+      matchupScore: raw.matchupScore,
+    },
+    meta: {
+      gamesPlayed: raw.gamesPlayed,
+      dataThroughWeek: raw.dataThroughWeek,
+    }
+  };
+}
+
+
+Modify your loader to:
+
+const forgeContext = trimForgeContext(await loadForgeContext(params));
+
+✅ 4. UPDATED PROMPT BUILDER (replace entire buildTiberPrompt)
+export function buildTiberPrompt(opts: {
+  userMessage: string;
+  recentMessages: any[];
+  memory: any;
+  forgeContext?: any;
+}): string {
+  const { userMessage, recentMessages, memory, forgeContext } = opts;
+
+  const memoryBlock = `
+[USER CONTEXT]
+League: ${memory.league || 'General'}
+Facts: ${JSON.stringify(memory.facts || {})}
+SessionSummary: ${memory.session || 'N/A'}
+`;
+
+  const dataBlock = forgeContext
+    ? `
+[FORGE DATA - TIER 0 AUTHORITY]
+Use this JSON as absolute truth. Never contradict it.
+${JSON.stringify(forgeContext, null, 2)}
+`
+    : `[FORGE DATA] No Forge metrics loaded. Admit uncertainty if needed.`;
+
+  const historyBlock =
+    recentMessages.length > 0
+      ? `[CONVERSATION LOG]\n${recentMessages
+          .map((m) => `${m.sender === 'USER' ? 'User' : 'Tiber'}: ${m.content}`)
+          .join('\n')}`
+      : `[CONVERSATION LOG] New Session`;
+
+  return `
+${TIBER_SYSTEM_INSTRUCTIONS}
+
+${memoryBlock}
+
+${dataBlock}
+
+${historyBlock}
+
+[CURRENT INPUT]
+User: ${userMessage}
+
+[EXECUTE REASONING]
+Response:
+`.trim();
+}
+
+✅ 5. UPDATE /api/tiber/chat
+
+Modify logic so:
+
+Load memory via TiberMemoryManager
+
+Detect Forge hints:
+
+forgePlayerId
+
+forgePosition
+
+forgeTeamId
+
+Call ForgeContextLoader
+
+Run through trimForgeContext
+
+Pass trimmed forgeContext into buildTiberPrompt
+
+Send final prompt to Gemini
+
+Save Tiber reply to message history
+
+Explicitly confirm the final code uses this prompt builder and not any legacy prompt.
+
+✅ 6. REMOVE OR DISABLE LEGACY PROMPTS
+
+Remove or disable:
+
+geminiEmbeddings.ts system prompt
+
+Any hardcoded VORP examples
+
+Any “fluffy” instruction sets
+
+Any unused RAG prompts
+
+Old prompts must not remain in code since they cause hallucination drift.
+
+✅ 7. TEST CASES (run after patch)
+
+Have the agent verify these:
+
+Test A – No VORP hallucination
+
+Ask Tiber:
+
+“What is Puka Nacua’s VORP?”
+
+Expected:
+
+“Unavailable — VORP not included in Forge data.”
+
+Test B – Volume Law enforcement
+
+Ask:
+
+“Should I start Player X vs the 31st-ranked defense?”
+
+Expected:
+
+“No. His Volume Subscore is low; matchup cannot override that.”
+
+Test C – No fluff
+
+Ask:
+
+“Start JSN or Mike Evans?”
+
+Expected:
+
+“Start Evans.”
+Bullet-point evidence only.
+
+Test D – Truth Ladder enforcement
+
+Ask:
+
+“Why is Puka struggling? Is his role collapsing?”
+
+Expected:
+
+“AlphaBase remains high. Recent weeks are variance, not a role collapse.”
+
+🚀 Final instruction to the agent:
+
+“Apply this patch as-is. Replace all legacy prompt logic with this system. Ensure that Tiber only uses ForgeContext as Tier-0 truth and cannot hallucinate metrics outside of the trimmed Forge context.”

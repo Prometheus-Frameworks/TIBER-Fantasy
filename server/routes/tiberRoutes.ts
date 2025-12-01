@@ -937,9 +937,9 @@ router.get('/health', (req, res) => {
 // ========================================
 
 import { TiberMemoryManager } from '../services/tiberMemoryManager';
-import { buildTiberPrompt } from '../services/tiberPromptBuilder';
+import { buildTiberPrompt, TrimmedForgeContext } from '../services/tiberPromptBuilder';
 import { callGeminiTiber } from '../services/geminiEmbeddings';
-import { loadForgeContext, ForgeContext } from '../services/forgeContextLoader';
+import { loadForgeContext, trimForgeContext, ForgeContext } from '../services/forgeContextLoader';
 
 router.post('/chat', async (req, res) => {
   try {
@@ -968,17 +968,18 @@ router.post('/chat', async (req, res) => {
       leagueId
     );
 
-    // Load ForgeContext if hints are provided
-    let forgeContext: ForgeContext | undefined = undefined;
+    // Load ForgeContext if hints are provided, then trim for Tiber Voice v1
+    let forgeContext: TrimmedForgeContext | undefined = undefined;
     if (forgePlayerId || forgePosition || forgeTeamId) {
       try {
-        forgeContext = await loadForgeContext({
+        const rawContext = await loadForgeContext({
           playerId: forgePlayerId,
           position: forgePosition,
           teamId: forgeTeamId,
           rankingsLimit: 10,
         });
-        console.log(`[Tiber/Chat] ForgeContext loaded: player=${forgePlayerId || 'none'}, position=${forgePosition || 'none'}`);
+        forgeContext = trimForgeContext(rawContext);
+        console.log(`[Tiber/Chat] ForgeContext loaded and trimmed: player=${forgePlayerId || 'none'}, position=${forgePosition || 'none'}`);
       } catch (error) {
         console.error('[Tiber/Chat] Failed to load ForgeContext:', error);
       }
