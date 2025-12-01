@@ -315,6 +315,7 @@ async function fetchFromWeeklyStats(
 
 /**
  * Fetch advanced metrics from playerAdvanced2024 or similar
+ * Note: These tables use NFL GSIS IDs, not canonical IDs, so we translate first
  */
 async function fetchAdvancedMetrics(
   canonicalId: string,
@@ -322,10 +323,16 @@ async function fetchAdvancedMetrics(
   season: number
 ): Promise<ForgeContext['advancedMetrics']> {
   try {
+    // Translate canonical ID to NFL GSIS ID for 2024 tables
+    const nflId = await getNflDataPyIdForCanonical(canonicalId);
+    if (!nflId) {
+      return undefined;
+    }
+    
     const advanced = await db
       .select()
       .from(playerAdvanced2024)
-      .where(eq(playerAdvanced2024.playerId, canonicalId))
+      .where(eq(playerAdvanced2024.playerId, nflId))
       .limit(1);
     
     if (advanced[0]) {
@@ -343,7 +350,7 @@ async function fetchAdvancedMetrics(
     const player2024 = await db
       .select()
       .from(playerSeason2024)
-      .where(eq(playerSeason2024.playerId, canonicalId))
+      .where(eq(playerSeason2024.playerId, nflId))
       .limit(1);
     
     if (player2024[0]) {
