@@ -460,6 +460,13 @@ export const playerIdentityMap = pgTable("player_identity_map", {
   height: text("height"),
   weight: integer("weight"),
   
+  // Identity consolidation fields (v0.2)
+  nameFingerprint: text("name_fingerprint"), // Normalized name for matching: "jamarr chase"
+  teamHistory: text("team_history").array(), // ["CIN", "FA"] - for trade/FA handling
+  mergedInto: text("merged_into"), // Points to surviving canonical_id if merged
+  needsReview: boolean("needs_review").default(false), // Flag for manual review queue
+  dataCompleteness: integer("data_completeness").default(0), // Count of non-null external IDs + FK refs
+  
   // Metadata
   isActive: boolean("is_active").default(true),
   confidence: real("confidence").default(1.0), // ID matching confidence
@@ -487,6 +494,12 @@ export const playerIdentityMap = pgTable("player_identity_map", {
   // Composite search indexes for common queries
   activePositionIdx: index("pim_active_position_idx").on(table.isActive, table.position),
   positionNameIdx: index("pim_position_name_idx").on(table.position, table.fullName),
+  
+  // Identity consolidation indexes (v0.2)
+  fingerprintIdx: index("pim_fingerprint_idx").on(table.nameFingerprint),
+  fingerprintPositionIdx: index("pim_fingerprint_position_idx").on(table.nameFingerprint, table.position),
+  mergedIntoIdx: index("pim_merged_into_idx").on(table.mergedInto).where(sql`${table.mergedInto} IS NOT NULL`),
+  needsReviewIdx: index("pim_needs_review_idx").on(table.needsReview).where(sql`${table.needsReview} = true`),
 }));
 
 // NFL Teams Dimension Table
