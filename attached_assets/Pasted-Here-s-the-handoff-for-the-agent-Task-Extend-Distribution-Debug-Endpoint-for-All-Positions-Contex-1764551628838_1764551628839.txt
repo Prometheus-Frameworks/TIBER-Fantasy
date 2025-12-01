@@ -1,0 +1,67 @@
+Here's the handoff for the agent:
+
+Task: Extend Distribution Debug Endpoint for All Positions
+Context
+The /api/forge/debug/distribution endpoint currently only returns distribution data for WR. We need it to accept a position parameter and return the same analysis for QB, RB, and TE.
+This is blocking our ability to set proper calibration parameters for QB and TE, which currently have no calibration defined (causing their alpha scores to appear much lower than WR/RB).
+Current Behavior
+GET /api/forge/debug/distribution
+→ Returns WR distribution only, ignores position param
+Required Behavior
+GET /api/forge/debug/distribution?position=QB
+GET /api/forge/debug/distribution?position=TE
+GET /api/forge/debug/distribution?position=RB
+GET /api/forge/debug/distribution?position=WR
+Each should return the same structure:
+json{
+  "success": true,
+  "position": "QB",
+  "season": 2025,
+  "week": 10,
+  "distribution": {
+    "count": <number>,
+    "min": <number>,
+    "p10": <number>,
+    "p25": <number>,
+    "p50": <number>,
+    "p75": <number>,
+    "p90": <number>,
+    "max": <number>
+  },
+  "calibrationSuggestion": {
+    "p10": <number>,
+    "p90": <number>,
+    "outMin": 25,
+    "outMax": 90
+  }
+}
+```
+
+### Implementation Notes
+
+1. The endpoint likely lives near the other FORGE debug/admin routes — check `apiRegistry.ts` or wherever `/api/forge/debug/distribution` is defined.
+
+2. The distribution calculation logic already exists for WR. The fix should be:
+   - Accept `position` as a query param (default to WR for backwards compatibility)
+   - Filter the player pool by the requested position
+   - Run the same percentile calculations
+
+3. Make sure the query pulls from the correct data source — should be calculating distribution on raw/uncalibrated alpha values (before the calibration step), otherwise the output won't be useful for setting calibration params.
+
+4. Validate that position param is one of: `QB`, `RB`, `WR`, `TE`. Return 400 if invalid.
+
+### Acceptance Criteria
+
+- [ ] Endpoint accepts `?position=QB|RB|WR|TE` param
+- [ ] Returns accurate distribution stats for each position
+- [ ] Distribution is calculated on pre-calibration alpha values
+- [ ] Invalid position returns 400 error
+- [ ] Default behavior (no param) returns WR for backwards compatibility
+
+### After Implementation
+
+Run these and send back the output:
+```
+GET /api/forge/debug/distribution?position=QB
+GET /api/forge/debug/distribution?position=TE
+We need the p10/p90 values to set calibration for QB and TE.
