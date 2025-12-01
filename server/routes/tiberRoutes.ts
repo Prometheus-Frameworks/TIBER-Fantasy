@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { tiberService } from '../services/tiberService';
 import { db } from '../infra/db';
-import { tiberScores, playerIdentityMap, players, injuries, gameLogs, seasonState } from '../../shared/schema';
+import { tiberScores, playerIdentityMap, players, injuries, gameLogs, seasonState, tiberConversations } from '../../shared/schema';
 import { eq, and, desc, sql, ilike, inArray, isNotNull } from 'drizzle-orm';
 import { injurySyncService } from '../services/injurySyncService';
 
@@ -929,6 +929,97 @@ router.get('/health', (req, res) => {
     service: 'TIBER v1 MVP',
     description: 'Tactical Index for Breakout Efficiency and Regression'
   });
+});
+
+// ========================================
+// TIBER CONVERSATION MEMORY SYSTEM v0.1
+// ========================================
+
+import { TiberMemoryManager } from '../services/tiberMemoryManager';
+import { buildTiberPrompt } from '../services/tiberPromptBuilder';
+import { generateChatResponse } from '../services/geminiEmbeddings';
+
+router.post('/chat', async (req, res) => {
+  try {
+    const { message, leagueId, conversationId: existingConversationId } = req.body;
+    
+    const userId = (req as any).user?.id ?? "anon";
+
+    if (!message) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    const conversationId = existingConversationId 
+      ? existingConversationId 
+      : await TiberMemoryManager.getOrCreateConversation(userId, leagueId);
+
+    const context = await TiberMemoryManager.buildContext(
+      userId, 
+      conversationId, 
+      leagueId
+    );
+
+    await TiberMemoryManager.appendMessage(conversationId, "USER", message);
+
+    const prompt = buildTiberPrompt({
+      userMessage: message,
+      recentMessages: context.recentMessages,
+      memory: context.memorySummaries,
+    });
+
+    const tiberReply = await generateChatResponse(message, [prompt]);
+
+    await TiberMemoryManager.appendMessage(conversationId, "TIBER", tiberReply);
+
+    res.json({
+      conversationId,
+      reply: tiberReply,
+    });
+
+  } catch (error) {
+    console.error("Tiber chat error:", error);
+    res.status(500).json({ error: "Tiber chat failed to respond." });
+  }
+});
+
+router.get('/conversations/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { leagueId } = req.query;
+    
+    const conversations = await db
+      .select()
+      .from(tiberConversations)
+      .where(
+        leagueId 
+          ? and(eq(tiberConversations.userId, userId), eq(tiberConversations.leagueId, leagueId as string))
+          : eq(tiberConversations.userId, userId)
+      )
+      .orderBy(desc(tiberConversations.createdAt))
+      .limit(20);
+    
+    res.json({ success: true, conversations });
+  } catch (error) {
+    console.error("Tiber conversations fetch error:", error);
+    res.status(500).json({ error: "Failed to fetch conversations" });
+  }
+});
+
+router.get('/conversation/:conversationId/messages', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { limit = 50 } = req.query;
+    
+    const messages = await TiberMemoryManager.getRecentMessages(
+      conversationId, 
+      Number(limit)
+    );
+    
+    res.json({ success: true, messages });
+  } catch (error) {
+    console.error("Tiber messages fetch error:", error);
+    res.status(500).json({ error: "Failed to fetch messages" });
+  }
 });
 
 export default router;
