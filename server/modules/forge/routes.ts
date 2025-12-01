@@ -114,12 +114,17 @@ const FALLBACK_PLAYERS: Record<PlayerPosition, string[]> = {
 /**
  * GET /api/forge/preview
  * 
+ * Preview FORGE alpha scores for players by position.
+ * Uses weekly_stats-ranked player pool (not alphabetical).
+ * 
  * Query params:
  * - position (required): WR | RB | TE | QB
  * - season (optional): number, defaults to 2025
  * - week (optional): number, defaults to 17
- * - limit (optional): number, defaults to 50
+ * - limit (optional): number, defaults to 50, max 100
  * - playerIds (optional): comma-separated canonical IDs
+ * - minGamesPlayed (optional): filter out players with fewer games
+ * - minConfidence (optional): filter out players below confidence threshold
  */
 router.get('/preview', async (req: Request, res: Response) => {
   try {
@@ -128,6 +133,8 @@ router.get('/preview', async (req: Request, res: Response) => {
     const week = parseInt(req.query.week as string) || 17;
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
     const playerIdsParam = req.query.playerIds as string;
+    const minGamesPlayed = parseInt(req.query.minGamesPlayed as string) || 0;
+    const minConfidence = parseInt(req.query.minConfidence as string) || 0;
     
     if (!position || !['WR', 'RB', 'TE', 'QB'].includes(position)) {
       return res.status(400).json({
@@ -136,30 +143,41 @@ router.get('/preview', async (req: Request, res: Response) => {
       });
     }
     
-    console.log(`[FORGE/Routes] Preview request: position=${position}, season=${season}, week=${week}, limit=${limit}`);
+    console.log(`[FORGE/Routes] Preview request: position=${position}, season=${season}, week=${week}, limit=${limit}, minGames=${minGamesPlayed}, minConf=${minConfidence}`);
     
-    let playerIds: string[] = [];
+    let scores: ForgeScore[];
     
     if (playerIdsParam) {
-      playerIds = playerIdsParam.split(',').map(id => id.trim()).filter(Boolean);
+      const playerIds = playerIdsParam.split(',').map(id => id.trim()).filter(Boolean);
+      scores = await forgeService.getForgeScoresForPlayers(playerIds, season, week);
     } else {
-      playerIds = await fetchPlayerIdsForPosition(position, limit);
+      scores = await forgeService.getForgeScoresBatch({
+        position: position as 'WR' | 'RB' | 'TE' | 'QB',
+        limit: limit * 2,
+        season,
+        asOfWeek: week,
+      });
     }
     
-    if (playerIds.length === 0) {
-      console.log(`[FORGE/Routes] No players found, using fallback list for ${position}`);
-      playerIds = FALLBACK_PLAYERS[position].slice(0, limit);
+    if (scores.length === 0) {
+      console.log(`[FORGE/Routes] No players found for ${position}`);
     }
     
-    console.log(`[FORGE/Routes] Scoring ${playerIds.length} ${position}s...`);
+    console.log(`[FORGE/Routes] Scored ${scores.length} ${position}s`);
     
-    const scores = await forgeService.getForgeScoresForPlayers(playerIds, season, week);
+    let filteredScores = scores;
+    if (minGamesPlayed > 0) {
+      filteredScores = filteredScores.filter(s => (s.gamesPlayed || 0) >= minGamesPlayed);
+    }
+    if (minConfidence > 0) {
+      filteredScores = filteredScores.filter(s => (s.confidence || 0) >= minConfidence);
+    }
     
-    // Enrich scores with SoS data
-    const enrichedScores = await enrichScoresWithSoS(scores, season);
+    const enrichedScores = await enrichScoresWithSoS(filteredScores, season);
     
-    // Sort by SoS-adjusted alpha (higher first)
-    const sortedScores = enrichedScores.sort((a, b) => b.alpha - a.alpha);
+    const sortedScores = enrichedScores
+      .sort((a, b) => b.alpha - a.alpha)
+      .slice(0, limit);
     
     return res.json({
       success: true,
@@ -167,8 +185,10 @@ router.get('/preview', async (req: Request, res: Response) => {
         position,
         season,
         week,
-        requestedCount: playerIds.length,
+        requestedCount: limit,
         returnedCount: sortedScores.length,
+        totalBeforeFilter: scores.length,
+        filters: { minGamesPlayed, minConfidence },
         sosIntegrated: true,
         scoredAt: new Date().toISOString(),
       },
