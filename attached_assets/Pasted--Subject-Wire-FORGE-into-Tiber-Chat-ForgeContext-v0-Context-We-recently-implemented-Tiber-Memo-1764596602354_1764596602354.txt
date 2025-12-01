@@ -1,0 +1,257 @@
+
+
+Subject: Wire FORGE into Tiber Chat (ForgeContext v0)
+
+Context:
+We recently implemented Tiber Memory v0:
+- New tables: tiber_conversations, tiber_messages, tiber_memory_snapshots
+- TiberMemoryManager service
+- TiberPromptBuilder with buildTiberPrompt
+- /api/tiber/chat now persists conversations and feeds recent messages to Gemini
+
+Now we want to give Tiber access to live FORGE data so that Tiber’s answers are grounded in:
+- FORGE player alpha scores + subscores
+- SoS metrics
+- Env/matchup information
+- A small rankings snapshot for context
+
+We do NOT want to build a full tool system yet. This is just:
+- A backend-only FORGE context loader
+- An optional “forgeContext” block injected into the Tiber prompt
+- Optional request fields (so existing clients don’t break)
+
+Tech stack:
+- Node / Express
+- Drizzle / Postgres
+- Existing FORGE services & routes (batch rankings, SoS, player context, etc.)
+- Gemini client used in /api/tiber/chat
+
+Goal (v0):
+- Create a ForgeContext loader service.
+- Extend the Tiber prompt builder to accept an optional ForgeContext.
+- Extend /api/tiber/chat to optionally load and pass ForgeContext when the client supplies basic hints (playerId / position / team).
+
+────────────────────────
+1) Forge Context Types
+────────────────────────
+
+Create a new file:
+
+- server/services/forgeContextLoader.ts
+
+We want a small typed object that Tiber can reason over, not full raw responses.
+
+Define:
+
+```ts
+// server/services/forgeContextLoader.ts
+
+export interface ForgePlayerContext {
+  id: string;
+  name: string;
+  team: string;
+  position: string;
+
+  alpha: number;           // SoS-adjusted final FORGE alpha
+  alphaBase?: number;      // pre-SoS alpha, if available
+
+  envScore?: number;       // environment score if available
+  matchupScore?: number;   // current or next-week matchup score if available
+
+  sosRos?: number;         // 0–100
+  sosNext3?: number;       // 0–100
+  sosPlayoffs?: number;    // 0–100
+  sosMultiplier?: number;  // 0.90–1.10
+
+  subscores?: {
+    volume?: number;
+    efficiency?: number;
+    stability?: number;
+    contextFit?: number;
+  };
+}
+
+export interface ForgeRankingsSnapshotPlayer {
+  id: string;
+  name: string;
+  team: string;
+  alpha: number;
+  sosMultiplier?: number;
+}
+
+export interface ForgeRankingsSnapshot {
+  position: string;
+  players: ForgeRankingsSnapshotPlayer[];
+}
+
+export interface ForgeContext {
+  player?: ForgePlayerContext;
+  rankingsSnapshot?: ForgeRankingsSnapshot;
+}
+
+Feel free to adjust field names if needed, but keep the overall shape close to this.
+
+────────────────────────
+2) Implement ForgeContextLoader
+────────────────────────
+
+In forgeContextLoader.ts, implement a single exported function:
+
+export interface ForgeContextInput {
+  playerId?: string;   // canonical player id (e.g., 'puka-nacua')
+  position?: string;   // 'WR' | 'RB' | 'TE' | 'QB'
+  teamId?: string;     // optional, if helpful for SoS / team-level queries
+  rankingsLimit?: number; // default ~10
+}
+
+export async function loadForgeContext(input: ForgeContextInput): Promise<ForgeContext> { ... }
+
+Behavior (v0):
+	1.	If playerId is provided:
+	•	Use existing internal FORGE services to fetch:
+	•	Player ranking row (e.g., from the same source that powers /api/forge/batch)
+	•	SoS for that player (/api/forge/sos/player/:playerId equivalent)
+	•	Any available subscores (volume, efficiency, stability, contextFit)
+	•	Env/matchup info if we already have a service for this
+	•	Construct player: ForgePlayerContext:
+	•	Fill id, name, team, position
+	•	alpha (final SoS-adjusted alpha)
+	•	alphaBase (if available in the ranking data)
+	•	subscores (if easily accessible in current services)
+	•	envScore / matchupScore (if accessible)
+	•	sosRos / sosNext3 / sosPlayoffs / sosMultiplier (from SoS services)
+IMPORTANT:
+	•	Try to reuse existing modules like the ones used by:
+	•	/api/forge/batch
+	•	/api/forge/sos/player/:playerId
+	•	Do NOT make HTTP calls back into our own server; call the underlying services/functions directly.
+	2.	If position is provided:
+	•	Fetch a small rankings snapshot for that position using the same logic as /api/forge/batch.
+	•	Limit to ~10–15 top players for v0.
+	•	Populate rankingsSnapshot:
+	•	position
+	•	players: { id, name, team, alpha, sosMultiplier }
+	3.	If both playerId and position are provided:
+	•	Load both player + rankingsSnapshot.
+	4.	If neither are provided:
+	•	Return {} (empty object).
+
+Error handling:
+	•	If an internal call fails, log the error but still return as much of ForgeContext as you can (e.g., rankings only, or player only).
+	•	Do NOT throw unless absolutely necessary; Tiber should still be able to answer without ForgeContext.
+
+──────────────────────────────
+3) Extend TiberPromptBuilder
+──────────────────────────────
+
+Update server/services/tiberPromptBuilder.ts:
+	1.	Import ForgeContext:
+
+import type { ForgeContext } from './forgeContextLoader';
+
+	2.	Extend BuildTiberPromptOptions:
+
+interface BuildTiberPromptOptions {
+  userMessage: string;
+  recentMessages: TiberMessage[];
+  memory: TiberMemorySummary;
+  forgeContext?: ForgeContext;  // NEW
+}
+
+	3.	In buildTiberPrompt, add a “Forge context” section if forgeContext is provided and non-empty.
+
+Example:
+
+const forgeContextBlock = forgeContext && (
+  forgeContext.player || forgeContext.rankingsSnapshot
+)
+  ? `Forge live context (from backend APIs):
+
+${JSON.stringify(forgeContext, null, 2)}
+`
+  : 'Forge live context: (none provided for this turn)';
+
+Then include this block in the final prompt string between the memory block and the recent conversation, e.g.:
+	•	Identity block
+	•	Memory block
+	•	Forge context block
+	•	Recent conversation
+	•	Current user message
+	•	Final instructions
+
+This ensures Gemini/Tiber has direct visibility into the FORGE data that the backend loaded.
+
+────────────────────────────
+4) Extend /api/tiber/chat Route
+────────────────────────────
+
+Update the Tiber chat route (e.g., /api/tiber/chat) to support optional FORGE context hints from the client.
+
+Request body v0 should become:
+
+type TiberChatRequestBody = {
+  message: string;
+  leagueId?: string;
+  conversationId?: string;
+
+  // NEW: Optional hints for ForgeContext
+  forgePlayerId?: string;  // canonical player id, e.g. 'puka-nacua'
+  forgePosition?: string;  // 'WR' | 'RB' | 'TE' | 'QB'
+  forgeTeamId?: string;    // optional
+};
+
+Workflow additions:
+	1.	After building context with TiberMemoryManager.buildContext,
+but before building the prompt, add:
+
+let forgeContext: ForgeContext | undefined = undefined;
+
+if (forgePlayerId || forgePosition || forgeTeamId) {
+  forgeContext = await loadForgeContext({
+    playerId: forgePlayerId,
+    position: forgePosition,
+    teamId: forgeTeamId,
+    rankingsLimit: 10,
+  });
+}
+
+	2.	When calling buildTiberPrompt, pass this forgeContext:
+
+const prompt = buildTiberPrompt({
+  userMessage: message,
+  recentMessages: context.recentMessages,
+  memory: context.memorySummaries,
+  forgeContext, // NEW
+});
+
+	3.	Everything else stays the same:
+	•	Save user message
+	•	Call Gemini with prompt
+	•	Save Tiber reply
+	•	Return { conversationId, reply: tiberReply }
+
+Backwards compatibility:
+	•	All new fields are optional (forgePlayerId, forgePosition, forgeTeamId).
+	•	If the client doesn’t send them, loadForgeContext is never called and forgeContext is undefined.
+	•	Existing behavior should remain identical, just with extra capabilities when hints are provided.
+
+────────────────────────
+5) Notes / Non-goals
+────────────────────────
+	•	Do NOT modify the existing Forge API endpoints themselves.
+	•	Do NOT add complex NLU, entity extraction, or tool-calling — v0 expects the client to provide explicit IDs/position.
+	•	Do NOT add embeddings or complex retrieval logic here.
+	•	Focus on:
+	•	Clean, typed ForgeContextLoader
+	•	Safe integration into buildTiberPrompt
+	•	Optional use in /api/tiber/chat
+
+Deliverables:
+	•	New file: server/services/forgeContextLoader.ts (with types + loadForgeContext implementation).
+	•	Updated file: server/services/tiberPromptBuilder.ts (BuildTiberPromptOptions + forgeContext block).
+	•	Updated Tiber chat route handler to:
+	•	Accept forgePlayerId/forgePosition/forgeTeamId from body.
+	•	Call loadForgeContext when hints are present.
+	•	Pass ForgeContext into buildTiberPrompt.
+
+Please output the full updated files so they can be reviewed before deployment.
