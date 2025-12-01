@@ -27,12 +27,12 @@ export const API_REGISTRY: ApiEndpointDescriptor[] = [
     key: 'forge_preview',
     method: 'GET',
     path: '/api/forge/preview',
-    description: 'Preview FORGE alpha scores for players by position. Returns SoS-adjusted alpha (alphaScore), pre-SoS alpha (alphaBase), and SoS metrics. SoS values are 0-100 where higher = easier schedule. sosMultiplier ranges from 0.90-1.10.',
+    description: 'Preview FORGE alpha scores for players by position. Uses weekly_stats-ranked player pool (sorted by fantasy points, not alphabetical). Returns SoS-adjusted alpha, pre-SoS alphaBase, and SoS metrics. Supports filtering by minGamesPlayed and minConfidence.',
     tags: ['forge', 'rankings', 'alpha', 'sos', 'core'],
     sampleParams: {
-      query: { position: 'WR', season: 2025, limit: 20 }
+      query: { position: 'WR', season: 2025, limit: 20, minGamesPlayed: 3, minConfidence: 40 }
     },
-    importantFields: ['alpha', 'alphaBase', 'sosRos', 'sosNext3', 'sosPlayoffs', 'sosMultiplier', 'trajectory', 'confidence']
+    importantFields: ['alpha', 'alphaBase', 'gamesPlayed', 'confidence', 'sosRos', 'sosMultiplier', 'trajectory']
   },
   {
     key: 'forge_score_player',
