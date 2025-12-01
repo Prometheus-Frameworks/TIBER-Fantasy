@@ -369,51 +369,52 @@ export interface CalibrationParams {
  * Position-specific calibration configs
  * 
  * METHODOLOGY: Filtered distributions (minGamesPlayed >= 4) to exclude
- * low-data players hitting placeholder scores. This gives healthier
- * p10-p90 spreads for calibration.
+ * low-data players hitting placeholder scores. Uses p97 as upper bound for
+ * WR/RB to allow differentiation among elite players (top 3-5%), and p95
+ * for TE/QB which have narrower distributions.
  * 
  * WR calibrated based on 2025 season week 10 FILTERED distribution:
- * - Filtered: count=121, min=29.5, p10=35.0, p50=40.1, p90=45.7, max=54.9
- * - Spread: p10→p90 = 10.7 points
- * - Calibration maps p10(35)→25, p90(46)→90
+ * - Filtered: count=123, p10=34.8, p50=39.8, p90=45.9, p95=47.4, p97=50.2, max=54.9
+ * - Spread: p10→p97 = 15.4 points
+ * - Calibration maps p10(35)→25, p97(50)→90
  * 
  * RB calibrated based on 2025 season week 10 FILTERED distribution:
- * - Filtered: count=94, min=25.2, p10=31.9, p50=38.4, p90=47.3, max=55.7
- * - Spread: p10→p90 = 15.4 points
- * - Calibration maps p10(32)→25, p90(47)→90
+ * - Filtered: count=93, p10=31.9, p50=38.2, p90=47.8, p95=50.5, p97=52.1, max=55.7
+ * - Spread: p10→p97 = 20.2 points
+ * - Calibration maps p10(32)→25, p97(52)→90
  * 
  * TE calibrated based on 2025 season week 10 FILTERED distribution:
- * - Filtered: count=77, min=31.0, p10=33.2, p50=38.8, p90=45.0, max=49.1
- * - Spread: p10→p90 = 11.8 points
- * - Calibration maps p10(33)→25, p90(45)→90
+ * - Filtered: count=75, p10=33.2, p50=38.8, p90=44.9, p95=46.5, p97=46.7, max=49.1
+ * - Spread: p10→p95 = 13.3 points (narrow elite tier)
+ * - Calibration maps p10(33)→25, p95(47)→90
  * 
  * QB calibrated based on 2025 season week 10 FILTERED distribution:
- * - Filtered: count=37, min=38.7, p10=40.5, p50=42.8, p90=47.6, max=49.3
- * - Spread: p10→p90 = 7.1 points (narrowest - QB scores cluster tightly)
- * - Calibration maps p10(40)→25, p90(48)→90
+ * - Filtered: count=37, p10=40.5, p50=42.8, p90=47.6, p95=48.4, p97=48.4, max=49.3
+ * - Spread: p10→p95 = 7.9 points (narrowest - QB scores cluster tightly)
+ * - Calibration maps p10(40)→25, p95(48)→90
  */
 export const ALPHA_CALIBRATION: Partial<Record<PlayerPosition, CalibrationParams>> = {
   WR: {
     p10: 35,      // WR 2025 filtered p10 rawAlpha
-    p90: 46,      // WR 2025 filtered p90 rawAlpha (rounded from 45.7)
+    p90: 50,      // WR 2025 filtered p97 rawAlpha (using p97 for better elite spread)
     outMin: 25,   // Calibrated floor for low-tier WRs
     outMax: 90,   // Calibrated ceiling for elite WRs
   },
   RB: {
     p10: 32,      // RB 2025 filtered p10 rawAlpha (rounded from 31.9)
-    p90: 47,      // RB 2025 filtered p90 rawAlpha (rounded from 47.3)
+    p90: 52,      // RB 2025 filtered p97 rawAlpha (using p97 for better elite spread)
     outMin: 25,   // Calibrated floor for depth/committee backs
     outMax: 90,   // Calibrated ceiling for elite RBs
   },
   TE: {
     p10: 33,      // TE 2025 filtered p10 rawAlpha (rounded from 33.2)
-    p90: 45,      // TE 2025 filtered p90 rawAlpha
+    p90: 47,      // TE 2025 filtered p95 rawAlpha (using p95 as upper bound)
     outMin: 25,   // Calibrated floor for depth TEs
     outMax: 90,   // Calibrated ceiling for elite TEs
   },
   QB: {
     p10: 40,      // QB 2025 filtered p10 rawAlpha (rounded from 40.5)
-    p90: 48,      // QB 2025 filtered p90 rawAlpha (rounded from 47.6)
+    p90: 48,      // QB 2025 filtered p95 rawAlpha (using p95 as upper bound)
     outMin: 25,   // Calibrated floor for backup QBs
     outMax: 90,   // Calibrated ceiling for elite fantasy QBs
   },
