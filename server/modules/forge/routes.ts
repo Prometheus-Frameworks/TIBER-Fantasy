@@ -464,6 +464,8 @@ router.get('/debug/distribution', async (req: Request, res: Response) => {
     const p50Idx = Math.floor(count * 0.5);
     const p75Idx = Math.floor(count * 0.75);
     const p90Idx = Math.floor(count * 0.9);
+    const p95Idx = Math.min(Math.floor(count * 0.95), count - 1);
+    const p97Idx = Math.min(Math.floor(count * 0.97), count - 1);
 
     const distribution = {
       count,
@@ -473,16 +475,19 @@ router.get('/debug/distribution', async (req: Request, res: Response) => {
       p50: Math.round(rawAlphas[p50Idx] * 10) / 10,
       p75: Math.round(rawAlphas[p75Idx] * 10) / 10,
       p90: Math.round(rawAlphas[p90Idx] * 10) / 10,
+      p95: Math.round(rawAlphas[p95Idx] * 10) / 10,
+      p97: Math.round(rawAlphas[p97Idx] * 10) / 10,
       max: Math.round(max * 10) / 10,
     };
 
     const spread = {
       p10_p50: Math.round((distribution.p50 - distribution.p10) * 10) / 10,
       p50_p90: Math.round((distribution.p90 - distribution.p50) * 10) / 10,
+      p90_p95: Math.round((distribution.p95 - distribution.p90) * 10) / 10,
       total: Math.round((distribution.max - distribution.min) * 10) / 10,
     };
 
-    console.log(`[FORGE/Debug] ${position} ${season}w${week} rawAlpha: min=${distribution.min} p10=${distribution.p10} p50=${distribution.p50} p90=${distribution.p90} max=${distribution.max} (${count} players after filters)`);
+    console.log(`[FORGE/Debug] ${position} ${season}w${week} rawAlpha: p10=${distribution.p10} p50=${distribution.p50} p90=${distribution.p90} p95=${distribution.p95} p97=${distribution.p97} max=${distribution.max} (${count} players)`);
 
     return res.json({
       success: true,
@@ -500,9 +505,10 @@ router.get('/debug/distribution', async (req: Request, res: Response) => {
       },
       calibrationSuggestion: {
         p10: distribution.p10,
-        p90: distribution.p90,
+        p95: distribution.p95,
         outMin: 25,
         outMax: 90,
+        note: 'Using p95 as upper bound to allow elite differentiation',
       },
     });
   } catch (error) {
