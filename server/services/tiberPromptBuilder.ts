@@ -5,6 +5,7 @@ export interface TiberMemorySummary {
   league?: string;
   session?: string;
   facts?: Record<string, any>;
+  mode?: 'FANTASY' | 'GENERAL';
 }
 
 export interface TrimmedForgeContext {
@@ -102,6 +103,7 @@ export function buildTiberPrompt(opts: BuildTiberPromptOptions): string {
 
   const memoryBlock = `
 [USER CONTEXT]
+Mode: ${memory.mode || 'GENERAL'}
 League: ${memory.league || 'General'}
 Facts: ${JSON.stringify(memory.facts || {})}
 SessionSummary: ${memory.session || 'N/A'}

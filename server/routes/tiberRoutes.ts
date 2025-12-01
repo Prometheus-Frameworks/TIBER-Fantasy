@@ -946,7 +946,7 @@ router.post('/chat', async (req, res) => {
     const { 
       message, 
       leagueId, 
-      conversationId: existingConversationId,
+      conversationId: clientConversationId,
       forgePlayerId,
       forgePosition,
       forgeTeamId,
@@ -958,19 +958,36 @@ router.post('/chat', async (req, res) => {
       return res.status(400).json({ error: "Message is required" });
     }
 
-    const conversationId = existingConversationId 
-      ? existingConversationId 
-      : await TiberMemoryManager.getOrCreateConversation(userId, leagueId);
+    // Detect fantasy mode: any Forge hint means fantasy mode
+    const isFantasy = !!forgePlayerId || !!forgePosition || !!forgeTeamId;
+    const mode: 'FANTASY' | 'GENERAL' = isFantasy ? 'FANTASY' : 'GENERAL';
+
+    // Conversation selection: separate pools per mode
+    let conversationId: string | null = null;
+
+    if (clientConversationId) {
+      // Verify the conversation's mode matches current mode
+      const convo = await TiberMemoryManager.getConversationById(clientConversationId);
+      if (convo && convo.mode === mode) {
+        conversationId = convo.id;
+      }
+    }
+
+    // If no valid conversation, create one in the correct mode
+    if (!conversationId) {
+      conversationId = await TiberMemoryManager.getOrCreateConversation(userId, leagueId, mode);
+    }
 
     const context = await TiberMemoryManager.buildContext(
       userId, 
       conversationId, 
-      leagueId
+      leagueId,
+      mode
     );
 
-    // Load ForgeContext if hints are provided, then trim for Tiber Voice v1
+    // Load ForgeContext only if in fantasy mode
     let forgeContext: TrimmedForgeContext | undefined = undefined;
-    if (forgePlayerId || forgePosition || forgeTeamId) {
+    if (isFantasy) {
       try {
         const rawContext = await loadForgeContext({
           playerId: forgePlayerId,
@@ -979,10 +996,12 @@ router.post('/chat', async (req, res) => {
           rankingsLimit: 10,
         });
         forgeContext = trimForgeContext(rawContext);
-        console.log(`[Tiber/Chat] ForgeContext loaded and trimmed: player=${forgePlayerId || 'none'}, position=${forgePosition || 'none'}`);
+        console.log(`[Tiber/Chat] FANTASY mode: ForgeContext loaded for player=${forgePlayerId || 'none'}, position=${forgePosition || 'none'}`);
       } catch (error) {
         console.error('[Tiber/Chat] Failed to load ForgeContext:', error);
       }
+    } else {
+      console.log(`[Tiber/Chat] GENERAL mode: No ForgeContext loaded`);
     }
 
     await TiberMemoryManager.appendMessage(conversationId, "USER", message);
@@ -1002,6 +1021,7 @@ router.post('/chat', async (req, res) => {
 
     res.json({
       conversationId,
+      mode,
       reply: tiberReply,
     });
 

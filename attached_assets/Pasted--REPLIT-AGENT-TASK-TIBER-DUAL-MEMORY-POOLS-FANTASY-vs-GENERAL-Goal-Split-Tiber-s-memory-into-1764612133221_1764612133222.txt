@@ -1,0 +1,255 @@
+📦 REPLIT AGENT TASK – TIBER DUAL MEMORY POOLS (FANTASY vs GENERAL)
+
+Goal:
+Split Tiber’s memory into two “domains” so that fantasy conversations never pull in prior philosophical / metaphor-heavy logs.
+
+We want:
+
+FANTASY memory = used when ForgeContext is involved
+
+GENERAL memory = used for everything else
+
+Tiber Voice v1 stays as-is; we’re just fixing memory routing.
+
+1. DB UPDATE – Add mode to tiber_conversations
+
+File: whatever migration / schema file defines tiber_conversations via Drizzle.
+
+a) Schema change
+
+Add a mode column:
+
+type: text or enum
+
+allowed values (string literal is fine): 'FANTASY' | 'GENERAL'
+
+default: 'GENERAL' for existing rows
+
+Example (pseudo-Drizzle):
+
+export const tiberConversations = pgTable('tiber_conversations', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  leagueId: text('league_id'),
+  title: text('title'),
+  createdAt: timestamp('created_at').defaultNow(),
+  mode: text('mode').notNull().default('GENERAL'), // NEW
+});
+
+
+Also add a migration to ALTER the existing table safely.
+
+2. TiberMemoryManager – Make it mode-aware
+
+File: server/services/tiberMemoryManager.ts
+
+a) Update getOrCreateConversation
+
+Change signature from:
+
+getOrCreateConversation(userId, leagueId)
+
+
+to:
+
+getOrCreateConversation(userId: string, leagueId?: string | null, mode: 'FANTASY' | 'GENERAL' = 'GENERAL')
+
+
+Logic:
+
+When searching for an existing conversation, filter by user_id, league_id, and mode.
+
+When creating a new conversation, set mode column accordingly.
+
+b) Update other internal methods if they assume no mode
+
+getRecentMessages(conversationId, limit) – likely fine as-is since it’s keyed by conversationId.
+
+buildContext(userId, conversationId, leagueId) – update signature to accept mode and, if you use it, include it in any summary object:
+
+buildContext(userId: string, conversationId: string, leagueId?: string | null, mode?: 'FANTASY' | 'GENERAL')
+
+
+Have buildContext include mode in the returned memory object:
+
+return {
+  league: leagueId || null,
+  facts: ..., 
+  session: ...,
+  mode, // NEW
+};
+
+3. /api/tiber/chat – Route requests to the right memory pool
+
+File: server/routes/tiberRoutes.ts (or equivalent where /api/tiber/chat lives)
+
+a) Detect fantasy mode
+
+After parsing req.body, determine whether this is a FANTASY request:
+
+const { message, forgePlayerId, forgePosition, forgeTeamId, conversationId: clientConversationId } = req.body;
+
+const isFantasy =
+  !!forgePlayerId ||
+  !!forgePosition ||
+  !!forgeTeamId; // any Forge hint means fantasy mode
+
+const mode: 'FANTASY' | 'GENERAL' = isFantasy ? 'FANTASY' : 'GENERAL';
+
+b) Conversation selection logic
+
+We want separate conversations per mode.
+
+Rules:
+
+If mode === 'FANTASY', ignore any previous GENERAL conversations.
+
+If client sends a conversationId, only respect it if it belongs to the same mode.
+
+Implementation sketch:
+
+let conversationId: string | null = null;
+
+if (clientConversationId) {
+  // Optional: verify the conversation's mode from DB.
+  const convo = await tiberMemoryManager.getConversationById(clientConversationId);
+  if (convo && convo.mode === mode) {
+    conversationId = convo.id;
+  }
+}
+
+// If no valid conversation, create one in the correct mode
+if (!conversationId) {
+  conversationId = await tiberMemoryManager.getOrCreateConversation(userId, leagueId, mode);
+}
+
+
+Use conversationId from here on for:
+
+appendMessage
+
+getRecentMessages
+
+buildContext
+
+c) Build memory + context with mode
+const recentMessages = await tiberMemoryManager.getRecentMessages(conversationId, 10);
+const memory = await tiberMemoryManager.buildContext(userId, conversationId, leagueId, mode);
+
+4. ForgeContext → Fantasy Mode
+
+File: server/services/forgeContextLoader.ts and the same /api/tiber/chat route.
+
+Leave ForgeContextLoader as-is, but:
+
+Only call it if isFantasy === true.
+
+Pass trimmed context (using existing trimForgeContext) into buildTiberPrompt.
+
+Example in route:
+
+let forgeContext = undefined;
+
+if (isFantasy) {
+  const rawForge = await loadForgeContext({ forgePlayerId, forgePosition, forgeTeamId });
+  forgeContext = trimForgeContext(rawForge);
+}
+
+
+Then:
+
+const prompt = buildTiberPrompt({
+  userMessage: message,
+  recentMessages,
+  memory,
+  forgeContext,
+});
+
+5. Prompt Builder – Expose mode in the memory block
+
+File: server/services/tiberPromptBuilder.ts
+
+We already have TIBER_SYSTEM_INSTRUCTIONS and buildTiberPrompt.
+Update the memory block to show the mode explicitly (this is just clarity for the model):
+
+Change:
+
+const memoryBlock = `
+[USER CONTEXT]
+League: ${memory.league || 'General'}
+Facts: ${JSON.stringify(memory.facts || {})}
+SessionSummary: ${memory.session || 'N/A'}
+`;
+
+
+To:
+
+const memoryBlock = `
+[USER CONTEXT]
+Mode: ${memory.mode || 'GENERAL'}
+League: ${memory.league || 'General'}
+Facts: ${JSON.stringify(memory.facts || {})}
+SessionSummary: ${memory.session || 'N/A'}
+`;
+
+
+Do not change TIBER_SYSTEM_INSTRUCTIONS here; keep Tiber Voice v1 as already applied.
+
+6. TESTS TO RUN AFTER PATCH
+
+Have the agent run these manually:
+
+✅ Test 1 – Fantasy mode isolated
+
+Start a non-fantasy chat:
+
+Ask: “What is the river in Tiber?” or some philosophical question.
+
+Let Tiber respond poetically (this is allowed in GENERAL mode).
+
+Now, new request:
+
+POST /api/tiber/chat with forgePlayerId set for Drake London.
+
+Message: “Why is Drake London ranked where he is in Forge?”
+
+Expected:
+
+No “river”, “currents”, “destiny”, or metaphors.
+
+Answer cites alpha, subscores, env, SoS.
+
+Tone is analytical, not poetic.
+
+If metaphors still appear → that means GENERAL messages are still being loaded into FANTASY mode; fix conversation filtering.
+
+✅ Test 2 – Separate conversations per mode
+
+Call /api/tiber/conversations/:userId (if exposed) or inspect DB.
+
+Confirm you now see conversations with mode = 'FANTASY' and mode = 'GENERAL'.
+
+Confirm FANTASY conversationId is not reused when you send a non-fantasy question.
+
+✅ Test 3 – Persistence in fantasy only
+
+Ask Tiber fantasy questions about a few players (Puka, Drake, Achane).
+
+Then ask again in the same FANTASY conversation:
+
+“Remind me what you said about Drake London’s environment.”
+
+Expected:
+It remembers previous fantasy conversation details, but still uses analytical tone and Forge metrics.
+
+7. Summary for the Agent
+
+Implement a dual-memory system for Tiber:
+
+Add a mode column to tiber_conversations (FANTASY vs GENERAL).
+
+Route /api/tiber/chat requests into the correct mode based on Forge hints.
+
+Ensure fantasy chats only ever use FANTASY-mode conversations and messages.
+
+Preserve Tiber Voice v1 as-is; we are only separating memory pools so philosophical "river" language can never leak into player analysis responses.

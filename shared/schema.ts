@@ -1972,11 +1972,13 @@ export type InsertTiberMemory = z.infer<typeof insertTiberMemorySchema>;
 // ========================================
 
 // Tiber Conversations - Conversation threads
+// Mode separates FANTASY (ForgeContext-based) vs GENERAL (philosophical) conversations
 export const tiberConversations = pgTable("tiber_conversations", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId: text("user_id").notNull(),
   leagueId: text("league_id"),
   title: text("title"),
+  mode: text("mode").notNull().default("GENERAL"), // 'FANTASY' | 'GENERAL'
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

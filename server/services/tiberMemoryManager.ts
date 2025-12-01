@@ -3,6 +3,7 @@ import { tiberConversations, tiberMessages, tiberMemorySnapshots } from "@shared
 import { eq, and, desc, or, isNull } from "drizzle-orm";
 
 export type Sender = "USER" | "TIBER";
+export type ConversationMode = "FANTASY" | "GENERAL";
 
 export interface TiberMessageData {
   sender: Sender;
@@ -18,21 +19,37 @@ export interface TiberContext {
     league?: string;
     session?: string;
     facts?: Record<string, any>;
+    mode?: ConversationMode;
   };
 }
 
 export const TiberMemoryManager = {
-  async getOrCreateConversation(userId: string, leagueId?: string): Promise<string> {
+  async getOrCreateConversation(
+    userId: string, 
+    leagueId?: string | null, 
+    mode: ConversationMode = "GENERAL"
+  ): Promise<string> {
     const [conversation] = await db
       .insert(tiberConversations)
       .values({
         userId,
         leagueId: leagueId || null,
-        title: "New Conversation",
+        title: mode === "FANTASY" ? "Fantasy Analysis" : "New Conversation",
+        mode,
       })
       .returning({ id: tiberConversations.id });
 
     return conversation.id;
+  },
+
+  async getConversationById(conversationId: string) {
+    const [conversation] = await db
+      .select()
+      .from(tiberConversations)
+      .where(eq(tiberConversations.id, conversationId))
+      .limit(1);
+
+    return conversation || null;
   },
 
   async appendMessage(conversationId: string, sender: Sender, content: string): Promise<void> {
@@ -89,16 +106,24 @@ export const TiberMemoryManager = {
     return result;
   },
 
-  async buildContext(userId: string, conversationId: string, leagueId?: string): Promise<TiberContext> {
+  async buildContext(
+    userId: string, 
+    conversationId: string, 
+    leagueId?: string | null,
+    mode?: ConversationMode
+  ): Promise<TiberContext> {
     const [recentMessages, memorySummaries] = await Promise.all([
       this.getRecentMessages(conversationId),
-      this.getMemorySnapshots(userId, leagueId),
+      this.getMemorySnapshots(userId, leagueId ?? undefined),
     ]);
 
     return {
       conversationId,
       recentMessages,
-      memorySummaries,
+      memorySummaries: {
+        ...memorySummaries,
+        mode: mode || "GENERAL",
+      },
     };
   },
 
