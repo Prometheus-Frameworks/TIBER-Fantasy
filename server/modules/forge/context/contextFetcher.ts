@@ -16,7 +16,8 @@ import {
   playerSeason2024,
   playerAdvanced2024,
   playerIdentityMap,
-  weeklyStats
+  weeklyStats,
+  silverPlayerWeeklyStats
 } from '@shared/schema';
 import { eq, and, desc, sql, lte, sum, count } from 'drizzle-orm';
 
@@ -314,7 +315,7 @@ async function fetchFromWeeklyStats(
 }
 
 /**
- * Fetch advanced metrics from playerAdvanced2024 or similar
+ * Fetch advanced metrics from silver_player_weekly_stats (2025) or 2024 tables
  * Note: These tables use NFL GSIS IDs, not canonical IDs, so we translate first
  */
 async function fetchAdvancedMetrics(
@@ -323,12 +324,87 @@ async function fetchAdvancedMetrics(
   season: number
 ): Promise<ForgeContext['advancedMetrics']> {
   try {
-    // Translate canonical ID to NFL GSIS ID for 2024 tables
+    // Translate canonical ID to NFL GSIS ID
     const nflId = await getNflDataPyIdForCanonical(canonicalId);
     if (!nflId) {
       return undefined;
     }
     
+    // For 2025+, use silver_player_weekly_stats with aggregated EPA
+    if (season >= 2025) {
+      const silverStats = await db
+        .select({
+          totalPassAtt: sum(silverPlayerWeeklyStats.passAttempts),
+          totalPassYards: sum(silverPlayerWeeklyStats.passingYards),
+          totalPassTds: sum(silverPlayerWeeklyStats.passingTds),
+          totalPassingEpa: sum(silverPlayerWeeklyStats.passingEpa),
+          totalTargets: sum(silverPlayerWeeklyStats.targets),
+          totalRecYards: sum(silverPlayerWeeklyStats.receivingYards),
+          totalReceivingEpa: sum(silverPlayerWeeklyStats.receivingEpa),
+          totalAirYards: sum(silverPlayerWeeklyStats.airYards),
+          totalRushAtt: sum(silverPlayerWeeklyStats.rushAttempts),
+          totalRushYards: sum(silverPlayerWeeklyStats.rushingYards),
+          totalRushingEpa: sum(silverPlayerWeeklyStats.rushingEpa),
+        })
+        .from(silverPlayerWeeklyStats)
+        .where(
+          and(
+            eq(silverPlayerWeeklyStats.playerId, nflId),
+            eq(silverPlayerWeeklyStats.season, season)
+          )
+        );
+      
+      if (silverStats[0] && (Number(silverStats[0].totalPassAtt) > 0 || Number(silverStats[0].totalTargets) > 0)) {
+        const s = silverStats[0];
+        const passAtt = Number(s.totalPassAtt) || 1;
+        const targets = Number(s.totalTargets) || 1;
+        const rushAtt = Number(s.totalRushAtt) || 1;
+        
+        // Calculate EPA per play based on position
+        let epaPerPlay: number | undefined;
+        if (position === 'QB' && Number(s.totalPassAtt) > 0) {
+          epaPerPlay = Number(s.totalPassingEpa) / passAtt;
+        } else if ((position === 'WR' || position === 'TE') && Number(s.totalTargets) > 0) {
+          epaPerPlay = Number(s.totalReceivingEpa) / targets;
+        } else if (position === 'RB') {
+          // RB: blend rushing and receiving EPA
+          const totalTouches = Number(s.totalRushAtt) + Number(s.totalTargets);
+          if (totalTouches > 0) {
+            epaPerPlay = (Number(s.totalRushingEpa) + Number(s.totalReceivingEpa)) / totalTouches;
+          }
+        }
+        
+        // Calculate AYPA for QBs (air yards per attempt)
+        const aypa = position === 'QB' && passAtt > 0 
+          ? Number(s.totalPassYards) / passAtt 
+          : undefined;
+        
+        // Calculate yards per carry for RBs
+        const yardsPerCarry = position === 'RB' && rushAtt > 0
+          ? Number(s.totalRushYards) / rushAtt
+          : undefined;
+        
+        // Calculate YPRR proxy (receiving yards per target) for WR/TE
+        const yprr = (position === 'WR' || position === 'TE') && targets > 0
+          ? Number(s.totalRecYards) / targets
+          : undefined;
+        
+        // Calculate ADOT proxy (air yards per target)
+        const adot = targets > 0 
+          ? Number(s.totalAirYards) / targets 
+          : undefined;
+        
+        return {
+          epaPerPlay: epaPerPlay ?? undefined,
+          aypa: aypa ?? undefined,
+          yardsPerCarry: yardsPerCarry ?? undefined,
+          yprr: yprr ?? undefined,
+          adot: adot ?? undefined,
+        };
+      }
+    }
+    
+    // Fallback to 2024 tables for historical data
     const advanced = await db
       .select()
       .from(playerAdvanced2024)
