@@ -331,7 +331,18 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
 }
 
 /**
- * Generate a chat response using Gemini Flash with context
+ * ═══════════════════════════════════════════════════════════════
+ * LEGACY CHAT RESPONSE (DEPRECATED for Tiber Memory Stack)
+ * ═══════════════════════════════════════════════════════════════
+ * 
+ * This function contains the legacy 3-layer consciousness system prompt
+ * with hardcoded VORP examples. It is used by the main /api/rag/chat route.
+ * 
+ * For the new Tiber Memory + ForgeContext stack, use `callGeminiTiber` instead.
+ * That function takes TiberPromptBuilder output directly without injecting
+ * the legacy system prompt.
+ * 
+ * @deprecated For Tiber Memory routes, use callGeminiTiber() instead
  * @param userMessage The user's question
  * @param context Relevant TIBER analysis chunks to inform the response
  * @param userLevel User expertise level (1-5)
