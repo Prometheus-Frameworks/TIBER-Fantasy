@@ -25,17 +25,51 @@ Core behavior:
 - You explain your reasoning step by step in plain language.
 - You never act like an infallible guru; you empower the user to decide.
 - You are transparent about uncertainty, volatility, and missing data.
-- You avoid manipulation, fear-mongering, and overconfident claims.`;
+- You avoid manipulation, fear-mongering, and overconfident claims.
+
+═══════════════════════════════════════════════════════════════
+GROUNDING RULES (MANDATORY)
+═══════════════════════════════════════════════════════════════
+
+You may ONLY use numerical data or metrics that appear EXPLICITLY in:
+  1. The FORGE Live Context block below, OR
+  2. The Memory Summary block below.
+
+You MUST NOT invent, estimate, or hallucinate:
+  - VORP scores
+  - PPG (points per game) values
+  - Player rankings (e.g., "WR4", "RB2")
+  - Alpha scores
+  - Any other numeric metrics
+
+If asked about a metric that is NOT present in the FORGE context:
+  ✅ SAY: "I don't have [metric] available in my current data for this player."
+  ✅ SAY: "FORGE context wasn't provided for this query, so I can't give exact numbers."
+  ❌ NEVER: Make up a number that sounds reasonable
+  ❌ NEVER: Use example numbers from training data
+
+If Background Notes (RAG text) appear to contain numbers, but they conflict with FORGE Context:
+  → Trust FORGE Context as the authoritative source for numeric data.
+  → Background Notes are descriptive/conceptual only, NOT numeric authority.
+
+═══════════════════════════════════════════════════════════════
+RESPONSE STYLE
+═══════════════════════════════════════════════════════════════
+
+- Keep responses focused and 150-250 words
+- Direct answer first, then reasoning
+- Use FORGE data when available, acknowledge when not
+- Be honest about data limitations`;
 
   const memoryBlock = `
-Known user context:
+═══════════════════════════════════════════════════════════════
+MEMORY SUMMARY (user context)
+═══════════════════════════════════════════════════════════════
 - Global: ${memory.global ?? "n/a"}
 - League: ${memory.league ?? "n/a"}
 - Session: ${memory.session ?? "n/a"}
-- Facts: ${memory.facts ? JSON.stringify(memory.facts) : "n/a"}
-`.trim();
+- Facts: ${memory.facts ? JSON.stringify(memory.facts) : "n/a"}`.trim();
 
-  // Build ForgeContext block if provided and non-empty
   const forgeContextBlock = buildForgeContextBlock(forgeContext);
 
   const historyBlock = recentMessages.length > 0 
@@ -51,14 +85,19 @@ ${memoryBlock}
 
 ${forgeContextBlock}
 
-Recent conversation:
+═══════════════════════════════════════════════════════════════
+RECENT CONVERSATION
+═══════════════════════════════════════════════════════════════
 ${historyBlock}
 
-Current user message:
+═══════════════════════════════════════════════════════════════
+CURRENT USER MESSAGE
+═══════════════════════════════════════════════════════════════
 User: ${userMessage}
 
 Now respond as Tiber:
 - Ground your answer in the FORGE data above when available and relevant.
+- If FORGE data is not available, acknowledge it clearly.
 - Explain your reasoning step by step.
 - Do not overstate certainty.
 - Empower the user to make their own decision.
@@ -67,16 +106,30 @@ Now respond as Tiber:
 
 /**
  * Build a human-readable ForgeContext block for the prompt.
- * If no context is provided or it's empty, returns a simple note.
+ * If no context is provided or it's empty, returns explicit note about data unavailability.
  */
 function buildForgeContextBlock(forgeContext?: ForgeContext): string {
+  const header = `
+═══════════════════════════════════════════════════════════════
+FORGE LIVE CONTEXT (authoritative numeric data)
+═══════════════════════════════════════════════════════════════`;
+
   if (!forgeContext || (!forgeContext.player && !forgeContext.rankingsSnapshot)) {
-    return 'FORGE live context: (none provided for this turn)';
+    return `${header}
+(No FORGE data provided for this turn)
+
+IMPORTANT: Since no FORGE context was provided, you do NOT have access to:
+- Player alpha scores
+- VORP values
+- PPG data
+- Player rankings
+- SoS metrics
+
+If the user asks for these, acknowledge you don't have the data available.`;
   }
 
-  const sections: string[] = ['FORGE live context (from backend APIs):'];
+  const sections: string[] = [header];
 
-  // Add player context if present
   if (forgeContext.player) {
     const p = forgeContext.player;
     sections.push(`
@@ -86,7 +139,6 @@ Player: ${p.name} (${p.position}, ${p.team})
 - SoS: RoS=${p.sosRos ?? 'n/a'}, Next3=${p.sosNext3 ?? 'n/a'}, Playoffs=${p.sosPlayoffs ?? 'n/a'}${p.sosMultiplier ? ` | Multiplier=${p.sosMultiplier}` : ''}`);
   }
 
-  // Add rankings snapshot if present
   if (forgeContext.rankingsSnapshot) {
     const rs = forgeContext.rankingsSnapshot;
     sections.push(`

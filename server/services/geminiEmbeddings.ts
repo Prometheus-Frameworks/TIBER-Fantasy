@@ -10,6 +10,53 @@ import { detectFormat, logFormatDetection } from '../lib/format-detector';
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 /**
+ * ═══════════════════════════════════════════════════════════════
+ * TIBER v2 CLEAN GEMINI CALL (ForgeContext-grounded)
+ * ═══════════════════════════════════════════════════════════════
+ * 
+ * Use this function for new Tiber Memory + ForgeContext stack.
+ * It takes the FULL system prompt from TiberPromptBuilder directly,
+ * without injecting the legacy 3-layer consciousness system.
+ * 
+ * @param systemPrompt - The complete prompt from TiberPromptBuilder (includes identity, memory, ForgeContext)
+ * @param userMessage - The current user message
+ * @returns Generated response text
+ */
+export async function callGeminiTiber(
+  systemPrompt: string,
+  userMessage: string
+): Promise<string> {
+  try {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY environment variable is not set");
+    }
+
+    console.log(`[Tiber/Gemini] Calling Gemini with TiberPromptBuilder output (${systemPrompt.length} chars)`);
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: `User: ${userMessage}`,
+      config: {
+        systemInstruction: systemPrompt,
+        temperature: 0.7,
+        maxOutputTokens: 500,
+      },
+    });
+
+    const text = response.text;
+    
+    if (!text) {
+      throw new Error("No text response from Gemini");
+    }
+
+    return text;
+  } catch (error) {
+    console.error("❌ [Tiber/Gemini] Failed to generate response:", error);
+    throw error;
+  }
+}
+
+/**
  * Query Mode Detection - Determines if query is about trades, waivers, start/sit, or generic
  * TIBER WAIVER VORP PATCH v1.0: Separates "Trade Brain" from "Waiver Brain"
  * 

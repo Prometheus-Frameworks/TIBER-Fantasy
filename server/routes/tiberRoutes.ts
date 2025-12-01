@@ -938,7 +938,7 @@ router.get('/health', (req, res) => {
 
 import { TiberMemoryManager } from '../services/tiberMemoryManager';
 import { buildTiberPrompt } from '../services/tiberPromptBuilder';
-import { generateChatResponse } from '../services/geminiEmbeddings';
+import { callGeminiTiber } from '../services/geminiEmbeddings';
 import { loadForgeContext, ForgeContext } from '../services/forgeContextLoader';
 
 router.post('/chat', async (req, res) => {
@@ -993,7 +993,9 @@ router.post('/chat', async (req, res) => {
       forgeContext,
     });
 
-    const tiberReply = await generateChatResponse(message, [prompt]);
+    // Use clean Gemini call with TiberPromptBuilder output as system prompt
+    // This bypasses the legacy 3-layer consciousness system with hardcoded VORP examples
+    const tiberReply = await callGeminiTiber(prompt, message);
 
     await TiberMemoryManager.appendMessage(conversationId, "TIBER", tiberReply);
 
