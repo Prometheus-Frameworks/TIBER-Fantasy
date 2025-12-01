@@ -396,6 +396,9 @@ router.post('/snapshot', async (req: Request, res: Response) => {
  * - position (required): WR | RB | TE | QB
  * - season (optional): number, defaults to 2025
  * - week (optional): number, defaults to 10
+ * - minGamesPlayed (optional): filter to players with >= N games (default: 4)
+ * - minConfidence (optional): filter to players with >= N confidence (default: 0)
+ * - includeAllPlayers (optional): if 'true', skip filters (for debugging)
  */
 router.get('/debug/distribution', async (req: Request, res: Response) => {
   try {
@@ -406,6 +409,9 @@ router.get('/debug/distribution', async (req: Request, res: Response) => {
     const position = (req.query.position as string)?.toUpperCase() as PlayerPosition;
     const season = parseInt(req.query.season as string) || 2025;
     const week = parseInt(req.query.week as string) || 10;
+    const includeAllPlayers = req.query.includeAllPlayers === 'true';
+    const minGamesPlayed = includeAllPlayers ? 0 : (parseInt(req.query.minGamesPlayed as string) || 4);
+    const minConfidence = includeAllPlayers ? 0 : (parseInt(req.query.minConfidence as string) || 0);
 
     if (!position || !['WR', 'RB', 'TE', 'QB'].includes(position)) {
       return res.status(400).json({
@@ -414,12 +420,20 @@ router.get('/debug/distribution', async (req: Request, res: Response) => {
       });
     }
 
-    console.log(`[FORGE/Debug] Distribution request: position=${position}, season=${season}, week=${week}`);
+    console.log(`[FORGE/Debug] Distribution request: position=${position}, season=${season}, week=${week}, minGames=${minGamesPlayed}, minConf=${minConfidence}`);
 
     const playerIds = await fetchPlayerIdsForPosition(position, 500);
-    const scores = await forgeService.getForgeScoresForPlayers(playerIds, season, week);
+    const allScores = await forgeService.getForgeScoresForPlayers(playerIds, season, week);
 
-    const rawAlphas = scores
+    const totalPlayers = allScores.length;
+    const cappedCount = allScores.filter(s => s.dataQuality?.cappedDueToMissingData).length;
+    
+    const filteredScores = allScores.filter(s => 
+      s.gamesPlayed >= minGamesPlayed && 
+      s.confidence >= minConfidence
+    );
+
+    const rawAlphas = filteredScores
       .map(s => s.rawAlpha)
       .filter((v): v is number => v != null && !isNaN(v))
       .sort((a, b) => a - b);
@@ -430,9 +444,15 @@ router.get('/debug/distribution', async (req: Request, res: Response) => {
         position,
         season,
         week,
+        filters: { minGamesPlayed, minConfidence },
         count: 0,
         distribution: null,
-        message: 'No scores found for this position/season/week',
+        dataQuality: {
+          totalPlayers,
+          cappedCount,
+          cappedPct: Math.round((cappedCount / totalPlayers) * 100),
+        },
+        message: 'No scores found matching filters',
       });
     }
 
@@ -456,14 +476,28 @@ router.get('/debug/distribution', async (req: Request, res: Response) => {
       max: Math.round(max * 10) / 10,
     };
 
-    console.log(`[FORGE/Debug] ${position} ${season}w${week} rawAlpha: min=${distribution.min} p10=${distribution.p10} p50=${distribution.p50} p90=${distribution.p90} max=${distribution.max}`);
+    const spread = {
+      p10_p50: Math.round((distribution.p50 - distribution.p10) * 10) / 10,
+      p50_p90: Math.round((distribution.p90 - distribution.p50) * 10) / 10,
+      total: Math.round((distribution.max - distribution.min) * 10) / 10,
+    };
+
+    console.log(`[FORGE/Debug] ${position} ${season}w${week} rawAlpha: min=${distribution.min} p10=${distribution.p10} p50=${distribution.p50} p90=${distribution.p90} max=${distribution.max} (${count} players after filters)`);
 
     return res.json({
       success: true,
       position,
       season,
       week,
+      filters: { minGamesPlayed, minConfidence },
       distribution,
+      spread,
+      dataQuality: {
+        totalPlayers,
+        filteredPlayers: count,
+        cappedCount,
+        cappedPct: Math.round((cappedCount / totalPlayers) * 100),
+      },
       calibrationSuggestion: {
         p10: distribution.p10,
         p90: distribution.p90,
