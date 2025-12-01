@@ -48,6 +48,13 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **Admin API Lexicon**: Developer tool at `/admin/api-lexicon` for browsing and testing Forge/Tiber API endpoints. Features searchable endpoint registry, tag filtering, sample parameters, live response previews with important field highlighting, and cURL command generation. Registry maintained at `server/infra/apiRegistry.ts`.
 - **Tiber Memory v0.1 (Conversation Memory System)**: Persistent conversation memory for Tiber AI chat. Features conversation threading, message history, and scoped memory snapshots (global, league, session). Endpoints: `/api/tiber/chat` (chat with memory), `/api/tiber/conversations/:userId` (list conversations), `/api/tiber/conversation/:conversationId/messages` (get messages). Uses `TiberMemoryManager` service for context building and `TiberPromptBuilder` for Tiber-specific prompts.
 - **ForgeContext v0 (FORGE-Tiber Integration)**: Wires live FORGE data into Tiber chat prompts. When clients provide optional hints (`forgePlayerId`, `forgePosition`, `forgeTeamId`), Tiber's responses are grounded in actual FORGE alpha scores, subscores (volume, efficiency, stability, contextFit), and SoS metrics. Uses `ForgeContextLoader` service to call underlying FORGE services directly (no HTTP self-calls). Fully backwards compatible - all hints are optional.
+- **Tiber Voice v1 (Prompt Architecture)**: Gemini-optimized reasoning and grounding system for Tiber AI. Features:
+  - **Truth Hierarchy**: Tier 0 (FORGE data = absolute law) > Tier 1 (role/injury context) > Tier 2 (narratives/vibes)
+  - **Reasoning Pipeline**: Alpha check → Subscores → Environment → Matchup/Schedule
+  - **Reasoning Heuristics**: Volume Law, Stability Principle, Anchor Rule, Skeptic's Razor
+  - **Style Guide**: Bottom Line Up Front, no fluff, no invented stats, direct analytical tone
+  - **Grounding**: `trimForgeContext` sends minimal FORGE payload; Tiber refuses to hallucinate missing metrics
+  - Files: `tiberPromptBuilder.ts` (system prompt), `forgeContextLoader.ts` (data trimmer)
 
 ## OASIS Status (Deprecated)
 
