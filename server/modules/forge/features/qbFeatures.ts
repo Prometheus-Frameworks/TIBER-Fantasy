@@ -1,10 +1,11 @@
 /**
- * FORGE v0.1 - QB Feature Builder
+ * FORGE v0.2 - QB Feature Builder
  * 
  * Builds position-specific features for Quarterbacks
  * per the FORGE scoring specification.
  * 
- * QB Alpha Weights: 25% volume, 35% efficiency, 15% roleLeverage, 10% stability, 15% contextFit
+ * QB Alpha Weights: 29% volume, 41% efficiency, 12% stability, 18% contextFit
+ * (v0.2: roleLeverage removed, weights redistributed)
  */
 
 import { ForgeContext, ForgeFeatureBundle, MISSING_DATA_CAPS } from '../types';
@@ -39,14 +40,12 @@ export function buildQBFeatures(context: ForgeContext): ForgeFeatureBundle {
   
   const volumeFeatures = buildVolumeFeatures(context, gamesPlayed);
   const efficiencyFeatures = buildEfficiencyFeatures(context, hasAdvancedStats);
-  const roleLeverageFeatures = buildRoleLeverageFeatures(context, hasSnapData);
   const stabilityFeatures = buildStabilityFeatures(context, gamesPlayed);
   const contextFitFeatures = buildContextFitFeatures(context, hasDvPData, hasEnvironmentData);
   
   if (gamesPlayed < 3) {
     volumeFeatures.score = Math.min(volumeFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
     efficiencyFeatures.score = Math.min(efficiencyFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
-    roleLeverageFeatures.score = Math.min(roleLeverageFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
     stabilityFeatures.score = Math.min(stabilityFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
   }
   
@@ -55,7 +54,6 @@ export function buildQBFeatures(context: ForgeContext): ForgeFeatureBundle {
     gamesPlayed,
     volumeFeatures,
     efficiencyFeatures,
-    roleLeverageFeatures,
     stabilityFeatures,
     contextFitFeatures,
     dataQuality: {
@@ -158,41 +156,6 @@ function buildEfficiencyFeatures(
   return { raw, normalized, score, capped };
 }
 
-function buildRoleLeverageFeatures(
-  context: ForgeContext,
-  hasSnapData: boolean
-): ForgeFeatureBundle['roleLeverageFeatures'] {
-  const rushAttempts = context.seasonStats.rushAttempts ?? 0;
-  const passAttempts = context.seasonStats.passingAttempts ?? 1;
-  
-  const designedRushShare = rushAttempts / Math.max(rushAttempts + passAttempts, 1);
-  const goalLineRushShare = context.roleMetrics?.goalLineRushShare;
-  
-  const raw = {
-    designedRushShare,
-    goalLineRushShare,
-  };
-  
-  const normalized = {
-    designedRushShare: calculatePercentile(designedRushShare, 0, QB_THRESHOLDS.DESIGNED_RUSH_SHARE_GOOD * 1.5),
-    goalLineRushShare: goalLineRushShare !== undefined
-      ? calculatePercentile(goalLineRushShare, 0, QB_THRESHOLDS.GOAL_LINE_RUSH_SHARE_GOOD * 1.5)
-      : 50,
-  };
-  
-  let score = clamp(
-    normalized.designedRushShare * 0.60 +
-    normalized.goalLineRushShare * 0.40,
-    0, 100
-  );
-  
-  const capped = !hasSnapData && goalLineRushShare === undefined;
-  if (capped) {
-    score = Math.min(score, MISSING_DATA_CAPS.NO_SNAP_DATA_ROLE);
-  }
-  
-  return { raw, normalized, score, capped };
-}
 
 function buildStabilityFeatures(
   context: ForgeContext,

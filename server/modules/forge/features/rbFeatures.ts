@@ -1,10 +1,11 @@
 /**
- * FORGE v0.1 - RB Feature Builder
+ * FORGE v0.2 - RB Feature Builder
  * 
  * Builds position-specific features for Running Backs
  * per the FORGE scoring specification.
  * 
- * RB Alpha Weights: 38% volume, 25% efficiency, 20% roleLeverage, 12% stability, 5% contextFit
+ * RB Alpha Weights: 47.5% volume, 31% efficiency, 15% stability, 6.5% contextFit
+ * (v0.2: roleLeverage removed, weights redistributed)
  */
 
 import { ForgeContext, ForgeFeatureBundle, MISSING_DATA_CAPS } from '../types';
@@ -42,14 +43,12 @@ export function buildRBFeatures(context: ForgeContext): ForgeFeatureBundle {
   
   const volumeFeatures = buildVolumeFeatures(context, gamesPlayed);
   const efficiencyFeatures = buildEfficiencyFeatures(context, hasAdvancedStats);
-  const roleLeverageFeatures = buildRoleLeverageFeatures(context, hasSnapData);
   const stabilityFeatures = buildStabilityFeatures(context, gamesPlayed);
   const contextFitFeatures = buildContextFitFeatures(context, hasDvPData, hasEnvironmentData);
   
   if (gamesPlayed < 3) {
     volumeFeatures.score = Math.min(volumeFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
     efficiencyFeatures.score = Math.min(efficiencyFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
-    roleLeverageFeatures.score = Math.min(roleLeverageFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
     stabilityFeatures.score = Math.min(stabilityFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
   }
   
@@ -58,7 +57,6 @@ export function buildRBFeatures(context: ForgeContext): ForgeFeatureBundle {
     gamesPlayed,
     volumeFeatures,
     efficiencyFeatures,
-    roleLeverageFeatures,
     stabilityFeatures,
     contextFitFeatures,
     dataQuality: {
@@ -167,52 +165,6 @@ function buildEfficiencyFeatures(
   return { raw, normalized, score, capped };
 }
 
-function buildRoleLeverageFeatures(
-  context: ForgeContext,
-  hasSnapData: boolean
-): ForgeFeatureBundle['roleLeverageFeatures'] {
-  const backfieldShare = context.roleMetrics?.backfieldTouchShare;
-  const receivingWorkRate = context.roleMetrics?.receivingWorkRate;
-  const goalLineWorkRate = context.roleMetrics?.goalLineWorkRate;
-  const thirdDownSnapPct = context.roleMetrics?.thirdDownSnapPct;
-  
-  const raw = {
-    backfieldShare,
-    receivingWorkRate,
-    goalLineWorkRate,
-    thirdDownSnapPct,
-  };
-  
-  const normalized = {
-    backfieldShare: backfieldShare !== undefined
-      ? calculatePercentile(backfieldShare, 0.3, RB_THRESHOLDS.BACKFIELD_SHARE_GOOD)
-      : 50,
-    receivingWorkRate: receivingWorkRate !== undefined
-      ? calculatePercentile(receivingWorkRate, 0.1, RB_THRESHOLDS.RECEIVING_WORK_RATE_GOOD)
-      : 50,
-    goalLineWorkRate: goalLineWorkRate !== undefined
-      ? calculatePercentile(goalLineWorkRate, 0, 0.8)
-      : 50,
-    thirdDownSnapPct: thirdDownSnapPct !== undefined
-      ? calculatePercentile(thirdDownSnapPct, 0.1, RB_THRESHOLDS.THIRD_DOWN_SNAP_PCT_GOOD)
-      : 50,
-  };
-  
-  let score = clamp(
-    normalized.backfieldShare * 0.40 +
-    normalized.receivingWorkRate * 0.25 +
-    normalized.goalLineWorkRate * 0.20 +
-    normalized.thirdDownSnapPct * 0.15,
-    0, 100
-  );
-  
-  const capped = !hasSnapData;
-  if (capped) {
-    score = Math.min(score, MISSING_DATA_CAPS.NO_SNAP_DATA_ROLE);
-  }
-  
-  return { raw, normalized, score, capped };
-}
 
 function buildStabilityFeatures(
   context: ForgeContext,

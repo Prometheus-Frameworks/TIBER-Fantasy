@@ -1,10 +1,11 @@
 /**
- * FORGE v0.1 - TE Feature Builder
+ * FORGE v0.2 - TE Feature Builder
  * 
  * Builds position-specific features for Tight Ends
  * per the FORGE scoring specification.
  * 
- * TE Alpha Weights: 30% volume, 28% efficiency, 25% roleLeverage, 10% stability, 7% contextFit
+ * TE Alpha Weights: 40% volume, 37% efficiency, 13% stability, 10% contextFit
+ * (v0.2: roleLeverage removed, weights redistributed)
  */
 
 import { ForgeContext, ForgeFeatureBundle, MISSING_DATA_CAPS } from '../types';
@@ -39,14 +40,12 @@ export function buildTEFeatures(context: ForgeContext): ForgeFeatureBundle {
   
   const volumeFeatures = buildVolumeFeatures(context, gamesPlayed);
   const efficiencyFeatures = buildEfficiencyFeatures(context, hasAdvancedStats);
-  const roleLeverageFeatures = buildRoleLeverageFeatures(context, hasSnapData);
   const stabilityFeatures = buildStabilityFeatures(context, gamesPlayed);
   const contextFitFeatures = buildContextFitFeatures(context, hasDvPData, hasEnvironmentData);
   
   if (gamesPlayed < 3) {
     volumeFeatures.score = Math.min(volumeFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
     efficiencyFeatures.score = Math.min(efficiencyFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
-    roleLeverageFeatures.score = Math.min(roleLeverageFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
     stabilityFeatures.score = Math.min(stabilityFeatures.score, MISSING_DATA_CAPS.LESS_THAN_3_GAMES);
   }
   
@@ -55,7 +54,6 @@ export function buildTEFeatures(context: ForgeContext): ForgeFeatureBundle {
     gamesPlayed,
     volumeFeatures,
     efficiencyFeatures,
-    roleLeverageFeatures,
     stabilityFeatures,
     contextFitFeatures,
     dataQuality: {
@@ -153,46 +151,6 @@ function buildEfficiencyFeatures(
   return { raw, normalized, score, capped };
 }
 
-function buildRoleLeverageFeatures(
-  context: ForgeContext,
-  hasSnapData: boolean
-): ForgeFeatureBundle['roleLeverageFeatures'] {
-  const routeRate = context.roleMetrics?.routeRate;
-  const slotRate = context.roleMetrics?.slotRate;
-  const rzRouteShare = context.roleMetrics?.redZoneRouteShare;
-  
-  const raw = {
-    routeRate,
-    slotRate,
-    rzRouteShare,
-  };
-  
-  const normalized = {
-    routeRate: routeRate !== undefined
-      ? calculatePercentile(routeRate, 0.4, TE_THRESHOLDS.ROUTE_RATE_GOOD)
-      : 50,
-    slotRate: slotRate !== undefined
-      ? calculatePercentile(slotRate, 0, 0.50)
-      : 50,
-    rzRouteShare: rzRouteShare !== undefined
-      ? calculatePercentile(rzRouteShare, 0, TE_THRESHOLDS.RZ_ROUTE_SHARE_GOOD * 1.5)
-      : 50,
-  };
-  
-  let score = clamp(
-    normalized.routeRate * 0.45 +
-    normalized.slotRate * 0.25 +
-    normalized.rzRouteShare * 0.30,
-    0, 100
-  );
-  
-  const capped = !hasSnapData;
-  if (capped) {
-    score = Math.min(score, MISSING_DATA_CAPS.NO_SNAP_DATA_ROLE);
-  }
-  
-  return { raw, normalized, score, capped };
-}
 
 function buildStabilityFeatures(
   context: ForgeContext,
