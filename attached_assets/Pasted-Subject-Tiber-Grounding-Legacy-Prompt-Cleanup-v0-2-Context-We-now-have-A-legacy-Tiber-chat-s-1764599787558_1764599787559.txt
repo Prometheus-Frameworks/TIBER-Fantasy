@@ -1,0 +1,144 @@
+Subject: Tiber Grounding & Legacy Prompt Cleanup v0.2
+
+Context:
+We now have:
+- A legacy Tiber chat system in geminiEmbeddings.ts with a huge system prompt and fake “example answers” that include hardcoded VORP-style lines (e.g. “Saquon is RB2 with 18.3 PPG and +91.5 VORP”).
+- A new Tiber chat system using:
+  - TiberMemoryManager (conversation persistence)
+  - TiberPromptBuilder (prompt assembly)
+  - ForgeContext v0 (live FORGE alpha/subscores/SoS)
+
+Problem:
+- The legacy prompt is teaching the LLM to imitate VORP-style numeric outputs even when no real data is present.
+- The new TiberPromptBuilder does not have strong grounding rules, so the model still feels “allowed” to invent numbers.
+- We want Forge to be the **only** authority for numeric player metrics (alpha, subscores, SoS, and later VORP), and prevent Tiber from hallucinating stats.
+
+Goals:
+1) Deprecate or neuter the legacy Tiber prompt in geminiEmbeddings.ts.
+2) Add strong grounding rules to TiberPromptBuilder so Tiber:
+   - Uses ForgeContext numbers only.
+   - Treats RAG/knowledge as descriptive, not numeric.
+   - Refuses to invent VORP/PPG/ranks when not present.
+3) Ensure the main /api/tiber/chat route is using the new Memory + ForgeContext stack, not the legacy one.
+
+────────────────────────
+1) Legacy Tiber Cleanup
+────────────────────────
+
+File of interest:
+- geminiEmbeddings.ts (or similarly named legacy Tiber chat integration)
+
+Tasks:
+1. Identify how/where geminiEmbeddings.ts is actually used:
+   - Search for imports of this module across the codebase.
+   - Confirm whether any current API route still uses this legacy Tiber chat path.
+
+2. If geminiEmbeddings.ts is NOT used by any live route:
+   - Mark it clearly as deprecated at the top of the file (comment).
+   - Optionally move it to a legacy/ folder if we have one.
+   - Remove or comment out any hardcoded “example answers” with fake VORP/PPG lines.
+   - NOTE: We want to keep the file around for historical reference, but it must not influence the live Tiber system.
+
+3. If geminiEmbeddings.ts IS used by any live route:
+   - Migrate that route to use the new Tiber stack:
+     - TiberMemoryManager (for conversation state)
+     - ForgeContext loader (for numeric data)
+     - TiberPromptBuilder (for prompt assembly)
+   - Remove the legacy direct Gemini call + baked-in prompt from that route.
+   - After migration, treat geminiEmbeddings.ts as in (2): deprecated / legacy.
+
+Deliverable:
+- No live route should be using geminiEmbeddings.ts to build prompts or call Gemini directly.
+- All Tiber chat should go through:
+  - TiberPromptBuilder
+  - TiberMemoryManager
+  - ForgeContext (when hints are provided)
+
+────────────────────────
+2) Strong Grounding Rules in TiberPromptBuilder
+────────────────────────
+
+File:
+- server/services/tiberPromptBuilder.ts
+
+Update the identity/behavior block to add explicit grounding rules. For example, expand Tiber’s identity with something like:
+
+- "You may ONLY use numerical data or metrics that appear explicitly in:
+   - the Forge Context block, or
+   - the Memory Summary block.
+   You must NOT invent stats, ranks, VORP values, points per game, or any other numerical metrics that are not present in those sections."
+
+- "If you do not see a metric in the Forge Context, you must say that the information is not available instead of guessing it."
+
+- "If any Background Notes (documentation/RAG text) appear to imply numbers, and they conflict with Forge Context numeric values, you must trust Forge Context."
+
+Implementation details:
+
+- Ensure the final prompt string clearly separates:
+  - Identity / behavior section
+  - Memory block
+  - Forge Context block
+  - (Optional) Background Notes / RAG text block
+  - Conversation history
+  - Current user message
+  - Final instructions
+
+- If there is a RAG/knowledge block, label it explicitly as:
+  - "Background Notes (descriptive, non-authoritative for numeric data)"
+
+────────────────────────
+3) Confirm /api/tiber/chat Uses Only New Stack
+────────────────────────
+
+File(s):
+- Tiber chat route definition (e.g. server/routes/tiber.ts or wherever /api/tiber/chat is defined)
+
+Tasks:
+
+1. Confirm that /api/tiber/chat uses:
+   - TiberMemoryManager for:
+     - getOrCreateConversation
+     - appendMessage
+     - buildContext (recentMessages + memorySummaries)
+   - ForgeContext loader for:
+     - forgePlayerId / forgePosition / forgeTeamId hints
+   - TiberPromptBuilder.buildTiberPrompt for:
+     - constructing the full prompt string.
+
+2. Confirm that /api/tiber/chat:
+   - Does NOT import or call geminiEmbeddings.ts.
+   - Calls a single Gemini client function with the built prompt (e.g. callGeminiTiber(prompt)).
+
+3. Optional: add a brief inline comment near the prompt builder call explaining that:
+   - ForgeContext is the only numeric authority.
+   - RAG/knowledge is advisory only.
+
+────────────────────────
+4) Sanity Check / Guardrail Test
+────────────────────────
+
+Finally, add a small internal test or manual check to verify behavior:
+
+- Call /api/tiber/chat with:
+  - message: "What is Puka Nacua's VORP right now?"
+  - WITHOUT passing any ForgeContext that includes VORP.
+
+Expected behavior after this task:
+- Tiber should say something like:
+  - "I don't have VORP available in the current Forge context, so I can't give a precise number."
+  - or "VORP is not provided here; I can talk generally about his profile if you’d like."
+
+- Tiber must NOT output a made-up VORP number.
+
+Deliverables:
+- Updated geminiEmbeddings.ts (marked deprecated, or migrated away from).
+- Updated TiberPromptBuilder with:
+  - explicit grounding rules
+  - clear separation of Forge Context vs any Background Notes
+- Confirmed /api/tiber/chat route using the new stack exclusively.
+
+Please output:
+- The updated TiberPromptBuilder file
+- Any updated route files for /api/tiber/chat
+- A brief note about the final state of geminiEmbeddings.ts (still present but unused, moved to legacy, etc.)
+so I can review before deploying.

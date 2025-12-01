@@ -1,0 +1,141 @@
+Subject: Audit Tiber RAG + VORP Usage and Align with Forge
+
+Context:
+We recently implemented:
+- Tiber Memory v0.1 (conversations + snapshots)
+- ForgeContext v0 (FORGE data injected into /api/tiber/chat via forgeContextLoader + TiberPromptBuilder)
+
+Problem:
+Tiber is still referencing VORP and other stats that are NOT coming from ForgeContext. These are likely coming from old RAG / knowledge sources that were used before Forge existed.
+
+We need to:
+1) Identify all places where Tiber gets VORP-like numeric signals from RAG/docs.
+2) Decide how VORP is allowed to exist going forward (either deprecated or explicitly sourced from Forge).
+3) Update the Tiber prompt builder so Forge numeric data is the primary authority, and RAG is secondary for explanations only.
+
+Tech stack:
+- Node / Express
+- Gemini model for Tiber
+- Whatever RAG / embedding / knowledge system we currently have configured for Tiber (search files for "RAG", "tiber_rag", "knowledgeBase", "embeddings", "pinecone", etc.)
+
+Goals for this task:
+- Produce a clear audit of:
+  - What data sources are feeding Tiber’s RAG layer
+  - Where VORP or similar numeric metrics are stored
+  - How those sources are wired into the Tiber prompt
+
+- Implement minimal changes so that:
+  - Forge numeric data is clearly the primary source of truth.
+  - Tiber does NOT invent VORP or pull it from stale docs unless explicitly passed in via ForgeContext.
+
+────────────────────────
+1) Code/Config Audit
+────────────────────────
+
+Step 1: Search the codebase for:
+- "VORP"
+- "vorp"
+- "value over replacement"
+- "tiber_rag"
+- "knowledgeBase"
+- "embeddings"
+- "pinecone"
+- "ragConfig"
+
+Identify:
+- Any JSON/CSV/TS/MD files that include per-player numeric VORP values.
+- Any RAG config that indexes these files for Tiber.
+- Any prompt-assembly code that pulls these docs into the Tiber prompt.
+
+Produce a markdown report:
+- File: docs/tiber_rag_audit.md
+- Include:
+  - List of all RAG sources used by Tiber (paths + short descriptions)
+  - Which of those contain numeric metrics (especially VORP, ranks, PPG)
+  - Where in the code the RAG retrieval is wired into Tiber’s prompt
+  - Any obvious stale/legacy references (e.g., old spreadsheets from a previous season)
+
+────────────────────────
+2) VORP Policy & Refactor
+────────────────────────
+
+We want to make Forge the numeric authority. For v0 of this task:
+
+A) If there is a dedicated "VORP per player" data source used by RAG:
+   - Tag it as legacy in the audit report.
+   - Either:
+     - A1) Remove it from the list of RAG-indexed sources so it is no longer retrieved.
+     - or
+     - A2) Rename / flag it in code as "legacy_vorp" and mark it as not for numeric authority in the prompt.
+
+   The goal is: Tiber should not be using old RAG docs as the source for current numeric VORP values.
+
+B) If we find we still want VORP:
+   - Do NOT implement real VORP math yet.
+   - Just:
+     - Add a TODO section in docs/tiber_rag_audit.md explaining:
+       - “Forge will eventually compute VORP internally and expose it via ForgeContext. For now, VORP from RAG sources is deprecated and must not be treated as authoritative.”
+
+────────────────────────
+3) TiberPromptBuilder Grounding Rules
+────────────────────────
+
+Update TiberPromptBuilder (server/services/tiberPromptBuilder.ts):
+
+- Add grounding rules to the Tiber identity block, such as:
+
+  - "You may ONLY use numerical data or metrics that appear explicitly in:
+     - the Forge Context block, or
+     - the Memory Summary block.
+     You must NOT invent stats, ranks, VORP values, points per game, or any other numerical metrics that are not present in those sections."
+
+  - "If you do not see a metric in the provided Forge Context, do not guess it. Instead, say that the information is not available."
+
+- Ensure the final prompt string includes:
+  - A clearly marked "Forge Context" section (already implemented in ForgeContext v0).
+  - If we have any RAG text blocks, label those separately as "Background Notes" or similar, and instruct Tiber that:
+    - ForgeContext numeric values override any implied numbers in textual notes.
+
+────────────────────────
+4) Optional: RAG Section Labeling in Prompt
+────────────────────────
+
+If there is a RAG retrieval block being fed into Tiber’s prompt (e.g., docs, cheat sheets, explanations), update TiberPromptBuilder to label it explicitly:
+
+Example:
+
+- "Forge Context (authoritative numeric data):"
+  { ...forgeContext JSON ... }
+
+- "Background Notes (non-authoritative, descriptive only):"
+  { RAG text here }
+
+Then in the identity section:
+
+- "If a Background Note contradicts Forge Context numeric values, you must trust Forge Context."
+
+────────────────────────
+5) Deliverables
+────────────────────────
+
+- New file: docs/tiber_rag_audit.md
+  - Lists:
+    - Tiber RAG sources
+    - Where VORP or numeric metrics live
+    - Which sources are now treated as legacy vs active
+
+- Updated TiberPromptBuilder:
+  - Strong grounding instructions to:
+    - Trust Forge numeric context
+    - Not invent VORP/PPG/ranks when not present
+    - Treat RAG text as secondary, not primary
+
+- (If applicable) Updated RAG configuration:
+  - RAG no longer indexes legacy VORP numeric sources
+  - Or they are clearly marked as deprecated until Forge owns VORP
+
+Please output:
+- The updated TiberPromptBuilder file
+- The docs/tiber_rag_audit.md contents
+- Any changes to RAG config or relevant service files
+so I can review them before deployment.
