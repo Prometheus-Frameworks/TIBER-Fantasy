@@ -10,8 +10,10 @@ import RankingsHub from "@/pages/RankingsHub";
 import SchedulePage from "@/pages/SchedulePage";
 import ForgeHub from "@/pages/admin/ForgeHub";
 import PlayerMapping from "@/pages/admin/PlayerMapping";
+import PlayerMappingTest from "@/pages/admin/PlayerMappingTest";
 import PlayerResearch from "@/pages/admin/PlayerResearch";
 import ApiLexicon from "@/pages/admin/ApiLexicon";
+import RagStatus from "@/pages/RagStatus";
 import ForgeLab from "@/pages/ForgeLab";
 import WRRankingsSandbox from "@/pages/WRRankingsSandbox";
 import QBRankingsSandbox from "@/pages/QBRankingsSandbox";
@@ -31,12 +33,12 @@ function Router() {
       
       {/* Admin: FORGE Hub - Central control room */}
       <Route path="/admin/forge-hub" component={ForgeHub} />
-      <Route path="/admin">
-        {() => <Redirect to="/admin/forge-hub" />}
-      </Route>
       
       {/* Admin: Player Mapping */}
       <Route path="/admin/player-mapping" component={PlayerMapping} />
+      
+      {/* Admin: Player Mapping Test (legacy) */}
+      <Route path="/admin/player-mapping-test" component={PlayerMappingTest} />
       
       {/* Admin: Player Research */}
       <Route path="/admin/player-research" component={PlayerResearch} />
@@ -44,12 +46,25 @@ function Router() {
       {/* Admin: API Lexicon - Forge/Tiber endpoint reference */}
       <Route path="/admin/api-lexicon" component={ApiLexicon} />
       
+      {/* Admin: RAG Status */}
+      <Route path="/admin/rag-status" component={RagStatus} />
+      
       {/* Admin: FORGE Lab - Interactive scoring sandbox */}
       <Route path="/admin/forge-lab" component={ForgeLab} />
       
       {/* Admin: Ranking Sandboxes */}
       <Route path="/admin/wr-rankings-sandbox" component={WRRankingsSandbox} />
       <Route path="/admin/qb-rankings-sandbox" component={QBRankingsSandbox} />
+      
+      {/* Dev: FORGE Dev Lab redirect (until separate component is built) */}
+      <Route path="/dev/forge">
+        {() => <Redirect to="/admin/forge-lab" />}
+      </Route>
+      
+      {/* Admin: Catch-all redirect to FORGE Hub (must be LAST of admin routes) */}
+      <Route path="/admin">
+        {() => <Redirect to="/admin/forge-hub" />}
+      </Route>
       
       {/* 404 Catch-all */}
       <Route component={NotFound} />
