@@ -84,7 +84,6 @@ export function calculateAlphaScore(
   
   const cappedDueToMissingData = 
     features.efficiencyFeatures.capped ||
-    features.roleLeverageFeatures.capped ||
     features.contextFitFeatures.isNeutral ||
     features.gamesPlayed < 3;
   
@@ -101,7 +100,6 @@ export function calculateAlphaScore(
     subScores: {
       volume: roundTo(subScores.volume, 1),
       efficiency: roundTo(subScores.efficiency, 1),
-      roleLeverage: roundTo(subScores.roleLeverage, 1),
       stability: roundTo(subScores.stability, 1),
       contextFit: roundTo(subScores.contextFit, 1),
     },
@@ -126,12 +124,12 @@ export function calculateAlphaScore(
 
 /**
  * Extract sub-scores from the feature bundle
+ * v0.2: roleLeverage removed
  */
 function calculateSubScores(features: ForgeFeatureBundle): ForgeSubScores {
   return {
     volume: features.volumeFeatures.score,
     efficiency: features.efficiencyFeatures.score,
-    roleLeverage: features.roleLeverageFeatures.score,
     stability: features.stabilityFeatures.score,
     contextFit: features.contextFitFeatures.score,
   };
@@ -139,6 +137,7 @@ function calculateSubScores(features: ForgeFeatureBundle): ForgeSubScores {
 
 /**
  * Calculate weighted alpha using position-specific weights
+ * v0.2: roleLeverage removed from calculation
  */
 function calculateWeightedAlpha(
   subScores: ForgeSubScores,
@@ -149,7 +148,6 @@ function calculateWeightedAlpha(
   const alpha = 
     subScores.volume * weights.volume +
     subScores.efficiency * weights.efficiency +
-    subScores.roleLeverage * weights.roleLeverage +
     subScores.stability * weights.stability +
     subScores.contextFit * weights.contextFit;
   

@@ -1,0 +1,79 @@
+Task: Remove roleLeverage SubScore
+Context
+The roleLeverage subScore currently returns 50 (neutral) for all players because the underlying fetchRoleMetrics() function isn't wired to real data. Rather than implement it, we're removing it entirely to simplify the model.
+Task
+1. Remove roleLeverage from subScore calculations
+Files likely affected:
+
+server/modules/forge/alphaEngine.ts — main scoring logic
+server/modules/forge/types.ts — type definitions, weight configs
+server/modules/forge/features/wrFeatures.ts
+server/modules/forge/features/rbFeatures.ts
+server/modules/forge/features/teFeatures.ts
+server/modules/forge/features/qbFeatures.ts
+server/modules/forge/context/contextFetcher.ts — fetchRoleMetrics() can be removed or deprecated
+
+2. Redistribute weights
+Current weights (from audit doc):
+SubScoreWRRBTEQBvolume0.350.380.300.25efficiency0.300.250.280.35roleLeverage0.180.200.250.15stability0.120.120.100.10contextFit0.050.050.070.15
+Redistribute roleLeverage weight proportionally across the remaining four. New weights should sum to 1.00.
+Suggested redistribution (proportional):
+WR (removing 0.18):
+
+volume: 0.35 → 0.43
+efficiency: 0.30 → 0.37
+stability: 0.12 → 0.15
+contextFit: 0.05 → 0.05
+
+RB (removing 0.20):
+
+volume: 0.38 → 0.475
+efficiency: 0.25 → 0.31
+stability: 0.12 → 0.15
+contextFit: 0.05 → 0.065
+
+TE (removing 0.25):
+
+volume: 0.30 → 0.40
+efficiency: 0.28 → 0.37
+stability: 0.10 → 0.13
+contextFit: 0.07 → 0.10
+
+QB (removing 0.15):
+
+volume: 0.25 → 0.29
+efficiency: 0.35 → 0.41
+stability: 0.10 → 0.12
+contextFit: 0.15 → 0.18
+
+Verify all weights sum to 1.00 after redistribution.
+3. Update API responses
+Remove roleLeverage from the subScores object in all FORGE endpoint responses. The response should only include:
+json"subScores": {
+  "volume": number,
+  "efficiency": number,
+  "stability": number,
+  "contextFit": number
+}
+4. Clean up dead code
+
+Remove or comment out fetchRoleMetrics() in contextFetcher.ts
+Remove any role-related metric calculations that are no longer used
+Remove roleLeverage from any TypeScript interfaces/types
+
+5. Re-run calibration check
+After removal, the raw alpha distribution will shift since we're removing a subScore that was contributing 50 to everyone. Run the distribution endpoint for all positions and verify the calibration still produces sensible output. May need minor calibration adjustments.
+Acceptance Criteria
+
+ roleLeverage removed from all subScore calculations
+ Weights redistributed and sum to 1.00 for each position
+ API responses no longer include roleLeverage in subScores
+ Dead code cleaned up (fetchRoleMetrics, role metric types)
+ All four positions spot-checked — rankings still sensible
+ No TypeScript errors or broken imports
+
+Send Back
+
+Confirmation of weight redistribution (final values for each position)
+Top 5 preview for each position to verify rankings still make sense
+Any calibration adjustments that were needed

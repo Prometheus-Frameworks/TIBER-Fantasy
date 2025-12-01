@@ -26,7 +26,6 @@ export type ForgeTrajectory = Trajectory;
 export interface ForgeSubScores {
   volume: number;        // Usage / opportunity metrics
   efficiency: number;    // Production per opportunity
-  roleLeverage: number;  // Role quality / high-leverage situation usage
   stability: number;     // Consistency / floor-ceiling balance
   contextFit: number;    // Team environment / matchup quality
 }
@@ -80,46 +79,49 @@ export interface ForgeScore {
 
 /**
  * Alpha weights by position (must sum to 1.0)
+ * 
+ * Note: roleLeverage removed in v0.2 - weights redistributed proportionally
  */
 export interface AlphaWeights {
   volume: number;
   efficiency: number;
-  roleLeverage: number;
   stability: number;
   contextFit: number;
 }
 
 /**
  * Position-specific alpha weights per the spec
+ * 
+ * v0.2: roleLeverage removed - weights redistributed proportionally:
+ * - WR: removed 0.18, redistributed to volume(+0.08), efficiency(+0.07), stability(+0.03)
+ * - RB: removed 0.20, redistributed to volume(+0.095), efficiency(+0.06), stability(+0.03), contextFit(+0.015)
+ * - TE: removed 0.25, redistributed to volume(+0.10), efficiency(+0.09), stability(+0.03), contextFit(+0.03)
+ * - QB: removed 0.15, redistributed to volume(+0.04), efficiency(+0.06), stability(+0.02), contextFit(+0.03)
  */
 export const ALPHA_WEIGHTS: Record<PlayerPosition, AlphaWeights> = {
   WR: {
-    volume: 0.35,
-    efficiency: 0.30,
-    roleLeverage: 0.18,
-    stability: 0.12,
-    contextFit: 0.05,
+    volume: 0.43,      // was 0.35
+    efficiency: 0.37,  // was 0.30
+    stability: 0.15,   // was 0.12
+    contextFit: 0.05,  // unchanged
   },
   RB: {
-    volume: 0.38,
-    efficiency: 0.25,
-    roleLeverage: 0.20,
-    stability: 0.12,
-    contextFit: 0.05,
+    volume: 0.475,     // was 0.38
+    efficiency: 0.31,  // was 0.25
+    stability: 0.15,   // was 0.12
+    contextFit: 0.065, // was 0.05
   },
   TE: {
-    volume: 0.30,
-    efficiency: 0.28,
-    roleLeverage: 0.25,
-    stability: 0.10,
-    contextFit: 0.07,
+    volume: 0.40,      // was 0.30
+    efficiency: 0.37,  // was 0.28
+    stability: 0.13,   // was 0.10
+    contextFit: 0.10,  // was 0.07
   },
   QB: {
-    volume: 0.25,
-    efficiency: 0.35,
-    roleLeverage: 0.15,
-    stability: 0.10,
-    contextFit: 0.15,
+    volume: 0.29,      // was 0.25
+    efficiency: 0.41,  // was 0.35
+    stability: 0.12,   // was 0.10
+    contextFit: 0.18,  // was 0.15
   },
 };
 
@@ -235,6 +237,8 @@ export interface ForgeContext {
 /**
  * Normalized feature bundle ready for scoring
  * All values are 0-100 percentile-based unless noted
+ * 
+ * v0.2: roleLeverageFeatures removed - underlying data wasn't connected
  */
 export interface ForgeFeatureBundle {
   position: PlayerPosition;
@@ -251,13 +255,6 @@ export interface ForgeFeatureBundle {
     normalized: Record<string, number>;
     score: number;
     capped: boolean;  // True if capped due to missing advanced stats
-  };
-  
-  roleLeverageFeatures: {
-    raw: Record<string, number | undefined>;
-    normalized: Record<string, number>;
-    score: number;
-    capped: boolean;
   };
   
   stabilityFeatures: {
@@ -331,7 +328,6 @@ export const CONFIDENCE_CONFIG = {
 export const MISSING_DATA_CAPS = {
   NO_ADVANCED_STATS_EFFICIENCY: 80,
   NO_SNAP_DATA_VOLUME: 75,
-  NO_SNAP_DATA_ROLE: 75,
   LESS_THAN_3_GAMES: 75,
   LESS_THAN_3_GAMES_CONFIDENCE: 45,
 } as const;
@@ -339,11 +335,12 @@ export const MISSING_DATA_CAPS = {
 /**
  * Simplified feature bundle base type for client parity
  * This is the normalized output shape from all feature builders
+ * 
+ * v0.2: roleLeverage removed
  */
 export interface ForgeFeatureBundleBase {
   volume: number;
   efficiency: number;
-  roleLeverage: number;
   stability: number;
   contextFit: number;
 }
