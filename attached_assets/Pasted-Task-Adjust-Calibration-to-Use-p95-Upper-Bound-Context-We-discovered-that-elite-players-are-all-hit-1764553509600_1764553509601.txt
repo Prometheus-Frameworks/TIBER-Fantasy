@@ -1,0 +1,41 @@
+Task: Adjust Calibration to Use p95 Upper Bound
+Context
+We discovered that elite players are all hitting the calibration ceiling (90), which eliminates differentiation and makes SOS the only tiebreaker. Players like Achane (54.5 raw) and Javonte (51.4 raw) both calibrate to 90, then SOS flips their ranking — which isn't the intended behavior.
+The fix is to use a higher percentile (p95 or p97) as the upper calibration bound so that only true outliers hit the ceiling.
+Task
+1. Pull p95 and p97 values from filtered distributions for all positions:
+GET /api/forge/debug/distribution?position=QB
+GET /api/forge/debug/distribution?position=RB
+GET /api/forge/debug/distribution?position=WR
+GET /api/forge/debug/distribution?position=TE
+If p95/p97 aren't currently returned, add them to the endpoint output alongside the existing percentiles.
+2. Update ALPHA_CALIBRATION in types.ts:
+Replace the current p90 values with p95 (or p97 if p95 is still causing bunching). Keep outMin at 25 and outMax at 90.
+Example (values TBD based on actual distribution):
+typescriptALPHA_CALIBRATION = {
+  WR: { p10: 35.0, p90: 50.0, outMin: 25, outMax: 90 },  // p90 raised to actual p95
+  RB: { p10: 31.9, p90: 53.0, outMin: 25, outMax: 90 },
+  TE: { p10: 33.2, p90: 47.5, outMin: 25, outMax: 90 },
+  QB: { p10: 40.5, p90: 49.5, outMin: 25, outMax: 90 },
+}
+3. Re-run preview spot checks:
+After updating calibration, pull top 10 for each position and verify:
+
+Elite players (Achane, Chase, Kelce, Mahomes) are still at or near the top
+There's differentiation among the top 5-10, not everyone at exactly 90
+The raw-to-calibrated ranking order is preserved (higher raw = higher calibrated)
+
+Acceptance Criteria
+
+ Distribution endpoint returns p95 and p97 values
+ Calibration updated to use p95 (or p97) as upper bound
+ Top 10 at each position shows differentiation (not all capped at 90)
+ Higher raw alpha always produces higher calibrated alpha (monotonic)
+ Spot check confirms sensible rankings
+
+Send Back
+
+The new distribution output with p95/p97 for all four positions
+Updated calibration values
+Top 10 preview for each position showing the new spread
+
