@@ -138,6 +138,7 @@ export class DatadiveSnapshotService {
     }
     console.log(`📊 [DataDive] Loaded ${identityMap.size} player identities for canonical mapping`);
 
+    // Load snap counts from bronze_nflfastr_snap_counts
     const snapCounts = await db
       .select()
       .from(bronzeNflfastrSnapCounts)
@@ -157,7 +158,67 @@ export class DatadiveSnapshotService {
         });
       }
     }
+    console.log(`📊 [DataDive] Loaded ${snapMap.size} snap counts`);
 
+    // Aggregate advanced receiving metrics from play-by-play data
+    const receivingPbp = await db.execute(sql`
+      SELECT 
+        receiver_player_id as player_id,
+        SUM(air_yards) as total_air_yards,
+        SUM(yards_after_catch) as total_yac,
+        SUM(epa) as total_epa,
+        COUNT(*) as play_count,
+        SUM(CASE WHEN epa > 0 THEN 1 ELSE 0 END) as success_count
+      FROM bronze_nflfastr_plays
+      WHERE season = ${season} AND week = ${week} AND receiver_player_id IS NOT NULL
+      GROUP BY receiver_player_id
+    `);
+    
+    const receivingAdvMap = new Map<string, { 
+      airYards: number; 
+      yac: number; 
+      totalEpa: number; 
+      playCount: number; 
+      successCount: number 
+    }>();
+    for (const row of (receivingPbp as any).rows || []) {
+      receivingAdvMap.set(row.player_id, {
+        airYards: Number(row.total_air_yards) || 0,
+        yac: Number(row.total_yac) || 0,
+        totalEpa: Number(row.total_epa) || 0,
+        playCount: Number(row.play_count) || 0,
+        successCount: Number(row.success_count) || 0,
+      });
+    }
+    console.log(`📊 [DataDive] Loaded ${receivingAdvMap.size} receiving advanced metrics from PBP`);
+
+    // Aggregate advanced rushing metrics from play-by-play data
+    const rushingPbp = await db.execute(sql`
+      SELECT 
+        rusher_player_id as player_id,
+        SUM(epa) as total_epa,
+        COUNT(*) as play_count,
+        SUM(CASE WHEN epa > 0 THEN 1 ELSE 0 END) as success_count
+      FROM bronze_nflfastr_plays
+      WHERE season = ${season} AND week = ${week} AND rusher_player_id IS NOT NULL
+      GROUP BY rusher_player_id
+    `);
+
+    const rushingAdvMap = new Map<string, { 
+      totalEpa: number; 
+      playCount: number; 
+      successCount: number 
+    }>();
+    for (const row of (rushingPbp as any).rows || []) {
+      rushingAdvMap.set(row.player_id, {
+        totalEpa: Number(row.total_epa) || 0,
+        playCount: Number(row.play_count) || 0,
+        successCount: Number(row.success_count) || 0,
+      });
+    }
+    console.log(`📊 [DataDive] Loaded ${rushingAdvMap.size} rushing advanced metrics from PBP`);
+
+    // Load silver data as fallback (may be empty for recent weeks)
     const silverData = await db
       .select()
       .from(silverPlayerWeeklyStats)
@@ -172,6 +233,7 @@ export class DatadiveSnapshotService {
     for (const row of silverData) {
       silverMap.set(row.playerId, row);
     }
+    console.log(`📊 [DataDive] Loaded ${silverMap.size} silver stats (fallback)`);
 
     let identityMatchCount = 0;
     let identityMissCount = 0;
@@ -179,6 +241,8 @@ export class DatadiveSnapshotService {
     const stagingRows = weeklyData.map((row) => {
       const snapInfo = snapMap.get(row.playerName?.toLowerCase() || "");
       const silver = silverMap.get(row.playerId);
+      const recAdv = receivingAdvMap.get(row.playerId);
+      const rushAdv = rushingAdvMap.get(row.playerId);
       
       // Get canonical name and position from identity map
       const identity = identityMap.get(row.playerId);
@@ -202,6 +266,24 @@ export class DatadiveSnapshotService {
       const tprr = routes > 0 ? targets / routes : null;
       const yprr = routes > 0 ? recYards / routes : null;
       const ypc = rushAtt > 0 ? rushYd / rushAtt : null;
+      
+      // Advanced receiving metrics from PBP (preferred) or silver (fallback)
+      const airYards = recAdv?.airYards ?? silver?.airYards ?? 0;
+      const yac = recAdv?.yac ?? silver?.yac ?? 0;
+      const aDot = targets > 0 ? airYards / targets : null;
+      
+      // EPA per target (receiving)
+      const recEpa = recAdv?.totalEpa ?? (silver?.receivingEpa ? Number(silver.receivingEpa) : null);
+      const epaPerTarget = recEpa !== null && targets > 0 ? recEpa / targets : null;
+      
+      // Success rate = successful plays / total plays (EPA > 0 = success)
+      const recPlayCount = recAdv?.playCount ?? 0;
+      const recSuccessCount = recAdv?.successCount ?? 0;
+      const successRate = recPlayCount > 0 ? recSuccessCount / recPlayCount : null;
+      
+      // Rush EPA
+      const rushEpa = rushAdv?.totalEpa ?? (silver?.rushingEpa ? Number(silver.rushingEpa) : null);
+      const rushEpaPerPlay = rushEpa !== null && rushAtt > 0 ? rushEpa / rushAtt : null;
 
       return {
         season,
@@ -219,19 +301,19 @@ export class DatadiveSnapshotService {
         receptions: row.rec || 0,
         recYards,
         recTds: row.recTd || 0,
-        aDot: silver?.airYards && targets > 0 ? silver.airYards / targets : null,
-        airYards: silver?.airYards || 0,
-        yac: silver?.yac || 0,
+        aDot,
+        airYards,
+        yac,
         tprr,
         yprr,
-        epaPerPlay: silver?.receivingEpa && targets > 0 ? silver.receivingEpa / targets : null,
-        epaPerTarget: silver?.receivingEpa && targets > 0 ? silver.receivingEpa / targets : null,
-        successRate: null,
+        epaPerPlay: epaPerTarget,
+        epaPerTarget,
+        successRate,
         rushAttempts: rushAtt,
         rushYards: rushYd,
         rushTds: row.rushTd || 0,
         yardsPerCarry: ypc,
-        rushEpaPerPlay: silver?.rushingEpa && rushAtt > 0 ? silver.rushingEpa / rushAtt : null,
+        rushEpaPerPlay,
         fptsStd: row.fantasyPointsStd || 0,
         fptsHalf: row.fantasyPointsHalf || 0,
         fptsPpr: row.fantasyPointsPpr || 0,

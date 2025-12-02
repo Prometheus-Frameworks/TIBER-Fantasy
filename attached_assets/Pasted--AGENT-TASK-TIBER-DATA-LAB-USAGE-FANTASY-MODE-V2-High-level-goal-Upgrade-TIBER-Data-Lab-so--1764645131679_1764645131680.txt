@@ -1,0 +1,325 @@
+🛠 AGENT TASK: TIBER DATA LAB – USAGE & FANTASY MODE V2
+
+High-level goal
+
+Upgrade TIBER Data Lab so that:
+
+Advanced metrics (aDOT, Air Yards, YAC, EPA/Play, Success%) and Snaps/Snap% are actually populated from source data (not just zeros).
+
+Users can switch between:
+
+Single-week view (current behavior)
+
+Season-to-date aggregates
+
+Custom week-range aggregates (e.g. Weeks 8–12)
+
+Add a “Fantasy Mode” toggle that prepares the UI/backend to show fantasy-specific metrics (and wires in Sleeper game logs as a data source, even if we only surface basic fantasy stats in v1).
+
+1) Fill Out Advanced Metrics from Source Data
+
+Problem right now:
+
+snapshot_player_week has columns like snaps, snap_share, a_dot, air_yards, yac, epa_per_play, success_rate, but many rows show 0 or - in the UI (e.g. Rashee Rice).
+
+Tasks:
+
+Audit weekly source columns (weekly_stats and/or pbp-based aggregates):
+
+Confirm which of these are available per player-week:
+
+snaps or offensive_snaps
+
+routes_run
+
+targets
+
+receptions
+
+receiving_yards
+
+air_yards
+
+yac (yards after catch)
+
+a_dot
+
+epa_per_target or similar
+
+success_rate (success % per target or per play)
+
+Update staging insert (datadive_player_week_staging) to correctly map these fields:
+
+For every advanced metric we already expose in the Data Lab table, do:
+
+COALESCE(ws.snaps, 0)        AS snaps,
+COALESCE(ws.snap_share, 0)   AS snap_share,
+COALESCE(ws.air_yards, 0)    AS air_yards,
+COALESCE(ws.yac, 0)          AS yac,
+COALESCE(ws.a_dot, 0)        AS a_dot,
+COALESCE(ws.epa_per_play, 0) AS epa_per_play,
+COALESCE(ws.success_rate, 0) AS success_rate
+
+
+If weekly_stats doesn’t have snap_share or success_rate, calculate:
+
+snap_share = snaps / team offensive snaps (approximate)
+
+success_rate = successful_plays / targets (or plays), where “success” is your existing EPA>0 or success flag.
+
+Rebuild snapshot for Week 11 with the new mapping:
+
+Clear datadive_player_week_staging and datadive_snapshot_player_week for Week 11.
+
+Re-run the snapshot job for Week 11.
+
+Confirm that for Rashee Rice / Nico Collins:
+
+snaps > 0
+
+snap_share in a realistic range (60–90% on full-time WRs)
+
+air_yards and a_dot non-zero when appropriate.
+
+Update null validation:
+
+Extend the “no core NULLs” validation to cover:
+
+snaps
+
+air_yards
+
+a_dot
+
+epa_per_play
+
+success_rate
+
+If any of these core advanced metrics are NULL after staging, log an error and abort the snapshot.
+
+UI update (small):
+
+Ensure the Data Lab WR view actually shows:
+
+Snaps
+
+Snap%
+
+aDOT
+
+Air Yards
+
+YAC
+
+EPA/Play
+
+Success%
+
+If the UI already has columns for these, it just needs real data now.
+
+2) Add Season + Week-Range Aggregation Filters
+
+Goal:
+
+Let a user say:
+
+“Show me WR TPRR for Weeks 8–12”
+
+“Show me Season-to-date WR usage”
+
+and have the table update accordingly.
+
+2.1 Backend: Add an aggregation endpoint
+
+Add a new endpoint:
+
+GET /api/data-lab/usage-agg
+
+
+Query params:
+
+position (optional, e.g. WR, RB, QB, TE)
+
+season (required)
+
+weekMode = "single" | "range" | "season"
+
+For single: week
+
+For range: weekFrom, weekTo
+
+For season: no week fields required (implicitly Week 1 → latest snapshot week)
+
+Behavior:
+
+Read from datadive_snapshot_player_week joined with datadive_snapshot_meta for the given season.
+
+Group by player_id (and position/team) and compute:
+
+total_routes   = SUM(routes_run)
+total_targets  = SUM(targets)
+total_yards    = SUM(receiving_yards)
+games_played   = COUNT(*) FILTER (WHERE snaps > 0 OR routes_run > 0)
+tprr           = CASE WHEN total_routes > 0 THEN total_targets::numeric / total_routes ELSE 0 END
+yprr           = CASE WHEN total_routes > 0 THEN total_yards::numeric / total_routes ELSE 0 END
+snap_share_avg = AVG(snap_share)
+routes_per_game = CASE WHEN games_played > 0 THEN total_routes::numeric / games_played ELSE 0 END
+targets_per_game = CASE WHEN games_played > 0 THEN total_targets::numeric / games_played ELSE 0 END
+
+
+Filter by week based on weekMode:
+
+WHERE season = $season
+  AND week BETWEEN $weekFrom AND $weekTo  -- for range
+
+
+Only include players with total_routes >= X (e.g. 10) to avoid one-route outliers.
+
+Return rows aligned with existing Data Lab columns, but with aggregated stats.
+
+2.2 Frontend: Add controls for Week Mode & Range
+
+In /tiber-data-lab:
+
+Add a simple “View” control:
+
+Dropdown: Week, Season, Custom Range
+
+For Week (current behavior):
+
+Show the existing Season/Week selectors.
+
+Use existing /api/data-lab/search.
+
+For Season:
+
+Hide week selector.
+
+Call /api/data-lab/usage-agg?weekMode=season&season=2025&position=WR.
+
+For Custom Range:
+
+Show two fields: Week From, Week To.
+
+Call /api/data-lab/usage-agg?weekMode=range&weekFrom=8&weekTo=12&season=2025&position=WR.
+
+Display the result in the same table component, but label it clearly at the top:
+
+“Viewing: WR • Season 2025 • Weeks 8–12 (Aggregated)”
+
+This is how you get your Adonai Mitchell WR8 in TPRR since trade type filters.
+
+3) Fantasy Mode Toggle (Sleeper game logs + xFPTS/xFPGoe groundwork)
+
+Goal:
+
+Add a “Fantasy Mode” toggle that:
+
+Changes the table to highlight fantasy-relevant stats.
+
+Uses Sleeper game logs as a source.
+
+Lays groundwork for future xFPTS and xFPGoe.
+
+3.1 Backend: Fantasy game-log endpoint (v1)
+
+Add a separate endpoint:
+
+GET /api/data-lab/fantasy-logs
+
+
+Query params:
+
+player_id (optional; if omitted, return top N players)
+
+season
+
+week (optional)
+
+position (optional)
+
+Data source:
+
+Use your existing Sleeper game log ingestion (whatever table you already have) or create a staging table like fantasy_game_logs with:
+
+player_id
+
+season
+
+week
+
+fpts_ppr
+
+fpts_half_ppr
+
+fpts_standard
+
+(Optional in v1) xFPTS, xFPGoe (can be 0 / placeholder for now)
+
+In v1, just surface raw fantasy points per game; don’t build xFPTS yet.
+
+3.2 Frontend: Fantasy Mode toggle
+
+In /tiber-data-lab:
+
+Add a toggle:
+
+“Mode: NFL Usage | Fantasy**”
+
+Behavior:
+
+NFL Usage mode (default)
+
+Use existing Data Lab endpoints (/search, /usage-agg).
+
+Show usage metrics (routes, TPRR, YPRR, snaps, etc).
+
+Fantasy mode
+
+For now, call /api/data-lab/fantasy-logs with the same Season/Week/Range filters.
+
+Table shows:
+
+Points (PPR, Half, Std)
+
+Maybe combine with usage metrics when available (nice to keep both).
+
+(Future work) once we define formulas:
+
+Add columns:
+
+xFPTS – expected fantasy points from usage.
+
+xFPGoe – actual minus expected.
+
+These will give the NFL-to-fantasy translation you mentioned.
+
+Make sure UI makes it visually obvious which mode you’re in to avoid confusion.
+
+4) Acceptance Criteria
+
+When this task is complete:
+
+For WRs in Week 11 single-week view:
+
+Rashee Rice, Nico Collins, etc show non-zero snaps, snap%, aDOT, Air Yards, and (when applicable) YAC/EPA/Success%.
+
+Using Season view:
+
+/api/data-lab/usage-agg?weekMode=season&position=WR returns aggregated usage (TPRR, YPRR) that matches what you’d expect over multiple games.
+
+Using Custom Range view (e.g. Weeks 8–12):
+
+WR table shows players ranked by multi-week TPRR/YPRR, allowing you to see risers like Adonai Mitchell.
+
+Fantasy Mode toggle:
+
+Switches the table to a fantasy-focused view, pulling data from a Sleeper-backed endpoint.
+
+At minimum: shows PPR, Half-PPR, and Standard points per game or per week.
+
+No regression to snapshot behavior:
+
+getCurrentSnapshot() still drives default Season/Week.
+
+/meta/current, Forge, and Data Lab all agree on latest official snapshot.
