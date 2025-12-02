@@ -427,7 +427,8 @@ export class DatadiveSnapshotService {
   ): Promise<void> {
     console.log(`🔍 [DataDive] Validating core metrics for snapshot ${snapshotId}...`);
     
-    const validation = await db.execute(sql`
+    // Check staging data for NULLs before coercion (more accurate check)
+    const stagingValidation = await db.execute(sql`
       SELECT 
         COUNT(*) AS total_rows,
         COUNT(*) FILTER (WHERE fpts_ppr IS NULL) AS null_fpts_ppr,
@@ -435,11 +436,11 @@ export class DatadiveSnapshotService {
         COUNT(*) FILTER (WHERE targets IS NULL) AS null_targets,
         COUNT(*) FILTER (WHERE snaps IS NULL) AS null_snaps,
         COUNT(*) FILTER (WHERE receptions IS NULL) AS null_receptions
-      FROM datadive_snapshot_player_week
-      WHERE snapshot_id = ${snapshotId} AND season = ${season} AND week = ${week};
+      FROM datadive_player_week_staging
+      WHERE season = ${season} AND week = ${week};
     `);
     
-    const row = (validation as any).rows[0];
+    const row = (stagingValidation as any).rows[0];
     const totalRows = Number(row?.total_rows) || 0;
     const nullFptsPpr = Number(row?.null_fpts_ppr) || 0;
     const nullRoutes = Number(row?.null_routes) || 0;
@@ -447,7 +448,7 @@ export class DatadiveSnapshotService {
     const nullSnaps = Number(row?.null_snaps) || 0;
     const nullReceptions = Number(row?.null_receptions) || 0;
     
-    console.log(`📊 [DataDive] Core metric validation: ${totalRows} rows, nulls: fptsPpr=${nullFptsPpr}, routes=${nullRoutes}, targets=${nullTargets}, snaps=${nullSnaps}, receptions=${nullReceptions}`);
+    console.log(`📊 [DataDive] Core metric staging validation: ${totalRows} rows, nulls: fptsPpr=${nullFptsPpr}, routes=${nullRoutes}, targets=${nullTargets}, snaps=${nullSnaps}, receptions=${nullReceptions}`);
     
     const errors: string[] = [];
     if (nullFptsPpr > 0) errors.push(`${nullFptsPpr} rows with NULL fpts_ppr`);
@@ -457,9 +458,9 @@ export class DatadiveSnapshotService {
     if (nullReceptions > 0) errors.push(`${nullReceptions} rows with NULL receptions`);
     
     if (errors.length > 0) {
-      console.warn(`⚠️ [DataDive] Core metric nulls detected (continuing): ${errors.join(', ')}`);
+      console.warn(`⚠️ [DataDive] Core metric nulls detected in staging (continuing): ${errors.join(', ')}`);
     } else {
-      console.log(`✅ [DataDive] All core metrics validated - no NULLs`);
+      console.log(`✅ [DataDive] All core metrics validated in staging - no NULLs`);
     }
   }
 
@@ -514,37 +515,42 @@ export class DatadiveSnapshotService {
       }
     >();
 
+    // Helper to check if value is defined (not null/undefined)
+    const isDefined = (val: any): val is number => val !== null && val !== undefined;
+    
     for (const row of allWeeklyData) {
       const existing = playerAggregates.get(row.playerId);
       
-      // Only count as a game played if player had snaps or routes (actually participated)
-      const countAsGame = (row.snaps || 0) > 0 || (row.routes || 0) > 0;
+      // Only count as a game played if player had snaps > 0 or routes > 0 (actually participated)
+      const snaps = row.snaps ?? 0;
+      const routes = row.routes ?? 0;
+      const countAsGame = snaps > 0 || routes > 0;
 
       if (existing) {
         if (countAsGame) existing.gamesPlayed++;
-        existing.totalSnaps += row.snaps || 0;
-        if (row.snapShare) existing.snapShares.push(row.snapShare);
-        existing.totalRoutes += row.routes || 0;
-        if (row.routeRate) existing.routeRates.push(row.routeRate);
-        existing.totalTargets += row.targets || 0;
-        if (row.targetShare) existing.targetShares.push(row.targetShare);
-        existing.totalReceptions += row.receptions || 0;
-        existing.totalRecYards += row.recYards || 0;
-        existing.totalRecTds += row.recTds || 0;
-        if (row.aDot) existing.aDots.push(row.aDot);
-        existing.totalAirYards += row.airYards || 0;
-        existing.totalYac += row.yac || 0;
-        if (row.tprr) existing.tprrs.push(row.tprr);
-        if (row.yprr) existing.yprrs.push(row.yprr);
-        if (row.epaPerPlay) existing.epas.push(row.epaPerPlay);
-        if (row.successRate) existing.successRates.push(row.successRate);
-        existing.totalRushAttempts += row.rushAttempts || 0;
-        existing.totalRushYards += row.rushYards || 0;
-        existing.totalRushTds += row.rushTds || 0;
-        if (row.yardsPerCarry) existing.ypcs.push(row.yardsPerCarry);
-        existing.totalFptsStd += row.fptsStd || 0;
-        existing.totalFptsHalf += row.fptsHalf || 0;
-        existing.totalFptsPpr += row.fptsPpr || 0;
+        existing.totalSnaps += snaps;
+        if (isDefined(row.snapShare)) existing.snapShares.push(row.snapShare);
+        existing.totalRoutes += routes;
+        if (isDefined(row.routeRate)) existing.routeRates.push(row.routeRate);
+        existing.totalTargets += row.targets ?? 0;
+        if (isDefined(row.targetShare)) existing.targetShares.push(row.targetShare);
+        existing.totalReceptions += row.receptions ?? 0;
+        existing.totalRecYards += row.recYards ?? 0;
+        existing.totalRecTds += row.recTds ?? 0;
+        if (isDefined(row.aDot)) existing.aDots.push(row.aDot);
+        existing.totalAirYards += row.airYards ?? 0;
+        existing.totalYac += row.yac ?? 0;
+        if (isDefined(row.tprr)) existing.tprrs.push(row.tprr);
+        if (isDefined(row.yprr)) existing.yprrs.push(row.yprr);
+        if (isDefined(row.epaPerPlay)) existing.epas.push(row.epaPerPlay);
+        if (isDefined(row.successRate)) existing.successRates.push(row.successRate);
+        existing.totalRushAttempts += row.rushAttempts ?? 0;
+        existing.totalRushYards += row.rushYards ?? 0;
+        existing.totalRushTds += row.rushTds ?? 0;
+        if (isDefined(row.yardsPerCarry)) existing.ypcs.push(row.yardsPerCarry);
+        existing.totalFptsStd += row.fptsStd ?? 0;
+        existing.totalFptsHalf += row.fptsHalf ?? 0;
+        existing.totalFptsPpr += row.fptsPpr ?? 0;
         existing.teamId = row.teamId;
       } else {
         playerAggregates.set(row.playerId, {
@@ -553,29 +559,29 @@ export class DatadiveSnapshotService {
           teamId: row.teamId,
           position: row.position,
           gamesPlayed: countAsGame ? 1 : 0,
-          totalSnaps: row.snaps || 0,
-          snapShares: row.snapShare ? [row.snapShare] : [],
-          totalRoutes: row.routes || 0,
-          routeRates: row.routeRate ? [row.routeRate] : [],
-          totalTargets: row.targets || 0,
-          targetShares: row.targetShare ? [row.targetShare] : [],
-          totalReceptions: row.receptions || 0,
-          totalRecYards: row.recYards || 0,
-          totalRecTds: row.recTds || 0,
-          aDots: row.aDot ? [row.aDot] : [],
-          totalAirYards: row.airYards || 0,
-          totalYac: row.yac || 0,
-          tprrs: row.tprr ? [row.tprr] : [],
-          yprrs: row.yprr ? [row.yprr] : [],
-          epas: row.epaPerPlay ? [row.epaPerPlay] : [],
-          successRates: row.successRate ? [row.successRate] : [],
-          totalRushAttempts: row.rushAttempts || 0,
-          totalRushYards: row.rushYards || 0,
-          totalRushTds: row.rushTds || 0,
-          ypcs: row.yardsPerCarry ? [row.yardsPerCarry] : [],
-          totalFptsStd: row.fptsStd || 0,
-          totalFptsHalf: row.fptsHalf || 0,
-          totalFptsPpr: row.fptsPpr || 0,
+          totalSnaps: snaps,
+          snapShares: isDefined(row.snapShare) ? [row.snapShare] : [],
+          totalRoutes: routes,
+          routeRates: isDefined(row.routeRate) ? [row.routeRate] : [],
+          totalTargets: row.targets ?? 0,
+          targetShares: isDefined(row.targetShare) ? [row.targetShare] : [],
+          totalReceptions: row.receptions ?? 0,
+          totalRecYards: row.recYards ?? 0,
+          totalRecTds: row.recTds ?? 0,
+          aDots: isDefined(row.aDot) ? [row.aDot] : [],
+          totalAirYards: row.airYards ?? 0,
+          totalYac: row.yac ?? 0,
+          tprrs: isDefined(row.tprr) ? [row.tprr] : [],
+          yprrs: isDefined(row.yprr) ? [row.yprr] : [],
+          epas: isDefined(row.epaPerPlay) ? [row.epaPerPlay] : [],
+          successRates: isDefined(row.successRate) ? [row.successRate] : [],
+          totalRushAttempts: row.rushAttempts ?? 0,
+          totalRushYards: row.rushYards ?? 0,
+          totalRushTds: row.rushTds ?? 0,
+          ypcs: isDefined(row.yardsPerCarry) ? [row.yardsPerCarry] : [],
+          totalFptsStd: row.fptsStd ?? 0,
+          totalFptsHalf: row.fptsHalf ?? 0,
+          totalFptsPpr: row.fptsPpr ?? 0,
         });
       }
     }
