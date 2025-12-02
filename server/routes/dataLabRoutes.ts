@@ -28,13 +28,13 @@ const performanceTagConfig = {
 /**
  * Expected Points Per Opportunity coefficients by position (PPR scoring)
  * Based on league-average production rates
+ * ppt = points per target, ppr = points per rush
  */
 const xFptsCoefficients = {
-  // Points per target (accounts for catch rate, yards, TDs)
-  WR: { ppt: 1.85, ppr: 0.4 },   // WRs: high target value
-  TE: { ppt: 1.65, ppr: 0.5 },   // TEs: slightly lower but more rush
-  RB: { ppt: 1.50, ppr: 0.85 },  // RBs: targets less valuable, but high rush value
-  QB: { ppt: 0.0, ppr: 0.0 },    // QBs: different scoring model
+  WR: { ppt: 1.85, ppr: 0.0 },   // WRs: high target value, no rush expectation
+  TE: { ppt: 1.65, ppr: 0.0 },   // TEs: slightly lower target value, no rush expectation
+  RB: { ppt: 1.50, ppr: 0.85 },  // RBs: targets + rushes (1.50 PPT + 0.85 PPR)
+  QB: { ppt: 0.0, ppr: 0.0 },    // QBs: different scoring model (passing excluded)
 };
 
 export type PerformanceTag = "RISER" | "FALLER" | "NEUTRAL" | null;
