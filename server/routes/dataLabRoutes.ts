@@ -514,6 +514,12 @@ router.get("/admin/auto-status", async (req: Request, res: Response) => {
  * - weekFrom, weekTo: For range mode
  * - position: Filter by position (WR, RB, TE, QB)
  * - minRoutes: Minimum routes to include (default: 10 for aggregates)
+ * - performanceFilter: "RISER" | "FALLER" | "NEUTRAL" - Filter by xFPGoe performance tag
+ * 
+ * New fields (season/range modes):
+ * - xPprPerGame: Expected PPR points per game based on opportunity volume
+ * - xFPGoePprPerGame: Actual PPR/G minus expected (positive = outperforming)
+ * - performanceTag: "RISER" | "FALLER" | "NEUTRAL" | null (min 3 games required)
  */
 router.get("/usage-agg", async (req: Request, res: Response) => {
   try {
@@ -526,6 +532,7 @@ router.get("/usage-agg", async (req: Request, res: Response) => {
       position,
       minRoutes = "10",
       limit = "100",
+      performanceFilter,
     } = req.query;
 
     if (!season) {
@@ -663,25 +670,40 @@ router.get("/usage-agg", async (req: Request, res: Response) => {
     `);
     const rows = (result as any).rows || [];
 
-    res.json({
-      season: seasonNum,
-      weekMode,
-      weekRange: { from: startWeek, to: endWeek },
-      modeLabel,
-      position: position || 'ALL',
-      minRoutes: minRoutesNum,
-      count: rows.length,
-      data: rows.map((row: any) => ({
+    // Map rows and calculate xFPTS metrics
+    let mappedData = rows.map((row: any) => {
+      const gamesPlayed = Number(row.games_played) || 0;
+      const totalTargets = Number(row.total_targets) || 0;
+      const totalRushAttempts = Number(row.total_rush_attempts) || 0;
+      const totalFptsPpr = Number(row.total_fpts_ppr) || 0;
+      const pos = row.position || 'WR';
+      
+      // Calculate expected fantasy points (xPPR)
+      const xFptsPprTotal = calculateXFptsPpr(totalTargets, totalRushAttempts, pos);
+      
+      // Calculate per-game metrics
+      const pprPerGame = gamesPlayed > 0 ? totalFptsPpr / gamesPlayed : 0;
+      const xPprPerGame = gamesPlayed > 0 ? xFptsPprTotal / gamesPlayed : 0;
+      
+      // xFPGoe = actual - expected (positive = outperforming, negative = underperforming)
+      const xFPGoePprPerGame = pprPerGame - xPprPerGame;
+      
+      // Get performance tag for season/range modes
+      const performanceTag = (weekMode === 'season' || weekMode === 'range')
+        ? getPerformanceTag(xFPGoePprPerGame, gamesPlayed)
+        : null;
+      
+      return {
         playerId: row.player_id,
         playerName: row.player_name,
         teamId: row.team_id,
         position: row.position,
-        gamesPlayed: Number(row.games_played) || 0,
+        gamesPlayed,
         totalSnaps: Number(row.total_snaps) || 0,
         avgSnapShare: row.avg_snap_share ? Number(row.avg_snap_share) : null,
         totalRoutes: Number(row.total_routes) || 0,
         avgRouteRate: row.avg_route_rate ? Number(row.avg_route_rate) : null,
-        totalTargets: Number(row.total_targets) || 0,
+        totalTargets,
         totalReceptions: Number(row.total_receptions) || 0,
         totalRecYards: Number(row.total_rec_yards) || 0,
         totalRecTds: Number(row.total_rec_tds) || 0,
@@ -690,20 +712,43 @@ router.get("/usage-agg", async (req: Request, res: Response) => {
         totalYac: Number(row.total_yac) || 0,
         avgEpaPerTarget: row.avg_epa_per_target ? Number(row.avg_epa_per_target) : null,
         avgSuccessRate: row.avg_success_rate ? Number(row.avg_success_rate) : null,
-        totalRushAttempts: Number(row.total_rush_attempts) || 0,
+        totalRushAttempts,
         totalRushYards: Number(row.total_rush_yards) || 0,
         totalRushTds: Number(row.total_rush_tds) || 0,
         avgYpc: row.avg_ypc ? Number(row.avg_ypc) : null,
         avgRushEpa: row.avg_rush_epa ? Number(row.avg_rush_epa) : null,
         totalFptsStd: Number(row.total_fpts_std) || 0,
         totalFptsHalf: Number(row.total_fpts_half) || 0,
-        totalFptsPpr: Number(row.total_fpts_ppr) || 0,
+        totalFptsPpr,
         avgTprr: Number(row.tprr) || 0,
         yprr: Number(row.yprr) || 0,
         routesPerGame: Number(row.routes_per_game) || 0,
         targetsPerGame: Number(row.targets_per_game) || 0,
-        fptsPprPerGame: Number(row.fpts_ppr_per_game) || 0,
-      })),
+        fptsPprPerGame: Math.round(pprPerGame * 10) / 10,
+        xPprPerGame: Math.round(xPprPerGame * 10) / 10,
+        xFPGoePprPerGame: Math.round(xFPGoePprPerGame * 10) / 10,
+        performanceTag,
+      };
+    });
+
+    // Apply performanceFilter if provided
+    if (performanceFilter && (weekMode === 'season' || weekMode === 'range')) {
+      const filterValue = (performanceFilter as string).toUpperCase();
+      if (['RISER', 'FALLER', 'NEUTRAL'].includes(filterValue)) {
+        mappedData = mappedData.filter(r => r.performanceTag === filterValue);
+      }
+    }
+
+    res.json({
+      season: seasonNum,
+      weekMode,
+      weekRange: { from: startWeek, to: endWeek },
+      modeLabel,
+      position: position || 'ALL',
+      minRoutes: minRoutesNum,
+      performanceFilter: performanceFilter || null,
+      count: mappedData.length,
+      data: mappedData,
     });
   } catch (error: any) {
     console.error("[DataLab] Error in usage-agg:", error);
