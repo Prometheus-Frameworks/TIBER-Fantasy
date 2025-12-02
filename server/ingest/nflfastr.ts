@@ -110,8 +110,8 @@ function mapNflfastRToWeeklyRow(x: any): WeeklyRow {
     team: x.team ?? x.recent_team ?? x.posteam,
     position: x.position as 'QB' | 'RB' | 'WR' | 'TE',
     
-    // Usage (optional fields from NFLfastR)
-    snaps: x.offense_snaps ?? undefined,
+    // Usage (from snap counts - routes estimated from snaps * position rate)
+    snaps: x.snaps ?? x.offense_snaps ?? undefined,
     routes: x.routes_run ?? undefined,
     targets: x.targets ?? undefined,
     rush_att: x.rush_att ?? 0,

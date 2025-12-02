@@ -40,6 +40,23 @@ def fetch_weekly_stats(season: int, week: int):
         if week_df.empty:
             return []
         
+        # Fetch snap counts for route estimation
+        snap_counts = {}
+        try:
+            snaps_polars = nfl.load_snap_counts([season])
+            snaps_df = snaps_polars.to_pandas()
+            week_snaps = snaps_df[snaps_df['week'] == week]
+            # Create lookup by player name (fallback to pfr_player_id if needed)
+            for _, row in week_snaps.iterrows():
+                player_key = row.get('player', '')
+                if player_key and pd.notna(row.get('offense_snaps')):
+                    snap_counts[player_key] = {
+                        'snaps': int(row['offense_snaps']),
+                        'snap_pct': float(row['offense_pct']) if pd.notna(row.get('offense_pct')) else None
+                    }
+        except Exception as e:
+            print(f"Warning: Could not load snap counts: {e}", file=sys.stderr)
+        
         # Calculate total fumbles (sack + rush + rec fumbles lost)
         week_df['fumbles'] = (
             week_df.get('sack_fumbles_lost', 0).fillna(0) +
@@ -55,6 +72,10 @@ def fetch_weekly_stats(season: int, week: int):
         ).astype(int)
         
         # Map nflreadpy columns to our WeeklyRow interface
+        # Note: original data has player_name (short) and player_display_name (full)
+        # Drop the short player_name and use full player_display_name instead
+        if 'player_name' in week_df.columns:
+            week_df = week_df.drop(columns=['player_name'])
         week_df = week_df.rename(columns={
             'player_display_name': 'player_name',
             'carries': 'rush_att',
@@ -69,10 +90,33 @@ def fetch_weekly_stats(season: int, week: int):
             'sacks_suffered': 'sacks',
         })
         
+        # Add snaps and routes from snap counts lookup
+        # Routes estimated as snaps * 0.70 for WR, 0.55 for TE, 0.40 for RB
+        route_rates = {'WR': 0.70, 'TE': 0.55, 'RB': 0.40, 'QB': 0.0}
+        
+        # Build snaps and routes columns using vectorized operations
+        snaps_list = []
+        routes_list = []
+        for idx, row in week_df.iterrows():
+            player_name = row['player_name']
+            position = row['position']
+            info = snap_counts.get(str(player_name), {})
+            snaps = info.get('snaps')
+            if snaps and snaps > 0 and position in route_rates and route_rates[position] > 0:
+                routes = int(snaps * route_rates[position])
+                snaps_list.append(snaps)
+                routes_list.append(routes)
+            else:
+                snaps_list.append(snaps)
+                routes_list.append(None)
+        
+        week_df['snaps'] = snaps_list
+        week_df['routes_run'] = routes_list
+        
         # Select final columns
         output_cols = [
             'season', 'week', 'player_id', 'player_name', 'team', 'position',
-            'targets', 'rush_att', 'rec', 'rec_yd', 'rec_td',
+            'snaps', 'routes_run', 'targets', 'rush_att', 'rec', 'rec_yd', 'rec_td',
             'rush_yd', 'rush_td', 'pass_yd', 'pass_td', 'int',
             'fumbles', 'two_pt'
         ]

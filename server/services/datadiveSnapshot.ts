@@ -579,13 +579,36 @@ export class DatadiveSnapshotService {
   ): Promise<void> {
     console.log(`📊 [DataDive] Building season aggregates through Week ${throughWeek}...`);
 
+    // Only aggregate from official snapshots to avoid counting duplicate rows
+    const officialSnapshotIds = await db
+      .select({ id: datadiveSnapshotMeta.id })
+      .from(datadiveSnapshotMeta)
+      .where(
+        and(
+          eq(datadiveSnapshotMeta.season, season),
+          lte(datadiveSnapshotMeta.week, throughWeek),
+          eq(datadiveSnapshotMeta.isOfficial, true)
+        )
+      );
+
+    const snapshotIds = officialSnapshotIds.map(s => s.id);
+    
+    if (snapshotIds.length === 0) {
+      console.warn(`⚠️ [DataDive] No official snapshots found for season ${season} weeks 1-${throughWeek}`);
+      return;
+    }
+    
+    console.log(`📊 [DataDive] Aggregating from ${snapshotIds.length} official snapshots`);
+
+    // Query weekly data only from official snapshots
     const allWeeklyData = await db
       .select()
       .from(datadiveSnapshotPlayerWeek)
       .where(
         and(
           eq(datadiveSnapshotPlayerWeek.season, season),
-          lte(datadiveSnapshotPlayerWeek.week, throughWeek)
+          lte(datadiveSnapshotPlayerWeek.week, throughWeek),
+          sql`${datadiveSnapshotPlayerWeek.snapshotId} IN (${sql.raw(snapshotIds.join(','))})`
         )
       );
 

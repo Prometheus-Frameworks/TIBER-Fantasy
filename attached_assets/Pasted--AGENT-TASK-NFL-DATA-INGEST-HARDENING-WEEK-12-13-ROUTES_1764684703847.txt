@@ -1,0 +1,323 @@
+🛠 AGENT TASK: NFL DATA INGEST HARDENING (WEEK 12/13 + ROUTES BUG + DATA AUDIT)
+
+Goal
+
+Fix the routes / TPRR bug where routes_run = 2 * targets for all players in weekly_stats.
+
+Fix the NFL ingest pipeline so 2025 Weeks 12 & 13 are fully imported (enough rows & teams to pass Datadive snapshot validation).
+
+Add a small data audit endpoint so we can see ingest health at a glance.
+
+This task is upstream of Datadive. Do not change Datadive snapshot/aggregation logic except where explicitly noted; assume those are correct.
+
+1) Fix routes_run / TPRR Source Bug in weekly_stats
+
+Symptom
+
+In weekly_stats for 2025, Week 11, every player has routes_run = 2 * targets, which forces TPRR to 0.50 for everyone downstream.
+
+We need to locate where routes_run is being computed or mapped incorrectly and fix it at the source.
+
+1.1 Inspect current weekly_stats values
+
+Run this in the DB:
+
+SELECT 
+  season,
+  week,
+  player_name,
+  team_id,
+  position,
+  routes_run,
+  targets,
+  receiving_yards
+FROM weekly_stats
+WHERE season = 2025
+  AND week = 11
+ORDER BY receiving_yards DESC
+LIMIT 25;
+
+
+Also:
+
+SELECT
+  COUNT(*) AS total_rows,
+  COUNT(*) FILTER (WHERE routes_run = targets * 2 AND targets > 0) AS suspicious_rows
+FROM weekly_stats
+WHERE season = 2025
+  AND week = 11;
+
+
+Confirm that this pattern is widespread (likely nearly 100% of rows).
+
+1.2 Compare against raw NFL data source
+
+Wherever the raw NFL stats are stored (e.g. nfl_raw_weekly, nfl_pbp_agg, or a CSV import), find the original routes / targets:
+
+-- Adjust table/column names to match actual schema
+SELECT 
+  season,
+  week,
+  player,   -- or player_name
+  team,
+  position,
+  routes    AS raw_routes,
+  targets   AS raw_targets
+FROM nfl_source_weekly
+WHERE season = 2025
+  AND week = 11
+  AND player = 'Michael Wilson' -- or some notable WR
+LIMIT 10;
+
+
+The goal: see whether the raw source is correct and our transform is wrong, or the source is itself bad.
+
+1.3 Audit the transform code that builds weekly_stats
+
+Search the codebase for where weekly_stats is populated (something like ingestNflWeeklyStats, buildWeeklyStats, etc.).
+
+Look specifically for:
+
+Any assignment of routes_run:
+
+routes_run: someField,
+// or
+routes_run = x.targets * 2
+
+
+Any join that might be duplicating rows and then aggregating incorrectly.
+
+Fix requirements:
+
+routes_run must be mapped to the true “routes run” metric from the raw source, not derived from targets.
+
+If there is no explicit routes field in the raw source, then:
+
+Either compute it correctly from route-level data (e.g. aggregated from pbp).
+
+Or temporarily set routes_run = targets as a more honest proxy (but don’t just hardcode 2 * targets).
+
+After the mapping is corrected, perform a backfill for 2025 Weeks 1–11:
+
+Either:
+
+Re-run the ingest pipeline for those weeks, overwriting the bad weekly_stats rows.
+
+Or run an UPDATE that remaps routes_run from the correct source column.
+
+Example backfill rough shape (adjust to real schema):
+
+UPDATE weekly_stats ws
+SET routes_run = src.routes
+FROM nfl_source_weekly src
+WHERE ws.season = src.season
+  AND ws.week = src.week
+  AND ws.player_id = src.player_id
+  AND ws.season = 2025
+  AND ws.week BETWEEN 1 AND 11;
+
+1.4 Add a guardrail check for routes/targets pattern
+
+To avoid missing this again, add a quick sanity check to the ingest pipeline:
+
+After writing weekly_stats for a given (season, week):
+
+SELECT
+  COUNT(*) AS total_rows,
+  COUNT(*) FILTER (WHERE routes_run = targets * 2 AND targets > 0) AS suspicious_rows
+FROM weekly_stats
+WHERE season = $season AND week = $week;
+
+
+If suspicious_rows is, say, > 50% of total_rows, log a warning:
+
+[INGEST WARNING] routes_run = 2*targets pattern detected for season X, week Y (N suspicious rows)
+
+You don’t have to block ingest, just make it obvious in logs.
+
+2) Fix Ingest for 2025 Weeks 12 & 13
+
+Right now:
+
+Week 12 has only ~20 rows across 2 teams in weekly_stats.
+
+Snapshot thresholds require ≥200 rows and ≥28 teams, so Datadive correctly refuses to create snapshots.
+
+We need the ingest to fully pull weeks 12 and 13.
+
+2.1 Confirm availability in source
+
+Check whatever mechanism fetches NFL data:
+
+If you use nflfastR / nfl_data_py, confirm that those libs have 2025 Week 12–13 data.
+
+If using CSV/remote source, confirm the files for those weeks exist.
+
+2.2 Re-run ingest for Weeks 12 & 13
+
+Update or rerun the ingest job so that for each week:
+
+All games are included.
+
+All offensive players are written into weekly_stats.
+
+After running the ingest:
+
+SELECT week,
+       COUNT(*) AS rows,
+       COUNT(DISTINCT team_id) AS teams
+FROM weekly_stats
+WHERE season = 2025
+GROUP BY week
+ORDER BY week;
+
+
+Target:
+
+For all completed weeks (1–13):
+
+rows ≈ 250–400 (depending on league size)
+
+distinct teams ≥ 30 (allowing for bye weeks but still broad coverage)
+
+2.3 Let Datadive auto-snapshot promote new weeks
+
+Once weekly_stats is correct:
+
+Call:
+
+GET /api/data-lab/admin/auto-status?season=2025
+
+
+Make sure:
+
+latestStatsWeek reflects the true max week (e.g. 13).
+
+lastSnappedWeek is < that.
+
+hasNewWeekAvailable (or equivalent) is true.
+
+Run the auto-snapshot job:
+
+POST /api/data-lab/admin/auto-run
+{
+  "season": 2025
+}
+
+
+Verify:
+
+GET /api/data-lab/meta/current
+
+
+Now reports lastSnappedWeek = 13 (or whatever the newest valid week is).
+
+Open /tiber-data-lab and confirm:
+
+Header pill shows Season 2025 • Week 13.
+
+Week filter defaults to Week 13.
+
+Fantasy + usage views now include Week 13 rows.
+
+3) Add Data Audit Endpoint for Quick Health Check
+
+We want a single API endpoint that surfaces a snapshot of ingest health per week, plus a couple of sanity checks.
+
+3.1 Backend: /api/data-lab/admin/data-audit
+
+Create a new admin route:
+
+// server/routes/dataLabAdmin.ts (or similar file)
+
+router.get('/data-audit', async (req, res) => {
+  const season = Number(req.query.season ?? new Date().getFullYear());
+
+  try {
+    const weeklySummary = await db.execute(sql`
+      SELECT
+        week,
+        COUNT(*) AS rows,
+        COUNT(DISTINCT team_id) AS teams,
+        COUNT(*) FILTER (
+          WHERE routes_run = targets * 2 AND targets > 0
+        ) AS suspicious_routes_pattern
+      FROM weekly_stats
+      WHERE season = ${season}
+      GROUP BY week
+      ORDER BY week;
+    `);
+
+    const snapshotSummary = await db.execute(sql`
+      SELECT
+        week,
+        is_official,
+        snapshot_at
+      FROM datadive_snapshot_meta
+      WHERE season = ${season}
+      ORDER BY week;
+    `);
+
+    res.json({
+      season,
+      weeklyStats: (weeklySummary as any).rows,
+      snapshots: (snapshotSummary as any).rows,
+    });
+  } catch (err: any) {
+    console.error('[DATA-AUDIT] error', err);
+    res.status(500).json({ error: err.message ?? String(err) });
+  }
+});
+
+
+This endpoint should not require auth in your dev environment, but treat it as an admin endpoint in prod.
+
+3.2 (Optional) UI hook – simple admin panel
+
+Not required, but if you want a quick visual:
+
+Add a small internal page /tiber-data-audit that calls /api/data-lab/admin/data-audit?season=2025 and renders:
+
+For each week: rows, teams, suspicious_routes_pattern, snapshot status.
+
+Color-code:
+
+Weeks with teams < 28 in red.
+
+Weeks where suspicious_routes_pattern > 0 in yellow.
+
+Weeks with snapshots in green.
+
+4) Acceptance Criteria
+
+The task is done when:
+
+Routes / TPRR fix
+
+For 2025 Week 11 in weekly_stats, routes_run is not uniformly 2 * targets.
+
+Only a small minority (or zero) rows trigger the routes_run = 2 * targets check.
+
+In TIBER Data Lab:
+
+Season and range views show varied TPRR, not a flat 0.50 across all players.
+
+Weeks 12 & 13 ingest
+
+weekly_stats for 2025 has ≥200 rows and ≥28 teams for Week 12 and Week 13.
+
+datadive_snapshot_meta contains official snapshots for those weeks.
+
+/api/data-lab/meta/current + /tiber-data-lab default to the latest week (e.g. 13).
+
+Data audit endpoint
+
+GET /api/data-lab/admin/data-audit?season=2025 returns:
+
+Per-week rows, teams, suspicious_routes_pattern.
+
+Snapshot info showing which weeks are snapped.
+
+No 500 errors; output is stable and JSON.
+
+Keep all changes additive and localized to the ingest pipeline and new admin endpoint. Do not modify the existing Datadive aggregation logic except for the sanity logging mentioned above.
