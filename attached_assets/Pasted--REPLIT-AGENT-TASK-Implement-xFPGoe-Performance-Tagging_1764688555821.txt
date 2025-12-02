@@ -1,0 +1,128 @@
+🛠 REPLIT AGENT TASK — Implement xFPGoe Performance Tagging System
+
+Module: TIBER Data Lab → Fantasy Engine → Usage Aggregation
+
+Goal
+
+Add performance tags (“RISER”, “FALLER”, “NEUTRAL”) to /api/data-lab/usage-agg season & range modes, derived from xFPTS/xFPGoe metrics.
+No UI clutter. Tags are for filtering + Tiber Voice.
+
+1. Backend: Tag Logic (TypeScript)
+
+Create a small config object:
+
+const performanceTagConfig = {
+  minGames: 3,
+  riserThreshold: 3.0,    // +3 PPR/G over expectation
+  fallerThreshold: -3.0,  // -3 PPR/G under expectation
+  neutralBand: 1.0        // -1 < Δ < +1
+};
+
+
+Add helper:
+
+export function getPerformanceTag(
+  xfpgoe: number,
+  gamesPlayed: number
+): "RISER" | "FALLER" | "NEUTRAL" | null {
+  if (gamesPlayed < performanceTagConfig.minGames) return null;
+
+  if (xfpgoe >= performanceTagConfig.riserThreshold) return "RISER";
+  if (xfpgoe <= performanceTagConfig.fallerThreshold) return "FALLER";
+  if (Math.abs(xfpgoe) < performanceTagConfig.neutralBand) return "NEUTRAL";
+
+  return "NEUTRAL";
+}
+
+2. Backend: Modify /api/data-lab/usage-agg
+
+In "season" and "range" modes:
+
+Ensure SQL returns:
+
+SUM(actual_ppr) AS actual_ppr_total
+SUM(x_ppr) AS x_ppr_total
+COUNT(*) FILTER (WHERE snaps > 0 OR routes_run > 0) AS games_played
+
+
+After mapping rows:
+
+const actualPerGame = actual_ppr_total / gamesPlayed;
+const xPerGame = x_ppr_total / gamesPlayed;
+const xfpgoe = actualPerGame - xPerGame;
+
+const performanceTag = getPerformanceTag(xfpgoe, gamesPlayed);
+
+
+Add to response object:
+
+{
+  playerId,
+  playerName,
+  position,
+  teamId,
+  gamesPlayed,
+  pprPerGame: actualPerGame,
+  xPprPerGame: xPerGame,
+  xFPGoePprPerGame: xfpgoe,
+  performanceTag,
+}
+
+3. Add Optional Query Param: performanceFilter
+API Example:
+/api/data-lab/usage-agg?weekMode=season&season=2025&position=WR&performanceFilter=RISER
+
+Values:
+
+RISER
+
+FALLER
+
+NEUTRAL
+
+Server-side filter:
+if (performanceFilter) {
+  rows = rows.filter(r => r.performanceTag === performanceFilter);
+}
+
+4. Frontend Integration (Minimal)
+
+No row text. No slogans.
+
+Fantasy Mode Season + Range views
+
+Keep existing numeric columns:
+
+| PPR/G | xPPR/G | Δ PPR/G |
+
+But send tags to client and optionally add a UI filter:
+
+All
+
+Risers
+
+Fallers
+
+Neutrals
+
+This filter will call the backend with performanceFilter.
+
+No visual chips rendered inside rows.
+
+5. Acceptance Criteria
+
+/usage-agg returns performanceTag.
+
+Tag logic follows thresholds above.
+
+Optional performanceFilter works.
+
+Data Lab UI stays numeric-only.
+
+No narrative or roast strings added.
+
+Tags fully available for Tiber Voice module.
+
+End of Task
+
+Proceed with implementation.

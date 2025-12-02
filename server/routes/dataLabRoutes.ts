@@ -14,6 +14,63 @@ import { runAutoWeeklySnapshotForSeason, getAutoSnapshotStatus } from "../servic
 
 const router = Router();
 
+/**
+ * Performance Tag Configuration for xFPGoe Analysis
+ * Used to classify players as RISER, FALLER, or NEUTRAL based on actual vs expected performance
+ */
+const performanceTagConfig = {
+  minGames: 3,           // Minimum games for stable tag
+  riserThreshold: 3.0,   // +3 PPR/G over expectation = RISER
+  fallerThreshold: -3.0, // -3 PPR/G under expectation = FALLER
+  neutralBand: 1.0,      // -1 < Δ < +1 = explicit NEUTRAL
+};
+
+/**
+ * Expected Points Per Opportunity coefficients by position (PPR scoring)
+ * Based on league-average production rates
+ */
+const xFptsCoefficients = {
+  // Points per target (accounts for catch rate, yards, TDs)
+  WR: { ppt: 1.85, ppr: 0.4 },   // WRs: high target value
+  TE: { ppt: 1.65, ppr: 0.5 },   // TEs: slightly lower but more rush
+  RB: { ppt: 1.50, ppr: 0.85 },  // RBs: targets less valuable, but high rush value
+  QB: { ppt: 0.0, ppr: 0.0 },    // QBs: different scoring model
+};
+
+export type PerformanceTag = "RISER" | "FALLER" | "NEUTRAL" | null;
+
+/**
+ * Calculate expected PPR fantasy points based on opportunity volume
+ * xPPR = (targets × ppt) + (rush_attempts × ppr)
+ */
+export function calculateXFptsPpr(
+  targets: number,
+  rushAttempts: number,
+  position: string
+): number {
+  const coeffs = xFptsCoefficients[position as keyof typeof xFptsCoefficients];
+  if (!coeffs) return 0;
+  
+  return (targets * coeffs.ppt) + (rushAttempts * coeffs.ppr);
+}
+
+/**
+ * Determine performance tag based on xFPGoe (actual vs expected PPR/G)
+ * Returns null if insufficient games for stable classification
+ */
+export function getPerformanceTag(
+  xfpgoe: number,
+  gamesPlayed: number
+): PerformanceTag {
+  if (gamesPlayed < performanceTagConfig.minGames) return null;
+
+  if (xfpgoe >= performanceTagConfig.riserThreshold) return "RISER";
+  if (xfpgoe <= performanceTagConfig.fallerThreshold) return "FALLER";
+  if (Math.abs(xfpgoe) < performanceTagConfig.neutralBand) return "NEUTRAL";
+
+  return "NEUTRAL";
+}
+
 router.get("/meta/current", async (req: Request, res: Response) => {
   try {
     const latestSnapshot = await datadiveSnapshotService.getLatestOfficialSnapshot();
