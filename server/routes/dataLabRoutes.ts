@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { db } from "../infra/db";
-import { eq, and, like, gte, lte, desc, or, ilike } from "drizzle-orm";
+import { eq, and, like, gte, lte, desc, or, ilike, sql } from "drizzle-orm";
 import {
   datadiveSnapshotMeta,
   datadiveSnapshotPlayerWeek,
@@ -443,6 +443,339 @@ router.get("/admin/auto-status", async (req: Request, res: Response) => {
       status: 'ERROR',
       message: error.message ?? String(error),
     });
+  }
+});
+
+/**
+ * Usage Aggregation Endpoint
+ * Supports: single week, season-to-date, and custom week ranges
+ * 
+ * Query params:
+ * - season (required): The NFL season year
+ * - weekMode: "single" | "range" | "season" (default: "single")
+ * - week: For single mode (required if weekMode=single)
+ * - weekFrom, weekTo: For range mode
+ * - position: Filter by position (WR, RB, TE, QB)
+ * - minRoutes: Minimum routes to include (default: 10 for aggregates)
+ */
+router.get("/usage-agg", async (req: Request, res: Response) => {
+  try {
+    const {
+      season,
+      weekMode = "single",
+      week,
+      weekFrom,
+      weekTo,
+      position,
+      minRoutes = "10",
+      limit = "100",
+    } = req.query;
+
+    if (!season) {
+      return res.status(400).json({
+        error: "Missing required parameter: season",
+        required: ["season"],
+        optional: ["weekMode", "week", "weekFrom", "weekTo", "position", "minRoutes"],
+      });
+    }
+
+    const seasonNum = Number(season);
+    const minRoutesNum = Number(minRoutes);
+    const limitNum = Math.min(Number(limit), 200);
+
+    // Determine week range based on mode
+    let startWeek: number;
+    let endWeek: number;
+    let modeLabel: string;
+
+    if (weekMode === "season") {
+      // Season mode: Week 1 to latest snapshot week
+      const latestSnapshot = await datadiveSnapshotService.getLatestOfficialSnapshot();
+      if (!latestSnapshot || latestSnapshot.season !== seasonNum) {
+        return res.status(404).json({
+          error: `No snapshot found for season ${seasonNum}`,
+        });
+      }
+      startWeek = 1;
+      endWeek = latestSnapshot.week;
+      modeLabel = `Season ${seasonNum} (Weeks 1-${endWeek})`;
+    } else if (weekMode === "range") {
+      if (!weekFrom || !weekTo) {
+        return res.status(400).json({
+          error: "Range mode requires weekFrom and weekTo parameters",
+        });
+      }
+      startWeek = Number(weekFrom);
+      endWeek = Number(weekTo);
+      modeLabel = `Weeks ${startWeek}-${endWeek}`;
+    } else {
+      // Single week mode (default)
+      if (!week) {
+        return res.status(400).json({
+          error: "Single week mode requires week parameter",
+        });
+      }
+      startWeek = Number(week);
+      endWeek = Number(week);
+      modeLabel = `Week ${week}`;
+    }
+
+    // Build SQL aggregation query across all snapshots in the week range
+    const positionFilter = position && (position as string).toUpperCase() !== 'ALL'
+      ? sql.raw(`AND spw.position = '${(position as string).toUpperCase()}'`)
+      : sql.raw('');
+
+    const result = await db.execute(sql`
+      WITH snapshot_weeks AS (
+        SELECT DISTINCT sm.id as snapshot_id, sm.week
+        FROM datadive_snapshot_meta sm
+        WHERE sm.season = ${seasonNum}
+          AND sm.week BETWEEN ${startWeek} AND ${endWeek}
+          AND sm.is_official = true
+      ),
+      player_agg AS (
+        SELECT 
+          spw.player_id,
+          spw.player_name,
+          MAX(spw.team_id) as team_id,
+          MAX(spw.position) as position,
+          COUNT(DISTINCT sw.week) FILTER (WHERE COALESCE(spw.snaps, 0) > 0 OR COALESCE(spw.routes, 0) > 0) as games_played,
+          SUM(COALESCE(spw.snaps, 0)) as total_snaps,
+          AVG(spw.snap_share) as avg_snap_share,
+          SUM(COALESCE(spw.routes, 0)) as total_routes,
+          AVG(spw.route_rate) as avg_route_rate,
+          SUM(COALESCE(spw.targets, 0)) as total_targets,
+          AVG(spw.target_share) as avg_target_share,
+          SUM(COALESCE(spw.receptions, 0)) as total_receptions,
+          SUM(COALESCE(spw.rec_yards, 0)) as total_rec_yards,
+          SUM(COALESCE(spw.rec_tds, 0)) as total_rec_tds,
+          AVG(spw.adot) as avg_adot,
+          SUM(COALESCE(spw.air_yards, 0)) as total_air_yards,
+          SUM(COALESCE(spw.yac, 0)) as total_yac,
+          AVG(spw.epa_per_target) as avg_epa_per_target,
+          AVG(spw.success_rate) as avg_success_rate,
+          SUM(COALESCE(spw.rush_attempts, 0)) as total_rush_attempts,
+          SUM(COALESCE(spw.rush_yards, 0)) as total_rush_yards,
+          SUM(COALESCE(spw.rush_tds, 0)) as total_rush_tds,
+          AVG(spw.yards_per_carry) as avg_ypc,
+          AVG(spw.rush_epa_per_play) as avg_rush_epa,
+          SUM(COALESCE(spw.fpts_std, 0)) as total_fpts_std,
+          SUM(COALESCE(spw.fpts_half, 0)) as total_fpts_half,
+          SUM(COALESCE(spw.fpts_ppr, 0)) as total_fpts_ppr
+        FROM snapshot_weeks sw
+        JOIN datadive_snapshot_player_week spw ON spw.snapshot_id = sw.snapshot_id AND spw.week = sw.week
+        WHERE 1=1 ${positionFilter}
+        GROUP BY spw.player_id, spw.player_name
+      )
+      SELECT 
+        player_id,
+        player_name,
+        team_id,
+        position,
+        games_played,
+        total_snaps,
+        ROUND(avg_snap_share::numeric, 3) as avg_snap_share,
+        total_routes,
+        ROUND(avg_route_rate::numeric, 3) as avg_route_rate,
+        total_targets,
+        total_receptions,
+        total_rec_yards,
+        total_rec_tds,
+        ROUND(avg_adot::numeric, 2) as avg_adot,
+        total_air_yards,
+        total_yac,
+        ROUND(avg_epa_per_target::numeric, 4) as avg_epa_per_target,
+        ROUND(avg_success_rate::numeric, 3) as avg_success_rate,
+        total_rush_attempts,
+        total_rush_yards,
+        total_rush_tds,
+        ROUND(avg_ypc::numeric, 2) as avg_ypc,
+        ROUND(avg_rush_epa::numeric, 4) as avg_rush_epa,
+        ROUND(total_fpts_std::numeric, 1) as total_fpts_std,
+        ROUND(total_fpts_half::numeric, 1) as total_fpts_half,
+        ROUND(total_fpts_ppr::numeric, 1) as total_fpts_ppr,
+        CASE WHEN total_routes > 0 THEN ROUND((total_targets::numeric / total_routes), 4) ELSE 0 END as tprr,
+        CASE WHEN total_routes > 0 THEN ROUND((total_rec_yards::numeric / total_routes), 2) ELSE 0 END as yprr,
+        CASE WHEN games_played > 0 THEN ROUND((total_routes::numeric / games_played), 1) ELSE 0 END as routes_per_game,
+        CASE WHEN games_played > 0 THEN ROUND((total_targets::numeric / games_played), 1) ELSE 0 END as targets_per_game,
+        CASE WHEN games_played > 0 THEN ROUND((total_fpts_ppr::numeric / games_played), 1) ELSE 0 END as fpts_ppr_per_game
+      FROM player_agg
+      WHERE total_routes >= ${minRoutesNum}
+      ORDER BY total_fpts_ppr DESC
+      LIMIT ${limitNum}
+    `);
+    const rows = (result as any).rows || [];
+
+    res.json({
+      season: seasonNum,
+      weekMode,
+      weekRange: { from: startWeek, to: endWeek },
+      modeLabel,
+      position: position || 'ALL',
+      minRoutes: minRoutesNum,
+      count: rows.length,
+      data: rows.map((row: any) => ({
+        playerId: row.player_id,
+        playerName: row.player_name,
+        teamId: row.team_id,
+        position: row.position,
+        gamesPlayed: Number(row.games_played) || 0,
+        totalSnaps: Number(row.total_snaps) || 0,
+        avgSnapShare: row.avg_snap_share ? Number(row.avg_snap_share) : null,
+        totalRoutes: Number(row.total_routes) || 0,
+        avgRouteRate: row.avg_route_rate ? Number(row.avg_route_rate) : null,
+        totalTargets: Number(row.total_targets) || 0,
+        totalReceptions: Number(row.total_receptions) || 0,
+        totalRecYards: Number(row.total_rec_yards) || 0,
+        totalRecTds: Number(row.total_rec_tds) || 0,
+        avgAdot: row.avg_adot ? Number(row.avg_adot) : null,
+        totalAirYards: Number(row.total_air_yards) || 0,
+        totalYac: Number(row.total_yac) || 0,
+        avgEpaPerTarget: row.avg_epa_per_target ? Number(row.avg_epa_per_target) : null,
+        avgSuccessRate: row.avg_success_rate ? Number(row.avg_success_rate) : null,
+        totalRushAttempts: Number(row.total_rush_attempts) || 0,
+        totalRushYards: Number(row.total_rush_yards) || 0,
+        totalRushTds: Number(row.total_rush_tds) || 0,
+        avgYpc: row.avg_ypc ? Number(row.avg_ypc) : null,
+        avgRushEpa: row.avg_rush_epa ? Number(row.avg_rush_epa) : null,
+        totalFptsStd: Number(row.total_fpts_std) || 0,
+        totalFptsHalf: Number(row.total_fpts_half) || 0,
+        totalFptsPpr: Number(row.total_fpts_ppr) || 0,
+        tprr: Number(row.tprr) || 0,
+        yprr: Number(row.yprr) || 0,
+        routesPerGame: Number(row.routes_per_game) || 0,
+        targetsPerGame: Number(row.targets_per_game) || 0,
+        fptsPprPerGame: Number(row.fpts_ppr_per_game) || 0,
+      })),
+    });
+  } catch (error: any) {
+    console.error("[DataLab] Error in usage-agg:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Fantasy Logs Endpoint
+ * Returns fantasy points from Sleeper game logs or weekly_stats
+ * 
+ * Query params:
+ * - season (required)
+ * - week (optional): Filter to specific week
+ * - weekFrom, weekTo (optional): Week range
+ * - position (optional): Filter by position
+ * - player_id (optional): Filter to specific player
+ */
+router.get("/fantasy-logs", async (req: Request, res: Response) => {
+  try {
+    const {
+      season,
+      week,
+      weekFrom,
+      weekTo,
+      position,
+      player_id,
+      limit = "100",
+    } = req.query;
+
+    if (!season) {
+      return res.status(400).json({
+        error: "Missing required parameter: season",
+      });
+    }
+
+    const seasonNum = Number(season);
+    const limitNum = Math.min(Number(limit), 200);
+
+    // Determine week filter using sql.raw for dynamic filter conditions
+    let weekFilter = sql.raw('');
+    if (week) {
+      weekFilter = sql.raw(`AND spw.week = ${Number(week)}`);
+    } else if (weekFrom && weekTo) {
+      weekFilter = sql.raw(`AND spw.week BETWEEN ${Number(weekFrom)} AND ${Number(weekTo)}`);
+    }
+
+    const positionFilter = position && (position as string).toUpperCase() !== 'ALL'
+      ? sql.raw(`AND spw.position = '${(position as string).toUpperCase()}'`)
+      : sql.raw('');
+
+    const playerFilter = player_id
+      ? sql.raw(`AND spw.player_id = '${player_id}'`)
+      : sql.raw('');
+
+    // Get fantasy-focused data from snapshots
+    const result = await db.execute(sql`
+      SELECT 
+        spw.player_id,
+        spw.player_name,
+        spw.team_id,
+        spw.position,
+        spw.season,
+        spw.week,
+        COALESCE(spw.targets, 0) as targets,
+        COALESCE(spw.receptions, 0) as receptions,
+        COALESCE(spw.rec_yards, 0) as rec_yards,
+        COALESCE(spw.rec_tds, 0) as rec_tds,
+        COALESCE(spw.rush_attempts, 0) as rush_attempts,
+        COALESCE(spw.rush_yards, 0) as rush_yards,
+        COALESCE(spw.rush_tds, 0) as rush_tds,
+        ROUND(COALESCE(spw.fpts_std, 0)::numeric, 1) as fpts_std,
+        ROUND(COALESCE(spw.fpts_half, 0)::numeric, 1) as fpts_half,
+        ROUND(COALESCE(spw.fpts_ppr, 0)::numeric, 1) as fpts_ppr,
+        COALESCE(spw.routes, 0) as routes,
+        spw.tprr,
+        spw.target_share,
+        spw.adot,
+        COALESCE(spw.air_yards, 0) as air_yards
+      FROM datadive_snapshot_player_week spw
+      JOIN datadive_snapshot_meta sm ON sm.id = spw.snapshot_id
+      WHERE sm.season = ${seasonNum}
+        AND sm.is_official = true
+        ${weekFilter}
+        ${positionFilter}
+        ${playerFilter}
+      ORDER BY spw.fpts_ppr DESC
+      LIMIT ${limitNum}
+    `);
+    const rows = (result as any).rows || [];
+
+    res.json({
+      mode: 'fantasy',
+      season: seasonNum,
+      week: week ? Number(week) : null,
+      weekRange: weekFrom && weekTo ? { from: Number(weekFrom), to: Number(weekTo) } : null,
+      position: position || 'ALL',
+      count: rows.length,
+      data: rows.map((row: any) => ({
+        playerId: row.player_id,
+        playerName: row.player_name,
+        teamId: row.team_id,
+        position: row.position,
+        season: row.season,
+        week: row.week,
+        targets: Number(row.targets) || 0,
+        receptions: Number(row.receptions) || 0,
+        recYards: Number(row.rec_yards) || 0,
+        recTds: Number(row.rec_tds) || 0,
+        rushAttempts: Number(row.rush_attempts) || 0,
+        rushYards: Number(row.rush_yards) || 0,
+        rushTds: Number(row.rush_tds) || 0,
+        fptsStd: Number(row.fpts_std) || 0,
+        fptsHalf: Number(row.fpts_half) || 0,
+        fptsPpr: Number(row.fpts_ppr) || 0,
+        // Usage context for future xFPTS
+        routes: Number(row.routes) || 0,
+        tprr: row.tprr ? Number(row.tprr) : null,
+        targetShare: row.target_share ? Number(row.target_share) : null,
+        adot: row.adot ? Number(row.adot) : null,
+        airYards: Number(row.air_yards) || 0,
+        // Placeholder for future xFPTS implementation
+        xFpts: null,
+        xFptsGoe: null,
+      })),
+    });
+  } catch (error: any) {
+    console.error("[DataLab] Error in fantasy-logs:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
