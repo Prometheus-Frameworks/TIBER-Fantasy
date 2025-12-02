@@ -13,7 +13,9 @@ import {
   Activity,
   X,
   MessageSquare,
-  AlertCircle
+  AlertCircle,
+  Calendar,
+  TrendingUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +26,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface SnapshotMeta {
   snapshotId: number;
@@ -81,6 +85,86 @@ interface SearchResponse {
   offset: number;
   data: PlayerWeekData[];
 }
+
+interface AggregatedPlayerData {
+  playerId: string;
+  playerName: string;
+  teamId: string | null;
+  position: string | null;
+  gamesPlayed: number;
+  totalRoutes: number;
+  totalTargets: number;
+  avgTprr: number | null;
+  avgTargetShare: number | null;
+  totalReceptions: number;
+  totalRecYards: number;
+  totalRecTds: number;
+  avgAdot: number | null;
+  totalAirYards: number;
+  totalYac: number;
+  avgEpaPerTarget: number | null;
+  avgSuccessRate: number | null;
+  totalRushAttempts: number;
+  totalRushYards: number;
+  totalRushTds: number;
+  avgRushEpa: number | null;
+  yprr: number | null;
+  yardsPerCarry: number | null;
+  totalFptsStd: number;
+  totalFptsHalf: number;
+  totalFptsPpr: number;
+  fptsStdPerGame: number;
+  fptsHalfPerGame: number;
+  fptsPprPerGame: number;
+}
+
+interface AggResponse {
+  modeLabel: string;
+  season: number;
+  weekMode: 'week' | 'season' | 'range';
+  weekRange: { from: number; to: number } | null;
+  position: string;
+  count: number;
+  data: AggregatedPlayerData[];
+}
+
+interface FantasyLogData {
+  playerId: string;
+  playerName: string;
+  teamId: string | null;
+  position: string | null;
+  season: number;
+  week: number;
+  targets: number;
+  receptions: number;
+  recYards: number;
+  recTds: number;
+  rushAttempts: number;
+  rushYards: number;
+  rushTds: number;
+  fptsStd: number;
+  fptsHalf: number;
+  fptsPpr: number;
+  routes: number;
+  tprr: number | null;
+  targetShare: number | null;
+  adot: number | null;
+  airYards: number;
+  xFpts: number | null;
+  xFptsGoe: number | null;
+}
+
+interface FantasyLogResponse {
+  mode: 'fantasy';
+  season: number;
+  week: number | null;
+  weekRange: { from: number; to: number } | null;
+  position: string;
+  count: number;
+  data: FantasyLogData[];
+}
+
+type ViewMode = 'week' | 'season' | 'range';
 
 const POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE'];
 
@@ -278,9 +362,13 @@ export default function TiberDataLab() {
   const [position, setPosition] = useState('ALL');
   const [season, setSeason] = useState<number | undefined>(undefined);
   const [week, setWeek] = useState<number | undefined>(undefined);
+  const [weekFrom, setWeekFrom] = useState<number | undefined>(undefined);
+  const [weekTo, setWeekTo] = useState<number | undefined>(undefined);
   const [minRoutes, setMinRoutes] = useState<string>('');
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerWeekData | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('week');
+  const [fantasyMode, setFantasyMode] = useState(false);
 
   const { data: metaData, isLoading: metaLoading, isError: metaError } = useQuery<SnapshotMeta>({
     queryKey: ['/api/data-lab/meta/current'],
@@ -290,41 +378,134 @@ export default function TiberDataLab() {
     if (metaData && metaData.season && metaData.week) {
       setSeason(metaData.season);
       setWeek(metaData.week);
+      setWeekTo(metaData.week);
+      setWeekFrom(1);
     }
   }, [metaData]);
   
-  // Compute whether search is ready - only true if meta loaded successfully AND values are valid
-  const searchReady = !metaError && season != null && week != null && season > 0 && week > 0;
+  const searchReady = !metaError && season != null && season > 0 && (
+    viewMode === 'season' || 
+    (viewMode === 'week' && week != null && week > 0) ||
+    (viewMode === 'range' && weekFrom != null && weekTo != null && weekFrom > 0 && weekTo > 0)
+  );
 
-  const searchParams = new URLSearchParams({
-    season: String(season ?? ''),
-    week: String(week ?? ''),
-    ...(searchQuery && { q: searchQuery }),
-    ...(position !== 'ALL' && { position }),
-    ...(minRoutes && { min_routes: minRoutes }),
-    limit: '50',
-  });
+  const buildSearchParams = () => {
+    const params = new URLSearchParams({
+      season: String(season ?? ''),
+      ...(position !== 'ALL' && { position }),
+      limit: '50',
+    });
+    
+    if (viewMode === 'week') {
+      params.set('week', String(week ?? ''));
+    } else if (viewMode === 'range') {
+      params.set('weekFrom', String(weekFrom ?? ''));
+      params.set('weekTo', String(weekTo ?? ''));
+    }
+    
+    if (searchQuery) params.set('q', searchQuery);
+    if (minRoutes) params.set('min_routes', minRoutes);
+    
+    return params;
+  };
+
+  const buildAggParams = () => {
+    const params = new URLSearchParams({
+      season: String(season ?? ''),
+      weekMode: viewMode,
+      ...(position !== 'ALL' && { position }),
+      limit: '50',
+    });
+    
+    if (viewMode === 'week') {
+      params.set('week', String(week ?? ''));
+    } else if (viewMode === 'range') {
+      params.set('weekFrom', String(weekFrom ?? ''));
+      params.set('weekTo', String(weekTo ?? ''));
+    }
+    
+    return params;
+  };
+
+  const buildFantasyParams = () => {
+    const params = new URLSearchParams({
+      season: String(season ?? ''),
+      ...(position !== 'ALL' && { position }),
+      limit: '50',
+    });
+    
+    if (viewMode === 'week') {
+      params.set('week', String(week ?? ''));
+    } else if (viewMode === 'range') {
+      params.set('weekFrom', String(weekFrom ?? ''));
+      params.set('weekTo', String(weekTo ?? ''));
+    }
+    
+    return params;
+  };
 
   const { 
     data: searchData, 
     isLoading: searchLoading, 
     refetch: refetchSearch 
   } = useQuery<SearchResponse>({
-    queryKey: ['/api/data-lab/search', season, week, searchQuery, position, minRoutes],
+    queryKey: ['/api/data-lab/search', season, week, searchQuery, position, minRoutes, viewMode],
     queryFn: async () => {
-      const res = await fetch(`/api/data-lab/search?${searchParams.toString()}`);
+      const res = await fetch(`/api/data-lab/search?${buildSearchParams().toString()}`);
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error || 'Search failed');
       }
       return res.json();
     },
-    enabled: searchReady,
+    enabled: searchReady && !fantasyMode && viewMode === 'week',
   });
+
+  const {
+    data: aggData,
+    isLoading: aggLoading,
+    refetch: refetchAgg
+  } = useQuery<AggResponse>({
+    queryKey: ['/api/data-lab/usage-agg', season, week, weekFrom, weekTo, position, viewMode],
+    queryFn: async () => {
+      const res = await fetch(`/api/data-lab/usage-agg?${buildAggParams().toString()}`);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Aggregation failed');
+      }
+      return res.json();
+    },
+    enabled: searchReady && !fantasyMode && viewMode !== 'week',
+  });
+
+  const {
+    data: fantasyData,
+    isLoading: fantasyLoading,
+    refetch: refetchFantasy
+  } = useQuery<FantasyLogResponse>({
+    queryKey: ['/api/data-lab/fantasy-logs', season, week, weekFrom, weekTo, position, viewMode],
+    queryFn: async () => {
+      const res = await fetch(`/api/data-lab/fantasy-logs?${buildFantasyParams().toString()}`);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Fantasy logs failed');
+      }
+      return res.json();
+    },
+    enabled: searchReady && fantasyMode,
+  });
+
+  const isLoading = searchLoading || aggLoading || fantasyLoading;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    refetchSearch();
+    if (fantasyMode) {
+      refetchFantasy();
+    } else if (viewMode === 'week') {
+      refetchSearch();
+    } else {
+      refetchAgg();
+    }
   };
 
   const handlePlayerClick = (player: PlayerWeekData) => {
@@ -402,23 +583,75 @@ export default function TiberDataLab() {
 
         <Card className="bg-[#141824] border-gray-700 mb-6" data-testid="card-search-filters">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Search className="h-5 w-5 text-blue-400" />
-              Search Players
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSearch} className="flex flex-wrap items-end gap-4">
-              <div className="flex-1 min-w-[200px]">
-                <Label className="text-gray-400 text-sm">Player Name</Label>
-                <Input
-                  placeholder="Search by name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-[#0a0e1a] border-gray-600 text-white"
-                  data-testid="input-search"
-                />
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Search className="h-5 w-5 text-blue-400" />
+                Search Players
+              </CardTitle>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="fantasy-mode"
+                    checked={fantasyMode}
+                    onCheckedChange={setFantasyMode}
+                    data-testid="switch-fantasy-mode"
+                  />
+                  <Label htmlFor="fantasy-mode" className="text-sm text-gray-400 flex items-center gap-1 cursor-pointer">
+                    <TrendingUp className="h-4 w-4" />
+                    Fantasy Mode
+                  </Label>
+                </div>
               </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)} className="w-auto">
+                <TabsList className="bg-[#0a0e1a] border border-gray-700">
+                  <TabsTrigger 
+                    value="week" 
+                    className="data-[state=active]:bg-blue-600 text-gray-400 data-[state=active]:text-white"
+                    data-testid="tab-view-week"
+                  >
+                    <Calendar className="h-4 w-4 mr-1" />
+                    Single Week
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="season" 
+                    className="data-[state=active]:bg-blue-600 text-gray-400 data-[state=active]:text-white"
+                    data-testid="tab-view-season"
+                  >
+                    Season Total
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="range" 
+                    className="data-[state=active]:bg-blue-600 text-gray-400 data-[state=active]:text-white"
+                    data-testid="tab-view-range"
+                  >
+                    Week Range
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+              {fantasyMode && (
+                <Badge className="bg-purple-600/30 text-purple-300 border-purple-600">
+                  Fantasy Points Focus
+                </Badge>
+              )}
+            </div>
+
+            <form onSubmit={handleSearch} className="flex flex-wrap items-end gap-4">
+              {!fantasyMode && viewMode === 'week' && (
+                <div className="flex-1 min-w-[200px]">
+                  <Label className="text-gray-400 text-sm">Player Name</Label>
+                  <Input
+                    placeholder="Search by name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="bg-[#0a0e1a] border-gray-600 text-white"
+                    data-testid="input-search"
+                  />
+                </div>
+              )}
 
               <div className="w-32">
                 <Label className="text-gray-400 text-sm">Position</Label>
@@ -448,40 +681,75 @@ export default function TiberDataLab() {
                 />
               </div>
 
-              <div className="w-24">
-                <Label className="text-gray-400 text-sm">Week</Label>
-                <Input
-                  type="number"
-                  value={week ?? ''}
-                  onChange={(e) => setWeek(e.target.value ? Number(e.target.value) : undefined)}
-                  className="bg-[#0a0e1a] border-gray-600 text-white"
-                  placeholder="..."
-                  min={1}
-                  max={18}
-                  data-testid="input-week"
-                />
-              </div>
+              {viewMode === 'week' && (
+                <div className="w-24">
+                  <Label className="text-gray-400 text-sm">Week</Label>
+                  <Input
+                    type="number"
+                    value={week ?? ''}
+                    onChange={(e) => setWeek(e.target.value ? Number(e.target.value) : undefined)}
+                    className="bg-[#0a0e1a] border-gray-600 text-white"
+                    placeholder="..."
+                    min={1}
+                    max={18}
+                    data-testid="input-week"
+                  />
+                </div>
+              )}
 
-              <div className="w-28">
-                <Label className="text-gray-400 text-sm">Min Routes</Label>
-                <Input
-                  type="number"
-                  placeholder="0"
-                  value={minRoutes}
-                  onChange={(e) => setMinRoutes(e.target.value)}
-                  className="bg-[#0a0e1a] border-gray-600 text-white"
-                  data-testid="input-min-routes"
-                />
-              </div>
+              {viewMode === 'range' && (
+                <>
+                  <div className="w-24">
+                    <Label className="text-gray-400 text-sm">From Week</Label>
+                    <Input
+                      type="number"
+                      value={weekFrom ?? ''}
+                      onChange={(e) => setWeekFrom(e.target.value ? Number(e.target.value) : undefined)}
+                      className="bg-[#0a0e1a] border-gray-600 text-white"
+                      placeholder="1"
+                      min={1}
+                      max={18}
+                      data-testid="input-week-from"
+                    />
+                  </div>
+                  <div className="w-24">
+                    <Label className="text-gray-400 text-sm">To Week</Label>
+                    <Input
+                      type="number"
+                      value={weekTo ?? ''}
+                      onChange={(e) => setWeekTo(e.target.value ? Number(e.target.value) : undefined)}
+                      className="bg-[#0a0e1a] border-gray-600 text-white"
+                      placeholder="..."
+                      min={1}
+                      max={18}
+                      data-testid="input-week-to"
+                    />
+                  </div>
+                </>
+              )}
+
+              {!fantasyMode && viewMode === 'week' && (
+                <div className="w-28">
+                  <Label className="text-gray-400 text-sm">Min Routes</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={minRoutes}
+                    onChange={(e) => setMinRoutes(e.target.value)}
+                    className="bg-[#0a0e1a] border-gray-600 text-white"
+                    data-testid="input-min-routes"
+                  />
+                </div>
+              )}
 
               <Button 
                 type="submit" 
                 className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" 
-                disabled={searchLoading || !searchReady}
+                disabled={isLoading || !searchReady}
                 data-testid="button-search"
               >
                 <Search className="h-4 w-4 mr-2" />
-                {searchLoading ? 'Loading...' : 'Search'}
+                {isLoading ? 'Loading...' : 'Search'}
               </Button>
             </form>
           </CardContent>
@@ -490,21 +758,140 @@ export default function TiberDataLab() {
         <Card className="bg-[#141824] border-gray-700" data-testid="card-results">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Results</CardTitle>
-              {searchData && (
-                <span className="text-gray-400 text-sm">
-                  {searchData.total} players found
-                </span>
-              )}
+              <CardTitle className="text-lg flex items-center gap-2">
+                Results
+                {fantasyMode && <Badge className="bg-purple-600/50 text-purple-200">Fantasy</Badge>}
+                {viewMode === 'season' && <Badge className="bg-green-600/50 text-green-200">Season</Badge>}
+                {viewMode === 'range' && <Badge className="bg-orange-600/50 text-orange-200">Range</Badge>}
+              </CardTitle>
+              <span className="text-gray-400 text-sm">
+                {fantasyMode 
+                  ? `${fantasyData?.count ?? 0} records` 
+                  : viewMode === 'week' 
+                    ? `${searchData?.total ?? 0} players` 
+                    : `${aggData?.count ?? 0} players`
+                }
+              </span>
             </div>
+            {aggData?.modeLabel && !fantasyMode && viewMode !== 'week' && (
+              <CardDescription className="text-gray-500">
+                {aggData.modeLabel}
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent className="p-0">
-            {searchLoading ? (
+            {isLoading ? (
               <div className="p-4 space-y-2">
                 {[...Array(5)].map((_, i) => (
                   <Skeleton key={i} className="h-12 w-full bg-gray-700" />
                 ))}
               </div>
+            ) : fantasyMode ? (
+              fantasyData?.data.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  No fantasy data found
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm" data-testid="table-fantasy">
+                    <thead className="bg-[#0a0e1a] text-gray-400 uppercase text-xs">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Player</th>
+                        <th className="px-4 py-3 text-center">Team</th>
+                        <th className="px-4 py-3 text-center">Pos</th>
+                        <th className="px-4 py-3 text-center">Week</th>
+                        <th className="px-4 py-3 text-center">PPR</th>
+                        <th className="px-4 py-3 text-center">Half</th>
+                        <th className="px-4 py-3 text-center">Std</th>
+                        <th className="px-4 py-3 text-center">Tgt</th>
+                        <th className="px-4 py-3 text-center">Rec</th>
+                        <th className="px-4 py-3 text-center">Yds</th>
+                        <th className="px-4 py-3 text-center">TDs</th>
+                        <th className="px-4 py-3 text-center">Rush</th>
+                        <th className="px-4 py-3 text-center">RshYds</th>
+                        <th className="px-4 py-3 text-center">aDOT</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-700">
+                      {fantasyData?.data.map((row, idx) => (
+                        <tr 
+                          key={`${row.playerId}-${row.week}-${idx}`} 
+                          className="hover:bg-[#1a1f2e] transition-colors"
+                          data-testid={`row-fantasy-${row.playerId}-${row.week}`}
+                        >
+                          <td className="px-4 py-3 font-medium text-white">{row.playerName}</td>
+                          <td className="px-4 py-3 text-center text-gray-400">{row.teamId || '-'}</td>
+                          <td className="px-4 py-3 text-center"><PositionBadge position={row.position} /></td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.week}</td>
+                          <td className="px-4 py-3 text-center font-mono text-purple-400 font-semibold">{formatStat(row.fptsPpr, 1)}</td>
+                          <td className="px-4 py-3 text-center font-mono text-blue-400">{formatStat(row.fptsHalf, 1)}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-400">{formatStat(row.fptsStd, 1)}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.targets}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.receptions}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.recYards}</td>
+                          <td className="px-4 py-3 text-center font-mono text-green-400">{row.recTds}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.rushAttempts}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.rushYards}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{formatStat(row.adot, 1)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            ) : viewMode !== 'week' ? (
+              aggData?.data.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  No aggregated data found
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm" data-testid="table-aggregated">
+                    <thead className="bg-[#0a0e1a] text-gray-400 uppercase text-xs">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Player</th>
+                        <th className="px-4 py-3 text-center">Team</th>
+                        <th className="px-4 py-3 text-center">Pos</th>
+                        <th className="px-4 py-3 text-center">GP</th>
+                        <th className="px-4 py-3 text-center">Tgt</th>
+                        <th className="px-4 py-3 text-center">TPRR</th>
+                        <th className="px-4 py-3 text-center">Rec</th>
+                        <th className="px-4 py-3 text-center">Yds</th>
+                        <th className="px-4 py-3 text-center">TDs</th>
+                        <th className="px-4 py-3 text-center">YPRR</th>
+                        <th className="px-4 py-3 text-center">aDOT</th>
+                        <th className="px-4 py-3 text-center">EPA/Tgt</th>
+                        <th className="px-4 py-3 text-center">Succ%</th>
+                        <th className="px-4 py-3 text-center">PPR/G</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-700">
+                      {aggData?.data.map((player) => (
+                        <tr 
+                          key={player.playerId} 
+                          className="hover:bg-[#1a1f2e] transition-colors"
+                          data-testid={`row-agg-${player.playerId}`}
+                        >
+                          <td className="px-4 py-3 font-medium text-white">{player.playerName}</td>
+                          <td className="px-4 py-3 text-center text-gray-400">{player.teamId || '-'}</td>
+                          <td className="px-4 py-3 text-center"><PositionBadge position={player.position} /></td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{player.gamesPlayed}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{player.totalTargets}</td>
+                          <td className="px-4 py-3 text-center font-mono text-blue-400">{formatStat(player.avgTprr, 2)}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{player.totalReceptions}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{player.totalRecYards}</td>
+                          <td className="px-4 py-3 text-center font-mono text-green-400">{player.totalRecTds}</td>
+                          <td className="px-4 py-3 text-center font-mono text-green-400">{formatStat(player.yprr, 2)}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{formatStat(player.avgAdot, 1)}</td>
+                          <td className="px-4 py-3 text-center font-mono text-yellow-400">{formatStat(player.avgEpaPerTarget, 2)}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{formatPct(player.avgSuccessRate)}</td>
+                          <td className="px-4 py-3 text-center font-mono text-purple-400 font-semibold">{formatStat(player.fptsPprPerGame, 1)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
             ) : searchData?.data.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 No players found matching your criteria
