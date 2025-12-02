@@ -3,6 +3,9 @@
  * 
  * Fetches and assembles all required context data for a player
  * from existing services and database tables.
+ * 
+ * As of v1.1: For season >= 2025, uses Datadive snapshot tables
+ * instead of legacy weeklyStats tables when USE_DATADIVE_FORGE is enabled.
  */
 
 import { ForgeContext, PlayerPosition, WeekOrPreseason } from '../types';
@@ -20,6 +23,13 @@ import {
   silverPlayerWeeklyStats
 } from '@shared/schema';
 import { eq, and, desc, sql, lte, sum, count } from 'drizzle-orm';
+import {
+  USE_DATADIVE_FORGE,
+  getSnapshotSeasonStats,
+  toForgeSeasonStats,
+  toForgeAdvancedMetrics,
+  getCurrentSnapshot
+} from '../../../services/datadiveContext';
 
 const playerIdentityService = PlayerIdentityService.getInstance();
 const oasisEnvironmentService = new OasisEnvironmentService();
@@ -107,7 +117,7 @@ async function fetchPlayerIdentity(playerId: string) {
 
 /**
  * Fetch season-level stats from playerSeasonFacts, weeklyStats, or playerSeason2024
- * For 2025+, prefers weeklyStats if it has more games (since playerSeasonFacts may be stale)
+ * For 2025+, prefers Datadive snapshot tables if USE_DATADIVE_FORGE is enabled
  */
 async function fetchSeasonStats(
   canonicalId: string, 
@@ -115,7 +125,19 @@ async function fetchSeasonStats(
   asOfWeek: number
 ): Promise<ForgeContext['seasonStats']> {
   try {
-    // For 2025+, check weeklyStats first since playerSeasonFacts may be stale
+    // For 2025+, try Datadive snapshot first if feature flag is enabled
+    if (season >= 2025 && USE_DATADIVE_FORGE) {
+      const nflDataPyId = await getNflDataPyIdForCanonical(canonicalId);
+      if (nflDataPyId) {
+        const datadiveStats = await getSnapshotSeasonStats(nflDataPyId, season);
+        if (datadiveStats && datadiveStats.gamesPlayed > 0) {
+          console.log(`[FORGE/Context] Using Datadive snapshot for ${canonicalId}: ${datadiveStats.gamesPlayed} games`);
+          return toForgeSeasonStats(datadiveStats);
+        }
+      }
+    }
+    
+    // Fallback to legacy path for 2025+ if Datadive didn't return data
     if (season >= 2025) {
       const weeklyResult = await fetchFromWeeklyStats(canonicalId, season, asOfWeek);
       if (weeklyResult && weeklyResult.gamesPlayed > 0) {
@@ -315,7 +337,7 @@ async function fetchFromWeeklyStats(
 }
 
 /**
- * Fetch advanced metrics from silver_player_weekly_stats (2025) or 2024 tables
+ * Fetch advanced metrics from Datadive (2025+), silver_player_weekly_stats (2025), or 2024 tables
  * Note: These tables use NFL GSIS IDs, not canonical IDs, so we translate first
  */
 async function fetchAdvancedMetrics(
@@ -330,7 +352,19 @@ async function fetchAdvancedMetrics(
       return undefined;
     }
     
-    // For 2025+, use silver_player_weekly_stats with aggregated EPA
+    // For 2025+, try Datadive snapshot first if feature flag is enabled
+    if (season >= 2025 && USE_DATADIVE_FORGE) {
+      const datadiveStats = await getSnapshotSeasonStats(nflId, season);
+      if (datadiveStats && datadiveStats.gamesPlayed > 0) {
+        const metrics = toForgeAdvancedMetrics(datadiveStats);
+        if (metrics) {
+          console.log(`[FORGE/Context] Using Datadive advanced metrics for ${canonicalId}`);
+          return metrics;
+        }
+      }
+    }
+    
+    // Fallback to silver_player_weekly_stats for 2025+
     if (season >= 2025) {
       const silverStats = await db
         .select({
