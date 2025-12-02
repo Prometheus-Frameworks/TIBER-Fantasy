@@ -155,12 +155,14 @@ export async function getCurrentSnapshot(): Promise<DatadiveSnapshot | null> {
 }
 
 /**
- * Map a Datadive snapshot player row to FORGE-compatible input.
- * Handles null values with sensible defaults.
+ * Map a Datadive snapshot weekly row to FORGE-compatible input.
+ * 
+ * NOTE: gamesPlayed is set to 1 because this function maps single-week data.
+ * Season aggregators (like getSnapshotSeasonStats) override this with actual totals.
  */
 export function mapSnapshotRowToForgeInput(row: DatadivePlayerRow): ForgeDatadiveInput {
   return {
-    gamesPlayed: 1,
+    gamesPlayed: 1, // Single week = 1 game; season aggregators override with actual totals
     snaps: row.snaps ?? 0,
     snapShare: row.snapShare ?? 0,
     
@@ -196,7 +198,8 @@ export function mapSnapshotRowToForgeInput(row: DatadivePlayerRow): ForgeDatadiv
 
 /**
  * Get player data from the current snapshot for a specific player.
- * Returns aggregated season stats from datadive_snapshot_player_season.
+ * Returns aggregated season stats from datadive_snapshot_player_season,
+ * with weighted EPA metrics computed from weekly rows.
  */
 export async function getSnapshotSeasonStats(
   nflDataPyId: string,
@@ -227,6 +230,14 @@ export async function getSnapshotSeasonStats(
     }
     
     const row = result[0];
+    
+    // Calculate weighted EPA metrics from weekly rows
+    const { epaPerTarget, rushEpaPerPlay } = await calculateWeightedEpaMetrics(
+      snapshot.snapshotId,
+      nflDataPyId,
+      season
+    );
+    
     return {
       gamesPlayed: row.gamesPlayed ?? 0,
       snaps: row.totalSnaps ?? 0,
@@ -247,14 +258,14 @@ export async function getSnapshotSeasonStats(
       yac: row.totalYac ?? 0,
       
       epaPerPlay: row.avgEpaPerPlay ?? 0,
-      epaPerTarget: 0,
+      epaPerTarget,  // Weighted average from weekly data
       successRate: row.avgSuccessRate ?? 0,
       
       rushAttempts: row.totalRushAttempts ?? 0,
       rushYards: row.totalRushYards ?? 0,
       rushTds: row.totalRushTds ?? 0,
       yardsPerCarry: row.avgYpc ?? 0,
-      rushEpaPerPlay: 0,
+      rushEpaPerPlay,  // Weighted average from weekly data
       
       fantasyPointsStd: row.totalFptsStd ?? 0,
       fantasyPointsHalf: row.totalFptsHalf ?? 0,
@@ -263,6 +274,73 @@ export async function getSnapshotSeasonStats(
   } catch (error) {
     console.error('[DatadiveContext] Error fetching season stats:', error);
     return null;
+  }
+}
+
+/**
+ * Calculate weighted EPA metrics from weekly snapshot data.
+ * 
+ * - epaPerTarget = (Σ week.epaPerTarget * week.targets) / max(Σ week.targets, 1)
+ * - rushEpaPerPlay = (Σ week.rushEpaPerPlay * week.rushAttempts) / max(Σ week.rushAttempts, 1)
+ * 
+ * Returns 0 when no volume exists so downstream logic can detect missing metrics.
+ */
+async function calculateWeightedEpaMetrics(
+  snapshotId: number,
+  playerId: string,
+  season: number
+): Promise<{ epaPerTarget: number; rushEpaPerPlay: number }> {
+  try {
+    const weeklyRows = await db
+      .select({
+        targets: datadiveSnapshotPlayerWeek.targets,
+        epaPerTarget: datadiveSnapshotPlayerWeek.epaPerTarget,
+        rushAttempts: datadiveSnapshotPlayerWeek.rushAttempts,
+        rushEpaPerPlay: datadiveSnapshotPlayerWeek.rushEpaPerPlay,
+      })
+      .from(datadiveSnapshotPlayerWeek)
+      .where(
+        and(
+          eq(datadiveSnapshotPlayerWeek.snapshotId, snapshotId),
+          eq(datadiveSnapshotPlayerWeek.playerId, playerId),
+          eq(datadiveSnapshotPlayerWeek.season, season)
+        )
+      );
+    
+    if (weeklyRows.length === 0) {
+      return { epaPerTarget: 0, rushEpaPerPlay: 0 };
+    }
+    
+    // Weighted average for epaPerTarget
+    let totalTargets = 0;
+    let weightedEpaTarget = 0;
+    for (const week of weeklyRows) {
+      const targets = week.targets ?? 0;
+      const epaTarget = week.epaPerTarget ?? 0;
+      if (targets > 0 && epaTarget !== null) {
+        totalTargets += targets;
+        weightedEpaTarget += epaTarget * targets;
+      }
+    }
+    const epaPerTarget = totalTargets > 0 ? weightedEpaTarget / totalTargets : 0;
+    
+    // Weighted average for rushEpaPerPlay
+    let totalRushAttempts = 0;
+    let weightedRushEpa = 0;
+    for (const week of weeklyRows) {
+      const rushAttempts = week.rushAttempts ?? 0;
+      const rushEpa = week.rushEpaPerPlay ?? 0;
+      if (rushAttempts > 0 && rushEpa !== null) {
+        totalRushAttempts += rushAttempts;
+        weightedRushEpa += rushEpa * rushAttempts;
+      }
+    }
+    const rushEpaPerPlay = totalRushAttempts > 0 ? weightedRushEpa / totalRushAttempts : 0;
+    
+    return { epaPerTarget, rushEpaPerPlay };
+  } catch (error) {
+    console.error('[DatadiveContext] Error calculating weighted EPA metrics:', error);
+    return { epaPerTarget: 0, rushEpaPerPlay: 0 };
   }
 }
 
@@ -305,6 +383,9 @@ export async function getSnapshotWeeklyStats(
 /**
  * Get list of eligible players for FORGE batch scoring from Datadive snapshot.
  * Replaces the weeklyStats-based eligibility check.
+ * 
+ * Uses canonical ID for deterministic deduplication (not player names).
+ * Filters by both identity map position AND snapshot position for accuracy.
  */
 export async function getDatadiveEligiblePlayers(
   position?: string,
@@ -320,10 +401,12 @@ export async function getDatadiveEligiblePlayers(
     const skillPositions = position ? [position] : ['QB', 'RB', 'WR', 'TE'];
     const perPositionLimit = position ? limit : Math.ceil(limit / 4);
     const allPlayers: Array<{ canonicalId: string; fullName: string; team: string; totalFpts: number }> = [];
+    const seenCanonicalIds = new Set<string>();
     
     for (const pos of skillPositions) {
+      const posUpper = pos.toUpperCase();
       const result = await db.execute(sql`
-        SELECT 
+        SELECT DISTINCT ON (pim.canonical_id)
           pim.canonical_id,
           pim.full_name,
           pim.nfl_team as team,
@@ -332,21 +415,31 @@ export async function getDatadiveEligiblePlayers(
         JOIN player_identity_map pim ON pim.nfl_data_py_id = dss.player_id
         WHERE dss.snapshot_id = ${snapshot.snapshotId}
           AND dss.season = ${snapshot.season}
-          AND pim.position = ${pos}
+          AND UPPER(pim.position) = ${posUpper}
+          AND (dss.position IS NULL OR UPPER(dss.position) = ${posUpper})
           AND pim.nfl_team IS NOT NULL
           AND pim.nfl_team != 'FA'
+          AND pim.is_active = true
           AND dss.games_played >= 1
-        ORDER BY dss.total_fpts_ppr DESC
-        LIMIT ${perPositionLimit}
+        ORDER BY pim.canonical_id, dss.total_fpts_ppr DESC
+        LIMIT ${perPositionLimit * 2}
       `);
       
       for (const row of result.rows as any[]) {
+        const canonicalId = row.canonical_id;
+        if (seenCanonicalIds.has(canonicalId)) {
+          continue;
+        }
+        seenCanonicalIds.add(canonicalId);
+        
         allPlayers.push({
-          canonicalId: row.canonical_id,
+          canonicalId,
           fullName: row.full_name,
           team: row.team,
           totalFpts: parseFloat(row.total_fpts) || 0,
         });
+        
+        if (allPlayers.length >= perPositionLimit) break;
       }
     }
     
