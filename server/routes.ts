@@ -102,6 +102,7 @@ import path from 'path';
 import { getCurrentWeek, getWeekInfo, isRisersFallersDataAvailable, getBestRisersFallersWeek, debugWeekDetection } from '../shared/weekDetection';
 import { createRagRouter, initRagOnBoot } from './routes/ragRoutes';
 import tiberMemoryRoutes from './routes/tiberMemoryRoutes';
+import dataLabRoutes from './routes/dataLabRoutes';
 import { registerPowerProcessingRoutes } from './routes/powerProcessing';
 import weeklyTakesRoutes from './routes/weeklyTakesRoutes';
 import playerComparePilotRoutes from './routes/playerComparePilotRoutes';
@@ -2369,6 +2370,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/consensus', consensusSeedingRoutes);
   app.use('/api/tiber-memory', tiberMemoryRoutes);
   console.log('🧠 Tiber Memory System routes mounted at /api/tiber-memory');
+  
+  app.use('/api/data-lab', dataLabRoutes);
+  console.log('🔬 Tiber Data Lab routes mounted at /api/data-lab/*');
   
   // OTC Consensus Engine v1.1 API Routes
   app.get('/api/profile/:username', getProfile);

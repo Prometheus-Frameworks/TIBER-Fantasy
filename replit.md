@@ -56,6 +56,14 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
   - **Style Guide**: Bottom Line Up Front, no fluff, no invented stats, direct analytical tone
   - **Grounding**: `trimForgeContext` sends minimal FORGE payload; Tiber refuses to hallucinate missing metrics
   - Files: `tiberPromptBuilder.ts` (system prompt), `forgeContextLoader.ts` (data trimmer)
+- **Tiber Data Lab v1 (Operation DataDive)**: Snapshot-based NFL data spine for reproducible analytics. Features:
+  - **Snapshot System**: Immutable weekly data snapshots with validation (min 200 rows, 28+ teams, no null IDs)
+  - **Advanced Metrics**: TPRR (targets per route), YPRR (yards per route), EPA/play, success rate, snap share
+  - **Tables**: `datadive_snapshot_meta` (snapshot audit), `datadive_player_week_staging` (temp staging), `datadive_snapshot_player_week` (finalized weekly), `datadive_snapshot_player_season` (season aggregates)
+  - **API Endpoints**: GET `/api/data-lab/meta/current`, `/api/data-lab/search`, `/api/data-lab/player-week`, `/api/data-lab/player-season`, `/api/data-lab/team-week`, `/api/data-lab/health`
+  - **Admin Endpoint**: POST `/api/data-lab/admin/run` with body `{season, week}` triggers snapshot creation
+  - **Frontend**: `/tiber-data-lab` page with search, position filter, and player detail drawer
+  - Files: `datadiveSnapshot.ts` (service), `dataLabRoutes.ts` (API), `TiberDataLab.tsx` (frontend)
 
 ## OASIS Status (Deprecated)
 

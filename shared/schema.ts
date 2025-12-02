@@ -4193,3 +4193,280 @@ export type ForgeTeamEnvironment = typeof forgeTeamEnvironment.$inferSelect;
 export type InsertForgeTeamEnvironment = typeof forgeTeamEnvironment.$inferInsert;
 export type ForgeTeamMatchupContext = typeof forgeTeamMatchupContext.$inferSelect;
 export type InsertForgeTeamMatchupContext = typeof forgeTeamMatchupContext.$inferInsert;
+
+// ========================================
+// TIBER DATA LAB - OPERATION DATADIVE
+// Snapshot-based NFL data spine for reproducible analytics
+// ========================================
+
+/**
+ * Snapshot Metadata Table
+ * Tracks each snapshot run with version, validation status, and audit info
+ */
+export const datadiveSnapshotMeta = pgTable("datadive_snapshot_meta", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  dataVersion: text("data_version").default("v1"),
+  
+  // Validation status
+  isOfficial: boolean("is_official").default(false),
+  rowCount: integer("row_count").notNull(),
+  teamCount: integer("team_count").notNull(),
+  validationPassed: boolean("validation_passed").default(false),
+  validationErrors: text("validation_errors"),
+  
+  // Audit
+  snapshotAt: timestamp("snapshot_at").defaultNow(),
+  triggeredBy: text("triggered_by").default("system"),
+}, (table) => ({
+  seasonWeekIdx: index("datadive_meta_season_week_idx").on(table.season, table.week),
+  officialIdx: index("datadive_meta_official_idx").on(table.isOfficial),
+}));
+
+/**
+ * Player Week Staging Table
+ * Temporary staging area for current week's data before snapshot finalization
+ */
+export const datadivePlayerWeekStaging = pgTable("datadive_player_week_staging", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  
+  // Player identity
+  playerId: text("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  teamId: text("team_id"),
+  position: text("position"),
+  
+  // Usage metrics
+  snaps: integer("snaps").default(0),
+  snapShare: real("snap_share"),
+  routes: integer("routes").default(0),
+  routeRate: real("route_rate"),
+  
+  // Receiving metrics
+  targets: integer("targets").default(0),
+  targetShare: real("target_share"),
+  receptions: integer("receptions").default(0),
+  recYards: integer("rec_yards").default(0),
+  recTds: integer("rec_tds").default(0),
+  aDot: real("adot"),
+  airYards: integer("air_yards").default(0),
+  yac: integer("yac").default(0),
+  
+  // Advanced efficiency metrics
+  tprr: real("tprr"),              // Targets per route run
+  yprr: real("yprr"),              // Yards per route run
+  epaPerPlay: real("epa_per_play"),
+  epaPerTarget: real("epa_per_target"),
+  successRate: real("success_rate"),
+  
+  // Rushing metrics
+  rushAttempts: integer("rush_attempts").default(0),
+  rushYards: integer("rush_yards").default(0),
+  rushTds: integer("rush_tds").default(0),
+  yardsPerCarry: real("yards_per_carry"),
+  rushEpaPerPlay: real("rush_epa_per_play"),
+  
+  // Fantasy points
+  fptsStd: real("fpts_std"),
+  fptsHalf: real("fpts_half"),
+  fptsPpr: real("fpts_ppr"),
+  
+  // Metadata
+  stagingAt: timestamp("staging_at").defaultNow(),
+}, (table) => ({
+  uniquePlayerWeek: unique("datadive_staging_week_unique").on(table.season, table.week, table.playerId),
+  playerIdx: index("datadive_staging_player_idx").on(table.playerId),
+  seasonWeekIdx: index("datadive_staging_season_week_idx").on(table.season, table.week),
+  positionIdx: index("datadive_staging_position_idx").on(table.position),
+}));
+
+/**
+ * Player Season Staging Table
+ * Season-to-date aggregates in staging before snapshot finalization
+ */
+export const datadivePlayerSeasonStaging = pgTable("datadive_player_season_staging", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  throughWeek: integer("through_week").notNull(),
+  
+  // Player identity
+  playerId: text("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  teamId: text("team_id"),
+  position: text("position"),
+  gamesPlayed: integer("games_played").default(0),
+  
+  // Cumulative usage
+  totalSnaps: integer("total_snaps").default(0),
+  avgSnapShare: real("avg_snap_share"),
+  totalRoutes: integer("total_routes").default(0),
+  avgRouteRate: real("avg_route_rate"),
+  
+  // Cumulative receiving
+  totalTargets: integer("total_targets").default(0),
+  avgTargetShare: real("avg_target_share"),
+  totalReceptions: integer("total_receptions").default(0),
+  totalRecYards: integer("total_rec_yards").default(0),
+  totalRecTds: integer("total_rec_tds").default(0),
+  avgAdot: real("avg_adot"),
+  totalAirYards: integer("total_air_yards").default(0),
+  totalYac: integer("total_yac").default(0),
+  
+  // Season efficiency averages
+  avgTprr: real("avg_tprr"),
+  avgYprr: real("avg_yprr"),
+  avgEpaPerPlay: real("avg_epa_per_play"),
+  avgSuccessRate: real("avg_success_rate"),
+  
+  // Cumulative rushing
+  totalRushAttempts: integer("total_rush_attempts").default(0),
+  totalRushYards: integer("total_rush_yards").default(0),
+  totalRushTds: integer("total_rush_tds").default(0),
+  avgYpc: real("avg_ypc"),
+  
+  // Cumulative fantasy
+  totalFptsStd: real("total_fpts_std"),
+  totalFptsHalf: real("total_fpts_half"),
+  totalFptsPpr: real("total_fpts_ppr"),
+  avgFptsPerGame: real("avg_fpts_per_game"),
+  
+  // Metadata
+  stagingAt: timestamp("staging_at").defaultNow(),
+}, (table) => ({
+  uniquePlayerSeason: unique("datadive_staging_season_unique").on(table.season, table.throughWeek, table.playerId),
+  playerIdx: index("datadive_staging_season_player_idx").on(table.playerId),
+  seasonIdx: index("datadive_staging_season_season_idx").on(table.season, table.throughWeek),
+}));
+
+/**
+ * Snapshot Player Week Table
+ * Finalized weekly player data tied to a specific snapshot
+ * Immutable once written - serves as the canonical record for that snapshot
+ */
+export const datadiveSnapshotPlayerWeek = pgTable("datadive_snapshot_player_week", {
+  id: serial("id").primaryKey(),
+  snapshotId: integer("snapshot_id").references(() => datadiveSnapshotMeta.id).notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  
+  // Player identity
+  playerId: text("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  teamId: text("team_id"),
+  position: text("position"),
+  
+  // Usage metrics
+  snaps: integer("snaps").default(0),
+  snapShare: real("snap_share"),
+  routes: integer("routes").default(0),
+  routeRate: real("route_rate"),
+  
+  // Receiving metrics
+  targets: integer("targets").default(0),
+  targetShare: real("target_share"),
+  receptions: integer("receptions").default(0),
+  recYards: integer("rec_yards").default(0),
+  recTds: integer("rec_tds").default(0),
+  aDot: real("adot"),
+  airYards: integer("air_yards").default(0),
+  yac: integer("yac").default(0),
+  
+  // Advanced efficiency metrics
+  tprr: real("tprr"),
+  yprr: real("yprr"),
+  epaPerPlay: real("epa_per_play"),
+  epaPerTarget: real("epa_per_target"),
+  successRate: real("success_rate"),
+  
+  // Rushing metrics
+  rushAttempts: integer("rush_attempts").default(0),
+  rushYards: integer("rush_yards").default(0),
+  rushTds: integer("rush_tds").default(0),
+  yardsPerCarry: real("yards_per_carry"),
+  rushEpaPerPlay: real("rush_epa_per_play"),
+  
+  // Fantasy points
+  fptsStd: real("fpts_std"),
+  fptsHalf: real("fpts_half"),
+  fptsPpr: real("fpts_ppr"),
+}, (table) => ({
+  uniqueSnapshotPlayerWeek: unique("datadive_snapshot_week_unique").on(table.snapshotId, table.playerId),
+  snapshotIdx: index("datadive_snapshot_week_snapshot_idx").on(table.snapshotId),
+  playerIdx: index("datadive_snapshot_week_player_idx").on(table.playerId),
+  seasonWeekIdx: index("datadive_snapshot_week_season_week_idx").on(table.season, table.week),
+  positionIdx: index("datadive_snapshot_week_position_idx").on(table.position),
+  teamIdx: index("datadive_snapshot_week_team_idx").on(table.teamId),
+}));
+
+/**
+ * Snapshot Player Season Table
+ * Finalized season-to-date aggregates tied to a specific snapshot
+ * Immutable once written - serves as the canonical record for that snapshot
+ */
+export const datadiveSnapshotPlayerSeason = pgTable("datadive_snapshot_player_season", {
+  id: serial("id").primaryKey(),
+  snapshotId: integer("snapshot_id").references(() => datadiveSnapshotMeta.id).notNull(),
+  season: integer("season").notNull(),
+  throughWeek: integer("through_week").notNull(),
+  
+  // Player identity
+  playerId: text("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  teamId: text("team_id"),
+  position: text("position"),
+  gamesPlayed: integer("games_played").default(0),
+  
+  // Cumulative usage
+  totalSnaps: integer("total_snaps").default(0),
+  avgSnapShare: real("avg_snap_share"),
+  totalRoutes: integer("total_routes").default(0),
+  avgRouteRate: real("avg_route_rate"),
+  
+  // Cumulative receiving
+  totalTargets: integer("total_targets").default(0),
+  avgTargetShare: real("avg_target_share"),
+  totalReceptions: integer("total_receptions").default(0),
+  totalRecYards: integer("total_rec_yards").default(0),
+  totalRecTds: integer("total_rec_tds").default(0),
+  avgAdot: real("avg_adot"),
+  totalAirYards: integer("total_air_yards").default(0),
+  totalYac: integer("total_yac").default(0),
+  
+  // Season efficiency averages
+  avgTprr: real("avg_tprr"),
+  avgYprr: real("avg_yprr"),
+  avgEpaPerPlay: real("avg_epa_per_play"),
+  avgSuccessRate: real("avg_success_rate"),
+  
+  // Cumulative rushing
+  totalRushAttempts: integer("total_rush_attempts").default(0),
+  totalRushYards: integer("total_rush_yards").default(0),
+  totalRushTds: integer("total_rush_tds").default(0),
+  avgYpc: real("avg_ypc"),
+  
+  // Cumulative fantasy
+  totalFptsStd: real("total_fpts_std"),
+  totalFptsHalf: real("total_fpts_half"),
+  totalFptsPpr: real("total_fpts_ppr"),
+  avgFptsPerGame: real("avg_fpts_per_game"),
+}, (table) => ({
+  uniqueSnapshotPlayerSeason: unique("datadive_snapshot_season_unique").on(table.snapshotId, table.playerId),
+  snapshotIdx: index("datadive_snapshot_season_snapshot_idx").on(table.snapshotId),
+  playerIdx: index("datadive_snapshot_season_player_idx").on(table.playerId),
+  seasonIdx: index("datadive_snapshot_season_season_idx").on(table.season, table.throughWeek),
+}));
+
+// DataDive Types
+export type DatadiveSnapshotMeta = typeof datadiveSnapshotMeta.$inferSelect;
+export type InsertDatadiveSnapshotMeta = typeof datadiveSnapshotMeta.$inferInsert;
+export type DatadivePlayerWeekStaging = typeof datadivePlayerWeekStaging.$inferSelect;
+export type InsertDatadivePlayerWeekStaging = typeof datadivePlayerWeekStaging.$inferInsert;
+export type DatadivePlayerSeasonStaging = typeof datadivePlayerSeasonStaging.$inferSelect;
+export type InsertDatadivePlayerSeasonStaging = typeof datadivePlayerSeasonStaging.$inferInsert;
+export type DatadiveSnapshotPlayerWeek = typeof datadiveSnapshotPlayerWeek.$inferSelect;
+export type InsertDatadiveSnapshotPlayerWeek = typeof datadiveSnapshotPlayerWeek.$inferInsert;
+export type DatadiveSnapshotPlayerSeason = typeof datadiveSnapshotPlayerSeason.$inferSelect;
+export type InsertDatadiveSnapshotPlayerSeason = typeof datadiveSnapshotPlayerSeason.$inferInsert;

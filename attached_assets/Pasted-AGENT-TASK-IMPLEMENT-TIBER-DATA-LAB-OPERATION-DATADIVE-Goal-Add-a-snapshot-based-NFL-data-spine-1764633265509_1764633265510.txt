@@ -1,0 +1,57 @@
+AGENT TASK: IMPLEMENT TIBER DATA LAB (OPERATION DATADIVE)
+
+Goal: Add a snapshot-based NFL data spine to the existing Node/TypeScript + Postgres backend, using Drizzle, without breaking any existing Forge / rankings logic.
+
+Steps:
+
+Add a new Drizzle migration 20251201_tiber_data_lab.ts that:
+
+Creates weekly_stats_raw (if not exists), player_week_staging, player_season_staging, snapshot_meta, snapshot_player_week, snapshot_player_season.
+
+Uses the schema provided by Lamar (columns for routes, targets, TPRR, YPRR, aDOT, EPA/play, success rate, snap_share, snaps, etc.).
+
+Implement server/services/datadiveSnapshot.ts with a runWeeklySnapshot(season, week, dataVersion?) function:
+
+Deletes old player_week_staging rows for that season/week.
+
+Inserts into player_week_staging from the existing weekly_stats table (adjust column names as needed).
+
+Runs validation: min 200 rows, at least 28 distinct teams, no null player_id/team_id. On failure, throw and DO NOT write snapshots.
+
+Inserts a new row into snapshot_meta and uses its id as snapshot_id.
+
+Copies staging rows into snapshot_player_week.
+
+Builds season-to-date aggregates into snapshot_player_season.
+
+Add a simple admin route (e.g. POST /admin/datadive/run) that calls runWeeklySnapshot(season, week) with JSON body { season, week } and returns the snapshot_id or error.
+
+Create a new router server/routes/dataLab.ts mounted at /api/data-lab with endpoints:
+
+GET /meta/current – returns latest official snapshot (season, week, snapshotAt, dataVersion).
+
+GET /player-week – query params: player_id?, name?, team_id?, position?, season, week, min_routes?, min_snaps?. Returns rows from snapshot_player_week.
+
+GET /player-season – player_id, season → latest row from snapshot_player_season.
+
+GET /team-week – team_id, season, week, position? → all snapshot_player_week rows.
+
+GET /search – general search over snapshot_player_week with filters (q, season, week, position, min_routes, min_snaps, limit, offset).
+
+GET /health – returns last snapshot meta and row counts for key snapshot tables.
+
+On the front-end, add a new page /tiber-data-lab:
+
+On load, call /api/data-lab/meta/current and default season/week to that.
+
+Show a search bar (q), position dropdown, season/week inputs, and min_routes field.
+
+When user hits Search, call /api/data-lab/search and render a table with columns: Name, Team, Pos, Routes, Targets, TPRR, Recs, Yards, YPRR, aDOT, EPA/play, Success Rate, Snaps, Snap%.
+
+Clicking a row opens a right-side drawer showing a more detailed breakdown of that player-week using the returned metrics.
+
+Add a stub “Ask Tiber to explain this profile” button in the drawer that currently just logs to console; this will later call a /api/tiber/explain-metrics endpoint.
+
+Do not change existing Forge / rankings code yet, but ensure that snapshot_* tables are queryable so we can later switch Forge to read from snapshots.
+
+Important: Keep all changes additive. Do not drop or modify existing Forge tables or logic. Just wire Datadive as a parallel data spine and expose it via /api/data-lab and /tiber-data-lab.

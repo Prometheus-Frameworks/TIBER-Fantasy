@@ -15,6 +15,7 @@ import PlayerResearch from "@/pages/admin/PlayerResearch";
 import ApiLexicon from "@/pages/admin/ApiLexicon";
 import RagStatus from "@/pages/RagStatus";
 import ForgeLab from "@/pages/ForgeLab";
+import TiberDataLab from "@/pages/TiberDataLab";
 import WRRankingsSandbox from "@/pages/WRRankingsSandbox";
 import QBRankingsSandbox from "@/pages/QBRankingsSandbox";
 import NotFound from "@/pages/not-found";
@@ -51,6 +52,9 @@ function Router() {
       
       {/* Admin: FORGE Lab - Interactive scoring sandbox */}
       <Route path="/admin/forge-lab" component={ForgeLab} />
+      
+      {/* Tiber Data Lab - Snapshot-based NFL data spine */}
+      <Route path="/tiber-data-lab" component={TiberDataLab} />
       
       {/* Admin: Ranking Sandboxes */}
       <Route path="/admin/wr-rankings-sandbox" component={WRRankingsSandbox} />

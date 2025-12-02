@@ -150,6 +150,21 @@ const ADMIN_TOOLS: { section: string; tools: AdminTool[] }[] = [
     ],
   },
   {
+    section: 'Data Lab',
+    tools: [
+      {
+        id: 'tiber-data-lab',
+        title: 'Tiber Data Lab',
+        description: 'Snapshot-based NFL data spine with TPRR, YPRR, EPA metrics',
+        href: '/tiber-data-lab',
+        icon: Database,
+        iconColor: 'text-cyan-400',
+        badge: 'New',
+        badgeColor: 'bg-cyan-600',
+      },
+    ],
+  },
+  {
     section: 'Admin Sandboxes',
     tools: [
       {
