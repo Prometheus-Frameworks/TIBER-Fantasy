@@ -735,7 +735,7 @@ router.get("/usage-agg", async (req: Request, res: Response) => {
     if (performanceFilter && (weekMode === 'season' || weekMode === 'range')) {
       const filterValue = (performanceFilter as string).toUpperCase();
       if (['RISER', 'FALLER', 'NEUTRAL'].includes(filterValue)) {
-        mappedData = mappedData.filter(r => r.performanceTag === filterValue);
+        mappedData = mappedData.filter((r: { performanceTag: PerformanceTag }) => r.performanceTag === filterValue);
       }
     }
 

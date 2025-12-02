@@ -70,6 +70,16 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
   - **Admin Endpoint**: POST `/api/data-lab/admin/run` with body `{season, week}` triggers snapshot creation
   - **Frontend**: `/tiber-data-lab` page with search, position filter, and player detail drawer
   - Files: `datadiveSnapshot.ts` (service), `dataLabRoutes.ts` (API), `TiberDataLab.tsx` (frontend)
+- **xFPTS v2 (Expected Fantasy Points v2)**: Context-aware expected fantasy points system with nflfastR-derived adjustments.
+  - **v1 Formula**: Usage-only baselines (WR: 1.85 PPT, TE: 1.65 PPT, RB: 1.50 PPT + 0.85 PPRush)
+  - **v2 Formula**: v1 × context multipliers (Red Zone, YAC ratio, Rush EPA, Success Rate)
+  - **Multiplier Bounds**: Receiving 1.0-1.3 (boost only), Rush 0.8-1.2 (can penalize)
+  - **Tables**: `datadive_nflfastr_metrics` (context metrics), `datadive_expected_fantasy_week` (v1/v2 expected points with multipliers)
+  - **API Endpoints**: 
+    - POST `/api/data-lab/admin/xfpts-run` with body `{season, week?, extractMetrics?}` triggers v2 computation
+    - GET `/api/data-lab/xfpts/player?player_id=X&season=Y` returns player expected fantasy with v2Context debug info
+  - **Response Contract**: `PlayerExpectedFantasyWeek` type with nested `v2Context` containing rzShare, yacRatio, rushEpaContribution, rushSuccessContribution
+  - Files: `xFptsConfig.ts` (config/multiplier logic), `xFptsService.ts` (computation service)
 
 ## OASIS Status (Deprecated)
 
