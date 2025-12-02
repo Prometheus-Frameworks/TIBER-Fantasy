@@ -26,28 +26,40 @@ export const xFptsConfig = {
 
 /**
  * Context configuration for v2 multipliers
- * All adjustments are capped to prevent wild swings
+ * 
+ * IMPORTANT: Final multipliers are hard-capped to documented ranges:
+ * - Receiving context: 1.0 to 1.3 (no penalty below baseline)
+ * - Rush context: 0.8 to 1.2 (can penalize poor rushing)
+ * 
+ * Individual component caps are set so combined values stay within final bounds.
  */
 export const contextConfig = {
   // Baseline averages
   yacLeagueAvg: 4.5,      // baseline YAC per reception
   rzNeutralShare: 0.15,   // ~15% of targets in RZ treated as "normal"
 
-  // Red Zone context caps (percent multipliers)
-  rzMaxBoost: 0.20,       // +20% max from RZ context
-  rzMaxPenalty: -0.10,    // -10% if completely RZ-starved
+  // FINAL MULTIPLIER BOUNDS (hard caps on combined multiplier)
+  recMultiplierMin: 1.0,   // Receiving context cannot penalize
+  recMultiplierMax: 1.3,   // +30% max for receiving context
+  rushMultiplierMin: 0.8,  // -20% max penalty for rush context
+  rushMultiplierMax: 1.2,  // +20% max boost for rush context
 
-  // YAC context caps
-  yacMaxBoost: 0.15,      // +15% max for elite YAC
-  yacMaxPenalty: -0.05,   // -5% for low YAC
+  // Component-level caps (individual contributions before combining)
+  // Red Zone: main driver of receiving boost
+  rzScalingFactor: 1.0,    // Scaling factor for RZ share deviation
+  rzMaxContribution: 0.20, // Max +20% from RZ alone
 
-  // Rush EPA context caps
-  epaMaxBoost: 0.15,      // +15% from rush EPA
-  epaMaxPenalty: -0.15,   // -15% penalty from bad EPA
+  // YAC: secondary receiving boost
+  yacScalingFactor: 0.3,   // Scaling factor for YAC ratio deviation
+  yacMaxContribution: 0.10, // Max +10% from YAC alone
 
-  // Rush success rate context caps
-  successMaxBoost: 0.10,  // +10% if very high success
-  successMaxPenalty: -0.05,
+  // Rush EPA: primary rush context driver
+  epaScalingFactor: 0.3,   // Scaling factor for EPA
+  epaMaxContribution: 0.15, // Max ±15% from EPA
+
+  // Rush success rate: secondary rush context
+  successScalingFactor: 0.2, // Scaling factor for success rate deviation
+  successMaxContribution: 0.08, // Max ±8% from success rate
 };
 
 /**
@@ -105,6 +117,9 @@ export function getPerformanceTag(
 /**
  * Calculate receiving context multiplier for v2
  * Based on RZ share and YAC ratio
+ * 
+ * FINAL MULTIPLIER IS HARD-CAPPED TO [1.0, 1.3]
+ * Receiving context can only boost, never penalize
  */
 export function calculateRecMultiplier(
   rzTargets: number,
@@ -122,20 +137,22 @@ export function calculateRecMultiplier(
     yacRatio = yacPerRec / contextConfig.yacLeagueAvg;
   }
 
-  // Map rzShare to a small boost/penalty around neutral RZ usage
-  const rzBoost = clamp(
-    (rzShare - contextConfig.rzNeutralShare) * 0.8,
-    contextConfig.rzMaxPenalty,
-    contextConfig.rzMaxBoost
-  );
+  // Calculate individual component boosts (can be negative internally)
+  const rzDeviation = rzShare - contextConfig.rzNeutralShare;
+  const rzRawBoost = rzDeviation * contextConfig.rzScalingFactor;
+  const rzBoost = clamp(rzRawBoost, 0, contextConfig.rzMaxContribution);
 
-  const yacBoost = clamp(
-    (yacRatio - 1) * 0.5,
-    contextConfig.yacMaxPenalty,
-    contextConfig.yacMaxBoost
-  );
+  const yacDeviation = yacRatio - 1;
+  const yacRawBoost = yacDeviation * contextConfig.yacScalingFactor;
+  const yacBoost = clamp(yacRawBoost, 0, contextConfig.yacMaxContribution);
 
-  const multiplier = 1 + rzBoost + yacBoost;
+  // Combine and apply FINAL HARD CLAMP to documented range [1.0, 1.3]
+  const rawMultiplier = 1 + rzBoost + yacBoost;
+  const multiplier = clamp(
+    rawMultiplier,
+    contextConfig.recMultiplierMin,
+    contextConfig.recMultiplierMax
+  );
 
   return { multiplier, rzShare, yacRatio, rzBoost, yacBoost };
 }
@@ -143,6 +160,9 @@ export function calculateRecMultiplier(
 /**
  * Calculate rushing context multiplier for v2
  * Based on EPA per rush and success rate
+ * 
+ * FINAL MULTIPLIER IS HARD-CAPPED TO [0.8, 1.2]
+ * Rush context CAN penalize poor efficiency
  */
 export function calculateRushMultiplier(
   rushEpa: number | null,
@@ -154,21 +174,32 @@ export function calculateRushMultiplier(
   }
 
   const epa = rushEpa ?? 0;
-  const success = rushSuccess ?? 0.5; // neutral default
+  const success = rushSuccess ?? 0.5; // neutral default (50% success rate)
 
-  const epaBoost = clamp(
-    epa * 0.4, // scaling factor
-    contextConfig.epaMaxPenalty,
-    contextConfig.epaMaxBoost
+  // EPA contribution: positive EPA = boost, negative EPA = penalty
+  const epaRawContribution = epa * contextConfig.epaScalingFactor;
+  const epaCtx = clamp(
+    epaRawContribution,
+    -contextConfig.epaMaxContribution,
+    contextConfig.epaMaxContribution
   );
 
-  const successBoost = clamp(
-    (success - 0.5) * 0.3, // 50% success ~ neutral
-    contextConfig.successMaxPenalty,
-    contextConfig.successMaxBoost
+  // Success rate contribution: 50% is neutral, above = boost, below = penalty
+  const successDeviation = success - 0.5;
+  const successRawContribution = successDeviation * contextConfig.successScalingFactor;
+  const successCtx = clamp(
+    successRawContribution,
+    -contextConfig.successMaxContribution,
+    contextConfig.successMaxContribution
   );
 
-  const multiplier = 1 + epaBoost + successBoost;
+  // Combine and apply FINAL HARD CLAMP to documented range [0.8, 1.2]
+  const rawMultiplier = 1 + epaCtx + successCtx;
+  const multiplier = clamp(
+    rawMultiplier,
+    contextConfig.rushMultiplierMin,
+    contextConfig.rushMultiplierMax
+  );
 
-  return { multiplier, epaCtx: epaBoost, successCtx: successBoost };
+  return { multiplier, epaCtx, successCtx };
 }

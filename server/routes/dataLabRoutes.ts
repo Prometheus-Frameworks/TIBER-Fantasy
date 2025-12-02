@@ -767,6 +767,128 @@ router.get("/usage-agg", async (req: Request, res: Response) => {
  * - position (optional): Filter by position
  * - player_id (optional): Filter to specific player
  */
+/**
+ * xFPTS v2 Admin Endpoint
+ * Triggers computation of context-aware expected fantasy points
+ * 
+ * POST body:
+ * - season (required): NFL season year
+ * - week (optional): Specific week to compute. If omitted, processes all available weeks.
+ * - extractMetrics (optional, default: true): Extract nflfastR metrics from snapshots first
+ */
+router.post("/admin/xfpts-run", async (req: Request, res: Response) => {
+  try {
+    const { season, week, extractMetrics = true } = req.body;
+
+    if (!season) {
+      return res.status(400).json({
+        error: "Missing required parameter: season",
+        required: ["season"],
+        optional: ["week", "extractMetrics"],
+      });
+    }
+
+    const seasonNum = Number(season);
+
+    // Import xFpts service dynamically to avoid circular deps
+    const { 
+      computeExpectedFantasyForWeek, 
+      computeExpectedFantasyForSeason,
+      extractNflfastrMetricsFromSnapshots 
+    } = await import("../services/xFptsService");
+
+    if (week !== undefined) {
+      const weekNum = Number(week);
+      console.log(`[xFPTS Admin] Running v2 computation for ${seasonNum} Week ${weekNum}`);
+
+      // Optionally extract metrics first
+      let metricsExtracted = null;
+      if (extractMetrics) {
+        metricsExtracted = await extractNflfastrMetricsFromSnapshots(seasonNum, weekNum);
+      }
+
+      const result = await computeExpectedFantasyForWeek(seasonNum, weekNum);
+
+      return res.json({
+        success: true,
+        message: `xFPTS v2 computed for ${seasonNum} Week ${weekNum}`,
+        metricsExtracted: metricsExtracted?.processed || null,
+        ...result,
+      });
+    } else {
+      console.log(`[xFPTS Admin] Running v2 computation for entire season ${seasonNum}`);
+
+      // For full season, extract metrics for each week first if requested
+      const latestSnapshot = await datadiveSnapshotService.getLatestOfficialSnapshot();
+      const maxWeek = latestSnapshot?.season === seasonNum ? latestSnapshot.week : 18;
+
+      if (extractMetrics) {
+        console.log(`[xFPTS Admin] Extracting nflfastR metrics for weeks 1-${maxWeek}...`);
+        for (let w = 1; w <= maxWeek; w++) {
+          await extractNflfastrMetricsFromSnapshots(seasonNum, w);
+        }
+      }
+
+      const result = await computeExpectedFantasyForSeason(seasonNum, 1, maxWeek);
+
+      return res.json({
+        success: true,
+        message: `xFPTS v2 computed for ${seasonNum} (Weeks 1-${maxWeek})`,
+        metricsExtracted: extractMetrics,
+        ...result,
+      });
+    }
+  } catch (error: any) {
+    console.error("[xFPTS Admin] Error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * xFPTS v2 Player Endpoint
+ * Get expected fantasy data for a specific player
+ * 
+ * Query params:
+ * - player_id (required)
+ * - season (required)
+ * - weekFrom, weekTo (optional)
+ */
+router.get("/xfpts/player", async (req: Request, res: Response) => {
+  try {
+    const { player_id, season, weekFrom, weekTo } = req.query;
+
+    if (!player_id || !season) {
+      return res.status(400).json({
+        error: "Missing required parameters",
+        required: ["player_id", "season"],
+      });
+    }
+
+    const { getPlayerExpectedFantasy } = await import("../services/xFptsService");
+    
+    const data = await getPlayerExpectedFantasy(
+      player_id as string,
+      Number(season),
+      weekFrom ? Number(weekFrom) : undefined,
+      weekTo ? Number(weekTo) : undefined
+    );
+
+    res.json({
+      playerId: player_id,
+      season: Number(season),
+      weekRange: weekFrom && weekTo ? { from: Number(weekFrom), to: Number(weekTo) } : null,
+      count: data.length,
+      data,
+    });
+  } catch (error: any) {
+    console.error("[xFPTS] Player query error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get("/fantasy-logs", async (req: Request, res: Response) => {
   try {
     const {
