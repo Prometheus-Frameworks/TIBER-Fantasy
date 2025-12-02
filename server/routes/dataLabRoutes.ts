@@ -199,6 +199,40 @@ router.get("/team-week", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * Normalize a search query for flexible matching.
+ * Handles: casing, spaces, periods, dashes, and common name variations.
+ */
+function normalizeSearchQuery(query: string): string {
+  return query
+    .toLowerCase()
+    .replace(/[.\-']/g, '') // Remove periods, dashes, apostrophes
+    .replace(/\s+/g, ' ')   // Normalize multiple spaces
+    .trim();
+}
+
+/**
+ * Check if a player name matches a search term.
+ * Uses normalized comparison for flexible matching.
+ */
+function playerNameMatches(playerName: string, searchTerm: string): boolean {
+  const normalizedName = normalizeSearchQuery(playerName);
+  const normalizedSearch = normalizeSearchQuery(searchTerm);
+  
+  // Direct substring match
+  if (normalizedName.includes(normalizedSearch)) {
+    return true;
+  }
+  
+  // Split search into words and check if all words appear in name
+  const searchWords = normalizedSearch.split(' ').filter(w => w.length > 0);
+  if (searchWords.length > 1) {
+    return searchWords.every(word => normalizedName.includes(word));
+  }
+  
+  return false;
+}
+
 router.get("/search", async (req: Request, res: Response) => {
   try {
     const {
@@ -245,30 +279,35 @@ router.get("/search", async (req: Request, res: Response) => {
       .from(datadiveSnapshotPlayerWeek)
       .where(eq(datadiveSnapshotPlayerWeek.snapshotId, snapshotId));
 
-    if (q) {
-      const searchTerm = (q as string).toLowerCase();
+    // Apply search filter with flexible matching
+    if (q && (q as string).trim().length > 0) {
+      const searchTerm = (q as string).trim();
       results = results.filter(
         (r) =>
-          r.playerName.toLowerCase().includes(searchTerm) ||
-          r.teamId?.toLowerCase().includes(searchTerm)
+          playerNameMatches(r.playerName, searchTerm) ||
+          r.teamId?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    if (position) {
+    // Apply position filter - skip if 'ALL' or empty
+    if (position && (position as string).toUpperCase() !== 'ALL') {
       const pos = (position as string).toUpperCase();
       results = results.filter((r) => r.position?.toUpperCase() === pos);
     }
 
-    if (min_routes) {
+    // Apply minimum routes filter - only if > 0
+    if (min_routes && Number(min_routes) > 0) {
       const minRoutes = Number(min_routes);
       results = results.filter((r) => (r.routes || 0) >= minRoutes);
     }
 
-    if (min_snaps) {
+    // Apply minimum snaps filter - only if > 0
+    if (min_snaps && Number(min_snaps) > 0) {
       const minSnaps = Number(min_snaps);
       results = results.filter((r) => (r.snaps || 0) >= minSnaps);
     }
 
+    // Sort by PPR fantasy points descending
     results.sort((a, b) => (b.fptsPpr || 0) - (a.fptsPpr || 0));
 
     const total = results.length;

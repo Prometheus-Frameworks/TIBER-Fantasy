@@ -10,6 +10,7 @@ import {
   weeklyStats,
   silverPlayerWeeklyStats,
   bronzeNflfastrSnapCounts,
+  playerIdentityMap,
   type DatadiveSnapshotMeta,
   type DatadiveSnapshotPlayerWeek,
   type DatadiveSnapshotPlayerSeason,
@@ -112,6 +113,28 @@ export class DatadiveSnapshotService {
 
     console.log(`📊 [DataDive] Found ${weeklyData.length} rows in weekly_stats`);
 
+    // Load player_identity_map for canonical names and positions
+    const identityData = await db
+      .select({
+        nflDataPyId: playerIdentityMap.nflDataPyId,
+        fullName: playerIdentityMap.fullName,
+        position: playerIdentityMap.position,
+      })
+      .from(playerIdentityMap)
+      .where(sql`${playerIdentityMap.nflDataPyId} IS NOT NULL`);
+
+    // Create lookup map by nfl_data_py_id
+    const identityMap = new Map<string, { fullName: string; position: string | null }>();
+    for (const identity of identityData) {
+      if (identity.nflDataPyId) {
+        identityMap.set(identity.nflDataPyId, {
+          fullName: identity.fullName,
+          position: identity.position,
+        });
+      }
+    }
+    console.log(`📊 [DataDive] Loaded ${identityMap.size} player identities for canonical mapping`);
+
     const snapCounts = await db
       .select()
       .from(bronzeNflfastrSnapCounts)
@@ -147,9 +170,24 @@ export class DatadiveSnapshotService {
       silverMap.set(row.playerId, row);
     }
 
+    let identityMatchCount = 0;
+    let identityMissCount = 0;
+
     const stagingRows = weeklyData.map((row) => {
       const snapInfo = snapMap.get(row.playerName?.toLowerCase() || "");
       const silver = silverMap.get(row.playerId);
+      
+      // Get canonical name and position from identity map
+      const identity = identityMap.get(row.playerId);
+      if (identity) {
+        identityMatchCount++;
+      } else {
+        identityMissCount++;
+      }
+      
+      // Use identity map for canonical data, fallback to weekly_stats
+      const playerName = identity?.fullName || row.playerName;
+      const position = identity?.position?.toUpperCase() || row.position?.toUpperCase() || null;
 
       const routes = row.routes || 0;
       const targets = row.targets || 0;
@@ -166,9 +204,9 @@ export class DatadiveSnapshotService {
         season,
         week,
         playerId: row.playerId,
-        playerName: row.playerName,
+        playerName,
         teamId: row.team,
-        position: row.position,
+        position,
         snaps,
         snapShare: snapInfo?.snapPct || null,
         routes,
@@ -196,6 +234,8 @@ export class DatadiveSnapshotService {
         fptsPpr: row.fantasyPointsPpr || 0,
       };
     });
+    
+    console.log(`📊 [DataDive] Identity map matches: ${identityMatchCount}, misses: ${identityMissCount}`);
 
     if (stagingRows.length > 0) {
       const chunkSize = 100;

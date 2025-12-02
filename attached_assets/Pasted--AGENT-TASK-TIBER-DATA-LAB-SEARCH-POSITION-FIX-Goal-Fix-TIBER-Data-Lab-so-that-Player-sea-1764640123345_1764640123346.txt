@@ -1,0 +1,291 @@
+🛠 AGENT TASK: TIBER DATA LAB – SEARCH & POSITION FIX
+
+Goal:
+Fix TIBER Data Lab so that:
+
+Player search returns correct results for valid names (e.g. “cee dee lamb”, “josh allen”).
+
+Positions are correct (e.g. Josh Allen appears only as QB, not RB).
+
+The lab uses the latest completed 2025 week snapshot by default.
+
+All key metric fields in snapshot tables are populated (no unexpected NULLs).
+
+The system is already live with:
+
+Datadive snapshot tables (prefix datadive_...)
+
+/api/data-lab/* endpoints
+
+/tiber-data-lab UI hooked up to /api/data-lab/search
+
+Right now:
+
+Searching multiple valid names (e.g. “cee dee lamb”, “josh allen”) returns 0 players found.
+
+Josh Allen (QB) is visible in the RB tab somewhere else in the app.
+
+1) Verify and Update Snapshot Meta (Latest Week)
+
+Query snapshot meta:
+
+SELECT id, season, week, snapshot_at, is_official, data_version
+FROM datadive_snapshot_meta
+ORDER BY season DESC, week DESC;
+
+
+Expected behavior:
+
+Latest row should be 2025, Week 12, is_official = TRUE.
+
+If only Week 11 exists:
+
+Trigger a new snapshot via the existing admin endpoint:
+
+POST /api/data-lab/admin/run
+{
+  "season": 2025,
+  "week": 12
+}
+
+
+Confirm a new datadive_snapshot_meta row exists for 2025 Week 12 and that /api/data-lab/meta/current now reports season = 2025, week = 12.
+
+Make sure getCurrentSnapshot() in server/services/datadiveContext.ts always returns the latest is_official = TRUE snapshot by ordering season DESC, week DESC.
+
+This ensures /tiber-data-lab defaults to the most recent completed 2025 week.
+
+2) Fix /api/data-lab/search So Valid Names Return Results
+
+Right now, the UI screenshot shows:
+
+Season = 2025
+
+Week = 11
+
+Player Name = “ceedee lamb”
+
+Results: 0 players found
+
+The top bar claims there are 296 players across 30 teams in the snapshot.
+
+We need to make the search endpoint bulletproof.
+
+2.1 Inspect current SQL for /api/data-lab/search
+
+In server/routes/dataLab.ts (or equivalent):
+
+Log the full set of query params and, if possible, the final SQL / filters.
+
+Confirm that the q parameter is used as partial match:
+
+AND (
+  player_name ILIKE '%' || q || '%' OR
+  team_id     ILIKE '%' || q || '%'
+)
+
+2.2 Fix common pitfalls
+
+Make sure the endpoint:
+
+Does not treat position=ALL as a real value.
+
+If position query param is 'ALL' or empty, do not add a position = 'ALL' filter.
+
+Treats min_routes correctly:
+
+If min_routes is empty or 0, do not filter out players with < 0 routes (no-op or >= 0).
+
+Uses the requested season/week, or falls back to getCurrentSnapshot() if none are provided.
+
+Example skeleton:
+
+router.get('/search', async (req, res) => {
+  const {
+    q,
+    season,
+    week,
+    position,
+    min_routes,
+    min_snaps,
+    limit = '100',
+    offset = '0',
+  } = req.query;
+
+  const pos = position && position !== 'ALL' ? (position as string) : null;
+
+  const rows = await db.execute(sql`
+    SELECT *
+    FROM datadive_snapshot_player_week
+    WHERE 1=1
+      ${season ? sql`AND season = ${Number(season)}` : sql``}
+      ${week ? sql`AND week   = ${Number(week)}` : sql``}
+      ${pos ? sql`AND position = ${pos}` : sql``}
+      ${min_routes ? sql`AND routes_run >= ${Number(min_routes)}` : sql``}
+      ${min_snaps ? sql`AND snaps      >= ${Number(min_snaps)}` : sql``}
+      ${q
+        ? sql`AND (player_name ILIKE ${'%' + (q as string) + '%'}
+                   OR team_id     ILIKE ${'%' + (q as string) + '%'})`
+        : sql``}
+    ORDER BY routes_run DESC NULLS LAST
+    LIMIT ${Number(limit)}
+    OFFSET ${Number(offset)};
+  `);
+
+  res.json((rows as any).rows);
+});
+
+2.3 Direct tests to run
+
+After code changes:
+
+Call the API directly:
+
+GET /api/data-lab/search?q=lamb&season=2025&week=11
+GET /api/data-lab/search?q=cee%20dee&season=2025&week=11
+GET /api/data-lab/search?q=allen&season=2025&week=11
+
+
+At least one of those should return rows if those players exist in the snapshot.
+
+Also test a no-name query:
+
+GET /api/data-lab/search?season=2025&week=11
+
+
+This should return many rows (up to the limit), not 0.
+
+If /api/data-lab/search returns data but the UI still shows 0, then:
+
+Check that the front-end is sending q (not name or something else).
+
+Verify season/week/min_routes are passed correctly from the UI.
+
+3) Fix Position Mapping (Josh Allen Showing as RB)
+
+Reported issue: Josh Allen (QB) appears under RB tab somewhere.
+
+We need to make sure Datadive and Forge are using a canonical, correct position.
+
+3.1 Check raw snapshot data
+
+Run:
+
+SELECT player_id, player_name, position, team_id, season, week
+FROM datadive_snapshot_player_week
+WHERE player_name ILIKE '%allen%'
+ORDER BY season DESC, week DESC
+LIMIT 20;
+
+
+If Josh is coming through as position = 'RB' here, the issue starts in staging / identity mapping.
+
+3.2 Fix staging / identity mapping pipeline
+
+In the staging insert into datadive_player_week_staging:
+
+Confirm how position is derived:
+
+It should come from either:
+
+The stats table’s position column, or
+
+A trusted identity/roster table joined on canonical player ID.
+
+Normalize to uppercase (QB, RB, WR, TE) and do not let any default or fallback assign RB if unknown.
+
+If you’re using an identity map, ensure:
+
+You use canonical ID → canonical position mapping.
+
+If multiple positions exist for a player (edge case), prefer the primary one (Josh = QB).
+
+Once fixed in staging:
+
+Regenerate the snapshot for that week (delete the affected datadive_snapshot_* rows for that week + meta entry, then rerun the admin snapshot for that week).
+
+3.3 Filter logic in RB tab
+
+If the RB tab is using Forge or another endpoint:
+
+Verify the RB filter only includes position = 'RB'.
+
+If the underlying snapshot has Josh as QB, he should never be included in that RB query.
+
+4) Ensure All Metric Fields Are Populated (No Unexpected NULLs)
+
+We want to avoid half-empty rows in the Data Lab and Forge inputs.
+
+Run this for the latest week (after Week 12 snapshot is created):
+
+SELECT
+  COUNT(*) AS total_rows,
+
+  COUNT(*) FILTER (WHERE routes_run      IS NULL) AS null_routes,
+  COUNT(*) FILTER (WHERE targets         IS NULL) AS null_targets,
+  COUNT(*) FILTER (WHERE tprr            IS NULL) AS null_tprr,
+  COUNT(*) FILTER (WHERE yprr            IS NULL) AS null_yprr,
+  COUNT(*) FILTER (WHERE a_dot           IS NULL) AS null_a_dot,
+  COUNT(*) FILTER (WHERE epa_per_play    IS NULL) AS null_epa_per_play,
+  COUNT(*) FILTER (WHERE success_rate    IS NULL) AS null_success_rate,
+  COUNT(*) FILTER (WHERE snap_share      IS NULL) AS null_snap_share,
+  COUNT(*) FILTER (WHERE snaps           IS NULL) AS null_snaps,
+  COUNT(*) FILTER (WHERE fp_standard     IS NULL) AS null_fp_standard,
+  COUNT(*) FILTER (WHERE fp_half_ppr     IS NULL) AS null_fp_half_ppr,
+  COUNT(*) FILTER (WHERE fp_ppr          IS NULL) AS null_fp_ppr
+FROM datadive_snapshot_player_week
+WHERE season = 2025
+  AND week   = 12;
+
+
+If any of the null_* counts are > 0 (for fields that should always exist):
+
+Update the staging insert (INSERT INTO datadive_player_week_staging) to COALESCE base numeric fields to 0:
+
+COALESCE(ws.routes_run, 0)       AS routes_run,
+COALESCE(ws.targets, 0)          AS targets,
+COALESCE(ws.receptions, 0)       AS receptions,
+COALESCE(ws.receiving_yards, 0)  AS receiving_yards,
+COALESCE(ws.air_yards, 0)        AS air_yards,
+COALESCE(ws.a_dot, 0)            AS a_dot,
+COALESCE(ws.tprr, 0)             AS tprr,
+COALESCE(ws.yprr, 0)             AS yprr,
+COALESCE(ws.carries, 0)          AS carries,
+COALESCE(ws.rushing_yards, 0)    AS rushing_yards,
+COALESCE(ws.rush_tds, 0)         AS rush_tds,
+COALESCE(ws.epa_per_play, 0)     AS epa_per_play,
+COALESCE(ws.success_rate, 0)     AS success_rate,
+COALESCE(ws.snap_share, 0)       AS snap_share,
+COALESCE(ws.snaps, 0)            AS snaps,
+COALESCE(ws.fp_standard, 0)      AS fp_standard,
+COALESCE(ws.fp_half_ppr, 0)      AS fp_half_ppr,
+COALESCE(ws.fp_ppr, 0)           AS fp_ppr
+
+
+Then re-run the snapshot for that week.
+
+5) Acceptance Criteria
+
+When you’re done, all of the following must be true:
+
+/api/data-lab/meta/current reports season = 2025, week = 12 (or the latest completed week) and matches the green “Snapshot” pill in the UI.
+
+/api/data-lab/search?season=2025&week=12 returns many rows (not 0) with default filters.
+
+/api/data-lab/search?q=lamb&season=2025&week=12 returns CeeDee Lamb if he exists in the underlying stats.
+
+/api/data-lab/search?q=allen&season=2025&week=12 returns Josh Allen with position = 'QB'.
+
+The RB-focused views only show players with position = 'RB'.
+
+The null scan query for datadive_snapshot_player_week returns 0 NULLs for all core metric columns listed above (or only for truly optional fields if explicitly allowed).
+
+Keep all changes additive and localized to:
+
+Datadive staging / snapshot SQL
+
+/api/data-lab/search route
+
+Position mapping / identity logic used to populate datadive_player_week_staging
+
+Do not remove or rename existing tables or endpoints.
