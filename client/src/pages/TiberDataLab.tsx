@@ -94,9 +94,14 @@ function formatPct(value: number | null | undefined): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-function StatCard({ label, value, format = 'number' }: { label: string; value: any; format?: 'number' | 'pct' | 'decimal' }) {
-  let displayValue = '-';
-  if (value != null) {
+function StatCard({ label, value, format = 'number', showZeroAsNA = false }: { label: string; value: any; format?: 'number' | 'pct' | 'decimal'; showZeroAsNA?: boolean }) {
+  let displayValue: string;
+  
+  if (value == null || value === undefined) {
+    displayValue = '0';
+  } else if (showZeroAsNA && value === 0) {
+    displayValue = 'N/A';
+  } else {
     if (format === 'pct') {
       displayValue = `${(Number(value) * 100).toFixed(1)}%`;
     } else if (format === 'decimal') {
@@ -242,12 +247,12 @@ function PlayerDrawer({
           <div>
             <div className="flex items-center gap-2 mb-3">
               <BarChart3 className="h-4 w-4 text-cyan-400" />
-              <span className="text-sm text-gray-400 uppercase tracking-wide">Fantasy Points</span>
+              <span className="text-sm text-gray-400 uppercase tracking-wide">Fantasy Points (Week {player.week})</span>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              <StatCard label="PPR" value={player.fptsPpr} format="decimal" />
-              <StatCard label="Half" value={player.fptsHalf} format="decimal" />
-              <StatCard label="Standard" value={player.fptsStd} format="decimal" />
+              <StatCard label="Week PPR" value={player.fptsPpr} format="decimal" />
+              <StatCard label="Week Half" value={player.fptsHalf} format="decimal" />
+              <StatCard label="Week Std" value={player.fptsStd} format="decimal" />
             </div>
           </div>
 
