@@ -419,6 +419,32 @@ export class DatadiveSnapshotService {
   ): Promise<number> {
     console.log(`📝 [DataDive] Creating snapshot metadata...`);
 
+    // Prevent duplicate official snapshots: mark any existing official snapshots for this week as non-official
+    const existingOfficial = await db
+      .select({ id: datadiveSnapshotMeta.id })
+      .from(datadiveSnapshotMeta)
+      .where(
+        and(
+          eq(datadiveSnapshotMeta.season, season),
+          eq(datadiveSnapshotMeta.week, week),
+          eq(datadiveSnapshotMeta.isOfficial, true)
+        )
+      );
+
+    if (existingOfficial.length > 0) {
+      console.log(`⚠️ [DataDive] Found ${existingOfficial.length} existing official snapshot(s) for ${season} Week ${week}, marking as non-official`);
+      await db
+        .update(datadiveSnapshotMeta)
+        .set({ isOfficial: false })
+        .where(
+          and(
+            eq(datadiveSnapshotMeta.season, season),
+            eq(datadiveSnapshotMeta.week, week),
+            eq(datadiveSnapshotMeta.isOfficial, true)
+          )
+        );
+    }
+
     const [result] = await db
       .insert(datadiveSnapshotMeta)
       .values({

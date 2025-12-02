@@ -805,10 +805,11 @@ export default function TiberDataLab() {
                         <th className="px-4 py-3 text-center">Std</th>
                         <th className="px-4 py-3 text-center">Tgt</th>
                         <th className="px-4 py-3 text-center">Rec</th>
-                        <th className="px-4 py-3 text-center">Yds</th>
-                        <th className="px-4 py-3 text-center">TDs</th>
+                        <th className="px-4 py-3 text-center">RecYds</th>
+                        <th className="px-4 py-3 text-center">RecTD</th>
                         <th className="px-4 py-3 text-center">Rush</th>
                         <th className="px-4 py-3 text-center">RshYds</th>
+                        <th className="px-4 py-3 text-center">RshTD</th>
                         <th className="px-4 py-3 text-center">aDOT</th>
                       </tr>
                     </thead>
@@ -829,9 +830,10 @@ export default function TiberDataLab() {
                           <td className="px-4 py-3 text-center font-mono text-gray-300">{row.targets}</td>
                           <td className="px-4 py-3 text-center font-mono text-gray-300">{row.receptions}</td>
                           <td className="px-4 py-3 text-center font-mono text-gray-300">{row.recYards}</td>
-                          <td className="px-4 py-3 text-center font-mono text-green-400">{row.recTds}</td>
+                          <td className="px-4 py-3 text-center font-mono text-green-400">{row.recTds || 0}</td>
                           <td className="px-4 py-3 text-center font-mono text-gray-300">{row.rushAttempts}</td>
                           <td className="px-4 py-3 text-center font-mono text-gray-300">{row.rushYards}</td>
+                          <td className="px-4 py-3 text-center font-mono text-orange-400">{row.rushTds || 0}</td>
                           <td className="px-4 py-3 text-center font-mono text-gray-300">{formatStat(row.adot, 1)}</td>
                         </tr>
                       ))}

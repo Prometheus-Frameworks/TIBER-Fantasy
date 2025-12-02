@@ -1,0 +1,314 @@
+🛠 AGENT TASK: DATADIVE – DEDUPE, SEASON FIX, WEEK 13
+
+Goal
+
+Fix duplicate rows in the Fantasy table and add separate rushing vs receiving TD columns.
+
+Correct Season aggregation logic so TPRR, YPRR, and PPR/G are accurate and not all 0.50 / 70+.
+
+Ensure the system can progress past Week 11 once 2025 Week 13 data exists in weekly_stats.
+
+1) Fix Fantasy View Duplication + Add Rush/Rec TD columns
+
+Symptoms (from UI):
+
+In /tiber-data-lab → Fantasy mode, every player appears twice with identical values:
+
+Christian McCaffrey row duplicated
+
+Sean Tucker duplicated
+
+Michael Wilson duplicated, etc.
+
+Numbers match, so this is almost certainly a join duplication or missing GROUP BY.
+
+1.1 Backend: /api/data-lab/fantasy-logs
+
+Inspect the query that powers /api/data-lab/fantasy-logs.
+
+Likely causes of duplication:
+
+Joining fantasy logs to usage/snapshot tables on (player_id, season, week) where either side has multiple rows per key.
+
+Missing GROUP BY / DISTINCT when combining multiple sources.
+
+Fix it so that final results are exactly one row per (player_id, season, week):
+
+Either:
+
+SELECT
+  player_id,
+  season,
+  week,
+  team_id,
+  position,
+  SUM(fp_ppr)       AS ppr,
+  SUM(fp_half_ppr)  AS half_ppr,
+  SUM(fp_standard)  AS std_ppr,
+  SUM(rec_tds)      AS rec_tds,
+  SUM(rush_tds)     AS rush_tds,
+  ...
+FROM fantasy_logs_x_usage
+WHERE ...
+GROUP BY player_id, season, week, team_id, position;
+
+
+Or (if rows are already unique) enforce:
+
+SELECT DISTINCT ON (player_id, season, week) ...
+ORDER BY player_id, season, week;
+
+
+but the preferred solution is a proper GROUP BY.
+
+Make sure that when joining fantasy logs to usage data, you avoid Cartesian products.
+
+If you don’t need usage in Fantasy view v1, you can safely left join on (player_id, season, week) only, with GROUP BY cleanup at the end.
+
+1.2 Add separate Rush TD vs Rec TD columns
+
+Right now the Fantasy table has a single TDs column. For RBs especially, we want the split.
+
+In the fantasy logs / aggregation query, surface:
+
+COALESCE(rec_tds, 0)  AS rec_tds,
+COALESCE(rush_tds, 0) AS rush_tds,
+(COALESCE(rec_tds, 0) + COALESCE(rush_tds, 0)) AS total_tds
+
+
+If you don’t currently store them split, derive them from the underlying stat fields you already have (receiving TD vs rushing TD).
+
+Extend the response DTO from /api/data-lab/fantasy-logs to include:
+
+recTds
+
+rushTds
+
+totalTds
+
+Frontend (Fantasy view table):
+
+Replace the single TDs column with:
+
+Rec TD
+
+Rush TD
+
+(Optional) Total TD as the far-right.
+
+This is especially helpful for guys like CMC, Bijan, Gibbs, etc.
+
+Acceptance for this section:
+
+Christian McCaffrey appears once for Week 11.
+
+Sean Tucker appears once for Week 11.
+
+Michael Wilson appears once for Week 11.
+
+Rec TD and Rush TD correctly reflect what happened in that game.
+
+2) Fix Season Aggregation (weekMode=season) – TPRR & PPR/G
+
+Symptoms:
+
+In Season mode:
+
+Every player has TPRR = 0.50 (screenshot shows all 0.50).
+
+PPR/G is absurd (70.2, 67.0, 66.0, etc.) for guys with very normal yardage/TD lines.
+
+GP = 1 for everyone in the screenshot, so clearly the logic is off.
+
+We need to make sure weekMode=season is not just copying single-week values or doubling via joins.
+
+2.1 Backend: /api/data-lab/usage-agg (weekMode=season)
+
+Open the handler for /api/data-lab/usage-agg and inspect the weekMode='season' branch.
+
+It should:
+
+Read from datadive_snapshot_player_week (not fantasy logs).
+
+Filter by season.
+
+Optionally filter by position.
+
+Aggregate over all weeks available in that season.
+
+The correct formula structure:
+
+SELECT
+  player_id,
+  player_name,
+  team_id,
+  position,
+  COUNT(*) FILTER (WHERE snaps > 0 OR routes_run > 0) AS games_played,
+  SUM(routes_run)        AS total_routes,
+  SUM(targets)           AS total_targets,
+  SUM(receiving_yards)   AS total_yards,
+  SUM(rec_tds)           AS total_rec_tds,
+  SUM(rush_tds)          AS total_rush_tds,
+  AVG(snap_share)        AS avg_snap_share,
+  SUM(fp_ppr)            AS fp_ppr_total,
+  CASE
+    WHEN SUM(routes_run) > 0
+    THEN SUM(targets)::numeric / SUM(routes_run)
+    ELSE 0
+  END AS tprr,
+  CASE
+    WHEN SUM(routes_run) > 0
+    THEN SUM(receiving_yards)::numeric / SUM(routes_run)
+    ELSE 0
+  END AS yprr,
+  CASE
+    WHEN COUNT(*) FILTER (WHERE snaps > 0 OR routes_run > 0) > 0
+    THEN SUM(fp_ppr)::numeric /
+         COUNT(*) FILTER (WHERE snaps > 0 OR routes_run > 0)
+    ELSE 0
+  END AS ppr_per_game
+FROM datadive_snapshot_player_week
+WHERE season = $season
+  AND (position = $position OR $position IS NULL)
+GROUP BY player_id, player_name, team_id, position;
+
+
+Key points:
+
+TPRR and YPRR computed from season totals, not averaging per-week ratios.
+
+PPR/G = season PPR total divided by games_played, not 1 or 0.
+
+Make sure no joins to fantasy logs here; this endpoint should be pure usage/snapshot.
+
+Ensure no hidden duplication:
+
+If you join snapshot_player_week to other tables, group at the end so each (player_id, season) is one row.
+
+Double-counting weeks will inflate both totals and PPR/G (which is what we’re seeing).
+
+Frontend:
+
+Season view should display:
+
+GP
+
+Total TGT
+
+TPRR (derived from total_targets/total_routes)
+
+YPRR (total_yards/total_routes)
+
+PPR/G (from ppr_per_game above).
+
+After fix, Christian McCaffrey’s PPR/G should look like a plausible ~24–30, not 70+.
+
+Acceptance for this section:
+
+Season view no longer shows TPRR = 0.50 for everyone (unless the data legitimately has that pattern).
+
+PPR/G values are realistic and clearly tied to per-week PPR you see in Fantasy view.
+
+GP reflects actual weeks played (for 2025 sample, probably 1 right now, but the numbers must scale correctly once more weeks are populated).
+
+3) Enable Week 12 / 13 Snapshots Once Data Exists
+
+Symptom:
+
+System “caps out” at Week 11.
+
+You mentioned Week 13 has finished in real life and should be available.
+
+We need to confirm if this is a data ingest issue (weekly_stats doesn’t have Week 12/13) or a snapshot logic issue.
+
+3.1 Check data availability in weekly_stats
+
+Run:
+
+SELECT season, MAX(week) AS latest_week, COUNT(*) AS rows
+FROM weekly_stats
+WHERE season = 2025
+GROUP BY season;
+
+
+If latest_week is still 11:
+
+The NFLfastR / nfl_data_py ingest job hasn’t pulled Weeks 12–13 yet.
+
+Fix: call whatever ingest pipeline exists to import 2025 Weeks 12 and 13 into weekly_stats before snapshotting.
+
+If latest_week is 13 (or >=12):
+
+Good. Data is there; now it’s a snapshot issue.
+
+3.2 Verify auto-status logic
+
+Call:
+
+GET /api/data-lab/admin/auto-status?season=2025
+
+
+Ensure:
+
+latestStatsWeek reflects the MAX(week) from weekly_stats.
+
+lastSnappedWeek is 11.
+
+hasNewWeekAvailable (or equivalent flag) is true if latestStatsWeek > lastSnappedWeek and row count / team count thresholds are satisfied.
+
+If latestStatsWeek is 13 but hasNewWeekAvailable is false:
+
+Re-check thresholds in runAutoWeeklySnapshotForSeason:
+
+players >= 200
+
+distinct teams >= 28
+
+no null player_id
+
+Maybe Week 12/13 is failing one of those checks — if so, log the exact failure reason (row count, team count, nulls) and return it from /auto-status for visibility.
+
+3.3 Run snapshot for newest valid week
+
+Once you confirm that:
+
+weekly_stats has Week 13
+
+Validation passes (≥200 rows, ≥28 teams, no nulls)
+
+Call:
+
+POST /api/data-lab/admin/auto-run
+{
+  "season": 2025
+}
+
+
+This should:
+
+Insert a new row into datadive_snapshot_meta with week = 13.
+
+Trigger the staging → snapshot copy for Week 13.
+
+Then check:
+
+GET /api/data-lab/meta/current
+
+
+You want:
+
+lastSnappedWeek = 13
+
+/tiber-data-lab showing “Season 2025 • Week 13” as the active snapshot.
+
+3.4 Acceptance for this section
+
+SELECT MAX(week) FROM weekly_stats WHERE season=2025 returns 13 (or current reality).
+
+datadive_snapshot_meta has a row for Week 13 marked is_official = TRUE.
+
+/api/data-lab/meta/current and /tiber-data-lab both show Week 13 as the current snapshot.
+
+Forge logs mention:
+
+[FORGE] Using Datadive snapshot for batch eligibility (snapshot X, week 13).
