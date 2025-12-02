@@ -1,0 +1,373 @@
+🛠 REPLIT AGENT TASK — xFPTS v2 (Context-Aware Expected Fantasy Points)
+
+Module: TIBER Data Lab → Datadive → Expected Fantasy Engine
+Goal: Upgrade xFPTS/xFPGoe to v2 by layering nflfastR-derived context (RZ usage, YAC, rushing EPA/success) on top of the existing v1 baselines.
+
+v1: usage-only baselines (targets/carries + positional buckets).
+
+v2: v1 × small, capped multipliers from nflfastR metrics.
+
+Keep everything:
+
+Snapshot-locked
+
+Tunable
+
+Reversible
+
+Numerically stable (no wild 1.8x multipliers).
+
+The UI should still just see PPR, xPPR, Δ PPR. v1 vs v2 is internal.
+
+1. Database Changes
+1.1 New table: datadive_nflfastr_metrics
+
+Create a table to store per-player, per-week nflfastR context metrics:
+
+CREATE TABLE IF NOT EXISTS datadive_nflfastr_metrics (
+  season        INT NOT NULL,
+  week          INT NOT NULL,
+  player_id     TEXT NOT NULL,
+  position      TEXT NOT NULL,
+  targets       INT,
+  air_yards     NUMERIC,
+  yac_per_rec   NUMERIC,   -- avg YAC per reception
+  rz_targets    INT,       -- targets inside RZ
+  rz_carries    INT,       -- rush attempts inside RZ
+  rush_epa      NUMERIC,   -- average EPA per rush
+  rush_success  NUMERIC,   -- success rate 0–1
+  created_at    TIMESTAMPTZ DEFAULT now(),
+  updated_at    TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY (season, week, player_id)
+);
+
+
+Add an updated_at trigger if you already use one elsewhere.
+
+Assumption: This table is populated from an nflfastR → CSV → Node upsert job, not in this task. You can add a TODO/stub if needed.
+
+1.2 Extend datadive_expected_fantasy_week for v2
+
+We already have v1 expected fantasy stored. We want to keep v1 and add v2 fields + debug multipliers.
+
+Add columns (names can be adjusted, but keep the idea):
+
+ALTER TABLE datadive_expected_fantasy_week
+  ADD COLUMN IF NOT EXISTS x_ppr_v1       NUMERIC(8,3),
+  ADD COLUMN IF NOT EXISTS xfpgoe_ppr_v1  NUMERIC(8,3),
+  ADD COLUMN IF NOT EXISTS x_ppr_v2       NUMERIC(8,3),
+  ADD COLUMN IF NOT EXISTS xfpgoe_ppr_v2  NUMERIC(8,3),
+  ADD COLUMN IF NOT EXISTS rec_multiplier NUMERIC(6,3),
+  ADD COLUMN IF NOT EXISTS rush_multiplier NUMERIC(6,3),
+  ADD COLUMN IF NOT EXISTS rz_share       NUMERIC(6,3),
+  ADD COLUMN IF NOT EXISTS yac_ratio      NUMERIC(6,3),
+  ADD COLUMN IF NOT EXISTS rush_epa_ctx   NUMERIC(6,3),
+  ADD COLUMN IF NOT EXISTS rush_success_ctx NUMERIC(6,3);
+
+
+Notes:
+
+x_ppr_v1/xfpgoe_ppr_v1 can be identical to legacy values (backfilled once).
+
+x_ppr_v2/xfpgoe_ppr_v2 will be the new context-aware version used by APIs.
+
+Multipliers and ratios are for debugging/inspection (nice to have, cheap to store).
+
+2. Config & Helpers (TypeScript)
+
+Add a small config + clamp helper in a shared service (e.g. services/xFptsConfig.ts or similar):
+
+export const contextConfig = {
+  // Minimum games / usage can be reused if needed later
+  yacLeagueAvg: 4.5,      // baseline YAC per reception
+  rzNeutralShare: 0.15,   // ~15% of targets in RZ treated as "normal"
+
+  // Caps on adjustments (percent multipliers)
+  rzMaxBoost: 0.20,       // +20% max from RZ context
+  rzMaxPenalty: -0.10,    // -10% if completely RZ-starved
+
+  yacMaxBoost: 0.15,      // +15% max for elite YAC
+  yacMaxPenalty: -0.05,   // -5% for low YAC
+
+  epaMaxBoost: 0.15,      // +15% from rush EPA
+  epaMaxPenalty: -0.15,   // -15% penalty from bad EPA
+
+  successMaxBoost: 0.10,  // +10% if very high success
+  successMaxPenalty: -0.05
+};
+
+export function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+
+This is the limiter that keeps v2 sane.
+
+3. Service: computeExpectedFantasyForWeek → v2 Upgrade
+
+You already have a function like computeExpectedFantasyForWeek(season, week) that:
+
+Reads from datadive_snapshot_player_week
+
+Uses baselines from datadive_fantasy_baselines
+
+Writes v1 xFPTS into datadive_expected_fantasy_week
+
+We’ll evolve it to:
+
+Compute v1 as before.
+
+Join in datadive_nflfastr_metrics.
+
+Apply context multipliers to get v2.
+
+Persist both v1 & v2.
+
+3.1 Load nflfastR metrics for the week
+
+Inside the service:
+
+type NflfastRMetrics = {
+  player_id: string;
+  position: string;
+  targets: number | null;
+  air_yards: number | null;
+  yac_per_rec: number | null;
+  rz_targets: number | null;
+  rz_carries: number | null;
+  rush_epa: number | null;
+  rush_success: number | null;
+};
+
+const metricsByPlayer = await loadNflfastRMetrics(season, week);
+// Implement as a DB query into datadive_nflfastr_metrics and map by player_id.
+
+3.2 For each player-week (core loop)
+
+Pseudocode in TS style:
+
+for (const snapshotRow of snapshotRows) {
+  const {
+    player_id,
+    position,
+    targets,
+    carries,
+    a_dot,
+    // ... existing fields used in v1
+  } = snapshotRow;
+
+  const metric = metricsByPlayer[player_id] ?? null;
+
+  // 1) v1 computation (existing logic)
+  const {
+    expected_rec_ppr_v1,
+    expected_rush_ppr_v1,
+    expected_receptions_v1,
+    // any existing v1 components
+  } = computeV1ExpectedPpr(snapshotRow, baselines); // you already have this concept
+
+  const xPPR_v1 = expected_rec_ppr_v1 + expected_rush_ppr_v1;
+  const actualPpr = snapshotRow.fp_ppr; // from fantasy logs join
+  const xFPGoe_v1 = actualPpr - xPPR_v1;
+
+3.3 v2 receiving context
+  let rzShare = 0;
+  let yacRatio = 1;
+
+  if (metric && targets > 0) {
+    const rzTargets = metric.rz_targets ?? 0;
+    rzShare = rzTargets / targets; // 0–1
+  }
+
+  if (metric && (metric.yac_per_rec ?? 0) > 0) {
+    yacRatio = (metric.yac_per_rec as number) / contextConfig.yacLeagueAvg;
+  }
+
+  // Map rzShare to a small boost/penalty around neutral RZ usage
+  const rzBoost = clamp(
+    (rzShare - contextConfig.rzNeutralShare) * 0.8,
+    contextConfig.rzMaxPenalty,
+    contextConfig.rzMaxBoost
+  );
+
+  const yacBoost = clamp(
+    (yacRatio - 1) * 0.5,
+    contextConfig.yacMaxPenalty,
+    contextConfig.yacMaxBoost
+  );
+
+  const recMultiplier = 1 + rzBoost + yacBoost;
+  const expected_rec_ppr_v2 = expected_rec_ppr_v1 * recMultiplier;
+
+3.4 v2 rushing context
+  let rushEpaCtx = 0;
+  let rushSuccessCtx = 0;
+
+  if (metric && carries > 0) {
+    const rushEpa = metric.rush_epa ?? 0;
+    const rushSuccess = metric.rush_success ?? 0.5; // neutral
+
+    const epaBoost = clamp(
+      rushEpa * 0.4, // scaling factor, small
+      contextConfig.epaMaxPenalty,
+      contextConfig.epaMaxBoost
+    );
+
+    const successBoost = clamp(
+      (rushSuccess - 0.5) * 0.3, // 50% success ~ neutral
+      contextConfig.successMaxPenalty,
+      contextConfig.successMaxBoost
+    );
+
+    rushEpaCtx = epaBoost;
+    rushSuccessCtx = successBoost;
+
+    const rushMultiplier = 1 + epaBoost + successBoost;
+    const expected_rush_ppr_v2 = expected_rush_ppr_v1 * rushMultiplier;
+
+    // Combine v2:
+    const xPPR_v2 = expected_rec_ppr_v2 + expected_rush_ppr_v2;
+    const xFPGoe_v2 = actualPpr - xPPR_v2;
+
+    // Persist to datadive_expected_fantasy_week
+    await upsertExpectedFantasyWeek({
+      season,
+      week,
+      player_id,
+      position,
+      xPPR_v1,
+      xFPGoe_v1,
+      xPPR_v2,
+      xFPGoe_v2,
+      rec_multiplier: recMultiplier,
+      rush_multiplier: rushMultiplier,
+      rz_share: rzShare,
+      yac_ratio: yacRatio,
+      rush_epa_ctx: rushEpaCtx,
+      rush_success_ctx: rushSuccessCtx,
+      // existing expected_rec, etc. fields preserved
+    });
+  } else {
+    // No rush context, but still apply receiving v2 only
+    const expected_rush_ppr_v2 = expected_rush_ppr_v1; // unchanged
+    const rushMultiplier = 1;
+    const xPPR_v2 = expected_rec_ppr_v2 + expected_rush_ppr_v2;
+    const xFPGoe_v2 = actualPpr - xPPR_v2;
+
+    await upsertExpectedFantasyWeek({
+      season,
+      week,
+      player_id,
+      position,
+      xPPR_v1,
+      xFPGoe_v1,
+      xPPR_v2,
+      xFPGoe_v2,
+      rec_multiplier: recMultiplier,
+      rush_multiplier,
+      rz_share: rzShare,
+      yac_ratio: yacRatio,
+      rush_epa_ctx: 0,
+      rush_success_ctx: 0,
+      // ...
+    });
+  }
+}
+
+
+Key idea:
+
+If nflfastR metrics are missing or partial, recMultiplier ≈ 1, rushMultiplier ≈ 1, so v2 ≈ v1.
+
+No explosions; everything is clamped and small.
+
+4. API Behavior (v2 as default output)
+
+We want the Data Lab & Fantasy endpoints to use v2 under the hood, without changing the shape of the responses the user already relies on.
+
+4.1 /api/data-lab/fantasy-logs
+
+Wherever we currently map xPPR, xFPGoePPR:
+
+Change to use v2 fields:
+
+const xPPR = row.x_ppr_v2 ?? row.x_ppr_v1;
+const xFPGoePPR = row.xfpgoe_ppr_v2 ?? row.xfpgoe_ppr_v1;
+
+
+Include v1 internally only if you want extra debug fields; no need to return them to the client for now.
+
+4.2 /api/data-lab/usage-agg
+
+When aggregating per season / range:
+
+Same idea: use v2 fields as the canonical ones:
+
+SUM(x.x_ppr_v2)  AS x_ppr_total,
+SUM(f.fp_ppr)    AS actual_ppr_total,
+...
+xPprPerGame      = x_ppr_total / gamesPlayed,
+xFPGoePprPerGame = (actual_ppr_total / gamesPlayed) - xPprPerGame;
+
+
+If v2 fields are null (during backfill), fall back to v1.
+
+The UI keeps the same columns:
+
+PPR/G
+
+xPPR/G
+
+Δ PPR/G
+
+They’re just now powered by v2.
+
+5. Backfill & Rollout
+
+Backfill nflfastR metrics into datadive_nflfastr_metrics for all existing official snapshots (2025 Weeks 1–11).
+
+Run computeExpectedFantasyForWeek in v2 mode across those weeks:
+
+Populate v1 + v2 fields in datadive_expected_fantasy_week.
+
+Verify a few players:
+
+Confirm v2 xPPR is close to v1 but slightly shifted for:
+
+RZ-heavy WRs
+
+Screen/YAC monsters
+
+Efficient rushers (positive EPA/success)
+
+Confirm API values match DB reads for a couple of spot checks.
+
+6. Acceptance Criteria
+
+This task is complete when:
+
+datadive_nflfastr_metrics exists and is populated for 2025 Weeks 1–11.
+
+datadive_expected_fantasy_week has:
+
+x_ppr_v1, xfpgoe_ppr_v1 (legacy baseline)
+
+x_ppr_v2, xfpgoe_ppr_v2 (context-aware)
+
+rec_multiplier, rush_multiplier, rz_share, yac_ratio, rush_epa_ctx, rush_success_ctx
+
+computeExpectedFantasyForWeek:
+
+Uses v1 as the base.
+
+Applies capped RZ/YAC/EPA/success multipliers to compute v2.
+
+Writes both v1 and v2 fields per player-week.
+
+/api/data-lab/fantasy-logs and /api/data-lab/usage-agg:
+
+Use v2 as the default expected points.
+
+Still return the same shape (PPR, xPPR, Δ PPR).
+
+Pass spot-checks vs DB (no random 1.8x insanity, v2 is believable).

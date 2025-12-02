@@ -4459,6 +4459,72 @@ export const datadiveSnapshotPlayerSeason = pgTable("datadive_snapshot_player_se
   seasonIdx: index("datadive_snapshot_season_season_idx").on(table.season, table.throughWeek),
 }));
 
+/**
+ * nflfastR Metrics Table
+ * Per-player, per-week context metrics from nflfastR for xFPTS v2 calculations
+ * Stores RZ usage, YAC, rushing EPA/success for context-aware expected fantasy
+ */
+export const datadiveNflfastrMetrics = pgTable("datadive_nflfastr_metrics", {
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  playerId: text("player_id").notNull(),
+  position: text("position"),
+  
+  targets: integer("targets"),
+  airYards: real("air_yards"),
+  yacPerRec: real("yac_per_rec"),
+  rzTargets: integer("rz_targets"),
+  rzCarries: integer("rz_carries"),
+  rushEpa: real("rush_epa"),
+  rushSuccess: real("rush_success"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.season, table.week, table.playerId] }),
+  seasonWeekIdx: index("datadive_nflfastr_season_week_idx").on(table.season, table.week),
+}));
+
+/**
+ * Expected Fantasy Week Table
+ * Stores v1 (usage-only) and v2 (context-aware) expected fantasy points per player-week
+ * Includes debug multipliers for transparency
+ */
+export const datadiveExpectedFantasyWeek = pgTable("datadive_expected_fantasy_week", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  playerId: text("player_id").notNull(),
+  position: text("position"),
+  
+  actualPpr: real("actual_ppr"),
+  
+  xPprV1: real("x_ppr_v1"),
+  xfpgoePprV1: real("xfpgoe_ppr_v1"),
+  
+  xPprV2: real("x_ppr_v2"),
+  xfpgoePprV2: real("xfpgoe_ppr_v2"),
+  
+  recMultiplier: real("rec_multiplier"),
+  rushMultiplier: real("rush_multiplier"),
+  rzShare: real("rz_share"),
+  yacRatio: real("yac_ratio"),
+  rushEpaCtx: real("rush_epa_ctx"),
+  rushSuccessCtx: real("rush_success_ctx"),
+  
+  expectedRecPprV1: real("expected_rec_ppr_v1"),
+  expectedRushPprV1: real("expected_rush_ppr_v1"),
+  expectedRecPprV2: real("expected_rec_ppr_v2"),
+  expectedRushPprV2: real("expected_rush_ppr_v2"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniquePlayerWeek: unique("datadive_xfpts_week_unique").on(table.season, table.week, table.playerId),
+  seasonWeekIdx: index("datadive_xfpts_season_week_idx").on(table.season, table.week),
+  playerIdx: index("datadive_xfpts_player_idx").on(table.playerId),
+}));
+
 // DataDive Types
 export type DatadiveSnapshotMeta = typeof datadiveSnapshotMeta.$inferSelect;
 export type InsertDatadiveSnapshotMeta = typeof datadiveSnapshotMeta.$inferInsert;
@@ -4470,3 +4536,7 @@ export type DatadiveSnapshotPlayerWeek = typeof datadiveSnapshotPlayerWeek.$infe
 export type InsertDatadiveSnapshotPlayerWeek = typeof datadiveSnapshotPlayerWeek.$inferInsert;
 export type DatadiveSnapshotPlayerSeason = typeof datadiveSnapshotPlayerSeason.$inferSelect;
 export type InsertDatadiveSnapshotPlayerSeason = typeof datadiveSnapshotPlayerSeason.$inferInsert;
+export type DatadiveNflfastrMetrics = typeof datadiveNflfastrMetrics.$inferSelect;
+export type InsertDatadiveNflfastrMetrics = typeof datadiveNflfastrMetrics.$inferInsert;
+export type DatadiveExpectedFantasyWeek = typeof datadiveExpectedFantasyWeek.$inferSelect;
+export type InsertDatadiveExpectedFantasyWeek = typeof datadiveExpectedFantasyWeek.$inferInsert;
