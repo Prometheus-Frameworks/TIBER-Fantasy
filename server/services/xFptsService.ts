@@ -393,15 +393,36 @@ export async function extractNflfastrMetricsFromSnapshots(
   return { processed: count };
 }
 
+export interface PlayerExpectedFantasyWeek {
+  season: number;
+  week: number;
+  playerId: string;
+  position: string | null;
+  actualPpr: number;
+  xPprV1: number;
+  xfpgoePprV1: number;
+  xPprV2: number;
+  xfpgoePprV2: number;
+  recMultiplier: number;
+  rushMultiplier: number;
+  v2Context: {
+    rzShare: number;
+    yacRatio: number;
+    rushEpaContribution: number;
+    rushSuccessContribution: number;
+  };
+}
+
 /**
  * Get expected fantasy stats for a player across weeks
+ * Returns properly typed v2 response with context debug info
  */
 export async function getPlayerExpectedFantasy(
   playerId: string,
   season: number,
   weekFrom?: number,
   weekTo?: number
-): Promise<any[]> {
+): Promise<PlayerExpectedFantasyWeek[]> {
   let weekFilter = sql.raw('');
   if (weekFrom !== undefined && weekTo !== undefined) {
     weekFilter = sql.raw(`AND week BETWEEN ${weekFrom} AND ${weekTo}`);
@@ -427,7 +448,27 @@ export async function getPlayerExpectedFantasy(
     ORDER BY week
   `);
 
-  return (result as any).rows || [];
+  const rows = (result as any).rows || [];
+  
+  return rows.map((row: any): PlayerExpectedFantasyWeek => ({
+    season: Number(row.season),
+    week: Number(row.week),
+    playerId: row.player_id,
+    position: row.position,
+    actualPpr: Number(row.actual_ppr) || 0,
+    xPprV1: Number(row.x_ppr_v1) || 0,
+    xfpgoePprV1: Number(row.xfpgoe_ppr_v1) || 0,
+    xPprV2: Number(row.x_ppr_v2) || 0,
+    xfpgoePprV2: Number(row.xfpgoe_ppr_v2) || 0,
+    recMultiplier: Number(row.rec_multiplier) || 1,
+    rushMultiplier: Number(row.rush_multiplier) || 1,
+    v2Context: {
+      rzShare: Number(row.rz_share) || 0,
+      yacRatio: Number(row.yac_ratio) || 1,
+      rushEpaContribution: Number(row.rush_epa_ctx) || 0,
+      rushSuccessContribution: Number(row.rush_success_ctx) || 0,
+    },
+  }));
 }
 
 /**
