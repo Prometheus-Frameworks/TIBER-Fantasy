@@ -22,6 +22,11 @@ import {
 import { db } from '../../infra/db';
 import { playerIdentityMap, weeklyStats } from '@shared/schema';
 import { eq, and, isNotNull, sql, desc, gte } from 'drizzle-orm';
+import { 
+  USE_DATADIVE_FORGE, 
+  getDatadiveEligiblePlayers,
+  getCurrentSnapshot 
+} from '../../services/datadiveContext';
 
 /**
  * Query parameters for batch scoring
@@ -143,11 +148,12 @@ class ForgeService implements IForgeService {
 
   /**
    * Fetch player IDs from identity map based on position/limit
-   * ELIGIBILITY RULES (as of v0.2):
-   * 1. Must have at least 1 game played in 2025 (from weekly_stats)
-   * 2. Must be on an active NFL team (not FA)
-   * 3. Ordered by total fantasy points (PPR) to get most relevant players first
-   * 4. Deduplication: If multiple canonical IDs map to same sleeper_id, prefer the one with more data
+   * ELIGIBILITY RULES (as of v0.3):
+   * 1. For 2025+ with USE_DATADIVE_FORGE: Uses Datadive snapshot tables
+   * 2. Must have at least 1 game played in current season
+   * 3. Must be on an active NFL team (not FA)
+   * 4. Ordered by total fantasy points (PPR) to get most relevant players first
+   * 5. Deduplication: If multiple canonical IDs map to same sleeper_id, prefer the one with more data
    */
   private async fetchPlayerIdsForBatch(
     position: ForgePosition | undefined,
@@ -155,6 +161,29 @@ class ForgeService implements IForgeService {
     season: number = 2025
   ): Promise<string[]> {
     try {
+      // For 2025+, use Datadive snapshot if feature flag is enabled
+      if (season >= 2025 && USE_DATADIVE_FORGE) {
+        const snapshot = await getCurrentSnapshot();
+        if (snapshot && snapshot.season === season) {
+          console.log(`[FORGE] Using Datadive snapshot for batch eligibility (snapshot ${snapshot.snapshotId}, week ${snapshot.week})`);
+          
+          const datadivePlayers = await getDatadiveEligiblePlayers(position, limit);
+          if (datadivePlayers.length > 0) {
+            const playerIds = datadivePlayers.map(p => p.canonicalId);
+            console.log(`[FORGE] Found ${playerIds.length} eligible players from Datadive (position=${position ?? 'ALL'})`);
+            
+            if (playerIds.length > 0) {
+              console.log(`[FORGE] Top 5 eligible: ${playerIds.slice(0, 5).join(', ')}`);
+            }
+            
+            return playerIds;
+          }
+          
+          console.log('[FORGE] No players from Datadive, falling back to legacy query');
+        }
+      }
+      
+      // Legacy path: Use weekly_stats directly
       const skillPositions: ForgePosition[] = ['QB', 'RB', 'WR', 'TE'];
       const targetPositions = position ? [position] : skillPositions;
       
@@ -165,7 +194,7 @@ class ForgeService implements IForgeService {
       const seenPlayerNames = new Set<string>();
 
       for (const pos of targetPositions) {
-        // Query: Join identity map with weekly_stats to get only players with 2025 activity
+        // Query: Join identity map with weekly_stats to get only players with activity
         // Group by canonical_id, sum fantasy points, filter by games >= 1
         const playersWithActivity = await db.execute<{
           canonical_id: string;
