@@ -1,0 +1,292 @@
+🛠 AGENT TASK: DATADIVE WEEK SELECTION & TUESDAY AUTO-SNAPSHOT
+
+Goal
+
+Remove all hardcoding of season = 2025 and week = 11 from TIBER Data Lab + Forge integration.
+
+Make the system always use the latest official snapshot by default.
+
+Add a small “auto snapshot” job that, when run on Tuesday, will snapshot the latest completed week (e.g. Week 13 tomorrow).
+
+1) Make getCurrentSnapshot() the Single Source of Truth
+
+File: server/services/datadiveContext.ts
+
+Ensure getCurrentSnapshot() is implemented like this:
+
+import { db } from '../infra/db';
+import { sql } from 'drizzle-orm';
+
+export type SnapshotContext = {
+  snapshotId: number;
+  season: number;
+  week: number;
+};
+
+export async function getCurrentSnapshot(): Promise<SnapshotContext | null> {
+  const res = await db.execute(sql`
+    SELECT id, season, week
+    FROM datadive_snapshot_meta
+    WHERE is_official = TRUE
+    ORDER BY season DESC, week DESC
+    LIMIT 1;
+  `);
+
+  const row = (res as any).rows[0];
+  if (!row) return null;
+
+  return {
+    snapshotId: row.id,
+    season: row.season,
+    week: row.week,
+  };
+}
+
+
+Do not hardcode 2025 or 11 inside this function.
+
+Anywhere else in the backend that needs “current season/week” (Forge, rankings, /api/data-lab/meta/current) must call getCurrentSnapshot().
+
+2) Fix /api/data-lab/meta/current to Use getCurrentSnapshot()
+
+File: server/routes/dataLab.ts
+
+Ensure:
+
+router.get('/meta/current', async (req, res) => {
+  const snapshot = await getCurrentSnapshot();
+  if (!snapshot) {
+    return res.status(404).json({ error: 'No snapshots found' });
+  }
+
+  const { snapshotId, season, week } = snapshot;
+
+  const metaRes = await db.execute(sql`
+    SELECT snapshot_at, data_version
+    FROM datadive_snapshot_meta
+    WHERE id = ${snapshotId}
+    LIMIT 1;
+  `);
+  const meta = (metaRes as any).rows[0];
+
+  // Optionally also compute counts if you want
+  const countsRes = await db.execute(sql`
+    SELECT COUNT(*) AS player_count, COUNT(DISTINCT team_id) AS team_count
+    FROM datadive_snapshot_player_week
+    WHERE season = ${season} AND week = ${week};
+  `);
+  const counts = (countsRes as any).rows[0];
+
+  res.json({
+    currentSeason: season,
+    lastSnappedWeek: week,
+    snapshotAt: meta.snapshot_at,
+    dataVersion: meta.data_version,
+    playerCount: Number(counts.player_count),
+    teamCount: Number(counts.team_count),
+  });
+});
+
+
+No hardcoded week/season here.
+
+3) Make /tiber-data-lab Default to the Snapshot Meta
+
+File: client/src/pages/TiberDataLab.tsx (or equivalent)
+
+Right now, the UI is probably doing:
+
+const [season, setSeason] = useState(2025);
+const [week, setWeek] = useState(11);
+
+
+Change it to:
+
+const [season, setSeason] = useState<number | undefined>(undefined);
+const [week, setWeek] = useState<number | undefined>(undefined);
+
+useEffect(() => {
+  fetch('/api/data-lab/meta/current')
+    .then((r) => r.json())
+    .then((data) => {
+      setSeason(data.currentSeason);
+      setWeek(data.lastSnappedWeek);
+    })
+    .catch(() => {});
+}, []);
+
+
+Also, disable the Search button until both season and week are set:
+
+<button
+  onClick={runSearch}
+  disabled={loading || season == null || week == null}
+>
+  {loading ? 'Loading…' : 'Search'}
+</button>
+
+
+No hardcoded Week 11 anywhere in the component.
+
+4) Remove Any Hardcoded Week in Forge Integration
+
+Search the backend for anything like:
+
+week = 11
+
+DEFAULT_WEEK = 11
+
+const CURRENT_WEEK = 11
+
+In particular, check:
+
+Forge batch eligibility
+
+Forge context fetching
+
+Any “current week” config passed into Forge.
+
+Replace these with calls to getCurrentSnapshot():
+
+const snap = await getCurrentSnapshot();
+if (!snap) throw new Error('No Datadive snapshot available');
+const { season, week } = snap;
+
+// use season/week from snap for all Datadive queries
+
+
+If you need “manual override” for testing:
+
+Add optional query params season/week to those endpoints, but default to getCurrentSnapshot() if not provided.
+
+5) Add “Auto Snapshot Latest Week” Job for Tuesday Mornings
+
+We want a simple function that:
+
+Looks at what weeks are already snapped
+
+Looks at what weeks exist in weekly_stats
+
+If there’s a “latest stats week” that is greater than the last snapped week, create a new snapshot for it.
+
+File: server/services/datadiveAuto.ts
+
+import { db } from '../infra/db';
+import { sql } from 'drizzle-orm';
+import { runWeeklySnapshot } from './datadiveSnapshot';
+
+export async function runAutoWeeklySnapshotForSeason(season: number) {
+  // 1) Last snapped week for this season
+  const snapRes = await db.execute(sql`
+    SELECT COALESCE(MAX(week), 0) AS last_snapped_week
+    FROM datadive_snapshot_meta
+    WHERE season = ${season} AND is_official = TRUE;
+  `);
+  const lastSnappedWeek = Number((snapRes as any).rows[0].last_snapped_week) || 0;
+
+  // 2) Latest week that exists in weekly_stats for this season
+  const statsRes = await db.execute(sql`
+    SELECT COALESCE(MAX(week), 0) AS latest_stats_week
+    FROM weekly_stats
+    WHERE season = ${season};
+  `);
+  const latestStatsWeek = Number((statsRes as any).rows[0].latest_stats_week) || 0;
+
+  if (latestStatsWeek === 0) {
+    throw new Error(`[DATADIVE/AUTO] No weekly_stats rows found for season ${season}`);
+  }
+
+  if (latestStatsWeek <= lastSnappedWeek) {
+    console.log(`[DATADIVE/AUTO] No new weeks to snapshot. last_snapped_week=${lastSnappedWeek}, latest_stats_week=${latestStatsWeek}`);
+    return null;
+  }
+
+  const targetWeek = latestStatsWeek;
+
+  console.log(`[DATADIVE/AUTO] Creating snapshot for season ${season}, week ${targetWeek}`);
+  const snapshotId = await runWeeklySnapshot(season, targetWeek, 'auto');
+  console.log(`[DATADIVE/AUTO] Snapshot complete (id=${snapshotId})`);
+  return { season, week: targetWeek, snapshotId };
+}
+
+5.1 Admin endpoint for Tuesday mornings
+
+File: server/routes/dataLabAdmin.ts (or fold into existing admin router)
+
+import { Router } from 'express';
+import { runAutoWeeklySnapshotForSeason } from '../services/datadiveAuto';
+
+const router = Router();
+
+// POST /api/data-lab/admin/auto-run
+router.post('/auto-run', async (req, res) => {
+  const { season } = req.body;
+  const targetSeason = season ?? new Date().getFullYear();
+
+  try {
+    const result = await runAutoWeeklySnapshotForSeason(targetSeason);
+    if (!result) {
+      return res.json({ status: 'NO_NEW_WEEK', message: 'No newer week found in weekly_stats' });
+    }
+    res.json({ status: 'SNAPSHOT_CREATED', ...result });
+  } catch (err: any) {
+    console.error('[DATADIVE/AUTO] error', err);
+    res.status(500).json({ status: 'ERROR', message: err.message ?? String(err) });
+  }
+});
+
+export default router;
+
+
+Mount as:
+
+app.use('/api/data-lab/admin', dataLabAdminRouter);
+
+
+Tuesday Morning Routine:
+
+At some time after all Week 13 games are in weekly_stats, call:
+
+POST /api/data-lab/admin/auto-run
+{
+  "season": 2025
+}
+
+
+This will:
+
+Look at the latest week present in weekly_stats for 2025 (expected = 13).
+
+Compare to datadive_snapshot_meta’s last snapped week.
+
+If 13 > 11, automatically create Week 13 snapshot.
+
+getCurrentSnapshot() + /meta/current + /tiber-data-lab will now all show Week 13.
+
+Later you can hook this endpoint into a cron/scheduler; for now you can just hit it manually Tuesday morning and trust it to pick the right week.
+
+6) Acceptance Checklist
+
+When this task is done, verify:
+
+SELECT season, week FROM datadive_snapshot_meta ORDER BY season DESC, week DESC;
+
+Shows 2025 Week 13 (or whatever the latest is) with is_official = TRUE.
+
+GET /api/data-lab/meta/current
+
+Returns lastSnappedWeek = 13 (or latest week) and correct player/team counts.
+
+/tiber-data-lab
+
+Default Season/Week fields match /meta/current
+
+No hardcoded 2025/11 in the code.
+
+Forge logs:
+
+Show [FORGE] Using Datadive snapshot for batch eligibility (snapshot X, week 13) (or whatever the latest week is).
+
+POST /api/data-lab/admin/auto-run:
+
+When called after Week 13 is in weekly_stats, returns SNAPSHOT_CREATED and a new snapshot_meta row appears.

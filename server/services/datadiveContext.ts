@@ -29,6 +29,12 @@ export const USE_DATADIVE_FORGE = process.env.USE_DATADIVE_FORGE !== 'false';
 // Types
 // ========================================
 
+export type SnapshotContext = {
+  snapshotId: number;
+  season: number;
+  week: number;
+};
+
 export interface DatadiveSnapshot {
   snapshotId: number;
   season: number;

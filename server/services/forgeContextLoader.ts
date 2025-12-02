@@ -9,6 +9,7 @@ import { forgeService } from '../modules/forge/forgeService';
 import { getPlayerSoS } from '../modules/forge/sosService';
 import type { ForgeScore, PlayerPosition } from '../modules/forge/types';
 import type { TrimmedForgeContext } from './tiberPromptBuilder';
+import { getCurrentSnapshot } from './datadiveContext';
 
 // ========================================
 // ForgeContext Types
@@ -81,8 +82,17 @@ function applySosMultiplier(alpha: number, sosRos: number): { norm: number; mult
 
 export async function loadForgeContext(input: ForgeContextInput): Promise<ForgeContext> {
   const { playerId, position, rankingsLimit = 10 } = input;
-  const season = 2025;
-  const asOfWeek = 17;
+  
+  // Get current snapshot for season/week - no hardcoding
+  const snapshot = await getCurrentSnapshot();
+  if (!snapshot) {
+    console.log('[ForgeContextLoader] No snapshot available, returning empty context');
+    return {};
+  }
+  
+  const season = snapshot.season;
+  const asOfWeek = snapshot.week;
+  console.log(`[ForgeContextLoader] Using snapshot: season ${season}, week ${asOfWeek}`);
 
   const result: ForgeContext = {};
 

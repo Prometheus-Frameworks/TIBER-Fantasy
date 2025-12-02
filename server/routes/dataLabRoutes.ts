@@ -10,6 +10,7 @@ import {
   type DatadiveSnapshotPlayerSeason,
 } from "@shared/schema";
 import { datadiveSnapshotService } from "../services/datadiveSnapshot";
+import { runAutoWeeklySnapshotForSeason, getAutoSnapshotStatus } from "../services/datadiveAuto";
 
 const router = Router();
 
@@ -390,6 +391,57 @@ router.get("/health", async (req: Request, res: Response) => {
     res.status(500).json({
       status: "error",
       error: error.message,
+    });
+  }
+});
+
+router.post("/admin/auto-run", async (req: Request, res: Response) => {
+  try {
+    const { season } = req.body;
+    const targetSeason = season ?? new Date().getFullYear();
+
+    console.log(`🚀 [DataLab Admin] Auto-run triggered for season ${targetSeason}`);
+
+    const result = await runAutoWeeklySnapshotForSeason(targetSeason);
+    
+    if (!result) {
+      return res.json({
+        status: 'NO_NEW_WEEK',
+        message: 'No newer week found in weekly_stats',
+        season: targetSeason,
+      });
+    }
+    
+    res.json({
+      status: 'SNAPSHOT_CREATED',
+      message: `Snapshot ${result.snapshotId} created for Week ${result.week}`,
+      ...result,
+    });
+  } catch (error: any) {
+    console.error("[DataLab Admin] Auto-run failed:", error);
+    res.status(500).json({
+      status: 'ERROR',
+      message: error.message ?? String(error),
+    });
+  }
+});
+
+router.get("/admin/auto-status", async (req: Request, res: Response) => {
+  try {
+    const { season } = req.query;
+    const targetSeason = season ? Number(season) : new Date().getFullYear();
+
+    const status = await getAutoSnapshotStatus(targetSeason);
+    
+    res.json({
+      status: 'OK',
+      ...status,
+    });
+  } catch (error: any) {
+    console.error("[DataLab Admin] Auto-status failed:", error);
+    res.status(500).json({
+      status: 'ERROR',
+      message: error.message ?? String(error),
     });
   }
 });

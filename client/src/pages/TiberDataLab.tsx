@@ -270,8 +270,8 @@ function PlayerDrawer({
 export default function TiberDataLab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [position, setPosition] = useState('ALL');
-  const [season, setSeason] = useState<number>(2024);
-  const [week, setWeek] = useState<number>(1);
+  const [season, setSeason] = useState<number | undefined>(undefined);
+  const [week, setWeek] = useState<number | undefined>(undefined);
   const [minRoutes, setMinRoutes] = useState<string>('');
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerWeekData | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -286,10 +286,13 @@ export default function TiberDataLab() {
       setWeek(metaData.week);
     }
   }, [metaData]);
+  
+  // Compute whether search is ready
+  const searchReady = season != null && week != null && season > 0 && week > 0;
 
   const searchParams = new URLSearchParams({
-    season: String(season),
-    week: String(week),
+    season: String(season ?? ''),
+    week: String(week ?? ''),
     ...(searchQuery && { q: searchQuery }),
     ...(position !== 'ALL' && { position }),
     ...(minRoutes && { min_routes: minRoutes }),
@@ -310,7 +313,7 @@ export default function TiberDataLab() {
       }
       return res.json();
     },
-    enabled: season > 0 && week > 0,
+    enabled: searchReady,
   });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -422,9 +425,10 @@ export default function TiberDataLab() {
                 <Label className="text-gray-400 text-sm">Season</Label>
                 <Input
                   type="number"
-                  value={season}
-                  onChange={(e) => setSeason(Number(e.target.value))}
+                  value={season ?? ''}
+                  onChange={(e) => setSeason(e.target.value ? Number(e.target.value) : undefined)}
                   className="bg-[#0a0e1a] border-gray-600 text-white"
+                  placeholder="..."
                   data-testid="input-season"
                 />
               </div>
@@ -433,9 +437,10 @@ export default function TiberDataLab() {
                 <Label className="text-gray-400 text-sm">Week</Label>
                 <Input
                   type="number"
-                  value={week}
-                  onChange={(e) => setWeek(Number(e.target.value))}
+                  value={week ?? ''}
+                  onChange={(e) => setWeek(e.target.value ? Number(e.target.value) : undefined)}
                   className="bg-[#0a0e1a] border-gray-600 text-white"
+                  placeholder="..."
                   min={1}
                   max={18}
                   data-testid="input-week"
@@ -454,9 +459,14 @@ export default function TiberDataLab() {
                 />
               </div>
 
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700" data-testid="button-search">
+              <Button 
+                type="submit" 
+                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" 
+                disabled={searchLoading || !searchReady}
+                data-testid="button-search"
+              >
                 <Search className="h-4 w-4 mr-2" />
-                Search
+                {searchLoading ? 'Loading...' : 'Search'}
               </Button>
             </form>
           </CardContent>
