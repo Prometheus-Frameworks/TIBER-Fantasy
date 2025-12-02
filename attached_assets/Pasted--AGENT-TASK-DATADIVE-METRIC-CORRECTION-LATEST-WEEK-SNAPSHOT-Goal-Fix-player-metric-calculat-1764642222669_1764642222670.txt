@@ -1,0 +1,204 @@
+🛠 AGENT TASK: DATADIVE – METRIC CORRECTION & LATEST WEEK SNAPSHOT
+
+Goal
+
+Fix player metric calculations so that:
+
+PPR per game is accurate and clearly labeled.
+
+No core metrics in the TIBER Data Lab drawer appear as “empty” when they should be 0.
+
+Ensure Datadive is using the latest available week (e.g. Week 12 / 13) as the current snapshot.
+
+1) Correct Season PPR Per Game (PPG) Calculations
+
+Problem:
+The TIBER Data Lab drawer for players (e.g. Nico Collins) reports unrealistic PPR PPG (e.g. 25.5), and some fields look empty.
+
+Fix:
+
+Update season snapshot aggregation (datadive_snapshot_player_season creation):
+
+In the aggregation query that builds datadive_snapshot_player_season from datadive_player_week_staging:
+
+Add explicit fields:
+
+SUM(fp_ppr)      AS fp_ppr_total,
+SUM(fp_standard) AS fp_standard_total,
+SUM(fp_half_ppr) AS fp_half_ppr_total
+
+
+Define games_played as:
+
+COUNT(*) FILTER (WHERE snaps > 0 OR routes_run > 0) AS games_played
+
+
+(Do not hardcode it to 1.)
+
+Add a per-game metric:
+
+CASE
+  WHEN COUNT(*) FILTER (WHERE snaps > 0 OR routes_run > 0) > 0
+  THEN SUM(fp_ppr) / COUNT(*) FILTER (WHERE snaps > 0 OR routes_run > 0)
+  ELSE 0
+END AS fp_ppr_ppg
+
+
+Make sure these fields exist as columns in datadive_snapshot_player_season (add them via a migration if needed).
+
+Update Datadive → Forge/Tiber mapping:
+
+In server/services/datadiveContext.ts, in getSnapshotSeasonStats() / toForgeSeasonStats():
+
+Map the above fields to clear names, e.g.:
+
+pprTotal: Number(row.fp_ppr_total ?? 0),
+pprPerGame: Number(row.fp_ppr_ppg ?? 0),
+
+
+Do not reuse single-week fp_ppr and label it as PPG.
+
+Update UI drawer to use correct fields:
+
+In /tiber-data-lab player detail drawer:
+
+Show two separate lines:
+
+“This Week PPR: {weekFpPpr}”
+
+From the selected snapshot_player_week.fp_ppr
+
+“Season PPR per game: {seasonPprPerGame}”
+
+From the season stats endpoint (use the new fp_ppr_ppg)
+
+Ensure labels match the data: don’t call a total “PPG”.
+
+2) Remove Empty Fields by Normalizing NULL → 0
+
+Problem:
+Some metrics appear empty in the sidebar, even for players that clearly have stats.
+
+Fix:
+
+In staging inserts (datadive_player_week_staging):
+
+Confirm all core numeric fields are wrapped in COALESCE(..., 0):
+
+COALESCE(ws.routes_run, 0)      AS routes_run,
+COALESCE(ws.targets, 0)         AS targets,
+COALESCE(ws.receptions, 0)      AS receptions,
+COALESCE(ws.receiving_yards, 0) AS receiving_yards,
+COALESCE(ws.air_yards, 0)       AS air_yards,
+COALESCE(ws.a_dot, 0)           AS a_dot,
+COALESCE(ws.tprr, 0)            AS tprr,
+COALESCE(ws.yprr, 0)            AS yprr,
+COALESCE(ws.carries, 0)         AS carries,
+COALESCE(ws.rushing_yards, 0)   AS rushing_yards,
+COALESCE(ws.rush_tds, 0)        AS rush_tds,
+COALESCE(ws.epa_per_play, 0)    AS epa_per_play,
+COALESCE(ws.success_rate, 0)    AS success_rate,
+COALESCE(ws.snap_share, 0)      AS snap_share,
+COALESCE(ws.snaps, 0)           AS snaps,
+COALESCE(ws.fp_standard, 0)     AS fp_standard,
+COALESCE(ws.fp_half_ppr, 0)     AS fp_half_ppr,
+COALESCE(ws.fp_ppr, 0)          AS fp_ppr
+
+
+Rebuild both staging and snapshot for the latest week (Week 11, and Week 12/13 once snapshots are created).
+
+Add a null-check validation rule to the snapshot job:
+
+After inserting into datadive_snapshot_player_week, run:
+
+SELECT
+  COUNT(*) AS total_rows,
+  COUNT(*) FILTER (WHERE fp_ppr IS NULL) AS null_fp_ppr
+FROM datadive_snapshot_player_week
+WHERE season = $season AND week = $week;
+
+
+If any core metric (fp_ppr, routes_run, targets, etc.) has NULLs, abort the snapshot and log an error.
+
+UI behavior:
+
+In /tiber-data-lab, for the drawer:
+
+If value is null or undefined by the time it reaches React, show:
+
+0 for core stats; or
+
+N/A if it truly doesn’t apply.
+
+Do not leave blank cells for meaningful stats.
+
+3) Ensure Latest Week Snapshot is Used (Week 12+/13)
+
+Problem:
+The Data Lab view still appears to reference Week 11, and Week 12 is not populated despite NFL being ahead.
+
+Fix:
+
+Confirm snapshots exist for the latest weeks:
+
+SELECT season, week, is_official, snapshot_at
+FROM datadive_snapshot_meta
+ORDER BY season DESC, week DESC;
+
+
+If only Week 11 exists, create snapshots for Week 12 (and later Week 13) using:
+
+POST /api/data-lab/admin/run or
+
+POST /api/data-lab/admin/auto-run (if implemented per previous task).
+
+Verify getCurrentSnapshot() is correct:
+
+Must select latest official snapshot:
+
+SELECT id, season, week
+FROM datadive_snapshot_meta
+WHERE is_official = TRUE
+ORDER BY season DESC, week DESC
+LIMIT 1;
+
+
+No hardcoded week or season values.
+
+Ensure /api/data-lab/meta/current uses getCurrentSnapshot():
+
+The response should show the latest (season, week) from datadive_snapshot_meta.
+
+/tiber-data-lab should use currentSeason and lastSnappedWeek to set its default filters (no hardcoded 11).
+
+Manual check after changes:
+
+Confirm that:
+
+/api/data-lab/meta/current returns the latest week.
+
+/tiber-data-lab defaults to that week.
+
+Nico Collins and other players show Week 12 (or Week 13) stats when that week exists in weekly_stats.
+
+4) Acceptance Criteria
+
+When this task is complete, all of the following should be true:
+
+For a test player (e.g. Nico Collins):
+
+The drawer shows:
+
+A realistic “This Week PPR” value for the selected week.
+
+A realistic “Season PPR per game” value based on actual games played.
+
+No obviously inflated PPR PPG like 25.5 unless that is truly correct.
+
+No empty metric cells for core fields in the sidebar; they should display 0 or N/A.
+
+/api/data-lab/meta/current and /tiber-data-lab both agree on the latest snapshot week (Week 12/13 once snapshot is created).
+
+datadive_snapshot_player_season has non-null fp_ppr_total and fp_ppr_ppg for players with games played.
+
+Snapshot job aborts if any core metrics stay NULL after staging.

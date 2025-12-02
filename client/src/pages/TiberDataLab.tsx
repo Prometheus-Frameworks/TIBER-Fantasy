@@ -12,7 +12,8 @@ import {
   BarChart3,
   Activity,
   X,
-  MessageSquare
+  MessageSquare,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -276,19 +277,19 @@ export default function TiberDataLab() {
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerWeekData | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const { data: metaData, isLoading: metaLoading } = useQuery<SnapshotMeta>({
+  const { data: metaData, isLoading: metaLoading, isError: metaError } = useQuery<SnapshotMeta>({
     queryKey: ['/api/data-lab/meta/current'],
   });
 
   useEffect(() => {
-    if (metaData) {
+    if (metaData && metaData.season && metaData.week) {
       setSeason(metaData.season);
       setWeek(metaData.week);
     }
   }, [metaData]);
   
-  // Compute whether search is ready
-  const searchReady = season != null && week != null && season > 0 && week > 0;
+  // Compute whether search is ready - only true if meta loaded successfully AND values are valid
+  const searchReady = !metaError && season != null && week != null && season > 0 && week > 0;
 
   const searchParams = new URLSearchParams({
     season: String(season ?? ''),
@@ -372,6 +373,15 @@ export default function TiberDataLab() {
                 <span className="text-gray-500 text-sm">
                   {new Date(metaData.snapshotAt).toLocaleString()}
                 </span>
+              </div>
+            </CardContent>
+          </Card>
+        ) : metaError ? (
+          <Card className="bg-[#141824] border-red-700 mb-6" data-testid="card-snapshot-error">
+            <CardContent className="p-4">
+              <div className="text-red-400 text-center flex items-center justify-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                Failed to load snapshot data. Search is disabled until snapshot is available.
               </div>
             </CardContent>
           </Card>

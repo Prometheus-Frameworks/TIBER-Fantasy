@@ -16,10 +16,53 @@ export interface AutoSnapshotResult {
   snapshotId: number;
 }
 
+const MIN_ROWS_FOR_SNAPSHOT = 200;
+const MIN_TEAMS_FOR_SNAPSHOT = 28;
+
+export interface DatasetValidation {
+  rowCount: number;
+  teamCount: number;
+  nullIdCount: number;
+  isValid: boolean;
+  reason?: string;
+}
+
+/**
+ * Validate that a week has enough data to be snapshotted.
+ * Checks: min 200 rows, at least 28 teams, no null player IDs.
+ */
+async function validateWeekData(season: number, week: number): Promise<DatasetValidation> {
+  const validationRes = await db.execute(sql`
+    SELECT 
+      COUNT(*) AS row_count,
+      COUNT(DISTINCT team) AS team_count,
+      COUNT(*) FILTER (WHERE player_id IS NULL) AS null_id_count
+    FROM weekly_stats
+    WHERE season = ${season} AND week = ${week};
+  `);
+  
+  const row = (validationRes as any).rows[0];
+  const rowCount = Number(row?.row_count) || 0;
+  const teamCount = Number(row?.team_count) || 0;
+  const nullIdCount = Number(row?.null_id_count) || 0;
+  
+  if (rowCount < MIN_ROWS_FOR_SNAPSHOT) {
+    return { rowCount, teamCount, nullIdCount, isValid: false, reason: `Row count ${rowCount} < ${MIN_ROWS_FOR_SNAPSHOT}` };
+  }
+  if (teamCount < MIN_TEAMS_FOR_SNAPSHOT) {
+    return { rowCount, teamCount, nullIdCount, isValid: false, reason: `Team count ${teamCount} < ${MIN_TEAMS_FOR_SNAPSHOT}` };
+  }
+  if (nullIdCount > 0) {
+    return { rowCount, teamCount, nullIdCount, isValid: false, reason: `Found ${nullIdCount} rows with null player_id` };
+  }
+  
+  return { rowCount, teamCount, nullIdCount, isValid: true };
+}
+
 /**
  * Run auto weekly snapshot for a given season.
  * Looks at the latest snapped week and the latest week in weekly_stats.
- * If there's a newer week in weekly_stats, creates a snapshot for it.
+ * If there's a newer week in weekly_stats AND it passes validation, creates a snapshot for it.
  * 
  * @param season The NFL season year (e.g., 2025)
  * @returns The snapshot result if a new snapshot was created, null if no new week found
@@ -53,6 +96,14 @@ export async function runAutoWeeklySnapshotForSeason(season: number): Promise<Au
   }
   
   const targetWeek = latestStatsWeek;
+  
+  // Validate dataset completeness before snapshotting
+  const validation = await validateWeekData(season, targetWeek);
+  console.log(`[DATADIVE/AUTO] Week ${targetWeek} validation: rows=${validation.rowCount}, teams=${validation.teamCount}, nullIds=${validation.nullIdCount}`);
+  
+  if (!validation.isValid) {
+    throw new Error(`[DATADIVE/AUTO] Week ${targetWeek} failed validation: ${validation.reason}`);
+  }
   
   console.log(`[DATADIVE/AUTO] Creating snapshot for season ${season}, week ${targetWeek}`);
   const result = await datadiveSnapshotService.runWeeklySnapshot(
