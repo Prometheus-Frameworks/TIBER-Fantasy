@@ -86,6 +86,8 @@ interface SearchResponse {
   data: PlayerWeekData[];
 }
 
+type PerformanceTag = "RISER" | "FALLER" | "NEUTRAL" | null;
+
 interface AggregatedPlayerData {
   playerId: string;
   playerName: string;
@@ -116,6 +118,9 @@ interface AggregatedPlayerData {
   fptsStdPerGame: number;
   fptsHalfPerGame: number;
   fptsPprPerGame: number;
+  xPprPerGame: number;
+  xFPGoePprPerGame: number;
+  performanceTag: PerformanceTag;
 }
 
 interface AggResponse {
@@ -369,6 +374,7 @@ export default function TiberDataLab() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [fantasyMode, setFantasyMode] = useState(false);
+  const [performanceFilter, setPerformanceFilter] = useState<'ALL' | 'RISER' | 'FALLER' | 'NEUTRAL'>('ALL');
 
   const { data: metaData, isLoading: metaLoading, isError: metaError } = useQuery<SnapshotMeta>({
     queryKey: ['/api/data-lab/meta/current'],
@@ -424,6 +430,10 @@ export default function TiberDataLab() {
       params.set('weekTo', String(weekTo ?? ''));
     }
     
+    if (performanceFilter !== 'ALL' && (viewMode === 'season' || viewMode === 'range')) {
+      params.set('performanceFilter', performanceFilter);
+    }
+    
     return params;
   };
 
@@ -466,7 +476,7 @@ export default function TiberDataLab() {
     isLoading: aggLoading,
     refetch: refetchAgg
   } = useQuery<AggResponse>({
-    queryKey: ['/api/data-lab/usage-agg', season, week, weekFrom, weekTo, position, viewMode],
+    queryKey: ['/api/data-lab/usage-agg', season, week, weekFrom, weekTo, position, viewMode, performanceFilter],
     queryFn: async () => {
       const res = await fetch(`/api/data-lab/usage-agg?${buildAggParams().toString()}`);
       if (!res.ok) {
@@ -669,6 +679,23 @@ export default function TiberDataLab() {
                 </Select>
               </div>
 
+              {(viewMode === 'season' || viewMode === 'range') && !fantasyMode && (
+                <div className="w-32">
+                  <Label className="text-gray-400 text-sm">Performance</Label>
+                  <Select value={performanceFilter} onValueChange={(v) => setPerformanceFilter(v as any)}>
+                    <SelectTrigger className="bg-[#0a0e1a] border-gray-600 text-white" data-testid="select-performance">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#141824] border-gray-600">
+                      <SelectItem value="ALL" className="text-white hover:bg-gray-700">All</SelectItem>
+                      <SelectItem value="RISER" className="text-green-400 hover:bg-gray-700">Risers</SelectItem>
+                      <SelectItem value="FALLER" className="text-red-400 hover:bg-gray-700">Fallers</SelectItem>
+                      <SelectItem value="NEUTRAL" className="text-gray-400 hover:bg-gray-700">Neutral</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="w-24">
                 <Label className="text-gray-400 text-sm">Season</Label>
                 <Input
@@ -863,8 +890,9 @@ export default function TiberDataLab() {
                         <th className="px-4 py-3 text-center">YPRR</th>
                         <th className="px-4 py-3 text-center">aDOT</th>
                         <th className="px-4 py-3 text-center">EPA/Tgt</th>
-                        <th className="px-4 py-3 text-center">Succ%</th>
                         <th className="px-4 py-3 text-center">PPR/G</th>
+                        <th className="px-4 py-3 text-center">xPPR/G</th>
+                        <th className="px-4 py-3 text-center">xFPGoe</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-700">
@@ -874,7 +902,13 @@ export default function TiberDataLab() {
                           className="hover:bg-[#1a1f2e] transition-colors"
                           data-testid={`row-agg-${player.playerId}`}
                         >
-                          <td className="px-4 py-3 font-medium text-white">{player.playerName}</td>
+                          <td className="px-4 py-3 font-medium text-white">
+                            <div className="flex items-center gap-2">
+                              {player.playerName}
+                              {player.performanceTag === 'RISER' && <Badge className="bg-green-600/20 text-green-400 text-[10px] px-1.5" data-testid={`tag-${player.playerId}`}>↑</Badge>}
+                              {player.performanceTag === 'FALLER' && <Badge className="bg-red-600/20 text-red-400 text-[10px] px-1.5" data-testid={`tag-${player.playerId}`}>↓</Badge>}
+                            </div>
+                          </td>
                           <td className="px-4 py-3 text-center text-gray-400">{player.teamId || '-'}</td>
                           <td className="px-4 py-3 text-center"><PositionBadge position={player.position} /></td>
                           <td className="px-4 py-3 text-center font-mono text-gray-300">{player.gamesPlayed}</td>
@@ -886,8 +920,14 @@ export default function TiberDataLab() {
                           <td className="px-4 py-3 text-center font-mono text-green-400">{formatStat(player.yprr, 2)}</td>
                           <td className="px-4 py-3 text-center font-mono text-gray-300">{formatStat(player.avgAdot, 1)}</td>
                           <td className="px-4 py-3 text-center font-mono text-yellow-400">{formatStat(player.avgEpaPerTarget, 2)}</td>
-                          <td className="px-4 py-3 text-center font-mono text-gray-300">{formatPct(player.avgSuccessRate)}</td>
                           <td className="px-4 py-3 text-center font-mono text-purple-400 font-semibold">{formatStat(player.fptsPprPerGame, 1)}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-400">{formatStat(player.xPprPerGame, 1)}</td>
+                          <td className={`px-4 py-3 text-center font-mono font-semibold ${
+                            player.xFPGoePprPerGame > 0 ? 'text-green-400' : 
+                            player.xFPGoePprPerGame < 0 ? 'text-red-400' : 'text-gray-400'
+                          }`} data-testid={`xfpgoe-${player.playerId}`}>
+                            {player.xFPGoePprPerGame > 0 ? '+' : ''}{formatStat(player.xFPGoePprPerGame, 1)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
