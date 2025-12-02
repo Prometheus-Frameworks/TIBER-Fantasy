@@ -641,7 +641,7 @@ router.get("/usage-agg", async (req: Request, res: Response) => {
         totalFptsStd: Number(row.total_fpts_std) || 0,
         totalFptsHalf: Number(row.total_fpts_half) || 0,
         totalFptsPpr: Number(row.total_fpts_ppr) || 0,
-        tprr: Number(row.tprr) || 0,
+        avgTprr: Number(row.tprr) || 0,
         yprr: Number(row.yprr) || 0,
         routesPerGame: Number(row.routes_per_game) || 0,
         targetsPerGame: Number(row.targets_per_game) || 0,
