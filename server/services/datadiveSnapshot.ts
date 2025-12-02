@@ -66,6 +66,9 @@ export class DatadiveSnapshotService {
       );
 
       await this.copyToSnapshotPlayerWeek(snapshotId, season, week);
+      
+      // Validate core metrics aren't NULL after snapshot copy
+      await this.validateSnapshotCoreMetrics(snapshotId, season, week);
 
       await this.buildSeasonAggregates(snapshotId, season, week);
 
@@ -417,6 +420,49 @@ export class DatadiveSnapshotService {
     console.log(`📋 [DataDive] Copied ${snapshotRows.length} rows to snapshot`);
   }
 
+  private async validateSnapshotCoreMetrics(
+    snapshotId: number,
+    season: number,
+    week: number
+  ): Promise<void> {
+    console.log(`🔍 [DataDive] Validating core metrics for snapshot ${snapshotId}...`);
+    
+    const validation = await db.execute(sql`
+      SELECT 
+        COUNT(*) AS total_rows,
+        COUNT(*) FILTER (WHERE fpts_ppr IS NULL) AS null_fpts_ppr,
+        COUNT(*) FILTER (WHERE routes IS NULL) AS null_routes,
+        COUNT(*) FILTER (WHERE targets IS NULL) AS null_targets,
+        COUNT(*) FILTER (WHERE snaps IS NULL) AS null_snaps,
+        COUNT(*) FILTER (WHERE receptions IS NULL) AS null_receptions
+      FROM datadive_snapshot_player_week
+      WHERE snapshot_id = ${snapshotId} AND season = ${season} AND week = ${week};
+    `);
+    
+    const row = (validation as any).rows[0];
+    const totalRows = Number(row?.total_rows) || 0;
+    const nullFptsPpr = Number(row?.null_fpts_ppr) || 0;
+    const nullRoutes = Number(row?.null_routes) || 0;
+    const nullTargets = Number(row?.null_targets) || 0;
+    const nullSnaps = Number(row?.null_snaps) || 0;
+    const nullReceptions = Number(row?.null_receptions) || 0;
+    
+    console.log(`📊 [DataDive] Core metric validation: ${totalRows} rows, nulls: fptsPpr=${nullFptsPpr}, routes=${nullRoutes}, targets=${nullTargets}, snaps=${nullSnaps}, receptions=${nullReceptions}`);
+    
+    const errors: string[] = [];
+    if (nullFptsPpr > 0) errors.push(`${nullFptsPpr} rows with NULL fpts_ppr`);
+    if (nullRoutes > 0) errors.push(`${nullRoutes} rows with NULL routes`);
+    if (nullTargets > 0) errors.push(`${nullTargets} rows with NULL targets`);
+    if (nullSnaps > 0) errors.push(`${nullSnaps} rows with NULL snaps`);
+    if (nullReceptions > 0) errors.push(`${nullReceptions} rows with NULL receptions`);
+    
+    if (errors.length > 0) {
+      console.warn(`⚠️ [DataDive] Core metric nulls detected (continuing): ${errors.join(', ')}`);
+    } else {
+      console.log(`✅ [DataDive] All core metrics validated - no NULLs`);
+    }
+  }
+
   private async buildSeasonAggregates(
     snapshotId: number,
     season: number,
@@ -470,9 +516,12 @@ export class DatadiveSnapshotService {
 
     for (const row of allWeeklyData) {
       const existing = playerAggregates.get(row.playerId);
+      
+      // Only count as a game played if player had snaps or routes (actually participated)
+      const countAsGame = (row.snaps || 0) > 0 || (row.routes || 0) > 0;
 
       if (existing) {
-        existing.gamesPlayed++;
+        if (countAsGame) existing.gamesPlayed++;
         existing.totalSnaps += row.snaps || 0;
         if (row.snapShare) existing.snapShares.push(row.snapShare);
         existing.totalRoutes += row.routes || 0;
@@ -503,7 +552,7 @@ export class DatadiveSnapshotService {
           playerName: row.playerName,
           teamId: row.teamId,
           position: row.position,
-          gamesPlayed: 1,
+          gamesPlayed: countAsGame ? 1 : 0,
           totalSnaps: row.snaps || 0,
           snapShares: row.snapShare ? [row.snapShare] : [],
           totalRoutes: row.routes || 0,
