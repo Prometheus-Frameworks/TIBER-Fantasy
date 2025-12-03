@@ -177,6 +177,39 @@ interface FantasyLogResponse {
   data: FantasyLogData[];
 }
 
+interface FantasyAggData {
+  playerId: string;
+  playerName: string;
+  teamId: string | null;
+  position: string | null;
+  gamesPlayed: number;
+  totalTargets: number;
+  totalReceptions: number;
+  totalRecYards: number;
+  totalRecTds: number;
+  totalRushAttempts: number;
+  totalRushYards: number;
+  totalRushTds: number;
+  totalFptsPpr: number;
+  totalRoutes: number;
+  pprPerGame: number;
+  xPprPerGame: number;
+  xFpgoePerGame: number;
+}
+
+interface FantasyAggResponse {
+  mode: 'fantasy-agg';
+  season: number;
+  weekMode: 'season' | 'range';
+  weekRange: { from: number; to: number };
+  modeLabel: string;
+  position: string;
+  count: number;
+  data: FantasyAggData[];
+}
+
+type FantasyResponse = FantasyLogResponse | FantasyAggResponse;
+
 type ViewMode = 'week' | 'season' | 'range';
 
 const POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE'];
@@ -671,6 +704,7 @@ export default function TiberDataLab() {
   const buildFantasyParams = () => {
     const params = new URLSearchParams({
       season: String(season ?? ''),
+      weekMode: viewMode,
       ...(position !== 'ALL' && { position }),
       limit: '50',
     });
@@ -723,7 +757,7 @@ export default function TiberDataLab() {
     data: fantasyData,
     isLoading: fantasyLoading,
     refetch: refetchFantasy
-  } = useQuery<FantasyLogResponse>({
+  } = useQuery<FantasyResponse>({
     queryKey: ['/api/data-lab/fantasy-logs', season, week, weekFrom, weekTo, position, viewMode],
     queryFn: async () => {
       const res = await fetch(`/api/data-lab/fantasy-logs?${buildFantasyParams().toString()}`);
@@ -735,6 +769,9 @@ export default function TiberDataLab() {
     },
     enabled: searchReady && fantasyMode,
   });
+  
+  // Helper to check if response is aggregated fantasy data
+  const isFantasyAgg = fantasyData?.mode === 'fantasy-agg';
 
   const isLoading = searchLoading || aggLoading || fantasyLoading;
 
@@ -1036,9 +1073,9 @@ export default function TiberDataLab() {
                 }
               </span>
             </div>
-            {aggData?.modeLabel && !fantasyMode && viewMode !== 'week' && (
+            {((aggData?.modeLabel && !fantasyMode) || (isFantasyAgg && (fantasyData as FantasyAggResponse)?.modeLabel)) && viewMode !== 'week' && (
               <CardDescription className="text-gray-500">
-                {aggData.modeLabel}
+                {fantasyMode && isFantasyAgg ? (fantasyData as FantasyAggResponse)?.modeLabel : aggData?.modeLabel}
               </CardDescription>
             )}
           </CardHeader>
@@ -1054,7 +1091,61 @@ export default function TiberDataLab() {
                 <div className="p-8 text-center text-gray-500">
                   No fantasy data found
                 </div>
+              ) : isFantasyAgg ? (
+                // Aggregated Fantasy Table for Season Total / Range mode
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm" data-testid="table-fantasy-agg">
+                    <thead className="bg-[#0a0e1a] text-gray-400 uppercase text-xs">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Player</th>
+                        <th className="px-4 py-3 text-center">Team</th>
+                        <th className="px-4 py-3 text-center">Pos</th>
+                        <th className="px-4 py-3 text-center">GP</th>
+                        <th className="px-4 py-3 text-center">PPR/G</th>
+                        <th className="px-4 py-3 text-center">xPPR/G</th>
+                        <th className="px-4 py-3 text-center">Δ PPR/G</th>
+                        <th className="px-4 py-3 text-center">Tgt</th>
+                        <th className="px-4 py-3 text-center">Rec</th>
+                        <th className="px-4 py-3 text-center">RecYds</th>
+                        <th className="px-4 py-3 text-center">RecTD</th>
+                        <th className="px-4 py-3 text-center">Rush</th>
+                        <th className="px-4 py-3 text-center">RshYds</th>
+                        <th className="px-4 py-3 text-center">RshTD</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-700">
+                      {(fantasyData as FantasyAggResponse)?.data.map((row) => (
+                        <tr 
+                          key={row.playerId}
+                          className="hover:bg-[#1a1f2e] transition-colors"
+                          data-testid={`row-fantasy-agg-${row.playerId}`}
+                        >
+                          <td className="px-4 py-3 font-medium text-white">{row.playerName}</td>
+                          <td className="px-4 py-3 text-center text-gray-400">{row.teamId || '-'}</td>
+                          <td className="px-4 py-3 text-center"><PositionBadge position={row.position} /></td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.gamesPlayed}</td>
+                          <td className="px-4 py-3 text-center font-mono text-purple-400 font-semibold">{formatStat(row.pprPerGame, 1)}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-400">{row.xPprPerGame != null ? formatStat(row.xPprPerGame, 1) : '-'}</td>
+                          <td className={`px-4 py-3 text-center font-mono font-semibold ${
+                            row.xFpgoePerGame != null && row.xFpgoePerGame > 0 ? 'text-green-400' : 
+                            row.xFpgoePerGame != null && row.xFpgoePerGame < 0 ? 'text-red-400' : 'text-gray-400'
+                          }`} data-testid={`xfpgoe-agg-${row.playerId}`}>
+                            {row.xFpgoePerGame != null ? `${row.xFpgoePerGame > 0 ? '+' : ''}${formatStat(row.xFpgoePerGame, 1)}` : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.totalTargets}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.totalReceptions}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.totalRecYards}</td>
+                          <td className="px-4 py-3 text-center font-mono text-green-400">{row.totalRecTds || 0}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.totalRushAttempts}</td>
+                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.totalRushYards}</td>
+                          <td className="px-4 py-3 text-center font-mono text-orange-400">{row.totalRushTds || 0}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
+                // Weekly Fantasy Table for Single Week mode
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm" data-testid="table-fantasy">
                     <thead className="bg-[#0a0e1a] text-gray-400 uppercase text-xs">
@@ -1077,7 +1168,7 @@ export default function TiberDataLab() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-700">
-                      {fantasyData?.data.map((row, idx) => (
+                      {(fantasyData as FantasyLogResponse)?.data.map((row, idx) => (
                         <tr 
                           key={`${row.playerId}-${row.week}-${idx}`} 
                           className="hover:bg-[#1a1f2e] cursor-pointer transition-colors"

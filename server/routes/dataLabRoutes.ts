@@ -911,6 +911,7 @@ router.get("/fantasy-logs", async (req: Request, res: Response) => {
       week,
       weekFrom,
       weekTo,
+      weekMode = "single",
       position,
       player_id,
       limit = "100",
@@ -925,7 +926,126 @@ router.get("/fantasy-logs", async (req: Request, res: Response) => {
     const seasonNum = Number(season);
     const limitNum = Math.min(Number(limit), 200);
 
-    // Determine week filter using sql.raw for dynamic filter conditions
+    // For season/range modes, return aggregated data
+    if (weekMode === 'season' || weekMode === 'range') {
+      // Get latest snapshot week for season mode
+      let startWeek = 1;
+      let endWeek = 18;
+      
+      if (weekMode === 'season') {
+        const latestSnapshot = await datadiveSnapshotService.getLatestOfficialSnapshot();
+        if (latestSnapshot && latestSnapshot.season === seasonNum) {
+          endWeek = latestSnapshot.week;
+        }
+      } else if (weekFrom && weekTo) {
+        startWeek = Number(weekFrom);
+        endWeek = Number(weekTo);
+      }
+
+      const positionFilter = position && (position as string).toUpperCase() !== 'ALL'
+        ? sql.raw(`AND spw.position = '${(position as string).toUpperCase()}'`)
+        : sql.raw('');
+
+      const playerFilter = player_id
+        ? sql.raw(`AND spw.player_id = '${player_id}'`)
+        : sql.raw('');
+
+      // Aggregated query for season/range mode
+      const result = await db.execute(sql`
+        WITH player_agg AS (
+          SELECT 
+            spw.player_id,
+            MAX(spw.player_name) as player_name,
+            MAX(spw.team_id) as team_id,
+            MAX(spw.position) as position,
+            COUNT(DISTINCT spw.week) FILTER (WHERE COALESCE(spw.snaps, 0) > 0 OR COALESCE(spw.routes, 0) > 0) as games_played,
+            SUM(COALESCE(spw.targets, 0)) as total_targets,
+            SUM(COALESCE(spw.receptions, 0)) as total_receptions,
+            SUM(COALESCE(spw.rec_yards, 0)) as total_rec_yards,
+            SUM(COALESCE(spw.rec_tds, 0)) as total_rec_tds,
+            SUM(COALESCE(spw.rush_attempts, 0)) as total_rush_attempts,
+            SUM(COALESCE(spw.rush_yards, 0)) as total_rush_yards,
+            SUM(COALESCE(spw.rush_tds, 0)) as total_rush_tds,
+            SUM(COALESCE(spw.fpts_std, 0)) as total_fpts_std,
+            SUM(COALESCE(spw.fpts_half, 0)) as total_fpts_half,
+            SUM(COALESCE(spw.fpts_ppr, 0)) as total_fpts_ppr,
+            SUM(COALESCE(spw.routes, 0)) as total_routes,
+            -- xFPTS aggregations
+            SUM(COALESCE(efw.x_ppr_v2, efw.x_ppr_v1, 0)) as total_x_ppr,
+            SUM(COALESCE(efw.xfpgoe_ppr_v2, efw.xfpgoe_ppr_v1, 0)) as total_xfpgoe_ppr
+          FROM datadive_snapshot_player_week spw
+          JOIN datadive_snapshot_meta sm ON sm.id = spw.snapshot_id
+          LEFT JOIN datadive_expected_fantasy_week efw 
+            ON efw.player_id = spw.player_id 
+            AND efw.season = sm.season
+            AND efw.week = spw.week
+          WHERE sm.season = ${seasonNum}
+            AND sm.is_official = true
+            AND spw.week BETWEEN ${startWeek} AND ${endWeek}
+            ${positionFilter}
+            ${playerFilter}
+          GROUP BY spw.player_id
+        )
+        SELECT 
+          player_id,
+          player_name,
+          team_id,
+          position,
+          games_played,
+          total_targets,
+          total_receptions,
+          total_rec_yards,
+          total_rec_tds,
+          total_rush_attempts,
+          total_rush_yards,
+          total_rush_tds,
+          ROUND(total_fpts_std::numeric, 1) as total_fpts_std,
+          ROUND(total_fpts_half::numeric, 1) as total_fpts_half,
+          ROUND(total_fpts_ppr::numeric, 1) as total_fpts_ppr,
+          total_routes,
+          ROUND(total_x_ppr::numeric, 1) as total_x_ppr,
+          ROUND(total_xfpgoe_ppr::numeric, 1) as total_xfpgoe_ppr,
+          CASE WHEN games_played > 0 THEN ROUND((total_fpts_ppr / games_played)::numeric, 1) ELSE 0 END as ppr_per_game,
+          CASE WHEN games_played > 0 THEN ROUND((total_x_ppr / games_played)::numeric, 1) ELSE 0 END as x_ppr_per_game,
+          CASE WHEN games_played > 0 THEN ROUND((total_xfpgoe_ppr / games_played)::numeric, 1) ELSE 0 END as xfpgoe_per_game
+        FROM player_agg
+        WHERE games_played > 0
+        ORDER BY total_fpts_ppr DESC
+        LIMIT ${limitNum}
+      `);
+      const rows = (result as any).rows || [];
+
+      return res.json({
+        mode: 'fantasy-agg',
+        season: seasonNum,
+        weekMode,
+        weekRange: { from: startWeek, to: endWeek },
+        modeLabel: weekMode === 'season' ? `Season ${seasonNum} (Weeks 1-${endWeek})` : `Weeks ${startWeek}-${endWeek}`,
+        position: position || 'ALL',
+        count: rows.length,
+        data: rows.map((row: any) => ({
+          playerId: row.player_id,
+          playerName: row.player_name,
+          teamId: row.team_id,
+          position: row.position,
+          gamesPlayed: Number(row.games_played) || 0,
+          totalTargets: Number(row.total_targets) || 0,
+          totalReceptions: Number(row.total_receptions) || 0,
+          totalRecYards: Number(row.total_rec_yards) || 0,
+          totalRecTds: Number(row.total_rec_tds) || 0,
+          totalRushAttempts: Number(row.total_rush_attempts) || 0,
+          totalRushYards: Number(row.total_rush_yards) || 0,
+          totalRushTds: Number(row.total_rush_tds) || 0,
+          totalFptsPpr: Number(row.total_fpts_ppr) || 0,
+          totalRoutes: Number(row.total_routes) || 0,
+          pprPerGame: Number(row.ppr_per_game) || 0,
+          xPprPerGame: Number(row.x_ppr_per_game) || 0,
+          xFpgoePerGame: Number(row.xfpgoe_per_game) || 0,
+        })),
+      });
+    }
+
+    // Single week mode - return individual weekly rows
     let weekFilter = sql.raw('');
     if (week) {
       weekFilter = sql.raw(`AND spw.week = ${Number(week)}`);
