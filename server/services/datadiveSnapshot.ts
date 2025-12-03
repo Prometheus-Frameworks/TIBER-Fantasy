@@ -35,7 +35,7 @@ interface SnapshotResult {
 
 export class DatadiveSnapshotService {
   private readonly MIN_ROWS = 200;
-  private readonly MIN_TEAMS = 28;
+  private readonly MIN_TEAMS = 24; // Lowered from 28 to account for bye weeks (up to 6 teams on bye)
 
   async runWeeklySnapshot(
     season: number,
