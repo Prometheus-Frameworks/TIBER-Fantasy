@@ -11,6 +11,7 @@ import {
 } from "@shared/schema";
 import { datadiveSnapshotService } from "../services/datadiveSnapshot";
 import { runAutoWeeklySnapshotForSeason, getAutoSnapshotStatus } from "../services/datadiveAuto";
+import { getAggregatedExpectedFantasy } from "../services/xFptsService";
 
 const router = Router();
 
@@ -670,7 +671,12 @@ router.get("/usage-agg", async (req: Request, res: Response) => {
     `);
     const rows = (result as any).rows || [];
 
-    // Map rows and calculate xFPTS metrics
+    // Fetch xFPTS v2 aggregated data for season/range modes
+    const xFptsV2Map = (weekMode === 'season' || weekMode === 'range') 
+      ? await getAggregatedExpectedFantasy(seasonNum, startWeek, endWeek, position as string | undefined)
+      : new Map();
+
+    // Map rows and calculate xFPTS metrics (use v2 with v1 fallback)
     let mappedData = rows.map((row: any) => {
       const gamesPlayed = Number(row.games_played) || 0;
       const totalTargets = Number(row.total_targets) || 0;
@@ -678,15 +684,24 @@ router.get("/usage-agg", async (req: Request, res: Response) => {
       const totalFptsPpr = Number(row.total_fpts_ppr) || 0;
       const pos = row.position || 'WR';
       
-      // Calculate expected fantasy points (xPPR)
-      const xFptsPprTotal = calculateXFptsPpr(totalTargets, totalRushAttempts, pos);
+      // Get v2 data if available, otherwise use v1 calculation
+      const v2Data = xFptsV2Map.get(row.player_id);
+      let xPprPerGame: number;
+      let xFPGoePprPerGame: number;
       
-      // Calculate per-game metrics
+      if (v2Data && v2Data.gamesWithData > 0) {
+        // Use v2 aggregated data from datadive_expected_fantasy_week
+        xPprPerGame = v2Data.xPpr / v2Data.gamesWithData;
+        xFPGoePprPerGame = v2Data.xfpgoe / v2Data.gamesWithData;
+      } else {
+        // Fallback to v1 calculation if no v2 data available
+        const xFptsPprTotal = calculateXFptsPpr(totalTargets, totalRushAttempts, pos);
+        const pprPerGame = gamesPlayed > 0 ? totalFptsPpr / gamesPlayed : 0;
+        xPprPerGame = gamesPlayed > 0 ? xFptsPprTotal / gamesPlayed : 0;
+        xFPGoePprPerGame = pprPerGame - xPprPerGame;
+      }
+      
       const pprPerGame = gamesPlayed > 0 ? totalFptsPpr / gamesPlayed : 0;
-      const xPprPerGame = gamesPlayed > 0 ? xFptsPprTotal / gamesPlayed : 0;
-      
-      // xFPGoe = actual - expected (positive = outperforming, negative = underperforming)
-      const xFPGoePprPerGame = pprPerGame - xPprPerGame;
       
       // Get performance tag for season/range modes
       const performanceTag = (weekMode === 'season' || weekMode === 'range')
@@ -926,7 +941,7 @@ router.get("/fantasy-logs", async (req: Request, res: Response) => {
       ? sql.raw(`AND spw.player_id = '${player_id}'`)
       : sql.raw('');
 
-    // Get fantasy-focused data from snapshots
+    // Get fantasy-focused data from snapshots, joined with xFPTS v2 data
     const result = await db.execute(sql`
       SELECT 
         spw.player_id,
@@ -949,9 +964,21 @@ router.get("/fantasy-logs", async (req: Request, res: Response) => {
         spw.tprr,
         spw.target_share,
         spw.adot,
-        COALESCE(spw.air_yards, 0) as air_yards
+        COALESCE(spw.air_yards, 0) as air_yards,
+        -- xFPTS v2 fields (with v1 fallback)
+        COALESCE(efw.x_ppr_v2, efw.x_ppr_v1) as x_ppr,
+        COALESCE(efw.xfpgoe_ppr_v2, efw.xfpgoe_ppr_v1) as xfpgoe_ppr,
+        -- v2 context fields for drawer
+        COALESCE(efw.rz_share, 0) as rz_share,
+        COALESCE(efw.yac_ratio, 1) as yac_ratio,
+        COALESCE(efw.rush_epa_ctx, 0) as rush_epa_ctx,
+        COALESCE(efw.rush_success_ctx, 0) as rush_success_ctx
       FROM datadive_snapshot_player_week spw
       JOIN datadive_snapshot_meta sm ON sm.id = spw.snapshot_id
+      LEFT JOIN datadive_expected_fantasy_week efw 
+        ON efw.player_id = spw.player_id 
+        AND efw.season = sm.season
+        AND efw.week = spw.week
       WHERE sm.season = ${seasonNum}
         AND sm.is_official = true
         ${weekFilter}
@@ -986,15 +1013,21 @@ router.get("/fantasy-logs", async (req: Request, res: Response) => {
         fptsStd: Number(row.fpts_std) || 0,
         fptsHalf: Number(row.fpts_half) || 0,
         fptsPpr: Number(row.fpts_ppr) || 0,
-        // Usage context for future xFPTS
         routes: Number(row.routes) || 0,
         tprr: row.tprr ? Number(row.tprr) : null,
         targetShare: row.target_share ? Number(row.target_share) : null,
         adot: row.adot ? Number(row.adot) : null,
         airYards: Number(row.air_yards) || 0,
-        // Placeholder for future xFPTS implementation
-        xFpts: null,
-        xFptsGoe: null,
+        // xFPTS v2 fields (v2 with v1 fallback)
+        xPpr: row.x_ppr != null ? Math.round(Number(row.x_ppr) * 10) / 10 : null,
+        xFpgoePpr: row.xfpgoe_ppr != null ? Math.round(Number(row.xfpgoe_ppr) * 10) / 10 : null,
+        // v2Context for drawer display
+        v2Context: row.x_ppr != null ? {
+          rzShare: Math.round(Number(row.rz_share) * 100) / 100,
+          yacRatio: Math.round(Number(row.yac_ratio) * 100) / 100,
+          rushEpaContribution: Math.round(Number(row.rush_epa_ctx) * 100) / 100,
+          rushSuccessContribution: Math.round(Number(row.rush_success_ctx) * 100) / 100,
+        } : null,
       })),
     });
   } catch (error: any) {

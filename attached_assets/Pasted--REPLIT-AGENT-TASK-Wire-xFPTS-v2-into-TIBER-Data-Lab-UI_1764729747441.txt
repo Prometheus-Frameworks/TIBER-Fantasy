@@ -1,0 +1,337 @@
+🛠 REPLIT AGENT TASK — Wire xFPTS v2 into TIBER Data Lab UI
+
+Goal
+
+Expose the new xFPTS v2 (Expected Fantasy Points v2) engine in the TIBER Data Lab frontend as:
+
+Clean, numeric-only columns in Fantasy Mode tables
+
+A proper “Expected vs Actual” block in the player drawer
+
+Backed by the new v2 endpoints + context object (v2Context)
+
+No memes, no narrative baked into the UI — just data.
+
+1. Backend: Make xFPTS v2 the Canonical Fantasy Layer
+
+We already have:
+
+datadive_expected_fantasy_week with:
+
+v1 fields
+
+v2 fields
+
+multipliers and context
+
+Endpoints:
+
+POST /api/data-lab/admin/xfpts-run
+
+GET /api/data-lab/xfpts/player?player_id=X&season=Y
+
+Now we make sure existing Data Lab endpoints use v2 under the hood.
+
+1.1 Update /api/data-lab/fantasy-logs
+
+Goal: For each player-week, return:
+
+Actual fantasy points (PPR/Half/Std)
+
+Expected PPR (v2)
+
+Delta (xFPGoe v2)
+
+v2 context object for the drawer
+
+Concrete steps:
+
+Join datadive_snapshot_player_week (or equivalent) with datadive_expected_fantasy_week by:
+
+season
+
+week
+
+player_id
+
+When mapping the response, use v2 if present, else fall back to v1:
+
+const xPpr = row.x_ppr_v2 ?? row.x_ppr_v1 ?? null;
+const xFpgoePpr = row.xfpgoe_ppr_v2 ?? row.xfpgoe_ppr_v1 ?? null;
+
+
+Response structure (example):
+
+{
+  "playerId": "puka-nacua",
+  "season": 2025,
+  "week": 11,
+  "position": "WR",
+  "teamId": "LAR",
+  "ppr": 24.2,
+  "halfPpr": 18.1,
+  "std": 12.0,
+  "xPpr": 20.3,          // v2 expected PPR
+  "xFpgoePpr": 3.9,       // actual - xPpr
+  "v2Context": {
+    "rzShare": 0.21,
+    "yacRatio": 1.18,
+    "rushEpaContribution": 0.00,
+    "rushSuccessContribution": 0.00
+  }
+}
+
+
+Ensure the v2Context fields are populated from the columns you already added:
+
+rzShare
+
+yacRatio
+
+rushEpaContribution
+
+rushSuccessContribution
+
+If any field is missing, default conservatively to 0 or 1 (for ratios), not null.
+
+1.2 Update /api/data-lab/usage-agg (Season + Range Modes)
+
+Goal: Season/range aggregation should use xFPTS v2 as the expected core.
+
+When aggregating, use:
+
+SUM(efw.x_ppr_v2)    AS x_ppr_total,
+SUM(f.fp_ppr)        AS actual_ppr_total,
+COUNT(*) FILTER (WHERE snaps > 0 OR routes_run > 0) AS games_played
+
+
+with fallback to v1 if v2 is null:
+
+SUM(COALESCE(efw.x_ppr_v2, efw.x_ppr_v1)) AS x_ppr_total
+
+
+In TypeScript:
+
+const pprPerGame = actual_ppr_total / gamesPlayed;
+const xPprPerGame = x_ppr_total / gamesPlayed;
+const xFpgoePprPerGame = pprPerGame - xPprPerGame;
+
+
+Make sure this is what the frontend uses in the Season and Week Range views when Fantasy Mode is enabled.
+
+2. Frontend: TIBER Data Lab — xFPTS v2 Integration
+
+Target page: /tiber-data-lab
+Current features:
+
+Search, filters (position, season, week)
+
+View Mode tabs (Single Week, Season Total, Range)
+
+Fantasy Mode toggle
+
+Player Detail Drawer
+
+We’ll wire xFPTS into:
+
+Fantasy Mode tables
+
+Player drawer’s “Expected vs Actual” block
+
+2.1 Fantasy Mode — Single Week View
+
+Table changes (weekly)
+
+For the weekly fantasy view, ensure the table columns are:
+
+| Player | Team | Pos | Week | PPR | xPPR | Δ PPR |
+
+Where:
+
+PPR = row.ppr
+
+xPPR = row.xPpr (v2)
+
+Δ PPR = row.xFpgoePpr = PPR - xPPR
+
+Implementation:
+
+In the Fantasy Mode weekly table component, map from fantasy-logs API response:
+
+Use the fields you added in 1.1.
+
+Format Δ PPR with:
+
++ sign for positive (over expectation)
+
+One decimal place (e.g., +3.9, -1.2)
+
+No tags or labels rendered in the cells — just numbers.
+
+2.2 Fantasy Mode — Season / Range Views
+
+For Season Total and Week Range view, using /usage-agg:
+
+Table columns:
+
+| Player | Team | Pos | GP | PPR/G | xPPR/G | Δ PPR/G |
+
+Where:
+
+GP = gamesPlayed
+
+PPR/G = pprPerGame
+
+xPPR/G = xPprPerGame
+
+Δ PPR/G = xFpgoePprPerGame
+
+Implementation:
+
+Use the v2-backed values from /usage-agg (after you changed the aggregation).
+
+Same formatting: one decimal, +/− sign.
+
+Again — no RISER/FALLER chips for now, just numeric columns.
+
+2.3 Player Detail Drawer — Expected vs Actual Block (v2)
+
+The drawer currently shows:
+
+Usage (routes, targets, snaps, etc.)
+
+Receiving stats
+
+Fantasy points
+
+We now upgrade the Expected vs Actual part using the new endpoints.
+
+Flow:
+
+When a player row is clicked:
+
+You probably already fetch detail via existing endpoint(s).
+
+Add a client-side call to:
+
+GET /api/data-lab/xfpts/player?player_id=<playerId>&season=<season>
+
+
+Response should include:
+
+Per-week series:
+
+week
+
+ppr
+
+xPpr
+
+xFpgoePpr
+
+Aggregated:
+
+pprPerGame
+
+xPprPerGame
+
+xFpgoePprPerGame
+
+Context object (last week or season-level):
+
+v2Context
+
+Drawer UI block (simple, numeric-only):
+
+Section Title:
+Expected vs Actual (PPR – v2)
+
+Top line (season summary):
+
+Actual PPR/G: 21.4
+
+Expected PPR/G: 18.9
+
+Δ PPR/G: +2.5
+
+Use bold labels, but keep it clean.
+
+Optional mini-table under it (recent weeks):
+
+Week	PPR	xPPR	Δ PPR
+9	18.5	17.2	+1.3
+10	24.2	21.0	+3.2
+11	12.1	14.0	-1.9
+
+Just map directly from /xfpts/player.
+
+Context sub-block (debug/info, still numeric):
+
+Label this something like:
+
+v2 Context (Usage Quality)
+
+Show ~3–4 key fields from v2Context, for example:
+
+RZ Share: 0.21
+
+YAC Ratio: 1.18
+
+Rush EPA Adj: +0.04
+
+Success Adj: +0.03
+
+No interpretation text; just surfaced numbers. Tiber Voice can use this later.
+
+3. UI/UX Safety Rules
+
+Do not introduce any narrative labels like “Riser”, “Faller”, “Luckbox”, etc.
+This layer is data only.
+
+No dependence on first-read metrics or any experimental flags.
+
+If xPpr or xFpgoePpr is missing for a row:
+
+Display – and don’t crash.
+
+If /xfpts/player fails:
+
+Show a small neutral message: “Expected points data unavailable” in the drawer.
+
+4. Acceptance Criteria
+
+This task is complete when:
+
+Weekly Fantasy View (Fantasy Mode):
+
+Shows PPR, xPPR, Δ PPR for each player-week.
+
+Values match /fantasy-logs (v2-backed).
+
+Season / Range Views (Fantasy Mode):
+
+Show PPR/G, xPPR/G, Δ PPR/G using /usage-agg.
+
+Confirm v2 is used (spot-check a known player in DB vs UI).
+
+Player Drawer:
+
+On row click:
+
+Fetches /xfpts/player?player_id=X&season=Y.
+
+Renders Expected vs Actual block with:
+
+Season PPR/G
+
+Season xPPR/G
+
+Δ PPR/G
+
+Shows v2Context values as a small stat list.
+
+No visual regressions:
+
+Data Lab still loads and functions even if xFPTS endpoints are temporarily down.
+
+Non-Fantasy modes untouched.
