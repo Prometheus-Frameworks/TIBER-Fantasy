@@ -668,9 +668,11 @@ export class SeasonFactsProcessor {
 
     // Calculate freshness score based on most recent data
     const mostRecentWeek = Math.max(...weeklyFacts.map(w => w.week));
-    const currentWeek = new Date().getUTCDay() < 3 ? // Tuesday is typical NFL week boundary
-      Math.ceil(((new Date().getTime() - new Date('2024-09-01').getTime()) / (1000 * 60 * 60 * 24)) / 7) :
-      Math.ceil(((new Date().getTime() - new Date('2024-09-01').getTime()) / (1000 * 60 * 60 * 24)) / 7) + 1;
+    // NFL 2025 season start: September 4, 2025
+    const seasonStart = new Date('2025-09-04');
+    const msSinceStart = new Date().getTime() - seasonStart.getTime();
+    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+    const currentWeek = Math.max(1, Math.min(18, Math.floor(msSinceStart / msPerWeek) + 1));
     
     const weeksBehind = Math.max(0, currentWeek - mostRecentWeek);
     const freshnessScore = Math.max(0, 1 - (weeksBehind * 0.1));

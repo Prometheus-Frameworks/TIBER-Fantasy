@@ -8,6 +8,7 @@ import { nightlyBuysSellsETL } from '../etl/nightlyBuysSellsUpdate';
 import { setupRBContextCheckCron } from './rbContextCheck';
 import { setupInjurySyncCron } from './injurySync';
 import { setupScheduleSyncCron } from './scheduleSync';
+import { getCurrentNFLWeek as getWeekFromConfig, CURRENT_NFL_SEASON } from '../../shared/config/seasons';
 
 /**
  * Setup nightly Buys/Sells computation cron job
@@ -96,15 +97,13 @@ export function setupAllCronJobs() {
   console.log('✅ All cron jobs initialized successfully');
 }
 
+/**
+ * Get current NFL week as string (for backwards compatibility)
+ * Uses centralized config from shared/config/seasons.ts
+ */
 function getCurrentNFLWeek(): string {
-  // Calculate current NFL week based on season calendar
-  const now = new Date();
-  const seasonStart = new Date('2024-09-05'); // NFL Week 1, 2024
-  const timeDiff = now.getTime() - seasonStart.getTime();
-  const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-  const weekNumber = Math.min(Math.max(Math.floor(daysDiff / 7) + 1, 1), 18);
-  
-  return `${weekNumber}`;
+  const week = getWeekFromConfig(CURRENT_NFL_SEASON);
+  return `${week ?? 1}`;
 }
 
 export { getCurrentNFLWeek };
