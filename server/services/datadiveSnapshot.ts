@@ -774,7 +774,7 @@ export class DatadiveSnapshotService {
       .select()
       .from(datadiveSnapshotMeta)
       .where(eq(datadiveSnapshotMeta.isOfficial, true))
-      .orderBy(desc(datadiveSnapshotMeta.snapshotAt))
+      .orderBy(desc(datadiveSnapshotMeta.week)) // Order by week, not timestamp
       .limit(1);
 
     return result || null;
