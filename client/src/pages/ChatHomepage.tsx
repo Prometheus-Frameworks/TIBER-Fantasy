@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, X, User, Bell, Search, Send, Loader2, ChevronDown, ChevronUp, Plus, Users, MoreVertical, Trash2, MessageSquarePlus } from 'lucide-react';
+import { Menu, X, User, Bell, Search, Send, Loader2, ChevronDown, ChevronUp, Plus, Users, MoreVertical, Trash2, MessageSquarePlus, TrendingUp, Calendar, Database } from 'lucide-react';
 import { Link } from 'wouter';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -433,7 +433,7 @@ export default function ChatHomepage() {
                   className="w-full text-left px-3 py-2 rounded hover:bg-gray-700/50 text-gray-300 transition-colors flex items-center gap-2"
                   onClick={() => setSidebarOpen(false)}
                 >
-                  <span className="text-lg">📊</span>
+                  <TrendingUp className="h-5 w-5 text-blue-400" />
                   Rankings
                 </button>
               </Link>
@@ -445,8 +445,20 @@ export default function ChatHomepage() {
                   className="w-full text-left px-3 py-2 rounded hover:bg-gray-700/50 text-gray-300 transition-colors flex items-center gap-2"
                   onClick={() => setSidebarOpen(false)}
                 >
-                  <span className="text-lg">📅</span>
+                  <Calendar className="h-5 w-5 text-purple-400" />
                   Schedule
+                </button>
+              </Link>
+            </li>
+            <li>
+              <Link href="/tiber-data-lab">
+                <button
+                  data-testid="nav-data-lab"
+                  className="w-full text-left px-3 py-2 rounded hover:bg-gray-700/50 text-gray-300 transition-colors flex items-center gap-2"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <Database className="h-5 w-5 text-cyan-400" />
+                  Data Lab
                 </button>
               </Link>
             </li>
@@ -477,7 +489,7 @@ export default function ChatHomepage() {
               <h1 className="text-lg font-bold hidden sm:block">TIBER: Your Assistant GM</h1>
               {selectedLeagueId && (
                 <p data-testid="league-context-indicator" className="text-xs text-blue-400 hidden sm:block">
-                  📊 {leagues.find((l: League) => l.id === selectedLeagueId)?.leagueName || 'League'}
+                  {leagues.find((l: League) => l.id === selectedLeagueId)?.leagueName || 'League'}
                   {leagues.find((l: League) => l.id === selectedLeagueId)?.settings.teams && 
                     ` (${leagues.find((l: League) => l.id === selectedLeagueId)?.settings.teams}T ${leagues.find((l: League) => l.id === selectedLeagueId)?.settings.scoring?.toUpperCase() || 'PPR'})`}
                 </p>
