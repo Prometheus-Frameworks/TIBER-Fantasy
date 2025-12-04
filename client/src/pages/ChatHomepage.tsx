@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, X, User, Bell, Search, Send, Loader2, ChevronDown, ChevronUp, Plus, Users, MoreVertical, Trash2, MessageSquarePlus, TrendingUp, Calendar, Database } from 'lucide-react';
+import { Menu, X, User, Bell, Search, Send, Loader2, ChevronDown, ChevronUp, Plus, Users, MoreVertical, Trash2, MessageSquarePlus, TrendingUp, Calendar, Database, Lightbulb, GraduationCap } from 'lucide-react';
 import { Link } from 'wouter';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -81,6 +81,7 @@ export default function ChatHomepage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [chatMode, setChatMode] = useState<'insight' | 'analyst'>('insight');
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
   const [createLeagueOpen, setCreateLeagueOpen] = useState(false);
   const [leaguesExpanded, setLeaguesExpanded] = useState(true);
@@ -146,29 +147,32 @@ export default function ChatHomepage() {
 
   const chatMutation = useMutation({
     mutationFn: async (message: string) => {
-      const response = await apiRequest('POST', '/api/rag/chat', {
+      const response = await apiRequest('POST', '/api/tiber/chat', {
         message,
-        user_level: 2,
+        chatMode,
         session_id: sessionId,
         league_id: selectedLeagueId,
       });
       return response.json() as Promise<ChatResponse>;
     },
-    onSuccess: (data) => {
-      // Save session ID and league ID
-      if (!sessionId) {
-        setSessionId(data.session_id);
-        localStorage.setItem('tiber_chat_session', data.session_id);
+    onSuccess: (data: any) => {
+      // Save session ID and league ID (Tiber returns conversationId)
+      const respSessionId = data.session_id || data.conversationId;
+      if (!sessionId && respSessionId) {
+        setSessionId(respSessionId);
+        localStorage.setItem('tiber_chat_session', respSessionId);
       }
       if (selectedLeagueId) {
         localStorage.setItem('tiber_chat_league', selectedLeagueId);
       }
 
-      // Add assistant message
+      // Add assistant message (Tiber returns reply, RAG returns response)
+      // Defensive handling for error responses or empty content
+      const content = data.reply || data.response || data.error || 'No response received. Please try again.';
       setMessages(prev => [...prev, {
-        id: `assistant-${data.message_id}`,
+        id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: data.response,
+        content: data.error ? `⚠️ ${content}` : content,
         sources: data.sources,
         timestamp: new Date(),
       }]);
@@ -551,11 +555,43 @@ export default function ChatHomepage() {
 
         {/* Input Bar */}
         <div className="border-t border-gray-800 bg-[#141824] p-4">
-          <div className="max-w-4xl mx-auto flex gap-2">
+          <div className="max-w-4xl mx-auto flex gap-2 items-center">
+            <Select value={chatMode} onValueChange={(val: 'insight' | 'analyst') => setChatMode(val)}>
+              <SelectTrigger 
+                className="w-[130px] h-10 text-xs bg-[#0a0e1a] border-gray-700 text-white"
+                data-testid="select-chat-mode"
+              >
+                <SelectValue>
+                  <div className="flex items-center gap-2">
+                    {chatMode === 'insight' ? (
+                      <><Lightbulb className="h-3 w-3 text-yellow-400" /> Insight</>
+                    ) : (
+                      <><GraduationCap className="h-3 w-3 text-purple-400" /> Analyst</>
+                    )}
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="bg-[#141824] border-gray-700">
+                <SelectItem value="insight" data-testid="option-insight-mode" className="text-white hover:bg-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="h-3 w-3 text-yellow-400" />
+                    <span>Insight Mode</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="analyst" data-testid="option-analyst-mode" className="text-white hover:bg-gray-700">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="h-3 w-3 text-purple-400" />
+                    <span>Analyst Mode</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
             <Input
               data-testid="input-chat"
               type="text"
-              placeholder="Ask about trades, start/sit, player analysis..."
+              placeholder={chatMode === 'insight' 
+                ? "Ask about trades, start/sit, player analysis..." 
+                : "Challenge me — I'll make you think like a pro..."}
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyPress}
