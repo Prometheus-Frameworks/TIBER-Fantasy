@@ -937,7 +937,7 @@ router.get('/health', (req, res) => {
 // ========================================
 
 import { TiberMemoryManager } from '../services/tiberMemoryManager';
-import { buildTiberPrompt, TrimmedForgeContext } from '../services/tiberPromptBuilder';
+import { buildTiberPrompt, TrimmedForgeContext, TiberChatMode } from '../services/tiberPromptBuilder';
 import { callGeminiTiber } from '../services/geminiEmbeddings';
 import { loadForgeContext, trimForgeContext, ForgeContext } from '../services/forgeContextLoader';
 
@@ -950,6 +950,7 @@ router.post('/chat', async (req, res) => {
       forgePlayerId,
       forgePosition,
       forgeTeamId,
+      chatMode = 'insight', // 'insight' (default) or 'analyst'
     } = req.body;
     
     const userId = (req as any).user?.id ?? "anon";
@@ -1006,11 +1007,15 @@ router.post('/chat', async (req, res) => {
 
     await TiberMemoryManager.appendMessage(conversationId, "USER", message);
 
+    // Validate chatMode
+    const validChatMode: TiberChatMode = (chatMode === 'analyst') ? 'analyst' : 'insight';
+    
     const prompt = buildTiberPrompt({
       userMessage: message,
       recentMessages: context.recentMessages,
       memory: context.memorySummaries,
       forgeContext,
+      chatMode: validChatMode,
     });
 
     // Use clean Gemini call with TiberPromptBuilder output as system prompt
@@ -1022,6 +1027,7 @@ router.post('/chat', async (req, res) => {
     res.json({
       conversationId,
       mode,
+      chatMode: validChatMode,
       reply: tiberReply,
     });
 
