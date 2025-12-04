@@ -10,6 +10,7 @@
 import { fetchWeeklyFromNflfastR } from '../ingest/nflfastr';
 import { storage } from '../storage';
 import { CURRENT_NFL_SEASON } from '../../shared/config/seasons';
+import { enrichByPosition } from '../enrichment';
 
 async function main() {
   const week = parseInt(process.argv[2], 10);
@@ -36,9 +37,34 @@ async function main() {
       process.exit(0);
     }
     
+    // Apply position-aware enrichment before upserting
+    console.log('\n🎯 Running position-aware enrichment...');
+    const enrichmentStats = { qb: 0, wr: 0, te: 0, rb: 0, other: 0, enriched: 0 };
+    
+    const enrichedStats = stats.map(player => {
+      // Track position counts
+      switch (player.position) {
+        case 'QB': enrichmentStats.qb++; break;
+        case 'WR': enrichmentStats.wr++; break;
+        case 'TE': enrichmentStats.te++; break;
+        case 'RB': enrichmentStats.rb++; break;
+        default: enrichmentStats.other++;
+      }
+      
+      // Apply position-specific enrichment
+      const result = enrichByPosition(player);
+      if (result.enriched) {
+        enrichmentStats.enriched++;
+      }
+      return result.player;
+    });
+    
+    console.log(`   QB: ${enrichmentStats.qb} | WR: ${enrichmentStats.wr} | TE: ${enrichmentStats.te} | RB: ${enrichmentStats.rb}`);
+    console.log(`   Enriched: ${enrichmentStats.enriched} players`);
+    
     // Preview top 5 players
     console.log('\n📊 Preview (top 5 by half-PPR):');
-    const preview = stats
+    const preview = enrichedStats
       .sort((a, b) => (b.fantasy_points_half || 0) - (a.fantasy_points_half || 0))
       .slice(0, 5);
     
@@ -51,7 +77,7 @@ async function main() {
     
     // Upsert to database
     console.log('\n💾 Upserting to weekly_stats table...');
-    const result = await storage.upsertWeeklyStats(stats);
+    const result = await storage.upsertWeeklyStats(enrichedStats);
     
     console.log(`✅ Inserted/updated ${result.inserted} player records`);
     console.log('\n🎯 You can now query the data:');
