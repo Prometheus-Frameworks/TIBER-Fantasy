@@ -1,0 +1,139 @@
+1. server/enrichment/qbBox.ts
+TypeScript// server/enrichment/qbBox.ts
+export const enrichQB = (p: any) => {
+  const att = p.passing_attempts || p.attempts || 0;
+  const comp = p.passing_completions || p.completions || 0;
+  const airYds = p.passing_air_yards || 0;
+  const yds = p.passing_yards || 0;
+  const sacks = p.sacks || 0;
+
+  return {
+    ...p,
+    cpoe: p.cpoe ?? null,
+    dakota: p.dakota ?? null,
+    pacr: airYds > 0 ? yds / airYds : null,
+    aggression_pct: p.aggression_pct ?? null,
+    avg_time_to_throw: p.avg_time_to_throw ?? null,
+    pressured_epa_per_dropback: p.pressured_epa ?? null,
+    play_action_epa: p.play_action_epa ?? null,
+    rz_passing_epa: p.redzone_passing_epa ?? null,
+    completion_pct: att > 0 ? (comp / att) * 100 : null,
+    ypa: att > 0 ? yds / att : null,
+    adj_yards_per_attempt: att > 0 ? (yds + 20 * p.passing_tds - 45 * p.interceptions) / att : null,
+    qb_rating: p.qb_rating ?? null,
+    // NGS style
+  };
+};
+2. server/enrichment/wrBox.ts (includes TE split logic)
+TypeScript// server/enrichment/wrBox.ts
+export const enrichWR = (p: any) => {
+  const targets = p.targets || 0;
+  const rec = p.receptions || 0;
+  const air = p.receiving_air_yards || 0;
+  const recYds = p.receiving_yards || 0;
+  const yac = p.receiving_yards_after_catch || 0;
+
+  const enriched = {
+    ...p,
+    wopr_x: p.wopr_x ?? null,
+    racr: air > 0 ? recYds / air : null,
+    target_share: p.target_share ?? null,
+    air_yards_share: p.air_yards_share ?? null,
+    yac_per_reception: rec > 0 ? yac / rec : null,
+    aypt: targets > 0 ? air / targets : null,
+    ypt: targets > 0 ? recYds / targets : null,
+    xyac_epa: p.xyac_epa ?? null,
+    cushion_avg: p.cushion ?? null,
+    separation_pct: p.separation_pct ?? null,
+    slot_rate: p.slot_rate ?? null,
+    contested_catch_rate: p.contested_catch_rate ?? null,
+    rz_targets: p.rz_targets ?? p.receiving_rz_target ?? 0,
+    end_zone_targets: p.end_zone_targets ?? 0,
+  };
+
+  // Auto-split TE vs WR for downstream boxes
+  if (p.position === 'TE') {
+    enriched.is_te = true;
+    enriched.inline_rate = p.inline_rate ?? null;
+    enriched.yprr = p.yards_per_route_run ?? null; // huge for TEs
+  }
+
+  return enriched;
+};
+3. server/enrichment/rbBox.ts
+TypeScript// server/enrichment/rbBox.ts
+export const enrichRB = (p: any) => {
+  const carries = p.carries || 0;
+  const rushYds = p.rushing_yards || 0;
+  const targets = p.targets || 0;
+  const rec = p.receptions || 0;
+
+  return {
+    ...p,
+    ryoe_per_carry: p.ryoe_per_carry ?? p.rushing_yards_over_expected_per_attempt ?? null,
+    ryoe_total: p.ryoe_total ?? p.rushing_yards_over_expected ?? null,
+    opportunity_share: p.opportunity_share ?? null,
+    rush_share: p.rush_share ?? null,
+    target_share: p.target_share ?? null,
+    elusive_rating: p.elusive_rating ?? null,
+    breakaway_rate: p.breakaway_rate ?? null,
+    yards_per_route_run: p.yards_per_route_run ?? null,
+    receiving_epa_per_target: targets > 0 ? p.receiving_epa / targets : null,
+    rz_carries: p.rz_carries ?? 0,
+    goal_line_carries: p.goal_line_carries ?? 0,
+    stuffed_rate: p.stuffed_rate ?? null,
+    yco_attempt: carries > 0 ? p.yards_after_contact / carries : null,
+  };
+};
+4. server/enrichment/idpBox.ts
+TypeScript// server/enrichment/idpBox.ts
+export const enrichIDP = (p: any) => {
+  return {
+    ...p,
+    tackles_solo: p.tackles_solo ?? p.solo_tackles ?? 0,
+    tackles_assist: p.tackles_assist ??  p.assisted_tackles ?? 0,
+    tfl: p.tfl ?? p.tackles_for_loss ?? 0,
+    sacks: p.sacks ?? 0,
+    qb_hits: p.qb_hits ?? 0,
+    passes_defended: p.passes_defended ?? p.defensed_passes ?? 0,
+    forced_fumbles: p.forced_fumbles ?? 0,
+    fumble_recoveries: p.fumble_recoveries ?? 0,
+    interceptions: p.interceptions ?? 0,
+    int_return_yards: p.int_return_yards ?? 0,
+    0,
+    blitz_rate: p.blitz_rate ?? null,
+    coverage_snaps: p.coverage_snaps ?? null,
+    hurry_pct: p.hurry_pct ?? null,
+    pressure_rate: p.pressure_rate ?? null,
+    missed_tackle_rate: p.missed_tackle_rate ?? null,
+  };
+};
+5. server/enrichment/fantasyBox.ts (bonus — auto-calculates all formats)
+TypeScript// server/enrichment/fantasyBox.ts
+export const enrichFantasy = (p: any) => {
+  const passTd = p.passing_tds ?? 0;
+  const rushTd = p.rushing_tds ??0;
+  const recTd = p.receiving_tds ??0;
+  const rec = p.receptions ??0;
+  const rushYds = p.rushing_yards ??0;
+  const recYds = p.receiving_yards ??0;
+  const passYds = p.passing_yards ??0;
+  const int = p.interceptions ??0;
+
+  const standard = passYds/25 + passTd*4 + rushYds/10 + rushTd*6 + recTd*6 - int*2;
+  const ppr = standard + rec*1;
+  const halfPpr = standard + rec*0.5;
+
+  return {
+    ...p,
+    fantasy_points_standard: Number(standard.toFixed(2)),
+    fantasy_points_half_ppr: Number(halfPpr.toFixed(2)),
+    fantasy_points_ppr: Number(ppr.toFixed(2)),
+    fantasy_rank_standard: null,   // will be filled by ranking job
+    fantasy_rank_ppr: null,
+    projected_points_ppr: null,   // hook for your projection model later
+  };
+};
+Just add one line to pushAllBoxes.ts to include fantasy:
+TypeScriptconst allPlayers = snapshot.map(enrichFantasy);
+await pushToBox('/v1/fantasy-projections', allPlayers);

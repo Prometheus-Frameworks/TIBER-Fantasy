@@ -3,21 +3,34 @@
  * 
  * Barrel export for all position-specific enrichment handlers.
  * Used during NFLfastR data ingestion to apply position-aware logic.
+ * 
+ * 2025 Pro-Grade Metrics:
+ * - QB: CPOE, dakota, PACR, pressured EPA, play-action EPA
+ * - WR/TE: WOPR, RACR, cushion, xyac_epa, slot rate, contested catch
+ * - RB: RYOE, opportunity share, elusive rating, stuffed rate
+ * - IDP: tackles, TFL, sacks, QB hits, pressure rate
+ * - Fantasy: auto-calculated Standard/Half/PPR points
  */
 
-export { enrichQB } from './qbBox';
-export { enrichWR, enrichTE } from './wrBox';
-export { enrichRB } from './rbBox';
-export { enrichIDP } from './idpBox';
-
-export type { EnrichmentResult } from './qbBox';
+export { enrichQB, enrichQBWithMeta, type EnrichedQB } from './qbBox';
+export { enrichWR, enrichTE, enrichWRWithMeta, type EnrichedWR } from './wrBox';
+export { enrichRB, enrichRBWithMeta, type EnrichedRB } from './rbBox';
+export { enrichIDP, enrichIDPWithMeta, type EnrichedIDP } from './idpBox';
+export { enrichFantasy, enrichFantasyWithMeta, type EnrichedFantasy } from './fantasyBox';
 
 import type { WeeklyRow } from '../../shared/types/fantasy';
-import type { EnrichmentResult } from './qbBox';
-import { enrichQB } from './qbBox';
-import { enrichWR, enrichTE } from './wrBox';
-import { enrichRB } from './rbBox';
-import { enrichIDP } from './idpBox';
+import { enrichQBWithMeta, type EnrichedQB } from './qbBox';
+import { enrichWRWithMeta, type EnrichedWR } from './wrBox';
+import { enrichRBWithMeta, type EnrichedRB } from './rbBox';
+import { enrichIDPWithMeta, type EnrichedIDP } from './idpBox';
+
+export type EnrichedPlayer = EnrichedQB | EnrichedWR | EnrichedRB | EnrichedIDP;
+
+export interface EnrichmentResult {
+  player: EnrichedPlayer | WeeklyRow;
+  enriched: boolean;
+  enrichments: string[];
+}
 
 /**
  * Route a player to the appropriate enrichment handler based on position.
@@ -28,17 +41,17 @@ export function enrichByPosition(player: WeeklyRow): EnrichmentResult {
   
   switch (pos) {
     case 'QB':
-      return enrichQB(player);
+      return enrichQBWithMeta(player);
     case 'WR':
-      return enrichWR(player);
+      return enrichWRWithMeta(player);
     case 'TE':
-      return enrichTE(player);
+      return enrichWRWithMeta(player); // Uses WR enrichment with TE-specific fields
     case 'RB':
-      return enrichRB(player);
+      return enrichRBWithMeta(player);
     default:
       // Unknown position or defensive player
       if (['DL', 'LB', 'DB', 'DE', 'DT', 'CB', 'S'].includes(pos as string)) {
-        return enrichIDP(player);
+        return enrichIDPWithMeta(player);
       }
       // Return unchanged for unknown positions
       return {

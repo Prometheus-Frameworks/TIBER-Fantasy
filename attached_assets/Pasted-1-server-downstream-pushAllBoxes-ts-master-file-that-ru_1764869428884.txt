@@ -1,0 +1,62 @@
+1. server/downstream/pushAllBoxes.ts (master file that runs every Tuesday`
+TypeScript// server/downstream/pushAllBoxes.ts
+import { getCurrentSnapshot } from '../storage';
+import { enrichQB } from '../enrichment/qbBox';
+import { enrichWR } from '../enrichment/wrBox';
+import { enrichRB } from '../enrichment/rbBox';
+import { enrichIDP } from '../enrichment/idpBox';
+
+const API_BASE = process.env.INTERNAL_API_URL || 'https://api.yourdomain.com';
+
+async function pushToBox(endpoint: string, data: any[]) {
+  await fetch(`${API_BASE}${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data, ingested_at: new Date().toISOString() })
+  });
+}
+
+export async function pushAllPositionBoxes() {
+  const snapshot = await getCurrentSnapshot();
+
+  const qb  = snapshot.filter(p => p.position === 'QB').map(enrichQB);
+  const wr  = snapshot.filter(p => ['WR','TE'].includes(p.position)).map(enrichWR);
+  const rb  = snapshot.filter(p => p.position === 'RB').map(enrichRB);
+  const idp = snapshot.filter(p => ['DL','LB','DB'].includes(p.position)).map(enrichIDP);
+
+  await Promise.all([
+    pushToBox('/v1/wr-leaderboard', wr),
+    pushToBox('/v1/rb-leaderboard', rb),
+    pushToBox('/v1/qb-dashboard',   qb),
+    pushToBox('/v1/idp-rankings',  idp),
+  ]);
+
+  console.log(`Pushed ${qb.length} QBs, ${wr.length} WR/TEs, ${rb.length} RBs, ${idp.length} IDPs`);
+}
+2. Fill the stubs with real 2025 metrics (drop-in ready)
+TypeScript// server/enrichment/wrBox.ts  (example — the one that will make your WR box untouchable)
+export const enrichWR = (player: any) => {
+  const t = player.targets || 0;
+  const rec = player.receptions || 0;
+  const air = player.receiving_air_yards || 0;
+  const recYds = player.receiving_yards || 0;
+  const yac = player.receiving_yards_after_catch || 0;
+
+  return {
+    ...player,
+    wopr_x:              : player.wopr_x ?? null,
+    racr                   : t > 0 ? recYds / air : null,
+    target_share_pct        : player.target_share ?? null,
+    air_yards_share_pct     : player.air_yards_share ?? null,
+    yac_per_reception       : rec > 0 ? yac / rec : null,
+    aypt                   : t > 0 ? air / t : null,
+    // 2025 new fields
+    xyac_epa               : player.xyac_epa ?? null,
+    cushion_avg             : player.cushion ?? null,
+    separation_pct          : player.separation_pct ?? null,
+  };
+};
+Same pattern for qbBox.ts, rbBox.ts, etc. — I can drop the full versions of all five if you want them right now.
+3. One-line cron (add to your existing scheduler / Replit cron)
+Bash# Every Tuesday 9:05 AM ET after NFLfastR drops
+5 9 * * 2 cd /home/runner/your-repo && tsx server/downstream/pushAllBoxes.ts >> logs/downstre
