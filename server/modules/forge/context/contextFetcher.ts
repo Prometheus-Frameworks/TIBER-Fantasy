@@ -26,9 +26,12 @@ import { eq, and, desc, sql, lte, sum, count } from 'drizzle-orm';
 import {
   USE_DATADIVE_FORGE,
   getSnapshotSeasonStats,
+  getEnrichedPlayerWeek,
+  enrichedToForgeInput,
   toForgeSeasonStats,
   toForgeAdvancedMetrics,
-  getCurrentSnapshot
+  getCurrentSnapshot,
+  type EnrichedPlayerData
 } from '../../../services/datadiveContext';
 
 const playerIdentityService = PlayerIdentityService.getInstance();
@@ -117,7 +120,8 @@ async function fetchPlayerIdentity(playerId: string) {
 
 /**
  * Fetch season-level stats from playerSeasonFacts, weeklyStats, or playerSeason2024
- * For 2025+, prefers Datadive snapshot tables if USE_DATADIVE_FORGE is enabled
+ * For 2025+, uses NEW enriched weekly data path through getEnrichedPlayerWeek()
+ * This ensures all 2025 pro-grade metrics (CPOE, WOPR, RACR, RYOE, etc.) flow through FORGE
  */
 async function fetchSeasonStats(
   canonicalId: string, 
@@ -125,13 +129,21 @@ async function fetchSeasonStats(
   asOfWeek: number
 ): Promise<ForgeContext['seasonStats']> {
   try {
-    // For 2025+, try Datadive snapshot first if feature flag is enabled
+    // For 2025+, use NEW enriched weekly data path (single source of truth)
     if (season >= 2025 && USE_DATADIVE_FORGE) {
+      const enrichedData = await getEnrichedPlayerWeek(canonicalId, season, asOfWeek > 0 ? asOfWeek : undefined);
+      if (enrichedData && enrichedData.gamesPlayed > 0) {
+        console.log(`[FORGE/Context] Using enriched weekly data for ${canonicalId}: ${enrichedData.gamesPlayed} games, enrichments: [${enrichedData.enrichmentList.join(', ')}]`);
+        const forgeInput = enrichedToForgeInput(enrichedData);
+        return toForgeSeasonStats(forgeInput);
+      }
+      
+      // Fallback to old season snapshot if enriched weekly data not available
       const nflDataPyId = await getNflDataPyIdForCanonical(canonicalId);
       if (nflDataPyId) {
         const datadiveStats = await getSnapshotSeasonStats(nflDataPyId, season);
         if (datadiveStats && datadiveStats.gamesPlayed > 0) {
-          console.log(`[FORGE/Context] Using Datadive snapshot for ${canonicalId}: ${datadiveStats.gamesPlayed} games`);
+          console.log(`[FORGE/Context] Fallback to Datadive season snapshot for ${canonicalId}: ${datadiveStats.gamesPlayed} games`);
           return toForgeSeasonStats(datadiveStats);
         }
       }
@@ -337,8 +349,9 @@ async function fetchFromWeeklyStats(
 }
 
 /**
- * Fetch advanced metrics from Datadive (2025+), silver_player_weekly_stats (2025), or 2024 tables
- * Note: These tables use NFL GSIS IDs, not canonical IDs, so we translate first
+ * Fetch advanced metrics from enriched weekly data (2025+) or legacy tables
+ * For 2025+: Uses enriched weekly data path which includes all pro-grade metrics
+ * (CPOE, WOPR, RACR, RYOE, dakota, cushion, xyac_epa, etc.)
  */
 async function fetchAdvancedMetrics(
   canonicalId: string,
@@ -346,22 +359,69 @@ async function fetchAdvancedMetrics(
   season: number
 ): Promise<ForgeContext['advancedMetrics']> {
   try {
-    // Translate canonical ID to NFL GSIS ID
+    // For 2025+, use NEW enriched weekly data path (single source of truth)
+    if (season >= 2025 && USE_DATADIVE_FORGE) {
+      const enrichedData = await getEnrichedPlayerWeek(canonicalId, season);
+      if (enrichedData && enrichedData.gamesPlayed > 0) {
+        const enriched = enrichedData.enrichedMetrics;
+        
+        // Build advanced metrics from enriched data
+        const metrics: ForgeContext['advancedMetrics'] = {
+          yprr: enrichedData.yprr > 0 ? enrichedData.yprr : undefined,
+          adot: enrichedData.aDot > 0 ? enrichedData.aDot : undefined,
+          epaPerPlay: enrichedData.epaPerPlay !== 0 ? enrichedData.epaPerPlay : undefined,
+          yardsPerCarry: enrichedData.yardsPerCarry > 0 ? enrichedData.yardsPerCarry : undefined,
+          successRate: enrichedData.successRate > 0 ? enrichedData.successRate : undefined,
+          // Position-specific enriched metrics
+          ...(position === 'QB' && {
+            cpoe: enriched.cpoe ?? undefined,
+            dakota: enriched.dakota ?? undefined,
+            pacr: enriched.pacr ?? undefined,
+            completionPct: enriched.completion_pct ?? undefined,
+            pressuredEpa: enriched.pressured_epa_per_dropback ?? undefined,
+          }),
+          ...((position === 'WR' || position === 'TE') && {
+            wopr: enriched.wopr_x ?? undefined,
+            racr: enriched.racr ?? undefined,
+            targetShare: enrichedData.targetShare,
+            airYardsShare: enriched.air_yards_share ?? undefined,
+            xyacEpa: enriched.xyac_epa ?? undefined,
+            cushion: enriched.cushion_avg ?? undefined,
+            separation: enriched.separation_pct ?? undefined,
+            slotRate: enriched.slot_rate ?? undefined,
+          }),
+          ...(position === 'RB' && {
+            ryoe: enriched.ryoe_per_carry ?? undefined,
+            opportunityShare: enriched.opportunity_share ?? undefined,
+            rushShare: enriched.rush_share ?? undefined,
+            elusiveRating: enriched.elusive_rating ?? undefined,
+            stuffedRate: enriched.stuffed_rate ?? undefined,
+            yardsAfterContact: enriched.yco_attempt ?? undefined,
+          }),
+        };
+        
+        console.log(`[FORGE/Context] Using enriched advanced metrics for ${canonicalId} (${position})`);
+        return metrics;
+      }
+      
+      // Fallback to old Datadive snapshot
+      const nflId = await getNflDataPyIdForCanonical(canonicalId);
+      if (nflId) {
+        const datadiveStats = await getSnapshotSeasonStats(nflId, season);
+        if (datadiveStats && datadiveStats.gamesPlayed > 0) {
+          const metrics = toForgeAdvancedMetrics(datadiveStats);
+          if (metrics) {
+            console.log(`[FORGE/Context] Fallback to Datadive advanced metrics for ${canonicalId}`);
+            return metrics;
+          }
+        }
+      }
+    }
+    
+    // Translate canonical ID to NFL GSIS ID for legacy paths
     const nflId = await getNflDataPyIdForCanonical(canonicalId);
     if (!nflId) {
       return undefined;
-    }
-    
-    // For 2025+, try Datadive snapshot first if feature flag is enabled
-    if (season >= 2025 && USE_DATADIVE_FORGE) {
-      const datadiveStats = await getSnapshotSeasonStats(nflId, season);
-      if (datadiveStats && datadiveStats.gamesPlayed > 0) {
-        const metrics = toForgeAdvancedMetrics(datadiveStats);
-        if (metrics) {
-          console.log(`[FORGE/Context] Using Datadive advanced metrics for ${canonicalId}`);
-          return metrics;
-        }
-      }
     }
     
     // Fallback to silver_player_weekly_stats for 2025+

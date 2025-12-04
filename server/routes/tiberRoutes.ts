@@ -940,6 +940,7 @@ import { TiberMemoryManager } from '../services/tiberMemoryManager';
 import { buildTiberPrompt, TrimmedForgeContext, TiberChatMode } from '../services/tiberPromptBuilder';
 import { callGeminiTiber } from '../services/geminiEmbeddings';
 import { loadForgeContext, trimForgeContext, ForgeContext } from '../services/forgeContextLoader';
+import { detectPlayers } from '../services/playerNameDetector';
 
 router.post('/chat', async (req, res) => {
   try {
@@ -947,7 +948,7 @@ router.post('/chat', async (req, res) => {
       message, 
       leagueId, 
       conversationId: clientConversationId,
-      forgePlayerId,
+      forgePlayerId: explicitPlayerId,
       forgePosition,
       forgeTeamId,
       chatMode = 'insight', // 'insight' (default) or 'analyst'
@@ -957,6 +958,19 @@ router.post('/chat', async (req, res) => {
 
     if (!message) {
       return res.status(400).json({ error: "Message is required" });
+    }
+
+    // Auto-detect player names if no explicit player ID provided
+    let forgePlayerId = explicitPlayerId;
+    let detectedPlayerName: string | null = null;
+    
+    if (!forgePlayerId) {
+      const detection = await detectPlayers(message);
+      if (detection.primaryPlayer) {
+        forgePlayerId = detection.primaryPlayer.canonicalId;
+        detectedPlayerName = detection.primaryPlayer.fullName;
+        console.log(`[Tiber/Chat] Auto-detected player: "${detectedPlayerName}" → ${forgePlayerId} (score: ${detection.primaryPlayer.score.toFixed(3)})`);
+      }
     }
 
     // Detect fantasy mode: any Forge hint means fantasy mode
@@ -997,7 +1011,8 @@ router.post('/chat', async (req, res) => {
           rankingsLimit: 10,
         });
         forgeContext = trimForgeContext(rawContext);
-        console.log(`[Tiber/Chat] FANTASY mode: ForgeContext loaded for player=${forgePlayerId || 'none'}, position=${forgePosition || 'none'}`);
+        const playerInfo = detectedPlayerName ? `(auto-detected: "${detectedPlayerName}")` : '(explicit)';
+        console.log(`[Tiber/Chat] FANTASY mode: ForgeContext loaded for player=${forgePlayerId || 'none'} ${playerInfo}, position=${forgePosition || 'none'}`);
       } catch (error) {
         console.error('[Tiber/Chat] Failed to load ForgeContext:', error);
       }
@@ -1029,6 +1044,10 @@ router.post('/chat', async (req, res) => {
       mode,
       chatMode: validChatMode,
       reply: tiberReply,
+      detectedPlayer: detectedPlayerName ? {
+        name: detectedPlayerName,
+        canonicalId: forgePlayerId,
+      } : null,
     });
 
   } catch (error) {
