@@ -930,7 +930,7 @@ export default function TiberDataLab() {
                     placeholder="Search by name..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="bg-[#0a0e1a] border-gray-600 text-white"
+                    className="bg-[#0a0e1a] border-gray-600 text-white placeholder:text-gray-400"
                     data-testid="input-search"
                   />
                 </div>
@@ -975,7 +975,7 @@ export default function TiberDataLab() {
                   type="number"
                   value={season ?? ''}
                   onChange={(e) => setSeason(e.target.value ? Number(e.target.value) : undefined)}
-                  className="bg-[#0a0e1a] border-gray-600 text-white"
+                  className="bg-[#0a0e1a] border-gray-600 text-white placeholder:text-gray-400"
                   placeholder="..."
                   data-testid="input-season"
                 />
@@ -988,7 +988,7 @@ export default function TiberDataLab() {
                     type="number"
                     value={week ?? ''}
                     onChange={(e) => setWeek(e.target.value ? Number(e.target.value) : undefined)}
-                    className="bg-[#0a0e1a] border-gray-600 text-white"
+                    className="bg-[#0a0e1a] border-gray-600 text-white placeholder:text-gray-400"
                     placeholder="..."
                     min={1}
                     max={18}
@@ -1005,7 +1005,7 @@ export default function TiberDataLab() {
                       type="number"
                       value={weekFrom ?? ''}
                       onChange={(e) => setWeekFrom(e.target.value ? Number(e.target.value) : undefined)}
-                      className="bg-[#0a0e1a] border-gray-600 text-white"
+                      className="bg-[#0a0e1a] border-gray-600 text-white placeholder:text-gray-400"
                       placeholder="1"
                       min={1}
                       max={18}
@@ -1018,7 +1018,7 @@ export default function TiberDataLab() {
                       type="number"
                       value={weekTo ?? ''}
                       onChange={(e) => setWeekTo(e.target.value ? Number(e.target.value) : undefined)}
-                      className="bg-[#0a0e1a] border-gray-600 text-white"
+                      className="bg-[#0a0e1a] border-gray-600 text-white placeholder:text-gray-400"
                       placeholder="..."
                       min={1}
                       max={18}
@@ -1036,7 +1036,7 @@ export default function TiberDataLab() {
                     placeholder="0"
                     value={minRoutes}
                     onChange={(e) => setMinRoutes(e.target.value)}
-                    className="bg-[#0a0e1a] border-gray-600 text-white"
+                    className="bg-[#0a0e1a] border-gray-600 text-white placeholder:text-gray-400"
                     data-testid="input-min-routes"
                   />
                 </div>

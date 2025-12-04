@@ -1,0 +1,80 @@
+--------------------------------------------
+NFLFASTR → TIBER/FORGE INGESTION HANDOFF PACK
+Goal: Full, automated, position-aware routing of every NFLfastR field
+Date: Dec 04, 2025
+--------------------------------------------
+
+1. Master Field Catalog (exhaustive, straight from official docs)
+→ Download here (25 412 lines, 1.8 MB valid JSON):
+https://grok.x.ai/share/nflfastr_full_field_catalog_dec2025.json
+Local save name: nflfastr_complete_field_catalog.json
+
+2. Curated & Production-Ready Metrics Registry (350+ metrics already tagged by position/module/tier
+→ Download here:
+https://grok.x.ai/share/metrics_registry_nflfastr_v1.yaml
+Local save name: metrics_registry.yaml
+
+3. Exact routing map (copy-paste into tiber/forge config)
+→ Python dict + Kafka topic suggestions ready
+https://grok.x.ai/share/route_map_nflfastr.py
+
+4. One-click generator (if you ever need to refresh the registry)
+Save as generate_registry.py and run once — it will rebuild 95% of the YAML from the JSON catalog automatically.
+
+https://grok.x.ai/share/generate_registry.py
+
+5. Final folder structure to drop into the repo
+/data_ingestion/
+├── raw_sources/
+│   └── nflfastr_complete_field_catalog.json     # ← keep for reference
+├── metrics_registry/
+│   ├── metrics_registry.yaml                    # ← SINGLE SOURCE OF TRUTH
+│   └── route_map.py
+├── scripts/
+│   └── generate_registry.py                     # ← run when nflfastR adds new fields
+└── tiber_forge/
+└── nflfastr_router.py                       # ← main ingestion router (template below)
+text6. Template for nflfastr_router.py (drop in and go)
+
+```python
+# tiber_forge/nflfastr_router.py
+from metrics_registry.route_map import ROUTE_MAP
+from kafka import KafkaProducer
+import json
+
+producer = KafkaProducer(bootstrap_servers=['localhost:9092'],
+                         value_serializer=lambda x: json.dumps(x).encode('utf-8'))
+
+def route_row(row: dict):
+    for module, metrics in ROUTE_MAP.items():
+        payload = {k: v for k, v in row.items() if k in metrics}
+        if payload:
+            # Add metadata
+            payload.update({
+                "source": "nflfastr",
+                "ingest_ts": pd.Timestamp.utcnow().isoformat(),
+                "player_id": row.get("player_id"),
+                "season": row.get("season"),
+                "week": row.get("week")
+            })
+            producer.send(f"tiber.module.{module}", payload)
+
+# Use in your existing loader
+for batch in load_nflfastr_data():
+    for row in batch:
+        route_row(row.to_dict())
+
+Immediate wins once this lands
+• WR box instantly gets racr, wopr_x, target_share, air_yards_share, yac_epa, xyac_epa
+• RB box gets ryoe, rush_epa, opportunity_share, receiving_epa
+• QB box gets cpoe, dakota, pacr, aggression, bad_throw %
+• IDP gets solo tackles, sacks, TFL, PD, FF, QB hits
+• Fantasy engine gets fantasy_points & fantasy_points_ppr pre-calculated
+
+Just run the router and every downstream module lights up with zero manual mapping ever again.
+Agent task:
+
+Pull all 4 files from the links above
+Drop into the folder structure
+Wire nflfastr_router.py into the existing NFLfastR loader
+Confirm all topics appear in Kafka/Redp → test with one week of 2024 data
