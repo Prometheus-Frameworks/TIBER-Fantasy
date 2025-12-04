@@ -1,0 +1,59 @@
+Goal
+Every single metric we pulled from nflfastR today (CPOE, dakota, PACR, WOPR-x, RACR, RYOE, cushion, xyac_epa, etc.) must flow through FORGE as the single junction box, then feed every downstream module (Tiber chat, leaderboards, Alpha scoring, projections, etc.).
+Current reality:
+
+pushAllBoxes.ts sends enriched data straight to external leaderboards (good)
+FORGE still pulls from its own snapshot_season table (old path) → missing our new 2025 metrics are invisible to Tiber/Alpha
+
+The fix — one clean, permanent reroute (agent can ship in <15 min)
+Step 1 – Make FORGE read from the same enriched snapshot we just built
+Add this to server/forge/forgeService.ts (or wherever you call getSnapshotSeasonStats):
+TypeScript// NEW: Use the same enriched weekly snapshot instead of the old season table
+import { db } from '../db';
+
+export async function getEnrichedPlayerWeek(canonicalId: string, season: number, week?: number) {
+  const query = db
+    .selectFrom('datadive_snapshot_player_week')
+    .innerJoin('player_identity_map', 'player_identity_map.canonical_id', 'datadive_snapshot_player_week.player_id')
+    .where('player_identity_map.canonical_id', '=', canonicalId)
+    .where('datadive_snapshot_player_week.season', '=', season);
+
+  if (week) query = query.where('datadive_snapshot_player_week.week', '=', week);
+
+  const row = await query.selectAll().executeTakeFirst();
+  
+  if (!row) return null;
+
+  // Run through our brand-new enrichment pipeline
+  const { enrichByPosition } = await import('../enrichment');
+  return enrichByPosition(row);
+}
+Then update every place that calls loadForgeContext / calculateAlphaScore:
+TypeScript// Old
+const stats = await getSnapshotSeasonStats(...)
+
+// New — one line change
+const stats = await getEnrichedPlayerWeek(canonicalId, 2025, currentWeek);
+Step 2 – Kill the old path permanently (optional but clean)
+SQL-- You can even drop the old season aggregation job if you want
+-- From now on, everything flows through the weekly enriched snapshot
+Result
+textNow the flow is perfect and future-proof:
+nflfastR → ingest-week.ts → enrichment boxes → datadive_snapshot_player_week
+↓
+FORGE (junction box)
+↓
+┌────────────────────┬──────────────────────┐
+▼                    ▼                      ▼
+Tiber Chat           Leaderboards             Projections
+(Alpha, RYOE,           /v1/wr-leaderboard       xFPTS v2
+WOPR, dakota)                                   etc.
+textEvery new metric we add tomorrow automatically hits every module with zero extra work.
+
+Tell the agent:
+Agent — final mission tonight:
+Replace every call to the old season snapshot with the new getEnrichedPlayerWeek() function (code above).
+That routes every single 2025 metric we built today (dakota, RACR, RYOE, WOPR-x, cushion, xyac_epa, etc.) through FORGE so Tiber and all downstream modules see them instantly.
+Once this lands, FORGE is officially the single source of truth and we never have this disconnect again.
+Ship this commit and we go from 98% → 100% live with weekly evolving insights.
+You’re about to make history from a Replit instance.
