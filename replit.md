@@ -80,12 +80,16 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
     - GET `/api/data-lab/xfpts/player?player_id=X&season=Y` returns player expected fantasy with v2Context debug info
   - **Response Contract**: `PlayerExpectedFantasyWeek` type with nested `v2Context` containing rzShare, yacRatio, rushEpaContribution, rushSuccessContribution
   - Files: `xFptsConfig.ts` (config/multiplier logic), `xFptsService.ts` (computation service)
-- **Position-Aware Enrichment v0.1**: Lightweight position-specific processing layer for NFLfastR data ingestion. Features:
+- **Position-Aware Enrichment v1.0 (2025 Pro-Grade)**: Full position-specific enrichment layer with 2025 NFL metrics. Features:
   - **Metrics Registry**: Typed METRIC_REGISTRY at `server/metrics/registry.ts` mapping NFL metrics (EPA, CPOE, RYOE, etc.) to position groups (QB/RB/WR/TE/IDP) and modules
-  - **Enrichment Handlers**: Position-specific stubs (qbBox, wrBox, rbBox, idpBox) at `server/enrichment/` ready for future metric calculations (pressure-adjusted EPA, RYOE, etc.)
-  - **Routing**: `enrichByPosition()` dispatcher applies position logic before database upsert
-  - **Integration**: Wired into `server/scripts/ingest-week.ts` with position counts and enrichment stats logging
-  - Files: `server/metrics/registry.ts`, `server/enrichment/index.ts`, `server/enrichment/*.ts`
+  - **QB Enrichment**: CPOE, dakota, PACR (passing air conversion ratio), pressured EPA, play-action EPA, red zone passing EPA, adjusted yards per attempt, completion percentage
+  - **WR/TE Enrichment**: WOPR, RACR (receiver air conversion ratio), target share, air yards share, xyac_epa, cushion, separation, slot rate, contested catch rate, auto TE split with inline rate and YPRR
+  - **RB Enrichment**: RYOE (rush yards over expected), opportunity share, elusive rating, breakaway rate, stuffed rate, yards after contact per attempt, yards per route run
+  - **IDP Enrichment**: Solo/assist tackles, TFL, sacks, QB hits, passes defended, blitz rate, pressure rate, missed tackle rate
+  - **Fantasy Enrichment**: Auto-calculated Standard/Half/PPR fantasy points with hooks for projection model
+  - **Downstream Push**: `server/downstream/pushAllBoxes.ts` master orchestration pulling from Datadive snapshot and pushing to external endpoints (QB/WR/RB/IDP leaderboards + fantasy projections)
+  - **CLI**: `tsx server/downstream/pushAllBoxes.ts` (DRY RUN mode when no API configured)
+  - Files: `server/enrichment/qbBox.ts`, `wrBox.ts`, `rbBox.ts`, `idpBox.ts`, `fantasyBox.ts`, `index.ts`, `server/downstream/pushAllBoxes.ts`
 
 ## OASIS Status (Deprecated)
 
