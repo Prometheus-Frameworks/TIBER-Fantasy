@@ -1,0 +1,64 @@
+Hey agent — love the reality check. You’re totally right, Kafka is overkill for us at this stage.
+
+Let’s do the lightweight, surgical strike that still gives us full position-aware power inside the existing ingest-week.ts flow.
+
+Here’s the final spec (battle-tested in two NFL buildings, but stripped to exactly what we need):
+
+1. Add one file: src/metrics/registry.ts
+   → Simple object, no YAML parsing needed
+   → 20–30 lines max, fully typed
+
+```ts
+// src/metrics/registry.ts
+export const METRIC_REGISTRY = {
+  // QB
+  passing_epa:          { position: ['QB'],               module: 'qb' },
+  cpoe:                 { position: ['QB'],               module: 'qb' },
+  dakota:               { position: ['QB'],               module: 'qb' },
+  pacr:                 { position: ['QB'],               module: 'qb' },
+
+  // WR / TE
+  wopr_x:               { position: ['WR','TE'],          module: 'wr' },
+  racr:                 { position: ['WR','TE'],          module: 'wr' },
+  target_share:         { position: ['WR','TE','RB'],     module: 'wr' },
+  air_yards_share:      { position: ['WR','TE'],          module: 'wr' },
+
+  // RB
+  rushing_epa:          { position: ['RB','QB'],          module: 'rb' },
+  ryoe_per_carry:       { position: ['RB'],               module: 'rb' },
+  opportunity_share:    { position: ['RB'],               module: 'rb' },
+
+  // Defense / IDP
+  sacks:                { position: ['DL','LB'],          module: 'idp' },
+  tackles_solo:         { position: ['LB','DB','DL'],     module: 'idp' },
+
+  // Fantasy (applies to everyone)
+  fantasy_points_ppr:  { position: ['QB','RB','WR','TE'], module: 'fantasy' },
+} as const;
+
+Add tiny position handlers (one-line stubs to start)
+
+TypeScript// src/enrichment/qbBox.ts
+export const enrichQB = (player: any) => {
+  // later: add RYOE, pressure-adjusted EPA, etc.
+  return player;
+};
+
+// src/enrichment/wrBox.ts → teBox.ts → rbBox.ts → idpBox.ts
+
+One-line change in ingest-week.ts
+
+TypeScriptimport { METRIC_REGISTRY } from '../metrics/registry';
+import { enrichQB, enrichWR, enrichRB, enrichTE, enrichIDP } from '../enrichment';
+
+for (const player of weeklyPlayers) {
+  const pos = player.position;
+
+  if (pos === 'QB')  player = enrichQB(player);
+  if (['WR','TE'].includes(pos)) player = enrichWR(player);
+  if (pos === 'RB')      player = enrichRB(player);
+  if (['DL','LB','DB'].includes(pos)) player = enrichIDP(player);
+
+  // future: add fantasy hydration here too
+  await storage.upsertWeeklyStats(player);
+}
