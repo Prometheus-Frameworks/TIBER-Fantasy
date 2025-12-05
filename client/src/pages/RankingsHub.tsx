@@ -156,18 +156,18 @@ export default function RankingsHub() {
   return (
     <div className="min-h-screen bg-[#0a0e1a] text-white">
       {/* Header */}
-      <header className="bg-[#141824] border-b border-gray-800 px-6 py-4">
+      <header className="bg-[#141824] border-b border-gray-800 px-3 sm:px-6 py-3 sm:py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" data-testid="link-home">
-                <Home className="h-4 w-4 mr-2" />
-                TIBER
+              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white px-2 sm:px-3" data-testid="link-home">
+                <Home className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">TIBER</span>
               </Button>
             </Link>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-blue-400" />
-              <h1 className="text-xl font-bold">FORGE Rankings</h1>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />
+              <h1 className="text-base sm:text-xl font-bold">FORGE Rankings</h1>
             </div>
           </div>
           <Button 
@@ -175,24 +175,24 @@ export default function RankingsHub() {
             size="sm" 
             onClick={() => refetch()}
             disabled={isLoading}
-            className="border-gray-700 text-gray-300 hover:text-white"
+            className="border-gray-700 text-gray-300 hover:text-white px-2 sm:px-3"
             data-testid="button-refresh"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            <RefreshCw className={`h-4 w-4 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-6">
+      <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
         {/* Position Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-1.5 sm:gap-2 mb-4 sm:mb-6">
           {(['WR', 'RB', 'TE', 'QB'] as Position[]).map((pos) => (
             <button
               key={pos}
               data-testid={`tab-${pos.toLowerCase()}`}
               onClick={() => setPosition(pos)}
-              className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+              className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-sm sm:text-base font-semibold transition-all ${
                 position === pos
                   ? 'bg-blue-600 text-white'
                   : 'bg-[#141824] text-gray-400 hover:text-white border border-gray-700'
@@ -203,8 +203,8 @@ export default function RankingsHub() {
           ))}
         </div>
 
-        {/* Info Banner */}
-        <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg px-4 py-3 mb-6">
+        {/* Info Banner - Hidden on mobile, shown on sm+ */}
+        <div className="hidden sm:block bg-blue-900/20 border border-blue-700/30 rounded-lg px-4 py-3 mb-6">
           <p className="text-sm text-blue-300">
             <strong>FORGE Alpha (0-100)</strong>: Unified player score combining volume, efficiency, role leverage, stability, and context. 
             SoS adjustment applies a 0.90-1.10 multiplier based on remaining schedule difficulty.
@@ -222,17 +222,37 @@ export default function RankingsHub() {
               <table className="w-full" data-testid="rankings-table">
                 <thead className="bg-[#0a0e1a]">
                   <tr>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider w-12">
+                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider w-8 sm:w-12">
                       #
                     </th>
-                    <SortableHeader field="playerName" label="Player" />
-                    <SortableHeader field="team" label="Team" />
-                    <SortableHeader field="alpha" label="Alpha" />
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('playerName')}>
+                      <div className="flex items-center gap-1">
+                        Player
+                        {sortField === 'playerName' && <span className="text-blue-400">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
+                      </div>
+                    </th>
+                    <th className="hidden sm:table-cell px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('team')}>
+                      <div className="flex items-center gap-1">
+                        Team
+                        {sortField === 'team' && <span className="text-blue-400">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
+                      </div>
+                    </th>
+                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('alpha')}>
+                      <div className="flex items-center gap-1">
+                        Alpha
+                        {sortField === 'alpha' && <span className="text-blue-400">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
+                      </div>
+                    </th>
+                    <th className="hidden md:table-cell px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">
                       Trend
                     </th>
-                    <SortableHeader field="sosRos" label="SoS" />
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('sosRos')}>
+                      <div className="flex items-center gap-1">
+                        SoS
+                        {sortField === 'sosRos' && <span className="text-blue-400">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
+                      </div>
+                    </th>
+                    <th className="hidden md:table-cell px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">
                       GP
                     </th>
                   </tr>
@@ -241,13 +261,13 @@ export default function RankingsHub() {
                   {isLoading ? (
                     [...Array(10)].map((_, i) => (
                       <tr key={i} className="animate-pulse">
-                        <td className="px-3 py-4"><div className="h-4 bg-slate-700 rounded w-6"></div></td>
-                        <td className="px-3 py-4"><div className="h-4 bg-slate-700 rounded w-32"></div></td>
-                        <td className="px-3 py-4"><div className="h-4 bg-slate-700 rounded w-10"></div></td>
-                        <td className="px-3 py-4"><div className="h-4 bg-slate-700 rounded w-12"></div></td>
-                        <td className="px-3 py-4"><div className="h-4 bg-slate-700 rounded w-8"></div></td>
-                        <td className="px-3 py-4"><div className="h-4 bg-slate-700 rounded w-8"></div></td>
-                        <td className="px-3 py-4"><div className="h-4 bg-slate-700 rounded w-6"></div></td>
+                        <td className="px-2 sm:px-3 py-2 sm:py-4"><div className="h-4 bg-slate-700 rounded w-4 sm:w-6"></div></td>
+                        <td className="px-2 sm:px-3 py-2 sm:py-4"><div className="h-4 bg-slate-700 rounded w-20 sm:w-32"></div></td>
+                        <td className="hidden sm:table-cell px-2 sm:px-3 py-2 sm:py-4"><div className="h-4 bg-slate-700 rounded w-10"></div></td>
+                        <td className="px-2 sm:px-3 py-2 sm:py-4"><div className="h-4 bg-slate-700 rounded w-10 sm:w-12"></div></td>
+                        <td className="hidden md:table-cell px-2 sm:px-3 py-2 sm:py-4"><div className="h-4 bg-slate-700 rounded w-8"></div></td>
+                        <td className="px-2 sm:px-3 py-2 sm:py-4"><div className="h-4 bg-slate-700 rounded w-6 sm:w-8"></div></td>
+                        <td className="hidden md:table-cell px-2 sm:px-3 py-2 sm:py-4"><div className="h-4 bg-slate-700 rounded w-6"></div></td>
                       </tr>
                     ))
                   ) : (
@@ -259,19 +279,22 @@ export default function RankingsHub() {
                           className="hover:bg-slate-800/50 transition-colors"
                           data-testid={`row-${player.playerId}`}
                         >
-                          <td className="px-3 py-3 text-slate-500 font-mono text-sm">
+                          <td className="px-2 sm:px-3 py-2 sm:py-3 text-slate-500 font-mono text-xs sm:text-sm">
                             {idx + 1}
                           </td>
-                          <td className="px-3 py-3">
-                            <span className="font-medium text-white">{player.playerName}</span>
+                          <td className="px-2 sm:px-3 py-2 sm:py-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                              <span className="font-medium text-white text-sm sm:text-base">{player.playerName}</span>
+                              <span className="sm:hidden text-[10px] text-slate-500">{player.nflTeam || '—'}</span>
+                            </div>
                           </td>
-                          <td className="px-3 py-3">
+                          <td className="hidden sm:table-cell px-2 sm:px-3 py-2 sm:py-3">
                             <span className="text-slate-400 text-sm">{player.nflTeam || '—'}</span>
                           </td>
-                          <td className="px-3 py-3">
+                          <td className="px-2 sm:px-3 py-2 sm:py-3">
                             <Tooltip>
                               <TooltipTrigger>
-                                <span className={`font-bold font-mono text-lg ${getAlphaColor(player.alpha)} ${getAlphaBg(player.alpha)} px-2 py-0.5 rounded`}>
+                                <span className={`font-bold font-mono text-sm sm:text-lg ${getAlphaColor(player.alpha)} ${getAlphaBg(player.alpha)} px-1.5 sm:px-2 py-0.5 rounded`}>
                                   {player.alpha.toFixed(1)}
                                 </span>
                               </TooltipTrigger>
@@ -284,16 +307,16 @@ export default function RankingsHub() {
                               </TooltipContent>
                             </Tooltip>
                           </td>
-                          <td className="px-3 py-3">
+                          <td className="hidden md:table-cell px-2 sm:px-3 py-2 sm:py-3">
                             <span className={`text-lg ${getTrajectoryColor(player.trajectory)}`}>
                               {getTrajectoryIcon(player.trajectory)}
                             </span>
                           </td>
-                          <td className="px-3 py-3">
+                          <td className="px-2 sm:px-3 py-2 sm:py-3">
                             {player.sosRos != null ? (
                               <Tooltip>
                                 <TooltipTrigger>
-                                  <span className={`text-xs font-bold px-2 py-1 rounded ${sosBadge.bg} ${sosBadge.color}`}>
+                                  <span className={`text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded ${sosBadge.bg} ${sosBadge.color}`}>
                                     {sosBadge.label}
                                   </span>
                                 </TooltipTrigger>
@@ -311,7 +334,7 @@ export default function RankingsHub() {
                               <span className="text-slate-500">—</span>
                             )}
                           </td>
-                          <td className="px-3 py-3 text-slate-400 text-sm">
+                          <td className="hidden md:table-cell px-2 sm:px-3 py-2 sm:py-3 text-slate-400 text-sm">
                             {player.gamesPlayed}
                           </td>
                         </tr>
@@ -324,25 +347,15 @@ export default function RankingsHub() {
           </div>
         )}
 
-        {/* Legend */}
-        <div className="mt-6 bg-[#141824] border border-gray-800 rounded-lg px-4 py-3">
-          <div className="flex flex-wrap gap-6 text-xs text-slate-400">
-            <div>
-              <span className="text-green-400 font-bold">80+</span> Elite
+        {/* Legend - Simplified on mobile */}
+        <div className="mt-4 sm:mt-6 bg-[#141824] border border-gray-800 rounded-lg px-3 sm:px-4 py-2 sm:py-3">
+          <div className="flex flex-wrap gap-3 sm:gap-6 text-[10px] sm:text-xs text-slate-400">
+            <div className="flex gap-2 sm:gap-4">
+              <span><span className="text-green-400 font-bold">80+</span> Elite</span>
+              <span><span className="text-emerald-400 font-bold">60+</span> Strong</span>
+              <span><span className="text-yellow-400 font-bold">40+</span> Avg</span>
             </div>
-            <div>
-              <span className="text-emerald-400 font-bold">60-79</span> Strong
-            </div>
-            <div>
-              <span className="text-yellow-400 font-bold">40-59</span> Average
-            </div>
-            <div>
-              <span className="text-orange-400 font-bold">20-39</span> Below Avg
-            </div>
-            <div>
-              <span className="text-red-400 font-bold">&lt;20</span> Poor
-            </div>
-            <div className="border-l border-slate-600 pl-4">
+            <div className="hidden sm:block border-l border-slate-600 pl-4">
               SoS: <span className="text-green-400 font-bold">++</span>/<span className="text-emerald-400 font-bold">+</span> Easy |
               <span className="text-slate-400 font-bold ml-1">=</span> Neutral |
               <span className="text-orange-400 font-bold ml-1">-</span>/<span className="text-red-400 font-bold">--</span> Hard
