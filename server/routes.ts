@@ -2678,6 +2678,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log('🎯 Strategy routes mounted at /api/strategy/*');
   console.log('🎯 Player Matchup Intelligence routes mounted at /api/matchup/*');
 
+  // ===== SYSTEM ENDPOINTS =====
+  // Universal current week detection endpoint
+  app.get('/api/system/current-week', (req, res) => {
+    const weekInfo = getCurrentWeek();
+    res.json({
+      success: true,
+      ...weekInfo,
+      // For convenience, include the week to use for upcoming games
+      upcomingWeek: weekInfo.weekStatus === 'completed' 
+        ? Math.min(weekInfo.currentWeek + 1, 18)
+        : weekInfo.currentWeek
+    });
+  });
+  console.log('⏰ System current week endpoint mounted at /api/system/current-week');
+
   // Weekly Takes routes
   app.use('/api/weekly-takes', weeklyTakesRoutes);
   console.log('📝 Weekly Takes routes mounted at /api/weekly-takes/*');
