@@ -20,7 +20,8 @@ import {
   playerAdvanced2024,
   playerIdentityMap,
   weeklyStats,
-  silverPlayerWeeklyStats
+  silverPlayerWeeklyStats,
+  qbEpaAdjusted
 } from '@shared/schema';
 import { eq, and, desc, sql, lte, sum, count } from 'drizzle-orm';
 import {
@@ -410,6 +411,32 @@ async function fetchAdvancedMetrics(
         const datadiveStats = await getSnapshotSeasonStats(nflId, season);
         if (datadiveStats && datadiveStats.gamesPlayed > 0) {
           const metrics = toForgeAdvancedMetrics(datadiveStats);
+          
+          // For QBs, ensure we have meaningful epaPerPlay before returning
+          // If not, try qb_epa_adjusted table
+          if (metrics && position === 'QB' && !metrics.epaPerPlay) {
+            const qbEpa = await db
+              .select({
+                epaPerPlay: qbEpaAdjusted.tiberAdjEpaPerPlay,
+                rawEpa: qbEpaAdjusted.rawEpaPerPlay,
+              })
+              .from(qbEpaAdjusted)
+              .where(
+                and(
+                  eq(qbEpaAdjusted.playerId, nflId),
+                  eq(qbEpaAdjusted.season, season)
+                )
+              )
+              .orderBy(desc(qbEpaAdjusted.week))
+              .limit(1);
+            
+            if (qbEpa[0]) {
+              const epa = qbEpa[0].epaPerPlay ?? qbEpa[0].rawEpa;
+              console.log(`[FORGE/Context] QB epaPerPlay from qb_epa_adjusted for ${canonicalId}: ${epa}`);
+              return { ...metrics, epaPerPlay: epa ?? undefined };
+            }
+          }
+          
           if (metrics) {
             console.log(`[FORGE/Context] Fallback to Datadive advanced metrics for ${canonicalId}`);
             return metrics;
@@ -534,6 +561,32 @@ async function fetchAdvancedMetrics(
         aypa: p.aypa ?? undefined,
         yardsPerCarry: p.rushYpc ?? undefined,
       };
+    }
+    
+    // HOTFIX: QB-specific fallback to qb_epa_adjusted table
+    if (position === 'QB' && nflId) {
+      const qbEpa = await db
+        .select({
+          epaPerPlay: qbEpaAdjusted.tiberAdjEpaPerPlay,
+          rawEpa: qbEpaAdjusted.rawEpaPerPlay,
+        })
+        .from(qbEpaAdjusted)
+        .where(
+          and(
+            eq(qbEpaAdjusted.playerId, nflId),
+            eq(qbEpaAdjusted.season, season)
+          )
+        )
+        .orderBy(desc(qbEpaAdjusted.week))
+        .limit(1);
+      
+      if (qbEpa[0]) {
+        const epa = qbEpa[0].epaPerPlay ?? qbEpa[0].rawEpa;
+        console.log(`[FORGE/Context] Using qb_epa_adjusted for ${canonicalId}: EPA=${epa}`);
+        return {
+          epaPerPlay: epa ?? undefined,
+        };
+      }
     }
     
     return undefined;

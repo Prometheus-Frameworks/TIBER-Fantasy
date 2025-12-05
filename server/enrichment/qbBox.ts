@@ -29,21 +29,34 @@ export const enrichQB = (p: any): EnrichedQB => {
   const passTds = p.passing_tds || p.pass_td || 0;
   const interceptions = p.interceptions || p.int || 0;
 
-  return {
-    ...p,
-    cpoe: p.cpoe ?? null,
-    dakota: p.dakota ?? null,
-    pacr: airYds > 0 ? yds / airYds : null,
-    aggression_pct: p.aggression_pct ?? p.aggression ?? null,
-    avg_time_to_throw: p.avg_time_to_throw ?? p.time_to_throw ?? null,
-    pressured_epa_per_dropback: p.pressured_epa ?? p.pressured_epa_per_dropback ?? null,
-    play_action_epa: p.play_action_epa ?? null,
-    rz_passing_epa: p.redzone_passing_epa ?? p.rz_passing_epa ?? null,
-    completion_pct: att > 0 ? (comp / att) * 100 : null,
-    ypa: att > 0 ? yds / att : null,
-    adj_yards_per_attempt: att > 0 ? (yds + 20 * passTds - 45 * interceptions) / att : null,
-    qb_rating: p.qb_rating ?? p.passer_rating ?? null,
-  };
+  const cpoe = p.cpoe ?? null;
+  const dakota = p.dakota ?? null;
+  const pacr = airYds > 0 ? yds / airYds : null;
+  const aggression_pct = p.aggression_pct ?? p.aggression ?? null;
+  const avg_time_to_throw = p.avg_time_to_throw ?? p.time_to_throw ?? null;
+  const pressured_epa = p.pressured_epa ?? p.pressured_epa_per_dropback ?? null;
+  const play_action_epa = p.play_action_epa ?? null;
+  const rz_passing_epa = p.redzone_passing_epa ?? p.rz_passing_epa ?? null;
+  const completion_pct = att > 0 ? (comp / att) * 100 : null;
+  const ypa = att > 0 ? yds / att : null;
+  const adj_yards_per_attempt = att > 0 ? (yds + 20 * passTds - 45 * interceptions) / att : null;
+  const qb_rating = p.qb_rating ?? p.passer_rating ?? null;
+
+  // HOTFIX — merge enriched fields into original object properly
+  return Object.assign(p, {
+    cpoe,
+    dakota,
+    pacr,
+    aggression_pct,
+    avg_time_to_throw,
+    pressured_epa_per_dropback: pressured_epa,
+    play_action_epa,
+    rz_passing_epa,
+    completion_pct,
+    ypa,
+    adj_yards_per_attempt,
+    qb_rating,
+  });
 };
 
 export interface EnrichmentResult {
