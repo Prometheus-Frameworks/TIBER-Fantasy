@@ -59,31 +59,30 @@ const POSITION_WEIGHTS: Record<PlayerPosition, { volume: number; efficiency: num
 
 export function calculateAlphaV2(player: EnrichedPlayerWeek): number {
   const games = player.games_played ?? 0;
-
-  // 1. Hard games-played floor — no exceptions
-  if (games < MIN_GAMES) {
-    return Math.max(25, player.raw_alpha * (games / MIN_GAMES) * 0.85);
-  }
-
-  // 2. Recency bias — last 4 weeks dominate
-  const recent = player.last_4_weeks_alpha ?? player.raw_alpha;
-  const blended = (recent * RECENCY_WEIGHT) + (player.season_alpha * BASE_WEIGHT);
-
-  // 3. Position-specific sub-score weights (2025 final)
   const weights = POSITION_WEIGHTS[player.position];
 
-  // 4. Final Alpha — calibrated 25→95 (95+ reserved for GOAT seasons)
-  const weightedSubscore = 
-    (player.subscores.volume * weights.volume +
-     player.subscores.efficiency * weights.efficiency +
-     player.subscores.stability * weights.stability +
-     player.subscores.context * weights.context) / 100;
-  
-  const final = blended * weightedSubscore;
+  // FINAL V2.1 — CORRECTED (no more compression)
+  const volumeWeighted     = player.subscores.volume     * weights.volume;
+  const efficiencyWeighted = player.subscores.efficiency * weights.efficiency;
+  const stabilityWeighted  = player.subscores.stability  * weights.stability;
+  const contextWeighted    = player.subscores.context    * weights.context;
 
-  // 5. Elite ceiling protection
+  let final = volumeWeighted + efficiencyWeighted + stabilityWeighted + contextWeighted;
+
+  // Apply recency on the summed score (cleaner)
+  if (games >= MIN_GAMES && player.last_4_weeks_alpha) {
+    const recent = player.last_4_weeks_alpha ?? final;
+    final = (recent * RECENCY_WEIGHT) + (final * BASE_WEIGHT);
+  }
+
+  // Elite protection stays
   if (player.season_alpha >= 90) {
-    return Math.max(final, 88);
+    final = Math.max(final, 88);
+  }
+
+  // Games-played floor stays
+  if (games < MIN_GAMES) {
+    final = Math.max(25, final * (games / MIN_GAMES) * 0.85);
   }
 
   return Math.round(final * 10) / 10;
