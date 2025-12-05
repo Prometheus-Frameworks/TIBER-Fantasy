@@ -393,6 +393,11 @@ export async function getSnapshotWeeklyStats(
  * 
  * Uses canonical ID for deterministic deduplication (not player names).
  * Filters by both identity map position AND snapshot position for accuracy.
+ * 
+ * ELIGIBILITY RULES (v0.3):
+ * - Must be on active NFL team (not FA)
+ * - Must have at least 1 game played
+ * - Must NOT be on IR or other ineligible status (via player_live_status table)
  */
 export async function getDatadiveEligiblePlayers(
   position?: string,
@@ -416,10 +421,11 @@ export async function getDatadiveEligiblePlayers(
         SELECT DISTINCT ON (pim.canonical_id)
           pim.canonical_id,
           pim.full_name,
-          pim.nfl_team as team,
+          COALESCE(pls.current_team, pim.nfl_team) as team,
           COALESCE(dss.total_fpts_ppr, 0) as total_fpts
         FROM datadive_snapshot_player_season dss
         JOIN player_identity_map pim ON pim.nfl_data_py_id = dss.player_id
+        LEFT JOIN player_live_status pls ON pls.canonical_id = pim.canonical_id
         WHERE dss.snapshot_id = ${snapshot.snapshotId}
           AND dss.season = ${snapshot.season}
           AND UPPER(pim.position) = ${posUpper}
@@ -428,6 +434,7 @@ export async function getDatadiveEligiblePlayers(
           AND pim.nfl_team != 'FA'
           AND pim.is_active = true
           AND dss.games_played >= 1
+          AND (pls.is_eligible_for_forge IS NULL OR pls.is_eligible_for_forge = true)
         ORDER BY pim.canonical_id, dss.total_fpts_ppr DESC
         LIMIT ${perPositionLimit * 2}
       `);
