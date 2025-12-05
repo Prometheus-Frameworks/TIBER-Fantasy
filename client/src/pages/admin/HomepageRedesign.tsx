@@ -3,11 +3,12 @@ import { Link, useLocation } from 'wouter';
 import { 
   ChevronLeft, Search, LayoutDashboard, BarChart3, Calendar, FlaskConical, 
   FileText, ArrowLeftRight, BookOpen, Plus, Send, User, Loader2, Lightbulb, 
-  GraduationCap, MessageSquarePlus, TrendingUp, TrendingDown, AlertTriangle
+  GraduationCap, MessageSquarePlus, TrendingUp, TrendingDown, AlertTriangle, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import EnhancedPlayerCard from '@/components/EnhancedPlayerCard';
 
 type Feature = {
   id: string;
@@ -60,6 +61,23 @@ interface WeeklyTake {
   position: 'QB' | 'RB' | 'WR' | 'TE';
 }
 
+interface PlayerSearchResult {
+  canonicalId: string;
+  fullName: string;
+  position: string;
+  nflTeam: string;
+  confidence: number;
+  matchReason: string;
+}
+
+interface SearchResponse {
+  success: boolean;
+  data: {
+    results: PlayerSearchResult[];
+    totalFound: number;
+  };
+}
+
 interface HomepageRedesignProps {
   isPreview?: boolean;
 }
@@ -73,6 +91,12 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Player search and modal state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [selectedPlayerForModal, setSelectedPlayerForModal] = useState<PlayerSearchResult | null>(null);
+  const searchWrapperRef = useRef<HTMLDivElement>(null);
 
   const features: Feature[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -134,6 +158,21 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     },
     staleTime: 10 * 60 * 1000,
   });
+
+  // Player search query with autocomplete
+  const { data: searchResults, isLoading: searchLoading } = useQuery<SearchResponse>({
+    queryKey: ['/api/player-identity/search', searchQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams({ name: searchQuery, limit: '5' });
+      const res = await fetch(`/api/player-identity/search?${params}`);
+      if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
+      return res.json();
+    },
+    enabled: searchQuery.length >= 2,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const searchPlayers = searchResults?.data?.results || [];
 
   // Combine FORGE scores with trending data for movers
   const forgeMovers = (() => {
@@ -208,6 +247,36 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
       localStorage.setItem('tiber_chat_messages', JSON.stringify(messages));
     }
   }, [messages]);
+
+  // Close search dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchWrapperRef.current && !searchWrapperRef.current.contains(event.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (value.length >= 2) {
+      setIsSearchOpen(true);
+    } else {
+      setIsSearchOpen(false);
+    }
+  };
+
+  const handleSelectSearchResult = (player: PlayerSearchResult) => {
+    setSelectedPlayerForModal(player);
+    setSearchQuery('');
+    setIsSearchOpen(false);
+  };
+
+  const handleClosePlayerModal = () => {
+    setSelectedPlayerForModal(null);
+  };
 
   const showWelcomeMessage = (leagueName?: string) => {
     setMessages([{
@@ -319,20 +388,39 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     setTimeout(() => handleSend(), 100);
   };
 
-  const handlePlayerClick = (playerName: string) => {
-    const message = `Give me a quick breakdown on ${playerName}`;
-    setChatMessage(message);
-    setTimeout(() => {
-      const userMessage: ChatMessage = {
-        id: `user-${Date.now()}`,
-        role: 'user',
-        content: message,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, userMessage]);
-      chatMutation.mutate(message);
-      setChatMessage('');
-    }, 100);
+  const handlePlayerClick = async (playerName: string, position?: string, team?: string) => {
+    // Search for the player to get their canonical ID and open the modal
+    try {
+      const params = new URLSearchParams({ name: playerName, limit: '1' });
+      const res = await fetch(`/api/player-identity/search?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.data?.results?.length > 0) {
+          const player = data.data.results[0];
+          setSelectedPlayerForModal({
+            canonicalId: player.canonicalId,
+            fullName: player.fullName,
+            position: position || player.position,
+            nflTeam: team || player.nflTeam,
+            confidence: player.confidence,
+            matchReason: player.matchReason,
+          });
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to search for player:', error);
+    }
+    
+    // Fallback: Create a minimal player object for the modal
+    setSelectedPlayerForModal({
+      canonicalId: playerName.toLowerCase().replace(/\s+/g, '_'),
+      fullName: playerName,
+      position: position || '??',
+      nflTeam: team || '???',
+      confidence: 0,
+      matchReason: 'name_match',
+    });
   };
 
   // Quick insights from weekly takes API - structure is { qb: [], rb: [], wr: [], te: [] }
@@ -450,14 +538,67 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
 
         {/* Search & Profile */}
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.03] rounded-lg border border-white/[0.08]">
-            <Search className="h-4 w-4 text-zinc-500" />
-            <input 
-              type="text" 
-              placeholder="Search players..." 
-              className="bg-transparent border-none text-zinc-200 text-sm outline-none w-40"
-              data-testid="input-search"
-            />
+          <div className="relative" ref={searchWrapperRef}>
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.03] rounded-lg border border-white/[0.08]">
+              <Search className="h-4 w-4 text-zinc-500" />
+              <input 
+                type="text" 
+                placeholder="Search players..." 
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="bg-transparent border-none text-zinc-200 text-sm outline-none w-48"
+                data-testid="input-player-search"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => { setSearchQuery(''); setIsSearchOpen(false); }}
+                  className="text-zinc-500 hover:text-zinc-300"
+                  data-testid="button-clear-search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            
+            {/* Search Dropdown */}
+            {isSearchOpen && searchQuery.length >= 2 && (
+              <div className="absolute top-full mt-2 w-80 bg-[#1e2330] border border-gray-700 rounded-lg shadow-xl z-[60] max-h-80 overflow-y-auto">
+                {searchLoading ? (
+                  <div className="p-4 text-center text-zinc-400">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                  </div>
+                ) : searchPlayers.length > 0 ? (
+                  <div className="py-2">
+                    {searchPlayers.map((player) => (
+                      <button
+                        key={player.canonicalId}
+                        onClick={() => handleSelectSearchResult(player)}
+                        className="w-full px-4 py-3 hover:bg-[#141824] transition-colors text-left flex items-center justify-between group"
+                        data-testid={`search-result-${player.canonicalId}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-cyan-500 rounded-full flex items-center justify-center font-bold text-white text-sm">
+                            {player.position}
+                          </div>
+                          <div>
+                            <div className="text-zinc-100 font-medium group-hover:text-purple-400 transition-colors">
+                              {player.fullName}
+                            </div>
+                            <div className="text-xs text-zinc-500">
+                              {player.nflTeam} • {player.position}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center text-zinc-400" data-testid="no-search-results">
+                    No players found
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center cursor-pointer">
             <User className="h-4 w-4 text-white" />
@@ -566,7 +707,7 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
                       </div>
                       <div>
                         <button 
-                          onClick={() => handlePlayerClick(player.name)}
+                          onClick={() => handlePlayerClick(player.name, player.position, player.team)}
                           className="text-sm font-semibold text-zinc-200 hover:text-purple-400 transition-colors cursor-pointer text-left"
                           data-testid={`player-link-${player.name.toLowerCase().replace(/\s+/g, '-')}`}
                         >
@@ -820,6 +961,24 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
           </div>
         </aside>
       </main>
+
+      {/* Player Card Modal */}
+      {selectedPlayerForModal && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+          onClick={handleClosePlayerModal}
+        >
+          <div 
+            className="max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <EnhancedPlayerCard 
+              player={selectedPlayerForModal} 
+              onClose={handleClosePlayerModal}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
