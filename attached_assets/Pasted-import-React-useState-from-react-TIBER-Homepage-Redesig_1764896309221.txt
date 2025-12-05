@@ -1,0 +1,617 @@
+import React, { useState } from 'react';
+
+// TIBER Homepage Redesign Concept
+// - Horizontal feature navigation across top
+// - Condensed chat panel on the right
+// - Dashboard widgets for at-a-glance insights
+// - Maintains dark theme with purple/teal gradient accents
+
+export default function TiberHomepage() {
+  const [activeFeature, setActiveFeature] = useState('dashboard');
+  const [selectedLeague, setSelectedLeague] = useState('morts-ff');
+  const [chatMessage, setChatMessage] = useState('');
+  const [chatMode, setChatMode] = useState('Insight');
+
+  const features = [
+    { id: 'dashboard', label: 'Dashboard', icon: '◫' },
+    { id: 'rankings', label: 'Rankings', icon: '📊' },
+    { id: 'schedule', label: 'Schedule', icon: '📅' },
+    { id: 'datalab', label: 'Data Lab', icon: '🔬' },
+    { id: 'waiver', label: 'Waiver Wire', icon: '📋' },
+    { id: 'trades', label: 'Trade Hub', icon: '🔄' },
+    { id: 'journal', label: 'Command Centre', icon: '📓' },
+  ];
+
+  const leagues = [
+    { id: 'test-dynasty', name: 'Test Dynasty', teams: 12, platform: 'Sleeper' },
+    { id: 'morts-ff', name: 'Morts FF', teams: 12, platform: 'Sleeper' },
+    { id: 'fifa-ballerz', name: 'Fifa Ballerz', teams: 10, platform: 'Sleeper' },
+  ];
+
+  const quickInsights = [
+    { type: 'alert', title: 'Injury Alert', content: 'Ja\'Marr Chase questionable - monitor practice reports', urgency: 'high' },
+    { type: 'trend', title: 'Rising', content: 'Bucky Irving +12% rostership', urgency: 'medium' },
+    { type: 'matchup', title: 'Week 14', content: 'Morts FF vs Dynasty Kings - projected 112.4', urgency: 'low' },
+  ];
+
+  const trendingPlayers = [
+    { name: 'Bucky Irving', team: 'TB', position: 'RB', change: '+18.2', direction: 'up' },
+    { name: 'Jameson Williams', team: 'DET', position: 'WR', change: '+12.7', direction: 'up' },
+    { name: 'Keenan Allen', team: 'CHI', position: 'WR', change: '-8.4', direction: 'down' },
+  ];
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0a0a0f 0%, #0d0d14 50%, #0f0a14 100%)',
+      color: '#e4e4e7',
+      fontFamily: "'JetBrains Mono', 'SF Mono', monospace",
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      
+      {/* ===== TOP HEADER BAR ===== */}
+      <header style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '12px 24px',
+        borderBottom: '1px solid rgba(139, 92, 246, 0.15)',
+        background: 'rgba(10, 10, 15, 0.8)',
+        backdropFilter: 'blur(12px)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+      }}>
+        {/* Logo & Brand */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '10px',
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 700,
+            fontSize: '16px',
+            color: '#fff',
+          }}>T</div>
+          <span style={{ 
+            fontWeight: 700, 
+            fontSize: '18px',
+            background: 'linear-gradient(135deg, #8b5cf6, #06b6d4)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>TIBER</span>
+        </div>
+
+        {/* League Selector - Always Visible */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '6px 12px',
+          background: 'rgba(139, 92, 246, 0.1)',
+          borderRadius: '8px',
+          border: '1px solid rgba(139, 92, 246, 0.2)',
+          cursor: 'pointer',
+        }}>
+          <span style={{ fontSize: '12px', color: '#a1a1aa' }}>Active:</span>
+          <select 
+            value={selectedLeague}
+            onChange={(e) => setSelectedLeague(e.target.value)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#e4e4e7',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            {leagues.map(league => (
+              <option key={league.id} value={league.id} style={{ background: '#1a1a24' }}>
+                {league.name} ({league.teams}T)
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Search & Profile */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            background: 'rgba(255, 255, 255, 0.03)',
+            borderRadius: '8px',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+          }}>
+            <span style={{ color: '#71717a' }}>⌕</span>
+            <input 
+              type="text" 
+              placeholder="Search players..." 
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#e4e4e7',
+                fontSize: '13px',
+                outline: 'none',
+                width: '160px',
+              }}
+            />
+          </div>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+          }}>👤</div>
+        </div>
+      </header>
+
+      {/* ===== HORIZONTAL FEATURE NAVIGATION ===== */}
+      <nav style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '12px 24px',
+        borderBottom: '1px solid rgba(139, 92, 246, 0.1)',
+        background: 'rgba(10, 10, 15, 0.5)',
+        overflowX: 'auto',
+      }}>
+        {features.map(feature => (
+          <button
+            key={feature.id}
+            onClick={() => setActiveFeature(feature.id)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 18px',
+              borderRadius: '8px',
+              border: 'none',
+              background: activeFeature === feature.id 
+                ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(6, 182, 212, 0.15))'
+                : 'transparent',
+              color: activeFeature === feature.id ? '#e4e4e7' : '#71717a',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              whiteSpace: 'nowrap',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              borderColor: activeFeature === feature.id 
+                ? 'rgba(139, 92, 246, 0.3)' 
+                : 'transparent',
+            }}
+          >
+            <span>{feature.icon}</span>
+            <span>{feature.label}</span>
+          </button>
+        ))}
+        
+        {/* Add Feature Button */}
+        <button style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '10px 14px',
+          borderRadius: '8px',
+          border: '1px dashed rgba(139, 92, 246, 0.3)',
+          background: 'transparent',
+          color: '#8b5cf6',
+          fontSize: '13px',
+          cursor: 'pointer',
+          marginLeft: '8px',
+        }}>
+          <span>+</span>
+        </button>
+      </nav>
+
+      {/* ===== MAIN CONTENT AREA ===== */}
+      <main style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 380px',
+        flex: 1,
+        overflow: 'hidden',
+      }}>
+        
+        {/* LEFT: Dashboard / Feature Content */}
+        <div style={{
+          padding: '24px',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '20px',
+        }}>
+          
+          {/* Quick Insights Row */}
+          <section>
+            <h3 style={{ 
+              fontSize: '12px', 
+              fontWeight: 600, 
+              color: '#71717a', 
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              marginBottom: '12px',
+            }}>Quick Insights</h3>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+              gap: '12px',
+            }}>
+              {quickInsights.map((insight, idx) => (
+                <div key={idx} style={{
+                  padding: '16px',
+                  borderRadius: '12px',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(139, 92, 246, 0.15)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}>
+                    <span style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: insight.urgency === 'high' ? '#ef4444' 
+                        : insight.urgency === 'medium' ? '#f59e0b' : '#22c55e',
+                    }}></span>
+                    <span style={{ 
+                      fontSize: '11px', 
+                      fontWeight: 600, 
+                      color: '#a1a1aa',
+                      textTransform: 'uppercase',
+                    }}>{insight.title}</span>
+                  </div>
+                  <p style={{ 
+                    fontSize: '13px', 
+                    color: '#e4e4e7',
+                    lineHeight: 1.5,
+                    margin: 0,
+                  }}>{insight.content}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Trending Players */}
+          <section>
+            <h3 style={{ 
+              fontSize: '12px', 
+              fontWeight: 600, 
+              color: '#71717a', 
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              marginBottom: '12px',
+            }}>FORGE Movers</h3>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              borderRadius: '12px',
+              border: '1px solid rgba(139, 92, 246, 0.15)',
+              overflow: 'hidden',
+            }}>
+              {trendingPlayers.map((player, idx) => (
+                <div key={idx} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '14px 18px',
+                  borderBottom: idx < trendingPlayers.length - 1 
+                    ? '1px solid rgba(139, 92, 246, 0.1)' : 'none',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '8px',
+                      background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(6, 182, 212, 0.1))',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#8b5cf6',
+                    }}>{player.position}</div>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#e4e4e7' }}>
+                        {player.name}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#71717a' }}>{player.team}</div>
+                    </div>
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: player.direction === 'up' ? '#22c55e' : '#ef4444',
+                  }}>
+                    {player.direction === 'up' ? '↑' : '↓'} {player.change}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* My Roster Quick View */}
+          <section>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '12px',
+            }}>
+              <h3 style={{ 
+                fontSize: '12px', 
+                fontWeight: 600, 
+                color: '#71717a', 
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                margin: 0,
+              }}>Start/Sit Suggestions</h3>
+              <span style={{
+                fontSize: '11px',
+                color: '#8b5cf6',
+                cursor: 'pointer',
+              }}>View Full Roster →</span>
+            </div>
+            <div style={{
+              padding: '20px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(6, 182, 212, 0.04))',
+              border: '1px solid rgba(139, 92, 246, 0.2)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+              }}>
+                <div style={{
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  background: 'rgba(34, 197, 94, 0.15)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  color: '#22c55e',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                }}>START</div>
+                <span style={{ fontSize: '13px', color: '#e4e4e7' }}>
+                  <strong>Nico Collins</strong> vs JAX — elite matchup, 94% confidence
+                </span>
+              </div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+              }}>
+                <div style={{
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#ef4444',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                }}>SIT</div>
+                <span style={{ fontSize: '13px', color: '#e4e4e7' }}>
+                  <strong>Courtland Sutton</strong> @ BUF — tough secondary, 71% confidence
+                </span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* RIGHT: Condensed Chat Panel */}
+        <aside style={{
+          borderLeft: '1px solid rgba(139, 92, 246, 0.15)',
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'rgba(10, 10, 15, 0.5)',
+        }}>
+          {/* Chat Header */}
+          <div style={{
+            padding: '16px 20px',
+            borderBottom: '1px solid rgba(139, 92, 246, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                fontSize: '14px',
+                color: '#fff',
+              }}>T</div>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: '#e4e4e7' }}>
+                  TIBER Chat
+                </div>
+                <div style={{ fontSize: '11px', color: '#71717a' }}>
+                  Your Assistant GM
+                </div>
+              </div>
+            </div>
+            <button style={{
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              background: 'transparent',
+              color: '#8b5cf6',
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}>
+              <span>+</span> New
+            </button>
+          </div>
+
+          {/* Chat Messages */}
+          <div style={{
+            flex: 1,
+            padding: '20px',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+          }}>
+            {/* TIBER Welcome Message */}
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+            }}>
+              <div style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '6px',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                fontSize: '12px',
+                color: '#fff',
+                flexShrink: 0,
+              }}>T</div>
+              <div style={{
+                padding: '12px 16px',
+                borderRadius: '12px',
+                borderTopLeftRadius: '4px',
+                background: 'rgba(139, 92, 246, 0.1)',
+                border: '1px solid rgba(139, 92, 246, 0.2)',
+                fontSize: '13px',
+                lineHeight: 1.6,
+                color: '#d4d4d8',
+              }}>
+                Hey! I see you're managing <strong style={{ color: '#8b5cf6' }}>Morts FF</strong> this week. 
+                A few things on my radar: Ja'Marr Chase's injury status and some interesting 
+                waiver targets. What do you want to dig into?
+              </div>
+            </div>
+
+            {/* Suggested Quick Actions */}
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '8px',
+              paddingLeft: '40px',
+            }}>
+              {['Analyze my matchup', 'Waiver targets', 'Start/Sit help', 'Trade value check'].map((action, idx) => (
+                <button key={idx} style={{
+                  padding: '8px 14px',
+                  borderRadius: '20px',
+                  border: '1px solid rgba(139, 92, 246, 0.25)',
+                  background: 'rgba(139, 92, 246, 0.05)',
+                  color: '#a1a1aa',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}>
+                  {action}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Chat Input */}
+          <div style={{
+            padding: '16px 20px',
+            borderTop: '1px solid rgba(139, 92, 246, 0.1)',
+          }}>
+            {/* Mode Selector */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px',
+            }}>
+              {['Insight', 'Teach', 'River'].map(mode => (
+                <button
+                  key={mode}
+                  onClick={() => setChatMode(mode)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    background: chatMode === mode ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
+                    color: chatMode === mode ? '#8b5cf6' : '#71717a',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+            
+            {/* Input Box */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              background: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid rgba(139, 92, 246, 0.2)',
+            }}>
+              <input
+                type="text"
+                placeholder="Ask about trades, start/sit, player analysis..."
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#e4e4e7',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
+              />
+              <button style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%)',
+                color: '#fff',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '16px',
+              }}>
+                ➤
+              </button>
+            </div>
+          </div>
+        </aside>
+      </main>
+    </div>
+  );
+}
