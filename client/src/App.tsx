@@ -24,8 +24,13 @@ import NotFound from "@/pages/not-found";
 function Router() {
   return (
     <Switch>
-      {/* Main Route - TIBER Chat Homepage */}
-      <Route path="/" component={ChatHomepage} />
+      {/* Main Route - New TIBER Homepage */}
+      <Route path="/">
+        {() => <HomepageRedesign isPreview={false} />}
+      </Route>
+      
+      {/* Legacy Chat Homepage (fallback during migration) */}
+      <Route path="/legacy-chat" component={ChatHomepage} />
       
       {/* Rankings - FORGE-powered player rankings */}
       <Route path="/rankings" component={RankingsHub} />
@@ -49,7 +54,9 @@ function Router() {
       <Route path="/admin/api-lexicon" component={ApiLexicon} />
       
       {/* Admin: Homepage Redesign Preview */}
-      <Route path="/admin/homepage-redesign" component={HomepageRedesign} />
+      <Route path="/admin/homepage-redesign">
+        {() => <HomepageRedesign isPreview={true} />}
+      </Route>
       
       {/* Admin: RAG Status */}
       <Route path="/admin/rag-status" component={RagStatus} />

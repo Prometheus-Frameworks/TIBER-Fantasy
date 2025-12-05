@@ -50,7 +50,11 @@ type TrendingPlayer = {
   direction: 'up' | 'down';
 };
 
-export default function HomepageRedesign() {
+interface HomepageRedesignProps {
+  isPreview?: boolean;
+}
+
+export default function HomepageRedesign({ isPreview = false }: HomepageRedesignProps) {
   const [, navigate] = useLocation();
   const [activeFeature, setActiveFeature] = useState('dashboard');
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
@@ -198,12 +202,17 @@ export default function HomepageRedesign() {
   };
 
   const handleLeagueChange = (leagueId: string) => {
-    setSelectedLeagueId(leagueId);
-    localStorage.setItem('tiber_chat_league', leagueId);
+    const normalizedId = leagueId || null;
+    setSelectedLeagueId(normalizedId);
+    if (normalizedId) {
+      localStorage.setItem('tiber_chat_league', normalizedId);
+    } else {
+      localStorage.removeItem('tiber_chat_league');
+    }
     localStorage.removeItem('tiber_chat_session');
     localStorage.removeItem('tiber_chat_messages');
     setSessionId(null);
-    const league = leagues.find(l => l.id === leagueId);
+    const league = normalizedId ? leagues.find(l => l.id === normalizedId) : undefined;
     showWelcomeMessage(league?.leagueName);
   };
 
@@ -251,21 +260,23 @@ export default function HomepageRedesign() {
       background: 'linear-gradient(135deg, #0a0a0f 0%, #0d0d14 50%, #0f0a14 100%)'
     }}>
       
-      {/* Admin Notice Banner - Remove this when migrating to production */}
-      <div className="bg-amber-500/10 border-b border-amber-500/30 px-6 py-2">
-        <div className="flex items-center justify-between max-w-full">
-          <div className="flex items-center gap-3">
-            <Link href="/admin/forge-hub">
-              <Button variant="ghost" size="sm" className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10" data-testid="button-back-hub">
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Back to Hub
-              </Button>
-            </Link>
-            <span className="text-amber-400 text-sm font-medium">Homepage Redesign Preview (Live Data)</span>
+      {/* Admin Notice Banner - Only shown in preview mode */}
+      {isPreview && (
+        <div className="bg-amber-500/10 border-b border-amber-500/30 px-6 py-2">
+          <div className="flex items-center justify-between max-w-full">
+            <div className="flex items-center gap-3">
+              <Link href="/admin/forge-hub">
+                <Button variant="ghost" size="sm" className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10" data-testid="button-back-hub">
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Back to Hub
+                </Button>
+              </Link>
+              <span className="text-amber-400 text-sm font-medium">Homepage Redesign Preview (Live Data)</span>
+            </div>
+            <span className="text-amber-400/60 text-xs">Admin Only - Design Preview Mode</span>
           </div>
-          <span className="text-amber-400/60 text-xs">Admin Only - Design Preview Mode</span>
         </div>
-      </div>
+      )}
 
       {/* ===== TOP HEADER BAR ===== */}
       <header className="flex items-center justify-between px-6 py-3 border-b border-purple-500/15 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-50">
