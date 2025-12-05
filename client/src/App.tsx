@@ -13,6 +13,7 @@ import PlayerMapping from "@/pages/admin/PlayerMapping";
 import PlayerMappingTest from "@/pages/admin/PlayerMappingTest";
 import PlayerResearch from "@/pages/admin/PlayerResearch";
 import ApiLexicon from "@/pages/admin/ApiLexicon";
+import HomepageRedesign from "@/pages/admin/HomepageRedesign";
 import RagStatus from "@/pages/RagStatus";
 import ForgeLab from "@/pages/ForgeLab";
 import TiberDataLab from "@/pages/TiberDataLab";
@@ -46,6 +47,9 @@ function Router() {
       
       {/* Admin: API Lexicon - Forge/Tiber endpoint reference */}
       <Route path="/admin/api-lexicon" component={ApiLexicon} />
+      
+      {/* Admin: Homepage Redesign Preview */}
+      <Route path="/admin/homepage-redesign" component={HomepageRedesign} />
       
       {/* Admin: RAG Status */}
       <Route path="/admin/rag-status" component={RagStatus} />

@@ -10,7 +10,8 @@ import {
   Shield,
   Settings,
   Database,
-  BookOpen
+  BookOpen,
+  LayoutDashboard
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -210,6 +211,21 @@ const ADMIN_TOOLS: { section: string; tools: AdminTool[] }[] = [
         iconColor: 'text-amber-400',
         badge: 'New',
         badgeColor: 'bg-amber-600',
+      },
+    ],
+  },
+  {
+    section: 'Design Previews',
+    tools: [
+      {
+        id: 'homepage-redesign',
+        title: 'Homepage Redesign Preview',
+        description: 'Preview the new dashboard layout with horizontal nav and chat panel',
+        href: '/admin/homepage-redesign',
+        icon: LayoutDashboard,
+        iconColor: 'text-purple-400',
+        badge: 'Preview',
+        badgeColor: 'bg-purple-600',
       },
     ],
   },
