@@ -313,9 +313,10 @@ export class WeeklyTakesService {
         const wr2 = recentGameLogs[1];
         const playerInfo = await this.getPlayerInfo(wr2.sleeperId);
         if (playerInfo && wr2.avgTargets) {
+          const avgTargets2 = Number(wr2.avgTargets);
           takes.push({
             player: playerInfo.name,
-            insight: `${softestDefense.defTeam} allows ${softestDefense.fpAllowed?.toFixed(1)} FPG to WRs - ${wr2.avgTargets.toFixed(1)} targets/game in soft matchup`,
+            insight: `${softestDefense.defTeam} allows ${softestDefense.fpAllowed?.toFixed(1)} FPG to WRs - ${avgTargets2.toFixed(1)} targets/game in soft matchup`,
             position: 'WR'
           });
         }
