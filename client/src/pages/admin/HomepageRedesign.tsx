@@ -841,7 +841,7 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
         {/* Desktop: shown in grid, Mobile: shown as overlay when toggled */}
         <aside className={`
           ${isMobileChatOpen 
-            ? 'fixed inset-0 z-[80] bg-[#0a0a0f]' 
+            ? 'flex fixed inset-0 z-[80] bg-[#0a0a0f]' 
             : 'hidden lg:flex lg:border-l lg:border-purple-500/15'
           } 
           flex-col bg-[#0a0a0f]/50
