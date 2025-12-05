@@ -5,18 +5,22 @@
     <!-- Mobile-optimized viewport for iOS, Android, and desktop -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
     
-    <!-- iOS-specific meta tags -->
+    <!-- iOS-specific meta tags for PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Tiber Fantasy" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Tiber" />
+    <link rel="apple-touch-icon" href="/icons/icon-180x180.png" />
     
     <!-- Android-specific meta tags -->
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#10b981" />
+    <meta name="theme-color" content="#8b5cf6" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0a0f" />
     
     <!-- Performance and rendering optimizations -->
     <meta name="format-detection" content="telephone=no" />
     <meta name="msapplication-tap-highlight" content="no" />
+    <meta name="msapplication-TileColor" content="#8b5cf6" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
     
     <!-- Primary SEO Meta Tags -->
     <title>Tiber Fantasy - Advanced NFL Fantasy Football Analytics Dashboard</title>
@@ -41,13 +45,35 @@
     <!-- Canonical URL -->
     <link rel="canonical" href="https://tiberfantasy.com/" />
     
-    <!-- PWA manifest for installable app experience -->
+    <!-- PWA manifest and icons -->
     <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-72x72.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-72x72.png" />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    
+    <!-- Preconnect to important origins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('[PWA] Service Worker registered:', registration.scope);
+            })
+            .catch((error) => {
+              console.warn('[PWA] Service Worker registration failed:', error);
+            });
+        });
+      }
+    </script>
+    
     <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
     <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
   </body>
