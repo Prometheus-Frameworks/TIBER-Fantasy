@@ -145,7 +145,7 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
   });
 
   // Fetch current NFL week from system endpoint
-  const { data: weekData } = useQuery({
+  const { data: weekData, isLoading: weekLoading } = useQuery({
     queryKey: ['/api/system/current-week'],
     queryFn: async () => {
       const response = await fetch('/api/system/current-week');
@@ -154,28 +154,29 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     staleTime: 60 * 1000, // Refresh every minute
   });
 
-  // Get the week to use for matchup-based features
-  const currentWeek = weekData?.upcomingWeek || weekData?.currentWeek || 1;
+  // Get the week to use for matchup-based features (only valid after weekData loads)
+  const currentWeek = weekData?.upcomingWeek || weekData?.currentWeek || 0;
+  const hasValidWeek = !!weekData && currentWeek > 0;
 
-  // Fetch strategy start/sit recommendations using dynamic week
+  // Fetch strategy start/sit recommendations using dynamic week (wait for week data)
   const { data: startSitData, isLoading: startSitLoading } = useQuery({
     queryKey: ['/api/strategy/start-sit', currentWeek],
     queryFn: async () => {
       const response = await fetch(`/api/strategy/start-sit?week=${currentWeek}&season=2025`);
       return response.json();
     },
-    enabled: currentWeek > 0,
+    enabled: hasValidWeek && !weekLoading,
     staleTime: 10 * 60 * 1000,
   });
 
-  // Fetch weekly takes for insights using dynamic week
+  // Fetch weekly takes for insights using dynamic week (wait for week data)
   const { data: weeklyTakesData, isLoading: takesLoading } = useQuery({
     queryKey: ['/api/weekly-takes', currentWeek],
     queryFn: async () => {
       const response = await fetch(`/api/weekly-takes?week=${currentWeek}`);
       return response.json();
     },
-    enabled: currentWeek > 0,
+    enabled: hasValidWeek && !weekLoading,
     staleTime: 10 * 60 * 1000,
   });
 

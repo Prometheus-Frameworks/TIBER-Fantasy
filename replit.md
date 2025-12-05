@@ -31,6 +31,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - Interactive GlowCard components, pulsing GlowCTA buttons, skeleton loading, and a top loading bar.
 - **New Homepage (Dec 2024)**: Horizontal feature navigation with Dashboard, Rankings, Schedule, Data Lab tabs. Condensed chat panel on right side with live Tiber Chat integration. Dashboard widgets for Quick Insights, FORGE Movers, and Start/Sit suggestions. League selector in header with real data from `/api/leagues`. Previous sidebar-style chat homepage available at `/legacy-chat` as fallback.
 - **Mobile-First PWA (Dec 2024)**: Progressive Web App with "Add to Home Screen" capability for iOS and Android. Service worker caches static assets. Responsive design with breakpoints at sm (640px), md (768px), and lg (1024px). Tables hide secondary columns on mobile using `hidden sm:table-cell` patterns. Touch-friendly buttons and inputs with proper sizing.
+- **Universal Current Week System (Dec 2024)**: `/api/system/current-week` endpoint provides real-time NFL week detection based on the 2025 schedule. Frontend components (HomepageRedesign, StrategyTab) use the `useCurrentNFLWeek()` hook to dynamically fetch the current week for Start/Sit and matchup-based features. Week detection uses `shared/weekDetection.ts` which has the full 2025 NFL schedule with precise game start/end times.
 
 **Technical Implementations & Feature Specifications:**
 - **Unified Player Hub (UPH)**: Centralizes player data, "Player Compass" profiles, "OTC Consensus" rankings, and Madden-style OVR.
