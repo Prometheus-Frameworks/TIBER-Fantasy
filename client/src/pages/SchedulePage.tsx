@@ -105,12 +105,12 @@ function PlayerSosView() {
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-400">Position</label>
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <label className="text-xs sm:text-sm text-slate-400 hidden sm:block">Position</label>
           <Select value={position} onValueChange={(v) => setPosition(v as Position)}>
-            <SelectTrigger className="w-24 bg-slate-800 border-slate-600" data-testid="select-position">
+            <SelectTrigger className="w-16 sm:w-24 bg-slate-800 border-slate-600 text-xs sm:text-sm" data-testid="select-position">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -122,10 +122,10 @@ function PlayerSosView() {
           </Select>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-slate-500" />
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-500" />
           <Select value={filterMode} onValueChange={(v) => setFilterMode(v as typeof filterMode)}>
-            <SelectTrigger className="w-36 bg-slate-800 border-slate-600" data-testid="select-filter">
+            <SelectTrigger className="w-28 sm:w-36 bg-slate-800 border-slate-600 text-xs sm:text-sm" data-testid="select-filter">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -136,7 +136,7 @@ function PlayerSosView() {
           </Select>
         </div>
 
-        <div className="text-xs text-slate-500 ml-auto">
+        <div className="text-[10px] sm:text-xs text-slate-500 ml-auto">
           {sortedPlayers.length} players
         </div>
       </div>
@@ -159,14 +159,20 @@ function PlayerSosView() {
             <table className="w-full" data-testid="player-sos-table">
               <thead className="bg-slate-800/50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider w-12">#</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Player</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Team</th>
-                  <SortHeader field="alpha" label="Alpha" />
-                  <SortHeader field="sosRos" label="SoS (RoS)" />
-                  <SortHeader field="sosMultiplier" label="Multiplier" />
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Next 3</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Playoffs</th>
+                  <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider w-8 sm:w-12">#</th>
+                  <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">Player</th>
+                  <th className="hidden sm:table-cell px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">Team</th>
+                  <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('alpha')}>
+                    <div className="flex items-center gap-1">Alpha <ArrowUpDown className={`h-3 w-3 ${sortField === 'alpha' ? 'text-blue-400' : 'text-slate-600'}`} /></div>
+                  </th>
+                  <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('sosRos')}>
+                    <div className="flex items-center gap-1">SoS <ArrowUpDown className={`h-3 w-3 ${sortField === 'sosRos' ? 'text-blue-400' : 'text-slate-600'}`} /></div>
+                  </th>
+                  <th className="hidden md:table-cell px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('sosMultiplier')}>
+                    <div className="flex items-center gap-1">Mult <ArrowUpDown className={`h-3 w-3 ${sortField === 'sosMultiplier' ? 'text-blue-400' : 'text-slate-600'}`} /></div>
+                  </th>
+                  <th className="hidden lg:table-cell px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">Next 3</th>
+                  <th className="hidden lg:table-cell px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">Playoffs</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
@@ -178,18 +184,23 @@ function PlayerSosView() {
                       className="hover:bg-slate-700/30 transition-colors"
                       data-testid={`row-player-${player.playerId}`}
                     >
-                      <td className="px-3 py-2 text-sm text-slate-500">{idx + 1}</td>
-                      <td className="px-3 py-2 text-sm font-medium text-white">{player.playerName}</td>
-                      <td className="px-3 py-2">
+                      <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-500">{idx + 1}</td>
+                      <td className="px-2 sm:px-3 py-1.5 sm:py-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-0">
+                          <span className="text-xs sm:text-sm font-medium text-white">{player.playerName}</span>
+                          <span className="sm:hidden text-[10px] text-slate-500">{player.nflTeam}</span>
+                        </div>
+                      </td>
+                      <td className="hidden sm:table-cell px-2 sm:px-3 py-1.5 sm:py-2">
                         <div className="flex items-center gap-2">
                           <TeamLogo team={player.nflTeam} size={18} />
                           <span className="text-sm text-slate-400">{player.nflTeam}</span>
                         </div>
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-2 sm:px-3 py-1.5 sm:py-2">
                         <Tooltip>
                           <TooltipTrigger>
-                            <span className="text-sm font-mono font-semibold text-blue-400">
+                            <span className="text-xs sm:text-sm font-mono font-semibold text-blue-400">
                               {player.alpha.toFixed(1)}
                             </span>
                           </TooltipTrigger>
@@ -201,22 +212,22 @@ function PlayerSosView() {
                           </TooltipContent>
                         </Tooltip>
                       </td>
-                      <td className="px-3 py-2">
-                        <span className={`text-sm font-mono px-2 py-0.5 rounded ${getSosColor(player.sosRos)}`}>
+                      <td className="px-2 sm:px-3 py-1.5 sm:py-2">
+                        <span className={`text-xs sm:text-sm font-mono px-1.5 sm:px-2 py-0.5 rounded ${getSosColor(player.sosRos)}`}>
                           {player.sosRos.toFixed(1)}
                         </span>
                       </td>
-                      <td className="px-3 py-2">
-                        <span className={`text-xs font-bold px-2 py-1 rounded ${badge.bg} ${badge.color}`}>
+                      <td className="hidden md:table-cell px-2 sm:px-3 py-1.5 sm:py-2">
+                        <span className={`text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded ${badge.bg} ${badge.color}`}>
                           {badge.label} {player.sosMultiplier.toFixed(3)}
                         </span>
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="hidden lg:table-cell px-2 sm:px-3 py-1.5 sm:py-2">
                         <span className={`text-sm font-mono px-2 py-0.5 rounded ${getSosColor(player.sosNext3)}`}>
                           {player.sosNext3?.toFixed(1) ?? '—'}
                         </span>
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="hidden lg:table-cell px-2 sm:px-3 py-1.5 sm:py-2">
                         <span className={`text-sm font-mono px-2 py-0.5 rounded ${getSosColor(player.sosPlayoffs)}`}>
                           {player.sosPlayoffs?.toFixed(1) ?? '—'}
                         </span>
@@ -275,12 +286,12 @@ function TeamSosView() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-400">Window</label>
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <label className="text-xs sm:text-sm text-slate-400 hidden sm:block">Window</label>
           <Select value={window} onValueChange={(v) => setWindow(v as SosWindow)}>
-            <SelectTrigger className="w-44 bg-slate-800 border-slate-600" data-testid="select-window">
+            <SelectTrigger className="w-32 sm:w-44 bg-slate-800 border-slate-600 text-xs sm:text-sm" data-testid="select-window">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -291,8 +302,8 @@ function TeamSosView() {
           </Select>
         </div>
 
-        <div className="text-xs text-slate-500 ml-auto">
-          Higher score = easier schedule
+        <div className="text-[10px] sm:text-xs text-slate-500 ml-auto">
+          Higher = easier
         </div>
       </div>
 
@@ -314,11 +325,11 @@ function TeamSosView() {
             <table className="w-full" data-testid="team-sos-grid">
               <thead className="bg-slate-800/50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Team</th>
-                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">QB SoS</th>
-                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">RB SoS</th>
-                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">WR SoS</th>
-                  <th className="px-3 py-2 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">TE SoS</th>
+                  <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">Team</th>
+                  <th className="px-1.5 sm:px-3 py-2 text-center text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">QB</th>
+                  <th className="px-1.5 sm:px-3 py-2 text-center text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">RB</th>
+                  <th className="px-1.5 sm:px-3 py-2 text-center text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">WR</th>
+                  <th className="px-1.5 sm:px-3 py-2 text-center text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">TE</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
@@ -328,22 +339,22 @@ function TeamSosView() {
                     className="hover:bg-slate-700/30 transition-colors"
                     data-testid={`row-team-${row.team}`}
                   >
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <TeamLogo team={row.team} size={20} />
-                        <span className="text-sm font-medium text-white">{row.team}</span>
+                    <td className="px-2 sm:px-3 py-1.5 sm:py-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <TeamLogo team={row.team} size={16} className="sm:w-5 sm:h-5" />
+                        <span className="text-xs sm:text-sm font-medium text-white">{row.team}</span>
                       </div>
                     </td>
                     {(['QB', 'RB', 'WR', 'TE'] as const).map(pos => {
                       const value = getSosValue(row[pos]);
                       return (
-                        <td key={pos} className="px-3 py-2 text-center">
+                        <td key={pos} className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-center">
                           {value != null ? (
-                            <span className={`text-sm font-mono px-3 py-1 rounded ${getSosCellColor(value)}`}>
+                            <span className={`text-[10px] sm:text-sm font-mono px-1.5 sm:px-3 py-0.5 sm:py-1 rounded ${getSosCellColor(value)}`}>
                               {value.toFixed(1)}
                             </span>
                           ) : (
-                            <span className="text-sm text-slate-500">—</span>
+                            <span className="text-xs sm:text-sm text-slate-500">—</span>
                           )}
                         </td>
                       );
@@ -356,18 +367,18 @@ function TeamSosView() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+      <div className="flex flex-wrap gap-2 sm:gap-3 text-[10px] sm:text-xs text-slate-500">
         <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded bg-green-500/30"></span> Easy (67+)
+          <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-green-500/30"></span> Easy
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded bg-emerald-500/20"></span> Above Avg (50-66)
+          <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-emerald-500/20"></span> Avg+
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded bg-yellow-500/20"></span> Below Avg (33-49)
+          <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-yellow-500/20"></span> Avg-
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded bg-red-500/30"></span> Tough (&lt;33)
+          <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-red-500/30"></span> Tough
         </span>
       </div>
     </div>
@@ -575,29 +586,29 @@ function SosImpactView() {
 export default function SchedulePage() {
   return (
     <div className="min-h-screen bg-[#0a0e1a] text-white">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Calendar className="h-7 w-7 text-blue-400" />
-            <h1 className="text-2xl font-bold">Schedule / Strength of Schedule</h1>
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <div className="mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+            <Calendar className="h-5 w-5 sm:h-7 sm:w-7 text-blue-400" />
+            <h1 className="text-lg sm:text-2xl font-bold">Schedule / SoS</h1>
           </div>
-          <p className="text-slate-400 text-sm">
+          <p className="text-slate-400 text-xs sm:text-sm">
             Analyze how remaining schedule difficulty affects player rankings
           </p>
         </div>
 
-        <Tabs defaultValue="players" className="space-y-6">
-          <TabsList className="bg-slate-800/50 border border-slate-700">
-            <TabsTrigger value="players" className="data-[state=active]:bg-blue-600" data-testid="tab-players">
-              <Users className="h-4 w-4 mr-2" />
-              Player SoS
+        <Tabs defaultValue="players" className="space-y-4 sm:space-y-6">
+          <TabsList className="bg-slate-800/50 border border-slate-700 w-full sm:w-auto">
+            <TabsTrigger value="players" className="data-[state=active]:bg-blue-600 text-xs sm:text-sm px-2 sm:px-4" data-testid="tab-players">
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Player</span> SoS
             </TabsTrigger>
-            <TabsTrigger value="teams" className="data-[state=active]:bg-blue-600" data-testid="tab-teams">
-              <Calendar className="h-4 w-4 mr-2" />
-              Team SoS
+            <TabsTrigger value="teams" className="data-[state=active]:bg-blue-600 text-xs sm:text-sm px-2 sm:px-4" data-testid="tab-teams">
+              <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Team</span> SoS
             </TabsTrigger>
-            <TabsTrigger value="impact" className="data-[state=active]:bg-blue-600" data-testid="tab-impact">
-              <TrendingUp className="h-4 w-4 mr-2" />
+            <TabsTrigger value="impact" className="data-[state=active]:bg-blue-600 text-xs sm:text-sm px-2 sm:px-4" data-testid="tab-impact">
+              <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Impact
             </TabsTrigger>
           </TabsList>
