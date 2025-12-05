@@ -235,6 +235,17 @@ export class DatadiveSnapshotService {
     }
     console.log(`📊 [DataDive] Loaded ${silverMap.size} silver stats (fallback)`);
 
+    // Calculate team total targets for target share calculation
+    const teamTargetsMap = new Map<string, number>();
+    for (const row of weeklyData) {
+      const team = row.team;
+      if (team) {
+        const current = teamTargetsMap.get(team) || 0;
+        teamTargetsMap.set(team, current + (row.targets || 0));
+      }
+    }
+    console.log(`📊 [DataDive] Calculated team targets for ${teamTargetsMap.size} teams`);
+
     let identityMatchCount = 0;
     let identityMissCount = 0;
 
@@ -267,6 +278,12 @@ export class DatadiveSnapshotService {
       const yprr = routes > 0 ? recYards / routes : null;
       const ypc = rushAtt > 0 ? rushYd / rushAtt : null;
       
+      // Calculate target share as player_targets / team_total_targets
+      const teamTotalTargets = row.team ? (teamTargetsMap.get(row.team) || 0) : 0;
+      const targetShare = teamTotalTargets > 0 && targets > 0 
+        ? targets / teamTotalTargets 
+        : null;
+      
       // Advanced receiving metrics from PBP (preferred) or silver (fallback)
       const airYards = recAdv?.airYards ?? silver?.airYards ?? 0;
       const yac = recAdv?.yac ?? silver?.yac ?? 0;
@@ -297,7 +314,7 @@ export class DatadiveSnapshotService {
         routes,
         routeRate: snaps > 0 ? routes / snaps : null,
         targets,
-        targetShare: null,
+        targetShare,
         receptions: row.rec || 0,
         recYards,
         recTds: row.recTd || 0,
