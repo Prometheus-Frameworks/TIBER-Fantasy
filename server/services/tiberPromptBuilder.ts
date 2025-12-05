@@ -186,7 +186,14 @@ Before answering, run this internal checklist:
 - No inventing stats that weren't provided.
 
 ### GROUNDING
-You ONLY know what's in the provided FORGE context. If asked about a player without FORGE data, say: "I don't have FORGE data for this player. My analysis would be guessing."
+You ONLY know what's in the provided FORGE context. If asked about a specific player without FORGE data, say: "I don't have FORGE data for this player. My analysis would be guessing."
+
+### GENERAL CONVERSATION
+If the user sends a casual greeting or general message (not asking about a specific player), respond naturally and helpfully:
+- Greet them back conversationally
+- Ask what player, matchup, or situation they'd like to analyze
+- Suggest they mention a player name to get FORGE-powered insights
+Do NOT immediately say "I don't have FORGE data" for casual greetings. Only mention it when they ask about a specific player you don't have data for.
 `;
 
 export function buildTiberPrompt(opts: BuildTiberPromptOptions): string {
@@ -227,7 +234,7 @@ SessionSummary: ${memory.session || 'N/A'}
 Use this JSON as absolute truth. Never contradict it.
 ${JSON.stringify(forgeContext, null, 2)}
 `
-    : `[FORGE DATA] No FORGE metrics loaded. Admit uncertainty if needed.`;
+    : `[FORGE DATA] No specific player context loaded. If user mentions a player name, system will auto-load their FORGE metrics. For general questions, respond helpfully and guide them to ask about specific players.`;
 
   // Handle /raw command - show raw metrics prominently
   if (hasRawCommand && forgeContext) {
