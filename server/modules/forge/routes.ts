@@ -26,6 +26,7 @@ import {
 import { applySosMultiplier } from './helpers/sosMultiplier';
 import { ForgeScore } from './types';
 import { batchCalculateAlphaV2, AlphaV2Result } from './alphaV2';
+import { sleeperLiveStatusSync } from '../../services/sleeperLiveStatusSync';
 
 const router = Router();
 
@@ -1636,6 +1637,65 @@ router.get('/sos/rankings', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[FORGE/SoS] Rankings error:', err);
     return res.status(500).json({ error: 'Failed to get SoS rankings' });
+  }
+});
+
+/**
+ * POST /api/forge/admin/sync-live-status
+ * 
+ * Sync player live status (current team, injury status) from Sleeper API.
+ * This updates player_live_status table for FORGE eligibility filtering.
+ * Fixes issues like:
+ * - Thielen showing CAR instead of PIT
+ * - Anthony Richardson appearing despite being on IR
+ */
+router.post('/admin/sync-live-status', async (req: Request, res: Response) => {
+  try {
+    console.log('[FORGE/Admin] Syncing player live status from Sleeper...');
+    
+    const result = await sleeperLiveStatusSync.syncLiveStatus();
+    
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error,
+      });
+    }
+    
+    return res.json({
+      success: true,
+      meta: {
+        playersProcessed: result.playersProcessed,
+        playersUpdated: result.playersUpdated,
+        playersSkipped: result.playersSkipped,
+        syncedAt: new Date().toISOString(),
+      },
+      examples: result.examples,
+      message: `Synced ${result.playersUpdated} players from Sleeper API`,
+    });
+  } catch (err) {
+    console.error('[FORGE/Admin] sync-live-status error:', err);
+    return res.status(500).json({ success: false, error: 'Live status sync failed' });
+  }
+});
+
+/**
+ * GET /api/forge/admin/ineligible-players
+ * 
+ * List players currently marked as ineligible for FORGE (IR, PUP, etc.)
+ */
+router.get('/admin/ineligible-players', async (req: Request, res: Response) => {
+  try {
+    const ineligible = await sleeperLiveStatusSync.getIneligiblePlayers();
+    
+    return res.json({
+      success: true,
+      count: ineligible.length,
+      players: ineligible,
+    });
+  } catch (err) {
+    console.error('[FORGE/Admin] ineligible-players error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to get ineligible players' });
   }
 });
 

@@ -107,11 +107,32 @@ export async function fetchContext(
 }
 
 /**
- * Fetch player identity from PlayerIdentityService
+ * Fetch player identity from PlayerIdentityService, enriched with live team status
  */
 async function fetchPlayerIdentity(playerId: string) {
   try {
     const identity = await playerIdentityService.getByAnyId(playerId);
+    if (!identity) return null;
+    
+    // Get live team from player_live_status if available (for up-to-date team info)
+    const liveStatusResult = await db.execute<{
+      current_team: string | null;
+      status: string | null;
+      is_eligible_for_forge: boolean | null;
+    }>(sql`
+      SELECT current_team, status, is_eligible_for_forge
+      FROM player_live_status
+      WHERE canonical_id = ${identity.canonicalId}
+      LIMIT 1
+    `);
+    
+    const liveStatus = liveStatusResult.rows[0];
+    
+    // Override nflTeam with live team if available (handles roster moves like Thielen CAR→PIT)
+    if (liveStatus?.current_team) {
+      identity.nflTeam = liveStatus.current_team;
+    }
+    
     return identity;
   } catch (error) {
     console.error(`[FORGE/Context] Error fetching identity for ${playerId}:`, error);

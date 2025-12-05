@@ -183,7 +183,7 @@ class ForgeService implements IForgeService {
         }
       }
       
-      // Legacy path: Use weekly_stats directly
+      // Legacy path: Use weekly_stats directly with live status filtering
       const skillPositions: ForgePosition[] = ['QB', 'RB', 'WR', 'TE'];
       const targetPositions = position ? [position] : skillPositions;
       
@@ -194,12 +194,13 @@ class ForgeService implements IForgeService {
       const seenPlayerNames = new Set<string>();
 
       for (const pos of targetPositions) {
-        // Query: Join identity map with weekly_stats to get only players with activity
-        // Group by canonical_id, sum fantasy points, filter by games >= 1
+        // Query: Join identity map with weekly_stats and live status
+        // Filter out IR/ineligible players using player_live_status table
         const playersWithActivity = await db.execute<{
           canonical_id: string;
           full_name: string;
           nfl_team: string;
+          current_team: string;
           games_played: number;
           total_fpts: number;
         }>(sql`
@@ -207,6 +208,7 @@ class ForgeService implements IForgeService {
             p.canonical_id,
             p.full_name,
             p.nfl_team,
+            COALESCE(pls.current_team, p.nfl_team) as current_team,
             COUNT(DISTINCT w.week) as games_played,
             COALESCE(SUM(w.fantasy_points_ppr), 0) as total_fpts
           FROM player_identity_map p
@@ -215,12 +217,14 @@ class ForgeService implements IForgeService {
             OR w.player_id = p.nfl_data_py_id
             OR w.player_id = p.canonical_id
           )
+          LEFT JOIN player_live_status pls ON pls.canonical_id = p.canonical_id
           WHERE p.position = ${pos}
             AND p.is_active = true
             AND p.nfl_team IS NOT NULL
             AND w.season = ${season}
             AND w.fantasy_points_ppr > 0
-          GROUP BY p.canonical_id, p.full_name, p.nfl_team
+            AND (pls.is_eligible_for_forge IS NULL OR pls.is_eligible_for_forge = true)
+          GROUP BY p.canonical_id, p.full_name, p.nfl_team, pls.current_team
           HAVING COUNT(DISTINCT w.week) >= 1
           ORDER BY total_fpts DESC
           LIMIT ${perPositionLimit * 2}
