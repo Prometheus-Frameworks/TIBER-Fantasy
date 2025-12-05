@@ -48,8 +48,22 @@ export class WeeklyTakesService {
 
     try {
       // Get top QBs by adjusted EPA (season totals)
+      // Only select columns we need to avoid missing column errors
       const topQBs = await db
-        .select()
+        .select({
+          playerId: qbEpaAdjusted.playerId,
+          playerName: qbEpaAdjusted.playerName,
+          season: qbEpaAdjusted.season,
+          week: qbEpaAdjusted.week,
+          rawEpaPerPlay: qbEpaAdjusted.rawEpaPerPlay,
+          tiberAdjEpaPerPlay: qbEpaAdjusted.tiberAdjEpaPerPlay,
+          tiberEpaDiff: qbEpaAdjusted.tiberEpaDiff,
+          dropAdjustment: qbEpaAdjusted.dropAdjustment,
+          pressureAdjustment: qbEpaAdjusted.pressureAdjustment,
+          yacAdjustment: qbEpaAdjusted.yacAdjustment,
+          defenseAdjustment: qbEpaAdjusted.defenseAdjustment,
+          confidence: qbEpaAdjusted.confidence,
+        })
         .from(qbEpaAdjusted)
         .where(and(
           eq(qbEpaAdjusted.season, season),
