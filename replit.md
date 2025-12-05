@@ -29,6 +29,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 **UI/UX Decisions**:
 - Dark navy background (`bg-[#0a0e1a]`), slate cards (`bg-[#141824]`), blue-purple gradient accents, and white/light typography.
 - Interactive GlowCard components, pulsing GlowCTA buttons, skeleton loading, and a top loading bar.
+- **New Homepage (Dec 2024)**: Horizontal feature navigation with Dashboard, Rankings, Schedule, Data Lab tabs. Condensed chat panel on right side with live Tiber Chat integration. Dashboard widgets for Quick Insights, FORGE Movers, and Start/Sit suggestions. League selector in header with real data from `/api/leagues`. Previous sidebar-style chat homepage available at `/legacy-chat` as fallback.
 
 **Technical Implementations & Feature Specifications:**
 - **Unified Player Hub (UPH)**: Centralizes player data, "Player Compass" profiles, "OTC Consensus" rankings, and Madden-style OVR.
