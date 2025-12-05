@@ -432,34 +432,39 @@ function SosImpactView() {
 
     return (
       <tr className="hover:bg-slate-700/30 transition-colors" data-testid={`impact-row-${player.playerId}`}>
-        <td className="px-3 py-2 text-sm text-slate-500">{idx + 1}</td>
-        <td className="px-3 py-2 text-sm font-medium text-white">{player.playerName}</td>
-        <td className="px-3 py-2">
+        <td className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-500">{idx + 1}</td>
+        <td className="px-1.5 sm:px-3 py-1.5 sm:py-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-0">
+            <span className="text-xs sm:text-sm font-medium text-white">{player.playerName}</span>
+            <span className="sm:hidden text-[10px] text-slate-500">{player.nflTeam} · {player.position}</span>
+          </div>
+        </td>
+        <td className="hidden sm:table-cell px-1.5 sm:px-3 py-1.5 sm:py-2">
           <div className="flex items-center gap-2">
             <TeamLogo team={player.nflTeam} size={16} />
             <span className="text-xs text-slate-400">{player.nflTeam}</span>
           </div>
         </td>
-        <td className="px-3 py-2 text-xs text-slate-500">{player.position}</td>
-        <td className="px-3 py-2">
+        <td className="hidden md:table-cell px-1.5 sm:px-3 py-1.5 sm:py-2 text-xs text-slate-500">{player.position}</td>
+        <td className="hidden lg:table-cell px-1.5 sm:px-3 py-1.5 sm:py-2">
           <div className="flex items-center gap-1 text-sm">
             <span className="text-slate-400 font-mono">{player.alphaBase.toFixed(1)}</span>
             <span className="text-slate-500">→</span>
             <span className="text-blue-400 font-mono font-semibold">{player.alpha.toFixed(1)}</span>
           </div>
         </td>
-        <td className="px-3 py-2">
-          <span className={`text-sm font-mono font-bold ${impactColor}`}>
+        <td className="px-1.5 sm:px-3 py-1.5 sm:py-2">
+          <span className={`text-xs sm:text-sm font-mono font-bold ${impactColor}`}>
             {impactSign}{player.impact.toFixed(1)}
           </span>
         </td>
-        <td className="px-3 py-2">
-          <span className={`text-sm font-mono px-2 py-0.5 rounded ${getSosColor(player.sosRos)}`}>
+        <td className="hidden md:table-cell px-1.5 sm:px-3 py-1.5 sm:py-2">
+          <span className={`text-xs sm:text-sm font-mono px-1.5 sm:px-2 py-0.5 rounded ${getSosColor(player.sosRos)}`}>
             {player.sosRos.toFixed(1)}
           </span>
         </td>
-        <td className="px-3 py-2">
-          <span className={`text-xs font-bold px-2 py-1 rounded ${badge.bg} ${badge.color}`}>
+        <td className="hidden lg:table-cell px-1.5 sm:px-3 py-1.5 sm:py-2">
+          <span className={`text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded ${badge.bg} ${badge.color}`}>
             {badge.label}
           </span>
         </td>
@@ -468,12 +473,12 @@ function SosImpactView() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-400">Position</label>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <label className="text-xs sm:text-sm text-slate-400 hidden sm:block">Position</label>
           <Select value={position} onValueChange={(v) => setPosition(v as typeof position)}>
-            <SelectTrigger className="w-24 bg-slate-800 border-slate-600" data-testid="select-impact-position">
+            <SelectTrigger className="w-16 sm:w-24 bg-slate-800 border-slate-600 text-xs sm:text-sm" data-testid="select-impact-position">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -486,15 +491,15 @@ function SosImpactView() {
           </Select>
         </div>
 
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-400">Min Alpha</label>
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <label className="text-xs sm:text-sm text-slate-400 hidden sm:block">Min α</label>
           <input
             type="number"
             min={0}
             max={100}
             value={minAlphaBase}
             onChange={(e) => setMinAlphaBase(Number(e.target.value))}
-            className="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+            className="w-14 sm:w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs sm:text-sm"
             data-testid="input-min-alpha"
           />
         </div>
@@ -513,32 +518,32 @@ function SosImpactView() {
       )}
 
       {!isLoading && !error && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-400" />
-              <h3 className="text-lg font-semibold text-white">Schedule Winners</h3>
-              <span className="text-xs text-slate-500">Players boosted by easy schedule</span>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+          <div className="space-y-2 sm:space-y-3">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />
+              <h3 className="text-sm sm:text-lg font-semibold text-white">Schedule Winners</h3>
+              <span className="hidden sm:inline text-xs text-slate-500">Players boosted by easy schedule</span>
             </div>
             <div className="bg-[#141824] rounded-lg border border-slate-700 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full" data-testid="winners-table">
                   <thead className="bg-slate-800/50">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider w-8">#</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Player</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Team</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Pos</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Base → Final</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Impact</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">SoS</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider"></th>
+                      <th className="px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider w-6 sm:w-8">#</th>
+                      <th className="px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">Player</th>
+                      <th className="hidden sm:table-cell px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">Team</th>
+                      <th className="hidden md:table-cell px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">Pos</th>
+                      <th className="hidden lg:table-cell px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">Base→Final</th>
+                      <th className="px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">+/-</th>
+                      <th className="hidden md:table-cell px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">SoS</th>
+                      <th className="hidden lg:table-cell px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/50">
                     {winners.map((p, i) => <ImpactRow key={p.playerId} player={p} idx={i} />)}
                     {winners.length === 0 && (
-                      <tr><td colSpan={8} className="px-3 py-4 text-center text-slate-500 text-sm">No players with schedule boost</td></tr>
+                      <tr><td colSpan={8} className="px-3 py-4 text-center text-slate-500 text-xs sm:text-sm">No players with schedule boost</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -546,25 +551,25 @@ function SosImpactView() {
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-red-400" />
-              <h3 className="text-lg font-semibold text-white">Schedule Traps</h3>
-              <span className="text-xs text-slate-500">Players penalized by hard schedule</span>
+          <div className="space-y-2 sm:space-y-3">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 text-red-400" />
+              <h3 className="text-sm sm:text-lg font-semibold text-white">Schedule Traps</h3>
+              <span className="hidden sm:inline text-xs text-slate-500">Players penalized by hard schedule</span>
             </div>
             <div className="bg-[#141824] rounded-lg border border-slate-700 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full" data-testid="traps-table">
                   <thead className="bg-slate-800/50">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider w-8">#</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Player</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Team</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Pos</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Base → Final</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Impact</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">SoS</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase tracking-wider"></th>
+                      <th className="px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider w-6 sm:w-8">#</th>
+                      <th className="px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">Player</th>
+                      <th className="hidden sm:table-cell px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">Team</th>
+                      <th className="hidden md:table-cell px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">Pos</th>
+                      <th className="hidden lg:table-cell px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">Base→Final</th>
+                      <th className="px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">+/-</th>
+                      <th className="hidden md:table-cell px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">SoS</th>
+                      <th className="hidden lg:table-cell px-1.5 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/50">
