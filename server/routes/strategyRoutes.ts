@@ -9,12 +9,19 @@
  * - Exclude T1 auto-starts (90%+ ownership)  
  * - Target T2-T3 "decision zone" players
  * - player_live_status integration for IR/inactive filtering
+ * 
+ * v2.1 - DvP-Powered Matchups:
+ * - Uses defense_vs_position_stats.avg_pts_per_game_ppr as primary signal
+ * - Recency-weighted matchup scoring (last 4 weeks)
+ * - matchupScore100 (0-100 scale) for precise matchup quality
+ * - isSmashSpot / isToughSpot flags for quick decisions
  */
 
 import { Router } from 'express';
 import { db } from '../infra/db';
 import { playerIdentityMap, defenseVsPositionStats, schedule, tiberScores, sleeperOwnership, playerLiveStatus } from '../../shared/schema';
 import { eq, and, or, sql, desc, asc, inArray, gte, lt, isNull } from 'drizzle-orm';
+import { getThisWeekMatchup, DvPMatchup, WeeklyDvPMatchup } from '../modules/forge/dvpMatchupService';
 
 const router = Router();
 
@@ -59,7 +66,18 @@ router.get('/start-sit', async (req, res) => {
       });
     }
 
-    const positions = position ? [position] : ['QB', 'RB', 'WR', 'TE'];
+    // Whitelist valid positions to prevent SQL injection
+    const VALID_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
+    const requestedPosition = position?.toUpperCase();
+    
+    if (requestedPosition && !VALID_POSITIONS.includes(requestedPosition as any)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid position. Must be one of: ${VALID_POSITIONS.join(', ')}`
+      });
+    }
+    
+    const positions = requestedPosition ? [requestedPosition] : [...VALID_POSITIONS];
 
     // Get latest ownership week
     const latestOwnershipWeek = await db
@@ -173,14 +191,18 @@ router.get('/start-sit', async (req, res) => {
       teamMatchups.set(game.away, { opponent: game.home, isHome: false });
     });
 
-    // BATCH 3: Get all DvP ratings for relevant positions this season
+    // BATCH 3: Get DvP ratings with recency-weighted FPTS allowed
+    // Uses last 4 weeks with weights: 40% latest, 30% prev, 20% older, 10% oldest
+    // Note: positions are already validated/whitelisted above
     const dvpRatings = await db
       .select({
         defenseTeam: defenseVsPositionStats.defenseTeam,
         position: defenseVsPositionStats.position,
+        season: defenseVsPositionStats.season,
+        week: defenseVsPositionStats.week,
+        avgPtsAllowed: defenseVsPositionStats.avgPtsPerGamePpr,
         rankVsPosition: defenseVsPositionStats.rankVsPosition,
         dvpRating: defenseVsPositionStats.dvpRating,
-        avgPtsAllowed: defenseVsPositionStats.avgPtsPerGamePpr,
       })
       .from(defenseVsPositionStats)
       .where(
@@ -188,12 +210,103 @@ router.get('/start-sit', async (req, res) => {
           eq(defenseVsPositionStats.season, season),
           inArray(defenseVsPositionStats.position, positions)
         )
-      );
+      )
+      .orderBy(desc(defenseVsPositionStats.week));
 
-    // Build DvP lookup map
-    const dvpMap = new Map<string, typeof dvpRatings[0]>();
-    dvpRatings.forEach(dvp => {
-      dvpMap.set(`${dvp.defenseTeam}_${dvp.position}`, dvp);
+    // Apply recency weighting: 40% latest, 30% prev, 20% older, 10% oldest
+    const teamPositionData = new Map<string, {
+      weeks: { week: number; fpts: number; rank: number; rating: string }[];
+    }>();
+
+    dvpRatings.forEach(row => {
+      const key = `${row.defenseTeam}_${row.position}`;
+      if (!teamPositionData.has(key)) {
+        teamPositionData.set(key, { weeks: [] });
+      }
+      const data = teamPositionData.get(key)!;
+      if (data.weeks.length < 4 && row.week !== null) {
+        data.weeks.push({
+          week: row.week,
+          fpts: Number(row.avgPtsAllowed) || 0,
+          rank: Number(row.rankVsPosition) || 16,
+          rating: row.dvpRating || 'neutral',
+        });
+      }
+    });
+
+    // Calculate weighted FPTS for each team-position
+    const RECENCY_WEIGHTS = [0.40, 0.30, 0.20, 0.10];
+    const weightedDvpData = new Map<string, {
+      defenseTeam: string;
+      position: string;
+      weightedFpts: number;
+      latestRank: number;
+      latestRating: string;
+    }>();
+
+    teamPositionData.forEach((data, key) => {
+      const [defenseTeam, position] = key.split('_');
+      let weightedFpts = 0;
+      let totalWeight = 0;
+      
+      data.weeks.forEach((weekData, idx) => {
+        const weight = RECENCY_WEIGHTS[idx] || 0.10;
+        weightedFpts += weekData.fpts * weight;
+        totalWeight += weight;
+      });
+      
+      // Normalize if we don't have all 4 weeks
+      if (totalWeight > 0 && totalWeight < 1) {
+        weightedFpts = weightedFpts / totalWeight;
+      }
+      
+      weightedDvpData.set(key, {
+        defenseTeam,
+        position,
+        weightedFpts,
+        latestRank: data.weeks[0]?.rank || 16,
+        latestRating: data.weeks[0]?.rating || 'neutral',
+      });
+    });
+
+    // Position-specific FPTS ranges for 0-100 normalization (based on actual 2025 data)
+    // Higher FPTS allowed = easier matchup = higher score
+    const FPTS_RANGES: Record<string, { min: number; max: number }> = {
+      QB: { min: 5, max: 28 },   // 2025 range: 2.7-31.2, avg 16.2
+      RB: { min: 8, max: 35 },   // 2025 range: 6.4-46.6, avg 21.0
+      WR: { min: 12, max: 45 },  // 2025 range: 9.8-53.0, avg 29.6
+      TE: { min: 3, max: 22 },   // 2025 range: 1.2-26.6, avg 14.1
+    };
+
+    // Build DvP lookup map with matchup score calculation from weighted data
+    const dvpMap = new Map<string, {
+      defenseTeam: string;
+      position: string;
+      rankVsPosition: number;
+      dvpRating: string;
+      avgFptsAllowed: number;
+      matchupScore100: number;
+      isSmashSpot: boolean;
+      isToughSpot: boolean;
+    }>();
+
+    weightedDvpData.forEach((data, key) => {
+      const fpts = data.weightedFpts;
+      const range = FPTS_RANGES[data.position] || FPTS_RANGES.WR;
+      const normalized = (fpts - range.min) / (range.max - range.min);
+      const matchupScore = Math.max(0, Math.min(100, Math.round(normalized * 100)));
+      const rank = data.latestRank;
+
+      dvpMap.set(key, {
+        defenseTeam: data.defenseTeam,
+        position: data.position,
+        rankVsPosition: rank,
+        dvpRating: data.latestRating,
+        avgFptsAllowed: Math.round(fpts * 10) / 10,
+        matchupScore100: matchupScore,
+        isSmashSpot: rank <= 8,
+        isToughSpot: rank >= 25,
+      });
     });
 
     // Extract players with nflfastrIds for batch TIBER query
@@ -256,10 +369,12 @@ router.get('/start-sit', async (req, res) => {
       // Skip T1 players (auto-starts already filtered by ownership, but double-check)
       if (isT1) return;
 
-      // Matchup quality assessment
-      const isEliteMatchup = dvpStats?.dvpRating === 'elite-matchup' || (dvpStats?.rankVsPosition && dvpStats.rankVsPosition <= 8);
-      const isFavorableMatchup = dvpStats?.dvpRating === 'favorable' || (dvpStats?.rankVsPosition && dvpStats.rankVsPosition <= 12);
-      const isToughMatchup = dvpStats?.dvpRating === 'tough' || dvpStats?.dvpRating === 'avoid' || (dvpStats?.rankVsPosition && dvpStats.rankVsPosition >= 25);
+      // Matchup quality assessment using new matchupScore100 (0-100 scale)
+      const matchupScore = dvpStats?.matchupScore100 ?? 50;
+      const isSmashSpot = dvpStats?.isSmashSpot || matchupScore >= 70;
+      const isEliteMatchup = matchupScore >= 60 || (dvpStats?.rankVsPosition && dvpStats.rankVsPosition <= 8);
+      const isFavorableMatchup = matchupScore >= 50 || (dvpStats?.rankVsPosition && dvpStats.rankVsPosition <= 12);
+      const isToughMatchup = matchupScore <= 35 || (dvpStats?.rankVsPosition && dvpStats.rankVsPosition >= 25);
       const isBreakingOut = playerTiber.length >= 2 && playerTiber[0].tier === 'breakout';
 
       let recommendation = 'start';
@@ -267,54 +382,72 @@ router.get('/start-sit', async (req, res) => {
       let reasoning = '';
 
       // Decision logic based on tier + matchup combination
+      // matchupScore: 0-100 (higher = easier), rank: 1-32 (lower = easier)
+      const matchupLabel = isSmashSpot ? '🔥 SMASH SPOT' : 
+                          isEliteMatchup ? 'Elite' : 
+                          isFavorableMatchup ? 'Favorable' : 
+                          isToughMatchup ? 'Tough' : 'Neutral';
+
       if (isT2) {
         // T2 players: Good but not elite
-        if (isEliteMatchup) {
+        if (isSmashSpot) {
           recommendation = 'start';
           confidence = 'high';
-          reasoning = `Strong T2 player with elite matchup vs ${matchup.opponent} (Def Rank: #${dvpStats?.rankVsPosition || '?'})`;
+          reasoning = `${matchupLabel}: T2 player vs ${matchup.opponent} (#${dvpStats?.rankVsPosition || '?'} vs ${player.position}, ${dvpStats?.avgFptsAllowed || '?'} FPTS/gm allowed)`;
+        } else if (isEliteMatchup) {
+          recommendation = 'start';
+          confidence = 'high';
+          reasoning = `Strong T2 player with elite matchup vs ${matchup.opponent} (Matchup Score: ${matchupScore}/100)`;
         } else if (isToughMatchup) {
           recommendation = 'sit';
           confidence = 'medium';
-          reasoning = `T2 player facing tough defense ${matchup.opponent} (Def Rank: #${dvpStats?.rankVsPosition || '?'}) - consider alternatives`;
+          reasoning = `T2 player facing tough ${matchup.opponent} defense (#${dvpStats?.rankVsPosition || '?'} vs ${player.position}) - consider alternatives`;
         } else if (isFavorableMatchup) {
           recommendation = 'start';
           confidence = 'medium';
-          reasoning = `Solid T2 option with favorable matchup vs ${matchup.opponent}`;
+          reasoning = `Solid T2 option with favorable matchup vs ${matchup.opponent} (Score: ${matchupScore}/100)`;
         } else {
           recommendation = 'start';
           confidence = 'low';
-          reasoning = `T2 player, neutral matchup - check your other options`;
+          reasoning = `T2 player, neutral matchup vs ${matchup.opponent} - check your other options`;
         }
       } else if (isT3) {
         // T3 players: Matchup-dependent
-        if (isEliteMatchup) {
+        if (isSmashSpot) {
+          recommendation = 'start';
+          confidence = 'high';
+          reasoning = `${matchupLabel}: Matchup unlocks T3 upside vs ${matchup.opponent} (#${dvpStats?.rankVsPosition || '?'}, ${dvpStats?.avgFptsAllowed || '?'} FPTS/gm)`;
+        } else if (isEliteMatchup) {
           recommendation = 'start';
           confidence = 'medium';
-          reasoning = `Matchup-dependent T3 player gets boost from elite matchup vs ${matchup.opponent} (Def Rank: #${dvpStats?.rankVsPosition || '?'})`;
+          reasoning = `T3 player boosted by elite matchup vs ${matchup.opponent} (Score: ${matchupScore}/100)`;
         } else if (isToughMatchup) {
           recommendation = 'sit';
           confidence = 'high';
-          reasoning = `T3 player in brutal matchup vs ${matchup.opponent} (Def Rank: #${dvpStats?.rankVsPosition || '?'}) - avoid`;
+          reasoning = `T3 player in brutal matchup vs ${matchup.opponent} (#${dvpStats?.rankVsPosition || '?'} defense) - avoid`;
         } else if (isFavorableMatchup && isBreakingOut) {
           recommendation = 'start';
           confidence = 'medium';
-          reasoning = `Breakout T3 candidate with favorable matchup - upside play`;
+          reasoning = `Breakout T3 candidate with favorable ${matchup.opponent} matchup - upside play`;
         } else {
           recommendation = 'sit';
           confidence = 'low';
-          reasoning = `T3 player in neutral matchup - likely better options available`;
+          reasoning = `T3 player in neutral matchup vs ${matchup.opponent} - likely better options`;
         }
       } else {
         // Below T3: Not recommended
-        if (isEliteMatchup) {
+        if (isSmashSpot) {
+          recommendation = 'start';
+          confidence = 'medium';
+          reasoning = `${matchupLabel}: Elite matchup vs ${matchup.opponent} could elevate this deep league flex`;
+        } else if (isEliteMatchup) {
           recommendation = 'start';
           confidence = 'low';
-          reasoning = `Deep league play: elite matchup could elevate this flex option`;
+          reasoning = `Deep league play: elite ${matchup.opponent} matchup (Score: ${matchupScore}/100)`;
         } else {
           recommendation = 'sit';
           confidence = 'medium';
-          reasoning = `Below T3 tier - limited upside this week`;
+          reasoning = `Below T3 tier vs ${matchup.opponent} - limited upside this week`;
         }
       }
 
@@ -331,6 +464,10 @@ router.get('/start-sit', async (req, res) => {
           isHome: matchup.isHome,
           dvpRating: dvpStats?.dvpRating || 'unknown',
           rankVsPosition: dvpStats?.rankVsPosition || null,
+          matchupScore100: matchupScore,
+          avgFptsAllowed: dvpStats?.avgFptsAllowed || null,
+          isSmashSpot,
+          isToughSpot: isToughMatchup,
         },
         recommendation,
         confidence,
