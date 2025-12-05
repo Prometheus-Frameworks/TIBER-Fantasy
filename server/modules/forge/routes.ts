@@ -25,6 +25,7 @@ import {
 } from './sosService';
 import { applySosMultiplier } from './helpers/sosMultiplier';
 import { ForgeScore } from './types';
+import { batchCalculateAlphaV2, AlphaV2Result } from './alphaV2';
 
 const router = Router();
 
@@ -197,6 +198,111 @@ router.get('/preview', async (req: Request, res: Response) => {
     
   } catch (error) {
     console.error('[FORGE/Routes] Preview error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * GET /api/forge/preview-v2
+ * 
+ * Preview FORGE Alpha V2 scores - 2025 final formula
+ * 
+ * Key changes from V1:
+ * - Hard games-played floor (MIN_GAMES = 4)
+ * - Recency bias (last 4 weeks = 65%)
+ * - Rebalanced position weights
+ * - Elite ceiling protection
+ * 
+ * Query params:
+ * - position (required): WR | RB | TE | QB
+ * - season (optional): number, defaults to 2025
+ * - week (optional): number, defaults to 14
+ * - limit (optional): number, defaults to 50, max 100
+ */
+router.get('/preview-v2', async (req: Request, res: Response) => {
+  try {
+    const position = (req.query.position as string)?.toUpperCase() as PlayerPosition;
+    const season = parseInt(req.query.season as string) || 2025;
+    const week = parseInt(req.query.week as string) || 14;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    
+    if (!position || !['WR', 'RB', 'TE', 'QB'].includes(position)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or missing position. Must be WR, RB, TE, or QB.',
+      });
+    }
+    
+    console.log(`[FORGE/Routes] Preview V2 request: position=${position}, season=${season}, week=${week}, limit=${limit}`);
+    
+    // Get V1 scores first
+    const v1Scores = await forgeService.getForgeScoresBatch({
+      position: position as 'WR' | 'RB' | 'TE' | 'QB',
+      limit: 150,
+      season,
+      asOfWeek: week,
+    });
+    
+    if (v1Scores.length === 0) {
+      console.log(`[FORGE/Routes] No players found for ${position}`);
+      return res.json({
+        success: true,
+        meta: {
+          position,
+          season,
+          week,
+          version: 'v2',
+          returnedCount: 0,
+        },
+        scores: [],
+      });
+    }
+    
+    console.log(`[FORGE/Routes] Converting ${v1Scores.length} ${position}s to V2 Alpha`);
+    
+    // Calculate V2 Alpha for all players
+    const v2Results = batchCalculateAlphaV2(v1Scores);
+    
+    // Sort by V2 Alpha and take top N
+    const topScores = v2Results.slice(0, limit);
+    
+    // Count flagged players
+    const flaggedCount = v2Results.filter(r => r.flags.length > 0).length;
+    const lowSampleCount = v2Results.filter(r => r.gamesPlayed < 4).length;
+    
+    return res.json({
+      success: true,
+      meta: {
+        position,
+        season,
+        week,
+        version: 'v2',
+        formula: {
+          minGames: 4,
+          recencyWeight: 0.65,
+          baseWeight: 0.35,
+          weights: {
+            QB: { volume: 0.25, efficiency: 0.50, stability: 0.15, context: 0.10 },
+            RB: { volume: 0.40, efficiency: 0.35, stability: 0.15, context: 0.10 },
+            WR: { volume: 0.35, efficiency: 0.40, stability: 0.15, context: 0.10 },
+            TE: { volume: 0.35, efficiency: 0.40, stability: 0.15, context: 0.10 },
+          }[position],
+        },
+        requestedCount: limit,
+        returnedCount: topScores.length,
+        totalScored: v1Scores.length,
+        flaggedCount,
+        lowSampleCount,
+        scoredAt: new Date().toISOString(),
+      },
+      scores: topScores,
+    });
+    
+  } catch (error) {
+    console.error('[FORGE/Routes] Preview V2 error:', error);
     return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
