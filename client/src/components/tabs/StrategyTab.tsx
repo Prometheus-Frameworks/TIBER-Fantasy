@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Shield, TrendingUp, TrendingDown, Target, Users, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 
 interface SOSRanking {
   team: string;
@@ -79,8 +80,10 @@ export default function StrategyTab() {
   const [activeTab, setActiveTab] = useState<'sos' | 'startsit' | 'waivers'>('startsit');
   const [sosView, setSosView] = useState<'defense' | 'offense'>('defense');
   const [sosPosition, setSosPosition] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
-  const [startSitWeek] = useState(7); // Week 7 for decision making
   const [startSitPosition, setStartSitPosition] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
+  
+  // Get current NFL week dynamically
+  const { upcomingWeek: startSitWeek, isLoading: weekLoading } = useCurrentNFLWeek();
 
   // Build query URLs with params
   const buildSosUrl = (type: 'defense' | 'offense') => {
@@ -120,16 +123,24 @@ export default function StrategyTab() {
     return `/api/strategy/targets?${params.toString()}`;
   };
 
-  // Fetch start/sit recommendations
+  // Fetch start/sit recommendations (wait for week data)
   const { data: startSitData, isLoading: startSitLoading } = useQuery<StartSitResponse>({
-    queryKey: [buildStartSitUrl()],
-    enabled: activeTab === 'startsit',
+    queryKey: ['/api/strategy/start-sit', startSitWeek, startSitPosition],
+    queryFn: async () => {
+      const response = await fetch(buildStartSitUrl());
+      return response.json();
+    },
+    enabled: activeTab === 'startsit' && startSitWeek > 0 && !weekLoading,
   });
 
-  // Fetch waiver targets
+  // Fetch waiver targets (wait for week data)
   const { data: waiverTargets, isLoading: waiversLoading } = useQuery<WaiverTargetsResponse>({
-    queryKey: [buildWaiverUrl()],
-    enabled: activeTab === 'waivers',
+    queryKey: ['/api/strategy/targets', startSitWeek],
+    queryFn: async () => {
+      const response = await fetch(buildWaiverUrl());
+      return response.json();
+    },
+    enabled: activeTab === 'waivers' && startSitWeek > 0 && !weekLoading,
   });
 
   const isLoading = sosView === 'defense' ? defenseLoading : offenseLoading;

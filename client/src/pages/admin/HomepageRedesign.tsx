@@ -144,23 +144,38 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch strategy start/sit recommendations
-  const { data: startSitData, isLoading: startSitLoading } = useQuery({
-    queryKey: ['/api/strategy/start-sit', 1],
+  // Fetch current NFL week from system endpoint
+  const { data: weekData } = useQuery({
+    queryKey: ['/api/system/current-week'],
     queryFn: async () => {
-      const response = await fetch('/api/strategy/start-sit?week=1&season=2025');
+      const response = await fetch('/api/system/current-week');
       return response.json();
     },
+    staleTime: 60 * 1000, // Refresh every minute
+  });
+
+  // Get the week to use for matchup-based features
+  const currentWeek = weekData?.upcomingWeek || weekData?.currentWeek || 1;
+
+  // Fetch strategy start/sit recommendations using dynamic week
+  const { data: startSitData, isLoading: startSitLoading } = useQuery({
+    queryKey: ['/api/strategy/start-sit', currentWeek],
+    queryFn: async () => {
+      const response = await fetch(`/api/strategy/start-sit?week=${currentWeek}&season=2025`);
+      return response.json();
+    },
+    enabled: currentWeek > 0,
     staleTime: 10 * 60 * 1000,
   });
 
-  // Fetch weekly takes for insights
+  // Fetch weekly takes for insights using dynamic week
   const { data: weeklyTakesData, isLoading: takesLoading } = useQuery({
-    queryKey: ['/api/weekly-takes'],
+    queryKey: ['/api/weekly-takes', currentWeek],
     queryFn: async () => {
-      const response = await fetch('/api/weekly-takes?week=1');
+      const response = await fetch(`/api/weekly-takes?week=${currentWeek}`);
       return response.json();
     },
+    enabled: currentWeek > 0,
     staleTime: 10 * 60 * 1000,
   });
 
