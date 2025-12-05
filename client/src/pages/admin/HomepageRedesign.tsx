@@ -100,12 +100,33 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
         setMessages(parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) })));
       } catch (e) {
         console.error('Failed to parse saved messages:', e);
-        showWelcomeMessage();
       }
-    } else {
-      showWelcomeMessage();
     }
   }, []);
+
+  // Auto-select first league when leagues load and none is selected, then show contextual welcome
+  useEffect(() => {
+    if (leagues.length > 0 && messages.length === 0) {
+      const savedLeagueId = localStorage.getItem('tiber_chat_league');
+      const leagueToUse = savedLeagueId && leagues.find(l => l.id === savedLeagueId) 
+        ? savedLeagueId 
+        : leagues[0].id;
+      
+      setSelectedLeagueId(leagueToUse);
+      localStorage.setItem('tiber_chat_league', leagueToUse);
+      
+      const league = leagues.find(l => l.id === leagueToUse);
+      showWelcomeMessage(league?.leagueName);
+    } else if (leagues.length === 0 && messages.length === 0) {
+      // No leagues yet, show generic welcome after a brief delay
+      const timer = setTimeout(() => {
+        if (messages.length === 0) {
+          showWelcomeMessage();
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [leagues, messages.length]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -315,7 +336,9 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
             className="bg-transparent border-none text-zinc-200 text-sm font-semibold cursor-pointer outline-none"
             data-testid="select-league"
           >
-            <option value="" className="bg-[#1a1a24]">Select League...</option>
+            {leagues.length === 0 && (
+              <option value="" className="bg-[#1a1a24]">Loading leagues...</option>
+            )}
             {leagues.map(league => (
               <option key={league.id} value={league.id} className="bg-[#1a1a24]">
                 {league.leagueName} ({league.settings.teams || 12}T)
