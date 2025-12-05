@@ -200,25 +200,29 @@ export class WeeklyTakesService {
       // Get recent game logs (last 3 weeks) for target leaders
       const recentWeeks = [week - 1, week - 2, week - 3].filter(w => w > 0);
       
-      let recentGameLogs = await db
-        .select({
-          sleeperId: gameLogs.sleeperId,
-          avgTargets: sql<number>`AVG(${gameLogs.targets})`.as('avg_targets'),
-          totalTargets: sql<number>`SUM(${gameLogs.targets})`.as('total_targets'),
-          avgReceptions: sql<number>`AVG(${gameLogs.receptions})`.as('avg_receptions'),
-          avgRecYards: sql<number>`AVG(${gameLogs.recYards})`.as('avg_rec_yards'),
-        })
-        .from(gameLogs)
-        .innerJoin(players, eq(gameLogs.playerId, players.id))
-        .where(and(
-          eq(gameLogs.season, season),
-          sql`${gameLogs.week} IN (${sql.join(recentWeeks, sql`, `)})`,
-          eq(players.position, 'WR'),
-          gte(gameLogs.targets, 5)
-        ))
-        .groupBy(gameLogs.sleeperId)
-        .orderBy(desc(sql`AVG(${gameLogs.targets})`))
-        .limit(20);
+      // Skip query if no valid weeks (e.g., week 1-3 of season)
+      let recentGameLogs: any[] = [];
+      if (recentWeeks.length > 0) {
+        recentGameLogs = await db
+          .select({
+            sleeperId: gameLogs.sleeperId,
+            avgTargets: sql<number>`AVG(${gameLogs.targets})`.as('avg_targets'),
+            totalTargets: sql<number>`SUM(${gameLogs.targets})`.as('total_targets'),
+            avgReceptions: sql<number>`AVG(${gameLogs.receptions})`.as('avg_receptions'),
+            avgRecYards: sql<number>`AVG(${gameLogs.recYards})`.as('avg_rec_yards'),
+          })
+          .from(gameLogs)
+          .innerJoin(players, eq(gameLogs.playerId, players.id))
+          .where(and(
+            eq(gameLogs.season, season),
+            sql`${gameLogs.week} IN (${sql.join(recentWeeks, sql`, `)})`,
+            eq(players.position, 'WR'),
+            gte(gameLogs.targets, 5)
+          ))
+          .groupBy(gameLogs.sleeperId)
+          .orderBy(desc(sql`AVG(${gameLogs.targets})`))
+          .limit(20);
+      }
 
       // Fallback to 2024 data if no 2025 game logs
       if (recentGameLogs.length === 0 && season === 2025) {
@@ -320,26 +324,30 @@ export class WeeklyTakesService {
       // Get recent TE game logs
       const recentWeeks = [week - 1, week - 2, week - 3].filter(w => w > 0);
       
-      let teGameLogs = await db
-        .select({
-          sleeperId: gameLogs.sleeperId,
-          avgTargets: sql<number>`AVG(${gameLogs.targets})`.as('avg_targets'),
-          totalTargets: sql<number>`SUM(${gameLogs.targets})`.as('total_targets'),
-          avgReceptions: sql<number>`AVG(${gameLogs.receptions})`.as('avg_receptions'),
-          avgRecYards: sql<number>`AVG(${gameLogs.recYards})`.as('avg_rec_yards'),
-          avgFantasyPts: sql<number>`AVG(${gameLogs.fantasyPointsPpr})`.as('avg_fantasy_pts'),
-        })
-        .from(gameLogs)
-        .innerJoin(players, eq(gameLogs.playerId, players.id))
-        .where(and(
-          eq(gameLogs.season, season),
-          sql`${gameLogs.week} IN (${sql.join(recentWeeks, sql`, `)})`,
-          eq(players.position, 'TE'),
-          gte(gameLogs.targets, 3)
-        ))
-        .groupBy(gameLogs.sleeperId)
-        .orderBy(desc(sql`AVG(${gameLogs.targets})`))
-        .limit(15);
+      // Skip query if no valid weeks (e.g., week 1-3 of season)
+      let teGameLogs: any[] = [];
+      if (recentWeeks.length > 0) {
+        teGameLogs = await db
+          .select({
+            sleeperId: gameLogs.sleeperId,
+            avgTargets: sql<number>`AVG(${gameLogs.targets})`.as('avg_targets'),
+            totalTargets: sql<number>`SUM(${gameLogs.targets})`.as('total_targets'),
+            avgReceptions: sql<number>`AVG(${gameLogs.receptions})`.as('avg_receptions'),
+            avgRecYards: sql<number>`AVG(${gameLogs.recYards})`.as('avg_rec_yards'),
+            avgFantasyPts: sql<number>`AVG(${gameLogs.fantasyPointsPpr})`.as('avg_fantasy_pts'),
+          })
+          .from(gameLogs)
+          .innerJoin(players, eq(gameLogs.playerId, players.id))
+          .where(and(
+            eq(gameLogs.season, season),
+            sql`${gameLogs.week} IN (${sql.join(recentWeeks, sql`, `)})`,
+            eq(players.position, 'TE'),
+            gte(gameLogs.targets, 3)
+          ))
+          .groupBy(gameLogs.sleeperId)
+          .orderBy(desc(sql`AVG(${gameLogs.targets})`))
+          .limit(15);
+      }
 
       // Fallback to 2024 data if no 2025 game logs
       if (teGameLogs.length === 0 && season === 2025) {

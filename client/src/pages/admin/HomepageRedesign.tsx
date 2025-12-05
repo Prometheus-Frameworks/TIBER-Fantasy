@@ -3,7 +3,7 @@ import { Link, useLocation } from 'wouter';
 import { 
   ChevronLeft, Search, LayoutDashboard, BarChart3, Calendar, FlaskConical, 
   FileText, ArrowLeftRight, BookOpen, Plus, Send, User, Loader2, Lightbulb, 
-  GraduationCap, MessageSquarePlus
+  GraduationCap, MessageSquarePlus, TrendingUp, TrendingDown, AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -35,20 +35,30 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-type Insight = {
-  type: string;
-  title: string;
-  content: string;
-  urgency: 'high' | 'medium' | 'low';
-};
-
-type TrendingPlayer = {
-  name: string;
-  team: string;
+interface ForgePlayer {
+  playerId: string;
+  playerName: string;
   position: string;
-  change: string;
-  direction: 'up' | 'down';
-};
+  nflTeam: string;
+  alpha: number;
+  alphaBase?: number;
+  tier?: string;
+}
+
+interface StartSitPlayer {
+  playerName: string;
+  position: string;
+  team: string;
+  opponent?: string;
+  confidence: number;
+  reason: string;
+}
+
+interface WeeklyTake {
+  player: string;
+  insight: string;
+  position: 'QB' | 'RB' | 'WR' | 'TE';
+}
 
 interface HomepageRedesignProps {
   isPreview?: boolean;
@@ -84,6 +94,65 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
   });
 
   const leagues: League[] = leaguesData?.leagues || [];
+
+  // Fetch FORGE batch scores for movers widget
+  const { data: forgeData, isLoading: forgeLoading } = useQuery({
+    queryKey: ['/api/forge/batch'],
+    queryFn: async () => {
+      const response = await fetch('/api/forge/batch?limit=20');
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch Sleeper trending players
+  const { data: trendingData } = useQuery({
+    queryKey: ['/api/sleeper/trending/add'],
+    queryFn: async () => {
+      const response = await fetch('/api/sleeper/trending/add?hours=24&limit=50');
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch strategy start/sit recommendations
+  const { data: startSitData, isLoading: startSitLoading } = useQuery({
+    queryKey: ['/api/strategy/start-sit', 1],
+    queryFn: async () => {
+      const response = await fetch('/api/strategy/start-sit?week=1&season=2025');
+      return response.json();
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Fetch weekly takes for insights
+  const { data: weeklyTakesData, isLoading: takesLoading } = useQuery({
+    queryKey: ['/api/weekly-takes'],
+    queryFn: async () => {
+      const response = await fetch('/api/weekly-takes?week=1');
+      return response.json();
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Combine FORGE scores with trending data for movers
+  const forgeMovers = (() => {
+    const scores = forgeData?.scores || [];
+    const trending = trendingData?.data || [];
+    
+    // Create a map of trending player_ids to their count
+    const trendingMap = new Map<string, number>();
+    trending.forEach((p: { player_id: string; count: number }) => {
+      trendingMap.set(p.player_id, p.count || 0);
+    });
+
+    // Mark players as risers/fallers based on alpha tier
+    return scores.slice(0, 6).map((player: ForgePlayer) => ({
+      ...player,
+      trendCount: trendingMap.get(player.playerId) || 0,
+      direction: player.alpha >= 75 ? 'up' as const : player.alpha < 50 ? 'down' as const : 'neutral' as const,
+    }));
+  })();
 
   // Load session from localStorage on mount
   useEffect(() => {
@@ -266,18 +335,50 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     }, 100);
   };
 
-  // Static mock data for dashboard widgets (can be replaced with real APIs later)
-  const quickInsights: Insight[] = [
-    { type: 'alert', title: 'Injury Alert', content: "Ja'Marr Chase questionable - monitor practice reports", urgency: 'high' },
-    { type: 'trend', title: 'Rising', content: 'Bucky Irving +12% rostership', urgency: 'medium' },
-    { type: 'matchup', title: 'Week 14', content: 'Morts FF vs Dynasty Kings - projected 112.4', urgency: 'low' },
-  ];
+  // Quick insights from weekly takes API - structure is { qb: [], rb: [], wr: [], te: [] }
+  // Each take has { player: string, insight: string, position: 'QB'|'RB'|'WR'|'TE' }
+  const quickInsights = (() => {
+    const takesData = weeklyTakesData?.data?.takes;
+    if (!takesData || takesLoading) {
+      return [
+        { type: 'loading', title: 'Loading', content: 'Fetching weekly insights...', urgency: 'low' as const },
+      ];
+    }
+    
+    // Flatten the position-grouped takes into a single array (already have position from API)
+    const allTakes: WeeklyTake[] = [
+      ...(takesData.qb || []),
+      ...(takesData.rb || []),
+      ...(takesData.wr || []),
+      ...(takesData.te || []),
+    ];
+    
+    if (allTakes.length === 0) {
+      // Show helpful fallback content when no takes are available
+      return [
+        { type: 'info', title: 'Week 1 Preview', content: 'Season starting soon - check back for matchup insights', urgency: 'low' as const },
+        { type: 'trend', title: 'FORGE Active', content: 'Player scoring engine is live and processing data', urgency: 'medium' as const },
+      ];
+    }
+    
+    // Map real takes to display format using correct API properties
+    return allTakes.slice(0, 3).map((take: WeeklyTake) => ({
+      type: 'matchup',
+      title: `${take.position}: ${take.player}`,
+      content: take.insight,
+      urgency: take.position === 'QB' ? 'high' as const : take.position === 'RB' ? 'medium' as const : 'low' as const,
+    }));
+  })();
 
-  const trendingPlayers: TrendingPlayer[] = [
-    { name: 'Bucky Irving', team: 'TB', position: 'RB', change: '+18.2', direction: 'up' },
-    { name: 'Jameson Williams', team: 'DET', position: 'WR', change: '+12.7', direction: 'up' },
-    { name: 'Keenan Allen', team: 'CHI', position: 'WR', change: '-8.4', direction: 'down' },
-  ];
+  // FORGE movers from batch API
+  const trendingPlayers = forgeMovers.map((player: any) => ({
+    name: player.playerName || 'Unknown',
+    team: player.nflTeam || '???',
+    position: player.position || '??',
+    change: player.alpha >= 75 ? `+${player.alpha.toFixed(1)}` : player.alpha < 50 ? `${player.alpha.toFixed(1)}` : player.alpha.toFixed(1),
+    direction: player.direction,
+    alpha: player.alpha,
+  }));
 
   const quickActions = ['Analyze my matchup', 'Waiver targets', 'Start/Sit help', 'Trade value check'];
 
@@ -426,40 +527,70 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
 
           {/* Trending Players / FORGE Movers */}
           <section>
-            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-3">
-              FORGE Movers
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
+                FORGE Movers
+              </h3>
+              <span className="text-[11px] text-zinc-500">
+                Alpha Score (0-100)
+              </span>
+            </div>
             <div className="bg-white/[0.02] rounded-xl border border-purple-500/15 overflow-hidden">
-              {trendingPlayers.map((player, idx) => (
-                <div 
-                  key={idx} 
-                  className={`flex items-center justify-between px-4 py-3.5 ${
-                    idx < trendingPlayers.length - 1 ? 'border-b border-purple-500/10' : ''
-                  }`}
-                  data-testid={`mover-${idx}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500/20 to-cyan-500/10 flex items-center justify-center text-xs font-semibold text-purple-500">
-                      {player.position}
-                    </div>
-                    <div>
-                      <button 
-                        onClick={() => handlePlayerClick(player.name)}
-                        className="text-sm font-semibold text-zinc-200 hover:text-purple-400 transition-colors cursor-pointer text-left"
-                        data-testid={`player-link-${player.name.toLowerCase().replace(/\s+/g, '-')}`}
-                      >
-                        {player.name}
-                      </button>
-                      <div className="text-[11px] text-zinc-500">{player.team}</div>
-                    </div>
-                  </div>
-                  <div className={`text-sm font-semibold ${
-                    player.direction === 'up' ? 'text-green-500' : 'text-red-500'
-                  }`}>
-                    {player.direction === 'up' ? '↑' : '↓'} {player.change}
-                  </div>
+              {forgeLoading ? (
+                <div className="flex items-center justify-center py-8 text-zinc-500">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  Loading FORGE data...
                 </div>
-              ))}
+              ) : trendingPlayers.length === 0 ? (
+                <div className="flex items-center justify-center py-8 text-zinc-500 text-sm">
+                  No FORGE data available
+                </div>
+              ) : (
+                trendingPlayers.map((player: any, idx: number) => (
+                  <div 
+                    key={idx} 
+                    className={`flex items-center justify-between px-4 py-3.5 ${
+                      idx < trendingPlayers.length - 1 ? 'border-b border-purple-500/10' : ''
+                    }`}
+                    data-testid={`mover-${idx}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-semibold ${
+                        player.direction === 'up' 
+                          ? 'bg-green-500/15 text-green-500' 
+                          : player.direction === 'down' 
+                            ? 'bg-red-500/15 text-red-500' 
+                            : 'bg-purple-500/20 text-purple-500'
+                      }`}>
+                        {player.position}
+                      </div>
+                      <div>
+                        <button 
+                          onClick={() => handlePlayerClick(player.name)}
+                          className="text-sm font-semibold text-zinc-200 hover:text-purple-400 transition-colors cursor-pointer text-left"
+                          data-testid={`player-link-${player.name.toLowerCase().replace(/\s+/g, '-')}`}
+                        >
+                          {player.name}
+                        </button>
+                        <div className="text-[11px] text-zinc-500">{player.team}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {player.direction === 'up' && <TrendingUp className="h-4 w-4 text-green-500" />}
+                      {player.direction === 'down' && <TrendingDown className="h-4 w-4 text-red-500" />}
+                      <span className={`text-sm font-bold ${
+                        player.direction === 'up' 
+                          ? 'text-green-500' 
+                          : player.direction === 'down' 
+                            ? 'text-red-500' 
+                            : 'text-zinc-400'
+                      }`}>
+                        {player.alpha?.toFixed(1) || '—'}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </section>
 
@@ -469,41 +600,93 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
               <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
                 Start/Sit Suggestions
               </h3>
-              <span className="text-[11px] text-purple-500 cursor-pointer hover:text-purple-400">
-                View Full Roster →
-              </span>
+              <Link href="/schedule">
+                <span className="text-[11px] text-purple-500 cursor-pointer hover:text-purple-400">
+                  View Full Schedule →
+                </span>
+              </Link>
             </div>
             <div className="p-5 rounded-xl bg-gradient-to-br from-purple-500/[0.08] to-cyan-500/[0.04] border border-purple-500/20 flex flex-col gap-4">
-              <div className="flex items-center gap-4">
-                <div className="px-2.5 py-1.5 rounded-md bg-green-500/15 border border-green-500/30 text-green-500 text-[11px] font-semibold">
-                  START
+              {startSitLoading ? (
+                <div className="flex items-center justify-center py-4 text-zinc-500">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  Loading recommendations...
                 </div>
-                <span className="text-sm text-zinc-200">
-                  <button 
-                    onClick={() => handlePlayerClick('Nico Collins')}
-                    className="font-bold hover:text-purple-400 transition-colors cursor-pointer"
-                    data-testid="player-link-nico-collins"
-                  >
-                    Nico Collins
-                  </button>
-                  {' '}vs JAX — elite matchup, 94% confidence
-                </span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="px-2.5 py-1.5 rounded-md bg-red-500/15 border border-red-500/30 text-red-500 text-[11px] font-semibold">
-                  SIT
-                </div>
-                <span className="text-sm text-zinc-200">
-                  <button 
-                    onClick={() => handlePlayerClick('Courtland Sutton')}
-                    className="font-bold hover:text-purple-400 transition-colors cursor-pointer"
-                    data-testid="player-link-courtland-sutton"
-                  >
-                    Courtland Sutton
-                  </button>
-                  {' '}@ BUF — tough secondary, 71% confidence
-                </span>
-              </div>
+              ) : (() => {
+                const recommendations = startSitData?.recommendations || [];
+                // Show up to 2 starts and 2 sits for more complete recommendations
+                const starts = recommendations.filter((r: any) => r.recommendation === 'start').slice(0, 2);
+                const sits = recommendations.filter((r: any) => r.recommendation === 'sit').slice(0, 2);
+                
+                if (recommendations.length === 0) {
+                  return (
+                    <div className="text-sm text-zinc-500 text-center py-2">
+                      <AlertTriangle className="h-4 w-4 inline mr-1" />
+                      No start/sit recommendations available for this week
+                    </div>
+                  );
+                }
+                
+                return (
+                  <>
+                    {/* Start recommendations */}
+                    {starts.map((rec: any, idx: number) => (
+                      <div key={`start-${idx}`} className="flex items-center gap-4">
+                        <div className="px-2.5 py-1.5 rounded-md bg-green-500/15 border border-green-500/30 text-green-500 text-[11px] font-semibold">
+                          START
+                        </div>
+                        <span className="text-sm text-zinc-200">
+                          <button 
+                            onClick={() => handlePlayerClick(rec.player?.fullName || rec.player?.canonicalId)}
+                            className="font-bold hover:text-purple-400 transition-colors cursor-pointer"
+                            data-testid={`player-link-start-${idx}`}
+                          >
+                            {rec.player?.fullName || 'Unknown'}
+                          </button>
+                          {rec.matchup?.opponent && <span> vs {rec.matchup.opponent}</span>}
+                          {rec.reasoning && <span> — {rec.reasoning}</span>}
+                        </span>
+                      </div>
+                    ))}
+                    {/* Sit recommendations */}
+                    {sits.map((rec: any, idx: number) => (
+                      <div key={`sit-${idx}`} className="flex items-center gap-4">
+                        <div className="px-2.5 py-1.5 rounded-md bg-red-500/15 border border-red-500/30 text-red-500 text-[11px] font-semibold">
+                          SIT
+                        </div>
+                        <span className="text-sm text-zinc-200">
+                          <button 
+                            onClick={() => handlePlayerClick(rec.player?.fullName || rec.player?.canonicalId)}
+                            className="font-bold hover:text-purple-400 transition-colors cursor-pointer"
+                            data-testid={`player-link-sit-${idx}`}
+                          >
+                            {rec.player?.fullName || 'Unknown'}
+                          </button>
+                          {rec.matchup?.opponent && <span> @ {rec.matchup.opponent}</span>}
+                          {rec.reasoning && <span> — {rec.reasoning}</span>}
+                        </span>
+                      </div>
+                    ))}
+                    {/* If only starts or only sits available */}
+                    {starts.length === 0 && sits.length > 0 && (
+                      <div className="flex items-center gap-4 opacity-60">
+                        <div className="px-2.5 py-1.5 rounded-md bg-green-500/10 border border-green-500/20 text-green-500/60 text-[11px] font-semibold">
+                          START
+                        </div>
+                        <span className="text-sm text-zinc-500 italic">No strong starts this week</span>
+                      </div>
+                    )}
+                    {sits.length === 0 && starts.length > 0 && (
+                      <div className="flex items-center gap-4 opacity-60">
+                        <div className="px-2.5 py-1.5 rounded-md bg-red-500/10 border border-red-500/20 text-red-500/60 text-[11px] font-semibold">
+                          SIT
+                        </div>
+                        <span className="text-sm text-zinc-500 italic">No strong sits this week</span>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </section>
         </div>
