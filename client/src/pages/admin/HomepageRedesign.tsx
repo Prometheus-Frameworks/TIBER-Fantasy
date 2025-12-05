@@ -77,9 +77,8 @@ export default function HomepageRedesign() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ 
-      background: 'linear-gradient(135deg, #0a0a0f 0%, #0d0d14 50%, #0f0a14 100%)',
-      fontFamily: "'JetBrains Mono', 'SF Mono', monospace"
+    <div className="min-h-screen flex flex-col font-sans" style={{ 
+      background: 'linear-gradient(135deg, #0a0a0f 0%, #0d0d14 50%, #0f0a14 100%)'
     }}>
       
       {/* Admin Notice Banner */}
