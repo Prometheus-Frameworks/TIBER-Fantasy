@@ -229,6 +229,22 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     setTimeout(() => handleSend(), 100);
   };
 
+  const handlePlayerClick = (playerName: string) => {
+    const message = `Give me a quick breakdown on ${playerName}`;
+    setChatMessage(message);
+    setTimeout(() => {
+      const userMessage: ChatMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: message,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, userMessage]);
+      chatMutation.mutate(message);
+      setChatMessage('');
+    }, 100);
+  };
+
   // Static mock data for dashboard widgets (can be replaced with real APIs later)
   const quickInsights: Insight[] = [
     { type: 'alert', title: 'Injury Alert', content: "Ja'Marr Chase questionable - monitor practice reports", urgency: 'high' },
@@ -404,7 +420,13 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
                       {player.position}
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-zinc-200">{player.name}</div>
+                      <button 
+                        onClick={() => handlePlayerClick(player.name)}
+                        className="text-sm font-semibold text-zinc-200 hover:text-purple-400 transition-colors cursor-pointer text-left"
+                        data-testid={`player-link-${player.name.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        {player.name}
+                      </button>
                       <div className="text-[11px] text-zinc-500">{player.team}</div>
                     </div>
                   </div>
@@ -434,7 +456,14 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
                   START
                 </div>
                 <span className="text-sm text-zinc-200">
-                  <strong>Nico Collins</strong> vs JAX — elite matchup, 94% confidence
+                  <button 
+                    onClick={() => handlePlayerClick('Nico Collins')}
+                    className="font-bold hover:text-purple-400 transition-colors cursor-pointer"
+                    data-testid="player-link-nico-collins"
+                  >
+                    Nico Collins
+                  </button>
+                  {' '}vs JAX — elite matchup, 94% confidence
                 </span>
               </div>
               <div className="flex items-center gap-4">
@@ -442,7 +471,14 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
                   SIT
                 </div>
                 <span className="text-sm text-zinc-200">
-                  <strong>Courtland Sutton</strong> @ BUF — tough secondary, 71% confidence
+                  <button 
+                    onClick={() => handlePlayerClick('Courtland Sutton')}
+                    className="font-bold hover:text-purple-400 transition-colors cursor-pointer"
+                    data-testid="player-link-courtland-sutton"
+                  >
+                    Courtland Sutton
+                  </button>
+                  {' '}@ BUF — tough secondary, 71% confidence
                 </span>
               </div>
             </div>
