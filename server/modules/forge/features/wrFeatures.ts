@@ -8,7 +8,7 @@
  * (v0.2: roleLeverage removed, weights redistributed)
  */
 
-import { ForgeContext, ForgeFeatureBundle, MISSING_DATA_CAPS } from '../types';
+import { ForgeContext, ForgeFeatureBundle, MISSING_DATA_CAPS, EFFICIENCY_CAPS } from '../types';
 import { 
   calculatePercentile, 
   safeAverage, 
@@ -153,6 +153,9 @@ function buildEfficiencyFeatures(
   if (capped) {
     score = Math.min(score, MISSING_DATA_CAPS.NO_ADVANCED_STATS_EFFICIENCY);
   }
+  
+  // Position-specific efficiency cap (WR/RB/TE capped at 85)
+  score = Math.min(score, EFFICIENCY_CAPS.WR);
   
   return { raw, normalized, score, capped };
 }

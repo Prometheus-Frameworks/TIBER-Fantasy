@@ -9,7 +9,8 @@
  * - Calibrated output range: 25→95
  */
 
-import { ForgeScore, PlayerPosition, ForgeSubScores } from './types';
+import { ForgeScore, PlayerPosition, ForgeSubScores, TiberTierLevel } from './types';
+import { assignSimpleTier, getTierLabel, getTierColor } from './tiberTiers';
 
 const MIN_GAMES = 4;
 const RECENCY_WEIGHT = 0.65;
@@ -47,6 +48,10 @@ export interface AlphaV2Result {
     stability: number;
     context: number;
   };
+  tier: TiberTierLevel;
+  tierLabel: string;
+  tierColor: string;
+  isElite: boolean;
   flags: string[];
 }
 
@@ -143,6 +148,9 @@ export function calculateAlphaV2FromForgeScore(score: ForgeScore, last4WeeksAlph
     flags.push('HIGH_VOL_LOW_EFF');
   }
   
+  // Assign Tiber Tier based on V2 Alpha
+  const tierAssignment = assignSimpleTier(alphaV2, score.position);
+  
   return {
     playerId: score.playerId,
     playerName: score.playerName,
@@ -153,6 +161,10 @@ export function calculateAlphaV2FromForgeScore(score: ForgeScore, last4WeeksAlph
     alphaV1,
     delta,
     subscores: enriched.subscores,
+    tier: tierAssignment.tier,
+    tierLabel: getTierLabel(tierAssignment.tier),
+    tierColor: getTierColor(tierAssignment.tier),
+    isElite: tierAssignment.isElite,
     flags,
   };
 }

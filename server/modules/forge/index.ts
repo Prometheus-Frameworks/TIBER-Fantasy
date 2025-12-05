@@ -38,7 +38,26 @@ export type {
   ForgeTrajectory,
 } from './types';
 
-export { ALPHA_WEIGHTS, TRAJECTORY_THRESHOLDS, CONFIDENCE_CONFIG, MISSING_DATA_CAPS } from './types';
+export { 
+  ALPHA_WEIGHTS, 
+  TRAJECTORY_THRESHOLDS, 
+  CONFIDENCE_CONFIG, 
+  MISSING_DATA_CAPS,
+  EFFICIENCY_CAPS,
+  TIBER_TIERS_2025,
+  TIER_MOVER_RULES,
+} from './types';
+
+export type { TiberTierLevel, TiberTierAssignment } from './types';
+
+export {
+  assignTier,
+  assignSimpleTier,
+  applyMoverRules,
+  getTierThresholds,
+  getTierLabel,
+  getTierColor,
+} from './tiberTiers';
 
 export { registerForgeRoutes } from './routes';
 export { default as forgeRouter } from './routes';

@@ -333,6 +333,57 @@ export const MISSING_DATA_CAPS = {
 } as const;
 
 /**
+ * Position-specific efficiency caps
+ * QBs can hit 100 (no cap), skill positions capped at 85
+ */
+export const EFFICIENCY_CAPS: Record<PlayerPosition, number> = {
+  QB: 100,
+  RB: 85,
+  WR: 85,
+  TE: 85,
+} as const;
+
+/**
+ * Tiber Tiers 2025 - Position-specific Alpha thresholds
+ * 
+ * T1 = Elite, T2 = Quality Starter, T3 = Flex/Depth, T4 = Rosterable, T5 = Waiver Wire
+ */
+export const TIBER_TIERS_2025 = {
+  QB: { T1: 85, T2: 75, T3: 65, T4: 55 },
+  RB: { T1: 82, T2: 74, T3: 66, T4: 58 },
+  WR: { T1: 84, T2: 76, T3: 68, T4: 60 },
+  TE: { T1: 80, T2: 72, T3: 64, T4: 56 },
+} as const;
+
+export type TiberTierLevel = 'T1' | 'T2' | 'T3' | 'T4' | 'T5';
+
+/**
+ * Weekly Mover Rules for Tiber Tiers
+ */
+export const TIER_MOVER_RULES = {
+  MAX_TIER_CHANGE_PER_WEEK: 1,
+  MAX_MATCHUP_BOOST: 10,
+  MAX_MATCHUP_PENALTY: -10,
+  BOTTOM_OFFENSE_MAX_BOOST: 4,  // Bottom-8 team in offensive EPA/play
+  LOW_SNAP_PROJECTION_THRESHOLD: 0.60,  // 60% projected snaps
+  ELITE_THRESHOLD: 85,  // Season Alpha >= 85 = true elite
+  ELITE_MAX_DROP: 6,    // Elites max -6 points (never drop out of T1)
+} as const;
+
+/**
+ * Tiber Tier assignment result
+ */
+export interface TiberTierAssignment {
+  tier: TiberTierLevel;
+  alpha: number;
+  weeklyAlpha?: number;  // Matchup-adjusted alpha
+  previousTier?: TiberTierLevel;
+  tierChange?: number;   // +1, 0, -1
+  isElite: boolean;
+  moveConstrained: boolean;
+}
+
+/**
  * Simplified feature bundle base type for client parity
  * This is the normalized output shape from all feature builders
  * 
