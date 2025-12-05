@@ -623,6 +623,36 @@ export const injuries = pgTable("injuries", {
   uniquePlayerSeason: unique("injuries_unique_player_season").on(table.canonicalPlayerId, table.season),
 }));
 
+// Player Live Status - Real-time roster status from Sleeper API
+// Tracks current team, injury status, and active/inactive for FORGE eligibility
+export const playerLiveStatus = pgTable("player_live_status", {
+  canonicalId: text("canonical_id").primaryKey().references(() => playerIdentityMap.canonicalId),
+  sleeperId: text("sleeper_id"),
+  
+  // Current team (authoritative source from Sleeper)
+  currentTeam: text("current_team"), // "PIT", "NYG", null for FA
+  
+  // Player status from Sleeper
+  status: text("status"), // "Active", "Inactive", "Injured Reserve", "PUP", "Suspended", "Out"
+  injuryStatus: text("injury_status"), // "Questionable", "Doubtful", "Out", "IR", null
+  injuryBodyPart: text("injury_body_part"), // "Knee", "Ankle", "Concussion", etc.
+  
+  // Eligibility flags for FORGE
+  isEligibleForForge: boolean("is_eligible_for_forge").default(true), // False if IR, PUP, or inactive
+  
+  // Sync metadata
+  lastSyncedAt: timestamp("last_synced_at").defaultNow(),
+  syncSource: text("sync_source").default("sleeper"), // "sleeper", "manual"
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  statusIdx: index("pls_status_idx").on(table.status),
+  eligibleIdx: index("pls_eligible_idx").on(table.isEligibleForForge),
+  teamIdx: index("pls_team_idx").on(table.currentTeam),
+  sleeperIdx: uniqueIndex("pls_sleeper_idx").on(table.sleeperId).where(sql`${table.sleeperId} IS NOT NULL`),
+}));
+
 // Depth Charts - Team depth chart positions
 export const depthCharts = pgTable("depth_charts", {
   id: serial("id").primaryKey(),
