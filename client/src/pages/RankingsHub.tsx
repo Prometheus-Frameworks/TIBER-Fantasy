@@ -1,12 +1,42 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
-import { Home, TrendingUp, ArrowUpDown, RefreshCw, Shield, Star, Zap } from 'lucide-react';
+import { Home, TrendingUp, ArrowUpDown, RefreshCw, Shield, Star, Zap, X, Info, Target, AlertTriangle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 
 type Position = 'WR' | 'RB' | 'TE' | 'QB' | 'DST';
+
+interface DefenseMetrics {
+  baseAlpha: number;
+  sackRate: number;
+  pressureRate: number;
+  intRate: number;
+  turnoverRate: number;
+  pointsAllowedPerDrive: number;
+}
+
+interface OpponentMetrics {
+  turnoverWorthyRate: number;
+  sackRateAllowed: number;
+  pressureRateAllowed: number;
+  pointsPerDrive: number;
+  playsPerGame: number;
+  qbIsRookie: boolean;
+  olInjured: boolean;
+}
+
+interface MatchupBreakdown {
+  turnoverBoost: number;
+  sackBoost: number;
+  pressureBoost: number;
+  scoringBoost: number;
+  rookieBonus: number;
+  olInjuryBonus: number;
+  totalBoost: number;
+}
 
 interface DSTRanking {
   rank: number;
@@ -19,6 +49,9 @@ interface DSTRanking {
   turnoverRate?: number;
   sackRate?: number;
   pointsAllowed?: number;
+  defenseMetrics?: DefenseMetrics;
+  opponentMetrics?: OpponentMetrics;
+  matchupBreakdown?: MatchupBreakdown;
 }
 
 interface DSTStreamerResponse {
@@ -127,7 +160,181 @@ function getBoostColor(boost: number) {
   return 'text-red-400';
 }
 
+function getBoostBarColor(value: number) {
+  if (value >= 4) return 'bg-green-500';
+  if (value >= 2) return 'bg-emerald-500';
+  if (value >= 0) return 'bg-slate-500';
+  return 'bg-red-500';
+}
+
+function MetricRow({ label, value, format = 'number', highlight = false }: { label: string; value: number | boolean; format?: 'number' | 'percent' | 'boolean'; highlight?: boolean }) {
+  let displayValue = '';
+  if (format === 'percent') {
+    displayValue = `${((value as number) * 100).toFixed(1)}%`;
+  } else if (format === 'boolean') {
+    displayValue = value ? 'Yes' : 'No';
+  } else {
+    displayValue = typeof value === 'number' ? value.toFixed(2) : String(value);
+  }
+  
+  return (
+    <div className={`flex justify-between items-center py-1.5 px-2 rounded ${highlight ? 'bg-slate-700/30' : ''}`}>
+      <span className="text-slate-400 text-sm">{label}</span>
+      <span className={`font-mono text-sm ${highlight ? 'text-white font-semibold' : 'text-slate-300'}`}>{displayValue}</span>
+    </div>
+  );
+}
+
+function BoostBreakdownRow({ label, value, maxValue = 10 }: { label: string; value: number; maxValue?: number }) {
+  const percentage = Math.min(100, Math.abs(value) / maxValue * 100);
+  const isPositive = value >= 0;
+  
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between items-center">
+        <span className="text-slate-400 text-sm">{label}</span>
+        <span className={`font-mono text-sm font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+          {isPositive ? '+' : ''}{value.toFixed(1)}
+        </span>
+      </div>
+      <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+        <div 
+          className={`h-full rounded-full transition-all ${getBoostBarColor(value)}`}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function DSTMatchupModal({ matchup, isOpen, onClose }: { matchup: DSTRanking | null; isOpen: boolean; onClose: () => void }) {
+  if (!matchup) return null;
+  
+  const { defenseMetrics, opponentMetrics, matchupBreakdown } = matchup;
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="bg-[#141824] border-gray-700 max-w-lg max-h-[85vh] overflow-y-auto" data-testid="dst-matchup-modal">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3 text-xl">
+            <div className={`p-2 rounded-lg ${getTierColor(matchup.tier)}`}>
+              <Shield className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-white">{matchup.team}</span>
+              <span className="text-slate-400 mx-2">vs</span>
+              <span className="text-slate-300">{matchup.opponent}</span>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-6 pt-4">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-xl border border-blue-700/30">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-white">{matchup.alpha}</div>
+              <div className="text-xs text-slate-400 uppercase">Alpha Score</div>
+            </div>
+            <div className="text-center">
+              <span className={`text-lg font-bold px-3 py-1 rounded border ${getTierColor(matchup.tier)}`}>{matchup.tier}</span>
+              <div className="text-xs text-slate-400 uppercase mt-1">Tier</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-emerald-400">{matchup.projectedPoints}</div>
+              <div className="text-xs text-slate-400 uppercase">Proj Pts</div>
+            </div>
+          </div>
+
+          {defenseMetrics && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-blue-400 uppercase tracking-wide">
+                <Shield className="h-4 w-4" />
+                {matchup.team} Defense Strength
+              </div>
+              <div className="bg-[#0a0e1a] rounded-lg p-3 space-y-1 border border-gray-800">
+                <MetricRow label="Base Alpha" value={defenseMetrics.baseAlpha} highlight />
+                <MetricRow label="Turnover Rate" value={defenseMetrics.turnoverRate} format="percent" />
+                <MetricRow label="Sack Rate" value={defenseMetrics.sackRate} format="percent" />
+                <MetricRow label="Pressure Rate" value={defenseMetrics.pressureRate} format="percent" />
+                <MetricRow label="INT Rate" value={defenseMetrics.intRate} format="percent" />
+                <MetricRow label="Pts Allowed/Drive" value={defenseMetrics.pointsAllowedPerDrive} />
+              </div>
+            </div>
+          )}
+
+          {opponentMetrics && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-orange-400 uppercase tracking-wide">
+                <Target className="h-4 w-4" />
+                {matchup.opponent} Offense Vulnerability
+              </div>
+              <div className="bg-[#0a0e1a] rounded-lg p-3 space-y-1 border border-gray-800">
+                <MetricRow label="Turnover-Worthy Rate" value={opponentMetrics.turnoverWorthyRate} format="percent" />
+                <MetricRow label="Sack Rate Allowed" value={opponentMetrics.sackRateAllowed} format="percent" />
+                <MetricRow label="Pressure Rate Allowed" value={opponentMetrics.pressureRateAllowed} format="percent" />
+                <MetricRow label="Points Per Drive" value={opponentMetrics.pointsPerDrive} />
+                <MetricRow label="Plays Per Game" value={opponentMetrics.playsPerGame} />
+                {opponentMetrics.qbIsRookie && (
+                  <div className="flex items-center gap-2 py-1.5 px-2 bg-yellow-900/20 rounded border border-yellow-700/30 mt-2">
+                    <AlertTriangle className="h-4 w-4 text-yellow-400" />
+                    <span className="text-yellow-400 text-sm font-medium">Rookie QB</span>
+                  </div>
+                )}
+                {opponentMetrics.olInjured && (
+                  <div className="flex items-center gap-2 py-1.5 px-2 bg-red-900/20 rounded border border-red-700/30 mt-2">
+                    <Users className="h-4 w-4 text-red-400" />
+                    <span className="text-red-400 text-sm font-medium">O-Line Injuries</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {matchupBreakdown && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-400 uppercase tracking-wide">
+                <Zap className="h-4 w-4" />
+                Matchup Boost Breakdown
+              </div>
+              <div className="bg-[#0a0e1a] rounded-lg p-4 space-y-3 border border-gray-800">
+                <BoostBreakdownRow label="Turnover Opportunity" value={matchupBreakdown.turnoverBoost} />
+                <BoostBreakdownRow label="Sack Opportunity" value={matchupBreakdown.sackBoost} />
+                <BoostBreakdownRow label="Pressure Factor" value={matchupBreakdown.pressureBoost} maxValue={5} />
+                <BoostBreakdownRow label="Scoring Defense" value={matchupBreakdown.scoringBoost} maxValue={5} />
+                {matchupBreakdown.rookieBonus > 0 && (
+                  <BoostBreakdownRow label="Rookie QB Bonus" value={matchupBreakdown.rookieBonus} maxValue={5} />
+                )}
+                {matchupBreakdown.olInjuryBonus > 0 && (
+                  <BoostBreakdownRow label="O-Line Injury Bonus" value={matchupBreakdown.olInjuryBonus} maxValue={5} />
+                )}
+                <div className="border-t border-gray-700 pt-3 mt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-white font-semibold">Total Matchup Boost</span>
+                    <span className={`font-mono text-lg font-bold ${getBoostColor(matchupBreakdown.totalBoost)}`}>
+                      {matchupBreakdown.totalBoost >= 0 ? '+' : ''}{matchupBreakdown.totalBoost}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-slate-400">
+                Alpha = Base Defense ({defenseMetrics?.baseAlpha ?? '—'}) + Matchup Boost ({matchupBreakdown?.totalBoost ?? '—'}).
+                Projected points estimated at Alpha / 9.
+              </p>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function DSTStreamerTable({ data, isLoading, week }: { data?: DSTStreamerResponse; isLoading: boolean; week: number }) {
+  const [selectedMatchup, setSelectedMatchup] = useState<DSTRanking | null>(null);
   if (isLoading) {
     return (
       <div className="bg-[#141824] border border-gray-800 rounded-xl p-8">
@@ -150,96 +357,118 @@ function DSTStreamerTable({ data, isLoading, week }: { data?: DSTStreamerRespons
   }
 
   return (
-    <div className="space-y-6">
-      {data.hiddenGem && (
-        <div className="bg-gradient-to-r from-purple-900/40 to-pink-900/40 border border-purple-500/50 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-600/30 rounded-lg">
-              <Star className="h-5 w-5 text-purple-400" />
-            </div>
-            <div>
-              <div className="text-xs text-purple-300 font-medium uppercase tracking-wide">Hidden Gem</div>
-              <div className="text-lg font-bold text-white">
-                {data.hiddenGem.team} vs {data.hiddenGem.opponent}
+    <>
+      <DSTMatchupModal 
+        matchup={selectedMatchup} 
+        isOpen={!!selectedMatchup} 
+        onClose={() => setSelectedMatchup(null)} 
+      />
+      
+      <div className="space-y-6">
+        <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-800/30 px-3 py-2 rounded-lg border border-slate-700/50">
+          <Info className="h-4 w-4 text-blue-400" />
+          <span>Click any matchup to see the full transparency breakdown</span>
+        </div>
+        
+        {data.hiddenGem && (
+          <div 
+            className="bg-gradient-to-r from-purple-900/40 to-pink-900/40 border border-purple-500/50 rounded-xl p-4 cursor-pointer hover:border-purple-400 transition-colors"
+            onClick={() => setSelectedMatchup(data.hiddenGem!)}
+            data-testid="hidden-gem-card"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-600/30 rounded-lg">
+                <Star className="h-5 w-5 text-purple-400" />
               </div>
-              <div className="text-sm text-purple-200">
-                Projected: {data.hiddenGem.projectedPoints} pts | Alpha: {data.hiddenGem.alpha} | Boost: +{data.hiddenGem.boost}
+              <div>
+                <div className="text-xs text-purple-300 font-medium uppercase tracking-wide">Hidden Gem</div>
+                <div className="text-lg font-bold text-white">
+                  {data.hiddenGem.team} vs {data.hiddenGem.opponent}
+                </div>
+                <div className="text-sm text-purple-200">
+                  Projected: {data.hiddenGem.projectedPoints} pts | Alpha: {data.hiddenGem.alpha} | Boost: +{data.hiddenGem.boost}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="bg-[#141824] border border-gray-800 rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full" data-testid="dst-rankings-table">
-            <thead className="bg-[#0a0e1a]">
-              <tr>
-                <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider w-10">#</th>
-                <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Defense</th>
-                <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">vs</th>
-                <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Tier</th>
-                <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Alpha</th>
-                <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Proj</th>
-                <th className="hidden sm:table-cell px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Boost</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-800">
-              {data.rankings.map((dst) => (
-                <tr key={`${dst.team}-${dst.opponent}`} className="hover:bg-slate-800/50 transition-colors" data-testid={`row-dst-${dst.team}`}>
-                  <td className="px-2 sm:px-3 py-2 sm:py-3 text-slate-500 font-mono text-xs sm:text-sm">{dst.rank}</td>
-                  <td className="px-2 sm:px-3 py-2 sm:py-3">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4 text-emerald-400" />
-                      <span className="font-semibold text-white text-sm sm:text-base">{dst.team}</span>
-                    </div>
-                  </td>
-                  <td className="px-2 sm:px-3 py-2 sm:py-3 text-slate-400 text-sm">@ {dst.opponent}</td>
-                  <td className="px-2 sm:px-3 py-2 sm:py-3">
-                    <span className={`text-[10px] sm:text-xs font-bold px-2 py-1 rounded border ${getTierColor(dst.tier)}`}>
-                      {dst.tier}
-                    </span>
-                  </td>
-                  <td className="px-2 sm:px-3 py-2 sm:py-3">
-                    <span className={`font-bold font-mono text-sm sm:text-lg ${getAlphaColor(dst.alpha)} ${getAlphaBg(dst.alpha)} px-1.5 sm:px-2 py-0.5 rounded`}>
-                      {dst.alpha}
-                    </span>
-                  </td>
-                  <td className="px-2 sm:px-3 py-2 sm:py-3">
-                    <span className="font-semibold text-white text-sm sm:text-base">{dst.projectedPoints}</span>
-                    <span className="text-[10px] sm:text-xs text-slate-500 ml-1">pts</span>
-                  </td>
-                  <td className="hidden sm:table-cell px-2 sm:px-3 py-2 sm:py-3">
-                    <span className={`font-mono text-sm ${getBoostColor(dst.boost)}`}>
-                      {dst.boost >= 0 ? '+' : ''}{dst.boost}
-                    </span>
-                  </td>
+        <div className="bg-[#141824] border border-gray-800 rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full" data-testid="dst-rankings-table">
+              <thead className="bg-[#0a0e1a]">
+                <tr>
+                  <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider w-10">#</th>
+                  <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Defense</th>
+                  <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">vs</th>
+                  <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Tier</th>
+                  <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Alpha</th>
+                  <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Proj</th>
+                  <th className="hidden sm:table-cell px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Boost</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {data.rankings.map((dst) => (
+                  <tr 
+                    key={`${dst.team}-${dst.opponent}`} 
+                    className="hover:bg-slate-800/50 transition-colors cursor-pointer" 
+                    onClick={() => setSelectedMatchup(dst)}
+                    data-testid={`row-dst-${dst.team}`}
+                  >
+                    <td className="px-2 sm:px-3 py-2 sm:py-3 text-slate-500 font-mono text-xs sm:text-sm">{dst.rank}</td>
+                    <td className="px-2 sm:px-3 py-2 sm:py-3">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-emerald-400" />
+                        <span className="font-semibold text-white text-sm sm:text-base">{dst.team}</span>
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-3 py-2 sm:py-3 text-slate-400 text-sm">@ {dst.opponent}</td>
+                    <td className="px-2 sm:px-3 py-2 sm:py-3">
+                      <span className={`text-[10px] sm:text-xs font-bold px-2 py-1 rounded border ${getTierColor(dst.tier)}`}>
+                        {dst.tier}
+                      </span>
+                    </td>
+                    <td className="px-2 sm:px-3 py-2 sm:py-3">
+                      <span className={`font-bold font-mono text-sm sm:text-lg ${getAlphaColor(dst.alpha)} ${getAlphaBg(dst.alpha)} px-1.5 sm:px-2 py-0.5 rounded`}>
+                        {dst.alpha}
+                      </span>
+                    </td>
+                    <td className="px-2 sm:px-3 py-2 sm:py-3">
+                      <span className="font-semibold text-white text-sm sm:text-base">{dst.projectedPoints}</span>
+                      <span className="text-[10px] sm:text-xs text-slate-500 ml-1">pts</span>
+                    </td>
+                    <td className="hidden sm:table-cell px-2 sm:px-3 py-2 sm:py-3">
+                      <span className={`font-mono text-sm ${getBoostColor(dst.boost)}`}>
+                        {dst.boost >= 0 ? '+' : ''}{dst.boost}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-[#141824] border border-gray-800 rounded-lg p-3 text-center">
-          <div className="text-xs text-slate-400 mb-1">T1 Smash</div>
-          <div className="text-lg font-bold text-green-400">{data.tiers.T1.length}</div>
-        </div>
-        <div className="bg-[#141824] border border-gray-800 rounded-lg p-3 text-center">
-          <div className="text-xs text-slate-400 mb-1">T2 Solid</div>
-          <div className="text-lg font-bold text-emerald-400">{data.tiers.T2.length}</div>
-        </div>
-        <div className="bg-[#141824] border border-gray-800 rounded-lg p-3 text-center">
-          <div className="text-xs text-slate-400 mb-1">T3 Playable</div>
-          <div className="text-lg font-bold text-yellow-400">{data.tiers.T3.length}</div>
-        </div>
-        <div className="bg-[#141824] border border-gray-800 rounded-lg p-3 text-center">
-          <div className="text-xs text-slate-400 mb-1">T4 Avoid</div>
-          <div className="text-lg font-bold text-orange-400">{data.tiers.T4.length}</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-[#141824] border border-gray-800 rounded-lg p-3 text-center">
+            <div className="text-xs text-slate-400 mb-1">T1 Smash</div>
+            <div className="text-lg font-bold text-green-400">{data.tiers.T1.length}</div>
+          </div>
+          <div className="bg-[#141824] border border-gray-800 rounded-lg p-3 text-center">
+            <div className="text-xs text-slate-400 mb-1">T2 Solid</div>
+            <div className="text-lg font-bold text-emerald-400">{data.tiers.T2.length}</div>
+          </div>
+          <div className="bg-[#141824] border border-gray-800 rounded-lg p-3 text-center">
+            <div className="text-xs text-slate-400 mb-1">T3 Playable</div>
+            <div className="text-lg font-bold text-yellow-400">{data.tiers.T3.length}</div>
+          </div>
+          <div className="bg-[#141824] border border-gray-800 rounded-lg p-3 text-center">
+            <div className="text-xs text-slate-400 mb-1">T4 Avoid</div>
+            <div className="text-lg font-bold text-orange-400">{data.tiers.T4.length}</div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

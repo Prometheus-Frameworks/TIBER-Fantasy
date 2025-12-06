@@ -2,6 +2,35 @@ import { db } from "../infra/db";
 import { schedule, defenseContext, defenseVP } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
+interface DefenseMetrics {
+  baseAlpha: number;
+  sackRate: number;
+  pressureRate: number;
+  intRate: number;
+  turnoverRate: number;
+  pointsAllowedPerDrive: number;
+}
+
+interface OpponentMetrics {
+  turnoverWorthyRate: number;
+  sackRateAllowed: number;
+  pressureRateAllowed: number;
+  pointsPerDrive: number;
+  playsPerGame: number;
+  qbIsRookie: boolean;
+  olInjured: boolean;
+}
+
+interface MatchupBreakdown {
+  turnoverBoost: number;
+  sackBoost: number;
+  pressureBoost: number;
+  scoringBoost: number;
+  rookieBonus: number;
+  olInjuryBonus: number;
+  totalBoost: number;
+}
+
 interface DSTRanking {
   rank: number;
   team: string;
@@ -14,6 +43,9 @@ interface DSTRanking {
   turnoverRate?: number;
   sackRate?: number;
   pointsAllowed?: number;
+  defenseMetrics?: DefenseMetrics;
+  opponentMetrics?: OpponentMetrics;
+  matchupBreakdown?: MatchupBreakdown;
 }
 
 interface DSTStreamerResponse {
@@ -157,20 +189,29 @@ export async function getDSTStreamer(week: number = 14, season: number = 2025): 
         olInjured: false 
       };
 
-      let matchupBoost = 0;
+      const turnoverBoost = Number(((offVuln.turnoverWorthyRate - 0.025) * 200).toFixed(1));
+      const sackBoost = Number(((offVuln.sackRateAllowed - 0.050) * 150).toFixed(1));
+      const pressureBoost = Number(((offVuln.pressureRateAllowed - 0.25) * 30).toFixed(1));
+      const scoringBoost = Number(((2.2 - offVuln.pointsPerDrive) * 5).toFixed(1));
+      const rookieBonus = offVuln.qbIsRookie ? 3 : 0;
+      const olInjuryBonus = offVuln.olInjured ? 2 : 0;
 
-      matchupBoost += (offVuln.turnoverWorthyRate - 0.025) * 200;
-      matchupBoost += (offVuln.sackRateAllowed - 0.050) * 150;
-      matchupBoost += (offVuln.pressureRateAllowed - 0.25) * 30;
-      matchupBoost += (2.2 - offVuln.pointsPerDrive) * 5;
-
-      if (offVuln.qbIsRookie) matchupBoost += 3;
-      if (offVuln.olInjured) matchupBoost += 2;
+      const matchupBoost = turnoverBoost + sackBoost + pressureBoost + scoringBoost + rookieBonus + olInjuryBonus;
 
       const score = defStrength.baseAlpha + matchupBoost;
       const projectedPoints = Number((score / 9.0).toFixed(1));
       const alpha = Math.round(Math.min(100, Math.max(45, score)));
       const boost = Math.round(matchupBoost);
+
+      const matchupBreakdown: MatchupBreakdown = {
+        turnoverBoost,
+        sackBoost,
+        pressureBoost,
+        scoringBoost,
+        rookieBonus,
+        olInjuryBonus,
+        totalBoost: boost,
+      };
 
       rankings.push({
         rank: 0,
@@ -183,6 +224,9 @@ export async function getDSTStreamer(week: number = 14, season: number = 2025): 
         turnoverRate: defStrength.turnoverRate,
         sackRate: defStrength.sackRate,
         pointsAllowed: defStrength.pointsAllowedPerDrive,
+        defenseMetrics: defStrength,
+        opponentMetrics: offVuln,
+        matchupBreakdown,
       });
     }
   }
