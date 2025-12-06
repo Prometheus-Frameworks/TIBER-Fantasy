@@ -136,7 +136,7 @@ export default function PlayerComparePilot() {
   const compData = data?.data;
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
+    <div className="min-h-screen bg-[#0a0e1a] text-white p-4 md:p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="space-y-2">
@@ -152,7 +152,7 @@ export default function PlayerComparePilot() {
         </div>
 
         {/* Input Form */}
-        <Card className="bg-card/50 border-border/50">
+        <Card className="bg-[#141824] border-gray-700">
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-end">
               <div className="space-y-2">
@@ -204,12 +204,12 @@ export default function PlayerComparePilot() {
           <div className="space-y-6">
             {/* Player Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-card/50 border-border/50">
+              <Card className="bg-[#141824] border-gray-700">
                 <CardContent className="pt-6">
                   <PlayerCard player={compData.player1} side="left" />
                 </CardContent>
               </Card>
-              <Card className="bg-card/50 border-border/50">
+              <Card className="bg-[#141824] border-gray-700">
                 <CardContent className="pt-6">
                   <PlayerCard player={compData.player2} side="right" />
                 </CardContent>
@@ -218,7 +218,7 @@ export default function PlayerComparePilot() {
 
             {/* Stats Comparison */}
             {compData.player1.recentStats && compData.player2.recentStats && (
-              <Card className="bg-card/50 border-border/50">
+              <Card className="bg-[#141824] border-gray-700">
                 <CardHeader>
                   <CardTitle className="text-lg text-white">Recent Performance (Last 3 Weeks)</CardTitle>
                 </CardHeader>

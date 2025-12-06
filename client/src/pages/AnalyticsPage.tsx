@@ -80,7 +80,7 @@ export default function AnalyticsPage() {
   const positionColor = POSITION_COLORS[position];
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
+    <div className="min-h-screen bg-[#0a0e1a] text-white p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="space-y-2">
@@ -96,7 +96,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Controls */}
-        <Card className="bg-card/50 border-border/50">
+        <Card className="bg-[#141824] border-gray-700">
           <CardContent className="pt-6">
             <div className="space-y-4">
               {/* Position Toggles */}
@@ -138,7 +138,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Chart */}
-        <Card className="bg-card/50 border-border/50">
+        <Card className="bg-[#141824] border-gray-700">
           <CardHeader>
             <CardTitle className="text-lg text-white">
               {POSITION_STATS[position].find(s => s.value === stat)?.label || stat} • {data?.data?.season || 2024} Weeks {data?.data?.week || '13-15'}
