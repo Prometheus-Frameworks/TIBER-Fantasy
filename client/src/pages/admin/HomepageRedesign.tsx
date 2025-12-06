@@ -4,7 +4,7 @@ import {
   ChevronLeft, Search, LayoutDashboard, BarChart3, Calendar, FlaskConical, 
   FileText, ArrowLeftRight, BookOpen, Plus, Send, User, Loader2, Lightbulb, 
   GraduationCap, MessageSquarePlus, TrendingUp, TrendingDown, AlertTriangle, X,
-  MessageCircle, ChevronDown
+  MessageCircle, ChevronDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -133,6 +133,18 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     },
     staleTime: 5 * 60 * 1000,
   });
+
+  // Fetch opportunity shifts (Next Man Up) for injured players
+  const { data: opportunityData } = useQuery({
+    queryKey: ['/api/forge/opportunity-shifts'],
+    queryFn: async () => {
+      const response = await fetch('/api/forge/opportunity-shifts');
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const opportunityShifts = opportunityData?.shifts || [];
 
   // Fetch Sleeper trending players
   const { data: trendingData } = useQuery({
@@ -754,6 +766,67 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
                 ))
               )}
             </div>
+            
+            {/* Next Man Up - Opportunity Shifts */}
+            {opportunityShifts.length > 0 && (
+              <div className="mt-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <h4 className="text-[10px] md:text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">
+                    Next Man Up
+                  </h4>
+                  <span className="text-[9px] md:text-[10px] text-zinc-600 bg-zinc-800 px-1.5 py-0.5 rounded">
+                    Injury Impact
+                  </span>
+                </div>
+                <div className="bg-white/[0.02] rounded-xl border border-purple-500/15 overflow-hidden">
+                  {opportunityShifts.slice(0, 8).map((shift: any, idx: number) => (
+                    <div 
+                      key={`${shift.type}-${shift.playerId}`}
+                      className={`flex items-center justify-between px-3 md:px-4 py-2 md:py-2.5 ${
+                        idx < Math.min(opportunityShifts.length, 8) - 1 ? 'border-b border-purple-500/10' : ''
+                      }`}
+                      data-testid={`opportunity-${shift.playerId}`}
+                    >
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <div className={`w-6 h-6 md:w-7 md:h-7 rounded-lg flex items-center justify-center ${
+                          shift.type === 'gaining' 
+                            ? 'bg-green-500/15' 
+                            : 'bg-red-500/15'
+                        }`}>
+                          {shift.type === 'gaining' ? (
+                            <ArrowUp className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-500" />
+                          ) : (
+                            <ArrowDown className="h-3.5 w-3.5 md:h-4 md:w-4 text-red-500" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-xs md:text-sm font-semibold ${
+                              shift.type === 'gaining' ? 'text-green-400' : 'text-red-400'
+                            }`}>
+                              {shift.playerName}
+                            </span>
+                            <span className="text-[10px] md:text-[11px] text-zinc-500">
+                              {shift.position} • {shift.team}
+                            </span>
+                          </div>
+                          <div className="text-[9px] md:text-[10px] text-zinc-500 truncate max-w-[180px] md:max-w-[250px]">
+                            {shift.reason}
+                          </div>
+                        </div>
+                      </div>
+                      <div className={`px-2 py-0.5 rounded text-[9px] md:text-[10px] font-medium ${
+                        shift.type === 'gaining' 
+                          ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
+                          : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                      }`}>
+                        {shift.type === 'gaining' ? '📈 Rising' : '🔻 Out'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Start/Sit Suggestions */}
