@@ -1,11 +1,39 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
-import { Home, TrendingUp, ArrowUpDown, RefreshCw } from 'lucide-react';
+import { Home, TrendingUp, ArrowUpDown, RefreshCw, Shield, Star, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 
-type Position = 'WR' | 'RB' | 'TE' | 'QB';
+type Position = 'WR' | 'RB' | 'TE' | 'QB' | 'DST';
+
+interface DSTRanking {
+  rank: number;
+  team: string;
+  opponent: string;
+  projectedPoints: number;
+  alpha: number;
+  boost: number;
+  tier: 'T1' | 'T2' | 'T3' | 'T4';
+  turnoverRate?: number;
+  sackRate?: number;
+  pointsAllowed?: number;
+}
+
+interface DSTStreamerResponse {
+  success: boolean;
+  week: number;
+  season: number;
+  tiers: {
+    T1: DSTRanking[];
+    T2: DSTRanking[];
+    T3: DSTRanking[];
+    T4: DSTRanking[];
+  };
+  hiddenGem?: DSTRanking;
+  rankings: DSTRanking[];
+}
 
 interface ForgePlayer {
   playerId: string;
@@ -83,10 +111,143 @@ function getTrajectoryColor(trajectory?: string): string {
 type SortField = 'alpha' | 'playerName' | 'team' | 'sosRos';
 type SortOrder = 'asc' | 'desc';
 
+function getTierColor(tier: 'T1' | 'T2' | 'T3' | 'T4') {
+  switch (tier) {
+    case 'T1': return 'text-green-400 bg-green-900/30 border-green-700/50';
+    case 'T2': return 'text-emerald-400 bg-emerald-900/30 border-emerald-700/50';
+    case 'T3': return 'text-yellow-400 bg-yellow-900/30 border-yellow-700/50';
+    case 'T4': return 'text-orange-400 bg-orange-900/30 border-orange-700/50';
+  }
+}
+
+function getBoostColor(boost: number) {
+  if (boost >= 8) return 'text-green-400';
+  if (boost >= 4) return 'text-emerald-400';
+  if (boost >= 0) return 'text-slate-400';
+  return 'text-red-400';
+}
+
+function DSTStreamerTable({ data, isLoading, week }: { data?: DSTStreamerResponse; isLoading: boolean; week: number }) {
+  if (isLoading) {
+    return (
+      <div className="bg-[#141824] border border-gray-800 rounded-xl p-8">
+        <div className="flex items-center justify-center gap-3">
+          <div className="animate-spin h-6 w-6 border-2 border-emerald-400 border-t-transparent rounded-full"></div>
+          <span className="text-slate-400">Loading DST rankings for Week {week}...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data?.rankings || data.rankings.length === 0) {
+    return (
+      <div className="bg-[#141824] border border-gray-800 rounded-xl p-8 text-center">
+        <Shield className="h-12 w-12 mx-auto mb-4 text-slate-600" />
+        <h3 className="text-lg font-semibold text-white mb-2">No DST Rankings Available</h3>
+        <p className="text-slate-400">Schedule data for Week {week} may not be loaded yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {data.hiddenGem && (
+        <div className="bg-gradient-to-r from-purple-900/40 to-pink-900/40 border border-purple-500/50 rounded-xl p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-600/30 rounded-lg">
+              <Star className="h-5 w-5 text-purple-400" />
+            </div>
+            <div>
+              <div className="text-xs text-purple-300 font-medium uppercase tracking-wide">Hidden Gem</div>
+              <div className="text-lg font-bold text-white">
+                {data.hiddenGem.team} vs {data.hiddenGem.opponent}
+              </div>
+              <div className="text-sm text-purple-200">
+                Projected: {data.hiddenGem.projectedPoints} pts | Alpha: {data.hiddenGem.alpha} | Boost: +{data.hiddenGem.boost}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-[#141824] border border-gray-800 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full" data-testid="dst-rankings-table">
+            <thead className="bg-[#0a0e1a]">
+              <tr>
+                <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider w-10">#</th>
+                <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Defense</th>
+                <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">vs</th>
+                <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Tier</th>
+                <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Alpha</th>
+                <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Proj</th>
+                <th className="hidden sm:table-cell px-2 sm:px-3 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Boost</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-800">
+              {data.rankings.map((dst) => (
+                <tr key={`${dst.team}-${dst.opponent}`} className="hover:bg-slate-800/50 transition-colors" data-testid={`row-dst-${dst.team}`}>
+                  <td className="px-2 sm:px-3 py-2 sm:py-3 text-slate-500 font-mono text-xs sm:text-sm">{dst.rank}</td>
+                  <td className="px-2 sm:px-3 py-2 sm:py-3">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-emerald-400" />
+                      <span className="font-semibold text-white text-sm sm:text-base">{dst.team}</span>
+                    </div>
+                  </td>
+                  <td className="px-2 sm:px-3 py-2 sm:py-3 text-slate-400 text-sm">@ {dst.opponent}</td>
+                  <td className="px-2 sm:px-3 py-2 sm:py-3">
+                    <span className={`text-[10px] sm:text-xs font-bold px-2 py-1 rounded border ${getTierColor(dst.tier)}`}>
+                      {dst.tier}
+                    </span>
+                  </td>
+                  <td className="px-2 sm:px-3 py-2 sm:py-3">
+                    <span className={`font-bold font-mono text-sm sm:text-lg ${getAlphaColor(dst.alpha)} ${getAlphaBg(dst.alpha)} px-1.5 sm:px-2 py-0.5 rounded`}>
+                      {dst.alpha}
+                    </span>
+                  </td>
+                  <td className="px-2 sm:px-3 py-2 sm:py-3">
+                    <span className="font-semibold text-white text-sm sm:text-base">{dst.projectedPoints}</span>
+                    <span className="text-[10px] sm:text-xs text-slate-500 ml-1">pts</span>
+                  </td>
+                  <td className="hidden sm:table-cell px-2 sm:px-3 py-2 sm:py-3">
+                    <span className={`font-mono text-sm ${getBoostColor(dst.boost)}`}>
+                      {dst.boost >= 0 ? '+' : ''}{dst.boost}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-[#141824] border border-gray-800 rounded-lg p-3 text-center">
+          <div className="text-xs text-slate-400 mb-1">T1 Smash</div>
+          <div className="text-lg font-bold text-green-400">{data.tiers.T1.length}</div>
+        </div>
+        <div className="bg-[#141824] border border-gray-800 rounded-lg p-3 text-center">
+          <div className="text-xs text-slate-400 mb-1">T2 Solid</div>
+          <div className="text-lg font-bold text-emerald-400">{data.tiers.T2.length}</div>
+        </div>
+        <div className="bg-[#141824] border border-gray-800 rounded-lg p-3 text-center">
+          <div className="text-xs text-slate-400 mb-1">T3 Playable</div>
+          <div className="text-lg font-bold text-yellow-400">{data.tiers.T3.length}</div>
+        </div>
+        <div className="bg-[#141824] border border-gray-800 rounded-lg p-3 text-center">
+          <div className="text-xs text-slate-400 mb-1">T4 Avoid</div>
+          <div className="text-lg font-bold text-orange-400">{data.tiers.T4.length}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function RankingsHub() {
   const [position, setPosition] = useState<Position>('WR');
   const [sortField, setSortField] = useState<SortField>('alpha');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const { currentWeek } = useCurrentNFLWeek();
 
   const { data, isLoading, error, refetch } = useQuery<ForgeBatchResponse>({
     queryKey: ['/api/forge/batch', position],
@@ -95,6 +256,17 @@ export default function RankingsHub() {
       if (!res.ok) throw new Error('Failed to fetch rankings');
       return res.json();
     },
+    enabled: position !== 'DST',
+  });
+
+  const { data: dstData, isLoading: dstLoading, error: dstError, refetch: dstRefetch } = useQuery<DSTStreamerResponse>({
+    queryKey: ['/api/data-lab/dst-streamer', currentWeek],
+    queryFn: async () => {
+      const res = await fetch(`/api/data-lab/dst-streamer?week=${currentWeek}&season=2025`);
+      if (!res.ok) throw new Error('Failed to fetch DST rankings');
+      return res.json();
+    },
+    enabled: position === 'DST',
   });
 
   const handleSort = (field: SortField) => {
@@ -173,12 +345,12 @@ export default function RankingsHub() {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => refetch()}
-            disabled={isLoading}
+            onClick={() => position === 'DST' ? dstRefetch() : refetch()}
+            disabled={position === 'DST' ? dstLoading : isLoading}
             className="border-gray-700 text-gray-300 hover:text-white px-2 sm:px-3"
             data-testid="button-refresh"
           >
-            <RefreshCw className={`h-4 w-4 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 sm:mr-2 ${(position === 'DST' ? dstLoading : isLoading) ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Refresh</span>
           </Button>
         </div>
@@ -186,36 +358,52 @@ export default function RankingsHub() {
 
       <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
         {/* Position Tabs */}
-        <div className="flex gap-1.5 sm:gap-2 mb-4 sm:mb-6">
-          {(['WR', 'RB', 'TE', 'QB'] as Position[]).map((pos) => (
+        <div className="flex gap-1.5 sm:gap-2 mb-4 sm:mb-6 overflow-x-auto pb-1">
+          {(['WR', 'RB', 'TE', 'QB', 'DST'] as Position[]).map((pos) => (
             <button
               key={pos}
               data-testid={`tab-${pos.toLowerCase()}`}
               onClick={() => setPosition(pos)}
-              className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-sm sm:text-base font-semibold transition-all ${
+              className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-sm sm:text-base font-semibold transition-all whitespace-nowrap flex items-center gap-1 ${
                 position === pos
-                  ? 'bg-blue-600 text-white'
+                  ? pos === 'DST' ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'
                   : 'bg-[#141824] text-gray-400 hover:text-white border border-gray-700'
               }`}
             >
+              {pos === 'DST' && <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
               {pos}
             </button>
           ))}
         </div>
 
         {/* Info Banner - Hidden on mobile, shown on sm+ */}
-        <div className="hidden sm:block bg-blue-900/20 border border-blue-700/30 rounded-lg px-4 py-3 mb-6">
-          <p className="text-sm text-blue-300">
-            <strong>FORGE Alpha (0-100)</strong>: Unified player score combining volume, efficiency, role leverage, stability, and context. 
-            SoS adjustment applies a 0.90-1.10 multiplier based on remaining schedule difficulty.
-          </p>
-        </div>
+        {position === 'DST' ? (
+          <div className="hidden sm:block bg-emerald-900/20 border border-emerald-700/30 rounded-lg px-4 py-3 mb-6">
+            <p className="text-sm text-emerald-300">
+              <strong>DST Streamer (Week {currentWeek})</strong>: Matchup-based defense rankings combining base strength, opponent turnovers, sack vulnerability, and situational boosts.
+              Higher projected points indicate more favorable streaming options.
+            </p>
+          </div>
+        ) : (
+          <div className="hidden sm:block bg-blue-900/20 border border-blue-700/30 rounded-lg px-4 py-3 mb-6">
+            <p className="text-sm text-blue-300">
+              <strong>FORGE Alpha (0-100)</strong>: Unified player score combining volume, efficiency, role leverage, stability, and context. 
+              SoS adjustment applies a 0.90-1.10 multiplier based on remaining schedule difficulty.
+            </p>
+          </div>
+        )}
 
         {/* Table */}
-        {error ? (
+        {(position === 'DST' ? dstError : error) ? (
           <div className="bg-red-900/30 border border-red-500 rounded-lg p-4">
-            <p className="text-red-400">Failed to load rankings: {error.message}</p>
+            <p className="text-red-400">Failed to load rankings: {(position === 'DST' ? dstError : error)?.message}</p>
           </div>
+        ) : position === 'DST' ? (
+          <DSTStreamerTable 
+            data={dstData} 
+            isLoading={dstLoading} 
+            week={currentWeek}
+          />
         ) : (
           <div className="bg-[#141824] border border-gray-800 rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
@@ -350,16 +538,32 @@ export default function RankingsHub() {
         {/* Legend - Simplified on mobile */}
         <div className="mt-4 sm:mt-6 bg-[#141824] border border-gray-800 rounded-lg px-3 sm:px-4 py-2 sm:py-3">
           <div className="flex flex-wrap gap-3 sm:gap-6 text-[10px] sm:text-xs text-slate-400">
-            <div className="flex gap-2 sm:gap-4">
-              <span><span className="text-green-400 font-bold">80+</span> Elite</span>
-              <span><span className="text-emerald-400 font-bold">60+</span> Strong</span>
-              <span><span className="text-yellow-400 font-bold">40+</span> Avg</span>
-            </div>
-            <div className="hidden sm:block border-l border-slate-600 pl-4">
-              SoS: <span className="text-green-400 font-bold">++</span>/<span className="text-emerald-400 font-bold">+</span> Easy |
-              <span className="text-slate-400 font-bold ml-1">=</span> Neutral |
-              <span className="text-orange-400 font-bold ml-1">-</span>/<span className="text-red-400 font-bold">--</span> Hard
-            </div>
+            {position === 'DST' ? (
+              <>
+                <div className="flex gap-2 sm:gap-4">
+                  <span><span className="text-green-400 font-bold">T1</span> Smash Play</span>
+                  <span><span className="text-emerald-400 font-bold">T2</span> Solid</span>
+                  <span><span className="text-yellow-400 font-bold">T3</span> Playable</span>
+                  <span><span className="text-orange-400 font-bold">T4</span> Avoid</span>
+                </div>
+                <div className="hidden sm:block border-l border-slate-600 pl-4">
+                  Boost: Matchup adjustment from base strength
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex gap-2 sm:gap-4">
+                  <span><span className="text-green-400 font-bold">80+</span> Elite</span>
+                  <span><span className="text-emerald-400 font-bold">60+</span> Strong</span>
+                  <span><span className="text-yellow-400 font-bold">40+</span> Avg</span>
+                </div>
+                <div className="hidden sm:block border-l border-slate-600 pl-4">
+                  SoS: <span className="text-green-400 font-bold">++</span>/<span className="text-emerald-400 font-bold">+</span> Easy |
+                  <span className="text-slate-400 font-bold ml-1">=</span> Neutral |
+                  <span className="text-orange-400 font-bold ml-1">-</span>/<span className="text-red-400 font-bold">--</span> Hard
+                </div>
+              </>
+            )}
           </div>
         </div>
       </main>

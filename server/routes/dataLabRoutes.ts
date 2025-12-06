@@ -12,6 +12,7 @@ import {
 import { datadiveSnapshotService } from "../services/datadiveSnapshot";
 import { runAutoWeeklySnapshotForSeason, getAutoSnapshotStatus } from "../services/datadiveAuto";
 import { getAggregatedExpectedFantasy } from "../services/xFptsService";
+import { getDSTStreamer } from "../modules/dstStreamer";
 
 const router = Router();
 
@@ -1153,6 +1154,21 @@ router.get("/fantasy-logs", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("[DataLab] Error in fantasy-logs:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/dst-streamer", async (req: Request, res: Response) => {
+  try {
+    const week = Number(req.query.week) || 14;
+    const season = Number(req.query.season) || 2025;
+    
+    console.log(`[DataLab] DST Streamer request for Week ${week}, Season ${season}`);
+    
+    const result = await getDSTStreamer(week, season);
+    res.json(result);
+  } catch (error: any) {
+    console.error("[DataLab] Error in dst-streamer:", error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
