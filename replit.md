@@ -50,6 +50,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **Strategy Tab**: Provides Start/Sit recommendations, Waiver Wire Targets, and SOS Rankings.
 - **Weekly Takes System**: Quick, punchy matchup insights with position-specific one-liners and concrete statistics.
 - **Role Banks (WR, RB, TE, QB)**: Season-level analytical classification systems for position-specific role evaluation, using multi-dimensional scoring models and tier classifications.
+- **DST Streamer (Dec 2024)**: Weekly defense/special teams streaming recommendations in Rankings Hub. Scoring formula combines defense strength (turnover rate, sack rate, points allowed) with opponent vulnerability (turnover-worthy rate, sack rate allowed, pressure rate). Tier distribution targets ~4 T1, ~10 T2, ~12 T3, ~2 T4 defenses per week. Available at `/api/data-lab/dst-streamer?week=X&season=Y` and via DST tab in Rankings.
 - **Admin API Lexicon**: Developer tool for browsing and testing Forge/Tiber API endpoints.
 
 ## External Dependencies
