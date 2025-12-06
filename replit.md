@@ -51,7 +51,6 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **Weekly Takes System**: Quick, punchy matchup insights with position-specific one-liners and concrete statistics.
 - **Role Banks (WR, RB, TE, QB)**: Season-level analytical classification systems for position-specific role evaluation, using multi-dimensional scoring models and tier classifications.
 - **DST Streamer (Dec 2024)**: Weekly defense/special teams streaming recommendations in Rankings Hub. Scoring formula combines defense strength (turnover rate, sack rate, points allowed) with opponent vulnerability (turnover-worthy rate, sack rate allowed, pressure rate). Tier distribution targets ~4 T1, ~10 T2, ~12 T3, ~2 T4 defenses per week. Available at `/api/data-lab/dst-streamer?week=X&season=Y` and via DST tab in Rankings. Features **DSTMatchupModal** transparency view showing full calculation breakdown (defense metrics, opponent vulnerability, matchup boost) when clicking any matchup row.
-- **ESPN QBR Data Integration (Dec 2024)**: Ingests Total Quarterback Rating data from nflverse/espnscrapeR-data repository. Available endpoints: `/api/data-lab/qbr/weekly?season=X&week=Y` for weekly QBR, `/api/data-lab/qbr/season?season=X` for season totals (min 100 QB plays filter), `/api/data-lab/qb-metrics-comparison?season=X` for side-by-side comparison of ESPN QBR vs FORGE Alpha vs Passer Rating. Data currently available through 2023 season.
 - **Admin API Lexicon**: Developer tool for browsing and testing Forge/Tiber API endpoints.
 
 ## External Dependencies

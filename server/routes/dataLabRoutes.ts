@@ -13,7 +13,6 @@ import { datadiveSnapshotService } from "../services/datadiveSnapshot";
 import { runAutoWeeklySnapshotForSeason, getAutoSnapshotStatus } from "../services/datadiveAuto";
 import { getAggregatedExpectedFantasy } from "../services/xFptsService";
 import { getDSTStreamer } from "../modules/dstStreamer";
-import { fetchQBRWeekly, fetchQBRSeason, getQBMetricsComparison } from "../services/qbrService";
 
 const router = Router();
 
@@ -1169,85 +1168,6 @@ router.get("/dst-streamer", async (req: Request, res: Response) => {
     res.json(result);
   } catch (error: any) {
     console.error("[DataLab] Error in dst-streamer:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-router.get("/qbr/weekly", async (req: Request, res: Response) => {
-  try {
-    const season = Number(req.query.season) || 2024;
-    const week = req.query.week ? Number(req.query.week) : undefined;
-    
-    console.log(`[DataLab] QBR Weekly request for Season ${season}${week ? `, Week ${week}` : ''}`);
-    
-    const data = await fetchQBRWeekly(season, week);
-    res.json({
-      success: true,
-      season,
-      week: week || 'all',
-      count: data.length,
-      source: 'ESPN via nflverse/espnscrapeR-data',
-      data,
-    });
-  } catch (error: any) {
-    console.error("[DataLab] Error fetching QBR weekly:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-router.get("/qbr/season", async (req: Request, res: Response) => {
-  try {
-    const season = Number(req.query.season) || 2024;
-    
-    console.log(`[DataLab] QBR Season request for Season ${season}`);
-    
-    const data = await fetchQBRSeason(season);
-    res.json({
-      success: true,
-      season,
-      count: data.length,
-      source: 'ESPN via nflverse/espnscrapeR-data',
-      data,
-    });
-  } catch (error: any) {
-    console.error("[DataLab] Error fetching QBR season:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-router.get("/qb-metrics-comparison", async (req: Request, res: Response) => {
-  try {
-    const season = Number(req.query.season) || 2024;
-    
-    console.log(`[DataLab] QB Metrics Comparison for Season ${season}`);
-    
-    const data = await getQBMetricsComparison(season);
-    res.json({
-      success: true,
-      season,
-      count: data.length,
-      description: 'Comparison of ESPN QBR, Traditional Passer Rating, and FORGE Alpha for QBs',
-      metrics: {
-        espnQbr: {
-          name: 'ESPN QBR',
-          scale: '0-100',
-          description: 'Total Quarterback Rating - ESPN proprietary metric factoring clutch, rushing, garbage time',
-        },
-        passerRating: {
-          name: 'NFL Passer Rating',
-          scale: '0-158.3',
-          description: 'Traditional passer rating using completion%, yards/attempt, TD%, INT%',
-        },
-        forgeAlpha: {
-          name: 'FORGE Alpha',
-          scale: '0-100',
-          description: 'Fantasy-focused score: 29% volume, 41% efficiency, 12% stability, 18% context',
-        },
-      },
-      data,
-    });
-  } catch (error: any) {
-    console.error("[DataLab] Error in QB metrics comparison:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
