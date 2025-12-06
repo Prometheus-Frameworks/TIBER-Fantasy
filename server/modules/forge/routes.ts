@@ -1726,6 +1726,24 @@ router.post('/admin/refresh', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/forge/opportunity-shifts
+ * 
+ * Get opportunity shifts for players when starters go OUT/IR.
+ * Returns players gaining opportunity (green arrow) and losing opportunity (red arrow).
+ */
+router.get('/opportunity-shifts', async (req: Request, res: Response) => {
+  try {
+    const { nextManUpService } = await import('../../services/nextManUpService');
+    const result = await nextManUpService.getOpportunityShifts();
+    
+    return res.json(result);
+  } catch (err) {
+    console.error('[FORGE] opportunity-shifts error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to get opportunity shifts' });
+  }
+});
+
 export function registerForgeRoutes(app: any): void {
   app.use('/api/forge', router);
   console.log('🔥 FORGE v0.2 routes mounted at /api/forge/*');
