@@ -858,9 +858,9 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
         <aside className={`
           ${isMobileChatOpen 
             ? 'flex fixed inset-0 z-[80] bg-[#0a0a0f]' 
-            : 'hidden lg:flex lg:border-l lg:border-purple-500/15'
+            : 'hidden lg:flex lg:border-l lg:border-purple-500/15 bg-[#0a0a0f]/50'
           } 
-          flex-col bg-[#0a0a0f]/50
+          flex-col
         `}>
           {/* Chat Header */}
           <div className="px-3 md:px-5 py-3 md:py-4 border-b border-purple-500/10 flex items-center justify-between">
