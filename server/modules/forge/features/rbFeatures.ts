@@ -79,22 +79,23 @@ function buildVolumeFeatures(
   const touches = rushAttempts + targets;
   const touchesPerGame = touches / gpSafe;
   
-  // v1.2: Estimate opportunityShare from touches if not provided (avg NFL team has ~28 RB touches/game)
+  // v1.2: Use exact opportunityShare from context if available (stored in snapShare), otherwise estimate
   const TEAM_RB_TOUCHES_PER_GAME = 28;
   let opportunityShare = context.seasonStats.snapShare ?? 0;
-  if (opportunityShare === 0 && touchesPerGame > 0) {
+  const hasExactOpportunityShare = opportunityShare > 0;
+  if (!hasExactOpportunityShare && touchesPerGame > 0) {
     opportunityShare = touchesPerGame / TEAM_RB_TOUCHES_PER_GAME;
   }
   
-  // v1.2: Estimate RZ touches from overall touches if not available (league avg ~15% of touches are in RZ)
+  // v1.2: Use exact RZ touches if available, otherwise estimate (~15% of touches are in RZ)
   const rzCarries = context.seasonStats.redZoneCarries ?? 0;
   const rzTargets = context.seasonStats.redZoneTargets ?? 0;
   let rzTouchesPerGame = (rzCarries + rzTargets) / gpSafe;
   if (rzTouchesPerGame === 0 && touches > 0) {
-    rzTouchesPerGame = touchesPerGame * 0.15; // Estimate 15% of touches are RZ
+    rzTouchesPerGame = touchesPerGame * 0.15;
   }
   
-  // v1.2: Estimate goal line carries from RZ touches (about 30% of RZ touches are goal line)
+  // v1.2: Estimate goal line carries from RZ touches (~30% of RZ touches are goal line)
   let goalLineCarriesPerGame = (rzCarries * 0.3) / gpSafe;
   if (goalLineCarriesPerGame === 0 && rzTouchesPerGame > 0) {
     goalLineCarriesPerGame = rzTouchesPerGame * 0.3;

@@ -123,7 +123,29 @@ function TrajectoryIcon({ trajectory }: { trajectory?: string }) {
   return <Minus className="h-4 w-4 text-slate-500" />;
 }
 
-function recalculateAlpha(player: ForgePlayer, weights: ForgeWeights): number {
+// v1.2: Calibration bands matching backend ALPHA_CALIBRATION constants
+const ALPHA_CALIBRATION: Record<Position, { p10: number; p90: number; outMin: number; outMax: number }> = {
+  WR: { p10: 35, p90: 65, outMin: 25, outMax: 95 },
+  RB: { p10: 32, p90: 62, outMin: 25, outMax: 95 },
+  TE: { p10: 33, p90: 58, outMin: 25, outMax: 95 },
+  QB: { p10: 30, p90: 60, outMin: 25, outMax: 95 },
+};
+
+function calibrateAlpha(position: Position, rawAlpha: number): number {
+  const config = ALPHA_CALIBRATION[position];
+  if (!config) return rawAlpha;
+  
+  const { p10, p90, outMin, outMax } = config;
+  if (p90 === p10) return (outMin + outMax) / 2;
+  
+  // Linear mapping from raw score to calibrated output
+  // Scores above p90 can exceed outMax (capped at 100)
+  const t = (rawAlpha - p10) / (p90 - p10);
+  const mapped = outMin + t * (outMax - outMin);
+  return Math.min(100, Math.max(0, mapped));
+}
+
+function recalculateAlpha(player: ForgePlayer, weights: ForgeWeights, position: Position): number {
   if (!player.subScores) return player.alpha;
   
   const { volume, efficiency, stability, contextFit } = player.subScores;
@@ -131,14 +153,18 @@ function recalculateAlpha(player: ForgePlayer, weights: ForgeWeights): number {
   
   if (totalWeight === 0) return player.alpha;
   
-  const weightedAlpha = (
+  // Compute raw weighted alpha from subScores
+  const rawAlpha = (
     (volume * weights.volume) +
     (efficiency * weights.efficiency) +
     (stability * weights.stability) +
     (contextFit * weights.context)
   ) / totalWeight;
   
-  return Math.round(weightedAlpha * 10) / 10;
+  // Apply calibration to map raw score (30-70) to calibrated range (25-95+)
+  const calibrated = calibrateAlpha(position, rawAlpha);
+  
+  return Math.round(calibrated * 10) / 10;
 }
 
 function WeightsPanel({ 
@@ -456,10 +482,10 @@ export default function TiberTiers() {
     return [...data.scores]
       .map(player => ({
         ...player,
-        adjustedAlpha: recalculateAlpha(player, weights),
+        adjustedAlpha: recalculateAlpha(player, weights, position),
       }))
       .sort((a, b) => b.adjustedAlpha - a.adjustedAlpha);
-  }, [data?.scores, weights]);
+  }, [data?.scores, weights, position]);
 
   const volumeLabel = position === 'RB' ? 'TCH' : 'TGT';
 

@@ -300,6 +300,7 @@ async function getNflDataPyIdForCanonical(canonicalId: string): Promise<string |
 
 /**
  * Fetch and aggregate season stats from weeklyStats table
+ * v1.2: Now computes exact targetShare and opportunityShare from team-level aggregates
  */
 async function fetchFromWeeklyStats(
   canonicalId: string,
@@ -314,9 +315,12 @@ async function fetchFromWeeklyStats(
       ? lte(weeklyStats.week, asOfWeek)
       : sql`1=1`;
     
-    const aggregated = await db
+    // First, get player stats including their team and position
+    const playerStats = await db
       .select({
         gamesPlayed: count(weeklyStats.week),
+        team: weeklyStats.team,
+        position: weeklyStats.position,
         totalSnaps: sum(weeklyStats.snaps),
         totalFpPpr: sum(weeklyStats.fantasyPointsPpr),
         totalFpHalf: sum(weeklyStats.fantasyPointsHalf),
@@ -338,32 +342,94 @@ async function fetchFromWeeklyStats(
           eq(weeklyStats.season, season),
           weekCondition
         )
-      );
+      )
+      .groupBy(weeklyStats.team, weeklyStats.position);
     
-    if (aggregated[0] && Number(aggregated[0].gamesPlayed) > 0) {
-      const a = aggregated[0];
-      console.log(`[FORGE/Context] Using weeklyStats for ${canonicalId}: ${a.gamesPlayed} games, ${a.totalFpPpr} FP`);
-      return {
-        gamesPlayed: Number(a.gamesPlayed) ?? 0,
-        gamesStarted: Number(a.gamesPlayed) ?? 0,
-        snapCount: Number(a.totalSnaps) ?? 0,
-        snapShare: 0,
-        fantasyPointsPpr: Number(a.totalFpPpr) ?? 0,
-        fantasyPointsHalfPpr: Number(a.totalFpHalf) ?? (Number(a.totalFpPpr) ?? 0) * 0.75,
-        targets: Number(a.totalTargets) ?? undefined,
-        receptions: Number(a.totalReceptions) ?? undefined,
-        receivingYards: Number(a.totalRecYards) ?? undefined,
-        receivingTds: Number(a.totalRecTds) ?? undefined,
-        rushAttempts: Number(a.totalRushAtt) ?? undefined,
-        rushYards: Number(a.totalRushYards) ?? undefined,
-        rushTds: Number(a.totalRushTds) ?? undefined,
-        passingYards: Number(a.totalPassYards) ?? undefined,
-        passingTds: Number(a.totalPassTds) ?? undefined,
-        interceptions: Number(a.totalInt) ?? undefined,
-      };
+    if (!playerStats[0] || Number(playerStats[0].gamesPlayed) === 0) {
+      return null;
     }
     
-    return null;
+    const a = playerStats[0];
+    const playerTeam = a.team;
+    const playerPosition = a.position;
+    const playerTargets = Number(a.totalTargets) || 0;
+    const playerRushAtt = Number(a.totalRushAtt) || 0;
+    const playerTouches = playerRushAtt + playerTargets;
+    
+    // Compute exact targetShare by getting team total targets (WR/TE/RB)
+    let targetShare: number | undefined = undefined;
+    let opportunityShare: number | undefined = undefined;
+    
+    if (playerTeam) {
+      // Get team total targets for targetShare calculation (receiving positions)
+      if (playerPosition && ['WR', 'TE', 'RB'].includes(playerPosition)) {
+        const teamTargetsResult = await db
+          .select({
+            totalTargets: sum(weeklyStats.targets),
+          })
+          .from(weeklyStats)
+          .where(
+            and(
+              eq(weeklyStats.team, playerTeam),
+              eq(weeklyStats.season, season),
+              weekCondition,
+              sql`${weeklyStats.position} IN ('WR', 'TE', 'RB')`
+            )
+          );
+        
+        const teamTotalTargets = Number(teamTargetsResult[0]?.totalTargets) || 0;
+        if (teamTotalTargets > 0 && playerTargets > 0) {
+          targetShare = playerTargets / teamTotalTargets;
+          console.log(`[FORGE/Context] Exact targetShare for ${canonicalId}: ${playerTargets}/${teamTotalTargets} = ${(targetShare * 100).toFixed(1)}%`);
+        }
+      }
+      
+      // Get team total RB touches for opportunityShare calculation
+      if (playerPosition === 'RB') {
+        const teamRBTouchesResult = await db
+          .select({
+            totalRushAtt: sum(weeklyStats.rushAtt),
+            totalTargets: sum(weeklyStats.targets),
+          })
+          .from(weeklyStats)
+          .where(
+            and(
+              eq(weeklyStats.team, playerTeam),
+              eq(weeklyStats.season, season),
+              weekCondition,
+              eq(weeklyStats.position, 'RB')
+            )
+          );
+        
+        const teamRBTouches = (Number(teamRBTouchesResult[0]?.totalRushAtt) || 0) + 
+                              (Number(teamRBTouchesResult[0]?.totalTargets) || 0);
+        if (teamRBTouches > 0 && playerTouches > 0) {
+          opportunityShare = playerTouches / teamRBTouches;
+          console.log(`[FORGE/Context] Exact opportunityShare for ${canonicalId}: ${playerTouches}/${teamRBTouches} = ${(opportunityShare * 100).toFixed(1)}%`);
+        }
+      }
+    }
+    
+    console.log(`[FORGE/Context] Using weeklyStats for ${canonicalId}: ${a.gamesPlayed} games, ${a.totalFpPpr} FP`);
+    return {
+      gamesPlayed: Number(a.gamesPlayed) ?? 0,
+      gamesStarted: Number(a.gamesPlayed) ?? 0,
+      snapCount: Number(a.totalSnaps) ?? 0,
+      snapShare: opportunityShare ?? 0, // Use opportunityShare as snap proxy for RBs
+      fantasyPointsPpr: Number(a.totalFpPpr) ?? 0,
+      fantasyPointsHalfPpr: Number(a.totalFpHalf) ?? (Number(a.totalFpPpr) ?? 0) * 0.75,
+      targets: playerTargets || undefined,
+      targetShare: targetShare,
+      receptions: Number(a.totalReceptions) ?? undefined,
+      receivingYards: Number(a.totalRecYards) ?? undefined,
+      receivingTds: Number(a.totalRecTds) ?? undefined,
+      rushAttempts: playerRushAtt || undefined,
+      rushYards: Number(a.totalRushYards) ?? undefined,
+      rushTds: Number(a.totalRushTds) ?? undefined,
+      passingYards: Number(a.totalPassYards) ?? undefined,
+      passingTds: Number(a.totalPassTds) ?? undefined,
+      interceptions: Number(a.totalInt) ?? undefined,
+    };
   } catch (error) {
     console.error(`[FORGE/Context] Error fetching from weeklyStats:`, error);
     return null;

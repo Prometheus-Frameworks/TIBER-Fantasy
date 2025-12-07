@@ -71,13 +71,22 @@ function buildVolumeFeatures(
 ): ForgeFeatureBundle['volumeFeatures'] {
   const gpSafe = Math.max(gamesPlayed, 1);
   
-  const passAttempts = context.seasonStats.passingAttempts ?? 0;
+  // v1.2: Use exact passingAttempts if available, otherwise estimate from yards (~7 yds/att)
+  const YARDS_PER_ATTEMPT_AVG = 7;
+  let passAttempts = context.seasonStats.passingAttempts ?? 0;
+  if (passAttempts === 0 && context.seasonStats.passingYards) {
+    passAttempts = Math.round(context.seasonStats.passingYards / YARDS_PER_ATTEMPT_AVG);
+  }
   const passAttemptsPerGame = passAttempts / gpSafe;
   
   const rushAttempts = context.seasonStats.rushAttempts ?? 0;
   const rushAttemptsPerGame = rushAttempts / gpSafe;
   
-  const rzPassAttemptsPerGame = (context.seasonStats.redZoneTargets ?? 0) / gpSafe * 2;
+  // v1.2: Estimate RZ attempts from TD rate (~12% of attempts are in RZ, ~25% RZ TD rate)
+  let rzPassAttemptsPerGame = (context.seasonStats.redZoneTargets ?? 0) / gpSafe * 2;
+  if (rzPassAttemptsPerGame === 0 && passAttempts > 0) {
+    rzPassAttemptsPerGame = passAttemptsPerGame * 0.12;
+  }
   
   const raw = {
     passAttemptsPerGame,
