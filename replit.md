@@ -36,9 +36,80 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 **Technical Implementations & Feature Specifications:**
 - **Unified Player Hub (UPH)**: Centralizes player data, "Player Compass" profiles, "OTC Consensus" rankings, and Madden-style OVR.
 - **AI & Analytics**: "Competence Mode" AI, Adaptive Consensus Engine, DeepSeek + Compass Fusion System, RAG Chat System using Google Gemini AI. Features Tiber Memory for persistent conversation and Dual Memory Pools (FANTASY vs GENERAL) for context separation. Tiber Voice offers Insight and Analyst chat modes with a 5-tier Truth Hierarchy and reasoning heuristics.
-- **FORGE (Football-Oriented Recursive Grading Engine)**: A self-contained scoring module providing unified alpha scores (0-100) for skill positions. Integrates with Datadive snapshot tables. Features **Next Man Up** opportunity tracking that identifies players gaining touches when starters go OUT/IR, displayed with green/red arrows in FORGE Movers.
-- **FORGE Recursion v1 (Dec 2024)**: True stateful two-pass scoring engine where each week's alpha depends on historical trajectory, volatility, and momentum. Pass 0 calculates raw alpha from current week metrics; Pass 1 applies stability adjustments based on surprise (deviation from expected), rolling volatility (8-week stddev), and momentum (3-week trend vs baseline). State persisted to `forge_player_state` table. Key formulas: `expected_alpha = alpha_prev * 0.7 + position_baseline * 0.3`, `surprise = alpha_raw - expected_alpha`, `stability_adjustment = f(surprise, volatility, momentum)`. Position baselines: QB=65, RB=58, WR=60, TE=55. API: `/api/forge/recursive/batch?position=QB&persist=true`, `/api/forge/recursive/player/:playerId`.
-- **Tiber Tiers (FORGE v0.2)**: Position-specific tier classification system with thresholds (QB T1≥85, RB T1≥82, WR T1≥84, TE T1≥80). Features weekly mover rules: max ±1 tier/week, max ±10 Alpha from matchups, bottom-8 offense max +4 boost, low snap projections (< 60%) get zero upward adjustment, true elites (Alpha≥85) max -6 drop protection. Efficiency caps: QB uncapped (100), WR/RB/TE capped at 85.
+- **FORGE (Football-Oriented Recursive Grading Engine)**: The core player evaluation system. FORGE provides unified Alpha scores (0-100) for skill positions, serving as the numeric authority for all player assessments.
+
+### FORGE Philosophy & Acronym
+
+| Letter | Meaning | Description |
+|--------|---------|-------------|
+| **F** | **Football** | Grounded in football reality. Every metric, threshold, and weight reflects what happens on the field - not abstract math. |
+| **O** | **Oriented** | Toward decision confidence. FORGE exists to help real managers make real calls with clarity. |
+| **R** | **Recursive** | Performance compounds. Each week's Alpha depends on historical trajectory. Outputs feed back as inputs. |
+| **G** | **Grading** | Four pillars (Volume, Efficiency, Stability, Context) → calibrated Alpha score (0-100). |
+| **E** | **Engine** | The data pipeline. Advanced metrics flow in, actionable intelligence flows out. |
+
+**The O Statement (FORGE Philosophy):**
+> *"FORGE is oriented toward decision confidence. Every Alpha score exists to answer one question: Should I start this player? We don't chase hot takes. We don't parrot consensus. We measure what happened, project what's likely, and give you the clarity to decide. When Tiber speaks, FORGE is the foundation. When you doubt, the data defends."*
+
+### FORGE Data Pipeline Architecture
+
+```
+DATA SOURCES (The "E" - Engine Input)
+├── Role Banks (Season-Level)
+│   ├── WR Role Bank: ALPHA, CO_ALPHA, PRIMARY_SLOT, SECONDARY, ROTATIONAL
+│   ├── RB Role Bank: ELITE_WORKHORSE, HIGH_END_RB1, MID_RB1, STRONG_RB2, etc.
+│   ├── TE Role Bank: Similar tiering with position-specific thresholds
+│   └── QB Role Bank: Similar tiering with QB-specific metrics
+│
+├── Datadive (2025 Enriched Metrics)
+│   ├── WR/TE: YPRR, WOPR, RACR, EPA/target, air yards share, xyac, separation
+│   ├── RB: RYOE, opportunity share, elusive rating, stuffed rate, YCO
+│   ├── QB: CPOE, DAKOTA, EPA/play, pressured EPA, PACR
+│   └── All: snap share, route rate, target share
+│
+└── Legacy Tables (2024 fallback)
+    └── playerAdvanced2024, playerSeason2024, qb_epa_adjusted
+           │
+           ▼
+CONTEXT FETCHER (contextFetcher.ts)
+├── Assembles ForgeContext with seasonStats, weeklyStats, advancedMetrics
+├── Fetches roleMetrics, teamEnvironment, dvpData
+└── Resolves player IDs across platforms
+           │
+           ▼
+FEATURE BUILDERS (Position-Specific)
+├── wrFeatures.ts  → WR: targets/game, YPRR, EPA/target, catch rate OE
+├── rbFeatures.ts  → RB: opportunities, RYOE, YAC, opportunity share
+├── teFeatures.ts  → TE: targets, YPRR, EPA/target, inline usage
+└── qbFeatures.ts  → QB: EPA/play, CPOE, AYPA, TD-INT differential
+           │
+           ▼
+GRADING ENGINE (alphaEngine.ts)
+├── calculateSubScores() → Volume, Efficiency, Stability, Context (0-100 each)
+├── calculateWeightedAlpha() → Position-specific weights applied
+├── calibrateAlpha() → Map to intuitive 0-100 scale
+├── calculateTrajectory() → Rising / Flat / Declining
+└── calculateConfidence() → Data quality adjustments (20-100)
+           │
+           ▼
+RECURSIVE ENGINE (recursiveAlphaEngine.ts)
+├── Pass 0: Raw Alpha from current week metrics
+├── Pass 1: Stability adjustments based on:
+│   ├── alphaPrev (previous week's Alpha)
+│   ├── surprise (deviation from expected)
+│   ├── volatility (8-week rolling stddev)
+│   └── momentum (3-week trend vs baseline)
+└── State persisted to forge_player_state table
+           │
+           ▼
+OUTPUT: ForgeScore with Alpha, Tier, Trajectory, Confidence
+```
+
+### FORGE Technical Implementation
+
+- **Recursion v1 (Dec 2024)**: Stateful two-pass scoring. Key formulas: `expected_alpha = alpha_prev * 0.7 + position_baseline * 0.3`, `surprise = alpha_raw - expected_alpha`. Position baselines: QB=65, RB=58, WR=60, TE=55. API: `/api/forge/recursive/batch?position=QB&persist=true`, `/api/forge/recursive/player/:playerId`.
+- **Tiber Tiers (v0.2)**: Position-specific tier thresholds (QB T1≥85, RB T1≥82, WR T1≥84, TE T1≥80). Weekly mover rules: max ±1 tier/week, max ±10 Alpha from matchups, elite protection (Alpha≥85 max -6 drop). Efficiency caps: QB uncapped, WR/RB/TE capped at 85.
+- **Next Man Up**: Opportunity tracking for players gaining touches when starters go OUT/IR, displayed with green/red arrows in FORGE Movers.
 - **FORGE SoS**: Position-specific strength of schedule analysis for rest of season, next 3 weeks, and playoffs.
 - **Tiber Data Lab (Operation DataDive)**: Snapshot-based NFL data spine for reproducible analytics, offering advanced metrics like TPRR, YPRR, EPA/play, and snap share.
 - **xFPTS v2 (Expected Fantasy Points v2)**: Context-aware expected fantasy points system with nflfastR-derived adjustments and context multipliers.
