@@ -46,6 +46,24 @@ export interface FPRData {
 }
 
 /**
+ * Fantasy stats for Tiber Tiers display
+ * v1.2: Added for enhanced fantasy rankings UI
+ */
+export interface FantasyStats {
+  seasonFptsPpr: number;      // Season total fantasy points (PPR)
+  seasonFptsHalf: number;     // Season total fantasy points (Half-PPR)
+  ppgPpr: number;             // Points per game (PPR)
+  ppgHalf: number;            // Points per game (Half-PPR)
+  last3AvgPpr: number;        // Last 3 games average (PPR)
+  last3AvgHalf: number;       // Last 3 games average (Half-PPR)
+  targets?: number;           // Season total targets (WR/TE/RB)
+  touches?: number;           // Season total touches (rush att + targets for RB)
+  receptions?: number;        // Season total receptions
+  snapPct?: number;           // Average snap percentage
+  rzOpps?: number;            // Red zone opportunities
+}
+
+/**
  * The complete FORGE score output for a player
  */
 export interface ForgeScore {
@@ -65,6 +83,8 @@ export interface ForgeScore {
   gamesPlayed: number;        // Games played this season (for context)
   
   fpr?: FPRData;              // Fibonacci Pattern Resonance data
+  
+  fantasyStats?: FantasyStats; // v1.2: Fantasy stats for Tiber Tiers
   
   dataQuality: {
     hasAdvancedStats: boolean;

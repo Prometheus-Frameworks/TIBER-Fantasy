@@ -16,6 +16,7 @@ import {
   Trajectory,
   PlayerPosition,
   FPRData,
+  FantasyStats,
   TeamEnvironment,
   MatchupContext,
   ALPHA_WEIGHTS,
@@ -87,6 +88,9 @@ export function calculateAlphaScore(
     features.contextFitFeatures.isNeutral ||
     features.gamesPlayed < 3;
   
+  // v1.2: Calculate fantasy stats from context
+  const fantasyStats = calculateFantasyStats(context, features.gamesPlayed);
+  
   return {
     playerId: context.playerId,
     playerName: context.playerName,
@@ -109,6 +113,8 @@ export function calculateAlphaScore(
     gamesPlayed: features.gamesPlayed,
     
     fpr,
+    
+    fantasyStats,
     
     dataQuality: {
       hasAdvancedStats: features.dataQuality.hasAdvancedStats,
@@ -161,7 +167,10 @@ function calculateWeightedAlpha(
  * The calibration is monotonic: higher raw scores always produce higher calibrated scores.
  * 
  * Formula: calibrated = outMin + ((raw - p10) / (p90 - p10)) * (outMax - outMin)
- * Then clamped to [0, 100]
+ * 
+ * v1.2 FIX: No longer clamps rawAlpha before mapping. This allows elite players
+ * with raw scores above p90 to exceed the outMax calibrated value (up to 100).
+ * Only the final output is clamped to [0, 100].
  */
 function calibrateAlpha(position: PlayerPosition, rawAlpha: number): number {
   const config = ALPHA_CALIBRATION[position];
@@ -176,10 +185,12 @@ function calibrateAlpha(position: PlayerPosition, rawAlpha: number): number {
     return rawAlpha;
   }
   
-  const clamped = Math.min(Math.max(rawAlpha, p10), p90);
-  const t = (clamped - p10) / (p90 - p10);
+  // v1.2: Use raw alpha directly without pre-clamping
+  // This allows scores above p90 to map above outMax (capped at 100)
+  const t = (rawAlpha - p10) / (p90 - p10);
   const mapped = outMin + t * (outMax - outMin);
   
+  // Only clamp final output to valid 0-100 range
   return clamp(mapped, 0, 100);
 }
 
@@ -362,6 +373,81 @@ function calculateFPR(context: ForgeContext): FPRData | undefined {
     band: fprOutput.band as FPRData['band'],
     forgeConfidenceModifier: fprOutput.forgeConfidenceModifier,
     forgeVolatilityIndex: fprOutput.forgeVolatilityIndex,
+  };
+}
+
+/**
+ * Calculate fantasy stats for Tiber Tiers display
+ * v1.2: Extracts fantasy-relevant metrics from context
+ * 
+ * Computes:
+ * - Season totals and PPG (PPR and Half-PPR)
+ * - Last 3 games average
+ * - Volume metrics (targets, touches, snap%)
+ * - Red zone opportunities
+ */
+function calculateFantasyStats(context: ForgeContext, gamesPlayed: number): FantasyStats {
+  const { seasonStats, weeklyStats } = context;
+  
+  // Season totals from seasonStats
+  const seasonFptsPpr = seasonStats?.fantasyPointsPpr ?? 0;
+  const receptions = seasonStats?.receptions ?? 0;
+  
+  // Half-PPR = PPR - (0.5 * receptions)
+  const seasonFptsHalf = seasonFptsPpr - (0.5 * receptions);
+  
+  // PPG calculations
+  const games = gamesPlayed > 0 ? gamesPlayed : 1;
+  const ppgPpr = seasonFptsPpr / games;
+  const ppgHalf = seasonFptsHalf / games;
+  
+  // Last 3 games average
+  const sortedWeeks = [...(weeklyStats || [])].sort((a, b) => b.week - a.week);
+  const last3Weeks = sortedWeeks.slice(0, 3);
+  
+  let last3AvgPpr = 0;
+  let last3AvgHalf = 0;
+  
+  if (last3Weeks.length > 0) {
+    const last3SumPpr = last3Weeks.reduce((sum, w) => sum + (w.fantasyPointsPpr || 0), 0);
+    const last3Receptions = last3Weeks.reduce((sum, w) => sum + (w.receptions || 0), 0);
+    last3AvgPpr = last3SumPpr / last3Weeks.length;
+    const last3SumHalf = last3SumPpr - (0.5 * last3Receptions);
+    last3AvgHalf = last3SumHalf / last3Weeks.length;
+  }
+  
+  // Volume metrics
+  const targets = seasonStats?.targets ?? undefined;
+  const rushAttempts = seasonStats?.rushAttempts ?? 0;
+  const touches = context.position === 'RB' 
+    ? rushAttempts + (targets ?? 0) 
+    : undefined;
+  
+  // Snap percentage (average from weekly data)
+  let snapPct: number | undefined;
+  if (weeklyStats && weeklyStats.length > 0) {
+    const snapsWithData = weeklyStats.filter(w => w.snapShare != null && w.snapShare > 0);
+    if (snapsWithData.length > 0) {
+      const avgSnap = snapsWithData.reduce((sum, w) => sum + (w.snapShare || 0), 0) / snapsWithData.length;
+      snapPct = Math.round(avgSnap);
+    }
+  }
+  
+  // Red zone opportunities from advanced metrics
+  const rzOpps = (seasonStats?.redZoneTargets ?? 0) + (seasonStats?.redZoneCarries ?? 0) || undefined;
+  
+  return {
+    seasonFptsPpr: roundTo(seasonFptsPpr, 1),
+    seasonFptsHalf: roundTo(seasonFptsHalf, 1),
+    ppgPpr: roundTo(ppgPpr, 1),
+    ppgHalf: roundTo(ppgHalf, 1),
+    last3AvgPpr: roundTo(last3AvgPpr, 1),
+    last3AvgHalf: roundTo(last3AvgHalf, 1),
+    targets,
+    touches,
+    receptions,
+    snapPct,
+    rzOpps,
   };
 }
 
