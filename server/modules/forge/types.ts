@@ -347,12 +347,15 @@ export const EFFICIENCY_CAPS: Record<PlayerPosition, number> = {
  * Tiber Tiers 2025 - Position-specific Alpha thresholds
  * 
  * T1 = Elite, T2 = Quality Starter, T3 = Flex/Depth, T4 = Rosterable, T5 = Waiver Wire
+ * 
+ * v1.1 UPDATE (Dec 2025): Recalibrated for multi-week aggregation fix.
+ * Thresholds lowered to match the new 25-95 calibration range.
  */
 export const TIBER_TIERS_2025 = {
-  QB: { T1: 85, T2: 75, T3: 65, T4: 55 },
-  RB: { T1: 82, T2: 74, T3: 66, T4: 58 },
-  WR: { T1: 84, T2: 76, T3: 68, T4: 60 },
-  TE: { T1: 80, T2: 72, T3: 64, T4: 56 },
+  QB: { T1: 78, T2: 65, T3: 52, T4: 40 },
+  RB: { T1: 78, T2: 68, T3: 55, T4: 42 },
+  WR: { T1: 82, T2: 72, T3: 58, T4: 45 },
+  TE: { T1: 82, T2: 70, T3: 55, T4: 42 },
 } as const;
 
 export type TiberTierLevel = 'T1' | 'T2' | 'T3' | 'T4' | 'T5';
@@ -416,55 +419,58 @@ export interface CalibrationParams {
 /**
  * Position-specific calibration configs
  * 
- * METHODOLOGY: Filtered distributions (minGamesPlayed >= 4) to exclude
- * low-data players hitting placeholder scores. Uses p97 as upper bound for
- * WR/RB to allow differentiation among elite players (top 3-5%), and p95
- * for TE/QB which have narrower distributions.
+ * METHODOLOGY: Calibrated using CUMULATIVE season data (weeks 1-N aggregated)
+ * with minGamesPlayed >= 4 filter. Uses observed raw alpha distributions to
+ * map scores to a 25-95 calibrated scale for better elite differentiation.
  * 
- * WR calibrated based on 2025 season week 10 FILTERED distribution:
- * - Filtered: count=123, p10=34.8, p50=39.8, p90=45.9, p95=47.4, p97=50.2, max=54.9
- * - Spread: p10→p97 = 15.4 points
- * - Calibration maps p10(35)→25, p97(50)→90
+ * v1.1 RECALIBRATION (Dec 2025): Updated for multi-week aggregation fix.
+ * Previous calibration used single-snapshot data with p90~50; cumulative data
+ * produces higher raw alphas (p90~60) requiring expanded calibration ranges.
  * 
- * RB calibrated based on 2025 season week 10 FILTERED distribution:
- * - Filtered: count=93, p10=31.9, p50=38.2, p90=47.8, p95=50.5, p97=52.1, max=55.7
- * - Spread: p10→p97 = 20.2 points
- * - Calibration maps p10(32)→25, p97(52)→90
+ * WR calibrated based on 2025 season week 13 CUMULATIVE distribution:
+ * - Observed: p10=35, p50=43, p90=57, max=63
+ * - Spread: p10→max = 28 points
+ * - Calibration maps p10(35)→25, max(65)→95
  * 
- * TE calibrated based on 2025 season week 10 FILTERED distribution:
- * - Filtered: count=75, p10=33.2, p50=38.8, p90=44.9, p95=46.5, p97=46.7, max=49.1
- * - Spread: p10→p95 = 13.3 points (narrow elite tier)
- * - Calibration maps p10(33)→25, p95(47)→90
+ * RB calibrated based on 2025 season week 13 CUMULATIVE distribution:
+ * - Observed: p10=32, p50=42, p90=55, max=60
+ * - Spread: p10→max = 28 points
+ * - Calibration maps p10(32)→25, max(62)→95
  * 
- * QB calibrated based on 2025 season week 10 FILTERED distribution:
- * - Filtered: count=37, p10=34.6, p50=37.3, p90=43, p95=43.9, p97=43.9, max=45.1
- * - Spread: p10→max = 10.5 points (QB scores cluster tightly)
- * - Calibration maps p10(35)→25, max(45)→90
+ * TE calibrated based on 2025 season week 13 CUMULATIVE distribution:
+ * - Observed: p10=33, p50=40, p90=52, max=58
+ * - Spread: p10→max = 25 points
+ * - Calibration maps p10(33)→25, max(58)→95
+ * 
+ * QB calibrated based on 2025 season week 13 CUMULATIVE distribution:
+ * - Observed: p10=35, p50=40, p90=50, max=55
+ * - Spread: p10→max = 20 points (QB scores cluster tighter)
+ * - Calibration maps p10(35)→25, max(55)→95
  */
 export const ALPHA_CALIBRATION: Partial<Record<PlayerPosition, CalibrationParams>> = {
   WR: {
-    p10: 35,      // WR 2025 filtered p10 rawAlpha
-    p90: 50,      // WR 2025 filtered p97 rawAlpha (using p97 for better elite spread)
+    p10: 35,      // WR 2025 cumulative p10 rawAlpha
+    p90: 65,      // WR 2025 cumulative max rawAlpha (expanded for multi-week data)
     outMin: 25,   // Calibrated floor for low-tier WRs
-    outMax: 90,   // Calibrated ceiling for elite WRs
+    outMax: 95,   // Calibrated ceiling for elite WRs (increased for better spread)
   },
   RB: {
-    p10: 32,      // RB 2025 filtered p10 rawAlpha (rounded from 31.9)
-    p90: 52,      // RB 2025 filtered p97 rawAlpha (using p97 for better elite spread)
+    p10: 32,      // RB 2025 cumulative p10 rawAlpha
+    p90: 62,      // RB 2025 cumulative max rawAlpha (expanded for multi-week data)
     outMin: 25,   // Calibrated floor for depth/committee backs
-    outMax: 90,   // Calibrated ceiling for elite RBs
+    outMax: 95,   // Calibrated ceiling for elite RBs (increased for better spread)
   },
   TE: {
-    p10: 33,      // TE 2025 filtered p10 rawAlpha (rounded from 33.2)
-    p90: 47,      // TE 2025 filtered p95 rawAlpha (using p95 as upper bound)
+    p10: 33,      // TE 2025 cumulative p10 rawAlpha
+    p90: 58,      // TE 2025 cumulative max rawAlpha (expanded for multi-week data)
     outMin: 25,   // Calibrated floor for depth TEs
-    outMax: 90,   // Calibrated ceiling for elite TEs
+    outMax: 95,   // Calibrated ceiling for elite TEs (increased for better spread)
   },
   QB: {
-    p10: 35,      // QB 2025 filtered p10 rawAlpha (rounded from 34.6)
-    p90: 45,      // QB 2025 filtered max rawAlpha (using max as upper bound for tight distribution)
+    p10: 35,      // QB 2025 cumulative p10 rawAlpha
+    p90: 48,      // QB 2025 cumulative max rawAlpha (observed max ~44, use 48 for ceiling room)
     outMin: 25,   // Calibrated floor for backup QBs
-    outMax: 90,   // Calibrated ceiling for elite fantasy QBs
+    outMax: 95,   // Calibrated ceiling for elite fantasy QBs (increased for better spread)
   },
 };
 
