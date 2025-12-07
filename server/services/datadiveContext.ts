@@ -611,11 +611,15 @@ async function getNflDataPyIdFromCanonical(canonicalId: string): Promise<string 
  * Get enriched player data from the weekly snapshot tables.
  * 
  * This is the NEW single source of truth for FORGE data.
- * It reads from datadive_snapshot_player_week and applies position-specific enrichment.
+ * It reads from datadive_snapshot_player_week ACROSS ALL OFFICIAL SNAPSHOTS
+ * and applies position-specific enrichment.
+ * 
+ * CRITICAL FIX v1.1: Now queries all official snapshots for weeks 1 through asOfWeek
+ * to properly aggregate season-to-date statistics instead of using a single snapshot.
  * 
  * @param canonicalId - The canonical player ID (e.g., "rashee-rice")
  * @param season - The NFL season (default: 2025)
- * @param asOfWeek - Optional: only include data up to this week
+ * @param asOfWeek - Optional: only include data up to this week (default: all available)
  */
 export async function getEnrichedPlayerWeek(
   canonicalId: string,
@@ -623,12 +627,6 @@ export async function getEnrichedPlayerWeek(
   asOfWeek?: number
 ): Promise<EnrichedPlayerData | null> {
   try {
-    const snapshot = await getCurrentSnapshot();
-    if (!snapshot || snapshot.season !== season) {
-      console.log(`[DatadiveContext] No matching snapshot for season ${season}`);
-      return null;
-    }
-    
     // Get the nfl_data_py_id for this canonical ID
     const nflDataPyId = await getNflDataPyIdFromCanonical(canonicalId);
     if (!nflDataPyId) {
@@ -636,23 +634,115 @@ export async function getEnrichedPlayerWeek(
       return null;
     }
     
-    // Fetch all weekly rows for this player
-    const weeklyRows = await db
-      .select()
-      .from(datadiveSnapshotPlayerWeek)
+    // Get all official snapshot IDs for the season up to asOfWeek
+    // This is the CRITICAL FIX: query across ALL official snapshots, not just one
+    const weekFilter = asOfWeek !== undefined ? asOfWeek : 99; // 99 = all weeks
+    
+    const officialSnapshots = await db
+      .select({ id: datadiveSnapshotMeta.id, week: datadiveSnapshotMeta.week })
+      .from(datadiveSnapshotMeta)
       .where(
         and(
-          eq(datadiveSnapshotPlayerWeek.snapshotId, snapshot.snapshotId),
-          eq(datadiveSnapshotPlayerWeek.playerId, nflDataPyId),
-          eq(datadiveSnapshotPlayerWeek.season, season)
+          eq(datadiveSnapshotMeta.season, season),
+          eq(datadiveSnapshotMeta.isOfficial, true),
+          sql`${datadiveSnapshotMeta.week} <= ${weekFilter}`
         )
-      )
-      .orderBy(datadiveSnapshotPlayerWeek.week);
+      );
     
-    if (weeklyRows.length === 0) {
+    if (officialSnapshots.length === 0) {
+      console.log(`[DatadiveContext] No official snapshots found for season ${season}`);
+      return null;
+    }
+    
+    const snapshotIds = officialSnapshots.map(s => s.id);
+    console.log(`[DatadiveContext] Fetching from ${snapshotIds.length} official snapshots for ${canonicalId} (weeks 1-${weekFilter})`);
+    
+    // Fetch weekly rows across ALL official snapshots for this player
+    // Use DISTINCT ON to handle duplicate week entries from re-snapshots
+    const weeklyRows = await db.execute<{
+      snapshot_id: number;
+      season: number;
+      week: number;
+      player_id: string;
+      player_name: string;
+      team_id: string | null;
+      position: string | null;
+      snaps: number | null;
+      snap_share: number | null;
+      routes: number | null;
+      route_rate: number | null;
+      targets: number | null;
+      target_share: number | null;
+      receptions: number | null;
+      rec_yards: number | null;
+      rec_tds: number | null;
+      adot: number | null;
+      air_yards: number | null;
+      yac: number | null;
+      tprr: number | null;
+      yprr: number | null;
+      epa_per_play: number | null;
+      epa_per_target: number | null;
+      success_rate: number | null;
+      rush_attempts: number | null;
+      rush_yards: number | null;
+      rush_tds: number | null;
+      yards_per_carry: number | null;
+      rush_epa_per_play: number | null;
+      fpts_std: number | null;
+      fpts_half: number | null;
+      fpts_ppr: number | null;
+    }>(sql`
+      SELECT DISTINCT ON (week) 
+        snapshot_id,
+        season,
+        week,
+        player_id,
+        player_name,
+        team_id,
+        position,
+        snaps,
+        snap_share,
+        routes,
+        route_rate,
+        targets,
+        target_share,
+        receptions,
+        rec_yards,
+        rec_tds,
+        adot,
+        air_yards,
+        yac,
+        tprr,
+        yprr,
+        epa_per_play,
+        epa_per_target,
+        success_rate,
+        rush_attempts,
+        rush_yards,
+        rush_tds,
+        yards_per_carry,
+        rush_epa_per_play,
+        fpts_std,
+        fpts_half,
+        fpts_ppr
+      FROM datadive_snapshot_player_week
+      WHERE player_id = ${nflDataPyId}
+        AND season = ${season}
+        AND week <= ${weekFilter}
+        AND snapshot_id IN (${sql.raw(snapshotIds.join(','))})
+      ORDER BY week ASC, snapshot_id DESC
+    `);
+    
+    if (weeklyRows.rows.length === 0) {
       console.log(`[DatadiveContext] No weekly data for player ${canonicalId} (${nflDataPyId})`);
       return null;
     }
+    
+    console.log(`[DatadiveContext] Found ${weeklyRows.rows.length} weeks of data for ${canonicalId}`);
+    
+    // Convert raw SQL result to expected format
+    const rows = weeklyRows.rows;
     
     // Get player identity info
     const identity = await db
@@ -665,20 +755,12 @@ export async function getEnrichedPlayerWeek(
       .where(eq(playerIdentityMap.canonicalId, canonicalId))
       .limit(1);
     
-    const playerName = identity[0]?.fullName ?? weeklyRows[0].playerName;
-    const position = identity[0]?.position ?? weeklyRows[0].position ?? 'WR';
-    const team = identity[0]?.team ?? weeklyRows[0].teamId;
-    
-    // Filter by asOfWeek if specified
-    const filteredRows = asOfWeek 
-      ? weeklyRows.filter(r => r.week <= asOfWeek)
-      : weeklyRows;
-    
-    if (filteredRows.length === 0) {
-      return null;
-    }
+    const playerName = identity[0]?.fullName ?? rows[0].player_name;
+    const position = identity[0]?.position ?? rows[0].position ?? 'WR';
+    const team = identity[0]?.team ?? rows[0].team_id;
     
     // Aggregate weekly rows into season totals
+    // Note: rows already filtered by asOfWeek via SQL query
     let totalSnaps = 0, totalRoutes = 0, totalTargets = 0, totalReceptions = 0;
     let totalRecYards = 0, totalRecTds = 0, totalAirYards = 0, totalYac = 0;
     let totalRushAttempts = 0, totalRushYards = 0, totalRushTds = 0;
@@ -691,48 +773,48 @@ export async function getEnrichedPlayerWeek(
     let weightedSuccessRate = 0;
     let gamesWithSnaps = 0, gamesWithTargets = 0, gamesWithRushes = 0;
     
-    for (const row of filteredRows) {
-      // Sum totals
-      totalSnaps += row.snaps ?? 0;
-      totalRoutes += row.routes ?? 0;
-      totalTargets += row.targets ?? 0;
-      totalReceptions += row.receptions ?? 0;
-      totalRecYards += row.recYards ?? 0;
-      totalRecTds += row.recTds ?? 0;
-      totalAirYards += row.airYards ?? 0;
-      totalYac += row.yac ?? 0;
-      totalRushAttempts += row.rushAttempts ?? 0;
-      totalRushYards += row.rushYards ?? 0;
-      totalRushTds += row.rushTds ?? 0;
-      totalFptsStd += row.fptsStd ?? 0;
-      totalFptsHalf += row.fptsHalf ?? 0;
-      totalFptsPpr += row.fptsPpr ?? 0;
+    for (const row of rows) {
+      // Sum totals (using snake_case from raw SQL)
+      totalSnaps += Number(row.snaps) || 0;
+      totalRoutes += Number(row.routes) || 0;
+      totalTargets += Number(row.targets) || 0;
+      totalReceptions += Number(row.receptions) || 0;
+      totalRecYards += Number(row.rec_yards) || 0;
+      totalRecTds += Number(row.rec_tds) || 0;
+      totalAirYards += Number(row.air_yards) || 0;
+      totalYac += Number(row.yac) || 0;
+      totalRushAttempts += Number(row.rush_attempts) || 0;
+      totalRushYards += Number(row.rush_yards) || 0;
+      totalRushTds += Number(row.rush_tds) || 0;
+      totalFptsStd += Number(row.fpts_std) || 0;
+      totalFptsHalf += Number(row.fpts_half) || 0;
+      totalFptsPpr += Number(row.fpts_ppr) || 0;
       
       // Weighted averages (weight by volume)
-      const snaps = row.snaps ?? 0;
-      const targets = row.targets ?? 0;
-      const rushes = row.rushAttempts ?? 0;
+      const snaps = Number(row.snaps) || 0;
+      const targets = Number(row.targets) || 0;
+      const rushes = Number(row.rush_attempts) || 0;
       
       if (snaps > 0) {
         gamesWithSnaps++;
-        weightedSnapShare += (row.snapShare ?? 0) * snaps;
-        weightedRouteRate += (row.routeRate ?? 0) * snaps;
-        weightedEpaPerPlay += (row.epaPerPlay ?? 0) * snaps;
-        weightedSuccessRate += (row.successRate ?? 0) * snaps;
+        weightedSnapShare += (Number(row.snap_share) || 0) * snaps;
+        weightedRouteRate += (Number(row.route_rate) || 0) * snaps;
+        weightedEpaPerPlay += (Number(row.epa_per_play) || 0) * snaps;
+        weightedSuccessRate += (Number(row.success_rate) || 0) * snaps;
       }
       
       if (targets > 0) {
         gamesWithTargets++;
-        weightedTargetShare += (row.targetShare ?? 0) * targets;
-        weightedTprr += (row.tprr ?? 0) * targets;
-        weightedYprr += (row.yprr ?? 0) * targets;
-        weightedAdot += (row.aDot ?? 0) * targets;
-        weightedEpaPerTarget += (row.epaPerTarget ?? 0) * targets;
+        weightedTargetShare += (Number(row.target_share) || 0) * targets;
+        weightedTprr += (Number(row.tprr) || 0) * targets;
+        weightedYprr += (Number(row.yprr) || 0) * targets;
+        weightedAdot += (Number(row.adot) || 0) * targets;
+        weightedEpaPerTarget += (Number(row.epa_per_target) || 0) * targets;
       }
       
       if (rushes > 0) {
         gamesWithRushes++;
-        weightedRushEpa += (row.rushEpaPerPlay ?? 0) * rushes;
+        weightedRushEpa += (Number(row.rush_epa_per_play) || 0) * rushes;
       }
     }
     
@@ -801,7 +883,7 @@ export async function getEnrichedPlayerWeek(
       position,
       team,
       
-      gamesPlayed: filteredRows.length,
+      gamesPlayed: rows.length,
       snaps: totalSnaps,
       snapShare: avgSnapShare,
       
