@@ -4224,6 +4224,68 @@ export type InsertForgeTeamEnvironment = typeof forgeTeamEnvironment.$inferInser
 export type ForgeTeamMatchupContext = typeof forgeTeamMatchupContext.$inferSelect;
 export type InsertForgeTeamMatchupContext = typeof forgeTeamMatchupContext.$inferInsert;
 
+/**
+ * FORGE Player State Table
+ * Recursive scoring state - stores per-player/week/season state for multi-pass scoring
+ * 
+ * FORGE Recursion v1:
+ * - Pass 0: Compute alpha_raw using existing feature weights
+ * - Pass 1: Calculate surprise (alpha_raw - expected_alpha), adjust using volatility/momentum
+ * - Store alpha_final + updated state for next week's computation
+ * 
+ * This enables FORGE to be a "recursive, multi-pass scoring engine where each week's
+ * score depends not just on current performance, but on how that performance interacts
+ * with the player's historical trajectory and stability profile."
+ */
+export const forgePlayerState = pgTable("forge_player_state", {
+  id: serial("id").primaryKey(),
+  
+  // Identity
+  playerId: text("player_id").notNull(),
+  playerName: text("player_name"),
+  position: text("position"),         // 'QB' | 'RB' | 'WR' | 'TE'
+  team: text("team"),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  
+  // Previous week's state (inputs to current week's Pass 1)
+  alphaPrev: real("alpha_prev"),           // Last week's final alpha
+  tierPrev: integer("tier_prev"),          // Last week's tier (1-4)
+  volatilityPrev: real("volatility_prev"), // Rolling std dev of alpha over last N weeks
+  momentum: real("momentum"),              // Recent alpha avg - seasonal baseline
+  
+  // Pass 0 output (raw single-pass score)
+  alphaRaw: real("alpha_raw"),
+  
+  // Pass 1 computations (recursive adjustments)
+  expectedAlpha: real("expected_alpha"),   // Based on alpha_prev + positional baseline
+  surprise: real("surprise"),              // alpha_raw - expected_alpha
+  stabilityAdjustment: real("stability_adjustment"), // Adjustment from surprise/volatility/momentum
+  
+  // Final outputs
+  alphaFinal: real("alpha_final"),         // After Pass 1 refinement
+  tierFinal: integer("tier_final"),        // Final tier assignment
+  confidenceScore: real("confidence_score"), // How confident are we in this score (0-100)
+  
+  // Volatility computation (for next week)
+  alphaHistory: real("alpha_history").array(), // Rolling window of recent alphas
+  volatilityUpdated: real("volatility_updated"), // New volatility for next week
+  momentumUpdated: real("momentum_updated"),     // New momentum for next week
+  
+  // Metadata
+  computedAt: timestamp("computed_at").defaultNow(),
+  passCount: integer("pass_count").default(2),  // Number of scoring passes used
+}, (table) => ({
+  uniquePlayerSeasonWeek: unique("forge_state_unique").on(table.playerId, table.season, table.week),
+  playerIdx: index("forge_state_player_idx").on(table.playerId),
+  seasonWeekIdx: index("forge_state_season_week_idx").on(table.season, table.week),
+  positionIdx: index("forge_state_position_idx").on(table.position),
+}));
+
+// FORGE Player State Types
+export type ForgePlayerState = typeof forgePlayerState.$inferSelect;
+export type InsertForgePlayerState = typeof forgePlayerState.$inferInsert;
+
 // ========================================
 // TIBER DATA LAB - OPERATION DATADIVE
 // Snapshot-based NFL data spine for reproducible analytics
