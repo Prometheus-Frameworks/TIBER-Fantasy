@@ -455,6 +455,174 @@ router.get('/batch', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/forge/recursive/batch
+ * 
+ * Recursive batch scoring endpoint using FORGE Recursion v1.
+ * Uses two-pass scoring with historical state for trajectory-aware grading.
+ * 
+ * Query params:
+ * - position (optional): WR | RB | TE | QB (defaults to all if not specified)
+ * - limit (optional): number, 1-100, defaults to 50
+ * - season (optional): number, defaults to 2025
+ * - week (optional): number, defaults to current week
+ * - persist (optional): 'true' | 'false', whether to save state (defaults to true)
+ */
+router.get('/recursive/batch', async (req: Request, res: Response) => {
+  try {
+    const { position, limit, season, week, persist } = req.query;
+
+    const normalizedPosition =
+      typeof position === 'string' && ['QB', 'RB', 'WR', 'TE'].includes(position.toUpperCase())
+        ? (position.toUpperCase() as PlayerPosition)
+        : undefined;
+
+    const normalizedLimit =
+      typeof limit === 'string' && !Number.isNaN(Number(limit))
+        ? Math.max(1, Math.min(Number(limit), 100))
+        : 50;
+
+    const normalizedSeason = 
+      typeof season === 'string' && !Number.isNaN(Number(season))
+        ? Number(season)
+        : 2025;
+
+    const normalizedWeek =
+      typeof week === 'string' && !Number.isNaN(Number(week))
+        ? Number(week)
+        : 14;
+
+    const shouldPersist = persist !== 'false';
+
+    console.log(`[FORGE/Recursive] Batch request: position=${normalizedPosition ?? 'ALL'}, limit=${normalizedLimit}, season=${normalizedSeason}, week=${normalizedWeek}, persist=${shouldPersist}`);
+
+    const { calculateRecursiveAlpha, getRecursionSummary } = await import('./recursiveAlphaEngine');
+    const { fetchContext } = await import('./context/contextFetcher');
+    const { buildWRFeatures } = await import('./features/wrFeatures');
+    const { buildQBFeatures } = await import('./features/qbFeatures');
+    const { buildRBFeatures } = await import('./features/rbFeatures');
+    const { buildTEFeatures } = await import('./features/teFeatures');
+
+    const scores = await forgeService.getForgeScoresBatch({
+      position: normalizedPosition,
+      limit: normalizedLimit,
+      season: normalizedSeason,
+      asOfWeek: normalizedWeek,
+    });
+
+    const recursiveScores = [];
+    
+    for (const score of scores) {
+      try {
+        const context = await fetchContext(score.playerId, normalizedSeason, normalizedWeek);
+        if (!context) continue;
+
+        let features;
+        switch (context.position) {
+          case 'QB':
+            features = buildQBFeatures(context);
+            break;
+          case 'RB':
+            features = buildRBFeatures(context);
+            break;
+          case 'TE':
+            features = buildTEFeatures(context);
+            break;
+          default:
+            features = buildWRFeatures(context);
+        }
+
+        const recursiveScore = await calculateRecursiveAlpha(
+          context,
+          features,
+          { persistState: shouldPersist }
+        );
+
+        recursiveScores.push({
+          ...recursiveScore,
+          recursionSummary: getRecursionSummary(recursiveScore),
+        });
+      } catch (err) {
+        console.error(`[FORGE/Recursive] Failed to score ${score.playerName}:`, err);
+      }
+    }
+
+    const sortedScores = recursiveScores.sort((a, b) => b.alpha - a.alpha);
+
+    return res.json({
+      success: true,
+      scores: sortedScores,
+      meta: {
+        position: normalizedPosition ?? 'ALL',
+        limit: normalizedLimit,
+        season: normalizedSeason,
+        week: normalizedWeek,
+        count: sortedScores.length,
+        recursionEnabled: true,
+        statePersisted: shouldPersist,
+        description: 'FORGE Recursion v1: Two-pass scoring with historical trajectory awareness',
+        scoredAt: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('[FORGE/Recursive] Batch error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'FORGE_RECURSIVE_BATCH_FAILED',
+    });
+  }
+});
+
+/**
+ * GET /api/forge/recursive/player/:playerId
+ * 
+ * Get recursive scoring history for a single player
+ */
+router.get('/recursive/player/:playerId', async (req: Request, res: Response) => {
+  try {
+    const { playerId } = req.params;
+    const season = typeof req.query.season === 'string' ? Number(req.query.season) : 2025;
+
+    const { getPlayerStateHistory } = await import('./forgeStateService');
+    const history = await getPlayerStateHistory(playerId, season);
+
+    if (history.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No recursive state history found for this player',
+      });
+    }
+
+    return res.json({
+      success: true,
+      playerId,
+      season,
+      history: history.map(state => ({
+        week: state.week,
+        alphaPrev: state.alphaPrev,
+        alphaRaw: state.alphaRaw,
+        alphaFinal: state.alphaFinal,
+        tier: state.tierFinal,
+        surprise: state.surprise,
+        volatility: state.volatilityUpdated,
+        momentum: state.momentumUpdated,
+        confidence: state.confidenceScore,
+      })),
+      meta: {
+        weeksTracked: history.length,
+        latestWeek: history[history.length - 1]?.week,
+        latestAlpha: history[history.length - 1]?.alphaFinal,
+      },
+    });
+  } catch (error) {
+    console.error('[FORGE/Recursive] Player history error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'FORGE_RECURSIVE_PLAYER_FAILED',
+    });
+  }
+});
+
+/**
  * POST /api/forge/snapshot
  * 
  * Dev-only: trigger a snapshot export as JSON file on the server.
