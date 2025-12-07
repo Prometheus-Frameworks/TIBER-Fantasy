@@ -1,0 +1,508 @@
+TIBER System Architecture v1.0
+
+Last updated: Dec 2025
+
+0. Purpose
+
+Tiber Fantasy is a free, open-source NFL fantasy football analytics platform built to:
+
+Ingest real NFL data (no paywalls)
+
+Evaluate players through a unified scoring engine (FORGE)
+
+Translate those scores into tactical, fantasy-relevant guidance (TIBER)
+
+Serve dynasty & redraft users with transparent reasoning, not black-box vibes
+
+At a high level:
+
+Reality (NFL data) → FORGE (grading engine) → TIBER (tactical interface) → User decisions
+
+1. Semantic Domains (The Five Big Buckets)
+
+Everything in TIBER belongs to one of these domains:
+
+DATA LAYER (Reality)
+
+External sources: NFLfastR, NFL-Data-Py, Sleeper, MySportsFeeds
+
+Internal: snapshots, role banks, schedule tables
+
+Responsibility: accurately mirror what happened on the field
+
+FEATURE LAYER (Signal Extraction)
+
+Position-specific feature builders (WR, RB, TE, QB)
+
+Responsibility: turn raw stats into normalized, interpretable features
+
+FORGE ENGINE (Scoring)
+
+Core grading logic and recursive state
+
+Responsibility: assign Alpha (0–100), trajectory, tiers, and confidence
+
+TIBER SYSTEM (Interpretation)
+
+Rankings, tiers, DST streamer, SOS, strategy views, Tiber Chat
+
+Responsibility: convert FORGE outputs into decisions & explanations
+
+UX / OS LAYER (Delivery)
+
+React frontend, PWA behavior, routing, layout, visual consistency
+
+Responsibility: make all of this usable, fast, and intuitive
+
+Each higher layer depends one-way on the layer below it. No backwards coupling.
+
+2. FORGE – Football-Oriented Recursive Grading Engine
+2.1 Acronym & Philosophy
+Letter	Meaning	Domain	Responsibility
+F	Football	Grounding	Maintain connection to on-field reality and positional truths.
+O	Oriented	Decision lens	Optimize for human decision confidence, not just model neatness.
+R	Recursive	Temporal state	Carry historical performance and trajectory into current scoring.
+G	Grading	Math	Combine Volume, Efficiency, Stability, and Context into Alpha.
+E	Engine	Pipeline	Move data from raw sources to final, usable scores.
+
+O Statement (North Star of FORGE)
+
+“FORGE is oriented toward decision confidence. Every Alpha score exists to answer one question: Should I start this player?”
+
+2.2 Data Inputs (Engine Intake)
+
+Role Banks (season-level classification)
+
+WR: ALPHA, CO_ALPHA, PRIMARY_SLOT, SECONDARY, ROTATIONAL
+
+RB: ELITE_WORKHORSE, HIGH_END_RB1, STRONG_RB2, etc.
+
+TE, QB: similar role tiers
+
+Datadive 2025 Enriched Metrics
+
+WR/TE: YPRR, WOPR, RACR, EPA/target, air yards share, separation, XYAC
+
+RB: RYOE, opportunity share, YAC, stuffed rate
+
+QB: CPOE, DAKOTA, EPA/play, pressured EPA, PACR
+
+All: snap share, route rate, target share, fantasy points
+
+Legacy 2024 Fallback
+
+playerAdvanced2024, playerSeason2024, qb_epa_adjusted
+
+Contextual Inputs
+
+Team environment
+
+Defense vs Position (DvP)
+
+Strength of schedule slices (next 3, playoffs)
+
+Injuries / OUT/IR flags
+
+2.3 Pipeline Stages
+
+1. Context Fetcher (contextFetcher.ts)
+
+Assembles ForgeContext:
+
+seasonStats
+
+weeklyStats
+
+advancedMetrics
+
+roleMetrics
+
+teamEnvironment
+
+dvpData
+
+Resolves player IDs across platforms (Sleeper, NFL, internal)
+
+2. Feature Builders (Position Specific)
+
+wrFeatures.ts – targets/game, YPRR, EPA/target, catch rate over expectation
+
+rbFeatures.ts – carries + targets, RYOE, YAC, opportunity share
+
+teFeatures.ts – targets, YPRR, inline vs route usage, EPA/target
+
+qbFeatures.ts – EPA/play, CPOE, AYPA, TD–INT differential, pressure splits
+
+3. Grading Engine (alphaEngine.ts)
+
+Sub-scores (0–100 each):
+
+Volume: usage, opportunities, routes, targets, snaps
+
+Efficiency: EPA, YPRR, RYOE, success rate, etc.
+
+Stability: role consistency, week-to-week variance, injury history
+
+Context: team quality, game script, DvP, SOS fragments
+
+Then:
+
+calculateWeightedAlpha() – position-specific weighting (e.g. WR efficiency vs RB volume emphasis)
+
+calibrateAlpha() – map internal composite to intuitive 0–100 scale
+
+calculateTrajectory() – rising / flat / declining based on recent trend
+
+calculateConfidence() – data quality, sample size, noise check
+
+4. Recursive Engine (recursiveAlphaEngine.ts)
+
+Stateful, two-pass scoring:
+
+Pass 0: Raw alpha
+
+alpha_raw = f(volume, efficiency, stability, context)
+
+Expected baseline:
+
+expected_alpha = alpha_prev * 0.7 + position_baseline * 0.3
+
+Position baselines: QB=65, RB=58, WR=60, TE=55
+
+Pass 1: Recursion adjustments
+
+surprise = alpha_raw - expected_alpha
+
+Inputs:
+
+alpha_prev – previous week’s Alpha
+
+volatility – 8-week rolling std dev
+
+momentum – 3-week trend vs baseline
+
+Adjust stability/context based on surprise + volatility
+
+Recalculate alpha_final
+
+Persist to forge_player_state:
+
+alpha_final, alpha_prev, momentum, volatility, tier_prev, last_week_context
+
+Output Contract (FORGE → TIBER):
+
+Every FORGE evaluation must provide:
+
+player_id
+
+position
+
+alpha (0–100)
+
+tiber_tier (position-aware)
+
+trajectory (RISING | FLAT | DECLINING)
+
+confidence (20–100)
+
+role_tag (from role bank)
+
+last_updated_week, season
+
+APIs:
+
+GET /api/forge/recursive/player/:playerId
+
+POST /api/forge/recursive/batch?position=QB&persist=true
+
+3. TIBER – Tactical Index for Breakout Efficiency & Recursion
+
+TIBER = FORGE’s voice to the user.
+
+TIBER consumes FORGE outputs and presents them as:
+
+tiers
+
+tables
+
+matchups
+
+chat responses
+
+strategy recommendations
+
+Originally R was “Regression”; we are conceptually shifting toward:
+
+R = Recursion – acknowledging stateful, week-to-week interpretation and narrative.
+
+(You can keep the old text for now and update the acronym over time.)
+
+3.1 High-Level Responsibilities
+
+Own the user-facing fantasy layer
+
+Interpret FORGE in:
+
+redraft
+
+dynasty
+
+DFS-style “who pops this week” contexts
+
+Power:
+
+Tiber Tiers interface
+
+Rankings hub
+
+DST Streamer
+
+Start/Sit Strategy tab
+
+Tiber Data Lab “fantasy mode”
+
+Tiber Chat reasoning
+
+3.2 Tiber Tiers
+
+Tier system uses FORGE Alpha + position thresholds + guardrails.
+
+Examples (v0.2, can be tuned):
+
+QB T1 ≥ 85
+
+WR T1 ≥ 84
+
+RB T1 ≥ 82
+
+TE T1 ≥ 80
+
+Rules:
+
+Max ±1 tier per week
+
+Max ±10 Alpha swing from matchup effects
+
+Elite protection: Alpha ≥ 85 → max −6 drop
+
+Efficiency caps: WR/RB/TE efficiency contribution capped at 85, QB uncapped
+
+Tiers are the primary navigational and psychological tool for the user.
+Rankings = sorted by tier, then Alpha.
+
+3.3 DST Streamer Module
+
+Exposed via:
+
+GET /api/data-lab/dst-streamer?week=X&season=Y
+
+DST tab in Rankings UI
+
+Scoring blends:
+
+Defense strength:
+
+turnover rate
+
+sack rate
+
+points allowed
+
+Offense vulnerability:
+
+turnover-worthy play rate
+
+sack rate allowed
+
+pressure rate
+
+Matchup boost:
+
+home/away
+
+implied total
+
+QB quality tier
+
+Target tier distribution per week:
+
+~4 T1 defenses
+
+~10 T2 defenses
+
+~12 T3 defenses
+
+~2 T4 “desperation” plays
+
+DSTMatchupModal:
+Clicking any matchup reveals the full breakdown:
+
+defense metrics
+
+opponent vulnerability profile
+
+final DST tier & Alpha
+
+short, human-readable blurb
+
+3.4 Tiber Data Lab
+
+Modes:
+
+NFL Mode (raw)
+
+Show pure football metrics: EPA, YPRR, RYOE, success rate, snap share, etc.
+
+No fantasy bias or scoring applied
+
+Fantasy Mode
+
+Wraps FORGE outputs + fantasy scoring context
+
+Redraft / Dynasty toggles:
+
+Redraft → shorter horizon, more weight on recent performance
+
+Dynasty → more insulation, age, role security, long-term usage
+
+This is the “labs & diagnostics” layer for power users.
+
+4. UX / OS – Delivery Layer
+
+Key decisions:
+
+Dark navy background, slate cards, blue-purple accents
+
+Glow cards, pulsing CTAs, skeleton loaders, top loading bar
+
+Homepage tabs:
+
+Dashboard
+
+Rankings (Tiber Tiers)
+
+Schedule
+
+Data Lab
+
+Right-hand Tiber Chat panel
+
+/legacy-chat preserved as fallback
+
+PWA support:
+
+service worker
+
+Add to Home Screen
+
+responsive down to mobile
+
+tables collapse secondary columns on small screens
+
+Frontend reads “unified truth” from FORGE/Tiber APIs. No business logic should live purely in React — only presentation and basic mapping.
+
+5. Agent Integration Model
+
+The Replit Agent, Gemini, and future agents should treat this architecture as:
+
+Source of Truth (what exists, what owns what)
+
+Boundary Map (what not to mix)
+
+Work Contract (how to extend without breaking coherency)
+
+5.1 Non-Negotiable Boundaries for Agents
+
+Do not:
+
+Write fantasy logic directly into data ingestion
+
+Hardcode tiers in the UI – always derive from FORGE outputs
+
+Let Tiber Chat invent metrics that don’t exist in the backend
+
+Bypass snapshot layers for live data except in explicit “live experimental” endpoints
+
+Do:
+
+Respect FORGE output contract (Alpha, Tier, Trajectory, Confidence, Role)
+
+Use Tiber as the interpretive layer, not a second scoring engine
+
+Add new features by attaching them to the correct domain:
+
+Data → Features → Forge → Tiber → UX
+
+6. Roadmap Hooks (For Future Work)
+
+These are already implied in the document but aren’t fully built out:
+
+Player Compass:
+
+Powered by FORGE outputs + Tiber Tiers + scenario tagging
+
+Lives in TIBER domain, uses FORGE as backend brain
+
+OTC Consensus / Community Layer:
+
+Aggregate community rankings → compare vs FORGE/TIBER
+
+Semantic home: TIBER (Index + Tactical)
+
+Tiber Brain OS:
+
+Multi-agent layer where Gemini/GPT/etc use this architecture as grounding
+
+Tiber Chat as the main conversational interface, always citing FORGE/TIBER objects
+
+How to Feed This to the Replit Agent
+
+Yes, you 100% should feed this to the agent. This is how you steer it.
+
+Step 1 — Replace or Append in replit.md
+
+Option A:
+Replace your current architecture section with this “TIBER System Architecture v1.0” block and keep your existing sections (Overview, External Dependencies, etc.) above/below it.
+
+Option B:
+Create a new file ARCHITECTURE.md with this content, and in replit.md just add:
+
+“See ARCHITECTURE.md for full semantic architecture and domain boundaries. All new features must respect these layers.”
+
+Either way, the agent just needs this text present in the repo.
+
+Step 2 — Add a Short “Agent Work Instructions” Section
+
+At the bottom of replit.md, add something like:
+
+## Agent Work Instructions (Dec 2025)
+
+When modifying or adding features:
+
+1. **Respect the Architecture:**
+   - Data ingestion and snapshots belong in the DATA layer.
+   - Feature engineering belongs in the FEATURE layer.
+   - Player scoring and Alpha/Tier logic belong in the FORGE engine.
+   - Fantasy interpretation (tiers page, DST streamer, strategy tab, chat prompts) belongs in the TIBER layer.
+   - UI styling and layout stay in the UX/OS layer.
+
+2. **Use the FORGE Output Contract:**
+   Each player evaluation must expose:
+   - player_id, position
+   - alpha (0–100)
+   - tiber_tier
+   - trajectory (RISING/FLAT/DECLINING)
+   - confidence (20–100)
+   - role_tag
+   - last_updated_week, season
+
+3. **When creating new APIs:**
+   - Prefer `/api/forge/*` for scoring-related endpoints.
+   - Prefer `/api/tiber/*` for fantasy-facing endpoints (tiers, streamers, strategy).
+   - Prefer `/api/data-lab/*` for raw analytics, lab tools, and diagnostics.
+   - Do not mix scoring logic into `/api/tiber/*` endpoints — they should consume FORGE, not re-implement it.
+
+4. **When unsure where a new feature belongs:**
+   - Ask: “Is this about numbers or advice?”
+   - If numbers → FORGE or Data Lab.
+   - If advice, UI grouping, or fantasy language → TIBER.

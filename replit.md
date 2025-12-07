@@ -29,119 +29,32 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 **UI/UX Decisions**:
 - Dark navy background (`bg-[#0a0e1a]`), slate cards (`bg-[#141824]`), blue-purple gradient accents, and white/light typography.
 - Interactive GlowCard components, pulsing GlowCTA buttons, skeleton loading, and a top loading bar.
-- **New Homepage (Dec 2024)**: Horizontal feature navigation with Dashboard, Rankings, Schedule, Data Lab tabs. Condensed chat panel on right side with live Tiber Chat integration. Dashboard widgets for Quick Insights, FORGE Movers, and Start/Sit suggestions. League selector in header with real data from `/api/leagues`. Previous sidebar-style chat homepage available at `/legacy-chat` as fallback.
-- **Mobile-First PWA (Dec 2024)**: Progressive Web App with "Add to Home Screen" capability for iOS and Android. Service worker caches static assets. Responsive design with breakpoints at sm (640px), md (768px), and lg (1024px). Tables hide secondary columns on mobile using `hidden sm:table-cell` patterns. Touch-friendly buttons and inputs with proper sizing.
-- **Universal Current Week System (Dec 2024)**: `/api/system/current-week` endpoint provides real-time NFL week detection based on the 2025 schedule. Frontend components (HomepageRedesign, StrategyTab) use the `useCurrentNFLWeek()` hook to dynamically fetch the current week for Start/Sit and matchup-based features. Week detection uses `shared/weekDetection.ts` which has the full 2025 NFL schedule with precise game start/end times.
+- **Homepage**: Horizontal feature navigation (Dashboard, Rankings, Schedule, Data Lab), condensed chat panel with live Tiber Chat, dashboard widgets (Quick Insights, FORGE Movers, Start/Sit), and league selector. Mobile-first PWA design with responsive breakpoints and touch-friendly elements.
+- **Universal Current Week System**: `/api/system/current-week` endpoint for real-time NFL week detection, used by frontend components.
 
 **Technical Implementations & Feature Specifications:**
 - **Unified Player Hub (UPH)**: Centralizes player data, "Player Compass" profiles, "OTC Consensus" rankings, and Madden-style OVR.
-- **AI & Analytics**: "Competence Mode" AI, Adaptive Consensus Engine, DeepSeek + Compass Fusion System, RAG Chat System using Google Gemini AI. Features Tiber Memory for persistent conversation and Dual Memory Pools (FANTASY vs GENERAL) for context separation. Tiber Voice offers Insight and Analyst chat modes with a 5-tier Truth Hierarchy and reasoning heuristics.
-- **FORGE (Football-Oriented Recursive Grading Engine)**: The core player evaluation system. FORGE provides unified Alpha scores (0-100) for skill positions, serving as the numeric authority for all player assessments.
-
-### FORGE Philosophy & Acronym
-
-| Letter | Meaning | Description |
-|--------|---------|-------------|
-| **F** | **Football** | Grounded in football reality. Every metric, threshold, and weight reflects what happens on the field - not abstract math. |
-| **O** | **Oriented** | Toward decision confidence. FORGE exists to help real managers make real calls with clarity. |
-| **R** | **Recursive** | Performance compounds. Each week's Alpha depends on historical trajectory. Outputs feed back as inputs. |
-| **G** | **Grading** | Four pillars (Volume, Efficiency, Stability, Context) → calibrated Alpha score (0-100). |
-| **E** | **Engine** | The data pipeline. Advanced metrics flow in, actionable intelligence flows out. |
-
-**The O Statement (FORGE Philosophy):**
-> *"FORGE is oriented toward decision confidence. Every Alpha score exists to answer one question: Should I start this player? We don't chase hot takes. We don't parrot consensus. We measure what happened, project what's likely, and give you the clarity to decide. When Tiber speaks, FORGE is the foundation. When you doubt, the data defends."*
-
-### FORGE Data Pipeline Architecture
-
-```
-DATA SOURCES (The "E" - Engine Input)
-├── Role Banks (Season-Level)
-│   ├── WR Role Bank: ALPHA, CO_ALPHA, PRIMARY_SLOT, SECONDARY, ROTATIONAL
-│   ├── RB Role Bank: ELITE_WORKHORSE, HIGH_END_RB1, MID_RB1, STRONG_RB2, etc.
-│   ├── TE Role Bank: Similar tiering with position-specific thresholds
-│   └── QB Role Bank: Similar tiering with QB-specific metrics
-│
-├── Datadive (2025 Enriched Metrics)
-│   ├── WR/TE: YPRR, WOPR, RACR, EPA/target, air yards share, xyac, separation
-│   ├── RB: RYOE, opportunity share, elusive rating, stuffed rate, YCO
-│   ├── QB: CPOE, DAKOTA, EPA/play, pressured EPA, PACR
-│   └── All: snap share, route rate, target share
-│
-└── Legacy Tables (2024 fallback)
-    └── playerAdvanced2024, playerSeason2024, qb_epa_adjusted
-           │
-           ▼
-CONTEXT FETCHER (contextFetcher.ts)
-├── Assembles ForgeContext with seasonStats, weeklyStats, advancedMetrics
-├── Fetches roleMetrics, teamEnvironment, dvpData
-└── Resolves player IDs across platforms
-           │
-           ▼
-FEATURE BUILDERS (Position-Specific)
-├── wrFeatures.ts  → WR: targets/game, YPRR, EPA/target, catch rate OE
-├── rbFeatures.ts  → RB: opportunities, RYOE, YAC, opportunity share
-├── teFeatures.ts  → TE: targets, YPRR, EPA/target, inline usage
-└── qbFeatures.ts  → QB: EPA/play, CPOE, AYPA, TD-INT differential
-           │
-           ▼
-GRADING ENGINE (alphaEngine.ts)
-├── calculateSubScores() → Volume, Efficiency, Stability, Context (0-100 each)
-├── calculateWeightedAlpha() → Position-specific weights applied
-├── calibrateAlpha() → Map to intuitive 0-100 scale
-├── calculateTrajectory() → Rising / Flat / Declining
-└── calculateConfidence() → Data quality adjustments (20-100)
-           │
-           ▼
-RECURSIVE ENGINE (recursiveAlphaEngine.ts)
-├── Pass 0: Raw Alpha from current week metrics
-├── Pass 1: Stability adjustments based on:
-│   ├── alphaPrev (previous week's Alpha)
-│   ├── surprise (deviation from expected)
-│   ├── volatility (8-week rolling stddev)
-│   └── momentum (3-week trend vs baseline)
-└── State persisted to forge_player_state table
-           │
-           ▼
-OUTPUT: ForgeScore with Alpha, Tier, Trajectory, Confidence
-```
-
-### FORGE Technical Implementation
-
-- **Recursion v1 (Dec 2024)**: Stateful two-pass scoring. Key formulas: `expected_alpha = alpha_prev * 0.7 + position_baseline * 0.3`, `surprise = alpha_raw - expected_alpha`. Position baselines: QB=65, RB=58, WR=60, TE=55. API: `/api/forge/recursive/batch?position=QB&persist=true`, `/api/forge/recursive/player/:playerId`.
-- **Tiber Tiers (v0.2)**: Position-specific tier thresholds (QB T1≥85, RB T1≥82, WR T1≥84, TE T1≥80). Weekly mover rules: max ±1 tier/week, max ±10 Alpha from matchups, elite protection (Alpha≥85 max -6 drop). Efficiency caps: QB uncapped, WR/RB/TE capped at 85.
-- **Next Man Up**: Opportunity tracking for players gaining touches when starters go OUT/IR, displayed with green/red arrows in FORGE Movers.
-- **FORGE SoS**: Position-specific strength of schedule analysis for rest of season, next 3 weeks, and playoffs.
-- **Tiber Data Lab (Operation DataDive)**: Snapshot-based NFL data spine for reproducible analytics, offering advanced metrics like TPRR, YPRR, EPA/play, and snap share.
-- **xFPTS v2 (Expected Fantasy Points v2)**: Context-aware expected fantasy points system with nflfastR-derived adjustments and context multipliers.
-- **Position-Aware Enrichment**: Full position-specific enrichment layer with 2025 NFL metrics for QB, WR/TE, RB, and IDP, including CPOE, WOPR, RYOE, and fantasy points calculations.
-- **EPA Analytics**: Advanced efficiency metrics from nfl-data-py play-by-play data, including EPA per play/target, Air EPA vs YAC EPA, success rates, and team offensive/defensive EPA context rankings.
-- **SOS Team Analytics**: Comprehensive strength of schedule system with position-specific matchup intelligence.
-- **Defense vs Position (DvP) Matchup System**: Calculates fantasy points allowed by defenses against specific positions.
+- **AI & Analytics**: "Competence Mode" AI, Adaptive Consensus Engine, DeepSeek + Compass Fusion System, RAG Chat System using Google Gemini AI, Tiber Memory (FANTASY vs GENERAL pools), and Tiber Voice (Insight/Analyst modes with 5-tier Truth Hierarchy).
+- **FORGE (Football-Oriented Recursive Grading Engine)**: Core player evaluation system providing unified Alpha scores (0-100) for skill positions. Emphasizes Football-Oriented, Recursive, Grading, and Engine principles.
+    - **FORGE Data Pipeline**: Ingests data from Role Banks, Datadive (enriched metrics), and Legacy Tables. Uses a Context Fetcher, position-specific Feature Builders, and a Grading Engine (`alphaEngine.ts`) to calculate Alpha scores, sub-scores (Volume, Efficiency, Stability, Context), trajectory, and confidence. A Recursive Engine (`recursiveAlphaEngine.ts`) applies stability adjustments based on previous Alpha, surprise, volatility, and momentum.
+    - **FORGE Output Contract**: Every FORGE evaluation provides `player_id`, `position`, `alpha`, `tiber_tier`, `trajectory`, `confidence`, `role_tag`, `last_updated_week`, `season`.
+    - **Recursion v1**: Stateful two-pass scoring with formulas for `expected_alpha` and `surprise`.
+    - **Tiber Tiers (v0.2)**: Position-specific tier thresholds (e.g., QB T1≥85) with guardrails for weekly changes and elite protection.
+    - **Next Man Up**: Tracks opportunity shifts for players replacing injured starters.
+    - **FORGE SoS**: Position-specific strength of schedule analysis.
+- **Tiber Data Lab (Operation DataDive)**: Snapshot-based NFL data spine for reproducible analytics, offering advanced metrics and supporting NFL Mode (raw football metrics) and Fantasy Mode (FORGE outputs + fantasy scoring).
+- **xFPTS v2 (Expected Fantasy Points v2)**: Context-aware expected fantasy points system.
+- **Position-Aware Enrichment**: Full position-specific enrichment layer with 2025 NFL metrics.
+- **EPA Analytics**: Advanced efficiency metrics from nfl-data-py.
+- **Defense vs Position (DvP) Matchup System**: Calculates fantasy points allowed by defenses.
 - **Data Integration & Sync**: Sleeper Sync, Canonical Player Pool, Roster Shift Listener, Roster Sync, and NFL Schedule Sync Infrastructure.
 - **Live Data Processing**: Live Data Integration Pipeline with multi-source data capture and a Hot List Player Extraction System.
 - **Strategy Tab**: Provides Start/Sit recommendations, Waiver Wire Targets, and SOS Rankings.
-- **Weekly Takes System**: Quick, punchy matchup insights with position-specific one-liners and concrete statistics.
-- **Role Banks (WR, RB, TE, QB)**: Season-level analytical classification systems for position-specific role evaluation, using multi-dimensional scoring models and tier classifications.
-- **DST Streamer (Dec 2024)**: Weekly defense/special teams streaming recommendations in Rankings Hub. Scoring formula combines defense strength (turnover rate, sack rate, points allowed) with opponent vulnerability (turnover-worthy rate, sack rate allowed, pressure rate). Tier distribution targets ~4 T1, ~10 T2, ~12 T3, ~2 T4 defenses per week. Available at `/api/data-lab/dst-streamer?week=X&season=Y` and via DST tab in Rankings. Features **DSTMatchupModal** transparency view showing full calculation breakdown (defense metrics, opponent vulnerability, matchup boost) when clicking any matchup row.
+- **Weekly Takes System**: Quick matchup insights.
+- **Role Banks (WR, RB, TE, QB)**: Season-level analytical classification systems.
+- **DST Streamer**: Weekly defense/special teams streaming recommendations based on defense strength, opponent vulnerability, and matchup boost, with a transparent calculation breakdown.
 - **Admin API Lexicon**: Developer tool for browsing and testing Forge/Tiber API endpoints.
-
-### TIBER Philosophy & Acronym
-
-| Letter | Meaning | Description |
-|--------|---------|-------------|
-| **T** | **Tactical** | Decision-focused. Every feature exists to help users make better fantasy choices. |
-| **I** | **Index** | Organized system. TIBER indexes FORGE insights into accessible, actionable intelligence. |
-| **B** | **Breakout** | Identifies emerging talent. Surfaces players trending up before consensus catches on. |
-| **E** | **Efficiency** | Measures what matters. EPA-driven metrics separate signal from noise. |
-| **R** | **Regression** | Spots decline. Flags players trending toward bust territory before it's too late. |
-
-**The T Statement (TIBER Philosophy):**
-> *"TIBER is the tactical interface where FORGE meets the user. It's not just a display layer—it's the translation of complex analytics into clear, confident decisions. TIBER speaks with the Gemini agent's voice, surfaces breakout and regression signals, and guides users through their fantasy season. When you Ask Tiber, you're asking the platform."*
-
-**TIBER = FORGE's Voice:**
-- **FORGE** calculates the numbers (Alpha, tiers, trajectories)
-- **TIBER** translates those numbers into advice and UI
-- **Playbook** captures user decisions for persistent engagement
+- **TIBER Philosophy**: The tactical interface translating FORGE insights into actionable intelligence, identifying breakouts, measuring efficiency, and using recursion for evolving narratives.
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
