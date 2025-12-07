@@ -106,7 +106,7 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
 
   const features: Feature[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'rankings', label: 'Tiber Tiers', icon: BarChart3, href: '/rankings' },
+    { id: 'tiers', label: 'Tiber Tiers', icon: BarChart3, href: '/tiers' },
     { id: 'schedule', label: 'Schedule', icon: Calendar, href: '/schedule' },
     { id: 'datalab', label: 'Data Lab', icon: FlaskConical, href: '/tiber-data-lab' },
     { id: 'waiver', label: 'Waiver Wire', icon: FileText },

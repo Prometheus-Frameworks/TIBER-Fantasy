@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useTopProgress } from "@/hooks/useTopProgress";
 import ChatHomepage from "@/pages/ChatHomepage";
 import RankingsHub from "@/pages/RankingsHub";
+import TiberTiers from "@/pages/TiberTiers";
 import SchedulePage from "@/pages/SchedulePage";
 import ForgeHub from "@/pages/admin/ForgeHub";
 import PlayerMapping from "@/pages/admin/PlayerMapping";
@@ -32,7 +33,10 @@ function Router() {
       {/* Legacy Chat Homepage (fallback during migration) */}
       <Route path="/legacy-chat" component={ChatHomepage} />
       
-      {/* Rankings - FORGE-powered player rankings */}
+      {/* Tiber Tiers - FORGE-powered fantasy rankings */}
+      <Route path="/tiers" component={TiberTiers} />
+      
+      {/* Rankings - Legacy FORGE rankings (redirect to Tiers) */}
       <Route path="/rankings" component={RankingsHub} />
       
       {/* Schedule / SoS */}
