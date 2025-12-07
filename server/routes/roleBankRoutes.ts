@@ -2,12 +2,12 @@
 import type { Express, Request, Response } from 'express';
 import { storage } from '../storage';
 import { db } from '../infra/db';
-import { playerIdentityMap, wrRoleBank, rbRoleBank, teRoleBank } from '@shared/schema';
+import { playerIdentityMap, wrRoleBank, rbRoleBank, teRoleBank, qbRoleBank } from '@shared/schema';
 import { eq, and, gte, inArray, desc as descOrder, asc as ascOrder, sql } from 'drizzle-orm';
 
 // ========== TYPES ==========
 
-type Position = 'WR' | 'RB' | 'TE';
+type Position = 'WR' | 'RB' | 'TE' | 'QB';
 
 // Unified response shape for all positions
 interface RoleBankListItem {
@@ -85,7 +85,7 @@ interface RoleBankDetailResponse extends RoleBankListItem {
 
 function normalizePosition(pos: string): Position | null {
   const upper = pos.toUpperCase();
-  if (upper === 'WR' || upper === 'RB' || upper === 'TE') {
+  if (upper === 'WR' || upper === 'RB' || upper === 'TE' || upper === 'QB') {
     return upper as Position;
   }
   return null;
@@ -98,9 +98,18 @@ function parseQueryArray(param: string | string[] | undefined): string[] | null 
 }
 
 // Transform raw DB row + identity to unified list item
+// Note: QB uses different column names (alphaTier, alphaContextScore)
 function transformToListItem(roleRow: any, position: Position, identityRow: any | null): RoleBankListItem {
   const playerName = identityRow?.fullName || null;
   const team = roleRow.team || identityRow?.team || null;
+  
+  // Handle QB's different column names
+  const roleScore = position === 'QB' 
+    ? (roleRow.alphaContextScore || 0) 
+    : (roleRow.roleScore || 0);
+  const roleTier = position === 'QB'
+    ? (roleRow.alphaTier || 'UNKNOWN')
+    : (roleRow.roleTier || 'UNKNOWN');
   
   return {
     playerId: roleRow.playerId,
@@ -110,8 +119,8 @@ function transformToListItem(roleRow: any, position: Position, identityRow: any 
     team,
     position,
     
-    roleScore: roleRow.roleScore || 0,
-    roleTier: roleRow.roleTier || 'UNKNOWN',
+    roleScore,
+    roleTier,
     
     gamesPlayed: roleRow.gamesPlayed || 0,
     
@@ -187,7 +196,7 @@ async function handleListRoleBank(req: Request, res: Response) {
     const position = normalizePosition(posParam);
     if (!position) {
       return res.status(400).json({
-        error: `Invalid position. Must be one of: WR, RB, TE`
+        error: `Invalid position. Must be one of: QB, WR, RB, TE`
       });
     }
     
@@ -217,28 +226,38 @@ async function handleListRoleBank(req: Request, res: Response) {
     } else if (position === 'RB') {
       roleTable = rbRoleBank;
       storageMethod = storage.getRBRoleBank.bind(storage);
-    } else {
+    } else if (position === 'TE') {
       roleTable = teRoleBank;
       storageMethod = storage.getTERoleBank.bind(storage);
+    } else {
+      // QB
+      roleTable = qbRoleBank;
+      storageMethod = storage.getQBRoleBank?.bind(storage) || (async () => []);
     }
     
     // Build Drizzle query with joins for better performance
-    // CRITICAL: Use player_positions view to enforce position filtering
-    const playerPositionsView = sql`(SELECT player_id, position FROM player_positions)`;
+    // Note: Role bank tables are already position-specific (wr_role_bank = WRs only)
+    // No need to cross-reference with player_positions view
     
-    // Apply filters
+    // Apply filters - QB uses different column names (alphaTier, alphaContextScore)
     const conditions: any[] = [
-      eq(roleTable.season, season),
-      // Enforce position filter via player_positions view
-      sql`${roleTable.playerId} IN (SELECT player_id FROM player_positions WHERE position = ${position})`
+      eq(roleTable.season, season)
     ];
     
     if (tierFilter && tierFilter.length > 0) {
-      conditions.push(inArray(roleTable.roleTier, tierFilter));
+      if (position === 'QB') {
+        conditions.push(inArray(roleTable.alphaTier, tierFilter));
+      } else {
+        conditions.push(inArray(roleTable.roleTier, tierFilter));
+      }
     }
     
     if (minRoleScore !== null && !isNaN(minRoleScore)) {
-      conditions.push(gte(roleTable.roleScore, minRoleScore));
+      if (position === 'QB') {
+        conditions.push(gte(roleTable.alphaContextScore, minRoleScore));
+      } else {
+        conditions.push(gte(roleTable.roleScore, minRoleScore));
+      }
     }
     
     // Build query with position enforcement
@@ -260,20 +279,23 @@ async function handleListRoleBank(req: Request, res: Response) {
       .where(and(...conditions))
       .$dynamic();
     
-    // Apply sorting
+    // Apply sorting - QB uses alphaContextScore instead of roleScore
     const sortOrder = order === 'asc' ? ascOrder : descOrder;
     
-    // Map sortBy to actual column
-    let sortColumn: any = roleTable.roleScore; // default
+    // Map sortBy to actual column (QB has different column names)
+    const defaultSortColumn = position === 'QB' ? roleTable.alphaContextScore : roleTable.roleScore;
+    let sortColumn: any = defaultSortColumn;
+    
     if (sortBy === 'targetsPerGame' && roleTable.targetsPerGame) {
       sortColumn = roleTable.targetsPerGame;
     } else if (sortBy === 'opportunitiesPerGame' && roleTable.opportunitiesPerGame) {
       sortColumn = roleTable.opportunitiesPerGame;
+    } else if (sortBy === 'dropbacksPerGame' && position === 'QB' && roleTable.dropbacksPerGame) {
+      sortColumn = roleTable.dropbacksPerGame;
     } else if (sortBy === 'pprPerGame') {
-      // Not a direct column, fallback to roleScore
-      sortColumn = roleTable.roleScore;
+      sortColumn = defaultSortColumn;
     } else if (sortBy === 'roleScore') {
-      sortColumn = roleTable.roleScore;
+      sortColumn = defaultSortColumn;
     }
     
     // Execute with sorting, limit, offset
