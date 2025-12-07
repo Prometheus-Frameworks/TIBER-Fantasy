@@ -207,6 +207,30 @@ export interface IStorage {
   }): Promise<any[]>;
   getQBRoleBankByPlayer(playerId: string, season: number): Promise<any | null>;
   getWeeklyUsageForQBRoleBank(playerId: string, season: number): Promise<any[]>;
+  
+  // Playbook operations
+  createPlaybookEntry(entry: {
+    userId: string;
+    leagueId?: string | null;
+    entryType: string;
+    title: string;
+    content: string;
+    playerIds?: string[];
+    metadata?: any;
+  }): Promise<any>;
+  getPlaybookEntries(userId: string, filters?: {
+    leagueId?: string;
+    entryType?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<any[]>;
+  updatePlaybookEntry(id: number, updates: Partial<{
+    title: string;
+    content: string;
+    playerIds: string[];
+    metadata: any;
+  }>): Promise<void>;
+  deletePlaybookEntry(id: number): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -890,6 +914,23 @@ export class MemStorage implements IStorage {
   
   async getWeeklyUsageForQBRoleBank(playerId: string, season: number): Promise<any[]> {
     return [];
+  }
+  
+  // Playbook operations (stubs - not implemented in MemStorage)
+  async createPlaybookEntry(entry: any): Promise<any> {
+    return { id: 1, ...entry, createdAt: new Date() };
+  }
+  
+  async getPlaybookEntries(userId: string, filters?: any): Promise<any[]> {
+    return [];
+  }
+  
+  async updatePlaybookEntry(id: number, updates: any): Promise<void> {
+    return;
+  }
+  
+  async deletePlaybookEntry(id: number): Promise<void> {
+    return;
   }
 }
 
@@ -2442,6 +2483,100 @@ export class DatabaseStorage implements IStorage {
       rushingTouchdowns: r.rushingTouchdowns ?? 0,
       fantasyPointsPpr: r.fantasyPointsPpr ?? 0
     }));
+  }
+  
+  // Playbook operations
+  async createPlaybookEntry(entry: {
+    userId: string;
+    leagueId?: string | null;
+    entryType: string;
+    title: string;
+    content: string;
+    playerIds?: string[];
+    metadata?: any;
+  }): Promise<any> {
+    const playerIdsArray = entry.playerIds && entry.playerIds.length > 0 
+      ? `{${entry.playerIds.join(',')}}` 
+      : null;
+    const metadataJson = entry.metadata ? JSON.stringify(entry.metadata) : null;
+    
+    const result = await db.execute(sql`
+      INSERT INTO playbook_entries (user_id, league_id, entry_type, title, content, player_ids, metadata)
+      VALUES (
+        ${entry.userId}, 
+        ${entry.leagueId ?? null}, 
+        ${entry.entryType}::playbook_entry_type, 
+        ${entry.title}, 
+        ${entry.content}, 
+        ${playerIdsArray}::text[], 
+        ${metadataJson}::jsonb
+      )
+      RETURNING *
+    `);
+    return result.rows[0];
+  }
+  
+  async getPlaybookEntries(userId: string, filters?: {
+    leagueId?: string;
+    entryType?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<any[]> {
+    const limit = filters?.limit ?? 50;
+    const offset = filters?.offset ?? 0;
+    
+    let query = sql`
+      SELECT * FROM playbook_entries 
+      WHERE user_id = ${userId}
+    `;
+    
+    if (filters?.leagueId) {
+      query = sql`${query} AND league_id = ${filters.leagueId}`;
+    }
+    if (filters?.entryType) {
+      query = sql`${query} AND entry_type = ${filters.entryType}::playbook_entry_type`;
+    }
+    
+    query = sql`${query} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+    
+    const result = await db.execute(query);
+    return result.rows as any[];
+  }
+  
+  async updatePlaybookEntry(id: number, updates: Partial<{
+    title: string;
+    content: string;
+    playerIds: string[];
+    metadata: any;
+  }>): Promise<void> {
+    const setClauses: string[] = [];
+    const values: any[] = [];
+    
+    if (updates.title !== undefined) {
+      setClauses.push('title = $' + (values.length + 1));
+      values.push(updates.title);
+    }
+    if (updates.content !== undefined) {
+      setClauses.push('content = $' + (values.length + 1));
+      values.push(updates.content);
+    }
+    if (updates.playerIds !== undefined) {
+      setClauses.push('player_ids = $' + (values.length + 1));
+      values.push(updates.playerIds);
+    }
+    if (updates.metadata !== undefined) {
+      setClauses.push('metadata = $' + (values.length + 1) + '::jsonb');
+      values.push(JSON.stringify(updates.metadata));
+    }
+    
+    setClauses.push('updated_at = NOW()');
+    values.push(id);
+    
+    await db.execute(sql.raw(`UPDATE playbook_entries SET ${setClauses.join(', ')} WHERE id = $${values.length}`, values));
+  }
+  
+  async deletePlaybookEntry(id: number): Promise<void> {
+    await db.execute(sql`DELETE FROM playbook_entries WHERE id = ${id}`);
   }
 }
 

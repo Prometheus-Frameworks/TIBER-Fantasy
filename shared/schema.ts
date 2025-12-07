@@ -4091,6 +4091,53 @@ export const chatMessages = pgTable("chat_messages", {
   sessionIdIdx: index("chat_messages_session_id_idx").on(table.sessionId),
 }));
 
+// ========================================
+// PLAYBOOK - USER DECISION JOURNAL
+// ========================================
+
+// Playbook entry type enum
+export const playbookEntryTypeEnum = pgEnum("playbook_entry_type", [
+  "roster_move",
+  "trade",
+  "waiver_add",
+  "waiver_drop",
+  "start_sit",
+  "note",
+  "insight"
+]);
+
+// Playbook entries table - User decisions and notes
+export const playbookEntries = pgTable("playbook_entries", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  leagueId: varchar("league_id").references(() => leagues.id, { onDelete: 'set null' }),
+  entryType: playbookEntryTypeEnum("entry_type").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  playerIds: text("player_ids").array(),
+  metadata: jsonb("metadata").$type<{
+    week?: number;
+    season?: number;
+    forgeAlpha?: Record<string, number>;
+    tier?: Record<string, string>;
+    linkedFeature?: string;
+    tags?: string[];
+  }>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("playbook_entries_user_id_idx").on(table.userId),
+  leagueIdIdx: index("playbook_entries_league_id_idx").on(table.leagueId),
+  entryTypeIdx: index("playbook_entries_type_idx").on(table.entryType),
+}));
+
+// Playbook Insert Schema
+export const insertPlaybookEntrySchema = createInsertSchema(playbookEntries).omit({ id: true, createdAt: true, updatedAt: true });
+
+// Playbook Types
+export type PlaybookEntry = typeof playbookEntries.$inferSelect;
+export type InsertPlaybookEntry = z.infer<typeof insertPlaybookEntrySchema>;
+
 // League System Insert Schemas
 export const insertLeagueSchema = createInsertSchema(leagues).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertLeagueContextSchema = createInsertSchema(leagueContext).omit({ id: true, createdAt: true });

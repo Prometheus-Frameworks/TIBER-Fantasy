@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import EnhancedPlayerCard from '@/components/EnhancedPlayerCard';
+import PlaybookTab from '@/components/tabs/PlaybookTab';
 
 type Feature = {
   id: string;
@@ -673,6 +674,14 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
         {/* LEFT: Dashboard / Feature Content */}
         <div className="p-3 md:p-6 overflow-y-auto flex flex-col gap-4 md:gap-5 flex-1">
           
+          {/* Playbook Tab */}
+          {activeFeature === 'playbook' && (
+            <PlaybookTab />
+          )}
+          
+          {/* Dashboard Content - only show when dashboard is active */}
+          {activeFeature === 'dashboard' && (
+          <>
           {/* Quick Insights Row */}
           <section>
             <h3 className="text-[11px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2 md:mb-3">
@@ -924,6 +933,8 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
               })()}
             </div>
           </section>
+          </>
+          )}
         </div>
 
         {/* RIGHT: Chat Panel - Live Tiber Chat */}

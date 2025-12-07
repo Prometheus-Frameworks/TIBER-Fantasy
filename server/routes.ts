@@ -8658,6 +8658,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========================================
+  // PLAYBOOK API - Decision Journal
+  // ========================================
+  
+  // GET /api/playbook - Get user's playbook entries
+  app.get('/api/playbook', async (req, res) => {
+    try {
+      const userId = req.query.user_id as string || 'default_user';
+      const leagueId = req.query.league_id as string | undefined;
+      const entryType = req.query.entry_type as string | undefined;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      
+      const entries = await storage.getPlaybookEntries(userId, {
+        leagueId,
+        entryType,
+        limit,
+        offset
+      });
+      
+      res.json({
+        success: true,
+        entries,
+        count: entries.length
+      });
+    } catch (error) {
+      console.error('❌ [Playbook] Failed to get entries:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+  
+  // POST /api/playbook - Create a new playbook entry
+  app.post('/api/playbook', async (req, res) => {
+    try {
+      const { user_id, league_id, entry_type, title, content, player_ids, metadata } = req.body;
+      
+      if (!entry_type || !title || !content) {
+        return res.status(400).json({
+          success: false,
+          error: 'entry_type, title, and content are required'
+        });
+      }
+      
+      const entry = await storage.createPlaybookEntry({
+        userId: user_id || 'default_user',
+        leagueId: league_id || null,
+        entryType: entry_type,
+        title,
+        content,
+        playerIds: player_ids || [],
+        metadata: metadata || {}
+      });
+      
+      console.log(`✅ [Playbook] Created entry: ${title} (type: ${entry_type})`);
+      
+      res.json({
+        success: true,
+        entry
+      });
+    } catch (error) {
+      console.error('❌ [Playbook] Failed to create entry:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+  
+  // PUT /api/playbook/:id - Update a playbook entry
+  app.put('/api/playbook/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { title, content, player_ids, metadata } = req.body;
+      
+      await storage.updatePlaybookEntry(id, {
+        title,
+        content,
+        playerIds: player_ids,
+        metadata
+      });
+      
+      res.json({
+        success: true,
+        message: 'Entry updated'
+      });
+    } catch (error) {
+      console.error('❌ [Playbook] Failed to update entry:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+  
+  // DELETE /api/playbook/:id - Delete a playbook entry
+  app.delete('/api/playbook/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      await storage.deletePlaybookEntry(id);
+      
+      console.log(`✅ [Playbook] Deleted entry: ${id}`);
+      
+      res.json({
+        success: true,
+        message: 'Entry deleted'
+      });
+    } catch (error) {
+      console.error('❌ [Playbook] Failed to delete entry:', error);
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message || 'Unknown error'
+      });
+    }
+  });
+
   // Helper function to extract player names from message
   function extractPlayerNamesFromMessage(message: string): string[] {
     const players: string[] = [];
