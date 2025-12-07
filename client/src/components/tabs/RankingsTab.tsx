@@ -184,7 +184,7 @@ export default function RankingsTab() {
     <div className="space-y-6">
       {/* Header with crimson accent */}
       <div className="border-b border-red-500/20 pb-4">
-        <h2 className="text-2xl font-bold text-white tracking-wide">RANKINGS</h2>
+        <h2 className="text-2xl font-bold text-white tracking-wide">TIBER TIERS</h2>
         <p className="text-gray-400 mt-1 text-sm tracking-wide">
           Use Weekly Trends to see who's hot right now. Use Season Roles to understand how players are being used.
         </p>

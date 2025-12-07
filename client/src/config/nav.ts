@@ -9,7 +9,7 @@ export interface NavLink {
 // Main navigation - Forge v1 minimal structure
 export const NAV_LINKS: NavLink[] = [
   { href: "/", label: "TIBER", description: "AI-powered fantasy football assistant" },
-  { href: "/rankings", label: "Rankings", description: "FORGE-powered player rankings by position" },
+  { href: "/rankings", label: "Tiber Tiers", description: "FORGE-powered player tiers by position" },
   { href: "/schedule", label: "Schedule", description: "Strength of Schedule analysis" },
   { href: "/leagues", label: "Leagues", description: "Your connected leagues" },
 ];

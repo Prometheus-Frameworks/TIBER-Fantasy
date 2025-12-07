@@ -125,6 +125,24 @@ OUTPUT: ForgeScore with Alpha, Tier, Trajectory, Confidence
 - **DST Streamer (Dec 2024)**: Weekly defense/special teams streaming recommendations in Rankings Hub. Scoring formula combines defense strength (turnover rate, sack rate, points allowed) with opponent vulnerability (turnover-worthy rate, sack rate allowed, pressure rate). Tier distribution targets ~4 T1, ~10 T2, ~12 T3, ~2 T4 defenses per week. Available at `/api/data-lab/dst-streamer?week=X&season=Y` and via DST tab in Rankings. Features **DSTMatchupModal** transparency view showing full calculation breakdown (defense metrics, opponent vulnerability, matchup boost) when clicking any matchup row.
 - **Admin API Lexicon**: Developer tool for browsing and testing Forge/Tiber API endpoints.
 
+### TIBER Philosophy & Acronym
+
+| Letter | Meaning | Description |
+|--------|---------|-------------|
+| **T** | **Tactical** | Decision-focused. Every feature exists to help users make better fantasy choices. |
+| **I** | **Index** | Organized system. TIBER indexes FORGE insights into accessible, actionable intelligence. |
+| **B** | **Breakout** | Identifies emerging talent. Surfaces players trending up before consensus catches on. |
+| **E** | **Efficiency** | Measures what matters. EPA-driven metrics separate signal from noise. |
+| **R** | **Regression** | Spots decline. Flags players trending toward bust territory before it's too late. |
+
+**The T Statement (TIBER Philosophy):**
+> *"TIBER is the tactical interface where FORGE meets the user. It's not just a display layer—it's the translation of complex analytics into clear, confident decisions. TIBER speaks with the Gemini agent's voice, surfaces breakout and regression signals, and guides users through their fantasy season. When you Ask Tiber, you're asking the platform."*
+
+**TIBER = FORGE's Voice:**
+- **FORGE** calculates the numbers (Alpha, tiers, trajectories)
+- **TIBER** translates those numbers into advice and UI
+- **Playbook** captures user decisions for persistent engagement
+
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
 - **Sleeper API**: Player projections, game logs, ADP data, league sync, and current roster data.
