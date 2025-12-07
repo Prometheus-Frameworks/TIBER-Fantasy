@@ -24,7 +24,9 @@ import { enrichByPosition, type EnrichedPlayer } from '../enrichment';
 // Feature Flag Configuration
 // ========================================
 
-export const USE_DATADIVE_FORGE = process.env.USE_DATADIVE_FORGE !== 'false';
+// v1.2: Disabled by default until Datadive snapshot has full player coverage
+// Set USE_DATADIVE_FORGE=true in .env to enable Datadive-based eligibility
+export const USE_DATADIVE_FORGE = process.env.USE_DATADIVE_FORGE === 'true';
 
 // ========================================
 // Types

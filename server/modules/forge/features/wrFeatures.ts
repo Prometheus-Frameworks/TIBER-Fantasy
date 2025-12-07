@@ -75,11 +75,24 @@ function buildVolumeFeatures(
   
   const targets = context.seasonStats.targets ?? 0;
   const targetsPerGame = targets / gpSafe;
-  const targetShare = context.seasonStats.targetShare ?? 0;
+  
+  // v1.2: Estimate targetShare from TPG if not provided (avg NFL team has ~32 targets/game)
+  const TEAM_TARGETS_PER_GAME = 32;
+  let targetShare = context.seasonStats.targetShare ?? 0;
+  if (targetShare === 0 && targetsPerGame > 0) {
+    targetShare = targetsPerGame / TEAM_TARGETS_PER_GAME;
+  }
+  
   const airYardsShare = context.seasonStats.airYards 
     ? context.seasonStats.airYards / (context.seasonStats.receivingYards || 1) * 0.3
     : undefined;
-  const rzTargetsPerGame = (context.seasonStats.redZoneTargets ?? 0) / gpSafe;
+  
+  // v1.2: Estimate RZ targets from overall targets if not available (league avg ~12% of targets are in RZ)
+  const rzTargets = context.seasonStats.redZoneTargets ?? 0;
+  let rzTargetsPerGame = rzTargets / gpSafe;
+  if (rzTargetsPerGame === 0 && targets > 0) {
+    rzTargetsPerGame = targetsPerGame * 0.12; // Estimate 12% of targets are RZ
+  }
   
   const raw = {
     targetsPerGame,
