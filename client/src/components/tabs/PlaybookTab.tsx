@@ -4,10 +4,11 @@ import {
   Plus, MessageCircle, Trash2, Edit3, Save, X, 
   TrendingUp, ArrowLeftRight, UserPlus, UserMinus, 
   PlayCircle, FileText, Lightbulb, Send, Loader2,
-  ChevronDown, ChevronRight
+  ChevronDown, ChevronRight, Crown, Calendar, BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { Link } from 'wouter';
 
 type EntryType = 'roster_move' | 'trade' | 'waiver_add' | 'waiver_drop' | 'start_sit' | 'note' | 'insight';
 
@@ -158,6 +159,28 @@ export default function PlaybookTab() {
         <p className="text-gray-400 mt-1 text-sm tracking-wide">
           Your decision journal. Track roster moves, trades, and insights alongside FORGE data.
         </p>
+      </div>
+
+      <div className="flex gap-2 flex-wrap text-xs">
+        <span className="text-gray-500 py-1">Quick Reference:</span>
+        <Link href="/rankings" data-testid="link-tiber-tiers">
+          <a className="flex items-center gap-1 px-2 py-1 bg-purple-600/20 border border-purple-500/30 rounded text-purple-300 hover:bg-purple-600/30 transition-colors cursor-pointer">
+            <Crown size={12} />
+            Tiber Tiers
+          </a>
+        </Link>
+        <Link href="/schedule" data-testid="link-sos">
+          <a className="flex items-center gap-1 px-2 py-1 bg-blue-600/20 border border-blue-500/30 rounded text-blue-300 hover:bg-blue-600/30 transition-colors cursor-pointer">
+            <Calendar size={12} />
+            SoS
+          </a>
+        </Link>
+        <Link href="/tiber-data-lab" data-testid="link-data-lab">
+          <a className="flex items-center gap-1 px-2 py-1 bg-green-600/20 border border-green-500/30 rounded text-green-300 hover:bg-green-600/30 transition-colors cursor-pointer">
+            <BarChart3 size={12} />
+            Data Lab
+          </a>
+        </Link>
       </div>
 
       <div className="flex gap-3 flex-wrap">
