@@ -39,7 +39,12 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
     - **FORGE Data Pipeline**: Ingests data from Role Banks, Datadive (enriched metrics), and Legacy Tables. Uses a Context Fetcher, position-specific Feature Builders, and a Grading Engine (`alphaEngine.ts`) to calculate Alpha scores, sub-scores (Volume, Efficiency, Stability, Context), trajectory, and confidence. A Recursive Engine (`recursiveAlphaEngine.ts`) applies stability adjustments based on previous Alpha, surprise, volatility, and momentum.
     - **FORGE Output Contract**: Every FORGE evaluation provides `player_id`, `position`, `alpha`, `tiber_tier`, `trajectory`, `confidence`, `role_tag`, `last_updated_week`, `season`.
     - **Recursion v1**: Stateful two-pass scoring with formulas for `expected_alpha` and `surprise`.
-    - **Tiber Tiers (v0.2)**: Position-specific tier thresholds (e.g., QB T1≥85) with guardrails for weekly changes and elite protection.
+    - **Tiber Tiers (v1.1)**: Position-specific tier thresholds recalibrated for cumulative season data:
+        - QB: T1≥70, T2≥55, T3≥42, T4≥32
+        - RB: T1≥78, T2≥68, T3≥55, T4≥42
+        - WR: T1≥82, T2≥72, T3≥58, T4≥45
+        - TE: T1≥82, T2≥70, T3≥55, T4≥42
+    - **FORGE v1.1 Multi-Week Aggregation**: Context fetcher aggregates data across ALL official snapshots (weeks 1-N) instead of single-week snapshots, eliminating outlier amplification and ensuring season-grounded Alpha scores.
     - **Next Man Up**: Tracks opportunity shifts for players replacing injured starters.
     - **FORGE SoS**: Position-specific strength of schedule analysis.
 - **Tiber Data Lab (Operation DataDive)**: Snapshot-based NFL data spine for reproducible analytics, offering advanced metrics and supporting NFL Mode (raw football metrics) and Fantasy Mode (FORGE outputs + fantasy scoring).
