@@ -352,7 +352,7 @@ export const EFFICIENCY_CAPS: Record<PlayerPosition, number> = {
  * Thresholds lowered to match the new 25-95 calibration range.
  */
 export const TIBER_TIERS_2025 = {
-  QB: { T1: 78, T2: 65, T3: 52, T4: 40 },
+  QB: { T1: 70, T2: 55, T3: 42, T4: 32 },  // Lowered to match calibrated QB range (max ~74)
   RB: { T1: 78, T2: 68, T3: 55, T4: 42 },
   WR: { T1: 82, T2: 72, T3: 58, T4: 45 },
   TE: { T1: 82, T2: 70, T3: 55, T4: 42 },
