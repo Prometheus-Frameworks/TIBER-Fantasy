@@ -140,76 +140,6 @@ interface V2Context {
   rushSuccessContribution: number;
 }
 
-interface FantasyLogData {
-  playerId: string;
-  playerName: string;
-  teamId: string | null;
-  position: string | null;
-  season: number;
-  week: number;
-  targets: number;
-  receptions: number;
-  recYards: number;
-  recTds: number;
-  rushAttempts: number;
-  rushYards: number;
-  rushTds: number;
-  fptsStd: number;
-  fptsHalf: number;
-  fptsPpr: number;
-  routes: number;
-  tprr: number | null;
-  targetShare: number | null;
-  adot: number | null;
-  airYards: number;
-  xPpr: number | null;
-  xFpgoePpr: number | null;
-  v2Context: V2Context | null;
-}
-
-interface FantasyLogResponse {
-  mode: 'fantasy';
-  season: number;
-  week: number | null;
-  weekRange: { from: number; to: number } | null;
-  position: string;
-  count: number;
-  data: FantasyLogData[];
-}
-
-interface FantasyAggData {
-  playerId: string;
-  playerName: string;
-  teamId: string | null;
-  position: string | null;
-  gamesPlayed: number;
-  totalTargets: number;
-  totalReceptions: number;
-  totalRecYards: number;
-  totalRecTds: number;
-  totalRushAttempts: number;
-  totalRushYards: number;
-  totalRushTds: number;
-  totalFptsPpr: number;
-  totalRoutes: number;
-  pprPerGame: number;
-  xPprPerGame: number;
-  xFpgoePerGame: number;
-}
-
-interface FantasyAggResponse {
-  mode: 'fantasy-agg';
-  season: number;
-  weekMode: 'season' | 'range';
-  weekRange: { from: number; to: number };
-  modeLabel: string;
-  position: string;
-  count: number;
-  data: FantasyAggData[];
-}
-
-type FantasyResponse = FantasyLogResponse | FantasyAggResponse;
-
 type ViewMode = 'week' | 'season' | 'range';
 
 const POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE'];
@@ -426,204 +356,6 @@ interface XFptsPlayerResponse {
   data: XFptsPlayerData[];
 }
 
-function FantasyPlayerDrawer({ 
-  player, 
-  open, 
-  onClose,
-  season: currentSeason
-}: { 
-  player: FantasyLogData | null; 
-  open: boolean; 
-  onClose: () => void;
-  season: number | undefined;
-}) {
-  const { data: xfptsData, isLoading, isError } = useQuery<XFptsPlayerResponse>({
-    queryKey: ['/api/data-lab/xfpts/player', player?.playerId, currentSeason],
-    queryFn: async () => {
-      const res = await fetch(`/api/data-lab/xfpts/player?player_id=${player?.playerId}&season=${currentSeason}`);
-      if (!res.ok) throw new Error('Failed to load xFPTS data');
-      return res.json();
-    },
-    enabled: open && !!player && !!currentSeason,
-  });
-
-  if (!player) return null;
-
-  const weeklyData = xfptsData?.data || [];
-  const hasXfptsData = weeklyData.length > 0;
-  
-  const seasonSummary = hasXfptsData ? {
-    totalPpr: weeklyData.reduce((sum, w) => sum + w.actualPpr, 0),
-    totalXPpr: weeklyData.reduce((sum, w) => sum + w.xPprV2, 0),
-    gamesPlayed: weeklyData.length,
-  } : null;
-
-  const pprPerGame = seasonSummary ? Math.round((seasonSummary.totalPpr / seasonSummary.gamesPlayed) * 10) / 10 : null;
-  const xPprPerGame = seasonSummary ? Math.round((seasonSummary.totalXPpr / seasonSummary.gamesPlayed) * 10) / 10 : null;
-  const deltaPprPerGame = pprPerGame !== null && xPprPerGame !== null 
-    ? Math.round((pprPerGame - xPprPerGame) * 10) / 10 
-    : null;
-
-  const recentWeeks = weeklyData.slice(-5).reverse();
-  const latestContext = weeklyData.length > 0 ? weeklyData[weeklyData.length - 1].v2Context : null;
-
-  return (
-    <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <SheetContent className="w-[400px] sm:w-[540px] bg-[#0a0e1a] border-gray-700 overflow-y-auto" data-testid="fantasy-player-drawer">
-        <SheetHeader>
-          <div className="flex items-center gap-3">
-            <PositionBadge position={player.position} />
-            <SheetTitle className="text-white text-xl" data-testid="drawer-fantasy-player-name">{player.playerName}</SheetTitle>
-          </div>
-          <SheetDescription className="text-gray-400">
-            {player.teamId || 'N/A'} • Week {player.week} • {player.season}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="mt-6 space-y-6">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="h-4 w-4 text-purple-400" />
-              <span className="text-sm text-gray-400 uppercase tracking-wide">Expected vs Actual (PPR – v2)</span>
-            </div>
-            
-            {isLoading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-16 w-full bg-gray-700" />
-                <Skeleton className="h-24 w-full bg-gray-700" />
-              </div>
-            ) : isError || !hasXfptsData ? (
-              <div className="bg-[#1a1f2e] p-4 rounded-lg text-center text-gray-500">
-                Expected points data unavailable
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  <div className="bg-[#1a1f2e] p-3 rounded-lg text-center">
-                    <div className="text-gray-500 text-xs uppercase tracking-wide">Actual PPR/G</div>
-                    <div className="font-mono text-purple-400 text-lg font-bold mt-1" data-testid="stat-actual-ppr">{pprPerGame}</div>
-                  </div>
-                  <div className="bg-[#1a1f2e] p-3 rounded-lg text-center">
-                    <div className="text-gray-500 text-xs uppercase tracking-wide">Expected PPR/G</div>
-                    <div className="font-mono text-gray-400 text-lg mt-1" data-testid="stat-expected-ppr">{xPprPerGame}</div>
-                  </div>
-                  <div className="bg-[#1a1f2e] p-3 rounded-lg text-center">
-                    <div className="text-gray-500 text-xs uppercase tracking-wide">Δ PPR/G</div>
-                    <div className={`font-mono text-lg font-bold mt-1 ${
-                      deltaPprPerGame !== null && deltaPprPerGame > 0 ? 'text-green-400' : 
-                      deltaPprPerGame !== null && deltaPprPerGame < 0 ? 'text-red-400' : 'text-gray-400'
-                    }`} data-testid="stat-delta-ppr">
-                      {deltaPprPerGame !== null ? `${deltaPprPerGame > 0 ? '+' : ''}${deltaPprPerGame}` : '-'}
-                    </div>
-                  </div>
-                </div>
-
-                {recentWeeks.length > 0 && (
-                  <div className="bg-[#1a1f2e] rounded-lg overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="text-gray-500 text-xs uppercase">
-                        <tr>
-                          <th className="px-3 py-2 text-left">Week</th>
-                          <th className="px-3 py-2 text-center">PPR</th>
-                          <th className="px-3 py-2 text-center">xPPR</th>
-                          <th className="px-3 py-2 text-center">Δ PPR</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-700">
-                        {recentWeeks.map((w) => (
-                          <tr key={w.week}>
-                            <td className="px-3 py-2 text-gray-400">{w.week}</td>
-                            <td className="px-3 py-2 text-center font-mono text-white">{w.actualPpr.toFixed(1)}</td>
-                            <td className="px-3 py-2 text-center font-mono text-gray-400">{w.xPprV2.toFixed(1)}</td>
-                            <td className={`px-3 py-2 text-center font-mono font-semibold ${
-                              w.xfpgoePprV2 > 0 ? 'text-green-400' : 
-                              w.xfpgoePprV2 < 0 ? 'text-red-400' : 'text-gray-400'
-                            }`}>
-                              {w.xfpgoePprV2 > 0 ? '+' : ''}{w.xfpgoePprV2.toFixed(1)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {latestContext && (
-            <>
-              <Separator className="bg-gray-700" />
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Zap className="h-4 w-4 text-yellow-400" />
-                  <span className="text-sm text-gray-400 uppercase tracking-wide">v2 Context (Usage Quality)</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-[#1a1f2e] p-3 rounded-lg">
-                    <div className="text-gray-500 text-xs uppercase tracking-wide">RZ Share</div>
-                    <div className="font-mono text-white text-lg mt-1" data-testid="stat-rz-share">{latestContext.rzShare.toFixed(2)}</div>
-                  </div>
-                  <div className="bg-[#1a1f2e] p-3 rounded-lg">
-                    <div className="text-gray-500 text-xs uppercase tracking-wide">YAC Ratio</div>
-                    <div className="font-mono text-white text-lg mt-1" data-testid="stat-yac-ratio">{latestContext.yacRatio.toFixed(2)}</div>
-                  </div>
-                  <div className="bg-[#1a1f2e] p-3 rounded-lg">
-                    <div className="text-gray-500 text-xs uppercase tracking-wide">Rush EPA Adj</div>
-                    <div className={`font-mono text-lg mt-1 ${
-                      latestContext.rushEpaContribution > 0 ? 'text-green-400' : 
-                      latestContext.rushEpaContribution < 0 ? 'text-red-400' : 'text-white'
-                    }`} data-testid="stat-rush-epa">
-                      {latestContext.rushEpaContribution > 0 ? '+' : ''}{latestContext.rushEpaContribution.toFixed(2)}
-                    </div>
-                  </div>
-                  <div className="bg-[#1a1f2e] p-3 rounded-lg">
-                    <div className="text-gray-500 text-xs uppercase tracking-wide">Success Adj</div>
-                    <div className={`font-mono text-lg mt-1 ${
-                      latestContext.rushSuccessContribution > 0 ? 'text-green-400' : 
-                      latestContext.rushSuccessContribution < 0 ? 'text-red-400' : 'text-white'
-                    }`} data-testid="stat-success-adj">
-                      {latestContext.rushSuccessContribution > 0 ? '+' : ''}{latestContext.rushSuccessContribution.toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          <Separator className="bg-gray-700" />
-
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <BarChart3 className="h-4 w-4 text-cyan-400" />
-              <span className="text-sm text-gray-400 uppercase tracking-wide">This Week ({player.week})</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <StatCard label="PPR" value={player.fptsPpr} format="decimal" />
-              <StatCard label="xPPR" value={player.xPpr} format="decimal" />
-              <div className="bg-[#1a1f2e] p-3 rounded-lg text-center">
-                <div className="text-gray-500 text-xs uppercase tracking-wide">Δ PPR</div>
-                <div className={`font-mono text-lg mt-1 ${
-                  player.xFpgoePpr != null && player.xFpgoePpr > 0 ? 'text-green-400' : 
-                  player.xFpgoePpr != null && player.xFpgoePpr < 0 ? 'text-red-400' : 'text-white'
-                }`}>
-                  {player.xFpgoePpr != null ? `${player.xFpgoePpr > 0 ? '+' : ''}${player.xFpgoePpr.toFixed(1)}` : '-'}
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-4 gap-2 mt-2">
-              <StatCard label="Tgt" value={player.targets} />
-              <StatCard label="Rec" value={player.receptions} />
-              <StatCard label="Yds" value={player.recYards} />
-              <StatCard label="TDs" value={player.recTds} />
-            </div>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
 export default function TiberDataLab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [position, setPosition] = useState('ALL');
@@ -635,10 +367,7 @@ export default function TiberDataLab() {
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerWeekData | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('week');
-  const [fantasyMode, setFantasyMode] = useState(false);
   const [performanceFilter, setPerformanceFilter] = useState<'ALL' | 'RISER' | 'FALLER' | 'NEUTRAL'>('ALL');
-  const [selectedFantasyPlayer, setSelectedFantasyPlayer] = useState<FantasyLogData | null>(null);
-  const [fantasyDrawerOpen, setFantasyDrawerOpen] = useState(false);
 
   const { data: metaData, isLoading: metaLoading, isError: metaError } = useQuery<SnapshotMeta>({
     queryKey: ['/api/data-lab/meta/current'],
@@ -701,23 +430,6 @@ export default function TiberDataLab() {
     return params;
   };
 
-  const buildFantasyParams = () => {
-    const params = new URLSearchParams({
-      season: String(season ?? ''),
-      weekMode: viewMode,
-      ...(position !== 'ALL' && { position }),
-      limit: '50',
-    });
-    
-    if (viewMode === 'week') {
-      params.set('week', String(week ?? ''));
-    } else if (viewMode === 'range') {
-      params.set('weekFrom', String(weekFrom ?? ''));
-      params.set('weekTo', String(weekTo ?? ''));
-    }
-    
-    return params;
-  };
 
   const { 
     data: searchData, 
@@ -733,7 +445,7 @@ export default function TiberDataLab() {
       }
       return res.json();
     },
-    enabled: searchReady && !fantasyMode && viewMode === 'week',
+    enabled: searchReady && viewMode === 'week',
   });
 
   const {
@@ -750,36 +462,14 @@ export default function TiberDataLab() {
       }
       return res.json();
     },
-    enabled: searchReady && !fantasyMode && viewMode !== 'week',
+    enabled: searchReady && viewMode !== 'week',
   });
 
-  const {
-    data: fantasyData,
-    isLoading: fantasyLoading,
-    refetch: refetchFantasy
-  } = useQuery<FantasyResponse>({
-    queryKey: ['/api/data-lab/fantasy-logs', season, week, weekFrom, weekTo, position, viewMode],
-    queryFn: async () => {
-      const res = await fetch(`/api/data-lab/fantasy-logs?${buildFantasyParams().toString()}`);
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Fantasy logs failed');
-      }
-      return res.json();
-    },
-    enabled: searchReady && fantasyMode,
-  });
-  
-  // Helper to check if response is aggregated fantasy data
-  const isFantasyAgg = fantasyData?.mode === 'fantasy-agg';
-
-  const isLoading = searchLoading || aggLoading || fantasyLoading;
+  const isLoading = searchLoading || aggLoading;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (fantasyMode) {
-      refetchFantasy();
-    } else if (viewMode === 'week') {
+    if (viewMode === 'week') {
       refetchSearch();
     } else {
       refetchAgg();
@@ -789,11 +479,6 @@ export default function TiberDataLab() {
   const handlePlayerClick = (player: PlayerWeekData) => {
     setSelectedPlayer(player);
     setDrawerOpen(true);
-  };
-
-  const handleFantasyPlayerClick = (player: FantasyLogData) => {
-    setSelectedFantasyPlayer(player);
-    setFantasyDrawerOpen(true);
   };
 
   return (
@@ -871,20 +556,9 @@ export default function TiberDataLab() {
                 <Search className="h-5 w-5 text-blue-400" />
                 Search Players
               </CardTitle>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="fantasy-mode"
-                    checked={fantasyMode}
-                    onCheckedChange={setFantasyMode}
-                    data-testid="switch-fantasy-mode"
-                  />
-                  <Label htmlFor="fantasy-mode" className="text-sm text-gray-400 flex items-center gap-1 cursor-pointer">
-                    <TrendingUp className="h-4 w-4" />
-                    Fantasy Mode
-                  </Label>
-                </div>
-              </div>
+              <Badge variant="outline" className="border-blue-600 text-blue-400">
+                NFL Mode
+              </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -915,15 +589,10 @@ export default function TiberDataLab() {
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
-              {fantasyMode && (
-                <Badge className="bg-purple-600/30 text-purple-300 border-purple-600">
-                  Fantasy Points Focus
-                </Badge>
-              )}
             </div>
 
             <form onSubmit={handleSearch} className="flex flex-wrap items-end gap-4">
-              {!fantasyMode && viewMode === 'week' && (
+              {viewMode === 'week' && (
                 <div className="flex-1 min-w-[200px]">
                   <Label className="text-gray-400 text-sm">Player Name</Label>
                   <Input
@@ -952,7 +621,7 @@ export default function TiberDataLab() {
                 </Select>
               </div>
 
-              {(viewMode === 'season' || viewMode === 'range') && !fantasyMode && (
+              {(viewMode === 'season' || viewMode === 'range') && (
                 <div className="w-32">
                   <Label className="text-gray-400 text-sm">Performance</Label>
                   <Select value={performanceFilter} onValueChange={(v) => setPerformanceFilter(v as any)}>
@@ -1060,22 +729,19 @@ export default function TiberDataLab() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
                 Results
-                {fantasyMode && <Badge className="bg-purple-600/50 text-purple-200">Fantasy</Badge>}
                 {viewMode === 'season' && <Badge className="bg-green-600/50 text-green-200">Season</Badge>}
                 {viewMode === 'range' && <Badge className="bg-orange-600/50 text-orange-200">Range</Badge>}
               </CardTitle>
               <span className="text-gray-400 text-sm">
-                {fantasyMode 
-                  ? `${fantasyData?.count ?? 0} records` 
-                  : viewMode === 'week' 
-                    ? `${searchData?.total ?? 0} players` 
-                    : `${aggData?.count ?? 0} players`
+                {viewMode === 'week' 
+                  ? `${searchData?.total ?? 0} players` 
+                  : `${aggData?.count ?? 0} players`
                 }
               </span>
             </div>
-            {((aggData?.modeLabel && !fantasyMode) || (isFantasyAgg && (fantasyData as FantasyAggResponse)?.modeLabel)) && viewMode !== 'week' && (
+            {aggData?.modeLabel && viewMode !== 'week' && (
               <CardDescription className="text-gray-500">
-                {fantasyMode && isFantasyAgg ? (fantasyData as FantasyAggResponse)?.modeLabel : aggData?.modeLabel}
+                {aggData?.modeLabel}
               </CardDescription>
             )}
           </CardHeader>
@@ -1086,123 +752,6 @@ export default function TiberDataLab() {
                   <Skeleton key={i} className="h-12 w-full bg-gray-700" />
                 ))}
               </div>
-            ) : fantasyMode ? (
-              fantasyData?.data.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
-                  No fantasy data found
-                </div>
-              ) : isFantasyAgg ? (
-                // Aggregated Fantasy Table for Season Total / Range mode
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm" data-testid="table-fantasy-agg">
-                    <thead className="bg-[#0a0e1a] text-gray-400 uppercase text-xs">
-                      <tr>
-                        <th className="px-4 py-3 text-left">Player</th>
-                        <th className="px-4 py-3 text-center">Team</th>
-                        <th className="px-4 py-3 text-center">Pos</th>
-                        <th className="px-4 py-3 text-center">GP</th>
-                        <th className="px-4 py-3 text-center">PPR/G</th>
-                        <th className="px-4 py-3 text-center">xPPR/G</th>
-                        <th className="px-4 py-3 text-center">Δ PPR/G</th>
-                        <th className="px-4 py-3 text-center">Tgt</th>
-                        <th className="px-4 py-3 text-center">Rec</th>
-                        <th className="px-4 py-3 text-center">RecYds</th>
-                        <th className="px-4 py-3 text-center">RecTD</th>
-                        <th className="px-4 py-3 text-center">Rush</th>
-                        <th className="px-4 py-3 text-center">RshYds</th>
-                        <th className="px-4 py-3 text-center">RshTD</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-700">
-                      {(fantasyData as FantasyAggResponse)?.data.map((row) => (
-                        <tr 
-                          key={row.playerId}
-                          className="hover:bg-[#1a1f2e] transition-colors"
-                          data-testid={`row-fantasy-agg-${row.playerId}`}
-                        >
-                          <td className="px-4 py-3 font-medium text-white">{row.playerName}</td>
-                          <td className="px-4 py-3 text-center text-gray-400">{row.teamId || '-'}</td>
-                          <td className="px-4 py-3 text-center"><PositionBadge position={row.position} /></td>
-                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.gamesPlayed}</td>
-                          <td className="px-4 py-3 text-center font-mono text-purple-400 font-semibold">{formatStat(row.pprPerGame, 1)}</td>
-                          <td className="px-4 py-3 text-center font-mono text-gray-400">{row.xPprPerGame != null ? formatStat(row.xPprPerGame, 1) : '-'}</td>
-                          <td className={`px-4 py-3 text-center font-mono font-semibold ${
-                            row.xFpgoePerGame != null && row.xFpgoePerGame > 0 ? 'text-green-400' : 
-                            row.xFpgoePerGame != null && row.xFpgoePerGame < 0 ? 'text-red-400' : 'text-gray-400'
-                          }`} data-testid={`xfpgoe-agg-${row.playerId}`}>
-                            {row.xFpgoePerGame != null ? `${row.xFpgoePerGame > 0 ? '+' : ''}${formatStat(row.xFpgoePerGame, 1)}` : '-'}
-                          </td>
-                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.totalTargets}</td>
-                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.totalReceptions}</td>
-                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.totalRecYards}</td>
-                          <td className="px-4 py-3 text-center font-mono text-green-400">{row.totalRecTds || 0}</td>
-                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.totalRushAttempts}</td>
-                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.totalRushYards}</td>
-                          <td className="px-4 py-3 text-center font-mono text-orange-400">{row.totalRushTds || 0}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                // Weekly Fantasy Table for Single Week mode
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm" data-testid="table-fantasy">
-                    <thead className="bg-[#0a0e1a] text-gray-400 uppercase text-xs">
-                      <tr>
-                        <th className="px-4 py-3 text-left">Player</th>
-                        <th className="px-4 py-3 text-center">Team</th>
-                        <th className="px-4 py-3 text-center">Pos</th>
-                        <th className="px-4 py-3 text-center">Week</th>
-                        <th className="px-4 py-3 text-center">PPR</th>
-                        <th className="px-4 py-3 text-center">xPPR</th>
-                        <th className="px-4 py-3 text-center">Δ PPR</th>
-                        <th className="px-4 py-3 text-center">Tgt</th>
-                        <th className="px-4 py-3 text-center">Rec</th>
-                        <th className="px-4 py-3 text-center">RecYds</th>
-                        <th className="px-4 py-3 text-center">RecTD</th>
-                        <th className="px-4 py-3 text-center">Rush</th>
-                        <th className="px-4 py-3 text-center">RshYds</th>
-                        <th className="px-4 py-3 text-center">RshTD</th>
-                        <th className="px-4 py-3 text-center"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-700">
-                      {(fantasyData as FantasyLogResponse)?.data.map((row, idx) => (
-                        <tr 
-                          key={`${row.playerId}-${row.week}-${idx}`} 
-                          className="hover:bg-[#1a1f2e] cursor-pointer transition-colors"
-                          onClick={() => handleFantasyPlayerClick(row)}
-                          data-testid={`row-fantasy-${row.playerId}-${row.week}`}
-                        >
-                          <td className="px-4 py-3 font-medium text-white">{row.playerName}</td>
-                          <td className="px-4 py-3 text-center text-gray-400">{row.teamId || '-'}</td>
-                          <td className="px-4 py-3 text-center"><PositionBadge position={row.position} /></td>
-                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.week}</td>
-                          <td className="px-4 py-3 text-center font-mono text-purple-400 font-semibold">{formatStat(row.fptsPpr, 1)}</td>
-                          <td className="px-4 py-3 text-center font-mono text-gray-400">{row.xPpr != null ? formatStat(row.xPpr, 1) : '-'}</td>
-                          <td className={`px-4 py-3 text-center font-mono font-semibold ${
-                            row.xFpgoePpr != null && row.xFpgoePpr > 0 ? 'text-green-400' : 
-                            row.xFpgoePpr != null && row.xFpgoePpr < 0 ? 'text-red-400' : 'text-gray-400'
-                          }`} data-testid={`xfpgoe-${row.playerId}-${row.week}`}>
-                            {row.xFpgoePpr != null ? `${row.xFpgoePpr > 0 ? '+' : ''}${formatStat(row.xFpgoePpr, 1)}` : '-'}
-                          </td>
-                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.targets}</td>
-                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.receptions}</td>
-                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.recYards}</td>
-                          <td className="px-4 py-3 text-center font-mono text-green-400">{row.recTds || 0}</td>
-                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.rushAttempts}</td>
-                          <td className="px-4 py-3 text-center font-mono text-gray-300">{row.rushYards}</td>
-                          <td className="px-4 py-3 text-center font-mono text-orange-400">{row.rushTds || 0}</td>
-                          <td className="px-4 py-3 text-center">
-                            <ChevronRight className="h-4 w-4 text-gray-500" />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )
             ) : viewMode !== 'week' ? (
               aggData?.data.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
@@ -1362,13 +911,6 @@ export default function TiberDataLab() {
         player={selectedPlayer}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-      />
-
-      <FantasyPlayerDrawer
-        player={selectedFantasyPlayer}
-        open={fantasyDrawerOpen}
-        onClose={() => setFantasyDrawerOpen(false)}
-        season={season}
       />
     </div>
   );
