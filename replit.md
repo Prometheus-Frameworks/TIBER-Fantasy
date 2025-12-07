@@ -47,7 +47,14 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
     - **FORGE v1.1 Multi-Week Aggregation**: Context fetcher aggregates data across ALL official snapshots (weeks 1-N) instead of single-week snapshots, eliminating outlier amplification and ensuring season-grounded Alpha scores.
     - **Next Man Up**: Tracks opportunity shifts for players replacing injured starters.
     - **FORGE SoS**: Position-specific strength of schedule analysis.
-- **Tiber Data Lab (Operation DataDive)**: Snapshot-based NFL data spine for reproducible analytics, offering advanced metrics and supporting NFL Mode (raw football metrics) and Fantasy Mode (FORGE outputs + fantasy scoring).
+- **Tiber Tiers Page** (`/tiers`): User-facing FORGE-powered fantasy rankings with:
+    - Position filter (WR, RB, TE, QB)
+    - User-adjustable weight sliders (Volume, Efficiency, Stability, Context) with live recalculation
+    - Preset system: Balanced, Workhorse, Efficiency, High Floor, Upside
+    - Season/Weekly toggle for different ranking views
+    - Tier badges (T1-T5) with position-specific thresholds
+    - Alpha scores recalculated in real-time based on user-selected weights
+- **Tiber Data Lab (Operation DataDive)** (`/tiber-data-lab`): Snapshot-based NFL data spine for reproducible analytics, focused on NFL Mode (raw football metrics only). Fantasy analytics moved to Tiber Tiers page.
 - **xFPTS v2 (Expected Fantasy Points v2)**: Context-aware expected fantasy points system.
 - **Position-Aware Enrichment**: Full position-specific enrichment layer with 2025 NFL metrics.
 - **EPA Analytics**: Advanced efficiency metrics from nfl-data-py.

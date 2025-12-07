@@ -36,8 +36,10 @@ function Router() {
       {/* Tiber Tiers - FORGE-powered fantasy rankings */}
       <Route path="/tiers" component={TiberTiers} />
       
-      {/* Rankings - Legacy FORGE rankings (redirect to Tiers) */}
-      <Route path="/rankings" component={RankingsHub} />
+      {/* Rankings - Redirect to Tiber Tiers */}
+      <Route path="/rankings">
+        {() => <Redirect to="/tiers" />}
+      </Route>
       
       {/* Schedule / SoS */}
       <Route path="/schedule" component={SchedulePage} />

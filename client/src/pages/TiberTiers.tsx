@@ -316,9 +316,12 @@ function WeightsPanel({
   );
 }
 
-function PlayerRow({ player, rank, weights }: { player: ForgePlayer; rank: number; weights: ForgeWeights }) {
-  const adjustedAlpha = recalculateAlpha(player, weights);
-  const tierInfo = getTierFromAlpha(adjustedAlpha, player.position);
+interface RankedPlayer extends ForgePlayer {
+  adjustedAlpha: number;
+}
+
+function PlayerRow({ player, rank }: { player: RankedPlayer; rank: number }) {
+  const tierInfo = getTierFromAlpha(player.adjustedAlpha, player.position);
   const trajectory = getTrajectoryIcon(player.trajectory);
 
   return (
@@ -339,7 +342,7 @@ function PlayerRow({ player, rank, weights }: { player: ForgePlayer; rank: numbe
       </td>
       <td className="py-3 px-4 text-center">
         <div className="flex items-center justify-center gap-2">
-          <span className="text-2xl font-bold text-white font-mono">{adjustedAlpha.toFixed(1)}</span>
+          <span className="text-2xl font-bold text-white font-mono">{player.adjustedAlpha.toFixed(1)}</span>
           <span className={`text-lg ${trajectory.color}`}>{trajectory.icon}</span>
         </div>
       </td>
@@ -560,7 +563,6 @@ export default function TiberTiers() {
                       key={player.playerId} 
                       player={player} 
                       rank={index + 1}
-                      weights={weights}
                     />
                   ))}
                 </tbody>
