@@ -19,11 +19,14 @@ import {
   FantasyStats,
   TeamEnvironment,
   MatchupContext,
+  ForgeScoreOptions,
   ALPHA_WEIGHTS,
   ALPHA_CALIBRATION,
   TRAJECTORY_THRESHOLDS,
   CONFIDENCE_CONFIG,
   MISSING_DATA_CAPS,
+  DEFAULT_SCORE_OPTIONS,
+  DYNASTY_AGE_CONFIG,
 } from './types';
 import { clamp, roundTo } from './utils/scoring';
 import { computeFPR, FPROutput } from './fibonacciPatternResonance';
@@ -41,20 +44,28 @@ export interface AlphaModifierContext {
  * Calculate the complete FORGE score for a player
  * 
  * The scoring pipeline is:
- *   rawAlpha → envAdjustedAlpha → matchupAdjustedAlpha → calibratedAlpha
+ *   rawAlpha → envAdjustedAlpha → matchupAdjustedAlpha → calibratedAlpha → dynastyAdjusted
+ * 
+ * v1.4: Added PPR/Dynasty scoring options
+ * - PPR: Scales efficiency subscore based on reception weight (0.5 or 1.0)
+ * - Dynasty: Applies age multiplier after calibration
  * 
  * @param context - Player context data
  * @param features - Computed feature bundle
  * @param modifiers - Optional environment/matchup modifiers
+ * @param scoreOptions - Optional PPR/Dynasty scoring options
  */
 export function calculateAlphaScore(
   context: ForgeContext,
   features: ForgeFeatureBundle,
-  modifiers?: AlphaModifierContext
+  modifiers?: AlphaModifierContext,
+  scoreOptions?: ForgeScoreOptions
 ): ForgeScore {
-  console.log(`[FORGE/AlphaEngine] Calculating alpha for ${context.playerName} (${context.position})`);
+  const options = scoreOptions ?? DEFAULT_SCORE_OPTIONS;
+  console.log(`[FORGE/AlphaEngine] Calculating alpha for ${context.playerName} (${context.position}) [${options.leagueType}/${options.pprType}PPR]`);
   
-  const subScores = calculateSubScores(features);
+  // v1.4: Apply PPR adjustment to efficiency subscore
+  const subScores = calculateSubScoresWithPPR(features, context, options);
   const rawAlpha = calculateWeightedAlpha(subScores, context.position);
   
   // Apply environment and matchup modifiers (v0.1)
@@ -76,7 +87,17 @@ export function calculateAlphaScore(
     }
   }
   
-  const calibratedAlpha = calibrateAlpha(context.position, modifiedAlpha);
+  let calibratedAlpha = calibrateAlpha(context.position, modifiedAlpha);
+  
+  // v1.4: Apply dynasty age multiplier if dynasty league
+  if (options.leagueType === 'dynasty') {
+    const dynastyMultiplier = getDynastyAgeMultiplier(context.age);
+    const dynastyAdjusted = calibratedAlpha * dynastyMultiplier;
+    if (dynastyMultiplier !== 1.0) {
+      console.log(`[FORGE/AlphaEngine] Dynasty age adj: age=${context.age ?? 'unknown'}, mult=${dynastyMultiplier.toFixed(3)}, alpha=${calibratedAlpha.toFixed(1)}→${dynastyAdjusted.toFixed(1)}`);
+    }
+    calibratedAlpha = clamp(dynastyAdjusted, 0, 100);
+  }
   
   const trajectory = calculateTrajectory(context);
   const confidence = calculateConfidence(context, features);
@@ -139,6 +160,99 @@ function calculateSubScores(features: ForgeFeatureBundle): ForgeSubScores {
     stability: features.stabilityFeatures.score,
     contextFit: features.contextFitFeatures.score,
   };
+}
+
+/**
+ * v1.4: Calculate sub-scores with PPR adjustment to efficiency
+ * 
+ * For full PPR (pprType='1'): Reception-heavy players get a boost to efficiency
+ * For half PPR (pprType='0.5'): Smaller boost
+ * 
+ * The boost is based on receptions per game relative to position average:
+ * - WR average: ~5 rec/game, elite ~8+
+ * - RB average: ~3 rec/game, pass-catching ~5+
+ * - TE average: ~4 rec/game, elite ~6+
+ * 
+ * Formula: efficiencyBoost = (recPerGame - posAvg) * pprWeight * 2
+ * This gives roughly +5-10 points for rec-heavy players in full PPR
+ */
+function calculateSubScoresWithPPR(
+  features: ForgeFeatureBundle, 
+  context: ForgeContext, 
+  options: ForgeScoreOptions
+): ForgeSubScores {
+  const baseScores = calculateSubScores(features);
+  
+  // Only apply PPR adjustment for WR, RB, TE (not QB)
+  if (context.position === 'QB') {
+    return baseScores;
+  }
+  
+  const pprWeight = options.pprType === '1' ? 1.0 : 0.5;
+  
+  // Get receptions per game from context
+  const receptions = context.seasonStats?.receptions ?? 0;
+  const gamesPlayed = context.seasonStats?.gamesPlayed ?? 1;
+  const recPerGame = receptions / Math.max(gamesPlayed, 1);
+  
+  // Position-specific reception averages (approximate league averages for starters)
+  const posAvgRec: Record<string, number> = {
+    WR: 4.5,
+    RB: 2.5,
+    TE: 3.5,
+  };
+  
+  const avgRec = posAvgRec[context.position] ?? 3.5;
+  const recDiff = recPerGame - avgRec;
+  
+  // Calculate efficiency boost: +2 points per reception above average in full PPR
+  const efficiencyBoost = recDiff * pprWeight * 2;
+  
+  // Clamp the boost to reasonable range (-5 to +10)
+  const clampedBoost = clamp(efficiencyBoost, -5, 10);
+  
+  if (Math.abs(clampedBoost) > 0.5) {
+    console.log(`[FORGE/AlphaEngine] PPR adj for ${context.playerName}: rec/g=${recPerGame.toFixed(1)} (avg=${avgRec}), boost=${clampedBoost.toFixed(1)} to efficiency`);
+  }
+  
+  return {
+    ...baseScores,
+    efficiency: clamp(baseScores.efficiency + clampedBoost, 0, 100),
+  };
+}
+
+/**
+ * v1.4: Calculate dynasty age multiplier
+ * 
+ * Under 27: 1.1 (10% boost for youth)
+ * Exactly 27: 1.0 (no adjustment)
+ * Over 27: 0.95^(age-27) (compounding 5% penalty per year)
+ * 
+ * Example outputs:
+ * - Age 23: 1.1 (10% boost)
+ * - Age 27: 1.0 (neutral)
+ * - Age 28: 0.95 (5% penalty)
+ * - Age 30: 0.857 (14.3% penalty)
+ * - Age 32: 0.774 (22.6% penalty)
+ */
+function getDynastyAgeMultiplier(age?: number): number {
+  if (age === undefined || age === null) {
+    // Unknown age - log warning and use neutral multiplier
+    console.warn(`[FORGE/AlphaEngine] ⚠️ Dynasty mode: Age unknown, using default age ${DYNASTY_AGE_CONFIG.DEFAULT_AGE}`);
+    return 1.0; // Neutral for unknown ages
+  }
+  
+  const { YOUTH_THRESHOLD, YOUTH_MULTIPLIER, DECAY_BASE } = DYNASTY_AGE_CONFIG;
+  
+  if (age < YOUTH_THRESHOLD) {
+    return YOUTH_MULTIPLIER; // 1.1 for young players
+  } else if (age === YOUTH_THRESHOLD) {
+    return 1.0; // Neutral at threshold
+  } else {
+    // Compounding decay: 0.95^(years over 27)
+    const yearsOver = age - YOUTH_THRESHOLD;
+    return Math.pow(DECAY_BASE, yearsOver);
+  }
 }
 
 /**

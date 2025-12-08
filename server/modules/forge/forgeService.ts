@@ -28,6 +28,9 @@ import {
   getCurrentSnapshot 
 } from '../../services/datadiveContext';
 
+import type { LeagueType, PPRType, ForgeScoreOptions } from './types';
+import { DEFAULT_SCORE_OPTIONS } from './types';
+
 /**
  * Query parameters for batch scoring
  */
@@ -38,6 +41,8 @@ export interface ForgeBatchQuery {
   asOfWeek?: WeekOrPreseason;
   startWeek?: number;
   endWeek?: number;
+  leagueType?: LeagueType;
+  pprType?: PPRType;
 }
 
 import { calculateAlphaScore } from './alphaEngine';
@@ -138,11 +143,21 @@ class ForgeService implements IForgeService {
       season = 2025, 
       asOfWeek = 17,
       startWeek,
-      endWeek
+      endWeek,
+      leagueType,
+      pprType
     } = query;
 
+    // Build scoring options with defaults
+    const scoreOptions: ForgeScoreOptions = {
+      ...DEFAULT_SCORE_OPTIONS,
+      ...(leagueType && { leagueType }),
+      ...(pprType && { pprType }),
+    };
+
     const weekRangeStr = startWeek && endWeek ? `, weeks ${startWeek}-${endWeek}` : '';
-    console.log(`[FORGE] Batch request: position=${position ?? 'ALL'}, limit=${limit}, season=${season}${weekRangeStr}`);
+    const optionsStr = `[${scoreOptions.leagueType}/${scoreOptions.pprType}PPR]`;
+    console.log(`[FORGE] Batch request: position=${position ?? 'ALL'}, limit=${limit}, season=${season}${weekRangeStr} ${optionsStr}`);
 
     // Fetch only eligible players with 2025 activity
     const playerIds = await this.fetchPlayerIdsForBatch(position, limit, season, startWeek, endWeek);
@@ -152,8 +167,8 @@ class ForgeService implements IForgeService {
       return [];
     }
 
-    // Pass week range to scoring
-    return this.getForgeScoresForPlayersWithRange(playerIds, season, asOfWeek, startWeek, endWeek);
+    // Pass week range and scoring options to scoring
+    return this.getForgeScoresForPlayersWithRange(playerIds, season, asOfWeek, startWeek, endWeek, scoreOptions);
   }
 
   /**
@@ -164,12 +179,13 @@ class ForgeService implements IForgeService {
     season: number, 
     asOfWeek: WeekOrPreseason,
     startWeek?: number,
-    endWeek?: number
+    endWeek?: number,
+    scoreOptions?: ForgeScoreOptions
   ): Promise<ForgeScore[]> {
     console.log(`[FORGE] Scoring ${playerIds.length} players...${startWeek && endWeek ? ` (weeks ${startWeek}-${endWeek})` : ''}`);
     
     const scorePromises = playerIds.map(id => 
-      this.scoreSinglePlayerWithRange(id, season, asOfWeek, startWeek, endWeek)
+      this.scoreSinglePlayerWithRange(id, season, asOfWeek, startWeek, endWeek, scoreOptions)
         .catch(error => {
           console.error(`[FORGE] Error scoring player ${id}:`, error.message);
           return null;
@@ -185,14 +201,15 @@ class ForgeService implements IForgeService {
   }
 
   /**
-   * Score a single player with optional week range filtering
+   * Score a single player with optional week range filtering and scoring options
    */
   private async scoreSinglePlayerWithRange(
     playerId: string, 
     season: number, 
     asOfWeek: WeekOrPreseason,
     startWeek?: number,
-    endWeek?: number
+    endWeek?: number,
+    scoreOptions?: ForgeScoreOptions
   ): Promise<ForgeScore> {
     const weekRangeStr = startWeek && endWeek ? ` (weeks ${startWeek}-${endWeek})` : '';
     console.log(`[FORGE] Scoring player ${playerId} for season ${season}, week ${asOfWeek}${weekRangeStr}`);
@@ -211,7 +228,7 @@ class ForgeService implements IForgeService {
     const featureBundle: ForgeFeatureBundle = builder(context);
 
     console.log(`[FORGE] Calculating Alpha Score...`);
-    const forgeScore: ForgeScore = calculateAlphaScore(context, featureBundle);
+    const forgeScore: ForgeScore = calculateAlphaScore(context, featureBundle, undefined, scoreOptions);
     
     console.log(`[FORGE] ${context.playerName}: Alpha=${forgeScore.alpha}, Confidence=${forgeScore.confidence}, Trajectory=${forgeScore.trajectory}`);
     

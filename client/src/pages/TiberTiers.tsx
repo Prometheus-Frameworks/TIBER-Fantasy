@@ -557,7 +557,7 @@ export default function TiberTiers() {
   const weekRangeParams = useMemo(() => getWeekRangeParams(weekRange, displayWeek), [weekRange, displayWeek]);
 
   const { data, isLoading, refetch, isFetching } = useQuery<ForgeBatchResponse>({
-    queryKey: ['/api/forge/batch', position, displayWeek, viewMode, weekRange],
+    queryKey: ['/api/forge/batch', position, displayWeek, viewMode, weekRange, leagueMode, scoringFormat],
     queryFn: async () => {
       const week = viewMode === 'weekly' ? displayWeek : displayWeek;
       let url = `/api/forge/batch?position=${position}&limit=50&season=2025&week=${week}`;
@@ -565,6 +565,10 @@ export default function TiberTiers() {
       if (weekRangeParams.startWeek && weekRangeParams.endWeek) {
         url += `&startWeek=${weekRangeParams.startWeek}&endWeek=${weekRangeParams.endWeek}`;
       }
+      
+      // v1.4: Add PPR/Dynasty scoring options
+      url += `&leagueType=${leagueMode}`;
+      url += `&pprType=${scoringFormat === 'ppr' ? '1' : '0.5'}`;
       
       const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch FORGE data');
@@ -668,19 +672,18 @@ export default function TiberTiers() {
                     <Trophy className="h-3 w-3 sm:h-3.5 sm:w-3.5 inline mr-1" />
                     Redraft
                   </button>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium text-slate-600 cursor-not-allowed"
-                        data-testid="toggle-dynasty"
-                        disabled
-                      >
-                        <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5 inline mr-1" />
-                        Dynasty
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>Coming Soon</TooltipContent>
-                  </Tooltip>
+                  <button
+                    onClick={() => setLeagueMode('dynasty')}
+                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors ${
+                      leagueMode === 'dynasty'
+                        ? 'bg-purple-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                    data-testid="toggle-dynasty"
+                  >
+                    <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5 inline mr-1" />
+                    Dynasty
+                  </button>
                 </div>
 
                 {/* Scoring Format Toggle */}

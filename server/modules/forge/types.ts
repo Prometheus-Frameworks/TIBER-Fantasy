@@ -20,6 +20,43 @@ export type ForgePosition = PlayerPosition;
 export type ForgeTrajectory = Trajectory;
 
 /**
+ * v1.4: Scoring format options for PPR/Dynasty adjustments
+ */
+export type LeagueType = 'redraft' | 'dynasty';
+export type PPRType = '0.5' | '1'; // Half-PPR or Full PPR
+
+/**
+ * Scoring options that affect Alpha calculation
+ * - PPR: Adjusts efficiency subscore based on receptions (rec-heavy players get boost in full PPR)
+ * - Dynasty: Applies age multiplier (young players get boost, old players get penalty)
+ */
+export interface ForgeScoreOptions {
+  leagueType: LeagueType;
+  pprType: PPRType;
+}
+
+/**
+ * Default scoring options (Redraft + Full PPR)
+ */
+export const DEFAULT_SCORE_OPTIONS: ForgeScoreOptions = {
+  leagueType: 'redraft',
+  pprType: '1',
+};
+
+/**
+ * Dynasty age multiplier constants
+ * - Under 27: 1.1 (10% boost for youth)
+ * - Over 27: 0.95^(age-27) (compounding 5% penalty per year over 27)
+ * - Default age (if unknown): 26 (neutral)
+ */
+export const DYNASTY_AGE_CONFIG = {
+  YOUTH_THRESHOLD: 27,
+  YOUTH_MULTIPLIER: 1.1,
+  DECAY_BASE: 0.95,
+  DEFAULT_AGE: 26,
+};
+
+/**
  * FORGE Sub-Scores (0-100 each)
  * These are the component scores that combine into the final Alpha
  */
@@ -156,6 +193,7 @@ export interface ForgeContext {
   nflTeam?: string;
   season: number;
   asOfWeek: WeekOrPreseason;
+  age?: number;  // v1.4: Player age for dynasty adjustments
   
   identity: {
     canonicalId: string;

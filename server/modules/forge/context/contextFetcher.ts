@@ -84,6 +84,9 @@ export async function fetchContext(
     fetchInjuryStatus(identity.canonicalId),
   ]);
   
+  // v1.4: Fetch player age for dynasty adjustments
+  const playerAge = await fetchPlayerAge(identity.canonicalId);
+  
   return {
     playerId: identity.canonicalId,
     playerName: identity.fullName,
@@ -91,6 +94,7 @@ export async function fetchContext(
     nflTeam: identity.nflTeam,
     season,
     asOfWeek,
+    age: playerAge,
     
     identity: {
       canonicalId: identity.canonicalId,
@@ -905,6 +909,60 @@ async function fetchInjuryStatus(
     hasRecentInjury: false,
     gamesMissedLast2Years: 0,
   };
+}
+
+/**
+ * v1.4: Fetch player age for dynasty adjustments
+ * Sources (in priority order):
+ * 1. player_season_facts table (age column)
+ * 2. players table (age column)
+ * 3. player_identity_map with birthDate calculation
+ * 
+ * Returns undefined if age not available (will use neutral multiplier)
+ */
+async function fetchPlayerAge(canonicalId: string): Promise<number | undefined> {
+  try {
+    // Try player_season_facts first (most reliable for current season)
+    const seasonFactsResult = await db.execute<{ age: number | null }>(sql`
+      SELECT age FROM player_season_facts 
+      WHERE player_id = ${canonicalId} AND season = 2025
+      LIMIT 1
+    `);
+    
+    if (seasonFactsResult.rows[0]?.age) {
+      return seasonFactsResult.rows[0].age;
+    }
+    
+    // Try players table
+    const playersResult = await db.execute<{ age: number | null }>(sql`
+      SELECT age FROM players 
+      WHERE id = ${canonicalId}
+      LIMIT 1
+    `);
+    
+    if (playersResult.rows[0]?.age) {
+      return playersResult.rows[0].age;
+    }
+    
+    // Try player_identity_map with birthDate
+    const identityResult = await db.execute<{ birth_date: Date | null }>(sql`
+      SELECT birth_date FROM player_identity_map 
+      WHERE canonical_id = ${canonicalId}
+      LIMIT 1
+    `);
+    
+    if (identityResult.rows[0]?.birth_date) {
+      const birthDate = new Date(identityResult.rows[0].birth_date);
+      const today = new Date();
+      const age = Math.floor((today.getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+      return age;
+    }
+    
+    return undefined;
+  } catch (error) {
+    console.warn(`[FORGE/Context] ⚠️ Could not fetch age for ${canonicalId}:`, error);
+    return undefined;
+  }
 }
 
 export default fetchContext;
