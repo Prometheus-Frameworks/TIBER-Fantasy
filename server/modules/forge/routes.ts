@@ -382,10 +382,12 @@ router.get('/health', (req: Request, res: Response) => {
  * - limit (optional): number, 1-500, defaults to 100
  * - season (optional): number, defaults to 2025
  * - week (optional): number, defaults to 17
+ * - startWeek (optional): number, start of week range filter
+ * - endWeek (optional): number, end of week range filter
  */
 router.get('/batch', async (req: Request, res: Response) => {
   try {
-    const { position, limit, season, week } = req.query;
+    const { position, limit, season, week, startWeek, endWeek } = req.query;
 
     const normalizedPosition =
       typeof position === 'string' && ['QB', 'RB', 'WR', 'TE'].includes(position.toUpperCase())
@@ -407,13 +409,29 @@ router.get('/batch', async (req: Request, res: Response) => {
         ? Number(week)
         : 17;
 
-    console.log(`[FORGE/Routes] Batch request: position=${normalizedPosition ?? 'ALL'}, limit=${normalizedLimit}, season=${normalizedSeason}, week=${normalizedWeek}`);
+    // Week range filtering (v0.3)
+    const normalizedStartWeek =
+      typeof startWeek === 'string' && !Number.isNaN(Number(startWeek))
+        ? Number(startWeek)
+        : undefined;
+    
+    const normalizedEndWeek =
+      typeof endWeek === 'string' && !Number.isNaN(Number(endWeek))
+        ? Number(endWeek)
+        : undefined;
+
+    const weekRangeStr = normalizedStartWeek && normalizedEndWeek 
+      ? `, weeks ${normalizedStartWeek}-${normalizedEndWeek}` 
+      : '';
+    console.log(`[FORGE/Routes] Batch request: position=${normalizedPosition ?? 'ALL'}, limit=${normalizedLimit}, season=${normalizedSeason}, week=${normalizedWeek}${weekRangeStr}`);
 
     const scores = await forgeService.getForgeScoresBatch({
       position: normalizedPosition,
       limit: normalizedLimit,
       season: normalizedSeason,
       asOfWeek: normalizedWeek,
+      startWeek: normalizedStartWeek,
+      endWeek: normalizedEndWeek,
     });
 
     // Enrich scores with SoS data
@@ -439,9 +457,12 @@ router.get('/batch', async (req: Request, res: Response) => {
         limit: normalizedLimit,
         season: normalizedSeason,
         week: normalizedWeek,
+        startWeek: normalizedStartWeek,
+        endWeek: normalizedEndWeek,
+        weekRangeActive: !!(normalizedStartWeek && normalizedEndWeek),
         count: sortedScores.length,
         sosIntegrated: true,
-        eligibilityRules: 'v0.2: gamesPlayed >= 1, deduped by normalized name',
+        eligibilityRules: 'v0.3: gamesPlayed >= 1, deduped by normalized name, week range filter',
         scoredAt: new Date().toISOString(),
       },
     });

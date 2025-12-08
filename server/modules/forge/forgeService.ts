@@ -36,6 +36,8 @@ export interface ForgeBatchQuery {
   limit?: number;
   season?: number;
   asOfWeek?: WeekOrPreseason;
+  startWeek?: number;
+  endWeek?: number;
 }
 
 import { calculateAlphaScore } from './alphaEngine';
@@ -124,26 +126,96 @@ class ForgeService implements IForgeService {
    * - Only includes players with actual 2025 game activity
    * - Ordered by total fantasy points before scoring
    * - Deduplicates identity variations (e.g., "Chris Godwin" vs "Chris Godwin Jr.")
+   * 
+   * WEEK RANGE (v0.3):
+   * - startWeek/endWeek allow filtering to specific week ranges
+   * - Useful for "Last 4 Weeks" or custom date range analysis
    */
   public async getForgeScoresBatch(query: ForgeBatchQuery): Promise<ForgeScore[]> {
     const { 
       position, 
       limit = 100, 
       season = 2025, 
-      asOfWeek = 17 
+      asOfWeek = 17,
+      startWeek,
+      endWeek
     } = query;
 
-    console.log(`[FORGE] Batch request: position=${position ?? 'ALL'}, limit=${limit}, season=${season}`);
+    const weekRangeStr = startWeek && endWeek ? `, weeks ${startWeek}-${endWeek}` : '';
+    console.log(`[FORGE] Batch request: position=${position ?? 'ALL'}, limit=${limit}, season=${season}${weekRangeStr}`);
 
     // Fetch only eligible players with 2025 activity
-    const playerIds = await this.fetchPlayerIdsForBatch(position, limit, season);
+    const playerIds = await this.fetchPlayerIdsForBatch(position, limit, season, startWeek, endWeek);
 
     if (playerIds.length === 0) {
       console.log('[FORGE] No eligible players found for batch query');
       return [];
     }
 
-    return this.getForgeScoresForPlayers(playerIds, season, asOfWeek);
+    // Pass week range to scoring
+    return this.getForgeScoresForPlayersWithRange(playerIds, season, asOfWeek, startWeek, endWeek);
+  }
+
+  /**
+   * Get FORGE scores for multiple players with optional week range filtering
+   */
+  private async getForgeScoresForPlayersWithRange(
+    playerIds: string[], 
+    season: number, 
+    asOfWeek: WeekOrPreseason,
+    startWeek?: number,
+    endWeek?: number
+  ): Promise<ForgeScore[]> {
+    console.log(`[FORGE] Scoring ${playerIds.length} players...${startWeek && endWeek ? ` (weeks ${startWeek}-${endWeek})` : ''}`);
+    
+    const scorePromises = playerIds.map(id => 
+      this.scoreSinglePlayerWithRange(id, season, asOfWeek, startWeek, endWeek)
+        .catch(error => {
+          console.error(`[FORGE] Error scoring player ${id}:`, error.message);
+          return null;
+        })
+    );
+
+    const results = await Promise.all(scorePromises);
+    const successfulScores = results.filter((score): score is ForgeScore => score !== null);
+    
+    console.log(`[FORGE] Successfully scored ${successfulScores.length}/${playerIds.length} players`);
+    
+    return successfulScores;
+  }
+
+  /**
+   * Score a single player with optional week range filtering
+   */
+  private async scoreSinglePlayerWithRange(
+    playerId: string, 
+    season: number, 
+    asOfWeek: WeekOrPreseason,
+    startWeek?: number,
+    endWeek?: number
+  ): Promise<ForgeScore> {
+    const weekRangeStr = startWeek && endWeek ? ` (weeks ${startWeek}-${endWeek})` : '';
+    console.log(`[FORGE] Scoring player ${playerId} for season ${season}, week ${asOfWeek}${weekRangeStr}`);
+    
+    // Use endWeek as asOfWeek if provided, otherwise use the original asOfWeek
+    const effectiveAsOfWeek = endWeek ?? asOfWeek;
+    
+    const context: ForgeContext = await fetchContext(playerId, season, effectiveAsOfWeek, startWeek);
+
+    const builder = featureBuilderMap.get(context.position);
+    if (!builder) {
+      throw new Error(`FORGE v0.1: Feature builder not found for position: ${context.position}`);
+    }
+
+    console.log(`[FORGE] Building features for ${context.playerName} (${context.position})...`);
+    const featureBundle: ForgeFeatureBundle = builder(context);
+
+    console.log(`[FORGE] Calculating Alpha Score...`);
+    const forgeScore: ForgeScore = calculateAlphaScore(context, featureBundle);
+    
+    console.log(`[FORGE] ${context.playerName}: Alpha=${forgeScore.alpha}, Confidence=${forgeScore.confidence}, Trajectory=${forgeScore.trajectory}`);
+    
+    return forgeScore;
   }
 
   /**
@@ -154,11 +226,14 @@ class ForgeService implements IForgeService {
    * 3. Must be on an active NFL team (not FA)
    * 4. Ordered by total fantasy points (PPR) to get most relevant players first
    * 5. Deduplication: If multiple canonical IDs map to same sleeper_id, prefer the one with more data
+   * 6. Week range filtering: Only counts activity within startWeek-endWeek if provided
    */
   private async fetchPlayerIdsForBatch(
     position: ForgePosition | undefined,
     limit: number,
-    season: number = 2025
+    season: number = 2025,
+    startWeek?: number,
+    endWeek?: number
   ): Promise<string[]> {
     try {
       // For 2025+, use Datadive snapshot if feature flag is enabled

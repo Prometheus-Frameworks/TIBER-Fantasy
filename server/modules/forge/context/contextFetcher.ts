@@ -23,7 +23,7 @@ import {
   silverPlayerWeeklyStats,
   qbEpaAdjusted
 } from '@shared/schema';
-import { eq, and, desc, sql, lte, sum, count } from 'drizzle-orm';
+import { eq, and, desc, sql, lte, gte, sum, count } from 'drizzle-orm';
 import {
   USE_DATADIVE_FORGE,
   getSnapshotSeasonStats,
@@ -40,13 +40,16 @@ const oasisEnvironmentService = new OasisEnvironmentService();
 
 /**
  * Fetch complete context for a player at a given point in the season
+ * @param startWeek - Optional start week for filtering (for week range analysis)
  */
 export async function fetchContext(
   playerId: string,
   season: number,
-  asOfWeek: WeekOrPreseason
+  asOfWeek: WeekOrPreseason,
+  startWeek?: number
 ): Promise<ForgeContext> {
-  console.log(`[FORGE/Context] Fetching context for ${playerId}, season ${season}, week ${asOfWeek}`);
+  const weekRangeStr = startWeek ? `, startWeek ${startWeek}` : '';
+  console.log(`[FORGE/Context] Fetching context for ${playerId}, season ${season}, week ${asOfWeek}${weekRangeStr}`);
   
   const identity = await fetchPlayerIdentity(playerId);
   
@@ -66,15 +69,15 @@ export async function fetchContext(
   const [
     seasonStats,
     advancedMetrics,
-    weeklyStats,
+    weeklyStatsData,
     roleMetrics,
     teamEnvironment,
     dvpData,
     injuryStatus,
   ] = await Promise.all([
-    fetchSeasonStats(identity.canonicalId, season, weekNum),
+    fetchSeasonStats(identity.canonicalId, season, weekNum, startWeek),
     fetchAdvancedMetrics(identity.canonicalId, position, season),
-    fetchWeeklyStats(sleeperId, season, weekNum),
+    fetchWeeklyStats(sleeperId, season, weekNum, startWeek),
     fetchRoleMetrics(identity.canonicalId, position, season),
     identity.nflTeam ? fetchTeamEnvironment(identity.nflTeam) : Promise.resolve(undefined),
     identity.nflTeam ? fetchDvPData(identity.nflTeam, position, season) : Promise.resolve(undefined),
@@ -98,7 +101,7 @@ export async function fetchContext(
     
     seasonStats,
     advancedMetrics,
-    weeklyStats,
+    weeklyStats: weeklyStatsData,
     roleMetrics,
     teamEnvironment,
     dvpData,
@@ -144,11 +147,13 @@ async function fetchPlayerIdentity(playerId: string) {
  * Fetch season-level stats from playerSeasonFacts, weeklyStats, or playerSeason2024
  * For 2025+, uses NEW enriched weekly data path through getEnrichedPlayerWeek()
  * This ensures all 2025 pro-grade metrics (CPOE, WOPR, RACR, RYOE, etc.) flow through FORGE
+ * @param startWeek - Optional start week for week range filtering
  */
 async function fetchSeasonStats(
   canonicalId: string, 
   season: number, 
-  asOfWeek: number
+  asOfWeek: number,
+  startWeek?: number
 ): Promise<ForgeContext['seasonStats']> {
   try {
     // For 2025+, use NEW enriched weekly data path (single source of truth)
@@ -173,7 +178,7 @@ async function fetchSeasonStats(
     
     // Fallback to legacy path for 2025+ if Datadive didn't return data
     if (season >= 2025) {
-      const weeklyResult = await fetchFromWeeklyStats(canonicalId, season, asOfWeek);
+      const weeklyResult = await fetchFromWeeklyStats(canonicalId, season, asOfWeek, startWeek);
       if (weeklyResult && weeklyResult.gamesPlayed > 0) {
         return weeklyResult;
       }
@@ -218,7 +223,7 @@ async function fetchSeasonStats(
     }
     
     // Fallback: try weeklyStats aggregation for older seasons too
-    const weeklyResult = await fetchFromWeeklyStats(canonicalId, season, asOfWeek);
+    const weeklyResult = await fetchFromWeeklyStats(canonicalId, season, asOfWeek, startWeek);
     if (weeklyResult && weeklyResult.gamesPlayed > 0) {
       return weeklyResult;
     }
@@ -301,19 +306,33 @@ async function getNflDataPyIdForCanonical(canonicalId: string): Promise<string |
 /**
  * Fetch and aggregate season stats from weeklyStats table
  * v1.2: Now computes exact targetShare and opportunityShare from team-level aggregates
+ * v1.3: Supports week range filtering for custom date range analysis
  */
 async function fetchFromWeeklyStats(
   canonicalId: string,
   season: number,
-  asOfWeek: number
+  asOfWeek: number,
+  startWeek?: number
 ): Promise<ForgeContext['seasonStats'] | null> {
   try {
     const nflDataPyId = await getNflDataPyIdForCanonical(canonicalId);
     if (!nflDataPyId) return null;
     
-    const weekCondition = asOfWeek > 0 
-      ? lte(weeklyStats.week, asOfWeek)
-      : sql`1=1`;
+    // Build week range condition: startWeek <= week <= asOfWeek
+    let weekCondition;
+    if (startWeek && asOfWeek > 0) {
+      // Week range mode: filter to specific week range
+      weekCondition = and(
+        gte(weeklyStats.week, startWeek),
+        lte(weeklyStats.week, asOfWeek)
+      );
+      console.log(`[FORGE/Context] Week range filter: weeks ${startWeek}-${asOfWeek}`);
+    } else if (asOfWeek > 0) {
+      // Standard mode: all weeks up to asOfWeek
+      weekCondition = lte(weeklyStats.week, asOfWeek);
+    } else {
+      weekCondition = sql`1=1`;
+    }
     
     // First, get player stats including their team and position
     const playerStats = await db
@@ -685,16 +704,27 @@ async function fetchAdvancedMetrics(
 
 /**
  * Fetch weekly game logs for trajectory/stability analysis
+ * @param startWeek - Optional start week for week range filtering
  */
 async function fetchWeeklyStats(
   sleeperId: string,
   season: number,
-  asOfWeek: number
+  asOfWeek: number,
+  startWeek?: number
 ): Promise<ForgeContext['weeklyStats']> {
   try {
-    const weekCondition = asOfWeek > 0 
-      ? lte(gameLogs.week, asOfWeek)
-      : sql`1=1`;
+    // Build week range condition: startWeek <= week <= asOfWeek
+    let weekCondition;
+    if (startWeek && asOfWeek > 0) {
+      weekCondition = and(
+        gte(gameLogs.week, startWeek),
+        lte(gameLogs.week, asOfWeek)
+      );
+    } else if (asOfWeek > 0) {
+      weekCondition = lte(gameLogs.week, asOfWeek);
+    } else {
+      weekCondition = sql`1=1`;
+    }
     
     const logs = await db
       .select({
