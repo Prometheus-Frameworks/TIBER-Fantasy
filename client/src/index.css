@@ -461,3 +461,65 @@ img {
     line-height: 1.6;
     color: #555;
 }
+
+/* FORGE Weights - Custom Range Slider with colored tracks */
+.slider-compact {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--slider-color, rgb(147, 51, 234)) 0%,
+    var(--slider-color, rgb(147, 51, 234)) var(--slider-value, 50%),
+    rgb(55, 65, 81) var(--slider-value, 50%),
+    rgb(55, 65, 81) 100%
+  );
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.slider-compact::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  border: 2px solid var(--slider-color, rgb(147, 51, 234));
+}
+
+.slider-compact::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  border: 2px solid var(--slider-color, rgb(147, 51, 234));
+}
+
+/* FORGE Collapse Animation */
+.forge-collapse-enter {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+.forge-collapse-enter-active {
+  max-height: 300px;
+  opacity: 1;
+  transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+}
+.forge-collapse-exit {
+  max-height: 300px;
+  opacity: 1;
+}
+.forge-collapse-exit-active {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease-in, opacity 0.15s ease-in;
+}

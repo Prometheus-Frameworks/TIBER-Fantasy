@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { 
@@ -22,7 +22,6 @@ import {
   Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
@@ -167,6 +166,36 @@ function recalculateAlpha(player: ForgePlayer, weights: ForgeWeights, position: 
   return Math.round(calibrated * 10) / 10;
 }
 
+// Custom compact slider with colored track
+function CompactSlider({ 
+  value, 
+  onChange, 
+  color,
+  testId 
+}: { 
+  value: number; 
+  onChange: (v: number) => void; 
+  color: string;
+  testId: string;
+}) {
+  return (
+    <input
+      type="range"
+      min={0}
+      max={100}
+      step={5}
+      value={value}
+      onChange={(e) => onChange(parseInt(e.target.value, 10))}
+      className="slider-compact"
+      style={{
+        '--slider-color': color,
+        '--slider-value': `${value}%`
+      } as CSSProperties}
+      data-testid={testId}
+    />
+  );
+}
+
 function WeightsPanel({ 
   weights, 
   onWeightsChange,
@@ -182,8 +211,8 @@ function WeightsPanel({
   const totalWeight = weights.volume + weights.efficiency + weights.stability + weights.context;
   const isValidTotal = totalWeight === 100;
 
-  const handleSliderChange = (field: keyof ForgeWeights, value: number[]) => {
-    onWeightsChange({ ...weights, [field]: value[0] });
+  const handleSliderChange = (field: keyof ForgeWeights, value: number) => {
+    onWeightsChange({ ...weights, [field]: value });
     setActivePreset('custom');
   };
 
@@ -200,38 +229,53 @@ function WeightsPanel({
     setActivePreset('balanced');
   };
 
+  // Colors for each slider
+  const SLIDER_COLORS = {
+    volume: 'rgb(59, 130, 246)',    // blue-500
+    efficiency: 'rgb(234, 179, 8)', // yellow-500
+    stability: 'rgb(168, 85, 247)', // purple-500
+    context: 'rgb(20, 184, 166)'    // teal-500
+  };
+
   return (
-    <div className="bg-[#141824] border border-slate-700 rounded-xl mb-4 sm:mb-6">
+    <div className="rounded-lg border border-gray-800 bg-gray-900/50 backdrop-blur-sm mb-3">
+      {/* Compact Header */}
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-3 sm:p-4 hover:bg-slate-800/30 transition-colors rounded-t-xl"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-800/30 transition-colors"
         data-testid="toggle-weights-panel"
       >
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" />
-          <h3 className="text-sm sm:text-lg font-semibold text-white">FORGE Weights</h3>
-          <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded ${isValidTotal ? 'bg-green-900/40 text-green-400' : 'bg-red-900/40 text-red-400'}`}>
+        <div className="flex items-center gap-2">
+          <Zap className="w-4 h-4 text-purple-400" />
+          <span className="text-sm font-semibold text-white">FORGE Weights</span>
+          <span className={`text-xs px-2 py-0.5 rounded ${isValidTotal ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
             {isValidTotal ? '100%' : `${totalWeight}%`}
           </span>
         </div>
         {isCollapsed ? (
-          <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400" />
+          <ChevronDown className="w-4 h-4 text-gray-400" />
         ) : (
-          <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400" />
+          <ChevronUp className="w-4 h-4 text-gray-400" />
         )}
       </button>
 
-      {!isCollapsed && (
-        <div className="p-3 sm:p-4 pt-0 space-y-3 sm:space-y-4">
-          <div className="flex flex-wrap gap-1.5 sm:gap-2 pb-3 border-b border-slate-700">
+      {/* Collapsible Content */}
+      <div 
+        className={`overflow-hidden transition-all duration-300 ease-out ${
+          isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[400px] opacity-100'
+        }`}
+      >
+        <div className="px-4 pb-3 space-y-3">
+          {/* Compact Preset Buttons */}
+          <div className="flex flex-wrap gap-2">
             {WEIGHT_PRESETS.map((preset) => (
               <button
                 key={preset.id}
                 onClick={() => applyPreset(preset.id)}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
                   activePreset === preset.id
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/50'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                 }`}
                 data-testid={`preset-${preset.id}`}
               >
@@ -240,111 +284,90 @@ function WeightsPanel({
             ))}
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
-            <div className="space-y-1.5 sm:space-y-2">
+          {/* 2x2 Slider Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+            {/* Volume Slider */}
+            <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label className="text-xs sm:text-sm text-slate-300 flex items-center gap-1 sm:gap-2">
-                  <Target className="h-3 w-3 sm:h-4 sm:w-4 text-blue-400" />
-                  <span className="hidden sm:inline">Volume</span>
-                  <span className="sm:hidden">Vol</span>
-                </label>
-                <span className="text-xs sm:text-sm font-mono text-blue-400">{weights.volume}%</span>
+                <div className="flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 text-blue-400" />
+                  <span className="text-xs text-gray-400">Vol</span>
+                </div>
+                <span className="text-sm font-semibold text-blue-400">{weights.volume}%</span>
               </div>
-              <Slider
-                value={[weights.volume]}
-                onValueChange={(v) => handleSliderChange('volume', v)}
-                min={0}
-                max={100}
-                step={5}
-                className="w-full"
-                data-testid="slider-volume"
+              <CompactSlider
+                value={weights.volume}
+                onChange={(v) => handleSliderChange('volume', v)}
+                color={SLIDER_COLORS.volume}
+                testId="slider-volume"
               />
-              <p className="text-[10px] sm:text-xs text-slate-500 hidden sm:block">Targets, touches, snap share</p>
             </div>
 
-            <div className="space-y-1.5 sm:space-y-2">
+            {/* Efficiency Slider */}
+            <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label className="text-xs sm:text-sm text-slate-300 flex items-center gap-1 sm:gap-2">
-                  <Zap className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400" />
-                  <span className="hidden sm:inline">Efficiency</span>
-                  <span className="sm:hidden">Eff</span>
-                </label>
-                <span className="text-xs sm:text-sm font-mono text-yellow-400">{weights.efficiency}%</span>
+                <div className="flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-yellow-400" />
+                  <span className="text-xs text-gray-400">Eff</span>
+                </div>
+                <span className="text-sm font-semibold text-yellow-400">{weights.efficiency}%</span>
               </div>
-              <Slider
-                value={[weights.efficiency]}
-                onValueChange={(v) => handleSliderChange('efficiency', v)}
-                min={0}
-                max={100}
-                step={5}
-                className="w-full"
-                data-testid="slider-efficiency"
+              <CompactSlider
+                value={weights.efficiency}
+                onChange={(v) => handleSliderChange('efficiency', v)}
+                color={SLIDER_COLORS.efficiency}
+                testId="slider-efficiency"
               />
-              <p className="text-[10px] sm:text-xs text-slate-500 hidden sm:block">YPRR, EPA, yards/touch</p>
             </div>
 
-            <div className="space-y-1.5 sm:space-y-2">
+            {/* Stability Slider */}
+            <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label className="text-xs sm:text-sm text-slate-300 flex items-center gap-1 sm:gap-2">
-                  <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-purple-400" />
-                  <span className="hidden sm:inline">Stability</span>
-                  <span className="sm:hidden">Stb</span>
-                </label>
-                <span className="text-xs sm:text-sm font-mono text-purple-400">{weights.stability}%</span>
+                <div className="flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-purple-400" />
+                  <span className="text-xs text-gray-400">Stb</span>
+                </div>
+                <span className="text-sm font-semibold text-purple-400">{weights.stability}%</span>
               </div>
-              <Slider
-                value={[weights.stability]}
-                onValueChange={(v) => handleSliderChange('stability', v)}
-                min={0}
-                max={100}
-                step={5}
-                className="w-full"
-                data-testid="slider-stability"
+              <CompactSlider
+                value={weights.stability}
+                onChange={(v) => handleSliderChange('stability', v)}
+                color={SLIDER_COLORS.stability}
+                testId="slider-stability"
               />
-              <p className="text-[10px] sm:text-xs text-slate-500 hidden sm:block">Week-to-week consistency</p>
             </div>
 
-            <div className="space-y-1.5 sm:space-y-2">
+            {/* Context Slider */}
+            <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label className="text-xs sm:text-sm text-slate-300 flex items-center gap-1 sm:gap-2">
-                  <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-400" />
-                  <span className="hidden sm:inline">Context</span>
-                  <span className="sm:hidden">Ctx</span>
-                </label>
-                <span className="text-xs sm:text-sm font-mono text-emerald-400">{weights.context}%</span>
+                <div className="flex items-center gap-1.5">
+                  <BarChart3 className="w-3.5 h-3.5 text-teal-400" />
+                  <span className="text-xs text-gray-400">Ctx</span>
+                </div>
+                <span className="text-sm font-semibold text-teal-400">{weights.context}%</span>
               </div>
-              <Slider
-                value={[weights.context]}
-                onValueChange={(v) => handleSliderChange('context', v)}
-                min={0}
-                max={100}
-                step={5}
-                className="w-full"
-                data-testid="slider-context"
+              <CompactSlider
+                value={weights.context}
+                onChange={(v) => handleSliderChange('context', v)}
+                color={SLIDER_COLORS.context}
+                testId="slider-context"
               />
-              <p className="text-[10px] sm:text-xs text-slate-500 hidden sm:block">Team environment, matchups</p>
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-2 border-t border-slate-700">
-            <div className="text-[10px] sm:text-xs text-slate-500 hidden sm:block">
-              Alpha Score = weighted blend of sub-scores
-            </div>
-            <div className="flex gap-2 w-full sm:w-auto justify-end">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={resetToDefaults}
-                className="border-slate-600 text-slate-300 hover:bg-slate-700 h-7 sm:h-9 text-xs sm:text-sm"
-                data-testid="button-reset-weights"
-              >
-                <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                Reset
-              </Button>
-            </div>
+          {/* Minimal Reset Button */}
+          <div className="flex justify-end pt-1">
+            <button
+              onClick={resetToDefaults}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 hover:text-white bg-gray-800/50 hover:bg-gray-700 rounded-md transition-colors"
+              data-testid="button-reset-weights"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset
+            </button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

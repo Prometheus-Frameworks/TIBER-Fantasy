@@ -1,0 +1,638 @@
+# Tiers Page Redesign - Complete Rewrite Handoff
+
+## Overview
+
+Complete redesign of the `/tiers` route to fix spacing issues where the FORGE Weights section takes up excessive space and creates a disconnected feel from the player list below.
+
+## Current Problems
+
+1. FORGE Weights card has excessive padding (making it feel like a separate page)
+1. Preset buttons are too large with too much spacing
+1. Slider rows have unnecessary vertical gaps
+1. Too much empty space throughout the entire section
+1. The player list feels disconnected from the controls above
+
+## Design Goals
+
+- Reduce FORGE Weights section height by ~60%
+- Create visual continuity between controls and player list
+- Maintain all functionality while dramatically reducing space usage
+- Keep existing purple/teal gradient color scheme unchanged
+
+-----
+
+## Component Structure
+
+### File Location
+
+`/app/routes/tiers.tsx` (or equivalent Tiers page component)
+
+### Layout Architecture
+
+```
+<Page Container>
+  └─ <Header Navigation>
+       ├─ "Tiber Tiers" title
+       ├─ View toggles (PPR, Half, Szn, Wk 14)
+       └─ Refresh button
+  
+  └─ <FORGE Weights Card> (COMPACT VERSION)
+       ├─ Card Header (collapsible)
+       ├─ Preset Buttons Row
+       └─ Sliders Grid (2x2 compact layout)
+  
+  └─ <Position Filter Buttons>
+       └─ WR, RB, TE, QB tabs
+  
+  └─ <Player List>
+       └─ Tiered player rankings
+```
+
+-----
+
+## Detailed Specifications
+
+### 1. FORGE Weights Card (Compact Redesign)
+
+#### Container Styling
+
+```tsx
+// Compact card with minimal padding
+className="rounded-lg border border-gray-800 bg-gray-900/50 backdrop-blur-sm"
+style={{
+  padding: "12px 16px",  // Reduced from current excessive padding
+  marginBottom: "12px"    // Tight spacing to position buttons
+}}
+```
+
+#### Card Header
+
+```tsx
+<div className="flex items-center justify-between mb-3">
+  <div className="flex items-center gap-2">
+    <ZapIcon className="w-4 h-4 text-purple-400" />
+    <span className="text-sm font-semibold text-white">FORGE Weights</span>
+    <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400">
+      100%
+    </span>
+  </div>
+  <button 
+    onClick={toggleCollapse}
+    className="text-gray-400 hover:text-white transition-colors"
+  >
+    <ChevronUpIcon className="w-4 h-4" />
+  </button>
+</div>
+```
+
+**Specifications:**
+
+- Height: 28px total
+- Icons: 16px (w-4 h-4)
+- Font: text-sm for title, text-xs for percentage badge
+- Margin bottom: 12px to preset buttons
+
+-----
+
+### 2. Preset Buttons Row (Compact)
+
+```tsx
+<div className="flex gap-2 mb-3">
+  {presets.map(preset => (
+    <button
+      key={preset.name}
+      className={`
+        px-3 py-1.5 rounded-md text-xs font-medium
+        transition-all duration-200
+        ${isActive 
+          ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/50' 
+          : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+        }
+      `}
+    >
+      {preset.name}
+    </button>
+  ))}
+</div>
+```
+
+**Specifications:**
+
+- Button height: 30px (py-1.5)
+- Button padding: 12px horizontal (px-3)
+- Gap between buttons: 8px
+- Font size: text-xs (12px)
+- Border radius: 6px (rounded-md)
+- Total row height: ~42px including margin
+
+**Presets:**
+
+- Balanced (default active)
+- Workhorse
+- Efficiency
+- High Floor
+- Upside
+
+-----
+
+### 3. Sliders Grid (2x2 Compact Layout)
+
+```tsx
+<div className="grid grid-cols-2 gap-x-6 gap-y-3">
+  {/* Volume Slider */}
+  <div className="space-y-1">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-1.5">
+        <TargetIcon className="w-3.5 h-3.5 text-blue-400" />
+        <span className="text-xs text-gray-400">Vol</span>
+      </div>
+      <span className="text-sm font-semibold text-blue-400">40%</span>
+    </div>
+    <input
+      type="range"
+      min="0"
+      max="100"
+      value={weights.volume}
+      className="slider-compact"
+    />
+  </div>
+
+  {/* Efficiency Slider */}
+  <div className="space-y-1">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-1.5">
+        <ZapIcon className="w-3.5 h-3.5 text-yellow-400" />
+        <span className="text-xs text-gray-400">Eff</span>
+      </div>
+      <span className="text-sm font-semibold text-yellow-400">35%</span>
+    </div>
+    <input
+      type="range"
+      min="0"
+      max="100"
+      value={weights.efficiency}
+      className="slider-compact"
+    />
+  </div>
+
+  {/* Stability Slider */}
+  <div className="space-y-1">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-1.5">
+        <ActivityIcon className="w-3.5 h-3.5 text-purple-400" />
+        <span className="text-xs text-gray-400">Stb</span>
+      </div>
+      <span className="text-sm font-semibold text-purple-400">15%</span>
+    </div>
+    <input
+      type="range"
+      min="0"
+      max="100"
+      value={weights.stability}
+      className="slider-compact"
+    />
+  </div>
+
+  {/* Context Slider */}
+  <div className="space-y-1">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-1.5">
+        <BarChartIcon className="w-3.5 h-3.5 text-teal-400" />
+        <span className="text-xs text-gray-400">Ctx</span>
+      </div>
+      <span className="text-sm font-semibold text-teal-400">10%</span>
+    </div>
+    <input
+      type="range"
+      min="0"
+      max="100"
+      value={weights.context}
+      className="slider-compact"
+    />
+  </div>
+</div>
+```
+
+**Grid Specifications:**
+
+- Grid: 2 columns, responsive
+- Column gap: 24px (gap-x-6)
+- Row gap: 12px (gap-y-3)
+- Each slider cell height: ~50px
+- Total grid height: ~112px (2 rows × 50px + 12px gap)
+
+**Slider Cell Breakdown:**
+
+- Label row: 20px height
+  - Icon: 14px (w-3.5 h-3.5)
+  - Label text: text-xs (12px)
+  - Value: text-sm (14px)
+- Spacing: 4px (space-y-1)
+- Slider track: 24px height
+- Total: 48px per row
+
+-----
+
+### 4. Custom Slider Styling
+
+```css
+/* Add to global CSS or component styles */
+.slider-compact {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--slider-color) 0%,
+    var(--slider-color) var(--slider-value),
+    rgb(55, 65, 81) var(--slider-value),
+    rgb(55, 65, 81) 100%
+  );
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.slider-compact::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border: 2px solid var(--slider-color);
+}
+
+.slider-compact::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border: 2px solid var(--slider-color);
+}
+```
+
+**Dynamic color variables (set inline per slider):**
+
+```tsx
+style={{
+  '--slider-color': 'rgb(147, 51, 234)', // purple-500 for example
+  '--slider-value': `${value}%`
+} as React.CSSProperties}
+```
+
+-----
+
+### 5. Reset Button (Minimized)
+
+Place in the bottom-right of the FORGE card, subtle and compact:
+
+```tsx
+<div className="flex justify-end mt-3">
+  <button
+    onClick={resetToDefaults}
+    className="
+      flex items-center gap-1.5 px-3 py-1.5
+      text-xs text-gray-400 hover:text-white
+      bg-gray-800/50 hover:bg-gray-700
+      rounded-md transition-colors
+    "
+  >
+    <RotateCcwIcon className="w-3 h-3" />
+    Reset
+  </button>
+</div>
+```
+
+**Specifications:**
+
+- Height: 30px
+- Font: text-xs
+- Icon: 12px (w-3 h-3)
+- Subtle appearance, not prominent
+
+-----
+
+### 6. Position Filter Buttons
+
+```tsx
+<div className="flex gap-2 mb-4">
+  {positions.map(pos => (
+    <button
+      key={pos}
+      className={`
+        flex-1 py-2.5 rounded-lg text-sm font-semibold
+        transition-all duration-200
+        ${isActive
+          ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30'
+          : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+        }
+      `}
+    >
+      {pos}
+    </button>
+  ))}
+</div>
+```
+
+**Specifications:**
+
+- Height: 40px (py-2.5)
+- Equal width (flex-1)
+- Gap: 8px
+- Margin bottom to player list: 16px
+
+-----
+
+## Complete Spacing Breakdown
+
+### Vertical Space Usage (Target)
+
+```
+[Header Nav]                     60px
+↓ gap                            8px
+[FORGE Weights Card]            
+  - Header                       28px
+  - gap                          12px
+  - Preset Buttons               42px (including margin)
+  - Sliders Grid                112px
+  - gap                          12px
+  - Reset Button                 30px
+  - Card padding (top/bot)       24px (12px × 2)
+  TOTAL CARD HEIGHT:           ~260px
+↓ gap                            12px
+[Position Buttons]               40px
+↓ gap                            16px
+[Player List]                  remaining height
+```
+
+**Key Achievement:** FORGE section reduced from ~450-500px to ~260px (48% reduction)
+
+-----
+
+## State Management
+
+```typescript
+interface ForgeWeights {
+  volume: number;      // 0-100
+  efficiency: number;  // 0-100
+  stability: number;   // 0-100
+  context: number;     // 0-100
+}
+
+interface Preset {
+  name: string;
+  weights: ForgeWeights;
+}
+
+const presets: Preset[] = [
+  {
+    name: 'Balanced',
+    weights: { volume: 40, efficiency: 35, stability: 15, context: 10 }
+  },
+  {
+    name: 'Workhorse',
+    weights: { volume: 60, efficiency: 20, stability: 15, context: 5 }
+  },
+  {
+    name: 'Efficiency',
+    weights: { volume: 25, efficiency: 50, stability: 15, context: 10 }
+  },
+  {
+    name: 'High Floor',
+    weights: { volume: 35, efficiency: 30, stability: 30, context: 5 }
+  },
+  {
+    name: 'Upside',
+    weights: { volume: 30, efficiency: 40, stability: 5, context: 25 }
+  }
+];
+
+const [weights, setWeights] = useState<ForgeWeights>(presets[0].weights);
+const [activePreset, setActivePreset] = useState<string>('Balanced');
+const [isCollapsed, setIsCollapsed] = useState(false);
+```
+
+-----
+
+## Responsive Behavior
+
+### Mobile (< 768px)
+
+```tsx
+// Sliders stack vertically instead of 2x2 grid
+<div className="space-y-3 md:grid md:grid-cols-2 md:gap-x-6 md:gap-y-3">
+  {/* All 4 sliders */}
+</div>
+
+// Position buttons remain horizontal but smaller
+<div className="flex gap-1.5 mb-4">
+  {positions.map(pos => (
+    <button className="flex-1 py-2 text-xs ...">
+      {pos}
+    </button>
+  ))}
+</div>
+```
+
+### Tablet (768px - 1024px)
+
+- Maintain 2x2 slider grid
+- Slightly reduce horizontal gaps
+
+### Desktop (> 1024px)
+
+- Full layout as specified
+- Optional: Consider 4-column slider layout for very wide screens
+
+-----
+
+## Validation Rules
+
+1. **Weight Sum Must Equal 100%**
+- Real-time validation as sliders move
+- Display warning if sum ≠ 100%
+- Auto-adjust other sliders proportionally (optional)
+1. **Preset Detection**
+- When weights exactly match a preset, highlight that preset
+- When user manually adjusts, deselect all presets
+1. **Persistence**
+- Save custom weights to localStorage
+- Restore on page load
+- Provide “Reset to Balanced” functionality
+
+-----
+
+## Animation & Interactions
+
+### Slider Movement
+
+```tsx
+// Smooth transition on preset change
+transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+```
+
+### Preset Button Click
+
+```tsx
+const applyPreset = (preset: Preset) => {
+  setActivePreset(preset.name);
+  // Animate weight changes
+  setWeights(preset.weights);
+};
+```
+
+### Collapse/Expand
+
+```tsx
+<Collapsible.Root
+  open={!isCollapsed}
+  onOpenChange={setIsCollapsed}
+>
+  <Collapsible.Content className="animate-slideDown">
+    {/* Preset buttons + sliders */}
+  </Collapsible.Content>
+</Collapsible.Root>
+```
+
+-----
+
+## Color Palette (Unchanged)
+
+### Slider Colors
+
+- Volume: `text-blue-400` / `rgb(96, 165, 250)`
+- Efficiency: `text-yellow-400` / `rgb(250, 204, 21)`
+- Stability: `text-purple-400` / `rgb(192, 132, 252)`
+- Context: `text-teal-400` / `rgb(45, 212, 191)`
+
+### Background Colors
+
+- Card background: `bg-gray-900/50` with backdrop blur
+- Button inactive: `bg-gray-800`
+- Button active: `bg-purple-500`
+- Border: `border-gray-800`
+
+### Text Colors
+
+- Primary: `text-white`
+- Secondary: `text-gray-300`
+- Tertiary: `text-gray-400`
+
+-----
+
+## Icon Requirements
+
+Import from your icon library (Lucide React recommended):
+
+```typescript
+import {
+  Zap,           // FORGE header
+  Target,        // Volume
+  Activity,      // Stability
+  BarChart3,     // Context
+  ChevronUp,     // Collapse toggle
+  RotateCcw      // Reset button
+} from 'lucide-react';
+```
+
+-----
+
+## Accessibility
+
+1. **Slider Labels**
+   
+   ```tsx
+   <label htmlFor="volume-slider" className="sr-only">
+     Volume Weight Percentage
+   </label>
+   <input
+     id="volume-slider"
+     type="range"
+     aria-label="Volume weight"
+     aria-valuemin={0}
+     aria-valuemax={100}
+     aria-valuenow={weights.volume}
+   />
+   ```
+1. **Keyboard Navigation**
+- Tab through preset buttons
+- Tab through sliders
+- Arrow keys adjust slider values
+- Enter/Space activates preset buttons
+1. **Screen Reader Announcements**
+   
+   ```tsx
+   <div role="status" aria-live="polite" className="sr-only">
+     Weights updated: Volume {weights.volume}%, Efficiency {weights.efficiency}%, 
+     Stability {weights.stability}%, Context {weights.context}%
+   </div>
+   ```
+
+-----
+
+## Testing Checklist
+
+- [ ] FORGE card height is ~260px (60% reduction achieved)
+- [ ] All 4 sliders fit in 2x2 grid without overflow
+- [ ] Preset buttons apply correct weight distributions
+- [ ] Weight sum validation works (must equal 100%)
+- [ ] Reset button returns to Balanced preset
+- [ ] Player list begins immediately after position buttons
+- [ ] Mobile responsive (sliders stack vertically)
+- [ ] Smooth animations on preset changes
+- [ ] Collapse/expand functionality works
+- [ ] Colors match existing purple/teal scheme
+- [ ] No visual disconnect between sections
+
+-----
+
+## Implementation Priority
+
+1. **Phase 1 (Critical):**
+- Compact card container with reduced padding
+- 2x2 slider grid layout
+- Smaller preset buttons
+1. **Phase 2 (Important):**
+- Custom slider styling
+- Preset functionality
+- Weight validation
+1. **Phase 3 (Polish):**
+- Collapse/expand feature
+- Smooth animations
+- localStorage persistence
+- Mobile responsive refinements
+
+-----
+
+## Notes for Agent
+
+- **Do not change color scheme** - purple/teal gradient stays exactly as is
+- **Focus on space reduction** - this is the primary goal
+- **Maintain all functionality** - every existing feature must work
+- **Visual continuity** - eliminate the “separate page” feeling
+- **Use existing component patterns** - match the style of other TIBER pages
+
+The player should see the FORGE controls as a compact, integrated part of the page flow, not a giant separate section that dominates the screen.
+
+-----
+
+## Final Measurements Target
+
+|Element         |Current|Target|Reduction|
+|----------------|-------|------|---------|
+|FORGE Card Total|~480px |~260px|45.8%    |
+|Preset Buttons  |~60px  |~42px |30%      |
+|Slider Section  |~200px |~112px|44%      |
+|Card Padding    |~40px  |~24px |40%      |
+
+**Success Metric:** User should see significant player list content without scrolling on a standard laptop screen (1920×1080).
+
+-----
+
+End of handoff document. Ready for implementation.
