@@ -619,14 +619,18 @@ async function getNflDataPyIdFromCanonical(canonicalId: string): Promise<string 
  * CRITICAL FIX v1.1: Now queries all official snapshots for weeks 1 through asOfWeek
  * to properly aggregate season-to-date statistics instead of using a single snapshot.
  * 
+ * v1.2: Added startWeek support for week range filtering.
+ * 
  * @param canonicalId - The canonical player ID (e.g., "rashee-rice")
  * @param season - The NFL season (default: 2025)
  * @param asOfWeek - Optional: only include data up to this week (default: all available)
+ * @param startWeek - Optional: only include data starting from this week (default: 1)
  */
 export async function getEnrichedPlayerWeek(
   canonicalId: string,
   season: number = 2025,
-  asOfWeek?: number
+  asOfWeek?: number,
+  startWeek?: number
 ): Promise<EnrichedPlayerData | null> {
   try {
     // Get the nfl_data_py_id for this canonical ID
@@ -636,9 +640,10 @@ export async function getEnrichedPlayerWeek(
       return null;
     }
     
-    // Get all official snapshot IDs for the season up to asOfWeek
-    // This is the CRITICAL FIX: query across ALL official snapshots, not just one
-    const weekFilter = asOfWeek !== undefined ? asOfWeek : 99; // 99 = all weeks
+    // Get all official snapshot IDs for the season within week range
+    // v1.2: Added startWeek support for week range filtering
+    const weekFilterMax = asOfWeek !== undefined ? asOfWeek : 99; // 99 = all weeks
+    const weekFilterMin = startWeek !== undefined ? startWeek : 1; // default to week 1
     
     const officialSnapshots = await db
       .select({ id: datadiveSnapshotMeta.id, week: datadiveSnapshotMeta.week })
@@ -647,7 +652,8 @@ export async function getEnrichedPlayerWeek(
         and(
           eq(datadiveSnapshotMeta.season, season),
           eq(datadiveSnapshotMeta.isOfficial, true),
-          sql`${datadiveSnapshotMeta.week} <= ${weekFilter}`
+          sql`${datadiveSnapshotMeta.week} >= ${weekFilterMin}`,
+          sql`${datadiveSnapshotMeta.week} <= ${weekFilterMax}`
         )
       );
     
@@ -657,7 +663,7 @@ export async function getEnrichedPlayerWeek(
     }
     
     const snapshotIds = officialSnapshots.map(s => s.id);
-    console.log(`[DatadiveContext] Fetching from ${snapshotIds.length} official snapshots for ${canonicalId} (weeks 1-${weekFilter})`);
+    console.log(`[DatadiveContext] Fetching from ${snapshotIds.length} official snapshots for ${canonicalId} (weeks ${weekFilterMin}-${weekFilterMax})`);
     
     // Fetch weekly rows across ALL official snapshots for this player
     // Use DISTINCT ON to handle duplicate week entries from re-snapshots
@@ -731,7 +737,8 @@ export async function getEnrichedPlayerWeek(
       FROM datadive_snapshot_player_week
       WHERE player_id = ${nflDataPyId}
         AND season = ${season}
-        AND week <= ${weekFilter}
+        AND week >= ${weekFilterMin}
+        AND week <= ${weekFilterMax}
         AND snapshot_id IN (${sql.raw(snapshotIds.join(','))})
       ORDER BY week ASC, snapshot_id DESC
     `);

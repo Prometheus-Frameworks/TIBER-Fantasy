@@ -157,8 +157,9 @@ async function fetchSeasonStats(
 ): Promise<ForgeContext['seasonStats']> {
   try {
     // For 2025+, use NEW enriched weekly data path (single source of truth)
+    // v1.2: Pass startWeek for week range filtering
     if (season >= 2025 && USE_DATADIVE_FORGE) {
-      const enrichedData = await getEnrichedPlayerWeek(canonicalId, season, asOfWeek > 0 ? asOfWeek : undefined);
+      const enrichedData = await getEnrichedPlayerWeek(canonicalId, season, asOfWeek > 0 ? asOfWeek : undefined, startWeek);
       if (enrichedData && enrichedData.gamesPlayed > 0) {
         console.log(`[FORGE/Context] Using enriched weekly data for ${canonicalId}: ${enrichedData.gamesPlayed} games, enrichments: [${enrichedData.enrichmentList.join(', ')}]`);
         const forgeInput = enrichedToForgeInput(enrichedData);
