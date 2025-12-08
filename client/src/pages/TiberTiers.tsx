@@ -238,44 +238,44 @@ function WeightsPanel({
   };
 
   return (
-    <div className="rounded-lg border border-gray-800 bg-gray-900/50 backdrop-blur-sm mb-3">
-      {/* Compact Header */}
+    <div className="rounded-md border border-gray-800/60 bg-gray-900/40 backdrop-blur-sm mb-2">
+      {/* Sleek Header */}
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-800/30 transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-800/20 transition-colors"
         data-testid="toggle-weights-panel"
       >
-        <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-semibold text-white">FORGE Weights</span>
-          <span className={`text-xs px-2 py-0.5 rounded ${isValidTotal ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-            {isValidTotal ? '100%' : `${totalWeight}%`}
+        <div className="flex items-center gap-1.5">
+          <Zap className="w-3.5 h-3.5 text-purple-400" />
+          <span className="text-xs font-semibold text-white tracking-wide uppercase">Weights</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${isValidTotal ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400'}`}>
+            {totalWeight}%
           </span>
         </div>
         {isCollapsed ? (
-          <ChevronDown className="w-4 h-4 text-gray-400" />
+          <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
         ) : (
-          <ChevronUp className="w-4 h-4 text-gray-400" />
+          <ChevronUp className="w-3.5 h-3.5 text-gray-500" />
         )}
       </button>
 
       {/* Collapsible Content */}
       <div 
-        className={`overflow-hidden transition-all duration-300 ease-out ${
-          isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[400px] opacity-100'
+        className={`overflow-hidden transition-all duration-200 ease-out ${
+          isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[300px] opacity-100'
         }`}
       >
-        <div className="px-4 pb-3 space-y-3">
-          {/* Compact Preset Buttons */}
-          <div className="flex flex-wrap gap-2">
+        <div className="px-3 pb-2.5 space-y-2">
+          {/* Tight Preset Buttons */}
+          <div className="flex flex-wrap gap-1.5">
             {WEIGHT_PRESETS.map((preset) => (
               <button
                 key={preset.id}
                 onClick={() => applyPreset(preset.id)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                className={`px-2 py-1 rounded text-[10px] font-medium transition-all duration-150 ${
                   activePreset === preset.id
-                    ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/50'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    ? 'bg-purple-500/90 text-white shadow-sm shadow-purple-500/40'
+                    : 'bg-gray-800/70 text-gray-400 hover:bg-gray-700/80 hover:text-gray-300'
                 }`}
                 data-testid={`preset-${preset.id}`}
               >
@@ -284,16 +284,16 @@ function WeightsPanel({
             ))}
           </div>
 
-          {/* 2x2 Slider Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+          {/* Tight 2x2 Slider Grid */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
             {/* Volume Slider */}
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Target className="w-3.5 h-3.5 text-blue-400" />
-                  <span className="text-xs text-gray-400">Vol</span>
+                <div className="flex items-center gap-1">
+                  <Target className="w-3 h-3 text-blue-400" />
+                  <span className="text-[10px] text-gray-500 font-medium">VOL</span>
                 </div>
-                <span className="text-sm font-semibold text-blue-400">{weights.volume}%</span>
+                <span className="text-[11px] font-semibold text-blue-400 font-mono">{weights.volume}</span>
               </div>
               <CompactSlider
                 value={weights.volume}
@@ -304,13 +304,13 @@ function WeightsPanel({
             </div>
 
             {/* Efficiency Slider */}
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5 text-yellow-400" />
-                  <span className="text-xs text-gray-400">Eff</span>
+                <div className="flex items-center gap-1">
+                  <Zap className="w-3 h-3 text-yellow-400" />
+                  <span className="text-[10px] text-gray-500 font-medium">EFF</span>
                 </div>
-                <span className="text-sm font-semibold text-yellow-400">{weights.efficiency}%</span>
+                <span className="text-[11px] font-semibold text-yellow-400 font-mono">{weights.efficiency}</span>
               </div>
               <CompactSlider
                 value={weights.efficiency}
@@ -321,13 +321,13 @@ function WeightsPanel({
             </div>
 
             {/* Stability Slider */}
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Activity className="w-3.5 h-3.5 text-purple-400" />
-                  <span className="text-xs text-gray-400">Stb</span>
+                <div className="flex items-center gap-1">
+                  <Activity className="w-3 h-3 text-purple-400" />
+                  <span className="text-[10px] text-gray-500 font-medium">STB</span>
                 </div>
-                <span className="text-sm font-semibold text-purple-400">{weights.stability}%</span>
+                <span className="text-[11px] font-semibold text-purple-400 font-mono">{weights.stability}</span>
               </div>
               <CompactSlider
                 value={weights.stability}
@@ -338,13 +338,13 @@ function WeightsPanel({
             </div>
 
             {/* Context Slider */}
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <BarChart3 className="w-3.5 h-3.5 text-teal-400" />
-                  <span className="text-xs text-gray-400">Ctx</span>
+                <div className="flex items-center gap-1">
+                  <BarChart3 className="w-3 h-3 text-teal-400" />
+                  <span className="text-[10px] text-gray-500 font-medium">CTX</span>
                 </div>
-                <span className="text-sm font-semibold text-teal-400">{weights.context}%</span>
+                <span className="text-[11px] font-semibold text-teal-400 font-mono">{weights.context}</span>
               </div>
               <CompactSlider
                 value={weights.context}
@@ -355,14 +355,14 @@ function WeightsPanel({
             </div>
           </div>
 
-          {/* Minimal Reset Button */}
-          <div className="flex justify-end pt-1">
+          {/* Inline Reset */}
+          <div className="flex justify-end">
             <button
               onClick={resetToDefaults}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 hover:text-white bg-gray-800/50 hover:bg-gray-700 rounded-md transition-colors"
+              className="flex items-center gap-1 px-2 py-0.5 text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
               data-testid="button-reset-weights"
             >
-              <RotateCcw className="w-3 h-3" />
+              <RotateCcw className="w-2.5 h-2.5" />
               Reset
             </button>
           </div>
