@@ -917,6 +917,9 @@ async function fetchInjuryStatus(
 /**
  * v1.5: Fetch xFPTS (expected fantasy points) data from datadive_expected_fantasy_week
  * Aggregates across the week range to get season totals and FPOE (fantasy points over expected)
+ * 
+ * NOTE: datadive_expected_fantasy_week uses nflfastr_gsis_id (e.g. "00-0036900") as player_id,
+ * so we need to join with player_identity_map to translate canonical_id to gsis_id
  */
 async function fetchXFptsData(
   canonicalId: string, 
@@ -936,18 +939,19 @@ async function fetchXFptsData(
     }>(sql`
       SELECT 
         COUNT(*) as games,
-        COALESCE(SUM(actual_ppr), 0) as total_actual,
-        COALESCE(SUM(x_ppr_v2), 0) as total_xfpts,
-        COALESCE(SUM(xfpgoe_ppr_v2), 0) as total_fpoe
-      FROM datadive_expected_fantasy_week
-      WHERE player_id = ${canonicalId}
-        AND season = ${season}
-        AND week >= ${weekLower}
-        AND week <= ${weekUpper}
+        COALESCE(SUM(dew.actual_ppr), 0) as total_actual,
+        COALESCE(SUM(dew.x_ppr_v2), 0) as total_xfpts,
+        COALESCE(SUM(dew.xfpgoe_ppr_v2), 0) as total_fpoe
+      FROM datadive_expected_fantasy_week dew
+      JOIN player_identity_map pim ON dew.player_id = pim.nflfastr_gsis_id
+      WHERE pim.canonical_id = ${canonicalId}
+        AND dew.season = ${season}
+        AND dew.week >= ${weekLower}
+        AND dew.week <= ${weekUpper}
     `);
     
     const row = result.rows[0];
-    if (!row || row.games === 0) {
+    if (!row || Number(row.games) === 0) {
       return undefined;
     }
     
