@@ -108,6 +108,11 @@ interface ForgePlayer {
     xFpts?: number;
     fpoe?: number;
   };
+  nextMatchup?: {
+    opponent: string;
+    dvpRank: number;
+    isHome: boolean;
+  };
 }
 
 interface ForgeBatchResponse {
@@ -564,6 +569,32 @@ function PlayerRow({
         </Tooltip>
       </td>
       
+      {/* Next Matchup - DvP Rank */}
+      <td className="py-3 px-3 text-center hidden xl:table-cell">
+        {player.nextMatchup ? (
+          <Tooltip>
+            <TooltipTrigger>
+              <span className={`font-mono text-sm ${
+                player.nextMatchup.dvpRank <= 8 
+                  ? 'text-green-400 font-medium' 
+                  : player.nextMatchup.dvpRank >= 25 
+                    ? 'text-red-400 font-medium' 
+                    : 'text-slate-400'
+              }`}>
+                {player.nextMatchup.isHome ? '' : '@'}{player.nextMatchup.opponent}
+                <span className="ml-1 text-xs opacity-70">({player.nextMatchup.dvpRank})</span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              vs {player.nextMatchup.opponent} - DvP Rank #{player.nextMatchup.dvpRank} 
+              {player.nextMatchup.dvpRank <= 8 ? ' (Smash Spot)' : player.nextMatchup.dvpRank >= 25 ? ' (Tough Matchup)' : ''}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <span className="text-slate-600">-</span>
+        )}
+      </td>
+      
       {/* Sub-scores */}
       <td className="py-3 px-3 text-center hidden xl:table-cell">
         <div className="flex items-center justify-center gap-1 text-xs">
@@ -675,13 +706,14 @@ export default function TiberTiers() {
   const exportToCsv = () => {
     if (!rankedPlayers.length) return;
     
-    const headers = ['Rank', 'Player', 'Team', 'Alpha', 'PPG', 'Total', 'L3', volumeLabel, 'REC', 'TDs', 'Snap%', 'RZ', 'xFPTS', 'FPOE', 'GP'];
+    const headers = ['Rank', 'Player', 'Team', 'Alpha', 'PPG', 'Total', 'L3', volumeLabel, 'REC', 'TDs', 'Snap%', 'RZ', 'xFPTS', 'FPOE', 'Matchup', 'DvP Rank', 'GP'];
     const rows = rankedPlayers.map((player, idx) => {
       const stats = player.fantasyStats;
       const ppg = scoringFormat === 'ppr' ? stats?.ppgPpr : stats?.ppgHalf;
       const total = scoringFormat === 'ppr' ? stats?.seasonFptsPpr : stats?.seasonFptsHalf;
       const l3 = scoringFormat === 'ppr' ? stats?.last3AvgPpr : stats?.last3AvgHalf;
       const volume = position === 'RB' ? stats?.touches : stats?.targets;
+      const matchup = player.nextMatchup;
       
       return [
         idx + 1,
@@ -698,6 +730,8 @@ export default function TiberTiers() {
         stats?.rzOpps ?? '',
         stats?.xFpts?.toFixed(1) ?? '',
         stats?.fpoe?.toFixed(1) ?? '',
+        matchup ? `${matchup.isHome ? 'vs ' : '@'}${matchup.opponent}` : '',
+        matchup?.dvpRank ?? '',
         player.gamesPlayed ?? '',
       ];
     });
@@ -1069,6 +1103,14 @@ export default function TiberTiers() {
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>Fantasy Points Over Expected (Actual - xFPTS)</TooltipContent>
+                        </Tooltip>
+                      </th>
+                      <th className="py-3 px-3 text-center hidden xl:table-cell">
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <span className="text-slate-400">Matchup</span>
+                          </TooltipTrigger>
+                          <TooltipContent>Next week opponent DvP rank (1 = easiest)</TooltipContent>
                         </Tooltip>
                       </th>
                       <th className="py-3 px-3 text-center hidden xl:table-cell">

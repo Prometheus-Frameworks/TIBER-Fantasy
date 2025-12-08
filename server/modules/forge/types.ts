@@ -128,6 +128,12 @@ export interface ForgeScore {
   
   fantasyStats?: FantasyStats; // v1.2: Fantasy stats for Tiber Tiers
   
+  nextMatchup?: {             // v1.7: Next week's matchup info for DvP column
+    opponent: string;
+    dvpRank: number;          // 1-32, lower = easier matchup
+    isHome: boolean;
+  };
+  
   dataQuality: {
     hasAdvancedStats: boolean;
     hasSnapData: boolean;

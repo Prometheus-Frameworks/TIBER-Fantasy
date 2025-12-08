@@ -769,7 +769,9 @@ async function fetchWeeklyStats(
         }>(sql`
           SELECT snaps.week, snaps.offense_pct
           FROM bronze_nflfastr_snap_counts snaps
-          JOIN player_identity_map pim ON LOWER(snaps.player) = LOWER(pim.full_name)
+          JOIN player_identity_map pim ON 
+            LOWER(REGEXP_REPLACE(snaps.player, ' (Jr\\.|Sr\\.|II|III|IV|V)$', '', 'g')) = LOWER(pim.full_name)
+            OR LOWER(snaps.player) = LOWER(pim.full_name)
           WHERE pim.canonical_id = ${canonicalId}
             AND snaps.season = ${season}
             AND snaps.week >= ${weekLower}

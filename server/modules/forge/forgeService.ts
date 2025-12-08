@@ -51,6 +51,7 @@ import { buildWRFeatures } from './features/wrFeatures';
 import { buildRBFeatures } from './features/rbFeatures';
 import { buildTEFeatures } from './features/teFeatures';
 import { buildQBFeatures } from './features/qbFeatures';
+import { getThisWeekMatchup } from './dvpMatchupService';
 
 const featureBuilderMap = new Map<PlayerPosition, (context: ForgeContext) => ForgeFeatureBundle>([
   ['WR', buildWRFeatures],
@@ -229,6 +230,23 @@ class ForgeService implements IForgeService {
 
     console.log(`[FORGE] Calculating Alpha Score...`);
     const forgeScore: ForgeScore = calculateAlphaScore(context, featureBundle, undefined, scoreOptions);
+    
+    // v1.7: Fetch next week matchup data for DvP column
+    if (context.nflTeam && typeof effectiveAsOfWeek === 'number') {
+      try {
+        const nextWeek = effectiveAsOfWeek + 1;
+        const matchup = await getThisWeekMatchup(context.nflTeam, context.position, nextWeek, season);
+        if (matchup) {
+          forgeScore.nextMatchup = {
+            opponent: matchup.opponent,
+            dvpRank: matchup.rankVsPosition,
+            isHome: matchup.isHome,
+          };
+        }
+      } catch (err) {
+        // Silently continue without matchup data
+      }
+    }
     
     console.log(`[FORGE] ${context.playerName}: Alpha=${forgeScore.alpha}, Confidence=${forgeScore.confidence}, Trajectory=${forgeScore.trajectory}`);
     
