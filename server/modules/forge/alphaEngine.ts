@@ -161,6 +161,57 @@ function calculateWeightedAlpha(
 }
 
 /**
+ * Validate and convert z-score inputs to calibrated alpha (0-100).
+ * 
+ * v1.3: Added z-score detection with asymmetric scaling to match tier expectations:
+ *   - Positive z-scores: calibrated = 50 + z * 23 (z=1.2 → ~78 for T2)
+ *   - Negative z-scores: calibrated = 50 + z * 100 (z=-0.3 → ~20 for T5)
+ * 
+ * This asymmetry reflects fantasy football reality: being slightly below average
+ * hurts more than being slightly above average helps.
+ * 
+ * @param rawValue - The raw input value (could be 0-100 or z-score)
+ * @param position - Player position for logging
+ * @returns Normalized value in 0-100 range
+ */
+function normalizeZScoreInput(rawValue: number, position: PlayerPosition): number {
+  // Detect z-score-like inputs: values between -5 and 5 that aren't valid percentages
+  // A z-score of ±4 is extremely rare (99.997%), so we use -5 to 5 as our detection range
+  const isLikelyZScore = rawValue >= -5 && rawValue <= 5 && (rawValue < 0 || rawValue < 10);
+  
+  if (isLikelyZScore && rawValue < 10) {
+    // Asymmetric z-score to calibrated alpha conversion
+    // Positive: z=1.2 → 78 (T2-ish), z=2.2 → 100 (elite)
+    // Negative: z=-0.3 → 20 (T5), z=-0.5 → 0 (replacement level)
+    let converted: number;
+    if (rawValue >= 0) {
+      // Positive z: multiplier ~23 (z=1.2 → 78, z=2.2 → 100)
+      converted = 50 + (rawValue * 23);
+    } else {
+      // Negative z: multiplier ~100 (z=-0.3 → 20, z=-0.5 → 0)
+      converted = 50 + (rawValue * 100);
+    }
+    const clamped = clamp(converted, 0, 100);
+    
+    console.warn(`[FORGE/AlphaEngine] ⚠️ Z-score detected for ${position}: z=${rawValue.toFixed(3)} → alpha=${clamped.toFixed(1)} (converted)`);
+    return clamped;
+  }
+  
+  // Handle out-of-bounds values (not z-scores but still bad)
+  if (rawValue < 0) {
+    console.warn(`[FORGE/AlphaEngine] ⚠️ Negative raw alpha for ${position}: ${rawValue.toFixed(1)} → clamped to 0`);
+    return 0;
+  }
+  
+  if (rawValue > 100) {
+    console.warn(`[FORGE/AlphaEngine] ⚠️ Raw alpha exceeds 100 for ${position}: ${rawValue.toFixed(1)} → clamped to 100`);
+    return 100;
+  }
+  
+  return rawValue;
+}
+
+/**
  * Calibrate raw alpha score to a more intuitive 0-100 scale
  * 
  * Uses position-specific linear remapping based on observed distribution.
@@ -171,28 +222,54 @@ function calculateWeightedAlpha(
  * v1.2 FIX: No longer clamps rawAlpha before mapping. This allows elite players
  * with raw scores above p90 to exceed the outMax calibrated value (up to 100).
  * Only the final output is clamped to [0, 100].
+ * 
+ * v1.3: Added z-score validation with warning logs for out-of-bounds inputs.
+ * Z-score inputs are converted directly to calibrated alpha and skip secondary calibration.
  */
 function calibrateAlpha(position: PlayerPosition, rawAlpha: number): number {
+  // v1.3: Detect z-scores first - they get converted directly to calibrated alpha
+  const isZScore = rawAlpha >= -5 && rawAlpha <= 5 && (rawAlpha < 0 || rawAlpha < 10);
+  if (isZScore && rawAlpha < 10) {
+    // Z-scores bypass secondary calibration - normalizeZScoreInput returns final calibrated value
+    return normalizeZScoreInput(rawAlpha, position);
+  }
+  
+  // Normal path: validate and then apply calibration
+  const normalizedRaw = normalizeZScoreInput(rawAlpha, position);
+  
   const config = ALPHA_CALIBRATION[position];
   
   if (!config) {
-    return rawAlpha;
+    return normalizedRaw;
   }
   
   const { p10, p90, outMin, outMax } = config;
   
   if (p90 === p10) {
-    return rawAlpha;
+    return normalizedRaw;
   }
   
   // v1.2: Use raw alpha directly without pre-clamping
   // This allows scores above p90 to map above outMax (capped at 100)
-  const t = (rawAlpha - p10) / (p90 - p10);
+  const t = (normalizedRaw - p10) / (p90 - p10);
   const mapped = outMin + t * (outMax - outMin);
+  
+  // Log warning if mapping produces extreme values
+  if (normalizedRaw < p10 - 10) {
+    console.warn(`[FORGE/AlphaEngine] ⚠️ Very low alpha for ${position}: raw=${normalizedRaw.toFixed(1)} < p10=${p10}, calibrated=${Math.max(0, mapped).toFixed(1)}`);
+  } else if (normalizedRaw > p90 + 10) {
+    console.warn(`[FORGE/AlphaEngine] ⚠️ Very high alpha for ${position}: raw=${normalizedRaw.toFixed(1)} > p90=${p90}, calibrated=${Math.min(100, mapped).toFixed(1)}`);
+  }
   
   // Only clamp final output to valid 0-100 range
   return clamp(mapped, 0, 100);
 }
+
+/**
+ * Export calibrateAlpha for testing purposes
+ * v1.3: Exposes the calibration function for unit testing
+ */
+export { calibrateAlpha, normalizeZScoreInput };
 
 /**
  * Calculate trajectory based on rolling vs season alpha
