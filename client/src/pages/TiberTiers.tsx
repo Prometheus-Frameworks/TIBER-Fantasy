@@ -201,34 +201,34 @@ function WeightsPanel({
   };
 
   return (
-    <div className="bg-[#141824] border border-slate-700 rounded-xl mb-6">
+    <div className="bg-[#141824] border border-slate-700 rounded-xl mb-4 sm:mb-6">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 hover:bg-slate-800/30 transition-colors rounded-t-xl"
+        className="w-full flex items-center justify-between p-3 sm:p-4 hover:bg-slate-800/30 transition-colors rounded-t-xl"
         data-testid="toggle-weights-panel"
       >
-        <div className="flex items-center gap-3">
-          <Zap className="h-5 w-5 text-purple-400" />
-          <h3 className="text-lg font-semibold text-white">FORGE Formula Weights</h3>
-          <span className={`text-xs px-2 py-1 rounded ${isValidTotal ? 'bg-green-900/40 text-green-400' : 'bg-red-900/40 text-red-400'}`}>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" />
+          <h3 className="text-sm sm:text-lg font-semibold text-white">FORGE Weights</h3>
+          <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded ${isValidTotal ? 'bg-green-900/40 text-green-400' : 'bg-red-900/40 text-red-400'}`}>
             {isValidTotal ? '100%' : `${totalWeight}%`}
           </span>
         </div>
         {isCollapsed ? (
-          <ChevronDown className="h-5 w-5 text-slate-400" />
+          <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400" />
         ) : (
-          <ChevronUp className="h-5 w-5 text-slate-400" />
+          <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400" />
         )}
       </button>
 
       {!isCollapsed && (
-        <div className="p-4 pt-0 space-y-4">
-          <div className="flex flex-wrap gap-2 pb-3 border-b border-slate-700">
+        <div className="p-3 sm:p-4 pt-0 space-y-3 sm:space-y-4">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2 pb-3 border-b border-slate-700">
             {WEIGHT_PRESETS.map((preset) => (
               <button
                 key={preset.id}
                 onClick={() => applyPreset(preset.id)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                   activePreset === preset.id
                     ? 'bg-purple-600 text-white'
                     : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
@@ -240,14 +240,15 @@ function WeightsPanel({
             ))}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="space-y-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+            <div className="space-y-1.5 sm:space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm text-slate-300 flex items-center gap-2">
-                  <Target className="h-4 w-4 text-blue-400" />
-                  Volume
+                <label className="text-xs sm:text-sm text-slate-300 flex items-center gap-1 sm:gap-2">
+                  <Target className="h-3 w-3 sm:h-4 sm:w-4 text-blue-400" />
+                  <span className="hidden sm:inline">Volume</span>
+                  <span className="sm:hidden">Vol</span>
                 </label>
-                <span className="text-sm font-mono text-blue-400">{weights.volume}%</span>
+                <span className="text-xs sm:text-sm font-mono text-blue-400">{weights.volume}%</span>
               </div>
               <Slider
                 value={[weights.volume]}
@@ -258,16 +259,17 @@ function WeightsPanel({
                 className="w-full"
                 data-testid="slider-volume"
               />
-              <p className="text-xs text-slate-500">Targets, touches, snap share</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 hidden sm:block">Targets, touches, snap share</p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5 sm:space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm text-slate-300 flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-yellow-400" />
-                  Efficiency
+                <label className="text-xs sm:text-sm text-slate-300 flex items-center gap-1 sm:gap-2">
+                  <Zap className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400" />
+                  <span className="hidden sm:inline">Efficiency</span>
+                  <span className="sm:hidden">Eff</span>
                 </label>
-                <span className="text-sm font-mono text-yellow-400">{weights.efficiency}%</span>
+                <span className="text-xs sm:text-sm font-mono text-yellow-400">{weights.efficiency}%</span>
               </div>
               <Slider
                 value={[weights.efficiency]}
@@ -278,16 +280,17 @@ function WeightsPanel({
                 className="w-full"
                 data-testid="slider-efficiency"
               />
-              <p className="text-xs text-slate-500">YPRR, EPA, yards/touch</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 hidden sm:block">YPRR, EPA, yards/touch</p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5 sm:space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm text-slate-300 flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-purple-400" />
-                  Stability
+                <label className="text-xs sm:text-sm text-slate-300 flex items-center gap-1 sm:gap-2">
+                  <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-purple-400" />
+                  <span className="hidden sm:inline">Stability</span>
+                  <span className="sm:hidden">Stb</span>
                 </label>
-                <span className="text-sm font-mono text-purple-400">{weights.stability}%</span>
+                <span className="text-xs sm:text-sm font-mono text-purple-400">{weights.stability}%</span>
               </div>
               <Slider
                 value={[weights.stability]}
@@ -298,16 +301,17 @@ function WeightsPanel({
                 className="w-full"
                 data-testid="slider-stability"
               />
-              <p className="text-xs text-slate-500">Week-to-week consistency</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 hidden sm:block">Week-to-week consistency</p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5 sm:space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm text-slate-300 flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-emerald-400" />
-                  Context
+                <label className="text-xs sm:text-sm text-slate-300 flex items-center gap-1 sm:gap-2">
+                  <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-400" />
+                  <span className="hidden sm:inline">Context</span>
+                  <span className="sm:hidden">Ctx</span>
                 </label>
-                <span className="text-sm font-mono text-emerald-400">{weights.context}%</span>
+                <span className="text-xs sm:text-sm font-mono text-emerald-400">{weights.context}%</span>
               </div>
               <Slider
                 value={[weights.context]}
@@ -318,23 +322,23 @@ function WeightsPanel({
                 className="w-full"
                 data-testid="slider-context"
               />
-              <p className="text-xs text-slate-500">Team environment, matchups</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 hidden sm:block">Team environment, matchups</p>
             </div>
           </div>
 
           <div className="flex items-center justify-between pt-2 border-t border-slate-700">
-            <div className="text-xs text-slate-500">
+            <div className="text-[10px] sm:text-xs text-slate-500 hidden sm:block">
               Alpha Score = weighted blend of sub-scores
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full sm:w-auto justify-end">
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={resetToDefaults}
-                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                className="border-slate-600 text-slate-300 hover:bg-slate-700 h-7 sm:h-9 text-xs sm:text-sm"
                 data-testid="button-reset-weights"
               >
-                <RotateCcw className="h-4 w-4 mr-1" />
+                <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                 Reset
               </Button>
             </div>
@@ -373,34 +377,34 @@ function PlayerRow({
   return (
     <tr className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors" data-testid={`player-row-${player.playerId}`}>
       {/* Rank */}
-      <td className="py-3 px-3 text-center">
-        <span className="text-slate-400 font-mono text-sm">{rank}</span>
+      <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
+        <span className="text-slate-400 font-mono text-xs sm:text-sm">{rank}</span>
       </td>
       
       {/* Player Info */}
-      <td className="py-3 px-3">
-        <div className="flex items-center gap-2">
-          <span className={`px-1.5 py-0.5 rounded text-xs font-bold border ${tierInfo.bg} ${tierInfo.color}`}>
+      <td className="py-2 sm:py-3 px-2 sm:px-3">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <span className={`px-1 sm:px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-bold border ${tierInfo.bg} ${tierInfo.color}`}>
             {tierInfo.tier}
           </span>
-          <div>
-            <div className="font-medium text-white text-sm">{player.playerName}</div>
-            <div className="text-xs text-slate-500">{player.nflTeam || 'FA'}</div>
+          <div className="min-w-0">
+            <div className="font-medium text-white text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{player.playerName}</div>
+            <div className="text-[10px] sm:text-xs text-slate-500">{player.nflTeam || 'FA'}</div>
           </div>
         </div>
       </td>
       
       {/* Alpha Score + Trajectory */}
-      <td className="py-3 px-3 text-center">
-        <div className="flex items-center justify-center gap-1">
-          <span className="text-lg font-bold text-white font-mono">{player.adjustedAlpha.toFixed(1)}</span>
+      <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
+        <div className="flex items-center justify-center gap-0.5 sm:gap-1">
+          <span className="text-sm sm:text-lg font-bold text-white font-mono">{player.adjustedAlpha.toFixed(1)}</span>
           <TrajectoryIcon trajectory={player.trajectory} />
         </div>
       </td>
       
       {/* Fantasy Points - PPG */}
-      <td className="py-3 px-3 text-center">
-        <span className="text-white font-mono text-sm">{ppg?.toFixed(1) || '-'}</span>
+      <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
+        <span className="text-white font-mono text-xs sm:text-sm">{ppg?.toFixed(1) || '-'}</span>
       </td>
       
       {/* Fantasy Points - Season Total */}
@@ -491,51 +495,52 @@ export default function TiberTiers() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-[#0a0e1a]">
+      <div className="min-h-screen bg-[#0a0e1a] overflow-x-hidden">
         <header className="bg-[#141824] border-b border-gray-800 sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <div className="flex items-center gap-4">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            {/* Mobile: Two rows, Desktop: Single row */}
+            <div className="flex items-center justify-between h-14 sm:h-16">
+              <div className="flex items-center gap-2 sm:gap-4">
                 <Link href="/">
-                  <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white" data-testid="button-home">
-                    <Home className="h-5 w-5" />
+                  <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white h-8 w-8 sm:h-10 sm:w-10" data-testid="button-home">
+                    <Home className="h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
                 </Link>
-                <div className="flex items-center gap-2">
-                  <Crown className="h-6 w-6 text-purple-400" />
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-purple-400" />
                   <div>
-                    <h1 className="text-xl font-bold text-white">Tiber Tiers</h1>
-                    <p className="text-xs text-slate-400 -mt-0.5">Fantasy Football Rankings</p>
+                    <h1 className="text-base sm:text-xl font-bold text-white">Tiber Tiers</h1>
+                    <p className="text-[10px] sm:text-xs text-slate-400 -mt-0.5 hidden sm:block">Fantasy Football Rankings</p>
                   </div>
-                  <Badge variant="outline" className="border-purple-500 text-purple-400 text-xs ml-2">
+                  <Badge variant="outline" className="border-purple-500 text-purple-400 text-[10px] sm:text-xs ml-1 sm:ml-2 hidden sm:inline-flex">
                     FORGE v1.2
                   </Badge>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
-                {/* League Mode Toggle */}
-                <div className="flex items-center bg-slate-800 rounded-lg p-0.5">
+              <div className="flex items-center gap-1 sm:gap-3">
+                {/* League Mode Toggle - Hidden on mobile */}
+                <div className="hidden sm:flex items-center bg-slate-800 rounded-lg p-0.5">
                   <button
                     onClick={() => setLeagueMode('redraft')}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                       leagueMode === 'redraft'
                         ? 'bg-purple-600 text-white'
                         : 'text-slate-400 hover:text-white'
                     }`}
                     data-testid="toggle-redraft"
                   >
-                    <Trophy className="h-3.5 w-3.5 inline mr-1" />
+                    <Trophy className="h-3 w-3 sm:h-3.5 sm:w-3.5 inline mr-1" />
                     Redraft
                   </button>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
-                        className="px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 cursor-not-allowed"
+                        className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium text-slate-600 cursor-not-allowed"
                         data-testid="toggle-dynasty"
                         disabled
                       >
-                        <Users className="h-3.5 w-3.5 inline mr-1" />
+                        <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5 inline mr-1" />
                         Dynasty
                       </button>
                     </TooltipTrigger>
@@ -547,7 +552,7 @@ export default function TiberTiers() {
                 <div className="flex items-center bg-slate-800 rounded-lg p-0.5">
                   <button
                     onClick={() => setScoringFormat('ppr')}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                       scoringFormat === 'ppr'
                         ? 'bg-blue-600 text-white'
                         : 'text-slate-400 hover:text-white'
@@ -558,7 +563,7 @@ export default function TiberTiers() {
                   </button>
                   <button
                     onClick={() => setScoringFormat('half')}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                       scoringFormat === 'half'
                         ? 'bg-blue-600 text-white'
                         : 'text-slate-400 hover:text-white'
@@ -571,13 +576,14 @@ export default function TiberTiers() {
 
                 {/* View Mode Toggle */}
                 <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-                  <TabsList className="bg-slate-800">
-                    <TabsTrigger value="season" className="data-[state=active]:bg-purple-600" data-testid="tab-season">
-                      <BarChart3 className="h-4 w-4 mr-1" />
-                      Season
+                  <TabsList className="bg-slate-800 h-8 sm:h-10">
+                    <TabsTrigger value="season" className="data-[state=active]:bg-purple-600 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-season">
+                      <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 mr-0.5 sm:mr-1" />
+                      <span className="hidden sm:inline">Season</span>
+                      <span className="sm:hidden">Szn</span>
                     </TabsTrigger>
-                    <TabsTrigger value="weekly" className="data-[state=active]:bg-purple-600" data-testid="tab-weekly">
-                      <Calendar className="h-4 w-4 mr-1" />
+                    <TabsTrigger value="weekly" className="data-[state=active]:bg-purple-600 text-xs sm:text-sm px-2 sm:px-3" data-testid="tab-weekly">
+                      <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-0.5 sm:mr-1" />
                       Wk {displayWeek}
                     </TabsTrigger>
                   </TabsList>
@@ -588,17 +594,17 @@ export default function TiberTiers() {
                   size="sm" 
                   onClick={() => refetch()}
                   disabled={isFetching}
-                  className="border-slate-600"
+                  className="border-slate-600 h-8 w-8 sm:h-9 sm:w-9 p-0"
                   data-testid="button-refresh"
                 >
-                  <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${isFetching ? 'animate-spin' : ''}`} />
                 </Button>
               </div>
             </div>
           </div>
         </header>
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
           <WeightsPanel 
             weights={weights}
             onWeightsChange={setWeights}
@@ -606,13 +612,13 @@ export default function TiberTiers() {
             onToggle={() => setWeightsCollapsed(!weightsCollapsed)}
           />
 
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div className="flex gap-1 sm:gap-2">
               {(['WR', 'RB', 'TE', 'QB'] as Position[]).map((pos) => (
                 <button
                   key={pos}
                   onClick={() => setPosition(pos)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm sm:text-base font-medium transition-colors flex-1 sm:flex-none ${
                     position === pos
                       ? 'bg-purple-600 text-white'
                       : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
@@ -624,16 +630,16 @@ export default function TiberTiers() {
               ))}
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="flex items-center justify-between sm:justify-end gap-4 text-xs sm:text-sm text-slate-500">
+              <div className="hidden sm:flex items-center gap-2">
                 <span className="text-blue-400">V</span>/
                 <span className="text-yellow-400">E</span>/
                 <span className="text-purple-400">S</span>/
                 <span className="text-emerald-400">C</span>
                 <span className="ml-1">= Sub-scores</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-slate-500">
-                <Info className="h-4 w-4" />
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Info className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span>{rankedPlayers.length} players</span>
               </div>
             </div>
@@ -641,18 +647,18 @@ export default function TiberTiers() {
 
           <div className="bg-[#141824] border border-gray-800 rounded-xl overflow-hidden">
             {isLoading ? (
-              <div className="p-8 text-center">
-                <div className="animate-spin h-8 w-8 border-2 border-purple-400 border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p className="text-slate-400">Loading {position} rankings...</p>
+              <div className="p-6 sm:p-8 text-center">
+                <div className="animate-spin h-6 w-6 sm:h-8 sm:w-8 border-2 border-purple-400 border-t-transparent rounded-full mx-auto mb-3 sm:mb-4"></div>
+                <p className="text-sm sm:text-base text-slate-400">Loading {position} rankings...</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full" data-testid="tiers-table">
-                  <thead className="bg-[#0a0e1a] text-xs text-slate-500 uppercase">
+              <div className="overflow-x-auto max-w-full">
+                <table className="w-full min-w-[400px]" data-testid="tiers-table">
+                  <thead className="bg-[#0a0e1a] text-[10px] sm:text-xs text-slate-500 uppercase">
                     <tr>
-                      <th className="py-3 px-3 text-center w-12">#</th>
-                      <th className="py-3 px-3 text-left">Player</th>
-                      <th className="py-3 px-3 text-center">
+                      <th className="py-2 sm:py-3 px-2 sm:px-3 text-center w-8 sm:w-12">#</th>
+                      <th className="py-2 sm:py-3 px-2 sm:px-3 text-left">Player</th>
+                      <th className="py-2 sm:py-3 px-2 sm:px-3 text-center">
                         <Tooltip>
                           <TooltipTrigger className="flex items-center justify-center gap-1 mx-auto">
                             <Crown className="h-3 w-3 text-purple-400" />
@@ -661,7 +667,7 @@ export default function TiberTiers() {
                           <TooltipContent>FORGE Alpha Score (0-100)</TooltipContent>
                         </Tooltip>
                       </th>
-                      <th className="py-3 px-3 text-center">
+                      <th className="py-2 sm:py-3 px-2 sm:px-3 text-center">
                         <Tooltip>
                           <TooltipTrigger>PPG</TooltipTrigger>
                           <TooltipContent>Points Per Game ({scoringFormat.toUpperCase()})</TooltipContent>
@@ -728,14 +734,17 @@ export default function TiberTiers() {
             )}
           </div>
 
-          <div className="mt-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 text-xs text-slate-500">
+          <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-slate-800/50 rounded-lg border border-slate-700/50 text-[10px] sm:text-xs text-slate-500">
             <div className="flex items-start gap-2">
-              <Info className="h-4 w-4 text-slate-400 mt-0.5" />
-              <div>
+              <Info className="h-3 w-3 sm:h-4 sm:w-4 text-slate-400 mt-0.5 flex-shrink-0" />
+              <div className="hidden sm:block">
                 <strong className="text-slate-300">FORGE</strong> (Football-Oriented Recursive Grading Engine) powers Tiber Tiers. 
                 Alpha scores combine <span className="text-blue-400">Volume</span>, <span className="text-yellow-400">Efficiency</span>, 
                 <span className="text-purple-400"> Stability</span>, and <span className="text-emerald-400">Context</span> sub-scores.
                 Adjust the sliders above to weight what matters most for your fantasy strategy.
+              </div>
+              <div className="sm:hidden">
+                <strong className="text-slate-300">FORGE</strong> powers these rankings. Adjust sliders above to customize.
               </div>
             </div>
           </div>
