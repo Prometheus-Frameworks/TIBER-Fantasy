@@ -49,6 +49,25 @@ const WEEK_RANGE_OPTIONS: { value: WeekRange; label: string }[] = [
   { value: 'weeks13+', label: 'Weeks 13+' },
 ];
 
+function getWeekRangeParams(weekRange: WeekRange, currentWeek: number): { startWeek?: number; endWeek?: number } {
+  switch (weekRange) {
+    case 'full':
+      return {};
+    case 'last4':
+      return { startWeek: Math.max(1, currentWeek - 3), endWeek: currentWeek };
+    case 'last6':
+      return { startWeek: Math.max(1, currentWeek - 5), endWeek: currentWeek };
+    case 'weeks1-6':
+      return { startWeek: 1, endWeek: 6 };
+    case 'weeks7-12':
+      return { startWeek: 7, endWeek: 12 };
+    case 'weeks13+':
+      return { startWeek: 13, endWeek: currentWeek };
+    default:
+      return {};
+  }
+}
+
 interface ForgeWeights {
   volume: number;
   efficiency: number;
@@ -511,12 +530,20 @@ export default function TiberTiers() {
   
   const { currentWeek, isLoading: weekLoading } = useCurrentNFLWeek();
   const displayWeek = currentWeek || 14;
+  
+  const weekRangeParams = useMemo(() => getWeekRangeParams(weekRange, displayWeek), [weekRange, displayWeek]);
 
   const { data, isLoading, refetch, isFetching } = useQuery<ForgeBatchResponse>({
-    queryKey: ['/api/forge/batch', position, displayWeek, viewMode],
+    queryKey: ['/api/forge/batch', position, displayWeek, viewMode, weekRange],
     queryFn: async () => {
       const week = viewMode === 'weekly' ? displayWeek : displayWeek;
-      const res = await fetch(`/api/forge/batch?position=${position}&limit=50&season=2025&week=${week}`);
+      let url = `/api/forge/batch?position=${position}&limit=50&season=2025&week=${week}`;
+      
+      if (weekRangeParams.startWeek && weekRangeParams.endWeek) {
+        url += `&startWeek=${weekRangeParams.startWeek}&endWeek=${weekRangeParams.endWeek}`;
+      }
+      
+      const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch FORGE data');
       return res.json();
     },
@@ -720,22 +747,22 @@ export default function TiberTiers() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div>
-                      <Select value={weekRange} onValueChange={(v) => setWeekRange(v as WeekRange)} disabled={weekRange !== 'full'}>
-                        <SelectTrigger className="w-[130px] sm:w-[140px] h-8 bg-slate-800 border-slate-700 text-xs sm:text-sm opacity-60" data-testid="select-week-range">
+                      <Select value={weekRange} onValueChange={(v) => setWeekRange(v as WeekRange)}>
+                        <SelectTrigger className="w-[130px] sm:w-[140px] h-8 bg-slate-800 border-slate-700 text-xs sm:text-sm" data-testid="select-week-range">
                           <Filter className="h-3 w-3 mr-1.5 text-slate-400" />
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-slate-800 border-slate-700">
                           {WEEK_RANGE_OPTIONS.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value} className="text-xs sm:text-sm" disabled={opt.value !== 'full'}>
-                              {opt.label} {opt.value !== 'full' && '(Soon)'}
+                            <SelectItem key={opt.value} value={opt.value} className="text-xs sm:text-sm">
+                              {opt.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent>Week range filtering coming soon</TooltipContent>
+                  <TooltipContent>Filter rankings by specific weeks</TooltipContent>
                 </Tooltip>
                 
                 <div className="flex items-center gap-1 sm:gap-2 text-xs text-slate-500">
