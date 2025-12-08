@@ -453,12 +453,35 @@ function PlayerRow({
         </div>
       </td>
       
-      {/* Alpha Score + Trajectory */}
+      {/* Alpha Score + Raw + Trajectory */}
       <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
-        <div className="flex items-center justify-center gap-0.5 sm:gap-1">
-          <span className="text-sm sm:text-lg font-bold text-white font-mono">{player.adjustedAlpha.toFixed(1)}</span>
-          <TrajectoryIcon trajectory={player.trajectory} />
-        </div>
+        <Tooltip>
+          <TooltipTrigger>
+            <div className="flex items-center justify-center gap-0.5 sm:gap-1">
+              <span className="text-sm sm:text-lg font-bold text-white font-mono">{player.adjustedAlpha.toFixed(1)}</span>
+              {player.rawAlpha && player.rawAlpha !== player.adjustedAlpha && (
+                <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">
+                  ({player.rawAlpha.toFixed(0)})
+                </span>
+              )}
+              <TrajectoryIcon trajectory={player.trajectory} />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="bg-slate-800 border-slate-700">
+            <div className="text-xs space-y-1">
+              <div className="flex justify-between gap-4">
+                <span className="text-slate-400">Calibrated:</span>
+                <span className="text-white font-mono">{player.adjustedAlpha.toFixed(1)}</span>
+              </div>
+              {player.rawAlpha && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-slate-400">Raw:</span>
+                  <span className="text-slate-300 font-mono">{player.rawAlpha.toFixed(1)}</span>
+                </div>
+              )}
+            </div>
+          </TooltipContent>
+        </Tooltip>
       </td>
       
       {/* Fantasy Points - PPG */}
