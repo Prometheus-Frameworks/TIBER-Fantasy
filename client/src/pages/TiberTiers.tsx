@@ -23,7 +23,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Filter
+  Filter,
+  Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -671,6 +672,50 @@ export default function TiberTiers() {
 
   const volumeLabel = position === 'RB' ? 'TCH' : 'TGT';
 
+  const exportToCsv = () => {
+    if (!rankedPlayers.length) return;
+    
+    const headers = ['Rank', 'Player', 'Team', 'Alpha', 'PPG', 'Total', 'L3', volumeLabel, 'REC', 'TDs', 'Snap%', 'RZ', 'xFPTS', 'FPOE', 'GP'];
+    const rows = rankedPlayers.map((player, idx) => {
+      const stats = player.fantasyStats;
+      const ppg = scoringFormat === 'ppr' ? stats?.ppgPpr : stats?.ppgHalf;
+      const total = scoringFormat === 'ppr' ? stats?.seasonFptsPpr : stats?.seasonFptsHalf;
+      const l3 = scoringFormat === 'ppr' ? stats?.last3AvgPpr : stats?.last3AvgHalf;
+      const volume = position === 'RB' ? stats?.touches : stats?.targets;
+      
+      return [
+        idx + 1,
+        player.playerName,
+        player.nflTeam || '',
+        player.adjustedAlpha?.toFixed(1) ?? '',
+        ppg?.toFixed(1) ?? '',
+        total?.toFixed(1) ?? '',
+        l3?.toFixed(1) ?? '',
+        volume ?? '',
+        stats?.receptions ?? '',
+        stats?.recTds ?? '',
+        stats?.snapPct ? `${stats.snapPct}%` : '',
+        stats?.rzOpps ?? '',
+        stats?.xFpts?.toFixed(1) ?? '',
+        stats?.fpoe?.toFixed(1) ?? '',
+        player.gamesPlayed ?? '',
+      ];
+    });
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `tiber-tiers-${position}-${weekRange}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const SortIcon = ({ column }: { column: SortColumn }) => {
     if (sortColumn !== column) {
       return <ArrowUpDown className="h-2.5 w-2.5 text-slate-600 ml-0.5" />;
@@ -774,6 +819,22 @@ export default function TiberTiers() {
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={exportToCsv}
+                      disabled={!rankedPlayers.length}
+                      className="border-slate-600 h-8 w-8 sm:h-9 sm:w-9 p-0 hover:border-blue-500 hover:text-blue-400"
+                      data-testid="button-export-csv"
+                    >
+                      <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Export to CSV</TooltipContent>
+                </Tooltip>
                 
                 <Button 
                   variant="outline" 
