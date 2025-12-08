@@ -19,18 +19,35 @@ import {
   Activity,
   Info,
   Trophy,
-  Users
+  Users,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Filter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 
 type Position = 'WR' | 'RB' | 'TE' | 'QB';
 type ViewMode = 'season' | 'weekly';
 type LeagueMode = 'redraft' | 'dynasty';
 type ScoringFormat = 'ppr' | 'half';
+type SortColumn = 'alpha' | 'ppg' | 'total' | 'l3' | 'volume' | 'snap' | 'rz' | 'gp';
+type SortDirection = 'desc' | 'asc';
+type WeekRange = 'full' | 'last4' | 'last6' | 'weeks1-6' | 'weeks7-12' | 'weeks13+';
+
+const WEEK_RANGE_OPTIONS: { value: WeekRange; label: string }[] = [
+  { value: 'full', label: 'Full Season' },
+  { value: 'last4', label: 'Last 4 Weeks' },
+  { value: 'last6', label: 'Last 6 Weeks' },
+  { value: 'weeks1-6', label: 'Weeks 1-6' },
+  { value: 'weeks7-12', label: 'Weeks 7-12' },
+  { value: 'weeks13+', label: 'Weeks 13+' },
+];
 
 interface ForgeWeights {
   volume: number;
@@ -488,6 +505,9 @@ export default function TiberTiers() {
   const [scoringFormat, setScoringFormat] = useState<ScoringFormat>('ppr');
   const [weightsCollapsed, setWeightsCollapsed] = useState(false);
   const [weights, setWeights] = useState<ForgeWeights>(DEFAULT_WEIGHTS);
+  const [weekRange, setWeekRange] = useState<WeekRange>('full');
+  const [sortColumn, setSortColumn] = useState<SortColumn>('alpha');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   
   const { currentWeek, isLoading: weekLoading } = useCurrentNFLWeek();
   const displayWeek = currentWeek || 14;
@@ -503,18 +523,60 @@ export default function TiberTiers() {
     staleTime: 60000,
   });
 
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
+
+  const getSortValue = (player: RankedPlayer, column: SortColumn): number => {
+    const stats = player.fantasyStats;
+    const ppg = scoringFormat === 'ppr' ? stats?.ppgPpr : stats?.ppgHalf;
+    const total = scoringFormat === 'ppr' ? stats?.seasonFptsPpr : stats?.seasonFptsHalf;
+    const l3 = scoringFormat === 'ppr' ? stats?.last3AvgPpr : stats?.last3AvgHalf;
+    const volume = position === 'RB' ? stats?.touches : stats?.targets;
+
+    switch (column) {
+      case 'alpha': return player.adjustedAlpha || 0;
+      case 'ppg': return ppg || 0;
+      case 'total': return total || 0;
+      case 'l3': return l3 || 0;
+      case 'volume': return volume || 0;
+      case 'snap': return stats?.snapPct || 0;
+      case 'rz': return stats?.rzOpps || 0;
+      case 'gp': return player.gamesPlayed || 0;
+      default: return 0;
+    }
+  };
+
   const rankedPlayers = useMemo(() => {
     if (!data?.scores) return [];
     
-    return [...data.scores]
-      .map(player => ({
-        ...player,
-        adjustedAlpha: recalculateAlpha(player, weights, position),
-      }))
-      .sort((a, b) => b.adjustedAlpha - a.adjustedAlpha);
-  }, [data?.scores, weights, position]);
+    const playersWithAlpha = [...data.scores].map(player => ({
+      ...player,
+      adjustedAlpha: recalculateAlpha(player, weights, position),
+    }));
+
+    return playersWithAlpha.sort((a, b) => {
+      const aVal = getSortValue(a, sortColumn);
+      const bVal = getSortValue(b, sortColumn);
+      return sortDirection === 'desc' ? bVal - aVal : aVal - bVal;
+    });
+  }, [data?.scores, weights, position, sortColumn, sortDirection, scoringFormat]);
 
   const volumeLabel = position === 'RB' ? 'TCH' : 'TGT';
+
+  const SortIcon = ({ column }: { column: SortColumn }) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-2.5 w-2.5 text-slate-600 ml-0.5" />;
+    }
+    return sortDirection === 'desc' 
+      ? <ArrowDown className="h-2.5 w-2.5 text-purple-400 ml-0.5" />
+      : <ArrowUp className="h-2.5 w-2.5 text-purple-400 ml-0.5" />;
+  };
 
   return (
     <TooltipProvider>
@@ -635,35 +697,74 @@ export default function TiberTiers() {
             onToggle={() => setWeightsCollapsed(!weightsCollapsed)}
           />
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <div className="flex gap-1 sm:gap-2">
-              {(['WR', 'RB', 'TE', 'QB'] as Position[]).map((pos) => (
-                <button
-                  key={pos}
-                  onClick={() => setPosition(pos)}
-                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm sm:text-base font-medium transition-colors flex-1 sm:flex-none ${
-                    position === pos
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                  }`}
-                  data-testid={`position-${pos.toLowerCase()}`}
-                >
-                  {pos}
-                </button>
-              ))}
+          <div className="flex flex-col gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex gap-1 sm:gap-2">
+                {(['WR', 'RB', 'TE', 'QB'] as Position[]).map((pos) => (
+                  <button
+                    key={pos}
+                    onClick={() => setPosition(pos)}
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm sm:text-base font-medium transition-colors flex-1 sm:flex-none ${
+                      position === pos
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    }`}
+                    data-testid={`position-${pos.toLowerCase()}`}
+                  >
+                    {pos}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Select value={weekRange} onValueChange={(v) => setWeekRange(v as WeekRange)} disabled={weekRange !== 'full'}>
+                        <SelectTrigger className="w-[130px] sm:w-[140px] h-8 bg-slate-800 border-slate-700 text-xs sm:text-sm opacity-60" data-testid="select-week-range">
+                          <Filter className="h-3 w-3 mr-1.5 text-slate-400" />
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-800 border-slate-700">
+                          {WEEK_RANGE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value} className="text-xs sm:text-sm" disabled={opt.value !== 'full'}>
+                              {opt.label} {opt.value !== 'full' && '(Soon)'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Week range filtering coming soon</TooltipContent>
+                </Tooltip>
+                
+                <div className="flex items-center gap-1 sm:gap-2 text-xs text-slate-500">
+                  <Info className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span>{rankedPlayers.length} players</span>
+                </div>
+              </div>
             </div>
             
-            <div className="flex items-center justify-between sm:justify-end gap-4 text-xs sm:text-sm text-slate-500">
+            <div className="flex items-center justify-between text-[10px] sm:text-xs text-slate-500">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">Sort by:</span>
+                <span className="text-purple-400 font-medium">
+                  {sortColumn === 'alpha' ? 'Alpha' : 
+                   sortColumn === 'ppg' ? 'PPG' :
+                   sortColumn === 'total' ? 'Total' :
+                   sortColumn === 'l3' ? 'L3 Avg' :
+                   sortColumn === 'volume' ? volumeLabel :
+                   sortColumn === 'snap' ? 'Snap%' :
+                   sortColumn === 'rz' ? 'RZ' : 'GP'}
+                  {sortDirection === 'desc' ? ' ↓' : ' ↑'}
+                </span>
+              </div>
               <div className="hidden sm:flex items-center gap-2">
                 <span className="text-blue-400">V</span>/
                 <span className="text-yellow-400">E</span>/
                 <span className="text-purple-400">S</span>/
                 <span className="text-emerald-400">C</span>
                 <span className="ml-1">= Sub-scores</span>
-              </div>
-              <div className="flex items-center gap-1 sm:gap-2">
-                <Info className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span>{rankedPlayers.length} players</span>
               </div>
             </div>
           </div>
@@ -682,55 +783,77 @@ export default function TiberTiers() {
                       <th className="py-2 sm:py-3 px-2 sm:px-3 text-center w-8 sm:w-12">#</th>
                       <th className="py-2 sm:py-3 px-2 sm:px-3 text-left">Player</th>
                       <th className="py-2 sm:py-3 px-2 sm:px-3 text-center">
-                        <Tooltip>
-                          <TooltipTrigger className="flex items-center justify-center gap-1 mx-auto">
-                            <Crown className="h-3 w-3 text-purple-400" />
-                            Alpha
-                          </TooltipTrigger>
-                          <TooltipContent>FORGE Alpha Score (0-100)</TooltipContent>
-                        </Tooltip>
+                        <button 
+                          onClick={() => handleSort('alpha')} 
+                          className={`flex items-center justify-center gap-0.5 mx-auto hover:text-purple-400 transition-colors ${sortColumn === 'alpha' ? 'text-purple-400' : ''}`}
+                          data-testid="sort-alpha"
+                        >
+                          <Crown className="h-3 w-3 text-purple-400" />
+                          Alpha
+                          <SortIcon column="alpha" />
+                        </button>
                       </th>
                       <th className="py-2 sm:py-3 px-2 sm:px-3 text-center">
-                        <Tooltip>
-                          <TooltipTrigger>PPG</TooltipTrigger>
-                          <TooltipContent>Points Per Game ({scoringFormat.toUpperCase()})</TooltipContent>
-                        </Tooltip>
+                        <button 
+                          onClick={() => handleSort('ppg')} 
+                          className={`flex items-center justify-center gap-0.5 mx-auto hover:text-blue-400 transition-colors ${sortColumn === 'ppg' ? 'text-blue-400' : ''}`}
+                          data-testid="sort-ppg"
+                        >
+                          PPG
+                          <SortIcon column="ppg" />
+                        </button>
                       </th>
                       <th className="py-3 px-3 text-center hidden md:table-cell">
-                        <Tooltip>
-                          <TooltipTrigger>Total</TooltipTrigger>
-                          <TooltipContent>Season Total Fantasy Points</TooltipContent>
-                        </Tooltip>
+                        <button 
+                          onClick={() => handleSort('total')} 
+                          className={`flex items-center justify-center gap-0.5 mx-auto hover:text-blue-400 transition-colors ${sortColumn === 'total' ? 'text-blue-400' : ''}`}
+                          data-testid="sort-total"
+                        >
+                          Total
+                          <SortIcon column="total" />
+                        </button>
                       </th>
                       <th className="py-3 px-3 text-center hidden lg:table-cell">
-                        <Tooltip>
-                          <TooltipTrigger>L3</TooltipTrigger>
-                          <TooltipContent>Last 3 Games Average</TooltipContent>
-                        </Tooltip>
+                        <button 
+                          onClick={() => handleSort('l3')} 
+                          className={`flex items-center justify-center gap-0.5 mx-auto hover:text-green-400 transition-colors ${sortColumn === 'l3' ? 'text-green-400' : ''}`}
+                          data-testid="sort-l3"
+                        >
+                          L3
+                          <SortIcon column="l3" />
+                        </button>
                       </th>
                       <th className="py-3 px-3 text-center hidden md:table-cell">
-                        <Tooltip>
-                          <TooltipTrigger className="flex items-center justify-center gap-1 mx-auto">
-                            <Target className="h-3 w-3 text-blue-400" />
-                            {volumeLabel}
-                          </TooltipTrigger>
-                          <TooltipContent>{position === 'RB' ? 'Total Touches' : 'Total Targets'}</TooltipContent>
-                        </Tooltip>
+                        <button 
+                          onClick={() => handleSort('volume')} 
+                          className={`flex items-center justify-center gap-0.5 mx-auto hover:text-blue-400 transition-colors ${sortColumn === 'volume' ? 'text-blue-400' : ''}`}
+                          data-testid="sort-volume"
+                        >
+                          <Target className="h-3 w-3 text-blue-400" />
+                          {volumeLabel}
+                          <SortIcon column="volume" />
+                        </button>
                       </th>
                       <th className="py-3 px-3 text-center hidden lg:table-cell">
-                        <Tooltip>
-                          <TooltipTrigger>Snap%</TooltipTrigger>
-                          <TooltipContent>Snap Percentage</TooltipContent>
-                        </Tooltip>
+                        <button 
+                          onClick={() => handleSort('snap')} 
+                          className={`flex items-center justify-center gap-0.5 mx-auto hover:text-slate-300 transition-colors ${sortColumn === 'snap' ? 'text-slate-300' : ''}`}
+                          data-testid="sort-snap"
+                        >
+                          Snap%
+                          <SortIcon column="snap" />
+                        </button>
                       </th>
                       <th className="py-3 px-3 text-center hidden lg:table-cell">
-                        <Tooltip>
-                          <TooltipTrigger className="flex items-center justify-center gap-1 mx-auto">
-                            <Zap className="h-3 w-3 text-orange-400" />
-                            RZ
-                          </TooltipTrigger>
-                          <TooltipContent>Red Zone Opportunities</TooltipContent>
-                        </Tooltip>
+                        <button 
+                          onClick={() => handleSort('rz')} 
+                          className={`flex items-center justify-center gap-0.5 mx-auto hover:text-orange-400 transition-colors ${sortColumn === 'rz' ? 'text-orange-400' : ''}`}
+                          data-testid="sort-rz"
+                        >
+                          <Zap className="h-3 w-3 text-orange-400" />
+                          RZ
+                          <SortIcon column="rz" />
+                        </button>
                       </th>
                       <th className="py-3 px-3 text-center hidden xl:table-cell">
                         <Tooltip>
@@ -738,7 +861,16 @@ export default function TiberTiers() {
                           <TooltipContent>Volume / Efficiency / Stability / Context Sub-scores</TooltipContent>
                         </Tooltip>
                       </th>
-                      <th className="py-3 px-3 text-center hidden md:table-cell">GP</th>
+                      <th className="py-3 px-3 text-center hidden md:table-cell">
+                        <button 
+                          onClick={() => handleSort('gp')} 
+                          className={`flex items-center justify-center gap-0.5 mx-auto hover:text-slate-300 transition-colors ${sortColumn === 'gp' ? 'text-slate-300' : ''}`}
+                          data-testid="sort-gp"
+                        >
+                          GP
+                          <SortIcon column="gp" />
+                        </button>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
