@@ -52,6 +52,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
     - User-adjustable weight sliders (Volume, Efficiency, Stability, Context) with live recalculation
     - Preset system: Balanced, Workhorse, Efficiency, High Floor, Upside
     - Season/Weekly toggle for different ranking views
+    - **Week Range Filtering (v1.2)**: Filter rankings by specific weeks (Full Season, Last 4 Weeks, Last 6 Weeks, Weeks 1-6, Weeks 7-12, Weeks 13+). Database-level filtering using SQL WHERE clauses for performance. API accepts `startWeek` and `endWeek` query parameters.
     - Tier badges (T1-T5) with position-specific thresholds
     - Alpha scores recalculated in real-time based on user-selected weights
 - **Tiber Data Lab (Operation DataDive)** (`/tiber-data-lab`): Snapshot-based NFL data spine for reproducible analytics, focused on NFL Mode (raw football metrics only). Fantasy analytics moved to Tiber Tiers page.
