@@ -74,6 +74,7 @@ export async function fetchContext(
     teamEnvironment,
     dvpData,
     injuryStatus,
+    xFptsData,
   ] = await Promise.all([
     fetchSeasonStats(identity.canonicalId, season, weekNum, startWeek),
     fetchAdvancedMetrics(identity.canonicalId, position, season),
@@ -82,6 +83,7 @@ export async function fetchContext(
     identity.nflTeam ? fetchTeamEnvironment(identity.nflTeam) : Promise.resolve(undefined),
     identity.nflTeam ? fetchDvPData(identity.nflTeam, position, season) : Promise.resolve(undefined),
     fetchInjuryStatus(identity.canonicalId),
+    fetchXFptsData(identity.canonicalId, season, weekNum, startWeek),
   ]);
   
   // v1.4: Fetch player age for dynasty adjustments
@@ -110,6 +112,7 @@ export async function fetchContext(
     teamEnvironment,
     dvpData,
     injuryStatus,
+    xFptsData,
   };
 }
 
@@ -909,6 +912,61 @@ async function fetchInjuryStatus(
     hasRecentInjury: false,
     gamesMissedLast2Years: 0,
   };
+}
+
+/**
+ * v1.5: Fetch xFPTS (expected fantasy points) data from datadive_expected_fantasy_week
+ * Aggregates across the week range to get season totals and FPOE (fantasy points over expected)
+ */
+async function fetchXFptsData(
+  canonicalId: string, 
+  season: number, 
+  asOfWeek: number,
+  startWeek?: number
+): Promise<ForgeContext['xFptsData']> {
+  try {
+    const weekLower = startWeek ?? 1;
+    const weekUpper = asOfWeek;
+    
+    const result = await db.execute<{
+      games: number;
+      total_actual: number;
+      total_xfpts: number;
+      total_fpoe: number;
+    }>(sql`
+      SELECT 
+        COUNT(*) as games,
+        COALESCE(SUM(actual_ppr), 0) as total_actual,
+        COALESCE(SUM(x_ppr_v2), 0) as total_xfpts,
+        COALESCE(SUM(xfpgoe_ppr_v2), 0) as total_fpoe
+      FROM datadive_expected_fantasy_week
+      WHERE player_id = ${canonicalId}
+        AND season = ${season}
+        AND week >= ${weekLower}
+        AND week <= ${weekUpper}
+    `);
+    
+    const row = result.rows[0];
+    if (!row || row.games === 0) {
+      return undefined;
+    }
+    
+    const games = Number(row.games);
+    const totalActual = Number(row.total_actual);
+    const totalXFpts = Number(row.total_xfpts);
+    const totalFpoe = Number(row.total_fpoe);
+    
+    return {
+      totalXFpts: Math.round(totalXFpts * 10) / 10,
+      totalActual: Math.round(totalActual * 10) / 10,
+      totalFpoe: Math.round(totalFpoe * 10) / 10,
+      avgFpoe: Math.round((totalFpoe / games) * 10) / 10,
+      gamesWithData: games,
+    };
+  } catch (error) {
+    console.warn(`[FORGE/Context] ⚠️ Could not fetch xFPTS data for ${canonicalId}:`, error);
+    return undefined;
+  }
 }
 
 /**

@@ -628,6 +628,13 @@ function calculateFantasyStats(context: ForgeContext, gamesPlayed: number): Fant
   // Red zone opportunities from advanced metrics
   const rzOpps = (seasonStats?.redZoneTargets ?? 0) + (seasonStats?.redZoneCarries ?? 0) || undefined;
   
+  // v1.5: Receiving TDs
+  const recTds = seasonStats?.receivingTds ?? undefined;
+  
+  // v1.5: xFPTS and FPOE from context
+  const xFpts = context.xFptsData?.totalXFpts;
+  const fpoe = context.xFptsData?.totalFpoe;
+  
   return {
     seasonFptsPpr: roundTo(seasonFptsPpr, 1),
     seasonFptsHalf: roundTo(seasonFptsHalf, 1),
@@ -638,8 +645,11 @@ function calculateFantasyStats(context: ForgeContext, gamesPlayed: number): Fant
     targets,
     touches,
     receptions,
+    recTds,
     snapPct,
     rzOpps,
+    xFpts,
+    fpoe,
   };
 }
 

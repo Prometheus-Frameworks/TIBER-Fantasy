@@ -85,6 +85,7 @@ export interface FPRData {
 /**
  * Fantasy stats for Tiber Tiers display
  * v1.2: Added for enhanced fantasy rankings UI
+ * v1.5: Added recTds, xFpts, fpoe for advanced columns
  */
 export interface FantasyStats {
   seasonFptsPpr: number;      // Season total fantasy points (PPR)
@@ -96,8 +97,11 @@ export interface FantasyStats {
   targets?: number;           // Season total targets (WR/TE/RB)
   touches?: number;           // Season total touches (rush att + targets for RB)
   receptions?: number;        // Season total receptions
+  recTds?: number;            // v1.5: Season receiving touchdowns
   snapPct?: number;           // Average snap percentage
   rzOpps?: number;            // Red zone opportunities
+  xFpts?: number;             // v1.5: Expected fantasy points (NFLfastR model)
+  fpoe?: number;              // v1.5: Fantasy Points Over Expected (actual - xFpts)
 }
 
 /**
@@ -290,6 +294,15 @@ export interface ForgeContext {
   injuryStatus?: {
     hasRecentInjury: boolean;  // Within last 30 days
     gamesMissedLast2Years?: number;
+  };
+  
+  // v1.5: Expected fantasy points data from NFLfastR models
+  xFptsData?: {
+    totalXFpts: number;       // Season total expected fantasy points
+    totalActual: number;      // Season total actual fantasy points
+    totalFpoe: number;        // Total fantasy points over expected
+    avgFpoe: number;          // Average FPOE per game
+    gamesWithData: number;    // Games with xFPTS data available
   };
 }
 

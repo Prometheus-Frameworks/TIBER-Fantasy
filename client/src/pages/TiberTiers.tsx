@@ -36,7 +36,7 @@ type Position = 'WR' | 'RB' | 'TE' | 'QB';
 type ViewMode = 'season' | 'weekly';
 type LeagueMode = 'redraft' | 'dynasty';
 type ScoringFormat = 'ppr' | 'half';
-type SortColumn = 'alpha' | 'ppg' | 'total' | 'l3' | 'volume' | 'snap' | 'rz' | 'gp';
+type SortColumn = 'alpha' | 'ppg' | 'total' | 'l3' | 'volume' | 'rec' | 'tds' | 'snap' | 'rz' | 'gp' | 'xfpts' | 'fpoe';
 type SortDirection = 'desc' | 'asc';
 type WeekRange = 'full' | 'last4' | 'last6' | 'weeks1-6' | 'weeks7-12' | 'weeks13+';
 
@@ -100,8 +100,12 @@ interface ForgePlayer {
     last3AvgHalf: number;
     targets?: number;
     touches?: number;
+    receptions?: number;
+    recTds?: number;
     snapPct?: number;
     rzOpps?: number;
+    xFpts?: number;
+    fpoe?: number;
   };
 }
 
@@ -519,6 +523,46 @@ function PlayerRow({
         <span className="text-orange-400 font-mono text-sm">{stats?.rzOpps || '-'}</span>
       </td>
       
+      {/* Receptions */}
+      <td className="py-3 px-3 text-center hidden lg:table-cell">
+        <span className="text-cyan-400 font-mono text-sm">{stats?.receptions || '-'}</span>
+      </td>
+      
+      {/* Receiving TDs */}
+      <td className="py-3 px-3 text-center hidden lg:table-cell">
+        <span className="text-yellow-400 font-mono text-sm">{stats?.recTds || '-'}</span>
+      </td>
+      
+      {/* xFPTS */}
+      <td className="py-3 px-3 text-center hidden xl:table-cell">
+        <Tooltip>
+          <TooltipTrigger>
+            <span className="text-slate-400 font-mono text-sm">{stats?.xFpts?.toFixed(1) || '-'}</span>
+          </TooltipTrigger>
+          <TooltipContent>Expected Fantasy Points</TooltipContent>
+        </Tooltip>
+      </td>
+      
+      {/* FPOE - Color coded */}
+      <td className="py-3 px-3 text-center hidden xl:table-cell">
+        <Tooltip>
+          <TooltipTrigger>
+            <span className={`font-mono text-sm font-medium ${
+              stats?.fpoe !== undefined 
+                ? stats.fpoe > 0 
+                  ? 'text-green-400' 
+                  : stats.fpoe < 0 
+                    ? 'text-red-400' 
+                    : 'text-slate-400'
+                : 'text-slate-500'
+            }`}>
+              {stats?.fpoe !== undefined ? (stats.fpoe > 0 ? '+' : '') + stats.fpoe.toFixed(1) : '-'}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>Fantasy Points Over Expected (Actual - xFPTS)</TooltipContent>
+        </Tooltip>
+      </td>
+      
       {/* Sub-scores */}
       <td className="py-3 px-3 text-center hidden xl:table-cell">
         <div className="flex items-center justify-center gap-1 text-xs">
@@ -599,9 +643,13 @@ export default function TiberTiers() {
       case 'total': return total || 0;
       case 'l3': return l3 || 0;
       case 'volume': return volume || 0;
+      case 'rec': return stats?.receptions || 0;
+      case 'tds': return stats?.recTds || 0;
       case 'snap': return stats?.snapPct || 0;
       case 'rz': return stats?.rzOpps || 0;
       case 'gp': return player.gamesPlayed || 0;
+      case 'xfpts': return stats?.xFpts || 0;
+      case 'fpoe': return stats?.fpoe || 0;
       default: return 0;
     }
   };
@@ -807,8 +855,12 @@ export default function TiberTiers() {
                    sortColumn === 'total' ? 'Total' :
                    sortColumn === 'l3' ? 'L3 Avg' :
                    sortColumn === 'volume' ? volumeLabel :
+                   sortColumn === 'rec' ? 'REC' :
+                   sortColumn === 'tds' ? 'TDs' :
                    sortColumn === 'snap' ? 'Snap%' :
-                   sortColumn === 'rz' ? 'RZ' : 'GP'}
+                   sortColumn === 'rz' ? 'RZ' :
+                   sortColumn === 'xfpts' ? 'xFPTS' :
+                   sortColumn === 'fpoe' ? 'FPOE' : 'GP'}
                   {sortDirection === 'desc' ? ' ↓' : ' ↑'}
                 </span>
               </div>
@@ -907,6 +959,56 @@ export default function TiberTiers() {
                           RZ
                           <SortIcon column="rz" />
                         </button>
+                      </th>
+                      <th className="py-3 px-3 text-center hidden lg:table-cell">
+                        <button 
+                          onClick={() => handleSort('rec')} 
+                          className={`flex items-center justify-center gap-0.5 mx-auto hover:text-cyan-400 transition-colors ${sortColumn === 'rec' ? 'text-cyan-400' : ''}`}
+                          data-testid="sort-rec"
+                        >
+                          REC
+                          <SortIcon column="rec" />
+                        </button>
+                      </th>
+                      <th className="py-3 px-3 text-center hidden lg:table-cell">
+                        <button 
+                          onClick={() => handleSort('tds')} 
+                          className={`flex items-center justify-center gap-0.5 mx-auto hover:text-yellow-400 transition-colors ${sortColumn === 'tds' ? 'text-yellow-400' : ''}`}
+                          data-testid="sort-tds"
+                        >
+                          TDs
+                          <SortIcon column="tds" />
+                        </button>
+                      </th>
+                      <th className="py-3 px-3 text-center hidden xl:table-cell">
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <button 
+                              onClick={() => handleSort('xfpts')} 
+                              className={`flex items-center justify-center gap-0.5 mx-auto hover:text-slate-300 transition-colors ${sortColumn === 'xfpts' ? 'text-slate-300' : ''}`}
+                              data-testid="sort-xfpts"
+                            >
+                              xFPTS
+                              <SortIcon column="xfpts" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Expected Fantasy Points (NFLfastR model)</TooltipContent>
+                        </Tooltip>
+                      </th>
+                      <th className="py-3 px-3 text-center hidden xl:table-cell">
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <button 
+                              onClick={() => handleSort('fpoe')} 
+                              className={`flex items-center justify-center gap-0.5 mx-auto hover:text-emerald-400 transition-colors ${sortColumn === 'fpoe' ? 'text-emerald-400' : ''}`}
+                              data-testid="sort-fpoe"
+                            >
+                              FPOE
+                              <SortIcon column="fpoe" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Fantasy Points Over Expected (Actual - xFPTS)</TooltipContent>
+                        </Tooltip>
                       </th>
                       <th className="py-3 px-3 text-center hidden xl:table-cell">
                         <Tooltip>
