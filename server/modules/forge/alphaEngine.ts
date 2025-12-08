@@ -119,6 +119,7 @@ export function calculateAlphaScore(
     nflTeam: context.nflTeam,
     season: context.season,
     asOfWeek: context.asOfWeek,
+    age: context.age,
     
     alpha: roundTo(calibratedAlpha, 1),
     rawAlpha: roundTo(rawAlpha, 1),

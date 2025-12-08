@@ -914,29 +914,19 @@ async function fetchInjuryStatus(
 /**
  * v1.4: Fetch player age for dynasty adjustments
  * Sources (in priority order):
- * 1. player_season_facts table (age column)
- * 2. players table (age column)
- * 3. player_identity_map with birthDate calculation
+ * 1. players table (via full_name join with player_identity_map)
+ * 2. player_identity_map with birthDate calculation
  * 
  * Returns undefined if age not available (will use neutral multiplier)
  */
 async function fetchPlayerAge(canonicalId: string): Promise<number | undefined> {
   try {
-    // Try player_season_facts first (most reliable for current season)
-    const seasonFactsResult = await db.execute<{ age: number | null }>(sql`
-      SELECT age FROM player_season_facts 
-      WHERE player_id = ${canonicalId} AND season = 2025
-      LIMIT 1
-    `);
-    
-    if (seasonFactsResult.rows[0]?.age) {
-      return seasonFactsResult.rows[0].age;
-    }
-    
-    // Try players table
+    // Join players table via full_name from player_identity_map
     const playersResult = await db.execute<{ age: number | null }>(sql`
-      SELECT age FROM players 
-      WHERE id = ${canonicalId}
+      SELECT p.age 
+      FROM players p 
+      JOIN player_identity_map pim ON p.full_name = pim.full_name 
+      WHERE pim.canonical_id = ${canonicalId} AND p.age IS NOT NULL
       LIMIT 1
     `);
     
@@ -944,7 +934,7 @@ async function fetchPlayerAge(canonicalId: string): Promise<number | undefined> 
       return playersResult.rows[0].age;
     }
     
-    // Try player_identity_map with birthDate
+    // Fallback: Try player_identity_map with birthDate
     const identityResult = await db.execute<{ birth_date: Date | null }>(sql`
       SELECT birth_date FROM player_identity_map 
       WHERE canonical_id = ${canonicalId}

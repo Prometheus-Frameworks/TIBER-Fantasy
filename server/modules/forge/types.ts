@@ -110,6 +110,7 @@ export interface ForgeScore {
   nflTeam?: string;
   season: number;
   asOfWeek: WeekOrPreseason;
+  age?: number;               // v1.4: Player age for dynasty adjustments
   
   alpha: number;              // Final calibrated score (0-100)
   rawAlpha?: number;          // Pre-calibration engine score (for debugging)

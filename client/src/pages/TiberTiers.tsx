@@ -652,7 +652,7 @@ export default function TiberTiers() {
                     <p className="text-[10px] sm:text-xs text-slate-400 -mt-0.5 hidden sm:block">Fantasy Football Rankings</p>
                   </div>
                   <Badge variant="outline" className="border-purple-500 text-purple-400 text-[10px] sm:text-xs ml-1 sm:ml-2 hidden sm:inline-flex">
-                    FORGE v1.2
+                    FORGE v1.4
                   </Badge>
                 </div>
               </div>
