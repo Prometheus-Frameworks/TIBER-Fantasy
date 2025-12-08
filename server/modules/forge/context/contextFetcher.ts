@@ -78,7 +78,7 @@ export async function fetchContext(
   ] = await Promise.all([
     fetchSeasonStats(identity.canonicalId, season, weekNum, startWeek),
     fetchAdvancedMetrics(identity.canonicalId, position, season),
-    fetchWeeklyStats(sleeperId, season, weekNum, startWeek),
+    fetchWeeklyStats(sleeperId, season, weekNum, startWeek, identity.canonicalId),
     fetchRoleMetrics(identity.canonicalId, position, season),
     identity.nflTeam ? fetchTeamEnvironment(identity.nflTeam) : Promise.resolve(undefined),
     identity.nflTeam ? fetchDvPData(identity.nflTeam, position, season) : Promise.resolve(undefined),
@@ -713,12 +713,15 @@ async function fetchAdvancedMetrics(
 /**
  * Fetch weekly game logs for trajectory/stability analysis
  * @param startWeek - Optional start week for week range filtering
+ * 
+ * v1.6: Also fetches snap data from bronze_nflfastr_snap_counts and merges it
  */
 async function fetchWeeklyStats(
   sleeperId: string,
   season: number,
   asOfWeek: number,
-  startWeek?: number
+  startWeek?: number,
+  canonicalId?: string
 ): Promise<ForgeContext['weeklyStats']> {
   try {
     // Build week range condition: startWeek <= week <= asOfWeek
@@ -753,10 +756,40 @@ async function fetchWeeklyStats(
       )
       .orderBy(desc(gameLogs.week));
     
+    // v1.6: Fetch snap data from bronze_nflfastr_snap_counts
+    let snapDataMap = new Map<number, number>();
+    if (canonicalId) {
+      try {
+        const weekLower = startWeek ?? 1;
+        const weekUpper = asOfWeek > 0 ? asOfWeek : 17;
+        
+        const snapResult = await db.execute<{
+          week: number;
+          offense_pct: number;
+        }>(sql`
+          SELECT snaps.week, snaps.offense_pct
+          FROM bronze_nflfastr_snap_counts snaps
+          JOIN player_identity_map pim ON LOWER(snaps.player) = LOWER(pim.full_name)
+          WHERE pim.canonical_id = ${canonicalId}
+            AND snaps.season = ${season}
+            AND snaps.week >= ${weekLower}
+            AND snaps.week <= ${weekUpper}
+        `);
+        
+        for (const row of snapResult.rows) {
+          // offense_pct is 0-1 range, convert to 0-100
+          const pct = Math.round((row.offense_pct || 0) * 100);
+          snapDataMap.set(row.week, pct);
+        }
+      } catch (err) {
+        console.warn(`[FORGE/Context] Could not fetch snap data for ${canonicalId}:`, err);
+      }
+    }
+    
     return logs.map(log => ({
       week: log.week,
       fantasyPointsPpr: log.fantasyPointsPpr ?? 0,
-      snapShare: undefined,
+      snapShare: snapDataMap.get(log.week) ?? undefined,
       targets: log.targets ?? undefined,
       receptions: log.receptions ?? undefined,
       rushAttempts: log.rushAttempts ?? undefined,
