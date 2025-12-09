@@ -1,0 +1,185 @@
+MESSAGE TO AGENT — Build QBContext v1 (2025 depth charts)
+
+We want to introduce a QBContext system that ties every WR/RB/TE to their actual 2025 QB and feeds that into FORGE’s teamContext and dynastyContext.
+
+1) Create a qb_context_2025 table
+
+Create a new table (or view) named qb_context_2025 with at least:
+
+qb_id                  -- QB player id
+team_id                -- team id
+season                 -- 2025
+depth_chart_rank       -- 1 for starter, 2 for backup, etc.
+is_primary_qb          -- boolean, true for rank 1 starter
+qb_skill_score         -- 0-100
+qb_redraft_score       -- 0-100
+qb_dynasty_score       -- 0-100
+qb_stability_score     -- 0-100
+qb_durability_score    -- 0-100
+qb_age                 -- current age
+games_started_recent   -- total games started over last 2-3 seasons
+
+2) Populate qb_context_2025 using 2025 depth charts only
+
+Use the 2025 current year depth charts, not historical starters.
+
+Source: use the existing depth chart or snapshot tables (e.g. snapshot_depth_charts or similar).
+
+Filter strictly on:
+
+season = 2025
+
+position = 'QB'
+
+status = active (exclude retired QBs like Matt Ryan)
+
+For each team_id:
+
+Select the QB with depth_chart_rank = 1 as the primary starter (is_primary_qb = true).
+
+Optionally include backups (depth_chart_rank = 2+) for future use.
+
+3) Compute QB context scores
+
+For each primary QB (depth_chart_rank = 1, season 2025):
+
+Use existing stats + FORGE where possible:
+
+qb_skill_score:
+
+Use the QB’s FORGE alpha in redraft mode, normalized 0–100.
+
+qb_redraft_score:
+
+Start from qb_skill_score.
+
+Adjust using current-season offensive metrics:
+
+team pass EPA, CPOE, success rate, explosive pass rate
+
+QB-specific EPA/CPOE if available
+
+Normalize to 0–100.
+
+qb_stability_score:
+
+Based on:
+
+games started last 2–3 seasons,
+
+depth chart lock as starter (is_primary_qb),
+
+absence of QB carousel.
+
+Normalize to 0–100.
+
+qb_durability_score:
+
+Inverse of games missed due to injury the last 2–3 seasons.
+
+Normalize to 0–100.
+
+qb_dynasty_score:
+
+Blend long-term quality and runway:
+
+qb_skill_score (current talent)
+
+qb_stability_score
+
+qb_durability_score
+
+age curve (penalize >33, slight boost 24–29)
+
+Example:
+
+qb_dynasty_score =
+  0.5 * qb_skill_score
++ 0.2 * qb_stability_score
++ 0.2 * qb_durability_score
++ 0.1 * age_curve_factor;
+
+
+Normalize final result to 0–100.
+
+Insert one row per QB starter into qb_context_2025.
+
+4) Integrate QBContext into FORGE Engine (WR/RB/TE)
+
+In forgeEngine.ts:
+
+When building context for WR, RB, and TE:
+
+Determine the player’s team_id and season (2025 for now).
+
+Look up that team’s primary QB:
+
+const qbContext = await getPrimaryQBContext(team_id, season); 
+// from qb_context_2025 where is_primary_qb = true
+
+
+Compute:
+
+const qbRedraftContextScore = qbContext.qb_redraft_score;   // 0-100
+const qbDynastyContextScore = qbContext.qb_dynasty_score;   // 0-100
+
+
+Blend into the existing context pillars:
+
+For redraft mode:
+
+effectiveTeamContext =
+  0.6 * shortTermTeamContext    // existing team_offensive_context-based value
++ 0.4 * qbRedraftContextScore;
+
+
+For dynasty mode:
+
+effectiveDynastyContext =
+  0.4 * dynastyTeamContext      // existing long-term team context
++ 0.6 * qbDynastyContextScore;
+
+
+Use these effective values in the pillars:
+
+Redraft:
+
+pillars.teamContext = effectiveTeamContext
+
+Dynasty:
+
+pillars.teamContext = effectiveDynastyContext
+
+Keep pillars.dynastyContext in debug output for transparency.
+
+5) Testing
+
+After implementation, please:
+
+Run FORGE E+G for WRs in both redraft and dynasty modes for 2025 for:
+
+Ja’Marr Chase (CIN)
+
+CeeDee Lamb (DAL)
+
+Amon-Ra St. Brown (DET)
+
+Drake London (ATL)
+
+Justin Jefferson (MIN)
+
+Jaylen Waddle (MIA)
+
+Puka Nacua (LAR)
+
+Confirm that:
+
+Each player’s context is tied to the correct 2025 QB via qb_context_2025.
+
+pillars.teamContext in redraft is influenced by qb_redraft_score.
+
+pillars.teamContext in dynasty is influenced by qb_dynasty_score.
+
+No retired QB (e.g. Matt Ryan) is attached to any 2025 skill player.
+
+End of instructions.
