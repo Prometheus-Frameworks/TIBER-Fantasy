@@ -35,11 +35,19 @@ import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 
 type Position = 'WR' | 'RB' | 'TE' | 'QB';
 type ViewMode = 'season' | 'weekly';
-type LeagueMode = 'redraft' | 'dynasty';
+type ForgeMode = 'redraft' | 'dynasty' | 'bestball';
 type ScoringFormat = 'ppr' | 'half';
 type SortColumn = 'alpha' | 'ppg' | 'total' | 'l3' | 'volume' | 'rec' | 'tds' | 'snap' | 'rz' | 'gp' | 'xfpts' | 'fpoe';
 type SortDirection = 'desc' | 'asc';
 type WeekRange = 'full' | 'last4' | 'last6' | 'weeks1-6' | 'weeks7-12' | 'weeks13+';
+
+interface FootballLensIssue {
+  code: string;
+  message: string;
+  severity: 'info' | 'warn' | 'block';
+  position: string;
+  pillar: string;
+}
 
 const WEEK_RANGE_OPTIONS: { value: WeekRange; label: string }[] = [
   { value: 'full', label: 'Full Season' },
@@ -83,9 +91,17 @@ interface ForgePlayer {
   nflTeam?: string;
   alpha: number;
   rawAlpha?: number;
+  tier?: string;
   confidence?: number;
   trajectory?: 'rising' | 'flat' | 'declining';
   gamesPlayed: number;
+  issues?: FootballLensIssue[] | null;
+  pillars?: {
+    volume: number;
+    efficiency: number;
+    teamContext: number;
+    stability: number;
+  };
   subScores?: {
     volume: number;
     efficiency: number;
@@ -116,14 +132,17 @@ interface ForgePlayer {
 }
 
 interface ForgeBatchResponse {
-  success: boolean;
+  success?: boolean;
   scores: ForgePlayer[];
   meta: {
     position: string;
-    limit: number;
+    mode: ForgeMode;
+    limit?: number;
     season: number;
-    week: number;
+    week: number | 'season';
     count: number;
+    playersWithIssues?: number;
+    version?: string;
   };
 }
 
@@ -191,22 +210,25 @@ function calibrateAlpha(position: Position, rawAlpha: number): number {
 }
 
 function recalculateAlpha(player: ForgePlayer, weights: ForgeWeights, position: Position): number {
-  if (!player.subScores) return player.alpha;
+  const pillars = player.pillars || player.subScores;
+  if (!pillars) return player.alpha;
   
-  const { volume, efficiency, stability, contextFit } = player.subScores;
+  const volume = pillars.volume;
+  const efficiency = pillars.efficiency;
+  const stability = pillars.stability;
+  const context = 'teamContext' in pillars ? pillars.teamContext : ('contextFit' in pillars ? pillars.contextFit : 50);
+  
   const totalWeight = weights.volume + weights.efficiency + weights.stability + weights.context;
   
   if (totalWeight === 0) return player.alpha;
   
-  // Compute raw weighted alpha from subScores
   const rawAlpha = (
     (volume * weights.volume) +
     (efficiency * weights.efficiency) +
     (stability * weights.stability) +
-    (contextFit * weights.context)
+    (context * weights.context)
   ) / totalWeight;
   
-  // Apply calibration to map raw score (30-70) to calibrated range (25-95+)
   const calibrated = calibrateAlpha(position, rawAlpha);
   
   return Math.round(calibrated * 10) / 10;
@@ -457,7 +479,32 @@ function PlayerRow({
             {tierInfo.tier}
           </span>
           <div className="min-w-0">
-            <div className="font-medium text-white text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{player.playerName}</div>
+            <div className="flex items-center gap-1">
+              <span className="font-medium text-white text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{player.playerName}</span>
+              {player.issues && player.issues.length > 0 && (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <span className={`px-1 py-0.5 rounded text-[8px] font-semibold ${
+                      player.issues[0].severity === 'warn' 
+                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' 
+                        : player.issues[0].severity === 'block'
+                          ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                          : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                    }`} data-testid={`issue-badge-${player.playerId}`}>
+                      !
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="bg-slate-800 border-slate-700 max-w-xs">
+                    <div className="text-xs space-y-1">
+                      <div className="font-semibold text-amber-400">Football Lens Alert</div>
+                      {player.issues.map((issue, i) => (
+                        <div key={i} className="text-slate-300">{issue.message}</div>
+                      ))}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
             <div className="text-[10px] sm:text-xs text-slate-500">{player.nflTeam || 'FA'}</div>
           </div>
         </div>
@@ -595,16 +642,16 @@ function PlayerRow({
         )}
       </td>
       
-      {/* Sub-scores */}
+      {/* Sub-scores (Pillars) */}
       <td className="py-3 px-3 text-center hidden xl:table-cell">
         <div className="flex items-center justify-center gap-1 text-xs">
-          <span className="text-blue-400">{player.subScores?.volume?.toFixed(0) || '-'}</span>
+          <span className="text-blue-400">{(player.pillars?.volume ?? player.subScores?.volume)?.toFixed(0) || '-'}</span>
           <span className="text-slate-600">/</span>
-          <span className="text-yellow-400">{player.subScores?.efficiency?.toFixed(0) || '-'}</span>
+          <span className="text-yellow-400">{(player.pillars?.efficiency ?? player.subScores?.efficiency)?.toFixed(0) || '-'}</span>
           <span className="text-slate-600">/</span>
-          <span className="text-purple-400">{player.subScores?.stability?.toFixed(0) || '-'}</span>
+          <span className="text-purple-400">{(player.pillars?.stability ?? player.subScores?.stability)?.toFixed(0) || '-'}</span>
           <span className="text-slate-600">/</span>
-          <span className="text-emerald-400">{player.subScores?.contextFit?.toFixed(0) || '-'}</span>
+          <span className="text-emerald-400">{(player.pillars?.teamContext ?? player.subScores?.contextFit)?.toFixed(0) || '-'}</span>
         </div>
       </td>
       
@@ -619,7 +666,7 @@ function PlayerRow({
 export default function TiberTiers() {
   const [position, setPosition] = useState<Position>('WR');
   const [viewMode, setViewMode] = useState<ViewMode>('season');
-  const [leagueMode, setLeagueMode] = useState<LeagueMode>('redraft');
+  const [forgeMode, setForgeMode] = useState<ForgeMode>('redraft');
   const [scoringFormat, setScoringFormat] = useState<ScoringFormat>('ppr');
   const [weightsCollapsed, setWeightsCollapsed] = useState(false);
   const [weights, setWeights] = useState<ForgeWeights>(DEFAULT_WEIGHTS);
@@ -633,18 +680,9 @@ export default function TiberTiers() {
   const weekRangeParams = useMemo(() => getWeekRangeParams(weekRange, displayWeek), [weekRange, displayWeek]);
 
   const { data, isLoading, refetch, isFetching } = useQuery<ForgeBatchResponse>({
-    queryKey: ['/api/forge/batch', position, displayWeek, viewMode, weekRange, leagueMode, scoringFormat],
+    queryKey: ['/api/forge/eg/batch', position, displayWeek, viewMode, weekRange, forgeMode, scoringFormat],
     queryFn: async () => {
-      const week = viewMode === 'weekly' ? displayWeek : displayWeek;
-      let url = `/api/forge/batch?position=${position}&limit=50&season=2025&week=${week}`;
-      
-      if (weekRangeParams.startWeek && weekRangeParams.endWeek) {
-        url += `&startWeek=${weekRangeParams.startWeek}&endWeek=${weekRangeParams.endWeek}`;
-      }
-      
-      // v1.4: Add PPR/Dynasty scoring options
-      url += `&leagueType=${leagueMode}`;
-      url += `&pprType=${scoringFormat === 'ppr' ? '1' : '0.5'}`;
+      let url = `/api/forge/eg/batch?position=${position}&limit=50&mode=${forgeMode}`;
       
       const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch FORGE data');
@@ -779,18 +817,18 @@ export default function TiberTiers() {
                     <p className="text-[10px] sm:text-xs text-slate-400 -mt-0.5 hidden sm:block">Fantasy Football Rankings</p>
                   </div>
                   <Badge variant="outline" className="border-purple-500 text-purple-400 text-[10px] sm:text-xs ml-1 sm:ml-2 hidden sm:inline-flex">
-                    FORGE v1.4
+                    FORGE E+G v2
                   </Badge>
                 </div>
               </div>
               
               <div className="flex items-center gap-1 sm:gap-3">
-                {/* League Mode Toggle - Hidden on mobile */}
+                {/* FORGE Mode Toggle - Hidden on mobile */}
                 <div className="hidden sm:flex items-center bg-slate-800 rounded-lg p-0.5">
                   <button
-                    onClick={() => setLeagueMode('redraft')}
+                    onClick={() => setForgeMode('redraft')}
                     className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                      leagueMode === 'redraft'
+                      forgeMode === 'redraft'
                         ? 'bg-purple-600 text-white'
                         : 'text-slate-400 hover:text-white'
                     }`}
@@ -800,9 +838,9 @@ export default function TiberTiers() {
                     Redraft
                   </button>
                   <button
-                    onClick={() => setLeagueMode('dynasty')}
+                    onClick={() => setForgeMode('dynasty')}
                     className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                      leagueMode === 'dynasty'
+                      forgeMode === 'dynasty'
                         ? 'bg-purple-600 text-white'
                         : 'text-slate-400 hover:text-white'
                     }`}
@@ -810,6 +848,18 @@ export default function TiberTiers() {
                   >
                     <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5 inline mr-1" />
                     Dynasty
+                  </button>
+                  <button
+                    onClick={() => setForgeMode('bestball')}
+                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors ${
+                      forgeMode === 'bestball'
+                        ? 'bg-purple-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                    data-testid="toggle-bestball"
+                  >
+                    <Zap className="h-3 w-3 sm:h-3.5 sm:w-3.5 inline mr-1" />
+                    BestBall
                   </button>
                 </div>
 

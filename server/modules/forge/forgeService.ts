@@ -420,3 +420,153 @@ class ForgeService implements IForgeService {
 export const forgeService = new ForgeService();
 
 export default forgeService;
+
+// ============================================================================
+// NEW E/F/O/G Unified API Helpers (v2)
+// These wrap the full E→F→O→G pipeline for external systems
+// ============================================================================
+
+import { Position as EGPosition, ForgePillarScores, runForgeEngineBatch } from './forgeEngine';
+import { ViewMode, gradeForgeWithMeta } from './forgeGrading';
+import type { FootballLensIssue } from './forgeFootballLens';
+
+export type ForgeMode = ViewMode;
+
+export type ForgeFullResult = {
+  playerId: string;
+  playerName: string;
+  position: EGPosition;
+  nflTeam?: string;
+  season: number;
+  week: number | 'season';
+  gamesPlayed: number;
+  pillars: ForgePillarScores;
+  alpha: number;
+  tier: string;
+  issues: FootballLensIssue[] | null;
+  debug?: {
+    baseAlpha: number;
+    recursionAdjustment: number;
+    footballLensAdjusted: boolean;
+  };
+};
+
+export type ForgeBatchResult = {
+  scores: ForgeFullResult[];
+  meta: {
+    position: EGPosition;
+    mode: ForgeMode;
+    season: number;
+    week: number | 'season';
+    version: string;
+    description: string;
+    count: number;
+    playersWithIssues: number;
+    scoredAt: string;
+  };
+};
+
+/**
+ * Get FORGE score for a single player using full E→F→O→G pipeline
+ */
+export async function getForgeForPlayer(
+  playerId: string,
+  position: EGPosition,
+  season: number = 2025,
+  week: number | 'season' = 'season',
+  mode: ForgeMode = 'redraft'
+): Promise<ForgeFullResult | null> {
+  try {
+    const { runForgeEngine } = await import('./forgeEngine');
+    const { gradeForge } = await import('./forgeGrading');
+    
+    const engineOutput = await runForgeEngine(playerId, position, season, week);
+    if (!engineOutput) return null;
+    
+    const gradeResult = gradeForge(engineOutput, { mode });
+    
+    return {
+      playerId: engineOutput.playerId,
+      playerName: engineOutput.playerName,
+      position: engineOutput.position,
+      nflTeam: engineOutput.nflTeam,
+      season: engineOutput.season,
+      week: engineOutput.week,
+      gamesPlayed: engineOutput.gamesPlayed,
+      pillars: engineOutput.pillars,
+      alpha: gradeResult.alpha,
+      tier: gradeResult.tier,
+      issues: gradeResult.issues || null,
+      debug: gradeResult.debug,
+    };
+  } catch (error) {
+    console.error(`[ForgeService] getForgeForPlayer error for ${playerId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Get FORGE scores for all players at a position using full E→F→O→G pipeline
+ */
+export async function getForgeForBatch(
+  position: EGPosition,
+  season: number = 2025,
+  week: number | 'season' = 'season',
+  mode: ForgeMode = 'redraft',
+  limit: number = 50
+): Promise<ForgeBatchResult> {
+  const engineOutputs = await runForgeEngineBatch(position, season, week, limit);
+  
+  const scores: ForgeFullResult[] = engineOutputs.map((engineOutput) => {
+    const gradeResult = gradeForgeWithMeta(engineOutput, { mode });
+    
+    return {
+      playerId: engineOutput.playerId,
+      playerName: engineOutput.playerName,
+      position: engineOutput.position,
+      nflTeam: engineOutput.nflTeam,
+      season: engineOutput.season,
+      week: engineOutput.week,
+      gamesPlayed: engineOutput.gamesPlayed,
+      pillars: engineOutput.pillars,
+      alpha: gradeResult.alpha,
+      tier: gradeResult.tier,
+      issues: gradeResult.issues || null,
+      debug: gradeResult.debug,
+    };
+  });
+
+  scores.sort((a, b) => b.alpha - a.alpha);
+  
+  const playersWithIssues = scores.filter(s => s.issues && s.issues.length > 0).length;
+
+  return {
+    scores,
+    meta: {
+      position,
+      mode,
+      season,
+      week,
+      version: 'E+G/v2',
+      description: 'FORGE Engine+Grading with Football Lens (F) and Orientation (O) layers',
+      count: scores.length,
+      playersWithIssues,
+      scoredAt: new Date().toISOString(),
+    },
+  };
+}
+
+/**
+ * Map FORGE tier (T1-T5) to branded Tiber tier names (optional)
+ */
+export const TIBER_TIER_MAP: Record<string, string> = {
+  T1: 'Tiber Prime',
+  T2: 'Tiber Core',
+  T3: 'Tiber Fringe',
+  T4: 'Tiber Depth',
+  T5: 'Tiber Fragile',
+};
+
+export function getTiberTierName(forgeTier: string): string {
+  return TIBER_TIER_MAP[forgeTier] || forgeTier;
+}
