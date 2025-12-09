@@ -1,0 +1,147 @@
+FORGE DYNASTY + REDRAFT WEIGHTING UPDATE
+
+We need to update the FORGE Grading Layer (G) weightings and TeamContext logic to correctly differentiate between redraft and dynasty modes.
+
+1. Update REDRAFT Mode Weights
+
+Replace the current redraft weights with the following for WR:
+
+// Redraft (WR)
+{
+  volume: 0.45,
+  efficiency: 0.30,
+  teamContext: 0.15,
+  stability: 0.10
+}
+
+
+These numbers must overwrite the current defaults for redraft.
+
+2. Implement DynastyContext Inside the Engine (E Layer)
+
+Inside forgeEngine.ts, create a new computed value called:
+
+dynastyContext
+
+
+It must be calculated as follows:
+
+dynastyContext Inputs (WR only for now)
+
+Use available data to compute:
+
+QB long-term score
+
+Combine QB’s FORGE Alpha + QB Stability
+
+Normalize to 0–100
+
+Offensive continuity score
+
+Use existing team context inputs:
+
+pass_rate
+
+neutral pass rate
+
+previous 2 years offensive EPA/CPOE
+
+Normalize to 0–100
+
+Career efficiency memory
+
+Weighted blend of last 2–3 seasons of:
+
+YPRR
+
+target share
+
+RACR
+
+aDOT
+
+Normalize to 0–100
+
+Combine into:
+dynastyContext = 
+  (0.40 * qbLongTermScore) +
+  (0.30 * offensiveContinuityScore) +
+  (0.30 * careerEfficiencyScore);
+
+
+Normalize to 0–100 after combination.
+
+Store dynastyContext on the engine output:
+
+pillars.dynastyContext = dynastyContext;
+
+3. Modify TeamContext for Dynasty Mode
+
+Inside forgeGrading.ts, when mode === "dynasty", replace the TeamContext pillar with:
+
+teamContext = (0.40 * shortTermTeamContext) + (0.60 * dynastyContext);
+
+
+Where:
+
+shortTermTeamContext = existing teamContext pillar calculated in the engine
+
+dynastyContext = the new value output by the engine
+
+This should happen BEFORE applying dynasty weights.
+
+4. Update Dynasty Mode Weights (WR)
+
+Replace the current dynasty weights with the following:
+
+// Dynasty (WR)
+{
+  volume: 0.20,
+  efficiency: 0.35,
+  teamContext: 0.20,   // uses blended dynastyContext
+  stability: 0.25
+}
+
+
+Make sure weights normalize to 1.0.
+
+5. Ensure Bestball Mode Stays Unchanged
+
+Do not modify bestball weights or logic.
+
+6. Return dynastyContext in API Response
+
+In both:
+
+/api/forge/eg/player
+
+/api/forge/eg/batch
+
+Include:
+
+pillars.dynastyContext
+
+
+in the response JSON to help with debugging and testing.
+
+7. Test With Sample Players After Implementation
+
+After the changes, run dynasty & redraft for:
+
+Lamb
+
+Jefferson
+
+Chase
+
+London
+
+JSN
+
+Verify that:
+
+Dynasty mode → Lamb / Chase / Jefferson are T1
+
+Redraft mode → Lamb is T1/T2, Chase & Jefferson adjust based on short-term context
+
+End of Instructions.
