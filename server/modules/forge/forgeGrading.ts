@@ -8,7 +8,7 @@
  * - Tier mapping (T1-T5)
  */
 
-import { ForgeEngineOutput, ForgePillarScores, Position } from './forgeEngine';
+import { ForgeEngineOutput, ForgePillarScores, Position, QbContextData } from './forgeEngine';
 import { applyFootballLens, FootballLensIssue } from './forgeFootballLens';
 
 export type ViewMode = 'redraft' | 'dynasty' | 'bestball';
@@ -178,13 +178,30 @@ export function gradeForge(
     lensApplied = JSON.stringify(pillars) !== JSON.stringify(engineOutput.pillars);
   }
 
-  // Dynasty mode: Blend teamContext with dynastyContext (40% short-term + 60% dynasty)
-  if (mode === 'dynasty' && pillars.dynastyContext !== undefined) {
-    const shortTermContext = pillars.teamContext;
-    const dynastyContext = pillars.dynastyContext;
-    const blendedContext = (0.40 * shortTermContext) + (0.60 * dynastyContext);
+  // Apply QB Context blending from qb_context_2025 table
+  const qbContext = engineOutput.qbContext;
+  const shortTermContext = pillars.teamContext;
+  
+  if (mode === 'redraft' && qbContext) {
+    // Redraft: 60% shortTermTeamContext + 40% qbRedraftScore
+    const blendedContext = (0.60 * shortTermContext) + (0.40 * qbContext.qbRedraftScore);
     pillars.teamContext = blendedContext;
-    console.log(`[ForgeGrading] Dynasty blend for ${engineOutput.playerName}: short=${shortTermContext.toFixed(1)} + dynasty=${dynastyContext.toFixed(1)} → blended=${blendedContext.toFixed(1)}`);
+    console.log(`[ForgeGrading] Redraft QB blend for ${engineOutput.playerName}: short=${shortTermContext.toFixed(1)} + qbRedraft=${qbContext.qbRedraftScore.toFixed(1)} → blended=${blendedContext.toFixed(1)} (QB: ${qbContext.qbName})`);
+  } else if (mode === 'dynasty') {
+    // Dynasty: Use dynastyContext with QB dynasty score blended in
+    const dynastyCtx = pillars.dynastyContext ?? shortTermContext;
+    
+    if (qbContext) {
+      // Dynasty: 40% dynastyTeamContext + 60% qbDynastyScore  
+      const blendedContext = (0.40 * dynastyCtx) + (0.60 * qbContext.qbDynastyScore);
+      pillars.teamContext = blendedContext;
+      console.log(`[ForgeGrading] Dynasty QB blend for ${engineOutput.playerName}: dynasty=${dynastyCtx.toFixed(1)} + qbDynasty=${qbContext.qbDynastyScore.toFixed(1)} → blended=${blendedContext.toFixed(1)} (QB: ${qbContext.qbName})`);
+    } else {
+      // Fallback: use existing dynastyContext blend
+      const blendedContext = (0.40 * shortTermContext) + (0.60 * dynastyCtx);
+      pillars.teamContext = blendedContext;
+      console.log(`[ForgeGrading] Dynasty blend for ${engineOutput.playerName}: short=${shortTermContext.toFixed(1)} + dynasty=${dynastyCtx.toFixed(1)} → blended=${blendedContext.toFixed(1)}`);
+    }
   }
 
   const weights = getPositionForgeWeights(engineOutput.position, mode);

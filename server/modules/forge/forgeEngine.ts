@@ -9,6 +9,7 @@
 
 import { db } from '../../infra/db';
 import { sql } from 'drizzle-orm';
+import { getPrimaryQbContext } from './qbContextPopulator';
 
 export type Position = 'QB' | 'RB' | 'WR' | 'TE';
 
@@ -48,6 +49,16 @@ export type ForgePillarScores = {
   dynastyContext?: number; // Dynasty-specific context (QB long-term + offensive continuity + career efficiency)
 };
 
+export type QbContextData = {
+  qbId: string;
+  qbName: string;
+  qbRedraftScore: number;
+  qbDynastyScore: number;
+  qbSkillScore: number;
+  qbStabilityScore: number;
+  qbDurabilityScore: number;
+};
+
 export type ForgeEngineOutput = {
   playerId: string;
   playerName: string;
@@ -60,6 +71,7 @@ export type ForgeEngineOutput = {
   priorAlpha?: number;
   alphaMomentum?: number;
   rawMetrics: Record<string, number | null>;
+  qbContext?: QbContextData; // QB context from qb_context_2025 table
 };
 
 export type MetricLookupFn = (
@@ -915,7 +927,24 @@ export async function runForgeEngine(
 
   const { priorAlpha, alphaMomentum } = extractRecursionSignals(context);
 
-  console.log(`[ForgeEngine] Pillars for ${context.playerName}: V=${pillars.volume.toFixed(1)} E=${pillars.efficiency.toFixed(1)} T=${pillars.teamContext.toFixed(1)} S=${pillars.stability.toFixed(1)} D=${dynastyContext.toFixed(1)}`);
+  // Fetch QB context from qb_context_2025 table for skill players
+  let qbContext: QbContextData | undefined;
+  if (position !== 'QB' && context.nflTeam) {
+    const qbData = await getPrimaryQbContext(context.nflTeam, season);
+    if (qbData) {
+      qbContext = {
+        qbId: qbData.qbId,
+        qbName: qbData.qbName,
+        qbRedraftScore: qbData.qbRedraftScore,
+        qbDynastyScore: qbData.qbDynastyScore,
+        qbSkillScore: qbData.qbSkillScore,
+        qbStabilityScore: qbData.qbStabilityScore,
+        qbDurabilityScore: qbData.qbDurabilityScore,
+      };
+    }
+  }
+
+  console.log(`[ForgeEngine] Pillars for ${context.playerName}: V=${pillars.volume.toFixed(1)} E=${pillars.efficiency.toFixed(1)} T=${pillars.teamContext.toFixed(1)} S=${pillars.stability.toFixed(1)} D=${dynastyContext.toFixed(1)}${qbContext ? ` | QB: ${qbContext.qbName}` : ''}`);
 
   return {
     playerId,
@@ -929,6 +958,7 @@ export async function runForgeEngine(
     priorAlpha,
     alphaMomentum,
     rawMetrics: context.roleBank,
+    qbContext,
   };
 }
 

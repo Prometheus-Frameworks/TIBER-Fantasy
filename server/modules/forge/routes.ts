@@ -23,6 +23,7 @@ import {
   getAllTeamSoSByPosition,
   getTeamWeeklySoS 
 } from './sosService';
+import { populateQbContext2025, getPrimaryQbContext } from './qbContextPopulator';
 import { applySosMultiplier } from './helpers/sosMultiplier';
 import { ForgeScore } from './types';
 import { batchCalculateAlphaV2, AlphaV2Result } from './alphaV2';
@@ -1934,6 +1935,68 @@ router.post('/admin/refresh', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[FORGE/Admin] refresh endpoint error:', err);
     return res.status(500).json({ success: false, error: 'Refresh failed' });
+  }
+});
+
+/**
+ * POST /api/forge/admin/qb-context/populate
+ * 
+ * Populate qb_context_2025 table with QB scores for each team.
+ * This should be run whenever QB data changes or at season start.
+ */
+router.post('/admin/qb-context/populate', async (req: Request, res: Response) => {
+  try {
+    const season = parseInt(req.body.season as string) || parseInt(req.query.season as string) || 2025;
+    
+    console.log(`[FORGE/Admin] QB Context populate request: season=${season}`);
+    
+    const result = await populateQbContext2025(season);
+    
+    return res.json({
+      success: result.success,
+      meta: { season },
+      teamsProcessed: result.teamsProcessed,
+      errors: result.errors,
+      message: `Populated QB context for ${result.teamsProcessed} teams`,
+    });
+  } catch (err) {
+    console.error('[FORGE/Admin] qb-context populate error:', err);
+    return res.status(500).json({ success: false, error: 'QB Context populate failed' });
+  }
+});
+
+/**
+ * GET /api/forge/qb-context/:team
+ * 
+ * Get primary QB context for a team.
+ */
+router.get('/qb-context/:team', async (req: Request, res: Response) => {
+  try {
+    const team = req.params.team?.toUpperCase();
+    const season = parseInt(req.query.season as string) || 2025;
+    
+    if (!team) {
+      return res.status(400).json({ success: false, error: 'Team is required' });
+    }
+    
+    const context = await getPrimaryQbContext(team, season);
+    
+    if (!context) {
+      return res.status(404).json({ 
+        success: false, 
+        error: `No QB context found for ${team}. Run POST /admin/qb-context/populate first.`
+      });
+    }
+    
+    return res.json({
+      success: true,
+      team,
+      season,
+      qbContext: context,
+    });
+  } catch (err) {
+    console.error('[FORGE] qb-context error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to get QB context' });
   }
 });
 
