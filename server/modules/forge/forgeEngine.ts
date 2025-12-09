@@ -387,13 +387,76 @@ async function fetchTeamContext(
   nflTeam: string | undefined,
   season: number
 ): Promise<Record<string, number | null>> {
-  if (!nflTeam) return { team_pass_volume: 50, team_run_volume: 50, team_pace: 50, team_red_zone_drives: 50 };
+  const defaults = { 
+    team_pass_volume: 50, 
+    team_run_volume: 50, 
+    team_pace: 50, 
+    team_red_zone_drives: 50 
+  };
+  
+  if (!nflTeam) return defaults;
+  
+  try {
+    const result = await db.execute(sql`
+      SELECT 
+        pass_epa,
+        rush_epa,
+        ypa,
+        cpoe,
+        run_success_rate,
+        explosive_20_plus
+      FROM team_offensive_context
+      WHERE team = ${nflTeam} AND season = ${season}
+      ORDER BY week DESC
+      LIMIT 1
+    `);
+    
+    if (result.rows.length === 0) {
+      const seasonFallback = await db.execute(sql`
+        SELECT 
+          pass_epa,
+          rush_epa,
+          ypa,
+          cpoe,
+          run_success_rate,
+          explosive_20_plus
+        FROM team_offensive_context
+        WHERE team = ${nflTeam}
+        ORDER BY season DESC, week DESC
+        LIMIT 1
+      `);
+      
+      if (seasonFallback.rows.length === 0) return defaults;
+      
+      const row = seasonFallback.rows[0] as Record<string, any>;
+      return normalizeTeamContext(row);
+    }
+    
+    const row = result.rows[0] as Record<string, any>;
+    return normalizeTeamContext(row);
+  } catch (error) {
+    console.error(`[ForgeEngine] Error fetching team context for ${nflTeam}:`, error);
+    return defaults;
+  }
+}
+
+function normalizeTeamContext(row: Record<string, any>): Record<string, number | null> {
+  const passEpa = parseFloat(row.pass_epa) || 0;
+  const rushEpa = parseFloat(row.rush_epa) || 0;
+  const cpoe = parseFloat(row.cpoe) || 0;
+  const runSuccessRate = parseFloat(row.run_success_rate) || 0;
+  const explosive = parseFloat(row.explosive_20_plus) || 0;
+  
+  const normalizeRange = (val: number, min: number, max: number) => {
+    const norm = ((val - min) / (max - min)) * 100;
+    return Math.max(0, Math.min(100, norm));
+  };
   
   return {
-    team_pass_volume: 55,
-    team_run_volume: 50,
-    team_pace: 52,
-    team_red_zone_drives: 50,
+    team_pass_volume: normalizeRange(passEpa, -0.2, 0.3),
+    team_run_volume: normalizeRange(rushEpa, -0.2, 0.2),
+    team_pace: normalizeRange(explosive, 3, 20),
+    team_red_zone_drives: normalizeRange(cpoe, -5, 10),
   };
 }
 
@@ -402,11 +465,38 @@ async function fetchSoSData(
   position: Position,
   season: number
 ): Promise<Record<string, number | null>> {
-  return {
+  const defaults = {
     pass_defense_sos: 50,
     run_defense_sos: 50,
     te_defense_sos: 50,
   };
+  
+  if (!nflTeam) return defaults;
+  
+  try {
+    const result = await db.execute(sql`
+      SELECT position, sos_score 
+      FROM sos_scores 
+      WHERE team = ${nflTeam} AND season = ${season}
+    `);
+    
+    if (result.rows.length === 0) return defaults;
+    
+    const sosMap: Record<string, number> = {};
+    for (const row of result.rows) {
+      const r = row as Record<string, any>;
+      sosMap[r.position] = parseFloat(r.sos_score) || 50;
+    }
+    
+    return {
+      pass_defense_sos: sosMap['WR'] ?? sosMap['PASS'] ?? 50,
+      run_defense_sos: sosMap['RB'] ?? sosMap['RUSH'] ?? 50,
+      te_defense_sos: sosMap['TE'] ?? sosMap['WR'] ?? 50,
+    };
+  } catch (error) {
+    console.error(`[ForgeEngine] Error fetching SoS for ${nflTeam}:`, error);
+    return defaults;
+  }
 }
 
 export async function fetchForgeContext(
