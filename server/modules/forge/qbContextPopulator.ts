@@ -89,14 +89,14 @@ export async function populateQbContext2025(season: number = 2025): Promise<{
             q.efficiency_score,
             q.epa_per_play,
             q.cpoe,
-            cp.full_name as player_name
+            (SELECT player_name FROM weekly_stats ws2 
+             WHERE ws2.player_id = q.player_id AND ws2.season = ${season} LIMIT 1) as player_name
           FROM qb_role_bank q
           JOIN (
             SELECT DISTINCT player_id 
             FROM weekly_stats 
             WHERE team = ${team} AND season = ${season} AND position = 'QB'
           ) ws ON q.player_id = ws.player_id
-          LEFT JOIN canonical_players cp ON q.player_id = cp.id
           WHERE q.season = ${season}
           ORDER BY q.games_played DESC
         `);
@@ -276,8 +276,8 @@ function calculateQbScores(input: QbScoreInput): QbScores {
   
   redraftScore = Math.min(100, Math.max(0, redraftScore));
   
-  // 5. Dynasty Score: Long-term value with age curve
-  // Formula: 0.5 * skill + 0.2 * stability + 0.2 * durability + 0.1 * age_curve
+  // 5. Dynasty Score: Long-term value emphasizing skill + stability
+  // Formula: 0.55 * dynastySkill + 0.25 * stability + 0.15 * durability + 0.05 * age_curve
   
   // Use career average alpha for dynasty instead of just current
   const careerAlphas = history.map(h => h.alphaContextScore);
@@ -285,18 +285,22 @@ function calculateQbScores(input: QbScoreInput): QbScores {
     ? careerAlphas.reduce((a, b) => a + b, 0) / careerAlphas.length 
     : skillScore;
   
-  // Blend current skill with career average for dynasty
-  const dynastySkill = (skillScore * 0.6) + (careerAvgAlpha * 0.4);
+  // Blend current skill with career average for dynasty (70% current, 30% career)
+  const dynastySkill = (skillScore * 0.7) + (careerAvgAlpha * 0.3);
   
-  // Age curve (placeholder - would use actual age)
-  const ageCurveFactor = 85; // Default to prime-ish age
+  // Age curve (placeholder - assume prime age for most starters)
+  const ageCurveFactor = 80; // Default to prime-ish age
   
-  const dynastyScore = Math.min(100, Math.max(0,
-    (0.5 * dynastySkill) +
-    (0.2 * stabilityScore) +
-    (0.2 * durabilityScore) +
-    (0.1 * ageCurveFactor)
-  ));
+  // Dynasty weights: Skill-heavy formula to ensure elite QBs score 70+
+  const rawDynastyScore = 
+    (0.55 * dynastySkill) +
+    (0.25 * stabilityScore) +
+    (0.15 * durabilityScore) +
+    (0.05 * ageCurveFactor);
+  
+  // Apply floor of 40 for any starter QB with reasonable skill
+  const dynastyFloor = skillScore >= 45 ? 45 : 35;
+  const dynastyScore = Math.min(100, Math.max(dynastyFloor, rawDynastyScore));
   
   return {
     skillScore,
@@ -308,16 +312,17 @@ function calculateQbScores(input: QbScoreInput): QbScores {
 }
 
 async function estimateQbAge(qbId: string): Promise<number | null> {
-  // Try to get age from canonical_players if available
+  // Estimate age based on years of NFL data (fallback approach)
   try {
     const result = await db.execute(sql`
-      SELECT years_exp FROM canonical_players WHERE id = ${qbId}
+      SELECT COUNT(DISTINCT season) as seasons_played
+      FROM qb_role_bank WHERE player_id = ${qbId}
     `);
     
     if (result.rows.length > 0) {
-      const yearsExp = parseInt((result.rows[0] as any).years_exp) || 0;
-      // Rough age estimate: entered league at 22 + years_exp
-      return 22 + yearsExp;
+      const seasonsPlayed = parseInt((result.rows[0] as any).seasons_played) || 0;
+      // Rough age estimate: entered league at 22 + seasons played
+      return seasonsPlayed > 0 ? 22 + seasonsPlayed : null;
     }
   } catch (e) {
     // Ignore errors, return null
