@@ -61,8 +61,11 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
     - Preset system: Balanced, Workhorse, Efficiency, High Floor, Upside
     - Season/Weekly toggle for different ranking views
     - **Week Range Filtering (v1.2)**: Filter rankings by specific weeks (Full Season, Last 4 Weeks, Last 6 Weeks, Weeks 1-6, Weeks 7-12, Weeks 13+). Database-level filtering using SQL WHERE clauses for performance. API accepts `startWeek` and `endWeek` query parameters.
+    - **FORGE E+G v2 Integration**: Uses `/api/forge/eg/batch` with full E→F→O→G pipeline.
+    - **Mode Toggle (v2)**: Redraft (balanced), Dynasty (+30% stability), BestBall (+20% efficiency) mode selection with real-time alpha recalculation.
+    - **Football Lens Issue Badges**: Players flagged by Football Lens display alert badges with severity-coded colors (info=blue, warn=amber, block=red) and hover tooltips explaining detected issues.
     - Tier badges (T1-T5) with position-specific thresholds
-    - Alpha scores recalculated in real-time based on user-selected weights
+    - Alpha scores recalculated in real-time based on user-selected weights and orientation mode
 - **Tiber Data Lab (Operation DataDive)** (`/tiber-data-lab`): Snapshot-based NFL data spine for reproducible analytics, focused on NFL Mode (raw football metrics only). Fantasy analytics moved to Tiber Tiers page.
 - **xFPTS v2 (Expected Fantasy Points v2)**: Context-aware expected fantasy points system.
 - **Position-Aware Enrichment**: Full position-specific enrichment layer with 2025 NFL metrics.
