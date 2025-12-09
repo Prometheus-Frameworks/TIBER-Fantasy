@@ -1,0 +1,261 @@
+We now have FORGE E+G split:
+
+server/modules/forge/forgeEngine.ts – builds 4 pillar scores (Volume, Efficiency, TeamContext, Stability)
+
+server/modules/forge/forgeGrading.ts – applies position weights, recursion, and tier mapping
+
+Next step: implement F (Football-Oriented) and O (Oriented) on top.
+
+1) Add a Football Lens (F layer)
+
+Create a new module:
+
+server/modules/forge/forgeFootballLens.ts
+
+Purpose:
+
+Inspect ForgeEngineOutput + pillars
+
+Detect football-sense issues
+
+Optionally apply small, bounded pillar adjustments
+
+Return:
+
+adjustedPillars
+
+issues (for logging / UI)
+
+Types
+
+In forgeFootballLens.ts:
+
+import { ForgeEngineOutput, ForgePillarScores, Position } from "./forgeEngine";
+
+export type FootballLensSeverity = "info" | "warn" | "block";
+
+export type FootballLensIssue = {
+  code: string;
+  message: string;
+  severity: FootballLensSeverity;
+  position?: Position;
+  pillar?: keyof ForgePillarScores;
+};
+
+export type FootballLensResult = {
+  pillars: ForgePillarScores;
+  issues: FootballLensIssue[];
+};
+
+Helper: soft adjust function
+function scalePillar(
+  pillars: ForgePillarScores,
+  key: keyof ForgePillarScores,
+  factor: number
+): ForgePillarScores {
+  return {
+    ...pillars,
+    [key]: Math.max(
+      0,
+      Math.min(100, pillars[key] * factor)
+    ) as ForgePillarScores[keyof ForgePillarScores],
+  };
+}
+
+Core function
+
+Implement:
+
+export function applyFootballLens(
+  engineOutput: ForgeEngineOutput
+): FootballLensResult {
+  let pillars = { ...engineOutput.pillars };
+  const issues: FootballLensIssue[] = [];
+  const { position } = engineOutput;
+
+  // Example Rule 1: WR TD spike with low volume
+  if (position === "WR") {
+    const { volume, efficiency } = pillars;
+
+    if (volume < 40 && efficiency > 85) {
+      issues.push({
+        code: "WR_TD_SPIKE_LOW_VOLUME",
+        message:
+          "WR shows elite efficiency but poor volume; likely driven by TD spikes or small sample.",
+        severity: "warn",
+        position,
+        pillar: "efficiency",
+      });
+
+      // Soft cap efficiency a bit (e.g. -10%)
+      pillars = scalePillar(pillars, "efficiency", 0.9);
+    }
+  }
+
+  // Example Rule 2: RB no receiving work in full-PPR
+  if (position === "RB") {
+    // Assume Engine context already encodes a receiving involvement score into Stability or Efficiency.
+    // For now, we can look at a low Efficiency + high Volume oddity, or if you expose a "receivingUsageScore"
+    // later we can plug that in here.
+
+    if (pillars.volume > 70 && pillars.efficiency < 50) {
+      issues.push({
+        code: "RB_VOLUME_WITH_BAD_EFFICIENCY",
+        message:
+          "RB has strong volume but poor efficiency; monitor for role or performance risk.",
+        severity: "info",
+        position,
+        pillar: "efficiency",
+      });
+    }
+  }
+
+  // Example Rule 3: Global sanity – if any single pillar is extremely high while others are terrible
+  const values = Object.values(pillars);
+  const maxPillar = Math.max(...values);
+  const minPillar = Math.min(...values);
+  if (maxPillar >= 90 && minPillar <= 30) {
+    issues.push({
+      code: "PILLAR_POLARIZATION",
+      message:
+        "One pillar is extremely strong while another is very weak; player is highly context-sensitive.",
+      severity: "info",
+    });
+  }
+
+  return { pillars, issues };
+}
+
+
+We can expand rules later, but this gives us a basic football sanity layer.
+
+2) Add Orientation Modes (O layer)
+
+We want redraft, dynasty, bestball modes that tweak weights in the grading layer.
+
+In forgeGrading.ts:
+
+Add a ViewMode type:
+
+export type ViewMode = "redraft" | "dynasty" | "bestball";
+
+
+Update getPositionForgeWeights to accept a mode parameter and adjust the base weights per mode.
+
+Assuming you already have:
+
+const POSITION_WEIGHTS: Record<Position, ForgeWeights> = {
+  WR: { volume: 0.43, efficiency: 0.37, teamContext: 0.05, stability: 0.15 },
+  RB: { volume: 0.475, efficiency: 0.31, teamContext: 0.065, stability: 0.15 },
+  TE: { volume: 0.40, efficiency: 0.37, teamContext: 0.10, stability: 0.13 },
+  QB: { volume: 0.29, efficiency: 0.41, teamContext: 0.18, stability: 0.12 },
+};
+
+
+Change it to:
+
+export function getPositionForgeWeights(
+  position: Position,
+  mode: ViewMode = "redraft"
+): ForgeWeights {
+  const base = POSITION_WEIGHTS[position];
+
+  switch (mode) {
+    case "dynasty":
+      // Dynasty: more weight on stability (role security, long-term),
+      // slightly less on short-term team context.
+      return {
+        volume: base.volume * 0.9,
+        efficiency: base.efficiency * 1.0,
+        teamContext: base.teamContext * 0.8,
+        stability: base.stability * 1.3,
+      };
+
+    case "bestball":
+      // Bestball: spike weeks matter more (efficiency), stability a bit less.
+      return {
+        volume: base.volume * 0.9,
+        efficiency: base.efficiency * 1.2,
+        teamContext: base.teamContext * 1.0,
+        stability: base.stability * 0.9,
+      };
+
+    case "redraft":
+    default:
+      return base;
+  }
+}
+
+
+Update gradeForge to accept an options object including mode:
+
+import { ForgeEngineOutput, ForgePillarScores, Position } from "./forgeEngine";
+import { applyFootballLens } from "./forgeFootballLens";
+import type { ViewMode } from "./forgeGradingTypes"; // or keep in same file
+
+export type GradeForgeOptions = {
+  mode?: ViewMode; // default "redraft"
+};
+
+export function gradeForge(
+  engineOutput: ForgeEngineOutput,
+  options: GradeForgeOptions = {}
+): ForgeGradeResult & { issues: FootballLensIssue[] } {
+  const mode = options.mode ?? "redraft";
+
+  // 1) Apply Football Lens (F) to adjust pillars / collect issues
+  const { pillars: footballPillars, issues } = applyFootballLens(engineOutput);
+
+  // 2) Get position + mode-specific weights (O)
+  const weights = getPositionForgeWeights(engineOutput.position, mode);
+
+  // 3) Compute base alpha from the adjusted pillars
+  const baseAlpha = computeBaseAlpha(footballPillars, weights);
+
+  // 4) Apply recursion bias as before
+  const alphaWithRecursion = applyRecursionBias(baseAlpha, {
+    priorAlpha: engineOutput.priorAlpha,
+    alphaMomentum: engineOutput.alphaMomentum,
+  });
+
+  const tier = mapAlphaToTier(alphaWithRecursion, engineOutput.position);
+
+  return {
+    alpha: alphaWithRecursion,
+    tier,
+    issues,
+  };
+}
+
+3) Wire F + O into existing endpoints
+
+In the new E+G endpoints (e.g. /api/forge/eg/player/:playerId and /api/forge/eg/batch):
+
+Add an optional mode query param:
+
+?position=WR&mode=redraft
+
+?position=WR&mode=dynasty
+
+?position=WR&mode=bestball
+
+Example:
+
+const mode = (req.query.mode as ViewMode) ?? "redraft";
+
+const engineOutput = await runForgeEngine(playerId, position, season, week);
+const grade = gradeForge(engineOutput, { mode });
+
+res.json({
+  playerId,
+  position,
+  season,
+  week,
+  pillars: engineOutput.pillars,
+  alpha: grade.alpha,
+  tier: grade.tier,
+  issues: grade.issues, // Football lens messages
+});
+
+
+If you don’t want to expose modes yet, default everything to "redraft" and just keep issues in the response for debugging.
