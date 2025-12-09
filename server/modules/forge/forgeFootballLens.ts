@@ -29,9 +29,11 @@ function scalePillar(
   key: keyof ForgePillarScores,
   factor: number
 ): ForgePillarScores {
+  const currentValue = pillars[key];
+  if (currentValue === undefined) return pillars;
   return {
     ...pillars,
-    [key]: Math.max(0, Math.min(100, pillars[key] * factor)),
+    [key]: Math.max(0, Math.min(100, currentValue * factor)),
   };
 }
 

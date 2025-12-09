@@ -2038,6 +2038,9 @@ router.get('/eg/batch', async (req: Request, res: Response) => {
           efficiency: Math.round(r.pillars.efficiency * 10) / 10,
           teamContext: Math.round(r.pillars.teamContext * 10) / 10,
           stability: Math.round(r.pillars.stability * 10) / 10,
+          dynastyContext: r.pillars.dynastyContext !== undefined 
+            ? Math.round(r.pillars.dynastyContext * 10) / 10 
+            : undefined,
         },
         issues: r.issues,
         debug: r.debug,
@@ -2125,6 +2128,9 @@ router.get('/eg/player/:playerId', async (req: Request, res: Response) => {
           efficiency: Math.round(result.pillars.efficiency * 10) / 10,
           teamContext: Math.round(result.pillars.teamContext * 10) / 10,
           stability: Math.round(result.pillars.stability * 10) / 10,
+          dynastyContext: result.pillars.dynastyContext !== undefined 
+            ? Math.round(result.pillars.dynastyContext * 10) / 10 
+            : undefined,
         },
         issues: result.issues,
         debug: result.debug,

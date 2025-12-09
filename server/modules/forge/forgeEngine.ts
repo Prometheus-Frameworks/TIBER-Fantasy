@@ -522,21 +522,31 @@ async function computeDynastyContext(
   let careerEfficiencyScore = 50;
   
   try {
-    // 1. QB Long-Term Score: Get team's QB alpha + stability
+    // 1. QB Long-Term Score: Get team's QB alpha + efficiency from qb_role_bank
+    // Need to join with weekly_stats to get team->player_id mapping
     if (nflTeam) {
       const qbResult = await db.execute(sql`
-        SELECT alpha_score, consistency_score, stability_index
-        FROM qb_role_bank 
-        WHERE team = ${nflTeam} AND season = ${season}
-        ORDER BY games_played DESC
+        SELECT qb.volume_score, qb.efficiency_score, qb.momentum_score, qb.alpha_context_score
+        FROM qb_role_bank qb
+        JOIN (
+          SELECT DISTINCT player_id 
+          FROM weekly_stats 
+          WHERE team = ${nflTeam} 
+            AND season = ${season} 
+            AND position = 'QB'
+          LIMIT 1
+        ) ws ON qb.player_id = ws.player_id
+        WHERE qb.season = ${season}
+        ORDER BY qb.games_played DESC
         LIMIT 1
       `);
       
       if (qbResult.rows.length > 0) {
         const qb = qbResult.rows[0] as Record<string, any>;
-        const qbAlpha = parseFloat(qb.alpha_score) || 50;
-        const qbStability = parseFloat(qb.consistency_score) || parseFloat(qb.stability_index) || 50;
-        qbLongTermScore = (0.6 * qbAlpha) + (0.4 * qbStability);
+        const qbAlpha = parseFloat(qb.alpha_context_score) || parseFloat(qb.efficiency_score) || 50;
+        const qbVolume = parseFloat(qb.volume_score) || 50;
+        // Use volume + alpha blend for QB quality
+        qbLongTermScore = (0.5 * qbAlpha) + (0.5 * qbVolume);
       }
     }
     
