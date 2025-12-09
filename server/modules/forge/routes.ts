@@ -1975,7 +1975,7 @@ router.get('/opportunity-shifts', async (req: Request, res: Response) => {
 router.get('/eg/batch', async (req: Request, res: Response) => {
   try {
     const { runForgeEngineBatch } = await import('./forgeEngine');
-    const { gradeForgeWithMeta, ViewMode } = await import('./forgeGrading');
+    const { gradeForgeWithMeta } = await import('./forgeGrading');
     type EGPosition = 'QB' | 'RB' | 'WR' | 'TE';
 
     const position = (req.query.position as string)?.toUpperCase();
