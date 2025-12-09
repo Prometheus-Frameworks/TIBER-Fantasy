@@ -14,6 +14,19 @@ import { db } from '../../infra/db';
 import { sql } from "drizzle-orm";
 import { qbContext2025 } from '../../../shared/schema';
 
+/**
+ * 2025 QB Overrides - Manual starter assignments for known situations
+ * These override historical game data to reflect actual 2025 starters
+ * Format: team_id → { qbId, qbName }
+ */
+const qbOverrides2025: Record<string, { qbId: string; qbName: string }> = {
+  // Vikings: J.J. McCarthy replaces Sam Darnold as 2025 starter
+  "MIN": { qbId: "00-0039923", qbName: "J.J. McCarthy" },
+  // Bengals: Joe Burrow returning from injury, replaces Joe Flacco
+  "CIN": { qbId: "00-0036442", qbName: "Joe Burrow" },
+  // Add more overrides as needed for 2025 starter changes
+};
+
 // QB age curve for dynasty scoring
 function getAgeCurveFactor(age: number | null): number {
   if (!age) return 50;
@@ -79,41 +92,86 @@ export async function populateQbContext2025(season: number = 2025): Promise<{
     
     for (const team of teams) {
       try {
-        // Get all QBs for this team this season
-        const qbsResult = await db.execute(sql`
-          SELECT 
-            q.player_id,
-            q.games_played,
-            q.alpha_context_score,
-            q.volume_score,
-            q.efficiency_score,
-            q.epa_per_play,
-            q.cpoe,
-            (SELECT player_name FROM weekly_stats ws2 
-             WHERE ws2.player_id = q.player_id AND ws2.season = ${season} LIMIT 1) as player_name
-          FROM qb_role_bank q
-          JOIN (
-            SELECT DISTINCT player_id 
-            FROM weekly_stats 
-            WHERE team = ${team} AND season = ${season} AND position = 'QB'
-          ) ws ON q.player_id = ws.player_id
-          WHERE q.season = ${season}
-          ORDER BY q.games_played DESC
-        `);
+        // Check for manual override first (known 2025 starter changes)
+        const override = qbOverrides2025[team];
         
-        if (qbsResult.rows.length === 0) {
-          console.log(`[QBContext] No QB data for ${team}, skipping`);
-          continue;
+        let qbId: string;
+        let qbName: string;
+        let gamesCurrentSeason: number;
+        let alphaScore: number;
+        let epaPerPlay: number | null;
+        let cpoe: number | null;
+        
+        if (override) {
+          // Use override QB
+          qbId = override.qbId;
+          qbName = override.qbName;
+          console.log(`[QBContext] ${team}: Using 2025 override → ${qbName} (${qbId})`);
+          
+          // Get QB data from role bank (check current season first, then historical)
+          const qbDataResult = await db.execute(sql`
+            SELECT 
+              games_played,
+              alpha_context_score,
+              epa_per_play,
+              cpoe,
+              season
+            FROM qb_role_bank
+            WHERE player_id = ${qbId}
+            ORDER BY season DESC
+            LIMIT 1
+          `);
+          
+          if (qbDataResult.rows.length > 0) {
+            const qbData = qbDataResult.rows[0] as any;
+            gamesCurrentSeason = parseInt(qbData.games_played) || 0;
+            alphaScore = parseFloat(qbData.alpha_context_score) || 50;
+            epaPerPlay = parseFloat(qbData.epa_per_play) || null;
+            cpoe = parseFloat(qbData.cpoe) || null;
+          } else {
+            // No role bank data, use defaults
+            gamesCurrentSeason = 0;
+            alphaScore = 50;
+            epaPerPlay = null;
+            cpoe = null;
+          }
+        } else {
+          // No override - fall back to historical game data selection
+          const qbsResult = await db.execute(sql`
+            SELECT 
+              q.player_id,
+              q.games_played,
+              q.alpha_context_score,
+              q.volume_score,
+              q.efficiency_score,
+              q.epa_per_play,
+              q.cpoe,
+              (SELECT player_name FROM weekly_stats ws2 
+               WHERE ws2.player_id = q.player_id AND ws2.season = ${season} LIMIT 1) as player_name
+            FROM qb_role_bank q
+            JOIN (
+              SELECT DISTINCT player_id 
+              FROM weekly_stats 
+              WHERE team = ${team} AND season = ${season} AND position = 'QB'
+            ) ws ON q.player_id = ws.player_id
+            WHERE q.season = ${season}
+            ORDER BY q.games_played DESC
+          `);
+          
+          if (qbsResult.rows.length === 0) {
+            console.log(`[QBContext] No QB data for ${team}, skipping`);
+            continue;
+          }
+          
+          // Primary QB = most games played
+          const primaryQb = qbsResult.rows[0] as any;
+          qbId = primaryQb.player_id;
+          qbName = primaryQb.player_name || `QB-${qbId}`;
+          gamesCurrentSeason = parseInt(primaryQb.games_played) || 0;
+          alphaScore = parseFloat(primaryQb.alpha_context_score) || 50;
+          epaPerPlay = parseFloat(primaryQb.epa_per_play) || null;
+          cpoe = parseFloat(primaryQb.cpoe) || null;
         }
-        
-        // Primary QB = most games played
-        const primaryQb = qbsResult.rows[0] as any;
-        const qbId = primaryQb.player_id;
-        const qbName = primaryQb.player_name || `QB-${qbId}`;
-        const gamesCurrentSeason = parseInt(primaryQb.games_played) || 0;
-        const alphaScore = parseFloat(primaryQb.alpha_context_score) || 50;
-        const epaPerPlay = parseFloat(primaryQb.epa_per_play) || null;
-        const cpoe = parseFloat(primaryQb.cpoe) || null;
         
         // Get historical games for stability/durability
         const historyResult = await db.execute(sql`
