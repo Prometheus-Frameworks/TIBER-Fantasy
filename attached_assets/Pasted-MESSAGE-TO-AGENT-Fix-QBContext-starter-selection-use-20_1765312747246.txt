@@ -1,0 +1,86 @@
+MESSAGE TO AGENT — Fix QBContext starter selection (use 2025 depth charts + MIN override)
+
+The new qb_context_2025 system is working, but the starter detection is still biased toward historical snaps. We need it to prioritize 2025 current depth charts, not past games, and explicitly map Vikings to J.J. McCarthy instead of Sam Darnold.
+
+1) Starter selection must use 2025 depth charts first
+
+In the logic that populates qb_context_2025 (inside /api/forge/admin/qb-context/populate):
+
+For each team_id and season = 2025:
+
+Try to select the starter from the depth chart table (e.g. snapshot_depth_charts or the equivalent you’re already using):
+
+position = 'QB'
+
+season = 2025
+
+depth_chart_rank = 1 (or the field you use to mark QB1)
+
+This QB should be treated as the primary starter (is_primary_qb = true).
+
+Only if no depth chart entry exists for that team/season:
+
+Then fall back to the old behavior using qb_role_bank + weekly_stats to infer the most recent starter.
+
+Right now we’re seeing:
+
+MIN → Sam Darnold
+
+CIN → Joe Flacco
+
+Those are correct historically but wrong for 2025 context. This change should prevent that.
+
+2) Add a manual override for Vikings QB = J.J. McCarthy
+
+Until the depth chart data fully reflects 2025 camp decisions, add a small override inside the QB context population logic:
+
+If team_id corresponds to the Vikings (MIN):
+
+Force the primary QB (is_primary_qb = true, depth_chart_rank = 1) to be J.J. McCarthy’s player_id, not Sam Darnold.
+
+Ensure qb_context_2025 for MIN uses McCarthy for:
+
+qb_skill_score
+
+qb_redraft_score
+
+qb_dynasty_score
+
+qb_stability_score
+
+etc.
+
+You can implement this as a simple mapping:
+
+const qbOverrides2025: Record<string, string> = {
+  // team_id: qb_id
+  "MIN": "jj_mccarthy_player_id_here",
+  // add more if needed later
+};
+
+
+If a team_id exists in qbOverrides2025, use that qb_id as the starter for 2025 when populating qb_context_2025.
+
+3) Re-run QBContext population and verify
+
+After updating the logic, re-run:
+
+POST /api/forge/admin/qb-context/populate
+
+Then confirm in logs for 2025:
+
+CIN → starter is Joe Burrow (not Joe Flacco)
+
+MIN → starter is J.J. McCarthy (not Sam Darnold)
+
+DAL → Dak Prescott
+
+DET → Jared Goff
+
+And confirm that:
+
+FORGE WR dynasty teamContext for Jefferson now reflects McCarthy, not Darnold.
+
+FORGE WR dynasty teamContext for Chase reflects Burrow, not Flacco.
+
+End of instructions.
