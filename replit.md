@@ -35,11 +35,15 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 **Technical Implementations & Feature Specifications:**
 - **Unified Player Hub (UPH)**: Centralizes player data, "Player Compass" profiles, "OTC Consensus" rankings, and Madden-style OVR.
 - **AI & Analytics**: "Competence Mode" AI, Adaptive Consensus Engine, DeepSeek + Compass Fusion System, RAG Chat System using Google Gemini AI, Tiber Memory (FANTASY vs GENERAL pools), and Tiber Voice (Insight/Analyst modes with 5-tier Truth Hierarchy).
-- **FORGE (Football-Oriented Recursive Grading Engine)**: Core player evaluation system providing unified Alpha scores (0-100) for skill positions. Emphasizes Football-Oriented, Recursive, Grading, and Engine principles.
-    - **FORGE E+G Architecture (v2)**: Modular refactor separating concerns into Engine (E) and Grading (G) layers:
-        - **Engine (`forgeEngine.ts`)**: Fetches context from DB (role banks, team_offensive_context, sos_scores), builds metric lookup function, computes 4 pillar scores (volume, efficiency, teamContext, stability). Position-specific pillar configs with weighted metrics from each data source.
-        - **Grading (`forgeGrading.ts`)**: Takes pillar scores, applies position-specific weights (e.g., WR: V=0.43, E=0.37, T=0.05, S=0.15), optional recursion bias (prior alpha, momentum), maps to tier (T1-T5).
-        - **Endpoints**: `/api/forge/eg/batch?position=WR` and `/api/forge/eg/player/:playerId?position=WR` for new architecture.
+- **FORGE (Football-Oriented Recursive Grading Engine)**: Core player evaluation system providing unified Alpha scores (0-100) for skill positions. Full FORGE acronym implementation:
+    - **F (Football Lens)**: `forgeFootballLens.ts` - Detects football-sense issues (TD spikes, volume/efficiency mismatches, pillar polarization). Applies bounded pillar adjustments when warranted. Returns issues with severity levels (info/warn/block).
+    - **O (Orientation Modes)**: ViewMode support for `redraft`, `dynasty`, `bestball`. Dynasty emphasizes stability (+30%), bestball emphasizes efficiency (+20%). Weight normalization ensures totals sum to 1.0.
+    - **R (Recursion)**: Two-pass scoring with prior alpha blending (80%/20%) and momentum adjustments (±3 max).
+    - **G (Grading)**: Position-specific weights (WR: V=0.43, E=0.37, T=0.05, S=0.15), tier mapping (T1-T5).
+    - **E (Engine)**: `forgeEngine.ts` - Fetches context from DB (role banks, team_offensive_context, sos_scores), builds metric lookup, computes 4 pillar scores (volume, efficiency, teamContext, stability).
+    - **FORGE E+G Architecture (v2)**: Modular architecture separating Engine (data/metrics) from Grading (scoring/tiers).
+        - **Endpoints**: `/api/forge/eg/batch?position=WR&mode=dynasty` and `/api/forge/eg/player/:playerId?position=WR&mode=bestball`
+        - **Response includes**: alpha, tier, pillars, issues (from Football Lens), debug info
     - **FORGE Data Pipeline**: Ingests data from Role Banks, Datadive (enriched metrics), and Legacy Tables. Uses a Context Fetcher, position-specific Feature Builders, and a Grading Engine (`alphaEngine.ts`) to calculate Alpha scores, sub-scores (Volume, Efficiency, Stability, Context), trajectory, and confidence. A Recursive Engine (`recursiveAlphaEngine.ts`) applies stability adjustments based on previous Alpha, surprise, volatility, and momentum.
     - **FORGE Output Contract**: Every FORGE evaluation provides `player_id`, `position`, `alpha`, `tiber_tier`, `trajectory`, `confidence`, `role_tag`, `last_updated_week`, `season`.
     - **Recursion v1**: Stateful two-pass scoring with formulas for `expected_alpha` and `surprise`.
