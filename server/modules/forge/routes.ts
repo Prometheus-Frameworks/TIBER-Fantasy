@@ -1961,10 +1961,13 @@ router.get('/opportunity-shifts', async (req: Request, res: Response) => {
  * FORGE Engine+Grading (E+G) batch endpoint.
  * Uses new modular architecture:
  * - Engine: Fetches context, builds pillar scores (volume, efficiency, teamContext, stability)
+ * - Football Lens (F): Detects football-sense issues, applies bounded pillar adjustments
+ * - Orientation (O): Applies mode-specific weight adjustments (redraft, dynasty, bestball)
  * - Grading: Applies position weights, recursion bias, tier mapping
  * 
  * Query params:
  * - position (required): WR | RB | TE | QB
+ * - mode (optional): 'redraft' | 'dynasty' | 'bestball', defaults to 'redraft'
  * - season (optional): number, defaults to 2025
  * - week (optional): number | 'season', defaults to 'season'
  * - limit (optional): number, 1-100, defaults to 50
@@ -1972,10 +1975,15 @@ router.get('/opportunity-shifts', async (req: Request, res: Response) => {
 router.get('/eg/batch', async (req: Request, res: Response) => {
   try {
     const { runForgeEngineBatch } = await import('./forgeEngine');
-    const { gradeForgeWithMeta } = await import('./forgeGrading');
+    const { gradeForgeWithMeta, ViewMode } = await import('./forgeGrading');
     type EGPosition = 'QB' | 'RB' | 'WR' | 'TE';
 
     const position = (req.query.position as string)?.toUpperCase();
+    const modeParam = (req.query.mode as string)?.toLowerCase();
+    const mode: 'redraft' | 'dynasty' | 'bestball' = 
+      modeParam && ['redraft', 'dynasty', 'bestball'].includes(modeParam)
+        ? (modeParam as 'redraft' | 'dynasty' | 'bestball')
+        : 'redraft';
     const season = parseInt(req.query.season as string) || 2025;
     const weekParam = req.query.week as string;
     const week = weekParam === 'season' || !weekParam ? 'season' : parseInt(weekParam);
@@ -1988,7 +1996,7 @@ router.get('/eg/batch', async (req: Request, res: Response) => {
       });
     }
 
-    console.log(`[FORGE/EG] Batch request: position=${position}, season=${season}, week=${week}, limit=${limit}`);
+    console.log(`[FORGE/EG] Batch request: position=${position}, mode=${mode}, season=${season}, week=${week}, limit=${limit}`);
 
     const engineOutputs = await runForgeEngineBatch(
       position as EGPosition,
@@ -1997,19 +2005,23 @@ router.get('/eg/batch', async (req: Request, res: Response) => {
       limit
     );
 
-    const results = engineOutputs.map(output => gradeForgeWithMeta(output));
+    const results = engineOutputs.map(output => gradeForgeWithMeta(output, { mode }));
 
     const sortedResults = results.sort((a, b) => b.alpha - a.alpha);
+
+    const issueCount = sortedResults.filter(r => r.issues && r.issues.length > 0).length;
 
     return res.json({
       success: true,
       meta: {
         position,
+        mode,
         season,
         week,
-        version: 'E+G/v1',
-        description: 'FORGE Engine+Grading architecture with 4-pillar scoring',
+        version: 'E+G/v2',
+        description: 'FORGE Engine+Grading with Football Lens (F) and Orientation (O) layers',
         count: sortedResults.length,
+        playersWithIssues: issueCount,
         scoredAt: new Date().toISOString(),
       },
       scores: sortedResults.map(r => ({
@@ -2027,6 +2039,7 @@ router.get('/eg/batch', async (req: Request, res: Response) => {
           teamContext: Math.round(r.pillars.teamContext * 10) / 10,
           stability: Math.round(r.pillars.stability * 10) / 10,
         },
+        issues: r.issues,
         debug: r.debug,
       })),
     });
@@ -2043,6 +2056,12 @@ router.get('/eg/batch', async (req: Request, res: Response) => {
  * GET /api/forge/eg/player/:playerId
  * 
  * Get FORGE Engine+Grading score for a single player
+ * 
+ * Query params:
+ * - position (required): WR | RB | TE | QB
+ * - mode (optional): 'redraft' | 'dynasty' | 'bestball', defaults to 'redraft'
+ * - season (optional): number, defaults to 2025
+ * - week (optional): number | 'season', defaults to 'season'
  */
 router.get('/eg/player/:playerId', async (req: Request, res: Response) => {
   try {
@@ -2052,6 +2071,11 @@ router.get('/eg/player/:playerId', async (req: Request, res: Response) => {
 
     const { playerId } = req.params;
     const position = (req.query.position as string)?.toUpperCase();
+    const modeParam = (req.query.mode as string)?.toLowerCase();
+    const mode: 'redraft' | 'dynasty' | 'bestball' = 
+      modeParam && ['redraft', 'dynasty', 'bestball'].includes(modeParam)
+        ? (modeParam as 'redraft' | 'dynasty' | 'bestball')
+        : 'redraft';
     const season = parseInt(req.query.season as string) || 2025;
     const weekParam = req.query.week as string;
     const week = weekParam === 'season' || !weekParam ? 'season' : parseInt(weekParam);
@@ -2070,7 +2094,7 @@ router.get('/eg/player/:playerId', async (req: Request, res: Response) => {
       });
     }
 
-    console.log(`[FORGE/EG] Player request: playerId=${playerId}, position=${position}, season=${season}, week=${week}`);
+    console.log(`[FORGE/EG] Player request: playerId=${playerId}, position=${position}, mode=${mode}, season=${season}, week=${week}`);
 
     const engineOutput = await runForgeEngine(
       playerId,
@@ -2079,10 +2103,14 @@ router.get('/eg/player/:playerId', async (req: Request, res: Response) => {
       week as number | 'season'
     );
 
-    const result = gradeForgeWithMeta(engineOutput);
+    const result = gradeForgeWithMeta(engineOutput, { mode });
 
     return res.json({
       success: true,
+      meta: {
+        mode,
+        version: 'E+G/v2',
+      },
       score: {
         playerId: result.playerId,
         playerName: result.playerName,
@@ -2098,6 +2126,7 @@ router.get('/eg/player/:playerId', async (req: Request, res: Response) => {
           teamContext: Math.round(result.pillars.teamContext * 10) / 10,
           stability: Math.round(result.pillars.stability * 10) / 10,
         },
+        issues: result.issues,
         debug: result.debug,
         rawMetrics: result.rawMetrics,
       },

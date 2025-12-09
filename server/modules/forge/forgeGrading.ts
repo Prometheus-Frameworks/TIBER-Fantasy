@@ -3,11 +3,15 @@
  * 
  * Handles:
  * - Position-specific weighting of pillars
+ * - Orientation modes (redraft, dynasty, bestball)
  * - Recursion bias (prior alpha, momentum)
- * - Tier mapping (S/A/B/C/D)
+ * - Tier mapping (T1-T5)
  */
 
 import { ForgeEngineOutput, ForgePillarScores, Position } from './forgeEngine';
+import { applyFootballLens, FootballLensIssue } from './forgeFootballLens';
+
+export type ViewMode = 'redraft' | 'dynasty' | 'bestball';
 
 export type ForgeWeights = {
   volume: number;
@@ -21,10 +25,17 @@ export type ForgeGradeResult = {
   tier: string;
   tierPosition: number;
   pillars: ForgePillarScores;
+  issues?: FootballLensIssue[];
   debug?: {
     baseAlpha: number;
     recursionAdjustment: number;
+    footballLensAdjusted: boolean;
   };
+};
+
+export type GradeForgeOptions = {
+  mode?: ViewMode;
+  skipFootballLens?: boolean;
 };
 
 const POSITION_WEIGHTS: Record<Position, ForgeWeights> = {
@@ -41,8 +52,50 @@ const POSITION_TIER_THRESHOLDS: Record<Position, number[]> = {
   QB: [70, 55, 42, 32],
 };
 
-export function getPositionForgeWeights(position: Position): ForgeWeights {
-  return POSITION_WEIGHTS[position];
+function normalizeWeights(weights: ForgeWeights): ForgeWeights {
+  const total = weights.volume + weights.efficiency + weights.teamContext + weights.stability;
+  if (total === 0) return weights;
+  return {
+    volume: weights.volume / total,
+    efficiency: weights.efficiency / total,
+    teamContext: weights.teamContext / total,
+    stability: weights.stability / total,
+  };
+}
+
+export function getPositionForgeWeights(
+  position: Position,
+  mode: ViewMode = 'redraft'
+): ForgeWeights {
+  const base = POSITION_WEIGHTS[position];
+
+  let adjusted: ForgeWeights;
+
+  switch (mode) {
+    case 'dynasty':
+      adjusted = {
+        volume: base.volume * 0.9,
+        efficiency: base.efficiency * 1.0,
+        teamContext: base.teamContext * 0.8,
+        stability: base.stability * 1.3,
+      };
+      break;
+
+    case 'bestball':
+      adjusted = {
+        volume: base.volume * 0.9,
+        efficiency: base.efficiency * 1.2,
+        teamContext: base.teamContext * 1.0,
+        stability: base.stability * 0.9,
+      };
+      break;
+
+    case 'redraft':
+    default:
+      return base;
+  }
+
+  return normalizeWeights(adjusted);
 }
 
 function computeBaseAlpha(
@@ -105,10 +158,27 @@ export function mapAlphaToTier(alpha: number, position: Position): { tier: strin
   return { tier: 'T5', tierPosition: 5 };
 }
 
-export function gradeForge(engineOutput: ForgeEngineOutput): ForgeGradeResult {
-  const weights = getPositionForgeWeights(engineOutput.position);
+export function gradeForge(
+  engineOutput: ForgeEngineOutput,
+  options: GradeForgeOptions = {}
+): ForgeGradeResult {
+  const mode = options.mode ?? 'redraft';
+  const skipLens = options.skipFootballLens ?? false;
 
-  const baseAlpha = computeBaseAlpha(engineOutput.pillars, weights);
+  let pillars = engineOutput.pillars;
+  let issues: FootballLensIssue[] = [];
+  let lensApplied = false;
+
+  if (!skipLens) {
+    const lensResult = applyFootballLens(engineOutput);
+    pillars = lensResult.pillars;
+    issues = lensResult.issues;
+    lensApplied = JSON.stringify(pillars) !== JSON.stringify(engineOutput.pillars);
+  }
+
+  const weights = getPositionForgeWeights(engineOutput.position, mode);
+
+  const baseAlpha = computeBaseAlpha(pillars, weights);
 
   const { alpha: alphaWithRecursion, adjustment } = applyRecursionBias(baseAlpha, {
     priorAlpha: engineOutput.priorAlpha,
@@ -117,16 +187,18 @@ export function gradeForge(engineOutput: ForgeEngineOutput): ForgeGradeResult {
 
   const { tier, tierPosition } = mapAlphaToTier(alphaWithRecursion, engineOutput.position);
 
-  console.log(`[ForgeGrading] ${engineOutput.playerName}: base=${baseAlpha.toFixed(1)} → final=${alphaWithRecursion.toFixed(1)} (${tier})`);
+  console.log(`[ForgeGrading] ${engineOutput.playerName}: mode=${mode} base=${baseAlpha.toFixed(1)} → final=${alphaWithRecursion.toFixed(1)} (${tier})${issues.length ? ` [${issues.length} issues]` : ''}`);
 
   return {
     alpha: Math.round(alphaWithRecursion * 10) / 10,
     tier,
     tierPosition,
-    pillars: engineOutput.pillars,
+    pillars,
+    issues: issues.length > 0 ? issues : undefined,
     debug: {
       baseAlpha: Math.round(baseAlpha * 10) / 10,
       recursionAdjustment: Math.round(adjustment * 10) / 10,
+      footballLensAdjusted: lensApplied,
     },
   };
 }
@@ -142,8 +214,11 @@ export type ForgeFullResult = ForgeGradeResult & {
   rawMetrics?: Record<string, number | null>;
 };
 
-export function gradeForgeWithMeta(engineOutput: ForgeEngineOutput): ForgeFullResult {
-  const grade = gradeForge(engineOutput);
+export function gradeForgeWithMeta(
+  engineOutput: ForgeEngineOutput,
+  options: GradeForgeOptions = {}
+): ForgeFullResult {
+  const grade = gradeForge(engineOutput, options);
   
   return {
     ...grade,
