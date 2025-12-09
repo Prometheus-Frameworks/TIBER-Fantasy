@@ -38,11 +38,20 @@ export type GradeForgeOptions = {
   skipFootballLens?: boolean;
 };
 
+// Base weights used for REDRAFT mode
 const POSITION_WEIGHTS: Record<Position, ForgeWeights> = {
-  WR: { volume: 0.43, efficiency: 0.37, teamContext: 0.05, stability: 0.15 },
+  WR: { volume: 0.45, efficiency: 0.30, teamContext: 0.15, stability: 0.10 },
   RB: { volume: 0.475, efficiency: 0.31, teamContext: 0.065, stability: 0.15 },
   TE: { volume: 0.40, efficiency: 0.37, teamContext: 0.10, stability: 0.13 },
   QB: { volume: 0.29, efficiency: 0.41, teamContext: 0.18, stability: 0.12 },
+};
+
+// Dynasty mode weights - different weighting philosophy
+const DYNASTY_WEIGHTS: Record<Position, ForgeWeights> = {
+  WR: { volume: 0.20, efficiency: 0.35, teamContext: 0.20, stability: 0.25 },
+  RB: { volume: 0.25, efficiency: 0.30, teamContext: 0.15, stability: 0.30 },
+  TE: { volume: 0.25, efficiency: 0.35, teamContext: 0.15, stability: 0.25 },
+  QB: { volume: 0.20, efficiency: 0.35, teamContext: 0.20, stability: 0.25 },
 };
 
 const POSITION_TIER_THRESHOLDS: Record<Position, number[]> = {
@@ -67,35 +76,28 @@ export function getPositionForgeWeights(
   position: Position,
   mode: ViewMode = 'redraft'
 ): ForgeWeights {
-  const base = POSITION_WEIGHTS[position];
-
-  let adjusted: ForgeWeights;
-
   switch (mode) {
     case 'dynasty':
-      adjusted = {
-        volume: base.volume * 0.9,
-        efficiency: base.efficiency * 1.0,
-        teamContext: base.teamContext * 0.8,
-        stability: base.stability * 1.3,
-      };
-      break;
+      // Use dedicated dynasty weights (already sum to 1.0)
+      return DYNASTY_WEIGHTS[position];
 
-    case 'bestball':
-      adjusted = {
+    case 'bestball': {
+      // Bestball: boost efficiency, reduce stability (upside > floor)
+      const base = POSITION_WEIGHTS[position];
+      const adjusted = {
         volume: base.volume * 0.9,
         efficiency: base.efficiency * 1.2,
         teamContext: base.teamContext * 1.0,
-        stability: base.stability * 0.9,
+        stability: base.stability * 0.8,
       };
-      break;
+      return normalizeWeights(adjusted);
+    }
 
     case 'redraft':
     default:
-      return base;
+      // Redraft uses base weights directly
+      return POSITION_WEIGHTS[position];
   }
-
-  return normalizeWeights(adjusted);
 }
 
 function computeBaseAlpha(
@@ -165,15 +167,24 @@ export function gradeForge(
   const mode = options.mode ?? 'redraft';
   const skipLens = options.skipFootballLens ?? false;
 
-  let pillars = engineOutput.pillars;
+  let pillars = { ...engineOutput.pillars };
   let issues: FootballLensIssue[] = [];
   let lensApplied = false;
 
   if (!skipLens) {
     const lensResult = applyFootballLens(engineOutput);
-    pillars = lensResult.pillars;
+    pillars = { ...lensResult.pillars };
     issues = lensResult.issues;
     lensApplied = JSON.stringify(pillars) !== JSON.stringify(engineOutput.pillars);
+  }
+
+  // Dynasty mode: Blend teamContext with dynastyContext (40% short-term + 60% dynasty)
+  if (mode === 'dynasty' && pillars.dynastyContext !== undefined) {
+    const shortTermContext = pillars.teamContext;
+    const dynastyContext = pillars.dynastyContext;
+    const blendedContext = (0.40 * shortTermContext) + (0.60 * dynastyContext);
+    pillars.teamContext = blendedContext;
+    console.log(`[ForgeGrading] Dynasty blend for ${engineOutput.playerName}: short=${shortTermContext.toFixed(1)} + dynasty=${dynastyContext.toFixed(1)} → blended=${blendedContext.toFixed(1)}`);
   }
 
   const weights = getPositionForgeWeights(engineOutput.position, mode);

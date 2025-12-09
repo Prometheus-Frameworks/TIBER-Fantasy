@@ -44,6 +44,7 @@ export type ForgePillarScores = {
   efficiency: number;
   teamContext: number;
   stability: number;
+  dynastyContext?: number; // Dynasty-specific context (QB long-term + offensive continuity + career efficiency)
 };
 
 export type ForgeEngineOutput = {
@@ -499,6 +500,78 @@ async function fetchSoSData(
   }
 }
 
+/**
+ * Compute dynastyContext for WRs - combines:
+ * - QB long-term score (40%): QB's FORGE alpha + stability
+ * - Offensive continuity (30%): Team pass rate, EPA trends
+ * - Career efficiency memory (30%): Historical YPRR, target share, efficiency
+ */
+async function computeDynastyContext(
+  nflTeam: string | undefined,
+  playerId: string,
+  position: Position,
+  season: number,
+  teamContext: Record<string, number | null>,
+  roleBank: Record<string, number | null>
+): Promise<number> {
+  // Only compute for WR for now
+  if (position !== 'WR') return 50;
+  
+  let qbLongTermScore = 50;
+  let offensiveContinuityScore = 50;
+  let careerEfficiencyScore = 50;
+  
+  try {
+    // 1. QB Long-Term Score: Get team's QB alpha + stability
+    if (nflTeam) {
+      const qbResult = await db.execute(sql`
+        SELECT alpha_score, consistency_score, stability_index
+        FROM qb_role_bank 
+        WHERE team = ${nflTeam} AND season = ${season}
+        ORDER BY games_played DESC
+        LIMIT 1
+      `);
+      
+      if (qbResult.rows.length > 0) {
+        const qb = qbResult.rows[0] as Record<string, any>;
+        const qbAlpha = parseFloat(qb.alpha_score) || 50;
+        const qbStability = parseFloat(qb.consistency_score) || parseFloat(qb.stability_index) || 50;
+        qbLongTermScore = (0.6 * qbAlpha) + (0.4 * qbStability);
+      }
+    }
+    
+    // 2. Offensive Continuity Score: Team pass EPA, neutral pass rate
+    const passVolume = teamContext['team_pass_volume'] ?? 50;
+    const teamPace = teamContext['team_pace'] ?? 50;
+    offensiveContinuityScore = (0.6 * passVolume) + (0.4 * teamPace);
+    
+    // 3. Career Efficiency Memory: Use role bank efficiency metrics
+    const efficiencyScore = roleBank['efficiency_score'] ?? 50;
+    const efficiencyIndex = roleBank['efficiency_index'] ?? 50;
+    const pprPerTarget = roleBank['ppr_per_target'] ?? null;
+    
+    // Blend available efficiency metrics
+    const effMetrics: number[] = [efficiencyScore, efficiencyIndex];
+    if (pprPerTarget !== null) {
+      // Normalize ppr_per_target (typical range 0.8-2.0) to 0-100
+      const normalizedPprPT = Math.min(100, Math.max(0, ((pprPerTarget - 0.8) / 1.2) * 100));
+      effMetrics.push(normalizedPprPT);
+    }
+    careerEfficiencyScore = effMetrics.reduce((a, b) => a + b, 0) / effMetrics.length;
+    
+  } catch (error) {
+    console.log(`[ForgeEngine] DynastyContext calculation partial - using defaults`);
+  }
+  
+  // Combine with formula from spec
+  const dynastyContext = 
+    (0.40 * qbLongTermScore) +
+    (0.30 * offensiveContinuityScore) +
+    (0.30 * careerEfficiencyScore);
+  
+  return Math.max(0, Math.min(100, dynastyContext));
+}
+
 export async function fetchForgeContext(
   playerId: string,
   position: Position,
@@ -569,16 +642,32 @@ export async function runForgeEngine(
   const lookup = createMetricLookup(context);
   const config = getPositionPillarConfig(position);
 
-  const pillars: ForgePillarScores = {
+  // Compute base pillars
+  const basePillars: ForgePillarScores = {
     volume: computePillarScore(config.volume, lookup),
     efficiency: computePillarScore(config.efficiency, lookup),
     teamContext: computePillarScore(config.teamContext, lookup),
     stability: computePillarScore(config.stability, lookup),
   };
 
+  // Compute dynastyContext for WRs (used in dynasty mode)
+  const dynastyContext = await computeDynastyContext(
+    context.nflTeam,
+    playerId,
+    position,
+    season,
+    context.teamContext,
+    context.roleBank
+  );
+
+  const pillars: ForgePillarScores = {
+    ...basePillars,
+    dynastyContext,
+  };
+
   const { priorAlpha, alphaMomentum } = extractRecursionSignals(context);
 
-  console.log(`[ForgeEngine] Pillars for ${context.playerName}: V=${pillars.volume.toFixed(1)} E=${pillars.efficiency.toFixed(1)} T=${pillars.teamContext.toFixed(1)} S=${pillars.stability.toFixed(1)}`);
+  console.log(`[ForgeEngine] Pillars for ${context.playerName}: V=${pillars.volume.toFixed(1)} E=${pillars.efficiency.toFixed(1)} T=${pillars.teamContext.toFixed(1)} S=${pillars.stability.toFixed(1)} D=${dynastyContext.toFixed(1)}`);
 
   return {
     playerId,
