@@ -600,9 +600,14 @@ async function fetchSoSData(
 
 /**
  * Compute dynastyContext for WRs - combines:
- * - QB long-term score (40%): QB's FORGE alpha + stability
+ * - QB long-term score (40%): QB's FORGE alpha + stability (INJURY-AWARE)
  * - Offensive continuity (30%): Team pass rate, EPA trends
  * - Career efficiency memory (30%): Historical YPRR, target share, efficiency
+ * 
+ * INJURY AWARENESS:
+ * If QB played < 5 games this season (e.g., Burrow on IR), treat as injury outlier.
+ * Don't let backup QB drag down dynastyContext.
+ * Formula: 60% last healthy season + 30% career + 10% current (only if >= 5 games)
  */
 async function computeDynastyContext(
   nflTeam: string | undefined,
@@ -620,11 +625,13 @@ async function computeDynastyContext(
   let careerEfficiencyScore = 50;
   
   try {
-    // 1. QB Long-Term Score: Get team's QB alpha + efficiency from qb_role_bank
-    // Need to join with weekly_stats to get team->player_id mapping
+    // 1. QB Long-Term Score: INJURY-AWARE calculation
+    // Check if starting QB played enough games to be representative
     if (nflTeam) {
-      const qbResult = await db.execute(sql`
-        SELECT qb.volume_score, qb.efficiency_score, qb.momentum_score, qb.alpha_context_score
+      // Get team's primary QB (most games played) for current season
+      const qbCurrentResult = await db.execute(sql`
+        SELECT qb.player_id, qb.games_played, qb.volume_score, qb.efficiency_score, 
+               qb.alpha_context_score, qb.epa_per_play, qb.cpoe
         FROM qb_role_bank qb
         JOIN (
           SELECT DISTINCT player_id 
@@ -632,19 +639,91 @@ async function computeDynastyContext(
           WHERE team = ${nflTeam} 
             AND season = ${season} 
             AND position = 'QB'
-          LIMIT 1
         ) ws ON qb.player_id = ws.player_id
         WHERE qb.season = ${season}
         ORDER BY qb.games_played DESC
         LIMIT 1
       `);
       
-      if (qbResult.rows.length > 0) {
-        const qb = qbResult.rows[0] as Record<string, any>;
-        const qbAlpha = parseFloat(qb.alpha_context_score) || parseFloat(qb.efficiency_score) || 50;
-        const qbVolume = parseFloat(qb.volume_score) || 50;
-        // Use volume + alpha blend for QB quality
-        qbLongTermScore = (0.5 * qbAlpha) + (0.5 * qbVolume);
+      const QB_INJURY_THRESHOLD = 5; // Less than 5 games = injury outlier
+      
+      if (qbCurrentResult.rows.length > 0) {
+        const qbCurrent = qbCurrentResult.rows[0] as Record<string, any>;
+        const qbPlayerId = qbCurrent.player_id as string;
+        const qbGamesPlayed = parseInt(qbCurrent.games_played) || 0;
+        
+        const isInjuryOutlierSeason = qbGamesPlayed < QB_INJURY_THRESHOLD;
+        
+        if (isInjuryOutlierSeason) {
+          // QB injured - use historical data instead of current season
+          console.log(`[ForgeEngine] QB injury detected for ${nflTeam}: ${qbGamesPlayed} games < ${QB_INJURY_THRESHOLD} threshold`);
+          
+          // Fetch QB's last healthy season (>= 8 games) and career data
+          const qbHistoryResult = await db.execute(sql`
+            SELECT season, games_played, volume_score, efficiency_score, alpha_context_score
+            FROM qb_role_bank
+            WHERE player_id = ${qbPlayerId}
+              AND season < ${season}
+              AND games_played >= 8
+            ORDER BY season DESC
+            LIMIT 3
+          `);
+          
+          let lastHealthyScore = 70; // Default for elite QBs (Burrow baseline)
+          let careerScore = 65;
+          let currentScore = 0; // Don't use current if injured
+          
+          if (qbHistoryResult.rows.length > 0) {
+            // Use last healthy season (most recent with 8+ games)
+            const lastHealthy = qbHistoryResult.rows[0] as Record<string, any>;
+            lastHealthyScore = parseFloat(lastHealthy.alpha_context_score) || 
+                              parseFloat(lastHealthy.efficiency_score) || 70;
+            
+            // Calculate career average from all healthy seasons
+            const careerAlphas = qbHistoryResult.rows.map((r: any) => 
+              parseFloat(r.alpha_context_score) || parseFloat(r.efficiency_score) || 50
+            );
+            careerScore = careerAlphas.reduce((a, b) => a + b, 0) / careerAlphas.length;
+          }
+          
+          // Injury-aware formula: 60% last healthy + 30% career + 10% current (0 if < 5 games)
+          qbLongTermScore = (0.60 * lastHealthyScore) + (0.30 * careerScore) + (0.10 * currentScore);
+          console.log(`[ForgeEngine] QB injury-aware score for ${nflTeam}: lastHealthy=${lastHealthyScore.toFixed(1)} career=${careerScore.toFixed(1)} → ${qbLongTermScore.toFixed(1)}`);
+          
+        } else {
+          // QB healthy - use current season data with normal weighting
+          const qbAlpha = parseFloat(qbCurrent.alpha_context_score) || parseFloat(qbCurrent.efficiency_score) || 50;
+          const qbVolume = parseFloat(qbCurrent.volume_score) || 50;
+          
+          // For healthy QB, still blend with historical data for dynasty stability
+          const qbHistoryResult = await db.execute(sql`
+            SELECT season, games_played, alpha_context_score, efficiency_score
+            FROM qb_role_bank
+            WHERE player_id = ${qbPlayerId}
+              AND season < ${season}
+              AND games_played >= 8
+            ORDER BY season DESC
+            LIMIT 2
+          `);
+          
+          let lastHealthyScore = qbAlpha; // Default to current
+          let careerScore = qbAlpha;
+          
+          if (qbHistoryResult.rows.length > 0) {
+            const lastHealthy = qbHistoryResult.rows[0] as Record<string, any>;
+            lastHealthyScore = parseFloat(lastHealthy.alpha_context_score) || 
+                              parseFloat(lastHealthy.efficiency_score) || qbAlpha;
+            
+            const careerAlphas = qbHistoryResult.rows.map((r: any) => 
+              parseFloat(r.alpha_context_score) || parseFloat(r.efficiency_score) || 50
+            );
+            careerScore = careerAlphas.reduce((a, b) => a + b, 0) / careerAlphas.length;
+          }
+          
+          // Healthy QB formula: 10% last healthy + 30% career + 60% current
+          // This emphasizes current production for a healthy QB
+          qbLongTermScore = (0.10 * lastHealthyScore) + (0.30 * careerScore) + (0.60 * ((qbAlpha + qbVolume) / 2));
+        }
       }
     }
     
