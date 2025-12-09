@@ -1,0 +1,184 @@
+Hook FORGE E/F/O/G into Tiber Tiers + Data Lab
+
+We now have:
+
+forgeEngine.ts (E)
+
+forgeFootballLens.ts (F)
+
+forgeGrading.ts (G + O)
+
+/api/forge/eg/player
+
+/api/forge/eg/batch
+
+Next: the new FORGE E/F/O/G outputs should drive all Tiber-facing tiers and Data Lab views.
+
+1) Create a unified FORGE service
+
+Create:
+
+server/modules/forge/forgeService.ts
+
+In it, add helpers that wrap the E/F/O/G flow (or proxy the existing EG endpoints internally):
+
+import { Position } from "./forgeEngine";
+import { ViewMode } from "./forgeGrading";
+import { runForgeEngine } from "./forgeEngine";
+import { gradeForge } from "./forgeGrading";
+
+export type ForgeMode = ViewMode; // "redraft" | "dynasty" | "bestball"
+
+export type ForgeFullResult = {
+  playerId: string;
+  position: Position;
+  season: number;
+  week: number | "season";
+  pillars: ForgePillarScores;
+  alpha: number;
+  tier: string;
+  issues: FootballLensIssue[];
+};
+
+export async function getForgeForPlayer(
+  playerId: string,
+  position: Position,
+  season: number,
+  week: number | "season",
+  mode: ForgeMode = "redraft"
+): Promise<ForgeFullResult> {
+  const engineOutput = await runForgeEngine(playerId, position, season, week);
+  const grade = gradeForge(engineOutput, { mode });
+
+  return {
+    playerId,
+    position,
+    season,
+    week,
+    pillars: engineOutput.pillars,
+    alpha: grade.alpha,
+    tier: grade.tier,
+    issues: grade.issues,
+  };
+}
+
+
+Also expose a batch helper that reuses the existing batch path or uses your existing batch infra to call runForgeEngine + gradeForge for multiple players.
+
+The point: other systems (Tiber tiers, Data Lab, rankings) should call this instead of rolling their own FORGE logic.
+
+2) Wire FORGE into Tiber Tier system
+
+Search the repo for:
+
+"TiberTier"
+
+"tiberTier"
+
+"TIBER_TIER"
+
+"Tiber tiers"
+
+and any existing mapping from alpha → tier.
+
+We want:
+
+Tiber’s tiers to be directly derived from the new FORGE E/F/O/G outputs:
+
+Either just use the tier coming from forgeGrading.ts (T1–T5), or
+
+Map that onto existing Tiber tier labels, e.g.:
+
+// Example mapping if Tiber already has its own tier naming:
+const TIBER_TIER_MAP: Record<string, string> = {
+  T1: "Tiber Prime",
+  T2: "Tiber Core",
+  T3: "Tiber Fringe",
+  T4: "Tiber Depth",
+  T5: "Tiber Fragile",
+};
+
+
+Update any existing tiberTierEngine.ts (or equivalent) so that instead of independently computing tiers from old FORGE alpha, it:
+
+Calls getForgeForPlayer(...)
+
+Reads alpha + tier
+
+Applies any Tiber-specific naming, if we want to keep a branded label.
+
+Make sure no old FORGE alpha logic is being used by Tiber tiers anymore. If there are legacy functions like getForgeAlphaForPlayer, either:
+
+replace internals to call forgeService.getForgeForPlayer, or
+
+mark them deprecated and migrate all existing references.
+
+3) Integrate into Tiber Data Lab
+
+Search for Data Lab FORGE stuff:
+
+"Data Lab"
+
+"data-lab"
+
+"FORGE" under any UI / routes like /data-lab
+
+We want a FORGE panel in the Data Lab that shows:
+
+Alpha
+
+Tier
+
+The 4 pillars (Volume, Efficiency, TeamContext, Stability)
+
+issues from Football Lens F
+
+Mode (redraft/dynasty/bestball)
+
+On the server side, add a dedicated route for Data Lab if needed, or reuse /api/forge/eg/player and just surface all debug info.
+
+On the client:
+
+For the Data Lab FORGE view:
+
+Add a dropdown for mode (redraft, dynasty, bestball) that feeds the mode query param.
+
+Visualize pillars as bars or a radar chart.
+
+List issues from Football Lens with severity styling.
+
+4) Update all UI components that show FORGE Alpha / Tiber Tier
+
+Search the frontend for:
+
+"FORGE Alpha" / "forgeAlpha"
+
+"Tiber Tier" / "TiberTierBadge" / any tier badge component
+
+"tier" fields coming from older APIs.
+
+For any component that:
+
+Renders a Tiber Tier badge
+
+Shows a FORGE score next to a player
+
+Displays ranking rows driven by FORGE alpha
+
+Update them to use:
+
+alpha     → from new E/F/O/G result
+tier      → from new E/F/O/G result (or mapped to Tiber tier name)
+mode      → passed from page-level state (default "redraft")
+issues    → optionally surface as tooltips or debug badges
+
+
+For rankings / lists, use the new batch version of the FORGE service in the backend.
+
+5) Default behavior
+
+Default mode = "redraft" everywhere unless explicitly overridden.
+
+Rankings page: redraft by default, but pass mode through into EG batch API if/when we add mode toggles to the UI.
+
+Tiber player chat / advice: use "redraft" unless the caller explicitly requests dynasty/bestball.
