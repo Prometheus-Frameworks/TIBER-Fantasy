@@ -626,10 +626,13 @@ async function computeDynastyContext(
   
   try {
     // 1. QB Long-Term Score: INJURY-AWARE calculation
-    // Check if starting QB played enough games to be representative
+    // Identify the FRANCHISE QB (not necessarily who played most games this season)
     if (nflTeam) {
-      // Get team's primary QB (most games played) for current season
-      const qbCurrentResult = await db.execute(sql`
+      const QB_INJURY_THRESHOLD = 5; // Less than 5 games = injury outlier
+      const QB_HEALTHY_SEASON_THRESHOLD = 8; // 8+ games = healthy season
+      
+      // Step 1: Find all QBs who played for this team this season
+      const allQbsResult = await db.execute(sql`
         SELECT qb.player_id, qb.games_played, qb.volume_score, qb.efficiency_score, 
                qb.alpha_context_score, qb.epa_per_play, qb.cpoe
         FROM qb_role_bank qb
@@ -642,87 +645,145 @@ async function computeDynastyContext(
         ) ws ON qb.player_id = ws.player_id
         WHERE qb.season = ${season}
         ORDER BY qb.games_played DESC
-        LIMIT 1
       `);
       
-      const QB_INJURY_THRESHOLD = 5; // Less than 5 games = injury outlier
+      // Step 2: Determine if any QB played a "healthy" season (>= 8 games)
+      const healthyStarter = allQbsResult.rows.find((r: any) => 
+        (parseInt(r.games_played) || 0) >= QB_HEALTHY_SEASON_THRESHOLD
+      );
       
-      if (qbCurrentResult.rows.length > 0) {
-        const qbCurrent = qbCurrentResult.rows[0] as Record<string, any>;
-        const qbPlayerId = qbCurrent.player_id as string;
-        const qbGamesPlayed = parseInt(qbCurrent.games_played) || 0;
+      if (healthyStarter) {
+        // Normal case: Starter is healthy, use current season data
+        const qb = healthyStarter as Record<string, any>;
+        const qbPlayerId = qb.player_id as string;
+        const qbAlpha = parseFloat(qb.alpha_context_score) || parseFloat(qb.efficiency_score) || 50;
+        const qbVolume = parseFloat(qb.volume_score) || 50;
         
-        const isInjuryOutlierSeason = qbGamesPlayed < QB_INJURY_THRESHOLD;
+        // Blend with historical data for dynasty stability
+        const qbHistoryResult = await db.execute(sql`
+          SELECT season, games_played, alpha_context_score, efficiency_score
+          FROM qb_role_bank
+          WHERE player_id = ${qbPlayerId}
+            AND season < ${season}
+            AND games_played >= ${QB_HEALTHY_SEASON_THRESHOLD}
+          ORDER BY season DESC
+          LIMIT 2
+        `);
         
-        if (isInjuryOutlierSeason) {
-          // QB injured - use historical data instead of current season
-          console.log(`[ForgeEngine] QB injury detected for ${nflTeam}: ${qbGamesPlayed} games < ${QB_INJURY_THRESHOLD} threshold`);
+        let lastHealthyScore = qbAlpha;
+        let careerScore = qbAlpha;
+        
+        if (qbHistoryResult.rows.length > 0) {
+          const lastHealthy = qbHistoryResult.rows[0] as Record<string, any>;
+          lastHealthyScore = parseFloat(lastHealthy.alpha_context_score) || 
+                            parseFloat(lastHealthy.efficiency_score) || qbAlpha;
           
-          // Fetch QB's last healthy season (>= 8 games) and career data
-          const qbHistoryResult = await db.execute(sql`
-            SELECT season, games_played, volume_score, efficiency_score, alpha_context_score
-            FROM qb_role_bank
-            WHERE player_id = ${qbPlayerId}
-              AND season < ${season}
-              AND games_played >= 8
-            ORDER BY season DESC
-            LIMIT 3
-          `);
+          const careerAlphas = qbHistoryResult.rows.map((r: any) => 
+            parseFloat(r.alpha_context_score) || parseFloat(r.efficiency_score) || 50
+          );
+          careerScore = careerAlphas.reduce((a, b) => a + b, 0) / careerAlphas.length;
+        }
+        
+        // Healthy QB formula: 10% last healthy + 30% career + 60% current
+        qbLongTermScore = (0.10 * lastHealthyScore) + (0.30 * careerScore) + (0.60 * ((qbAlpha + qbVolume) / 2));
+        
+      } else {
+        // INJURY CASE: No QB has 8+ games - find the franchise QB via historical data
+        console.log(`[ForgeEngine] No healthy starter for ${nflTeam} this season - checking for injured franchise QB`);
+        
+        // Find the team's historical starter (most total games in last 3 seasons)
+        const franchiseQbResult = await db.execute(sql`
+          SELECT qb.player_id, SUM(qb.games_played) as total_games,
+                 MAX(qb.alpha_context_score) as best_alpha,
+                 AVG(qb.alpha_context_score) as avg_alpha
+          FROM qb_role_bank qb
+          JOIN (
+            SELECT DISTINCT player_id 
+            FROM weekly_stats 
+            WHERE team = ${nflTeam} 
+              AND position = 'QB'
+          ) ws ON qb.player_id = ws.player_id
+          WHERE qb.season >= ${season - 3}
+            AND qb.games_played >= ${QB_HEALTHY_SEASON_THRESHOLD}
+          GROUP BY qb.player_id
+          ORDER BY total_games DESC, best_alpha DESC
+          LIMIT 1
+        `);
+        
+        if (franchiseQbResult.rows.length > 0) {
+          // Found the franchise QB - use their historical performance
+          const franchiseQb = franchiseQbResult.rows[0] as Record<string, any>;
+          const franchiseQbId = franchiseQb.player_id as string;
           
-          let lastHealthyScore = 70; // Default for elite QBs (Burrow baseline)
-          let careerScore = 65;
-          let currentScore = 0; // Don't use current if injured
+          console.log(`[ForgeEngine] Found franchise QB ${franchiseQbId} for ${nflTeam} with ${franchiseQb.total_games} games over recent seasons`);
           
-          if (qbHistoryResult.rows.length > 0) {
-            // Use last healthy season (most recent with 8+ games)
-            const lastHealthy = qbHistoryResult.rows[0] as Record<string, any>;
-            lastHealthyScore = parseFloat(lastHealthy.alpha_context_score) || 
-                              parseFloat(lastHealthy.efficiency_score) || 70;
+          // Check this QB's current season status
+          const currentSeasonQb = allQbsResult.rows.find((r: any) => r.player_id === franchiseQbId);
+          const currentGames = currentSeasonQb ? (parseInt((currentSeasonQb as any).games_played) || 0) : 0;
+          
+          if (currentGames < QB_INJURY_THRESHOLD) {
+            // Franchise QB is INJURED this season
+            console.log(`[ForgeEngine] QB injury detected for ${nflTeam}: franchise QB has ${currentGames} games < ${QB_INJURY_THRESHOLD} threshold`);
             
-            // Calculate career average from all healthy seasons
-            const careerAlphas = qbHistoryResult.rows.map((r: any) => 
-              parseFloat(r.alpha_context_score) || parseFloat(r.efficiency_score) || 50
-            );
-            careerScore = careerAlphas.reduce((a, b) => a + b, 0) / careerAlphas.length;
+            // Fetch QB's healthy seasons for dynasty value
+            const qbHistoryResult = await db.execute(sql`
+              SELECT season, games_played, volume_score, efficiency_score, alpha_context_score
+              FROM qb_role_bank
+              WHERE player_id = ${franchiseQbId}
+                AND games_played >= ${QB_HEALTHY_SEASON_THRESHOLD}
+              ORDER BY season DESC
+              LIMIT 3
+            `);
+            
+            let lastHealthyScore = 70; // Default for elite QBs
+            let careerScore = 65;
+            
+            if (qbHistoryResult.rows.length > 0) {
+              const lastHealthy = qbHistoryResult.rows[0] as Record<string, any>;
+              lastHealthyScore = parseFloat(lastHealthy.alpha_context_score) || 
+                                parseFloat(lastHealthy.efficiency_score) || 70;
+              
+              const careerAlphas = qbHistoryResult.rows.map((r: any) => 
+                parseFloat(r.alpha_context_score) || parseFloat(r.efficiency_score) || 50
+              );
+              careerScore = careerAlphas.reduce((a, b) => a + b, 0) / careerAlphas.length;
+            }
+            
+            // Injury-aware formula: 60% last healthy + 30% career + 10% current (0 for injured QB)
+            qbLongTermScore = (0.60 * lastHealthyScore) + (0.30 * careerScore);
+            console.log(`[ForgeEngine] QB injury-aware score for ${nflTeam}: lastHealthy=${lastHealthyScore.toFixed(1)} career=${careerScore.toFixed(1)} → ${qbLongTermScore.toFixed(1)}`);
+            
+          } else {
+            // Franchise QB played some but not enough for "healthy" - partial weight
+            const qbData = currentSeasonQb as Record<string, any>;
+            const currentAlpha = parseFloat(qbData.alpha_context_score) || 50;
+            
+            const qbHistoryResult = await db.execute(sql`
+              SELECT alpha_context_score, efficiency_score
+              FROM qb_role_bank
+              WHERE player_id = ${franchiseQbId}
+                AND games_played >= ${QB_HEALTHY_SEASON_THRESHOLD}
+              ORDER BY season DESC
+              LIMIT 2
+            `);
+            
+            let historicalScore = currentAlpha;
+            if (qbHistoryResult.rows.length > 0) {
+              const careerAlphas = qbHistoryResult.rows.map((r: any) => 
+                parseFloat(r.alpha_context_score) || parseFloat(r.efficiency_score) || 50
+              );
+              historicalScore = careerAlphas.reduce((a, b) => a + b, 0) / careerAlphas.length;
+            }
+            
+            // Partial season: 40% current + 60% historical
+            qbLongTermScore = (0.40 * currentAlpha) + (0.60 * historicalScore);
           }
-          
-          // Injury-aware formula: 60% last healthy + 30% career + 10% current (0 if < 5 games)
-          qbLongTermScore = (0.60 * lastHealthyScore) + (0.30 * careerScore) + (0.10 * currentScore);
-          console.log(`[ForgeEngine] QB injury-aware score for ${nflTeam}: lastHealthy=${lastHealthyScore.toFixed(1)} career=${careerScore.toFixed(1)} → ${qbLongTermScore.toFixed(1)}`);
-          
         } else {
-          // QB healthy - use current season data with normal weighting
-          const qbAlpha = parseFloat(qbCurrent.alpha_context_score) || parseFloat(qbCurrent.efficiency_score) || 50;
-          const qbVolume = parseFloat(qbCurrent.volume_score) || 50;
-          
-          // For healthy QB, still blend with historical data for dynasty stability
-          const qbHistoryResult = await db.execute(sql`
-            SELECT season, games_played, alpha_context_score, efficiency_score
-            FROM qb_role_bank
-            WHERE player_id = ${qbPlayerId}
-              AND season < ${season}
-              AND games_played >= 8
-            ORDER BY season DESC
-            LIMIT 2
-          `);
-          
-          let lastHealthyScore = qbAlpha; // Default to current
-          let careerScore = qbAlpha;
-          
-          if (qbHistoryResult.rows.length > 0) {
-            const lastHealthy = qbHistoryResult.rows[0] as Record<string, any>;
-            lastHealthyScore = parseFloat(lastHealthy.alpha_context_score) || 
-                              parseFloat(lastHealthy.efficiency_score) || qbAlpha;
-            
-            const careerAlphas = qbHistoryResult.rows.map((r: any) => 
-              parseFloat(r.alpha_context_score) || parseFloat(r.efficiency_score) || 50
-            );
-            careerScore = careerAlphas.reduce((a, b) => a + b, 0) / careerAlphas.length;
+          // No franchise QB found - new team or young QB room, use current best
+          if (allQbsResult.rows.length > 0) {
+            const bestQb = allQbsResult.rows[0] as Record<string, any>;
+            qbLongTermScore = parseFloat(bestQb.alpha_context_score) || 50;
           }
-          
-          // Healthy QB formula: 10% last healthy + 30% career + 60% current
-          // This emphasizes current production for a healthy QB
-          qbLongTermScore = (0.10 * lastHealthyScore) + (0.30 * careerScore) + (0.60 * ((qbAlpha + qbVolume) / 2));
         }
       }
     }
