@@ -18,7 +18,8 @@ export type MetricSource =
   | 'sos_table'
   | 'role_bank'
   | 'qb_alpha'
-  | 'recursion';
+  | 'recursion'
+  | 'derived';
 
 export type PillarMetricConfig = {
   metricKey: string;
@@ -109,11 +110,14 @@ const WR_PILLARS: PositionPillarConfig = {
     ],
   },
   stability: {
+    // Rewritten to focus on ROLE SECURITY, not scoring volatility
+    // Boom-bust WRs should NOT be penalized for high fantasy variance
     metrics: [
-      { metricKey: 'consistency_score', source: 'role_bank', weight: 0.35 },
-      { metricKey: 'stability_index', source: 'role_bank', weight: 0.25 },
-      { metricKey: 'target_std_dev', source: 'role_bank', weight: 0.20, invert: true },
-      { metricKey: 'fantasy_std_dev', source: 'role_bank', weight: 0.20, invert: true },
+      { metricKey: 'availability_score', source: 'derived', weight: 0.25 },      // Games played / 17
+      { metricKey: 'route_stability', source: 'derived', weight: 0.25 },         // Route share consistency
+      { metricKey: 'snap_floor', source: 'derived', weight: 0.20 },              // Minimum snap share floor
+      { metricKey: 'depth_chart_insulation', source: 'derived', weight: 0.15 },  // Role security vs backups
+      { metricKey: 'qb_continuity', source: 'derived', weight: 0.15 },           // QB situation stability
     ],
   },
 };
@@ -300,6 +304,97 @@ function normalizeMetric(value: number | null, metricKey: string): number | null
   return Math.max(0, Math.min(100, normalized));
 }
 
+/**
+ * Compute derived stability metrics for WRs
+ * These focus on ROLE SECURITY, not scoring volatility
+ * Boom-bust WRs should NOT be penalized for high fantasy variance
+ */
+function computeDerivedMetric(metricKey: string, context: ForgeContext): number | null {
+  const roleBank = context.roleBank;
+  const teamContext = context.teamContext;
+  
+  switch (metricKey) {
+    case 'availability_score': {
+      // Games played normalized to 17-game season
+      // Higher = more available/durable
+      const gamesPlayed = context.gamesPlayed || roleBank['games_played'] as number || 0;
+      const maxGames = 17;
+      const availScore = Math.min(100, (gamesPlayed / maxGames) * 100);
+      return availScore;
+    }
+    
+    case 'route_stability': {
+      // Route share consistency - consistent route runners have stable share
+      // Use route_share_est as primary indicator (higher = more stable role)
+      const routeShare = roleBank['route_share_est'] as number;
+      if (routeShare == null) {
+        // Fallback to routes_per_game normalized (30 rpg = 100)
+        const routesPerGame = roleBank['routes_per_game'] as number;
+        if (routesPerGame == null) return 50; // default
+        return Math.min(100, (routesPerGame / 35) * 100);
+      }
+      // route_share_est is typically 0-1, convert to 0-100
+      return Math.min(100, routeShare * 100);
+    }
+    
+    case 'snap_floor': {
+      // Minimum snap share floor - uses stability_index as proxy
+      // stability_index reflects consistent playing time
+      const stabilityIndex = roleBank['stability_index'] as number;
+      if (stabilityIndex != null) {
+        return Math.max(0, Math.min(100, stabilityIndex));
+      }
+      // Fallback: use consistency_score if available
+      const consistencyScore = roleBank['consistency_score'] as number;
+      if (consistencyScore != null) {
+        return Math.max(0, Math.min(100, consistencyScore * 0.8)); // Weight it down slightly
+      }
+      return 50; // default
+    }
+    
+    case 'depth_chart_insulation': {
+      // Role security vs backups - high target share = insulated from competition
+      // Use target_share_avg as primary indicator
+      const targetShareAvg = roleBank['target_share_avg'] as number;
+      if (targetShareAvg != null) {
+        // target_share_avg is typically 0-0.35 for elite WRs, normalize to 0-100
+        // 0.25+ target share = very insulated (100)
+        // 0.10 target share = vulnerable (40)
+        const normalized = Math.min(100, ((targetShareAvg - 0.05) / 0.25) * 100);
+        return Math.max(20, normalized); // Floor at 20
+      }
+      // Fallback to role_score
+      const roleScore = roleBank['role_score'] as number;
+      if (roleScore != null) {
+        return Math.max(0, Math.min(100, roleScore));
+      }
+      return 50; // default
+    }
+    
+    case 'qb_continuity': {
+      // QB situation stability - uses team context for pass volume/consistency
+      // In dynasty mode, this is critical - stable QB = stable target opportunity
+      const teamPassVolume = teamContext['team_pass_volume'] as number;
+      const teamPace = teamContext['team_pace'] as number;
+      
+      if (teamPassVolume != null && teamPace != null) {
+        // Blend pass volume (weighted 60%) and pace (weighted 40%)
+        // Both are typically 0-100 normalized
+        const blended = (teamPassVolume * 0.6) + (teamPace * 0.4);
+        return Math.max(30, Math.min(100, blended));
+      }
+      
+      if (teamPassVolume != null) return Math.max(30, Math.min(100, teamPassVolume));
+      if (teamPace != null) return Math.max(30, Math.min(100, teamPace));
+      
+      return 50; // default
+    }
+    
+    default:
+      return null;
+  }
+}
+
 export function createMetricLookup(context: ForgeContext): MetricLookupFn {
   return (metricKey: string, source: MetricSource): number | null => {
     let rawValue: number | null = null;
@@ -317,6 +412,9 @@ export function createMetricLookup(context: ForgeContext): MetricLookupFn {
       case 'recursion':
         if (metricKey === 'prior_alpha') rawValue = context.recursion.priorAlpha ?? null;
         if (metricKey === 'alpha_momentum') rawValue = context.recursion.alphaMomentum ?? null;
+        break;
+      case 'derived':
+        rawValue = computeDerivedMetric(metricKey, context);
         break;
       default:
         rawValue = null;
