@@ -1,0 +1,381 @@
+We’re refactoring FORGE so that:
+
+E = Engine → handles data fetching, metric normalization, and building the 4 pillar scores:
+
+volume, efficiency, teamContext, stability (0–100)
+
+G = Grading → takes these pillars + position-specific weights and outputs:
+
+alpha (0–100) and tier string
+
+Later we will wire F and O on top, but for now: E + G split only.
+
+Tasks
+
+Create two new modules:
+
+src/forge/forgeEngine.ts
+
+src/forge/forgeGrading.ts
+
+Move / refactor logic from the current FORGE alpha engine (alphaEngine.ts or equivalent) so that:
+
+forgeEngine.ts:
+
+Fetches all needed context for a player:
+
+snapshot_player_week
+
+snapshot_team_context
+
+SoS tables
+
+role banks (wr_role_bank, rb_role_bank, te_role_bank, qb_role_bank)
+
+prior alpha / momentum (if we have them stored)
+
+Builds a metric lookup function so pillar logic doesn't care about DB details.
+
+Uses per-position pillar configs to compute:
+
+volume
+
+efficiency
+
+teamContext
+
+stability
+
+Returns a ForgeEngineOutput object.
+
+forgeGrading.ts:
+
+Takes ForgeEngineOutput
+
+Applies position-specific FORGE weights for the 4 pillars.
+
+Optionally folds in recursion signals (prior alpha, momentum) in a bounded way.
+
+Maps final alpha to a tier.
+
+Returns { alpha, tier }.
+
+Update existing FORGE endpoints (e.g. /api/forge/alpha, batch endpoints, etc.) so they now do this:
+
+import { runForgeEngine } from "@/forge/forgeEngine";
+import { gradeForge } from "@/forge/forgeGrading";
+
+const engineOutput = await runForgeEngine(playerId, position, season, week);
+const grade = gradeForge(engineOutput);
+
+return {
+  ...grade,         // alpha, tier
+  pillars: engineOutput.pillars,
+};
+
+
+Stop doing pillar math inline in the current alpha engine.
+
+Any computation of:
+
+volume, efficiency, stability, contextFit / teamContext
+
+should move into Engine via computePillarScore and config.
+
+Grading should be a pure function over the 4 pillar scores.
+
+Forge Engine design (E)
+
+Create these types in forgeEngine.ts:
+
+export type Position = "QB" | "RB" | "WR" | "TE";
+
+export type MetricSource =
+  | "snapshot_player_week"
+  | "snapshot_team_context"
+  | "sos_table"
+  | "role_bank"
+  | "qb_alpha"
+  | "recursion"; // prior alpha / momentum if stored separately
+
+export type PillarMetricConfig = {
+  metricKey: string;     // e.g. "targetsPerGameScore"
+  source: MetricSource;  // where we load it from
+  weight: number;        // weight inside the pillar
+  invert?: boolean;      // invert e.g. for volatility metrics
+  cap?: { min?: number; max?: number }; // optional clamp
+};
+
+export type PillarConfig = {
+  metrics: PillarMetricConfig[];
+};
+
+export type PositionPillarConfig = {
+  volume: PillarConfig;
+  efficiency: PillarConfig;
+  teamContext: PillarConfig;
+  stability: PillarConfig;
+};
+
+export type ForgePillarScores = {
+  volume: number;       // 0-100
+  efficiency: number;   // 0-100
+  teamContext: number;  // 0-100
+  stability: number;    // 0-100
+};
+
+export type ForgeEngineOutput = {
+  playerId: string;
+  position: Position;
+  season: number;
+  week: number | "season";
+  pillars: ForgePillarScores;
+  priorAlpha?: number;
+  alphaMomentum?: number;
+};
+
+
+Implement a generic pillar scorer:
+
+export type MetricLookupFn = (
+  metricKey: string,
+  source: MetricSource
+) => number | null;
+
+export function computePillarScore(
+  pillarConfig: PillarConfig,
+  lookup: MetricLookupFn
+): number {
+  let total = 0;
+  let weightSum = 0;
+
+  for (const metric of pillarConfig.metrics) {
+    let value = lookup(metric.metricKey, metric.source);
+    if (value == null) continue;
+
+    if (metric.invert) {
+      value = 100 - value;
+    }
+
+    if (metric.cap) {
+      if (metric.cap.min !== undefined) value = Math.max(metric.cap.min, value);
+      if (metric.cap.max !== undefined) value = Math.min(metric.cap.max, value);
+    }
+
+    total += value * metric.weight;
+    weightSum += metric.weight;
+  }
+
+  if (weightSum === 0) {
+    return 50; // neutral fallback if no metrics present
+  }
+
+  return total / weightSum;
+}
+
+
+Create placeholder pillar configs for WR and RB (we will refine later). They should use existing normalized metrics from our snapshot / role bank tables, for example:
+
+WR volume: targetsPerGameScore, targetShareScore, routesPerGameScore, redZoneTargetShareScore, snapShareScore
+
+WR efficiency: yprrScore, racrScore, epaPerTargetScore, catchOverExpectationScore, yacPerRecScore, tdRateScore
+
+WR teamContext: teamPpgScore, teamPassAttemptsScore, redZoneDrivesScore, qbAlphaScore, passDefenseSoSScore, paceScore
+
+WR stability: targetShareStabilityScore, snapShareStabilityScore, gamesMissedScore, routesFloorScore, roleStabilityScore
+
+RB follows similar structure, using touches, rush share, success rate, RYOE, OL run block, run SoS, etc.
+
+You can start with:
+
+const WR_PILLARS: PositionPillarConfig = {
+  volume: { metrics: [/* fill from existing normalized scores */] },
+  efficiency: { metrics: [/* ... */] },
+  teamContext: { metrics: [/* ... */] },
+  stability: { metrics: [/* ... */] },
+};
+
+const RB_PILLARS: PositionPillarConfig = {
+  volume: { metrics: [/* ... */] },
+  efficiency: { metrics: [/* ... */] },
+  teamContext: { metrics: [/* ... */] },
+  stability: { metrics: [/* ... */] },
+};
+
+// TODO: TE_PILLARS, QB_PILLARS with sensible defaults
+
+
+Then:
+
+export function getPositionPillarConfig(position: Position): PositionPillarConfig {
+  switch (position) {
+    case "WR":
+      return WR_PILLARS;
+    case "RB":
+      return RB_PILLARS;
+    case "TE":
+      return TE_PILLARS;
+    case "QB":
+      return QB_PILLARS;
+  }
+}
+
+
+Implement runForgeEngine:
+
+export async function runForgeEngine(
+  playerId: string,
+  position: Position,
+  season: number,
+  week: number | "season"
+): Promise<ForgeEngineOutput> {
+  const context = await fetchForgeContext(playerId, position, season, week);
+  const lookup = createMetricLookup(context);
+  const config = getPositionPillarConfig(position);
+
+  const pillars: ForgePillarScores = {
+    volume: computePillarScore(config.volume, lookup),
+    efficiency: computePillarScore(config.efficiency, lookup),
+    teamContext: computePillarScore(config.teamContext, lookup),
+    stability: computePillarScore(config.stability, lookup),
+  };
+
+  const { priorAlpha, alphaMomentum } = extractRecursionSignals(context);
+
+  return {
+    playerId,
+    position,
+    season,
+    week,
+    pillars,
+    priorAlpha,
+    alphaMomentum,
+  };
+}
+
+
+You will need to implement:
+
+fetchForgeContext(...) using existing DB utilities
+
+createMetricLookup(context) to map (metricKey, source) → numeric score
+
+extractRecursionSignals(context) to pull prior alpha + momentum, or return undefined if not available.
+
+Keep all heavy normalization work in our weekly snapshot / datadive pipelines so the Engine mostly just stitches scores together.
+
+Forge Grading design (G)
+
+In forgeGrading.ts:
+
+import { ForgeEngineOutput, ForgePillarScores, Position } from "./forgeEngine";
+
+export type ForgeWeights = {
+  volume: number;
+  efficiency: number;
+  teamContext: number;
+  stability: number;
+};
+
+export type ForgeGradeResult = {
+  alpha: number; // 0-100
+  tier: string;  // e.g. "S", "A", "B+", etc.
+};
+
+
+Define position-specific weights (we can start from existing ALPHA_WEIGHTS):
+
+const POSITION_WEIGHTS: Record<Position, ForgeWeights> = {
+  WR: { volume: 0.43, efficiency: 0.37, teamContext: 0.05, stability: 0.15 },
+  RB: { volume: 0.475, efficiency: 0.31, teamContext: 0.065, stability: 0.15 },
+  TE: { volume: 0.40, efficiency: 0.37, teamContext: 0.10, stability: 0.13 },
+  QB: { volume: 0.29, efficiency: 0.41, teamContext: 0.18, stability: 0.12 },
+};
+
+export function getPositionForgeWeights(position: Position): ForgeWeights {
+  return POSITION_WEIGHTS[position];
+}
+
+
+Core grading:
+
+function computeBaseAlpha(
+  pillars: ForgePillarScores,
+  weights: ForgeWeights
+): number {
+  const { volume, efficiency, teamContext, stability } = pillars;
+  const { volume: wV, efficiency: wE, teamContext: wT, stability: wS } = weights;
+
+  const totalWeight = wV + wE + wT + wS || 1;
+
+  const alpha =
+    (volume * wV +
+      efficiency * wE +
+      teamContext * wT +
+      stability * wS) /
+    totalWeight;
+
+  // clamp safety
+  return Math.max(0, Math.min(100, alpha));
+}
+
+
+Small, bounded recursion bias:
+
+type RecursionOpts = {
+  priorAlpha?: number;
+  alphaMomentum?: number;
+};
+
+export function applyRecursionBias(
+  baseAlpha: number,
+  opts: RecursionOpts
+): number {
+  const { priorAlpha, alphaMomentum } = opts;
+  let result = baseAlpha;
+
+  if (priorAlpha != null) {
+    // pull slightly toward prior alpha (stability)
+    result = 0.8 * result + 0.2 * priorAlpha;
+  }
+
+  if (alphaMomentum != null) {
+    // momentum nudges max ±3 pts
+    const delta = Math.max(-3, Math.min(3, alphaMomentum));
+    result += delta;
+  }
+
+  return Math.max(0, Math.min(100, result));
+}
+
+
+Simple tier mapping for now (can refine later):
+
+export function mapAlphaToTier(alpha: number, position: Position): string {
+  if (alpha >= 90) return "S";
+  if (alpha >= 80) return "A";
+  if (alpha >= 70) return "B";
+  if (alpha >= 60) return "C";
+  return "D";
+}
+
+
+Top-level:
+
+export function gradeForge(engineOutput: ForgeEngineOutput): ForgeGradeResult {
+  const weights = getPositionForgeWeights(engineOutput.position);
+
+  const baseAlpha = computeBaseAlpha(engineOutput.pillars, weights);
+
+  const alphaWithRecursion = applyRecursionBias(baseAlpha, {
+    priorAlpha: engineOutput.priorAlpha,
+    alphaMomentum: engineOutput.alphaMomentum,
+  });
+
+  const tier = mapAlphaToTier(alphaWithRecursion, engineOutput.position);
+
+  return {
+    alpha: alphaWithRecursion,
+    tier,
+  };
+}
