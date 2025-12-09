@@ -519,7 +519,7 @@ export async function runForgeEngineBatch(
     const result = await db.execute(sql`
       SELECT player_id FROM ${sql.identifier(tableName)}
       WHERE season = ${season}
-      ORDER BY role_score DESC NULLS LAST
+      ORDER BY volume_score DESC NULLS LAST
       LIMIT ${limit}
     `);
 

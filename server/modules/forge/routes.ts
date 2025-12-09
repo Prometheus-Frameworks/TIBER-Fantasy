@@ -1955,9 +1955,165 @@ router.get('/opportunity-shifts', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/forge/eg/batch
+ * 
+ * FORGE Engine+Grading (E+G) batch endpoint.
+ * Uses new modular architecture:
+ * - Engine: Fetches context, builds pillar scores (volume, efficiency, teamContext, stability)
+ * - Grading: Applies position weights, recursion bias, tier mapping
+ * 
+ * Query params:
+ * - position (required): WR | RB | TE | QB
+ * - season (optional): number, defaults to 2025
+ * - week (optional): number | 'season', defaults to 'season'
+ * - limit (optional): number, 1-100, defaults to 50
+ */
+router.get('/eg/batch', async (req: Request, res: Response) => {
+  try {
+    const { runForgeEngineBatch } = await import('./forgeEngine');
+    const { gradeForgeWithMeta } = await import('./forgeGrading');
+    type EGPosition = 'QB' | 'RB' | 'WR' | 'TE';
+
+    const position = (req.query.position as string)?.toUpperCase();
+    const season = parseInt(req.query.season as string) || 2025;
+    const weekParam = req.query.week as string;
+    const week = weekParam === 'season' || !weekParam ? 'season' : parseInt(weekParam);
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+
+    if (!position || !['WR', 'RB', 'TE', 'QB'].includes(position)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or missing position. Must be WR, RB, TE, or QB.',
+      });
+    }
+
+    console.log(`[FORGE/EG] Batch request: position=${position}, season=${season}, week=${week}, limit=${limit}`);
+
+    const engineOutputs = await runForgeEngineBatch(
+      position as EGPosition,
+      season,
+      week as number | 'season',
+      limit
+    );
+
+    const results = engineOutputs.map(output => gradeForgeWithMeta(output));
+
+    const sortedResults = results.sort((a, b) => b.alpha - a.alpha);
+
+    return res.json({
+      success: true,
+      meta: {
+        position,
+        season,
+        week,
+        version: 'E+G/v1',
+        description: 'FORGE Engine+Grading architecture with 4-pillar scoring',
+        count: sortedResults.length,
+        scoredAt: new Date().toISOString(),
+      },
+      scores: sortedResults.map(r => ({
+        playerId: r.playerId,
+        playerName: r.playerName,
+        position: r.position,
+        nflTeam: r.nflTeam,
+        alpha: r.alpha,
+        tier: r.tier,
+        tierPosition: r.tierPosition,
+        gamesPlayed: r.gamesPlayed,
+        pillars: {
+          volume: Math.round(r.pillars.volume * 10) / 10,
+          efficiency: Math.round(r.pillars.efficiency * 10) / 10,
+          teamContext: Math.round(r.pillars.teamContext * 10) / 10,
+          stability: Math.round(r.pillars.stability * 10) / 10,
+        },
+        debug: r.debug,
+      })),
+    });
+  } catch (error) {
+    console.error('[FORGE/EG] Batch error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'FORGE_EG_BATCH_FAILED',
+    });
+  }
+});
+
+/**
+ * GET /api/forge/eg/player/:playerId
+ * 
+ * Get FORGE Engine+Grading score for a single player
+ */
+router.get('/eg/player/:playerId', async (req: Request, res: Response) => {
+  try {
+    const { runForgeEngine } = await import('./forgeEngine');
+    const { gradeForgeWithMeta } = await import('./forgeGrading');
+    type EGPosition = 'QB' | 'RB' | 'WR' | 'TE';
+
+    const { playerId } = req.params;
+    const position = (req.query.position as string)?.toUpperCase();
+    const season = parseInt(req.query.season as string) || 2025;
+    const weekParam = req.query.week as string;
+    const week = weekParam === 'season' || !weekParam ? 'season' : parseInt(weekParam);
+
+    if (!playerId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing playerId parameter',
+      });
+    }
+
+    if (!position || !['WR', 'RB', 'TE', 'QB'].includes(position)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or missing position. Must be WR, RB, TE, or QB.',
+      });
+    }
+
+    console.log(`[FORGE/EG] Player request: playerId=${playerId}, position=${position}, season=${season}, week=${week}`);
+
+    const engineOutput = await runForgeEngine(
+      playerId,
+      position as EGPosition,
+      season,
+      week as number | 'season'
+    );
+
+    const result = gradeForgeWithMeta(engineOutput);
+
+    return res.json({
+      success: true,
+      score: {
+        playerId: result.playerId,
+        playerName: result.playerName,
+        position: result.position,
+        nflTeam: result.nflTeam,
+        alpha: result.alpha,
+        tier: result.tier,
+        tierPosition: result.tierPosition,
+        gamesPlayed: result.gamesPlayed,
+        pillars: {
+          volume: Math.round(result.pillars.volume * 10) / 10,
+          efficiency: Math.round(result.pillars.efficiency * 10) / 10,
+          teamContext: Math.round(result.pillars.teamContext * 10) / 10,
+          stability: Math.round(result.pillars.stability * 10) / 10,
+        },
+        debug: result.debug,
+        rawMetrics: result.rawMetrics,
+      },
+    });
+  } catch (error) {
+    console.error('[FORGE/EG] Player error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'FORGE_EG_PLAYER_FAILED',
+    });
+  }
+});
+
 export function registerForgeRoutes(app: any): void {
   app.use('/api/forge', router);
-  console.log('🔥 FORGE v0.2 routes mounted at /api/forge/*');
+  console.log('🔥 FORGE v0.2 routes mounted at /api/forge/* (E+G architecture enabled)');
 }
 
 export default router;
