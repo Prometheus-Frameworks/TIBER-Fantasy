@@ -55,6 +55,13 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
     - **FORGE v1.1 Multi-Week Aggregation**: Context fetcher aggregates data across ALL official snapshots (weeks 1-N) instead of single-week snapshots, eliminating outlier amplification and ensuring season-grounded Alpha scores.
     - **Next Man Up**: Tracks opportunity shifts for players replacing injured starters.
     - **FORGE SoS**: Position-specific strength of schedule analysis.
+    - **QB Context v1**: Team-to-QB mapping system providing QB-aware context for skill positions.
+        - **Table**: `qb_context_2025` stores QB scores (skill, redraft, dynasty, stability, durability) per team.
+        - **Population**: `POST /api/forge/admin/qb-context/populate` computes QB scores from `qb_role_bank` + `weekly_stats`.
+        - **Blending Formulas**:
+            - Redraft mode: `effectiveTeamContext = 0.60 * shortTermContext + 0.40 * qbRedraftScore`
+            - Dynasty mode: `effectiveDynastyContext = 0.40 * dynastyContext + 0.60 * qbDynastyScore`
+        - **Files**: `qbContextPopulator.ts` (scoring), `forgeEngine.ts` (fetch), `forgeGrading.ts` (blending).
 - **Tiber Tiers Page** (`/tiers`): User-facing FORGE-powered fantasy rankings with:
     - Position filter (WR, RB, TE, QB)
     - User-adjustable weight sliders (Volume, Efficiency, Stability, Context) with live recalculation
