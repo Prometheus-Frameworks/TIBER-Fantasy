@@ -4679,3 +4679,61 @@ export type DatadiveNflfastrMetrics = typeof datadiveNflfastrMetrics.$inferSelec
 export type InsertDatadiveNflfastrMetrics = typeof datadiveNflfastrMetrics.$inferInsert;
 export type DatadiveExpectedFantasyWeek = typeof datadiveExpectedFantasyWeek.$inferSelect;
 export type InsertDatadiveExpectedFantasyWeek = typeof datadiveExpectedFantasyWeek.$inferInsert;
+
+// ========================================
+// QB CONTEXT v1 - TEAM-TO-QB MAPPING
+// ========================================
+
+/**
+ * QB Context 2025 - Maps each team to their primary QB with context scores
+ * Used by FORGE to provide QB-aware teamContext and dynastyContext for WR/RB/TE
+ */
+export const qbContext2025 = pgTable("qb_context_2025", {
+  id: serial("id").primaryKey(),
+  
+  // QB identification
+  qbId: text("qb_id").notNull(), // NFLfastR player ID
+  qbName: text("qb_name").notNull(), // Display name
+  teamId: text("team_id").notNull(), // Team abbreviation (CIN, DAL, etc.)
+  season: integer("season").notNull().default(2025),
+  
+  // Depth chart position
+  depthChartRank: integer("depth_chart_rank").notNull().default(1), // 1 = starter, 2 = backup
+  isPrimaryQb: boolean("is_primary_qb").notNull().default(true),
+  
+  // Core QB scores (0-100)
+  qbSkillScore: real("qb_skill_score").notNull().default(50), // QB's FORGE alpha
+  qbRedraftScore: real("qb_redraft_score").notNull().default(50), // Current-season value
+  qbDynastyScore: real("qb_dynasty_score").notNull().default(50), // Long-term value
+  qbStabilityScore: real("qb_stability_score").notNull().default(50), // Games started continuity
+  qbDurabilityScore: real("qb_durability_score").notNull().default(50), // Inverse of missed games
+  
+  // Additional context
+  qbAge: integer("qb_age"), // Current age for dynasty curves
+  gamesStartedRecent: integer("games_started_recent"), // Total games started last 2-3 seasons
+  gamesStartedCurrentSeason: integer("games_started_current_season"), // Games in current season
+  
+  // Offensive metrics used in calculations
+  epaPerPlay: real("epa_per_play"),
+  cpoe: real("cpoe"),
+  teamPassEpa: real("team_pass_epa"),
+  
+  // Metadata
+  isActive: boolean("is_active").notNull().default(true),
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  teamSeasonIdx: index("qb_context_2025_team_season_idx").on(table.teamId, table.season),
+  primaryQbIdx: index("qb_context_2025_primary_idx").on(table.teamId, table.season, table.isPrimaryQb),
+  uniqueQbTeamSeason: unique("qb_context_2025_unique").on(table.qbId, table.teamId, table.season),
+}));
+
+export const insertQbContext2025Schema = createInsertSchema(qbContext2025).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true,
+  calculatedAt: true 
+});
+export type InsertQbContext2025 = z.infer<typeof insertQbContext2025Schema>;
+export type QbContext2025 = typeof qbContext2025.$inferSelect;
