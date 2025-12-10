@@ -5,7 +5,7 @@
 ### Authentication & Health
 | Endpoint | Method | Parameters | Description |
 |----------|--------|------------|-------------|
-| `/api/signal` | GET | `founder` (optional) | OTC signature protocol endpoint, reveals credits in founder mode |
+| `/api/signal` | GET | `founder` (optional) | TIBER signature protocol endpoint, reveals credits in founder mode |
 | `/api/version` | GET | None | Returns build version, commit, and process ID |
 | `/api/health` | GET | None | Comprehensive health check for all services (Sleeper, logs, ratings) |
 
@@ -150,7 +150,7 @@
 - **Primary**: Sleeper API (3,755+ active players)
 - **Secondary**: MySportsFeeds API, SportsDataIO
 - **Analytics**: Player Compass (4-directional scoring)
-- **Community**: OTC Consensus rankings
+- **Community**: TIBER Consensus rankings
 - **Intelligence**: Snap count analysis, injury reports
 
 ## Response Formats

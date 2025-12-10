@@ -10,7 +10,7 @@ import { sql } from 'drizzle-orm';
 export interface AnalyticsField {
   fieldName: string;
   dataType: 'number' | 'string' | 'boolean' | 'date' | 'array';
-  source: 'Sleeper-API' | 'OASIS-API' | 'Internal-Calculation' | 'Deprecated' | 'Placeholder';
+  source: 'Sleeper-API' | 'TRACKSTAR-API' | 'Internal-Calculation' | 'Deprecated' | 'Placeholder';
   granularity: 'Season-Level' | 'Game-Level' | 'Weekly-Rolling' | 'Career-Aggregate' | 'Real-Time' | 'Static';
   status: 'Active' | 'Placeholder' | 'Empty' | 'Deprecated' | 'Planned';
   description: string;

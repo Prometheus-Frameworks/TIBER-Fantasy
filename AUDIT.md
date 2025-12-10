@@ -41,7 +41,7 @@
 **Remove all of these (90+ files):**
 - All `/mock/*` pages (Systems, Draft, Rookies, etc.)
 - All test/demo pages (ApiTest, ApiDemo, TestDataPage, etc.)
-- Old ranking systems (Rankings.tsx, RankingsV3.tsx, OTCConsensus.tsx)
+- Old ranking systems (Rankings.tsx, RankingsV3.tsx, TIBERConsensus.tsx)
 - Duplicate trade analyzers (keep one for Moves tab)
 - All Compass variants (RBCompass, WRCompass, TECompass, etc.) - consolidate into Strategy tab
 - Consensus pages (ConsensusHub, ConsensusSeeding, etc.)
@@ -103,7 +103,7 @@ client/src/pages/:
 - MockLanding.tsx
 - News.tsx
 - Oasis.tsx
-- OASISTeamContext.tsx
+- TRACKSTARTeamContext.tsx
 - player-analysis.tsx
 - player-analytics.tsx
 - player-profile.tsx

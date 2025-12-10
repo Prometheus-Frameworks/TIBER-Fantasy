@@ -35,7 +35,7 @@ Step 2 – Mark legacy views
 
 Anything that:
 
-Relies on old OASIS data,
+Relies on old TRACKSTAR data,
 
 Uses mock data,
 

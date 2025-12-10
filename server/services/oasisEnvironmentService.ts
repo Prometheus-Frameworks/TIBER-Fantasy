@@ -1,9 +1,9 @@
 /**
- * OASIS Environment Service
+ * TRACKSTAR Environment Service
  * Centralized team environment data management with caching and normalization
  * Provides normalized team environment metrics for Player Compass and Rankings Fusion
  * 
- * TODO: Replace OASIS with internal FORGE SoS module
+ * TODO: Replace TRACKSTAR with internal FORGE SoS module
  * See: docs/oasis_audit.md for migration plan
  * Target: Migrate to forgeEnvironmentService using forge_team_env_context table
  */
@@ -127,7 +127,7 @@ export class OasisEnvironmentService {
   }
 
   /**
-   * Refresh OASIS data from the API
+   * Refresh TRACKSTAR data from the API
    */
   private async refreshData(): Promise<void> {
     if (this.refreshInProgress) return;
@@ -136,11 +136,11 @@ export class OasisEnvironmentService {
     try {
       console.log('🔄 [OasisEnvironment] Refreshing team environment data...');
       
-      // Fetch current season/week data from OASIS API using production-ready config
+      // Fetch current season/week data from TRACKSTAR API using production-ready config
       const { internalFetch } = await import('../utils/apiConfig');
       
       const data = await internalFetch('/api/oasis/environment?season=2025&week=2', {
-        timeout: 12000,  // 12 second timeout for OASIS environment data
+        timeout: 12000,  // 12 second timeout for TRACKSTAR environment data
         retries: 2       // Retry for environment data calls
       });
       const teams: OasisRawData[] = data.teams;

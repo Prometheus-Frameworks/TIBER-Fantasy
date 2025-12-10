@@ -28,7 +28,7 @@ export interface PlayerInput {
 
   // Matchup / Environment
   defRankVsPos?: number;          // 1 (hard) ... 32 (easy) — inverted in scoring
-  oasisMatchupScore?: number;     // 0-100 from your OASIS
+  oasisMatchupScore?: number;     // 0-100 from your TRACKSTAR
   impliedTeamTotal?: number;      // Vegas points 10-40 typical
   olHealthIndex?: number;         // 0-100 (QB/RB helpful)
   weatherImpact?: number;         // -1 to +1 (negative bad weather, positive dome/ideal)
@@ -223,7 +223,7 @@ function scoreMatchup(p: PlayerInput, cfg: StartSitConfig, reasons: string[]) {
   );
 
   reasons.push(
-    `Matchup vs ${(p as any).opponent ?? "?"}: defRankAdj ${def.toFixed(0)} | OASIS ${oasis.toFixed(0)} | implied ${implied.toFixed(0)} | OL ${ol.toFixed(0)} | weather ${weatherAdj.toFixed(0)}`
+    `Matchup vs ${(p as any).opponent ?? "?"}: defRankAdj ${def.toFixed(0)} | TRACKSTAR ${oasis.toFixed(0)} | implied ${implied.toFixed(0)} | OL ${ol.toFixed(0)} | weather ${weatherAdj.toFixed(0)}`
   );
   return clamp(score, 0, 100);
 }

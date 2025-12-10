@@ -1,4 +1,4 @@
-// TODO: Replace OASIS with internal FORGE SoS module
+// TODO: Replace TRACKSTAR with internal FORGE SoS module
 // See: docs/oasis_audit.md for migration plan
 // Target: Merge into sos.service.ts using forge_team_env_context and forge_team_matchup_context
 
@@ -9,9 +9,9 @@ import { schedule } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 
 /**
- * OASIS-Enhanced Strength of Schedule Service
+ * TRACKSTAR-Enhanced Strength of Schedule Service
  * 
- * Projects early season (2025) SOS using OASIS team environment data
+ * Projects early season (2025) SOS using TRACKSTAR team environment data
  * when historical DVP data is not yet available.
  * 
  * DEPRECATED: This service is scheduled for migration to internal FORGE SoS module.
@@ -46,7 +46,7 @@ export class OasisSosService {
   }
 
   /**
-   * Generate OASIS-based defensive projections for all teams
+   * Generate TRACKSTAR-based defensive projections for all teams
    */
   async generateDefensiveProjections(season: number, position: Position): Promise<OasisDefensiveProjection[]> {
     const cacheKey = `${season}-${position}`;
@@ -55,15 +55,15 @@ export class OasisSosService {
     if (this.isCacheValid(cacheKey)) {
       const cached = this.projectionCache.get(cacheKey);
       if (cached) {
-        console.debug(`[OASIS-SOS] Cache hit for ${season} ${position}`);
+        console.debug(`[TRACKSTAR-SOS] Cache hit for ${season} ${position}`);
         return cached;
       }
     }
 
-    console.info(`[OASIS-SOS] Generating defensive projections for ${season} ${position}`);
+    console.info(`[TRACKSTAR-SOS] Generating defensive projections for ${season} ${position}`);
 
     try {
-      // Get OASIS team data for all 32 teams
+      // Get TRACKSTAR team data for all 32 teams
       const teamIds = ['BUF', 'KC', 'SF', 'MIA', 'DAL', 'NYG', 'PHI', 'WAS', 'MIN', 'DET', 'GB', 'CHI', 
                        'TB', 'NO', 'ATL', 'CAR', 'LAR', 'SEA', 'ARI', 'SF', 'BAL', 'CIN', 'CLE', 'PIT',
                        'HOU', 'IND', 'JAX', 'TEN', 'DEN', 'LV', 'LAC', 'NYJ'];
@@ -85,17 +85,17 @@ export class OasisSosService {
       this.projectionCache.set(cacheKey, projections);
       this.cacheTimestamps.set(cacheKey, Date.now());
 
-      console.info(`[OASIS-SOS] Generated ${projections.length} defensive projections for ${position}`);
+      console.info(`[TRACKSTAR-SOS] Generated ${projections.length} defensive projections for ${position}`);
       return projections;
 
     } catch (error) {
-      console.error(`[OASIS-SOS] Error generating defensive projections:`, error);
+      console.error(`[TRACKSTAR-SOS] Error generating defensive projections:`, error);
       return [];
     }
   }
 
   /**
-   * Calculate defensive projection for a specific team using OASIS data
+   * Calculate defensive projection for a specific team using TRACKSTAR data
    */
   private async calculateDefensiveProjection(
     teamId: string, 
@@ -105,7 +105,7 @@ export class OasisSosService {
     // Base fantasy points allowed - league average by position
     const baselineFPA = this.getPositionBaseline(position);
     
-    // OASIS-based adjustments
+    // TRACKSTAR-based adjustments
     const oasisFactors = {
       scoring_environment: teamEnv.scoring_environment || 50,
       pace_factor: teamEnv.pace || 65,
@@ -114,7 +114,7 @@ export class OasisSosService {
       ol_grade: teamEnv.ol_grade || 50
     };
 
-    // Calculate defensive strength based on OASIS offensive environment
+    // Calculate defensive strength based on TRACKSTAR offensive environment
     // Better offensive environment = easier to score against = higher FPA
     const defensiveProjection = this.calculatePositionSpecificProjection(
       baselineFPA, 
@@ -202,7 +202,7 @@ export class OasisSosService {
   private calculateConfidence(teamEnv: any): number {
     let confidence = 70; // Base confidence
 
-    // Boost confidence for teams with complete OASIS data
+    // Boost confidence for teams with complete TRACKSTAR data
     if (teamEnv.scoring_environment && teamEnv.pace && teamEnv.red_zone_efficiency) {
       confidence += 20;
     }
@@ -215,27 +215,27 @@ export class OasisSosService {
   }
 
   /**
-   * Generate OASIS-powered weekly SOS for early 2025 season
+   * Generate TRACKSTAR-powered weekly SOS for early 2025 season
    */
   async generateOasisWeeklySOS(
     position: Position,
     week: number,
     season: number = 2025
   ): Promise<WeeklySOS[]> {
-    console.info(`[OASIS-SOS] Generating weekly SOS for ${position} ${season} Week ${week}`);
+    console.info(`[TRACKSTAR-SOS] Generating weekly SOS for ${position} ${season} Week ${week}`);
 
     try {
       // Get schedule for the week
       const games = await this.getWeekGames(season, week);
       if (!games.length) {
-        console.warn(`[OASIS-SOS] No schedule data for ${season} Week ${week}`);
+        console.warn(`[TRACKSTAR-SOS] No schedule data for ${season} Week ${week}`);
         return [];
       }
 
       // Get defensive projections
       const defensiveProjections = await this.generateDefensiveProjections(season, position);
       if (!defensiveProjections.length) {
-        console.warn(`[OASIS-SOS] No defensive projections available for ${position}`);
+        console.warn(`[TRACKSTAR-SOS] No defensive projections available for ${position}`);
         return [];
       }
 
@@ -277,17 +277,17 @@ export class OasisSosService {
         }
       }
 
-      console.info(`[OASIS-SOS] Generated ${results.length} weekly SOS entries for ${position} ${season} Week ${week}`);
+      console.info(`[TRACKSTAR-SOS] Generated ${results.length} weekly SOS entries for ${position} ${season} Week ${week}`);
       return results;
 
     } catch (error) {
-      console.error(`[OASIS-SOS] Error generating weekly SOS:`, error);
+      console.error(`[TRACKSTAR-SOS] Error generating weekly SOS:`, error);
       return [];
     }
   }
 
   /**
-   * Generate OASIS-powered ROS SOS for early 2025 season
+   * Generate TRACKSTAR-powered ROS SOS for early 2025 season
    */
   async generateOasisROSSOS(
     position: Position,
@@ -295,7 +295,7 @@ export class OasisSosService {
     window: number = 5,
     season: number = 2025
   ): Promise<ROSItem[]> {
-    console.info(`[OASIS-SOS] Generating ROS SOS for ${position} ${season} weeks ${startWeek}-${startWeek + window - 1}`);
+    console.info(`[TRACKSTAR-SOS] Generating ROS SOS for ${position} ${season} weeks ${startWeek}-${startWeek + window - 1}`);
 
     const weeks = Array.from({length: window}, (_, i) => startWeek + i);
     const allWeeklyResults: WeeklySOS[] = [];
@@ -333,7 +333,7 @@ export class OasisSosService {
     // Sort by average score (descending = easier schedules first)
     rosItems.sort((a, b) => b.avg_score - a.avg_score);
 
-    console.info(`[OASIS-SOS] Generated ROS SOS for ${rosItems.length} teams`);
+    console.info(`[TRACKSTAR-SOS] Generated ROS SOS for ${rosItems.length} teams`);
     return rosItems;
   }
 
@@ -356,16 +356,16 @@ export class OasisSosService {
         return games;
       }
     } catch (error) {
-      console.warn(`[OASIS-SOS] Could not fetch schedule for ${season} Week ${week}:`, error);
+      console.warn(`[TRACKSTAR-SOS] Could not fetch schedule for ${season} Week ${week}:`, error);
     }
     
     // Return sample schedule for early 2025 if database doesn't have it yet
     if (season === 2025 && week <= 3) {
-      console.info(`[OASIS-SOS] Using sample schedule for ${season} Week ${week}`);
+      console.info(`[TRACKSTAR-SOS] Using sample schedule for ${season} Week ${week}`);
       return this.getSampleSchedule(week);
     }
     
-    console.warn(`[OASIS-SOS] No schedule data available for ${season} Week ${week}`);
+    console.warn(`[TRACKSTAR-SOS] No schedule data available for ${season} Week ${week}`);
     return [];
   }
 
@@ -434,7 +434,7 @@ export class OasisSosService {
     };
 
     const games = scheduleData[week as keyof typeof scheduleData] || scheduleData[3];
-    console.info(`[OASIS-SOS] Using sample schedule for Week ${week} with ${games.length} games`);
+    console.info(`[TRACKSTAR-SOS] Using sample schedule for Week ${week} with ${games.length} games`);
     return games;
   }
 
@@ -479,7 +479,7 @@ export class OasisSosService {
   clearCache(): void {
     this.projectionCache.clear();
     this.cacheTimestamps.clear();
-    console.info('[OASIS-SOS] Cache cleared');
+    console.info('[TRACKSTAR-SOS] Cache cleared');
   }
 }
 

@@ -3,10 +3,10 @@ import { consensusRanks, consensusAudit } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { inMemoryConsensusStore } from "./inMemoryStore";
 
-// OTC Consensus Command Router v1 - Priority Override System
-// Routes "OTC consensus ..." messages to consensus updates, bypassing injury logic
+// TIBER Consensus Command Router v1 - Priority Override System
+// Routes "TIBER consensus ..." messages to consensus updates, bypassing injury logic
 
-const CONSENSUS_REGEX = /^OTC\s+consensus\s+(Redraft|Dynasty)\s+(QB|RB|WR|TE|ALL)\s*(\d+)\s*:\s*(.+)$/i;
+const CONSENSUS_REGEX = /^TIBER\s+consensus\s+(Redraft|Dynasty)\s+(QB|RB|WR|TE|ALL)\s*(\d+)\s*:\s*(.+)$/i;
 
 export interface ConsensusUpdatePayload {
   season: number;
@@ -38,7 +38,7 @@ export interface ConsensusUpdateResult {
 }
 
 /**
- * Parse OTC consensus command into structured payload
+ * Parse TIBER consensus command into structured payload
  * Returns null if command doesn't match the expected format
  */
 export function parseConsensusCommand(text: string): ConsensusUpdatePayload | null {
@@ -210,7 +210,7 @@ export async function updateConsensusRank(payload: ConsensusUpdatePayload): Prom
 
 /**
  * Check if message should be routed to consensus system
- * Returns true if message starts with "OTC consensus"
+ * Returns true if message starts with "TIBER consensus"
  */
 export function shouldRouteToConsensus(text: string): boolean {
   return CONSENSUS_REGEX.test(text.trim());

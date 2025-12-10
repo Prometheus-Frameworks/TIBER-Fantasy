@@ -77,7 +77,7 @@ export class ECRAdapter {
   private readonly FANTASYPROS_BASE_URL = 'https://www.fantasypros.com/nfl';
   private readonly DEFAULT_TIMEOUT = 45000; // 45 seconds for large ranking sets
   private readonly API_VERSION = 'v1';
-  private readonly USER_AGENT = 'OTC-Fantasy-Hub/1.0';
+  private readonly USER_AGENT = 'TIBER-Fantasy-Hub/1.0';
 
   /**
    * Ingest expert consensus rankings by position

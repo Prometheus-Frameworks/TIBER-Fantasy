@@ -2,10 +2,10 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { attachSignatureHeader } from "./middleware/signature";
-import { OTC_SIGNATURE } from "../shared/otcSignature";
+import { TIBER_SIGNATURE } from "../shared/otcSignature";
 
-// silence unused OTC_SIGNATURE in strict builds
-void OTC_SIGNATURE;
+// silence unused TIBER_SIGNATURE in strict builds
+void TIBER_SIGNATURE;
 
 // tiny logger so we don't import Vite's log helper
 const log = (...args: any[]) => console.log(...args);

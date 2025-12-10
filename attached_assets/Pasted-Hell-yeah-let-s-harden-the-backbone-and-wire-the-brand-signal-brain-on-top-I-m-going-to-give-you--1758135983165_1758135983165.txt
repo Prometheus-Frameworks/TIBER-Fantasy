@@ -55,8 +55,8 @@ export class SeasonService {
     }
 
     // 3) ENV override
-    const season = Number(this.deps.env.OTC_SEASON ?? new Date().getFullYear());
-    const week   = Number(this.deps.env.OTC_WEEK ?? 0);
+    const season = Number(this.deps.env.TIBER_SEASON ?? new Date().getFullYear());
+    const week   = Number(this.deps.env.TIBER_WEEK ?? 0);
     await this.persist('env', season, week, week === 0 ? 'pre':'regular');
     return { season, week, seasonType: week===0?'pre':'regular', source:'env' };
   }
@@ -110,15 +110,15 @@ const localHash = hash(await drizzleGenerateSQL());
 const liveHash  = await db.oneOrNone(`select checksum_sql from schema_registry order by applied_at desc limit 1`);
 
 if (localHash !== liveHash?.checksum_sql) {
-  if (process.env.OTC_AUTO_MIGRATE === 'true') {
+  if (process.env.TIBER_AUTO_MIGRATE === 'true') {
     await runMigrations(); // drizzle-kit migrate
   } else {
-    throw new Error('Schema drift detected. Set OTC_AUTO_MIGRATE=true or apply manually.');
+    throw new Error('Schema drift detected. Set TIBER_AUTO_MIGRATE=true or apply manually.');
   }
 }
 
 Bonus hardening:
-	•	Shadow DB in CI to validate migrations (OTC_SHADOW_URL)
+	•	Shadow DB in CI to validate migrations (TIBER_SHADOW_URL)
 	•	Contract tests: spin against shadow, run a minimal read/write suite, then destroy.
 	•	Write-block flag: maintenance.write_block=true in a settings table when drift is detected and auto-migrate is off.
 

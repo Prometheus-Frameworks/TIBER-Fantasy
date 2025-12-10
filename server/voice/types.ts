@@ -1,6 +1,6 @@
 /**
  * Tiber Voice System - Data-driven fantasy football guidance
- * Replaces hardcoded responses with live OTC Power/RAG data
+ * Replaces hardcoded responses with live TIBER Power/RAG data
  */
 
 export type TiberIntent = 'START_SIT' | 'TRADE' | 'WAIVER' | 'RANKING_EXPLAIN' | 'PLAYER_OUTLOOK';

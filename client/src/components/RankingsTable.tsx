@@ -121,7 +121,7 @@ export default function RankingsTable({ mode }: Props) {
           href="/consensus"
           className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
         >
-          ← Back to OTC Consensus Hub
+          ← Back to TIBER Consensus Hub
         </Link>
       </div>
 

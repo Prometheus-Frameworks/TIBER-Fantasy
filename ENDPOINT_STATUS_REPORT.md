@@ -45,9 +45,9 @@ GET /api/usage-leaders
 
 ### 🔌 EXTERNAL DEPENDENCY
 ```bash
-# OASIS Team Environment Data
+# TRACKSTAR Team Environment Data
 GET /api/oasis/teams
-→ Status: Requires OASIS_R_BASE environment variable for external R API
+→ Status: Requires TRACKSTAR_R_BASE environment variable for external R API
 → Fallback: Returns structured error with "upstream unavailable" message
 ```
 
@@ -93,7 +93,7 @@ const leaders = await fetch('/api/usage-leaders').then(r => r.json());
 ## Next Steps
 
 1. **Quick Fix**: Adjust usage-leaders filter logic (5 min)
-2. **Optional**: Configure OASIS_R_BASE for team environment data  
+2. **Optional**: Configure TRACKSTAR_R_BASE for team environment data  
 3. **Ready**: Frontend integration can proceed with 95% API coverage
 
 **Status**: 🎯 **DISCOVERY MISSION COMPLETE** - All gaps identified and patched

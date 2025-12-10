@@ -1,4 +1,4 @@
-Got you, Boss Man J. Let’s lock the attribute sheet first—only fields we can actually pull from Sleeper, nflfastR, and OASIS (your context module). No fantasy land “routes run” unless we wire a provider later.
+Got you, Boss Man J. Let’s lock the attribute sheet first—only fields we can actually pull from Sleeper, nflfastR, and TRACKSTAR (your context module). No fantasy land “routes run” unless we wire a provider later.
 
 I’m giving you:
 	•	a practical attribute list (per-week, per-player) with exact source mapping
@@ -14,7 +14,7 @@ Attribute	Type	Source	Notes / How we get it (only if present)
 season, week	int	both	Pipeline params (truth)
 otc_id	text	xref	Your canonical ID (xref maps Sleeper/nflfastR → otc_id)
 team, position	text	Sleeper	From Sleeper player/game log meta
-opp_team	text	OASIS	OASIS opponent resolver for that week
+opp_team	text	TRACKSTAR	TRACKSTAR opponent resolver for that week
 status_injury	text?	Sleeper	“questionable/out/IR” if Sleeper exposes; else null
 pass_att	int?	Sleeper	Game log
 pass_cmp	int?	Sleeper	Game log
@@ -36,11 +36,11 @@ aDOT	float?	nflfastR	air_yards / targets if both present
 yac	int?	nflfastR	PBP aggregate (sum yards_after_catch)
 epa_total	float?	nflfastR	Sum EPA across plays involved
 epa_per_play	float?	nflfastR	epa_total / (rush_att + targets + pass_att)*
-team_plays	int?	nflfastR/OASIS	Offensive plays run by player’s team that week
-opp_def_rank	float?	OASIS	Your defensive strength index (lower = tougher)
-pace_situation_adj	float?	OASIS	Your seconds/play or pace index
-implied_team_total	float?	OASIS	Your implied points (from lines or OASIS model)
-adp_sf	float?	Sleeper/OASIS	Sleeper ADP (Superflex if you’ve got it) or OASIS stored ADP
+team_plays	int?	nflfastR/TRACKSTAR	Offensive plays run by player’s team that week
+opp_def_rank	float?	TRACKSTAR	Your defensive strength index (lower = tougher)
+pace_situation_adj	float?	TRACKSTAR	Your seconds/play or pace index
+implied_team_total	float?	TRACKSTAR	Your implied points (from lines or TRACKSTAR model)
+adp_sf	float?	Sleeper/TRACKSTAR	Sleeper ADP (Superflex if you’ve got it) or TRACKSTAR stored ADP
 fantasy_pts_halfppr	float?	Sleeper	Nice for QA / UI
 
 * for epa_per_play, if pass_att is present we can use per-dropback instead; keep it simple for now.
@@ -133,7 +133,7 @@ We’ll compute four subscores + an Overall. All math is transparent and reprodu
 	•	WR/TE: USG = 1.0*norm(targets) + 0.6*norm(air_yards)
 	•	QB: USG = 0.6*norm(pass_att) + 0.4*norm(rush_att)
 
-3) Matchup/Environment (from OASIS)
+3) Matchup/Environment (from TRACKSTAR)
 
 ENV = 0.7*norm(implied_team_total) − 0.7*norm(opp_def_rank) + 0.3*norm(pace_situation_adj)
 
@@ -158,7 +158,7 @@ Merge Logic (exact and boring—good)
 	•	Build player_xref (source, external_id → otc_id).
 	•	Sleeper pass #1 → fill base: team/position + the box score stats + fantasy_pts_halfppr + injury.
 	•	nflfastR pass #2 → add: air_yards, yac, epa_total, epa_per_play, sacks_taken, team_plays (if you compute it here).
-	•	OASIS pass #3 → add: opp_team, opp_def_rank, pace_situation_adj, implied_team_total, (optional) ADP.
+	•	TRACKSTAR pass #3 → add: opp_team, opp_def_rank, pace_situation_adj, implied_team_total, (optional) ADP.
 	•	Derive aDOT = air_yards / targets when both present.
 
 If a field is missing, leave null—the scorer handles nulls as 0-impact after normalization.
@@ -196,7 +196,7 @@ Example Row (WR week)
 ⸻
 
 Why this works (and won’t BS you)
-	•	Every attribute is traceable to Sleeper, nflfastR, or OASIS.
+	•	Every attribute is traceable to Sleeper, nflfastR, or TRACKSTAR.
 	•	If Sleeper doesn’t expose a stat in a given week, nflfastR can often fill (targets, air yards); if neither does, it stays null.
 	•	Ratings are deterministic and rebuildable from attributes. No mystery knobs.
 

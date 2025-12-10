@@ -114,7 +114,7 @@ The market's half-right about Nico Collins. The other half is where the value li
       readTime: '8 min',
       featured: true,
       published: true,
-      author: 'OTC Team',
+      author: 'TIBER Team',
       authorBio: 'Advanced analytics team focused on identifying market inefficiencies in dynasty fantasy football.',
       metaKeywords: ['Nico Collins', 'Fantasy Football', 'Dynasty', 'WR Analysis', 'Target Share', 'Market Value']
     };
@@ -139,7 +139,7 @@ The market's half-right about Nico Collins. The other half is where the value li
         readTime: '12 min',
         featured: false,
         published: true,
-        author: 'OTC Analytics',
+        author: 'TIBER Analytics',
         authorBio: 'Data science team specializing in fantasy football analytics.',
         metaKeywords: ['Target Competition', 'WR Analysis', 'Fantasy Football', 'Methodology']
       },
@@ -154,7 +154,7 @@ The market's half-right about Nico Collins. The other half is where the value li
         readTime: '10 min',
         featured: true,
         published: true,
-        author: 'OTC Strategy',
+        author: 'TIBER Strategy',
         authorBio: 'Strategic analysis team focused on positional value and market trends.',
         metaKeywords: ['RB Committees', 'Running Backs', 'Fantasy Football', 'Strategy']
       }

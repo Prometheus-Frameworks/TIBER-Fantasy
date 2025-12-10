@@ -5,7 +5,7 @@
  * - RankingsFusionService (xFP + compass scores)
  * - PlayerCompassService (dynasty/redraft)
  * - RatingsEngineService (talent/opportunity/consistency)
- * - OASIS Environment data
+ * - TRACKSTAR Environment data
  * 
  * Produces unified 1-99 ratings with position-specific weighting and confidence handling
  */
@@ -454,11 +454,11 @@ export class OVRService {
     }
     
     try {
-      // Get OASIS environment score
+      // Get TRACKSTAR environment score
       const oasisData = await this.oasisService.getTeamEnvironment(input.team);
       
       if (oasisData) {
-        // Average key OASIS metrics using correct property names
+        // Average key TRACKSTAR metrics using correct property names
         const metrics = [
           oasisData.environment_score_pct || 50,
           oasisData.pace_pct || 50,
@@ -470,7 +470,7 @@ export class OVRService {
         inputData.oasis_raw = oasisData;
       }
     } catch (error) {
-      console.warn(`[OVR] Failed to get OASIS environment score for ${input.team}:`, error);
+      console.warn(`[OVR] Failed to get TRACKSTAR environment score for ${input.team}:`, error);
     }
     
     try {
@@ -506,7 +506,7 @@ export class OVRService {
       inputData.age_value_score = inputData.ratings_raw.age_adjusted_value;
     }
     
-    console.log(`[OVR] Gathered real data for ${input.name}: Fusion=${inputData.fusion_score || 'N/A'}, Ratings=${inputData.ratings_engine_score || 'N/A'}, Compass=${inputData.compass_score || 'N/A'}, OASIS=${inputData.oasis_environment_score || 'N/A'}`);
+    console.log(`[OVR] Gathered real data for ${input.name}: Fusion=${inputData.fusion_score || 'N/A'}, Ratings=${inputData.ratings_engine_score || 'N/A'}, Compass=${inputData.compass_score || 'N/A'}, TRACKSTAR=${inputData.oasis_environment_score || 'N/A'}`);
     
     return inputData;
   }
@@ -554,7 +554,7 @@ export class OVRService {
       confidence.compass = config.confidence_parameters.compass.full_data_threshold;
     }
     
-    // OASIS confidence (based on data freshness)
+    // TRACKSTAR confidence (based on data freshness)
     if (inputData.oasis_environment_score !== undefined) {
       const freshHours = config.confidence_parameters.oasis_environment.freshness_hours;
       const now = Date.now();

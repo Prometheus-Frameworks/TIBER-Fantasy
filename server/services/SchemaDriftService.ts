@@ -34,7 +34,7 @@ export interface MigrationRecord {
  * applying migrations automatically based on environment configuration.
  */
 export class SchemaDriftService {
-  private readonly AUTO_MIGRATE_ENV = 'OTC_AUTO_MIGRATE';
+  private readonly AUTO_MIGRATE_ENV = 'TIBER_AUTO_MIGRATE';
   private readonly ENVIRONMENT = process.env.NODE_ENV || 'development';
   
   /**

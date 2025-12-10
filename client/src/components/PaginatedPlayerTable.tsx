@@ -57,7 +57,7 @@ export default function PaginatedPlayerTable() {
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Fantasy Player Database</h1>
         <p className="text-muted-foreground">
-          Unified player rankings with Player Compass scores, OTC Consensus, and Qwen analysis
+          Unified player rankings with Player Compass scores, TIBER Consensus, and Qwen analysis
         </p>
       </div>
       

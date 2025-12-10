@@ -76,7 +76,7 @@ export class SleeperAdpProvider implements Provider {
   constructor(private season: number, private type: "redraft"|"dynasty" = "redraft") {}
   async load(opts: { pos: Pos }): Promise<ConsensusRow[]> {
     const url = `https://api.sleeper.app/v1/adp/nfl/ppr?season=${this.season}&type=${this.type}`;
-    const res = await fetch(url, { headers: { "User-Agent": "OTC-Consensus/1.0" } });
+    const res = await fetch(url, { headers: { "User-Agent": "TIBER-Consensus/1.0" } });
     if (!res.ok) return [];
     const data = await res.json();
     // data is array with player_id, player_name, pos, team, adp

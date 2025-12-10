@@ -145,9 +145,9 @@ interface IntelEntry {
 }
 ```
 
-### OASIS Routes
+### TRACKSTAR Routes
 ```typescript
-interface OASISTeam {
+interface TRACKSTARTeam {
   team: string;
   oasis_score: number;
   pass_rate: number;
@@ -155,7 +155,7 @@ interface OASISTeam {
   red_zone_efficiency: number;
 }
 
-interface OASISOffense {
+interface TRACKSTAROffense {
   team: string;
   passing_epa: number;
   rushing_epa: number;
@@ -190,7 +190,7 @@ interface OASISOffense {
 
 ### ❌ PARTIALLY WORKING
 - `/api/usage-leaders` - WR filtering logic needs adjustment
-- `/api/oasis/teams` - Requires OASIS_R_BASE environment variable
+- `/api/oasis/teams` - Requires TRACKSTAR_R_BASE environment variable
 
 ### 🔧 TECHNICAL FIXES IMPLEMENTED
 1. Fixed `loadWRData()` function references → `wrRatingsService.getAllWRPlayers()`
@@ -206,5 +206,5 @@ interface OASISOffense {
 - **Rookie Data**: Static JS objects and Python evaluation scripts
 - **VORP**: Calculated from player projections and age penalties
 - **Intelligence**: JSON file (`data/preseason_week1_intel.json`) - preseason observations
-- **OASIS**: External R API proxy with ETag caching
+- **TRACKSTAR**: External R API proxy with ETag caching
 - **Compass**: Calculated scores based on position-specific algorithms

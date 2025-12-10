@@ -44,19 +44,19 @@ export function parseConsensusCommand(input: string): {
       command: null,
       error: {
         success: false,
-        message: "❌ Error: Command must start with 'OTC consensus'. Format: OTC consensus <POSITION><RANK> : <PLAYER NAME>",
+        message: "❌ Error: Command must start with 'TIBER consensus'. Format: TIBER consensus <POSITION><RANK> : <PLAYER NAME>",
         errorType: "INVALID_FORMAT"
       }
     };
   }
   
-  // Pattern: "OTC consensus <POSITION><RANK> : <PLAYER NAME>"
-  const pattern = /^OTC\s+consensus\s+(QB|RB|WR|TE)(\d+)\s*:\s*(.+)$/i;
+  // Pattern: "TIBER consensus <POSITION><RANK> : <PLAYER NAME>"
+  const pattern = /^TIBER\s+consensus\s+(QB|RB|WR|TE)(\d+)\s*:\s*(.+)$/i;
   const match = trimmed.match(pattern);
   
   if (!match) {
     // Check for missing position
-    const noPositionPattern = /^OTC\s+consensus\s*(\d+)?\s*:\s*(.+)$/i;
+    const noPositionPattern = /^TIBER\s+consensus\s*(\d+)?\s*:\s*(.+)$/i;
     if (noPositionPattern.test(trimmed)) {
       return {
         command: null,
@@ -72,7 +72,7 @@ export function parseConsensusCommand(input: string): {
       command: null,
       error: {
         success: false,
-        message: "❌ Error: Invalid command format. Use: OTC consensus <POSITION><RANK> : <PLAYER NAME>",
+        message: "❌ Error: Invalid command format. Use: TIBER consensus <POSITION><RANK> : <PLAYER NAME>",
         errorType: "INVALID_FORMAT"
       }
     };

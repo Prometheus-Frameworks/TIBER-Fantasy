@@ -1,4 +1,4 @@
-// ragRoutes.ts — RAG-for-OTC (Node inline) | v0.3
+// ragRoutes.ts — RAG-for-TIBER (Node inline) | v0.3
 // Plug this router into your existing Express app.
 // Env (optional):
 //   RAG_DB=rag_news.db
@@ -182,7 +182,7 @@ async function fetchNflRss() {
 async function fetchNflFallback() {
   try {
     const response = await fetch(NFL_NEWS_FALLBACK, { 
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; OTC-RAG/1.0)' }
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TIBER-RAG/1.0)' }
     });
     const html = await response.text();
     const $ = cheerio.load(html);
@@ -210,7 +210,7 @@ async function fetchNflFallback() {
 async function fetchArticleBody(url: string) {
   try {
     const res = await fetch(url, { 
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; OTC-RAG/1.0)' }
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TIBER-RAG/1.0)' }
     });
     const html = await res.text();
     const $ = cheerio.load(html);

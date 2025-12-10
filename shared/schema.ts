@@ -1359,7 +1359,7 @@ export const gameLogsRelations = relations(gameLogs, ({ one }) => ({
   }),
 }));
 
-// OTC Consensus Engine v1.1 Tables
+// TIBER Consensus Engine v1.1 Tables
 export const userProfiles = pgTable("user_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: varchar("username").notNull().unique(),
@@ -1443,13 +1443,13 @@ export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
 export type InsertUserRank = z.infer<typeof insertUserRankSchema>;
 export type InsertFireEvent = z.infer<typeof insertFireEventSchema>;
 
-// OTC Consensus Command Router v1 types
+// TIBER Consensus Command Router v1 types
 export type ConsensusRank = typeof consensusRanks.$inferSelect;
 export type InsertConsensusRank = typeof consensusRanks.$inferInsert;
 export type ConsensusAudit = typeof consensusAudit.$inferSelect;
 export type InsertConsensusAudit = typeof consensusAudit.$inferInsert;
 
-// OTC Consensus Command Router v1 - dedicated consensus ranking system
+// TIBER Consensus Command Router v1 - dedicated consensus ranking system
 export const consensusRanks = pgTable("consensus_ranks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   season: integer("season").notNull().default(2025),

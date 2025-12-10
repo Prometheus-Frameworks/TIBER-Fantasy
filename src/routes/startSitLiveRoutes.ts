@@ -217,7 +217,7 @@ router.post('/live', async (req: Request, res: Response) => {
     return res.status(400).json({
       error: "bad_input_or_internal",
       detail: String(err?.message || err),
-      hint: "Check that playerA/playerB include position and team (for OASIS/vegas), and that numbers are valid."
+      hint: "Check that playerA/playerB include position and team (for TRACKSTAR/vegas), and that numbers are valid."
     });
   }
 });

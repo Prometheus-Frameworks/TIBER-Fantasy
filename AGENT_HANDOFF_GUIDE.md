@@ -3,7 +3,7 @@
 ## 🎯 Quick Context Transfer
 
 ### Project Identity
-**On The Clock (OTC)** - Open-source fantasy football platform focused on dynasty leagues, built with React/TypeScript + Node.js/Express backend. Mission: democratize advanced analytics without paywalls.
+**On The Clock (TIBER)** - Open-source fantasy football platform focused on dynasty leagues, built with React/TypeScript + Node.js/Express backend. Mission: democratize advanced analytics without paywalls.
 
 ### Core Architecture Overview
 ```
@@ -49,7 +49,7 @@ APIs: Sleeper (free), MySportsFeeds, SportsDataIO
 
 ### Major Systems (Operational)
 1. **Player Compass** - 4-directional player evaluation system
-2. **OTC Consensus** - Dynamic rankings with surge detection  
+2. **TIBER Consensus** - Dynamic rankings with surge detection  
 3. **Hot List** - Live player extraction with 4 buckets (Risers, Elite, Surge, Value)
 4. **Redraft Hub** - 7-tab interface with live NFL data
 5. **VORP Rankings** - Value Over Replacement Player calculations
@@ -111,7 +111,7 @@ GET /api/players/hot-list?bucket=risers&limit=10
 # Player pool
 GET /api/player-pool?pos=WR&limit=20
 
-# OTC Consensus
+# TIBER Consensus
 GET /api/consensus
 ```
 

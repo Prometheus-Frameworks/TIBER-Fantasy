@@ -1,7 +1,7 @@
-// Enhanced Player Compass Service - Dynasty vs Redraft Separation with OASIS Integration
+// Enhanced Player Compass Service - Dynasty vs Redraft Separation with TRACKSTAR Integration
 // Tiber's in-house ratings engine with format-specific evaluations and team environment data
 //
-// TODO: Replace OASIS with internal FORGE SoS module
+// TODO: Replace TRACKSTAR with internal FORGE SoS module
 // See: docs/oasis_audit.md for migration plan
 // Target: Replace oasisEnvironmentService with forgeEnvironmentService
 
@@ -158,7 +158,7 @@ export class PlayerCompassService {
     if (rawStats?.yardsPerTarget > 12) north += 1.0; // Efficiency bonus
     if (draftCapital && draftCapital <= 32) north += 1.5; // First round talent
 
-    // EAST: Environment (team context, QB, scheme fit) - ENHANCED WITH OASIS
+    // EAST: Environment (team context, QB, scheme fit) - ENHANCED WITH TRACKSTAR
     let east = 5.0;
     
     // Legacy context tags
@@ -168,7 +168,7 @@ export class PlayerCompassService {
       if (tag.includes('crowded') || tag.includes('committee')) east -= 1.0;
     });
 
-    // OASIS Integration for WR/TE: PROE + QB stability + scoring environment
+    // TRACKSTAR Integration for WR/TE: PROE + QB stability + scoring environment
     if (team) {
       const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
       if (teamEnv) {
@@ -302,7 +302,7 @@ export class PlayerCompassService {
     }
     if (rawStats?.yardsAfterContact > 3.5) north += 1.0;
 
-    // EAST: Environment - ENHANCED WITH OASIS
+    // EAST: Environment - ENHANCED WITH TRACKSTAR
     let east = 5.0;
     
     // Legacy context tags
@@ -311,7 +311,7 @@ export class PlayerCompassService {
       if (tag.includes('committee')) east -= 1.5;
     });
 
-    // OASIS Integration for RB: OL grade + red zone efficiency + pace
+    // TRACKSTAR Integration for RB: OL grade + red zone efficiency + pace
     if (team) {
       const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
       if (teamEnv) {
@@ -413,7 +413,7 @@ export class PlayerCompassService {
     let south = 5.0;
     let west = 5.0;
 
-    // OASIS Integration for TE (similar to WR): PROE + QB stability + scoring environment
+    // TRACKSTAR Integration for TE (similar to WR): PROE + QB stability + scoring environment
     if (team) {
       const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
       if (teamEnv) {
@@ -437,7 +437,7 @@ export class PlayerCompassService {
     let south = 5.0;
     let west = 5.0;
 
-    // OASIS Integration for TE
+    // TRACKSTAR Integration for TE
     if (team) {
       const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
       if (teamEnv) {
@@ -462,7 +462,7 @@ export class PlayerCompassService {
     let south = 5.0;
     let west = 5.0;
 
-    // OASIS Integration for QB: QB stability + pace + PROE (scaled 1.2x)
+    // TRACKSTAR Integration for QB: QB stability + pace + PROE (scaled 1.2x)
     if (team) {
       const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
       if (teamEnv) {
@@ -487,7 +487,7 @@ export class PlayerCompassService {
     let south = 5.0;
     let west = 5.0;
 
-    // OASIS Integration for QB
+    // TRACKSTAR Integration for QB
     if (team) {
       const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
       if (teamEnv) {

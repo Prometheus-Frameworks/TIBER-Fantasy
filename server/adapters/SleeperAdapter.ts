@@ -126,7 +126,7 @@ export class SleeperAdapter {
       const response = await fetch(`${this.BASE_URL}/players/nfl`, {
         signal: controller.signal,
         headers: {
-          'User-Agent': 'OTC-Fantasy-Hub/1.0',
+          'User-Agent': 'TIBER-Fantasy-Hub/1.0',
           'Accept': 'application/json'
         }
       });
@@ -265,7 +265,7 @@ export class SleeperAdapter {
       const response = await fetch(`${this.BASE_URL}/players/nfl/trending/add`, {
         signal: addController.signal,
         headers: {
-          'User-Agent': 'OTC-Fantasy-Hub/1.0',
+          'User-Agent': 'TIBER-Fantasy-Hub/1.0',
           'Accept': 'application/json'
         }
       });
@@ -285,7 +285,7 @@ export class SleeperAdapter {
       const dropResponse = await fetch(`${this.BASE_URL}/players/nfl/trending/drop`, {
         signal: dropController.signal,
         headers: {
-          'User-Agent': 'OTC-Fantasy-Hub/1.0',
+          'User-Agent': 'TIBER-Fantasy-Hub/1.0',
           'Accept': 'application/json'
         }
       });

@@ -23,7 +23,7 @@ What to fix (now)
 card.ovr = Math.max(1, Math.min(99, Math.round(performance_score)));
 
 
-	4.	Delete the overlays (for now). Don’t compute or display Fusion/OASIS/Composite. They’re just muddying the water.
+	4.	Delete the overlays (for now). Don’t compute or display Fusion/TRACKSTAR/Composite. They’re just muddying the water.
 
 ⸻
 
@@ -36,7 +36,7 @@ Guardrails (so this never fools you again)
 
 TL;DR on your Nico card
 	•	It used fake/placeholder stats (2-35 on 4 targets).
-	•	It still let Fusion/OASIS touch the headline.
+	•	It still let Fusion/TRACKSTAR touch the headline.
 	•	It still mapped OVR from a different scale.
 
 Rip out the overlays, wire OVR directly to the Sleeper-derived performance_score, and fail if inputs don’t match a WR5 profile. After that, Nico’s week will land in the 80–90 range like it should.
