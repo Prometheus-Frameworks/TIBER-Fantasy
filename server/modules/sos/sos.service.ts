@@ -1,7 +1,7 @@
 import { db } from '../../infra/db';
 import { defenseVP, schedule, defenseContext, teamOffensiveContext, teamDefensiveContext, teamReceiverAlignmentMatchups, teamCoverageMatchups } from '@shared/schema';
 import { eq, and, lte, between, gte } from 'drizzle-orm';
-import { oasisSosService } from './oasisSosService';
+import { contextSosService } from './contextSosService';
 
 export type Position = 'RB'|'WR'|'QB'|'TE';
 
@@ -256,7 +256,7 @@ export async function computeWeeklySOS(position: Position, week: number, season 
   // For 2025 early season, use TRACKSTAR projections when historical data isn't available
   if (season === 2025 && week <= 3) {
     console.info(`[SOS] Using TRACKSTAR projections for ${season} Week ${week}`);
-    return await oasisSosService.generateOasisWeeklySOS(position, week, season);
+    return await contextSosService.generateContextWeeklySOS(position, week, season);
   }
 
   const games = await getWeekGames(season, week);
@@ -334,7 +334,7 @@ export async function computeROSSOS(position: Position, startWeek = 1, window = 
   // For 2025 early season, use TRACKSTAR projections
   if (season === 2025 && startWeek <= 3) {
     console.info(`[SOS] Using TRACKSTAR ROS projections for ${season} starting Week ${startWeek}`);
-    return await oasisSosService.generateOasisROSSOS(position, startWeek, window, season);
+    return await contextSosService.generateContextROSSOS(position, startWeek, window, season);
   }
 
   const weeks = Array.from({length: window}, (_,i) => startWeek + i);
@@ -575,7 +575,7 @@ export async function computeWeeklySOSv2(
   // For 2025 early season, use TRACKSTAR projections when historical data isn't available
   if (season === 2025 && week <= 3) {
     console.info(`[SOS] Using TRACKSTAR projections for ${season} Week ${week} (v2)`);
-    return await oasisSosService.generateOasisWeeklySOS(position, week, season);
+    return await contextSosService.generateContextWeeklySOS(position, week, season);
   }
 
   // Normalize weights to ensure they sum to 1.0

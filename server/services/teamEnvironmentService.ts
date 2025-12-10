@@ -8,7 +8,7 @@
  * Target: Migrate to forgeEnvironmentService using forge_team_env_context table
  */
 
-interface OasisRawData {
+interface TeamEnvironmentRawData {
   team: string;
   environment_score: number;
   pace: number;
@@ -59,7 +59,7 @@ interface LeagueStats {
   scoring_environment: { mean: number; std: number; };
 }
 
-export class OasisEnvironmentService {
+export class TeamEnvironmentService {
   private cache = new Map<string, TeamEnvironment>();
   private leagueStats: LeagueStats | null = null;
   private lastRefresh: Date | null = null;
@@ -134,16 +134,16 @@ export class OasisEnvironmentService {
     
     this.refreshInProgress = true;
     try {
-      console.log('🔄 [OasisEnvironment] Refreshing team environment data...');
+      console.log('🔄 [TeamEnvironment] Refreshing team environment data...');
       
       // Fetch current season/week data from TRACKSTAR API using production-ready config
       const { internalFetch } = await import('../utils/apiConfig');
       
-      const data = await internalFetch('/api/oasis/environment?season=2025&week=2', {
+      const data = await internalFetch('/api/environment/environment?season=2025&week=2', {
         timeout: 12000,  // 12 second timeout for TRACKSTAR environment data
         retries: 2       // Retry for environment data calls
       });
-      const teams: OasisRawData[] = data.teams;
+      const teams: TeamEnvironmentRawData[] = data.teams;
       
       // Calculate league statistics
       this.leagueStats = this.calculateLeagueStats(teams);
@@ -158,10 +158,10 @@ export class OasisEnvironmentService {
       });
       
       this.lastRefresh = new Date();
-      console.log(`✅ [OasisEnvironment] Refreshed ${normalizedTeams.length} teams`);
+      console.log(`✅ [TeamEnvironment] Refreshed ${normalizedTeams.length} teams`);
       
     } catch (error) {
-      console.error('❌ [OasisEnvironment] Refresh failed:', error);
+      console.error('❌ [TeamEnvironment] Refresh failed:', error);
       // Keep existing cache on error
     } finally {
       this.refreshInProgress = false;
@@ -171,7 +171,7 @@ export class OasisEnvironmentService {
   /**
    * Calculate league-wide statistics for normalization
    */
-  private calculateLeagueStats(teams: OasisRawData[]): LeagueStats {
+  private calculateLeagueStats(teams: TeamEnvironmentRawData[]): LeagueStats {
     const metrics = ['environment_score', 'pace', 'proe', 'ol_grade', 'qb_stability', 'red_zone_efficiency', 'scoring_environment'] as const;
     const stats: any = {};
     
@@ -190,7 +190,7 @@ export class OasisEnvironmentService {
   /**
    * Normalize team data with percentiles and z-scores
    */
-  private normalizeTeam(team: OasisRawData, leagueStats: LeagueStats): TeamEnvironment {
+  private normalizeTeam(team: TeamEnvironmentRawData, leagueStats: LeagueStats): TeamEnvironment {
     // Calculate percentiles (simplified using z-score to percentile approximation)
     const toPercentile = (value: number, mean: number, std: number): number => {
       const z = (value - mean) / (std || 1);
@@ -270,7 +270,7 @@ export class OasisEnvironmentService {
    */
   private startCronRefresh(): void {
     setInterval(() => {
-      console.log('⏰ [OasisEnvironment] Hourly refresh triggered');
+      console.log('⏰ [TeamEnvironment] Hourly refresh triggered');
       this.refreshData();
     }, 60 * 60 * 1000); // 1 hour
   }
@@ -299,4 +299,4 @@ export class OasisEnvironmentService {
 }
 
 // Singleton instance
-export const oasisEnvironmentService = new OasisEnvironmentService();
+export const teamEnvironmentService = new TeamEnvironmentService();

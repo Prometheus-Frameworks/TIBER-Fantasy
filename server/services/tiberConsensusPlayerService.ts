@@ -83,7 +83,7 @@ export class TIBERConsensusPlayerService {
     return {
       data: paginatedPlayers,
       meta: {
-        source: "otc_consensus_service",
+        source: "tiber_consensus_service",
         version: "1.0",
         ts: new Date().toISOString(),
         total: filteredPlayers.length,
@@ -100,4 +100,4 @@ export class TIBERConsensusPlayerService {
   }
 }
 
-export const otcConsensusPlayerService = new TIBERConsensusPlayerService();
+export const tiberConsensusPlayerService = new TIBERConsensusPlayerService();

@@ -13,7 +13,7 @@ import { xfpRepository } from './xfpRepository';
 import { predictXfp, type Row as XfpRow, type Coeffs } from './xfpTrainer';
 import { RiskEngine } from './riskEngine';
 import { MarketEngine } from './marketEngine';
-import { oasisEnvironmentService } from './oasisEnvironmentService';
+import { teamEnvironmentService } from './teamEnvironmentService';
 
 // Load fusion configuration
 const configPath = path.join(process.cwd(), 'config', 'compass.v3.2.json');
@@ -165,7 +165,7 @@ export class RankingsFusionService {
     const weights = config.quadrants.east;
     
     // Get TRACKSTAR team environment data
-    const teamEnv = player.team ? await oasisEnvironmentService.getTeamEnvironment(player.team) : null;
+    const teamEnv = player.team ? await teamEnvironmentService.getTeamEnvironment(player.team) : null;
     
     // Blend TRACKSTAR with existing metrics (60% TRACKSTAR, 40% existing if both present)
     const blendedProe = this.blendMetrics(
@@ -469,7 +469,7 @@ export class RankingsFusionService {
   private async applyEnvironmentAdjustment(score: number, player: FusionPlayer, mode: Mode): Promise<number> {
     if (!player.team) return score;
     
-    const teamEnv = await oasisEnvironmentService.getTeamEnvironment(player.team);
+    const teamEnv = await teamEnvironmentService.getTeamEnvironment(player.team);
     if (!teamEnv) return score;
     
     // Environment adjustment: clamp(3 * (environment_score_pct-50)/50, -3, +3)

@@ -4,13 +4,13 @@ import {
   LivePlayerContext, StartSitLiveQuery, NFLTeam, VolatilityMeta,
   StartSitInputsWithProvenance, StartSitProvenanceData, ProviderPayloads
 } from "../interfaces";
-import { 
-  fetchSleeperUsage, 
+import {
+  fetchSleeperUsage,
   fetchSleeperProjection,
   SleeperUsageWithProvenance,
   SleeperProjectionWithProvenance
 } from "../providers/sleeper";
-import { fetchOasisMatchup, OasisMatchupWithProvenance } from "../providers/oasis";
+import { fetchEnvironmentMatchup, EnvironmentMatchupWithProvenance } from "../providers/context";
 import { fetchVegasLine, VegasTeamLineWithProvenance } from "../providers/vegas";
 import { fetchNewsSignal, NewsSignalWithProvenance } from "../providers/news";
 import { calcWeightedTouches } from "../normalizers/usage";
@@ -23,7 +23,7 @@ async function buildLiveContext(player: { id: string; position: PlayerInput["pos
   const [usage, proj, oasis, vegas, news] = await Promise.all([
     fetchSleeperUsage(player.id, week),
     fetchSleeperProjection(player.id, week),
-    fetchOasisMatchup(player.team as NFLTeam, player.position),
+    fetchEnvironmentMatchup(player.team as NFLTeam, player.position),
     player.team ? fetchVegasLine(player.team) : Promise.resolve({} as any),
     fetchNewsSignal(player.id),
   ]);
@@ -116,7 +116,7 @@ async function buildInputsWithProvenance(
   const [usage, projections, oasis, vegas, news] = await Promise.all([
     fetchSleeperUsage(player.id, week),
     fetchSleeperProjection(player.id, week),
-    fetchOasisMatchup(player.team as NFLTeam, player.position),
+    fetchEnvironmentMatchup(player.team as NFLTeam, player.position),
     player.team ? fetchVegasLine(player.team) : Promise.resolve({
       team: (player.team || "JAX") as NFLTeam,
       opponent: "JAX" as NFLTeam,

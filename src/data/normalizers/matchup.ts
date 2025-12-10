@@ -1,7 +1,7 @@
 // src/data/normalizers/matchup.ts
-import { OasisMatchup, VegasTeamLine } from "../interfaces";
+import { EnvironmentMatchup, VegasTeamLine } from "../interfaces";
 
-export function mergeMatchup(oasis: OasisMatchup, vegas: Partial<VegasTeamLine>) {
+export function mergeMatchup(oasis: EnvironmentMatchup, vegas: Partial<VegasTeamLine>) {
   return {
     defRankVsPos: oasis?.defRankVsPos ?? 16,
     oasisMatchupScore: oasis?.oasisMatchupScore ?? 50,

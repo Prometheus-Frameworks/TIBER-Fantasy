@@ -7,7 +7,7 @@
  */
 
 export interface TRACKSTARTeamContext {
-  oasisTags: string[];
+  contextTags: string[];
   offensiveScheme?: string;
   tempo?: 'High' | 'Medium' | 'Low';
   redZoneUsage?: string;
@@ -67,7 +67,7 @@ export class TRACKSTARContextualTeamMappingService {
       return this.createResult(player, contextAdjustments, appliedTags, logs);
     }
 
-    const tags = Array.isArray(teamContext.oasisTags) ? teamContext.oasisTags : [];
+    const tags = Array.isArray(teamContext.contextTags) ? teamContext.contextTags : [];
     logs.push(`Evaluating ${player.playerName} (${player.position}) with ${tags.length} TRACKSTAR tags`);
 
     // WR Context Logic
@@ -140,7 +140,7 @@ export class TRACKSTARContextualTeamMappingService {
       triggerScope: ["dynastyValuation", "playerProfile", "teamContext"],
       inputValidation: {
         requiredFields: ["player.team", "player.position"],
-        optionalFields: ["team.oasisTags"]
+        optionalFields: ["team.contextTags"]
       },
       contextMappings: {
         WR: "High Tempo Pass Offense → +0.05 dynasty value",
@@ -167,7 +167,7 @@ export class TRACKSTARContextualTeamMappingService {
           dynastyValue: 75
         },
         teamContext: {
-          oasisTags: ['High Tempo Pass Offense']
+          contextTags: ['High Tempo Pass Offense']
         }
       },
       // RB Test Case
@@ -181,7 +181,7 @@ export class TRACKSTARContextualTeamMappingService {
           projectedYPC: 4.2
         },
         teamContext: {
-          oasisTags: ['Outside Zone Run']
+          contextTags: ['Outside Zone Run']
         }
       },
       // TE Test Case
@@ -195,7 +195,7 @@ export class TRACKSTARContextualTeamMappingService {
           touchdownCeiling: 6
         },
         teamContext: {
-          oasisTags: ['Condensed Red Zone Usage']
+          contextTags: ['Condensed Red Zone Usage']
         }
       },
       // QB Test Case
@@ -209,7 +209,7 @@ export class TRACKSTARContextualTeamMappingService {
           rushingScoreWeight: 0.2
         },
         teamContext: {
-          oasisTags: ['Designed QB Run Concepts']
+          contextTags: ['Designed QB Run Concepts']
         }
       }
     ];
@@ -243,4 +243,4 @@ export class TRACKSTARContextualTeamMappingService {
   }
 }
 
-export const oasisContextualTeamMappingService = new TRACKSTARContextualTeamMappingService();
+export const teamContextMappingService = new TRACKSTARContextualTeamMappingService();

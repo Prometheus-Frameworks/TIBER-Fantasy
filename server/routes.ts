@@ -3072,9 +3072,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Ratings router mounted at /api/ratings above
 
   // TRACKSTAR Routes - Baseline data (Phase 1 cleanup: removed dead R server/otc-power imports)
-  const oasisCache = new Map();
+  const environmentCache = new Map();
   const TRACKSTAR_TTL_MS = 5 * 60 * 1000; // 5 minutes
-  
+
   // Baseline environment scores
   const BASELINE_ENV_SCORES: Record<string, number> = {
     'BUF': 95, 'KC': 94, 'SF': 93, 'MIA': 92, 'DAL': 91, 'BAL': 90,
@@ -3084,7 +3084,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     'WAS': 70, 'CHI': 68, 'DEN': 67, 'TEN': 66, 'LV': 65, 'NE': 64,
     'CAR': 63, 'NYG': 62
   };
-  
+
   // Baseline pace data (plays per game)
   const BASELINE_PACE: Record<string, number> = {
     'MIA': 72.5, 'BUF': 69.8, 'NO': 68.9, 'PHI': 68.2, 'BAL': 67.1,
@@ -3096,18 +3096,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     'CAR': 59.5, 'NYG': 59.2
   };
 
-  // TRACKSTAR Environment/Team data endpoint
-  app.get('/api/oasis/environment', async (req, res) => {
-    const { season = 2025, week = 2 } = req.query;
+  const handleEnvironment = async (req: Request, res: Response) => {
+    const { season = 2025, week = 2 } = req.query as Record<string, any>;
     const cacheKey = `environment_${season}_${week}`;
     const now = Date.now();
-    const hit = oasisCache.get(cacheKey);
-    
+    const hit = environmentCache.get(cacheKey);
+
     if (hit && (now - hit.ts) < TRACKSTAR_TTL_MS) {
       return res.json(hit.data);
     }
 
-    // Use inline baseline environment scores
     const teams = Object.entries(BASELINE_ENV_SCORES).map(([team, envScore]) => ({
       team,
       environment_score: envScore,
@@ -3120,62 +3118,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }));
 
     const result = { teams };
-    oasisCache.set(cacheKey, { ts: now, data: result });
-    
+    environmentCache.set(cacheKey, { ts: now, data: result });
+
     console.log(`✅ [TRACKSTAR] Served environment data for ${teams.length} teams (Season ${season}, Week ${week}) - Using baseline`);
     return res.json(result);
-  });
+  };
 
-  // TRACKSTAR Pace data endpoint
-  app.get('/api/oasis/pace', async (req, res) => {
-    const { season = 2025, week = 2 } = req.query;
+  const handlePace = async (req: Request, res: Response) => {
+    const { season = 2025, week = 2 } = req.query as Record<string, any>;
     const cacheKey = `pace_${season}_${week}`;
     const now = Date.now();
-    const hit = oasisCache.get(cacheKey);
-    
+    const hit = environmentCache.get(cacheKey);
+
     if (hit && (now - hit.ts) < TRACKSTAR_TTL_MS) {
       return res.json(hit.data);
     }
 
-    // Use inline baseline pace data
     const result = Object.entries(BASELINE_PACE).map(([team, pace]) => ({
       team,
       pace
     }));
 
-    oasisCache.set(cacheKey, { ts: now, data: result });
+    environmentCache.set(cacheKey, { ts: now, data: result });
     console.log(`✅ [TRACKSTAR] Served pace data for ${result.length} teams`);
     return res.json(result);
-  });
+  };
 
-  // TRACKSTAR Teams endpoint (main endpoint)
-  app.get('/api/oasis/teams', async (req, res) => {
-    const { season = 2025 } = req.query;
+  const handleTeams = async (req: Request, res: Response) => {
+    const { season = 2025 } = req.query as Record<string, any>;
     const cacheKey = `teams_${season}`;
     const now = Date.now();
-    const hit = oasisCache.get(cacheKey);
-    
+    const hit = environmentCache.get(cacheKey);
+
     if (hit && (now - hit.ts) < TRACKSTAR_TTL_MS) {
       return res.json(hit.data);
     }
 
     try {
-      // Generate TRACKSTAR-style team data using your existing data sources
       const teams = [
         'BUF', 'KC', 'SF', 'MIA', 'DAL', 'BAL', 'PHI', 'DET', 'CIN', 'LAC',
         'MIN', 'HOU', 'TB', 'ATL', 'LAR', 'GB', 'SEA', 'IND', 'JAX', 'NO',
         'ARI', 'NYJ', 'PIT', 'CLE', 'WAS', 'CHI', 'DEN', 'TEN', 'LV', 'NE', 'CAR', 'NYG'
       ];
-      
+
       const teamData = teams.map(teamId => ({
         teamId,
-        teamName: teamId, // You can enhance this with full team names
+        teamName: teamId,
         offensiveArchitecture: {
-          epa_per_play: Math.random() * 0.3 - 0.1, // Range: -0.1 to 0.2 (realistic EPA)
-          success_rate: 0.35 + Math.random() * 0.25, // Range: 35% to 60%
-          explosive_play_rate: 0.05 + Math.random() * 0.10, // Range: 5% to 15%
-          red_zone_efficiency: Math.random() * 0.4 - 0.2, // Range: -0.2 to 0.2
-          third_down_efficiency: Math.random() * 0.3 - 0.1 // Range: -0.1 to 0.2
+          epa_per_play: Math.random() * 0.3 - 0.1,
+          success_rate: 0.35 + Math.random() * 0.25,
+          explosive_play_rate: 0.05 + Math.random() * 0.10,
+          red_zone_efficiency: Math.random() * 0.4 - 0.2,
+          third_down_efficiency: Math.random() * 0.3 - 0.1
         },
         schemeMetrics: {
           tempo: Math.random() > 0.66 ? 'High' : Math.random() > 0.33 ? 'Medium' : 'Low',
@@ -3185,65 +3179,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         playerContext: []
       }));
-      
-      oasisCache.set(cacheKey, { ts: now, data: teamData });
-      
+
+      environmentCache.set(cacheKey, { ts: now, data: teamData });
+
       console.log(`✅ [TRACKSTAR] Served team data for ${teamData.length} teams (Season ${season}) - Using integrated data sources`);
       return res.json(teamData);
-      
+
     } catch (error) {
       console.error('❌ [TRACKSTAR] Teams data error:', error);
       return res.status(500).json({
-        error: "TRACKSTAR teams data unavailable", 
+        error: "TRACKSTAR teams data unavailable",
         detail: String(error)
       });
     }
-  });
+  };
 
-  // Fallback for any other TRACKSTAR endpoints
-  app.get('/api/oasis/*', async (req, res) => {
+  const handleMatchup = async (_req: Request, res: Response) => {
+    return res.json({
+      defRankVsPos: 16,
+      oasisMatchupScore: 50,
+      olHealthIndex: 75,
+      __source: 'environment_stub',
+      __mock: true
+    });
+  };
+
+  const handleDiscovery = (_req: Request, res: Response) => {
+    res.json({
+      endpoints: [
+        "/teams",
+        "/metrics/offense",
+        "/metrics/defense",
+        "/targets/distribution"
+      ]
+    });
+  };
+
+  const handleDebug = async (req: Request, res: Response) => {
+    const list = ["/teams", "/metrics/offense", "/targets/distribution"];
+    const out: Record<string, any> = {};
+    const prefix = req.path.includes('/api/oasis') ? '/api/oasis' : '/api/environment';
+
+    for (const p of list) {
+      try {
+        const response = await fetch(`${req.protocol}://${req.get("host")}${prefix}${p}`);
+        const json = await response.json();
+        out[p] = {
+          ok: true,
+          count: Array.isArray(json) ? json.length : undefined,
+          keys: Array.isArray(json) && json[0] ? Object.keys(json[0]) : Object.keys(json || {})
+        };
+      } catch (error) {
+        out[p] = { ok: false, error: String(error) };
+      }
+    }
+    res.json(out);
+  };
+
+  const handleLegacyFallback = async (req: Request, res: Response) => {
     const pathParam = req.params && typeof req.params === 'object' ? (req.params as any)['0'] || '' : '';
-    
+
     return res.status(404).json({
       error: "TRACKSTAR endpoint not found",
       available_endpoints: ["/environment", "/pace", "/teams"],
       requested: pathParam,
       message: "Local R server TRACKSTAR system active"
     });
-  });
+  };
 
-  // TRACKSTAR endpoint discovery
-  app.get("/api/oasis/_index", (_req, res) => {
-    res.json({ 
-      endpoints: [
-        "/teams",
-        "/metrics/offense", 
-        "/metrics/defense",
-        "/targets/distribution"
-      ]
-    });
-  });
+  app.get('/api/environment/environment', handleEnvironment);
+  // DEPRECATED: legacy OASIS route, use /api/environment/... instead (TRACKSTAR)
+  app.get('/api/oasis/environment', handleEnvironment);
 
-  // TRACKSTAR debug endpoint - tests all available endpoints
-  app.get("/api/oasis/_debug", async (req, res) => {
-    const list = ["/teams", "/metrics/offense", "/targets/distribution"];
-    const out: Record<string, any> = {};
-    
-    for (const p of list) {
-      try {
-        const response = await fetch(`${req.protocol}://${req.get("host")}/api/oasis${p}`);
-        const json = await response.json();
-        out[p] = { 
-          ok: true, 
-          count: Array.isArray(json) ? json.length : undefined, 
-          keys: Array.isArray(json) && json[0] ? Object.keys(json[0]) : Object.keys(json || {}) 
-        };
-      } catch (error) { 
-        out[p] = { ok: false, error: String(error) }; 
-      }
-    }
-    res.json(out);
-  });
+  app.get('/api/environment/pace', handlePace);
+  app.get('/api/pace', handlePace);
+  // DEPRECATED: legacy OASIS route, use /api/environment/... instead (TRACKSTAR)
+  app.get('/api/oasis/pace', handlePace);
+
+  app.get('/api/environment/teams', handleTeams);
+  // DEPRECATED: legacy OASIS route, use /api/environment/... instead (TRACKSTAR)
+  app.get('/api/oasis/teams', handleTeams);
+
+  app.get('/api/environment/matchup', handleMatchup);
+  // DEPRECATED: legacy OASIS route, use /api/environment/... instead (TRACKSTAR)
+  app.get('/api/oasis/matchup', handleMatchup);
+
+  app.get('/api/environment/_index', handleDiscovery);
+  // DEPRECATED: legacy OASIS route, use /api/environment/... instead (TRACKSTAR)
+  app.get('/api/oasis/_index', handleDiscovery);
+
+  app.get('/api/environment/_debug', handleDebug);
+  // DEPRECATED: legacy OASIS route, use /api/environment/... instead (TRACKSTAR)
+  app.get('/api/oasis/_debug', handleDebug);
+
+  app.get('/api/environment/*', handleLegacyFallback);
+  // DEPRECATED: legacy OASIS route, use /api/environment/... instead (TRACKSTAR)
+  app.get('/api/oasis/*', handleLegacyFallback);
 
   // Sleeper ADP API for QB data
   app.get('/api/adp/qb', async (req: Request, res: Response) => {
@@ -3473,7 +3504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // 🏆 TIBER Consensus Service - Community rankings
   app.get('/api/consensus/players', async (req: Request, res: Response) => {
     try {
-      const { otcConsensusPlayerService } = await import("./services/otcConsensusPlayerService");
+      const { tiberConsensusPlayerService } = await import("./services/tiberConsensusPlayerService");
       
       const filters = {
         pos: req.query.pos as string,
@@ -3483,7 +3514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pageSize: req.query.pageSize ? parseInt(req.query.pageSize as string) : 10,
       };
 
-      const result = await otcConsensusPlayerService.getPlayers(filters);
+      const result = await tiberConsensusPlayerService.getPlayers(filters);
       res.json(result);
     } catch (error) {
       console.error('❌ TIBER Consensus API Error:', error);
@@ -4091,7 +4122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/consensus/:format', rateLimiters.heavyOperation, async (req: Request, res: Response) => {
     try {
-      const { otcConsensusService } = await import('./services/otcConsensusService');
+      const { tiberConsensusService } = await import('./services/tiberConsensusService');
       const format = req.params.format as 'dynasty' | 'redraft';
       const position = req.query.position as string;
       const limit = parseInt(req.query.limit as string) || 100;
@@ -4102,7 +4133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid format. Use dynasty or redraft' });
       }
       
-      const { rankings, metadata } = await otcConsensusService.getConsensusRankings(format, position);
+      const { rankings, metadata } = await tiberConsensusService.getConsensusRankings(format, position);
       
       res.json({
         success: true,
@@ -4116,7 +4147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           format_description: format === 'dynasty' 
             ? 'Community consensus on long-term dynasty value and outlook'
             : 'Community consensus on current season fantasy production',
-          tier_definitions: otcConsensusService.getTierDefinitions(format)
+          tier_definitions: tiberConsensusService.getTierDefinitions(format)
         }
       });
       
@@ -4128,10 +4159,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/consensus/splits/:playerId', async (req: Request, res: Response) => {
     try {
-      const { otcConsensusService } = await import('./services/otcConsensusService');
+      const { tiberConsensusService } = await import('./services/tiberConsensusService');
       const playerId = req.params.playerId;
       
-      const splits = await otcConsensusService.getConsensusSplits(playerId);
+      const splits = await tiberConsensusService.getConsensusSplits(playerId);
       
       res.json({
         success: true,
@@ -4148,14 +4179,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/consensus/vote', async (req: Request, res: Response) => {
     try {
-      const { otcConsensusService } = await import('./services/otcConsensusService');
+      const { tiberConsensusService } = await import('./services/tiberConsensusService');
       const { playerId, rank, format, userId } = req.body;
       
       if (!playerId || !rank || !format) {
         return res.status(400).json({ error: 'Missing required fields: playerId, rank, format' });
       }
       
-      const result = await otcConsensusService.submitVote(playerId, rank, format, userId);
+      const result = await tiberConsensusService.submitVote(playerId, rank, format, userId);
       
       res.json({
         success: result.success,
