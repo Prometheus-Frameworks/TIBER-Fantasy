@@ -10,7 +10,7 @@
 
 import { ForgeContext, PlayerPosition, WeekOrPreseason } from '../types';
 import { PlayerIdentityService } from '../../../services/PlayerIdentityService';
-import { OasisEnvironmentService } from '../../../services/oasisEnvironmentService';
+import { TeamEnvironmentService } from '../../../services/teamEnvironmentService';
 import { db } from '../../../infra/db';
 import { 
   gameLogs, 
@@ -36,7 +36,7 @@ import {
 } from '../../../services/datadiveContext';
 
 const playerIdentityService = PlayerIdentityService.getInstance();
-const oasisEnvironmentService = new OasisEnvironmentService();
+const teamEnvironmentService = new TeamEnvironmentService();
 
 /**
  * Fetch complete context for a player at a given point in the season
@@ -865,7 +865,7 @@ async function fetchTeamEnvironment(
   team: string
 ): Promise<ForgeContext['teamEnvironment']> {
   try {
-    const env = await oasisEnvironmentService.getTeamEnvironment(team);
+    const env = await teamEnvironmentService.getTeamEnvironment(team);
     
     if (env) {
       return {

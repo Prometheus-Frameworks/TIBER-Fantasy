@@ -3,9 +3,9 @@
 //
 // TODO: Replace TRACKSTAR with internal FORGE SoS module
 // See: docs/oasis_audit.md for migration plan
-// Target: Replace oasisEnvironmentService with forgeEnvironmentService
+// Target: Replace teamEnvironmentService with forgeEnvironmentService
 
-import { oasisEnvironmentService, type TeamEnvironment } from './oasisEnvironmentService';
+import { teamEnvironmentService, type TeamEnvironment } from './teamEnvironmentService';
 
 export interface CompassScore {
   score: number;
@@ -170,7 +170,7 @@ export class PlayerCompassService {
 
     // TRACKSTAR Integration for WR/TE: PROE + QB stability + scoring environment
     if (team) {
-      const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
+      const teamEnv = await teamEnvironmentService.getTeamEnvironment(team);
       if (teamEnv) {
         // WR benefits from: PROE (p90 = +1.2), QB stability (p90 = +1.0), scoring environment (p90 = +0.8)
         const proeBoost = this.calculatePercentileBoost(teamEnv.proe_pct, 1.2);
@@ -313,7 +313,7 @@ export class PlayerCompassService {
 
     // TRACKSTAR Integration for RB: OL grade + red zone efficiency + pace
     if (team) {
-      const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
+      const teamEnv = await teamEnvironmentService.getTeamEnvironment(team);
       if (teamEnv) {
         // RB benefits from: OL grade (p90 = +1.2), red zone efficiency (p90 = +0.8), pace (p90 = +0.5)
         const olBoost = this.calculatePercentileBoost(teamEnv.ol_grade_pct, 1.2);
@@ -415,7 +415,7 @@ export class PlayerCompassService {
 
     // TRACKSTAR Integration for TE (similar to WR): PROE + QB stability + scoring environment
     if (team) {
-      const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
+      const teamEnv = await teamEnvironmentService.getTeamEnvironment(team);
       if (teamEnv) {
         const proeBoost = this.calculatePercentileBoost(teamEnv.proe_pct, 1.2);
         const qbBoost = this.calculatePercentileBoost(teamEnv.qb_stability_pct, 1.0);
@@ -439,7 +439,7 @@ export class PlayerCompassService {
 
     // TRACKSTAR Integration for TE
     if (team) {
-      const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
+      const teamEnv = await teamEnvironmentService.getTeamEnvironment(team);
       if (teamEnv) {
         const proeBoost = this.calculatePercentileBoost(teamEnv.proe_pct, 1.2);
         const qbBoost = this.calculatePercentileBoost(teamEnv.qb_stability_pct, 1.0);
@@ -464,7 +464,7 @@ export class PlayerCompassService {
 
     // TRACKSTAR Integration for QB: QB stability + pace + PROE (scaled 1.2x)
     if (team) {
-      const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
+      const teamEnv = await teamEnvironmentService.getTeamEnvironment(team);
       if (teamEnv) {
         const qbBoost = this.calculatePercentileBoost(teamEnv.qb_stability_pct, 1.2);
         const paceBoost = this.calculatePercentileBoost(teamEnv.pace_pct, 1.0);
@@ -489,7 +489,7 @@ export class PlayerCompassService {
 
     // TRACKSTAR Integration for QB
     if (team) {
-      const teamEnv = await oasisEnvironmentService.getTeamEnvironment(team);
+      const teamEnv = await teamEnvironmentService.getTeamEnvironment(team);
       if (teamEnv) {
         const qbBoost = this.calculatePercentileBoost(teamEnv.qb_stability_pct, 1.2);
         const paceBoost = this.calculatePercentileBoost(teamEnv.pace_pct, 1.0);

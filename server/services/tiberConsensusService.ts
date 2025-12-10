@@ -130,4 +130,4 @@ export class TIBERConsensusService {
   }
 }
 
-export const otcConsensusService = new TIBERConsensusService();
+export const tiberConsensusService = new TIBERConsensusService();

@@ -15,7 +15,7 @@ import path from 'path';
 import { RankingsFusionService } from './rankingsFusionService';
 import { PlayerCompassService } from './playerCompassService';
 // REMOVED: ratingsEngineService (DEAD_ORPHAN) - ratings now handled by Role Bank
-import { oasisEnvironmentService } from './oasisEnvironmentService';
+import { teamEnvironmentService } from './teamEnvironmentService';
 import { scoreWeeklyOVR, type GameLogRow, type Position as SleeperPosition } from './sleeperOvrScorer';
 
 // Load OVR configuration
@@ -81,7 +81,7 @@ export class OVRService {
   private fusionService = new RankingsFusionService();
   private compassService = new PlayerCompassService();
   // REMOVED: ratingsEngine - ratings consolidated into Role Bank system
-  private oasisService = oasisEnvironmentService;
+  private environmentService = teamEnvironmentService;
   
   private cache = new Map<string, OVRResult>();
   private cacheTimestamp = new Map<string, number>();
@@ -455,7 +455,7 @@ export class OVRService {
     
     try {
       // Get TRACKSTAR environment score
-      const oasisData = await this.oasisService.getTeamEnvironment(input.team);
+      const oasisData = await this.environmentService.getTeamEnvironment(input.team);
       
       if (oasisData) {
         // Average key TRACKSTAR metrics using correct property names

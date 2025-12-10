@@ -20,9 +20,9 @@ export interface SleeperUsage {
   insideTenTouches?: number; // last 3 games rolling
 }
 
-export interface OasisMatchup {
+export interface EnvironmentMatchup {
   defRankVsPos?: number;     // 1..32 (1 hardest)
-  oasisMatchupScore?: number; // 0..100 (your R/TRACKSTAR output)
+  oasisMatchupScore?: number; // 0..100 (your environment/context output)
   olHealthIndex?: number;    // 0..100
 }
 
@@ -55,7 +55,7 @@ export interface LivePlayerContext {
   projCeiling?: number | null;
 
   usage: SleeperUsage;
-  matchup: OasisMatchup & Partial<VegasTeamLine>;
+  matchup: EnvironmentMatchup & Partial<VegasTeamLine>;
   volatility: VolatilityMeta;
   news: NewsSignal;
 }
@@ -80,14 +80,14 @@ export interface SleeperProjectionWithProvenance extends ProviderSource {
   floor?: number;
   ceiling?: number;
 }
-export interface OasisMatchupWithProvenance extends OasisMatchup, ProviderSource {}
+export interface EnvironmentMatchupWithProvenance extends EnvironmentMatchup, ProviderSource {}
 export interface VegasTeamLineWithProvenance extends VegasTeamLine, ProviderSource {}
 export interface NewsSignalWithProvenance extends NewsSignal, ProviderSource {}
 
 export interface ProviderPayloads {
   usage: SleeperUsageWithProvenance;
   projections: SleeperProjectionWithProvenance;
-  oasis: OasisMatchupWithProvenance;
+  oasis: EnvironmentMatchupWithProvenance;
   vegas: VegasTeamLineWithProvenance;
   news: NewsSignalWithProvenance;
 }

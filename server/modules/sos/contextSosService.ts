@@ -2,7 +2,7 @@
 // See: docs/oasis_audit.md for migration plan
 // Target: Merge into sos.service.ts using forge_team_env_context and forge_team_matchup_context
 
-import { oasisEnvironmentService } from '../../services/oasisEnvironmentService';
+import { teamEnvironmentService } from '../../services/teamEnvironmentService';
 import type { Position, WeeklySOS, ROSItem } from './sos.types';
 import { db } from '../../infra/db';
 import { schedule } from '@shared/schema';
@@ -17,13 +17,13 @@ import { eq, and } from 'drizzle-orm';
  * DEPRECATED: This service is scheduled for migration to internal FORGE SoS module.
  */
 
-export interface OasisDefensiveProjection {
+export interface EnvironmentDefensiveProjection {
   team: string;
   position: Position;
   projected_fpa: number; // Projected fantasy points allowed
   environment_tier: 'elite' | 'good' | 'average' | 'poor';
   confidence: number; // 0-100 confidence in projection
-  oasis_factors: {
+  environment_factors: {
     scoring_environment: number;
     pace_factor: number;
     red_zone_efficiency: number;
@@ -32,23 +32,23 @@ export interface OasisDefensiveProjection {
   };
 }
 
-export class OasisSosService {
-  private static instance: OasisSosService;
-  private projectionCache = new Map<string, OasisDefensiveProjection[]>();
+export class ContextSosService {
+  private static instance: ContextSosService;
+  private projectionCache = new Map<string, EnvironmentDefensiveProjection[]>();
   private cacheTTL = 1 * 60 * 60 * 1000; // 1 hour
   private cacheTimestamps = new Map<string, number>();
 
-  static getInstance(): OasisSosService {
-    if (!OasisSosService.instance) {
-      OasisSosService.instance = new OasisSosService();
+  static getInstance(): ContextSosService {
+    if (!ContextSosService.instance) {
+      ContextSosService.instance = new ContextSosService();
     }
-    return OasisSosService.instance;
+    return ContextSosService.instance;
   }
 
   /**
    * Generate TRACKSTAR-based defensive projections for all teams
    */
-  async generateDefensiveProjections(season: number, position: Position): Promise<OasisDefensiveProjection[]> {
+  async generateDefensiveProjections(season: number, position: Position): Promise<EnvironmentDefensiveProjection[]> {
     const cacheKey = `${season}-${position}`;
     
     // Check cache first
@@ -69,12 +69,12 @@ export class OasisSosService {
                        'HOU', 'IND', 'JAX', 'TEN', 'DEN', 'LV', 'LAC', 'NYJ'];
       const allTeams = [];
       for (const teamId of teamIds) {
-        const teamEnv = await oasisEnvironmentService.getTeamEnvironment(teamId);
+        const teamEnv = await teamEnvironmentService.getTeamEnvironment(teamId);
         if (teamEnv) {
           allTeams.push({...teamEnv, teamId});
         }
       }
-      const projections: OasisDefensiveProjection[] = [];
+      const projections: EnvironmentDefensiveProjection[] = [];
 
       for (const teamEnv of allTeams) {
         const projection = await this.calculateDefensiveProjection(teamEnv.teamId, position, teamEnv);
@@ -101,12 +101,12 @@ export class OasisSosService {
     teamId: string, 
     position: Position, 
     teamEnv: any
-  ): Promise<OasisDefensiveProjection> {
+  ): Promise<EnvironmentDefensiveProjection> {
     // Base fantasy points allowed - league average by position
     const baselineFPA = this.getPositionBaseline(position);
     
     // TRACKSTAR-based adjustments
-    const oasisFactors = {
+    const environmentFactors = {
       scoring_environment: teamEnv.scoring_environment || 50,
       pace_factor: teamEnv.pace || 65,
       red_zone_efficiency: teamEnv.red_zone_efficiency || 50,
@@ -119,10 +119,10 @@ export class OasisSosService {
     const defensiveProjection = this.calculatePositionSpecificProjection(
       baselineFPA, 
       position, 
-      oasisFactors
+      environmentFactors
     );
 
-    const environmentTier = this.determineEnvironmentTier(oasisFactors.scoring_environment);
+    const environmentTier = this.determineEnvironmentTier(environmentFactors.scoring_environment);
     const confidence = this.calculateConfidence(teamEnv);
 
     return {
@@ -131,7 +131,7 @@ export class OasisSosService {
       projected_fpa: Math.round(defensiveProjection * 100) / 100,
       environment_tier: environmentTier,
       confidence,
-      oasis_factors: oasisFactors
+      environment_factors: environmentFactors
     };
   }
 
@@ -217,7 +217,7 @@ export class OasisSosService {
   /**
    * Generate TRACKSTAR-powered weekly SOS for early 2025 season
    */
-  async generateOasisWeeklySOS(
+  async generateContextWeeklySOS(
     position: Position,
     week: number,
     season: number = 2025
@@ -240,7 +240,7 @@ export class OasisSosService {
       }
 
       // Create projection map
-      const projectionMap = new Map<string, OasisDefensiveProjection>();
+      const projectionMap = new Map<string, EnvironmentDefensiveProjection>();
       defensiveProjections.forEach(proj => projectionMap.set(proj.team, proj));
 
       // Calculate SOS scores using percentile scaling
@@ -289,7 +289,7 @@ export class OasisSosService {
   /**
    * Generate TRACKSTAR-powered ROS SOS for early 2025 season
    */
-  async generateOasisROSSOS(
+  async generateContextROSSOS(
     position: Position,
     startWeek: number = 1,
     window: number = 5,
@@ -302,7 +302,7 @@ export class OasisSosService {
 
     // Collect weekly SOS for all weeks in window
     for (const week of weeks) {
-      const weeklyResults = await this.generateOasisWeeklySOS(position, week, season);
+      const weeklyResults = await this.generateContextWeeklySOS(position, week, season);
       allWeeklyResults.push(...weeklyResults);
     }
 
@@ -483,4 +483,4 @@ export class OasisSosService {
   }
 }
 
-export const oasisSosService = OasisSosService.getInstance();
+export const contextSosService = ContextSosService.getInstance();
