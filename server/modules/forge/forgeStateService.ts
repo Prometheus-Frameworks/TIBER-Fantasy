@@ -210,7 +210,7 @@ export async function saveForgeState(update: ForgeStateUpdate): Promise<void> {
       )
       .limit(1);
 
-    const record: InsertForgePlayerState = {
+    const record = {
       playerId: update.playerId,
       playerName: update.playerName,
       position: update.position,
@@ -233,7 +233,7 @@ export async function saveForgeState(update: ForgeStateUpdate): Promise<void> {
       momentumUpdated: update.momentumUpdated,
       computedAt: new Date(),
       passCount: 2,
-    };
+    } as InsertForgePlayerState;
 
     if (existing.length > 0) {
       await db
